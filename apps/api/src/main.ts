@@ -27,6 +27,7 @@ import { HttpAdapterHost } from "@nestjs/core";
 import { ClsMiddleware, ClsService } from "nestjs-cls";
 
 import { SentryExceptionFilter } from "./infrastructure/filters/sentry-exception.filter";
+import { NestAppLoggerAdapter } from "./lib/nest-app-logger.adapter";
 
 import { CorrelationIdMiddleware } from "./infrastructure/middleware/correlation-id.middleware";
 import * as trpcExpress from "@trpc/server/adapters/express";
@@ -98,11 +99,19 @@ async function bootstrap() {
   // see the validated/defaulted value instead of undefined.
   process.env["PDF_EXPORT_JWT_SECRET"] ??= env.PDF_EXPORT_JWT_SECRET;
 
-  // We resolve ClsService from the container, so the app must exist first.
-  // Pre-Nest output goes to console (no logger available yet).
+  // Phase 68: pre-bootstrap logger (no CLS yet) routed through NestAppLoggerAdapter
+  // so all NestJS Logger(context) calls in services/schedulers land in app.log.
+  // After CLS is resolved, the adapter is upgraded to the CLS-aware instance.
+  const preBootLogger = createAppLogger({
+    service: "customreport-api",
+    minLevel: env.LOG_LEVEL,
+    logDir: env.LOG_DIR,
+  });
+  const nestLoggerAdapter = new NestAppLoggerAdapter(preBootLogger);
+
   console.log("[bootstrap] starting customreport-api");
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { logger: nestLoggerAdapter });
 
   // Phase 68: global Sentry exception filter — captures 5xx and non-HTTP errors.
   const { httpAdapter } = app.get(HttpAdapterHost);
@@ -116,6 +125,7 @@ async function bootstrap() {
     clsService: cls,
   });
 
+  nestLoggerAdapter.setLogger(logger);
   logger.info("bootstrap started");
   // 37-01: log OTel decision for ops visibility (one line, structured).
   if (otelDecision.started) {
