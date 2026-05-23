@@ -221,3 +221,34 @@ updated: 2026-05-22T00:34:00Z source: peo-retro graceful-coalescing PR #7 close
 10. [ ] core-principles cleanup CLAUDE*CODE*\* env vars (cross-repo task)
 11. [ ] 46-followup live-Prisma matrix verification (still pending from earlier retro)
 12. [ ] Major deps separate PRs — typescript 6, lucide 1.x, jsdom 29, vite 8 (when its peer plugin catches up)
+
+## Session 2026-05-23..24 (live UAT wave 1+2+3)
+
+updated: 2026-05-24T02:11:00Z source: peo-retro shiny-eagle live-UAT
+
+### Shipped — live UAT wave fixes
+
+1. [x] fix(lead): stage chip status no longer overridden by linked risks in edit form <!-- done: df998b1 -->
+2. [x] fix(autosave): staleTime: Infinity on byPeriodQ — eliminates window-focus refetch edit-loss (#1) <!-- done: 906b736 -->
+3. [x] fix(docker): corepack → npm install -g pnpm in Dockerfile.web (#4be33d2) <!-- done: 4be33d2 -->
+4. [x] feat(slides): wave 2 redesign — 2-col grid, pill metrics+tooltip, product scope into slide-frame w/ hero, dedup AgentReview (#11 #13 #14 #15 #17) <!-- done: c5b12fb -->
+5. [x] fix(dashboard): activity panel shows rows for reopened periods — was silently hiding all data when periodStatus="reopened" (#18) <!-- done: d231102 -->
+6. [x] fix(obs): host.docker.internal wired for OTel+Sentry+Prometheus cross-network traces <!-- done: 332e719 -->
+
+### Investigation findings (no code needed)
+
+- #8 at-risk warning — already implemented: computeUnbackedStages + banner in sdlc-pipeline.tsx
+- #19 skeleton audit — all screens already have skeletons; no gaps found
+- #20 LeadHistoryList — single caller in reports/page.tsx:217; HEAD/LEAD shape consistent
+
+### New pending — carry forward
+
+1. [ ] Ручной UAT — В: `?mode=slides` → ScopeToggle "Own | By product" виден <!-- unchanged from prev retro -->
+2. [ ] Ручной UAT — Г: "By product" → слайды с hero + product grid <!-- unchanged from prev retro -->
+3. [ ] Ручной UAT — Д: hero band (имя + KPI tiles), chip carousel, 16:10 frame <!-- unchanged from prev retro -->
+4. [ ] Ручной UAT — Е: автор с 5+ продуктами → пагинация (1/2, стрелки) <!-- unchanged from prev retro -->
+5. [ ] approve PR #7 в GitHub Enterprise UI (внешний шаг — ждёт пользователя) <!-- unchanged from prev retro -->
+6. [ ] merge PR #7 → main (после approve) <!-- unchanged from prev retro -->
+7. [ ] /peo-jira transition PRJ-2 после merge <!-- unchanged from prev retro -->
+8. [ ] tag v8.3.x когда milestone готов к закрытию <!-- unchanged from prev retro -->
+9. [ ] Решение: закрывать milestone v8.3 или добавлять scope <!-- unchanged from prev retro -->
