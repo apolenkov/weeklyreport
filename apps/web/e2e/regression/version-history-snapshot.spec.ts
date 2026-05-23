@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginByCookie, wipeAndReseed } from "./helpers/dev-auth";
+import { loginByCookie, seedAdvancedViaCli } from "./helpers/dev-auth";
 
 /**
  * LEAD-VHS-01..07: Version History Snapshot (F3)
@@ -52,23 +52,39 @@ async function readCurrentVersion(
 // ─── suite setup ──────────────────────────────────────────────────────────────
 
 test.describe("LEAD-VHS-01..07: Version History Snapshot", () => {
-  let seeded = false;
+  // Serial mode: all tests share one worker so the beforeAll seed runs exactly
+  // once. fullyParallel would spawn a worker per test and race concurrent
+  // migrate-reset + db-seed calls against each other.
+  test.describe.configure({ mode: "serial" });
+
+  test.beforeAll(async () => {
+    // CLI-seed once before any login. 300 s budget covers the ~2 m 48 s
+    // advanced seed that the API-mediated wipeAndReseed kills at 120 s,
+    // leaving the DB broken and every dev-login returning 500.
+    test.setTimeout(300_000);
+    seedAdvancedViaCli();
+    // After prisma migrate reset the running API's Prisma pool has stale
+    // connections (PostgreSQL forcibly closes them on DROP DATABASE).
+    // Wait briefly so the pool can establish fresh connections before any
+    // dev-login request arrives.
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  });
 
   test.beforeEach(async ({ page }) => {
     for (let attempt = 1; attempt <= 5; attempt++) {
-      await loginByCookie(page, {
-        role: "lead",
-        email: "olga@customreport.local",
-        redirect: "/lead/report",
-      });
-      if (!seeded) {
-        await wipeAndReseed(page, "advanced");
-        seeded = true;
+      try {
         await loginByCookie(page, {
           role: "lead",
           email: "olga@customreport.local",
           redirect: "/lead/report",
         });
+      } catch (err) {
+        // API may return 500 while Prisma reconnects after the DB reset.
+        if (attempt < 5) {
+          await page.waitForTimeout(3000);
+          continue;
+        }
+        throw err;
       }
       const ready = await page
         .waitForSelector('[data-testid="lead-report-form"]', { timeout: 12000 })
