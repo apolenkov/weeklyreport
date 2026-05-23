@@ -831,26 +831,42 @@ export function LeadForm({
       }),
     };
   });
-  // TODO(STAGE-COLOR-SNAPSHOT): apply deriveEffectiveStageStatus to snapshotStageMap path
-  // F3.4: build a lookup from snapshot stageStatuses so own-author stage chips
-  // reflect the status captured at snapshot time, not the current draft state.
+  // F3.4: build a lookup from snapshot stageStatuses + risks + items so own-author
+  // stage chips reflect the status captured at snapshot time, not the current draft.
   // Plain const — must stay after the early-return guard; not a hook.
   const snapshotStageMap = (() => {
     if (!getVersionQ.data) return null;
     const raw = getVersionQ.data as {
       stageStatuses?: Array<{ projectId: string; stageName: string; status: string }>;
+      risks?: Array<{ projectId: string; stageName?: string | null; severity?: string }>;
+      items?: Array<{ projectId: string; stageName?: string | null; workflowStatus: string }>;
     };
-    const map = new Map<string, Map<string, string>>();
+    type SnapEntry = {
+      traffic: string;
+      risks: Array<{ severity?: string }>;
+      items: Array<{ workflowStatus: string }>;
+    };
+    const map = new Map<string, Map<string, SnapEntry>>();
     for (const ss of raw.stageStatuses ?? []) {
       let pm = map.get(ss.projectId);
       if (!pm) { pm = new Map(); map.set(ss.projectId, pm); }
-      pm.set(ss.stageName.toLowerCase(), ss.status);
+      pm.set(normalizeStageName(ss.stageName), { traffic: ss.status, risks: [], items: [] });
+    }
+    for (const r of raw.risks ?? []) {
+      if (!r.stageName) continue;
+      const entry = map.get(r.projectId)?.get(normalizeStageName(r.stageName));
+      if (entry) entry.risks.push({ severity: r.severity });
+    }
+    for (const item of raw.items ?? []) {
+      if (!item.stageName) continue;
+      const entry = map.get(item.projectId)?.get(normalizeStageName(item.stageName));
+      if (entry) entry.items.push({ workflowStatus: item.workflowStatus });
     }
     return map;
   })();
 
   // F3.4: when viewing a historical snapshot, override own-author stage statuses
-  // with snapshot values so chips reflect the captured state.
+  // with snapshot values so chips reflect the captured state, including risks/items.
   const displayProducts: Product[] = (() => {
     if (!snapshotStageMap) return products;
     return products.map((p) => {
@@ -860,13 +876,12 @@ export function LeadForm({
         ...p,
         stages: p.stages.map((s) => {
           if (s.ownership === "locked") return s;
-          const snap = pm.get(s.stageName.toLowerCase());
-          if (snap === undefined) return s;
-          // snap is a raw Prisma TrafficLight value ("green"/"yellow"/"red"/null-ish).
-          // Must map through trafficToStageStatus before passing to StageChip which
-          // indexes STATUS_CONFIG by dash-case StageStatus ("on-track"/"at-risk"/"blocked"/"empty").
-          // Casting directly caused "Cannot read properties of undefined (reading 'border')".
-          return { ...s, status: trafficToStageStatus(snap as import("../../lib/mappers/traffic-light").TrafficLightStatus | null) };
+          const snap = pm.get(normalizeStageName(s.stageName));
+          if (!snap) return s;
+          // snap.traffic is a raw Prisma TrafficLight value; map to StageStatus first,
+          // then derive the effective status incorporating captured risks and items.
+          const explicit = trafficToStageStatus(snap.traffic as import("../../lib/mappers/traffic-light").TrafficLightStatus | null);
+          return { ...s, status: deriveEffectiveStageStatus(explicit, snap.risks, snap.items) };
         }),
       };
     });
