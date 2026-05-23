@@ -2,7 +2,6 @@
 
 import { AlertTriangle, ArrowRight, FileText, Target } from "lucide-react";
 
-import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import type { ReactNode } from "react";
 
 import type {
@@ -72,10 +71,13 @@ function SectionBlock({
                 key={row.text + "-" + String(idx)}
                 className="flex min-w-0 items-baseline gap-2"
               >
+                {/* Fixed-width slot so all item texts start at the same X. */}
+                <span className="inline-flex w-[28px] shrink-0 justify-center">
+                  {row.priorityRank != null
+                    ? priorityChip(row.priorityRank)
+                    : null}
+                </span>
                 {inlineProductMarker(row.productName)}
-                {row.priorityRank != null
-                  ? priorityChip(row.priorityRank)
-                  : null}
                 <span
                   className={`min-w-0 line-clamp-3 border-l-2 ${borderClass} pl-3 text-[13px] leading-snug text-[var(--color-foreground)]`}
                 >
@@ -98,12 +100,9 @@ function SectionBlock({
 export function LeadUnifiedSlide({ model }: Props) {
   return (
     <div
-      className="flex flex-col gap-5 [:fullscreen_&]:min-h-[60dvh] [:fullscreen_&]:justify-between"
+      className="grid grid-cols-2 gap-4 [:fullscreen_&]:min-h-[60dvh] [:fullscreen_&]:content-between"
       data-testid="lead-unified-slide"
     >
-      <div className="flex justify-end">
-        <AgentReviewComingSoon />
-      </div>
       <SectionBlock
         icon={<Target className="h-4 w-4" aria-hidden="true" />}
         label="Current work"
