@@ -79,22 +79,10 @@ export function StageMultiSelect({
           })}
         </div>
       )}
-      {selected.length === 0 ? (
+      {selected.length === 0 && (
         <p className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">
           Scope: all assigned stages.
         </p>
-      ) : (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--color-muted-foreground)]">
-          <span>Scope:</span>
-          {selected.map((stage) => (
-            <span
-              key={stage}
-              className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
-            >
-              {stage}
-            </span>
-          ))}
-        </div>
       )}
       {error && (
         <p
