@@ -28,6 +28,7 @@ services:
       # Phase 52 (UFB-054): product-KPI dashboard
       - ./deploy/grafana/product-telemetry-dashboard.json:/var/lib/grafana/dashboards/customreport/product-telemetry-dashboard.json:ro
       - ./deploy/prometheus-otel-lgtm.yml:/otel-lgtm/prometheus.yaml:ro
+      - ./deploy/alert-rules.yml:/otel-lgtm/alert-rules.yml:ro
     environment:
       GF_PATHS_PROVISIONING: /etc/grafana/provisioning
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}

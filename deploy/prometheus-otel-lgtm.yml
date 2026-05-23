@@ -24,6 +24,9 @@ otlp:
     - deployment.environment.name
     - host.name
 
+rule_files:
+  - /otel-lgtm/alert-rules.yml
+
 scrape_configs:
   - job_name: customreport-api
     metrics_path: /metrics
