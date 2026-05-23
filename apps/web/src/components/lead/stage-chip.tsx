@@ -180,7 +180,11 @@ export function StageChip({
           .join(" · ")
       : null;
   const title = isLocked
-    ? [stage.assignee ?? "Unknown", lockSuffix, "No edit permissions"]
+    ? [
+        `Locked — owned by ${stage.assignee ?? "another lead"}`,
+        lockSuffix,
+        "You don't have edit permissions",
+      ]
         .filter(Boolean)
         .join(" · ")
     : isUnassigned
