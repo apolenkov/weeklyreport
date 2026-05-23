@@ -40,7 +40,9 @@ export function StageMultiSelect({
         id={helperId}
         className="mb-2 text-[11px] text-[var(--color-muted-foreground)]"
       >
-        Optional. Leave empty to apply to all assigned stages.
+        Optional. Leave empty to apply to all assigned stages. Tip: mark the
+        stage as blocked on the SDLC pipeline above before pinning a risk —
+        that keeps your blocker scope honest.
       </p>
       {stages.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[rgba(0,0,0,0.18)] bg-[var(--color-muted)] px-3 py-2.5 text-sm text-[var(--color-muted-foreground)]">
