@@ -24,6 +24,7 @@ import { SearchModule } from "./modules/search/search.module";
 import { ActivityModule } from "./modules/activity/activity.module";
 import { TelemetryModule } from "./modules/telemetry/telemetry.module";
 import { TelegramModule } from "./modules/telegram/telegram.module";
+import { ObservabilityModule } from "./modules/observability/observability.module.js";
 import { PdfExportProcessor } from "./infrastructure/bullmq/pdf-export.processor";
 import { EmailReminderProcessor } from "./infrastructure/bullmq/email-reminder.processor";
 import { EmailService } from "./infrastructure/email/email.service";
@@ -69,6 +70,7 @@ import { assertNoDevAuthInProduction } from "./lib/dev-auth-fence";
     // Seeds-only — MockTelegramAdapter unless TG_BOT_TOKEN is set, in
     // which case selectTelegramAdapter throws at boot.
     TelegramModule,
+    ObservabilityModule,
   ],
   providers: [
     PdfExportProcessor,
