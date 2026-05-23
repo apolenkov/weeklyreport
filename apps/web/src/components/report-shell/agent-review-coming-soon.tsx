@@ -15,7 +15,7 @@ export function AgentReviewComingSoon() {
         aria-label="Agent review is coming soon"
         title="Coming Soon"
         data-testid="agent-review-coming-soon"
-        className="inline-flex h-8 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-2.5 text-[12px] font-semibold text-[var(--color-muted-foreground)]"
+        className="inline-flex min-h-[var(--touch-target-min)] cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-4 py-1.5 text-sm font-semibold text-[var(--color-muted-foreground)]"
       >
         <BotMessageSquare size={14} strokeWidth={2} aria-hidden="true" />
         <span>Agent review</span>
