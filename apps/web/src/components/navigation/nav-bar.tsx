@@ -76,7 +76,7 @@ const BRAND_SLOT_CLASS = "flex w-10 shrink-0 items-center justify-center py-4";
 const RIGHT_RAIL_CLASS =
   "relative flex items-center justify-end gap-2.5 justify-self-end xl:w-[272px]";
 const LOGOUT_BUTTON_CLASS =
-  "inline-flex h-8 w-10 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)] xl:w-[88px] xl:px-3";
+  "inline-flex h-8 w-10 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]";
 
 function getRoleLabel(role: Role): string {
   switch (role) {
