@@ -13,6 +13,7 @@ import {
   customreportSectionsSubmittedTotal,
   customreportSectionSubmissionLatencySeconds,
 } from "../../infrastructure/metrics/metrics.registry.js";
+import { createAppLogger } from "../../lib/logger.js";
 
 export class ReportSectionDomainError extends Error {
   constructor(
@@ -139,6 +140,14 @@ function mergeSection(
 }
 
 export class ReportSectionsService {
+  private readonly logger = createAppLogger({
+    service: "ReportSectionsService",
+    logDir: process.env["LOG_DIR"],
+    minLevel:
+      (process.env["LOG_LEVEL"] as "debug" | "info" | "warn" | "error") ??
+      "info",
+  });
+
   constructor(
     private readonly repository: ReportSectionsRepository,
     // UFB-049 / Phase 50-B: optional grace-period settings provider.
@@ -230,9 +239,14 @@ export class ReportSectionsService {
       );
     }
 
-    return this.repository.saveSection(
+    const saved = await this.repository.saveSection(
       mergeSection(section, parsedInput, "draft"),
     );
+    this.logger.info("section draft saved", {
+      reportSectionId: parsedInput.reportSectionId,
+      authorId: section.authorId,
+    });
+    return saved;
   }
 
   async submitSection(
@@ -288,6 +302,11 @@ export class ReportSectionsService {
       // Never let metric emission corrupt the submit response.
     }
 
+    this.logger.info("section submitted", {
+      reportSectionId: parsedInput.reportSectionId,
+      authorId: section.authorId,
+      late,
+    });
     return saved;
   }
 }
