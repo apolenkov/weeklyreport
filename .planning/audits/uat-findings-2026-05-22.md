@@ -229,8 +229,17 @@ pnpm lint:md     → 677 files, 0 errors
   with submitted lead sections. Spec LSC-01 will catch regression automatically.
 - **LSC-05/06 mine-path** — `buildStageGrid` needs `section.risks` plumbing by
   stageName (backend currently exposes `stageIds[]`). Self-skip in spec until wired.
-- **CLS live trace after** — `DashboardSkeleton` geometry fix committed; measured
-  baseline 0.0817; live re-trace needed to confirm improvement.
 - **priorityRank + Revoke P6/P7** — submit lead sections first, then verify in
   head dashboard (task #322, user-driven).
 - **next/font migration** — `TODO(VERCEL-FONT)` deferred, visual sign-off needed.
+
+## CLS re-trace (run 4, 2026-05-23, layout-shift PerformanceObserver, 1728×900)
+
+```text
+/head/dashboard  CLS 0.0675  good (was 0.0817 — improved by ~17%)
+/lead/report     CLS 0.0000  good (unchanged)
+```
+
+`DashboardSkeleton` height reservations in commit `3f4cb01` confirmed effective:
+dashboard CLS dropped from 0.0817 → 0.0675. Both screens remain well within the
+"good" band (< 0.10). The CLS live-trace open item is resolved.
