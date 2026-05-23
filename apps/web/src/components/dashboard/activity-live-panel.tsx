@@ -83,10 +83,10 @@ function renderBody(
     );
   }
 
-  if (data.periodStatus !== "open") {
+  if (data.periodStatus !== "open" && data.periodStatus !== "reopened") {
     return (
       <p className="text-sm text-[var(--color-muted-foreground)]">
-        Period published; activity is not tracked.
+        Period is closed; activity is not tracked.
       </p>
     );
   }
