@@ -5,6 +5,7 @@ import { createGzip } from "node:zlib";
 import { pipeline } from "node:stream/promises";
 
 import { trace } from "@opentelemetry/api";
+import { logs, SeverityNumber } from "@opentelemetry/api-logs";
 import type { ClsService } from "nestjs-cls";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
@@ -32,6 +33,13 @@ const LEVEL_PRIORITY: Record<LogLevel, number> = {
   info: 1,
   warn: 2,
   error: 3,
+};
+
+const LEVEL_SEVERITY: Record<LogLevel, SeverityNumber> = {
+  debug: SeverityNumber.DEBUG,
+  info: SeverityNumber.INFO,
+  warn: SeverityNumber.WARN,
+  error: SeverityNumber.ERROR,
 };
 
 const DEFAULT_MAX_BYTES = 50 * 1024 * 1024; // 50 MB
@@ -259,6 +267,20 @@ class AppLoggerImpl implements AppLogger {
       // and swallows errors via the catch inside enqueueWrite.
       enqueueWrite(this.fileSink, entry);
     }
+
+    // Forward to OTel log provider (no-op when provider not registered).
+    logs.getLogger("customreport-api").emit({
+      body: message,
+      severityNumber: LEVEL_SEVERITY[level],
+      severityText: level,
+      attributes: {
+        correlationId: entry.correlationId,
+        ...(entry.traceId ? { traceId: entry.traceId } : {}),
+        ...(entry.spanId ? { spanId: entry.spanId } : {}),
+        ...this.baseContext,
+        ...context,
+      },
+    });
   }
 }
 
