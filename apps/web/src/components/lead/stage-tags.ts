@@ -39,3 +39,24 @@ export function stageNameMatches(
   const tags = splitStageNames(stageName);
   return tags.length === 0 || tags.includes(stage);
 }
+
+/**
+ * Returns true when a risk (or decision/item) covers the given stage name.
+ *
+ * Prefers `stageIds` (new format) over the deprecated `stageName` CSV field.
+ * This is the canonical matcher — always use it instead of raw stageNameMatches
+ * when the object may carry stageIds.
+ *
+ * stageIds = []  → risk applies to all assigned stages → always true
+ * stageIds = ["Testing"]  → only true for "Testing"
+ * stageIds = undefined  → fall back to stageName CSV (legacy)
+ */
+export function riskCoversStage(
+  risk: { stageName?: string | null; stageIds?: string[] },
+  stageName: string,
+): boolean {
+  if (risk.stageIds !== undefined) {
+    return risk.stageIds.length === 0 || risk.stageIds.includes(stageName);
+  }
+  return stageNameMatches(risk.stageName, stageName);
+}
