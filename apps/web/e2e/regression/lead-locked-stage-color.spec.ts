@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginByCookie, wipeAndReseed } from "./helpers/dev-auth";
+import { loginByCookie, seedAdvancedViaCli } from "./helpers/dev-auth";
 
 const FRONTEND_URL = "http://localhost:3000";
 const LEAD_REPORT_URL = "http://localhost:3000/lead/report";
@@ -70,7 +70,13 @@ async function chipHasLockIcon(
 // ────────────────────────────────────────────────────────────────────────────
 
 test.describe("LEAD-LSC-01..06: Locked Stage Color (F2 cross-author + mine derive)", () => {
-  let seeded = false;
+  test.beforeAll(() => {
+    // CLI-seed once before any login. 300 s budget covers the ~2 m 48 s
+    // advanced seed that the API-mediated path kills at 120 s, leaving the DB
+    // broken and every dev-login returning 500.
+    test.setTimeout(300_000);
+    seedAdvancedViaCli();
+  });
 
   test.beforeEach(async ({ page }) => {
     for (let attempt = 1; attempt <= 5; attempt++) {
@@ -79,15 +85,6 @@ test.describe("LEAD-LSC-01..06: Locked Stage Color (F2 cross-author + mine deriv
         email: "olga@customreport.local",
         redirect: "/lead/report",
       });
-      if (!seeded) {
-        await wipeAndReseed(page, "advanced");
-        seeded = true;
-        await loginByCookie(page, {
-          role: "lead",
-          email: "olga@customreport.local",
-          redirect: "/lead/report",
-        });
-      }
       const ready = await page
         .waitForSelector('[data-testid="lead-report-form"]', { timeout: 10000 })
         .then(async () => {

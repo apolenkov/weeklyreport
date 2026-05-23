@@ -1,3 +1,6 @@
+import { spawnSync } from "node:child_process";
+import * as path from "node:path";
+
 import type { Page } from "@playwright/test";
 
 type Role = "lead" | "head" | "admin" | "viewer";
@@ -180,6 +183,37 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
       await page.goto("/", { waitUntil: "domcontentloaded" }).catch(() => null);
     }
     return;
+  }
+}
+
+/**
+ * Out-of-band advanced seed for the LSC suite. The API-mediated
+ * dev.wipeAndReseed procedure caps its child process at 120 s, but the
+ * advanced seed runs ~2 m 48 s and gets SIGKILL'd mid-seed, leaving the DB
+ * dropped and every subsequent request (including dev-login) returning 500.
+ * Running the seed directly via the Prisma CLI with a 300 s timeout sidesteps
+ * the procedural cap.
+ *
+ * TODO(E2E-RESEED-01): the suite-wide in-test reseed via API under
+ * fullyParallel is inherently race-prone — this is the LSC-only escape hatch.
+ */
+export function seedAdvancedViaCli(): void {
+  // apps/web/e2e/regression/helpers → 5 levels up to repo root
+  const repoRoot = path.resolve(__dirname, "..", "..", "..", "..", "..");
+  const env = {
+    ...process.env,
+    PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
+  };
+  const opts = { cwd: repoRoot, encoding: "utf8" as const, timeout: 300_000, env };
+
+  const reset = spawnSync("pnpm", ["exec", "prisma", "migrate", "reset", "--force"], opts);
+  if (reset.status !== 0) {
+    throw new Error(`prisma migrate reset failed (status=${reset.status}):\n${reset.stderr}`);
+  }
+
+  const seed = spawnSync("pnpm", ["exec", "prisma", "db", "seed"], opts);
+  if (seed.status !== 0) {
+    throw new Error(`prisma db seed failed (status=${seed.status}):\n${seed.stderr}`);
   }
 }
 
