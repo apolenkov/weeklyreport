@@ -28,6 +28,7 @@ import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon"
 import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
 import { SlideFullscreenButton } from "./slide-fullscreen-button";
 import { LeadProductGrid } from "./lead-product-grid";
+import { LeadSlideHero } from "./lead-slide-hero";
 
 function SlideEmptyState({
   title,
@@ -167,12 +168,31 @@ export function LeadSlidesClient({
 
   if (scope === "product") {
     return (
-      <div ref={deckRef} className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">{scopeControls}</div>
-          {!inReportMode && <SlideFullscreenButton targetRef={deckRef} />}
-        </div>
-        <LeadProductGrid products={sectionModel?.productSlides ?? []} />
+      <div ref={deckRef}>
+        <article className="slide-frame rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+          {sectionModel ? (
+            <LeadSlideHero
+              slide={sectionModel}
+              heroControls={
+                <div className="flex flex-wrap items-center gap-2">
+                  {scopeControls}
+                </div>
+              }
+            />
+          ) : (
+            <div className="flex flex-wrap items-center gap-2 border-b border-[rgba(0,0,0,0.08)] pb-4">
+              {scopeControls}
+            </div>
+          )}
+          <div className="mt-5">
+            <LeadProductGrid products={sectionModel?.productSlides ?? []} />
+          </div>
+          {!inReportMode && (
+            <div className="mt-4 flex justify-end">
+              <SlideFullscreenButton targetRef={deckRef} />
+            </div>
+          )}
+        </article>
       </div>
     );
   }
