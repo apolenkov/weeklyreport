@@ -15,7 +15,7 @@ import type { Product, RiskEntry, StageStatus } from "./mock-data";
 import { RisksSection } from "./risks-section";
 import { SdlcPipeline } from "./sdlc-pipeline";
 import type { CrossAuthorEntry } from "./sdlc-pipeline";
-import { splitStageNames, stageNameMatches } from "./stage-tags";
+import { riskCoversStage, splitStageNames } from "./stage-tags";
 
 /**
  * LeadFormSyncBridge — composes useStatusRiskSync with SdlcPipeline + RisksSection.
@@ -333,7 +333,7 @@ function computeUnbackedStages(ctx: ReturnType<typeof useBridgeContext>) {
       const hasRisk = ctx.risks.some(
         (r) =>
           r.productId === product.id &&
-          stageNameMatches(r.stageName, stage.stageName) &&
+          riskCoversStage(r, stage.stageName) &&
           (r.text ?? "").trim().length > 0,
       );
       if (!hasRisk) {

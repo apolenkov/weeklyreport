@@ -25,4 +25,16 @@ describe("deriveEffectiveStageStatus", () => {
   it("stays blocked when explicit is blocked and no risks/items", () => {
     expect(deriveEffectiveStageStatus("blocked", [], [])).toBe("blocked");
   });
+
+  it("section isolation: risks for another stage do not bleed into this chip", () => {
+    // Regression for #10: risks filtered to stageIds:["Testing"] must not
+    // affect the Development chip. The caller (mapLeadProducts) does the
+    // filtering; we verify that an empty risks/items array leaves the chip alone.
+    expect(deriveEffectiveStageStatus("empty", [], [])).toBe("empty");
+    expect(deriveEffectiveStageStatus("on-track", [], [])).toBe("on-track");
+  });
+
+  it("explicit at-risk chip without risks stays at-risk (user set it manually)", () => {
+    expect(deriveEffectiveStageStatus("at-risk", [], [])).toBe("at-risk");
+  });
 });

@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import { StageMultiSelect } from "./stage-multi-select";
 
 describe("StageMultiSelect", () => {
-  it("shows every selected stage in the scope summary", () => {
+  it("shows checkboxes checked for each selected stage, no duplicate scope pills", () => {
     render(
       <StageMultiSelect
         id="stages"
@@ -18,11 +18,19 @@ describe("StageMultiSelect", () => {
       />,
     );
 
-    expect(screen.getByText("Scope:")).toBeInTheDocument();
-    expect(screen.getAllByText("Dev").length).toBeGreaterThan(1);
-    expect(screen.getAllByText("Testing").length).toBeGreaterThan(1);
-    expect(screen.getAllByText("Release").length).toBeGreaterThan(1);
-    expect(screen.queryByText("+1 more")).not.toBeInTheDocument();
+    // Each selected stage appears exactly once (in the checkbox label — not duplicated as pills).
+    const checkboxes = screen.getAllByRole("checkbox");
+    expect(checkboxes).toHaveLength(3);
+    expect(
+      checkboxes.every((cb) => (cb as HTMLInputElement).checked),
+    ).toBe(true);
+
+    // No "Scope:" duplicate summary — the commit removed it when stages are selected.
+    expect(screen.queryByText("Scope:")).not.toBeInTheDocument();
+    // No "all assigned stages" footer when at least one stage is selected.
+    expect(
+      screen.queryByText("Scope: all assigned stages."),
+    ).not.toBeInTheDocument();
   });
 
   it("hides the picker when only one assigned stage exists", () => {

@@ -202,8 +202,8 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     );
 
     expect(themeControl).not.toBeNull();
-    expect(themeControl?.textContent).toMatch(/Theme/i);
-    expect(themeControl?.textContent).not.toMatch(/Soon/i);
+    // Icon-only: visible text was removed in favour of aria-label/title (#2 navbar fix).
+    expect(themeControl?.textContent?.trim()).toBe("");
     expect(themeControl).toHaveAttribute(
       "aria-label",
       "Theme selection is coming soon",
@@ -221,8 +221,8 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     );
 
     expect(languageControl).not.toBeNull();
-    expect(languageControl?.textContent).toMatch(/Language/i);
-    expect(languageControl?.textContent).not.toMatch(/Soon/i);
+    // Icon-only: visible text was removed in favour of aria-label/title (#2 navbar fix).
+    expect(languageControl?.textContent?.trim()).toBe("");
     expect(languageControl).toHaveAttribute(
       "aria-label",
       "Language selection is coming soon",
