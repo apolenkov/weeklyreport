@@ -25,6 +25,7 @@ import {
   SEED_PRODUCTS,
   SEED_STAGES,
   SEED_REPORTS,
+  SEED_HISTORY_REPORTS,
   HEAD_USER_ID,
   LEAD_1_ID,
   LEAD_MARIA_ID,
@@ -77,12 +78,14 @@ function publishedOffset(days: number, hours = 10, minutes = 0): Date {
 //   stageAssignmentId: 00000000b0{P}{S}     -> 10 + 1 + 1 = 12 (P is hex 0..b)
 //   riskId:            00000000090{NN}      -> 11 + 2-digit seq with padStart(2)
 //   decisionId:        00000000000a{S}      -> 11 + 1 = 12
-function sectionId(reportSuffix: "1" | "2", leadIndex: number): string {
+type ReportSuffix = "1" | "2" | "3" | "4" | "5";
+
+function sectionId(reportSuffix: ReportSuffix, leadIndex: number): string {
   return `a0000000-0000-4000-8000-0000000040${reportSuffix}${leadIndex}`;
 }
 
 function itemId(
-  reportSuffix: "1" | "2",
+  reportSuffix: ReportSuffix,
   leadIndex: number,
   itemSeq: number,
 ): string {
@@ -90,7 +93,7 @@ function itemId(
 }
 
 function projectStatusId(
-  reportSuffix: "1" | "2",
+  reportSuffix: ReportSuffix,
   leadIndex: number,
   prodSeq: number,
 ): string {
@@ -1101,6 +1104,102 @@ async function main() {
       where: { id: itemId("2", cfg.leadIndex, 1) },
       data: { priorityRank: 1 },
     });
+  }
+
+  // ----- History reports (N-2, N-3, N-4) for Fill From regression -----
+  // Creates 3 additional published report periods so Fill From dropdown shows
+  // realistic history (2 archived, 1 non-archived past period).
+  const HISTORY_SUFFIXES: ReportSuffix[] = ["3", "4", "5"];
+  for (let hIdx = 0; hIdx < SEED_HISTORY_REPORTS.length; hIdx++) {
+    const histReport = SEED_HISTORY_REPORTS[hIdx]!;
+    const suffix = HISTORY_SUFFIXES[hIdx]!;
+    const periodStart = new Date(histReport.periodStart);
+    const publishedAt = new Date(histReport.periodEnd);
+
+    await prisma.report.upsert({
+      where: { id: histReport.id },
+      update: {
+        periodStart,
+        periodEnd: new Date(histReport.periodEnd),
+        deadline: new Date(histReport.deadline),
+        status: ReportStatus.published,
+        periodStatus: PeriodStatus.published,
+        periodState: PeriodState.published,
+        archived: histReport.archived,
+        weekLabel: histReport.weekLabel,
+        publishedAt,
+        publishedById: HEAD_USER_ID,
+      },
+      create: {
+        id: histReport.id,
+        periodStart,
+        periodEnd: new Date(histReport.periodEnd),
+        deadline: new Date(histReport.deadline),
+        status: ReportStatus.published,
+        periodStatus: PeriodStatus.published,
+        periodState: PeriodState.published,
+        archived: histReport.archived,
+        weekLabel: histReport.weekLabel,
+        publishedAt,
+        publishedById: HEAD_USER_ID,
+      },
+    });
+
+    for (let i = 0; i < activeLeadConfigs.length; i++) {
+      const cfg = activeLeadConfigs[i]!;
+      const secId = sectionId(suffix, cfg.leadIndex);
+      const submitDate = new Date(periodStart);
+      submitDate.setUTCDate(submitDate.getUTCDate() + (i % 5));
+      submitDate.setUTCHours(10 + i, 0, 0, 0);
+
+      await prisma.reportSection.upsert({
+        where: { reportId_authorId: { reportId: histReport.id, authorId: cfg.leadId } },
+        update: { id: secId, status: ReportSectionStatus.submitted, submittedAt: submitDate },
+        create: {
+          id: secId,
+          reportId: histReport.id,
+          authorId: cfg.leadId,
+          status: ReportSectionStatus.submitted,
+          submittedAt: submitDate,
+        },
+      });
+      totalSections++;
+
+      for (let pIdx = 0; pIdx < cfg.products.length; pIdx++) {
+        const product = cfg.products[pIdx]!;
+        const psId = projectStatusId(suffix, cfg.leadIndex, pIdx + 1);
+        await prisma.projectStatus.upsert({
+          where: { reportSectionId_projectId: { reportSectionId: secId, projectId: product.id } },
+          update: { id: psId, status: TrafficLightStatus.green },
+          create: { id: psId, reportSectionId: secId, projectId: product.id, status: TrafficLightStatus.green },
+        });
+
+        const id = itemId(suffix, cfg.leadIndex, pIdx + 1);
+        await prisma.item.upsert({
+          where: { id },
+          update: {
+            reportSectionId: secId,
+            projectId: product.id,
+            type: ItemType.current,
+            text: `Завершили этап по продукту «${product.name}»`,
+            tag: "feature",
+            workflowStatus: ItemWorkflowStatus.done,
+            stageName: stageNameFor(cfg.leadIndex + pIdx),
+          },
+          create: {
+            id,
+            reportSectionId: secId,
+            projectId: product.id,
+            type: ItemType.current,
+            text: `Завершили этап по продукту «${product.name}»`,
+            tag: "feature",
+            workflowStatus: ItemWorkflowStatus.done,
+            stageName: stageNameFor(cfg.leadIndex + pIdx),
+          },
+        });
+        totalItems++;
+      }
+    }
   }
 
   // ----- Admin review/action examples -----
