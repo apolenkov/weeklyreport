@@ -6,6 +6,8 @@ type LeadHistorySidebarProps = {
   readonly entries: ReadonlyArray<HistoryEntry>;
   readonly summaryTitle?: string;
   readonly showStatus?: boolean;
+  /** When true, renders third-person copy (head/viewer looking at someone else's section). */
+  readonly viewerMode?: boolean;
 };
 
 /**
@@ -22,6 +24,7 @@ export function LeadHistorySidebar({
   entries,
   summaryTitle = "My History Summary",
   showStatus = true,
+  viewerMode = false,
 }: LeadHistorySidebarProps) {
   const total = entries.length;
   const submitted = entries.filter((e) => e.status === "submitted").length;
@@ -103,16 +106,20 @@ export function LeadHistorySidebar({
                 </p>
               ) : streak === 1 ? (
                 <p className="text-[13px] text-[var(--color-foreground)]">
-                  Last week submitted. Keep the streak going.
+                  Last week submitted.{" "}
+                  {!viewerMode && "Keep the streak going."}
                 </p>
               ) : total === 0 ? (
                 <p className="text-[13px] text-[var(--color-muted-foreground)]">
-                  No history yet — your first submission lands here.
+                  {viewerMode
+                    ? "No history yet."
+                    : "No history yet — your first submission lands here."}
                 </p>
               ) : (
                 <p className="text-[13px] text-[var(--color-foreground)]">
-                  Most recent week is still a draft. Submit to extend your
-                  streak.
+                  {viewerMode
+                    ? "Most recent week is still a draft."
+                    : "Most recent week is still a draft. Submit to extend your streak."}
                 </p>
               )}
               {totalRed > 0 && (
