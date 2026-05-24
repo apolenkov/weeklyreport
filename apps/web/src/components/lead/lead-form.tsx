@@ -1383,10 +1383,10 @@ export function LeadForm({
   }
 
   // Autosave indicator label — 4-state badge.
+  // Use the same versions array that feeds VersionHistoryNav so the badge
+  // never shows a stale version number (e.g. "Version 1" when v4 is live).
   const latestVersionNumber =
-    versionsQ.data && versionsQ.data.length > 0
-      ? versionsQ.data[0]?.version ?? null
-      : null;
+    versions.length > 0 ? (versions[0]?.version ?? null) : null;
   const autosaveLabel =
     autosave.state === "saving"
       ? "↻ Saving…"

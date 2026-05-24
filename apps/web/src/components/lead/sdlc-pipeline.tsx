@@ -136,8 +136,8 @@ export function SdlcPipeline({
             <div className="flex-1">
               <p className="text-sm font-semibold" style={{ color: "#8a6d1b" }}>
                 {unbackedStages.length === 1
-                  ? "1 stage marked at-risk/blocked has no risk written."
-                  : `${unbackedStages.length} stages marked at-risk/blocked have no risk written.`}
+                  ? "1 stage has no matching risk written."
+                  : `${unbackedStages.length} stages have no matching risk written.`}
               </p>
               <p className="mt-0.5 text-[12px]" style={{ color: "#8a6d1b" }}>
                 Open Risks &amp; Blockers below and use{" "}

@@ -356,13 +356,16 @@ function computeUnbackedStages(ctx: ReturnType<typeof useBridgeContext>) {
     for (const stage of product.stages) {
       if (stage.ownership !== "mine") continue;
       if (stage.status !== "at-risk" && stage.status !== "blocked") continue;
-      const hasRisk = ctx.risks.some(
+      // A blocked stage requires a blocked risk; an at-risk risk alone
+      // does not justify marking a stage as blocked.
+      const hasMatchingRisk = ctx.risks.some(
         (r) =>
           r.productId === product.id &&
           riskCoversStage(r, stage.stageName) &&
-          (r.text ?? "").trim().length > 0,
+          (r.text ?? "").trim().length > 0 &&
+          (stage.status === "at-risk" || r.severity === "blocked"),
       );
-      if (!hasRisk) {
+      if (!hasMatchingRisk) {
         out.push({
           productId: product.id,
           productName: product.name,
