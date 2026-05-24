@@ -168,6 +168,55 @@ describe("LeadFormSyncBridge", () => {
     expect(textbox).toBeInTheDocument();
   });
 
+  it("Test 5: mixed-case stageIds alias — risk with stageIds ['dev'] counts toward the 'Dev' stage chip", async () => {
+    const user = userEvent.setup();
+    const product = buildProduct({
+      stages: [
+        {
+          stageName: "Planning",
+          status: "on-track",
+          ownership: "locked",
+          assignee: "PM",
+        },
+        {
+          stageName: "Dev",
+          status: "blocked",
+          ownership: "mine",
+          assignee: "Тимлид 1",
+        },
+        {
+          stageName: "Testing",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "Тимлид 1",
+        },
+      ],
+    });
+    // lowercase "dev" in stageIds — canonical alias of "Development" / "Dev"
+    const risk: RiskEntry = {
+      id: "r1",
+      productId: "crm",
+      productName: "CRM Platform",
+      stageIds: ["dev"],
+      severity: "blocked",
+      text: "API outage",
+      impact: "",
+      mitigation: "",
+    };
+
+    render(<Harness initialProducts={[product]} initialRisks={[risk]} />);
+
+    const devChip = screen.getByRole("button", { name: "Dev: blocked" });
+    await user.click(devChip);
+
+    const clearOption = await screen.findByRole("menuitem", { name: /Clear/i });
+    await user.click(clearOption);
+
+    // Confirmation dialog appears only when linkedRiskCount > 0.
+    // "1 linked risk" proves canonicalization: stageIds["dev"] → "Development" → matches "Dev".
+    expect(await screen.findByText(/1 linked risk/i)).toBeInTheDocument();
+  });
+
   it("Test 4: when readOnly=true, stage chips are disabled and risks render as preview cards without edit/add controls", () => {
     const product = buildProduct();
     const risk: RiskEntry = {
