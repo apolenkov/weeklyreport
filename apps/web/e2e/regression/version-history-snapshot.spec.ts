@@ -5,19 +5,21 @@ import { loginByCookie, seedAdvancedViaCli } from "./helpers/dev-auth";
  * LEAD-VHS-01..07: Version History Snapshot (F3)
  *
  * Covers:
- *   F3.1  — saveDraft debounce → createSnapshot fires ~5s after autosave
+ *   F3.1  — every successful autosave fires createSnapshot automatically (onSaveSuccess)
  *   F3.4  — VersionHistoryNav arrows switch snapshot mode / read-only banner
  *   F3.4  — Restore returns draft to snapshot state (items + priorityRank +
  *            severity + stageStatuses)
  *
  * Timing:
- *   autosave debounce = 3 s, snapshot delay after autosave = 5 s
- *   => total edit->createSnapshot ~8-10 s. waitForResponse uses 15 s timeout.
+ *   autosave debounce = 3 s, snapshot fires immediately on onSaveSuccess
+ *   => total edit->createSnapshot ~5-8 s. waitForResponse uses 15 s timeout.
  *
  * URL patterns (tRPC httpBatchLink, base path /trpc):
  *   saveDraft      => *\/trpc\/reports.saveDraft*
  *   createSnapshot => *\/trpc\/leadForm.createSnapshot*
  *   restoreVersion => *\/trpc\/leadForm.restoreVersion*
+ *
+ * Autosave badge format: "Version N · HH:MM" (changed from "✓ Saved at HH:MM")
  */
 
 const SCREENSHOT_DIR =
@@ -198,9 +200,9 @@ test.describe("LEAD-VHS-01..07: Version History Snapshot", () => {
       { timeout: 10000 },
     );
 
-    // Autosave label reads "Saved at HH:MM" or "Autosaved" after success
+    // Autosave label reads "Version N · HH:MM" or "Autosaved" after success
     const savedIndicator = page
-      .getByText(/Saved at \d{1,2}:\d{2}|Autosaved/i)
+      .getByText(/Version \d+ · \d{1,2}:\d{2}|Autosaved/i)
       .first();
     await expect(savedIndicator).toBeVisible({ timeout: 3000 });
 
