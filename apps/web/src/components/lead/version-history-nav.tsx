@@ -9,15 +9,6 @@ type VersionHistoryNavProps = {
   readonly versions: VersionSnapshot[];
   readonly onRestore?: (version: number) => void;
   /**
-   * When provided, renders a "Save Version" button next to the v# pill.
-   * Clicking creates an explicit checkpoint via leadForm.createSnapshot
-   * (parent-owned mutation, surfaced as a toast). Hidden in read-only /
-   * submitted contexts where snapshots are meaningless.
-   */
-  readonly onSaveVersion?: () => void;
-  /** Set false to gray out the Save Version button (e.g. mid-mutation). */
-  readonly canSaveVersion?: boolean;
-  /**
    * F3.4: Called when the user navigates to a historical version (version
    * number) or back to the latest (null). Used by lead-form.tsx to switch
    * into snapshot read-only view mode.
@@ -105,8 +96,6 @@ function formatDiff(delta: number, label: string): string | null {
 export function VersionHistoryNav({
   versions,
   onRestore,
-  onSaveVersion,
-  canSaveVersion = true,
   onViewVersion,
   viewedVersion,
 }: VersionHistoryNavProps) {
@@ -199,35 +188,6 @@ export function VersionHistoryNav({
           <ChevronRight />
         </button>
 
-        {/* Pin Version — marks the current snapshot as protected from
-            time-based rotation. Autosave already creates a version on every
-            successful save; this button only adds the ★ pinned flag so the
-            snapshot is never pruned by the retention policy. */}
-        {onSaveVersion && (
-          <button
-            type="button"
-            className="flex min-h-8 items-center gap-1.5 rounded-[var(--radius)] border border-[var(--color-primary)] bg-transparent px-3 py-1.5 text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
-            onClick={onSaveVersion}
-            disabled={!canSaveVersion || !isLatest}
-            title={
-              isLatest
-                ? "Pin version — protect this snapshot from automatic cleanup"
-                : "Return to the latest version before pinning"
-            }
-            aria-label="Pin version"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-            </svg>
-            <span className="text-xs font-medium">Pin</span>
-          </button>
-        )}
       </div>
 
       {/* Version History Modal */}
@@ -286,15 +246,6 @@ export function VersionHistoryNav({
                     <div className="flex-1">
                       <div className="text-sm font-semibold">
                         Version {v.version}
-                        {v.pinned && (
-                          <span
-                            className="ml-1.5 text-[11px]"
-                            title="Pinned — protected from automatic cleanup"
-                            aria-label="Pinned version"
-                          >
-                            ★
-                          </span>
-                        )}
                         {idx === 0 && (
                           <span className="ml-2 text-[10px] font-medium text-[var(--color-starbucks-accent)]">
                             Latest
