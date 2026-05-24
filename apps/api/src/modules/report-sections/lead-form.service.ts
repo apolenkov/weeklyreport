@@ -49,6 +49,8 @@ export interface LeadFormRepository {
   createVersionSnapshot(sectionId: string): Promise<number>;
   /** Returns the most recent snapshot for a section, or null if none exists. */
   getLatestSnapshot(sectionId: string): Promise<SnapshotLatestRow | null>;
+  /** Returns the snapshot projection for a section (same shape stored in VersionSnapshot.data). */
+  buildSnapshotProjection(sectionId: string): Promise<Record<string, unknown>>;
   createReopenRequest(
     sectionId: string,
     userId: string,
@@ -321,8 +323,10 @@ export class LeadFormService {
         return { version: latest.version, skipped: true, reason: "throttled" };
       }
 
-      // Content dedup: skip if data is byte-identical to the latest snapshot
-      if (stableStringify(latest.data) === stableStringify(section)) {
+      // Content dedup: skip if data is byte-identical to the latest snapshot.
+      // Compare two snapshot projections (same shape) — not section vs snapshot.
+      const currentProjection = await this.repository.buildSnapshotProjection(sectionId);
+      if (stableStringify(latest.data) === stableStringify(currentProjection)) {
         return { version: latest.version, skipped: true, reason: "no-change" };
       }
     }

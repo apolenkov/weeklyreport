@@ -4,7 +4,7 @@ import type {
   VersionSnapshot,
 } from "@customreport/shared";
 import { versionSnapshotSchema } from "@customreport/shared";
-import type { ItemType, ItemWorkflowStatus } from "@prisma/client";
+import type { ItemType, ItemWorkflowStatus, Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import {
@@ -378,25 +378,10 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     });
   }
 
-  async createVersionSnapshot(sectionId: string): Promise<number> {
-    const section = await this.prisma.reportSection.findUnique({
-      where: { id: sectionId },
-      include: reportSectionFullInclude,
-    });
-
-    if (!section) {
-      throw new Error(`Section ${sectionId} not found for snapshot.`);
-    }
-
-    const maxSnapshot = await this.prisma.versionSnapshot.findFirst({
-      where: { reportSectionId: sectionId },
-      orderBy: { version: "desc" },
-      select: { version: true },
-    });
-
-    const nextVersion = (maxSnapshot?.version ?? 0) + 1;
-
-    const data = {
+  private buildSnapshotData(
+    section: Prisma.ReportSectionGetPayload<{ include: typeof reportSectionFullInclude }>,
+  ): Record<string, unknown> {
+    return {
       items: section.items.map((i) => ({
         projectId: i.projectId,
         type: i.type,
@@ -433,6 +418,40 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         status: ss.status,
       })),
     };
+  }
+
+  async buildSnapshotProjection(sectionId: string): Promise<Record<string, unknown>> {
+    const section = await this.prisma.reportSection.findUnique({
+      where: { id: sectionId },
+      include: reportSectionFullInclude,
+    });
+
+    if (!section) {
+      throw new Error(`Section ${sectionId} not found for snapshot projection.`);
+    }
+
+    return this.buildSnapshotData(section);
+  }
+
+  async createVersionSnapshot(sectionId: string): Promise<number> {
+    const section = await this.prisma.reportSection.findUnique({
+      where: { id: sectionId },
+      include: reportSectionFullInclude,
+    });
+
+    if (!section) {
+      throw new Error(`Section ${sectionId} not found for snapshot.`);
+    }
+
+    const maxSnapshot = await this.prisma.versionSnapshot.findFirst({
+      where: { reportSectionId: sectionId },
+      orderBy: { version: "desc" },
+      select: { version: true },
+    });
+
+    const nextVersion = (maxSnapshot?.version ?? 0) + 1;
+
+    const data = this.buildSnapshotData(section);
 
     await this.prisma.versionSnapshot.create({
       data: {
