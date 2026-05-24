@@ -90,10 +90,10 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
   const hasNext = currentIndex > 0;
   const periodOptions = useMemo(
     () =>
-      periods.map((p) => {
-        const label = p.dateRange;
-        return { id: p.id, label };
-      }),
+      periods.map((p) => ({
+        id: p.id,
+        label: p.isCurrent ? `${p.dateRange} (Current)` : p.dateRange,
+      })),
     [periods],
   );
 
@@ -185,6 +185,12 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
           <ChevronRight />
         </span>
       </div>
+
+      {selectedPeriod?.isCurrent && (
+        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+          Current
+        </span>
+      )}
 
       <button
         type="button"
