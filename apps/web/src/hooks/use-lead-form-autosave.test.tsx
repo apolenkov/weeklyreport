@@ -312,4 +312,95 @@ describe("useLeadFormAutosave", () => {
     expect(result.current.state).toBe("saved");
     expect(result.current.dirty).toBe(false);
   });
+
+  it("forceSave() bypasses debounce and triggers immediate save", async () => {
+    const { wrapper, calls } = buildHarness();
+    const { result } = renderHook(
+      () =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload: makePayload("force-me"),
+          enabled: true,
+          debounceMs: 5000,
+        }),
+      { wrapper },
+    );
+
+    // Hook starts pending (debounce in flight), no mutation yet.
+    expect(result.current.state).toBe("pending");
+    expect(calls).toHaveLength(0);
+
+    // Call forceSave — should bypass the 5s debounce immediately.
+    await act(async () => {
+      void result.current.forceSave();
+      await flushAll();
+    });
+
+    // Mutation must have fired without advancing timers by 5000ms.
+    expect(calls.length).toBeGreaterThanOrEqual(1);
+    expect(["saving", "saved"]).toContain(result.current.state);
+  });
+
+  it("Save button isInFlight becomes true while save is in flight", async () => {
+    // Use a slow mutation to hold isPending=true for inspection.
+    let resolveMutation!: () => void;
+    const { wrapper } = buildHarness({
+      mutationFn: () =>
+        new Promise<unknown>((resolve) => {
+          resolveMutation = () => resolve({ ok: true });
+        }),
+    });
+
+    const { result } = renderHook(
+      () =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload: makePayload("in-flight"),
+          enabled: true,
+          debounceMs: 3000,
+        }),
+      { wrapper },
+    );
+
+    // Trigger via forceSave.
+    await act(async () => {
+      void result.current.forceSave();
+      await flushAll();
+    });
+
+    // While mutation is pending, isInFlight should be true.
+    expect(result.current.isInFlight).toBe(true);
+
+    // Resolve the mutation.
+    await act(async () => {
+      resolveMutation();
+      await flushAll();
+    });
+
+    expect(result.current.isInFlight).toBe(false);
+    expect(result.current.state).toBe("saved");
+  });
+
+  it("Save button shows ✓ Saved after success (state=saved transitions)", async () => {
+    const { wrapper } = buildHarness();
+    const { result } = renderHook(
+      () =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload: makePayload("check-saved"),
+          enabled: true,
+          debounceMs: 3000,
+        }),
+      { wrapper },
+    );
+
+    await act(async () => {
+      void result.current.forceSave();
+      await flushAll();
+    });
+
+    expect(result.current.state).toBe("saved");
+    expect(result.current.isInFlight).toBe(false);
+    expect(result.current.lastSavedAt).toBeInstanceOf(Date);
+  });
 });

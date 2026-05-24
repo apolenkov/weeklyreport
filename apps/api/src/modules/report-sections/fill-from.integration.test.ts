@@ -49,7 +49,7 @@ function createMockRepository(
   createVersionSnapshot: ReturnType<typeof vi.fn>;
 } {
   const fillFromFn = vi.fn(async (_target: string, _source: string) => 5);
-  const createSnapshotFn = vi.fn(async () => {});
+  const createSnapshotFn = vi.fn(async () => 1);
 
   return {
     async getSectionById(id: string) {
@@ -70,6 +70,9 @@ function createMockRepository(
       return 1;
     },
     createVersionSnapshot: createSnapshotFn,
+    async getLatestSnapshot() {
+      return null;
+    },
     async createReopenRequest() {},
     async hasSharedProduct() {
       return false;

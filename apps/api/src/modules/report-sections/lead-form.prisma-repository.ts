@@ -378,7 +378,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     });
   }
 
-  async createVersionSnapshot(sectionId: string): Promise<void> {
+  async createVersionSnapshot(sectionId: string): Promise<number> {
     const section = await this.prisma.reportSection.findUnique({
       where: { id: sectionId },
       include: reportSectionFullInclude,
@@ -484,6 +484,26 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
           ) daily WHERE rn = 1
         )
     `;
+
+    return nextVersion;
+  }
+
+  async getLatestSnapshot(
+    sectionId: string,
+  ): Promise<import("./lead-form.service.js").SnapshotLatestRow | null> {
+    const row = await this.prisma.versionSnapshot.findFirst({
+      where: { reportSectionId: sectionId },
+      orderBy: { version: "desc" },
+      select: { data: true, createdAt: true, version: true },
+    });
+
+    if (!row) return null;
+
+    return {
+      data: row.data as Record<string, unknown>,
+      createdAt: row.createdAt,
+      version: row.version,
+    };
   }
 
   async hasSharedProduct(userId1: string, userId2: string): Promise<boolean> {

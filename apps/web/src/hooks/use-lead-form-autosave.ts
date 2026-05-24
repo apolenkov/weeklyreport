@@ -14,6 +14,9 @@ export type AutosaveSnapshot = {
   readonly state: AutosaveState;
   readonly lastSavedAt: Date | null;
   readonly dirty: boolean;
+  readonly isInFlight: boolean;
+  /** Cancels the debounce timer and triggers an immediate save. */
+  readonly forceSave: () => Promise<void>;
 };
 
 export type UseLeadFormAutosaveArgs = {
@@ -35,8 +38,11 @@ export type UseLeadFormAutosaveArgs = {
    * in lead-form.tsx to checkpoint a version every Nth save without
    * spawning yet another effect chain. The hook is otherwise unaware of
    * snapshots — it just emits the signal.
+   *
+   * Named with the "Action" suffix to satisfy Next.js 16 RSC prop
+   * serialization rules for "use client" entry files (TS71007).
    */
-  readonly onSaveSuccess?: () => void;
+  readonly onSaveSuccessAction?: () => void;
 };
 
 const DEFAULT_DEBOUNCE_MS = 5000;
@@ -85,11 +91,17 @@ export function useLeadFormAutosave(
 
   const lastSavedRef = useRef<string>("");
   const inFlightRef = useRef<string>("");
+  // Queued payload key: when forceSave is called while a mutation is in
+  // flight, we stash the current key here and fire again after success.
+  const queuedKeyRef = useRef<string | null>(null);
   // Hold the latest onSaveSuccess in a ref so changing the callback identity
   // never re-runs the debounce effect. The mutation closure reads through
   // the ref at fire time.
-  const onSaveSuccessRef = useRef<(() => void) | undefined>(args.onSaveSuccess);
-  onSaveSuccessRef.current = args.onSaveSuccess;
+  const onSaveSuccessRef = useRef<(() => void) | undefined>(args.onSaveSuccessAction);
+  onSaveSuccessRef.current = args.onSaveSuccessAction;
+
+  // Mutable ref holding the active debounce timer id so forceSave can cancel it.
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Prime lastSavedRef from caller-supplied baseline whenever it changes.
   // Lets the LeadForm tell us "this freshly-loaded server payload is already
@@ -108,8 +120,22 @@ export function useLeadFormAutosave(
         setState("saved");
         setLastSavedAt(new Date());
         onSaveSuccessRef.current?.();
+
+        // Fire queued save if one was requested during in-flight.
+        if (queuedKeyRef.current !== null) {
+          const queued = payloadRef.current;
+          const queuedKey = queuedKeyRef.current;
+          queuedKeyRef.current = null;
+          const queuedSectionId = reportSectionIdRef.current;
+          if (queued !== null && queuedKey !== lastSavedRef.current && queuedSectionId !== null) {
+            setState("saving");
+            inFlightRef.current = queuedKey;
+            void mutateAsyncRef.current({ ...queued, reportSectionId: queuedSectionId });
+          }
+        }
       },
       onError: (err: unknown) => {
+        queuedKeyRef.current = null;
         setState("error");
         const msg =
           err instanceof Error && err.message ? err.message : "Autosave failed";
@@ -130,9 +156,13 @@ export function useLeadFormAutosave(
   // unrelated re-renders (which would reset the debounce timer).
   const payloadRef = useRef(payload);
   const mutateRef = useRef(saveDraftMut.mutate);
+  const mutateAsyncRef = useRef(saveDraftMut.mutateAsync);
+  const reportSectionIdRef = useRef(reportSectionId);
   useEffect(() => {
     payloadRef.current = payload;
     mutateRef.current = saveDraftMut.mutate;
+    mutateAsyncRef.current = saveDraftMut.mutateAsync;
+    reportSectionIdRef.current = reportSectionId;
   });
 
   // Debounced save trigger.
@@ -150,7 +180,13 @@ export function useLeadFormAutosave(
       mutateRef.current({ ...current, reportSectionId });
     }, debounceMs);
 
-    return () => clearTimeout(timer);
+    debounceTimerRef.current = timer;
+    return () => {
+      clearTimeout(timer);
+      if (debounceTimerRef.current === timer) {
+        debounceTimerRef.current = null;
+      }
+    };
   }, [payloadKey, enabled, dirty, reportSectionId, debounceMs]);
 
   // beforeunload guard while dirty (INT-07).
@@ -158,12 +194,59 @@ export function useLeadFormAutosave(
     if (!dirty) return;
     function handler(e: BeforeUnloadEvent) {
       e.preventDefault();
-      // Setting returnValue is required for legacy browsers.
+      // Legacy browsers (Chrome <119, Firefox <109) require returnValue to be
+      // set. Modern browsers honour preventDefault() alone. Keep both to
+      // satisfy the browser matrix; the TS6385 deprecation is a compiler
+      // diagnostic only and does not trigger the ESLint rule.
       e.returnValue = "";
     }
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
 
-  return { state, lastSavedAt, dirty };
+  /**
+   * Cancels the pending debounce timer and triggers an immediate save.
+   * If a mutation is already in flight the current payload is queued and
+   * fired automatically on success.
+   */
+  const forceSave = useRef<() => Promise<void>>(() => Promise.resolve());
+  forceSave.current = async () => {
+    const current = payloadRef.current;
+    const currentKey = current === null ? "" : stableStringify(current);
+    const sectionId = reportSectionIdRef.current;
+
+    if (!enabled || current === null || currentKey === "" || !sectionId) {
+      return;
+    }
+    if (currentKey === lastSavedRef.current) {
+      // Already up-to-date — nothing to save.
+      return;
+    }
+
+    // Cancel outstanding debounce timer.
+    if (debounceTimerRef.current !== null) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+
+    if (saveDraftMut.isPending) {
+      // A mutation is already in flight. Queue for after success.
+      queuedKeyRef.current = currentKey;
+      return;
+    }
+
+    setState("saving");
+    inFlightRef.current = currentKey;
+    await mutateAsyncRef.current({ ...current, reportSectionId: sectionId });
+  };
+
+  const isInFlight = saveDraftMut.isPending;
+
+  return {
+    state,
+    lastSavedAt,
+    dirty,
+    isInFlight,
+    forceSave: forceSave.current,
+  };
 }
