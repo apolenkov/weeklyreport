@@ -2,6 +2,16 @@
 
 const STAGE_SPLIT_RE = /[,;]+/;
 
+/** UI chip label → DB canonical stage name. "Dev" is the chip; "Development" is stored in stageIds. */
+const STAGE_ALIAS: Record<string, string> = {
+  dev: "Development",
+};
+
+/** Normalize a stage name to its canonical DB form (resolves UI chip aliases). */
+export function canonicalStageName(name: string): string {
+  return STAGE_ALIAS[name.toLowerCase()] ?? name;
+}
+
 export function splitStageNames(
   stageName: string | null | undefined,
 ): string[] {
@@ -56,7 +66,9 @@ export function riskCoversStage(
   stageName: string,
 ): boolean {
   if (risk.stageIds !== undefined) {
-    return risk.stageIds.length === 0 || risk.stageIds.includes(stageName);
+    if (risk.stageIds.length === 0) return true;
+    const canonical = canonicalStageName(stageName);
+    return risk.stageIds.some((id) => canonicalStageName(id) === canonical);
   }
   return stageNameMatches(risk.stageName, stageName);
 }
