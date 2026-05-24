@@ -3,7 +3,7 @@ import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { LeadFormSyncBridge } from "./lead-form-sync-bridge";
+import { LeadFormSyncBridge, promoteStageStatus } from "./lead-form-sync-bridge";
 import type { Product, RiskEntry } from "./mock-data";
 import { expectDefined } from "../../test/expect-defined.js";
 
@@ -53,12 +53,24 @@ function Harness({
 }: HarnessProps) {
   const [products, setProducts] = useState(initialProducts);
   const [risks, setRisks] = useState(initialRisks);
+  const [risksAddSignal, setRisksAddSignal] = useState(0);
+
+  // Mirror what lead-form.tsx does: derive owned stages per product so the
+  // RiskEditDialog stage selector is populated in integration tests.
+  function stagesForProduct(productId: string): readonly string[] {
+    const product = products.find((p) => p.id === productId);
+    return (product?.stages ?? [])
+      .filter((s) => s.ownership === "mine")
+      .map((s) => s.stageName);
+  }
 
   return (
     <LeadFormSyncBridge.Provider
       products={products}
       risks={risks}
       readOnly={readOnly}
+      risksAddSignal={risksAddSignal}
+      stagesForProduct={stagesForProduct}
       onProductsChange={(next) => {
         setProducts(next);
         onProductsChangeSpy?.(next);
@@ -74,6 +86,14 @@ function Harness({
       </section>
       <section>
         <h2>Risks</h2>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={() => setRisksAddSignal((v) => v + 1)}
+          >
+            + Add Risk
+          </button>
+        )}
         <LeadFormSyncBridge.Risks />
       </section>
     </LeadFormSyncBridge.Provider>
@@ -251,5 +271,140 @@ describe("LeadFormSyncBridge", () => {
     expect(
       screen.queryByRole("button", { name: /\+ Add Risk/i }),
     ).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 3.5: promoteStageStatus pure function + up-flow integration
+// ---------------------------------------------------------------------------
+
+describe("promoteStageStatus pure function", () => {
+  it.each([
+    ["on-track", "blocked", "blocked"],
+    ["on-track", "at-risk", "at-risk"],
+    ["at-risk", "blocked", "blocked"],
+    ["at-risk", "at-risk", "at-risk"],
+    ["blocked", "at-risk", "blocked"],
+    ["blocked", "blocked", "blocked"],
+  ] as const)(
+    "current=%s + riskSeverity=%s → %s",
+    (current, riskSeverity, expected) => {
+      expect(promoteStageStatus(current, riskSeverity)).toBe(expected);
+    },
+  );
+});
+
+describe("LeadFormSyncBridge — up-flow stage promotion", () => {
+  it("saving a risk with severity=Blocked promotes the pipeline stage from on-track to Blocked", async () => {
+    const user = userEvent.setup();
+    const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
+    const product = buildProduct({
+      stages: [
+        {
+          stageName: "Planning",
+          status: "on-track",
+          ownership: "locked",
+          assignee: "PM",
+        },
+        {
+          stageName: "Dev",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "Lead",
+        },
+        {
+          stageName: "Testing",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "Lead",
+        },
+      ],
+    });
+
+    render(
+      <Harness
+        initialProducts={[product]}
+        initialRisks={[]}
+        onProductsChangeSpy={onProductsChangeSpy}
+      />,
+    );
+
+    // Open the Add Risk dialog.
+    const addBtn = screen.getByRole("button", { name: /\+ Add Risk/i });
+    await user.click(addBtn);
+
+    // Select Blocked severity, fill required fields, select Dev stage.
+    const blockedBtn = await screen.findByRole("button", { name: /Blocked/i });
+    await user.click(blockedBtn);
+
+    await user.type(screen.getByLabelText(/^Risk \*/i), "Infra outage");
+    await user.type(screen.getByLabelText(/^Impact \*/i), "Work stopped");
+    await user.type(screen.getByLabelText(/^Mitigation \*/i), "Escalate");
+
+    // Dev is not pre-selected (no pipeline flags). Click it.
+    const devCheckbox = screen.getByRole("checkbox", { name: "Dev" });
+    await user.click(devCheckbox);
+
+    await user.click(screen.getByRole("button", { name: /Save Risk/i }));
+
+    // Dev stage should be promoted to blocked; Planning (locked) unchanged.
+    expect(onProductsChangeSpy).toHaveBeenCalled();
+    const lastCall = onProductsChangeSpy.mock.calls.at(-1)?.[0];
+    const dev = lastCall?.[0]?.stages.find((s) => s.stageName === "Dev");
+    const planning = lastCall?.[0]?.stages.find(
+      (s) => s.stageName === "Planning",
+    );
+    expect(dev?.status).toBe("blocked");
+    expect(planning?.status).toBe("on-track"); // locked → never promoted
+  });
+
+  it("locked-ownership stages are NOT promoted when a risk is saved", async () => {
+    const user = userEvent.setup();
+    const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
+    const product = buildProduct({
+      stages: [
+        {
+          stageName: "Planning",
+          status: "on-track",
+          ownership: "locked",
+          assignee: "PM",
+        },
+        {
+          stageName: "Dev",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "Lead",
+        },
+      ],
+    });
+
+    render(
+      <Harness
+        initialProducts={[product]}
+        initialRisks={[]}
+        onProductsChangeSpy={onProductsChangeSpy}
+      />,
+    );
+
+    const addBtn = screen.getByRole("button", { name: /\+ Add Risk/i });
+    await user.click(addBtn);
+
+    await user.type(screen.getByLabelText(/^Risk \*/i), "Risk");
+    await user.type(screen.getByLabelText(/^Impact \*/i), "Impact");
+    await user.type(screen.getByLabelText(/^Mitigation \*/i), "Mitigation");
+
+    // Dev is the only mine-owned stage — computeInitialStageIds auto-selects it.
+    // StageMultiSelect renders "Applied automatically" (non-interactive) for
+    // a single stage, so there is no checkbox to click.
+
+    await user.click(screen.getByRole("button", { name: /Save Risk/i }));
+
+    // Find the most recent products update.
+    const lastCall = onProductsChangeSpy.mock.calls.at(-1)?.[0];
+    const planning = lastCall?.[0]?.stages.find(
+      (s) => s.stageName === "Planning",
+    );
+    // Planning is locked-ownership — must remain on-track regardless.
+    expect(planning?.status).toBe("on-track");
   });
 });
