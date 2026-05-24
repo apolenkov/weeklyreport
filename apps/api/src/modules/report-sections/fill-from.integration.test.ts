@@ -73,6 +73,9 @@ function createMockRepository(
     async getLatestSnapshot() {
       return null;
     },
+    async buildSnapshotProjection() {
+      return {};
+    },
     async createReopenRequest() {},
     async hasSharedProduct() {
       return false;

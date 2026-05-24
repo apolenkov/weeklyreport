@@ -457,7 +457,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       data: {
         reportSectionId: sectionId,
         version: nextVersion,
-        data,
+        data: data as Prisma.InputJsonValue,
       },
     });
 
