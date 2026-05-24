@@ -1428,6 +1428,7 @@ export function LeadForm({
               ))}
           </div>
           <div className="flex items-center gap-3">
+            {!isSlidesMode && <AgentReviewComingSoon />}
             {!isSlidesMode &&
               (currentWeekItems.length > 0 ||
                 nextWeekItems.length > 0 ||
@@ -1444,7 +1445,6 @@ export function LeadForm({
                 </button>
               )}
             {isSlidesMode && <SlideFullscreenButton targetRef={deckRef} />}
-            {!isSlidesMode && <AgentReviewComingSoon />}
             <ViewModeToggle
               mode={isSlidesMode ? "slides" : "edit"}
               editHref={

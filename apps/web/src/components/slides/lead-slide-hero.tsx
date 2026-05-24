@@ -112,7 +112,7 @@ export function LeadSlideHero({ slide, authorName, periodLabel, heroControls }: 
         <div className="flex flex-wrap items-center gap-2">
           <span
             className={[
-              "inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border px-2.5 py-1 text-xs font-semibold",
+              "inline-flex h-7 items-center gap-1.5 rounded-[var(--radius-pill)] border px-2.5 py-1 text-xs font-semibold",
               toneClassName,
             ].join(" ")}
           >

@@ -29,7 +29,7 @@ export function ScopeToggle({
     <div
       role="radiogroup"
       aria-label="Slide scope"
-      className="inline-flex rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.15)] bg-[var(--color-surface)] p-0.5"
+      className="inline-flex h-7 items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.15)] bg-[var(--color-surface)] p-0.5"
     >
       {allowedScopes.map((s) => (
         <button

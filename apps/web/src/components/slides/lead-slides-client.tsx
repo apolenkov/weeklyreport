@@ -162,7 +162,7 @@ export function LeadSlidesClient({
         }}
         allowedScopes={["own", "product"]}
       />
-      <AgentReviewComingSoon />
+      <AgentReviewComingSoon compact />
     </>
   );
 
