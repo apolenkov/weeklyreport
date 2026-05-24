@@ -186,12 +186,6 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
         </span>
       </div>
 
-      {selectedPeriod?.isCurrent && (
-        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-          Current
-        </span>
-      )}
-
       <button
         type="button"
         className={PERIOD_NAV_ARROW_BUTTON_CLASS}

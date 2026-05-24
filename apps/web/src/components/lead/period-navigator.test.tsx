@@ -123,13 +123,8 @@ describe("PeriodNavigator (lead)", () => {
     expect(select.selectedOptions[0]?.textContent).toBe("Apr 7–13, 2026");
   });
 
-  it("shows green Current badge when the selected period is current", () => {
-    render(<PeriodNavigator periods={PERIODS} />);
-    expect(screen.getByText("Current")).toBeInTheDocument();
-  });
-
-  it("hides Current badge when a past period is selected", () => {
-    mockPathname = "/lead/report/2026-W16";
+  it("does not render a standalone Current badge element", () => {
+    // The (Current) suffix lives in the option text only; no inline badge.
     render(<PeriodNavigator periods={PERIODS} />);
     expect(screen.queryByText("Current")).not.toBeInTheDocument();
   });
