@@ -105,6 +105,7 @@ function createMockRepository(
     restoreVersion: vi.fn().mockResolvedValue(1),
     createVersionSnapshot: vi.fn().mockResolvedValue(1),
     getLatestSnapshot: vi.fn().mockResolvedValue(null),
+    buildSnapshotProjection: vi.fn().mockResolvedValue({}),
     createReopenRequest: vi.fn().mockResolvedValue(undefined),
     hasSharedProduct: vi.fn().mockResolvedValue(false),
     getCrossAuthors: vi.fn().mockResolvedValue([]),
@@ -695,17 +696,24 @@ describe("LeadFormService — createSnapshot", () => {
 
   it("skips when data is byte-identical to the latest snapshot (no-change)", async () => {
     // A snapshot from 2 minutes ago (outside the throttle window),
-    // but whose data matches the current section content exactly.
-    // We pass a serialisable replica of draftSection as the stored snapshot
-    // data so stableStringify produces the same output.
+    // but whose data matches the current snapshot projection exactly.
+    // buildSnapshotProjection returns the same projection shape that is stored
+    // in VersionSnapshot.data — both sides of the comparison are now the same shape.
+    const snapshotProjection: Record<string, unknown> = {
+      items: [{ projectId: "p1", type: "current", text: "Deliver feature X", tag: "feature", workflowStatus: "in_progress", carriedOver: false, completed: null, priorityRank: null, stageName: null }],
+      risks: [],
+      decisions: [],
+      stageStatuses: [],
+    };
     const oldSnapshot: SnapshotLatestRow = {
-      data: JSON.parse(JSON.stringify(draftSection)) as Record<string, unknown>,
+      data: structuredClone(snapshotProjection),
       createdAt: new Date(Date.now() - 120_000),
       version: 7,
     };
     const repo = createMockRepository({
       getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
       getLatestSnapshot: vi.fn().mockResolvedValue(oldSnapshot),
+      buildSnapshotProjection: vi.fn().mockResolvedValue(structuredClone(snapshotProjection)),
     });
     const service = new LeadFormService(repo);
 

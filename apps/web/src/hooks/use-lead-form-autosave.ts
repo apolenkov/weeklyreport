@@ -94,6 +94,9 @@ export function useLeadFormAutosave(
   // Queued payload key: when forceSave is called while a mutation is in
   // flight, we stash the current key here and fire again after success.
   const queuedKeyRef = useRef<string | null>(null);
+  // Queued payload snapshot: stashed at queue time so onSuccess fires the
+  // original queued payload, not a potentially-updated payloadRef.current.
+  const queuedPayloadRef = useRef<typeof payload>(null);
   // Hold the latest onSaveSuccess in a ref so changing the callback identity
   // never re-runs the debounce effect. The mutation closure reads through
   // the ref at fire time.
@@ -123,9 +126,10 @@ export function useLeadFormAutosave(
 
         // Fire queued save if one was requested during in-flight.
         if (queuedKeyRef.current !== null) {
-          const queued = payloadRef.current;
+          const queued = queuedPayloadRef.current;
           const queuedKey = queuedKeyRef.current;
           queuedKeyRef.current = null;
+          queuedPayloadRef.current = null;
           const queuedSectionId = reportSectionIdRef.current;
           if (queued !== null && queuedKey !== lastSavedRef.current && queuedSectionId !== null) {
             setState("saving");
@@ -232,6 +236,7 @@ export function useLeadFormAutosave(
     if (saveDraftMut.isPending) {
       // A mutation is already in flight. Queue for after success.
       queuedKeyRef.current = currentKey;
+      queuedPayloadRef.current = current;
       return;
     }
 

@@ -403,4 +403,68 @@ describe("useLeadFormAutosave", () => {
     expect(result.current.isInFlight).toBe(false);
     expect(result.current.lastSavedAt).toBeInstanceOf(Date);
   });
+
+  it("queued forceSave fires with the stashed payload (not a later payloadRef update)", async () => {
+    // Arrange: first mutation is slow; subsequent ones resolve immediately.
+    let resolveMutation!: () => void;
+    let callCount = 0;
+    const { wrapper, calls } = buildHarness({
+      mutationFn: () => {
+        callCount++;
+        if (callCount === 1) {
+          // First call: slow — held until we call resolveMutation().
+          return new Promise<unknown>((resolve) => {
+            resolveMutation = () => resolve({ ok: true });
+          });
+        }
+        // Subsequent calls (queued save): resolve immediately.
+        return Promise.resolve({ ok: true });
+      },
+    });
+
+    const payloadP1 = makePayload("payload-p1");
+    const payloadP2 = makePayload("payload-p2");
+
+    const { result, rerender } = renderHook(
+      ({ payload }: { payload: DraftSavePayload }) =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload,
+          enabled: true,
+          debounceMs: 5000,
+        }),
+      { wrapper, initialProps: { payload: payloadP1 } },
+    );
+
+    // Trigger the first save (P1 in flight).
+    await act(async () => {
+      void result.current.forceSave();
+      await flushAll();
+    });
+    expect(result.current.isInFlight).toBe(true);
+    expect(calls).toHaveLength(1);
+
+    // Payload changes to P2 while P1 is still in flight.
+    rerender({ payload: payloadP2 });
+
+    // Queue a second forceSave while in flight — should stash P2 key+payload.
+    await act(async () => {
+      void result.current.forceSave();
+      await flushAll();
+    });
+    // Still in flight (mutation not resolved yet), no second mutation fired.
+    expect(calls).toHaveLength(1);
+
+    // Resolve P1 — the queued save (P2) should fire automatically and complete.
+    await act(async () => {
+      resolveMutation();
+      await flushAll();
+    });
+
+    // Second mutation must have fired with the P2 payload.
+    expect(calls).toHaveLength(2);
+    // After both saves complete the hook should not be dirty.
+    // (dirty = payloadKey !== lastSavedRef; lastSavedRef is set to P2's key)
+    expect(result.current.dirty).toBe(false);
+  });
 });
