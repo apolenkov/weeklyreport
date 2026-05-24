@@ -496,6 +496,7 @@ describe("mapLeadVersions", () => {
         itemCount: 4,
         riskCount: 2,
         decisionCount: 1,
+        pinned: false,
       },
     ];
     const mapped = mapLeadVersions(versions, now);

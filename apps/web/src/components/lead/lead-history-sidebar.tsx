@@ -1,7 +1,5 @@
 "use client";
 
-import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
-
 import type { HistoryEntry } from "../../lib/mappers";
 
 type LeadHistorySidebarProps = {
@@ -125,13 +123,6 @@ export function LeadHistorySidebar({
                 </p>
               )}
             </SidebarCard>
-            <SidebarCard title="Draft History" comingSoon>
-              <p className="text-[13px] text-[var(--color-muted-foreground)]">
-                Draft version history — coming soon. Each save will create a
-                timestamped snapshot so you can review and restore earlier
-                drafts.
-              </p>
-            </SidebarCard>
           </>
         )}
       </div>
@@ -141,11 +132,9 @@ export function LeadHistorySidebar({
 
 function SidebarCard({
   title,
-  comingSoon,
   children,
 }: {
   readonly title: string;
-  readonly comingSoon?: boolean;
   readonly children: React.ReactNode;
 }) {
   return (
@@ -154,7 +143,6 @@ function SidebarCard({
         <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
           {title}
         </span>
-        {comingSoon && <ComingSoonBadge />}
       </div>
       {children}
     </div>
