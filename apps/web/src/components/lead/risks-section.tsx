@@ -6,7 +6,7 @@ import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { RiskEditDialog } from "./risk-edit-dialog";
 import type { Product, RiskEntry } from "./mock-data";
-import { splitStageNames } from "./stage-tags";
+import { canonicalStageName, splitStageNames } from "./stage-tags";
 
 type RisksSectionProps = {
   readonly risks: RiskEntry[];
@@ -159,7 +159,7 @@ export function RisksSection({
           const isBlocked = risk.severity === "blocked";
           const stageTags =
             risk.stageIds && risk.stageIds.length > 0
-              ? risk.stageIds
+              ? risk.stageIds.map(canonicalStageName)
               : splitStageNames(risk.stageName);
           // Empty means implicit all assigned stages. A non-empty stageIds
           // array is explicit user scope, even when it contains every stage.

@@ -28,7 +28,8 @@ describe("RisksSection stage scope", () => {
     );
 
     expect(screen.queryByText("All stages")).not.toBeInTheDocument();
-    expect(screen.getByText("Dev")).toBeInTheDocument();
+    // "Dev" is canonicalized to "Development" before rendering (L4 fix).
+    expect(screen.getByText("Development")).toBeInTheDocument();
     expect(screen.getByText("Testing")).toBeInTheDocument();
   });
 
@@ -53,7 +54,8 @@ describe("RisksSection stage scope", () => {
     expect(screen.getByText("Planning")).toBeInTheDocument();
     expect(screen.getByText("Analysis")).toBeInTheDocument();
     expect(screen.getByText("Design")).toBeInTheDocument();
-    expect(screen.getByText("Dev")).toBeInTheDocument();
+    // "Dev" is canonicalized to "Development" before rendering (L4 fix).
+    expect(screen.getByText("Development")).toBeInTheDocument();
     expect(screen.queryByText("+1")).not.toBeInTheDocument();
   });
 });

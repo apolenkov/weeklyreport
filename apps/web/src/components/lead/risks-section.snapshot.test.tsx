@@ -45,7 +45,8 @@ describe("RisksSection meta-row — pre-extract snapshot", () => {
       />,
     );
     expect(screen.getByText("Vasily Lead")).toBeInTheDocument();
-    expect(screen.getByText("Dev")).toBeInTheDocument();
+    // "Dev" is canonicalized to "Development" before rendering (L4 fix).
+    expect(screen.getByText("Development")).toBeInTheDocument();
     expect(screen.getByText("Testing")).toBeInTheDocument();
     const stageDiv = container.querySelector('[aria-label^="Risk stages:"]');
     expect(stageDiv).toMatchSnapshot();

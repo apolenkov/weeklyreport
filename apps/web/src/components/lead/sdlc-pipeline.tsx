@@ -3,7 +3,7 @@
 import { OnTrackIcon } from "../ai/on-track-icon";
 import { StageChip } from "./stage-chip";
 import type { Product, RiskEntry, StageStatus } from "./mock-data";
-import { splitStageNames } from "./stage-tags";
+import { canonicalStageName, splitStageNames } from "./stage-tags";
 
 export type CrossAuthorEntry = {
   projectId: string;
@@ -105,9 +105,9 @@ export function SdlcPipeline({
         : splitStageNames(r.stageName);
     const keys =
       stageTags.length > 0
-        ? stageTags.map((stageName) => `${r.productId}::${stageName}`)
+        ? stageTags.map((stageName) => `${r.productId}::${canonicalStageName(stageName)}`)
         : (product?.stages ?? []).map(
-            (stage) => `${r.productId}::${stage.stageName}`,
+            (stage) => `${r.productId}::${canonicalStageName(stage.stageName)}`,
           );
     for (const key of keys) {
       riskCountByKey.set(key, (riskCountByKey.get(key) ?? 0) + 1);
@@ -255,7 +255,7 @@ export function SdlcPipeline({
                       readOnly={readOnly}
                       linkedRiskCount={
                         riskCountByKey.get(
-                          `${product.id}::${stage.stageName}`,
+                          `${product.id}::${canonicalStageName(stage.stageName)}`,
                         ) ?? 0
                       }
                       onStatusChange={(name, status) =>
