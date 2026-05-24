@@ -374,17 +374,45 @@ updated: 2026-05-24T19:48:00Z source: peo-retro v8.4.2-uat-sweep
 
 ### New pending — carry forward
 
-1. [ ] Phase 4a: slide density audit (Playwright, 9 комбинаций density×viewport)
-2. [ ] Ручной UAT v8.4.2 — 6 сценариев (plan §5):
-   - Сц.1: RiskEditDialog с blocked stage → stage pre-checked, hint виден
-   - Сц.2: Period select → текстовый «(Current)», нет зелёной точки
-   - Сц.3: Slides → AgentReview справа от Fullscreen в toolbar, НЕ в hero
-   - Сц.4: Открыть report с v4 → badge показывает «Version 4», не «Version 1»
-   - Сц.5: 3 density × 3 viewport (после 4a, если ship 4b)
-   - Сц.6: Risk с `stageIds: ["dev"]` + Item с `stageStatuses.Development: "blocked"` → ОДИН blocked chip
-3. [x] git push origin fix/PRJ-2/shiny-eagle <!-- done: 84a3fabe+62c7ffb6+f42990c2 pushed; 35764573 Phase 4a pushed below -->
-4. [ ] approve PR #7 в GitHub Enterprise UI <!-- unchanged from prev retro -->
-5. [ ] merge PR #7 → main (после approve) <!-- unchanged from prev retro -->
-6. [ ] tag v8.4.2 после merge
-7. [ ] /peo-jira transition PRJ-2 после merge <!-- unchanged from prev retro -->
-8. [x] Создать `.planning/todos/pending/2026-05-25-slide-redesign-v8.4.3.md` (4b DEFERRED) <!-- done: 35764573 -->
+1. [x] Phase 4a: slide density audit (Playwright, medium density 3×viewport) <!-- done: 35764573 — sparse/heavy/fullscreen deferred to v8.4.3 per todo -->
+2. [x] Ручной UAT v8.4.2 — 6 сценариев:
+   - [x] Сц.1: RiskEditDialog с blocked stage → "DevOps" checked, hint "These stages will show as At Risk: DevOps" виден <!-- done: live Playwright MCP 2026-05-24 -->
+   - [x] Сц.2: Period select → "May 18–24, 2026 (Current)" в label, нет standalone зелёного badge <!-- done: live Playwright MCP 2026-05-24 -->
+   - [x] Сц.3: Slides → AgentReview `button "Agent review is coming soon"` рядом с Fullscreen в page header <!-- done: 9aafb56a -->
+   - [x] Сц.4: Report с v4 → badge `"Version 4 — open history"` показывает v4, не v1 <!-- done: live Playwright MCP 2026-05-24 -->
+   - [x] Сц.5: DEFERRED to v8.4.3 (density audit только medium) <!-- done: 35764573 todo -->
+   - [x] Сц.6: Risk с `stageIds: ["dev"]` → canonicalization тест (Test 5) green, 1 linked risk count корректен <!-- done: bbb076fe -->
+3. [x] git push origin fix/PRJ-2/shiny-eagle <!-- done: 9aafb56a+bbb076fe pushed 2026-05-24 -->
+4. [x] Создать `.planning/todos/pending/2026-05-25-slide-redesign-v8.4.3.md` (4b DEFERRED) <!-- done: 35764573 -->
+5. [ ] approve PR #7 в GitHub Enterprise UI <!-- unchanged from prev retro -->
+6. [ ] merge PR #7 → main (после approve) <!-- unchanged from prev retro -->
+7. [ ] tag v8.4.2 после merge <!-- unchanged from prev retro -->
+8. [ ] /peo-jira transition PRJ-2 после merge <!-- unchanged from prev retro -->
+
+## Session 2026-05-24 (v8.4.2 final UAT — fix Сц.3 + Сц.6 test)
+
+updated: 2026-05-24T20:45:00Z source: peo-retro v8.4.2-final-uat
+
+### Shipped
+
+1. [x] fix(slides): AgentReview кнопка добавлена в slides-mode page header рядом с Fullscreen <!-- done: 9aafb56a -->
+2. [x] test(stage-sync): тест Test 5 закрепляет Dev/Development alias через linked-risk confirmation dialog <!-- done: bbb076fe -->
+3. [x] git push origin fix/PRJ-2/shiny-eagle <!-- done: bbb076fe pushed -->
+
+### UAT results — все 6 сценариев v8.4.2
+
+| Сц. | Описание                                         | Результат                                                          |
+| --- | ------------------------------------------------ | ------------------------------------------------------------------ |
+| 1   | RiskEditDialog: blocked stage pre-checked + hint | ✅ DevOps checked, "These stages will show as At Risk: DevOps"     |
+| 2   | Period "(Current)" suffix, нет badge             | ✅ label содержит "(Current)", badge отсутствует                   |
+| 3   | Slides: AgentReview в toolbar рядом с Fullscreen | ✅ button "Agent review is coming soon" рядом с "Enter fullscreen" |
+| 4   | Report с v4: badge "Version 4"                   | ✅ `generic "v4"` внутри version badge                             |
+| 5   | 3 density × 3 viewport                           | DEFERRED → v8.4.3                                                  |
+| 6   | stageIds["dev"] → 1 linked risk chip             | ✅ Test 5 green: confirmation dialog shows "1 linked risk"         |
+
+### New pending — carry forward
+
+1. [ ] approve PR #7 в GitHub Enterprise UI <!-- unchanged from prev retro -->
+2. [ ] merge PR #7 → main (после approve) <!-- unchanged from prev retro -->
+3. [ ] tag v8.4.2 после merge <!-- unchanged from prev retro -->
+4. [ ] /peo-jira transition PRJ-2 после merge <!-- unchanged from prev retro -->
