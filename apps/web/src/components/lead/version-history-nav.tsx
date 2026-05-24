@@ -69,27 +69,6 @@ function ChevronRight() {
   );
 }
 
-function SaveIcon() {
-  // Floppy-disk save icon — leans into the "checkpoint" mental model that
-  // sits well next to the v# pill. Same stroke-width as the rest of the
-  // toolbar icons so the row feels uniform.
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3.5 w-3.5"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
-      <polyline points="17 21 17 13 7 13 7 21" />
-      <polyline points="7 3 7 8 15 8" />
-    </svg>
-  );
-}
-
 // Default number of versions to show inside the history modal before revealing
 // the rest via a "Show all" button. v5.0 has no server-side cursor for
 // `leadForm.versions` (returns the full array in one call), so we paginate
@@ -220,25 +199,33 @@ export function VersionHistoryNav({
           <ChevronRight />
         </button>
 
-        {/* Save Version — manual checkpoint. Hidden in read-only / submitted
-            contexts where snapshots can't change anything. Auto-snapshots
-            (every 10 successful autosaves) come from the autosave hook;
-            this button is purely user-initiated. */}
+        {/* Pin Version — marks the current snapshot as protected from
+            time-based rotation. Autosave already creates a version on every
+            successful save; this button only adds the ★ pinned flag so the
+            snapshot is never pruned by the retention policy. */}
         {onSaveVersion && (
           <button
             type="button"
-            className="flex min-h-8 items-center gap-1.5 rounded-[var(--radius)] border border-[var(--color-primary)] bg-[var(--color-primary)] px-3 py-1.5 text-white transition-colors hover:bg-[var(--color-starbucks-accent)] hover:border-[var(--color-starbucks-accent)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
+            className="flex min-h-8 items-center gap-1.5 rounded-[var(--radius)] border border-[var(--color-primary)] bg-transparent px-3 py-1.5 text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
             onClick={onSaveVersion}
             disabled={!canSaveVersion || !isLatest}
             title={
               isLatest
-                ? "Save Version — checkpoint the current draft"
-                : "Return to the latest version before saving a checkpoint"
+                ? "Pin version — protect this snapshot from automatic cleanup"
+                : "Return to the latest version before pinning"
             }
-            aria-label="Save Version"
+            aria-label="Pin version"
           >
-            <SaveIcon />
-            <span className="text-xs font-medium">Save</span>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+            </svg>
+            <span className="text-xs font-medium">Pin</span>
           </button>
         )}
       </div>
@@ -299,6 +286,15 @@ export function VersionHistoryNav({
                     <div className="flex-1">
                       <div className="text-sm font-semibold">
                         Version {v.version}
+                        {v.pinned && (
+                          <span
+                            className="ml-1.5 text-[11px]"
+                            title="Pinned — protected from automatic cleanup"
+                            aria-label="Pinned version"
+                          >
+                            ★
+                          </span>
+                        )}
                         {idx === 0 && (
                           <span className="ml-2 text-[10px] font-medium text-[var(--color-starbucks-accent)]">
                             Latest
