@@ -686,6 +686,14 @@ export function LeadForm({
     payload: draftPayload,
     enabled: !isReadOnlyEarly && !isSubmitted && draftSection !== null,
     initialSavedKey,
+    onSaveSuccess: () => {
+      // Every successful autosave creates a new (unpinned) version snapshot.
+      // Skip when viewing a historical snapshot (read-only overlay) or when
+      // a snapshot mutation is already in flight.
+      if (!sectionIdForActions || viewedSnapshotVersion !== null) return;
+      if (createSnapshotMut.isPending) return;
+      createSnapshotMut.mutate({ reportSectionId: sectionIdForActions });
+    },
   });
 
   // 35-07: set document.title to surface the addressed week in the browser
@@ -1386,7 +1394,7 @@ export function LeadForm({
   function handleSaveVersion() {
     if (!sectionIdForActions) return;
     isManualSaveRef.current = true;
-    createSnapshotMut.mutate({ reportSectionId: sectionIdForActions });
+    createSnapshotMut.mutate({ reportSectionId: sectionIdForActions, pinned: true });
   }
 
   function handleToggleAll() {
@@ -1395,13 +1403,17 @@ export function LeadForm({
   }
 
   // Autosave indicator label — 4-state badge.
+  const latestVersionNumber =
+    versionsQ.data && versionsQ.data.length > 0
+      ? versionsQ.data[versionsQ.data.length - 1]?.version ?? null
+      : null;
   const autosaveLabel =
     autosave.state === "saving"
       ? "↻ Saving…"
       : autosave.state === "pending"
         ? "● Pending…"
         : autosave.state === "saved" && autosave.lastSavedAt
-          ? `✓ Saved at ${autosave.lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+          ? `${latestVersionNumber != null ? `Version ${latestVersionNumber} · ` : ""}${autosave.lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
           : autosave.state === "error"
             ? "⚠ Save failed"
             : "Autosaved";

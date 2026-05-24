@@ -680,7 +680,7 @@ describe("LeadForm mutation wiring", () => {
       await flushAll();
     });
 
-    const saveBtn = screen.getByRole("button", { name: /^Save Version$/ });
+    const saveBtn = screen.getByRole("button", { name: /^Pin version$/i });
     act(() => {
       saveBtn.click();
     });
