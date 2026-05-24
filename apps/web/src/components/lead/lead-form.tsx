@@ -610,28 +610,14 @@ export function LeadForm({
     }),
   );
 
-  // createSnapshot is triggered by the "Save Version" manual button only.
-  // The toast is keyed on a ref so future automated paths can fire silently.
-  const isManualSaveRef = useRef(false);
   const createSnapshotMut = useMutation(
     trpc.leadForm.createSnapshot.mutationOptions({
       onSuccess: () => {
         invalidateLeadForm(qc, trpc);
-        if (isManualSaveRef.current) {
-          toast.success("Version saved");
-          isManualSaveRef.current = false;
-        }
       },
-      onError: (err: unknown) => {
-        // Auto-path failures stay silent — they're a safety net, not a
-        // user request. Manual failures surface so the user knows the
-        // checkpoint didn't land.
-        if (isManualSaveRef.current) {
-          const msg =
-            err instanceof Error ? err.message : "Save Version failed";
-          toast.error(msg);
-          isManualSaveRef.current = false;
-        }
+      onError: () => {
+        // Autosave-triggered snapshot failures are silent — the user already
+        // sees "✓ Saved"; a toast for the background snapshot would confuse.
       },
     }),
   );
@@ -1391,12 +1377,6 @@ export function LeadForm({
     restoreMut.mutate({ reportSectionId: sectionIdForActions, version });
   }
 
-  function handleSaveVersion() {
-    if (!sectionIdForActions) return;
-    isManualSaveRef.current = true;
-    createSnapshotMut.mutate({ reportSectionId: sectionIdForActions, pinned: true });
-  }
-
   function handleToggleAll() {
     setGroupExpanded((prev) => !prev);
     setGroupSyncKey((k) => k + 1);
@@ -1547,8 +1527,6 @@ export function LeadForm({
               <VersionHistoryNav
                 versions={versions}
                 onRestore={isReadOnly ? undefined : handleRestoreVersion}
-                onSaveVersion={isViewingSnapshot ? undefined : (isReadOnly ? undefined : handleSaveVersion)}
-                canSaveVersion={!createSnapshotMut.isPending}
                 onViewVersion={setViewedSnapshotVersion}
                 viewedVersion={viewedSnapshotVersion}
               />
