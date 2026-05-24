@@ -6,6 +6,8 @@ type StageMultiSelectProps = {
   readonly stages: readonly string[];
   readonly error?: string;
   readonly onChange: (next: string[]) => void;
+  /** When provided, shows a consequence-preview hint below the stage chips. */
+  readonly previewSeverity?: "at-risk" | "blocked";
 };
 
 export function StageMultiSelect({
@@ -14,6 +16,7 @@ export function StageMultiSelect({
   stages,
   error,
   onChange,
+  previewSeverity,
 }: StageMultiSelectProps) {
   const selected = value;
   const helperId = `${id}-hint`;
@@ -80,6 +83,13 @@ export function StageMultiSelect({
             );
           })}
         </div>
+      )}
+      {previewSeverity && value.length > 0 && (
+        <p className="mt-2 text-xs text-amber-700">
+          {previewSeverity === "blocked"
+            ? `These stages will show as Blocked: ${value.join(", ")}`
+            : `These stages will show as At Risk: ${value.join(", ")}`}
+        </p>
       )}
       {selected.length === 0 && (
         <p className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">

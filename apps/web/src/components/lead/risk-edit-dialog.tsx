@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Product, RiskEntry } from "./mock-data";
 import { StageMultiSelect } from "./stage-multi-select";
+import { canonicalStageName } from "./stage-tags";
 
 type RiskEditDialogProps = {
   readonly open: boolean;
@@ -83,14 +84,21 @@ export function RiskEditDialog({
   );
   const [impact, setImpact] = useState(initialImpact ?? "");
   const [mitigation, setMitigation] = useState(initialMitigation ?? "");
-  // UFB-073 (R1): pre-select all owned stages on create; restore existing on edit.
-  const [stageIds, setStageIds] = useState<string[]>(
-    risk?.stageIds
-      ? [...risk.stageIds]
-      : isCreate
-        ? [...(stagesForProduct?.(seedProduct?.id ?? "") ?? [])]
-        : [],
-  );
+  // UFB-073 (R1): pre-select stages on create. Prefer at-risk/blocked stages so
+  // the dialog immediately reflects what needs attention; fall back to all owned
+  // stages when none are flagged yet.
+  const [stageIds, setStageIds] = useState<string[]>(() => {
+    if (risk?.stageIds) return [...risk.stageIds];
+    if (!isCreate) return [];
+    const ownedStages = stagesForProduct?.(seedProduct?.id ?? "") ?? [];
+    const riskyStages = new Set<string>(
+      (seedProduct?.stages ?? [])
+        .filter((s) => s.status === "at-risk" || s.status === "blocked")
+        .map((s) => s.stageName),
+    );
+    const pre = ownedStages.filter((n) => riskyStages.has(n));
+    return pre.length > 0 ? pre : [...ownedStages];
+  });
   // Per-field error map: each required field's empty validation reads
   // its own message and toggles its border red. Replaces the old single
   // `error` string that only highlighted the first failure and
@@ -111,13 +119,18 @@ export function RiskEditDialog({
       setProductId(risk?.productId ?? seedProduct?.id ?? "");
       setImpact(initialImpact ?? "");
       setMitigation(initialMitigation ?? "");
-      setStageIds(
-        risk?.stageIds
-          ? [...risk.stageIds]
-          : isCreate
-            ? [...(stagesForProduct?.(seedProduct?.id ?? "") ?? [])]
-            : [],
-      );
+      setStageIds(() => {
+        if (risk?.stageIds) return [...risk.stageIds];
+        if (!isCreate) return [];
+        const ownedStages = stagesForProduct?.(seedProduct?.id ?? "") ?? [];
+        const riskyStages = new Set<string>(
+          (seedProduct?.stages ?? [])
+            .filter((s) => s.status === "at-risk" || s.status === "blocked")
+            .map((s) => s.stageName),
+        );
+        const pre = ownedStages.filter((n) => riskyStages.has(n));
+        return pre.length > 0 ? pre : [...ownedStages];
+      });
       setErrors({});
     }
     // eslint-disable-next-line react-compiler/react-compiler
@@ -149,8 +162,9 @@ export function RiskEditDialog({
     if (selectedStageIds.length === 0) return "at-risk";
     const product = products.find((p) => p.id === forProductId);
     if (!product) return "at-risk";
+    const canonicalSelected = new Set(selectedStageIds.map(canonicalStageName));
     const matched = product.stages.filter((s) =>
-      selectedStageIds.includes(s.stageName),
+      canonicalSelected.has(canonicalStageName(s.stageName)),
     );
     if (matched.some((s) => s.status === "blocked")) return "blocked";
     if (matched.some((s) => s.status === "at-risk")) return "at-risk";
@@ -360,6 +374,7 @@ export function RiskEditDialog({
             value={stageIds}
             stages={stagesForProduct?.(productId) ?? []}
             onChange={handleStageChange}
+            previewSeverity={stageIds.length > 0 ? severity : undefined}
           />
 
           {/* Severity chips */}

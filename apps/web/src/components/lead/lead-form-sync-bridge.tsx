@@ -15,7 +15,7 @@ import type { Product, RiskEntry, StageStatus } from "./mock-data";
 import { RisksSection } from "./risks-section";
 import { SdlcPipeline } from "./sdlc-pipeline";
 import type { CrossAuthorEntry } from "./sdlc-pipeline";
-import { riskCoversStage, splitStageNames } from "./stage-tags";
+import { canonicalStageName, riskCoversStage, splitStageNames } from "./stage-tags";
 
 /**
  * LeadFormSyncBridge — composes useStatusRiskSync with SdlcPipeline + RisksSection.
@@ -83,13 +83,16 @@ type BridgeContextValue = {
 const BridgeContext = createContext<BridgeContextValue | null>(null);
 
 function riskStageKeys(products: Product[], risk: RiskEntry): string[] {
-  const tags = splitStageNames(risk.stageName);
+  const tags =
+    risk.stageIds !== undefined
+      ? risk.stageIds
+      : splitStageNames(risk.stageName);
   if (tags.length > 0) {
-    return tags.map((stageName) => `${risk.productId}::${stageName}`);
+    return tags.map((stageName) => `${risk.productId}::${canonicalStageName(stageName)}`);
   }
   const product = products.find((item) => item.id === risk.productId);
   return (product?.stages ?? []).map(
-    (stage) => `${risk.productId}::${stage.stageName}`,
+    (stage) => `${risk.productId}::${canonicalStageName(stage.stageName)}`,
   );
 }
 
