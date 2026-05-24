@@ -148,6 +148,15 @@ export function FillFromButton({
               }}
             />
             <div className="max-h-[200px] space-y-1 overflow-y-auto">
+              {pastPeriods.length === 0 ? (
+                <p className="px-2 py-3 text-center text-[13px] text-[var(--color-muted-foreground)]">
+                  No submitted past reports found.
+                </p>
+              ) : filteredPeriods.length === 0 ? (
+                <p className="px-2 py-3 text-center text-[13px] text-[var(--color-muted-foreground)]">
+                  No reports match your search.
+                </p>
+              ) : null}
               {filteredPeriods.map((p, idx) => (
                 <button
                   key={p.id}
