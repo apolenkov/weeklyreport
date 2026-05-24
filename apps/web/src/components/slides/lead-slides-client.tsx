@@ -153,17 +153,14 @@ export function LeadSlidesClient({
   }
 
   const scopeControls = (
-    <>
-      <ScopeToggle
-        value={scope}
-        onChange={(s) => {
-          setScope(s);
-          setSelectedIndex(0);
-        }}
-        allowedScopes={["own", "product"]}
-      />
-      <AgentReviewComingSoon compact />
-    </>
+    <ScopeToggle
+      value={scope}
+      onChange={(s) => {
+        setScope(s);
+        setSelectedIndex(0);
+      }}
+      allowedScopes={["own", "product"]}
+    />
   );
 
   if (scope === "product") {
@@ -188,7 +185,8 @@ export function LeadSlidesClient({
             <LeadProductGrid products={sectionModel?.productSlides ?? []} />
           </div>
           {!inReportMode && (
-            <div className="mt-4 flex justify-end">
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <AgentReviewComingSoon />
               <SlideFullscreenButton targetRef={deckRef} />
             </div>
           )}
@@ -221,7 +219,10 @@ export function LeadSlidesClient({
         }
         toolbar={
           !inReportMode ? (
-            <SlideFullscreenButton targetRef={deckRef} />
+            <div className="flex items-center gap-2">
+              <AgentReviewComingSoon />
+              <SlideFullscreenButton targetRef={deckRef} />
+            </div>
           ) : undefined
         }
       />
