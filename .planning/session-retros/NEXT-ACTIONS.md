@@ -416,3 +416,25 @@ updated: 2026-05-24T20:45:00Z source: peo-retro v8.4.2-final-uat
 2. [ ] merge PR #7 → main (после approve) <!-- unchanged from prev retro -->
 3. [ ] tag v8.4.2 после merge <!-- unchanged from prev retro -->
 4. [ ] /peo-jira transition PRJ-2 после merge <!-- unchanged from prev retro -->
+
+---
+
+## Session 2026-05-25 — Phase 3.7 Save Now + FillFrom empty-state (v8.4.2 final)
+
+updated: 2026-05-25T00:00:00Z source: peo-retro
+
+### Shipped
+
+1. [x] feat(autosave): Save Now button + spinner + snapshot throttle/dedup (Phase 3.7) <!-- done: 48f467cd -->
+2. [x] fix(autosave): correct snapshot dedup projection + queued forceSave stale key <!-- done: 85197193 -->
+3. [x] fix(api): correct Prisma cast + add buildSnapshotProjection to integration test mocks <!-- done: c9077b41 -->
+4. [x] feat(fill-from): show empty-state when no past reports in dropdown <!-- done: 27304dfd -->
+5. [x] T6 verify gates: typecheck ✓ 0 errors, lint ✓ 0 errors, web 559/559 PASS, API 926/926 PASS <!-- done: gates verified -->
+   - 4 e2e failures: pre-existing seed-state issues (VHS DB has 0 snapshots for active section; foreign-author/slides specs need draft section), NOT T1-T4 regression
+
+### Carry forward (HUMAN)
+
+1. [ ] approve PR #7 в GitHub Enterprise UI <!-- unchanged from prev retro -->
+2. [ ] merge PR #7 → main (после approve) <!-- unchanged from prev retro -->
+3. [ ] tag v8.4.2 после merge <!-- unchanged from prev retro -->
+4. [ ] /peo-jira transition PRJ-2 после merge <!-- unchanged from prev retro -->

@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v8.4
 milestone_name: Versioning UX
 status: in_review
-last_updated: "2026-05-24T00:00:00.000Z"
-last_activity: 2026-05-24 -- Versioning redesign shipped (quiet-pondering-dragonfly plan). P1 backend (pinned field + time-based retention) + P2+P3 frontend (autosave→snapshot wire + Pin button) committed. PR #7 open (fix/PRJ-2/shiny-eagle).
+last_updated: "2026-05-25T00:00:00.000Z"
+last_activity: 2026-05-25 -- v8.4.2 UAT Sweep Phase 3.7 shipped. Save Now button + forceSave API + snapshot throttle/dedup (60 s + content-dedup). FillFromButton empty/error states. All unit/integration gates green (559/559 web, 926/926 API). 4 e2e pre-existing seed failures (not regression). PR #7 open (fix/PRJ-2/shiny-eagle), ~80+ commits ahead of main. Awaiting human PR approve + merge + tag v8.4.2.
 active_pr:
   number: 7
   url: https://ghe.example.org/apolenkov/customreport/pull/7
@@ -21,8 +21,8 @@ progress:
 # Project State: CustomReport
 
 **Project:** Team Status Reporting Web App
-**Status:** v8.4 in-review — PR #7 open (fix/PRJ-2/shiny-eagle). Versioning UX redesign (quiet-pondering-dragonfly) committed.
-**Last Updated:** 2026-05-24
+**Status:** v8.4.2 in-review — PR #7 open (fix/PRJ-2/shiny-eagle). UAT Sweep Phase 3.7 shipped (Save Now + FillFrom empty-state + snapshot throttle/dedup). Awaiting PR approve + merge + tag.
+**Last Updated:** 2026-05-25
 
 ## Active PR
 
