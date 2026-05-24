@@ -177,6 +177,7 @@ export default function ReportsPage() {
             includeArchive={includeArchive}
             isLoading={isLoading}
             summaryTitle={summaryTitle}
+            isLead={isLead}
           />
         </div>
       </div>
@@ -189,11 +190,13 @@ function HistoryPanel({
   includeArchive,
   isLoading,
   summaryTitle,
+  isLead,
 }: {
   readonly entries: HistoryEntry[];
   readonly includeArchive: boolean;
   readonly isLoading: boolean;
   readonly summaryTitle: string;
+  readonly isLead: boolean;
 }) {
   const [showAll, setShowAll] = useState(false);
 
@@ -242,6 +245,7 @@ function HistoryPanel({
           entries={entries}
           summaryTitle={summaryTitle}
           showStatus
+          viewerMode={!isLead}
         />
       </div>
     </div>
