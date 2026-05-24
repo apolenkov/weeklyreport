@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Product, RiskEntry } from "./mock-data";
 import { StageMultiSelect } from "./stage-multi-select";
@@ -58,6 +58,45 @@ const SEVERITY_CHOICES: readonly SeverityChoice[] = [
   },
 ];
 
+/**
+ * Derives initial severity from pipeline-flagged stages.
+ * Called ONCE in useState initializer; never re-run on stage checkbox toggles
+ * so the user's explicit severity choice is sticky.
+ */
+function deriveFromPreChecked(
+  product: Product | undefined,
+  ownedStages: readonly string[],
+): "at-risk" | "blocked" {
+  const flagged = (product?.stages ?? []).filter((s) =>
+    ownedStages.some(
+      (n) => canonicalStageName(n) === canonicalStageName(s.stageName),
+    ),
+  );
+  if (flagged.some((s) => s.status === "blocked")) return "blocked";
+  if (flagged.some((s) => s.status === "at-risk")) return "at-risk";
+  return "at-risk";
+}
+
+/** Computes which stage IDs to pre-select on dialog open. */
+function computeInitialStageIds(
+  risk: RiskEntry | null,
+  isCreate: boolean,
+  seedProduct: Product | undefined,
+  ownedStages: readonly string[],
+): string[] {
+  if (risk?.stageIds) return [...risk.stageIds];
+  if (!isCreate) return [];
+  // Single-stage assignment: auto-select it (shown as "Applied automatically").
+  if (ownedStages.length === 1) return [...ownedStages];
+  // L5 fix: canonicalize both sides so "Dev" (seed) matches "Development" (owned).
+  const riskyStages = new Set<string>(
+    (seedProduct?.stages ?? [])
+      .filter((s) => s.status === "at-risk" || s.status === "blocked")
+      .map((s) => canonicalStageName(s.stageName)),
+  );
+  return ownedStages.filter((n) => riskyStages.has(canonicalStageName(n)));
+}
+
 export function RiskEditDialog({
   open,
   risk,
@@ -76,36 +115,34 @@ export function RiskEditDialog({
     : products.find((p) => p.id === risk.productId);
 
   const [text, setText] = useState(risk?.text ?? "");
-  const [severity, setSeverity] = useState<"at-risk" | "blocked">(
-    risk?.severity ?? "at-risk",
-  );
+
+  // Severity derived ONCE from pipeline on create; user choice is sticky thereafter.
+  // Severity is NOT re-derived when the user toggles stage checkboxes (Phase 3.5 §5).
+  const [severity, setSeverity] = useState<"at-risk" | "blocked">(() => {
+    if (risk?.severity) return risk.severity;
+    const ownedStages = stagesForProduct?.(seedProduct?.id ?? "") ?? [];
+    return deriveFromPreChecked(seedProduct, ownedStages);
+  });
+
   const [productId, setProductId] = useState(
     risk?.productId ?? seedProduct?.id ?? "",
   );
   const [impact, setImpact] = useState(initialImpact ?? "");
   const [mitigation, setMitigation] = useState(initialMitigation ?? "");
+
   // Pre-select only stages already marked at-risk/blocked on the pipeline.
-  // Empty selection means "all stages" per the helper text — do not fall back
-  // to all owned stages when none are flagged.
+  // L5 fix: canonicalize both stageName sides to handle "Dev" ↔ "Development" aliases.
   const [stageIds, setStageIds] = useState<string[]>(() => {
-    if (risk?.stageIds) return [...risk.stageIds];
-    if (!isCreate) return [];
     const ownedStages = stagesForProduct?.(seedProduct?.id ?? "") ?? [];
-    const riskyStages = new Set<string>(
-      (seedProduct?.stages ?? [])
-        .filter((s) => s.status === "at-risk" || s.status === "blocked")
-        .map((s) => s.stageName),
-    );
-    return ownedStages.filter((n) => riskyStages.has(n));
+    return computeInitialStageIds(risk, isCreate, seedProduct, ownedStages);
   });
-  // Per-field error map: each required field's empty validation reads
-  // its own message and toggles its border red. Replaces the old single
-  // `error` string that only highlighted the first failure and
-  // visually pinned the message under one (potentially wrong) field.
+
+  // Per-field error map.
   const [errors, setErrors] = useState<{
     text?: string;
     impact?: string;
     mitigation?: string;
+    stageIds?: string;
   }>({});
 
   // A13/A15 fix: stagesForProduct excluded from deps — unstable parent ref (new arrow fn
@@ -113,22 +150,17 @@ export function RiskEditDialog({
   // both text (A13) and severity (A15). Dialog is key-reset by parent on open-transition.
   useEffect(() => {
     if (open) {
+      const ownedStages = stagesForProduct?.(seedProduct?.id ?? "") ?? [];
       setText(risk?.text ?? "");
-      setSeverity(risk?.severity ?? "at-risk");
+      setSeverity(
+        risk?.severity ?? deriveFromPreChecked(seedProduct, ownedStages),
+      );
       setProductId(risk?.productId ?? seedProduct?.id ?? "");
       setImpact(initialImpact ?? "");
       setMitigation(initialMitigation ?? "");
-      setStageIds(() => {
-        if (risk?.stageIds) return [...risk.stageIds];
-        if (!isCreate) return [];
-        const ownedStages = stagesForProduct?.(seedProduct?.id ?? "") ?? [];
-        const riskyStages = new Set<string>(
-          (seedProduct?.stages ?? [])
-            .filter((s) => s.status === "at-risk" || s.status === "blocked")
-            .map((s) => s.stageName),
-        );
-        return ownedStages.filter((n) => riskyStages.has(n));
-      });
+      setStageIds(
+        computeInitialStageIds(risk, isCreate, seedProduct, ownedStages),
+      );
       setErrors({});
     }
     // eslint-disable-next-line react-compiler/react-compiler
@@ -147,40 +179,40 @@ export function RiskEditDialog({
     isCreate,
   ]);
 
+  // Context strip: pipeline stages already flagged that are owned by this lead.
+  const preCheckedStages = useMemo(() => {
+    const ownedStages = stagesForProduct?.(seedProduct?.id ?? "") ?? [];
+    return (seedProduct?.stages ?? [])
+      .filter((s) => s.status === "at-risk" || s.status === "blocked")
+      .filter((s) =>
+        ownedStages.some(
+          (n) => canonicalStageName(n) === canonicalStageName(s.stageName),
+        ),
+      )
+      .map((s) => ({
+        name: canonicalStageName(s.stageName),
+        severity: s.status as "at-risk" | "blocked",
+      }));
+  }, [seedProduct, stagesForProduct]);
+
   if (!open) return null;
 
   const headerProductName =
     products.find((p) => p.id === productId)?.name ?? "";
   const headerVerb = isCreate ? "Add Risk" : "Edit Risk";
 
-  function deriveSeverityFromStages(
-    selectedStageIds: string[],
-    forProductId: string,
-  ): "at-risk" | "blocked" {
-    if (selectedStageIds.length === 0) return "at-risk";
-    const product = products.find((p) => p.id === forProductId);
-    if (!product) return "at-risk";
-    const canonicalSelected = new Set(selectedStageIds.map(canonicalStageName));
-    const matched = product.stages.filter((s) =>
-      canonicalSelected.has(canonicalStageName(s.stageName)),
-    );
-    if (matched.some((s) => s.status === "blocked")) return "blocked";
-    if (matched.some((s) => s.status === "at-risk")) return "at-risk";
-    return "at-risk";
-  }
-
   function handleStageChange(nextStageIds: string[]) {
     setStageIds(nextStageIds);
-    if (isCreate) setSeverity(deriveSeverityFromStages(nextStageIds, productId));
+    // Clear stageIds error as soon as the user selects something.
+    if (nextStageIds.length > 0) {
+      setErrors((prev) => ({ ...prev, stageIds: undefined }));
+    }
+    // Severity is NOT updated here — user's explicit severity choice is sticky.
   }
 
   function setProductAndStages(nextProductId: string) {
-    const nextStageIds = stagesForProduct
-      ? [...stagesForProduct(nextProductId)]
-      : [];
     setProductId(nextProductId);
-    setStageIds(nextStageIds);
-    if (isCreate) setSeverity(deriveSeverityFromStages(nextStageIds, nextProductId));
+    setStageIds(stagesForProduct ? [...stagesForProduct(nextProductId)] : []);
   }
 
   function handleSave() {
@@ -191,6 +223,8 @@ export function RiskEditDialog({
     if (t.length === 0) next.text = "Risk description is required";
     if (im.length === 0) next.impact = "Impact is required";
     if (m.length === 0) next.mitigation = "Mitigation is required";
+    if (stageIds.length === 0)
+      next.stageIds = "Select at least one stage.";
     if (Object.keys(next).length > 0) {
       setErrors(next);
       return;
@@ -204,7 +238,7 @@ export function RiskEditDialog({
       id: risk?.id ?? crypto.randomUUID(),
       productId: product.id,
       productName: product.name,
-      stageIds: stageIds.length > 0 ? stageIds : undefined,
+      stageIds,
       severity,
       text: t,
       impact: im,
@@ -231,7 +265,7 @@ export function RiskEditDialog({
       role="presentation"
     >
       <div
-        className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[var(--radius)] bg-white p-6 shadow-2xl"
+        className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[var(--radius)] bg-white p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -246,194 +280,207 @@ export function RiskEditDialog({
           ) : null}
         </h2>
 
-        <div className="space-y-4">
-          {/* Risk description */}
-          <div>
-            <label
-              className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-              htmlFor="risk-text"
-            >
-              Risk *
-            </label>
-            <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
-              One sentence: what specifically might go wrong (the situation, not
-              its consequence).
-            </p>
-            <textarea
-              id="risk-text"
-              autoFocus
-              aria-invalid={errors.text ? "true" : "false"}
-              aria-describedby={errors.text ? "risk-text-error" : undefined}
-              className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
-                errors.text
-                  ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
-                  : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
-              }`}
-              style={{ minHeight: "60px" }}
-              value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-                setErrors((prev) => ({ ...prev, text: undefined }));
-              }}
-              placeholder="e.g. Vendor API regression delays OAuth2 integration"
-            />
-            {errors.text && (
-              <p
-                id="risk-text-error"
-                className="mt-1 text-xs text-[var(--color-destructive)]"
-              >
-                {errors.text}
-              </p>
-            )}
-          </div>
-
-          {/* Impact */}
-          <div>
-            <label
-              className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-              htmlFor="risk-impact"
-            >
-              Impact *
-            </label>
-            <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
-              The consequence in real terms — what gets blocked, delayed, or
-              costs more. Different from <em>Severity</em>: severity is the
-              categorical level (At Risk / Blocked); impact is the narrative.
-            </p>
-            <textarea
-              id="risk-impact"
-              aria-invalid={errors.impact ? "true" : "false"}
-              aria-describedby={errors.impact ? "risk-impact-error" : undefined}
-              className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
-                errors.impact
-                  ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
-                  : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
-              }`}
-              style={{ minHeight: "50px" }}
-              value={impact}
-              onChange={(e) => {
-                setImpact(e.target.value);
-                setErrors((prev) => ({ ...prev, impact: undefined }));
-              }}
-              placeholder="e.g. Delays Q3 launch by 2 weeks; 4 downstream teams idle"
-            />
-            {errors.impact && (
-              <p
-                id="risk-impact-error"
-                className="mt-1 text-xs text-[var(--color-destructive)]"
-              >
-                {errors.impact}
-              </p>
-            )}
-          </div>
-
-          {/* Mitigation */}
-          <div>
-            <label
-              className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-              htmlFor="risk-mitigation"
-            >
-              Mitigation *
-            </label>
-            <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
-              What you (or someone) is doing to prevent or absorb the risk.
-            </p>
-            <textarea
-              id="risk-mitigation"
-              aria-invalid={errors.mitigation ? "true" : "false"}
-              aria-describedby={
-                errors.mitigation ? "risk-mitigation-error" : undefined
-              }
-              className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
-                errors.mitigation
-                  ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
-                  : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
-              }`}
-              style={{ minHeight: "50px" }}
-              value={mitigation}
-              onChange={(e) => {
-                setMitigation(e.target.value);
-                setErrors((prev) => ({ ...prev, mitigation: undefined }));
-              }}
-              placeholder="e.g. Vendor escalation in progress; ETA 48h"
-            />
-            {errors.mitigation && (
-              <p
-                id="risk-mitigation-error"
-                className="mt-1 text-xs text-[var(--color-destructive)]"
-              >
-                {errors.mitigation}
-              </p>
-            )}
-          </div>
-
-          <StageMultiSelect
-            id="risk-stage"
-            value={stageIds}
-            stages={stagesForProduct?.(productId) ?? []}
-            onChange={handleStageChange}
-            previewSeverity={severity}
-          />
-
-          {/* Severity chips */}
-          <div>
-            <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
-              Severity
-            </span>
-            <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
-              How urgent: <strong>At Risk</strong> = needs attention soon;
-              <strong> Blocked</strong> = work has stopped. Drives the chip
-              colour and SDLC-pipeline sync.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {SEVERITY_CHOICES.map((c) => {
-                const selected = severity === c.value;
-                return (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setSeverity(c.value)}
-                    className="inline-flex min-h-[34px] items-center gap-1 rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-[background-color,border-color,color,opacity]"
-                    style={{
-                      background: selected ? c.bg : "transparent",
-                      color: selected ? c.color : "var(--color-foreground)",
-                      border: `1.5px solid ${selected ? c.border : "rgba(0,0,0,0.15)"}`,
-                    }}
-                    aria-pressed={selected}
-                  >
-                    {c.label}
-                  </button>
-                );
-              })}
+        {/* Context strip: shown only when pipeline already has flagged owned stages */}
+        {preCheckedStages.length > 0 && (
+          <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs">
+            <div className="font-medium text-amber-900">
+              {headerProductName} →{" "}
+              {preCheckedStages
+                .map(
+                  (s) =>
+                    `${s.name} (${s.severity === "blocked" ? "Blocked" : "At Risk"})`,
+                )
+                .join(" · ")}
+            </div>
+            <div className="mt-0.5 text-[11px] text-amber-700">
+              Pre-selected from SDLC pipeline. Adjust below if needed.
             </div>
           </div>
+        )}
 
-          {/* Product picker */}
-          {products.length > 1 && (
+        {/* Two-column layout on md+: left = text fields, right = meta */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_280px]">
+          {/* Left: Risk / Impact / Mitigation */}
+          <div className="space-y-4">
             <div>
               <label
                 className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-                htmlFor="risk-product"
+                htmlFor="risk-text"
               >
-                Product
+                Risk *
               </label>
-              <select
-                id="risk-product"
-                className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
-                value={productId}
-                onChange={(e) => setProductAndStages(e.target.value)}
-              >
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+              <textarea
+                id="risk-text"
+                autoFocus
+                aria-invalid={errors.text ? "true" : "false"}
+                aria-describedby={errors.text ? "risk-text-error" : undefined}
+                className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                  errors.text
+                    ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
+                    : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
+                }`}
+                style={{ minHeight: "60px" }}
+                value={text}
+                onChange={(e) => {
+                  setText(e.target.value);
+                  setErrors((prev) => ({ ...prev, text: undefined }));
+                }}
+                placeholder="e.g. Vendor API regression delays OAuth2 integration"
+              />
+              {errors.text && (
+                <p
+                  id="risk-text-error"
+                  className="mt-1 text-xs text-[var(--color-destructive)]"
+                >
+                  {errors.text}
+                </p>
+              )}
             </div>
-          )}
+
+            <div>
+              <label
+                className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+                htmlFor="risk-impact"
+              >
+                Impact *
+              </label>
+              <textarea
+                id="risk-impact"
+                aria-invalid={errors.impact ? "true" : "false"}
+                aria-describedby={
+                  errors.impact ? "risk-impact-error" : undefined
+                }
+                className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                  errors.impact
+                    ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
+                    : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
+                }`}
+                style={{ minHeight: "50px" }}
+                value={impact}
+                onChange={(e) => {
+                  setImpact(e.target.value);
+                  setErrors((prev) => ({ ...prev, impact: undefined }));
+                }}
+                placeholder="e.g. Delays Q3 launch by 2 weeks; 4 downstream teams idle"
+              />
+              {errors.impact && (
+                <p
+                  id="risk-impact-error"
+                  className="mt-1 text-xs text-[var(--color-destructive)]"
+                >
+                  {errors.impact}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label
+                className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+                htmlFor="risk-mitigation"
+              >
+                Mitigation *
+              </label>
+              <textarea
+                id="risk-mitigation"
+                aria-invalid={errors.mitigation ? "true" : "false"}
+                aria-describedby={
+                  errors.mitigation ? "risk-mitigation-error" : undefined
+                }
+                className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                  errors.mitigation
+                    ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
+                    : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
+                }`}
+                style={{ minHeight: "50px" }}
+                value={mitigation}
+                onChange={(e) => {
+                  setMitigation(e.target.value);
+                  setErrors((prev) => ({ ...prev, mitigation: undefined }));
+                }}
+                placeholder="e.g. Vendor escalation in progress; ETA 48h"
+              />
+              {errors.mitigation && (
+                <p
+                  id="risk-mitigation-error"
+                  className="mt-1 text-xs text-[var(--color-destructive)]"
+                >
+                  {errors.mitigation}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Stages / Severity / Product */}
+          <div className="space-y-4">
+            <StageMultiSelect
+              id="risk-stage"
+              value={stageIds}
+              stages={stagesForProduct?.(productId) ?? []}
+              onChange={handleStageChange}
+              previewSeverity={severity}
+              error={errors.stageIds}
+            />
+
+            {/* Severity chips */}
+            <div>
+              <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
+                Severity
+              </span>
+              <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
+                <strong>At Risk</strong> = needs attention;{" "}
+                <strong>Blocked</strong> = work stopped.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {SEVERITY_CHOICES.map((c) => {
+                  const selected = severity === c.value;
+                  return (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setSeverity(c.value)}
+                      className="inline-flex min-h-[34px] items-center gap-1 rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-[background-color,border-color,color,opacity]"
+                      style={{
+                        background: selected ? c.bg : "transparent",
+                        color: selected ? c.color : "var(--color-foreground)",
+                        border: `1.5px solid ${selected ? c.border : "rgba(0,0,0,0.15)"}`,
+                      }}
+                      aria-pressed={selected}
+                    >
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Product picker */}
+            {products.length > 1 && (
+              <div>
+                <label
+                  className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+                  htmlFor="risk-product"
+                >
+                  Product
+                </label>
+                <select
+                  id="risk-product"
+                  className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+                  value={productId}
+                  onChange={(e) => setProductAndStages(e.target.value)}
+                >
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="mt-5 flex justify-end gap-3">
+        {/* Sticky footer — always visible at bottom of dialog */}
+        <div className="sticky bottom-0 mt-5 flex justify-end gap-3 border-t bg-white pt-3">
           <button
             type="button"
             onClick={onCancel}
@@ -444,7 +491,7 @@ export function RiskEditDialog({
           <button
             type="button"
             onClick={handleSave}
-            className="btn-press inline-flex min-h-[40px] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-accent)]"
+            className="btn-press inline-flex min-h-[40px] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Save Risk
           </button>

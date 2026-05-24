@@ -6,6 +6,9 @@
  * UFB-073 (revised): in create mode, only stages that are already
  * marked at-risk/blocked on the SDLC pipeline are pre-selected.
  * If none are flagged, the selection starts empty (= applies to all).
+ *
+ * Phase 3.5: required stage selection (empty = validation error);
+ * bidirectional severity decouple; context strip from pipeline.
  */
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -37,6 +40,10 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
       />,
     );
 
+    // Both checkboxes should start unchecked (no flagged stages in pipeline).
+    expect(screen.getByRole("checkbox", { name: "Dev" })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Testing" })).not.toBeChecked();
+
     fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
       target: { value: "Vendor delay" },
     });
@@ -48,16 +55,9 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
 
-    expect(onSave).toHaveBeenCalledTimes(1);
-    const saved = onSave.mock.calls[0]?.[0];
-    expect(saved).toMatchObject({
-      text: "Vendor delay",
-      impact: "Slips Q3",
-      mitigation: "Escalate",
-      severity: "at-risk",
-    });
-    // Empty selection → undefined (= applies to all stages sentinel).
-    expect(saved?.stageIds).toBeUndefined();
+    // Required stage validation: onSave not called, error message shown.
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByText(/Select at least one stage/i)).toBeInTheDocument();
   });
 
   it("pre-selects only at-risk/blocked stages when opening create dialog", () => {
@@ -192,6 +192,255 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
       cb.parentElement?.textContent?.trim(),
     );
     expect(labels).toEqual(["Testing", "Support"]);
+  });
+
+  it("pre-selects canonical stage when pipeline uses alias (Dev → Development)", () => {
+    const onSave = vi.fn();
+    const productsWithAlias: Product[] = [
+      {
+        id: "p1",
+        name: "CRM",
+        overallStatus: "blocked",
+        stages: [
+          { stageName: "Dev", status: "blocked", ownership: "mine", assignee: "Lead" },
+          { stageName: "Testing", status: "on-track", ownership: "mine", assignee: "Lead" },
+        ],
+      },
+    ];
+
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={productsWithAlias}
+        onSave={onSave}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Development", "Testing"]}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
+      target: { value: "Outage" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: "Down" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
+      target: { value: "Fix" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    // "Dev" (seed) canonicalizes to "Development" (owned) — pre-select must match.
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      stageIds: ["Development"],
+    });
+  });
+
+  it("renders context strip showing pre-selected stages from pipeline", () => {
+    const productsWithFlags: Product[] = [
+      {
+        id: "p1",
+        name: "CRM",
+        overallStatus: "blocked",
+        stages: [
+          { stageName: "Dev", status: "blocked", ownership: "mine", assignee: "Lead" },
+          { stageName: "Testing", status: "at-risk", ownership: "mine", assignee: "Lead" },
+        ],
+      },
+    ];
+
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={productsWithFlags}
+        onSave={() => undefined}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev", "Testing"]}
+      />,
+    );
+
+    // The context strip text contains both product name and stage/severity info.
+    expect(
+      screen.getByText(/Pre-selected from SDLC pipeline/i),
+    ).toBeInTheDocument();
+    // Strip header mentions at least one flagged stage.
+    expect(screen.getByText(/CRM →/)).toBeInTheDocument();
+  });
+
+  it("hides context strip when no stages are flagged in pipeline", () => {
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={() => undefined}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev", "Testing"]}
+      />,
+    );
+
+    expect(
+      screen.queryByText(/Pre-selected from SDLC pipeline/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("severity stays Blocked after user selects it and then toggles a stage checkbox", () => {
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={() => undefined}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev", "Testing"]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Blocked/i }));
+    expect(screen.getByRole("button", { name: /Blocked/i })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    // Toggle Dev stage checkbox — severity must NOT flip back to at-risk.
+    fireEvent.click(screen.getByRole("checkbox", { name: "Dev" }));
+
+    expect(screen.getByRole("button", { name: /Blocked/i })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: /At Risk/i })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("derives initial severity Blocked when pipeline stage is blocked on dialog open", () => {
+    const productsBlocked: Product[] = [
+      {
+        id: "p1",
+        name: "CRM",
+        overallStatus: "blocked",
+        stages: [
+          {
+            stageName: "Dev",
+            status: "blocked",
+            ownership: "mine",
+            assignee: "Lead",
+          },
+        ],
+      },
+    ];
+
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={productsBlocked}
+        onSave={() => undefined}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+      />,
+    );
+
+    // Single blocked stage → derived severity should be Blocked.
+    expect(screen.getByRole("button", { name: /Blocked/i })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("preserves risk.severity when editing an existing risk (does not re-derive)", () => {
+    const productsBlocked: Product[] = [
+      {
+        id: "p1",
+        name: "CRM",
+        overallStatus: "blocked",
+        stages: [
+          {
+            stageName: "Dev",
+            status: "blocked",
+            ownership: "mine",
+            assignee: "Lead",
+          },
+        ],
+      },
+    ];
+
+    render(
+      <RiskEditDialog
+        open
+        risk={{
+          id: "r1",
+          productId: "p1",
+          productName: "CRM",
+          stageIds: ["Dev"],
+          severity: "at-risk",
+          text: "Old risk",
+          impact: "",
+          mitigation: "",
+        }}
+        products={productsBlocked}
+        onSave={() => undefined}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+      />,
+    );
+
+    // Edit mode: risk.severity="at-risk" must win over pipeline's "blocked".
+    expect(
+      screen.getByRole("button", { name: /At Risk/i }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByRole("button", { name: /Blocked/i }),
+    ).toHaveAttribute("aria-pressed", "false");
+  });
+
+  // P3.6 layout smoke tests
+  it("renders Save Risk and Cancel buttons in the sticky footer", () => {
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={() => undefined}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+      />,
+    );
+
+    const save = screen.getByRole("button", { name: /Save Risk/i });
+    const cancel = screen.getByRole("button", { name: /Cancel/i });
+    expect(save.parentElement).toHaveClass("sticky");
+    expect(cancel.parentElement).toBe(save.parentElement);
+  });
+
+  it("uses two-column grid layout on md+ viewports", () => {
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={() => undefined}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+      />,
+    );
+
+    // The form grid wrapping both columns.
+    const grid = document
+      .querySelector('[class*="md:grid-cols-"]');
+    expect(grid).not.toBeNull();
   });
 });
 

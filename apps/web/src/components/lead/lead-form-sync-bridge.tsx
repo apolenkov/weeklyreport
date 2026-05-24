@@ -18,6 +18,21 @@ import type { CrossAuthorEntry } from "./sdlc-pipeline";
 import { canonicalStageName, riskCoversStage, splitStageNames } from "./stage-tags";
 
 /**
+ * Promotes a stage status based on a risk's severity.
+ * Never downgrades: if the stage is already blocked, it stays blocked.
+ * Exported for unit testing.
+ */
+export function promoteStageStatus(
+  current: StageStatus,
+  riskSeverity: "at-risk" | "blocked",
+): StageStatus {
+  if (current === "blocked") return "blocked";
+  if (riskSeverity === "blocked") return "blocked";
+  if (current === "at-risk") return "at-risk";
+  return riskSeverity; // "on-track" + "at-risk" → "at-risk"
+}
+
+/**
  * LeadFormSyncBridge — composes useStatusRiskSync with SdlcPipeline + RisksSection.
  *
  * Architecture decision: Provider + sub-components shape.
@@ -192,60 +207,68 @@ function Provider({
       // Strip foreign entries so they don't bleed into draft mutations or
       // skew the stage-clear count (foreign risks belong to other authors).
       const ownNext = next.filter((r) => !r.foreign);
-      // Detect (productId, stageName) tuples that were present in `risks` but
-      // have zero remaining entries after this change. For each, reset the
-      // matching stage's status back to 'on-track' so the "× Blocked" / risk
-      // marker on the SDLC pipeline disappears symmetrically with the
-      // existing additive auto-sync (handleStageStatusChange + handleRiskFilled).
+
+      // Count risks per canonical stage key after this change.
       const nextCounts = new Map<string, number>();
       for (const r of ownNext) {
         for (const key of riskStageKeys(products, r)) {
           nextCounts.set(key, (nextCounts.get(key) ?? 0) + 1);
         }
       }
-      const stagesToClear: { productId: string; stageName: string }[] = [];
+
+      // Stages to clear: had risks before, now have none → reset to on-track.
+      const stagesToClear = new Set<string>();
       const seen = new Set<string>();
       for (const r of risks) {
         for (const key of riskStageKeys(products, r)) {
           if (seen.has(key)) continue;
           seen.add(key);
           if ((nextCounts.get(key) ?? 0) === 0) {
-            const [productId, stageName] = key.split("::");
-            if (productId && stageName) {
-              stagesToClear.push({ productId, stageName });
-            }
+            stagesToClear.add(key);
           }
+        }
+      }
+
+      // Up-flow promotion: surviving risks promote their stages up, never down.
+      // locked-ownership stages are excluded (owned by the product head, not this lead).
+      const stagePromotions = new Map<string, "at-risk" | "blocked">();
+      for (const r of ownNext) {
+        for (const key of riskStageKeys(products, r)) {
+          if (stagesToClear.has(key)) continue;
+          const current = stagePromotions.get(key);
+          if (current === "blocked") continue;
+          stagePromotions.set(
+            key,
+            r.severity === "blocked" ? "blocked" : "at-risk",
+          );
         }
       }
 
       onRisksChange(ownNext);
 
-      if (stagesToClear.length > 0) {
-        // Reset the affected stages to 'on-track' via the same
-        // onProductsChange path the pipeline uses. Only clear stages that
-        // are currently flagged at-risk/blocked — leave on-track / empty
-        // alone so we don't overwrite an already-clean state.
-        const cleared = products.map((p) => {
-          const productClears = stagesToClear.filter(
-            (s) => s.productId === p.id,
-          );
-          if (productClears.length === 0) return p;
-          return {
-            ...p,
-            stages: p.stages.map((s) => {
-              const hit = productClears.find(
-                (c) => c.stageName === s.stageName,
-              );
-              if (!hit) return s;
-              if (s.status === "at-risk" || s.status === "blocked") {
-                return { ...s, status: "on-track" as const };
-              }
-              return s;
-            }),
-          };
-        });
-        onProductsChange(cleared);
-      }
+      const hasProductChanges =
+        stagesToClear.size > 0 || stagePromotions.size > 0;
+      if (!hasProductChanges) return;
+
+      const updatedProducts = products.map((p) => ({
+        ...p,
+        stages: p.stages.map((s) => {
+          if (s.ownership === "locked") return s;
+          const key = `${p.id}::${canonicalStageName(s.stageName)}`;
+          if (stagesToClear.has(key)) {
+            return s.status === "at-risk" || s.status === "blocked"
+              ? { ...s, status: "on-track" as const }
+              : s;
+          }
+          const target = stagePromotions.get(key);
+          if (target) {
+            const promoted = promoteStageStatus(s.status, target);
+            return promoted !== s.status ? { ...s, status: promoted } : s;
+          }
+          return s;
+        }),
+      }));
+      onProductsChange(updatedProducts);
     },
     [readOnly, onRisksChange, onProductsChange, products, risks],
   );
