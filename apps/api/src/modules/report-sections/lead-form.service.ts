@@ -34,7 +34,7 @@ export interface LeadFormRepository {
   listVersions(sectionId: string): Promise<VersionSnapshot[]>;
   getVersion(sectionId: string, version: number): Promise<Record<string, unknown> | null>;
   restoreVersion(sectionId: string, version: number): Promise<number>;
-  createVersionSnapshot(sectionId: string): Promise<void>;
+  createVersionSnapshot(sectionId: string, opts?: { pinned?: boolean }): Promise<void>;
   createReopenRequest(
     sectionId: string,
     userId: string,
@@ -253,6 +253,7 @@ export class LeadFormService {
   async createSnapshot(
     sectionId: string,
     userId: string,
+    opts?: { pinned?: boolean },
   ): Promise<{ success: true }> {
     const section = await this.repository.getSectionById(sectionId);
 
@@ -268,7 +269,8 @@ export class LeadFormService {
       throw new Error("Cannot snapshot a submitted section.");
     }
 
-    await this.repository.createVersionSnapshot(sectionId);
+    // TODO(PIN-01): enforce max 20 pinned snapshots per section (anti-abuse)
+    await this.repository.createVersionSnapshot(sectionId, opts);
     return { success: true };
   }
 

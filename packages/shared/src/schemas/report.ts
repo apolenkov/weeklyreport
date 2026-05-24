@@ -676,6 +676,8 @@ export const versionSnapshotSchema = z.object({
   itemCount: z.number().int().min(0).default(0),
   riskCount: z.number().int().min(0).default(0),
   decisionCount: z.number().int().min(0).default(0),
+  /** Protected from time-based rotation. Pinned versions survive indefinitely. */
+  pinned: z.boolean().default(false),
 });
 
 // ---------------------------------------------------------------------------

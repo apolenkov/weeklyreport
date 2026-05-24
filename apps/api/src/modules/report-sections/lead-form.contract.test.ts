@@ -66,6 +66,7 @@ const sampleVersions: VersionSnapshot[] = [
     itemCount: 0,
     riskCount: 0,
     decisionCount: 0,
+    pinned: false,
   },
   {
     id: "aaaa2222-2222-4222-8222-222222222222",
@@ -75,6 +76,7 @@ const sampleVersions: VersionSnapshot[] = [
     itemCount: 0,
     riskCount: 0,
     decisionCount: 0,
+    pinned: false,
   },
   {
     id: "aaaa3333-3333-4333-8333-333333333333",
@@ -84,6 +86,7 @@ const sampleVersions: VersionSnapshot[] = [
     itemCount: 0,
     riskCount: 0,
     decisionCount: 0,
+    pinned: false,
   },
 ];
 
@@ -632,7 +635,7 @@ describe("LeadFormService — createSnapshot", () => {
     const result = await service.createSnapshot(SECTION_ID, AUTHOR_ID);
 
     expect(result).toEqual({ success: true });
-    expect(repo.createVersionSnapshot).toHaveBeenCalledWith(SECTION_ID);
+    expect(repo.createVersionSnapshot).toHaveBeenCalledWith(SECTION_ID, undefined);
   });
 
   it("rejects when caller is not the author", async () => {

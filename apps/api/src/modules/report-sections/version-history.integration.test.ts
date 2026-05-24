@@ -54,6 +54,7 @@ function makeVersions(count: number): VersionSnapshot[] {
     itemCount: 0,
     riskCount: 0,
     decisionCount: 0,
+    pinned: false,
   }));
 }
 

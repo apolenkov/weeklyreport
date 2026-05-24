@@ -16,8 +16,6 @@ import type {
   CrossAuthorSectionRow,
 } from "./lead-form.service";
 
-const MAX_SNAPSHOTS = 50;
-
 @Injectable()
 export class LeadFormPrismaRepository implements LeadFormRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -213,7 +211,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     const rows = await this.prisma.versionSnapshot.findMany({
       where: { reportSectionId: sectionId },
       orderBy: { version: "desc" },
-      take: MAX_SNAPSHOTS,
     });
 
     return rows.map((row) => {
@@ -227,6 +224,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         reportSectionId: row.reportSectionId,
         version: row.version,
         createdAt: row.createdAt,
+        pinned: row.pinned,
         itemCount: data?.items?.length ?? 0,
         riskCount: data?.risks?.length ?? 0,
         decisionCount: data?.decisions?.length ?? 0,
@@ -381,7 +379,10 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     });
   }
 
-  async createVersionSnapshot(sectionId: string): Promise<void> {
+  async createVersionSnapshot(
+    sectionId: string,
+    opts?: { pinned?: boolean },
+  ): Promise<void> {
     const section = await this.prisma.reportSection.findUnique({
       where: { id: sectionId },
       include: reportSectionFullInclude,
@@ -391,7 +392,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       throw new Error(`Section ${sectionId} not found for snapshot.`);
     }
 
-    // Determine next version number
     const maxSnapshot = await this.prisma.versionSnapshot.findFirst({
       where: { reportSectionId: sectionId },
       orderBy: { version: "desc" },
@@ -400,7 +400,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
 
     const nextVersion = (maxSnapshot?.version ?? 0) + 1;
 
-    // Serialize current section data
     const data = {
       items: section.items.map((i) => ({
         projectId: i.projectId,
@@ -444,28 +443,54 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         reportSectionId: sectionId,
         version: nextVersion,
         data,
+        pinned: opts?.pinned ?? false,
       },
     });
 
-    // Prune old snapshots if over the limit
-    const totalCount = await this.prisma.versionSnapshot.count({
-      where: { reportSectionId: sectionId },
-    });
+    // Time-based retention: keep all <24 h, 1/hour for 24 h–7 d,
+    // 1/day for 7 d–30 d, delete everything >30 d. Pinned rows are never
+    // touched regardless of age (pinned = false guard in the WHERE clause).
+    await this.prisma.$executeRaw`
+      DELETE FROM "VersionSnapshot"
+      WHERE "reportSectionId" = ${sectionId}
+        AND pinned = false
+        AND id NOT IN (
+          -- Window 1: keep everything from the last 24 hours
+          SELECT id FROM "VersionSnapshot"
+          WHERE "reportSectionId" = ${sectionId}
+            AND "createdAt" > NOW() - INTERVAL '24 hours'
 
-    if (totalCount > MAX_SNAPSHOTS) {
-      const oldest = await this.prisma.versionSnapshot.findMany({
-        where: { reportSectionId: sectionId },
-        orderBy: { version: "asc" },
-        take: totalCount - MAX_SNAPSHOTS,
-        select: { id: true },
-      });
+          UNION ALL
 
-      if (oldest.length > 0) {
-        await this.prisma.versionSnapshot.deleteMany({
-          where: { id: { in: oldest.map((s) => s.id) } },
-        });
-      }
-    }
+          -- Window 2: keep newest per clock-hour between 24 h and 7 days
+          SELECT id FROM (
+            SELECT id,
+                   ROW_NUMBER() OVER (
+                     PARTITION BY date_trunc('hour', "createdAt")
+                     ORDER BY "createdAt" DESC
+                   ) AS rn
+            FROM "VersionSnapshot"
+            WHERE "reportSectionId" = ${sectionId}
+              AND "createdAt" <= NOW() - INTERVAL '24 hours'
+              AND "createdAt" > NOW() - INTERVAL '7 days'
+          ) hourly WHERE rn = 1
+
+          UNION ALL
+
+          -- Window 3: keep newest per calendar-day between 7 and 30 days
+          SELECT id FROM (
+            SELECT id,
+                   ROW_NUMBER() OVER (
+                     PARTITION BY date_trunc('day', "createdAt")
+                     ORDER BY "createdAt" DESC
+                   ) AS rn
+            FROM "VersionSnapshot"
+            WHERE "reportSectionId" = ${sectionId}
+              AND "createdAt" <= NOW() - INTERVAL '7 days'
+              AND "createdAt" > NOW() - INTERVAL '30 days'
+          ) daily WHERE rn = 1
+        )
+    `;
   }
 
   async hasSharedProduct(userId1: string, userId2: string): Promise<boolean> {

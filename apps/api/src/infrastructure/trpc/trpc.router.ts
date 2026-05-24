@@ -2023,12 +2023,18 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       createSnapshot: protectedProcedure
-        .input(z.object({ reportSectionId: z.string().uuid() }))
+        .input(
+          z.object({
+            reportSectionId: z.string().uuid(),
+            pinned: z.boolean().optional(),
+          }),
+        )
         .mutation(async ({ input, ctx }) => {
           try {
             return await deps.leadFormService.createSnapshot(
               input.reportSectionId,
               ctx.session.userId,
+              { pinned: input.pinned },
             );
           } catch (error) {
             throw mapDomainError(error);
