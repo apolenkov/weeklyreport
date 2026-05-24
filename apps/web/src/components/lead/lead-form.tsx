@@ -1385,7 +1385,7 @@ export function LeadForm({
   // Autosave indicator label — 4-state badge.
   const latestVersionNumber =
     versionsQ.data && versionsQ.data.length > 0
-      ? versionsQ.data[versionsQ.data.length - 1]?.version ?? null
+      ? versionsQ.data[0]?.version ?? null
       : null;
   const autosaveLabel =
     autosave.state === "saving"
