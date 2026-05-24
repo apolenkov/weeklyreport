@@ -84,9 +84,9 @@ export function RiskEditDialog({
   );
   const [impact, setImpact] = useState(initialImpact ?? "");
   const [mitigation, setMitigation] = useState(initialMitigation ?? "");
-  // UFB-073 (R1): pre-select stages on create. Prefer at-risk/blocked stages so
-  // the dialog immediately reflects what needs attention; fall back to all owned
-  // stages when none are flagged yet.
+  // Pre-select only stages already marked at-risk/blocked on the pipeline.
+  // Empty selection means "all stages" per the helper text — do not fall back
+  // to all owned stages when none are flagged.
   const [stageIds, setStageIds] = useState<string[]>(() => {
     if (risk?.stageIds) return [...risk.stageIds];
     if (!isCreate) return [];
@@ -96,8 +96,7 @@ export function RiskEditDialog({
         .filter((s) => s.status === "at-risk" || s.status === "blocked")
         .map((s) => s.stageName),
     );
-    const pre = ownedStages.filter((n) => riskyStages.has(n));
-    return pre.length > 0 ? pre : [...ownedStages];
+    return ownedStages.filter((n) => riskyStages.has(n));
   });
   // Per-field error map: each required field's empty validation reads
   // its own message and toggles its border red. Replaces the old single
@@ -128,8 +127,7 @@ export function RiskEditDialog({
             .filter((s) => s.status === "at-risk" || s.status === "blocked")
             .map((s) => s.stageName),
         );
-        const pre = ownedStages.filter((n) => riskyStages.has(n));
-        return pre.length > 0 ? pre : [...ownedStages];
+        return ownedStages.filter((n) => riskyStages.has(n));
       });
       setErrors({});
     }

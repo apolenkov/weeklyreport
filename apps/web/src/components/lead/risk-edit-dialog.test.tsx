@@ -3,8 +3,9 @@
  * (`StageMultiSelect`). Options come from `stagesForProduct(productId)`
  * — the lead's StageAssignment rows.
  *
- * UFB-073: in create mode all owned stages are pre-selected by default.
- * Deselecting all → em-dash sentinel.
+ * UFB-073 (revised): in create mode, only stages that are already
+ * marked at-risk/blocked on the SDLC pipeline are pre-selected.
+ * If none are flagged, the selection starts empty (= applies to all).
  */
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -22,7 +23,7 @@ const products: Product[] = [
 ];
 
 describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
-  it("pre-selects all owned stages by default in create mode (UFB-073)", () => {
+  it("starts with empty stage selection when no stages are flagged in create mode", () => {
     const onSave = vi.fn();
     render(
       <RiskEditDialog
@@ -48,13 +49,58 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
     fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+    const saved = onSave.mock.calls[0]?.[0];
+    expect(saved).toMatchObject({
       text: "Vendor delay",
       impact: "Slips Q3",
       mitigation: "Escalate",
       severity: "at-risk",
-      // UFB-073 + R1: pre-fill saves as stageIds array (not joined CSV).
-      stageIds: ["Dev", "Testing"],
+    });
+    // Empty selection → undefined (= applies to all stages sentinel).
+    expect(saved?.stageIds).toBeUndefined();
+  });
+
+  it("pre-selects only at-risk/blocked stages when opening create dialog", () => {
+    const onSave = vi.fn();
+    const productsWithRiskyStage: Product[] = [
+      {
+        id: "p1",
+        name: "CRM",
+        overallStatus: "at-risk",
+        stages: [
+          { stageName: "Dev", status: "blocked", ownership: "mine", assignee: "Lead" },
+          { stageName: "Testing", status: "on-track", ownership: "mine", assignee: "Lead" },
+        ],
+      },
+    ];
+
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={productsWithRiskyStage}
+        onSave={onSave}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev", "Testing"]}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
+      target: { value: "Critical outage" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: "Work stopped" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
+      target: { value: "Escalate" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    // Only "Dev" (blocked) should be pre-selected; "Testing" (on-track) must not.
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      stageIds: ["Dev"],
     });
   });
 
@@ -114,8 +160,8 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
     fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
       target: { value: "Escalate" },
     });
-    // Both stages are pre-selected (UFB-073). Deselect 'Testing' to keep only 'Dev'.
-    fireEvent.click(screen.getByRole("checkbox", { name: "Testing" }));
+    // No stages are pre-selected (none are at-risk/blocked). Select 'Dev' explicitly.
+    fireEvent.click(screen.getByRole("checkbox", { name: "Dev" }));
 
     fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
 
