@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: v8.3
-milestone_name: UAT Final Review
+milestone: v8.4
+milestone_name: Versioning UX
 status: in_review
-last_updated: "2026-05-21T00:00:00.000Z"
-last_activity: 2026-05-21 -- §22+§23+§24 done (graceful-coalescing-kurzweil plan). PR #7 open (fix/PRJ-2/shiny-eagle, 70+ commits ahead of main).
+last_updated: "2026-05-24T00:00:00.000Z"
+last_activity: 2026-05-24 -- Versioning redesign shipped (quiet-pondering-dragonfly plan). P1 backend (pinned field + time-based retention) + P2+P3 frontend (autosave→snapshot wire + Pin button) committed. PR #7 open (fix/PRJ-2/shiny-eagle).
 active_pr:
   number: 7
   url: https://ghe.example.org/apolenkov/customreport/pull/7
@@ -21,8 +21,8 @@ progress:
 # Project State: CustomReport
 
 **Project:** Team Status Reporting Web App
-**Status:** v8.3 in-review — PR #7 open (fix/PRJ-2/shiny-eagle). §22+§23+§24 done. 70+ commits ahead of main.
-**Last Updated:** 2026-05-21
+**Status:** v8.4 in-review — PR #7 open (fix/PRJ-2/shiny-eagle). Versioning UX redesign (quiet-pondering-dragonfly) committed.
+**Last Updated:** 2026-05-24
 
 ## Active PR
 
