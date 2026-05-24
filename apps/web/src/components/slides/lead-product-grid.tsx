@@ -67,7 +67,7 @@ function ProductCard({ product }: { product: SlideProduct }) {
   return (
     <div className="flex flex-col gap-3 rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
       <div className="flex items-start justify-between gap-2">
-        <h3 className="truncate text-sm font-semibold text-[var(--color-foreground)]">
+        <h3 className="break-words text-sm font-semibold text-[var(--color-foreground)]">
           {product.name}
         </h3>
         {!isCross && <StatusBadge status={product.status} />}

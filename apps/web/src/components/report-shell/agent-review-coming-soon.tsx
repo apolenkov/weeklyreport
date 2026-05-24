@@ -5,8 +5,10 @@ import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
 /**
  * Inert placeholder for the future agent-review surface.
  * TODO(AGENT-REVIEW-01): mount in lead+head slide and report surfaces
+ *
+ * compact — strips touch-target min-height for slides header where space is tight.
  */
-export function AgentReviewComingSoon() {
+export function AgentReviewComingSoon({ compact = false }: { compact?: boolean }) {
   return (
     <div className="group relative inline-flex">
       <button
@@ -15,7 +17,11 @@ export function AgentReviewComingSoon() {
         aria-label="Agent review is coming soon"
         title="Coming Soon"
         data-testid="agent-review-coming-soon"
-        className="inline-flex min-h-[var(--touch-target-min)] cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-4 py-1.5 text-sm font-semibold text-[var(--color-muted-foreground)]"
+        className={`inline-flex cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] font-semibold text-[var(--color-muted-foreground)] ${
+          compact
+            ? "px-2.5 py-1 text-xs"
+            : "min-h-[var(--touch-target-min)] px-4 py-1.5 text-sm"
+        }`}
       >
         <BotMessageSquare size={14} strokeWidth={2} aria-hidden="true" />
         <span>Agent review</span>

@@ -12,18 +12,17 @@ import type {
 type Props = { readonly model: UnifiedSlideModel };
 
 function inlineProductMarker(productName: string): ReactNode {
-  const short = (productName.split(/\s+/)[0] ?? productName).slice(0, 12);
   return (
     <span
       aria-label={`Product: ${productName}`}
-      className="inline-flex w-[110px] shrink-0 items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]"
+      className="inline-flex min-w-[110px] max-w-[160px] shrink-0 items-start gap-1 text-[10px] font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]"
       title={productName}
     >
       <span
         aria-hidden="true"
-        className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-muted-foreground)]"
+        className="mt-[3px] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-muted-foreground)]"
       />
-      <span className="truncate">{short}</span>
+      <span className="line-clamp-2 break-words text-[11px] leading-tight">{productName}</span>
     </span>
   );
 }
@@ -100,7 +99,7 @@ function SectionBlock({
 export function LeadUnifiedSlide({ model }: Props) {
   return (
     <div
-      className="grid grid-cols-2 gap-4 [:fullscreen_&]:min-h-[60dvh] [:fullscreen_&]:content-between"
+      className="grid auto-rows-fr grid-cols-2 gap-4 [:fullscreen_&]:min-h-[60dvh] [:fullscreen_&]:content-between"
       data-testid="lead-unified-slide"
     >
       <SectionBlock
