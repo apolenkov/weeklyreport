@@ -372,7 +372,7 @@ export function RiskEditDialog({
             value={stageIds}
             stages={stagesForProduct?.(productId) ?? []}
             onChange={handleStageChange}
-            previewSeverity={stageIds.length > 0 ? severity : undefined}
+            previewSeverity={severity}
           />
 
           {/* Severity chips */}
