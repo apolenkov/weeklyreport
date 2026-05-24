@@ -318,3 +318,73 @@ updated: 2026-05-24T12:20:00Z source: Demo-retro versioning-ux
 ### Идея: Demo-retro fullscan mode
 
 1. [ ] Добавить в `Demo-retro` режим `fullscan`: сканировать все `~/.claude/projects/**/*.jsonl` через CloudMem MCP (`smart_search`, `timeline`) вместо ручного grep JSONL — дать агенту полную картину сессий для ретро без токен-взрыва от raw JSONL
+
+## Session 2026-05-24 (v8.4.1 UAT Feedback Sweep — plan quiet-pondering-dragonfly)
+
+updated: 2026-05-24T18:52:00Z source: Demo-retro v8.4.1-uat-sweep
+
+### Shipped — 10 UAT findings закрыты (3 коммита + push)
+
+1. [x] P1: `stage-tags.ts` — `canonicalStageName()` + alias `Dev→Development`; `riskCoversStage` обходит по canonical с обеих сторон (#1) <!-- done: 22d75a77 -->
+2. [x] P1: `stage-tags.test.ts` — 3 alias-кейса + 2 canonicalStageName кейса (#1) <!-- done: 22d75a77 -->
+3. [x] P1: `period-navigator.tsx` — `(Current)` суффикс в label + зелёный badge рядом с select (#8) <!-- done: 22d75a77 -->
+4. [x] P1: `period-navigator.test.tsx` — обновлён D-17, добавлены badge-тесты (#8) <!-- done: 22d75a77 -->
+5. [x] P2: `lead-form.tsx` — AgentReview ↔ Toggle All swap в edit-mode header (#2) <!-- done: 1d59ad76 -->
+6. [x] P2: `agent-review-coming-soon.tsx` — prop `compact` убирает `min-h-[touch-target]` (#3) <!-- done: 1d59ad76 -->
+7. [x] P2: `lead-slides-client.tsx` — передаёт `compact` в `AgentReviewComingSoon` (#3) <!-- done: 1d59ad76 -->
+8. [x] P2: `scope-toggle.tsx` + `lead-slide-hero.tsx` — `h-7` выравнивает высоту (#4) <!-- done: 1d59ad76 -->
+9. [x] P2: `lead-unified-slide.tsx` — `auto-rows-fr` равные квадранты (#5+6); `inlineProductMarker` `line-clamp-2 break-words` без `slice(12)` (#7) <!-- done: 1d59ad76 -->
+10. [x] P2: `slide-product-chips.tsx` + `lead-product-grid.tsx` — `line-clamp-2 break-words` (#7) <!-- done: 1d59ad76 -->
+11. [x] P2: snapshot обновлён после compact-prop рефакторинга <!-- done: 1d59ad76 -->
+12. [x] P3: `lead-history-sidebar.tsx` — prop `viewerMode` → third-person copy (#C1) <!-- done: 46458ee0 -->
+13. [x] P3: `reports/page.tsx` — `viewerMode={!isLead}` через `HistoryPanel` (#C1) <!-- done: 46458ee0 -->
+14. [x] P3: `apps/api/package.json` — `kill-port 3002` в `dev` script (#9) <!-- done: 46458ee0 -->
+15. [x] `git push origin fix/PRJ-2/shiny-eagle` — 3 коммита отправлены <!-- done: 46458ee0 pushed -->
+
+### New pending — carry forward
+
+1. [ ] Ручной UAT v8.4.1 — перезапустить dev servers, проверить 4 роли (9 сценариев из плана §12.2)
+2. [ ] Resolve Bugsink YOURPULSE-API-1 через `bugsink-manage` shell после проверки kill-port fix
+3. [ ] approve PR #7 в GitHub Enterprise UI <!-- unchanged from prev retro -->
+4. [ ] merge PR #7 → main (после approve) <!-- unchanged from prev retro -->
+5. [ ] tag v8.4.1 после merge <!-- new: v8.4.1 patch landed -->
+6. [ ] /Demo-jira transition PRJ-2 после merge <!-- unchanged from prev retro -->
+
+## Session 2026-05-24 (v8.4.2 UAT Feedback Sweep — plan quiet-pondering-dragonfly)
+
+updated: 2026-05-24T19:48:00Z source: Demo-retro v8.4.2-uat-sweep
+
+### Shipped — P1/P2/P3 коммиты (3 коммита, 13 файлов, 528/528 тестов)
+
+1. [x] #2 period-navigator: удалён inline зелёный badge «Current»; суффикс `(Current)` в label остаётся <!-- done: 84a3fabe -->
+2. [x] #4 lead-form: `latestVersionNumber` читает `versionsQ.data[0]` вместо `data.length-1` — badge теперь показывает актуальную версию <!-- done: 84a3fabe -->
+3. [x] #3 lead-slides-client: `AgentReviewComingSoon` убран из `scopeControls` (hero), добавлен в `toolbar` рядом с `SlideFullscreenButton` (оба view: `ReportSlides` + product-scope footer) <!-- done: 62c7ffb6 -->
+4. [x] #1 stage-multi-select: prop `previewSeverity` + consequence-hint «These stages will show as Blocked/At Risk: …» <!-- done: f42990c2 -->
+5. [x] #1 risk-edit-dialog: preselect at-risk/blocked stages при создании; fallback на все owned; передаёт `previewSeverity` в `StageMultiSelect` <!-- done: f42990c2 -->
+6. [x] L1 sdlc-pipeline: `riskCountByKey` строит и ищет ключи через `canonicalStageName` (Dev=Development) <!-- done: f42990c2 -->
+7. [x] L2 lead-form-sync-bridge: `riskStageKeys` читает `stageIds[]` (не legacy `stageName`) + canonicalizует <!-- done: f42990c2 -->
+8. [x] L3 risk-edit-dialog: `deriveSeverityFromStages` использует `Set(canonicalStageName)` вместо raw `.includes` <!-- done: f42990c2 -->
+9. [x] L4 risks-section: display chips применяют `canonicalStageName` к stageIds перед рендером <!-- done: f42990c2 -->
+10. [x] Тесты обновлены: `period-navigator.test.tsx` (badge → no-badge), `risks-section.test.tsx` + `risks-section.snapshot.test.tsx` (Dev→Development) <!-- done: f42990c2 -->
+
+### Phase 4a (density audit) — НЕ выполнена в этой сессии
+
+1. [ ] Playwright 3×3 density matrix → `.planning/notes/slide-density-audit-2026-05-25.md`
+2. [ ] Script: `tools/uat-screenshots/slide-density-matrix.ts`
+
+### New pending — carry forward
+
+1. [ ] Phase 4a: slide density audit (Playwright, 9 комбинаций density×viewport)
+2. [ ] Ручной UAT v8.4.2 — 6 сценариев (plan §5):
+   - Сц.1: RiskEditDialog с blocked stage → stage pre-checked, hint виден
+   - Сц.2: Period select → текстовый «(Current)», нет зелёной точки
+   - Сц.3: Slides → AgentReview справа от Fullscreen в toolbar, НЕ в hero
+   - Сц.4: Открыть report с v4 → badge показывает «Version 4», не «Version 1»
+   - Сц.5: 3 density × 3 viewport (после 4a, если ship 4b)
+   - Сц.6: Risk с `stageIds: ["dev"]` + Item с `stageStatuses.Development: "blocked"` → ОДИН blocked chip
+3. [ ] git push origin fix/PRJ-2/shiny-eagle
+4. [ ] approve PR #7 в GitHub Enterprise UI <!-- unchanged from prev retro -->
+5. [ ] merge PR #7 → main (после approve) <!-- unchanged from prev retro -->
+6. [ ] tag v8.4.2 после merge
+7. [ ] /Demo-jira transition PRJ-2 после merge <!-- unchanged from prev retro -->
+8. [ ] Создать `.planning/todos/pending/2026-05-25-slide-redesign-v8.4.3.md` (4b DEFERRED)
