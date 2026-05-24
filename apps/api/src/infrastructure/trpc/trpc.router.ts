@@ -2026,7 +2026,6 @@ export function createAppRouter(deps: RouterDeps) {
         .input(
           z.object({
             reportSectionId: z.string().uuid(),
-            pinned: z.boolean().optional(),
           }),
         )
         .mutation(async ({ input, ctx }) => {
@@ -2034,7 +2033,6 @@ export function createAppRouter(deps: RouterDeps) {
             return await deps.leadFormService.createSnapshot(
               input.reportSectionId,
               ctx.session.userId,
-              { pinned: input.pinned },
             );
           } catch (error) {
             throw mapDomainError(error);

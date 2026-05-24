@@ -464,7 +464,6 @@ model VersionSnapshot {
   version         Int
   data            Json
   createdAt       DateTime      @default(now())
-  pinned          Boolean       @default(false)
   reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
 
   @@unique([reportSectionId, version])

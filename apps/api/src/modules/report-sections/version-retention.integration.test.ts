@@ -5,8 +5,7 @@
  *   0–24 h    → keep all
  *   24 h–7 d  → keep newest per clock-hour
  *   7 d–30 d  → keep newest per calendar-day
- *   > 30 d    → delete all (unless pinned = true)
- *   pinned    → never deleted regardless of age
+ *   > 30 d    → delete all
  */
 
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
@@ -40,10 +39,10 @@ describe("LeadFormPrismaRepository — time-based retention", () => {
   });
 
   /** Insert a snapshot bypassing the @default(now()) so we can control the age. */
-  async function insertAt(version: number, createdAt: Date, pinned = false) {
+  async function insertAt(version: number, createdAt: Date) {
     await prisma.$executeRaw`
-      INSERT INTO "VersionSnapshot" (id, "reportSectionId", version, data, "createdAt", pinned)
-      VALUES (gen_random_uuid()::text, ${sectionId}, ${version}, '{"items":[],"risks":[],"decisions":[],"stageStatuses":[]}', ${createdAt}, ${pinned})
+      INSERT INTO "VersionSnapshot" (id, "reportSectionId", version, data, "createdAt")
+      VALUES (gen_random_uuid()::text, ${sectionId}, ${version}, '{"items":[],"risks":[],"decisions":[],"stageStatuses":[]}', ${createdAt})
     `;
   }
 
@@ -122,7 +121,7 @@ describe("LeadFormPrismaRepository — time-based retention", () => {
     expect(snapshots).toHaveLength(2);
   });
 
-  it("deletes all unpinned snapshots older than 30 days", async () => {
+  it("deletes all snapshots older than 30 days", async () => {
     await insertAt(1, daysAgo(31));
     await insertAt(2, daysAgo(35));
 
@@ -132,47 +131,5 @@ describe("LeadFormPrismaRepository — time-based retention", () => {
       where: { reportSectionId: sectionId },
     });
     expect(count).toBe(1); // only the new snapshot
-  });
-
-  it("never deletes pinned snapshots regardless of age", async () => {
-    await insertAt(1, daysAgo(31), false); // unpinned → should be deleted
-    await insertAt(2, daysAgo(35), true); // pinned → must survive
-
-    await repo.createVersionSnapshot(sectionId);
-
-    const snapshots = await prisma.versionSnapshot.findMany({
-      where: { reportSectionId: sectionId },
-      select: { version: true },
-      orderBy: { version: "asc" },
-    });
-    const versions = snapshots.map((s) => s.version);
-    expect(versions).not.toContain(1); // unpinned >30d → deleted
-    expect(versions).toContain(2); // pinned → never deleted
-    expect(snapshots).toHaveLength(2); // pinned v2 + new snapshot
-  });
-
-  it("pinned snapshots in the 24h–7d window are preserved even though the rest of the hour is thinned", async () => {
-    // Anchor all three to the same UTC hour (3 days + 3 hours ago) to avoid
-    // boundary flakiness. v1 and v3 are unpinned; v2 is pinned.
-    const hourStart = new Date(Date.now() - (3 * 24 + 3) * 3_600_000);
-    hourStart.setUTCMinutes(0, 0, 0);
-    const sameHour = (m: number) =>
-      new Date(hourStart.getTime() + m * 60_000);
-
-    await insertAt(1, sameHour(5), false); // HH:05 — unpinned, oldest → deleted
-    await insertAt(2, sameHour(20), true); // HH:20 — PINNED → must survive
-    await insertAt(3, sameHour(50)); // HH:50 — newest unpinned → survives as bucket winner
-
-    await repo.createVersionSnapshot(sectionId);
-
-    const snapshots = await prisma.versionSnapshot.findMany({
-      where: { reportSectionId: sectionId },
-      select: { version: true },
-      orderBy: { version: "asc" },
-    });
-    const versions = snapshots.map((s) => s.version);
-    expect(versions).toContain(2); // pinned must survive
-    expect(versions).toContain(3); // newest unpinned in hour bucket
-    expect(versions).not.toContain(1); // unpinned, older, same bucket
   });
 });

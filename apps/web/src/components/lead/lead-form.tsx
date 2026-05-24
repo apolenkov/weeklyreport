@@ -673,7 +673,7 @@ export function LeadForm({
     enabled: !isReadOnlyEarly && !isSubmitted && draftSection !== null,
     initialSavedKey,
     onSaveSuccess: () => {
-      // Every successful autosave creates a new (unpinned) version snapshot.
+      // Every successful autosave creates a new version snapshot.
       // Skip when viewing a historical snapshot (read-only overlay) or when
       // a snapshot mutation is already in flight.
       if (!sectionIdForActions || viewedSnapshotVersion !== null) return;
