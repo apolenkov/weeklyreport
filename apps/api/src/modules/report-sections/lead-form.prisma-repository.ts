@@ -224,7 +224,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         reportSectionId: row.reportSectionId,
         version: row.version,
         createdAt: row.createdAt,
-        pinned: row.pinned,
         itemCount: data?.items?.length ?? 0,
         riskCount: data?.risks?.length ?? 0,
         decisionCount: data?.decisions?.length ?? 0,
@@ -379,10 +378,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     });
   }
 
-  async createVersionSnapshot(
-    sectionId: string,
-    opts?: { pinned?: boolean },
-  ): Promise<void> {
+  async createVersionSnapshot(sectionId: string): Promise<void> {
     const section = await this.prisma.reportSection.findUnique({
       where: { id: sectionId },
       include: reportSectionFullInclude,
@@ -443,17 +439,14 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         reportSectionId: sectionId,
         version: nextVersion,
         data,
-        pinned: opts?.pinned ?? false,
       },
     });
 
     // Time-based retention: keep all <24 h, 1/hour for 24 h–7 d,
-    // 1/day for 7 d–30 d, delete everything >30 d. Pinned rows are never
-    // touched regardless of age (pinned = false guard in the WHERE clause).
+    // 1/day for 7 d–30 d, delete everything >30 d.
     await this.prisma.$executeRaw`
       DELETE FROM "VersionSnapshot"
       WHERE "reportSectionId" = ${sectionId}
-        AND pinned = false
         AND id NOT IN (
           -- Window 1: keep everything from the last 24 hours
           SELECT id FROM "VersionSnapshot"

@@ -119,7 +119,6 @@ export type VersionSnapshot = {
   itemCount: number;
   riskCount: number;
   decisionCount: number;
-  pinned: boolean;
 };
 
 export type HistoryEntry = {
@@ -731,7 +730,6 @@ export const MOCK_VERSIONS: VersionSnapshot[] = [
     itemCount: 11,
     riskCount: 3,
     decisionCount: 2,
-    pinned: false,
   },
   {
     version: 2,
@@ -739,7 +737,6 @@ export const MOCK_VERSIONS: VersionSnapshot[] = [
     itemCount: 10,
     riskCount: 2,
     decisionCount: 2,
-    pinned: true,
   },
   {
     version: 1,
@@ -747,7 +744,6 @@ export const MOCK_VERSIONS: VersionSnapshot[] = [
     itemCount: 8,
     riskCount: 1,
     decisionCount: 1,
-    pinned: false,
   },
 ];
 
