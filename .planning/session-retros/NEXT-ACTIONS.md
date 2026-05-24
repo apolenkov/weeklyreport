@@ -252,3 +252,69 @@ updated: 2026-05-24T02:11:00Z source: peo-retro shiny-eagle live-UAT
 7. [ ] /peo-jira transition PRJ-2 после merge <!-- unchanged from prev retro -->
 8. [ ] tag v8.3.x когда milestone готов к закрытию <!-- unchanged from prev retro -->
 9. [ ] Решение: закрывать milestone v8.3 или добавлять scope <!-- unchanged from prev retro -->
+
+## Session 2026-05-24 (docker-expert + obs smoke)
+
+updated: 2026-05-24T00:00:00Z source: peo-retro docker-obs-smoke
+
+### Shipped
+
+1. [x] fix(obs): remove non-existent BUGSINK_CREATE_SUPERUSER env var + document correct flow <!-- done: aed1b76 -->
+2. [x] fix(obs): prometheus scrape api via host.docker.internal (cross-network) <!-- done: 6267c1e (obs worktree) -->
+3. [x] fix(docker): pin turbo@2, merge pnpm+turbo RUN, add HEALTHCHECK + NEXT_TELEMETRY_DISABLED <!-- done: 396eb21 -->
+4. [x] Smoke-check наблюдаемости — Prometheus 4 targets up, traceId в логах, Bugsink 2 events <!-- done: live verified via MCP 2026-05-24 -->
+
+### Smoke results (live MCP check)
+
+- Prometheus: api + postgres + redis + otelcol → all `up=1` ✅
+- HTTP metrics: реальный rate по tRPC routes (auth.me, leadForm.byPeriod, etc.) ✅
+- App logs: traceId присутствует в каждой строке ✅
+- Bugsink: 2 старых события (2026-05-23), новых ошибок нет ✅
+
+## Session 2026-05-24 (OTel log forwarding to Loki)
+
+updated: 2026-05-24T00:35:00Z source: peo-retro otel-loki-pipeline
+
+### Shipped
+
+1. [x] fix(otel): `otel.bootstrap.ts` — `LoggerProvider(processors:[...])` вместо `addLogRecordProcessor` (API dropped in sdk-logs@0.218) <!-- done: 90cd4c6 -->
+2. [x] feat(otel): `logger.ts` — `logs.getLogger().emit()` в `AppLoggerImpl.emit()` → логи идут в Loki через OTLP <!-- done: 90cd4c6 -->
+3. [x] fix: установка `@opentelemetry/exporter-logs-otlp-http` внутри API контейнера (host node_modules не монтируется) <!-- done: docker exec pnpm install + restart -->
+4. [x] Loki verified: `{service_name="customreport-api"}` → записи с `traceId`, `spanId`, `correlationId`, `severity_number` <!-- done: Grafana MCP query 2026-05-24 -->
+
+### New pending — carry forward
+
+1. [ ] Ручной UAT — В: `?mode=slides` → ScopeToggle "Own | By product" виден <!-- unchanged from prev retro -->
+2. [ ] Ручной UAT — Г: "By product" → слайды с hero + product grid <!-- unchanged from prev retro -->
+3. [ ] Ручной UAT — Д: hero band (имя + KPI tiles), chip carousel, 16:10 frame <!-- unchanged from prev retro -->
+4. [ ] Ручной UAT — Е: автор с 5+ продуктами → пагинация (1/2, стрелки) <!-- unchanged from prev retro -->
+5. [ ] approve PR #7 в GitHub Enterprise UI <!-- unchanged from prev retro -->
+6. [ ] merge PR #7 → main (после approve) <!-- unchanged from prev retro -->
+7. [ ] /peo-jira transition PRJ-2 после merge <!-- unchanged from prev retro -->
+8. [ ] tag v8.4.0 когда milestone v8.4 Versioning UX готов к закрытию <!-- updated: v8.3 → v8.4 per STATE.md milestone bump -->
+9. [ ] Grafana alert rules: ApiDown, HighError, SlowP95, DLQActive <!-- unchanged from prev retro -->
+10. [ ] После каждого деплоя: `docker exec api pnpm install` — новые npm-пакеты не монтируются в dev-контейнер автоматически <!-- unchanged from prev retro -->
+
+## Session 2026-05-24 (v8.4 Versioning UX — plan quiet-pondering-dragonfly)
+
+updated: 2026-05-24T12:20:00Z source: peo-retro versioning-ux
+
+### Shipped
+
+1. [x] P1 backend: `VersionSnapshot.pinned Boolean @default(false)` + migration `20260524000001` <!-- done: 701b6a15 -->
+2. [x] P1 backend: time-based retention SQL (all / 1h / 1d / delete >30d / pinned never) — 6/6 tests <!-- done: 701b6a15 -->
+3. [x] P2 frontend: `onSaveSuccess` → `createSnapshot()` на каждый автосейв <!-- done: cce0b7ac -->
+4. [x] P3 UI: бейдж `"Version N · HH:MM"`, кнопка Pin (и сразу удалена — см. ниже) <!-- done: cce0b7ac -->
+5. [x] refactor: кнопка Pin убрана полностью — 30 дней ротации достаточно <!-- done: a95681f5 -->
+6. [x] P4: e2e spec VHS-03 обновлён на новый формат бейджа, STATE.md → v8.4 <!-- done: b54d1e4d -->
+
+### New pending — carry forward
+
+1. [ ] Ручной UAT versioning: открыть черновик → подождать автосейв → убедиться бейдж «Version N+1 · HH:MM»
+2. [ ] approve PR #7 в GitHub Enterprise UI <!-- unchanged from prev retro -->
+3. [ ] merge PR #7 → main (после approve) <!-- unchanged from prev retro -->
+4. [ ] /peo-jira transition PRJ-2 после merge <!-- unchanged from prev retro -->
+
+### Идея: peo-retro fullscan mode
+
+1. [ ] Добавить в `peo-retro` режим `fullscan`: сканировать все `~/.claude/projects/**/*.jsonl` через CloudMem MCP (`smart_search`, `timeline`) вместо ручного grep JSONL — дать агенту полную картину сессий для ретро без токен-взрыва от raw JSONL
