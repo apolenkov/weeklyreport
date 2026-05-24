@@ -84,14 +84,18 @@ export function StageMultiSelect({
           })}
         </div>
       )}
-      {previewSeverity && value.length > 0 && (
+      {previewSeverity && (
         <p className="mt-2 text-xs text-amber-700">
-          {previewSeverity === "blocked"
-            ? `These stages will show as Blocked: ${value.join(", ")}`
-            : `These stages will show as At Risk: ${value.join(", ")}`}
+          {value.length === 0
+            ? previewSeverity === "blocked"
+              ? "All assigned stages will show as Blocked."
+              : "All assigned stages will show as At Risk."
+            : previewSeverity === "blocked"
+              ? `These stages will show as Blocked: ${value.join(", ")}`
+              : `These stages will show as At Risk: ${value.join(", ")}` }
         </p>
       )}
-      {selected.length === 0 && (
+      {!previewSeverity && selected.length === 0 && (
         <p className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">
           Scope: all assigned stages.
         </p>
