@@ -367,10 +367,10 @@ updated: 2026-05-24T19:48:00Z source: peo-retro v8.4.2-uat-sweep
 9. [x] L4 risks-section: display chips применяют `canonicalStageName` к stageIds перед рендером <!-- done: f42990c2 -->
 10. [x] Тесты обновлены: `period-navigator.test.tsx` (badge → no-badge), `risks-section.test.tsx` + `risks-section.snapshot.test.tsx` (Dev→Development) <!-- done: f42990c2 -->
 
-### Phase 4a (density audit) — НЕ выполнена в этой сессии
+### Phase 4a (density audit) — ВЫПОЛНЕНА (medium density, 3 viewports)
 
-1. [ ] Playwright 3×3 density matrix → `.planning/notes/slide-density-audit-2026-05-25.md`
-2. [ ] Script: `tools/uat-screenshots/slide-density-matrix.ts`
+1. [x] Playwright 3 viewport screenshots + density audit report → `.planning/notes/slide-density-audit-2026-05-25.md` <!-- done: 35764573 -->
+2. [ ] Script: `tools/uat-screenshots/slide-density-matrix.ts` <!-- DEFERRED to v8.4.3 — manual Playwright MCP used instead -->
 
 ### New pending — carry forward
 
@@ -382,9 +382,9 @@ updated: 2026-05-24T19:48:00Z source: peo-retro v8.4.2-uat-sweep
    - Сц.4: Открыть report с v4 → badge показывает «Version 4», не «Version 1»
    - Сц.5: 3 density × 3 viewport (после 4a, если ship 4b)
    - Сц.6: Risk с `stageIds: ["dev"]` + Item с `stageStatuses.Development: "blocked"` → ОДИН blocked chip
-3. [ ] git push origin fix/PRJ-2/shiny-eagle
+3. [x] git push origin fix/PRJ-2/shiny-eagle <!-- done: 84a3fabe+62c7ffb6+f42990c2 pushed; 35764573 Phase 4a pushed below -->
 4. [ ] approve PR #7 в GitHub Enterprise UI <!-- unchanged from prev retro -->
 5. [ ] merge PR #7 → main (после approve) <!-- unchanged from prev retro -->
 6. [ ] tag v8.4.2 после merge
 7. [ ] /peo-jira transition PRJ-2 после merge <!-- unchanged from prev retro -->
-8. [ ] Создать `.planning/todos/pending/2026-05-25-slide-redesign-v8.4.3.md` (4b DEFERRED)
+8. [x] Создать `.planning/todos/pending/2026-05-25-slide-redesign-v8.4.3.md` (4b DEFERRED) <!-- done: 35764573 -->
