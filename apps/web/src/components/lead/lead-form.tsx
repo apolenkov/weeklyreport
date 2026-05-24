@@ -44,6 +44,7 @@ import { SlideFullscreenButton } from "../slides/slide-fullscreen-button";
 import { AccordionSection } from "../report-shell/accordion-section";
 import { ViewModeToggle } from "../report-shell/view-mode-toggle";
 import { ReportToolbar } from "../report-shell/report-toolbar";
+import { SaveNowButton } from "../report-shell/save-now-button";
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 
 import type {
@@ -672,7 +673,7 @@ export function LeadForm({
     payload: draftPayload,
     enabled: !isReadOnlyEarly && !isSubmitted && draftSection !== null,
     initialSavedKey,
-    onSaveSuccess: () => {
+    onSaveSuccessAction: () => {
       // Every successful autosave creates a new version snapshot.
       // Skip when viewing a historical snapshot (read-only overlay) or when
       // a snapshot mutation is already in flight.
@@ -1514,6 +1515,7 @@ export function LeadForm({
               />
             </>
           }
+          leadingExtras={!isReadOnly ? <SaveNowButton autosave={autosave} /> : undefined}
           trailingExtras={
             <>
               <FillFromButton

@@ -70,7 +70,7 @@ function createMockRepository(
   restoreVersion: ReturnType<typeof vi.fn>;
   listVersions: ReturnType<typeof vi.fn>;
 } {
-  const createSnapshotFn = vi.fn(async () => {});
+  const createSnapshotFn = vi.fn(async () => 1);
   const restoreVersionFn = vi.fn(
     async (_id: string, version: number) => version,
   );
@@ -91,6 +91,9 @@ function createMockRepository(
     async getVersion() { return null; },
     restoreVersion: restoreVersionFn,
     createVersionSnapshot: createSnapshotFn,
+    async getLatestSnapshot() {
+      return null;
+    },
     async createReopenRequest() {},
     async hasSharedProduct() {
       return false;
