@@ -18,11 +18,11 @@ export default defineConfig({
       "**/*.eval.test.ts",
       "**/dist/**",
       "**/node_modules/**",
-      // TODO(samlify-xmldom-onError): samlify@2.13 throws at import time
-      // against @xmldom/xmldom@0.9.x (the version pinned by our CVE-
-      // mitigating pnpm.overrides). Excluded until samlify ships an
-      // onError-compatible release. Production SAML path uses a
-      // different parser entry and remains covered by the runtime tests.
+      // TODO(fix-xml-crypto-xmldom-onerror): samlify-level errorHandler/mimeType
+      // patched (patches/samlify@2.13.1.patch), but xml-crypto@6.1.2 still
+      // calls parseFromString without mimeType in 11 places. Patching xml-crypto
+      // touches the production @node-saml path — needs a separate change with
+      // full SAML regression coverage. Skip until then.
       "**/saml.samlify.test.ts",
     ],
     coverage: {
