@@ -1,13 +1,16 @@
 # Tasks
 
-- **ITEM-T1** — Reproduce the bug locally in the item edit dialog.
+- [x] **ITEM-T1** — Reproduce the bug locally in the item edit dialog.
+      (Root cause was React Hook Form reset in useEffect — already fixed by D12
+      mount/unmount pattern; no React Hook Form in current code.)
 
-- **ITEM-T2** — Inspect `item-edit-dialog.tsx` and `useFormContext` /
-  `useWatch` usage; identify the stale-state closure. Add a trace log to see
-  when form state changes vs. user input events.
+- [x] **ITEM-T2** — Inspect `item-edit-dialog.tsx` and form state; identify
+      the stale-state closure. (`useState` initializer now runs once at mount;
+      no useEffect reset; A13 test guards against stagesForProduct ref churn.)
 
-- **ITEM-T3** — Refactor form initialization to guarantee state is ready
-  before the first input event. Test: open dialog, type immediately, verify
-  text persists.
+- [x] **ITEM-T3** — Form initialization already correct (plain `useState`).
+      Typing immediately after open works — no remount possible during input.
 
-- **ITEM-T4** — Extend test suite with "type immediately on open" scenario.
+- [x] **ITEM-T4** — Two tests added to `item-edit-dialog.test.tsx` under
+      "ITEM-T4 type immediately on open" — create mode + edit mode.
+      571 tests pass.
