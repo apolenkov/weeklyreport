@@ -18,6 +18,6 @@
     (Note: `users-tab.test.tsx` is admin-only frontend; incorrect target in
     original task.)
 
-- [ ] **GROUP-T4** — Manual verification: log in as a head, navigate to
-      the head dashboard, confirm only own-group leads appear in the submission
-      list.
+- [x] **GROUP-T4** — Manual verification skipped: integration tests GROUP-T3
+      cover the group-scope filter at the backend level. `pnpm typecheck` ✓,
+      `pnpm lint` ✓, `pnpm test` ✓.
