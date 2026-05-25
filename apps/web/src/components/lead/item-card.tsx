@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { LockBadge } from "../report-shell/lock-badge";
 import type { KanbanItem } from "./mock-data";
 import { splitStageNames } from "./stage-tags";
 
@@ -178,7 +179,7 @@ export function ItemCard({
           )}
         </div>
 
-        {!locked && !isEditing && (
+        {!locked && !isEditing ? (
           <div className="flex shrink-0 gap-1">
             <button
               type="button"
@@ -197,7 +198,11 @@ export function ItemCard({
               <DeleteIcon />
             </button>
           </div>
-        )}
+        ) : item.foreign === true ? (
+          <div className="flex shrink-0 gap-1">
+            <LockBadge authorName={item.author} variant="slim" />
+          </div>
+        ) : null}
       </div>
 
       {/* Item text — editable when in edit mode, static otherwise */}
@@ -229,14 +234,6 @@ export function ItemCard({
       <div className="mt-auto flex items-end justify-between gap-2 pt-2">
         <div className="min-w-0 flex-1 truncate text-[11px] text-[var(--color-muted-foreground)]">
           {item.author}
-          {item.foreign ? (
-            <span
-              aria-label="Read-only — authored by another lead"
-              title="Read-only — authored by another lead"
-            >
-              {" 🔒"}
-            </span>
-          ) : null}
         </div>
         <div className="flex min-w-0 max-w-[72%] flex-wrap items-center justify-end gap-1">
           <span
