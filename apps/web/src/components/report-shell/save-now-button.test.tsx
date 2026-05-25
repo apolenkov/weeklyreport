@@ -26,18 +26,36 @@ afterEach(() => {
 });
 
 describe("SaveNowButton", () => {
-  it("renders 'Save now' label in idle/pending/error states", () => {
+  it("renders aria-label 'Save draft now' in idle and pending states", () => {
     const { rerender } = render(
       <SaveNowButton autosave={makeSnapshot({ state: "idle" })} />,
     );
-    expect(screen.getByRole("button", { name: /save draft now/i })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: /save draft now/i }),
+    ).toBeDefined();
 
     rerender(
       <SaveNowButton
         autosave={makeSnapshot({ state: "pending", dirty: true })}
       />,
     );
-    expect(screen.getByRole("button", { name: /save draft now/i })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: /save draft now/i }),
+    ).toBeDefined();
+  });
+
+  it("renders no visible label text — icon-only button", () => {
+    render(
+      <SaveNowButton
+        autosave={makeSnapshot({ state: "pending", dirty: true })}
+      />,
+    );
+    // The textual labels from the old pill ("Save now" / "Saving…" / "Saved" /
+    // "Retry save") must not appear in the rendered DOM. The aria-label/title
+    // attribute carries the accessible name instead.
+    expect(
+      screen.queryByText(/save now|saving|saved|retry save/i),
+    ).toBeNull();
   });
 
   it("is enabled only when state is pending or error", () => {
@@ -46,73 +64,89 @@ describe("SaveNowButton", () => {
         autosave={makeSnapshot({ state: "pending", dirty: true })}
       />,
     );
-    const btn = screen.getByRole("button") as HTMLButtonElement;
-    expect(btn.disabled).toBe(false);
+    expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(
+      false,
+    );
 
     rerender(
       <SaveNowButton
         autosave={makeSnapshot({ state: "error", dirty: true })}
       />,
     );
-    expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(false);
-
-    rerender(
-      <SaveNowButton autosave={makeSnapshot({ state: "idle" })} />,
+    expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(
+      false,
     );
-    expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(true);
+
+    rerender(<SaveNowButton autosave={makeSnapshot({ state: "idle" })} />);
+    expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(
+      true,
+    );
 
     rerender(
       <SaveNowButton
         autosave={makeSnapshot({ state: "saving", isInFlight: true })}
       />,
     );
-    expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(
+      true,
+    );
   });
 
-  it("shows 'Saving…' label and is disabled while isInFlight=true", () => {
+  it("shows spinner icon and aria-label 'Saving draft' while in flight", () => {
     render(
       <SaveNowButton
         autosave={makeSnapshot({ state: "saving", isInFlight: true })}
       />,
     );
-    expect(screen.getByRole("button", { name: /saving draft/i })).toBeDefined();
-    expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      screen.getByRole("button", { name: /saving draft/i }),
+    ).toBeDefined();
+    // Spinner is identified by a stable data attribute.
+    expect(
+      screen.getByTestId("save-now-spinner"),
+    ).toBeDefined();
   });
 
-  it("shows '✓ Saved' for ~1500ms after state transitions to saved, then reverts", async () => {
+  it("shows check icon for ~1500ms after success, then reverts to disc + 'Save draft now'", () => {
     const { rerender } = render(
       <SaveNowButton
         autosave={makeSnapshot({ state: "pending", dirty: true })}
       />,
     );
 
-    // Simulate mutation completing: state=saved, isInFlight=false.
     rerender(
       <SaveNowButton
-        autosave={makeSnapshot({ state: "saved", dirty: false, isInFlight: false })}
+        autosave={makeSnapshot({
+          state: "saved",
+          dirty: false,
+          isInFlight: false,
+        })}
       />,
     );
 
-    // Immediately after success the button should show "Saved".
-    expect(screen.getByRole("button", { name: /draft saved/i })).toBeDefined();
-    expect(screen.getByText("Saved")).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: /draft saved/i }),
+    ).toBeDefined();
+    expect(screen.getByTestId("save-now-check")).toBeDefined();
 
-    // After 1500ms the label should revert.
     act(() => {
       vi.advanceTimersByTime(1500);
     });
 
-    // After revert button aria-label should be back to "Save draft now".
-    // The button is now disabled (state=saved) so label reverts to "Save now".
     const btn = screen.getByRole("button") as HTMLButtonElement;
     expect(btn.getAttribute("aria-label")).toBe("Save draft now");
+    expect(screen.getByTestId("save-now-disc")).toBeDefined();
   });
 
   it("calls forceSave when clicked in pending state", async () => {
     const forceSave = vi.fn().mockResolvedValue(undefined);
     render(
       <SaveNowButton
-        autosave={makeSnapshot({ state: "pending", dirty: true, forceSave })}
+        autosave={makeSnapshot({
+          state: "pending",
+          dirty: true,
+          forceSave,
+        })}
       />,
     );
 
@@ -124,15 +158,16 @@ describe("SaveNowButton", () => {
     expect(forceSave).toHaveBeenCalledOnce();
   });
 
-  it("does not call forceSave when button is disabled (idle state)", async () => {
+  it("does not call forceSave when button is disabled (idle state)", () => {
     const forceSave = vi.fn();
     render(
-      <SaveNowButton autosave={makeSnapshot({ state: "idle", forceSave })} />,
+      <SaveNowButton
+        autosave={makeSnapshot({ state: "idle", forceSave })}
+      />,
     );
 
     const btn = screen.getByRole("button") as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
-    // Click on a disabled button should not trigger handler.
     btn.click();
     expect(forceSave).not.toHaveBeenCalled();
   });
