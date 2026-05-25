@@ -284,6 +284,8 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
 
     await this.prisma.$transaction(
       async (tx) => {
+        // TODO(v8.5-A-occ): wipe+recreate has no OCC version check — last writer
+        // wins silently. Replace with version-gated UPDATE + tx when v8.5 ships.
         await tx.item.deleteMany({ where: { reportSectionId: sectionId } });
         await tx.risk.deleteMany({ where: { reportSectionId: sectionId } });
         await tx.decision.deleteMany({ where: { reportSectionId: sectionId } });

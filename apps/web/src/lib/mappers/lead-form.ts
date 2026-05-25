@@ -293,6 +293,11 @@ function buildProjectIndex(section: ReportSectionReadModel): Map<
  * current lead actually owns. When `projectId` is undefined (decisions /
  * priorities are department-scoped), returns the union across all projects.
  */
+// TODO(v8.5-C-ownership): this function is one of TWO sources of stage
+// ownership: here it reads `project.ownedStages` from the section read-model;
+// `sdlc-pipeline.tsx` derives ownership from `products[].stages.filter(s =>
+// s.ownership === "mine")`. The two sets can diverge. Unify into a single
+// shared helper in packages/shared (plan section 15.5, cluster C).
 export function ownedStagesForProject(
   section: ReportSectionReadModel,
   projectId: string | undefined,

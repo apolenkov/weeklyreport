@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { LockBadge } from "../report-shell/lock-badge";
 import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { DecisionEditDialog } from "./decision-edit-dialog";
@@ -201,7 +202,7 @@ export function DecisionsSection({
                     Owner: {decision.owner}
                   </span>
                 )}
-                {!readOnly && mine && !decision.foreign && (
+                {!readOnly && mine && !decision.foreign ? (
                   <div className="ml-auto flex gap-1">
                     <button
                       type="button"
@@ -220,7 +221,11 @@ export function DecisionsSection({
                       <DeleteIcon />
                     </button>
                   </div>
-                )}
+                ) : decision.foreign === true ? (
+                  <div className="ml-auto flex gap-1">
+                    <LockBadge authorName={decision.owner} />
+                  </div>
+                ) : null}
               </div>
               <div className="space-y-2 text-sm text-[var(--color-foreground)]">
                 <div>
@@ -249,7 +254,7 @@ export function DecisionsSection({
                 authorName={decision.owner}
                 stageTags={stageTags}
                 ariaLabel={`Decision stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
-                foreign={decision.foreign === true}
+                foreign={false}
               />
             </div>
           );

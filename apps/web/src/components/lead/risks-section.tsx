@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { LockBadge } from "../report-shell/lock-badge";
 import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { RiskEditDialog } from "./risk-edit-dialog";
@@ -202,7 +203,7 @@ export function RisksSection({
                 <span className="font-[family-name:var(--font-sans)] text-sm font-semibold break-words">
                   {risk.productName}
                 </span>
-                {!locked && (
+                {!locked ? (
                   <div className="ml-auto flex gap-1">
                     <button
                       type="button"
@@ -221,7 +222,11 @@ export function RisksSection({
                       <DeleteIcon />
                     </button>
                   </div>
-                )}
+                ) : risk.foreign === true ? (
+                  <div className="ml-auto flex gap-1">
+                    <LockBadge authorName={risk.authorName ?? sectionAuthorName} />
+                  </div>
+                ) : null}
               </div>
               {/* Risk + impact + mitigation summary — read-only on the
                   card; the dialog is the only edit surface so we can
@@ -269,7 +274,7 @@ export function RisksSection({
                 authorName={risk.authorName ?? sectionAuthorName}
                 stageTags={stageTags}
                 ariaLabel={"Risk stages: " + stageTagsLabel}
-                foreign={risk.foreign === true}
+                foreign={false}
               />
             </div>
           );

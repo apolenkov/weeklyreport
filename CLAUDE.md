@@ -169,6 +169,33 @@ reopened. Director-facing UAT currently goes through the viewer read-only path.
 - For resume/closeout, prefer `.planning/HANDOFF.json`,
   `.planning/STATE.md`, and recent `.planning/reports/**` over chat memory.
 
+### Branch Hygiene
+
+No long-lived `stash-*` / `backup-*` / `preserve-*` / `wip-*` branches. They
+are sticky by name — easy to create, easy to forget, dangerous to merge later.
+Concrete failure mode: `stash-uat-v7-2026-05-14` sat for 12 days, drifted 384
+commits behind `main` with a +13 278 / −499 diff that no one would ever want
+merged — yet the name implied "preserve, maybe merge later" and burned a
+session deciding what to do with it.
+
+If WIP needs to survive a session boundary, use one of:
+
+- `git stash push -u -m "<reason>"` — real stash, 30-day reflog window.
+- draft PR — visible on GitHub, has CI, easy to close without merge.
+- normal commit on the active feature branch — rebase-friendly, no separate
+  branch lifecycle to remember.
+
+Auto-flag stale branches at the start of any session that involves `git push`,
+`git merge`, or other branch ops. Run `git branch -vv` and surface any branch
+where the name matches `^(stash|backup|preserve|wip)-` OR `committerdate` is
+older than 7 days AND it is behind `origin/main` by more than 50 commits. Ask
+the user whether to drop or push-then-drop before continuing. Recovery via
+`git reflog` covers any "oops" within 30 days, so the default is delete.
+
+Worktrees follow the same rule. If a worktree's branch has been merged or is
+obsolete, remove the worktree with `git worktree remove <path>` and delete the
+branch in the same session.
+
 ## Code Patterns
 
 - TypeScript strict mode is enforced across packages.

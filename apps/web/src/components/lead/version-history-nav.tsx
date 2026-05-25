@@ -20,6 +20,9 @@ type VersionHistoryNavProps = {
    * Pass the current version number to keep the nav in sync after a restore.
    */
   readonly viewedVersion?: number | null;
+  // TODO(v8.5-B-pin): add `onPin?: (version: number, pinned: boolean) => void`
+  // prop + ★ button in nav row — pin/unpin reverted in a95681f5/6d4726fe,
+  // requires VersionSnapshot.kind enum change (plan section 15.4, cluster B).
 };
 
 // Chevron icons — same family used by PeriodNavigator. The two control
