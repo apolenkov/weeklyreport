@@ -102,7 +102,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
         impact: "High impact",
         mitigation: "Mitigate now",
         severity: "blocked",
-        stageName: "Dev",
+        stageNames: ["Dev"],
       },
     });
     await prisma.decision.create({
@@ -112,7 +112,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
         text: "Source decision",
         owner: "Lead",
         impact: "High",
-        stageName: "Testing",
+        stageNames: ["Testing"],
       },
     });
 
@@ -170,7 +170,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
     expect(items.every((item) => item.carriedOver === false)).toBe(true);
     expect(risks).toHaveLength(1);
     expect(expectDefined(risks[0]).severity).toBe("blocked");
-    expect(expectDefined(risks[0]).stageName).toBe("Dev");
+    expect(expectDefined(risks[0]).stageNames).toEqual(["Dev"]);
     expect(decisions).toHaveLength(1);
     expect(expectDefined(decisions[0]).text).toBe("Source decision");
   });
