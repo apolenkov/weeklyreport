@@ -43,7 +43,7 @@ describe("RisksSection LockBadge (Phase 3.8)", () => {
     );
 
     expect(
-      screen.getByRole("img", { name: "Read-only — authored by Alice" }),
+      screen.getByLabelText("Read-only — authored by Alice"),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /Edit risk/i }),

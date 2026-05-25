@@ -91,7 +91,6 @@ function LockBadge({
     <div
       ref={buttonRef}
       className="flex min-h-[34px] min-w-[34px] cursor-default items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)]"
-      role="img"
       tabIndex={0}
       aria-label={`Read-only — authored by ${authorName ?? "another lead"}`}
       onMouseEnter={handleEnter}

@@ -78,19 +78,8 @@ function deriveFromPreChecked(
 }
 
 /** Computes which stage IDs to pre-select on dialog open. */
-function computeInitialStageIds(
-  risk: RiskEntry | null,
-  _isCreate: boolean,
-  _seedProduct: Product | undefined,
-  _ownedStages: readonly string[],
-): string[] {
-  // Phase 3.8: pre-select stages only when editing an existing risk that
-  // already carries stageIds. On create — always empty; the user marks
-  // stages explicitly. Pipeline severity still drives the severity init
-  // (see deriveFromPreChecked) and the context strip still appears as a
-  // hint, but stage checkboxes start clean.
-  if (risk?.stageIds) return [...risk.stageIds];
-  return [];
+function computeInitialStageIds(risk: RiskEntry | null): string[] {
+  return risk?.stageIds ? [...risk.stageIds] : [];
 }
 
 export function RiskEditDialog({
@@ -126,11 +115,11 @@ export function RiskEditDialog({
   const [impact, setImpact] = useState(initialImpact ?? "");
   const [mitigation, setMitigation] = useState(initialMitigation ?? "");
 
-  // Pre-select only stages already marked at-risk/blocked on the pipeline.
-  // L5 fix: canonicalize both stageName sides to handle "Dev" ↔ "Development" aliases.
+  // Phase 3.8: stage checkboxes start empty on create. The user marks
+  // stages explicitly. preCheckedStages still renders an info strip
+  // (context only), but does not influence initial selection.
   const [stageIds, setStageIds] = useState<string[]>(() => {
-    const ownedStages = stagesForProduct?.(seedProduct?.id ?? "") ?? [];
-    return computeInitialStageIds(risk, isCreate, seedProduct, ownedStages);
+    return computeInitialStageIds(risk);
   });
 
   // Per-field error map.
@@ -154,9 +143,7 @@ export function RiskEditDialog({
       setProductId(risk?.productId ?? seedProduct?.id ?? "");
       setImpact(initialImpact ?? "");
       setMitigation(initialMitigation ?? "");
-      setStageIds(
-        computeInitialStageIds(risk, isCreate, seedProduct, ownedStages),
-      );
+      setStageIds(computeInitialStageIds(risk));
       setErrors({});
     }
     // eslint-disable-next-line react-compiler/react-compiler
