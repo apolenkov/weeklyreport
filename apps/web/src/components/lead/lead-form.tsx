@@ -1596,8 +1596,8 @@ export function LeadForm({
               {...(sectionIdForActions
                 ? { sectionId: sectionIdForActions }
                 : {})}
-              {...(currentUser.name
-                ? { sectionAuthorName: currentUser.name }
+              {...(draftSection.authorName
+                ? { sectionAuthorName: draftSection.authorName }
                 : {})}
               risksAddSignal={risksAddSignal}
               crossAuthors={enrichedCrossAuthors}
