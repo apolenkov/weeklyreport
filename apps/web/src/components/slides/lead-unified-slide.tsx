@@ -99,7 +99,7 @@ function SectionBlock({
 export function LeadUnifiedSlide({ model }: Props) {
   return (
     <div
-      className="grid auto-rows-fr grid-cols-2 gap-4 [:fullscreen_&]:min-h-[60dvh] [:fullscreen_&]:content-between"
+      className="grid auto-rows-fr grid-cols-2 gap-3 [:fullscreen_&]:min-h-[60dvh] [:fullscreen_&]:content-between"
       data-testid="lead-unified-slide"
     >
       <SectionBlock
