@@ -1519,7 +1519,6 @@ export function LeadForm({
               />
             </>
           }
-          leadingExtras={!isReadOnly ? <SaveNowButton autosave={autosave} /> : undefined}
           trailingExtras={
             <>
               <FillFromButton
@@ -1537,6 +1536,15 @@ export function LeadForm({
                 onViewVersion={setViewedSnapshotVersion}
                 viewedVersion={viewedSnapshotVersion}
               />
+              {!isReadOnly && (
+                <>
+                  <Separator
+                    orientation="vertical"
+                    className="h-5 bg-[var(--color-border)]"
+                  />
+                  <SaveNowButton autosave={autosave} />
+                </>
+              )}
             </>
           }
         />
