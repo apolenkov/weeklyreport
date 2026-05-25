@@ -263,7 +263,7 @@ function HistoryArchiveToggle({
 }) {
   return (
     <div className="flex min-h-10 shrink-0 items-center">
-      <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-white px-3 text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] hover:text-[var(--color-starbucks-accent)]">
+      <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-white px-3 text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] hover:text-[var(--color-starbucks-accent)]" title="Past weeks and closed reports">
         <input
           type="checkbox"
           checked={checked}
