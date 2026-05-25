@@ -959,6 +959,256 @@ it("createSnapshot skips when data is byte-identical to latest snapshot", async 
 
 Эти пункты — отдельная phase в v8.5 (см. раздел 15).
 
+### Phase 3.8 — Lock badge для foreign risk-карточек + откат Phase 3.5 stage-prefill
+
+**Контекст (page feedback 2026-05-25, два независимых отзыва на одной странице):**
+
+1. **Feedback #1** (RisksSection, viewport 1728×962, source `risks-section.tsx:106:72`):
+
+   > «давай еще сверзу справа доавим замочи и тултип ьудет полчыему и кто и
+   > нформацию - красивй стилизованцй»
+
+   Перевод: на foreign (чужих) risk-карточках хочется заметный замок справа
+   сверху + стилизованный tooltip «почему / кто / доп. информация». Текущее
+   состояние — маленький `🔒` emoji внутри `MetaRow` (`meta-row.tsx:29-36`) +
+   native `title` — не «красивый».
+
+2. **Feedback #2** (RiskEditDialog, viewport 1728×962):
+
+   > «давай не заполнять атовматически если не выделено на статусе?
+   > презаполнять только по рподуктам и севирети и. нужно продукту»
+
+   Перевод: текущий Phase 3.5 пред-выбор stages в диалоге создания риска —
+   слишком навязчивый. Заполнять только product + severity. Stages — пустые,
+   юзер сам отметит. Контекстная полоска и derive severity остаются.
+
+**Locked решения (по AskUserQuestion 2026-05-25):**
+
+| #   | Вопрос                                    | Ответ                                                                 |
+| --- | ----------------------------------------- | --------------------------------------------------------------------- |
+| Q1  | Lock badge на own карточках               | НЕТ — оставить как есть, только foreign                               |
+| Q2  | Context strip в RiskEditDialog при pivot  | ДА — показывать как информацию (без auto-check stages)                |
+| Q3  | Phase 3.5 severity-derive из max-severity | ДА — оставить (derive остаётся, отключается только pre-select stages) |
+
+#### TL;DR
+
+```text
+было                                            │  станет
+────────────────────────────────────────────────│──────────────────────────────────────
+foreign risk card:                              │  foreign risk card:
+  меленький "🔒" в MetaRow внизу                │    стилизованный <Lock /> в верхнем
+  + native title="Read-only — authored by…"    │    правом углу (там где сейчас Edit/
+                                                │    Delete на own карточках)
+                                                │    + SdlcTooltipProvider tooltip:
+                                                │    «Locked · {authorName} · {time}»
+                                                │
+  own risk card:                                │  own risk card: без изменений
+    Edit/Delete справа сверху, без badge       │
+                                                │
+RiskEditDialog (новый риск, pipeline:           │  RiskEditDialog (новый риск, pipeline:
+  Dev=blocked):                                 │    Dev=blocked):
+  - context strip «Dev (Blocked) — pre-selected│    - context strip остаётся:
+    from SDLC pipeline»                         │      «Dev (Blocked) · отмечено в SDLC»
+  - severity = blocked (max-derive)             │    - severity = blocked (max-derive)
+  - stage checkboxes: ☑ Development              │    - stage checkboxes: ☐☐☐ ВСЕ ПУСТЫЕ
+                                                │      (юзер сам выберет)
+                                                │
+single-stage product (только 1 owned stage):    │  single-stage product:
+  ☑ Development pre-checked                     │  ☐ Development НЕ pre-checked
+                                                │  (правило снято: severity информацию даёт,
+                                                │   а stage юзер всегда выбирает явно)
+```
+
+#### Part A — Lock badge в правом верхнем углу foreign risk card
+
+**Файл:** `apps/web/src/components/lead/risks-section.tsx`
+
+Текущая структура header'а карточки (`risks-section.tsx:192-225`):
+
+```tsx
+<div className="mb-3 flex flex-wrap items-center gap-2">
+  <span /* severity pill At Risk / Blocked */ />
+  <span /* productName */ />
+  {!locked && (
+    <div className="ml-auto flex gap-1">
+      <button /* Edit */ />
+      <button /* Delete */ />
+    </div>
+  )}
+</div>
+```
+
+**Цель:** когда `locked === true` (включая `risk.foreign === true`), вместо
+скрытых Edit/Delete рендерить `LockBadge` в том же `ml-auto` слоте.
+`LockBadge` использует:
+
+- icon `Lock` из `lucide-react` (паттерн уже есть в `stage-chip.tsx:5`)
+- размер `h-4 w-4` (немного крупнее чем chip-icon `h-[11px]`, потому что это
+  primary affordance на карточке, не вторичная отметка)
+- стиль кнопки-в-кружке как у Edit/Delete: `flex min-h-[34px] min-w-[34px]
+items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)]
+bg-white p-1.5 text-[var(--color-muted-foreground)] cursor-default`
+- hover/transitions включены, но `cursor-default` — это не действующая
+  кнопка, только trigger tooltip'а
+- `SdlcTooltipProvider` для богатого tooltip'а (паттерн из
+  `stage-chip.tsx:194-202`): `tooltip.show(rect, tooltipContent)` на
+  `onMouseEnter`/`onFocus`, `tooltip.hide()` на `onMouseLeave`/`onBlur`
+
+**Tooltip content** (одно-/многострочный текст):
+
+```text
+Read-only
+Author: {authorName ?? "another lead"}
+You can't edit this card.
+```
+
+(`SdlcTooltipProvider` принимает строку — multi-line через `\n` для
+auto-wrap внутри `maxWidth: 280`.)
+
+**Поведение MetaRow** (`meta-row.tsx:29-36`):
+
+Убрать рендер маленького `🔒` после `authorName`, потому что сильный
+lock-affordance теперь на header-уровне. `MetaRow.foreign` prop остаётся (для
+других consumers — items-section), но в `risks-section.tsx` `MetaRow` будем
+передавать `foreign={false}` (или вообще не передавать) — после Phase 3.8
+foreign-индикатор живёт в header'е, не в meta-row.
+
+**ВАЖНО:** убедиться что `items-section.tsx` всё ещё передаёт `foreign` в
+MetaRow (там lock-badge в header не делаем — это отдельный pattern). Поэтому
+`MetaRow.foreign` prop остаётся.
+
+**Тесты:**
+
+- `risks-section.test.tsx` (если есть) — добавить case:
+  - own card: header содержит Edit/Delete buttons, НЕ содержит LockBadge
+  - foreign card: header содержит LockBadge с `aria-label="Read-only — authored by {name}"`,
+    НЕ содержит Edit/Delete
+
+#### Part B — Откат stage pre-selection (но НЕ severity и НЕ context strip)
+
+**Файл:** `apps/web/src/components/lead/risk-edit-dialog.tsx`
+
+Текущая `computeInitialStageIds` (`risk-edit-dialog.tsx:80-98`):
+
+```ts
+function computeInitialStageIds(
+  risk: RiskEntry | null,
+  isCreate: boolean,
+  seedProduct: Product | undefined,
+  ownedStages: readonly string[],
+): string[] {
+  if (risk?.stageIds) return [...risk.stageIds];
+  if (!isCreate) return [];
+  // Single-stage assignment: auto-select it (shown as "Applied automatically").
+  if (ownedStages.length === 1) return [...ownedStages];
+  // L5 fix: canonicalize both sides so "Dev" (seed) matches "Development" (owned).
+  const riskyStages = new Set<string>(
+    (seedProduct?.stages ?? [])
+      .filter((s) => s.status === "at-risk" || s.status === "blocked")
+      .map((s) => canonicalStageName(s.stageName)),
+  );
+  return ownedStages.filter((n) => riskyStages.has(canonicalStageName(n)));
+}
+```
+
+**Цель:** при создании нового риска (`isCreate === true`) ВСЕГДА возвращать
+`[]`. Pre-select остаётся только при ЯВНОМ редактировании существующего
+риска (`risk?.stageIds`).
+
+```ts
+function computeInitialStageIds(
+  risk: RiskEntry | null,
+  _isCreate: boolean,
+  _seedProduct: Product | undefined,
+  _ownedStages: readonly string[],
+): string[] {
+  // Phase 3.8: pre-select stages only when editing an existing risk that
+  // already carries stageIds. On create — always empty; the user marks
+  // stages explicitly. Pipeline severity still drives the severity init
+  // (see deriveFromPreChecked) and the context strip still appears as a
+  // hint, but stage checkboxes start clean.
+  if (risk?.stageIds) return [...risk.stageIds];
+  return [];
+}
+```
+
+(Сигнатуру не меняем — три аргумента остаются на случай, если в будущем
+понадобится частичный pre-select; помечаем подчёркиванием как неиспользуемые
+сейчас. Это безопаснее чем переименовывать вызовы.)
+
+**ОСТАВЛЯЕМ без изменений:**
+
+- `preCheckedStages` useMemo (`risk-edit-dialog.tsx:183-196`) — питает
+  context strip как информацию.
+- `deriveFromPreChecked` (`risk-edit-dialog.tsx:67-78`) — severity всё ещё
+  derived от max pipeline severity на open.
+- `useEffect` reset block (`risk-edit-dialog.tsx:151-180`) — `setStageIds`
+  по-прежнему вызывает `computeInitialStageIds`, но та теперь возвращает
+  `[]` на create.
+- Single-stage auto-assign правило **снимается** — user попросил «не
+  заполнять автоматически». Если у lead'а единственная owned stage, он
+  всё равно отметит её сам.
+
+**Context strip текстовая правка:** убрать строку «Pre-selected from SDLC
+pipeline. Adjust below if needed.» — она лгала бы после Phase 3.8. Заменить
+на нейтральное «Already flagged in SDLC pipeline» (информация, не
+инструкция).
+
+Файл: `risk-edit-dialog.tsx` — найти block рендерящий strip (по тексту
+«Pre-selected from SDLC pipeline») и заменить subtitle.
+
+**Тесты `risk-edit-dialog.test.tsx`:**
+
+Найти и обновить (FLIP с pre-checked на empty):
+
+- Test «pre-selects canonical stage when pipeline uses alias (Dev →
+  Development)» → переименовать в «does NOT pre-select stages on create even
+  if pipeline has flagged ones», assert `stageIds = []`.
+- Test «renders context strip showing pre-selected stages with severity
+  pills» → остаётся, assert текст strip'а изменился на «Already flagged in
+  SDLC pipeline» (или какой выбрали).
+- Test «derives initial severity from pre-checked stages on dialog open» —
+  ОСТАЁТСЯ как есть, severity-derive не меняется.
+- Test «preserves risk.severity when editing existing risk» — без изменений.
+- Test «disables Save Risk when no stages selected» — без изменений
+  (валидация остаётся, теперь срабатывает чаще, что и нужно).
+
+Если есть test «auto-selects single owned stage» — удалить или
+переименовать в «does NOT auto-select even with single owned stage».
+
+#### Файлы Phase 3.8
+
+| Файл                                                              | Что меняем                                                                                                                   |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/src/components/lead/risks-section.tsx`                  | новый `LockBadge` inline JSX в header foreign-card; tooltip через `useSdlcTooltip`; убрать `foreign={true}` из MetaRow здесь |
+| `apps/web/src/components/lead/risk-edit-dialog.tsx`               | `computeInitialStageIds` upgrade → `[]` на create; subtitle context strip                                                    |
+| `apps/web/src/components/lead/risk-edit-dialog.test.tsx`          | flip Phase 3.5 prefill tests; добавить test «on create stageIds=[]»                                                          |
+| `apps/web/src/components/lead/risks-section.test.tsx` (или новый) | render foreign card → assert LockBadge present, no Edit/Delete                                                               |
+
+`meta-row.tsx` — НЕ трогаем. `foreign` prop остаётся для items-section.
+
+#### Acceptance / Manual UAT
+
+| #     | Scenario                                                                                                                                                                                                                                                |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.8-A | Open lead Risks section с одной foreign-карточкой → видно lock-icon в верхнем правом углу карточки (там, где у own — Edit/Delete); hover/focus показывает tooltip «Read-only / Author: {name} / You can't edit this card»; нет маленького 🔒 в meta-row |
+| 3.8-B | Own риск-карточка → не показывает LockBadge; Edit/Delete как и были                                                                                                                                                                                     |
+| 3.8-C | Pipeline Dev=Blocked → «+ Add Risk» → severity = Blocked (как и раньше); context strip есть с текстом «Dev (Blocked) — already flagged in SDLC pipeline»; чекбоксы stages ВСЕ ПУСТЫЕ                                                                    |
+| 3.8-D | Pipeline всё on-track → «+ Add Risk» → severity = At Risk (default); context strip отсутствует; stage checkboxes пустые; Save Risk disabled пока не выбран ≥1 stage                                                                                     |
+| 3.8-E | Edit существующего риска с `stageIds: ["Development"]` → диалог открывается с уже отмеченной Development (поведение редактирования НЕ меняется)                                                                                                         |
+| 3.8-F | Product имеет 1 owned stage (например, lead владеет только Testing) → «+ Add Risk» → Testing НЕ pre-checked (правило snято)                                                                                                                             |
+
+#### Что Phase 3.8 НЕ делает
+
+- НЕ трогает `MetaRow.foreign` prop (used by items-section).
+- НЕ меняет severity-derive (`deriveFromPreChecked`) — только stage-prefill.
+- НЕ убирает context strip — только меняет subtitle с инструктивного
+  «Adjust below if needed» на информативный «Already flagged in SDLC
+  pipeline».
+- НЕ трогает single-stage auto-assign в других местах кода (если есть).
+- НЕ меняет ItemEditDialog (если там тоже была prefill-логика — это другой
+  scope).
+
 ### Phase 5 — Verify
 
 ```bash
@@ -985,6 +1235,8 @@ pnpm --filter @customreport/web test:e2e -- version-history
 | 8   | Lead form: правлю textarea → жму Save Now → spinner крутится → ✓ Saved → через ~1.5 с обратно `Save now`; badge в header показывает «Version N+1 · HH:MM»                                                |
 | 9   | FillFromButton: открываю lead, у которого есть ≥1 архив → клик `[Choose past report to fill from]` → dropdown показывает ≥1 row; на новом lead'е без архивов → видно empty-state `No past reports found` |
 | 10  | Snapshot throttle: правлю lead подряд 5 раз с паузой 10 с → проверяю `SELECT count(*) FROM "VersionSnapshot" WHERE "reportSectionId" = '…'` → +1, не +5 (или максимум +1-2 если контент менялся)         |
+| 11  | Phase 3.8: foreign risk card в правом верхнем углу показывает LockBadge с rich tooltip («Read-only / Author / You can't edit»); own card — без badge                                                     |
+| 12  | Phase 3.8: «+ Add Risk» когда pipeline Dev=Blocked → severity=Blocked, context strip есть, но stage checkboxes пустые; Save disabled до выбора                                                           |
 
 ---
 
@@ -1288,7 +1540,7 @@ C. Ownership source-of-truth     │ products[].stages.filter(           │ е�
 | A3  | `saveSection` обёрнуть в `prisma.$transaction([                                                                                    |
 |     | prisma.reportSection.update({ where: {id, version: clientVersion}, data: {version: {increment: 1}, ...}}),                         |
 |     | ...deleteMany, ...createMany                                                                                                       |
-|     | ])`. Если`version`rejected (Prisma бросает`RecordNotFound`) → throw`OptimisticLockError`.                                        |
+|     | ])`. Если`version`rejected (Prisma бросает`RecordNotFound`) → throw`OptimisticLockError`.                                          |
 | A4  | tRPC error mapping: `OptimisticLockError` → 409 (`code: "CONFLICT"`) с current server `version` + diff hint.                       |
 | A5  | UI: `useLeadFormAutosave.onError` ловит 409, показывает `ConflictResolutionDialog` («Кто-то изменил эту секцию. Перезагрузить?»).  |
 | A6  | `LeadFormService.publishReport` берёт advisory lock на все sections отчёта (`pg_advisory_xact_lock`), waiting period для in-flight |

@@ -439,3 +439,43 @@ updated: 2026-05-25T00:00:00Z source: Demo-retro
 2. [ ] merge PR #7 → main (после approve) <!-- unchanged from prev retro -->
 3. [ ] tag v8.4.2 после merge <!-- unchanged from prev retro -->
 4. [ ] /Demo-jira transition PRJ-2 после merge <!-- unchanged from prev retro -->
+
+---
+
+## Session 2026-05-25 — Phase 3.8 LockBadge + Phase 3.5 prefill reversal (v8.4.2 patch)
+
+updated: 2026-05-25T09:00:00Z source: subagent-driven-development
+
+Plan: `.planning/plans/quiet-pondering-dragonfly.md` → Phase 3.8 (added this session).
+
+### Shipped — два UAT-feedback пункта закрыты (2 коммита, 4 файла, 561/561 тестов)
+
+1. [x] feat(risks): lock badge on foreign cards + drop Phase 3.5 stage prefill <!-- done: 65980947 -->
+   - `LockBadge` (Lock icon + SdlcTooltipProvider) в верхнем правом углу foreign risk-карточек
+   - Tooltip: «Read-only · Author: X · You can't edit this card»
+   - Маленький 🔒 в MetaRow убран для risks (items-section не задет)
+   - `computeInitialStageIds` упрощён: на create stages всегда пустые
+   - Severity-derive из max pipeline severity сохранён (Phase 3.5 §5 интактно)
+   - Context strip subtitle: «Pre-selected from SDLC pipeline. Adjust below…» → «Already flagged in SDLC pipeline.»
+   - Tests: prefill assertions флипнуты на empty; 2 новых LockBadge теста
+2. [x] refactor(risks): tidy Phase 3.8 review feedback <!-- done: b3234b4b -->
+   - SDD code-quality review: dead params в `computeInitialStageIds` (collapsed to 1-line) + LockBadge role/tabIndex contradiction (`role="img"` removed)
+   - Test обновлён: `getByRole("img")` → `getByLabelText(/Read-only — authored by/)`
+
+### Verify (все gates зелёные на `b3234b4b`)
+
+- typecheck ✓ 0 errors
+- lint ✓ 0 errors
+- web tests: 561/561 PASS (+2 над baseline 559)
+- pre-existing TS71007 warnings на prop names (`onChange`, `onSave`, `stagesForProduct`) — baseline noise, не регрессия
+- pre-existing TS6385 на `stageName` deprecated — baseline noise
+
+### Carry forward (HUMAN)
+
+1. [ ] Ручной UAT Phase 3.8: foreign risk card → LockBadge виден в правом верхнем; hover/focus → tooltip; own card без badge
+2. [ ] Ручной UAT Phase 3.8: «+ Add Risk» с pipeline Dev=Blocked → severity=Blocked + context strip + stages ВСЕ ПУСТЫЕ; Save disabled до выбора
+3. [ ] push `fix/PRJ-2/shiny-eagle` (ahead 3: 54728ca6 + 65980947 + b3234b4b) после явного approve
+4. [ ] approve PR #7 в GitHub Enterprise UI <!-- unchanged from prev retro -->
+5. [ ] merge PR #7 → main (после approve) <!-- unchanged from prev retro -->
+6. [ ] tag v8.4.2 после merge <!-- unchanged from prev retro -->
+7. [ ] /Demo-jira transition PRJ-2 после merge <!-- unchanged from prev retro -->
