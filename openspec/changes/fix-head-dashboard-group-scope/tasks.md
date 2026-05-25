@@ -1,14 +1,23 @@
 # Tasks
 
-- **GROUP-T1** — Locate the users-list tRPC procedure (likely in
-  `apps/api/src/modules/users/users.router.ts`).
+- [x] **GROUP-T1** — Locate the users-list tRPC procedure. Found in
+      `apps/api/src/modules/review/review.prisma-repository.ts` —
+      `getSubmissionDashboard` queries `reportSection` with head's group scope.
+      (Note: no `apps/api/src/modules/users/` module exists; the head-visible
+      user list is the submission dashboard rows.)
 
-- **GROUP-T2** — Add a role-coverage middleware or inline check: if caller
-  is a head, add WHERE clause to filter by `currentUser.groupIds`. Update
-  the Prisma query.
+- [x] **GROUP-T2** — Add group filter for heads. Already done in Phase
+      46-02 (UFB-040): `groupScopeFilter(session, "reportSection")` is spread
+      into the Prisma `findMany` where-clause in `review.prisma-repository.ts`.
+      No code change needed.
 
-- **GROUP-T3** — Extend `users-tab.test.tsx` with two scenarios: head sees
-  only own-group users, admin sees all users.
+- [x] **GROUP-T3** — Added two integration tests to
+      `apps/api/src/modules/review/review.integration.test.ts`:
+  - "GROUP-T3 / head sees only own-group sections"
+  - "GROUP-T3 / admin sees all sections across groups"
+    (Note: `users-tab.test.tsx` is admin-only frontend; incorrect target in
+    original task.)
 
-- **GROUP-T4** — Manual verification: log in as a head, navigate to admin
-  dashboard, confirm user list is filtered.
+- [ ] **GROUP-T4** — Manual verification: log in as a head, navigate to
+      the head dashboard, confirm only own-group leads appear in the submission
+      list.
