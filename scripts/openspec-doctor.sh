@@ -10,8 +10,9 @@
 #   3. fully-checked changes still living in changes/ (should be archived).
 #   4. stray files at openspec/changes/ root (only valid: archive/, scratch/,
 #      individual change folders).
-#   5. delta-spec coverage gap — informational (project policy allows
-#      proposal+tasks only when no invariant is touched).
+#   5. delta-spec coverage — every change must have specs/<capability>/
+#      spec.md with ## ADDED Requirements + at least one Scenario block.
+#      Required for `openspec validate --strict` to pass.
 #
 # Exit codes:
 #   0 — all clean OR only informational notes.
@@ -122,12 +123,12 @@ while IFS= read -r entry; do
   emit fail "stray file at changes/ root: $base"
 done < <(find "$CHANGES_DIR" -mindepth 1 -maxdepth 1 -type f)
 
-header "── (5) delta-spec coverage (informational) ─────────────────"
+header "── (5) delta-spec coverage ─────────────────────────────────"
 while IFS= read -r dir; do
   [[ -z "$dir" ]] && continue
   name=$(basename "$dir")
   if [[ ! -d "$dir/specs" ]]; then
-    emit info "$name: no specs/ deltas (OK if no invariant touched)"
+    emit fail "$name: missing specs/ — strict validation will fail"
   fi
 done < "$CHANGES_LIST"
 
