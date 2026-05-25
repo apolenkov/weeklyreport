@@ -474,8 +474,36 @@ Plan: `.planning/plans/quiet-pondering-dragonfly.md` → Phase 3.8 (added this s
 
 1. [ ] Ручной UAT Phase 3.8: foreign risk card → LockBadge виден в правом верхнем; hover/focus → tooltip; own card без badge
 2. [ ] Ручной UAT Phase 3.8: «+ Add Risk» с pipeline Dev=Blocked → severity=Blocked + context strip + stages ВСЕ ПУСТЫЕ; Save disabled до выбора
-3. [ ] push `fix/PRJ-2/shiny-eagle` (ahead 3: 54728ca6 + 65980947 + b3234b4b) после явного approve
+3. [ ] push `fix/PRJ-2/shiny-eagle` (ahead 5: 54728ca6 + 65980947 + b3234b4b + 4a56e022 + 2df408ce) после явного approve
 4. [ ] approve PR #7 в GitHub Enterprise UI <!-- unchanged from prev retro -->
 5. [ ] merge PR #7 → main (после approve) <!-- unchanged from prev retro -->
 6. [ ] tag v8.4.2 после merge <!-- unchanged from prev retro -->
 7. [ ] /Demo-jira transition PRJ-2 после merge <!-- unchanged from prev retro -->
+
+---
+
+## Session 2026-05-25 — Phase 3.8b LockBadge propagation (v8.4.2 patch)
+
+updated: 2026-05-25T10:00:00Z source: subagent-driven-development
+
+Driver: page feedback «а в других местах?» — user picked full symmetry option (Decisions + Items + Risks все носят одинаковый LockBadge top-right паттерн).
+
+### Shipped — extract + propagate (1 коммит, 4 файла, 561/561 тестов)
+
+1. [x] refactor(report-shell): extract LockBadge + propagate to decisions + items <!-- done: 2df408ce -->
+   - Новый shared компонент `apps/web/src/components/report-shell/lock-badge.tsx` (sibling to `meta-row.tsx`)
+   - 2 варианта: `default` (34×34 для Risks/Decisions, matches Edit/Delete buttons) и `slim` (24×24 для compact item-card)
+   - `useSdlcTooltip` + `useRef` инкапсулированы — потребитель не передаёт tooltip prop
+   - Risks: inline LockBadge удалён, заменён shared import (без изменения поведения)
+   - Decisions: 3-way conditional (own/editable → Edit+Delete · foreign → LockBadge default · else → null); `<MetaRow foreign={false}>` для устранения дубль-🔒
+   - Items: 3-way conditional с `variant="slim"` для соответствия плотности компактных карточек; inline 🔒 в footer удалён
+   - SDD дисциплина: spec-review ✅ + code-quality-review ✅ (один nit — defensive owner-fallback — помечен ревьюером как не-блокер, отложен)
+
+### Verify (gates зелёные на `2df408ce`)
+
+- typecheck ✓ 0 errors · lint ✓ 0 errors · web tests 561/561 PASS
+- Pre-existing TS71007 на prop names — baseline noise
+
+### Defer (nice-to-have nit, не блокирует)
+
+1. [ ] decisions-section.tsx:226 — добавить `decision.owner ?? undefined` fallback (gracefully degrades to "another lead" если owner undefined); полировка комментариев на `min-h-[34px]` arbitrary class
