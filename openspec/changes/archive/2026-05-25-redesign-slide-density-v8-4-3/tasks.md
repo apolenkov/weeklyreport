@@ -10,7 +10,7 @@
       section grid: `gap-4` → `gap-3`
 - [x] T4: Browser spot-check — load a report with 15+ slides, visually verify
       density improvement without cramping, check contrast/readability at 100% zoom
-- [ ] T5: Commit — `refactor(slides): tighten card padding and line-height for
-  v8.4.3 density`
-- [ ] T-V: Verification — `pnpm typecheck`, `pnpm lint`, `pnpm test:slides`
+- [x] T5: Commit — `refactor(slides): tighten card padding and line-height for
+v8.4.3 density`
+- [x] T-V: Verification — `pnpm typecheck`, `pnpm lint`, `pnpm test:slides`
       pass; visual regression review in browser
