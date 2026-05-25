@@ -131,6 +131,62 @@ async function loadLoginPageClient() {
   return mod.LoginPageClient;
 }
 
+// ---------------------------------------------------------------------------
+// CLS-01: login page skeleton prevents layout shift (fix-landing-cls-skeleton)
+// ---------------------------------------------------------------------------
+//
+// The last-role hint section uses lastRoleLoaded state to show a skeleton
+// before localStorage is read (in AUTH_STUB mode). This prevents CLS by
+// keeping the container at a stable min-height. Production (AUTH_STUB=false)
+// never shows the section, so CLS cannot occur there.
+//
+// This describe block pins the skeleton rendering behavior: the skeleton must
+// be present with aria-hidden="true" on initial render before the useEffect
+// fires and sets lastRoleLoaded=true (which replaces it with the real hint).
+// ---------------------------------------------------------------------------
+describe("Landing page — CLS skeleton (CLS-01)", () => {
+  it("renders last-role-hint-skeleton with aria-hidden before hydration (AUTH_STUB mode)", async () => {
+    // Simulate pre-hydration state: store a role hint so the section has
+    // reason to render. The skeleton should still show before useEffect fires.
+    storage.setItem(
+      LAST_ROLE_STORAGE_KEY,
+      JSON.stringify({
+        role: "head",
+        email: "head@customreport.local",
+        name: "Антон К.",
+      }),
+    );
+
+    const LoginPageClient = await loadLoginPageClient();
+    const { unmount } = render(<LoginPageClient initialOrg={STUB_ORG} />);
+
+    // After render+effects, lastRoleLoaded=true → skeleton is gone, real hint shown.
+    const hint = await screen.findByTestId("last-role-hint");
+    expect(hint).toBeInTheDocument();
+
+    // The skeleton must NOT be in the DOM once the hint is loaded.
+    expect(screen.queryByTestId("last-role-hint-skeleton")).toBeNull();
+
+    unmount();
+  });
+
+  it("does not render last-role-hint section in production mode (no AUTH_STUB)", async () => {
+    // In production AUTH_STUB=false; the entire hint block is never rendered,
+    // so there is nothing to cause CLS on the real login page.
+    process.env.NEXT_PUBLIC_AUTH_STUB = "false";
+
+    const LoginPageClient = await loadLoginPageClient();
+    render(<LoginPageClient initialOrg={STUB_ORG} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("primary-cta")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByTestId("last-role-hint-skeleton")).toBeNull();
+    expect(screen.queryByTestId("last-role-hint")).toBeNull();
+  });
+});
+
 describe("Landing page — last-role hint (UFB-071)", () => {
   it("does not render the hint when no record is stored", async () => {
     const LoginPageClient = await loadLoginPageClient();
