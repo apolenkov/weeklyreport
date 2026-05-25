@@ -693,7 +693,7 @@ async function main() {
           text: texts.current[i]!,
           tag: tagCycle[i % tagCycle.length]!,
           workflowStatus: workflowCycle[i % workflowCycle.length]!,
-          stageName: stageNameFor(cfg.leadIndex + i),
+          stageNames: [stageNameFor(cfg.leadIndex + i)],
         },
         create: {
           id,
@@ -703,7 +703,7 @@ async function main() {
           text: texts.current[i]!,
           tag: tagCycle[i % tagCycle.length]!,
           workflowStatus: workflowCycle[i % workflowCycle.length]!,
-          stageName: stageNameFor(cfg.leadIndex + i),
+          stageNames: [stageNameFor(cfg.leadIndex + i)],
         },
       });
       totalItems++;
@@ -721,7 +721,7 @@ async function main() {
           text: texts.next[i]!,
           tag: tagCycle[i % tagCycle.length]!,
           workflowStatus: ItemWorkflowStatus.in_progress,
-          stageName: stageNameFor(cfg.leadIndex + i + 3),
+          stageNames: [stageNameFor(cfg.leadIndex + i + 3)],
         },
         create: {
           id,
@@ -731,7 +731,7 @@ async function main() {
           text: texts.next[i]!,
           tag: tagCycle[i % tagCycle.length]!,
           workflowStatus: ItemWorkflowStatus.in_progress,
-          stageName: stageNameFor(cfg.leadIndex + i + 3),
+          stageNames: [stageNameFor(cfg.leadIndex + i + 3)],
         },
       });
       totalItems++;
@@ -851,7 +851,7 @@ async function main() {
       impact: "Сдвигает milestone SSO на 1 неделю, блокирует смежную команду",
       mitigation:
         "Эскалирована заявка на расширение квоты, параллельно готовим batch-fallback",
-      stageName: "Development",
+      stageNames: ["Development"],
     },
     {
       id: riskId(2),
@@ -861,7 +861,7 @@ async function main() {
       impact: "Блокирует релиз до получения патча от вендора",
       mitigation:
         "Патч ETA 8 мая, временно перешли на chunked extraction по 500K",
-      stageName: "Testing",
+      stageNames: ["Testing"],
     },
     {
       id: riskId(3),
@@ -872,7 +872,7 @@ async function main() {
         "Окно обслуживания затрагивает зависимые сервисы (auth, payments)",
       mitigation:
         "Окно запланировано в субботу 02:00 МСК, rollback-план провалидирован",
-      stageName: "DevOps",
+      stageNames: ["DevOps"],
     },
     {
       id: riskId(4),
@@ -881,7 +881,7 @@ async function main() {
       risk: "Тюнинг WAF может выдавать false positives на пиковой нагрузке",
       impact: "Часть клиентских запросов может блокироваться без причины",
       mitigation: "Раскатка через shadow-mode + кнопка мгновенного rollback",
-      stageName: "Support",
+      stageNames: ["Support"],
     },
     // LSC-05: Olga's section — risk on Testing stage (no explicit stageStatus).
     // After deriveEffectiveStageStatus fix the Testing chip shows at-risk (#fef3c7).
@@ -892,7 +892,7 @@ async function main() {
       risk: "Нестабильность Testing-окружения при нагрузочных прогонах",
       impact: "Задержка валидации релиза",
       mitigation: "Изолированный стенд для нагрузки запланирован на следующий спринт",
-      stageName: "Testing",
+      stageNames: ["Testing"],
     },
   ];
 
@@ -905,7 +905,7 @@ async function main() {
         risk: r.risk,
         impact: r.impact,
         mitigation: r.mitigation,
-        stageName: r.stageName,
+        stageNames: r.stageNames,
       },
       create: r,
     });
@@ -956,7 +956,7 @@ async function main() {
       text: "Настройка DevOps-конвейера для Платёжного шлюза",
       tag: "infra",
       workflowStatus: ItemWorkflowStatus.blocked,
-      stageName: "DevOps",
+      stageNames: ["DevOps"],
     },
     create: {
       id: "a0000000-0000-4000-8000-000000005156",
@@ -966,7 +966,7 @@ async function main() {
       text: "Настройка DevOps-конвейера для Платёжного шлюза",
       tag: "infra",
       workflowStatus: ItemWorkflowStatus.blocked,
-      stageName: "DevOps",
+      stageNames: ["DevOps"],
     },
   });
 
@@ -981,7 +981,7 @@ async function main() {
       owner: "Василий И.",
       deadline: activeOffset(8, 15),
       impact: "Разблокирует выкатку SSO portal на 100% трафика",
-      stageName: "Development",
+      stageNames: ["Development"],
     },
     {
       id: decisionId(2),
@@ -991,7 +991,7 @@ async function main() {
       owner: "Игорь В.",
       deadline: activeOffset(9, 18),
       impact: "Закрывает tech-debt по пулу соединений, разгружает p99",
-      stageName: "DevOps",
+      stageNames: ["DevOps"],
     },
     {
       id: decisionId(3),
@@ -1001,7 +1001,7 @@ async function main() {
       owner: "Дмитрий С.",
       deadline: activeOffset(10, 12),
       impact: "Снижает риск инцидентов на проде, безопасный rollback",
-      stageName: "Support",
+      stageNames: ["Support"],
     },
   ];
 
@@ -1015,7 +1015,7 @@ async function main() {
         owner: d.owner,
         deadline: d.deadline,
         impact: d.impact,
-        stageName: d.stageName,
+        stageNames: d.stageNames,
       },
       create: d,
     });
@@ -1083,7 +1083,7 @@ async function main() {
           text: prevWeekText,
           tag: "feature",
           workflowStatus: ItemWorkflowStatus.done,
-          stageName: stageNameFor(cfg.leadIndex + pIdx),
+          stageNames: [stageNameFor(cfg.leadIndex + pIdx)],
         },
         create: {
           id,
@@ -1093,7 +1093,7 @@ async function main() {
           text: prevWeekText,
           tag: "feature",
           workflowStatus: ItemWorkflowStatus.done,
-          stageName: stageNameFor(cfg.leadIndex + pIdx),
+          stageNames: [stageNameFor(cfg.leadIndex + pIdx)],
         },
       });
       totalItems++;
@@ -1184,7 +1184,7 @@ async function main() {
             text: `Завершили этап по продукту «${product.name}»`,
             tag: "feature",
             workflowStatus: ItemWorkflowStatus.done,
-            stageName: stageNameFor(cfg.leadIndex + pIdx),
+            stageNames: [stageNameFor(cfg.leadIndex + pIdx)],
           },
           create: {
             id,
@@ -1194,7 +1194,7 @@ async function main() {
             text: `Завершили этап по продукту «${product.name}»`,
             tag: "feature",
             workflowStatus: ItemWorkflowStatus.done,
-            stageName: stageNameFor(cfg.leadIndex + pIdx),
+            stageNames: [stageNameFor(cfg.leadIndex + pIdx)],
           },
         });
         totalItems++;
