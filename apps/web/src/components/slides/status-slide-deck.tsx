@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import type { SectionSlideModel, SlideTone } from "./section-slide-utils";
+import { SlideFullscreenButton } from "./slide-fullscreen-button";
 import { buildUnifiedSlideModel } from "./section-slide-utils";
 import { LeadUnifiedSlide } from "./lead-unified-slide";
 import { LeadSlideHero } from "./lead-slide-hero";
@@ -181,8 +182,10 @@ function LeadSlideArticle({
 }
 
 function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
+  const articleRef = useRef<HTMLElement>(null);
   return (
-    <article className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(247,249,246,0.92)_100%)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_12px_24px_-18px_rgba(0,0,0,0.25),0_1px_2px_rgba(0,0,0,0.05)]">
+    <article ref={articleRef} className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(247,249,246,0.92)_100%)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_12px_24px_-18px_rgba(0,0,0,0.25),0_1px_2px_rgba(0,0,0,0.05)]">
+      <SlideFullscreenButton targetRef={articleRef} variant="floating" />
       <div className="grid gap-5 xl:grid-cols-[1fr_310px]">
         <div className="min-w-0 space-y-5">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[rgba(0,0,0,0.08)] pb-4">
@@ -257,7 +260,9 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
                 <FileText className="h-4 w-4" aria-hidden="true" />
                 Decisions
               </div>
-              {textList(slide.decisions, "No decisions", 2)}
+              <div className="max-h-[300px] overflow-y-auto">
+                {textList(slide.decisions, "No decisions", slide.decisions.length)}
+              </div>
             </section>
           ) : null}
         </div>
@@ -334,7 +339,7 @@ export function StatusSlideDeck({
 
   return (
     <section
-      className="space-y-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+      className="space-y-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
       data-testid={mode + "-slides-deck"}
       tabIndex={0}
       onKeyDown={handleKeyDown}
@@ -345,7 +350,7 @@ export function StatusSlideDeck({
             <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold text-[var(--color-primary)]">
               {title}
             </h1>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--color-muted-foreground)]">
+            <p className="mt-1 max-w-2xl text-sm leading-[1.4] text-[var(--color-muted-foreground)]">
               {subtitle}
             </p>
           </div>
