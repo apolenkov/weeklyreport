@@ -1,0 +1,124 @@
+schema: spec-driven
+
+context: |
+  # Project
+  CustomReport — internal SaaS for a software department. Six team leads
+  fill structured weekly status sections (project traffic lights, current and
+  next week items, risks, decisions, top priorities); the head reviews,
+  publishes, and exports a unified PDF report.
+
+  Current shipped baseline: v8.2 (2026-05-18). Active work: v8.4 versioning
+  UX + stage/save toolbar polish on branch `fix/PRJ-2/save-disc`.
+
+  # Stack
+  - Monorepo: pnpm 10.11 workspaces + Turborepo 2.5
+  - Frontend: Next.js 16 (App Router, React Compiler), React 19, Tailwind 4,
+    shadcn/ui via `@customreport/ui`, TanStack Query 5, tRPC 11 client
+  - Backend: NestJS 11, Express 5, tRPC 11 server, Prisma 7 with
+    `@prisma/adapter-pg`, BullMQ 5, Redis 7, PostgreSQL 15, OpenTelemetry,
+    Prometheus prom-client
+  - Auth: SAML via `@node-saml/passport-saml` + Keycloak (prod); dev-only
+    `/auth/dev-login` gated behind `AUTH_DEV_MODE`
+  - Validation: Zod 4 shared schemas in `@customreport/shared`
+  - Testing: Vitest 4 (unit), Playwright 1.59 (E2E), Testing Library, MSW 2
+  - Node: >=20.19 (Docker pins `node:20-alpine`; API runner uses
+    Playwright noble image for PDF gen)
+
+  # Workspace layout
+  apps/web         — Next.js frontend (`@customreport/web`)
+  apps/api         — NestJS backend (`@customreport/api`)
+  packages/shared  — Zod schemas + tRPC router types (`@customreport/shared`)
+  packages/ui      — shadcn/ui + composition components (`@customreport/ui`)
+  prisma/          — schema, migrations (append-only), seeds, destructive
+                     guard
+  .planning/       — historical roadmap, phases, retros, research; NOT
+                     openspec specs
+  graphify-out/    — repo knowledge graph (`GRAPH_REPORT.md`, `graph.json`)
+
+  # Roles
+  - lead    — fills own report section (items, risks, decisions, priorities,
+              traffic lights); submits
+  - head    — lead capabilities + review + publish + admin CRUD + PDF export
+  - viewer  — read-only access to published reports + PDF download
+  No runtime director role exists; director-facing UAT routes through viewer.
+
+  # Domain model anchors
+  Report (period) → ReportSection (per lead) → { ProjectStatus[], Item[]
+  (current/next), Risk[], Decision[], Priority[] }. Versioning v8.4 adds
+  autosave→snapshot wiring, pinned snapshots, time-based retention. Report
+  carries both `periodState` and legacy period tuple — six writers must
+  update both atomically (no DB constraint enforces this).
+
+  # Conventions (load-bearing)
+  - TypeScript strict everywhere; `no-explicit-any` is an error; no floating
+    promises; `verbatimModuleSyntax: true` (use `import type`)
+  - File names kebab-case with role suffix (`*.service.ts`,
+    `*.prisma-repository.ts`, `*.router.ts`, `*.module.ts`); React component
+    files kebab-case, exports PascalCase
+  - tRPC procedures must use one of 7 canonical middleware-chain builders
+    (role-coverage gate; CI compares by reference identity)
+  - Repository interface lives in the service file; Prisma implementation in
+    `*.prisma-repository.ts`; wired via `useFactory` in the module
+  - Domain errors extend `Error`; map to tRPC errors in
+    `apps/api/src/infrastructure/trpc/trpc.error-mapper.ts`; never leak
+    internal messages to clients
+  - Zod parse at every layer boundary (service input, repository output,
+    router input); use `safeText()` helper for user-facing text fields
+  - Shared schemas/enums live in `@customreport/shared` — update there
+    before duplicating in app code
+  - Static production UI strings in `apps/web/src/**/*.tsx` stay English
+    until a real i18n phase exists; Russian is allowed only as data, seeds,
+    comments, or tests
+  - Deferred user-facing features use `ComingSoonBadge` from
+    `@customreport/ui`; deferred backend paths throw
+    `Error('Not implemented — see TODO(<ref>)')`
+  - Non-prod `POSTGRES_DB` and the database name inside `DATABASE_URL` must
+    suffix with `_uat`, `_dev`, or `_test` when the host is not truly local;
+    `prisma/_destructive-guard.ts` parses `DATABASE_URL`
+  - Prisma migrations are append-only; review destructive migrations
+    against the guard
+  - In MVP phase schema and interfaces can change freely (`migrate reset`
+    is preferred over alter-table migrations); openspec proposals should
+    state explicitly when this freedom is being used
+
+  # Quality gates (must stay green)
+  pnpm typecheck && pnpm lint && pnpm test && pnpm build
+  Planning + openspec markdown: pnpm lint:md
+  Local Docker verify: pnpm docker:local:verify
+
+  # Sources of truth (read before proposing)
+  - `.planning/codebase/CODEBASE-MAP-2026-05-25.md` — durable mental map
+  - `.planning/codebase/STACK.md`, `CONVENTIONS.md`, `ARCHITECTURE.md`
+  - `prisma/schema.prisma` — current data model
+  - `packages/shared/src/schemas/` — canonical Zod schemas
+  - `graphify-out/GRAPH_REPORT.md` — cross-file dependency view
+
+rules:
+  proposal:
+    - State the user-visible problem in plain language before the technical
+      framing; one short paragraph maximum.
+    - Cite the inventories that justify the change (existing files, planning
+      memos, related issues) instead of restating background.
+    - Include an explicit "Non-goals" list when scope could plausibly creep.
+    - Keep proposals under ~400 words; longer rationale belongs in
+      `design.md`.
+  design:
+    - Show before/after data flow when the change touches request paths,
+      Prisma writes, or shared schemas.
+    - Identify which of the load-bearing invariants the change preserves,
+      mutates, or relaxes (period dual-state, role-coverage gate,
+      destructive-db guard, ai-module facade, deferred-feature pattern).
+    - Surface rollout concerns — migration order, feature-flag gating,
+      destructive ops, downstream consumers in apps/web and apps/api.
+  tasks:
+    - Group by repo target — shared/ui first, then api, then web, then
+      planning + docs.
+    - Each task should be small enough to land in one commit; bigger work
+      gets split.
+    - Verification step at the end must list the exact gate commands that
+      were run.
+  specs:
+    - Express requirements as testable contracts ("the system MUST",
+      "the system MUST NOT"), not as implementation steps.
+    - Name the consumer surface explicitly (tRPC procedure, repository
+      method, React route, Prisma model) so future changes can grep for it.
