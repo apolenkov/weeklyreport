@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Lock } from "lucide-react";
+import { useEffect, useState } from "react";
 
+import { LockBadge } from "../report-shell/lock-badge";
 import { MetaRow } from "../report-shell/meta-row";
-import { useSdlcTooltip } from "../ui/sdlc-tooltip";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { RiskEditDialog } from "./risk-edit-dialog";
 import type { Product, RiskEntry } from "./mock-data";
@@ -70,39 +69,6 @@ function DeleteIcon() {
   );
 }
 
-function LockBadge({
-  authorName,
-  tooltip,
-}: {
-  readonly authorName: string | undefined;
-  readonly tooltip: ReturnType<typeof useSdlcTooltip>;
-}) {
-  const buttonRef = useRef<HTMLDivElement | null>(null);
-  const tooltipContent = `Read-only · Author: ${authorName ?? "another lead"} · You can't edit this card`;
-  function handleEnter() {
-    const el = buttonRef.current;
-    if (!el) return;
-    tooltip.show(el.getBoundingClientRect(), tooltipContent);
-  }
-  function handleLeave() {
-    tooltip.hide();
-  }
-  return (
-    <div
-      ref={buttonRef}
-      className="flex min-h-[34px] min-w-[34px] cursor-default items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)]"
-      tabIndex={0}
-      aria-label={`Read-only — authored by ${authorName ?? "another lead"}`}
-      onMouseEnter={handleEnter}
-      onMouseLeave={handleLeave}
-      onFocus={handleEnter}
-      onBlur={handleLeave}
-    >
-      <Lock className="h-4 w-4" aria-hidden="true" />
-    </div>
-  );
-}
-
 export function RisksSection({
   risks,
   readOnly = false,
@@ -113,7 +79,6 @@ export function RisksSection({
   sectionAuthorName,
   addSignal = 0,
 }: RisksSectionProps) {
-  const tooltip = useSdlcTooltip();
   const [dialogState, setDialogState] = useState<
     | { open: false }
     | { open: true; mode: "create"; seedProductId?: string }
@@ -259,7 +224,7 @@ export function RisksSection({
                   </div>
                 ) : risk.foreign === true ? (
                   <div className="ml-auto flex gap-1">
-                    <LockBadge authorName={risk.authorName ?? sectionAuthorName} tooltip={tooltip} />
+                    <LockBadge authorName={risk.authorName ?? sectionAuthorName} />
                   </div>
                 ) : null}
               </div>
