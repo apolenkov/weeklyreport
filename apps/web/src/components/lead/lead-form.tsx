@@ -322,15 +322,8 @@ export function LeadForm({
       targetReportId !== "" &&
       !shouldRouteHeadLikeAwayFromLeadForm &&
       !shouldDeferForSession,
-    // Prevent window-focus refetches from overwriting in-flight local edits.
-    // Every mutation that changes server state calls invalidateLeadForm(), so
-    // explicit invalidation is the only freshness path — no background polling
-    // needed.
-    // TODO(v8.5-D-multitab): staleTime: Infinity is safe while all mutations call
-    // invalidateLeadForm(), BUT useLeadFormAutosave.onSuccess does NOT — other tabs
-    // get stale data. Fix: add invalidateLeadForm() in the autosave onSuccess handler
-    // + set staleTime: 30_000 + refetchOnWindowFocus: true (plan section 15.6 D2).
-    staleTime: Infinity,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   // The section id for actions (autosave / submit / revoke) comes from the
