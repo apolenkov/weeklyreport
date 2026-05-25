@@ -220,6 +220,10 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
             </div>
           </div>
 
+          {/* TODO(v8.4.3-slide-redesign): 2-column grid breaks visual rhythm at
+              sparse / medium / heavy content density. Redesign to fixed topology
+              (min-h + line-clamp or 4-row vertical stack) after density audit —
+              see plan section 4b. Phase 3.7 deferred to v8.4.3. */}
           <div className="grid gap-4 xl:grid-cols-2">
             <section className="space-y-2">
               <div className="flex items-center gap-2 text-xs font-bold uppercase text-[var(--color-muted-foreground)]">

@@ -123,6 +123,9 @@ export function useLeadFormAutosave(
         setState("saved");
         setLastSavedAt(new Date());
         onSaveSuccessRef.current?.();
+        // TODO(v8.5-D-multitab): call invalidateLeadForm(qc, trpc, {reportSectionId})
+        // here so other browser tabs see the fresh draft without waiting for
+        // window focus. Also set staleTime: 30_000 in byPeriod query (plan 15.6 D1).
 
         // Fire queued save if one was requested during in-flight.
         if (queuedKeyRef.current !== null) {
