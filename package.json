@@ -23,6 +23,7 @@
     "test:e2e": "pnpm --filter @customreport/web exec playwright test",
     "test:e2e:ui": "pnpm --filter @customreport/web exec playwright test --ui",
     "doctor": "GSD_RUNTIME=codex bash scripts/doctor.sh",
+    "openspec:doctor": "bash scripts/openspec-doctor.sh",
     "docker:local:verify": "bash scripts/docker-local-verify.sh",
     "db:seed:simple": "tsx prisma/seed-simple.ts",
     "db:seed:advanced": "tsx prisma/seed.ts",
