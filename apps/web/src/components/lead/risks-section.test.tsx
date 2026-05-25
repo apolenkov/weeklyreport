@@ -73,6 +73,30 @@ describe("RisksSection LockBadge (Phase 3.8)", () => {
       screen.getByRole("button", { name: /Delete risk/i }),
     ).toBeInTheDocument();
   });
+
+  it("falls back to sectionAuthorName when risk.authorName is absent (T2 fix)", () => {
+    // risk.authorName is absent — LockBadge must show sectionAuthorName, not the
+    // current user's name. Before the fix, lead-form.tsx passed currentUser.name
+    // as sectionAuthorName, causing the badge to show the wrong person.
+    const riskWithoutAuthor: RiskEntry = {
+      ...foreignRisk,
+      authorName: undefined,
+    };
+
+    render(
+      <SdlcTooltipProvider>
+        <RisksSection
+          risks={[riskWithoutAuthor]}
+          products={[{ id: "p1", name: "Product", overallStatus: "at-risk", stages: [] }]}
+          sectionAuthorName="Bob"
+        />
+      </SdlcTooltipProvider>,
+    );
+
+    expect(
+      screen.getByLabelText("Read-only — authored by Bob"),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("RisksSection stage scope", () => {
