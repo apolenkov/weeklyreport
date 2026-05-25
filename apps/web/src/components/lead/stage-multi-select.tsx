@@ -6,7 +6,7 @@ type StageMultiSelectProps = {
   readonly stages: readonly string[];
   readonly error?: string;
   readonly onChange: (next: string[]) => void;
-  /** When provided, shows a consequence-preview hint below the stage chips. */
+  /** When provided, shows a consequence-preview banner above the stage chips. */
   readonly previewSeverity?: "at-risk" | "blocked";
 };
 
@@ -30,6 +30,22 @@ export function StageMultiSelect({
   }
 
   const singleStage = stages.length === 1 ? stages[0] : undefined;
+  const isMultiChoice = stages.length >= 2;
+  const severityLabel = previewSeverity === "blocked" ? "Blocked" : "At Risk";
+
+  // Banner copy: collapse to a generic line when more than one stage is
+  // selected; name the stage when exactly one is selected; default copy when
+  // nothing is selected.
+  let bannerText = "";
+  if (isMultiChoice && previewSeverity) {
+    if (selected.length === 0) {
+      bannerText = `All assigned stages will show as ${severityLabel}.`;
+    } else if (selected.length === 1) {
+      bannerText = `Stage ${selected[0]} will show as ${severityLabel}.`;
+    } else {
+      bannerText = `Selected stages will show as ${severityLabel}.`;
+    }
+  }
 
   return (
     <fieldset
@@ -47,6 +63,17 @@ export function StageMultiSelect({
         stage as blocked on the SDLC pipeline above before pinning a risk —
         that keeps your blocker scope honest.
       </p>
+      {bannerText && (
+        <div
+          data-testid="stage-scope-banner"
+          role="status"
+          aria-live="polite"
+          className="mb-2 flex w-full items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+        >
+          <AlertTriangleIcon />
+          <span>{bannerText}</span>
+        </div>
+      )}
       {stages.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[rgba(0,0,0,0.18)] bg-[var(--color-muted)] px-3 py-2.5 text-sm text-[var(--color-muted-foreground)]">
           No assigned stages available.
@@ -59,7 +86,10 @@ export function StageMultiSelect({
           </span>
         </div>
       ) : (
-        <div className="flex flex-wrap gap-2">
+        <div
+          data-testid="stage-checkbox-group"
+          className="flex flex-wrap gap-2"
+        >
           {stages.map((stage) => {
             const checked = selected.includes(stage);
             return (
@@ -84,18 +114,7 @@ export function StageMultiSelect({
           })}
         </div>
       )}
-      {previewSeverity && (
-        <p className="mt-2 text-xs text-amber-700">
-          {value.length === 0
-            ? previewSeverity === "blocked"
-              ? "All assigned stages will show as Blocked."
-              : "All assigned stages will show as At Risk."
-            : previewSeverity === "blocked"
-              ? `These stages will show as Blocked: ${value.join(", ")}`
-              : `These stages will show as At Risk: ${value.join(", ")}` }
-        </p>
-      )}
-      {!previewSeverity && selected.length === 0 && (
+      {!previewSeverity && selected.length === 0 && isMultiChoice && (
         <p className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">
           Scope: all assigned stages.
         </p>
@@ -109,5 +128,25 @@ export function StageMultiSelect({
         </p>
       )}
     </fieldset>
+  );
+}
+
+function AlertTriangleIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
   );
 }
