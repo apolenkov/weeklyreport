@@ -1,37 +1,59 @@
 /**
- * UFB-058 / Phase 58: static tagline under the PulseMark.
+ * UFB-062: dynamic tagline cycler on the landing hero.
  *
- * Original design used a 3-phrase CSS-only cycler. The math on three
- * non-overlapping phrases sharing one 12s keyframe never converged
- * cleanly without either: (a) a flash of empty text at t=0, or (b) JS
- * state for index swap. Pure-CSS solution failed UAT screenshot;
- * dropped in favor of one strong assertion line. The ECG line under
- * PULSE in PulseBackground already supplies the motion.
+ * Driven by React state + setTimeout chain (deterministic cleanup,
+ * no setInterval anti-pattern — see UFB-058 comment history).
  *
- * TODO(UFB-062-cycling): if/when product wants the multi-phrase
- * carousel back, drive it with React state + setTimeout chain
- * (legitimate, with useEffect cleanup — not the setInterval
- * anti-pattern) so timing is deterministic. The CLAUDE.md TODO
- * discipline rule applies — add a metric
- * `customreport_landing_tagline_view_total{phrase}` to see which
- * phrase audiences see most.
+ * Rotation schedule: 3 s visible → 250 ms fade-out → swap → 250 ms fade-in.
+ * On mount, picks a random start index so repeat visits feel fresh.
  *
- * TODO(i18n-future): the TAGLINE string is the only hardcoded UI
- * copy on the landing page. When i18n is introduced, move to the
- * locale dictionary and read via the i18n hook. DB-sourced content
- * (Organization names, report text) may be Russian, but UI strings
- * stay English until i18n lands.
+ * TODO(i18n-future): move phrases to locale dictionary when i18n lands.
  */
+"use client";
 
-// UFB-062: dropped "weekly" — landing copy must stay cadence-neutral
-// once AppSettings.periodCadence can be 'bi-weekly' (and, future,
-// 'monthly'). The motion under PULSE already implies a recurring beat.
-const TAGLINE = "Your portfolio's pulse, distilled.";
+import { useEffect, useRef, useState } from "react";
+import { LANDING_TAGLINES } from "./landing-page.constants";
+
+const VISIBLE_MS = 3_000;
+const FADE_MS = 250;
+
+function randomIndex(): number {
+  return Math.floor(Math.random() * LANDING_TAGLINES.length);
+}
 
 export function TaglineCycler() {
+  const [index, setIndex] = useState<number>(randomIndex);
+  const [visible, setVisible] = useState(true);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    function cycle() {
+      // Fade out
+      setVisible(false);
+      timerRef.current = setTimeout(() => {
+        // Swap phrase
+        setIndex((i) => (i + 1) % LANDING_TAGLINES.length);
+        // Fade in
+        setVisible(true);
+        // Schedule next cycle
+        timerRef.current = setTimeout(cycle, VISIBLE_MS);
+      }, FADE_MS);
+    }
+
+    timerRef.current = setTimeout(cycle, VISIBLE_MS);
+
+    return () => {
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   return (
-    <p className="pulse-tagline-static" role="text">
-      {TAGLINE}
+    <p
+      className="pulse-tagline"
+      role="text"
+      style={{ opacity: visible ? 1 : 0 }}
+    >
+      {LANDING_TAGLINES[index]}
     </p>
   );
 }
