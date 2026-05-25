@@ -431,6 +431,7 @@ updated: 2026-05-25T00:00:00Z source: Demo-retro
 4. [x] feat(fill-from): show empty-state when no past reports in dropdown <!-- done: 27304dfd -->
 5. [x] T6 verify gates: typecheck ✓ 0 errors, lint ✓ 0 errors, web 559/559 PASS, API 926/926 PASS <!-- done: gates verified -->
    - 4 e2e failures: pre-existing seed-state issues (VHS DB has 0 snapshots for active section; foreign-author/slides specs need draft section), NOT T1-T4 regression
+6. [x] T7 closeout: NEXT-ACTIONS.md (append), STATE.md updated, memory saved, /Demo-retro rendered <!-- done: 281b0426 -->
 
 ### Carry forward (HUMAN)
 
