@@ -11,11 +11,12 @@ interface SaveNowButtonProps {
 }
 
 /**
- * Icon-only "Save now" button. Square sized to var(--touch-target-min)
- * (~44×44 for WCAG AA + parity with sibling toolbar controls); the SVG glyph
- * itself is 14×14, centred. Anchored to the toolbar's far-right slot.
- * Renders a floppy-disc icon by default; swaps to a spinner while a save is
- * in flight; flashes a check on success; shows an alert triangle on error.
+ * Icon-only "Save now" button. Circle 32×32 to match the pill-shaped
+ * sibling controls in the toolbar (period nav arrows, version nav arrows,
+ * Fill caret); the SVG glyph itself is 14×14, centred. Anchored to the
+ * toolbar's far-right slot. Renders a floppy-disc icon by default; swaps
+ * to a spinner while a save is in flight; flashes a check on success;
+ * shows an alert triangle on error.
  *
  * State → icon mapping:
  *   idle / pending          → disc        (enabled only in `pending`)
@@ -76,7 +77,7 @@ export function SaveNowButton({ autosave }: SaveNowButtonProps) {
       onClick={handleClick}
       aria-label={ariaLabel}
       title={ariaLabel}
-      className="inline-flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-40"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-40"
     >
       {isSaving ? (
         <SpinnerIcon />
