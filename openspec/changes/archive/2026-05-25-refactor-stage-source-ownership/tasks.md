@@ -37,7 +37,7 @@
   `mock-data.ts` now both source from shared.
 
 - [x] T6: Grep for any other stage-mapping duplicates (`grep -rn "Dev.*Testing"
-  apps/`) and consolidate
+apps/`) and consolidate
 
   Updated `apps/web/src/components/admin/mock-data.ts`: replaced local
   `StageName` type and `STAGE_NAMES` const with re-exports from
@@ -45,7 +45,7 @@
   from `mock-data` (unchanged — re-export preserved the contract).
 
 - [x] T7: Commit — `refactor(shared): consolidate stage mapping to single
-  source of truth`
+source of truth`
 
   Committed as `refactor(shared): consolidate stage mapping to single source`.
 
