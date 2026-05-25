@@ -27,6 +27,9 @@ importers:
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
+      luxon:
+        specifier: ^3.7.2
+        version: 3.7.2
       pg:
         specifier: ^8.20.0
         version: 8.21.0
@@ -37,6 +40,9 @@ importers:
       "@commitlint/config-conventional":
         specifier: ^21.0.1
         version: 21.0.1
+      "@types/luxon":
+        specifier: ^3.7.1
+        version: 3.7.1
       "@types/node":
         specifier: ^24.9.1
         version: 24.12.4
