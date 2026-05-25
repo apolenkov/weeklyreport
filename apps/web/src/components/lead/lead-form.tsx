@@ -780,12 +780,12 @@ export function LeadForm({
       );
       const caSection = _caSectionByAuthorId.get(ca.authorId);
       const stageRisks = (caSection?.risks ?? []).filter(
-        (r) => r.projectId === ca.projectId && r.stageName != null &&
-          normalizeStageName(r.stageName) === lower,
+        (r) => r.projectId === ca.projectId &&
+          r.stageNames.some((n) => normalizeStageName(n) === lower),
       );
       const stageItems = (caSection?.items ?? []).filter(
-        (i) => i.projectId === ca.projectId && i.stageName != null &&
-          normalizeStageName(i.stageName) === lower,
+        (i) => i.projectId === ca.projectId &&
+          i.stageNames.some((n) => normalizeStageName(n) === lower),
       );
       const status = deriveEffectiveStageStatus(
         trafficToStageStatus(stageEntry?.status ?? null),
@@ -976,7 +976,7 @@ export function LeadForm({
             id: `foreign:${ca.authorId}:${i.id}`,
             productId: i.projectId,
             productName: productNameById.get(i.projectId) ?? i.projectId,
-            stageName: i.stageName ?? undefined,
+            stageIds: i.stageNames,
             status: (i.workflowStatus === "in_progress"
               ? "in-progress"
               : i.workflowStatus === "done"
@@ -1001,7 +1001,7 @@ export function LeadForm({
             id: `foreign:${ca.authorId}:${i.id}`,
             productId: i.projectId,
             productName: productNameById.get(i.projectId) ?? i.projectId,
-            stageName: i.stageName ?? undefined,
+            stageIds: i.stageNames,
             status: (i.workflowStatus === "in_progress"
               ? "in-progress"
               : i.workflowStatus === "done"
@@ -1024,7 +1024,7 @@ export function LeadForm({
           id: `foreign:${ca.authorId}:${r.id}`,
           productId: r.projectId,
           productName: productNameById.get(r.projectId) ?? r.projectId,
-          stageName: r.stageName ?? undefined,
+          stageIds: r.stageNames,
           severity: r.severity === "blocked" ? "blocked" : "at-risk",
           text: r.risk,
           impact: r.impact,
@@ -1047,7 +1047,7 @@ export function LeadForm({
           owner: d.owner,
           impact: d.impact,
           deadline: d.deadline ? d.deadline.toISOString().slice(0, 10) : null,
-          stageName: d.stageName ?? undefined,
+          stageIds: d.stageNames,
           authorId: ca.authorId,
           foreign: true,
         }),

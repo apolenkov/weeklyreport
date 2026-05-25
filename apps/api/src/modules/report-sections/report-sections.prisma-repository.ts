@@ -83,7 +83,7 @@ type PrismaReportSectionWithRelations = NonNullable<
     carriedOver: boolean;
     completed: boolean | null;
     priorityRank: number | null;
-    stageName: string | null;
+    stageNames: string[];
   }>;
   risks: Array<{
     id: string;
@@ -92,7 +92,7 @@ type PrismaReportSectionWithRelations = NonNullable<
     impact: string;
     mitigation: string;
     severity: string;
-    stageName: string | null;
+    stageNames: string[];
   }>;
   decisions: Array<{
     id: string;
@@ -101,7 +101,7 @@ type PrismaReportSectionWithRelations = NonNullable<
     deadline: Date | null;
     impact: string;
     resolvedAt: Date | null;
-    stageName: string | null;
+    stageNames: string[];
     productId: string | null;
   }>;
 };
@@ -212,9 +212,7 @@ export function mapPrismaToReportSection(
       carriedOver: i.carriedOver,
       completed: i.completed,
       priorityRank: i.priorityRank ?? null,
-      stageIds: i.stageName
-        ? i.stageName.split(", ").filter(Boolean)
-        : undefined,
+      stageIds: i.stageNames.length > 0 ? i.stageNames : undefined,
     })),
     risks: row.risks.map((r) => ({
       id: r.id,
@@ -223,9 +221,7 @@ export function mapPrismaToReportSection(
       impact: r.impact,
       mitigation: r.mitigation,
       severity: r.severity === "blocked" ? "blocked" : "at-risk",
-      stageIds: r.stageName
-        ? r.stageName.split(", ").filter(Boolean)
-        : undefined,
+      stageIds: r.stageNames.length > 0 ? r.stageNames : undefined,
     })),
     decisions: row.decisions.map((d) => ({
       id: d.id,
@@ -234,9 +230,7 @@ export function mapPrismaToReportSection(
       deadline: d.deadline,
       impact: d.impact,
       resolvedAt: d.resolvedAt,
-      stageIds: d.stageName
-        ? d.stageName.split(", ").filter(Boolean)
-        : undefined,
+      stageIds: d.stageNames.length > 0 ? d.stageNames : undefined,
       productId: d.productId ?? undefined,
     })),
   });
@@ -356,7 +350,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               carriedOver: i.carriedOver,
               completed: i.completed ?? null,
               priorityRank: i.priorityRank ?? null,
-              stageName: i.stageIds?.join(", ") ?? null,
+              stageNames: i.stageIds ?? [],
             })),
           });
         }
@@ -371,7 +365,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               impact: r.impact,
               mitigation: r.mitigation,
               severity: r.severity ?? "at-risk",
-              stageName: r.stageIds?.join(", ") ?? null,
+              stageNames: r.stageIds ?? [],
             })),
           });
         }
@@ -387,7 +381,7 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
               deadline: d.deadline ?? null,
               impact: d.impact,
               resolvedAt: d.resolvedAt ?? null,
-              stageName: d.stageIds?.join(", ") ?? null,
+              stageNames: d.stageIds ?? [],
               productId: d.productId as string,
             })),
           });

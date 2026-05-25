@@ -700,7 +700,7 @@ describe("LeadFormService — createSnapshot", () => {
     // buildSnapshotProjection returns the same projection shape that is stored
     // in VersionSnapshot.data — both sides of the comparison are now the same shape.
     const snapshotProjection: Record<string, unknown> = {
-      items: [{ projectId: "p1", type: "current", text: "Deliver feature X", tag: "feature", workflowStatus: "in_progress", carriedOver: false, completed: null, priorityRank: null, stageName: null }],
+      items: [{ projectId: "p1", type: "current", text: "Deliver feature X", tag: "feature", workflowStatus: "in_progress", carriedOver: false, completed: null, priorityRank: null, stageNames: [] }],
       risks: [],
       decisions: [],
       stageStatuses: [],
