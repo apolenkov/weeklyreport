@@ -1,0 +1,89 @@
+{
+  "decision": "submitted",
+  "stage": "interview",
+  "result": {
+    "stage": "interview",
+    "title": "Accumulated Work Audit — forensic scan of all sessions and pending work",
+    "goalSlug": "accumulated-work-audit",
+    "answers": [
+      {
+        "questionId": "time-scope",
+        "selectedOptionIds": ["all-time"],
+        "customAnswer": "",
+        "answer": "Всё накопление (Recommended)",
+        "completed": true
+      },
+      {
+        "questionId": "repo-scope",
+        "selectedOptionIds": ["this-repo"],
+        "customAnswer": "",
+        "answer": "Только customreport (Recommended)",
+        "completed": true
+      },
+      {
+        "questionId": "data-sources",
+        "selectedOptionIds": [
+          "claude-transcripts",
+          "codex-sessions",
+          "planning-ledgers",
+          "memory-store"
+        ],
+        "customAnswer": "",
+        "answer": "Claude Code transcripts (.jsonl)\nCodex sessions\n.planning/STATE.md, NEXT-ACTIONS.md, HANDOFF.json\n.planning/memory + claude-mem observations",
+        "completed": true
+      },
+      {
+        "questionId": "status-categories",
+        "selectedOptionIds": [
+          "done",
+          "in-progress",
+          "not-started",
+          "needs-research",
+          "blocked",
+          "loops-detected",
+          "ideas-unfiled",
+          "retro",
+          "decisions-log"
+        ],
+        "customAnswer": "",
+        "answer": "DONE — закрыто с commit evidence\nIN-PROGRESS — частично сделано\nNOT-STARTED — упомянуто но не начато\nNEEDS-RESEARCH — недостаточно данных для plan\nBLOCKED — внешний/внутренний blocker\nLOOPS — обсуждалось ≥3 раз без resolution\nIDEAS-UNFILED — упомянуто и забыто\nRETRO — GOOD/BAD/LEARNED по всему накоплению (Recommended)\nDECISIONS — что было решено и когда",
+        "completed": true
+      },
+      {
+        "questionId": "loop-threshold",
+        "selectedOptionIds": ["two-mentions"],
+        "customAnswer": "",
+        "answer": "≥2 mentions",
+        "completed": true
+      },
+      {
+        "questionId": "action-after-audit",
+        "selectedOptionIds": ["report-with-recs"],
+        "customAnswer": "",
+        "answer": "Report + per-item recommendation (Recommended)",
+        "completed": true
+      },
+      {
+        "questionId": "output-format",
+        "selectedOptionIds": ["md-plus-json"],
+        "customAnswer": "",
+        "answer": "Markdown report + JSON ledger (Recommended)",
+        "completed": true
+      },
+      {
+        "questionId": "privacy-quotes",
+        "selectedOptionIds": ["summary-with-ref"],
+        "customAnswer": "",
+        "answer": "Summary + session-id ref (Recommended)",
+        "completed": true
+      },
+      {
+        "questionId": "use-existing-skill",
+        "selectedOptionIds": ["extend-existing"],
+        "customAnswer": "",
+        "answer": "Использовать Demo-session-scan + extend (Recommended)",
+        "completed": true
+      }
+    ]
+  }
+}

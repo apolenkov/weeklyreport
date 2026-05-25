@@ -12,14 +12,16 @@ Codex repo overlay.
 Use current files instead of memory:
 
 - `README.md` - architecture, setup, dev login URLs, verification commands.
-- `.planning/STATE.md` - current milestone status and deferred scope.
-- `.planning/HANDOFF.json` - paused work, blockers, dirty-file warnings.
-- `.planning/codebase/CONVENTIONS.md` - detailed naming and TypeScript rules.
+- `openspec/changes/` - active backlog (run `openspec list`).
+- `openspec/specs/` - 5 durable invariants (destructive-db-guard,
+  deferred-feature-pattern, role-coverage-gate, period-dual-state,
+  ai-module-facade).
+- `openspec/config.yaml` - project context + change-lifecycle rules.
 - `.env.example`, `.env.test.example`, `apps/web/.env.example` - runtime
   switches and port assumptions.
 
-Do not paste generated research dumps here. Planning/research sources belong in
-`.planning/**`; repo setup belongs in `README.md`.
+Do not paste generated research dumps here. Active work lives in `openspec/`;
+historical context is recoverable via `git log`.
 
 ## Project Snapshot
 
@@ -35,17 +37,13 @@ customreport
 +-- packages/ui     # shadcn/ui and Tailwind tokens
 +-- prisma          # schema, migrations, seeds, destructive guards
 +-- scripts         # repo helpers and push/local verification guards
-+-- tools           # UAT extraction and generation tools
-+-- .planning       # GSD state, phase evidence, handoffs, research
++-- tools           # UAT extraction, generation tools, accumulated-work-audit
++-- openspec        # active backlog (changes/) + durable contracts (specs/)
 ```
 
-Current default branch of work is `fix/PRJ-2/uat-v7-2026-05-12`. Before
-continuing or closing work, check `git status --short --branch`,
-`.planning/STATE.md`, and `.planning/HANDOFF.json`.
-
-There are often pre-existing dirty regression evidence files during PRJ-2/UAT
-work. Do not stage, revert, or normalize unrelated dirty files unless the task
-explicitly owns them.
+Active branch for ongoing work is `chore/PRJ-2/openspec-consolidation`
+(rebased on `main`). Run `git status --short --branch` and `openspec list`
+to see current state.
 
 ## Commands
 
@@ -151,23 +149,10 @@ Dark mode, background changes, rebrand, and theme switching are research-only
 unless the user explicitly chooses a concrete direction. Screenshots and
 research memos are allowed; CSS token/theme/background implementation is not.
 
-Relevant current todo:
-`.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`.
-
 ### Director Scope
 
 Do not add a runtime director workflow unless that direction is explicitly
 reopened. Director-facing UAT currently goes through the viewer read-only path.
-
-### Planning And Evidence
-
-- For phase/milestone execution, use GSD and keep `.planning` state in sync;
-  small explicit repo-doc edits can stay direct when verified.
-- Planning edits under `.planning/**` must pass `pnpm lint:md`.
-- Preserve historical phase evidence; do not flatten superseded plans unless
-  the user asks for consolidation.
-- For resume/closeout, prefer `.planning/HANDOFF.json`,
-  `.planning/STATE.md`, and recent `.planning/reports/**` over chat memory.
 
 ### Branch Hygiene
 
@@ -207,13 +192,3 @@ branch in the same session.
   `prisma/_destructive-guard.ts`.
 - For product/group/report-period behavior, inspect existing tests before
   changing query semantics; this area has had regression-heavy UAT work.
-
-## Graphify
-
-This repo has `graphify-out/GRAPH_REPORT.md` and `graphify-out/graph.json`.
-For broad architecture questions, read the graph report before raw-file
-scanning. If code files are modified and `graphify` is available, run:
-
-```bash
-graphify update .
-```
