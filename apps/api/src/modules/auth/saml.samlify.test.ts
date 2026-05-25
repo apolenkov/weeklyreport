@@ -139,12 +139,17 @@ async function mintSignedResponse(
   return result.context;
 }
 
-// TODO(samlify-xmldom-onError): samlify@2.13 calls xmldom's deprecated
-// errorHandler() which throws on @xmldom/xmldom@0.9.x (the version
-// pinned by the CVE-mitigating pnpm.overrides). Skip until samlify
-// ships an onError-compatible release or we pin xmldom <0.9 (which
-// reopens the XML-injection CVE). Runtime SAML path uses a different
-// parser entry, so production is not affected.
+// PARTIAL FIX (samlify-xmldom-onError):
+//   - samlify@2.13.1 patched via pnpm: errorHandler→onError + parseFromString
+//     mimeType default — see patches/samlify@2.13.1.patch
+//   - xml-crypto@6.1.2 (transitive) still calls parseFromString without
+//     mimeType in 11 places; that patch touches the production @node-saml
+//     path so we hold it for a separate change with full SAML regression
+//     coverage. Tracked as openspec/changes/fix-xml-crypto-xmldom-onerror/.
+// Skip stays until xml-crypto is patched. Runtime SAML (@node-saml) works
+// because it depends on xml-crypto for signature ops but on @xmldom 0.9
+// for actual DOM parsing — that path has its own error handling that
+// doesn't trip the missing-mimeType issue at the moment.
 describe.skip("38-03 SAML hardening — samlify mock IdP integration", () => {
   let idp: IdPInstance;
   let sp: SPInstance;

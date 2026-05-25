@@ -25,4 +25,10 @@ approach 1 (use maintained `@xmldom/xmldom`).
 
 ## Status
 
-Open — TODO(samlify-xmldom-onError) in codebase.
+Shipped 2026-05-25 — `patches/samlify@2.13.1.patch` + comment refresh
+in `apps/api/src/modules/auth/saml.samlify.test.ts` and
+`apps/api/vitest.config.ts`. The samlify-level `errorHandler` →
+`onError` translation and the `parseFromString` mimeType default are
+in place. Test stays skipped: transitive `xml-crypto@6.1.2` still
+needs its own patch — tracked in
+`openspec/changes/deferred/fix-xml-crypto-xmldom-onerror/`.
