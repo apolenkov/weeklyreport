@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "verbatimModuleSyntax": false,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "paths": {
+      "luxon": ["./apps/api/node_modules/luxon"]
+    }
+  },
+  "include": ["prisma/**/*.ts"]
+}

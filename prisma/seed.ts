@@ -3,6 +3,7 @@ import "dotenv/config";
 import pg from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import {
+  Prisma,
   PrismaClient,
   Role,
   ReportSectionStatus,
@@ -405,7 +406,7 @@ async function main() {
       // Keep advanced seed content source-of-truth in the section rows. A
       // stale empty snapshot makes /reports/<id> render 0 products even when
       // the seeded published report has submitted sections.
-      publishedSnapshot: null,
+      publishedSnapshot: Prisma.DbNull,
     },
     create: {
       id: publishedReport.id,
@@ -419,7 +420,7 @@ async function main() {
       weekLabel: publishedReport.weekLabel,
       publishedAt: new Date(publishedReport.publishedAt),
       publishedById: HEAD_USER_ID,
-      publishedSnapshot: null,
+      publishedSnapshot: Prisma.DbNull,
     },
   });
 
