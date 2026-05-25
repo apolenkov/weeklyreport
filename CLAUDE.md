@@ -149,25 +149,10 @@ Dark mode, background changes, rebrand, and theme switching are research-only
 unless the user explicitly chooses a concrete direction. Screenshots and
 research memos are allowed; CSS token/theme/background implementation is not.
 
-The deferred change `openspec/changes/deferred/enable-theme-switch/` tracks
-this — activation requires explicit user sign-off.
-
 ### Director Scope
 
 Do not add a runtime director workflow unless that direction is explicitly
 reopened. Director-facing UAT currently goes through the viewer read-only path.
-
-### Planning And Evidence
-
-- Active backlog and proposals live in `openspec/changes/`. Use
-  `openspec list` to see what's open, `openspec change new <slug>` to add.
-- Deferred work sits in `openspec/changes/deferred/` with an
-  `## Activation trigger` section in each proposal.
-- Durable contracts (invariants) live in `openspec/specs/`. Modify via
-  delta-specs inside a change, never directly.
-- Openspec markdown still passes `pnpm lint:md`.
-- For resume/closeout, prefer `openspec list` + `git log` + recent commits
-  on the active branch over chat memory.
 
 ### Branch Hygiene
 
@@ -207,10 +192,3 @@ branch in the same session.
   `prisma/_destructive-guard.ts`.
 - For product/group/report-period behavior, inspect existing tests before
   changing query semantics; this area has had regression-heavy UAT work.
-
-## Mental Map
-
-For broad architecture questions, read `apps/api/src/app.module.ts` +
-`apps/web/src/app/` route tree + `prisma/schema.prisma`. If a fresh
-dependency graph is genuinely needed, regenerate via `graphify update .`
-locally — don't commit the output, treat it as a one-shot artifact.
