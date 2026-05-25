@@ -31,6 +31,7 @@ import { useSession } from "../../lib/session-provider";
 type NavLink = {
   href: string;
   label: string;
+  title?: string;
   // Roles that should SEE this link in nav. Tighter than route-access
   // (head/admin can technically open /lead/report but should not see it
   // in their nav — lead-prefix routes are personal lead data, head has
@@ -45,6 +46,7 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
   {
     href: "/reports?tab=drafts",
     label: "History",
+    title: "Past weeks and closed reports",
     roles: ["lead"],
   },
   // UAT 2026-05-22: /head/history now 307-redirects to /reports?tab=published
@@ -52,11 +54,13 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
   {
     href: "/reports?tab=published",
     label: "History",
+    title: "Past weeks and closed reports",
     roles: ["head"],
   },
   {
     href: "/reports?tab=published",
     label: "History",
+    title: "Past weeks and closed reports",
     roles: ["viewer"],
   },
   { href: "/head/dashboard", label: "Dashboard", roles: ["head"] },
@@ -339,6 +343,7 @@ export function NavBar() {
               <a
                 key={link.href}
                 href={link.href}
+                title={link.title}
                 className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-1.5 text-[13px] transition-colors ${
                   active
                     ? "bg-[var(--color-success)] font-semibold text-[var(--color-starbucks-accent)]"
