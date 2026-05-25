@@ -12,15 +12,14 @@
  */
 
 import { config as loadEnv } from "dotenv";
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import net from "node:net";
 import { spawnSync } from "node:child_process";
 
 // Load .env from the repo root regardless of cwd. The script may be invoked
 // via `pnpm --filter @customreport/api exec tsx ../../prisma/reset-hard.ts`,
 // in which case cwd is apps/api (no .env), or directly from the repo root.
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const REPO_ROOT = resolve(__dirname, "..");
 loadEnv({ path: resolve(REPO_ROOT, ".env") });
 
 import pg from "pg";
