@@ -29,7 +29,7 @@ export default defineConfig([
     "tools/uat-extractor/*.ts",
     // accumulated-work-audit tool runs via `node --experimental-strip-types`
     // and isn't in any tsconfig project — same pattern as the scripts above.
-    ".planning/scripts/**",
+    "tools/audit-work/**",
     "**/e2e/**",
   ]),
   {
