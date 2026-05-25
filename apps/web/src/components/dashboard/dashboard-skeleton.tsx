@@ -2,25 +2,33 @@ import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
 /**
  * Loading-state skeleton for the head dashboard. Mirrors the dimensions of
- * Submission Activity / KpiCards / AlertBar / BlockedAtRiskTable so the
- * load-to-data transition has no layout shift.
+ * ActivityLivePanel / KpiCards / Activity24hCard / LeadSummaryTable /
+ * ProductKpiCard / AlertBar / BlockedAtRiskTable in the exact render order so
+ * the load-to-data transition has minimal layout shift.
  *
  * Stateless and hook-free — safe to render server-side.
  */
 export function DashboardSkeleton() {
   return (
     <div className="space-y-6">
-      {/* Submission Activity */}
-      <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5">
-        <div className="mb-4 flex items-center justify-between">
+      {/* ActivityLivePanel — card with header + 6 lead rows */}
+      <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]">
+        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
           <Skeleton className="h-6 w-44" />
           <Skeleton className="h-4 w-36" />
         </div>
-        <div className="space-y-1">
+        <ul className="space-y-1">
           {[0, 1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-14 w-full rounded-[var(--radius)]" />
+            <li key={i} className="flex items-center gap-3 py-1">
+              <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+              <div className="min-w-0 flex-1 space-y-1.5">
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+              <Skeleton className="h-5 w-20 rounded-[var(--radius-pill)]" />
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
 
       {/* KPI Cards (3-up grid) */}
@@ -37,10 +45,52 @@ export function DashboardSkeleton() {
         ))}
       </div>
 
-      {/* Alert bar */}
+      {/* Activity24hCard — single compact card */}
+      <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]">
+        <Skeleton className="mb-2 h-4 w-40" />
+        <Skeleton className="h-9 w-20" />
+        <Skeleton className="mt-2 h-3 w-56" />
+      </div>
+
+      {/* LeadSummaryTable — header + table rows */}
+      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-4">
+          <Skeleton className="h-5 w-48" />
+          <Skeleton className="h-5 w-24 rounded-[var(--radius-pill)]" />
+        </div>
+        <div className="overflow-x-auto">
+          <div className="min-w-[840px]">
+            {/* thead placeholder */}
+            <div className="flex gap-4 border-b border-[var(--color-border)] px-5 py-3">
+              {[120, 80, 80, 80, 100].map((w, i) => (
+                <Skeleton key={i} className={`h-3 w-[${w}px]`} />
+              ))}
+            </div>
+            {/* tbody rows */}
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="flex items-center gap-4 border-b border-[var(--color-border)] px-5 py-3 last:border-0"
+              >
+                <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="ml-auto h-5 w-20 rounded-[var(--radius-pill)]" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ProductKpiCard — reserved height matches the lazy-loaded card */}
+      <div
+        aria-hidden="true"
+        className="min-h-[173px] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)]"
+      />
+
+      {/* AlertBar */}
       <Skeleton className="h-12 w-full rounded-[var(--radius)]" />
 
-      {/* Blocked & At Risk header */}
+      {/* BlockedAtRiskTable */}
       <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-white">
         <div className="flex items-center justify-between p-4">
           <Skeleton className="h-5 w-48" />

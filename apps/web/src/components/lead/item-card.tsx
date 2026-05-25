@@ -89,6 +89,7 @@ export function ItemCard({
     STATUS_BADGE["in-progress"];
   const isBlocked = item.status === "blocked";
   const isPlanned = item.status === "planned";
+  const locked = readOnly || item.foreign === true;
   const stageTags =
     item.stageIds && item.stageIds.length > 0
       ? item.stageIds
@@ -152,19 +153,32 @@ export function ItemCard({
           ? `3px dashed var(--color-starbucks-accent)`
           : `3px solid ${isBlocked ? "var(--color-destructive)" : "var(--color-starbucks-accent)"}`,
         background: isBlocked ? "#fee2e2" : "var(--color-background)",
+        opacity: item.foreign ? 0.7 : 1,
       }}
     >
 
       {/* Card top line: status on the left, item actions on the right. */}
       <div className="mb-2 flex items-start justify-between gap-2">
-        <span
-          className="inline-flex w-fit shrink-0 items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[10px] font-semibold"
-          style={{ background: badge.bg, color: badge.text }}
-        >
-          {badge.label}
-        </span>
+        <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+          <span
+            className="inline-flex w-fit shrink-0 items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[10px] font-semibold"
+            style={{ background: badge.bg, color: badge.text }}
+          >
+            {badge.label}
+          </span>
+          {item.priorityRank != null && (
+            <span
+              className="inline-flex w-fit shrink-0 items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-bold tabular-nums"
+              style={{ background: "#cba258", color: "#fff" }}
+              aria-label={`Priority ${item.priorityRank}`}
+              title={`Priority rank ${item.priorityRank}`}
+            >
+              P{item.priorityRank}
+            </span>
+          )}
+        </div>
 
-        {!readOnly && !isEditing && (
+        {!locked && !isEditing && (
           <div className="flex shrink-0 gap-1">
             <button
               type="button"
@@ -187,7 +201,7 @@ export function ItemCard({
       </div>
 
       {/* Item text — editable when in edit mode, static otherwise */}
-      {isEditing && !readOnly ? (
+      {isEditing && !locked ? (
         <textarea
           ref={textareaRef}
           className="w-full resize-y rounded-md border border-[var(--color-starbucks-accent)] bg-white px-2 py-1.5 text-sm text-[var(--color-foreground)] focus:outline-none focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
@@ -215,6 +229,14 @@ export function ItemCard({
       <div className="mt-auto flex items-end justify-between gap-2 pt-2">
         <div className="min-w-0 flex-1 truncate text-[11px] text-[var(--color-muted-foreground)]">
           {item.author}
+          {item.foreign ? (
+            <span
+              aria-label="Read-only — authored by another lead"
+              title="Read-only — authored by another lead"
+            >
+              {" 🔒"}
+            </span>
+          ) : null}
         </div>
         <div className="flex min-w-0 max-w-[72%] flex-wrap items-center justify-end gap-1">
           <span

@@ -45,11 +45,6 @@ const baseSection: ReportSectionReadModel = {
   ],
   risks: [],
   decisions: [],
-  priorities: [
-    { rank: 1, text: "Priority 1" },
-    { rank: 2, text: "Priority 2" },
-    { rank: 3, text: "Priority 3" },
-  ],
 };
 
 function createRepository(
@@ -83,7 +78,6 @@ function validDraft(overrides: Record<string, unknown> = {}) {
     items: baseSection.items,
     risks: [],
     decisions: [],
-    priorities: baseSection.priorities,
     ...overrides,
   };
 }
@@ -142,7 +136,6 @@ describe("ReportSectionsService — getActiveSection", () => {
     expect(typeof result.reportId).toBe("string");
     expect(Array.isArray(result.projects)).toBe(true);
     expect(Array.isArray(result.items)).toBe(true);
-    expect(Array.isArray(result.priorities)).toBe(true);
   });
 });
 
@@ -215,21 +208,6 @@ describe("ReportSectionsService — saveDraft happy path", () => {
 
     expect(saved.decisions).toHaveLength(1);
     expect(saved.decisions[0]?.owner).toBe(baseSection.authorName);
-  });
-
-  it("updates priorities", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
-    const saved = await service.saveDraft(
-      validDraft({
-        priorities: [
-          { rank: 1, text: "New priority 1" },
-          { rank: 2, text: "New priority 2" },
-          { rank: 3, text: "New priority 3" },
-        ],
-      }),
-    );
-
-    expect(saved.priorities[0]?.text).toBe("New priority 1");
   });
 
   it("preserves draft status after save", async () => {
@@ -413,7 +391,7 @@ describe("ReportSectionsService — submitSection happy path", () => {
     expect(result.projects[0]?.trafficLight).toBe("red");
   });
 
-  it("preserves items, risks, decisions, priorities from input", async () => {
+  it("preserves items, risks, decisions from input", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
     const result = await service.submitSection(
       validSubmit({
@@ -502,78 +480,6 @@ describe("ReportSectionsService — submitSection validation errors", () => {
     ).rejects.toMatchObject({ code: "MISSING_CURRENT_ITEM" });
   });
 
-  it("rejects when priorities have empty text", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
-
-    await expect(
-      service.submitSection(
-        validSubmit({
-          priorities: [
-            { rank: 1, text: "" },
-            { rank: 2, text: "OK" },
-            { rank: 3, text: "OK" },
-          ],
-        }),
-      ),
-    ).rejects.toThrow(); // Zod rejects empty text before validateSubmitInput
-  });
-
-  it("rejects when zero priorities", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
-
-    await expect(
-      service.submitSection(
-        validSubmit({
-          priorities: [],
-        }),
-      ),
-    ).rejects.toThrow(); // Zod .min(1) check
-  });
-
-  it("accepts 1 priority (dynamic: min 1)", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
-    const result = await service.submitSection(
-      validSubmit({
-        priorities: [{ rank: 1, text: "Only one" }],
-      }),
-    );
-
-    expect(result.status).toBe("submitted");
-    expect(result.priorities).toHaveLength(1);
-  });
-
-  it("accepts 5 priorities (dynamic: no upper limit)", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
-    const result = await service.submitSection(
-      validSubmit({
-        priorities: [
-          { rank: 1, text: "P1" },
-          { rank: 2, text: "P2" },
-          { rank: 3, text: "P3" },
-          { rank: 4, text: "P4" },
-          { rank: 5, text: "P5" },
-        ],
-      }),
-    );
-
-    expect(result.priorities).toHaveLength(5);
-  });
-
-  it("rejects duplicate priority ranks", async () => {
-    const service = new ReportSectionsService(createRepository(baseSection));
-
-    await expect(
-      service.submitSection(
-        validSubmit({
-          priorities: [
-            { rank: 1, text: "P1" },
-            { rank: 1, text: "P2" },
-          ],
-        }),
-      ),
-    ).rejects.toThrow(); // Zod refine: unique ranks
-  });
-
   it("rejects confirmed: false", async () => {
     const service = new ReportSectionsService(createRepository(baseSection));
 
@@ -652,7 +558,6 @@ describe("ReportSectionsService — multi-project", () => {
       items: multiProjectSection.items,
       risks: [],
       decisions: [],
-      priorities: baseSection.priorities,
     });
 
     expect(saved.projects[0]?.trafficLight).toBe("green");
@@ -674,7 +579,6 @@ describe("ReportSectionsService — multi-project", () => {
         items: multiProjectSection.items,
         risks: [],
         decisions: [],
-        priorities: baseSection.priorities,
       }),
     ).rejects.toMatchObject({ code: "MISSING_TRAFFIC_LIGHT" });
   });
@@ -706,7 +610,6 @@ describe("ReportSectionsService — multi-project", () => {
         ],
         risks: [],
         decisions: [],
-        priorities: baseSection.priorities,
       }),
     ).rejects.toMatchObject({ code: "MISSING_CURRENT_ITEM" });
   });
@@ -726,7 +629,6 @@ describe("ReportSectionsService — multi-project", () => {
       items: multiProjectSection.items,
       risks: [],
       decisions: [],
-      priorities: baseSection.priorities,
     });
 
     expect(result.status).toBe("submitted");

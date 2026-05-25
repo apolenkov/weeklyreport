@@ -57,7 +57,9 @@ export class PrismaService
         if (e.duration >= SLOW_QUERY_MS) {
           // Slow query — always log at warn-level so it shows up even in
           // production logs without flipping the global LOG_LEVEL.
-          this.logger.warn(`slow query (${e.duration}ms): ${e.query}`);
+          this.logger.warn(
+            `slow query ${JSON.stringify({ phase: "db.query", durationMs: e.duration, query: e.query })}`,
+          );
         } else if (debugEnabled) {
           // Verbose per-query trace — only when explicitly debugging.
           this.logger.debug(`query (${e.duration}ms): ${e.query}`);

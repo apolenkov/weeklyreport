@@ -36,7 +36,6 @@ function makePayload(text = "first"): DraftSavePayload {
     ],
     risks: [],
     decisions: [],
-    priorities: [{ rank: 1, text: "p" }],
   };
 }
 
@@ -311,6 +310,161 @@ describe("useLeadFormAutosave", () => {
     });
 
     expect(result.current.state).toBe("saved");
+    expect(result.current.dirty).toBe(false);
+  });
+
+  it("forceSave() bypasses debounce and triggers immediate save", async () => {
+    const { wrapper, calls } = buildHarness();
+    const { result } = renderHook(
+      () =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload: makePayload("force-me"),
+          enabled: true,
+          debounceMs: 5000,
+        }),
+      { wrapper },
+    );
+
+    // Hook starts pending (debounce in flight), no mutation yet.
+    expect(result.current.state).toBe("pending");
+    expect(calls).toHaveLength(0);
+
+    // Call forceSave — should bypass the 5s debounce immediately.
+    await act(async () => {
+      void result.current.forceSave();
+      await flushAll();
+    });
+
+    // Mutation must have fired without advancing timers by 5000ms.
+    expect(calls.length).toBeGreaterThanOrEqual(1);
+    expect(["saving", "saved"]).toContain(result.current.state);
+  });
+
+  it("Save button isInFlight becomes true while save is in flight", async () => {
+    // Use a slow mutation to hold isPending=true for inspection.
+    let resolveMutation!: () => void;
+    const { wrapper } = buildHarness({
+      mutationFn: () =>
+        new Promise<unknown>((resolve) => {
+          resolveMutation = () => resolve({ ok: true });
+        }),
+    });
+
+    const { result } = renderHook(
+      () =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload: makePayload("in-flight"),
+          enabled: true,
+          debounceMs: 3000,
+        }),
+      { wrapper },
+    );
+
+    // Trigger via forceSave.
+    await act(async () => {
+      void result.current.forceSave();
+      await flushAll();
+    });
+
+    // While mutation is pending, isInFlight should be true.
+    expect(result.current.isInFlight).toBe(true);
+
+    // Resolve the mutation.
+    await act(async () => {
+      resolveMutation();
+      await flushAll();
+    });
+
+    expect(result.current.isInFlight).toBe(false);
+    expect(result.current.state).toBe("saved");
+  });
+
+  it("Save button shows ✓ Saved after success (state=saved transitions)", async () => {
+    const { wrapper } = buildHarness();
+    const { result } = renderHook(
+      () =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload: makePayload("check-saved"),
+          enabled: true,
+          debounceMs: 3000,
+        }),
+      { wrapper },
+    );
+
+    await act(async () => {
+      void result.current.forceSave();
+      await flushAll();
+    });
+
+    expect(result.current.state).toBe("saved");
+    expect(result.current.isInFlight).toBe(false);
+    expect(result.current.lastSavedAt).toBeInstanceOf(Date);
+  });
+
+  it("queued forceSave fires with the stashed payload (not a later payloadRef update)", async () => {
+    // Arrange: first mutation is slow; subsequent ones resolve immediately.
+    let resolveMutation!: () => void;
+    let callCount = 0;
+    const { wrapper, calls } = buildHarness({
+      mutationFn: () => {
+        callCount++;
+        if (callCount === 1) {
+          // First call: slow — held until we call resolveMutation().
+          return new Promise<unknown>((resolve) => {
+            resolveMutation = () => resolve({ ok: true });
+          });
+        }
+        // Subsequent calls (queued save): resolve immediately.
+        return Promise.resolve({ ok: true });
+      },
+    });
+
+    const payloadP1 = makePayload("payload-p1");
+    const payloadP2 = makePayload("payload-p2");
+
+    const { result, rerender } = renderHook(
+      ({ payload }: { payload: DraftSavePayload }) =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload,
+          enabled: true,
+          debounceMs: 5000,
+        }),
+      { wrapper, initialProps: { payload: payloadP1 } },
+    );
+
+    // Trigger the first save (P1 in flight).
+    await act(async () => {
+      void result.current.forceSave();
+      await flushAll();
+    });
+    expect(result.current.isInFlight).toBe(true);
+    expect(calls).toHaveLength(1);
+
+    // Payload changes to P2 while P1 is still in flight.
+    rerender({ payload: payloadP2 });
+
+    // Queue a second forceSave while in flight — should stash P2 key+payload.
+    await act(async () => {
+      void result.current.forceSave();
+      await flushAll();
+    });
+    // Still in flight (mutation not resolved yet), no second mutation fired.
+    expect(calls).toHaveLength(1);
+
+    // Resolve P1 — the queued save (P2) should fire automatically and complete.
+    await act(async () => {
+      resolveMutation();
+      await flushAll();
+    });
+
+    // Second mutation must have fired with the P2 payload.
+    expect(calls).toHaveLength(2);
+    // After both saves complete the hook should not be dirty.
+    // (dirty = payloadKey !== lastSavedRef; lastSavedRef is set to P2's key)
     expect(result.current.dirty).toBe(false);
   });
 });

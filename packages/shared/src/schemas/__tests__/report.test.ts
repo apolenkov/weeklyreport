@@ -8,7 +8,6 @@ import {
   riskInputSchema,
   riskSeveritySchema,
   decisionInputSchema,
-  priorityInputSchema,
   trafficLightStatusSchema,
   itemTypeSchema,
   itemWorkflowStatusSchema,
@@ -71,24 +70,17 @@ const validDecision = () => ({
   impact: "Better performance",
 });
 
-const validPriority = (rank: number) => ({
-  rank,
-  text: `Priority number ${rank}`,
-});
-
 const validDraft = () => ({
   reportSectionId: uuid(),
   projectStatuses: [{ projectId: PROJECT_UUID, status: "green" as const }],
   items: [validItem()],
   risks: [validRisk()],
   decisions: [validDecision()],
-  priorities: [validPriority(1)],
 });
 
 const validSubmit = () => ({
   ...validDraft(),
   confirmed: true as const,
-  priorities: [validPriority(1), validPriority(2), validPriority(3)],
 });
 
 // Helper to generate arrays of a given size
@@ -100,9 +92,6 @@ const makeRisks = (count: number) =>
 
 const makeDecisions = (count: number) =>
   Array.from({ length: count }, () => validDecision());
-
-const makePriorities = (count: number) =>
-  Array.from({ length: count }, (_, i) => validPriority((i % 3) + 1));
 
 // ---------------------------------------------------------------------------
 // Group 1: draftSaveSchema boundaries
@@ -152,18 +141,6 @@ describe("draftSaveSchema", () => {
 
   it("rejects decisions array with 101 elements", () => {
     const draft = { ...validDraft(), decisions: makeDecisions(101) };
-    const result = draftSaveSchema.safeParse(draft);
-    expect(result.success).toBe(false);
-  });
-
-  it("accepts priorities array with 50 elements (max boundary)", () => {
-    const draft = { ...validDraft(), priorities: makePriorities(50) };
-    const result = draftSaveSchema.safeParse(draft);
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects priorities array with 51 elements (exceeds max)", () => {
-    const draft = { ...validDraft(), priorities: makePriorities(51) };
     const result = draftSaveSchema.safeParse(draft);
     expect(result.success).toBe(false);
   });
@@ -367,47 +344,8 @@ describe("decisionInputSchema — safeText", () => {
 // ---------------------------------------------------------------------------
 
 describe("submitSectionSchema", () => {
-  it("accepts valid submit with 3 unique priority ranks", () => {
+  it("accepts valid submit", () => {
     const result = submitSectionSchema.safeParse(validSubmit());
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects submit with duplicate rank values (BUG-002)", () => {
-    const submit = {
-      ...validSubmit(),
-      priorities: [validPriority(1), validPriority(1), validPriority(2)],
-    };
-    const result = submitSectionSchema.safeParse(submit);
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects submit with 0 priorities", () => {
-    const submit = { ...validSubmit(), priorities: [] };
-    const result = submitSectionSchema.safeParse(submit);
-    expect(result.success).toBe(false);
-  });
-
-  it("accepts submit with 1 priority (dynamic: min 1)", () => {
-    const submit = {
-      ...validSubmit(),
-      priorities: [validPriority(1)],
-    };
-    const result = submitSectionSchema.safeParse(submit);
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts submit with 5 priorities (dynamic: no upper limit)", () => {
-    const submit = {
-      ...validSubmit(),
-      priorities: [
-        validPriority(1),
-        validPriority(2),
-        validPriority(3),
-        validPriority(4),
-        validPriority(5),
-      ],
-    };
-    const result = submitSectionSchema.safeParse(submit);
     expect(result.success).toBe(true);
   });
 
@@ -455,71 +393,37 @@ describe("submitSectionSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 6: priorityInputSchema — text validation
+// Group 6: itemInputSchema — priorityRank field
 // ---------------------------------------------------------------------------
 
-describe("priorityInputSchema", () => {
-  it("accepts priority text with visible characters", () => {
-    const result = priorityInputSchema.safeParse(validPriority(1));
+describe("itemInputSchema priorityRank", () => {
+  it("accepts item without priorityRank", () => {
+    const result = itemInputSchema.safeParse(validItem());
     expect(result.success).toBe(true);
   });
 
-  it("rejects priority text that is only whitespace", () => {
-    const p = { rank: 1, text: "   " };
-    const result = priorityInputSchema.safeParse(p);
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects priority text that is only zero-width spaces (BUG-013)", () => {
-    const p = { rank: 1, text: "\u200B\u200B" };
-    const result = priorityInputSchema.safeParse(p);
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects priority text with null byte", () => {
-    const p = { rank: 1, text: "P1\u0000Task" };
-    const result = priorityInputSchema.safeParse(p);
-    expect(result.success).toBe(false);
-  });
-
-  it("accepts rank at min boundary (1)", () => {
-    const result = priorityInputSchema.safeParse({ rank: 1, text: "Go" });
+  it("accepts item with priorityRank null", () => {
+    const result = itemInputSchema.safeParse({ ...validItem(), priorityRank: null });
     expect(result.success).toBe(true);
   });
 
-  it("accepts rank 3", () => {
-    const result = priorityInputSchema.safeParse({ rank: 3, text: "Go" });
+  it("accepts item with priorityRank 1", () => {
+    const result = itemInputSchema.safeParse({ ...validItem(), priorityRank: 1 });
     expect(result.success).toBe(true);
   });
 
-  it("accepts rank 10 (dynamic: no upper limit)", () => {
-    const result = priorityInputSchema.safeParse({ rank: 10, text: "Go" });
+  it("accepts item with priorityRank 99 (no upper limit)", () => {
+    const result = itemInputSchema.safeParse({ ...validItem(), priorityRank: 99 });
     expect(result.success).toBe(true);
   });
 
-  it("rejects rank below min (0)", () => {
-    const result = priorityInputSchema.safeParse({ rank: 0, text: "Go" });
+  it("rejects priorityRank 0 (below min)", () => {
+    const result = itemInputSchema.safeParse({ ...validItem(), priorityRank: 0 });
     expect(result.success).toBe(false);
   });
 
-  it("rejects non-integer rank (1.5)", () => {
-    const result = priorityInputSchema.safeParse({ rank: 1.5, text: "Go" });
-    expect(result.success).toBe(false);
-  });
-
-  it("accepts text at max boundary (200 chars)", () => {
-    const result = priorityInputSchema.safeParse({
-      rank: 1,
-      text: "A".repeat(200),
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects text exceeding max (201 chars)", () => {
-    const result = priorityInputSchema.safeParse({
-      rank: 1,
-      text: "A".repeat(201),
-    });
+  it("rejects non-integer priorityRank (1.5)", () => {
+    const result = itemInputSchema.safeParse({ ...validItem(), priorityRank: 1.5 });
     expect(result.success).toBe(false);
   });
 });
@@ -804,7 +708,6 @@ describe("validateSubmitInput", () => {
     items: [],
     risks: [],
     decisions: [],
-    priorities: [],
     ...overrides,
   });
 
@@ -838,37 +741,6 @@ describe("validateSubmitInput", () => {
     };
     const errors = validateSubmitInput(section, input as SubmitSectionPayload);
     expect(errors.some((e) => e.code === "MISSING_CURRENT_ITEM")).toBe(true);
-  });
-
-  it("returns MISSING_PRIORITIES when priorities have blank text", () => {
-    const section = makeSection();
-    const input = {
-      ...validSubmit(),
-      projectStatuses: [{ projectId: PROJECT_UUID, status: "green" as const }],
-      items: [
-        { ...validItem(), projectId: PROJECT_UUID, type: "current" as const },
-      ],
-      priorities: [
-        { rank: 1, text: "  " },
-        { rank: 2, text: "OK" },
-      ],
-    };
-    const errors = validateSubmitInput(section, input as SubmitSectionPayload);
-    expect(errors.some((e) => e.code === "MISSING_PRIORITIES")).toBe(true);
-  });
-
-  it("returns MISSING_PRIORITIES when priorities array is empty", () => {
-    const section = makeSection();
-    const input = {
-      ...validSubmit(),
-      projectStatuses: [{ projectId: PROJECT_UUID, status: "green" as const }],
-      items: [
-        { ...validItem(), projectId: PROJECT_UUID, type: "current" as const },
-      ],
-      priorities: [],
-    };
-    const errors = validateSubmitInput(section, input as SubmitSectionPayload);
-    expect(errors.some((e) => e.code === "MISSING_PRIORITIES")).toBe(true);
   });
 
   it("returns no errors for valid input", () => {

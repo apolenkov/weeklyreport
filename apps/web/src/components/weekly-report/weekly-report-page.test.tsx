@@ -295,6 +295,7 @@ function renderPage(
   captured: Captured,
   authorId?: string,
   role: SessionUser["role"] = "head",
+  scope?: "product" | "lead",
 ) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -323,7 +324,9 @@ function renderPage(
       </QueryClientProvider>
     );
   }
-  return render(<WeeklyReportPage authorId={authorId} />, { wrapper: Wrapper });
+  return render(<WeeklyReportPage authorId={authorId} scope={scope} />, {
+    wrapper: Wrapper,
+  });
 }
 
 describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-05)", () => {
@@ -362,6 +365,26 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     expect(captured.publishMutationFn.mock.calls[0]?.[0]).toEqual({
       reportId: REPORT_ID,
     });
+  });
+
+  it("groups products under each lead when scope is 'lead' (head split-view parity)", async () => {
+    const captured: Captured = {
+      publishMutationFn: vi.fn().mockResolvedValue(undefined),
+      reopenMutationFn: vi.fn().mockResolvedValue(undefined),
+      pdfExportRequestMutationFn: vi.fn(),
+    };
+    renderPage(
+      makeWeeklyReportData("open"),
+      captured,
+      undefined,
+      "head",
+      "lead",
+    );
+    // "By lead" renders the author's name as a group heading (h3) instead of a
+    // flat product accordion list.
+    expect(
+      await screen.findByRole("heading", { name: "Alice", level: 3 }),
+    ).toBeInTheDocument();
   });
 
   it("disables publish and hides Toggle All for an empty weekly report", async () => {

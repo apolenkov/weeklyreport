@@ -9,6 +9,8 @@ import { logClientError } from "../../lib/client-error-reporting";
 
 vi.mock("@tanstack/react-query", () => ({
   useQuery: vi.fn(),
+  useMutation: vi.fn(() => ({ isPending: false, mutate: vi.fn() })),
+  useQueryClient: vi.fn(() => ({ invalidateQueries: vi.fn() })),
 }));
 
 vi.mock("sonner", () => ({
@@ -34,6 +36,11 @@ vi.mock("../../lib/trpc-context", () => ({
     weeklyReport: {
       get: {
         queryOptions: () => ({ queryKey: ["weeklyReport.get"] }),
+      },
+    },
+    leadForm: {
+      revokeAllSubmitted: {
+        mutationOptions: () => ({}),
       },
     },
   }),

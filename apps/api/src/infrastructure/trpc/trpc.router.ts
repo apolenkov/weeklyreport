@@ -349,15 +349,12 @@ export function createAppRouter(deps: RouterDeps) {
               },
             },
             items: {
-              select: { projectId: true, updatedAt: true },
+              select: { projectId: true, updatedAt: true, priorityRank: true },
             },
             risks: {
               select: { projectId: true, updatedAt: true },
             },
             decisions: {
-              select: { productId: true, updatedAt: true },
-            },
-            priorities: {
               select: { productId: true, updatedAt: true },
             },
             projectStatuses: {
@@ -388,14 +385,12 @@ export function createAppRouter(deps: RouterDeps) {
             for (const row of s.items) productIds.add(row.projectId);
             for (const row of s.risks) productIds.add(row.projectId);
             for (const row of s.decisions) productIds.add(row.productId);
-            for (const row of s.priorities) productIds.add(row.productId);
 
             const editDates = [
               s.updatedAt,
               ...s.items.map((row) => row.updatedAt),
               ...s.risks.map((row) => row.updatedAt),
               ...s.decisions.map((row) => row.updatedAt),
-              ...s.priorities.map((row) => row.updatedAt),
               ...s.projectStatuses.map((row) => row.updatedAt),
               ...s.stageStatuses.map((row) => row.updatedAt),
               ...s.versionSnapshots.map((row) => row.createdAt),
@@ -421,7 +416,7 @@ export function createAppRouter(deps: RouterDeps) {
               itemCount: s.items.length,
               riskCount: s.risks.length,
               decisionCount: s.decisions.length,
-              priorityCount: s.priorities.length,
+              priorityCount: s.items.filter((i) => i.priorityRank != null).length,
               productCount: productIds.size,
               versionCount: s.versionSnapshots.length,
               latestVersion: latestVersion?.version ?? null,
@@ -465,10 +460,9 @@ export function createAppRouter(deps: RouterDeps) {
                   sections: {
                     where: sectionScope,
                     select: {
-                      items: { select: { projectId: true } },
+                      items: { select: { projectId: true, priorityRank: true } },
                       risks: { select: { projectId: true } },
                       decisions: { select: { productId: true } },
-                      priorities: { select: { productId: true } },
                       projectStatuses: {
                         select: { projectId: true, status: true },
                       },
@@ -494,7 +488,9 @@ export function createAppRouter(deps: RouterDeps) {
                   itemCount += section.items.length;
                   riskCount += section.risks.length;
                   decisionCount += section.decisions.length;
-                  priorityCount += section.priorities.length;
+                  priorityCount += section.items.filter(
+                    (i) => i.priorityRank != null,
+                  ).length;
 
                   for (const row of section.projectStatuses) {
                     productIds.add(row.projectId);
@@ -512,9 +508,6 @@ export function createAppRouter(deps: RouterDeps) {
                     productIds.add(row.projectId);
                   }
                   for (const row of section.decisions) {
-                    productIds.add(row.productId);
-                  }
-                  for (const row of section.priorities) {
                     productIds.add(row.productId);
                   }
                 }
@@ -1699,6 +1692,12 @@ export function createAppRouter(deps: RouterDeps) {
           z.object({
             reportId: z.string().uuid(),
             ruleId: z.string().uuid().optional(),
+            // T-F4-4 (plan §23.4): scope dispatch to a single lead so the
+            // Head Dashboard Remind button can ping one author without
+            // exposing emails to the client. When undefined, falls back to
+            // the original "every draft author" behaviour used by the
+            // bulk AlertBar action.
+            leadId: z.string().uuid().optional(),
           }),
         )
         .output(
@@ -1709,8 +1708,15 @@ export function createAppRouter(deps: RouterDeps) {
             reason: z.string().optional(),
           }),
         )
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
           try {
+            const activeReportId = ctx.session.activeReportId;
+            if (!activeReportId || activeReportId !== input.reportId) {
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message: "report-not-active",
+              });
+            }
             const rule = await deps.prisma.reminderRule.findFirst({
               where: {
                 reportId: input.reportId,
@@ -1728,17 +1734,33 @@ export function createAppRouter(deps: RouterDeps) {
               };
             }
             const draftSections = await deps.prisma.reportSection.findMany({
-              where: { reportId: input.reportId, status: "draft" },
+              where: {
+                reportId: input.reportId,
+                status: "draft",
+                ...(input.leadId ? { authorId: input.leadId } : {}),
+              },
               include: {
                 author: { select: { email: true, notificationOptOut: true } },
               },
             });
-            // Compute the dedupeKey shape requestReminderExecution would derive
-            // for the legacy (no-payload) path — `${rule.id}:${fireAt}:${email}`
-            // — and look up existing executions BEFORE calling the service so
-            // we can tell new dispatches apart from dedupe hits. Without this,
-            // every click reported "Reminder sent" even when the cron-driven
-            // scheduler had already sent the same recipient inside the cycle.
+            if (input.leadId !== undefined && draftSections.length === 0) {
+              return {
+                dispatched: 0,
+                alreadySent: 0,
+                skipped: 0,
+                reason: "no-matching-section",
+              };
+            }
+            // Race-safe attribution (Codex review fix): call the service
+            // first — it atomically inserts via the dedupeKey @unique index,
+            // so two concurrent clicks never produce two emails. Then read
+            // the execution back and compare `createdAt` to the call's
+            // start. If it lies inside the call window it is genuinely new,
+            // otherwise the service deduplicated against a prior dispatch.
+            // Old pattern (pre-read + service call) had a TOCTOU race where
+            // both concurrent callers saw `existing === null` and both
+            // incremented `dispatched`, mis-reporting the counter even
+            // though only one email actually went out.
             const fireAtIso = rule.fireAt.toISOString();
             let dispatched = 0;
             let alreadySent = 0;
@@ -1749,15 +1771,20 @@ export function createAppRouter(deps: RouterDeps) {
                 continue;
               }
               const dedupeKey = `${rule.id}:${fireAtIso}:${sec.author.email}`;
-              const existing = await deps.prisma.reminderExecution.findUnique({
-                where: { dedupeKey },
-              });
+              const beforeMs = Date.now();
               await deps.remindersService.requestReminderExecution(
                 rule.id,
                 sec.author.email,
               );
-              if (existing) alreadySent++;
-              else dispatched++;
+              const after = await deps.prisma.reminderExecution.findUnique({
+                where: { dedupeKey },
+                select: { createdAt: true },
+              });
+              if (after && after.createdAt.getTime() >= beforeMs) {
+                dispatched++;
+              } else {
+                alreadySent++;
+              }
             }
             return { dispatched, alreadySent, skipped };
           } catch (error) {
@@ -1975,8 +2002,32 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
+      getVersion: protectedProcedure
+        .input(
+          z.object({
+            reportSectionId: z.string().uuid(),
+            version: z.number().int().positive(),
+          }),
+        )
+        .query(async ({ input, ctx }) => {
+          try {
+            return await deps.leadFormService.getVersion(
+              input.reportSectionId,
+              input.version,
+              ctx.session.userId,
+              ctx.session.role,
+            );
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
       createSnapshot: protectedProcedure
-        .input(z.object({ reportSectionId: z.string().uuid() }))
+        .input(
+          z.object({
+            reportSectionId: z.string().uuid(),
+          }),
+        )
         .mutation(async ({ input, ctx }) => {
           try {
             return await deps.leadFormService.createSnapshot(
@@ -1994,6 +2045,19 @@ export function createAppRouter(deps: RouterDeps) {
           try {
             return await deps.leadFormService.revokeSubmission(
               input.reportSectionId,
+              ctx.session.userId,
+            );
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      revokeAllSubmitted: headProcedure
+        .input(z.object({ reportId: z.string().uuid() }))
+        .mutation(async ({ input, ctx }) => {
+          try {
+            return await deps.leadFormService.revokeAllSubmitted(
+              input.reportId,
               ctx.session.userId,
             );
           } catch (error) {

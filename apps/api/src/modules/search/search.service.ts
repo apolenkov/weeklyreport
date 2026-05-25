@@ -6,6 +6,7 @@ import {
   type SearchQueryInput,
   type SearchQueryOutput,
 } from "@customreport/shared";
+import { createAppLogger } from "../../lib/logger.js";
 
 /**
  * 39-05 (PERF-05): SearchRepository contract — Prisma-free at the service
@@ -43,6 +44,14 @@ export class SearchAuthorizationError extends Error {
 }
 
 export class SearchService {
+  private readonly logger = createAppLogger({
+    service: "SearchService",
+    logDir: process.env["LOG_DIR"],
+    minLevel:
+      (process.env["LOG_LEVEL"] as "debug" | "info" | "warn" | "error") ??
+      "info",
+  });
+
   constructor(private readonly repository: SearchRepository) {}
 
   /**
@@ -113,6 +122,11 @@ export class SearchService {
     });
 
     const limited = sorted.slice(0, parsed.limit);
+    this.logger.info("search executed", {
+      scope: parsed.scope,
+      role: session.role,
+      hits: limited.length,
+    });
     return searchQueryOutputSchema.parse(limited);
   }
 }

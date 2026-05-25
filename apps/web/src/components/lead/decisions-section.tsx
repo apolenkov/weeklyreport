@@ -177,7 +177,10 @@ export function DecisionsSection({
             <div
               key={decision.id}
               className="rounded-lg p-4"
-              style={{ background: "var(--color-background)" }}
+              style={{
+                background: "var(--color-background)",
+                opacity: decision.foreign ? 0.7 : 1,
+              }}
             >
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]">
@@ -198,7 +201,7 @@ export function DecisionsSection({
                     Owner: {decision.owner}
                   </span>
                 )}
-                {!readOnly && mine && (
+                {!readOnly && mine && !decision.foreign && (
                   <div className="ml-auto flex gap-1">
                     <button
                       type="button"
@@ -246,6 +249,7 @@ export function DecisionsSection({
                 authorName={decision.owner}
                 stageTags={stageTags}
                 ariaLabel={`Decision stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
+                foreign={decision.foreign === true}
               />
             </div>
           );

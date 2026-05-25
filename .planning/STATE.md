@@ -1,10 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v8.2
-milestone_name: GSD Closure & Quality
-status: between_milestones
-last_updated: "2026-05-18T23:25:00.000Z"
-last_activity: 2026-05-18 -- v8.3 pre-UAT closure done. F1-F13 + WS-A/B/C/D all committed (13 commits). Push pending SSL.
+milestone: v8.4
+milestone_name: Versioning UX
+status: in_review
+last_updated: "2026-05-25T00:00:00.000Z"
+last_activity: 2026-05-25 -- v8.4.2 UAT Sweep Phase 3.7 shipped. Save Now button + forceSave API + snapshot throttle/dedup (60 s + content-dedup). FillFromButton empty/error states. All unit/integration gates green (559/559 web, 926/926 API). 4 e2e pre-existing seed failures (not regression). PR #7 open (fix/PRJ-2/shiny-eagle), ~80+ commits ahead of main. Awaiting human PR approve + merge + tag v8.4.2.
+active_pr:
+  number: 7
+  url: https://ghe.example.org/apolenkov/customreport/pull/7
+  branch: fix/PRJ-2/shiny-eagle
+  commits_ahead: 70+
 progress:
   total_phases: 5
   completed_phases: 5
@@ -16,8 +21,15 @@ progress:
 # Project State: CustomReport
 
 **Project:** Team Status Reporting Web App
-**Status:** v8.3 pre-UAT closure DONE — all 13 workstreams committed (2026-05-18). Push pending SSL. Ready for manual UAT.
-**Last Updated:** 2026-05-18
+**Status:** v8.4.2 in-review — PR #7 open (fix/PRJ-2/shiny-eagle). UAT Sweep Phase 3.7 shipped (Save Now + FillFrom empty-state + snapshot throttle/dedup). Awaiting PR approve + merge + tag.
+**Last Updated:** 2026-05-25
+
+## Active PR
+
+- **PR #7:** <https://ghe.example.org/apolenkov/customreport/pull/7>
+- **Branch:** `fix/PRJ-2/shiny-eagle`
+- **Plan:** graceful-coalescing-kurzweil — §22, §23, §24 closed
+- **Commits ahead of main:** 70+
 
 ---
 
@@ -65,6 +77,16 @@ Items acknowledged and deferred at v8.1 milestone close on 2026-05-18:
 | uat_gap           | Phase 16: 16-HUMAN-UAT.md                           | partial      |
 | verification_gap  | Phase 16: 16-VERIFICATION.md                        | human_needed |
 | context_questions | Phases 52-60 (future backlog)                       | open         |
+| ufb               | UFB-014 multi-SDLC per product                      | dropped      |
+
+UFB-014 dropped at v8.3 close (2026-05-22, confirmed by user): the
+original UX request — visually flag SDLC stages the lead did not
+contribute to — is fully covered by the lock-icon work shipped in F2
+(commit fd5d74d) and the lead-locked-stage-color regression spec
+(ae93078). Product-level multi-SDLC pipeline data refactor is not
+needed. Item-level multi-stage tagging via stageIds remains the
+canonical multi-stage field per ADR
+`.planning/tickets/session-leftovers-2026-05-14/ADR.md`.
 
 Known deferred items at close: 26 (see above). Quick tasks with status "missing"
 are stale artifact slugs from archived sessions — not active work items.

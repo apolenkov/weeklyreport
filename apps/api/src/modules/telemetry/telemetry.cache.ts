@@ -1,4 +1,4 @@
-import { Injectable, type OnModuleDestroy } from "@nestjs/common";
+import { Injectable, Logger, type OnModuleDestroy } from "@nestjs/common";
 import Redis from "ioredis";
 
 import type { TelemetryCachePort } from "./telemetry.service.js";
@@ -20,6 +20,7 @@ const PREFIX = "customreport:telemetry:";
 
 @Injectable()
 export class TelemetryCache implements TelemetryCachePort, OnModuleDestroy {
+  private readonly logger = new Logger(TelemetryCache.name);
   private readonly redis: Redis;
 
   constructor() {
@@ -39,10 +40,14 @@ export class TelemetryCache implements TelemetryCachePort, OnModuleDestroy {
     const namespaced = `${PREFIX}${key}`;
     try {
       const cached = await this.redis.get(namespaced);
-      if (cached !== null) return JSON.parse(cached) as T;
+      if (cached !== null) {
+        this.logger.debug(`cache hit key=${key}`);
+        return JSON.parse(cached) as T;
+      }
     } catch {
       // Cache miss/failure → fall through to compute.
     }
+    this.logger.debug(`cache miss key=${key}`);
     const fresh = await fn();
     try {
       await this.redis.setex(namespaced, TTL_SECONDS, JSON.stringify(fresh));

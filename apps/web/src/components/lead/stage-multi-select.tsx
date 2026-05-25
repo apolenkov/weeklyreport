@@ -6,6 +6,8 @@ type StageMultiSelectProps = {
   readonly stages: readonly string[];
   readonly error?: string;
   readonly onChange: (next: string[]) => void;
+  /** When provided, shows a consequence-preview hint below the stage chips. */
+  readonly previewSeverity?: "at-risk" | "blocked";
 };
 
 export function StageMultiSelect({
@@ -14,6 +16,7 @@ export function StageMultiSelect({
   stages,
   error,
   onChange,
+  previewSeverity,
 }: StageMultiSelectProps) {
   const selected = value;
   const helperId = `${id}-hint`;
@@ -40,7 +43,9 @@ export function StageMultiSelect({
         id={helperId}
         className="mb-2 text-[11px] text-[var(--color-muted-foreground)]"
       >
-        Optional. Leave empty to apply to all assigned stages.
+        Optional. Leave empty to apply to all assigned stages. Tip: mark the
+        stage as blocked on the SDLC pipeline above before pinning a risk —
+        that keeps your blocker scope honest.
       </p>
       {stages.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[rgba(0,0,0,0.18)] bg-[var(--color-muted)] px-3 py-2.5 text-sm text-[var(--color-muted-foreground)]">
@@ -79,22 +84,21 @@ export function StageMultiSelect({
           })}
         </div>
       )}
-      {selected.length === 0 ? (
+      {previewSeverity && (
+        <p className="mt-2 text-xs text-amber-700">
+          {value.length === 0
+            ? previewSeverity === "blocked"
+              ? "All assigned stages will show as Blocked."
+              : "All assigned stages will show as At Risk."
+            : previewSeverity === "blocked"
+              ? `These stages will show as Blocked: ${value.join(", ")}`
+              : `These stages will show as At Risk: ${value.join(", ")}` }
+        </p>
+      )}
+      {!previewSeverity && selected.length === 0 && (
         <p className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">
           Scope: all assigned stages.
         </p>
-      ) : (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--color-muted-foreground)]">
-          <span>Scope:</span>
-          {selected.map((stage) => (
-            <span
-              key={stage}
-              className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]"
-            >
-              {stage}
-            </span>
-          ))}
-        </div>
       )}
       {error && (
         <p

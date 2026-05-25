@@ -31,6 +31,17 @@ export type SlideProduct = {
   readonly risks: string[];
   readonly decisions: string[];
   readonly priorities: string[];
+  /**
+   * T-G3: map of item-text → priorityRank for THIS product, populated for
+   * items whose priorityRank is non-null. Sparse — items without a rank
+   * simply have no key. Lookup is used by the unified slide renderer to
+   * stamp a P{N} chip next to bullets when the item carries a rank.
+   *
+   * Keyed by trimmed text because (text, productId) is unique within a
+   * lead's section; rank can change between weeks so per-text lookup is
+   * preferable to threading rank through every string array.
+   */
+  readonly itemRanks?: Readonly<Record<string, number>>;
 };
 
 export type SectionSlideModel = {
@@ -130,10 +141,10 @@ export function buildSectionSlideModel(
   const decisions = section.decisions
     .filter((decision) => nonEmpty(decision.text))
     .map((decision) => decision.text.trim());
-  const priorities = section.priorities
-    .filter((priority) => nonEmpty(priority.text))
-    .sort((a, b) => a.rank - b.rank)
-    .map((priority) => priority.text.trim());
+  const priorities = section.items
+    .filter((item) => item.priorityRank != null && nonEmpty(item.text))
+    .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
+    .map((item) => item.text.trim());
 
   const projectIds = new Set(projectRows.map((project) => project.projectId));
   const productSlides: SlideProduct[] = projectRows.map((project) => ({
@@ -174,13 +185,23 @@ export function buildSectionSlideModel(
           decision.productId === project.projectId && nonEmpty(decision.text),
       )
       .map((decision) => decision.text.trim()),
-    priorities: section.priorities
+    priorities: section.items
       .filter(
-        (priority) =>
-          priority.productId === project.projectId && nonEmpty(priority.text),
+        (item) =>
+          item.projectId === project.projectId &&
+          item.priorityRank != null &&
+          nonEmpty(item.text),
       )
-      .sort((a, b) => a.rank - b.rank)
-      .map((priority) => priority.text.trim()),
+      .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
+      .map((item) => item.text.trim()),
+    // T-G3: capture per-text rank so the unified slide can render P{N}
+    // chips on whichever bullet bucket the item lands in.
+    itemRanks: section.items.reduce<Record<string, number>>((acc, item) => {
+      if (item.projectId === project.projectId && item.priorityRank != null && nonEmpty(item.text)) {
+        acc[item.text.trim()] = item.priorityRank;
+      }
+      return acc;
+    }, {}),
   }));
 
   const crossProductDecisions = section.decisions
@@ -190,14 +211,15 @@ export function buildSectionSlideModel(
         nonEmpty(decision.text),
     )
     .map((decision) => decision.text.trim());
-  const crossProductPriorities = section.priorities
+  const crossProductPriorities = section.items
     .filter(
-      (priority) =>
-        (!priority.productId || !projectIds.has(priority.productId)) &&
-        nonEmpty(priority.text),
+      (item) =>
+        item.priorityRank != null &&
+        (!item.projectId || !projectIds.has(item.projectId)) &&
+        nonEmpty(item.text),
     )
-    .sort((a, b) => a.rank - b.rank)
-    .map((priority) => priority.text.trim());
+    .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
+    .map((item) => item.text.trim());
   if (crossProductDecisions.length > 0 || crossProductPriorities.length > 0) {
     productSlides.push({
       id: "cross-product",
@@ -459,7 +481,7 @@ export function buildActivitySlideModel(
  */
 export function paginateSectionSlides(
   model: SectionSlideModel,
-  productsPerPage = 4,
+  productsPerPage = 9,
 ): SectionSlideModel[] {
   // Separate real product slides from the synthetic cross-product entry.
   const crossProduct = model.productSlides.find(
@@ -498,6 +520,93 @@ export function paginateSectionSlides(
   return pages;
 }
 
+// ---- Unified by-section slide model (W12) ----
+
+export type UnifiedSectionRow = {
+  readonly text: string;
+  readonly productName: string;
+  /** T-G3: present when the source item carries a priorityRank. */
+  readonly priorityRank?: number;
+};
+
+export type UnifiedSlideModel = {
+  readonly current: readonly UnifiedSectionRow[];
+  readonly next: readonly UnifiedSectionRow[];
+  readonly risks: readonly UnifiedSectionRow[];
+  readonly priorities: readonly UnifiedSectionRow[];
+  readonly decisions: readonly UnifiedSectionRow[];
+  readonly emptyProducts: {
+    readonly current: readonly string[];
+    readonly next: readonly string[];
+    readonly risks: readonly string[];
+    readonly priorities: readonly string[];
+    readonly decisions: readonly string[];
+  };
+};
+
+export function buildUnifiedSlideModel(
+  slide: SectionSlideModel,
+): UnifiedSlideModel {
+  const products = [...slide.productSlides].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+
+  const current: UnifiedSectionRow[] = [];
+  const next: UnifiedSectionRow[] = [];
+  const risks: UnifiedSectionRow[] = [];
+  const priorities: UnifiedSectionRow[] = [];
+  const decisions: UnifiedSectionRow[] = [];
+  const emptyProducts = {
+    current: [] as string[],
+    next: [] as string[],
+    risks: [] as string[],
+    priorities: [] as string[],
+    decisions: [] as string[],
+  };
+
+  for (const product of products) {
+    const name =
+      product.id === "cross-product" ? "Shared context" : product.name;
+    const ranks = product.itemRanks ?? {};
+    const withRank = (text: string): UnifiedSectionRow => {
+      const rank = ranks[text];
+      return rank != null
+        ? { text, productName: name, priorityRank: rank }
+        : { text, productName: name };
+    };
+    if (product.currentItems.length > 0) {
+      product.currentItems.forEach((text) => current.push(withRank(text)));
+    } else {
+      emptyProducts.current.push(name);
+    }
+    if (product.nextItems.length > 0) {
+      product.nextItems.forEach((text) => next.push(withRank(text)));
+    } else {
+      emptyProducts.next.push(name);
+    }
+    if (product.risks.length > 0) {
+      // Risks don't carry priorityRank, but keep the row shape uniform.
+      product.risks.forEach((text) => risks.push({ text, productName: name }));
+    } else {
+      emptyProducts.risks.push(name);
+    }
+    if (product.priorities.length > 0) {
+      product.priorities.forEach((text) => priorities.push(withRank(text)));
+    } else {
+      emptyProducts.priorities.push(name);
+    }
+    if (product.decisions.length > 0) {
+      product.decisions.forEach((text) =>
+        decisions.push({ text, productName: name }),
+      );
+    } else {
+      emptyProducts.decisions.push(name);
+    }
+  }
+
+  return { current, next, risks, priorities, decisions, emptyProducts };
+}
+
 export function sortSlidesForReview(
   slides: readonly SectionSlideModel[],
 ): SectionSlideModel[] {
@@ -513,5 +622,190 @@ export function sortSlidesForReview(
     const scoreDiff = a.score - b.score;
     if (scoreDiff !== 0) return scoreDiff;
     return a.ownerName.localeCompare(b.ownerName);
+  });
+}
+
+// ---- Product-scoped slide transposition (UAT 2026-05-22, done-condition 3/10) ----
+//
+// The default head deck is per-lead: one slide per lead's report section.
+// "By product" scope transposes that into one slide per product, aggregating
+// every lead's items / risks / decisions for that product into a single
+// product-centric slide. Cross-product content (items/decisions with no
+// product, or referencing a product the author does not own in their section)
+// is collected into a synthetic "Shared context" slide, mirroring the
+// per-section cross-product entry that buildSectionSlideModel already emits.
+//
+// Implementation reuses buildSectionSlideModel by synthesising one pseudo
+// ReportSectionReadModel per product, so tone / score / readiness / counts are
+// computed by the exact same logic as the per-lead path.
+
+type SectionItem = ReportSectionReadModel["items"][number];
+type SectionRisk = ReportSectionReadModel["risks"][number];
+type SectionDecision = ReportSectionReadModel["decisions"][number];
+type OwnedStage = NonNullable<
+  ReportSectionReadModel["projects"][number]["ownedStages"]
+>[number];
+
+const SHARED_PRODUCT_ID = "shared-context";
+const SHARED_PRODUCT_NAME = "Shared context";
+
+const TRAFFIC_RANK: Record<"green" | "yellow" | "red", number> = {
+  green: 0,
+  yellow: 1,
+  red: 2,
+};
+
+function worstTraffic(a: SlideStageStatus, b: SlideStageStatus): SlideStageStatus {
+  if (a == null) return b;
+  if (b == null) return a;
+  return TRAFFIC_RANK[a] >= TRAFFIC_RANK[b] ? a : b;
+}
+
+type ProductAcc = {
+  projectId: string;
+  projectName: string;
+  trafficLight: SlideStageStatus;
+  ownedStages: Map<string, OwnedStage>;
+  items: SectionItem[];
+  risks: SectionRisk[];
+  decisions: SectionDecision[];
+  contributors: string[];
+  contributorSet: Set<string>;
+  seenSections: Set<string>;
+  anySubmitted: boolean;
+  allSubmitted: boolean;
+  latestSubmittedAt: Date | null;
+};
+
+export function buildProductScopedSlides(
+  sections: readonly ReportSectionReadModel[],
+): SectionSlideModel[] {
+  const products = new Map<string, ProductAcc>();
+
+  const ensure = (id: string, name: string): ProductAcc => {
+    let acc = products.get(id);
+    if (!acc) {
+      acc = {
+        projectId: id,
+        projectName: name,
+        trafficLight: null,
+        ownedStages: new Map(),
+        items: [],
+        risks: [],
+        decisions: [],
+        contributors: [],
+        contributorSet: new Set(),
+        seenSections: new Set(),
+        anySubmitted: false,
+        allSubmitted: true,
+        latestSubmittedAt: null,
+      };
+      products.set(id, acc);
+    }
+    return acc;
+  };
+
+  // Register a (product, section) contribution exactly once: tracks the
+  // contributing lead name and folds the section's submitted state into the
+  // product's aggregate status.
+  const register = (acc: ProductAcc, section: ReportSectionReadModel) => {
+    if (acc.seenSections.has(section.reportSectionId)) return;
+    acc.seenSections.add(section.reportSectionId);
+    if (!acc.contributorSet.has(section.authorName)) {
+      acc.contributorSet.add(section.authorName);
+      acc.contributors.push(section.authorName);
+    }
+    const submitted = section.status === "submitted";
+    acc.anySubmitted = acc.anySubmitted || submitted;
+    acc.allSubmitted = acc.allSubmitted && submitted;
+    if (submitted && section.submittedAt) {
+      if (
+        !acc.latestSubmittedAt ||
+        section.submittedAt > acc.latestSubmittedAt
+      ) {
+        acc.latestSubmittedAt = section.submittedAt;
+      }
+    }
+  };
+
+  for (const section of sections) {
+    // A product is "owned" by the section iff it appears in section.projects.
+    // Items/risks/decisions pointing elsewhere fall through to Shared context,
+    // matching buildSectionSlideModel's per-section cross-product handling.
+    const owned = new Set(section.projects.map((p) => p.projectId));
+
+    for (const project of section.projects) {
+      const acc = ensure(project.projectId, project.projectName);
+      acc.trafficLight = worstTraffic(acc.trafficLight, project.trafficLight);
+      for (const stage of project.ownedStages ?? []) {
+        const prev = acc.ownedStages.get(stage.stageId);
+        acc.ownedStages.set(
+          stage.stageId,
+          prev
+            ? {
+                ...prev,
+                status: worstTraffic(prev.status ?? null, stage.status ?? null),
+              }
+            : stage,
+        );
+      }
+      register(acc, section);
+    }
+
+    const bucketFor = (productId: string | null | undefined): ProductAcc =>
+      productId && owned.has(productId)
+        ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          products.get(productId)!
+        : ensure(SHARED_PRODUCT_ID, SHARED_PRODUCT_NAME);
+
+    for (const item of section.items) {
+      const acc = bucketFor(item.projectId);
+      acc.items.push(item);
+      register(acc, section);
+    }
+    for (const risk of section.risks) {
+      const acc = bucketFor(risk.projectId);
+      acc.risks.push(risk);
+      register(acc, section);
+    }
+    for (const decision of section.decisions) {
+      const acc = bucketFor(decision.productId);
+      acc.decisions.push(decision);
+      register(acc, section);
+    }
+  }
+
+  const fallbackReportId = sections[0]?.reportId ?? SHARED_PRODUCT_ID;
+
+  return [...products.values()].map((acc) => {
+    const pseudoSection: ReportSectionReadModel = {
+      reportSectionId: "product-" + acc.projectId,
+      reportId: fallbackReportId,
+      authorId: acc.projectId,
+      authorName: acc.projectName,
+      // authorRole intentionally omitted (no "product" role exists); the
+      // resulting ownerRole is overridden below to label the slide source.
+      status: acc.anySubmitted && acc.allSubmitted ? "submitted" : "draft",
+      submittedAt: acc.latestSubmittedAt,
+      projects: [
+        {
+          projectId: acc.projectId,
+          projectName: acc.projectName,
+          trafficLight: acc.trafficLight,
+          ownedStages: [...acc.ownedStages.values()],
+        },
+      ],
+      items: acc.items,
+      risks: acc.risks,
+      decisions: acc.decisions,
+    };
+    const model = buildSectionSlideModel(pseudoSection);
+    return {
+      ...model,
+      ownerRole: "product",
+      // Subtitle / nav rail show contributing leads instead of the (single)
+      // product name, which the h2 owner heading already displays.
+      products: acc.contributors.length > 0 ? [...acc.contributors] : model.products,
+    };
   });
 }

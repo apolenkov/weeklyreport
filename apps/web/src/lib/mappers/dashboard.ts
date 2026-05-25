@@ -64,6 +64,8 @@ export type LeadInfo = {
   decisionCount?: number;
   priorityCount?: number;
   submittedAtLabel?: string | null;
+  /** SC-160: The section UUID needed for the per-lead Revoke button. */
+  reportSectionId?: string;
 };
 
 export type KpiData = {
@@ -141,7 +143,7 @@ function countSectionContent(section: ReportSectionReadModel): number {
     section.items.length +
     section.risks.length +
     section.decisions.length +
-    section.priorities.length
+    section.items.filter((i) => i.priorityRank != null).length
   );
 }
 
@@ -300,8 +302,10 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
         section?.items.filter((item) => item.type === "next").length ?? 0,
       riskCount: section?.risks.length ?? 0,
       decisionCount: section?.decisions.length ?? 0,
-      priorityCount: section?.priorities.length ?? 0,
+      priorityCount:
+        section?.items.filter((i) => i.priorityRank != null).length ?? 0,
       submittedAtLabel: isoSubmittedLabel(section?.submittedAt ?? null),
+      reportSectionId: section?.reportSectionId,
     };
   });
 

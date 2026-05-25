@@ -36,7 +36,6 @@ function makeSection(
     items: [],
     risks: [],
     decisions: [],
-    priorities: [],
     ...overrides,
   };
 }
@@ -55,6 +54,7 @@ function makeVersions(count: number): VersionSnapshot[] {
     itemCount: 0,
     riskCount: 0,
     decisionCount: 0,
+    pinned: false,
   }));
 }
 
@@ -70,7 +70,7 @@ function createMockRepository(
   restoreVersion: ReturnType<typeof vi.fn>;
   listVersions: ReturnType<typeof vi.fn>;
 } {
-  const createSnapshotFn = vi.fn(async () => {});
+  const createSnapshotFn = vi.fn(async () => 1);
   const restoreVersionFn = vi.fn(
     async (_id: string, version: number) => version,
   );
@@ -88,8 +88,15 @@ function createMockRepository(
       return 0;
     },
     listVersions: listVersionsFn,
+    async getVersion() { return null; },
     restoreVersion: restoreVersionFn,
     createVersionSnapshot: createSnapshotFn,
+    async getLatestSnapshot() {
+      return null;
+    },
+    async buildSnapshotProjection() {
+      return {};
+    },
     async createReopenRequest() {},
     async hasSharedProduct() {
       return false;
@@ -99,6 +106,9 @@ function createMockRepository(
     },
     async getCrossAuthorSections() {
       return [];
+    },
+    async revokeAllSubmitted() {
+      return 0;
     },
   };
 }

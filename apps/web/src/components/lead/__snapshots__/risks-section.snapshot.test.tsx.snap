@@ -4,7 +4,7 @@ exports[`RisksSection meta-row — pre-extract snapshot > renders All-stages pil
 
 exports[`RisksSection meta-row — pre-extract snapshot > renders specific stage chips and author together in the meta-row 1`] = `
 <div
-  aria-label="Risk stages: Dev, Testing"
+  aria-label="Risk stages: Development, Testing"
   class="mt-3 flex items-center justify-between gap-2"
 >
   <span
@@ -14,12 +14,12 @@ exports[`RisksSection meta-row — pre-extract snapshot > renders specific stage
   </span>
   <span
     class="inline-flex flex-wrap items-center gap-1"
-    title="Dev, Testing"
+    title="Development, Testing"
   >
     <span
       class="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
     >
-      Dev
+      Development
     </span>
     <span
       class="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"

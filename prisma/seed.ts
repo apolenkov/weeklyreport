@@ -25,6 +25,7 @@ import {
   SEED_PRODUCTS,
   SEED_STAGES,
   SEED_REPORTS,
+  SEED_HISTORY_REPORTS,
   HEAD_USER_ID,
   LEAD_1_ID,
   LEAD_MARIA_ID,
@@ -77,12 +78,14 @@ function publishedOffset(days: number, hours = 10, minutes = 0): Date {
 //   stageAssignmentId: 00000000b0{P}{S}     -> 10 + 1 + 1 = 12 (P is hex 0..b)
 //   riskId:            00000000090{NN}      -> 11 + 2-digit seq with padStart(2)
 //   decisionId:        00000000000a{S}      -> 11 + 1 = 12
-function sectionId(reportSuffix: "1" | "2", leadIndex: number): string {
+type ReportSuffix = "1" | "2" | "3" | "4" | "5";
+
+function sectionId(reportSuffix: ReportSuffix, leadIndex: number): string {
   return `a0000000-0000-4000-8000-0000000040${reportSuffix}${leadIndex}`;
 }
 
 function itemId(
-  reportSuffix: "1" | "2",
+  reportSuffix: ReportSuffix,
   leadIndex: number,
   itemSeq: number,
 ): string {
@@ -90,19 +93,11 @@ function itemId(
 }
 
 function projectStatusId(
-  reportSuffix: "1" | "2",
+  reportSuffix: ReportSuffix,
   leadIndex: number,
   prodSeq: number,
 ): string {
   return `a0000000-0000-4000-8000-000000006${reportSuffix}${leadIndex}${prodSeq}`;
-}
-
-function priorityId(
-  reportSuffix: "1" | "2",
-  leadIndex: number,
-  rank: number,
-): string {
-  return `a0000000-0000-4000-8000-000000008${reportSuffix}${leadIndex}${rank}`;
 }
 
 function riskId(seq: number): string {
@@ -289,6 +284,80 @@ async function main() {
       });
       stageAssignmentCount++;
     }
+  }
+
+  // --- 4b. Cross-author stage assignments (demo: Igor + Maria on LEAD_1 products) ---
+  // This makes LEAD_IGOR and LEAD_MARIA appear as cross-contributors in
+  // LEAD_1's report view, so the "Other contributors" strip shows ≥2 entries.
+  const crossAuthorAssignments: {
+    id: string;
+    userId: string;
+    stageId: string;
+    projectId: string;
+  }[] = [
+    // Igor on Маркетинговый портал (product 201) — Testing stage (sortOrder 4)
+    // LEAD_1 owns Planning/Analysis/Design (0–2), so Testing/DevOps are free.
+    {
+      id: "a0000000-0000-4000-8000-00000000ca01",
+      userId: LEAD_IGOR_ID,
+      stageId: "a0000000-0000-4000-8000-000000000705",
+      projectId: "a0000000-0000-4000-8000-000000000201",
+    },
+    // Maria on Маркетинговый портал (product 201) — DevOps stage (sortOrder 5)
+    {
+      id: "a0000000-0000-4000-8000-00000000ca02",
+      userId: LEAD_MARIA_ID,
+      stageId: "a0000000-0000-4000-8000-000000000706",
+      projectId: "a0000000-0000-4000-8000-000000000201",
+    },
+    // LSC-01: LEAD_1 on Платёжный шлюз (209) — Support stage → locked+blocked chip for Olga
+    {
+      id: "a0000000-0000-4000-8000-00000000ca03",
+      userId: LEAD_1_ID,
+      stageId: "a0000000-0000-4000-8000-000000000707",
+      projectId: "a0000000-0000-4000-8000-000000000209",
+    },
+    // LSC-02: LEAD_1 on Платёжный шлюз (209) — Planning stage → locked+at-risk chip for Olga
+    {
+      id: "a0000000-0000-4000-8000-00000000ca04",
+      userId: LEAD_1_ID,
+      stageId: "a0000000-0000-4000-8000-000000000701",
+      projectId: "a0000000-0000-4000-8000-000000000209",
+    },
+  ];
+  for (const ca of crossAuthorAssignments) {
+    await prisma.stageAssignment.upsert({
+      where: {
+        stageId_projectId: { stageId: ca.stageId, projectId: ca.projectId },
+      },
+      update: { userId: ca.userId },
+      create: ca,
+    });
+  }
+
+  // LSC-05/06: Olga owns Testing + DevOps on product 209 with no stageStatus.
+  // After deriveEffectiveStageStatus fix, risk/item severity drives the chip color.
+  for (const lscSa of [
+    {
+      id: "a0000000-0000-4000-8000-00000000ca05",
+      userId: LEAD_OLGA_ID,
+      stageId: "a0000000-0000-4000-8000-000000000705", // Testing
+      projectId: "a0000000-0000-4000-8000-000000000209",
+    },
+    {
+      id: "a0000000-0000-4000-8000-00000000ca06",
+      userId: LEAD_OLGA_ID,
+      stageId: "a0000000-0000-4000-8000-000000000706", // DevOps
+      projectId: "a0000000-0000-4000-8000-000000000209",
+    },
+  ]) {
+    await prisma.stageAssignment.upsert({
+      where: {
+        stageId_projectId: { stageId: lscSa.stageId, projectId: lscSa.projectId },
+      },
+      update: { userId: lscSa.userId },
+      create: lscSa,
+    });
   }
 
   // --- 5. Active report (Week 16) ---
@@ -517,7 +586,6 @@ async function main() {
   let totalItems = 0;
   let totalProjectStatuses = 0;
   let totalStageStatuses = 0;
-  let totalPriorities = 0;
 
   for (const cfg of activeLeadConfigs) {
     const secId = sectionId("1", cfg.leadIndex);
@@ -712,33 +780,11 @@ async function main() {
       ];
     })();
 
-    const firstProductId = cfg.products[0]?.id ?? "";
     for (let r = 0; r < priorityTexts.length; r++) {
-      const rank = r + 1;
-      const id = priorityId("1", cfg.leadIndex, rank);
-      await prisma.priority.upsert({
-        where: {
-          reportSectionId_rank: {
-            reportSectionId: secId,
-            rank,
-          },
-        },
-        update: {
-          id,
-          productId: firstProductId,
-          text: priorityTexts[r]!,
-          stageName: stageNameFor(cfg.leadIndex + r),
-        },
-        create: {
-          id,
-          reportSectionId: secId,
-          productId: firstProductId,
-          rank,
-          text: priorityTexts[r]!,
-          stageName: stageNameFor(cfg.leadIndex + r),
-        },
+      await prisma.item.update({
+        where: { id: itemId("1", cfg.leadIndex, r + 1) },
+        data: { priorityRank: r + 1 },
       });
-      totalPriorities++;
     }
   }
 
@@ -837,6 +883,17 @@ async function main() {
       mitigation: "Раскатка через shadow-mode + кнопка мгновенного rollback",
       stageName: "Support",
     },
+    // LSC-05: Olga's section — risk on Testing stage (no explicit stageStatus).
+    // After deriveEffectiveStageStatus fix the Testing chip shows at-risk (#fef3c7).
+    {
+      id: riskId(5),
+      reportSectionId: sectionId("1", 5),
+      projectId: "a0000000-0000-4000-8000-000000000209",
+      risk: "Нестабильность Testing-окружения при нагрузочных прогонах",
+      impact: "Задержка валидации релиза",
+      mitigation: "Изолированный стенд для нагрузки запланирован на следующий спринт",
+      stageName: "Testing",
+    },
   ];
 
   for (const r of risks) {
@@ -856,6 +913,62 @@ async function main() {
 
   // Quiet unused-warning for mariaSec (may not be used by risks above)
   void mariaSec;
+
+  // LSC-01/02: LEAD_1 stageStatus on Olga's product 209 so cross-author locked
+  // chips appear in Olga's view. Support=red (blocked), Planning=yellow (at-risk).
+  for (const lscSS of [
+    {
+      id: "a0000000-0000-4000-8000-00000000f901",
+      reportSectionId: primaryLeadSec,
+      projectId: "a0000000-0000-4000-8000-000000000209",
+      stageId: "a0000000-0000-4000-8000-000000000707", // Support → red → blocked
+      status: TrafficLightStatus.red,
+    },
+    {
+      id: "a0000000-0000-4000-8000-00000000f902",
+      reportSectionId: primaryLeadSec,
+      projectId: "a0000000-0000-4000-8000-000000000209",
+      stageId: "a0000000-0000-4000-8000-000000000701", // Planning → yellow → at-risk
+      status: TrafficLightStatus.yellow,
+    },
+  ]) {
+    await prisma.stageStatus.upsert({
+      where: {
+        reportSectionId_projectId_stageId: {
+          reportSectionId: lscSS.reportSectionId,
+          projectId: lscSS.projectId,
+          stageId: lscSS.stageId,
+        },
+      },
+      update: { status: lscSS.status },
+      create: lscSS,
+    });
+  }
+
+  // LSC-06: Olga blocked item on DevOps stage (no explicit stageStatus).
+  // After deriveEffectiveStageStatus fix the DevOps chip shows blocked (#fee2e2).
+  await prisma.item.upsert({
+    where: { id: "a0000000-0000-4000-8000-000000005156" },
+    update: {
+      reportSectionId: sectionId("1", 5),
+      projectId: "a0000000-0000-4000-8000-000000000209",
+      type: ItemType.current,
+      text: "Настройка DevOps-конвейера для Платёжного шлюза",
+      tag: "infra",
+      workflowStatus: ItemWorkflowStatus.blocked,
+      stageName: "DevOps",
+    },
+    create: {
+      id: "a0000000-0000-4000-8000-000000005156",
+      reportSectionId: sectionId("1", 5),
+      projectId: "a0000000-0000-4000-8000-000000000209",
+      type: ItemType.current,
+      text: "Настройка DevOps-конвейера для Платёжного шлюза",
+      tag: "infra",
+      workflowStatus: ItemWorkflowStatus.blocked,
+      stageName: "DevOps",
+    },
+  });
 
   // ----- Decisions (2-3 across active sections) -----
   // Russian-language decisions for the head to action.
@@ -986,32 +1099,107 @@ async function main() {
       totalItems++;
     }
 
-    // One priority per published section
-    const id = priorityId("2", cfg.leadIndex, 1);
-    const firstProdId = cfg.products[0]?.id ?? "";
-    await prisma.priority.upsert({
-      where: {
-        reportSectionId_rank: {
-          reportSectionId: secId,
-          rank: 1,
-        },
-      },
+    // One priority per published section — mark first item
+    await prisma.item.update({
+      where: { id: itemId("2", cfg.leadIndex, 1) },
+      data: { priorityRank: 1 },
+    });
+  }
+
+  // ----- History reports (N-2, N-3, N-4) for Fill From regression -----
+  // Creates 3 additional published report periods so Fill From dropdown shows
+  // realistic history (2 archived, 1 non-archived past period).
+  const HISTORY_SUFFIXES: ReportSuffix[] = ["3", "4", "5"];
+  for (let hIdx = 0; hIdx < SEED_HISTORY_REPORTS.length; hIdx++) {
+    const histReport = SEED_HISTORY_REPORTS[hIdx]!;
+    const suffix = HISTORY_SUFFIXES[hIdx]!;
+    const periodStart = new Date(histReport.periodStart);
+    const publishedAt = new Date(histReport.periodEnd);
+
+    await prisma.report.upsert({
+      where: { id: histReport.id },
       update: {
-        id,
-        productId: firstProdId,
-        text: `Закрыть остаточные задачи прошлой недели — ${cfg.name}`,
-        stageName: stageNameFor(cfg.leadIndex),
+        periodStart,
+        periodEnd: new Date(histReport.periodEnd),
+        deadline: new Date(histReport.deadline),
+        status: ReportStatus.published,
+        periodStatus: PeriodStatus.published,
+        periodState: PeriodState.published,
+        archived: histReport.archived,
+        weekLabel: histReport.weekLabel,
+        publishedAt,
+        publishedById: HEAD_USER_ID,
       },
       create: {
-        id,
-        reportSectionId: secId,
-        productId: firstProdId,
-        rank: 1,
-        text: `Закрыть остаточные задачи прошлой недели — ${cfg.name}`,
-        stageName: stageNameFor(cfg.leadIndex),
+        id: histReport.id,
+        periodStart,
+        periodEnd: new Date(histReport.periodEnd),
+        deadline: new Date(histReport.deadline),
+        status: ReportStatus.published,
+        periodStatus: PeriodStatus.published,
+        periodState: PeriodState.published,
+        archived: histReport.archived,
+        weekLabel: histReport.weekLabel,
+        publishedAt,
+        publishedById: HEAD_USER_ID,
       },
     });
-    totalPriorities++;
+
+    for (let i = 0; i < activeLeadConfigs.length; i++) {
+      const cfg = activeLeadConfigs[i]!;
+      const secId = sectionId(suffix, cfg.leadIndex);
+      const submitDate = new Date(periodStart);
+      submitDate.setUTCDate(submitDate.getUTCDate() + (i % 5));
+      submitDate.setUTCHours(10 + i, 0, 0, 0);
+
+      await prisma.reportSection.upsert({
+        where: { reportId_authorId: { reportId: histReport.id, authorId: cfg.leadId } },
+        update: { id: secId, status: ReportSectionStatus.submitted, submittedAt: submitDate },
+        create: {
+          id: secId,
+          reportId: histReport.id,
+          authorId: cfg.leadId,
+          status: ReportSectionStatus.submitted,
+          submittedAt: submitDate,
+        },
+      });
+      totalSections++;
+
+      for (let pIdx = 0; pIdx < cfg.products.length; pIdx++) {
+        const product = cfg.products[pIdx]!;
+        const psId = projectStatusId(suffix, cfg.leadIndex, pIdx + 1);
+        await prisma.projectStatus.upsert({
+          where: { reportSectionId_projectId: { reportSectionId: secId, projectId: product.id } },
+          update: { id: psId, status: TrafficLightStatus.green },
+          create: { id: psId, reportSectionId: secId, projectId: product.id, status: TrafficLightStatus.green },
+        });
+
+        const id = itemId(suffix, cfg.leadIndex, pIdx + 1);
+        await prisma.item.upsert({
+          where: { id },
+          update: {
+            reportSectionId: secId,
+            projectId: product.id,
+            type: ItemType.current,
+            text: `Завершили этап по продукту «${product.name}»`,
+            tag: "feature",
+            workflowStatus: ItemWorkflowStatus.done,
+            stageName: stageNameFor(cfg.leadIndex + pIdx),
+          },
+          create: {
+            id,
+            reportSectionId: secId,
+            projectId: product.id,
+            type: ItemType.current,
+            text: `Завершили этап по продукту «${product.name}»`,
+            tag: "feature",
+            workflowStatus: ItemWorkflowStatus.done,
+            stageName: stageNameFor(cfg.leadIndex + pIdx),
+          },
+        });
+        totalItems++;
+      }
+    }
   }
 
   // ----- Admin review/action examples -----
@@ -1219,7 +1407,7 @@ async function main() {
       `${SEED_STAGES.length} stages, ${stageAssignmentCount} assignments, ` +
       `2 reports, ${totalSections} sections, ${totalItems} items, ` +
       `${totalProjectStatuses} project statuses, ${totalStageStatuses} stage statuses, ${risks.length} risks, ` +
-      `${decisions.length} decisions, ${totalPriorities} priorities, ` +
+      `${decisions.length} decisions, ` +
       `${reminderPolicies.length} reminder policies, ` +
       `${reminderRules.length} reminder rules, ${versionSnapshots.length} version snapshots, ` +
       `2 viewer group accesses, 1 reopen request, 1 action log`,

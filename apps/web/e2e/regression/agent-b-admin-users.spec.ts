@@ -145,4 +145,53 @@ test.describe("ADM-010..020: Admin Panel - Users Tab", () => {
     await expect(page.getByText("User saved")).toBeVisible({ timeout: 10_000 });
     await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-020.png` });
   });
+
+  test("ADM-021: Deactivate then reactivate a user", async ({ page }) => {
+    // Step 1 – find the first active user's Deactivate button
+    const deactivateBtn = page
+      .getByRole("button", { name: /^Deactivate / })
+      .first();
+    await expect(deactivateBtn).toBeVisible({ timeout: 10_000 });
+
+    // Step 2 – click Deactivate; assert tRPC response + toast
+    const deactivateResponse = page.waitForResponse(
+      (r) =>
+        r.url().includes("admin.deactivateUser") && r.status() === 200,
+      { timeout: 15_000 },
+    );
+    await deactivateBtn.click();
+    await deactivateResponse;
+    await expect(page.getByText("User deactivated")).toBeVisible({
+      timeout: 10_000,
+    });
+
+    // Step 3 – switch status filter to show inactive users
+    await page
+      .getByTestId("users-status-filter")
+      .selectOption("inactive");
+    await page.locator('[data-testid="users-table"] tbody tr').first().waitFor({
+      state: "visible",
+      timeout: 10_000,
+    });
+
+    // Step 4 – assert the deactivated user row now shows Activate button
+    const activateBtn = page
+      .getByRole("button", { name: /^Activate / })
+      .first();
+    await expect(activateBtn).toBeVisible({ timeout: 10_000 });
+
+    // Step 5 – click Activate; assert tRPC response + toast
+    const activateResponse = page.waitForResponse(
+      (r) =>
+        r.url().includes("admin.activateUser") && r.status() === 200,
+      { timeout: 15_000 },
+    );
+    await activateBtn.click();
+    await activateResponse;
+    await expect(page.getByText("User activated")).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await page.screenshot({ path: `${SCREENSHOT_DIR}/ADM-021.png` });
+  });
 });

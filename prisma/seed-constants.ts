@@ -360,3 +360,72 @@ export const SEED_REPORTS = {
     publishedAt: endOfDay(plusDays(PREV_MONDAY, 6)).toISOString(),
   },
 } as const;
+
+// ----- History reports: N-2, N-3 (archived), N-4 (archived) -----
+// Added for Fill From regression: 5 periods total (active + 4 submitted).
+// UUID range: ...0003-...0005 (within Reports: ...0001-...0009).
+
+export const HISTORY_REPORT_2_ID = "a0000000-0000-4000-8000-000000000003";
+export const HISTORY_REPORT_3_ID = "a0000000-0000-4000-8000-000000000004";
+export const HISTORY_REPORT_4_ID = "a0000000-0000-4000-8000-000000000005";
+
+const PREV2_MONDAY = plusDays(PREV_MONDAY, -7);
+const PREV3_MONDAY = plusDays(PREV_MONDAY, -14);
+const PREV4_MONDAY = plusDays(PREV_MONDAY, -21);
+
+export type SeedHistoryReport = {
+  id: string;
+  periodStart: string;
+  periodEnd: string;
+  deadline: string;
+  weekLabel: string;
+  archived: boolean;
+};
+
+export const SEED_HISTORY_REPORTS: readonly SeedHistoryReport[] = [
+  {
+    id: HISTORY_REPORT_2_ID,
+    periodStart: PREV2_MONDAY.toISOString(),
+    periodEnd: endOfDay(plusDays(PREV2_MONDAY, 6)).toISOString(),
+    deadline: new Date(
+      Date.UTC(
+        plusDays(PREV2_MONDAY, 4).getUTCFullYear(),
+        plusDays(PREV2_MONDAY, 4).getUTCMonth(),
+        plusDays(PREV2_MONDAY, 4).getUTCDate(),
+        15, 0, 0,
+      ),
+    ).toISOString(),
+    weekLabel: `Week ${isoWeekNumber(PREV2_MONDAY)}`,
+    archived: false,
+  },
+  {
+    id: HISTORY_REPORT_3_ID,
+    periodStart: PREV3_MONDAY.toISOString(),
+    periodEnd: endOfDay(plusDays(PREV3_MONDAY, 6)).toISOString(),
+    deadline: new Date(
+      Date.UTC(
+        plusDays(PREV3_MONDAY, 4).getUTCFullYear(),
+        plusDays(PREV3_MONDAY, 4).getUTCMonth(),
+        plusDays(PREV3_MONDAY, 4).getUTCDate(),
+        15, 0, 0,
+      ),
+    ).toISOString(),
+    weekLabel: `Week ${isoWeekNumber(PREV3_MONDAY)}`,
+    archived: true,
+  },
+  {
+    id: HISTORY_REPORT_4_ID,
+    periodStart: PREV4_MONDAY.toISOString(),
+    periodEnd: endOfDay(plusDays(PREV4_MONDAY, 6)).toISOString(),
+    deadline: new Date(
+      Date.UTC(
+        plusDays(PREV4_MONDAY, 4).getUTCFullYear(),
+        plusDays(PREV4_MONDAY, 4).getUTCMonth(),
+        plusDays(PREV4_MONDAY, 4).getUTCDate(),
+        15, 0, 0,
+      ),
+    ).toISOString(),
+    weekLabel: `Week ${isoWeekNumber(PREV4_MONDAY)}`,
+    archived: true,
+  },
+];

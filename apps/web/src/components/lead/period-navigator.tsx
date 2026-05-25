@@ -90,10 +90,10 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
   const hasNext = currentIndex > 0;
   const periodOptions = useMemo(
     () =>
-      periods.map((p) => {
-        const label = p.dateRange;
-        return { id: p.id, label };
-      }),
+      periods.map((p) => ({
+        id: p.id,
+        label: p.isCurrent ? `${p.dateRange} (Current)` : p.dateRange,
+      })),
     [periods],
   );
 

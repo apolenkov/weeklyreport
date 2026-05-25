@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { AlertTriangle, Check, Circle } from "lucide-react";
 
 import type { SectionSlideModel } from "./section-slide-utils";
@@ -30,8 +31,9 @@ function toneConfig(tone: ToneVariant): {
     case "blocked":
       return {
         label: "Blockers",
+        // red-100 bg + red-950 text → WCAG AA pass for small text
         className:
-          "border-[rgba(200,32,20,0.24)] bg-[#fff1f0] text-[var(--color-destructive)]",
+          "border-[rgba(200,32,20,0.24)] bg-[#fee2e2] text-[#7f1d1d]",
         icon: (
           <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
         ),
@@ -39,8 +41,9 @@ function toneConfig(tone: ToneVariant): {
     case "at-risk":
       return {
         label: "At risk",
+        // amber-100 bg + amber-900 text → WCAG AA pass for small text
         className:
-          "border-[rgba(212,160,23,0.38)] bg-[#fff7df] text-[#725313]",
+          "border-[rgba(212,160,23,0.38)] bg-[#fef3c7] text-[#78350f]",
         icon: (
           <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
         ),
@@ -62,13 +65,18 @@ function toneConfig(tone: ToneVariant): {
   }
 }
 
-function metricTile(value: number, label: string) {
+function metricTile(value: number, label: string, tooltip?: string) {
   return (
-    <div className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/80 px-3 py-2">
-      <div className="text-lg font-semibold text-[var(--color-primary)]">
+    <div
+      className="inline-flex flex-col items-center gap-0.5 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.12)] bg-white px-3 py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+      title={tooltip ?? label}
+    >
+      <span className="text-base font-bold leading-none text-[var(--color-foreground)]">
         {value}
-      </div>
-      <div className="text-xs text-[var(--color-muted-foreground)]">{label}</div>
+      </span>
+      <span className="text-[10px] leading-none text-[var(--color-muted-foreground)]">
+        {label}
+      </span>
     </div>
   );
 }
@@ -86,9 +94,11 @@ type Props = {
   readonly slide: SectionSlideModel;
   readonly authorName?: string;
   readonly periodLabel?: string;
+  /** Rendered inline with the tone badge, e.g. scope toggle + agent review. */
+  readonly heroControls?: ReactNode;
 };
 
-export function LeadSlideHero({ slide, authorName, periodLabel }: Props) {
+export function LeadSlideHero({ slide, authorName, periodLabel, heroControls }: Props) {
   const tone = worstProductTone(slide.productSlides);
   const { label: toneLabel, className: toneClassName, icon: toneIcon } =
     toneConfig(tone);
@@ -102,13 +112,14 @@ export function LeadSlideHero({ slide, authorName, periodLabel }: Props) {
         <div className="flex flex-wrap items-center gap-2">
           <span
             className={[
-              "inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border px-2.5 py-1 text-xs font-semibold",
+              "inline-flex h-7 items-center gap-1.5 rounded-[var(--radius-pill)] border px-2.5 py-1 text-xs font-semibold",
               toneClassName,
             ].join(" ")}
           >
             {toneIcon}
             {toneLabel}
           </span>
+          {heroControls}
         </div>
         <p className="mt-2 text-sm font-medium text-[var(--color-muted-foreground)]">
           {displayName}
@@ -120,11 +131,19 @@ export function LeadSlideHero({ slide, authorName, periodLabel }: Props) {
           ) : null}
         </p>
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="flex flex-wrap gap-2">
         {metricTile(slide.currentCount, "Current")}
         {metricTile(slide.riskCount, "Risks")}
-        {metricTile(slide.priorityCount, "Priorities")}
-        {metricTile(onTrackPct, "On-track %")}
+        {metricTile(
+          slide.priorityCount,
+          "Priorities",
+          "Priority items in this section",
+        )}
+        {metricTile(
+          onTrackPct,
+          "On-track %",
+          "Percentage of products without blocked or at-risk status",
+        )}
       </div>
     </div>
   );

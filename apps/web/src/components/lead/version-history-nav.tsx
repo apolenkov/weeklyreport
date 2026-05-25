@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import type { VersionSnapshot } from "./mock-data";
 import { PERIOD_NAV_ARROW_BUTTON_CLASS } from "./period-navigator";
@@ -9,14 +9,17 @@ type VersionHistoryNavProps = {
   readonly versions: VersionSnapshot[];
   readonly onRestore?: (version: number) => void;
   /**
-   * When provided, renders a "Save Version" button next to the v# pill.
-   * Clicking creates an explicit checkpoint via leadForm.createSnapshot
-   * (parent-owned mutation, surfaced as a toast). Hidden in read-only /
-   * submitted contexts where snapshots are meaningless.
+   * F3.4: Called when the user navigates to a historical version (version
+   * number) or back to the latest (null). Used by lead-form.tsx to switch
+   * into snapshot read-only view mode.
    */
-  readonly onSaveVersion?: () => void;
-  /** Set false to gray out the Save Version button (e.g. mid-mutation). */
-  readonly canSaveVersion?: boolean;
+  readonly onViewVersion?: (version: number | null) => void;
+  /**
+   * F3.4: When the parent resets the snapshot view (e.g. "Back to current"
+   * button), pass null here so the nav pill syncs back to the latest version.
+   * Pass the current version number to keep the nav in sync after a restore.
+   */
+  readonly viewedVersion?: number | null;
 };
 
 // Chevron icons — same family used by PeriodNavigator. The two control
@@ -57,27 +60,6 @@ function ChevronRight() {
   );
 }
 
-function SaveIcon() {
-  // Floppy-disk save icon — leans into the "checkpoint" mental model that
-  // sits well next to the v# pill. Same stroke-width as the rest of the
-  // toolbar icons so the row feels uniform.
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3.5 w-3.5"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
-      <polyline points="17 21 17 13 7 13 7 21" />
-      <polyline points="7 3 7 8 15 8" />
-    </svg>
-  );
-}
-
 // Default number of versions to show inside the history modal before revealing
 // the rest via a "Show all" button. v5.0 has no server-side cursor for
 // `leadForm.versions` (returns the full array in one call), so we paginate
@@ -114,10 +96,18 @@ function formatDiff(delta: number, label: string): string | null {
 export function VersionHistoryNav({
   versions,
   onRestore,
-  onSaveVersion,
-  canSaveVersion = true,
+  onViewVersion,
+  viewedVersion,
 }: VersionHistoryNavProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  // F3.4: when the parent resets viewedVersion to null (e.g. "Back to current"
+  // button), sync the nav pill back to the latest version (index 0).
+  useEffect(() => {
+    if (viewedVersion == null && currentIndex !== 0) {
+      setCurrentIndex(0);
+    }
+  }, [viewedVersion, currentIndex]);
   const [showModal, setShowModal] = useState(false);
   const [showAllVersions, setShowAllVersions] = useState(false);
 
@@ -130,12 +120,16 @@ export function VersionHistoryNav({
     if (!hasPrev) return;
     const nextIndex = currentIndex + 1;
     setCurrentIndex(nextIndex);
+    // F3.4: notify parent — navigating away from latest → snapshot view mode.
+    onViewVersion?.(versions[nextIndex]?.version ?? null);
   }
 
   function handleNext() {
     if (!hasNext) return;
     const nextIndex = currentIndex - 1;
     setCurrentIndex(nextIndex);
+    // F3.4: notify parent — nextIndex 0 = latest (exit snapshot mode).
+    onViewVersion?.(nextIndex === 0 ? null : (versions[nextIndex]?.version ?? null));
   }
 
   function handleRestore(version: number) {
@@ -194,27 +188,6 @@ export function VersionHistoryNav({
           <ChevronRight />
         </button>
 
-        {/* Save Version — manual checkpoint. Hidden in read-only / submitted
-            contexts where snapshots can't change anything. Auto-snapshots
-            (every 10 successful autosaves) come from the autosave hook;
-            this button is purely user-initiated. */}
-        {onSaveVersion && (
-          <button
-            type="button"
-            className="flex min-h-8 items-center gap-1.5 rounded-[var(--radius)] border border-[var(--color-primary)] bg-[var(--color-primary)] px-3 py-1.5 text-white transition-colors hover:bg-[var(--color-starbucks-accent)] hover:border-[var(--color-starbucks-accent)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35"
-            onClick={onSaveVersion}
-            disabled={!canSaveVersion || !isLatest}
-            title={
-              isLatest
-                ? "Save Version — checkpoint the current draft"
-                : "Return to the latest version before saving a checkpoint"
-            }
-            aria-label="Save Version"
-          >
-            <SaveIcon />
-            <span className="text-xs font-medium">Save</span>
-          </button>
-        )}
       </div>
 
       {/* Version History Modal */}

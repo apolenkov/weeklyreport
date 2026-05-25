@@ -40,11 +40,6 @@ const baseSection: ReportSectionReadModel = {
   ],
   risks: [],
   decisions: [],
-  priorities: [
-    { rank: 1, text: "Priority 1" },
-    { rank: 2, text: "Priority 2" },
-    { rank: 3, text: "Priority 3" },
-  ],
 };
 
 function createRepository(
@@ -81,11 +76,6 @@ describe("ReportSectionsService", () => {
       reportSectionId: baseSection.reportSectionId,
       projects: [{ projectName: "Project 1" }],
       items: [{ text: "Current item" }],
-      priorities: [
-        { rank: 1, text: "Priority 1" },
-        { rank: 2, text: "Priority 2" },
-        { rank: 3, text: "Priority 3" },
-      ],
     });
   });
 
@@ -103,7 +93,6 @@ describe("ReportSectionsService", () => {
       items: baseSection.items,
       risks: [],
       decisions: [],
-      priorities: baseSection.priorities,
     });
 
     expect(saved.status).toBe("draft");
@@ -128,8 +117,7 @@ describe("ReportSectionsService", () => {
           items: baseSection.items,
           risks: [],
           decisions: [],
-          priorities: baseSection.priorities,
-        },
+            },
         "55555555-5555-4555-8555-555555555555",
       ),
     ).rejects.toBeInstanceOf(ReportSectionAccessError);
@@ -152,8 +140,7 @@ describe("ReportSectionsService", () => {
         items: baseSection.items,
         risks: [],
         decisions: [],
-        priorities: baseSection.priorities,
-      }),
+        }),
     ).rejects.toMatchObject({
       code: "MISSING_TRAFFIC_LIGHT",
     });
@@ -177,8 +164,7 @@ describe("ReportSectionsService", () => {
           items: baseSection.items,
           risks: [],
           decisions: [],
-          priorities: baseSection.priorities,
-        },
+            },
         "55555555-5555-4555-8555-555555555555",
       ),
     ).rejects.toBeInstanceOf(ReportSectionAccessError);
@@ -200,7 +186,6 @@ describe("ReportSectionsService", () => {
       items: baseSection.items,
       risks: [],
       decisions: [],
-      priorities: baseSection.priorities,
     });
 
     expect(saved.status).toBe("submitted");
@@ -231,8 +216,7 @@ describe("ReportSectionsService", () => {
           items: baseSection.items,
           risks: [],
           decisions: [],
-          priorities: baseSection.priorities,
-        }),
+            }),
       ).rejects.toMatchObject({
         code: "SECTION_ALREADY_SUBMITTED",
         message: "Cannot edit sections of a published report.",
@@ -256,8 +240,7 @@ describe("ReportSectionsService", () => {
         items: baseSection.items,
         risks: [],
         decisions: [],
-        priorities: baseSection.priorities,
-      });
+        });
 
       expect(saved.status).toBe("draft");
       expect(saved.projects[0]?.trafficLight).toBe("green");
@@ -286,8 +269,7 @@ describe("ReportSectionsService", () => {
         items: baseSection.items,
         risks: [],
         decisions: [],
-        priorities: baseSection.priorities,
-      });
+        });
 
       expect(calls).toEqual([baseSection.reportId]);
     });
@@ -320,8 +302,7 @@ describe("ReportSectionsService", () => {
           items: baseSection.items,
           risks: [],
           decisions: [],
-          priorities: baseSection.priorities,
-        }),
+            }),
       ).rejects.toMatchObject({
         code: "SECTION_ALREADY_SUBMITTED",
         message: "Submitted sections are read-only.",
@@ -355,8 +336,7 @@ describe("ReportSectionsService", () => {
         items: baseSection.items,
         risks: [],
         decisions: [],
-        priorities: baseSection.priorities,
-      }),
+        }),
     ).rejects.toMatchObject({
       code: "SECTION_ALREADY_SUBMITTED",
     });
@@ -428,7 +408,6 @@ describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
       items: baseSection.items,
       risks: [],
       decisions: [],
-      priorities: baseSection.priorities,
     };
   }
 
@@ -545,11 +524,6 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
       items: [],
       risks: [],
       decisions: [],
-      priorities: [
-        { rank: 1, text: "p1" },
-        { rank: 2, text: "p2" },
-        { rank: 3, text: "p3" },
-      ],
     };
     let current = section;
     return {
@@ -605,11 +579,6 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
       ],
       risks: [],
       decisions: [],
-      priorities: [
-        { rank: 1, text: "p1" },
-        { rank: 2, text: "p2" },
-        { rank: 3, text: "p3" },
-      ],
     });
 
     expect(
@@ -654,11 +623,6 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
       ],
       risks: [],
       decisions: [],
-      priorities: [
-        { rank: 1, text: "p1" },
-        { rank: 2, text: "p2" },
-        { rank: 3, text: "p3" },
-      ],
     });
 
     expect(

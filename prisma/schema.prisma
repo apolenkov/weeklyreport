@@ -120,10 +120,9 @@ model Project {
   // GroupProduct.product. Left untouched on backfill; existing read paths
   // that derive group via `lead.reportingGroupId` continue to work.
   groupProducts    GroupProduct[]
-  // R4-C: required 1:N edges to Decision and Priority. productId is NOT NULL
-  // after R4-C migration. Cascade on project delete removes orphaned artefacts.
+  // R4-C: required 1:N edge to Decision. productId is NOT NULL after R4-C migration.
+  // Cascade on project delete removes orphaned artefacts.
   decisions        Decision[]
-  priorities       Priority[]
 
   @@index([leadId])
   @@index([archived])
@@ -237,7 +236,6 @@ model ReportSection {
   late             Boolean             @default(false)
   decisions        Decision[]
   items            Item[]
-  priorities       Priority[]
   projectStatuses  ProjectStatus[]
   reopenRequests   ReopenRequest[]
   author           User                @relation("ReportSectionAuthor", fields: [authorId], references: [id])
@@ -298,6 +296,7 @@ model Item {
   workflowStatus  ItemWorkflowStatus
   carriedOver     Boolean                  @default(false)
   completed       Boolean?
+  priorityRank    Int?
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, COALESCE(text, ''::text))"))
@@ -308,6 +307,7 @@ model Item {
   @@index([reportSectionId])
   @@index([projectId])
   @@index([stageName])
+  @@index([reportSectionId, priorityRank])
   @@index([searchTsv], type: Gin)
 }
 
@@ -354,22 +354,7 @@ model Decision {
   @@index([searchTsv], type: Gin)
 }
 
-model Priority {
-  id              String        @id @default(uuid())
-  reportSectionId String
-  productId       String
-  rank            Int
-  text            String
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  stageName       String?
-  reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  project         Project       @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@unique([reportSectionId, rank])
-  @@index([productId])
-  @@index([stageName])
-}
 
 model PdfExportJob {
   id          String          @id @default(uuid())

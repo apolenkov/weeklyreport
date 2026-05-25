@@ -20,6 +20,18 @@ export class LeadFormAccessError extends Error {
   }
 }
 
+/** Minimal shape returned by getLatestSnapshot for throttle/dedup checks. */
+export interface SnapshotLatestRow {
+  data: Record<string, unknown>;
+  createdAt: Date;
+  version: number;
+}
+
+/** Result shape returned by the public createSnapshot API. */
+export type CreateSnapshotResult =
+  | { version: number; skipped?: false }
+  | { version: number; skipped: true; reason: "throttled" | "no-change" };
+
 export interface LeadFormRepository {
   getSectionById(sectionId: string): Promise<ReportSectionReadModel | null>;
   getSectionForPeriod(
@@ -32,8 +44,13 @@ export interface LeadFormRepository {
     sourceSectionId: string,
   ): Promise<number>;
   listVersions(sectionId: string): Promise<VersionSnapshot[]>;
+  getVersion(sectionId: string, version: number): Promise<Record<string, unknown> | null>;
   restoreVersion(sectionId: string, version: number): Promise<number>;
-  createVersionSnapshot(sectionId: string): Promise<void>;
+  createVersionSnapshot(sectionId: string): Promise<number>;
+  /** Returns the most recent snapshot for a section, or null if none exists. */
+  getLatestSnapshot(sectionId: string): Promise<SnapshotLatestRow | null>;
+  /** Returns the snapshot projection for a section (same shape stored in VersionSnapshot.data). */
+  buildSnapshotProjection(sectionId: string): Promise<Record<string, unknown>>;
   createReopenRequest(
     sectionId: string,
     userId: string,
@@ -52,16 +69,22 @@ export interface LeadFormRepository {
       authorId: string;
       authorName: string;
       stageNames: string[];
+      stages: { stageName: string; status: "green" | "yellow" | "red" | null }[];
       itemCount: number;
       riskCount: number;
     }[]
   >;
-  /** Returns full section content (items/risks/decisions/priorities) for cross-author leads
+  /** Returns full section content (items/risks/decisions) for cross-author leads
    *  who share at least one product with the requesting user, filtered to shared products only. */
   getCrossAuthorSections(
     reportId: string,
     userId: string,
   ): Promise<CrossAuthorSectionRow[]>;
+  /** SC-165: Revoke every submitted section in a report in one transaction. */
+  revokeAllSubmitted(
+    reportId: string,
+    revokedBy: string,
+  ): Promise<number>;
 }
 
 export interface CrossAuthorSectionRow {
@@ -77,6 +100,7 @@ export interface CrossAuthorSectionRow {
     workflowStatus: string;
     carriedOver: boolean;
     completed: boolean | null;
+    priorityRank: number | null;
     stageName: string | null;
   }[];
   risks: {
@@ -98,13 +122,26 @@ export interface CrossAuthorSectionRow {
     resolvedAt: Date | null;
     stageName: string | null;
   }[];
-  priorities: {
-    id: string;
-    productId: string;
-    rank: number;
-    text: string;
-    stageName: string | null;
-  }[];
+}
+
+/** Minimum time between autosave-triggered snapshots for a single section. */
+const SNAPSHOT_THROTTLE_MS = 60_000;
+
+/**
+ * Stable JSON serialisation with sorted object keys so equivalent payloads
+ * compare equal regardless of property insertion order.
+ * Used for content-based dedup in createSnapshot.
+ */
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value))
+    return `[${(value as unknown[]).map(stableStringify).join(",")}]`;
+  const keys = Object.keys(value as Record<string, unknown>).sort();
+  const parts = keys.map((k) => {
+    const v = (value as Record<string, unknown>)[k];
+    return `${JSON.stringify(k)}:${stableStringify(v)}`;
+  });
+  return `{${parts.join(",")}}`;
 }
 
 export class LeadFormService {
@@ -186,6 +223,28 @@ export class LeadFormService {
     return this.repository.listVersions(sectionId);
   }
 
+  async getVersion(
+    sectionId: string,
+    version: number,
+    userId: string,
+    role?: Role,
+  ): Promise<Record<string, unknown> | null> {
+    const section = await this.repository.getSectionById(sectionId);
+    if (!section) {
+      throw new LeadFormDomainError(`Section ${sectionId} not found.`);
+    }
+    const isHeadLike = role === "head" || role === "admin";
+    const canView =
+      section.authorId === userId ||
+      isHeadLike ||
+      (role === "lead" &&
+        (await this.repository.hasSharedProduct(userId, section.authorId)));
+    if (!canView) {
+      throw new LeadFormAccessError("Access denied.");
+    }
+    return this.repository.getVersion(sectionId, version);
+  }
+
   /** API-09: Restore a section to a specific version. */
   async restoreVersion(
     sectionId: string,
@@ -221,16 +280,26 @@ export class LeadFormService {
    *
    * Used by:
    * - The "Save Version" button on the lead form (manual checkpoint).
-   * - The autosave hook every N=10 successful saves (silent safety net).
+   * - The autosave hook on every successful autosave (silent safety net).
    *
    * Validates ownership and skips when the section is submitted (locked
    * sections shouldn't accumulate snapshots — there's nothing changing).
-   * Snapshot retention (50 max per section) is enforced by the repository.
+   *
+   * Server-side throttle + dedup applied before writing:
+   * - Throttle: at most one snapshot per 60 s per section (silently skipped).
+   * - Content dedup: if the section data hasn't changed vs. the last snapshot,
+   *   the write is silently skipped.
+   * Time-based retention (all <24 h / hourly 24 h–7 d / daily 7–30 d /
+   * drop >30 d) is enforced inside the repository.
+   *
+   * Internal callers (fillFrom, restoreVersion) call
+   * repository.createVersionSnapshot() directly and bypass throttle — those
+   * are safety-net snapshots that must always fire.
    */
   async createSnapshot(
     sectionId: string,
     userId: string,
-  ): Promise<{ success: true }> {
+  ): Promise<CreateSnapshotResult> {
     const section = await this.repository.getSectionById(sectionId);
 
     if (!section) {
@@ -245,8 +314,25 @@ export class LeadFormService {
       throw new Error("Cannot snapshot a submitted section.");
     }
 
-    await this.repository.createVersionSnapshot(sectionId);
-    return { success: true };
+    const latest = await this.repository.getLatestSnapshot(sectionId);
+
+    if (latest) {
+      // Throttle: skip if last snapshot is less than 60 seconds ago
+      const ageMs = Date.now() - latest.createdAt.getTime();
+      if (ageMs < SNAPSHOT_THROTTLE_MS) {
+        return { version: latest.version, skipped: true, reason: "throttled" };
+      }
+
+      // Content dedup: skip if data is byte-identical to the latest snapshot.
+      // Compare two snapshot projections (same shape) — not section vs snapshot.
+      const currentProjection = await this.repository.buildSnapshotProjection(sectionId);
+      if (stableStringify(latest.data) === stableStringify(currentProjection)) {
+        return { version: latest.version, skipped: true, reason: "no-change" };
+      }
+    }
+
+    const version = await this.repository.createVersionSnapshot(sectionId);
+    return { version };
   }
 
   /** API-04: Request the head to reopen a submitted section. */
@@ -319,6 +405,7 @@ export class LeadFormService {
       authorId: string;
       authorName: string;
       stageNames: string[];
+      stages: { stageName: string; status: "green" | "yellow" | "red" | null }[];
       itemCount: number;
       riskCount: number;
     }[]
@@ -331,5 +418,17 @@ export class LeadFormService {
     userId: string,
   ): Promise<CrossAuthorSectionRow[]> {
     return this.repository.getCrossAuthorSections(reportId, userId);
+  }
+
+  /** SC-165: Revoke every submitted section in a report in one transaction. */
+  async revokeAllSubmitted(
+    reportId: string,
+    revokedByUserId: string,
+  ): Promise<{ success: true; revokedCount: number }> {
+    const count = await this.repository.revokeAllSubmitted(
+      reportId,
+      revokedByUserId,
+    );
+    return { success: true, revokedCount: count };
   }
 }

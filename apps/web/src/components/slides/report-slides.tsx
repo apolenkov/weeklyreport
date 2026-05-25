@@ -19,6 +19,8 @@ type ReportSlidesProps = {
   readonly sourceLabel?: string;
   readonly hideSourceLink?: boolean;
   readonly toolbar?: ReactNode;
+  /** Rendered inside the lead slide hero, inline with the tone badge. */
+  readonly heroControls?: ReactNode;
 };
 
 export function ReportSlides({
@@ -34,6 +36,7 @@ export function ReportSlides({
   sourceLabel,
   hideSourceLink,
   toolbar,
+  heroControls,
 }: ReportSlidesProps) {
   return (
     <StatusSlideDeck
@@ -48,6 +51,7 @@ export function ReportSlides({
       sourceLabel={sourceLabel}
       hideSourceLink={hideSourceLink}
       toolbar={toolbar}
+      heroControls={heroControls}
       mode={variant}
       showChrome={variant === "lead" ? false : undefined}
     />

@@ -4,7 +4,7 @@ import type {
   VersionSnapshot,
 } from "@customreport/shared";
 import { versionSnapshotSchema } from "@customreport/shared";
-import type { ItemType, ItemWorkflowStatus } from "@prisma/client";
+import type { ItemType, ItemWorkflowStatus, Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import {
@@ -15,8 +15,6 @@ import type {
   LeadFormRepository,
   CrossAuthorSectionRow,
 } from "./lead-form.service";
-
-const MAX_SNAPSHOTS = 50;
 
 @Injectable()
 export class LeadFormPrismaRepository implements LeadFormRepository {
@@ -86,6 +84,26 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         submittedAt: null,
       },
     });
+  }
+
+  /** SC-165: Revoke every submitted section in a report atomically. */
+  async revokeAllSubmitted(
+    reportId: string,
+    revokedBy: string,
+  ): Promise<number> {
+    const now = new Date();
+    const result = await this.prisma.$transaction(async (tx) => {
+      return tx.reportSection.updateMany({
+        where: { reportId, status: "submitted" },
+        data: {
+          status: "draft",
+          revokedAt: now,
+          revokedBy,
+          submittedAt: null,
+        },
+      });
+    });
+    return result.count;
   }
 
   async fillFromSection(
@@ -176,11 +194,23 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     return copiedItems;
   }
 
+  async getVersion(
+    sectionId: string,
+    version: number,
+  ): Promise<Record<string, unknown> | null> {
+    const snapshot = await this.prisma.versionSnapshot.findUnique({
+      where: {
+        reportSectionId_version: { reportSectionId: sectionId, version },
+      },
+      select: { data: true },
+    });
+    return (snapshot?.data as Record<string, unknown>) ?? null;
+  }
+
   async listVersions(sectionId: string): Promise<VersionSnapshot[]> {
     const rows = await this.prisma.versionSnapshot.findMany({
       where: { reportSectionId: sectionId },
       orderBy: { version: "desc" },
-      take: MAX_SNAPSHOTS,
     });
 
     return rows.map((row) => {
@@ -221,6 +251,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         workflowStatus: string;
         carriedOver: boolean;
         completed: boolean | null;
+        priorityRank?: number | null;
         stageName?: string | null;
         stageIds?: string[];
       }>;
@@ -229,6 +260,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         risk: string;
         impact: string;
         mitigation: string;
+        severity?: string | null;
         stageName?: string | null;
         stageIds?: string[];
       }>;
@@ -242,12 +274,11 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         stageIds?: string[];
         productId?: string | null;
       }>;
-      priorities: Array<{
-        rank: number;
-        text: string;
-        stageName?: string | null;
-        stageIds?: string[];
-        productId?: string | null;
+      stageStatuses?: Array<{
+        projectId: string;
+        stageId: string;
+        stageName?: string;
+        status: "green" | "yellow" | "red" | null;
       }>;
     };
 
@@ -256,7 +287,14 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         await tx.item.deleteMany({ where: { reportSectionId: sectionId } });
         await tx.risk.deleteMany({ where: { reportSectionId: sectionId } });
         await tx.decision.deleteMany({ where: { reportSectionId: sectionId } });
-        await tx.priority.deleteMany({ where: { reportSectionId: sectionId } });
+        // F3.3 (T-G5): wipe + rebuild stage statuses so chip colors track the
+        // restored snapshot. Snapshots created before this field was added
+        // simply leave `stageStatuses` undefined → keep current statuses.
+        if (data.stageStatuses !== undefined) {
+          await tx.stageStatus.deleteMany({
+            where: { reportSectionId: sectionId },
+          });
+        }
 
         if (data.items.length > 0) {
           await tx.item.createMany({
@@ -269,6 +307,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               workflowStatus: i.workflowStatus as ItemWorkflowStatus,
               carriedOver: i.carriedOver,
               completed: i.completed ?? null,
+              priorityRank: i.priorityRank ?? null,
               stageName: i.stageIds?.join(", ") ?? i.stageName ?? null,
             })),
           });
@@ -282,6 +321,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               risk: r.risk,
               impact: r.impact,
               mitigation: r.mitigation,
+              severity: r.severity ?? "at-risk",
               stageName: r.stageIds?.join(", ") ?? r.stageName ?? null,
             })),
           });
@@ -303,17 +343,13 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
           });
         }
 
-        const prioritiesToRestore = data.priorities.filter(
-          (p) => !!p.productId,
-        );
-        if (prioritiesToRestore.length > 0) {
-          await tx.priority.createMany({
-            data: prioritiesToRestore.map((p) => ({
+        if (data.stageStatuses && data.stageStatuses.length > 0) {
+          await tx.stageStatus.createMany({
+            data: data.stageStatuses.map((ss) => ({
               reportSectionId: sectionId,
-              rank: p.rank,
-              text: p.text,
-              stageName: p.stageIds?.join(", ") ?? p.stageName ?? null,
-              productId: p.productId as string,
+              projectId: ss.projectId,
+              stageId: ss.stageId,
+              status: ss.status,
             })),
           });
         }
@@ -342,27 +378,10 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     });
   }
 
-  async createVersionSnapshot(sectionId: string): Promise<void> {
-    const section = await this.prisma.reportSection.findUnique({
-      where: { id: sectionId },
-      include: reportSectionFullInclude,
-    });
-
-    if (!section) {
-      throw new Error(`Section ${sectionId} not found for snapshot.`);
-    }
-
-    // Determine next version number
-    const maxSnapshot = await this.prisma.versionSnapshot.findFirst({
-      where: { reportSectionId: sectionId },
-      orderBy: { version: "desc" },
-      select: { version: true },
-    });
-
-    const nextVersion = (maxSnapshot?.version ?? 0) + 1;
-
-    // Serialize current section data
-    const data = {
+  private buildSnapshotData(
+    section: Prisma.ReportSectionGetPayload<{ include: typeof reportSectionFullInclude }>,
+  ): Record<string, unknown> {
+    return {
       items: section.items.map((i) => ({
         projectId: i.projectId,
         type: i.type,
@@ -371,6 +390,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         workflowStatus: i.workflowStatus,
         carriedOver: i.carriedOver,
         completed: i.completed ?? null,
+        priorityRank: i.priorityRank ?? null,
         stageName: i.stageName ?? null,
       })),
       risks: section.risks.map((r) => ({
@@ -378,6 +398,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         risk: r.risk,
         impact: r.impact,
         mitigation: r.mitigation,
+        severity: r.severity,
         stageName: r.stageName ?? null,
       })),
       decisions: section.decisions.map((d) => ({
@@ -389,41 +410,119 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         stageName: d.stageName ?? null,
         productId: d.productId,
       })),
-      priorities: section.priorities.map((p) => ({
-        rank: p.rank,
-        text: p.text,
-        stageName: p.stageName ?? null,
-        productId: p.productId,
+      // F3.3: include stage statuses so version viewer can restore chip colors.
+      stageStatuses: section.stageStatuses.map((ss) => ({
+        projectId: ss.projectId,
+        stageId: ss.stageId,
+        stageName: (ss as { stage?: { name: string } }).stage?.name ?? ss.stageId,
+        status: ss.status,
       })),
     };
+  }
+
+  async buildSnapshotProjection(sectionId: string): Promise<Record<string, unknown>> {
+    const section = await this.prisma.reportSection.findUnique({
+      where: { id: sectionId },
+      include: reportSectionFullInclude,
+    });
+
+    if (!section) {
+      throw new Error(`Section ${sectionId} not found for snapshot projection.`);
+    }
+
+    return this.buildSnapshotData(section);
+  }
+
+  async createVersionSnapshot(sectionId: string): Promise<number> {
+    const section = await this.prisma.reportSection.findUnique({
+      where: { id: sectionId },
+      include: reportSectionFullInclude,
+    });
+
+    if (!section) {
+      throw new Error(`Section ${sectionId} not found for snapshot.`);
+    }
+
+    const maxSnapshot = await this.prisma.versionSnapshot.findFirst({
+      where: { reportSectionId: sectionId },
+      orderBy: { version: "desc" },
+      select: { version: true },
+    });
+
+    const nextVersion = (maxSnapshot?.version ?? 0) + 1;
+
+    const data = this.buildSnapshotData(section);
 
     await this.prisma.versionSnapshot.create({
       data: {
         reportSectionId: sectionId,
         version: nextVersion,
-        data,
+        data: data as Prisma.InputJsonValue,
       },
     });
 
-    // Prune old snapshots if over the limit
-    const totalCount = await this.prisma.versionSnapshot.count({
+    // Time-based retention: keep all <24 h, 1/hour for 24 h–7 d,
+    // 1/day for 7 d–30 d, delete everything >30 d.
+    await this.prisma.$executeRaw`
+      DELETE FROM "VersionSnapshot"
+      WHERE "reportSectionId" = ${sectionId}
+        AND id NOT IN (
+          -- Window 1: keep everything from the last 24 hours
+          SELECT id FROM "VersionSnapshot"
+          WHERE "reportSectionId" = ${sectionId}
+            AND "createdAt" > NOW() - INTERVAL '24 hours'
+
+          UNION ALL
+
+          -- Window 2: keep newest per clock-hour between 24 h and 7 days
+          SELECT id FROM (
+            SELECT id,
+                   ROW_NUMBER() OVER (
+                     PARTITION BY date_trunc('hour', "createdAt")
+                     ORDER BY "createdAt" DESC
+                   ) AS rn
+            FROM "VersionSnapshot"
+            WHERE "reportSectionId" = ${sectionId}
+              AND "createdAt" <= NOW() - INTERVAL '24 hours'
+              AND "createdAt" > NOW() - INTERVAL '7 days'
+          ) hourly WHERE rn = 1
+
+          UNION ALL
+
+          -- Window 3: keep newest per calendar-day between 7 and 30 days
+          SELECT id FROM (
+            SELECT id,
+                   ROW_NUMBER() OVER (
+                     PARTITION BY date_trunc('day', "createdAt")
+                     ORDER BY "createdAt" DESC
+                   ) AS rn
+            FROM "VersionSnapshot"
+            WHERE "reportSectionId" = ${sectionId}
+              AND "createdAt" <= NOW() - INTERVAL '7 days'
+              AND "createdAt" > NOW() - INTERVAL '30 days'
+          ) daily WHERE rn = 1
+        )
+    `;
+
+    return nextVersion;
+  }
+
+  async getLatestSnapshot(
+    sectionId: string,
+  ): Promise<import("./lead-form.service.js").SnapshotLatestRow | null> {
+    const row = await this.prisma.versionSnapshot.findFirst({
       where: { reportSectionId: sectionId },
+      orderBy: { version: "desc" },
+      select: { data: true, createdAt: true, version: true },
     });
 
-    if (totalCount > MAX_SNAPSHOTS) {
-      const oldest = await this.prisma.versionSnapshot.findMany({
-        where: { reportSectionId: sectionId },
-        orderBy: { version: "asc" },
-        take: totalCount - MAX_SNAPSHOTS,
-        select: { id: true },
-      });
+    if (!row) return null;
 
-      if (oldest.length > 0) {
-        await this.prisma.versionSnapshot.deleteMany({
-          where: { id: { in: oldest.map((s) => s.id) } },
-        });
-      }
-    }
+    return {
+      data: row.data as Record<string, unknown>,
+      createdAt: row.createdAt,
+      version: row.version,
+    };
   }
 
   async hasSharedProduct(userId1: string, userId2: string): Promise<boolean> {
@@ -451,6 +550,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       authorId: string;
       authorName: string;
       stageNames: string[];
+      stages: { stageName: string; status: "green" | "yellow" | "red" | null }[];
       itemCount: number;
       riskCount: number;
     }[]
@@ -467,13 +567,14 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       where: { projectId: { in: myProjectIds }, userId: { not: userId } },
       select: {
         projectId: true,
+        stageId: true,
         project: { select: { id: true, name: true, archived: true } },
         stage: { select: { name: true } },
         user: { select: { id: true, name: true } },
       },
     });
 
-    // Section stats for other authors in this report
+    // Section stats + stage statuses for other authors in this report
     const otherUserIds = [...new Set(others.map((o) => o.user.id))];
     const sections = await this.prisma.reportSection.findMany({
       where: { reportId, authorId: { in: otherUserIds } },
@@ -481,9 +582,20 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         authorId: true,
         items: { select: { projectId: true } },
         risks: { select: { projectId: true } },
+        stageStatuses: { select: { projectId: true, stageId: true, status: true } },
       },
     });
     const sectionByAuthor = new Map(sections.map((s) => [s.authorId, s]));
+
+    // Build status lookup: "(authorId)::projectId::stageId" → status
+    const statusMap = new Map<string, "green" | "yellow" | "red">();
+    for (const s of sections) {
+      for (const ss of s.stageStatuses) {
+        if (ss.status !== null) {
+          statusMap.set(`${s.authorId}::${ss.projectId}::${ss.stageId}`, ss.status);
+        }
+      }
+    }
 
     // Group by (projectId, authorId)
     const grouped = new Map<
@@ -494,6 +606,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         authorId: string;
         authorName: string;
         stageNames: Set<string>;
+        stageEntries: { stageName: string; status: "green" | "yellow" | "red" | null }[];
         itemCount: number;
         riskCount: number;
       }
@@ -502,6 +615,8 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     for (const row of others) {
       if (row.project.archived) continue;
       const key = `${row.projectId}::${row.user.id}`;
+      const stageStatus =
+        statusMap.get(`${row.user.id}::${row.projectId}::${row.stageId}`) ?? null;
       if (!grouped.has(key)) {
         const section = sectionByAuthor.get(row.user.id);
         const itemCount = section
@@ -516,17 +631,26 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
           authorId: row.user.id,
           authorName: row.user.name,
           stageNames: new Set([row.stage.name]),
+          stageEntries: [{ stageName: row.stage.name, status: stageStatus }],
           itemCount,
           riskCount,
         });
       } else {
-        grouped.get(key)?.stageNames.add(row.stage.name);
+        const entry = grouped.get(key);
+        entry?.stageNames.add(row.stage.name);
+        entry?.stageEntries.push({ stageName: row.stage.name, status: stageStatus });
       }
     }
 
     return [...grouped.values()].map((g) => ({
-      ...g,
+      projectId: g.projectId,
+      projectName: g.projectName,
+      authorId: g.authorId,
+      authorName: g.authorName,
       stageNames: [...g.stageNames],
+      stages: g.stageEntries,
+      itemCount: g.itemCount,
+      riskCount: g.riskCount,
     }));
   }
 
@@ -592,6 +716,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
             workflowStatus: true,
             carriedOver: true,
             completed: true,
+            priorityRank: true,
             stageName: true,
           },
         },
@@ -618,16 +743,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
             stageName: true,
           },
         },
-        priorities: {
-          select: {
-            id: true,
-            productId: true,
-            rank: true,
-            text: true,
-            stageName: true,
-          },
-          orderBy: { rank: "asc" },
-        },
       },
     });
 
@@ -644,11 +759,12 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         authorName: authorEntry.authorName,
         sharedProductIds: [...sharedIds],
         items: section.items.filter((i) => sharedIds.has(i.projectId)),
+        // TODO(STAGE-CROSS-AUTHOR-MULTI): risks carry scalar stageName (comma-joined
+        // from DB), not stageIds[]. A multi-stage risk "Testing, DevOps" won't match
+        // individual stages in the cross-author chip path. Mine-path uses stageIds[]
+        // membership (split in report-sections.prisma-repository.ts) instead.
         risks: section.risks.filter((r) => sharedIds.has(r.projectId)),
         decisions: section.decisions.filter((d) => sharedIds.has(d.productId)),
-        priorities: section.priorities.filter((p) =>
-          sharedIds.has(p.productId),
-        ),
       });
     }
 

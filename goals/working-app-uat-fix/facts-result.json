@@ -1,0 +1,109 @@
+{
+  "decision": "submitted",
+  "stage": "facts",
+  "result": {
+    "stage": "facts",
+    "title": "Working-app UAT + fix (all roles, one goal)",
+    "goalSlug": "working-app-uat-fix",
+    "facts": [
+      {
+        "id": "fact-render-clean",
+        "text": "Все 4 роли (lead / head / admin / viewer) открывают свои основные экраны с нулём console-ошибок на свежем билде.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-priorityrank",
+        "text": "В отчёте лида: приоритет (priority rank) айтема сохраняется после перезагрузки и снова отображается в диалоге редактирования.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-lead-splitview",
+        "text": "В отчёте лида: edit-режим и slides-режим доступны рядом (split-view); переключение/просмотр не теряет несохранённые правки — единый источник данных.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-head-splitview",
+        "text": "У хеда: split-view показывает сборный (агрегированный) статус и его слайд-форму рядом; хед там НЕ редактирует, только просматривает.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": false,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-head-grouping",
+        "text": "У хеда: группировку можно переключать между «по продукту» и «по лидам» — и в статус-виде, и в слайд-виде.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-head-pulse",
+        "text": "Head dashboard = «пульс» статусов текущего периода: видно, какие секции уже сданы/зафиксированы, а какие ещё нет.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-revoke",
+        "text": "У хеда: кнопки Revoke (по лиду) и Revoke All появляются и работают, когда есть сданные секции лидов.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-no-jump",
+        "text": "На ключевых экранах нет видимого «прыжка» при загрузке: скелетон совпадает по размеру с финальным контентом (CLS≈0).",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-all-fixed",
+        "text": "Каждая найденная UAT-проблема (визуальная и алгоритмическая, ▲-high и ▼-low) починена до зелёного — ничего не отложено.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": false,
+        "recommendedAutomatedVerification": false
+      },
+      {
+        "id": "fact-frozen",
+        "text": "Замороженные направления не тронуты: AI/RAG, тёмная тема, i18n, holidays-calendar, Telegram, Director.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-gates",
+        "text": "Все гейты зелёные: pnpm typecheck, pnpm lint, pnpm test, pnpm lint:md.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-parallel",
+        "text": "Исполнение идёт параллельными субагентами (Haiku — скан/разведка, Sonnet — фиксы), Opus — только для синтеза/конфликтов; коммиты атомарные на fix/PRJ-2/shiny-eagle.",
+        "accepted": true,
+        "removed": false,
+        "comment": "Ещё сделать так, что, в принципе, у нас много уже реализовано, просто нужно проверить и доработать.Самое главное сделать чек. Я бы еще дополнительно сделал вызовы ConSimplifier и CodeModernization и по review, по выправке пакетов до последних ESLint по стандартам. есть же кстати гугловские стандарты и много плагинов которые совмещены спредти и реслинд кстати еще есть нужно провести аудит через верцал обязательно по их скиллам best practice если нет то надо установитьИ все это можно действительно прям по максимуму распараллелить на разных агентов и Opus только по сути нужно включать, где действительно это надо.",
+        "automatedVerification": false,
+        "recommendedAutomatedVerification": false
+      }
+    ],
+    "factsMarkdown": "# Facts\n\n- Все 4 роли (lead / head / admin / viewer) открывают свои основные экраны с нулём console-ошибок на свежем билде.\n- В отчёте лида: приоритет (priority rank) айтема сохраняется после перезагрузки и снова отображается в диалоге редактирования.\n- В отчёте лида: edit-режим и slides-режим доступны рядом (split-view); переключение/просмотр не теряет несохранённые правки — единый источник данных.\n- У хеда: split-view показывает сборный (агрегированный) статус и его слайд-форму рядом; хед там НЕ редактирует, только просматривает.\n- У хеда: группировку можно переключать между «по продукту» и «по лидам» — и в статус-виде, и в слайд-виде.\n- Head dashboard = «пульс» статусов текущего периода: видно, какие секции уже сданы/зафиксированы, а какие ещё нет.\n- У хеда: кнопки Revoke (по лиду) и Revoke All появляются и работают, когда есть сданные секции лидов.\n- На ключевых экранах нет видимого «прыжка» при загрузке: скелетон совпадает по размеру с финальным контентом (CLS≈0).\n- Каждая найденная UAT-проблема (визуальная и алгоритмическая, ▲-high и ▼-low) починена до зелёного — ничего не отложено.\n- Замороженные направления не тронуты: AI/RAG, тёмная тема, i18n, holidays-calendar, Telegram, Director.\n- Все гейты зелёные: pnpm typecheck, pnpm lint, pnpm test, pnpm lint:md.\n- Исполнение идёт параллельными субагентами (Haiku — скан/разведка, Sonnet — фиксы), Opus — только для синтеза/конфликтов; коммиты атомарные на fix/PRJ-2/shiny-eagle."
+  }
+}

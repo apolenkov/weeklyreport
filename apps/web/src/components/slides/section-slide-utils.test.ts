@@ -4,6 +4,7 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 
 import {
   buildActivitySlideModel,
+  buildProductScopedSlides,
   buildSectionSlideModel,
   sortSlidesForReview,
 } from "./section-slide-utils";
@@ -56,6 +57,7 @@ function makeSection(
         workflowStatus: "done",
         carriedOver: false,
         completed: true,
+        priorityRank: 1,
       },
       {
         id: "66666666-6666-4666-8666-666666666666",
@@ -70,14 +72,6 @@ function makeSection(
     ],
     risks: [],
     decisions: [],
-    priorities: [
-      {
-        id: "77777777-7777-4777-8777-777777777777",
-        rank: 1,
-        text: "Ship the release summary",
-        productId: PRODUCT_ID,
-      },
-    ],
     ...overrides,
   };
 }
@@ -99,7 +93,7 @@ describe("section slide utilities", () => {
         name: "Core Product",
         currentItems: ["Closed release blockers"],
         nextItems: ["Prepare rollout notes"],
-        priorities: ["Ship the release summary"],
+        priorities: ["Closed release blockers"],
         stages: [
           expect.objectContaining({ name: "Discovery", status: "yellow" }),
           expect.objectContaining({ name: "Build", status: "green" }),
@@ -142,6 +136,7 @@ describe("section slide utilities", () => {
             workflowStatus: "done",
             carriedOver: false,
             completed: true,
+            priorityRank: 1,
           },
           {
             id: "66666666-6666-4666-8666-666666666666",
@@ -152,6 +147,17 @@ describe("section slide utilities", () => {
             workflowStatus: "in_progress",
             carriedOver: false,
             completed: null,
+          },
+          {
+            id: "77777777-7777-4777-8777-777777777777",
+            projectId: PRODUCT_TWO_ID,
+            type: "next",
+            text: "Protect launch date",
+            tag: "delivery",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            completed: null,
+            priorityRank: 2,
           },
         ],
         risks: [
@@ -175,20 +181,6 @@ describe("section slide utilities", () => {
             productId: null,
           },
         ],
-        priorities: [
-          {
-            id: "77777777-7777-4777-8777-777777777777",
-            rank: 1,
-            text: "Stabilize API",
-            productId: PRODUCT_ID,
-          },
-          {
-            id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
-            rank: 2,
-            text: "Protect launch date",
-            productId: PRODUCT_TWO_ID,
-          },
-        ],
       }),
     );
 
@@ -198,14 +190,14 @@ describe("section slide utilities", () => {
         name: "Core Product",
         currentItems: ["Close API parity"],
         nextItems: [],
-        priorities: ["Stabilize API"],
+        priorities: ["Close API parity"],
       }),
     );
     expect(slide.productSlides[1]).toEqual(
       expect.objectContaining({
         name: "Data Portal",
         currentItems: [],
-        nextItems: ["Prepare portal rollout"],
+        nextItems: ["Prepare portal rollout", "Protect launch date"],
         risks: ["Release scope may slip"],
         priorities: ["Protect launch date"],
       }),
@@ -253,7 +245,6 @@ describe("section slide utilities", () => {
             completed: true,
           },
         ],
-        priorities: [],
       }),
     );
 
@@ -294,7 +285,28 @@ describe("section slide utilities", () => {
     const warning = buildSectionSlideModel(
       makeSection({
         authorName: "Warning",
-        priorities: [],
+        items: [
+          {
+            id: "55555555-5555-4555-8555-555555555555",
+            projectId: PRODUCT_ID,
+            type: "current",
+            text: "Closed release blockers",
+            tag: "delivery",
+            workflowStatus: "done",
+            carriedOver: false,
+            completed: true,
+          },
+          {
+            id: "66666666-6666-4666-8666-666666666666",
+            projectId: PRODUCT_ID,
+            type: "next",
+            text: "Prepare rollout notes",
+            tag: "delivery",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            completed: null,
+          },
+        ],
       }),
     );
     const blocked = buildSectionSlideModel(
@@ -314,6 +326,127 @@ describe("section slide utilities", () => {
     expect(
       sortSlidesForReview([ready, warning, blocked]).map((s) => s.tone),
     ).toEqual(["blocked", "warning", "ready"]);
+  });
+
+  it("transposes per-lead sections into one slide per product (product scope)", () => {
+    const SECTION_TWO_ID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+    const AUTHOR_TWO_ID = "ffffffff-ffff-4fff-8fff-ffffffffffff";
+
+    const alice = makeSection({
+      reportSectionId: SECTION_ID,
+      authorId: AUTHOR_ID,
+      authorName: "Alice",
+      status: "submitted",
+      submittedAt: new Date("2026-05-20T10:00:00Z"),
+      projects: [
+        {
+          projectId: PRODUCT_ID,
+          projectName: "Core Product",
+          trafficLight: "green",
+          ownedStages: [],
+        },
+        {
+          projectId: PRODUCT_TWO_ID,
+          projectName: "Data Portal",
+          trafficLight: "yellow",
+          ownedStages: [],
+        },
+      ],
+      items: [
+        {
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0001",
+          projectId: PRODUCT_ID,
+          type: "current",
+          text: "Alice core work",
+          tag: "delivery",
+          workflowStatus: "done",
+          carriedOver: false,
+          completed: true,
+        },
+        {
+          id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002",
+          projectId: PRODUCT_TWO_ID,
+          type: "next",
+          text: "Alice portal next",
+          tag: "delivery",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+          completed: null,
+        },
+      ],
+      risks: [],
+      decisions: [],
+    });
+
+    const bob = makeSection({
+      reportSectionId: SECTION_TWO_ID,
+      authorId: AUTHOR_TWO_ID,
+      authorName: "Bob",
+      status: "draft",
+      submittedAt: null,
+      projects: [
+        {
+          projectId: PRODUCT_ID,
+          projectName: "Core Product",
+          trafficLight: "red",
+          ownedStages: [],
+        },
+      ],
+      items: [
+        {
+          id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0003",
+          projectId: PRODUCT_ID,
+          type: "current",
+          text: "Bob core work",
+          tag: "delivery",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+          completed: null,
+        },
+      ],
+      risks: [],
+      decisions: [
+        {
+          id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbb0004",
+          text: "Shared roadmap call",
+          owner: "Head",
+          deadline: null,
+          impact: "Cross-product",
+          resolvedAt: null,
+          productId: null,
+        },
+      ],
+    });
+
+    const slides = buildProductScopedSlides([alice, bob]);
+    const byName = Object.fromEntries(slides.map((s) => [s.ownerName, s]));
+
+    expect(slides.map((s) => s.ownerName).sort()).toEqual([
+      "Core Product",
+      "Data Portal",
+      "Shared context",
+    ]);
+
+    // Shared product aggregates both leads' items; worst traffic (green+red)
+    // drives the blocked tone; contributing leads replace the product subtitle.
+    const core = byName["Core Product"];
+    expect(core.ownerRole).toBe("product");
+    expect(core.products).toEqual(["Alice", "Bob"]);
+    expect([...core.currentItems].sort()).toEqual([
+      "Alice core work",
+      "Bob core work",
+    ]);
+    expect(core.tone).toBe("blocked");
+
+    // Single-owner product carries only that lead's content.
+    const portal = byName["Data Portal"];
+    expect(portal.products).toEqual(["Alice"]);
+    expect(portal.nextItems).toEqual(["Alice portal next"]);
+
+    // Cross-product decisions land in a synthetic Shared context slide.
+    const shared = byName["Shared context"];
+    expect(shared.decisions).toEqual(["Shared roadmap call"]);
+    expect(shared.products).toEqual(["Bob"]);
   });
 
   it("builds an empty owner slide from activity rows before a section exists", () => {

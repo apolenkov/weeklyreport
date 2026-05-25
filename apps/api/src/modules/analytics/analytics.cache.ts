@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import type { OnModuleDestroy } from "@nestjs/common";
 import Redis from "ioredis";
 
@@ -23,6 +23,7 @@ const PREFIX = "customreport:analytics:";
  */
 @Injectable()
 export class AnalyticsCache implements AnalyticsCachePort, OnModuleDestroy {
+  private readonly logger = new Logger(AnalyticsCache.name);
   private readonly redis: Redis;
 
   constructor() {
@@ -41,10 +42,14 @@ export class AnalyticsCache implements AnalyticsCachePort, OnModuleDestroy {
   async getOrCompute<T>(key: string, fn: () => Promise<T>): Promise<T> {
     try {
       const cached = await this.redis.get(key);
-      if (cached !== null) return JSON.parse(cached) as T;
+      if (cached !== null) {
+        this.logger.debug(`cache hit key=${key}`);
+        return JSON.parse(cached) as T;
+      }
     } catch {
       // Cache failure is non-fatal — fall through to compute.
     }
+    this.logger.debug(`cache miss key=${key}`);
     const fresh = await fn();
     try {
       await this.redis.setex(key, TTL_SECONDS, JSON.stringify(fresh));

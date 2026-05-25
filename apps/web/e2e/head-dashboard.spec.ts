@@ -3,7 +3,10 @@
  *
  * Validates the head dashboard at /head/dashboard -- KPI cards, alert bar,
  * lead reports grid, report archive, and toggle-all interaction.
- * All data is currently mock; tests verify UI rendering and interactions.
+ *
+ * Data source: the page calls tRPC weeklyReport.get (real backend in dev/
+ * integration environments). Numeric assertions are derived from the advanced
+ * seed: 4 submitted / 6 total for the active report period.
  *
  * Covers: SC-20..SC-25 (Dashboard), SC-59 (responsive)
  */
@@ -48,10 +51,19 @@ test.describe("Head Dashboard", () => {
   // KPI Cards
   // -----------------------------------------------------------------------
 
-  test("Submissions KPI card is visible with count", async ({ headPage }) => {
+  test("Submissions KPI card shows seed-accurate 4/6 count", async ({
+    headPage,
+  }) => {
+    // Seed: Vasily, Maria, Igor, Dmitry submitted (4); Olga draft, Sergey draft (2).
+    // weeklyReport.get.submissionCount filters status==="submitted" in DB.
     await expect(headPage.getByText("Submissions")).toBeVisible();
-    // Shows 4/6 from mock data -- use .first() since 4/6 also appears in archive card
+    // Use .first() since "4/6" may also appear in archive card for the prior week.
     await expect(headPage.getByText("4/6").first()).toBeVisible();
+  });
+
+  test("Submissions KPI shows total lead count of 6", async ({ headPage }) => {
+    // Seed registers 6 leads in the department's reporting group.
+    await expect(headPage.getByText("6 leads")).toBeVisible();
   });
 
   test("Deadline KPI card is visible with report deadline", async ({
@@ -75,9 +87,12 @@ test.describe("Head Dashboard", () => {
   // Alert Bar
   // -----------------------------------------------------------------------
 
-  test("alert bar shows pending leads message", async ({ headPage }) => {
-    // Alert bar text: "Olga N. (Draft) and Sergey T. (Not started) haven't submitted"
-    // Use the full container text to avoid strict mode violations
+  test("alert bar shows exactly 2 pending leads from seed (Olga + Sergey)", async ({
+    headPage,
+  }) => {
+    // Seed: 2 non-submitted leads — Ольга Н. (draft with items) and
+    // Сергей Т. (draft, no items → shows as Not started / Pending).
+    // Alert bar lists them by name so the head can identify who's missing.
     await expect(headPage.getByText("Olga N.").first()).toBeVisible();
     await expect(headPage.getByText("Sergey T.").first()).toBeVisible();
     await expect(
@@ -96,10 +111,16 @@ test.describe("Head Dashboard", () => {
     await expect(headPage.getByText("6 leads")).toBeVisible();
   });
 
-  test("lead cards show status badges", async ({ headPage }) => {
-    // 4 submitted, 1 draft, 1 pending from mock data
+  test("lead cards show status badges reflecting seed distribution", async ({
+    headPage,
+  }) => {
+    // Seed: 4 submitted (Vasily, Maria, Igor, Dmitry), 1 draft with items
+    // (Olga), 1 draft with no items (Sergey — shows as Pending in UI).
     const submittedBadges = headPage.getByText("Submitted", { exact: true });
+    // At least 4 submitted badges visible (one per submitted lead card).
     await expect(submittedBadges.first()).toBeVisible();
+    await expect(submittedBadges).toHaveCount(4);
+
     await expect(
       headPage.getByText("Draft", { exact: true }).first(),
     ).toBeVisible();

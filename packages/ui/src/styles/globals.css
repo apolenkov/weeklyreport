@@ -106,6 +106,13 @@
   --slide-max-products-per-page: 4;
   --font-size-slide-display: 2.5rem;
   --font-size-slide-headline: 1.5rem;
+
+  /* ---- Slide layout & typography ramp (F-shiny-4) ---- */
+  --slide-pad: 24px;
+  --slide-row-min: 80px;
+  --slide-title-size: 28px;
+  --slide-body-size: 13px;
+  --slide-line-clamp: 3;
 }
 
 /* ---- Skeleton animation (shimmer) ---- */
