@@ -174,3 +174,31 @@ describe("admin group-product contract (UFB-054, Phase 56-B)", () => {
     expect(isAdminProcedure(proc)).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// GROUP-SCOPE-01: admin.snapshot is admin-only (UFB-038 gate)
+// ---------------------------------------------------------------------------
+//
+// Regression guard for fix-head-dashboard-group-scope (PRJ-2 UAT debt).
+//
+// Root cause: prior to UFB-038, admin.snapshot used headProcedure which let
+// head users call it and see ALL users regardless of their reporting group.
+// UFB-038 (Phase 44-B) switched the endpoint to adminProcedure (admin-only),
+// eliminating cross-group user leakage from the admin panel for heads.
+//
+// This test asserts the gate is still in place so a future refactor cannot
+// accidentally revert to headProcedure and re-open the leak.
+// ---------------------------------------------------------------------------
+
+describe("admin.snapshot group-scope gate (GROUP-SCOPE-01)", () => {
+  const stubDeps = {} as Parameters<typeof createAppRouter>[0];
+  const appRouter = createAppRouter(stubDeps);
+  const router = appRouter as unknown as {
+    _def: { procedures: Record<string, unknown> };
+  };
+
+  it("admin.snapshot is guarded by adminProcedure (not headProcedure)", () => {
+    const proc = getProcedure(router, "admin.snapshot");
+    expect(isAdminProcedure(proc)).toBe(true);
+  });
+});
