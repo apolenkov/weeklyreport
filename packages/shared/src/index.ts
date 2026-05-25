@@ -10,3 +10,4 @@ export * from "./schemas/ai-summary";
 export * from "./schemas/integrations";
 export * from "./admin/reminder-policy.schema";
 export * from "./auth";
+export * from "./schemas/stage-names";
