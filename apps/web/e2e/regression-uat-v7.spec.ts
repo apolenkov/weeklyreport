@@ -135,13 +135,10 @@ test.describe("D-34/A35 — Viewer published archive is read-only", () => {
 
     await waitForUatRoute(page, "/reports?tab=published");
 
-    await expect(page.getByRole("heading", { name: "Reports" })).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "My Drafts" }),
-    ).toBeDisabled();
-    await expect(
-      page.getByRole("button", { name: "Published" }),
-    ).toHaveAttribute("aria-current", "page");
+    // Reports page was redesigned: it is now a unified "History" page with no
+    // My Drafts / Published tabs. Viewer gets read-only compiled history.
+    await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
+    // Viewer has no search scope → no search input
     await expect(page.getByPlaceholder(/search/i)).toHaveCount(0);
     await expectNoReportMutationControls(page);
 
@@ -289,24 +286,27 @@ test.describe("D-9 — Admin settings integrations", () => {
 });
 
 // ---------------------------------------------------------------------------
-// D-25 — Reports page: Lead history sidebar Coming Soon badge
+// D-25 — Reports page: Lead history sidebar stats panel
 // ---------------------------------------------------------------------------
 
-test.describe("D-25 — Lead history sidebar Coming Soon badge", () => {
-  test("reports page drafts area shows coming soon in history sidebar", async ({
+test.describe("D-25 — Lead history sidebar stats panel", () => {
+  test("reports page shows history stats sidebar for lead", async ({
     browser,
   }) => {
     const ctx = await browser.newContext(withRole("lead"));
     const page = await ctx.newPage();
 
-    // Explicitly load the drafts tab — LeadHistorySidebar (with Coming Soon card) is
-    // rendered only inside LeadDraftsPanel which shows at ?tab=drafts
     await page.goto("/reports?tab=drafts");
     await waitReady(page);
 
-    // "Draft History" sidebar card always shows Coming Soon (D-25 fix)
-    const badge = page.getByText(/coming soon/i).first();
-    await expect(badge).toBeVisible({ timeout: 8_000 });
+    // The Draft History coming-soon widget was removed (523cc822).
+    // The sidebar now renders a stats panel — verify it is present and
+    // that no raw mutation controls are visible.
+    const sidebar = page.getByRole("complementary", {
+      name: /history summary/i,
+    });
+    await expect(sidebar).toBeVisible({ timeout: 8_000 });
+    await expectNoReportMutationControls(page);
 
     await ctx.close();
   });
