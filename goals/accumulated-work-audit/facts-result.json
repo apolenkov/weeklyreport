@@ -1,0 +1,141 @@
+{
+  "decision": "submitted",
+  "stage": "facts",
+  "result": {
+    "stage": "facts",
+    "title": "Accumulated Work Audit — facts",
+    "goalSlug": "accumulated-work-audit",
+    "facts": [
+      {
+        "id": "fact-output-md",
+        "text": "Audit создаёт `.planning/audits/accumulated-work-status-<YYYY-MM-DD>.md` с 9 разделами: DONE, IN-PROGRESS, NOT-STARTED, NEEDS-RESEARCH, BLOCKED, LOOPS, IDEAS-UNFILED, RETRO, DECISIONS-LOG.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-output-json",
+        "text": "Параллельно создаётся `.planning/audits/accumulated-work-status-<YYYY-MM-DD>.json` с той же структурой в machine-readable виде для будущего resume tooling.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-scan-claude",
+        "text": "Audit сканирует ВСЕ `.jsonl` файлы из `~/.claude/projects/-Users-ap-work-customreport/` (Claude Code transcripts, все доступные сессии).",
+        "accepted": true,
+        "removed": false,
+        "comment": "плюч что в планиниг папкеи и гсд",
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-scan-codex",
+        "text": "Audit сканирует ВСЕ Codex sessions из `~/.codex/sessions/**` (фильтруя по cwd customreport).",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-scan-planning",
+        "text": "Audit читает `.planning/STATE.md`, `.planning/session-retros/NEXT-ACTIONS.md`, `.planning/HANDOFF.json` и cross-ref'ит их с transcripts.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-scan-memory",
+        "text": "Audit включает `.planning/memory/*.md` + claude-mem observations как источник прошлых решений и learnings.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-item-fields",
+        "text": "Каждый recovered item в отчёте имеет: id, title (≤80 chars), status (1 из 9 категорий), session-id ref для drill-down, first-mention timestamp, last-touch timestamp, и per-item recommendation в одну строку.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-loops-threshold",
+        "text": "Topic классифицируется как LOOP если упомянут в ≥2 разных sessions без landing commit / locked decision evidence.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-retro-section",
+        "text": "RETRO секция содержит три под-раздела GOOD / BAD / LEARNED, агрегированные по всему накоплению работы (не одной сессии).",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": false,
+        "recommendedAutomatedVerification": false
+      },
+      {
+        "id": "fact-decisions-log",
+        "text": "DECISIONS-LOG записывает locked решения (что было принято и когда) с session-id ref и краткой формулировкой каждого decision.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-no-verbatim",
+        "text": "Output НЕ содержит verbatim transcript quotes — только summary + session-id ref для drill-down.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-reuse-skill",
+        "text": "Primary engine — существующий `Demo-session-scan` skill. Новый код только в extensions: RETRO aggregation, LOOPS detection, DECISIONS-LOG, JSON ledger emit.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": false,
+        "recommendedAutomatedVerification": false
+      },
+      {
+        "id": "fact-single-command",
+        "text": "Полный audit запускается одной командой через `/goal goals/accumulated-work-audit/goal.md` (или эквивалентный invocation).",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-summary-counts",
+        "text": "Markdown отчёт открывается summary блоком с total counts по каждой из 9 категорий (например: `DONE 47 · IN-PROGRESS 3 · LOOPS 5 · UNFILED 12`).",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-per-item-rec",
+        "text": "Каждый item в категориях NOT-STARTED, NEEDS-RESEARCH, BLOCKED, IDEAS-UNFILED имеет рекомендацию: `next-step: <конкретное действие>` (≤120 chars).",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      },
+      {
+        "id": "fact-read-only",
+        "text": "Audit — read-only: не создаёт автоматически новые TODO файлы и не модифицирует state-файлы. Только генерирует отчёт.",
+        "accepted": true,
+        "removed": false,
+        "automatedVerification": true,
+        "recommendedAutomatedVerification": true
+      }
+    ],
+    "factsMarkdown": "# Facts\n\n- Audit создаёт `.planning/audits/accumulated-work-status-<YYYY-MM-DD>.md` с 9 разделами: DONE, IN-PROGRESS, NOT-STARTED, NEEDS-RESEARCH, BLOCKED, LOOPS, IDEAS-UNFILED, RETRO, DECISIONS-LOG.\n- Параллельно создаётся `.planning/audits/accumulated-work-status-<YYYY-MM-DD>.json` с той же структурой в machine-readable виде для будущего resume tooling.\n- Audit сканирует ВСЕ `.jsonl` файлы из `~/.claude/projects/-Users-ap-work-customreport/` (Claude Code transcripts, все доступные сессии).\n- Audit сканирует ВСЕ Codex sessions из `~/.codex/sessions/**` (фильтруя по cwd customreport).\n- Audit читает `.planning/STATE.md`, `.planning/session-retros/NEXT-ACTIONS.md`, `.planning/HANDOFF.json` и cross-ref'ит их с transcripts.\n- Audit включает `.planning/memory/*.md` + claude-mem observations как источник прошлых решений и learnings.\n- Каждый recovered item в отчёте имеет: id, title (≤80 chars), status (1 из 9 категорий), session-id ref для drill-down, first-mention timestamp, last-touch timestamp, и per-item recommendation в одну строку.\n- Topic классифицируется как LOOP если упомянут в ≥2 разных sessions без landing commit / locked decision evidence.\n- RETRO секция содержит три под-раздела GOOD / BAD / LEARNED, агрегированные по всему накоплению работы (не одной сессии).\n- DECISIONS-LOG записывает locked решения (что было принято и когда) с session-id ref и краткой формулировкой каждого decision.\n- Output НЕ содержит verbatim transcript quotes — только summary + session-id ref для drill-down.\n- Primary engine — существующий `Demo-session-scan` skill. Новый код только в extensions: RETRO aggregation, LOOPS detection, DECISIONS-LOG, JSON ledger emit.\n- Полный audit запускается одной командой через `/goal goals/accumulated-work-audit/goal.md` (или эквивалентный invocation).\n- Markdown отчёт открывается summary блоком с total counts по каждой из 9 категорий (например: `DONE 47 · IN-PROGRESS 3 · LOOPS 5 · UNFILED 12`).\n- Каждый item в категориях NOT-STARTED, NEEDS-RESEARCH, BLOCKED, IDEAS-UNFILED имеет рекомендацию: `next-step: <конкретное действие>` (≤120 chars).\n- Audit — read-only: не создаёт автоматически новые TODO файлы и не модифицирует state-файлы. Только генерирует отчёт."
+  }
+}
