@@ -83,6 +83,25 @@ export function groupScopeFilter(
   }
 }
 
+/**
+ * Defensive assertion: throws a BUG-level error if `session` is undefined.
+ * Call at the repository entry point to surface missing-session callers early
+ * rather than silently returning unscoped results.
+ *
+ * Admin sessions legitimately produce an empty `groupScopeFilter` result (no
+ * Prisma filter = full access), so passing a defined admin session is correct
+ * and will NOT throw. Only `undefined` (no session at all) is rejected.
+ */
+export function guardGroupScope(
+  session: Pick<UserSession, "role"> | undefined,
+): void {
+  if (session === undefined) {
+    throw new Error(
+      "[BUG] Repository query called without a scope session — group isolation not enforced.",
+    );
+  }
+}
+
 function computeAllowedGroupIds(session: UserSession): string[] {
   if (session.role === "head" || session.role === "lead") {
     return session.reportingGroupId ? [session.reportingGroupId] : [];
