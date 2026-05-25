@@ -75,13 +75,6 @@ function makeWeeklyReport(
         ],
         risks: [],
         decisions: [],
-        priorities: [
-          {
-            id: "88888888-8888-4888-8888-888888888888",
-            rank: 1,
-            text: "Finish OAuth2",
-          },
-        ],
       },
     ],
     escalations: [],
@@ -226,7 +219,7 @@ describe("WeeklyReportService — integration (data shape)", () => {
     expect(result.submissionCount).toBe(6);
   });
 
-  it("lead sections include items, risks, decisions, and priorities", async () => {
+  it("lead sections include items, risks, and decisions", async () => {
     const report = makeWeeklyReport({
       leadSections: [
         {
@@ -271,13 +264,6 @@ describe("WeeklyReportService — integration (data shape)", () => {
               impact: "Performance",
             },
           ],
-          priorities: [
-            {
-              id: "bbbb9999-9999-4999-8999-999999999999",
-              rank: 1,
-              text: "Ship feature X",
-            },
-          ],
         },
       ],
     });
@@ -293,6 +279,5 @@ describe("WeeklyReportService — integration (data shape)", () => {
     expect(section.items).toHaveLength(1);
     expect(section.risks).toHaveLength(1);
     expect(section.decisions).toHaveLength(1);
-    expect(section.priorities).toHaveLength(1);
   });
 });

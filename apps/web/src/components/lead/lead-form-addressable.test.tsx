@@ -260,6 +260,13 @@ function buildHarness(opts: {
         }),
         pathFilter: () => ({ queryKey: ["leadForm.crossAuthorSections"] }),
       },
+      getVersion: {
+        queryOptions: () => ({
+          queryKey: ["leadForm.getVersion"],
+          queryFn: async () => null,
+        }),
+        pathFilter: () => ({ queryKey: ["leadForm.getVersion"] }),
+      },
     },
     ai: {
       onTrack: {

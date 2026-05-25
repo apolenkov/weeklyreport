@@ -46,6 +46,11 @@ function cloneCarriedItem(
   const targetItemId = crypto.randomUUID();
 
   return {
+    // Q8 default (plan §20.5/§21.6 T-G4): the spread preserves
+    // `priorityRank` across the carry-over so a lead doesn't lose ranking
+    // when an unfinished next-week item lands in the new period. Reset
+    // intentionally rejected — leads otherwise re-prioritize on every
+    // boundary, undoing the previous week's signal.
     item: {
       ...item,
       id: targetItemId,

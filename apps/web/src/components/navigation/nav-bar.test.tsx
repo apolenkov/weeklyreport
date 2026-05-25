@@ -163,13 +163,15 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkMissing(container, "/admin");
   });
 
-  it("head sees /head/* links (Dashboard, Status, Slides, History)", () => {
+  it("head sees three tabs: Dashboard, Status, History (no Slides — T-F4-3)", () => {
     setRole("head");
     const { container } = render(<NavBar />);
     expectLinkExists(container, "/head/dashboard");
     expectLinkExists(container, "/head/report");
-    expectLinkExists(container, "/head/slides");
-    expectLinkExists(container, "/head/history");
+    // UAT 2026-05-22: head History now points to /reports?tab=published
+    expectLinkExists(container, "/reports?tab=published");
+    expectLinkMissing(container, "/head/history");
+    expectLinkMissing(container, "/head/slides");
     expectLinkMissing(container, "/reports?tab=drafts");
   });
 
@@ -200,8 +202,8 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     );
 
     expect(themeControl).not.toBeNull();
-    expect(themeControl?.textContent).toMatch(/Theme/i);
-    expect(themeControl?.textContent).not.toMatch(/Soon/i);
+    // Icon-only: visible text was removed in favour of aria-label/title (#2 navbar fix).
+    expect(themeControl?.textContent?.trim()).toBe("");
     expect(themeControl).toHaveAttribute(
       "aria-label",
       "Theme selection is coming soon",
@@ -219,8 +221,8 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     );
 
     expect(languageControl).not.toBeNull();
-    expect(languageControl?.textContent).toMatch(/Language/i);
-    expect(languageControl?.textContent).not.toMatch(/Soon/i);
+    // Icon-only: visible text was removed in favour of aria-label/title (#2 navbar fix).
+    expect(languageControl?.textContent?.trim()).toBe("");
     expect(languageControl).toHaveAttribute(
       "aria-label",
       "Language selection is coming soon",
@@ -304,13 +306,13 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkMissing(container, "/reports?tab=published");
   });
 
-  it("activates head History on /head/history", () => {
+  it("activates head History on /reports (tab=published)", () => {
     setRole("head");
-    setRoute("/head/history");
+    setRoute("/reports", "tab=published");
 
     const { container } = render(<NavBar />);
 
-    expectActiveLink(container, "/head/history");
+    expectActiveLink(container, "/reports?tab=published");
     expectInactiveLink(container, "/head/dashboard");
   });
 

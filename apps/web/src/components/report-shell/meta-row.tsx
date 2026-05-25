@@ -5,6 +5,8 @@ type MetaRowProps = {
   readonly stageTags: readonly string[];
   readonly ariaLabel?: string;
   readonly className?: string;
+  /** When true, render a 🔒 after authorName to signal a foreign (read-only) row. */
+  readonly foreign?: boolean;
 };
 
 export function MetaRow({
@@ -12,6 +14,7 @@ export function MetaRow({
   stageTags,
   ariaLabel,
   className = "mt-3",
+  foreign = false,
 }: MetaRowProps) {
   const title =
     stageTags.length === 0 ? "All stages" : stageTags.join(", ");
@@ -23,6 +26,14 @@ export function MetaRow({
     >
       <span className="truncate text-[11px] font-medium text-[var(--color-muted-foreground)]">
         {authorName ?? ""}
+        {foreign && authorName ? (
+          <span
+            aria-label="Read-only — authored by another lead"
+            title="Read-only — authored by another lead"
+          >
+            {" 🔒"}
+          </span>
+        ) : null}
       </span>
       <span
         className="inline-flex flex-wrap items-center gap-1"

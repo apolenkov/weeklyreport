@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 import type { ReportPeriod } from "./mock-data";
 
@@ -147,6 +148,15 @@ export function FillFromButton({
               }}
             />
             <div className="max-h-[200px] space-y-1 overflow-y-auto">
+              {pastPeriods.length === 0 ? (
+                <p className="px-2 py-3 text-center text-[13px] text-[var(--color-muted-foreground)]">
+                  No submitted past reports found.
+                </p>
+              ) : filteredPeriods.length === 0 ? (
+                <p className="px-2 py-3 text-center text-[13px] text-[var(--color-muted-foreground)]">
+                  No reports match your search.
+                </p>
+              ) : null}
               {filteredPeriods.map((p, idx) => (
                 <button
                   key={p.id}
@@ -186,45 +196,49 @@ export function FillFromButton({
         )}
       </div>
 
-      {/* Confirmation dialog */}
-      {showConfirm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40">
-          <div
-            className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Confirm fill from previous"
-          >
-            <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-              Fill from {selectedPeriod?.weekLabel}?
-            </h3>
-            <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-              This will overwrite your current draft with data from{" "}
-              <strong>
-                {selectedPeriod?.weekLabel} ({selectedPeriod?.dateRange})
-              </strong>
-              . Current Week items, Risks, and Decisions will be replaced.
-              Priorities will NOT be filled.
-            </p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
-                onClick={handleCancel}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
-                onClick={handleConfirm}
-              >
-                Replace &amp; Fill
-              </button>
+      {/* Confirmation dialog — portal to document.body so ancestor
+          transform/filter does not break position:fixed containment */}
+      {showConfirm &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40">
+            <div
+              className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Confirm fill from previous"
+            >
+              <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
+                Fill from {selectedPeriod?.weekLabel}?
+              </h3>
+              <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
+                This will overwrite your current draft with data from{" "}
+                <strong>
+                  {selectedPeriod?.weekLabel} ({selectedPeriod?.dateRange})
+                </strong>
+                . Current Week items, Risks, and Decisions will be replaced.
+                Priorities will NOT be filled.
+              </p>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+                  onClick={handleConfirm}
+                >
+                  Replace &amp; Fill
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }

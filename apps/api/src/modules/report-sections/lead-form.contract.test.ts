@@ -9,6 +9,7 @@ import {
   LeadFormDomainError,
   LeadFormService,
   type LeadFormRepository,
+  type SnapshotLatestRow,
 } from "./lead-form.service";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import { customreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
@@ -46,7 +47,6 @@ const draftSection: ReportSectionReadModel = {
   ],
   risks: [],
   decisions: [],
-  priorities: [{ rank: 1, text: "Priority 1" }],
 };
 
 const submittedSection: ReportSectionReadModel = {
@@ -101,12 +101,16 @@ function createMockRepository(
     revokeSectionSubmission: vi.fn().mockResolvedValue(undefined),
     fillFromSection: vi.fn().mockResolvedValue(5),
     listVersions: vi.fn().mockResolvedValue([]),
+    getVersion: vi.fn().mockResolvedValue(null),
     restoreVersion: vi.fn().mockResolvedValue(1),
-    createVersionSnapshot: vi.fn().mockResolvedValue(undefined),
+    createVersionSnapshot: vi.fn().mockResolvedValue(1),
+    getLatestSnapshot: vi.fn().mockResolvedValue(null),
+    buildSnapshotProjection: vi.fn().mockResolvedValue({}),
     createReopenRequest: vi.fn().mockResolvedValue(undefined),
     hasSharedProduct: vi.fn().mockResolvedValue(false),
     getCrossAuthors: vi.fn().mockResolvedValue([]),
     getCrossAuthorSections: vi.fn().mockResolvedValue([]),
+    revokeAllSubmitted: vi.fn().mockResolvedValue(0),
     ...overrides,
   };
 }
@@ -151,6 +155,38 @@ describe("LeadFormService — revokeSubmission", () => {
     await expect(
       service.revokeSubmission(SECTION_ID, OTHER_USER_ID),
     ).rejects.toThrow(`Section ${SECTION_ID} not found.`);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// revokeAllSubmitted (SC-165)
+// ---------------------------------------------------------------------------
+
+describe("LeadFormService — revokeAllSubmitted", () => {
+  it("returns success with revokedCount from repository", async () => {
+    const repo = createMockRepository({
+      revokeAllSubmitted: vi.fn().mockResolvedValue(3),
+    });
+    const service = new LeadFormService(repo);
+
+    const result = await service.revokeAllSubmitted(REPORT_ID, OTHER_USER_ID);
+
+    expect(result).toEqual({ success: true, revokedCount: 3 });
+    expect(repo.revokeAllSubmitted).toHaveBeenCalledWith(
+      REPORT_ID,
+      OTHER_USER_ID,
+    );
+  });
+
+  it("returns revokedCount 0 when no submitted sections exist", async () => {
+    const repo = createMockRepository({
+      revokeAllSubmitted: vi.fn().mockResolvedValue(0),
+    });
+    const service = new LeadFormService(repo);
+
+    const result = await service.revokeAllSubmitted(REPORT_ID, OTHER_USER_ID);
+
+    expect(result).toEqual({ success: true, revokedCount: 0 });
   });
 });
 
@@ -593,12 +629,13 @@ describe("LeadFormService — createSnapshot", () => {
   it("snapshots a draft section owned by the caller", async () => {
     const repo = createMockRepository({
       getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
+      // No previous snapshot — getLatestSnapshot returns null (default mock)
     });
     const service = new LeadFormService(repo);
 
     const result = await service.createSnapshot(SECTION_ID, AUTHOR_ID);
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({ version: 1 });
     expect(repo.createVersionSnapshot).toHaveBeenCalledWith(SECTION_ID);
   });
 
@@ -635,6 +672,54 @@ describe("LeadFormService — createSnapshot", () => {
     await expect(service.createSnapshot(SECTION_ID, AUTHOR_ID)).rejects.toThrow(
       `Section ${SECTION_ID} not found.`,
     );
+    expect(repo.createVersionSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("skips when called within 60s of the previous snapshot (throttled)", async () => {
+    // Last snapshot was taken 30 seconds ago — still inside the 60 s window.
+    const recentSnapshot: SnapshotLatestRow = {
+      data: {},
+      createdAt: new Date(Date.now() - 30_000),
+      version: 5,
+    };
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
+      getLatestSnapshot: vi.fn().mockResolvedValue(recentSnapshot),
+    });
+    const service = new LeadFormService(repo);
+
+    const result = await service.createSnapshot(SECTION_ID, AUTHOR_ID);
+
+    expect(result).toEqual({ version: 5, skipped: true, reason: "throttled" });
+    expect(repo.createVersionSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("skips when data is byte-identical to the latest snapshot (no-change)", async () => {
+    // A snapshot from 2 minutes ago (outside the throttle window),
+    // but whose data matches the current snapshot projection exactly.
+    // buildSnapshotProjection returns the same projection shape that is stored
+    // in VersionSnapshot.data — both sides of the comparison are now the same shape.
+    const snapshotProjection: Record<string, unknown> = {
+      items: [{ projectId: "p1", type: "current", text: "Deliver feature X", tag: "feature", workflowStatus: "in_progress", carriedOver: false, completed: null, priorityRank: null, stageName: null }],
+      risks: [],
+      decisions: [],
+      stageStatuses: [],
+    };
+    const oldSnapshot: SnapshotLatestRow = {
+      data: structuredClone(snapshotProjection),
+      createdAt: new Date(Date.now() - 120_000),
+      version: 7,
+    };
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
+      getLatestSnapshot: vi.fn().mockResolvedValue(oldSnapshot),
+      buildSnapshotProjection: vi.fn().mockResolvedValue(structuredClone(snapshotProjection)),
+    });
+    const service = new LeadFormService(repo);
+
+    const result = await service.createSnapshot(SECTION_ID, AUTHOR_ID);
+
+    expect(result).toEqual({ version: 7, skipped: true, reason: "no-change" });
     expect(repo.createVersionSnapshot).not.toHaveBeenCalled();
   });
 });

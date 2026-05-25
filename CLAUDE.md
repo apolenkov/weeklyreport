@@ -67,14 +67,6 @@ pnpm build
 pnpm docker:local:verify
 ```
 
-Playwright is the regression runner for this repo:
-
-```bash
-pnpm test:e2e
-pnpm --filter @customreport/web exec playwright test \
-  --config=e2e/regression/playwright.regression.config.ts
-```
-
 Planning docs:
 
 ```bash
@@ -109,7 +101,14 @@ pnpm db:wipe:manual-uat
 When a feature is deliberately deferred, leave physical traces in code:
 
 - `TODO(<ref>)` near the activation point.
-- Loud stub: `throw new Error('Not implemented -- see TODO(<ref>)')`.
+- For deferred **user-facing** features (settings, admin tabs, nav items),
+  prefer a `ComingSoonBadge` tooltip on an inert control over a hidden
+  feature flag. Reference pattern:
+  `apps/web/src/components/navigation/nav-bar.tsx`
+  `LanguageComingSoonControl` / `ThemeComingSoonControl`. Shows the user the
+  feature is acknowledged and roadmapped without exposing half-working UI.
+- For deferred **backend / non-UI** paths use a loud stub instead:
+  `throw new Error('Not implemented -- see TODO(<ref>)')`.
 - Metric name declared up front when the future path affects observability.
 
 This is mandatory for seeds-only or mock-only paths such as Phase 54 AI/RAG and

@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { createGzip } from "node:zlib";
 import { pipeline } from "node:stream/promises";
 
+import { trace } from "@opentelemetry/api";
+import { logs, SeverityNumber } from "@opentelemetry/api-logs";
 import type { ClsService } from "nestjs-cls";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
@@ -21,6 +23,8 @@ type LogEntry = {
   level: LogLevel;
   message: string;
   correlationId: string;
+  traceId?: string;
+  spanId?: string;
   [key: string]: unknown;
 };
 
@@ -29,6 +33,13 @@ const LEVEL_PRIORITY: Record<LogLevel, number> = {
   info: 1,
   warn: 2,
   error: 3,
+};
+
+const LEVEL_SEVERITY: Record<LogLevel, SeverityNumber> = {
+  debug: SeverityNumber.DEBUG,
+  info: SeverityNumber.INFO,
+  warn: SeverityNumber.WARN,
+  error: SeverityNumber.ERROR,
 };
 
 const DEFAULT_MAX_BYTES = 50 * 1024 * 1024; // 50 MB
@@ -236,6 +247,13 @@ class AppLoggerImpl implements AppLogger {
       ...context,
     };
 
+    const span = trace.getActiveSpan();
+    const spanCtx = span?.spanContext();
+    if (spanCtx && trace.isSpanContextValid(spanCtx)) {
+      entry.traceId = spanCtx.traceId;
+      entry.spanId = spanCtx.spanId;
+    }
+
     const formatted = JSON.stringify(entry);
 
     if (level === "error") {
@@ -249,6 +267,20 @@ class AppLoggerImpl implements AppLogger {
       // and swallows errors via the catch inside enqueueWrite.
       enqueueWrite(this.fileSink, entry);
     }
+
+    // Forward to OTel log provider (no-op when provider not registered).
+    logs.getLogger("customreport-api").emit({
+      body: message,
+      severityNumber: LEVEL_SEVERITY[level],
+      severityText: level,
+      attributes: {
+        correlationId: entry.correlationId,
+        ...(entry.traceId ? { traceId: entry.traceId } : {}),
+        ...(entry.spanId ? { spanId: entry.spanId } : {}),
+        ...this.baseContext,
+        ...context,
+      },
+    });
   }
 }
 

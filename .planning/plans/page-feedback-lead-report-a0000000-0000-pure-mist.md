@@ -1940,3 +1940,207 @@ pnpm --filter @customreport/web exec playwright test --grep "slide a11y"
 F16-1 + F16-2 + F16-6 — параллельно (независимые файлы). F16-3 после F16-2 (нужны tokens). F16-4 + F16-5 после F16-1 и F16-3 (нужна data API и компоненты). F16-7 — последняя.
 
 ---
+
+## 22. Demo-retro APPEND-ONLY ledger fix (POST-RAGE forensic fix)
+
+> [!IMPORTANT]
+> Цель: `/Demo-retro` больше **никогда** не должен молча перезаписать `NEXT-ACTIONS.md` целиком и удалить незавершённые `[ ]` пункты. Поведение должно быть append-only: новый retro **дописывает / обновляет** ledger, а не заменяет его.
+
+### 22.1 Контекст (forensic finding)
+
+Прошёлся по всем JSONL-сессиям `~/.claude/projects/-Users-ap-work-customreport/*.jsonl`. Найдено **четыре** destructive overwrite events на gitignored `.planning/session-retros/NEXT-ACTIONS.md`:
+
+| #   | Дата             | Session       | Что снесено                                                                                                                                        |
+| --- | ---------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | 2026-05-12T04:19 | `bba7038f...` | Phase 50/51 wave + UFB-014/024/032/041 + periodCadence + Holidays calendar pending list                                                            |
+| 2   | 2026-05-14T11:35 | `32223757...` | Night-marathon D-2…D-36 status frame (26 items)                                                                                                    |
+| 3   | 2026-05-14T12:49 | `32223757...` | Post-marathon Wave 1-4 CLOSED block; D-12 reverted                                                                                                 |
+| 4   | 2026-05-18T17:22 | `b8d5b2af...` | Peak v8.2 ledger (2186 B) — Phase 67/68/69/70/71 + TD-01..TD-06 + 5 VERIFICATION.md closures + e2e suite + ComingSoonCard — заменено на 784 B v8.3 |
+
+Все четыре события сделаны через `Write` tool как **полная перезапись файла**, без diff-merge.
+
+### 22.2 Fix в `~/.claude/skills/Demo-retro/SKILL.md`
+
+| Где (line range)                               | Что меняется                                                                                                                                                                                                                                                                                                                                       |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| L406-466 «Continuation ledger»                 | Hard rule: **READ-DIFF-APPEND pattern**. Перед записью ledger всегда `Read` существующий `.planning/session-retros/NEXT-ACTIONS.md`. Сохранять все `[ ]` пункты. `[x]`-mark только те, для которых найдено доказательство выполнения (commit SHA / VERIFICATION.md / file present). Никогда не удалять незавершённый пункт без явной user-команды. |
+| L574-592 «Anti-patterns»                       | NEW bullet: «Silent overwrite of `NEXT-ACTIONS.md` deleting `[ ]` entries without explicit DONE evidence. Если retro-агент не нашёл commit/file backing — пункт остаётся в ledger с пометкой `(unchanged from prev retro)`.»                                                                                                                       |
+| L551-569 «Verification checklist»              | NEW check: `[ ]` «NEXT-ACTIONS.md diff vs previous version shows ONLY additions or `[ ]`→`[x]` transitions; никаких удалений без commit SHA evidence».                                                                                                                                                                                             |
+| NEW section после L466 «Ledger merge contract» | Шаги: (1) `git diff --no-index /tmp/prev-ledger.md .planning/session-retros/NEXT-ACTIONS.md` перед write; (2) если diff показывает удалённые `[ ]` без commit evidence — abort + ask user; (3) каждый `[x]`-mark сопровождается inline-комментарием `<!-- done: <sha-short> -->`.                                                                  |
+
+### 22.3 Принцип append-only
+
+```text
+Previous ledger:    New retro adds:        Result (allowed):
+[ ] task A          - task A done (sha)    [x] task A <!-- done: abc123 -->
+[ ] task B          - new task C           [ ] task B    (unchanged)
+                                           [ ] task C    (new)
+
+Result (FORBIDDEN — текущий баг):
+[ ] task A     →    [silent wipe]    →    [ ] task C
+[ ] task B
+```
+
+### 22.4 Verify SKILL.md fix
+
+```bash
+# 1. Re-read updated SKILL.md, найти три новых блока + один NEW section
+rg -n "APPEND-ONLY|Ledger merge contract|diff vs previous" ~/.claude/skills/Demo-retro/SKILL.md
+
+# 2. Symbolic test: invoke /Demo-retro и проверить, что NEXT-ACTIONS.md не теряет [ ] пункты
+cp .planning/session-retros/NEXT-ACTIONS.md /tmp/ledger-before.md
+# (next /Demo-retro session)
+diff /tmp/ledger-before.md .planning/session-retros/NEXT-ACTIONS.md
+# Ожидаем: только additions и [ ]→[x], никаких удалений
+```
+
+---
+
+## 23. NEXT-ACTIONS.md restoration manifest
+
+> [!IMPORTANT]
+> Восстановить пункты, удалённые в 4 destructive events. Cross-reference с git log показал, что **~90% удалённых пунктов уже DONE** (есть commit SHA). Остальные распределены по UNCLEAR / STILL-PENDING.
+
+### 23.1 Classification table
+
+| Deleted item (по event-у)          | Status              | Evidence (SHA / file / note)                                                                          |
+| ---------------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Event 1 (2026-05-12)**           |                     |                                                                                                       |
+| Phase 50-A                         | ✓ DONE-WITH-SHA     | `c3da086 docs(planning): close Phase 50-A`                                                            |
+| Phase 50-B                         | ✓ DONE-WITH-SHA     | `8a61fa8 docs(planning): close Phase 50-B`                                                            |
+| Phase 51-A                         | ✓ DONE-WITH-SHA     | `ddf2ced docs(planning): close Phase 51-A`                                                            |
+| Phase 51-B                         | ✓ DONE-WITH-SHA     | `9423608 docs(planning): close Phase 51-B`                                                            |
+| Phase 51-C                         | ✓ DONE-WITH-SHA     | `696ecd0 docs(planning): close Phase 51-C`                                                            |
+| UFB-041 head presentation          | ✓ DONE-WITH-SHA     | `1dce3dc docs(planning): UFB-041 head presentation mode`                                              |
+| periodCadence removal              | ✓ DONE-WITH-SHA     | `adc261b feat(schema,api,web): UFB-068 — remove dead periodCadence column` (resolved as UFB-068)      |
+| UFB-014 multi-SDLC                 | ⚠ STILL-PENDING     | No commit found. Restore as `[ ]` в новом ledger.                                                     |
+| UFB-024 theme toggle               | ⚠ BLOCKED-BY-POLICY | User policy: visual/theme work research-gated. Restore as `[ ]` с пометкой `(blocked: theme policy)`. |
+| UFB-032 design tokens              | ⚠ BLOCKED-BY-POLICY | Same policy gate. Restore as `[ ]` с той же пометкой.                                                 |
+| Holidays calendar                  | ⚠ STILL-PENDING     | No commit. Restore as `[ ]`.                                                                          |
+| **Event 2 (2026-05-14T11:35)**     |                     |                                                                                                       |
+| Night-marathon D-2..D-36 frame     | ✓ DOCUMENTED        | `3a17656 docs(retro): night-marathon 2026-05-14 — retro memo` (frame archived в retro memo, не lost)  |
+| **Event 3 (2026-05-14T12:49)**     |                     |                                                                                                       |
+| Post-marathon Wave 1-4 CLOSED      | ✓ DONE-WITH-SHA     | PR #4 ship; см. `2026-05-14-grafana-audit.md` memory entry                                            |
+| D-12 reverted                      | ⚠ UNCLEAR           | Нужен ручной review — был ли D-12 закрыт после revert или остался open                                |
+| **Event 4 (2026-05-18T17:22)**     |                     |                                                                                                       |
+| Phase 67 close 5 verification gaps | ✓ DONE-WITH-SHA     | `7550b90 chore(planning): Phase 67`                                                                   |
+| Phase 68 tech debt sweep           | ✓ DONE-WITH-SHA     | `f6ba27a Phase 68 SUMMARY`                                                                            |
+| TD-01 scopeDenied                  | ✓ DONE-WITH-SHA     | `b1859ba fix(api): TD-01`                                                                             |
+| TD-02 + TD-06                      | ✓ DONE-WITH-SHA     | `087ae30 feat(api): TD-02 + TD-06`                                                                    |
+| TD-03 search.service               | ✓ DONE-WITH-SHA     | `24354be feat(api): TD-03`                                                                            |
+| TD-04 ReminderPolicy e2e           | ✓ DONE-WITH-SHA     | `e446b39 test(web): TD-04`                                                                            |
+| TD-05 PolicyApplicator perf        | ✓ DONE-WITH-SHA     | `5940a07 test(api): TD-05`                                                                            |
+| Phase 69 e2e coverage              | ✓ DONE-WITH-SHA     | `d7704ab Phase 69 SUMMARY`, `2a69a1a test(web): Phase 69`                                             |
+| Phase 70 planning hygiene          | ✓ DONE-WITH-SHA     | `404cf26 Phase 70 SUMMARY`, `7b3cac5 Phase 70 + HEAD-CONSOLIDATE-01 + UFB-061`                        |
+| Phase 71 ComingSoonBadge           | ✓ DONE-WITH-SHA     | `29b7153 Phase 71 SUMMARY`, `941dd54 feat(ui): Phase 71 ComingSoonBadge`                              |
+| LOCK-01 lock badge                 | ✓ DONE-WITH-SHA     | `fb9e138`, `0463aea`                                                                                  |
+| v8.2 milestone archive             | ✓ DONE-WITH-SHA     | `ca459a0 archive v8.2`, `c1e0e40 audit PASSED 29/31`                                                  |
+| UAT landing pages                  | ⚠ UNCLEAR           | Нужен manual review                                                                                   |
+| 47-02 CI badge                     | ⚠ UNCLEAR           | Нужен manual review                                                                                   |
+| 46-followup live-Prisma matrix     | ⚠ UNCLEAR           | Нужен manual review                                                                                   |
+
+### 23.2 Restoration plan (apply post-ExitPlanMode)
+
+Восстановленный `.planning/session-retros/NEXT-ACTIONS.md` будет иметь shape:
+
+```markdown
+# NEXT ACTIONS
+
+updated: 2026-05-19T08:00:00Z source: Demo-retro forensic restoration v1
+
+## RUN FIRST
+
+(текущие 1-2 пункта, унаследованные из последнего корректного retro)
+
+## HUMAN (UAT pending)
+
+1. [ ] Сценарий А: Vasily → SDLC Pipeline → Boris в Other contributors
+2. [ ] Сценарий Б: Show details ▾ в Risks → inline readonly Boris
+3. [ ] Сценарий В: ?mode=slides → ScopeToggle visible
+4. [ ] Сценарий Г: By product → Vasily + Boris slides
+5. [ ] Сценарий Д: hero band + chip carousel + 16:10 frame
+6. [ ] Сценарий Е: 5+ продуктов → пагинация (1/2, стрелки)
+7. [ ] Решение: закрывать milestone v8.3 или добавлять scope
+
+## STILL-PENDING (restored from forensic scan)
+
+1. [ ] UFB-014 multi-SDLC assignment per product (no commit found 2026-05-12..2026-05-19)
+2. [ ] Holidays calendar (no commit found)
+3. [ ] UAT landing pages (need manual review)
+4. [ ] 47-02 CI badge (need manual review)
+5. [ ] 46-followup live-Prisma matrix (need manual review)
+6. [ ] D-12 status (need manual review — был revert 2026-05-14T12:49)
+
+## BLOCKED-BY-POLICY
+
+1. [ ] UFB-024 theme toggle — research-gated by user policy (visual/theme)
+2. [ ] UFB-032 design tokens — same policy gate
+
+## DONE (forensic recovery — already shipped, kept as audit trail)
+
+- [x] Phase 50-A — c3da086
+- [x] Phase 50-B — 8a61fa8
+- [x] Phase 51-A — ddf2ced
+- [x] Phase 51-B — 9423608
+- [x] Phase 51-C — 696ecd0
+- [x] UFB-041 head presentation — 1dce3dc
+- [x] periodCadence removal (resolved as UFB-068) — adc261b
+- [x] Night-marathon D-2..D-36 — archived в retro memo 3a17656
+- [x] Phase 67 — 7550b90
+- [x] Phase 68 tech debt sweep — f6ba27a
+- [x] TD-01 — b1859ba
+- [x] TD-02 + TD-06 — 087ae30
+- [x] TD-03 — 24354be
+- [x] TD-04 — e446b39
+- [x] TD-05 — 5940a07
+- [x] Phase 69 e2e — d7704ab + 2a69a1a
+- [x] Phase 70 hygiene — 404cf26 + 7b3cac5
+- [x] Phase 71 ComingSoonBadge — 29b7153 + 941dd54
+- [x] LOCK-01 — fb9e138 + 0463aea
+- [x] v8.2 milestone archive — ca459a0 + c1e0e40
+- [x] F1-F16 — see project_v83_f14_f16_2026_05_19.md memory entry
+
+## VERIFY
+
+(перенесено из текущего ledger)
+```
+
+---
+
+## 24. Updated verify + closeout
+
+```bash
+# 1. SKILL.md fix landed
+rg -n "APPEND-ONLY|Ledger merge contract|diff vs previous" ~/.claude/skills/Demo-retro/SKILL.md
+# Ожидаем: ≥4 совпадения (anti-pattern + verification check + new section + intro)
+
+# 2. NEXT-ACTIONS.md restored с полным набором
+wc -l .planning/session-retros/NEXT-ACTIONS.md
+# Ожидаем: ≥40 строк (DONE audit trail + STILL-PENDING + HUMAN UAT)
+
+rg -c "STILL-PENDING|BLOCKED-BY-POLICY|DONE \(forensic recovery" .planning/session-retros/NEXT-ACTIONS.md
+# Ожидаем: 3 (все три секции)
+
+# 3. Все DONE-WITH-SHA коммиты действительно существуют
+for sha in c3da086 8a61fa8 ddf2ced 9423608 696ecd0 1dce3dc adc261b 7550b90 f6ba27a b1859ba 087ae30 24354be e446b39 5940a07 d7704ab 2a69a1a 404cf26 7b3cac5 29b7153 941dd54 fb9e138 0463aea ca459a0 c1e0e40; do
+  git rev-parse --verify $sha >/dev/null 2>&1 && echo "✓ $sha" || echo "✗ $sha MISSING"
+done
+
+# 4. Symbolic test: следующий /Demo-retro не сносит [ ] пункты
+cp .planning/session-retros/NEXT-ACTIONS.md /tmp/ledger-pre-retro.md
+# (тригерим /Demo-retro)
+diff /tmp/ledger-pre-retro.md .planning/session-retros/NEXT-ACTIONS.md
+# Ожидаем: только additions и [ ]→[x] с inline <!-- done: sha -->
+```
+
+### 24.1 Three-part fix execution order (post-ExitPlanMode)
+
+```text
+[1. SKILL.md rewrite]  → [2. NEXT-ACTIONS.md restore]  → [3. verify per §24]
+   ~/.claude/skills/        .planning/session-retros/        rg + wc + git rev-parse + diff
+   Demo-retro/SKILL.md       NEXT-ACTIONS.md
+```
+
+Шаг 1 предотвращает будущие повторения. Шаг 2 восстанавливает потерянный ledger из git evidence. Шаг 3 закрывает контур.
+
+---

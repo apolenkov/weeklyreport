@@ -64,6 +64,7 @@ import {
   type StageStatus,
   type TrafficLightStatus,
 } from "./traffic-light";
+import { deriveEffectiveStageStatus } from "../stage-status";
 import {
   formatPeriodRangeWithYear,
   isoWeekNumber as sharedIsoWeekNumber,
@@ -314,6 +315,11 @@ export function ownedStagesForProject(
 
 // ---- Mappers ----
 
+export function normalizeStageName(stageName: string): string {
+  const lower = stageName.toLowerCase();
+  return lower === "development" ? "dev" : lower;
+}
+
 /**
  * Build the 7-stage grid for one project from the read model's `ownedStages`.
  *
@@ -335,12 +341,15 @@ function buildStageGrid(
     stageName: string;
     status?: TrafficLightStatus | null;
   }[],
+  risks: readonly { stageIds?: readonly string[]; severity?: string }[] = [],
+  items: readonly { stageIds?: readonly string[]; workflowStatus: string }[] = [],
 ): LeadStageAssignment[] {
   const owned = new Map(
     ownedStages.map((stage) => [stage.stageName.toLowerCase(), stage] as const),
   );
   return STAGE_NAMES.map((stageName) => {
     const lower = stageName.toLowerCase();
+    const norm = normalizeStageName(stageName);
     const ownedStage =
       owned.get(lower) ??
       // Aliases between the canonical seeded stage name ("Development") and
@@ -350,7 +359,11 @@ function buildStageGrid(
     if (ownedStage) {
       return {
         stageName,
-        status: trafficToStageStatus(ownedStage.status ?? null),
+        status: deriveEffectiveStageStatus(
+          trafficToStageStatus(ownedStage.status ?? null),
+          risks.filter((r) => r.stageIds?.some((s) => normalizeStageName(s) === norm)),
+          items.filter((i) => i.stageIds?.some((s) => normalizeStageName(s) === norm)),
+        ),
         ownership: "mine" as const,
         assignee: ownerLabel,
       };
@@ -386,7 +399,16 @@ export function mapLeadProducts(
       id: p.projectId,
       name: p.projectName,
       overallStatus,
-      stages: buildStageGrid(section.authorName, ownedStages),
+      stages: buildStageGrid(
+        section.authorName,
+        ownedStages,
+        // Explicit chip status must win in the edit form. Passing risks and
+        // items here caused deriveEffectiveStageStatus to override the
+        // user's chip clicks on every re-render (PRJ-2). The sync hook
+        // (use-status-risk-sync) owns the risk→chip signal path.
+        [],
+        [],
+      ),
     };
   });
 }
@@ -422,6 +444,10 @@ export function mapLeadItems(
         status,
         text: item.text,
         author: section.authorName,
+        // F1: carry priorityRank into the bound KanbanItem so ItemEditDialog
+        // re-populates the field on reopen (was dropped → empty field after
+        // reload even though the value persisted + showed in the priorities view).
+        priorityRank: item.priorityRank ?? null,
       };
     });
 }
@@ -478,15 +504,20 @@ export function mapLeadPriorities(
   section: ReportSectionReadModel,
 ): LeadPriorityEntry[] {
   const projectIndex = buildProjectIndex(section);
-  return section.priorities.map((p) => ({
-    rank: clampRank(p.rank),
-    text: p.text,
-    stageIds: p.stageIds,
-    productId: p.productId ?? undefined,
-    productName:
-      (p.productId ? projectIndex.get(p.productId)?.name : undefined) ??
-      undefined,
-  }));
+  return section.items
+    .filter((i) => i.priorityRank != null)
+    .sort((a, b) => {
+      const ra = (a.priorityRank ?? 0) >= 1 ? (a.priorityRank ?? 0) : Infinity;
+      const rb = (b.priorityRank ?? 0) >= 1 ? (b.priorityRank ?? 0) : Infinity;
+      return ra - rb;
+    })
+    .map((i) => ({
+      rank: clampRank(i.priorityRank ?? 0),
+      text: i.text,
+      stageIds: i.stageIds,
+      productId: i.projectId,
+      productName: projectIndex.get(i.projectId)?.name ?? undefined,
+    }));
 }
 
 /**

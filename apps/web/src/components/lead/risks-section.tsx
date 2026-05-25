@@ -6,7 +6,7 @@ import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { RiskEditDialog } from "./risk-edit-dialog";
 import type { Product, RiskEntry } from "./mock-data";
-import { splitStageNames } from "./stage-tags";
+import { canonicalStageName, splitStageNames } from "./stage-tags";
 
 type RisksSectionProps = {
   readonly risks: RiskEntry[];
@@ -159,7 +159,7 @@ export function RisksSection({
           const isBlocked = risk.severity === "blocked";
           const stageTags =
             risk.stageIds && risk.stageIds.length > 0
-              ? risk.stageIds
+              ? risk.stageIds.map(canonicalStageName)
               : splitStageNames(risk.stageName);
           // Empty means implicit all assigned stages. A non-empty stageIds
           // array is explicit user scope, even when it contains every stage.
@@ -177,6 +177,7 @@ export function RisksSection({
             (linkedProductStatus === "at-risk" ||
               linkedProductStatus === "blocked") &&
             stageTags.length === 0;
+          const locked = readOnly || risk.foreign === true;
           return (
             <div
               key={risk.id}
@@ -185,6 +186,7 @@ export function RisksSection({
               style={{
                 background: isBlocked ? "#fdf8f8" : "#fffcf5",
                 border: `1px solid ${isBlocked ? "rgba(200,32,20,0.15)" : "rgba(212,160,23,0.15)"}`,
+                opacity: risk.foreign ? 0.7 : 1,
               }}
             >
               <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -200,7 +202,7 @@ export function RisksSection({
                 <span className="font-[family-name:var(--font-sans)] text-sm font-semibold break-words">
                   {risk.productName}
                 </span>
-                {!readOnly && (
+                {!locked && (
                   <div className="ml-auto flex gap-1">
                     <button
                       type="button"
@@ -264,9 +266,10 @@ export function RisksSection({
               )}
               {/* P5: unified [author …… chip] meta-row */}
               <MetaRow
-                authorName={sectionAuthorName}
+                authorName={risk.authorName ?? sectionAuthorName}
                 stageTags={stageTags}
                 ariaLabel={"Risk stages: " + stageTagsLabel}
+                foreign={risk.foreign === true}
               />
             </div>
           );

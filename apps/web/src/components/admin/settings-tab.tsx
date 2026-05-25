@@ -11,6 +11,7 @@ import {
   TabsContent,
 } from "@customreport/ui/components/ui/tabs";
 import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
+import { Calendar } from "lucide-react";
 
 import { invalidateAdmin } from "../../lib/cache-keys";
 import { useTRPC } from "../../lib/trpc-context";
@@ -59,6 +60,9 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
               surfaces Telegram (seeds-only); future integrations (Slack,
               MS Teams, webhook fan-out) join the same sub-tab. */}
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
+          <TabsTrigger value="holidays">
+            <HolidaysComingSoonControl />
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="identity" className="pt-6">
@@ -80,7 +84,44 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
         <TabsContent value="integrations" className="pt-6">
           <IntegrationsSubTab />
         </TabsContent>
+
+        <TabsContent value="holidays" className="pt-6">
+          <div className="max-w-lg space-y-5">
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              Holiday calendar management coming soon. Schedule organization-wide
+              closures to exclude from deadline calculations and report period
+              boundaries.
+            </p>
+          </div>
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// ─── Holidays Coming Soon Control ────────────────────────────────────────
+
+function HolidaysComingSoonControl() {
+  // TODO(holidays-activation): replace with real holidays calendar form
+  // when dedicated holiday-management phase ships (see
+  // .planning/todos/pending/2026-05-21-holidays-calendar.md).
+  return (
+    <div className="group relative inline-flex">
+      <button
+        type="button"
+        aria-disabled="true"
+        aria-label="Holidays calendar is coming soon"
+        title="Coming Soon"
+        data-testid="holidays-coming-soon"
+        className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] xl:w-[92px] xl:px-2.5"
+      >
+        <Calendar size={14} strokeWidth={2} aria-hidden="true" />
+        <span className="hidden xl:inline">Holidays</span>
+      </button>
+      <ComingSoonBadge
+        role="tooltip"
+        className="pointer-events-none absolute right-0 top-[calc(100%+6px)] z-30 opacity-0 shadow-[0_8px_18px_-14px_rgba(0,0,0,0.22),0_1px_2px_rgba(0,0,0,0.08)] transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+      />
     </div>
   );
 }

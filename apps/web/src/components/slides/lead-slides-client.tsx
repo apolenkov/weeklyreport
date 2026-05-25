@@ -1,6 +1,13 @@
 "use client";
 
-import { useContext, useEffect, useMemo, useState } from "react";
+import {
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
@@ -16,10 +23,12 @@ import { ReportSlides } from "./report-slides";
 import {
   buildSectionSlideModel,
   paginateSectionSlides,
-  type SectionSlideModel,
-  type SlideProduct,
 } from "./section-slide-utils";
-import { LeadScopeToggle } from "./lead-scope-toggle";
+import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
+import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
+import { SlideFullscreenButton } from "./slide-fullscreen-button";
+import { LeadProductGrid } from "./lead-product-grid";
+import { LeadSlideHero } from "./lead-slide-hero";
 
 function SlideEmptyState({
   title,
@@ -43,109 +52,24 @@ function SlideEmptyState({
 type LeadSlidesClientProps = {
   readonly initialReportId?: string | null;
   readonly chrome?: "full" | "content";
+  /** W9.A: when provided, this ref is applied to the deck root div so the
+   *  caller (lead-form header) can host the fullscreen button. */
+  readonly deckRef?: RefObject<HTMLDivElement | null>;
 };
 
-type CrossAuthorRow = {
-  authorId: string;
-  authorName: string;
-  sharedProductIds: string[];
-  items: {
-    id: string;
-    projectId: string;
-    type: string;
-    text: string;
-    workflowStatus: string;
-  }[];
-  risks: { id: string; projectId: string; risk: string; severity: string }[];
-  decisions: { id: string; productId: string; text: string }[];
-  priorities: { id: string; productId: string; rank: number; text: string }[];
-};
-
-/** Build a minimal SectionSlideModel from a cross-author row for display. */
-function buildCrossAuthorSlideModel(ca: CrossAuthorRow): SectionSlideModel[] {
-  const currentItems = ca.items
-    .filter((i) => i.type === "current" && i.text.trim())
-    .map((i) => i.text.trim());
-  const nextItems = ca.items
-    .filter((i) => i.type === "next" && i.text.trim())
-    .map((i) => i.text.trim());
-  const risks = ca.risks
-    .filter((r) => r.risk.trim())
-    .map((r) => r.risk.trim());
-  const decisions = ca.decisions
-    .filter((d) => d.text.trim())
-    .map((d) => d.text.trim());
-  const priorities = [...ca.priorities]
-    .sort((a, b) => a.rank - b.rank)
-    .filter((p) => p.text.trim())
-    .map((p) => p.text.trim());
-
-  const blockedCount = ca.items.filter((i) => i.workflowStatus === "blocked").length
-    + ca.risks.filter((r) => r.severity === "blocked").length;
-  const atRiskCount = ca.risks.filter((r) => r.severity === "at-risk").length;
-
-  const tone: SectionSlideModel["tone"] =
-    currentItems.length === 0 && nextItems.length === 0
-      ? "empty"
-      : blockedCount > 0
-        ? "blocked"
-        : atRiskCount > 0 || risks.length > 0
-          ? "warning"
-          : "ready";
-
-  // Synthetic product card so LeadSlideArticle renders actual content via
-  // ProductSdlcGroups. "cross-product" id receives special neutral styling in
-  // ProductSdlcGroups (no status accent) and is excluded from chip generation.
-  const syntheticProduct: SlideProduct = {
-    id: "cross-product",
-    name: ca.authorName,
-    status: null,
-    stages: [],
-    currentItems,
-    nextItems,
-    risks,
-    decisions,
-    priorities,
-  };
-
-  const model: SectionSlideModel = {
-    id: ca.authorId + "-cross",
-    ownerId: ca.authorId,
-    ownerName: ca.authorName,
-    ownerRole: "lead",
-    status: "submitted",
-    submittedAt: null,
-    products: [ca.authorName],
-    productSlides: [syntheticProduct],
-    productCount: 1,
-    currentCount: currentItems.length,
-    nextCount: nextItems.length,
-    riskCount: risks.length,
-    decisionCount: decisions.length,
-    priorityCount: priorities.length,
-    blockedCount,
-    atRiskCount,
-    score: currentItems.length > 0 && nextItems.length > 0 ? 80 : 40,
-    tone,
-    readiness: [],
-    currentItems,
-    nextItems,
-    risks,
-    decisions,
-    priorities,
-  };
-  return [model];
-}
 
 export function LeadSlidesClient({
   initialReportId = null,
+  deckRef: externalDeckRef,
 }: LeadSlidesClientProps) {
   const trpc = useTRPC();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const session = useContext(SessionContext);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [scope, setScope] = useState<"own" | "product">("own");
+  const [scope, setScope] = useState<ScopeValue>("own");
+  const internalDeckRef = useRef<HTMLDivElement>(null);
+  const deckRef = externalDeckRef ?? internalDeckRef;
 
   const activeQ = useQuery(trpc.reports.getActive.queryOptions());
   const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
@@ -175,10 +99,6 @@ export function LeadSlidesClient({
     }),
     enabled: targetReportId !== "",
   });
-  const crossAuthorQ = useQuery({
-    ...trpc.leadForm.crossAuthorSections.queryOptions({ reportId: targetReportId }),
-    enabled: scope === "product" && targetReportId !== "",
-  });
 
   useEffect(() => {
     if (!activeQ.isError) return;
@@ -197,17 +117,18 @@ export function LeadSlidesClient({
     });
   }, [byPeriodQ.isError, byPeriodQ.error, targetReportId]);
 
-  const slides = useMemo(() => {
-    if (!byPeriodQ.data?.section) return [];
-    const ownSlides = paginateSectionSlides(
-      buildSectionSlideModel(byPeriodQ.data.section),
-    );
-    if (scope !== "product" || !crossAuthorQ.data?.length) return ownSlides;
-    const foreignSlides = crossAuthorQ.data.flatMap((ca) =>
-      buildCrossAuthorSlideModel(ca),
-    );
-    return [...ownSlides, ...foreignSlides];
-  }, [byPeriodQ.data, scope, crossAuthorQ.data]);
+  const sectionModel = useMemo(
+    () =>
+      byPeriodQ.data?.section
+        ? buildSectionSlideModel(byPeriodQ.data.section)
+        : null,
+    [byPeriodQ.data],
+  );
+
+  const slides = useMemo(
+    () => (sectionModel ? paginateSectionSlides(sectionModel) : []),
+    [sectionModel],
+  );
 
   if (activeQ.isLoading || byPeriodQ.isLoading || historyQ.isLoading) {
     return <SlideSkeleton />;
@@ -231,35 +152,80 @@ export function LeadSlidesClient({
     );
   }
 
-  return (
-    <ReportSlides
-      slides={slides}
-      selectedIndex={selectedIndex}
-      onSelect={setSelectedIndex}
-      variant="lead"
-      title={inReportMode ? "Report slides" : "My Status Slides"}
-      subtitle={
-        inReportMode
-          ? "Report sections grouped by product and SDLC stage."
-          : "Current section grouped by product and SDLC stage."
-      }
-      groupLabel={
-        inReportMode ? null : (session?.user?.reportingGroupName ?? null)
-      }
-      sourceHref={"/lead/report/" + encodeURIComponent(targetReportId)}
-      sourceLabel="Open source section"
-      hideSourceLink={inReportMode}
-      toolbar={
-        !inReportMode ? (
-          <LeadScopeToggle
-            scope={scope}
-            onChange={(s) => {
-              setScope(s);
-              setSelectedIndex(0);
-            }}
-          />
-        ) : undefined
-      }
+  const scopeControls = (
+    <ScopeToggle
+      value={scope}
+      onChange={(s) => {
+        setScope(s);
+        setSelectedIndex(0);
+      }}
+      allowedScopes={["own", "product"]}
     />
+  );
+
+  if (scope === "product") {
+    return (
+      <div ref={deckRef}>
+        <article className="slide-frame rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+          {sectionModel ? (
+            <LeadSlideHero
+              slide={sectionModel}
+              heroControls={
+                <div className="flex flex-wrap items-center gap-2">
+                  {scopeControls}
+                </div>
+              }
+            />
+          ) : (
+            <div className="flex flex-wrap items-center gap-2 border-b border-[rgba(0,0,0,0.08)] pb-4">
+              {scopeControls}
+            </div>
+          )}
+          <div className="mt-5">
+            <LeadProductGrid products={sectionModel?.productSlides ?? []} />
+          </div>
+          {!inReportMode && (
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <AgentReviewComingSoon />
+              <SlideFullscreenButton targetRef={deckRef} />
+            </div>
+          )}
+        </article>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={deckRef}>
+      <ReportSlides
+        slides={slides}
+        selectedIndex={selectedIndex}
+        onSelect={setSelectedIndex}
+        variant="lead"
+        title={inReportMode ? "Report slides" : "My Status Slides"}
+        subtitle={
+          inReportMode
+            ? "Report sections grouped by product and SDLC stage."
+            : "Current section grouped by product and SDLC stage."
+        }
+        groupLabel={
+          inReportMode ? null : (session?.user?.reportingGroupName ?? null)
+        }
+        sourceHref={"/lead/report/" + encodeURIComponent(targetReportId)}
+        sourceLabel="Open source section"
+        hideSourceLink={inReportMode}
+        heroControls={
+          <div className="flex flex-wrap items-center gap-2">{scopeControls}</div>
+        }
+        toolbar={
+          !inReportMode ? (
+            <div className="flex items-center gap-2">
+              <AgentReviewComingSoon />
+              <SlideFullscreenButton targetRef={deckRef} />
+            </div>
+          ) : undefined
+        }
+      />
+    </div>
   );
 }

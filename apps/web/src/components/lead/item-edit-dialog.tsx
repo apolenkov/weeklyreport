@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { KanbanItem, ItemStatus, Product } from "./mock-data";
 import { StageMultiSelect } from "./stage-multi-select";
 
@@ -35,6 +35,15 @@ type ItemEditDialogProps = {
    * owns on the given project. Constrains the "SDLC Stage" select.
    */
   readonly stagesForProduct?: (productId: string) => readonly string[];
+  /**
+   * All priority ranks currently in use by own items for the full period
+   * (current + next week combined). The dialog excludes the edited item's
+   * own existing rank from this set before marking options as taken, so
+   * the user can keep the same rank without seeing it disabled.
+   * Legacy rank collisions (multiple items sharing a rank) are handled
+   * gracefully — the collision set is visible but the dialog never crashes.
+   */
+  readonly ownPeriodRanks?: readonly number[];
   readonly onSave: (next: KanbanItem) => void;
   readonly onCancel: () => void;
 };
@@ -88,7 +97,21 @@ const NEXT_WEEK_CHOICES: readonly Choice[] = [
   },
 ];
 
-export function ItemEditDialog({
+/**
+ * D12 fix (react-compiler-safe): outer shell conditionally mounts the inner
+ * content component. Mount = fresh useState from props; unmount on close.
+ * No useEffect reset needed — structural guarantee via mount/unmount.
+ *
+ * A13 invariant preserved: stagesForProduct is NOT in any deps array.
+ * useState initialises once at mount from the stable `initial` snapshot, so
+ * parent re-renders with a new stagesForProduct reference don't wipe typed text.
+ */
+export function ItemEditDialog(props: ItemEditDialogProps) {
+  if (!props.open) return null;
+  return <ItemEditDialogContent {...props} />;
+}
+
+function ItemEditDialogContent({
   open,
   item,
   products,
@@ -96,15 +119,16 @@ export function ItemEditDialog({
   currentUserName,
   defaultProductId,
   stagesForProduct,
+  ownPeriodRanks,
   onSave,
   onCancel,
 }: ItemEditDialogProps) {
-  "use no memo";
   const isCreate = item === null;
 
-  // Local form state — initialize from the bound item (or defaults for create).
-  // Reset every time the dialog is reopened or the bound item changes so a
-  // second "Edit" click on a different row doesn't carry stale draft values.
+  // Local form state — initialised once at mount from the bound item (or
+  // create-mode defaults). The parent unmounts this component on close and
+  // mounts a fresh instance on reopen, so state is always in sync with the
+  // current item — no useEffect reset required.
   const seedProduct = isCreate
     ? (products.find((p) => p.id === defaultProductId) ?? products[0])
     : null;
@@ -119,6 +143,9 @@ export function ItemEditDialog({
   const [text, setText] = useState(initial.text);
   const [status, setStatus] = useState<ItemStatus>(initial.status);
   const [productId, setProductId] = useState(initial.productId);
+  const [priorityRank, setPriorityRank] = useState<number | null>(
+    item?.priorityRank ?? null,
+  );
   // UFB-073 (R1): pre-select all owned stages on create; restore existing on edit.
   const [stageIds, setStageIds] = useState<string[]>(
     item?.stageIds
@@ -129,35 +156,21 @@ export function ItemEditDialog({
   );
   const [errors, setErrors] = useState<{ text?: string }>({});
 
-  // A13 fix: stagesForProduct excluded from deps — unstable parent ref (new arrow fn
-  // each render) causes form-race on autosave → React Query invalidate cycle.
-  // Dialog is key-reset by parent on open-transition instead.
-  useEffect(() => {
-    if (open) {
-      setText(initial.text);
-      setStatus(initial.status);
-      setProductId(initial.productId);
-      setStageIds(
-        item?.stageIds
-          ? [...item.stageIds]
-          : isCreate
-            ? [...(stagesForProduct?.(initial.productId) ?? [])]
-            : [],
-      );
-      setErrors({});
-    }
-    // eslint-disable-next-line react-compiler/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    open,
-    item?.id,
-    item?.stageIds,
-    initial.text,
-    initial.status,
-    initial.productId,
-    defaultProductId,
-    isCreate,
-  ]);
+  // Ranks already taken by OTHER items. The item's own current rank is
+  // excluded so the user can keep it without seeing a false "taken" marker.
+  // Legacy data with duplicate ranks is tolerated: the Set deduplicates.
+  const takenRanks = new Set(
+    (ownPeriodRanks ?? []).filter((r) => r !== (item?.priorityRank ?? null)),
+  );
+  // Offer options 1..10 plus any legacy rank above 10 already on the item.
+  const MAX_RANK = 10;
+  const rankOptions = Array.from({ length: MAX_RANK }, (_, i) => i + 1);
+  if (
+    item?.priorityRank != null &&
+    item.priorityRank > MAX_RANK
+  ) {
+    rankOptions.push(item.priorityRank);
+  }
 
   if (!open) return null;
 
@@ -192,6 +205,7 @@ export function ItemEditDialog({
       text: trimmed,
       status,
       author: item?.author ?? currentUserName ?? "You",
+      priorityRank: priorityRank ?? null,
     };
     onSave(out);
   }
@@ -272,6 +286,36 @@ export function ItemEditDialog({
                 {errors.text}
               </p>
             )}
+          </div>
+
+          {/* Priority rank — optional; set to mark this item as a top priority */}
+          <div>
+            <label
+              className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+              htmlFor="item-priority-rank"
+            >
+              Priority rank{" "}
+              <span className="font-normal">(optional — leave blank if not a priority)</span>
+            </label>
+            <select
+              id="item-priority-rank"
+              className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+              value={priorityRank ?? ""}
+              onChange={(e) => {
+                const v = e.target.value;
+                setPriorityRank(v === "" ? null : parseInt(v, 10));
+              }}
+            >
+              <option value="">— none —</option>
+              {rankOptions.map((r) => {
+                const taken = takenRanks.has(r);
+                return (
+                  <option key={r} value={r} disabled={taken}>
+                    {r}{taken ? " (taken)" : ""}
+                  </option>
+                );
+              })}
+            </select>
           </div>
 
           <StageMultiSelect

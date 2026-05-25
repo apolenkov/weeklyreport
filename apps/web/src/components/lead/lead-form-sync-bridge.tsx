@@ -15,7 +15,22 @@ import type { Product, RiskEntry, StageStatus } from "./mock-data";
 import { RisksSection } from "./risks-section";
 import { SdlcPipeline } from "./sdlc-pipeline";
 import type { CrossAuthorEntry } from "./sdlc-pipeline";
-import { splitStageNames, stageNameMatches } from "./stage-tags";
+import { canonicalStageName, riskCoversStage, splitStageNames } from "./stage-tags";
+
+/**
+ * Promotes a stage status based on a risk's severity.
+ * Never downgrades: if the stage is already blocked, it stays blocked.
+ * Exported for unit testing.
+ */
+export function promoteStageStatus(
+  current: StageStatus,
+  riskSeverity: "at-risk" | "blocked",
+): StageStatus {
+  if (current === "blocked") return "blocked";
+  if (riskSeverity === "blocked") return "blocked";
+  if (current === "at-risk") return "at-risk";
+  return riskSeverity; // "on-track" + "at-risk" → "at-risk"
+}
 
 /**
  * LeadFormSyncBridge — composes useStatusRiskSync with SdlcPipeline + RisksSection.
@@ -68,8 +83,9 @@ type BridgeContextValue = {
   risksAddSignal?: number;
   /** F1: cross-author entries for the current report period. */
   crossAuthors?: readonly CrossAuthorEntry[];
-  /** F1: active reportId for building drill-in URL. */
-  reportId?: string;
+  /** W5: merged risks (own + foreign) for visual rendering only. The sync hook
+   * still operates on `risks` (own-only) to avoid false-positive mutations. */
+  displayRisks?: RiskEntry[];
   handleStageStatusChange: (
     productId: string,
     stageName: string,
@@ -82,13 +98,16 @@ type BridgeContextValue = {
 const BridgeContext = createContext<BridgeContextValue | null>(null);
 
 function riskStageKeys(products: Product[], risk: RiskEntry): string[] {
-  const tags = splitStageNames(risk.stageName);
+  const tags =
+    risk.stageIds !== undefined
+      ? risk.stageIds
+      : splitStageNames(risk.stageName);
   if (tags.length > 0) {
-    return tags.map((stageName) => `${risk.productId}::${stageName}`);
+    return tags.map((stageName) => `${risk.productId}::${canonicalStageName(stageName)}`);
   }
   const product = products.find((item) => item.id === risk.productId);
   return (product?.stages ?? []).map(
-    (stage) => `${risk.productId}::${stage.stageName}`,
+    (stage) => `${risk.productId}::${canonicalStageName(stage.stageName)}`,
   );
 }
 
@@ -127,8 +146,8 @@ export type LeadFormSyncBridgeProviderProps = {
   readonly risksAddSignal?: number;
   /** F1: cross-author entries for shared products. */
   readonly crossAuthors?: readonly CrossAuthorEntry[];
-  /** F1: active reportId for building drill-in URL. */
-  readonly reportId?: string;
+  /** W5: merged risks for visual rendering; own-only risks drive sync hook. */
+  readonly displayRisks?: RiskEntry[];
   readonly children: ReactNode;
 };
 
@@ -143,7 +162,7 @@ function Provider({
   sectionAuthorName,
   risksAddSignal,
   crossAuthors,
-  reportId,
+  displayRisks,
   children,
 }: LeadFormSyncBridgeProviderProps) {
   const [pendingSuggestion, setPendingSuggestion] =
@@ -185,60 +204,71 @@ function Provider({
   const handleRisksChange = useCallback(
     (next: RiskEntry[]) => {
       if (readOnly) return;
-      // Detect (productId, stageName) tuples that were present in `risks` but
-      // have zero remaining entries after this change. For each, reset the
-      // matching stage's status back to 'on-track' so the "× Blocked" / risk
-      // marker on the SDLC pipeline disappears symmetrically with the
-      // existing additive auto-sync (handleStageStatusChange + handleRiskFilled).
+      // Strip foreign entries so they don't bleed into draft mutations or
+      // skew the stage-clear count (foreign risks belong to other authors).
+      const ownNext = next.filter((r) => !r.foreign);
+
+      // Count risks per canonical stage key after this change.
       const nextCounts = new Map<string, number>();
-      for (const r of next) {
+      for (const r of ownNext) {
         for (const key of riskStageKeys(products, r)) {
           nextCounts.set(key, (nextCounts.get(key) ?? 0) + 1);
         }
       }
-      const stagesToClear: { productId: string; stageName: string }[] = [];
+
+      // Stages to clear: had risks before, now have none → reset to on-track.
+      const stagesToClear = new Set<string>();
       const seen = new Set<string>();
       for (const r of risks) {
         for (const key of riskStageKeys(products, r)) {
           if (seen.has(key)) continue;
           seen.add(key);
           if ((nextCounts.get(key) ?? 0) === 0) {
-            const [productId, stageName] = key.split("::");
-            if (productId && stageName) {
-              stagesToClear.push({ productId, stageName });
-            }
+            stagesToClear.add(key);
           }
         }
       }
 
-      onRisksChange(next);
-
-      if (stagesToClear.length > 0) {
-        // Reset the affected stages to 'on-track' via the same
-        // onProductsChange path the pipeline uses. Only clear stages that
-        // are currently flagged at-risk/blocked — leave on-track / empty
-        // alone so we don't overwrite an already-clean state.
-        const cleared = products.map((p) => {
-          const productClears = stagesToClear.filter(
-            (s) => s.productId === p.id,
+      // Up-flow promotion: surviving risks promote their stages up, never down.
+      // locked-ownership stages are excluded (owned by the product head, not this lead).
+      const stagePromotions = new Map<string, "at-risk" | "blocked">();
+      for (const r of ownNext) {
+        for (const key of riskStageKeys(products, r)) {
+          if (stagesToClear.has(key)) continue;
+          const current = stagePromotions.get(key);
+          if (current === "blocked") continue;
+          stagePromotions.set(
+            key,
+            r.severity === "blocked" ? "blocked" : "at-risk",
           );
-          if (productClears.length === 0) return p;
-          return {
-            ...p,
-            stages: p.stages.map((s) => {
-              const hit = productClears.find(
-                (c) => c.stageName === s.stageName,
-              );
-              if (!hit) return s;
-              if (s.status === "at-risk" || s.status === "blocked") {
-                return { ...s, status: "on-track" as const };
-              }
-              return s;
-            }),
-          };
-        });
-        onProductsChange(cleared);
+        }
       }
+
+      onRisksChange(ownNext);
+
+      const hasProductChanges =
+        stagesToClear.size > 0 || stagePromotions.size > 0;
+      if (!hasProductChanges) return;
+
+      const updatedProducts = products.map((p) => ({
+        ...p,
+        stages: p.stages.map((s) => {
+          if (s.ownership === "locked") return s;
+          const key = `${p.id}::${canonicalStageName(s.stageName)}`;
+          if (stagesToClear.has(key)) {
+            return s.status === "at-risk" || s.status === "blocked"
+              ? { ...s, status: "on-track" as const }
+              : s;
+          }
+          const target = stagePromotions.get(key);
+          if (target) {
+            const promoted = promoteStageStatus(s.status, target);
+            return promoted !== s.status ? { ...s, status: promoted } : s;
+          }
+          return s;
+        }),
+      }));
+      onProductsChange(updatedProducts);
     },
     [readOnly, onRisksChange, onProductsChange, products, risks],
   );
@@ -261,7 +291,7 @@ function Provider({
       ...(sectionAuthorName !== undefined ? { sectionAuthorName } : {}),
       ...(risksAddSignal !== undefined ? { risksAddSignal } : {}),
       ...(crossAuthors !== undefined ? { crossAuthors } : {}),
-      ...(reportId !== undefined ? { reportId } : {}),
+      ...(displayRisks !== undefined ? { displayRisks } : {}),
       handleStageStatusChange,
       handleRisksChange,
       handleRiskFilled,
@@ -275,7 +305,7 @@ function Provider({
       sectionAuthorName,
       risksAddSignal,
       crossAuthors,
-      reportId,
+      displayRisks,
       handleStageStatusChange,
       handleRisksChange,
       handleRiskFilled,
@@ -326,13 +356,16 @@ function computeUnbackedStages(ctx: ReturnType<typeof useBridgeContext>) {
     for (const stage of product.stages) {
       if (stage.ownership !== "mine") continue;
       if (stage.status !== "at-risk" && stage.status !== "blocked") continue;
-      const hasRisk = ctx.risks.some(
+      // A blocked stage requires a blocked risk; an at-risk risk alone
+      // does not justify marking a stage as blocked.
+      const hasMatchingRisk = ctx.risks.some(
         (r) =>
           r.productId === product.id &&
-          stageNameMatches(r.stageName, stage.stageName) &&
-          (r.text ?? "").trim().length > 0,
+          riskCoversStage(r, stage.stageName) &&
+          (r.text ?? "").trim().length > 0 &&
+          (stage.status === "at-risk" || r.severity === "blocked"),
       );
-      if (!hasRisk) {
+      if (!hasMatchingRisk) {
         out.push({
           productId: product.id,
           productName: product.name,
@@ -359,16 +392,18 @@ function Pipeline() {
       {...(ctx.crossAuthors !== undefined
         ? { crossAuthors: ctx.crossAuthors }
         : {})}
-      {...(ctx.reportId !== undefined ? { reportId: ctx.reportId } : {})}
     />
   );
 }
 
 function Risks() {
   const ctx = useBridgeContext("LeadFormSyncBridge.Risks");
+  // displayRisks (own + foreign merged) for visual render; sync hook still
+  // uses ctx.risks (own-only) via handleRisksChange to avoid false mutations.
+  const renderRisks = ctx.displayRisks ?? ctx.risks;
   return (
     <RisksSection
-      risks={ctx.risks}
+      risks={renderRisks}
       readOnly={ctx.readOnly}
       onChange={ctx.handleRisksChange}
       onRiskFilled={ctx.handleRiskFilled}

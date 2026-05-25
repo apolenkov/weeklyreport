@@ -145,7 +145,7 @@ async function ensureWeeklyReport(
     return { reportId, sectionId: existingSection.id };
   }
 
-  // Create section + priorities + project statuses
+  // Create section + project statuses
   const projects = await prisma.project.findMany({
     where: { leadId: userId, archived: false },
     select: { id: true },
@@ -156,30 +156,6 @@ async function ensureWeeklyReport(
   });
 
   if (projects.length > 0) {
-    const firstProject = projects.find(Boolean);
-    const firstProjectId = firstProject?.id ?? "";
-    await prisma.priority.createMany({
-      data: [
-        {
-          reportSectionId: section.id,
-          productId: firstProjectId,
-          rank: 1,
-          text: "Priority 1",
-        },
-        {
-          reportSectionId: section.id,
-          productId: firstProjectId,
-          rank: 2,
-          text: "Priority 2",
-        },
-        {
-          reportSectionId: section.id,
-          productId: firstProjectId,
-          rank: 3,
-          text: "Priority 3",
-        },
-      ],
-    });
     await prisma.projectStatus.createMany({
       data: projects.map((p) => ({
         reportSectionId: section.id,

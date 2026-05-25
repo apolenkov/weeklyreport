@@ -102,19 +102,18 @@ describe("PeriodNavigator (lead)", () => {
     expect(select.value).toBe("2026-W15");
   });
 
-  it("D-17: renders compact date range text without period numbering", () => {
+  it("D-17: current period option carries (Current) suffix; no week/period numbering", () => {
     render(<PeriodNavigator periods={PERIODS} />);
     const select = screen.getByLabelText(
       "Select reporting period",
     ) as HTMLSelectElement;
 
-    expect(select.selectedOptions[0]?.textContent).toBe("Apr 21–27, 2026");
+    expect(select.selectedOptions[0]?.textContent).toBe("Apr 21–27, 2026 (Current)");
     expect(select.selectedOptions[0]?.textContent).not.toContain("Period");
     expect(select.selectedOptions[0]?.textContent).not.toContain("Week");
-    expect(select.selectedOptions[0]?.textContent).not.toContain("Current");
   });
 
-  it("D-17: keeps past-period option text to the date range", () => {
+  it("D-17: past-period option text is the bare date range (no suffix)", () => {
     mockPathname = "/lead/report/2026-W15";
     render(<PeriodNavigator periods={PERIODS} />);
     const select = screen.getByLabelText(
@@ -122,5 +121,11 @@ describe("PeriodNavigator (lead)", () => {
     ) as HTMLSelectElement;
 
     expect(select.selectedOptions[0]?.textContent).toBe("Apr 7–13, 2026");
+  });
+
+  it("does not render a standalone Current badge element", () => {
+    // The (Current) suffix lives in the option text only; no inline badge.
+    render(<PeriodNavigator periods={PERIODS} />);
+    expect(screen.queryByText("Current")).not.toBeInTheDocument();
   });
 });

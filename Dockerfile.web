@@ -1,8 +1,7 @@
 # Stage 1: Base with pnpm and turbo
-FROM node:20-alpine AS base
+FROM node:25-alpine AS base
 RUN apk add --no-cache libc6-compat
-RUN corepack enable && corepack prepare pnpm@10.11.0 --activate
-RUN npm install -g turbo
+RUN npm install -g pnpm@10.11.0 turbo@2
 
 # Stage 2: Prune monorepo for web workspace
 FROM base AS pruner
@@ -31,10 +30,11 @@ ENV API_URL=${API_URL}
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_PUBLIC_AUTH_STUB=${NEXT_PUBLIC_AUTH_STUB}
 ENV NEXT_PUBLIC_DEV_ROLE_SWITCHER=${NEXT_PUBLIC_DEV_ROLE_SWITCHER}
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm turbo build --filter=@customreport/web
 
 # Stage 5: Production runner with Next.js standalone
-FROM node:20-alpine AS runner
+FROM node:25-alpine AS runner
 RUN apk add --no-cache libc6-compat
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
@@ -45,5 +45,8 @@ COPY --from=builder --chown=nextjs:nextjs /app/apps/web/public ./apps/web/public
 USER nextjs
 ENV NODE_ENV=production
 ENV HOSTNAME="0.0.0.0"
+ENV NEXT_TELEMETRY_DISABLED=1
 EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+  CMD wget -qO- http://localhost:3000/ || exit 1
 CMD ["node", "apps/web/server.js"]

@@ -47,10 +47,10 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
     label: "History",
     roles: ["lead"],
   },
-  // Phase 61 (robust-baking-aurora): head gets its own history page with
-  // period navigator and inline form ↔ slides mode toggle.
+  // UAT 2026-05-22: /head/history now 307-redirects to /reports?tab=published
+  // (same surface as viewer). Nav link points directly to the destination.
   {
-    href: "/head/history",
+    href: "/reports?tab=published",
     label: "History",
     roles: ["head"],
   },
@@ -61,13 +61,10 @@ const NAV_LINKS: ReadonlyArray<NavLink> = [
   },
   { href: "/head/dashboard", label: "Dashboard", roles: ["head"] },
   { href: "/head/report", label: "Status", roles: ["head"] },
-  // UFB-058 / Phase 60: Status Presentation surface — draft authoring
-  // stays in the lead report mode switch (`/lead/report/:id?mode=slides`).
-  {
-    href: "/head/slides",
-    label: "Slides",
-    roles: ["head"],
-  },
+  // T-F4-3 (plan §22.9): Slides removed from head nav — slides is a mode
+  // toggle inside Status/History, not a separate destination. The
+  // /head/slides URL still redirects to /head/history?mode=slides
+  // (back-compat in head/slides/page.tsx).
   // UFB-038: admin tab is admin-only. heads have a dashboard, not an admin
   // panel. The /admin/layout.tsx role gate enforces the same on the route.
   { href: "/admin", label: "Admin", roles: ["admin"] },
@@ -79,7 +76,7 @@ const BRAND_SLOT_CLASS = "flex w-10 shrink-0 items-center justify-center py-4";
 const RIGHT_RAIL_CLASS =
   "relative flex items-center justify-end gap-2.5 justify-self-end xl:w-[272px]";
 const LOGOUT_BUTTON_CLASS =
-  "inline-flex h-8 w-10 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)] xl:w-[88px] xl:px-3";
+  "inline-flex h-8 w-10 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]";
 
 function getRoleLabel(role: Role): string {
   switch (role) {
@@ -115,7 +112,6 @@ function isActiveLink(
 ): boolean {
   if (href === "/admin") return pathname.startsWith("/admin");
   if (href === "/head/report") return pathname.startsWith("/head/report");
-  if (href === "/head/history") return pathname.startsWith("/head/history");
   if (href === "/head/dashboard") return pathname === "/head/dashboard";
   if (href.startsWith("/reports?")) {
     const hrefTab = reportsTabFromHref(href);
@@ -173,10 +169,9 @@ function LanguageComingSoonControl() {
         aria-label="Language selection is coming soon"
         title="Coming Soon"
         data-testid="language-coming-soon"
-        className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] xl:w-[92px] xl:px-2.5"
+        className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)]"
       >
         <Globe2 size={14} strokeWidth={2} aria-hidden="true" />
-        <span className="hidden xl:inline">Language</span>
       </button>
       <ComingSoonBadge
         role="tooltip"
@@ -198,10 +193,9 @@ function ThemeComingSoonControl() {
         aria-label="Theme selection is coming soon"
         title="Coming Soon"
         data-testid="theme-coming-soon"
-        className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] xl:w-[92px] xl:px-2.5"
+        className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)]"
       >
         <Moon size={14} strokeWidth={2} aria-hidden="true" />
-        <span className="hidden xl:inline">Theme</span>
       </button>
       <ComingSoonBadge
         role="tooltip"
@@ -225,7 +219,6 @@ function NavIcon({ href }: { readonly href: string }) {
       return <FileText {...common} />;
     case "/reports?tab=drafts":
     case "/reports?tab=published":
-    case "/head/history":
       return <Clock {...common} />;
     case "/head/dashboard":
       return <LayoutDashboard {...common} />;
@@ -373,11 +366,11 @@ export function NavBar() {
                 aria-hidden="true"
               />
               <div
-                className="h-8 w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40 xl:w-[92px]"
+                className="h-8 w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40"
                 aria-hidden="true"
               />
               <div
-                className="h-8 w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40 xl:w-[88px]"
+                className="h-8 w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40"
                 aria-hidden="true"
               />
             </>
@@ -419,7 +412,6 @@ export function NavBar() {
                     <polyline points="16 17 21 12 16 7" />
                     <line x1="21" y1="12" x2="9" y2="12" />
                   </svg>
-                  <span className="hidden xl:inline">Logout</span>
                 </button>
               )}
             </>

@@ -75,6 +75,8 @@ export class AiSummaryService {
    *   - period exists, no sections    → empty-state summary (no adapter call)
    *   - period exists, ≥1 sections    → adapter.generate(...) result
    */
+  // TODO(AGENT-REVIEW-02): wire real LLM provider here once org selects one.
+  // AgentReviewComingSoon (UI trace) shows the coming-soon badge until this stub is replaced.
   async getSummary(periodId: string): Promise<AiSummaryResult> {
     if (!this.repository) {
       throw new Error("AiSummaryService.repository not wired");

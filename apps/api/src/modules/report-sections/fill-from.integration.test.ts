@@ -34,7 +34,6 @@ function makeSection(
     items: [],
     risks: [],
     decisions: [],
-    priorities: [],
     ...overrides,
   };
 }
@@ -50,7 +49,7 @@ function createMockRepository(
   createVersionSnapshot: ReturnType<typeof vi.fn>;
 } {
   const fillFromFn = vi.fn(async (_target: string, _source: string) => 5);
-  const createSnapshotFn = vi.fn(async () => {});
+  const createSnapshotFn = vi.fn(async () => 1);
 
   return {
     async getSectionById(id: string) {
@@ -64,10 +63,19 @@ function createMockRepository(
     async listVersions() {
       return [];
     },
+    async getVersion() {
+      return null;
+    },
     async restoreVersion() {
       return 1;
     },
     createVersionSnapshot: createSnapshotFn,
+    async getLatestSnapshot() {
+      return null;
+    },
+    async buildSnapshotProjection() {
+      return {};
+    },
     async createReopenRequest() {},
     async hasSharedProduct() {
       return false;
@@ -77,6 +85,9 @@ function createMockRepository(
     },
     async getCrossAuthorSections() {
       return [];
+    },
+    async revokeAllSubmitted() {
+      return 0;
     },
   };
 }

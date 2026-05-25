@@ -38,6 +38,11 @@ export type KanbanItem = {
   status: ItemStatus;
   text: string;
   author: string;
+  /** When true, this item belongs to another author (viewer-side, read-only). */
+  foreign?: boolean;
+  authorId?: string;
+  /** Derived from Item.priorityRank. Null = not a priority item. */
+  priorityRank?: number | null;
 };
 
 export type RiskEntry = {
@@ -54,6 +59,9 @@ export type RiskEntry = {
   impact: string;
   /** Schema-required mitigation narrative; surfaced in the edit dialog. */
   mitigation: string;
+  foreign?: boolean;
+  authorId?: string;
+  authorName?: string;
 };
 
 export type DecisionEntry = {
@@ -70,6 +78,8 @@ export type DecisionEntry = {
   /** @deprecated Use stageIds. Kept for reading legacy data. */
   stageName?: string;
   stageIds?: string[];
+  foreign?: boolean;
+  authorId?: string;
 };
 
 export type PriorityEntry = {
@@ -81,6 +91,9 @@ export type PriorityEntry = {
   stageIds?: string[];
   productId?: string;
   productName?: string;
+  foreign?: boolean;
+  authorId?: string;
+  authorName?: string;
 };
 
 export type ReportPeriod = {

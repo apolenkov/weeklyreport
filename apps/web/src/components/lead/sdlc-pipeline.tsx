@@ -3,7 +3,7 @@
 import { OnTrackIcon } from "../ai/on-track-icon";
 import { StageChip } from "./stage-chip";
 import type { Product, RiskEntry, StageStatus } from "./mock-data";
-import { splitStageNames } from "./stage-tags";
+import { canonicalStageName, splitStageNames } from "./stage-tags";
 
 export type CrossAuthorEntry = {
   projectId: string;
@@ -11,8 +11,14 @@ export type CrossAuthorEntry = {
   authorId: string;
   authorName: string;
   stageNames: string[];
+  /** Per-stage status from backend StageStatus records; undefined = legacy data without status. */
+  stages?: { stageName: string; status: "green" | "yellow" | "red" | null }[];
   itemCount: number;
   riskCount: number;
+  /** Per-risk details when crossAuthorSections data is loaded; null = loading. */
+  risks: { severity: "blocked" | "at-risk"; text: string }[] | null;
+  /** True when the author has no items and no risks for this product. */
+  isEmpty: boolean;
 };
 
 type SdlcPipelineProps = {
@@ -54,13 +60,8 @@ type SdlcPipelineProps = {
   /**
    * F1: Cross-author entries for shared products. Grouped by projectId;
    * rendered as a subtle "Other contributors" row below each product card.
-   * Link drills into foreign-author readonly view (P63 LOCK-01).
    */
   readonly crossAuthors?: readonly CrossAuthorEntry[];
-  /**
-   * F1: Active report ID — used to build the ?authorId= drill-in URL.
-   */
-  readonly reportId?: string;
 };
 
 function getProductBackground(status: StageStatus): string {
@@ -83,7 +84,6 @@ export function SdlcPipeline({
   risks,
   unbackedStages = [],
   crossAuthors = [],
-  reportId,
 }: SdlcPipelineProps) {
   function handleStatusChange(
     productId: string,
@@ -105,9 +105,9 @@ export function SdlcPipeline({
         : splitStageNames(r.stageName);
     const keys =
       stageTags.length > 0
-        ? stageTags.map((stageName) => `${r.productId}::${stageName}`)
+        ? stageTags.map((stageName) => `${r.productId}::${canonicalStageName(stageName)}`)
         : (product?.stages ?? []).map(
-            (stage) => `${r.productId}::${stage.stageName}`,
+            (stage) => `${r.productId}::${canonicalStageName(stage.stageName)}`,
           );
     for (const key of keys) {
       riskCountByKey.set(key, (riskCountByKey.get(key) ?? 0) + 1);
@@ -136,8 +136,8 @@ export function SdlcPipeline({
             <div className="flex-1">
               <p className="text-sm font-semibold" style={{ color: "#8a6d1b" }}>
                 {unbackedStages.length === 1
-                  ? "1 stage marked at-risk/blocked has no risk written."
-                  : `${unbackedStages.length} stages marked at-risk/blocked have no risk written.`}
+                  ? "1 stage has no matching risk written."
+                  : `${unbackedStages.length} stages have no matching risk written.`}
               </p>
               <p className="mt-0.5 text-[12px]" style={{ color: "#8a6d1b" }}>
                 Open Risks &amp; Blockers below and use{" "}
@@ -217,80 +217,64 @@ export function SdlcPipeline({
 
           {/* Stages row */}
           <div className="flex flex-wrap justify-center items-center gap-2 pb-1">
-            {product.stages.map((stage, idx) => (
-              <div key={stage.stageName} className="flex items-center gap-2">
-                {idx > 0 && (
-                  <div
-                    className="flex items-center text-lg font-bold"
-                    style={{
-                      color:
-                        stage.ownership === "mine" ||
-                        product.stages[idx - 1]?.ownership === "mine"
-                          ? "var(--color-starbucks-accent)"
-                          : "var(--color-muted-foreground)",
-                      alignSelf: "center",
-                    }}
-                  >
-                    &rarr;
-                  </div>
-                )}
-                <div className="relative">
-                  <StageChip
-                    stage={stage}
-                    readOnly={readOnly}
-                    linkedRiskCount={
-                      riskCountByKey.get(`${product.id}::${stage.stageName}`) ??
-                      0
-                    }
-                    onStatusChange={(name, status) =>
-                      handleStatusChange(product.id, name, status)
-                    }
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* F1: cross-author summary — other leads who share this product */}
-          {crossAuthors.filter((ca) => ca.projectId === product.id).length >
-            0 && (
-            <div className="mt-3 border-t border-[rgba(0,0,0,0.06)] pt-2">
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
-                Other contributors
-              </p>
-              <ul className="space-y-0.5">
-                {crossAuthors
-                  .filter((ca) => ca.projectId === product.id)
-                  .map((ca) => (
-                    <li
-                      key={`${ca.projectId}::${ca.authorId}`}
-                      className="flex items-center gap-1.5 text-[12px] text-[var(--color-muted-foreground)]"
+            {product.stages.map((stage, idx) => {
+              const crossAuthorForStage = crossAuthors.find((ca) => {
+                if (ca.projectId !== product.id) return false;
+                const lower = stage.stageName.toLowerCase();
+                // Mirror the "Dev" ↔ "Development" alias from lead-form.ts:
+                // DB stage name is "Development"; chip label is "Dev".
+                return ca.stageNames.some((n) => {
+                  const nl = n.toLowerCase();
+                  return (
+                    nl === lower ||
+                    (lower === "dev" && nl === "development") ||
+                    (lower === "development" && nl === "dev")
+                  );
+                });
+              });
+              return (
+                <div key={stage.stageName} className="flex items-center gap-2">
+                  {idx > 0 && (
+                    <div
+                      className="flex items-center text-lg font-bold"
+                      style={{
+                        color:
+                          stage.ownership === "mine" ||
+                          product.stages[idx - 1]?.ownership === "mine"
+                            ? "var(--color-starbucks-accent)"
+                            : "var(--color-muted-foreground)",
+                        alignSelf: "center",
+                      }}
                     >
-                      <span className="font-medium text-[var(--color-foreground)]">
-                        {ca.authorName}
-                      </span>
-                      <span aria-hidden="true">·</span>
-                      <span>{ca.stageNames.join(", ")}</span>
-                      <span aria-hidden="true">—</span>
-                      <span>
-                        {ca.itemCount} item{ca.itemCount !== 1 ? "s" : ""}
-                        {ca.riskCount > 0 ? `, ${ca.riskCount} risk` : ""}
-                        {ca.riskCount > 1 ? "s" : ""}
-                      </span>
-                      {reportId && (
-                        <a
-                          href={`/lead/report/${reportId}?authorId=${ca.authorId}`}
-                          className="ml-auto inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)] hover:underline"
-                          aria-label={`View ${ca.authorName}'s section in read-only`}
-                        >
-                          readonly ↗
-                        </a>
-                      )}
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          )}
+                      &rarr;
+                    </div>
+                  )}
+                  <div className="relative">
+                    <StageChip
+                      stage={stage}
+                      readOnly={readOnly}
+                      linkedRiskCount={
+                        riskCountByKey.get(
+                          `${product.id}::${canonicalStageName(stage.stageName)}`,
+                        ) ?? 0
+                      }
+                      onStatusChange={(name, status) =>
+                        handleStatusChange(product.id, name, status)
+                      }
+                      crossAuthorInfo={
+                        crossAuthorForStage
+                          ? {
+                              itemCount: crossAuthorForStage.itemCount,
+                              riskCount: crossAuthorForStage.riskCount,
+                            }
+                          : undefined
+                      }
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       ))}
     </div>

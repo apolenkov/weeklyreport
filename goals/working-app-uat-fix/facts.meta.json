@@ -1,0 +1,103 @@
+{
+  "goalSlug": "working-app-uat-fix",
+  "facts": [
+    {
+      "id": "fact-render-clean",
+      "text": "Все 4 роли (lead / head / admin / viewer) открывают свои основные экраны с нулём console-ошибок на свежем билде.",
+      "comment": "",
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "fact-priorityrank",
+      "text": "В отчёте лида: приоритет (priority rank) айтема сохраняется после перезагрузки и снова отображается в диалоге редактирования.",
+      "comment": "",
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "fact-lead-splitview",
+      "text": "В отчёте лида: edit-режим и slides-режим доступны рядом (split-view); переключение/просмотр не теряет несохранённые правки — единый источник данных.",
+      "comment": "",
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "fact-head-splitview",
+      "text": "У хеда: split-view показывает сборный (агрегированный) статус и его слайд-форму рядом; хед там НЕ редактирует, только просматривает.",
+      "comment": "",
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": false
+    },
+    {
+      "id": "fact-head-grouping",
+      "text": "У хеда: группировку можно переключать между «по продукту» и «по лидам» — и в статус-виде, и в слайд-виде.",
+      "comment": "",
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "fact-head-pulse",
+      "text": "Head dashboard = «пульс» статусов текущего периода: видно, какие секции уже сданы/зафиксированы, а какие ещё нет.",
+      "comment": "",
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "fact-revoke",
+      "text": "У хеда: кнопки Revoke (по лиду) и Revoke All появляются и работают, когда есть сданные секции лидов.",
+      "comment": "",
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "fact-no-jump",
+      "text": "На ключевых экранах нет видимого «прыжка» при загрузке: скелетон совпадает по размеру с финальным контентом (CLS≈0).",
+      "comment": "",
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "fact-stage-color",
+      "text": "Стадии SDLC показывают реальный цвет статуса (green/yellow/red) даже для cross-author контрибьютора — не серый; заблокированная стадия = замок рядом (read-only), цвет статуса сохраняется; ячейка окрашивается при наличии хотя бы одной стадии/риска/блока. Источник: sdlc-pipeline.tsx, stage-chip.tsx.",
+      "comment": "Уточнение из UAT 2026-05-22: цвет статуса важнее факта блокировки — замок только индикатор read-only, не заменяет цвет.",
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "fact-all-fixed",
+      "text": "Каждая найденная UAT-проблема (визуальная и алгоритмическая, ▲-high и ▼-low) починена до зелёного — ничего не отложено.",
+      "comment": "",
+      "recommendedAutomatedVerification": false,
+      "automatedVerification": false
+    },
+    {
+      "id": "fact-frozen",
+      "text": "Замороженные направления не тронуты: AI/RAG, тёмная тема, i18n, holidays-calendar, Telegram, Director.",
+      "comment": "",
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "fact-gates",
+      "text": "Все гейты зелёные: pnpm typecheck, pnpm lint, pnpm test, pnpm lint:md.",
+      "comment": "",
+      "recommendedAutomatedVerification": true,
+      "automatedVerification": true
+    },
+    {
+      "id": "fact-logging-perf",
+      "text": "Логирование покрывает ключевые пути по максимуму (запросы, tRPC, БД-запросы с таймингами, медленные операции, ошибки), чтобы при UAT по логам анализировать, где нужен кэш и где нужны индексы БД. Артефакт: аудит покрытия логами + список cache/index-возможностей по конкретным запросам; evidence-backed выигрыши применяются.",
+      "comment": "UAT 2026-05-22: логи — основа для перф-анализа (cache/index). Опора на существующий observability-стек (pino/OTel/Prometheus/Grafana, pnpm logs).",
+      "recommendedAutomatedVerification": false,
+      "automatedVerification": false
+    },
+    {
+      "id": "fact-parallel",
+      "text": "Исполнение идёт параллельными субагентами (Haiku — скан/разведка, Sonnet — фиксы), Opus — только для синтеза/конфликтов; коммиты атомарные на fix/PRJ-2/shiny-eagle.",
+      "comment": "Check-first (многое реализовано — проверить и доработать). Дополнительно: code-simplifier + code-modernization + review; ESLint/Prettier до стандартов (Google config + combined plugins) + пакеты до последних; обязательный Vercel best-practices аудит через их скиллы (установить если нет); максимум параллельности, Opus только где реально нужен.",
+      "recommendedAutomatedVerification": false,
+      "automatedVerification": false
+    }
+  ]
+}

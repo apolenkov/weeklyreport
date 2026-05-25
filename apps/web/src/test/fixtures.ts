@@ -32,10 +32,5 @@ export function createDemoSection(): ReportSectionReadModel {
     ],
     risks: [],
     decisions: [],
-    priorities: [
-      { rank: 1, text: "Priority 1" },
-      { rank: 2, text: "Priority 2" },
-      { rank: 3, text: "Priority 3" },
-    ],
   };
 }

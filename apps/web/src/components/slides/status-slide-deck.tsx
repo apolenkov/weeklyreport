@@ -11,18 +11,18 @@ import {
   FileText,
   Gauge,
   Layers,
-  ListChecks,
   Target,
 } from "lucide-react";
 
-import type {
-  SectionSlideModel,
-  SlideProduct,
-  SlideStageStatus,
-  SlideTone,
-} from "./section-slide-utils";
+import type { SectionSlideModel, SlideTone } from "./section-slide-utils";
+import { buildUnifiedSlideModel } from "./section-slide-utils";
+import { LeadUnifiedSlide } from "./lead-unified-slide";
 import { LeadSlideHero } from "./lead-slide-hero";
-import { type ProductChipEntry, SlideProductChips } from "./slide-product-chips";
+import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
+import {
+  type ProductChipEntry,
+  SlideProductChips,
+} from "./slide-product-chips";
 
 type StatusSlideDeckProps = {
   readonly slides: readonly SectionSlideModel[];
@@ -37,6 +37,7 @@ type StatusSlideDeckProps = {
   readonly hideSourceLink?: boolean;
   readonly mode: "lead" | "head";
   readonly toolbar?: ReactNode;
+  readonly heroControls?: ReactNode;
   readonly showChrome?: boolean;
 };
 
@@ -126,238 +127,6 @@ function textList(items: readonly string[], empty: string, limit = 3) {
   );
 }
 
-function statusLabel(status: SlideStageStatus): string {
-  switch (status) {
-    case "green":
-      return "Green";
-    case "yellow":
-      return "Yellow";
-    case "red":
-      return "Red";
-    default:
-      return "No status";
-  }
-}
-
-function statusClass(status: SlideStageStatus): string {
-  switch (status) {
-    case "green":
-      return "border-[rgba(0,117,74,0.24)] bg-[rgba(229,245,237,0.72)] text-[var(--color-primary)]";
-    case "yellow":
-      return "border-[rgba(212,160,23,0.34)] bg-[#fff7df] text-[#725313]";
-    case "red":
-      return "border-[rgba(200,32,20,0.24)] bg-[#fff1f0] text-[var(--color-destructive)]";
-    default:
-      return "border-[rgba(0,0,0,0.12)] bg-[var(--color-muted)] text-[var(--color-muted-foreground)]";
-  }
-}
-
-function productStoryList({
-  id,
-  label,
-  items,
-  empty,
-  icon,
-  tone = "neutral",
-}: {
-  readonly id: string;
-  readonly label: string;
-  readonly items: readonly string[];
-  readonly empty: string;
-  readonly icon: ReactNode;
-  readonly tone?: "neutral" | "risk" | "priority" | "decision";
-}) {
-  const toneClassName = {
-    neutral: "text-[var(--color-muted-foreground)]",
-    risk: "text-[var(--color-destructive)]",
-    priority: "text-[var(--color-starbucks-gold)]",
-    decision: "text-[var(--color-starbucks-accent)]",
-  }[tone];
-  const lineClassName = {
-    neutral: "border-[rgba(0,117,74,0.22)]",
-    risk: "border-[rgba(200,32,20,0.28)]",
-    priority: "border-[rgba(212,160,23,0.34)]",
-    decision: "border-[rgba(0,117,74,0.28)]",
-  }[tone];
-
-  return (
-    <section className="min-w-0" data-testid={"lead-slide-story-" + id}>
-      <div
-        className={[
-          "flex items-center gap-2 text-[11px] font-bold uppercase",
-          toneClassName,
-        ].join(" ")}
-      >
-        {icon}
-        {label}
-      </div>
-      {items.length > 0 ? (
-        <ul className="mt-2 space-y-1.5">
-          {items.map((item, index) => (
-            <li
-              key={item + "-" + index}
-              className={[
-                "min-w-0 break-words border-l-2 pl-3 text-[15px] leading-6 text-[var(--color-foreground)]",
-                lineClassName,
-              ].join(" ")}
-            >
-              {item}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
-          {empty}
-        </p>
-      )}
-    </section>
-  );
-}
-
-function ProductSdlcGroups({
-  products,
-}: {
-  readonly products: readonly SlideProduct[];
-}) {
-  if (products.length === 0) {
-    return (
-      <section className="min-h-0 border-t border-[rgba(0,0,0,0.08)] pt-4">
-        <p className="text-sm text-[var(--color-muted-foreground)]">
-          No product scope assigned.
-        </p>
-      </section>
-    );
-  }
-
-  const realProducts = products.filter(
-    (product) => product.id !== "cross-product",
-  );
-  const sharedProducts = products.filter(
-    (product) => product.id === "cross-product",
-  );
-  const orderedProducts = [...realProducts, ...sharedProducts];
-  const hasMultipleRealProducts = realProducts.length > 1;
-  const productGridClass = [
-    "grid min-h-0 gap-6",
-    hasMultipleRealProducts ? "xl:grid-cols-2" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  return (
-    <div className={productGridClass} data-testid="lead-slide-products">
-      {orderedProducts.map((product) => {
-        const isSharedContext = product.id === "cross-product";
-        const productNumber = realProducts.findIndex(
-          (item) => item.id === product.id,
-        );
-        const productAccentClass = isSharedContext
-          ? "border-l-4 border-l-[rgba(0,0,0,0.16)]"
-          : product.status === "green"
-            ? "border-l-4 border-l-[rgba(0,117,74,0.5)]"
-            : product.status === "yellow"
-              ? "border-l-4 border-l-[rgba(212,160,23,0.62)]"
-              : product.status === "red"
-                ? "border-l-4 border-l-[rgba(200,32,20,0.55)]"
-                : "border-l-4 border-l-[rgba(0,0,0,0.2)]";
-        return (
-          <section
-            key={product.id}
-            id={"product-card-" + product.id}
-            className={[
-              "min-w-0 border-t border-[rgba(0,0,0,0.08)] pt-5 first:border-t-0 first:pt-0",
-              productAccentClass,
-              isSharedContext && hasMultipleRealProducts ? "xl:col-span-2" : "",
-            ].join(" ")}
-            data-testid={"lead-slide-product-" + product.id}
-          >
-            <div className="grid min-h-0 gap-5">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[11px] font-bold uppercase text-[var(--color-muted-foreground)]">
-                    {isSharedContext
-                      ? "Shared context"
-                      : realProducts.length > 1
-                        ? "Product " + (productNumber + 1)
-                        : "Product"}
-                  </span>
-                  {!isSharedContext ? (
-                    <span
-                      className={[
-                        "inline-flex min-h-7 items-center rounded-[var(--radius-pill)] border px-2 text-[11px] font-semibold",
-                        statusClass(product.status),
-                      ].join(" ")}
-                    >
-                      {statusLabel(product.status)}
-                    </span>
-                  ) : null}
-                </div>
-                <h3 className="mt-2 text-3xl font-bold leading-tight text-[var(--color-primary)]">
-                  {product.name}
-                </h3>
-                {!isSharedContext && product.stages.length > 0 ? (
-                  <p className="mt-3 text-sm font-medium text-[var(--color-muted-foreground)]">
-                    {product.stages.map((s) => s.name).join(" · ")}
-                  </p>
-                ) : !isSharedContext ? (
-                  <p className="mt-3 text-sm text-[var(--color-muted-foreground)]">
-                    No owned SDLC stages
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="grid min-w-0 gap-x-8 gap-y-5 md:grid-cols-2">
-                {productStoryList({
-                  id: product.id + "-current",
-                  label: "Current work",
-                  items: product.currentItems,
-                  empty: "No current work",
-                  icon: <Target className="h-4 w-4" aria-hidden="true" />,
-                })}
-                {productStoryList({
-                  id: product.id + "-next",
-                  label: "Next focus",
-                  items: product.nextItems,
-                  empty: "No next focus",
-                  icon: <ArrowRight className="h-4 w-4" aria-hidden="true" />,
-                })}
-                {productStoryList({
-                  id: product.id + "-risks",
-                  label: "Risks",
-                  items: product.risks,
-                  empty: "No active risks",
-                  icon: (
-                    <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-                  ),
-                  tone: "risk",
-                })}
-                {productStoryList({
-                  id: product.id + "-priorities",
-                  label: "Priorities",
-                  items: product.priorities,
-                  empty: "No priorities set",
-                  icon: <ListChecks className="h-4 w-4" aria-hidden="true" />,
-                  tone: "priority",
-                })}
-                <div className="md:col-span-2">
-                  {productStoryList({
-                    id: product.id + "-decisions",
-                    label: "Decisions",
-                    items: product.decisions,
-                    empty: "No decisions",
-                    icon: <FileText className="h-4 w-4" aria-hidden="true" />,
-                    tone: "decision",
-                  })}
-                </div>
-              </div>
-            </div>
-          </section>
-        );
-      })}
-    </div>
-  );
-}
-
 function selectedSlide(
   slides: readonly SectionSlideModel[],
   index: number,
@@ -366,7 +135,13 @@ function selectedSlide(
   return slides[Math.min(Math.max(index, 0), slides.length - 1)] ?? null;
 }
 
-function LeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
+function LeadSlideArticle({
+  slide,
+  heroControls,
+}: {
+  readonly slide: SectionSlideModel;
+  readonly heroControls?: ReactNode;
+}) {
   const productChips: ProductChipEntry[] = slide.productSlides
     .filter((p) => p.id !== "cross-product")
     .map((p) => ({
@@ -383,16 +158,23 @@ function LeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
     }));
 
   return (
-    <article className="slide-frame rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+    <article
+      className="slide-frame rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+      onClick={() => {
+        if (typeof document !== "undefined" && document.fullscreenElement) {
+          void document.exitFullscreen();
+        }
+      }}
+    >
       <div
         key={String(slide.pageIndex ?? 0)}
         className="animate-fade-in space-y-5"
       >
-        <LeadSlideHero slide={slide} />
+        <LeadSlideHero slide={slide} heroControls={heroControls} />
         {productChips.length > 1 ? (
           <SlideProductChips products={productChips} />
         ) : null}
-        <ProductSdlcGroups products={slide.productSlides} />
+        <LeadUnifiedSlide model={buildUnifiedSlideModel(slide)} />
       </div>
     </article>
   );
@@ -427,11 +209,14 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
                   : "No products assigned"}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {metricLabel(slide.currentCount, "Current")}
-              {metricLabel(slide.nextCount, "Next")}
-              {metricLabel(slide.riskCount, "Risks")}
-              {metricLabel(slide.priorityCount, "Priority")}
+            <div className="flex flex-col items-end gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {metricLabel(slide.currentCount, "Current")}
+                {metricLabel(slide.nextCount, "Next")}
+                {metricLabel(slide.riskCount, "Risks")}
+                {metricLabel(slide.priorityCount, "Priority")}
+              </div>
+              <AgentReviewComingSoon />
             </div>
           </div>
 
@@ -460,13 +245,6 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
               {textList(slide.risks, "No risks raised")}
             </section>
 
-            <section className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase text-[var(--color-starbucks-gold)]">
-                <ListChecks className="h-4 w-4" aria-hidden="true" />
-                Top priorities
-              </div>
-              {textList(slide.priorities, "No priorities set")}
-            </section>
           </div>
 
           {slide.decisions.length > 0 ? (
@@ -530,6 +308,7 @@ export function StatusSlideDeck({
   hideSourceLink = false,
   mode,
   toolbar,
+  heroControls,
   showChrome = true,
 }: StatusSlideDeckProps) {
   const slide = selectedSlide(slides, selectedIndex);
@@ -591,7 +370,7 @@ export function StatusSlideDeck({
         </header>
       ) : null}
 
-      {showChrome && toolbar ? <div>{toolbar}</div> : null}
+      {toolbar ? <div>{toolbar}</div> : null}
 
       {!slide ? (
         <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-16 text-center">
@@ -690,7 +469,7 @@ export function StatusSlideDeck({
             ) : null}
 
             {isLead ? (
-              <LeadSlideArticle slide={slide} />
+              <LeadSlideArticle slide={slide} heroControls={heroControls} />
             ) : (
               <HeadSlideArticle slide={slide} />
             )}

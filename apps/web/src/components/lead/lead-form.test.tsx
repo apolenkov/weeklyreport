@@ -288,6 +288,14 @@ function buildHarness(
         }),
         pathFilter: () => ({ queryKey: ["leadForm.crossAuthorSections"] }),
       },
+      // F3.4: snapshot viewer — returns null (no snapshot loaded in unit tests).
+      getVersion: {
+        queryOptions: () => ({
+          queryKey: ["leadForm.getVersion"],
+          queryFn: async () => null,
+        }),
+        pathFilter: () => ({ queryKey: ["leadForm.getVersion"] }),
+      },
     },
     ai: {
       // Phase 31 (AI-03): OnTrackIcon is mounted in SdlcPipeline; provide a
@@ -408,7 +416,7 @@ describe("LeadForm mutation wiring", () => {
       const label = b.getAttribute("aria-label") ?? "";
       return (
         /^(Planning|Analysis|Design|Dev|Testing|DevOps|Support):/.test(label) &&
-        !(b as HTMLButtonElement).disabled
+        b.getAttribute("aria-disabled") !== "true"
       );
     }) as HTMLButtonElement | undefined;
     expect(editableChip).toBeDefined();
@@ -520,7 +528,7 @@ describe("LeadForm mutation wiring", () => {
       const label = b.getAttribute("aria-label") ?? "";
       return (
         /^(Planning|Analysis|Design|Dev|Testing|DevOps|Support):/.test(label) &&
-        !(b as HTMLButtonElement).disabled
+        b.getAttribute("aria-disabled") !== "true"
       );
     }) as HTMLButtonElement | undefined;
     expect(editableChip).toBeDefined();
@@ -650,41 +658,6 @@ describe("LeadForm mutation wiring", () => {
       screen.getByRole("dialog", { name: "Version history" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Restore$/ })).toBeNull();
-  });
-
-  it("Save Version button: clicking fires leadForm.createSnapshot with the active sectionId", async () => {
-    const { Wrapper, calls } = buildHarness({
-      versions: [
-        {
-          id: "v1",
-          reportSectionId: SECTION_ID,
-          version: 1,
-          createdAt: new Date("2026-04-19T10:00:00Z"),
-        },
-      ],
-    });
-    render(
-      <Wrapper>
-        <LeadForm />
-      </Wrapper>,
-    );
-    await act(async () => {
-      await flushAll();
-    });
-
-    const saveBtn = screen.getByRole("button", { name: /^Save Version$/ });
-    act(() => {
-      saveBtn.click();
-    });
-    await act(async () => {
-      await flushAll();
-    });
-
-    const snapshotCalls = calls.filter((c) => c.type === "createSnapshot");
-    expect(snapshotCalls).toHaveLength(1);
-    expect(snapshotCalls[0]?.vars).toMatchObject({
-      reportSectionId: SECTION_ID,
-    });
   });
 
   it("submitted-section action: Lead sees Request Reopen, not Revoke", async () => {

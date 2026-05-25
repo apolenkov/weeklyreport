@@ -170,7 +170,6 @@ describe("mapWeeklyReport", () => {
             },
           ],
           decisions: [],
-          priorities: [],
         },
         {
           reportSectionId: SECTION_B,
@@ -199,7 +198,6 @@ describe("mapWeeklyReport", () => {
           ],
           risks: [],
           decisions: [],
-          priorities: [],
         },
       ],
     });
@@ -299,7 +297,6 @@ describe("mapWeeklyReport", () => {
             },
           ],
           decisions: [],
-          priorities: [],
         },
       ],
     });
@@ -347,7 +344,6 @@ describe("mapWeeklyReport", () => {
             },
           ],
           decisions: [],
-          priorities: [],
         },
       ],
     });
@@ -407,7 +403,18 @@ describe("mapWeeklyReport", () => {
           projects: [
             { projectId: PROJECT_A, projectName: "CRM", trafficLight: "green" },
           ],
-          items: [],
+          items: [
+            {
+              id: "i1",
+              projectId: PROJECT_A,
+              type: "current",
+              text: "Ship OAuth",
+              tag: "feature",
+              workflowStatus: "in_progress",
+              carriedOver: false,
+              priorityRank: 1,
+            },
+          ],
           risks: [],
           decisions: [
             {
@@ -417,7 +424,6 @@ describe("mapWeeklyReport", () => {
               impact: "Caching",
             },
           ],
-          priorities: [{ id: "p1", rank: 1, text: "Ship OAuth" }],
         },
       ],
     });
@@ -466,7 +472,18 @@ describe("mapWeeklyReport", () => {
               trafficLight: "yellow",
             },
           ],
-          items: [],
+          items: [
+            {
+              id: "i1",
+              projectId: PROJECT_B,
+              type: "current",
+              text: "Stabilize Billing jobs",
+              tag: "feature",
+              workflowStatus: "in_progress",
+              carriedOver: false,
+              priorityRank: 1,
+            },
+          ],
           risks: [],
           decisions: [
             {
@@ -474,14 +491,6 @@ describe("mapWeeklyReport", () => {
               text: "Approve Billing migration",
               owner: "Head",
               impact: "Payment rollout",
-              productId: PROJECT_B,
-            },
-          ],
-          priorities: [
-            {
-              id: "p1",
-              rank: 1,
-              text: "Stabilize Billing jobs",
               productId: PROJECT_B,
             },
           ],

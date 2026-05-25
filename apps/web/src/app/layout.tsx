@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { AgentationDevtools } from "../components/agentation-devtools";
+import { WebVitalsReporter } from "../components/web-vitals-reporter";
 import { QueryErrorBoundary } from "../components/error-boundary";
 import { TRPCProvider } from "../lib/trpc-provider";
 import { getOrgPublic } from "../lib/server/get-org-public";
@@ -10,6 +12,18 @@ type RootLayoutProps = Readonly<{
   children: ReactNode;
 }>;
 
+// Vercel audit 2026-05-22: titles were blank on SSR (set later by a client
+// effect). Set them server-side via the Metadata API so the document title is
+// correct on first paint and shareable links resolve a real title.
+export async function generateMetadata(): Promise<Metadata> {
+  const org = await getOrgPublic();
+  const name = org?.fullName ?? "CustomReport";
+  return {
+    title: { default: name, template: `%s · ${name}` },
+    description: "Weekly status reporting for a software department.",
+  };
+}
+
 export default async function RootLayout({ children }: RootLayoutProps) {
   // UFB-070: pre-fetch org identity server-side so the landing page can read
   // it from a <script> tag on first paint — eliminates the "ORG" flash.
@@ -18,6 +32,12 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* TODO(VERCEL-FONT): migrate the three Google families to
+            next/font/google for self-hosting (drops the render-blocking
+            external stylesheet + adds size-adjust fallback metrics for lower
+            CLS). Deferred: touches the --font-* CSS token system and needs a
+            visual sign-off pass, so it is held behind the theme/visual gate.
+            Current preconnect + display=swap is an acceptable interim. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
@@ -45,6 +65,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         <TRPCProvider>
           <QueryErrorBoundary>{children}</QueryErrorBoundary>
         </TRPCProvider>
+        <WebVitalsReporter />
         <AgentationDevtools />
       </body>
     </html>
