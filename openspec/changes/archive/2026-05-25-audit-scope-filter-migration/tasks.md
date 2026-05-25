@@ -36,7 +36,7 @@
       confirms throws on undefined, passes on any defined session (admin, head).
       `group-scope.test.ts` 929/929 tests pass.
 - [x] SCOPE-T6: Commit — `security: add scope-access audit + defensive
-  guards to report repository`.
+guards to report repository`.
 
 ## Verification
 
