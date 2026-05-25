@@ -16,6 +16,6 @@
 - [ ] T7: Add integration tests — mock provider, test summarize/generate flows,
       verify error handling
 - [ ] T8: Commit — `feat(ai): activate real provider adapter (Phase 54
-    completion)`
+  completion)`
 - [ ] T-V: Verification — `pnpm typecheck`, `pnpm lint`, `pnpm test` all pass;
       manual test generation endpoint with mock/real provider

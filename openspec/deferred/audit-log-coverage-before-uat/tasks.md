@@ -4,7 +4,7 @@
       IE/cache/index edge cases: section autosave, item mutations, risk updates,
       report publish
 - [ ] T2: Audit current logging — run `grep -r "logger\|console\|AppLogger"
-    apps/api/src` and identify which critical paths have log statements
+  apps/api/src` and identify which critical paths have log statements
 - [ ] T3: Document coverage gaps — create a table with path name, current log
       coverage (none/sparse/adequate), and proposed additions
 - [ ] T4: Propose targeted additions — suggest 3–5 strategic log points

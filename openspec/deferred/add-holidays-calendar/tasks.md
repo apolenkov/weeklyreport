@@ -12,6 +12,6 @@
       (e.g., deadline 5 business days away landing on a Monday after holiday
       Thursday)
 - [ ] T6: Commit — `feat(business-date): add holidays support to deadline
-    calculation`
+  calculation`
 - [ ] T-V: Verification — `pnpm typecheck`, `pnpm lint`, `pnpm test` all pass;
       business-date tests include holiday edge cases
