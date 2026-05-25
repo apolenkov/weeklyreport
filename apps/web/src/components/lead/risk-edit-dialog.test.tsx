@@ -60,7 +60,7 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
     expect(screen.getByText(/Select at least one stage/i)).toBeInTheDocument();
   });
 
-  it("pre-selects only at-risk/blocked stages when opening create dialog", () => {
+  it("does NOT pre-select stages on create even when pipeline has flagged ones", () => {
     const onSave = vi.fn();
     const productsWithRiskyStage: Product[] = [
       {
@@ -86,22 +86,14 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
-      target: { value: "Critical outage" },
-    });
-    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
-      target: { value: "Work stopped" },
-    });
-    fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
-      target: { value: "Escalate" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+    // Phase 3.8: stage checkboxes start empty on create regardless of pipeline flags.
+    expect(screen.getByRole("checkbox", { name: "Dev" })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Testing" })).not.toBeChecked();
 
-    expect(onSave).toHaveBeenCalledTimes(1);
-    // Only "Dev" (blocked) should be pre-selected; "Testing" (on-track) must not.
-    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
-      stageIds: ["Dev"],
-    });
+    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+    // Required stage validation fires since no stages are selected.
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByText(/Select at least one stage/i)).toBeInTheDocument();
   });
 
   it("saves selected Blocked severity", () => {
@@ -194,8 +186,7 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
     expect(labels).toEqual(["Testing", "Support"]);
   });
 
-  it("pre-selects canonical stage when pipeline uses alias (Dev → Development)", () => {
-    const onSave = vi.fn();
+  it("does NOT pre-select stages on create when pipeline uses alias (Dev → Development)", () => {
     const productsWithAlias: Product[] = [
       {
         id: "p1",
@@ -213,29 +204,16 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
         open
         risk={null}
         products={productsWithAlias}
-        onSave={onSave}
+        onSave={vi.fn()}
         onCancel={() => undefined}
         defaultProductId="p1"
         stagesForProduct={() => ["Development", "Testing"]}
       />,
     );
 
-    fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
-      target: { value: "Outage" },
-    });
-    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
-      target: { value: "Down" },
-    });
-    fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
-      target: { value: "Fix" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
-
-    expect(onSave).toHaveBeenCalledTimes(1);
-    // "Dev" (seed) canonicalizes to "Development" (owned) — pre-select must match.
-    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
-      stageIds: ["Development"],
-    });
+    // Phase 3.8: stage checkboxes start empty on create regardless of pipeline aliases.
+    expect(screen.getByRole("checkbox", { name: "Development" })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Testing" })).not.toBeChecked();
   });
 
   it("renders context strip showing pre-selected stages from pipeline", () => {
@@ -265,7 +243,7 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
 
     // The context strip text contains both product name and stage/severity info.
     expect(
-      screen.getByText(/Pre-selected from SDLC pipeline/i),
+      screen.getByText(/Already flagged in SDLC pipeline/i),
     ).toBeInTheDocument();
     // Strip header mentions at least one flagged stage.
     expect(screen.getByText(/CRM →/)).toBeInTheDocument();
@@ -285,7 +263,7 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
     );
 
     expect(
-      screen.queryByText(/Pre-selected from SDLC pipeline/i),
+      screen.queryByText(/Already flagged in SDLC pipeline/i),
     ).not.toBeInTheDocument();
   });
 

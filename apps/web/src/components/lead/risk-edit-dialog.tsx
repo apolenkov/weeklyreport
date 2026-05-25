@@ -80,21 +80,17 @@ function deriveFromPreChecked(
 /** Computes which stage IDs to pre-select on dialog open. */
 function computeInitialStageIds(
   risk: RiskEntry | null,
-  isCreate: boolean,
-  seedProduct: Product | undefined,
-  ownedStages: readonly string[],
+  _isCreate: boolean,
+  _seedProduct: Product | undefined,
+  _ownedStages: readonly string[],
 ): string[] {
+  // Phase 3.8: pre-select stages only when editing an existing risk that
+  // already carries stageIds. On create — always empty; the user marks
+  // stages explicitly. Pipeline severity still drives the severity init
+  // (see deriveFromPreChecked) and the context strip still appears as a
+  // hint, but stage checkboxes start clean.
   if (risk?.stageIds) return [...risk.stageIds];
-  if (!isCreate) return [];
-  // Single-stage assignment: auto-select it (shown as "Applied automatically").
-  if (ownedStages.length === 1) return [...ownedStages];
-  // L5 fix: canonicalize both sides so "Dev" (seed) matches "Development" (owned).
-  const riskyStages = new Set<string>(
-    (seedProduct?.stages ?? [])
-      .filter((s) => s.status === "at-risk" || s.status === "blocked")
-      .map((s) => canonicalStageName(s.stageName)),
-  );
-  return ownedStages.filter((n) => riskyStages.has(canonicalStageName(n)));
+  return [];
 }
 
 export function RiskEditDialog({
@@ -219,11 +215,20 @@ export function RiskEditDialog({
     const t = text.trim();
     const im = impact.trim();
     const m = mitigation.trim();
+    // When exactly one stage is available and the UI shows it as
+    // "Applied automatically", treat it as implicitly selected so the
+    // lead can save without a manual click. (Phase 3.8: general create
+    // no longer pre-fills stageIds, but the single-stage UX stays frictionless.)
+    const availableStages = stagesForProduct?.(productId) ?? [];
+    const effectiveStageIds =
+      stageIds.length === 0 && availableStages.length === 1
+        ? [...availableStages]
+        : stageIds;
     const next: typeof errors = {};
     if (t.length === 0) next.text = "Risk description is required";
     if (im.length === 0) next.impact = "Impact is required";
     if (m.length === 0) next.mitigation = "Mitigation is required";
-    if (stageIds.length === 0)
+    if (effectiveStageIds.length === 0)
       next.stageIds = "Select at least one stage.";
     if (Object.keys(next).length > 0) {
       setErrors(next);
@@ -238,7 +243,7 @@ export function RiskEditDialog({
       id: risk?.id ?? crypto.randomUUID(),
       productId: product.id,
       productName: product.name,
-      stageIds,
+      stageIds: effectiveStageIds,
       severity,
       text: t,
       impact: im,
@@ -293,7 +298,7 @@ export function RiskEditDialog({
                 .join(" · ")}
             </div>
             <div className="mt-0.5 text-[11px] text-amber-700">
-              Pre-selected from SDLC pipeline. Adjust below if needed.
+              Already flagged in SDLC pipeline.
             </div>
           </div>
         )}
