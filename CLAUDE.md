@@ -12,14 +12,16 @@ Codex repo overlay.
 Use current files instead of memory:
 
 - `README.md` - architecture, setup, dev login URLs, verification commands.
-- `.planning/STATE.md` - current milestone status and deferred scope.
-- `.planning/HANDOFF.json` - paused work, blockers, dirty-file warnings.
-- `.planning/codebase/CONVENTIONS.md` - detailed naming and TypeScript rules.
+- `openspec/changes/` - active backlog (run `openspec list`).
+- `openspec/specs/` - 5 durable invariants (destructive-db-guard,
+  deferred-feature-pattern, role-coverage-gate, period-dual-state,
+  ai-module-facade).
+- `openspec/config.yaml` - project context + change-lifecycle rules.
 - `.env.example`, `.env.test.example`, `apps/web/.env.example` - runtime
   switches and port assumptions.
 
-Do not paste generated research dumps here. Planning/research sources belong in
-`.planning/**`; repo setup belongs in `README.md`.
+Do not paste generated research dumps here. Active work lives in `openspec/`;
+historical context is recoverable via `git log`.
 
 ## Project Snapshot
 
@@ -35,17 +37,13 @@ customreport
 +-- packages/ui     # shadcn/ui and Tailwind tokens
 +-- prisma          # schema, migrations, seeds, destructive guards
 +-- scripts         # repo helpers and push/local verification guards
-+-- tools           # UAT extraction and generation tools
-+-- .planning       # GSD state, phase evidence, handoffs, research
++-- tools           # UAT extraction, generation tools, accumulated-work-audit
++-- openspec        # active backlog (changes/) + durable contracts (specs/)
 ```
 
-Current default branch of work is `fix/PRJ-2/uat-v7-2026-05-12`. Before
-continuing or closing work, check `git status --short --branch`,
-`.planning/STATE.md`, and `.planning/HANDOFF.json`.
-
-There are often pre-existing dirty regression evidence files during PRJ-2/UAT
-work. Do not stage, revert, or normalize unrelated dirty files unless the task
-explicitly owns them.
+Active branch for ongoing work is `chore/PRJ-2/openspec-consolidation`
+(rebased on `main`). Run `git status --short --branch` and `openspec list`
+to see current state.
 
 ## Commands
 
@@ -151,8 +149,8 @@ Dark mode, background changes, rebrand, and theme switching are research-only
 unless the user explicitly chooses a concrete direction. Screenshots and
 research memos are allowed; CSS token/theme/background implementation is not.
 
-Relevant current todo:
-`.planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md`.
+The deferred change `openspec/changes/deferred/enable-theme-switch/` tracks
+this — activation requires explicit user sign-off.
 
 ### Director Scope
 
@@ -161,13 +159,15 @@ reopened. Director-facing UAT currently goes through the viewer read-only path.
 
 ### Planning And Evidence
 
-- For phase/milestone execution, use GSD and keep `.planning` state in sync;
-  small explicit repo-doc edits can stay direct when verified.
-- Planning edits under `.planning/**` must pass `pnpm lint:md`.
-- Preserve historical phase evidence; do not flatten superseded plans unless
-  the user asks for consolidation.
-- For resume/closeout, prefer `.planning/HANDOFF.json`,
-  `.planning/STATE.md`, and recent `.planning/reports/**` over chat memory.
+- Active backlog and proposals live in `openspec/changes/`. Use
+  `openspec list` to see what's open, `openspec change new <slug>` to add.
+- Deferred work sits in `openspec/changes/deferred/` with an
+  `## Activation trigger` section in each proposal.
+- Durable contracts (invariants) live in `openspec/specs/`. Modify via
+  delta-specs inside a change, never directly.
+- Openspec markdown still passes `pnpm lint:md`.
+- For resume/closeout, prefer `openspec list` + `git log` + recent commits
+  on the active branch over chat memory.
 
 ### Branch Hygiene
 
@@ -208,12 +208,9 @@ branch in the same session.
 - For product/group/report-period behavior, inspect existing tests before
   changing query semantics; this area has had regression-heavy UAT work.
 
-## Graphify
+## Mental Map
 
-This repo has `graphify-out/GRAPH_REPORT.md` and `graphify-out/graph.json`.
-For broad architecture questions, read the graph report before raw-file
-scanning. If code files are modified and `graphify` is available, run:
-
-```bash
-graphify update .
-```
+For broad architecture questions, read `apps/api/src/app.module.ts` +
+`apps/web/src/app/` route tree + `prisma/schema.prisma`. If a fresh
+dependency graph is genuinely needed, regenerate via `graphify update .`
+locally — don't commit the output, treat it as a one-shot artifact.
