@@ -1436,7 +1436,7 @@ async function main() {
         workflowStatus: it.status,
         carriedOver: it.carriedOver ?? false,
         completed: it.completed ?? false,
-        stageName: stageFor(idx),
+        stageNames: [stageFor(idx)],
         priorityRank: idx < content.priorities.length ? idx + 1 : null,
       })),
       ...content.nextItems.map((it, idx) => ({
@@ -1450,7 +1450,7 @@ async function main() {
         workflowStatus: ItemWorkflowStatus.in_progress,
         carriedOver: false,
         completed: false,
-        stageName: stageFor(idx + 100),
+        stageNames: [stageFor(idx + 100)],
       })),
     ];
     await prisma.item.createMany({ data: itemRows });
@@ -1464,7 +1464,7 @@ async function main() {
           risk: content.risk.risk,
           impact: content.risk.impact,
           mitigation: content.risk.mitigation,
-          stageName: stageFor(0),
+          stageNames: [stageFor(0)],
         },
       });
     }
@@ -1481,7 +1481,7 @@ async function main() {
         owner: lead.label,
         impact: d.impact,
         deadline: d.deadline ?? null,
-        stageName: stageFor(dIdx),
+        stageNames: [stageFor(dIdx)],
       })),
     });
 
@@ -1513,7 +1513,7 @@ async function main() {
       workflowStatus: ItemWorkflowStatus.in_progress,
       carriedOver: false,
       completed: false,
-      stageName: "Planning",
+      stageNames: ["Planning"],
     },
   });
   await prisma.risk.create({
@@ -1525,7 +1525,7 @@ async function main() {
       impact: "Деградация дашборда для отдела продаж",
       mitigation: "PM эскалирует задачу на инфра-команду",
       severity: "at-risk",
-      stageName: "Planning",
+      stageNames: ["Planning"],
     },
   });
   // Boris PROD_CRM — CW + NW items (already seeded), Risk, Decision, Priority.
@@ -1542,7 +1542,7 @@ async function main() {
         workflowStatus: ItemWorkflowStatus.in_progress,
         carriedOver: false,
         completed: false,
-        stageName: "Planning",
+        stageNames: ["Planning"],
         priorityRank: 1,
       },
       {
@@ -1555,7 +1555,7 @@ async function main() {
         workflowStatus: ItemWorkflowStatus.in_progress,
         carriedOver: false,
         completed: false,
-        stageName: "Planning",
+        stageNames: ["Planning"],
       },
     ],
   });
@@ -1568,7 +1568,7 @@ async function main() {
       impact: "Задержка Design-спринта на 1 неделю",
       mitigation: "PM фасилитирует воркшоп с заказчиком до пятницы",
       severity: "at-risk",
-      stageName: "Planning",
+      stageNames: ["Planning"],
     },
   });
   await prisma.decision.create({
@@ -1579,7 +1579,7 @@ async function main() {
       text: "Утвердить структуру аналитического API до начала разработки",
       owner: "Борис С.",
       impact: "Позволяет Design-команде начать прототипирование немедленно",
-      stageName: "Planning",
+      stageNames: ["Planning"],
     },
   });
   // Victor (LEAD_CLOUD_PM) owns Analysis on PROD_CRM (section 408).
@@ -1597,7 +1597,7 @@ async function main() {
         workflowStatus: ItemWorkflowStatus.in_progress,
         carriedOver: false,
         completed: false,
-        stageName: "Analysis",
+        stageNames: ["Analysis"],
         priorityRank: 1,
       },
       {
@@ -1610,7 +1610,7 @@ async function main() {
         workflowStatus: ItemWorkflowStatus.in_progress,
         carriedOver: false,
         completed: false,
-        stageName: "Analysis",
+        stageNames: ["Analysis"],
       },
     ],
   });
@@ -1623,7 +1623,7 @@ async function main() {
       impact: "Задержка старта Dev-фазы на 2 недели",
       mitigation: "Виктор организует межкомандный воркшоп по схеме данных",
       severity: "blocked",
-      stageName: "Analysis",
+      stageNames: ["Analysis"],
     },
   });
   await prisma.decision.create({
@@ -1634,7 +1634,7 @@ async function main() {
       text: "Использовать GraphQL вместо REST для аналитического слоя",
       owner: "Виктор Л.",
       impact: "Единая точка доступа, меньше over-fetching",
-      stageName: "Analysis",
+      stageNames: ["Analysis"],
     },
   });
   // Galina (LEAD_DEVOPS_PM) owns Design on PROD_CRM (section 409).
@@ -1652,7 +1652,7 @@ async function main() {
         workflowStatus: ItemWorkflowStatus.in_progress,
         carriedOver: false,
         completed: false,
-        stageName: "Design",
+        stageNames: ["Design"],
         priorityRank: 1,
       },
       {
@@ -1665,7 +1665,7 @@ async function main() {
         workflowStatus: ItemWorkflowStatus.in_progress,
         carriedOver: false,
         completed: false,
-        stageName: "Design",
+        stageNames: ["Design"],
       },
     ],
   });
@@ -1678,7 +1678,7 @@ async function main() {
       impact: "Переработка компонентов на этапе Dev",
       mitigation: "Галина организует review с Boris и стейкхолдерами",
       severity: "at-risk",
-      stageName: "Design",
+      stageNames: ["Design"],
     },
   });
   await prisma.decision.create({
@@ -1689,7 +1689,7 @@ async function main() {
       text: "Принять Material Design 3 как базовую дизайн-систему для портала",
       owner: "Галина М.",
       impact: "Ускоряет разработку компонентов на 30%",
-      stageName: "Design",
+      stageNames: ["Design"],
     },
   });
   console.log(
@@ -1836,7 +1836,7 @@ async function main() {
             workflowStatus: ItemWorkflowStatus.done,
             carriedOver: false,
             completed: true,
-            stageName: "Development",
+            stageNames: ["Development"],
             priorityRank: 1,
             createdAt,
             updatedAt: submittedAt,
@@ -1851,7 +1851,7 @@ async function main() {
             workflowStatus: ItemWorkflowStatus.done,
             carriedOver: false,
             completed: true,
-            stageName: "Development",
+            stageNames: ["Development"],
             createdAt,
             updatedAt: submittedAt,
           },
