@@ -148,7 +148,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               workflowStatus: i.workflowStatus,
               carriedOver: false,
               completed: i.completed ?? null,
-              stageName: i.stageName ?? null,
+              stageNames: i.stageNames,
             })),
           });
           copiedItems += source.items.length;
@@ -164,7 +164,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               impact: r.impact,
               mitigation: r.mitigation,
               severity: r.severity,
-              stageName: r.stageName ?? null,
+              stageNames: r.stageNames,
             })),
           });
           copiedItems += source.risks.length;
@@ -181,7 +181,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               deadline: d.deadline ?? null,
               impact: d.impact,
               resolvedAt: d.resolvedAt ?? null,
-              stageName: d.stageName ?? null,
+              stageNames: d.stageNames,
               productId: d.productId as string,
             })),
           });
@@ -254,6 +254,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         priorityRank?: number | null;
         stageName?: string | null;
         stageIds?: string[];
+        stageNames?: string[];
       }>;
       risks: Array<{
         projectId: string;
@@ -263,6 +264,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         severity?: string | null;
         stageName?: string | null;
         stageIds?: string[];
+        stageNames?: string[];
       }>;
       decisions: Array<{
         text: string;
@@ -272,6 +274,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         resolvedAt: string | null;
         stageName?: string | null;
         stageIds?: string[];
+        stageNames?: string[];
         productId?: string | null;
       }>;
       stageStatuses?: Array<{
@@ -310,7 +313,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               carriedOver: i.carriedOver,
               completed: i.completed ?? null,
               priorityRank: i.priorityRank ?? null,
-              stageName: i.stageIds?.join(", ") ?? i.stageName ?? null,
+              stageNames: i.stageNames ?? i.stageIds ?? (i.stageName ? [i.stageName] : []),
             })),
           });
         }
@@ -324,7 +327,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               impact: r.impact,
               mitigation: r.mitigation,
               severity: r.severity ?? "at-risk",
-              stageName: r.stageIds?.join(", ") ?? r.stageName ?? null,
+              stageNames: r.stageNames ?? r.stageIds ?? (r.stageName ? [r.stageName] : []),
             })),
           });
         }
@@ -339,7 +342,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               deadline: d.deadline ? new Date(d.deadline) : null,
               impact: d.impact,
               resolvedAt: d.resolvedAt ? new Date(d.resolvedAt) : null,
-              stageName: d.stageIds?.join(", ") ?? d.stageName ?? null,
+              stageNames: d.stageNames ?? d.stageIds ?? (d.stageName ? [d.stageName] : []),
               productId: d.productId as string,
             })),
           });
@@ -393,7 +396,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         carriedOver: i.carriedOver,
         completed: i.completed ?? null,
         priorityRank: i.priorityRank ?? null,
-        stageName: i.stageName ?? null,
+        stageNames: i.stageNames,
       })),
       risks: section.risks.map((r) => ({
         projectId: r.projectId,
@@ -401,7 +404,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         impact: r.impact,
         mitigation: r.mitigation,
         severity: r.severity,
-        stageName: r.stageName ?? null,
+        stageNames: r.stageNames,
       })),
       decisions: section.decisions.map((d) => ({
         text: d.text,
@@ -409,7 +412,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         deadline: d.deadline?.toISOString() ?? null,
         impact: d.impact,
         resolvedAt: d.resolvedAt?.toISOString() ?? null,
-        stageName: d.stageName ?? null,
+        stageNames: d.stageNames,
         productId: d.productId,
       })),
       // F3.3: include stage statuses so version viewer can restore chip colors.
@@ -719,7 +722,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
             carriedOver: true,
             completed: true,
             priorityRank: true,
-            stageName: true,
+            stageNames: true,
           },
         },
         risks: {
@@ -730,7 +733,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
             impact: true,
             mitigation: true,
             severity: true,
-            stageName: true,
+            stageNames: true,
           },
         },
         decisions: {
@@ -742,7 +745,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
             deadline: true,
             impact: true,
             resolvedAt: true,
-            stageName: true,
+            stageNames: true,
           },
         },
       },
@@ -761,10 +764,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         authorName: authorEntry.authorName,
         sharedProductIds: [...sharedIds],
         items: section.items.filter((i) => sharedIds.has(i.projectId)),
-        // TODO(STAGE-CROSS-AUTHOR-MULTI): risks carry scalar stageName (comma-joined
-        // from DB), not stageIds[]. A multi-stage risk "Testing, DevOps" won't match
-        // individual stages in the cross-author chip path. Mine-path uses stageIds[]
-        // membership (split in report-sections.prisma-repository.ts) instead.
         risks: section.risks.filter((r) => sharedIds.has(r.projectId)),
         decisions: section.decisions.filter((d) => sharedIds.has(d.productId)),
       });

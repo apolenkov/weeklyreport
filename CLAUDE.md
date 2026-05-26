@@ -11,14 +11,12 @@ Codex repo overlay.
 
 Use current files instead of memory:
 
-- `README.md` - architecture, setup, dev login URLs, verification commands.
 - `openspec/changes/` - active backlog (run `openspec list`).
 - `openspec/specs/` - 5 durable invariants (destructive-db-guard,
   deferred-feature-pattern, role-coverage-gate, period-dual-state,
   ai-module-facade).
 - `openspec/config.yaml` - project context + change-lifecycle rules.
-- `.env.example`, `.env.test.example`, `apps/web/.env.example` - runtime
-  switches and port assumptions.
+- `.env.example`, `.env.test.example` - runtime switches and port assumptions.
 
 Do not paste generated research dumps here. Active work lives in `openspec/`;
 historical context is recoverable via `git log`.
@@ -36,12 +34,10 @@ customreport
 +-- packages/shared # Zod schemas, types, shared contracts
 +-- packages/ui     # shadcn/ui and Tailwind tokens
 +-- prisma          # schema, migrations, seeds, destructive guards
-+-- scripts         # repo helpers and push/local verification guards
-+-- tools           # UAT extraction, generation tools, accumulated-work-audit
 +-- openspec        # active backlog (changes/) + durable contracts (specs/)
 ```
 
-Active branch for ongoing work is `chore/PRJ-2/openspec-consolidation`
+Active branch for ongoing work is `feat/PRJ-2/stage-refactor`
 (rebased on `main`). Run `git status --short --branch` and `openspec list`
 to see current state.
 
@@ -62,7 +58,6 @@ pnpm typecheck
 pnpm lint
 pnpm test
 pnpm build
-pnpm docker:local:verify
 ```
 
 Planning docs:

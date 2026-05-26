@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { UserSession } from "@customreport/shared";
 
-import { groupScopeFilter } from "./group-scope.js";
+import { groupScopeFilter, guardGroupScope } from "./group-scope.js";
 
 const GROUP_A = "a0000000-0000-4000-8000-000000000a01";
 const GROUP_B = "a0000000-0000-4000-8000-000000000a02";
@@ -198,5 +198,21 @@ describe("groupScopeFilter", () => {
         }),
       ).toEqual({ author: { reportingGroupId: { in: [GROUP_A] } } });
     });
+  });
+});
+
+describe("guardGroupScope", () => {
+  it("does not throw when session is defined", () => {
+    expect(() => guardGroupScope(session("head"))).not.toThrow();
+  });
+
+  it("does not throw for admin session", () => {
+    expect(() => guardGroupScope(session("admin"))).not.toThrow();
+  });
+
+  it("throws when session is undefined", () => {
+    expect(() => guardGroupScope(undefined)).toThrow(
+      "[BUG] Repository query called without a scope session",
+    );
   });
 });

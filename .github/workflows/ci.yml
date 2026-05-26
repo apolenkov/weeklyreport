@@ -75,6 +75,9 @@ jobs:
       - name: Lint
         run: pnpm turbo lint
 
+      - name: Prisma script typecheck
+        run: pnpm lint:prisma:typecheck
+
       - name: Typecheck
         run: pnpm turbo typecheck
 
@@ -190,7 +193,7 @@ jobs:
         run: pnpm turbo build --filter=@customreport/shared --filter=@customreport/ui
 
       - name: Run E2E tests
-        run: pnpm exec playwright test --config=apps/web/playwright.config.ts
+        run: pnpm exec playwright test --config=e2e/playwright.config.ts
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
@@ -207,22 +210,6 @@ jobs:
           name: test-results
           path: test-results/
           retention-days: 14
-
-      # 34-07: per-spec flaky-rate metric (passed-on-retry / total).
-      # Doesn't fail the build — just surfaces the trend.
-      - name: Compute flaky-rate metric
-        if: ${{ !cancelled() }}
-        run: node scripts/flaky-rate.mjs
-
-      - name: Upload flaky-rate metric
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: flaky-rate
-          path: |
-            apps/web/e2e/.results/flaky-rate.md
-            apps/web/e2e/.results/flaky-rate.json
-          retention-days: 30
 
   # ------------------------------------------------------------------
   # Job 2b: Prisma migrate-reset gate (34-04)
@@ -370,7 +357,7 @@ jobs:
         run: pnpm turbo build --filter=@customreport/shared --filter=@customreport/ui
 
       - name: Run visual regression tests
-        run: pnpm --filter @customreport/web exec playwright test --project=visual
+        run: pnpm exec playwright test --project=visual --config=e2e/playwright.config.ts
 
       - name: Upload visual diff artefacts
         if: ${{ failure() }}

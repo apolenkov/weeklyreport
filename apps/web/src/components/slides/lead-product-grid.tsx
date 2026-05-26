@@ -88,7 +88,7 @@ function ProductCard({ product }: { product: SlideProduct }) {
       </div>
 
       {product.risks.length > 0 || product.decisions.length > 0 ? (
-        <div className="flex flex-wrap gap-3 border-t border-[rgba(0,0,0,0.06)] pt-2">
+        <div className="mt-auto flex flex-wrap gap-3 border-t border-[rgba(0,0,0,0.06)] pt-2">
           {product.risks.length > 0 ? (
             <span className="inline-flex items-center gap-1 text-xs text-[var(--color-destructive)]">
               <AlertTriangle className="h-3 w-3" aria-hidden="true" />

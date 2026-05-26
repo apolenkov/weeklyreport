@@ -30,27 +30,11 @@ export type MockGroup = {
 
 export const DEFAULT_GROUP_ID = "g1";
 
-export type StageName =
-  | "Planning"
-  | "Analysis"
-  | "Design"
-  | "Development"
-  | "Testing"
-  | "DevOps"
-  | "Support";
-
-export const STAGE_NAMES: StageName[] = [
-  "Planning",
-  "Analysis",
-  "Design",
-  "Development",
-  "Testing",
-  "DevOps",
-  "Support",
-];
+export type { StageName } from "@customreport/shared";
+export { STAGE_NAMES } from "@customreport/shared";
 
 export type StageAssignment = {
-  stage: StageName;
+  stage: import("@customreport/shared").StageName;
   assigneeId: string | null;
 };
 

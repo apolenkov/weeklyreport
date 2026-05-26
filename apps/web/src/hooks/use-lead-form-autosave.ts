@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { useTRPC } from "../lib/trpc-context";
+import { invalidateLeadForm } from "../lib/cache-keys";
 
 import type { DraftSavePayload } from "@customreport/shared";
 
@@ -85,6 +86,7 @@ export function useLeadFormAutosave(
   const initialSavedKey = args.initialSavedKey ?? null;
 
   const trpc = useTRPC();
+  const qc = useQueryClient();
 
   const [state, setState] = useState<AutosaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -123,9 +125,7 @@ export function useLeadFormAutosave(
         setState("saved");
         setLastSavedAt(new Date());
         onSaveSuccessRef.current?.();
-        // TODO(v8.5-D-multitab): call invalidateLeadForm(qc, trpc, {reportSectionId})
-        // here so other browser tabs see the fresh draft without waiting for
-        // window focus. Also set staleTime: 30_000 in byPeriod query (plan 15.6 D1).
+        invalidateLeadForm(qc, trpc);
 
         // Fire queued save if one was requested during in-flight.
         if (queuedKeyRef.current !== null) {

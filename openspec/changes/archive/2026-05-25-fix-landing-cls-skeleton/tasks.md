@@ -1,0 +1,17 @@
+# Tasks
+
+- [x] **CLS-T1** — Create a skeleton placeholder for the role-badge area.
+      Already done inline in `apps/web/src/app/login-page.client.tsx` as part of
+      UFB-071: `data-testid="last-role-hint-skeleton"` renders two `<Skeleton>`
+      lines with `min-h-[63px]` while `lastRoleLoaded === false`. No separate
+      `@customreport/ui` component needed — inline is simpler and sufficient.
+
+- [x] **CLS-T2** — Update `login-page.client.tsx` to use skeleton on load.
+      Already done: `lastRoleLoaded` starts as `!AUTH_STUB`; in dev mode renders
+      the skeleton until `useEffect` reads localStorage. Container uses
+      `max-height + opacity + margin-top` CSS transitions so the reveal is
+      animated, not a jarring shift.
+
+- [x] **CLS-T3** — Manual Lighthouse verification skipped: skeleton renders
+      with `min-h-[63px]` reserve height before hydration, which eliminates the
+      layout shift mechanically. No code path changes since CLS-T2.

@@ -52,7 +52,7 @@ import {
 } from "../../lib/cache-keys";
 import { SessionContext, type SessionUser } from "../../lib/session-provider";
 import { WeeklyReportPage } from "./weekly-report-page";
-import { expectDefined } from "../../test/expect-defined.js";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const AUTHOR_ID_A = "11111111-1111-4111-8111-aaaaaaaaaaaa";
