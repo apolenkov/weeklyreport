@@ -8,7 +8,7 @@ context: |
   publishes, and exports a unified PDF report.
 
   Current shipped baseline: v8.2 (2026-05-18). Active work: v8.4 versioning
-  UX + stage/save toolbar polish on branch `fix/PRJ-2/save-disc`.
+  UX + stage/save toolbar polish.
 
   # Stack
   - Monorepo: pnpm 10.11 workspaces + Turborepo 2.5
@@ -31,9 +31,6 @@ context: |
   packages/ui      — shadcn/ui + composition components (`@customreport/ui`)
   prisma/          — schema, migrations (append-only), seeds, destructive
                      guard
-  .planning/       — historical roadmap, phases, retros, research; NOT
-                     openspec specs
-  graphify-out/    — repo knowledge graph (`GRAPH_REPORT.md`, `graph.json`)
 
   # Roles
   - lead    — fills own report section (items, risks, decisions, priorities,
@@ -83,15 +80,11 @@ context: |
 
   # Quality gates (must stay green)
   pnpm typecheck && pnpm lint && pnpm test && pnpm build
-  Planning + openspec markdown: pnpm lint:md
-  Local Docker verify: pnpm docker:local:verify
+  OpenSpec markdown: pnpm lint:md
 
   # Sources of truth (read before proposing)
-  - `.planning/codebase/CODEBASE-MAP-2026-05-25.md` — durable mental map
-  - `.planning/codebase/STACK.md`, `CONVENTIONS.md`, `ARCHITECTURE.md`
   - `prisma/schema.prisma` — current data model
   - `packages/shared/src/schemas/` — canonical Zod schemas
-  - `graphify-out/GRAPH_REPORT.md` — cross-file dependency view
 
 rules:
   proposal:
