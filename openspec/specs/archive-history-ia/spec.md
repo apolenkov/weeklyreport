@@ -1,9 +1,17 @@
+# Archive and History Information Architecture
+
 ## Purpose
 
 Define the information architecture invariant that separates "History"
 (snapshots within the current report) from "Archive" (past closed
 reports). Ensures leads are never confused about where to find version
 snapshots vs. previous periods.
+
+Consumer surfaces: `ReportToolbar` in
+`apps/web/src/components/weekly-report/report-toolbar.tsx` (History entry
+point), `ArchiveToggle` in
+`apps/web/src/components/weekly-report/archive-toggle.tsx` (Archive entry
+point).
 
 ## Requirements
 
@@ -38,9 +46,9 @@ requiring the user to click into either.
 #### Scenario: User hovers over History
 
 - **WHEN** the user hovers over (or focuses) the History control
-- **THEN** a tooltip or aria-label reading approximately "Snapshots and edits within this report" is announced
+- **THEN** a tooltip or aria-label reading "Snapshots and edits within this report" is announced
 
 #### Scenario: User hovers over Archive
 
 - **WHEN** the user hovers over (or focuses) the Archive control
-- **THEN** a tooltip or aria-label reading approximately "Past weeks and closed reports" is announced
+- **THEN** a tooltip or aria-label reading "Past weeks and closed reports" is announced

@@ -2,17 +2,23 @@
 
 ## Purpose
 
-TBD - created by archiving change add-report-url-id. Update Purpose after archive.
+Define the URL shape invariant for lead and head report views. Ensures that
+every report page carries a stable, bookmarkable path-segment identifier so
+that links, deep-links, and browser history resolve to the correct report.
+
+Consumer surfaces: Next.js routes
+`apps/web/src/app/(app)/lead/report/[reportId]/page.tsx` and
+`apps/web/src/app/(app)/head/report/[reportId]/page.tsx`.
 
 ## Requirements
 
-### Requirement: Lead Report URLs Include a Stable Report Identifier
+### Requirement: Report URLs Encode the Report Identifier as a Path Segment
 
-Lead report routes MUST encode a stable identifier (UUID or short id)
-in the URL — either as a path segment (`/lead/report/[id]`) or as a
-query parameter (`/lead/report?reportId=<uuid>`). The identifier MUST
-uniquely resolve to a single report period and MUST remain stable for
-the lifetime of that report.
+Lead and head report routes MUST encode a stable UUID identifier in the URL
+as a path segment: `/lead/report/[reportId]` and `/head/report/[reportId]`
+respectively. Query-parameter encoding (e.g. `?reportId=<uuid>`) MUST NOT
+be used. The identifier MUST uniquely resolve to a single report period and
+MUST remain stable for the lifetime of that report.
 
 #### Scenario: Lead opens a report and the URL reflects the identifier
 

@@ -7,6 +7,11 @@ hero section. Ensures the hero displays a curated tagline array rather
 than a hardcoded string, and that rotation transitions do not produce
 layout shift.
 
+Consumer surfaces: `TaglineCycler` in
+`apps/web/src/components/landing/tagline-cycler.tsx`,
+`LANDING_TAGLINES` constant in
+`apps/web/src/components/landing/landing-page.constants.ts`.
+
 ## Requirements
 
 ### Requirement: Landing Hero Displays a Tagline from a Curated Set

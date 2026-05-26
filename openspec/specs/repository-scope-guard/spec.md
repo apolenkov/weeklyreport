@@ -2,7 +2,14 @@
 
 ## Purpose
 
-TBD - created by archiving change audit-scope-filter-migration. Update Purpose after archive.
+Define the defensive scope-guard invariant that prevents Prisma repository
+read methods from returning cross-group data when upstream middleware
+regresses. Ensures that every read of `findDraftSections`, `findReports`,
+and period queries is bounded to the caller's authorised product group.
+
+Consumer surfaces: `findDraftSections`, `findReports`, and period query
+methods in `apps/api/src/modules/` repositories; `ScopeGuardError` type;
+tRPC procedures that call these methods.
 
 ## Requirements
 
@@ -31,19 +38,18 @@ regression cannot silently widen the data set returned to a caller.
 - **THEN** the repository raises a `ScopeGuardError`
 - **AND** the caller MUST explicitly handle the empty-scope case upstream rather than leaning on the repository to return zero rows
 
-### Requirement: Audit Documents Every Caller of the Guarded Methods
+### Requirement: Every Caller of Guarded Methods Must Pass a Valid Group Scope
 
-The change MUST produce an audit document listing every tRPC procedure
-that calls `findDraftSections`, `findReports`, or period queries, the
-middleware chain each procedure uses, and whether the upstream scope
-guard is present. Unguarded paths MUST be either fixed or explicitly
-justified.
+Callers of `findDraftSections`, `findReports`, and period queries MUST supply
+a non-null `groupScope` from the authenticated session context. Callers MUST
+NOT bypass the scope guard by passing a null or empty scope with the expectation
+that the query returns zero rows.
 
-#### Scenario: Reviewer inspects the audit document
+#### Scenario: New procedure added that calls a guarded method
 
-- **WHEN** a reviewer opens the audit document produced by this change
-- **THEN** the document lists every consumer of the guarded methods with file and line refs
-- **AND** every entry is annotated as either `guarded`, `fixed`, or `justified`
+- **WHEN** a developer adds a new tRPC procedure that calls `findReports`
+- **THEN** the procedure MUST pass `groupScope` from `ctx` into the repository call
+- **AND** a code review or CI check MUST flag the absence of `groupScope` as a violation
 
 ### Requirement: Regression Test Covers Unauthorized Group Access
 

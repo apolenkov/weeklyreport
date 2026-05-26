@@ -2,17 +2,23 @@
 
 ## Purpose
 
-TBD - created by archiving change redesign-slide-density-v8-4-3. Update Purpose after archive.
+Define the density and layout invariants for the lead-role status slide
+deck. Ensures that slide cards render at consistent tight density, that
+decisions remain reachable via scroll when overflow occurs, and that the
+user always has a discoverable fullscreen-exit path.
+
+Consumer surfaces: `StatusSlideDeck`, `SummarySlide`, `DecisionSlide`
+components in `apps/web/src/components/`.
 
 ## Requirements
 
-### Requirement: Slide Card Density Tokens Are Centralized
+### Requirement: Slide Card Density Tokens Are Consistent Across the Deck
 
-The status slide deck MUST source its three density tokens — outer card
-padding, section-header line-height, and inter-slide gap — from a single
-constant or Tailwind utility set, not from per-component literals. A
-future density tweak MUST be a single-source change, not a sweep across
-multiple components.
+The status slide deck MUST apply the same values for its three density
+tokens — outer card padding, section-header line-height, and inter-slide
+gap — across every slide card. Changing a density token MUST affect all
+slide cards in the deck simultaneously; no individual card MUST silently
+override the shared value.
 
 #### Scenario: Designer tightens slide padding
 
