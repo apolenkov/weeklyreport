@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 
-import { roleSchema, userSessionSchema } from "../auth";
+import { roleSchema, userSessionSchema } from "./auth";
 
 // ---------------------------------------------------------------------------
 // roleSchema

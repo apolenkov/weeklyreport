@@ -12,8 +12,8 @@ vi.mock("@anthropic-ai/sdk", () => {
   return { default: MockAnthropic };
 });
 
-import { _resetAiClientForTests } from "../ai-client.js";
-import { AiService } from "../ai.service.js";
+import { _resetAiClientForTests } from "./ai-client.js";
+import { AiService } from "./ai.service.js";
 import type {
   AiFacade,
   AiInsightRow,
@@ -21,7 +21,7 @@ import type {
   CellForOnTrack,
   ReportForSummary,
   RiskForSentiment,
-} from "../ai-facade.js";
+} from "./ai-facade.js";
 import type { AiInsightKind } from "@prisma/client";
 
 class InMemoryFacade implements AiFacade {
@@ -263,14 +263,14 @@ describe("AiService.summary", () => {
 
 describe("summary system prompt — char-count floor", async () => {
   it("SUMMARY_SYSTEM_PROMPT is at least 3500 chars (≥1024-token cache breakpoint)", async () => {
-    const { SUMMARY_SYSTEM_PROMPT } = await import("../prompts/summary.js");
+    const { SUMMARY_SYSTEM_PROMPT } = await import("./prompts/summary.js");
     expect(SUMMARY_SYSTEM_PROMPT.length).toBeGreaterThanOrEqual(3500);
   });
 });
 
 describe("sentiment system prompt — char-count floor", async () => {
   it("SENTIMENT_SYSTEM_PROMPT is at least 3500 chars", async () => {
-    const { SENTIMENT_SYSTEM_PROMPT } = await import("../prompts/sentiment.js");
+    const { SENTIMENT_SYSTEM_PROMPT } = await import("./prompts/sentiment.js");
     expect(SENTIMENT_SYSTEM_PROMPT.length).toBeGreaterThanOrEqual(3500);
   });
 });
@@ -361,7 +361,7 @@ describe("AiService.sentiment", () => {
 
 describe("on-track system prompt — char-count floor", async () => {
   it("ON_TRACK_SYSTEM_PROMPT is at least 3500 chars", async () => {
-    const { ON_TRACK_SYSTEM_PROMPT } = await import("../prompts/on-track.js");
+    const { ON_TRACK_SYSTEM_PROMPT } = await import("./prompts/on-track.js");
     expect(ON_TRACK_SYSTEM_PROMPT.length).toBeGreaterThanOrEqual(3500);
   });
 });

@@ -9,7 +9,7 @@
  */
 import { describe, it, expect } from "vitest";
 
-import { selectAiAdapter } from "../ai.module.js";
+import { selectAiAdapter } from "./ai.module.js";
 
 const isRealProvider =
   !!process.env["AI_PROVIDER"] && process.env["AI_PROVIDER"] !== "mock";

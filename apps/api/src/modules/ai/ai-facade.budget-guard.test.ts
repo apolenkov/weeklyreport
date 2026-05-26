@@ -20,8 +20,8 @@ vi.mock("@anthropic-ai/sdk", () => {
   return { default: MockAnthropic };
 });
 
-import { _resetAiClientForTests } from "../ai-client.js";
-import { AiService, PER_REPORT_BUDGET_TOKENS } from "../ai.service.js";
+import { _resetAiClientForTests } from "./ai-client.js";
+import { AiService, PER_REPORT_BUDGET_TOKENS } from "./ai.service.js";
 import type {
   AiFacade,
   AiInsightRow,
@@ -29,7 +29,7 @@ import type {
   CellForOnTrack,
   ReportForSummary,
   RiskForSentiment,
-} from "../ai-facade.js";
+} from "./ai-facade.js";
 import type { AiInsightKind } from "@prisma/client";
 
 class InMemoryFacade implements AiFacade {

@@ -15,7 +15,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { AiService } from "../ai.service.js";
+import { AiService } from "./ai.service.js";
 import type {
   AiFacade,
   AiInsightRow,
@@ -23,7 +23,7 @@ import type {
   CellForOnTrack,
   ReportForSummary,
   RiskForSentiment,
-} from "../ai-facade.js";
+} from "./ai-facade.js";
 import type { AiInsightKind } from "@prisma/client";
 
 type FixtureRisk = RiskForSentiment & {

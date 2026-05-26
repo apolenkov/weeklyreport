@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { telemetrySummarySchema } from "../telemetry";
+import { telemetrySummarySchema } from "./telemetry";
 
 describe("telemetrySummarySchema (Phase 52 / UFB-054)", () => {
   it("accepts a fully-populated summary", () => {
