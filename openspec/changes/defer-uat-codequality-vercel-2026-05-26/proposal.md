@@ -25,10 +25,28 @@ code-quality чистка. Это большая работа, которую о
 - ESLint/Prettier до текущих стандартов
 - Подтянуть зависимости
 
-**Wave 4 — Vercel best-practices аудит:**
+Скиллы-эксперты Wave 3 (параллельный запуск):
+
+- `/typescript-expert` — TypeScript строгость, типы, дженерики
+- `/typescript-pro` — TypeScript advanced patterns
+- `/nestjs-expert` — NestJS модули, DI, guards, interceptors
+- `/react-best-practices` — React паттерны, хуки, производительность
+- `/postgres-pro` — запросы, индексы, схема
+- `/postgresql-optimization` — медленные запросы, планы выполнения
+- `/observability-engineer` — логирование, метрики, трейсинг
+- `/docker-expert` — Dockerfile, compose, слои образов
+
+**Wave 4 — Vercel best-practices + UI/UX аудит:**
 
 Запустить Vercel best-practice skill: производительность, Core Web Vitals,
 Next.js 16 конвенции.
+
+Скиллы-эксперты Wave 4 (параллельный запуск):
+
+- `/ui-ux-pro-max` — UI/UX аудит, доступность, иерархия
+- `/slides` — слайд-дека (StatusSlideDeck, SummarySlide, DecisionSlide)
+- `/react-view-transitions` — анимации, View Transitions API
+- `/frontend-design` — визуальный дизайн, токены, типографика
 
 **Wave 5 — Финальные гейты + re-sweep:**
 
