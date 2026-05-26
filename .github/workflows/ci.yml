@@ -193,7 +193,7 @@ jobs:
         run: pnpm turbo build --filter=@customreport/shared --filter=@customreport/ui
 
       - name: Run E2E tests
-        run: pnpm exec playwright test --config=apps/web/playwright.config.ts
+        run: pnpm exec playwright test --config=e2e/playwright.config.ts
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
@@ -357,7 +357,7 @@ jobs:
         run: pnpm turbo build --filter=@customreport/shared --filter=@customreport/ui
 
       - name: Run visual regression tests
-        run: pnpm --filter @customreport/web exec playwright test --project=visual
+        run: pnpm exec playwright test --project=visual --config=e2e/playwright.config.ts
 
       - name: Upload visual diff artefacts
         if: ${{ failure() }}
