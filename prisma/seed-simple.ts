@@ -25,7 +25,7 @@
  * Cyrillic. Realistic content for a Development department demo.
  *
  * Run:
- *   PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' pnpm db:seed:simple
+ *   pnpm db:seed:simple
  */
 
 import "dotenv/config";
