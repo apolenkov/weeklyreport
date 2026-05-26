@@ -198,8 +198,8 @@ export async function loginByCookie(page: Page, identity: DevAuthIdentity) {
  * fullyParallel is inherently race-prone — this is the LSC-only escape hatch.
  */
 export function seedAdvancedViaCli(): void {
-  // apps/web/e2e/regression/helpers → 5 levels up to repo root
-  const repoRoot = path.resolve(__dirname, "..", "..", "..", "..", "..");
+  // e2e/regression/helpers → 3 levels up to repo root
+  const repoRoot = path.resolve(__dirname, "..", "..", "..");
   const env = {
     ...process.env,
     PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",

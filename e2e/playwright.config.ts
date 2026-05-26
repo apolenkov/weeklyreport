@@ -6,24 +6,21 @@ const API_PORT = Number(process.env.E2E_API_PORT ?? 3101);
 const WEB_URL = `http://127.0.0.1:${WEB_PORT}`;
 const API_URL = `http://127.0.0.1:${API_PORT}`;
 
-// Repo root (apps/web/playwright.config.ts → ../..).
-const REPO_ROOT = path.resolve(__dirname, "..", "..");
+// Repo root (e2e/playwright.config.ts → ..).
+const REPO_ROOT = path.resolve(__dirname, "..");
 
 export default defineConfig({
-  testDir: "e2e",
+  testDir: ".",
   testIgnore: ["**/integration/**"],
-  outputDir: "e2e/.results",
+  outputDir: ".results",
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  // 34-07: dual reporter in CI — `github` for inline annotations on PRs, +
-  // `json` written to `e2e/.results/results.json` so the flaky-rate metric
-  // step can compute passed-on-retry / total. Local dev keeps the html UI.
   reporter: process.env.CI
-    ? [["github"], ["json", { outputFile: "e2e/.results/results.json" }]]
+    ? [["github"], ["json", { outputFile: ".results/results.json" }]]
     : "html",
   use: {
     baseURL: WEB_URL,
@@ -54,7 +51,7 @@ export default defineConfig({
     // generates its own linux-pinned set on first run via --update-snapshots.
     {
       name: "visual",
-      testDir: "e2e/visual",
+      testDir: "visual",
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],
