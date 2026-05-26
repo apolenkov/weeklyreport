@@ -16,8 +16,7 @@ Use current files instead of memory:
   deferred-feature-pattern, role-coverage-gate, period-dual-state,
   ai-module-facade).
 - `openspec/config.yaml` - project context + change-lifecycle rules.
-- `.env.example`, `.env.test.example`, `apps/web/.env.example` - runtime
-  switches and port assumptions.
+- `.env.example`, `.env.test.example` - runtime switches and port assumptions.
 
 Do not paste generated research dumps here. Active work lives in `openspec/`;
 historical context is recoverable via `git log`.
