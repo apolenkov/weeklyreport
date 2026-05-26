@@ -8,7 +8,7 @@
     "lint": "tsc --noEmit -p tsconfig.json && eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "visual:setup": "bash scripts/visual-setup.sh",
+    "visual:setup": "pnpm -w exec prisma migrate reset --force --skip-seed && pnpm -w db:seed:simple",
     "visual:test": "playwright test --project=visual --config ../../e2e/playwright.config.ts",
     "visual:update": "playwright test --project=visual --update-snapshots --config ../../e2e/playwright.config.ts"
   },

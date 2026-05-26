@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 
 import { LeadFormSyncBridge, promoteStageStatus } from "./lead-form-sync-bridge";
 import type { Product, RiskEntry } from "./mock-data";
-import { expectDefined } from "../../test/expect-defined.js";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 
 function buildProduct(overrides?: Partial<Product>): Product {
   return {

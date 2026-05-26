@@ -8,7 +8,7 @@ import {
 } from "@customreport/shared";
 
 import { mapAdminSnapshot, mapAdminSettings, __testing } from "./admin";
-import { expectDefined } from "../../test/expect-defined.js";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 
 const { mapReminder } = __testing;
 
