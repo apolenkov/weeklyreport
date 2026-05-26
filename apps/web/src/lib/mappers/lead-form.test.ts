@@ -15,6 +15,8 @@ import {
   mapLeadPriorities,
   mapLeadPeriods,
   mapLeadVersions,
+  ownedStagesForProject,
+  stageNamesMatch,
 } from "./lead-form";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 
@@ -552,5 +554,113 @@ describe("mapLeadFormData", () => {
       history: [],
     });
     expect(result.readOnly).toBe(true);
+  });
+});
+
+describe("stageNamesMatch", () => {
+  it("treats 'Development' and 'Dev' as equivalent (alias)", () => {
+    expect(stageNamesMatch("Development", "Dev")).toBe(true);
+    expect(stageNamesMatch("Dev", "Development")).toBe(true);
+    expect(stageNamesMatch("development", "dev")).toBe(true);
+  });
+
+  it("matches identical names case-insensitively", () => {
+    expect(stageNamesMatch("Planning", "Planning")).toBe(true);
+    expect(stageNamesMatch("TESTING", "testing")).toBe(true);
+  });
+
+  it("does not match unrelated names", () => {
+    expect(stageNamesMatch("Planning", "Testing")).toBe(false);
+    expect(stageNamesMatch("Dev", "DevOps")).toBe(false);
+  });
+});
+
+describe("ownedStagesForProject", () => {
+  it("returns canonical pipeline name 'Dev' when DB stores 'Development'", () => {
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM",
+          trafficLight: "green",
+          ownedStages: [{ stageId: "s1", stageName: "Development", sortOrder: 3, status: "green" }],
+        },
+      ],
+    });
+    const result = ownedStagesForProject(section, PROJECT_A);
+    expect(result).toContain("Dev");
+    expect(result).not.toContain("Development");
+  });
+
+  it("returns canonical names for all owned stages scoped to a project", () => {
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM",
+          trafficLight: "green",
+          ownedStages: [
+            { stageId: "s1", stageName: "Development", sortOrder: 3, status: "green" },
+            { stageId: "s2", stageName: "Testing", sortOrder: 4, status: null },
+          ],
+        },
+        {
+          projectId: PROJECT_B,
+          projectName: "ERP",
+          trafficLight: "yellow",
+          ownedStages: [
+            { stageId: "s3", stageName: "Planning", sortOrder: 1, status: null },
+          ],
+        },
+      ],
+    });
+    const resultA = ownedStagesForProject(section, PROJECT_A);
+    expect(resultA.sort()).toEqual(["Dev", "Testing"]);
+
+    const resultB = ownedStagesForProject(section, PROJECT_B);
+    expect(resultB).toEqual(["Planning"]);
+  });
+
+  it("returns union across all projects when projectId is undefined", () => {
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM",
+          trafficLight: "green",
+          ownedStages: [{ stageId: "s1", stageName: "Dev", sortOrder: 3, status: "green" }],
+        },
+        {
+          projectId: PROJECT_B,
+          projectName: "ERP",
+          trafficLight: null,
+          ownedStages: [{ stageId: "s2", stageName: "Planning", sortOrder: 1, status: null }],
+        },
+      ],
+    });
+    const result = ownedStagesForProject(section, undefined);
+    expect(result.sort()).toEqual(["Dev", "Planning"]);
+  });
+
+  it("agrees with mapLeadProducts on which stages are 'mine'", () => {
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM",
+          trafficLight: "green",
+          ownedStages: [
+            { stageId: "s1", stageName: "Development", sortOrder: 3, status: "green" },
+            { stageId: "s2", stageName: "Testing", sortOrder: 4, status: null },
+          ],
+        },
+      ],
+    });
+    const ownedNames = ownedStagesForProject(section, PROJECT_A);
+    const products = mapLeadProducts(section);
+    const mineInGrid = products[0]?.stages
+      .filter((s) => s.ownership === "mine")
+      .map((s) => s.stageName) ?? [];
+    expect(ownedNames.sort()).toEqual(mineInGrid.sort());
   });
 });
