@@ -1,4 +1,11 @@
-## ADDED Requirements
+## Purpose
+
+Define the information architecture invariant that separates "History"
+(snapshots within the current report) from "Archive" (past closed
+reports). Ensures leads are never confused about where to find version
+snapshots vs. previous periods.
+
+## Requirements
 
 ### Requirement: Archive and History Have Distinct Navigation Surfaces
 
