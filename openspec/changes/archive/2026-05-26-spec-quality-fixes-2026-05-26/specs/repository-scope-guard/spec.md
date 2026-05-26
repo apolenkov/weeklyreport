@@ -1,8 +1,3 @@
-## RENAMED Requirements
-
-- FROM: `### Requirement: Audit Documents Every Caller of the Guarded Methods`
-- TO: `### Requirement: Every Caller of Guarded Methods Must Pass a Valid Group Scope`
-
 ## MODIFIED Requirements
 
 ### Requirement: Every Caller of Guarded Methods Must Pass a Valid Group Scope

@@ -1,8 +1,3 @@
-## RENAMED Requirements
-
-- FROM: `### Requirement: Closed Periods Expose a Reopen Action to Head and Admin`
-- TO: `### Requirement: Published Periods Expose a Reopen Action to Head and Admin`
-
 ## MODIFIED Requirements
 
 ### Requirement: Published Periods Expose a Reopen Action to Head and Admin
