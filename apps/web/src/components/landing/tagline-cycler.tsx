@@ -52,6 +52,7 @@ export function TaglineCycler() {
       className="pulse-tagline"
       role="text"
       style={{ opacity: visible ? 1 : 0 }}
+      suppressHydrationWarning
     >
       {LANDING_TAGLINES[index]}
     </p>
