@@ -467,4 +467,31 @@ describe("useLeadFormAutosave", () => {
     // (dirty = payloadKey !== lastSavedRef; lastSavedRef is set to P2's key)
     expect(result.current.dirty).toBe(false);
   });
+
+  it("invalidates leadForm queries after successful save (cross-tab sync)", async () => {
+    const { wrapper, queryClient } = buildHarness();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(
+      () =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload: makePayload("cross-tab"),
+          enabled: true,
+          debounceMs: 3000,
+        }),
+      { wrapper },
+    );
+
+    await act(async () => {
+      void result.current.forceSave();
+      await flushAll();
+    });
+
+    expect(result.current.state).toBe("saved");
+    const invalidatedKeys = invalidateSpy.mock.calls.map((c) =>
+      JSON.stringify(c[0]),
+    );
+    expect(invalidatedKeys.some((k) => k.includes("leadForm"))).toBe(true);
+  });
 });

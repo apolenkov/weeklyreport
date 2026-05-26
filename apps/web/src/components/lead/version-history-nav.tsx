@@ -171,7 +171,7 @@ export function VersionHistoryNav({
           type="button"
           className="inline-flex min-h-8 items-center gap-1 rounded-md border border-[var(--color-muted)] bg-[var(--color-background)] px-2 font-[family-name:var(--font-sans)] text-[12px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none"
           onClick={() => setShowModal(true)}
-          title="View version history — compare and roll back"
+          title="Snapshots and edits within this report"
           aria-label={`Version ${currentVersion?.version ?? "—"} — open history`}
         >
           <span className="inline-block w-[36px] text-center text-xs font-medium tabular-nums">

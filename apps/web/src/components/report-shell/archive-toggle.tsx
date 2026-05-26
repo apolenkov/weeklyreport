@@ -13,8 +13,8 @@ export function ArchiveToggle({ checked, onChange }: ArchiveToggleProps) {
       type="button"
       role="switch"
       aria-checked={checked}
-      aria-label="Show archived periods"
-      title="Show archived periods"
+      aria-label="Show closed (archived) report periods"
+      title="Show closed (archived) report periods"
       onClick={() => onChange(!checked)}
       className={`inline-flex min-h-8 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] border px-2 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] ${
         checked

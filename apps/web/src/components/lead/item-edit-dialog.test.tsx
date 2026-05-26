@@ -330,3 +330,55 @@ describe("ItemEditDialog — UFB-014 stageIds", () => {
     });
   });
 });
+
+describe("ItemEditDialog — ITEM-T4 type immediately on open", () => {
+  it("preserves text typed immediately after the dialog opens (create mode)", () => {
+    const onSave = vi.fn();
+    render(
+      <ItemEditDialog
+        open={true}
+        item={null}
+        products={products}
+        week="current"
+        defaultProductId="p1"
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+
+    // Simulate typing before any async effects could run
+    const textField = screen.getByLabelText(/Description \*/i);
+    fireEvent.change(textField, { target: { value: "typed immediately" } });
+
+    // No re-renders or async ops — text must be exactly what was typed
+    expect(textField).toHaveValue("typed immediately");
+  });
+
+  it("preserves text typed immediately after the dialog opens (edit mode)", () => {
+    const onSave = vi.fn();
+    const item: KanbanItem = {
+      id: "item-imm",
+      productId: "p1",
+      productName: "DevOps Tools",
+      text: "existing text",
+      status: "in-progress",
+      author: "Test Lead",
+    };
+
+    render(
+      <ItemEditDialog
+        open={true}
+        item={item}
+        products={products}
+        week="current"
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+
+    const textField = screen.getByLabelText(/Description \*/i);
+    fireEvent.change(textField, { target: { value: "existing text — amended" } });
+
+    expect(textField).toHaveValue("existing text — amended");
+  });
+});

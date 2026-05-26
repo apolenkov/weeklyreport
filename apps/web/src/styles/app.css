@@ -199,8 +199,10 @@ body:has([role="dialog"]) [data-testid="dev-role-switcher-trigger"] {
   pointer-events: none;
 }
 
-/* Local MVP: keep the Agentation devtools below the top navigation. */
+/* Keep the Agentation devtools panel just below the top navigation (not at
+   the bottom of the viewport). Nav bar height ≈ 64px; 4.5rem ≈ 72px gives a
+   small gap. D-27/D-36: box.y must be < 200px. */
 .styles-module__toolbar___wNsdK {
-  top: auto !important;
-  bottom: 1rem !important;
+  top: 4.5rem !important;
+  bottom: auto !important;
 }

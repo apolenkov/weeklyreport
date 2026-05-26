@@ -16,7 +16,7 @@ import {
 import { SessionContext } from "../../lib/session-provider";
 import { logClientError } from "../../lib/client-error-reporting";
 import { mapLeadFormData } from "../../lib/mappers";
-import { ownedStagesForProject, normalizeStageName } from "../../lib/mappers/lead-form";
+import { ownedStagesForProject, normalizeStageName, stageNamesMatch } from "../../lib/mappers/lead-form";
 import { stageStatusToTraffic, trafficToStageStatus } from "../../lib/mappers/traffic-light";
 import { deriveEffectiveStageStatus } from "../../lib/stage-status";
 import { isoWeekNumber, formatDateRange } from "../../lib/mappers/lead-history";
@@ -322,15 +322,8 @@ export function LeadForm({
       targetReportId !== "" &&
       !shouldRouteHeadLikeAwayFromLeadForm &&
       !shouldDeferForSession,
-    // Prevent window-focus refetches from overwriting in-flight local edits.
-    // Every mutation that changes server state calls invalidateLeadForm(), so
-    // explicit invalidation is the only freshness path — no background polling
-    // needed.
-    // TODO(v8.5-D-multitab): staleTime: Infinity is safe while all mutations call
-    // invalidateLeadForm(), BUT useLeadFormAutosave.onSuccess does NOT — other tabs
-    // get stale data. Fix: add invalidateLeadForm() in the autosave onSuccess handler
-    // + set staleTime: 30_000 + refetchOnWindowFocus: true (plan section 15.6 D2).
-    staleTime: Infinity,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   // The section id for actions (autosave / submit / revoke) comes from the
@@ -771,32 +764,23 @@ export function LeadForm({
       _crossAuthorStageMap.set(ca.projectId, _sm);
     }
     for (const sn of ca.stageNames) {
-      const lower = sn.toLowerCase();
-      const stageEntry = ca.stages?.find(
-        (s) =>
-          s.stageName.toLowerCase() === lower ||
-          (lower === "dev" && s.stageName.toLowerCase() === "development") ||
-          (lower === "development" && s.stageName.toLowerCase() === "dev"),
-      );
+      const norm = normalizeStageName(sn);
+      const stageEntry = ca.stages?.find((s) => stageNamesMatch(s.stageName, sn));
       const caSection = _caSectionByAuthorId.get(ca.authorId);
       const stageRisks = (caSection?.risks ?? []).filter(
-        (r) => r.projectId === ca.projectId && r.stageName != null &&
-          normalizeStageName(r.stageName) === lower,
+        (r) => r.projectId === ca.projectId &&
+          r.stageNames.some((n) => normalizeStageName(n) === norm),
       );
       const stageItems = (caSection?.items ?? []).filter(
-        (i) => i.projectId === ca.projectId && i.stageName != null &&
-          normalizeStageName(i.stageName) === lower,
+        (i) => i.projectId === ca.projectId &&
+          i.stageNames.some((n) => normalizeStageName(n) === norm),
       );
       const status = deriveEffectiveStageStatus(
         trafficToStageStatus(stageEntry?.status ?? null),
         stageRisks,
         stageItems,
       );
-      const entry = { assignee: ca.authorName, status };
-      _sm.set(lower, entry);
-      // Mirror the dev ↔ development alias used in ownedStagesForProject mapper.
-      if (lower === "dev") _sm.set("development", entry);
-      if (lower === "development") _sm.set("dev", entry);
+      _sm.set(norm, { assignee: ca.authorName, status });
     }
   }
   const products: Product[] = (data.products as Product[]).map((product) => {
@@ -806,7 +790,7 @@ export function LeadForm({
       ...product,
       stages: product.stages.map((stage) => {
         if (stage.ownership !== "unassigned") return stage;
-        const entry = stageMap.get(stage.stageName.toLowerCase());
+        const entry = stageMap.get(normalizeStageName(stage.stageName));
         if (!entry) return stage;
         return { ...stage, ownership: "locked" as const, assignee: entry.assignee, status: entry.status };
       }),
@@ -976,7 +960,7 @@ export function LeadForm({
             id: `foreign:${ca.authorId}:${i.id}`,
             productId: i.projectId,
             productName: productNameById.get(i.projectId) ?? i.projectId,
-            stageName: i.stageName ?? undefined,
+            stageIds: i.stageNames,
             status: (i.workflowStatus === "in_progress"
               ? "in-progress"
               : i.workflowStatus === "done"
@@ -1001,7 +985,7 @@ export function LeadForm({
             id: `foreign:${ca.authorId}:${i.id}`,
             productId: i.projectId,
             productName: productNameById.get(i.projectId) ?? i.projectId,
-            stageName: i.stageName ?? undefined,
+            stageIds: i.stageNames,
             status: (i.workflowStatus === "in_progress"
               ? "in-progress"
               : i.workflowStatus === "done"
@@ -1024,7 +1008,7 @@ export function LeadForm({
           id: `foreign:${ca.authorId}:${r.id}`,
           productId: r.projectId,
           productName: productNameById.get(r.projectId) ?? r.projectId,
-          stageName: r.stageName ?? undefined,
+          stageIds: r.stageNames,
           severity: r.severity === "blocked" ? "blocked" : "at-risk",
           text: r.risk,
           impact: r.impact,
@@ -1047,7 +1031,7 @@ export function LeadForm({
           owner: d.owner,
           impact: d.impact,
           deadline: d.deadline ? d.deadline.toISOString().slice(0, 10) : null,
-          stageName: d.stageName ?? undefined,
+          stageIds: d.stageNames,
           authorId: ca.authorId,
           foreign: true,
         }),

@@ -7,7 +7,7 @@ import type {
   RiskEntry,
   StageStatus,
 } from "../components/lead/mock-data";
-import { expectDefined } from "../test/expect-defined.js";
+import { expectDefined } from "../test-utils/expect-defined.js";
 
 function buildProduct(overrides?: Partial<Product>): Product {
   return {

@@ -302,13 +302,12 @@ model Item {
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, COALESCE(text, ''::text))"))
-  stageName       String?
+  stageNames      String[]
   project         Project                  @relation(fields: [projectId], references: [id])
   reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
 
   @@index([reportSectionId])
   @@index([projectId])
-  @@index([stageName])
   @@index([reportSectionId, priorityRank])
   @@index([searchTsv], type: Gin)
 }
@@ -324,13 +323,12 @@ model Risk {
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, ((((COALESCE(risk, ''::text) || ' '::text) || COALESCE(impact, ''::text)) || ' '::text) || COALESCE(mitigation, ''::text)))"))
-  stageName       String?
+  stageNames      String[]
   project         Project                  @relation(fields: [projectId], references: [id])
   reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
 
   @@index([reportSectionId])
   @@index([projectId])
-  @@index([stageName])
   @@index([searchTsv], type: Gin)
 }
 
@@ -346,13 +344,12 @@ model Decision {
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, COALESCE(text, ''::text))"))
-  stageName       String?
+  stageNames      String[]
   reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
   project         Project                  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([reportSectionId])
   @@index([productId])
-  @@index([stageName])
   @@index([searchTsv], type: Gin)
 }
 

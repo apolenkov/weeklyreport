@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 
 import { LeadForm } from "./lead-form";
 import { TRPCProxyContext } from "../../lib/trpc-context";
-import { expectDefined } from "../../test/expect-defined.js";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -554,7 +554,7 @@ describe("LeadForm mutation wiring", () => {
     });
 
     // Open the version history modal via its trigger button.
-    const historyTrigger = screen.getByTitle(/View version history/i);
+    const historyTrigger = screen.getByTitle(/Snapshots and edits within this report/i);
     act(() => {
       historyTrigger.click();
     });
@@ -604,7 +604,7 @@ describe("LeadForm mutation wiring", () => {
       await flushAll();
     });
 
-    expect(screen.getByTitle(/View version history/i)).toHaveTextContent("v2");
+    expect(screen.getByTitle(/Snapshots and edits within this report/i)).toHaveTextContent("v2");
 
     act(() => {
       screen.getByRole("button", { name: /^Previous version$/i }).click();
@@ -613,7 +613,7 @@ describe("LeadForm mutation wiring", () => {
       await flushAll();
     });
 
-    expect(screen.getByTitle(/View version history/i)).toHaveTextContent("v1");
+    expect(screen.getByTitle(/Snapshots and edits within this report/i)).toHaveTextContent("v1");
     expect(calls.filter((c) => c.type === "restoreVersion")).toHaveLength(0);
   });
 
@@ -651,7 +651,7 @@ describe("LeadForm mutation wiring", () => {
     });
 
     act(() => {
-      screen.getByTitle(/View version history/i).click();
+      screen.getByTitle(/Snapshots and edits within this report/i).click();
     });
 
     expect(

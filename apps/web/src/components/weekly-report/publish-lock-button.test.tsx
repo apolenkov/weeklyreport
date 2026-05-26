@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 
 import { PublishLockButton } from "./publish-lock-button";
-import { expectDefined } from "../../test/expect-defined.js";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 
 describe("PublishLockButton (Phase 22 — plan 22-05)", () => {
   it('renders "Publish & Lock" when periodStatus is open', () => {

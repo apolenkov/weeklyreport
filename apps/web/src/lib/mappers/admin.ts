@@ -37,6 +37,9 @@ import type {
   ReminderPolicyKind,
   ReminderAudience,
 } from "@customreport/shared";
+import { STAGE_NAMES } from "@customreport/shared";
+
+export type { StageName } from "@customreport/shared";
 
 import { formatPeriodLabel } from "../format-date";
 
@@ -70,27 +73,8 @@ export type MockGroup = {
   headUserId: string | null;
 };
 
-export type StageName =
-  | "Planning"
-  | "Analysis"
-  | "Design"
-  | "Development"
-  | "Testing"
-  | "DevOps"
-  | "Support";
-
-const STAGE_NAMES: readonly StageName[] = [
-  "Planning",
-  "Analysis",
-  "Design",
-  "Development",
-  "Testing",
-  "DevOps",
-  "Support",
-];
-
 export type StageAssignment = {
-  stage: StageName;
+  stage: import("@customreport/shared").StageName;
   assigneeId: string | null;
 };
 

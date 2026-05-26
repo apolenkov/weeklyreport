@@ -50,19 +50,6 @@ The recurring workaround is:
 https_proxy="" http_proxy="" git push origin main
 ```
 
-A helper script handles the detection + workaround automatically:
-
-```bash
-scripts/push-guard.sh           # detects DNS state, retries with proxy unset
-scripts/push-guard.sh --check-only   # exit 0 if pushable, 1 otherwise
-```
-
-Recommended alias in `~/.zshrc`:
-
-```bash
-alias gpush='scripts/push-guard.sh'
-```
-
 ## Mutation Consumer Audit
 
 CI runs `pnpm uat:audit` on every push/PR. It catches the "tRPC mutation

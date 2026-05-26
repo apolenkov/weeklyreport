@@ -101,7 +101,7 @@ export interface CrossAuthorSectionRow {
     carriedOver: boolean;
     completed: boolean | null;
     priorityRank: number | null;
-    stageName: string | null;
+    stageNames: string[];
   }[];
   risks: {
     id: string;
@@ -110,7 +110,7 @@ export interface CrossAuthorSectionRow {
     impact: string;
     mitigation: string;
     severity: string;
-    stageName: string | null;
+    stageNames: string[];
   }[];
   decisions: {
     id: string;
@@ -120,7 +120,7 @@ export interface CrossAuthorSectionRow {
     deadline: Date | null;
     impact: string;
     resolvedAt: Date | null;
-    stageName: string | null;
+    stageNames: string[];
   }[];
 }
 

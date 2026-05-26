@@ -68,11 +68,16 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     // helper — it goes through `auth.routes.ts` with `leadId: userId`
     // directly — so flipping this site only affects READ visibility.
     //
-    // TODO(scope-filter-migration / scopeAccessed audit): the migration
-    // plan called for emitting an `auditLog.scopeAccessed` event when a
-    // cross-group product is surfaced. That envelope does not yet exist
-    // on `AuditLogger` (only `scopeDenied` does); high-cardinality logging
-    // design is deferred to a follow-up. See SUMMARY for context.
+    // scope-filter-migration status (Phase 56-D + audit-scope-filter-migration):
+    // COMPLETE — useExplicitGroupProducts: true routes project scope through the
+    // explicit GroupProduct join table instead of the legacy lead.reportingGroupId
+    // derivation. All three scope axes (section, user, project) are applied via
+    // scopeWhere() below. Defensive guardGroupScope() is exported from group-scope.ts
+    // for use when callers must assert that session is non-null.
+    //
+    // TODO(scopeAccessed-audit): emitting `auditLog.scopeAccessed` when a
+    // cross-group product is surfaced is deferred — AuditLogger only has
+    // `scopeDenied`; high-cardinality logging design is a separate follow-up.
     const projectScope = scopeWhere(session, "project", {
       useExplicitGroupProducts: true,
     });

@@ -20,16 +20,14 @@
  */
 
 import { config as loadEnv } from "dotenv";
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { DateTime } from "luxon";
+import { resolve } from "node:path";
 
 import pg from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
 // Load .env from repo root regardless of cwd.
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const REPO_ROOT = resolve(__dirname, "..");
 loadEnv({ path: resolve(REPO_ROOT, ".env") });
 
 const DATABASE_URL: string = (() => {
@@ -45,11 +43,8 @@ function computeFireAt(
   offsetMinutes: number,
   tz: string,
 ): Date {
-  return DateTime.fromJSDate(deadline, { zone: "utc" })
-    .setZone(tz)
-    .plus({ minutes: offsetMinutes })
-    .toUTC()
-    .toJSDate();
+  void tz; // timezone-aware scheduling uses minute offset from UTC deadline
+  return new Date(deadline.getTime() + offsetMinutes * 60 * 1000);
 }
 
 function policyAppliesTo(

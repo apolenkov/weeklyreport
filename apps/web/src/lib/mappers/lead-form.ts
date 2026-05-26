@@ -293,29 +293,21 @@ function buildProjectIndex(section: ReportSectionReadModel): Map<
  * current lead actually owns. When `projectId` is undefined (decisions /
  * priorities are department-scoped), returns the union across all projects.
  */
-// TODO(v8.5-C-ownership): this function is one of TWO sources of stage
-// ownership: here it reads `project.ownedStages` from the section read-model;
-// `sdlc-pipeline.tsx` derives ownership from `products[].stages.filter(s =>
-// s.ownership === "mine")`. The two sets can diverge. Unify into a single
-// shared helper in packages/shared (plan section 15.5, cluster C).
 export function ownedStagesForProject(
   section: ReportSectionReadModel,
   projectId: string | undefined,
 ): string[] {
-  const collected = new Set<string>();
+  const rawOwned: string[] = [];
   if (projectId) {
     const project = section.projects.find((p) => p.projectId === projectId);
-    if (project) {
-      for (const stage of project.ownedStages ?? [])
-        collected.add(stage.stageName);
-    }
-    return [...collected];
+    for (const stage of project?.ownedStages ?? []) rawOwned.push(stage.stageName);
+  } else {
+    for (const project of section.projects)
+      for (const stage of project.ownedStages ?? []) rawOwned.push(stage.stageName);
   }
-  for (const project of section.projects) {
-    for (const stage of project.ownedStages ?? [])
-      collected.add(stage.stageName);
-  }
-  return [...collected];
+  return STAGE_NAMES.filter((canonical) =>
+    rawOwned.some((raw) => stageNamesMatch(canonical, raw)),
+  );
 }
 
 // ---- Mappers ----
@@ -325,20 +317,16 @@ export function normalizeStageName(stageName: string): string {
   return lower === "development" ? "dev" : lower;
 }
 
+/** True when two stage names refer to the same pipeline slot (handles "Development" ↔ "Dev" alias). */
+export function stageNamesMatch(a: string, b: string): boolean {
+  return normalizeStageName(a) === normalizeStageName(b);
+}
+
 /**
  * Build the 7-stage grid for one project from the read model's `ownedStages`.
  *
- * The standard SDLC pipeline is rendered for every project so the user can
- * always see the full lifecycle context. Stages whose name appears in
- * `ownedStages` are flagged `mine` and inherit the project's overall traffic
- * status; the rest stay `unassigned` with assignee=null and an empty status
- * so the chip greys out. Replaces the pre-35-04 fake grid that hard-coded the
- * lead onto "Dev" regardless of their actual StageAssignment rows.
- *
- * Stage-name matching is case-insensitive and tolerates "Dev" vs.
- * "Development" (the seed file uses "Development", the presentation grid
- * uses "Dev" because the chip surface is narrow). Without the alias the
- * "all 7 stages owned" case still rendered most stages as `unassigned`.
+ * Stages whose name appears in `ownedStages` (matched via `stageNamesMatch`)
+ * are flagged `mine`; the rest stay `unassigned`.
  */
 function buildStageGrid(
   ownerLabel: string,
@@ -349,18 +337,9 @@ function buildStageGrid(
   risks: readonly { stageIds?: readonly string[]; severity?: string }[] = [],
   items: readonly { stageIds?: readonly string[]; workflowStatus: string }[] = [],
 ): LeadStageAssignment[] {
-  const owned = new Map(
-    ownedStages.map((stage) => [stage.stageName.toLowerCase(), stage] as const),
-  );
   return STAGE_NAMES.map((stageName) => {
-    const lower = stageName.toLowerCase();
     const norm = normalizeStageName(stageName);
-    const ownedStage =
-      owned.get(lower) ??
-      // Aliases between the canonical seeded stage name ("Development") and
-      // the compact pipeline label ("Dev").
-      (lower === "dev" ? owned.get("development") : undefined) ??
-      (lower === "development" ? owned.get("dev") : undefined);
+    const ownedStage = ownedStages.find((s) => stageNamesMatch(s.stageName, stageName)) ?? null;
     if (ownedStage) {
       return {
         stageName,
