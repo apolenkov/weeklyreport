@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
-import { MockTelegramAdapter } from "../mock-telegram.adapter";
+import { MockTelegramAdapter } from "./mock-telegram.adapter";
 
 describe("MockTelegramAdapter (Phase 55 / UFB-056)", () => {
   let writeSpy: ReturnType<typeof vi.spyOn>;

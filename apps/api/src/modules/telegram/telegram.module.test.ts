@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { MockTelegramAdapter } from "../mock-telegram.adapter";
-import { selectTelegramAdapter } from "../telegram.module";
+import { MockTelegramAdapter } from "./mock-telegram.adapter";
+import { selectTelegramAdapter } from "./telegram.module";
 
 describe("selectTelegramAdapter (Phase 55 / UFB-056)", () => {
   const originalToken = process.env["TG_BOT_TOKEN"];

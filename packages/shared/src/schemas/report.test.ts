@@ -40,7 +40,7 @@ import {
   groupProductEdgeInputSchema,
   type ReportSectionReadModel,
   type SubmitSectionPayload,
-} from "../report";
+} from "./report";
 
 // ---------------------------------------------------------------------------
 // Fixtures

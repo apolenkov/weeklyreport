@@ -28,7 +28,7 @@ import {
   _resetAiClientForTests,
   extractUsage,
   runStructured,
-} from "../ai-client.js";
+} from "./ai-client.js";
 
 const schema = z.object({ verdict: z.enum(["ok", "bad"]), reason: z.string() });
 

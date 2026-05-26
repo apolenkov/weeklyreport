@@ -3,12 +3,12 @@
 // empty-period short-circuit (no adapter call).
 import { describe, expect, it } from "vitest";
 
-import type { AiAdapter, AiAdapterContext } from "../ai.adapter.js";
+import type { AiAdapter, AiAdapterContext } from "./ai.adapter.js";
 import {
   AiSummaryService,
   type AiSummaryRepository,
-} from "../ai-summary.service.js";
-import { NullAiSummaryCache } from "../ai-summary.cache.js";
+} from "./ai-summary.service.js";
+import { NullAiSummaryCache } from "./ai-summary.cache.js";
 
 function makeAdapter(text: string): AiAdapter & {
   calls: AiAdapterContext[];

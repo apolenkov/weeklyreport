@@ -4,7 +4,7 @@ import {
   adminTestTelegramSendSchema,
   integrationsStatusSchema,
   telegramIntegrationStatusSchema,
-} from "../integrations";
+} from "./integrations";
 
 describe("telegramIntegrationStatusSchema (Phase 55 / UFB-056)", () => {
   it("accepts the off-state (no token, no bindings)", () => {

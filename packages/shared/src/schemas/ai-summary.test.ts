@@ -2,7 +2,7 @@ import { randomUUID as uuid } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { aiSummarySchema } from "../ai-summary";
+import { aiSummarySchema } from "./ai-summary";
 
 describe("aiSummarySchema (Phase 54 / UFB-055)", () => {
   it("accepts a mock-source payload with empty summary (no sections)", () => {

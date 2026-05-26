@@ -86,6 +86,9 @@ export default defineConfig([
       "apps/api/src/modules/ai/ai-authz.ts",
       "apps/api/src/modules/ai/__tests__/**",
       "apps/api/src/modules/ai/__fixtures__/**",
+      "apps/api/src/modules/ai/*.test.ts",
+      "apps/api/src/modules/ai/*.spec.ts",
+      "apps/api/src/modules/ai/*.eval.ts",
     ],
     rules: {
       "no-restricted-imports": [

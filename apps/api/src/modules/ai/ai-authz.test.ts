@@ -16,7 +16,7 @@ import {
   assertCanReadRisk,
   assertCanReadSection,
   reportVisibilityWhere,
-} from "../ai-authz.js";
+} from "./ai-authz.js";
 import type { UserSession } from "@customreport/shared";
 
 const VIEWER: UserSession = {

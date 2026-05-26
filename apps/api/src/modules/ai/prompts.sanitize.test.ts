@@ -6,10 +6,10 @@
 // prompt's HARD RULES.
 import { describe, expect, it } from "vitest";
 
-import { sanitizeUserContent } from "../prompts/sanitize.js";
-import { buildSentimentUserPrompt } from "../prompts/sentiment.js";
-import { buildOnTrackUserPrompt } from "../prompts/on-track.js";
-import type { RiskForSentiment, CellForOnTrack } from "../ai-facade.js";
+import { sanitizeUserContent } from "./prompts/sanitize.js";
+import { buildSentimentUserPrompt } from "./prompts/sentiment.js";
+import { buildOnTrackUserPrompt } from "./prompts/on-track.js";
+import type { RiskForSentiment, CellForOnTrack } from "./ai-facade.js";
 
 describe("sanitizeUserContent", () => {
   it("passes plain text through unchanged", () => {
