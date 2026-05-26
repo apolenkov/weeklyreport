@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 
 import { LeadForm } from "./lead-form";
 import { TRPCProxyContext } from "../../lib/trpc-context";
-import { expectDefined } from "../../test/expect-defined.js";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },

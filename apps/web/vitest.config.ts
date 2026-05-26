@@ -47,7 +47,7 @@ export default defineConfig({
       zod: path.dirname(require.resolve("zod/package.json")),
       // Replace the `server-only` guard with an empty stub so RSC helper
       // modules can be imported in jsdom tests without throwing.
-      "server-only": path.resolve(__dirname, "src/test/server-only-mock.ts"),
+      "server-only": path.resolve(__dirname, "src/test-utils/server-only-mock.ts"),
     },
   },
 });
