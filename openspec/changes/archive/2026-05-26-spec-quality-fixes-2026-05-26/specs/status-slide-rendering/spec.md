@@ -1,8 +1,3 @@
-## RENAMED Requirements
-
-- FROM: `### Requirement: Slide Card Density Tokens Are Centralized`
-- TO: `### Requirement: Slide Card Density Tokens Are Consistent Across the Deck`
-
 ## MODIFIED Requirements
 
 ### Requirement: Slide Card Density Tokens Are Consistent Across the Deck

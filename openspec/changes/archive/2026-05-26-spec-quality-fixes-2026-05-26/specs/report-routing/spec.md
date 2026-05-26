@@ -1,8 +1,3 @@
-## RENAMED Requirements
-
-- FROM: `### Requirement: Lead Report URLs Include a Stable Report Identifier`
-- TO: `### Requirement: Report URLs Encode the Report Identifier as a Path Segment`
-
 ## MODIFIED Requirements
 
 ### Requirement: Report URLs Encode the Report Identifier as a Path Segment
