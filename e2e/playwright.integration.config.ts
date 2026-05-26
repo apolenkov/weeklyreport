@@ -32,10 +32,10 @@ if (!process.env.E2E_DATABASE_URL) {
 }
 
 export default defineConfig({
-  testDir: path.join(__dirname, "e2e/integration"),
-  outputDir: path.join(__dirname, "e2e/integration/.results"),
-  globalSetup: path.join(__dirname, "e2e/integration/global-setup.ts"),
-  globalTeardown: path.join(__dirname, "e2e/integration/global-teardown.ts"),
+  testDir: path.join(__dirname, "integration"),
+  outputDir: path.join(__dirname, "integration/.results"),
+  globalSetup: path.join(__dirname, "integration/global-setup.ts"),
+  globalTeardown: path.join(__dirname, "integration/global-teardown.ts"),
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: false, // shared DB state
@@ -84,7 +84,7 @@ export default defineConfig({
           "test-secret-must-be-32-chars-or-more!!",
         FRONTEND_URL: WEB_URL,
         PDF_BASE_URL: WEB_URL,
-        PDF_OUTPUT_DIR: path.join(__dirname, "e2e/integration/.results/pdfs"),
+        PDF_OUTPUT_DIR: path.join(__dirname, "integration/.results/pdfs"),
         BULLMQ_PREFIX,
         NODE_ENV: "test",
         LOG_LEVEL: "warn", // keep test output readable
