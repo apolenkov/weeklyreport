@@ -2,19 +2,41 @@
 
 ## Purpose
 
-TBD - created by archiving change fix-period-reopen-ui. Update Purpose after archive.
+Define the UI invariants for period lifecycle actions (publish and reopen)
+available to head and admin roles. Ensures that leads and viewers never
+see mutating controls, that reopen requires explicit confirmation, and that
+the period status displayed in the UI matches the canonical enum value in
+the database.
+
+Period status enum values: `"open"`, `"published"`, `"reopened"` (defined in
+`packages/shared/src/schemas/report.ts`). A "locked" period in UI language
+maps to `published` state. After a successful reopen the state returns to
+`"open"`.
+
+Consumer surfaces: `period.reopen` tRPC mutation in
+`apps/api/src/infrastructure/trpc/trpc.router.ts` (enforced via
+`headProcedure`, which is `buildRoleMiddleware(["head", "admin"])` — both
+roles are already covered), `PublishLockButton` component in
+`apps/web/src/components/weekly-report/publish-lock-button.tsx`.
 
 ## Requirements
 
-### Requirement: Closed Periods Expose a Reopen Action to Head and Admin
+### Requirement: Published Periods Expose a Reopen Action to Head and Admin
 
 Period cards and period-detail views MUST render a "Reopen" action button
-on closed periods when the viewer is a head or admin. The action MUST
-NOT appear on open periods, and MUST NOT appear for leads or viewers.
+on periods whose state is `published` when the viewer is a head or admin.
+The action MUST NOT appear on `open` periods, and MUST NOT appear for leads
+or viewers.
 
-#### Scenario: Head views a closed period
+#### Scenario: Head views a published period
 
-- **WHEN** a head opens the period list and looks at a period whose state is `closed`
+- **WHEN** a head opens the period list and looks at a period whose state is `published`
+- **THEN** the period card renders a visible "Reopen" button
+- **AND** the button is enabled and clickable
+
+#### Scenario: Admin views a published period
+
+- **WHEN** an admin opens the period list and looks at a period whose state is `published`
 - **THEN** the period card renders a visible "Reopen" button
 - **AND** the button is enabled and clickable
 
@@ -23,9 +45,9 @@ NOT appear on open periods, and MUST NOT appear for leads or viewers.
 - **WHEN** a head opens the period list and looks at a period whose state is `open`
 - **THEN** no "Reopen" button is rendered on that period card
 
-#### Scenario: Lead views a closed period
+#### Scenario: Lead views a published period
 
-- **WHEN** a lead opens the period list and looks at a closed period
+- **WHEN** a lead opens the period list and looks at a period whose state is `published`
 - **THEN** no "Reopen" button is rendered (lead is not authorized to reopen)
 
 ### Requirement: Reopen Action Requires Confirmation
@@ -46,4 +68,4 @@ able to cancel without side effects.
 
 - **WHEN** the user clicks "Reopen" and dismisses the dialog
 - **THEN** no mutation fires
-- **AND** the period remains in `closed` state
+- **AND** the period remains in `published` state

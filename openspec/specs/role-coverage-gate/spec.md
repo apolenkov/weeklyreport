@@ -1,10 +1,15 @@
 ## Purpose
 
-Every tRPC procedure in CustomReport MUST be constructed through one of 7 canonical
+Every tRPC procedure in CustomReport MUST be constructed through one of 8 canonical
 middleware-chain builders that live in `apps/api/src/infrastructure/trpc/`. The CI
 role-coverage gate verifies this by reference identity — not structural equality —
 so that copying a builder's body into a local helper still counts as a violation.
 A PR that adds a non-compliant procedure MUST fail CI before the branch can be merged.
+
+The 8 canonical builders are: `publicProcedure`, `protectedProcedure`,
+`headProcedure`, `leadProcedure`, `viewerProcedure`, `anyRoleProcedure`,
+`adminProcedure`, `leadershipProcedure`. All are exported from
+`apps/api/src/infrastructure/trpc/trpc.middleware.ts`.
 
 Consumer surfaces: `apps/api/src/infrastructure/trpc/` (canonical builders),
 all `*.router.ts` files under `apps/api/src/` (targets), and the CI workflow
@@ -15,7 +20,7 @@ file under `.github/workflows/` (enforcement point).
 ### Requirement: Procedures Must Use Canonical Builders
 
 Every tRPC procedure defined in `apps/api/src/**/*.router.ts` MUST be constructed
-using one of the 7 canonical middleware-chain builders exported from
+using one of the 8 canonical middleware-chain builders exported from
 `apps/api/src/infrastructure/trpc/`. Procedures that do not reference a canonical
 builder MUST be rejected by the CI gate.
 
@@ -32,7 +37,7 @@ builder MUST be rejected by the CI gate.
 ### Requirement: Gate Compares Builders by Reference Identity
 
 The CI gate MUST verify that a procedure's builder is the same object reference
-as one of the 7 canonical builders. A developer who copies a canonical builder's
+as one of the 8 canonical builders. A developer who copies a canonical builder's
 middleware chain into a new local helper and uses that helper MUST still fail the
 gate.
 

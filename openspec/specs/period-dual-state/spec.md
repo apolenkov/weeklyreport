@@ -48,6 +48,19 @@ Any code path added after this spec that mutates the period representation of a 
 - **WHEN** a new writer updates only the legacy period tuple on a `Report` row, leaving `periodState` unchanged
 - **THEN** downstream readers that consume `periodState` observe a stale value, producing a phantom divergence
 
+### Requirement: Atomicity Must Be Covered by an Automated Test
+
+At least one automated integration test MUST assert that the dual-state
+write invariant holds. The test MUST verify that a rolled-back transaction
+leaves neither `periodState` nor the legacy period tuple in a partially
+updated state.
+
+#### Scenario: Transaction rolls back mid-write
+
+- **WHEN** a writer begins a dual-state update and the Prisma transaction rolls back before both fields are committed
+- **THEN** neither `periodState` nor the legacy period tuple reflects the new value
+- **AND** the `Report` row remains in its prior consistent state
+
 ### Requirement: Divergence Is a Runtime Crash Risk
 
 The absence of a database constraint means Postgres will silently accept a row where `periodState` and the legacy tuple disagree. The system MUST treat any detected divergence between the two representations as an error condition, not a recoverable inconsistency.
