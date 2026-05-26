@@ -16,7 +16,7 @@ import {
 import { SessionContext } from "../../lib/session-provider";
 import { logClientError } from "../../lib/client-error-reporting";
 import { mapLeadFormData } from "../../lib/mappers";
-import { ownedStagesForProject, normalizeStageName } from "../../lib/mappers/lead-form";
+import { ownedStagesForProject, normalizeStageName, stageNamesMatch } from "../../lib/mappers/lead-form";
 import { stageStatusToTraffic, trafficToStageStatus } from "../../lib/mappers/traffic-light";
 import { deriveEffectiveStageStatus } from "../../lib/stage-status";
 import { isoWeekNumber, formatDateRange } from "../../lib/mappers/lead-history";
@@ -764,32 +764,23 @@ export function LeadForm({
       _crossAuthorStageMap.set(ca.projectId, _sm);
     }
     for (const sn of ca.stageNames) {
-      const lower = sn.toLowerCase();
-      const stageEntry = ca.stages?.find(
-        (s) =>
-          s.stageName.toLowerCase() === lower ||
-          (lower === "dev" && s.stageName.toLowerCase() === "development") ||
-          (lower === "development" && s.stageName.toLowerCase() === "dev"),
-      );
+      const norm = normalizeStageName(sn);
+      const stageEntry = ca.stages?.find((s) => stageNamesMatch(s.stageName, sn));
       const caSection = _caSectionByAuthorId.get(ca.authorId);
       const stageRisks = (caSection?.risks ?? []).filter(
         (r) => r.projectId === ca.projectId &&
-          r.stageNames.some((n) => normalizeStageName(n) === lower),
+          r.stageNames.some((n) => normalizeStageName(n) === norm),
       );
       const stageItems = (caSection?.items ?? []).filter(
         (i) => i.projectId === ca.projectId &&
-          i.stageNames.some((n) => normalizeStageName(n) === lower),
+          i.stageNames.some((n) => normalizeStageName(n) === norm),
       );
       const status = deriveEffectiveStageStatus(
         trafficToStageStatus(stageEntry?.status ?? null),
         stageRisks,
         stageItems,
       );
-      const entry = { assignee: ca.authorName, status };
-      _sm.set(lower, entry);
-      // Mirror the dev ↔ development alias used in ownedStagesForProject mapper.
-      if (lower === "dev") _sm.set("development", entry);
-      if (lower === "development") _sm.set("dev", entry);
+      _sm.set(norm, { assignee: ca.authorName, status });
     }
   }
   const products: Product[] = (data.products as Product[]).map((product) => {
@@ -799,7 +790,7 @@ export function LeadForm({
       ...product,
       stages: product.stages.map((stage) => {
         if (stage.ownership !== "unassigned") return stage;
-        const entry = stageMap.get(stage.stageName.toLowerCase());
+        const entry = stageMap.get(normalizeStageName(stage.stageName));
         if (!entry) return stage;
         return { ...stage, ownership: "locked" as const, assignee: entry.assignee, status: entry.status };
       }),
