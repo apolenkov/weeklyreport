@@ -263,7 +263,7 @@ export function NavBar() {
   const orgShortName = orgResolved
     ? visibleOrganization.shortName
     : DEFAULT_ORGANIZATION_IDENTITY.shortName;
-  const homeLabel = visibleUser ? visibleUser.name + " home" : "Loading";
+  const homeLabel = visibleUser ? visibleUser.name + " home" : "Profile loading";
   const identityMeta = [
     orgResolved ? orgShortName : null,
     visibleUser?.reportingGroupName,

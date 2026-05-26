@@ -107,7 +107,7 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
               that Recharts injects by default — the chart has no interactive value
               for keyboard users so we remove it from the focus order entirely (D-35). */}
           <div aria-hidden="true" tabIndex={-1} className="h-full w-full">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={1}>
             <LineChart
               data={sparklineRows}
               margin={{ top: 4, right: 4, left: 4, bottom: 0 }}
