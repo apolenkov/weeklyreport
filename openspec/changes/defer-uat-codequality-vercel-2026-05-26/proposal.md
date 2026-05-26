@@ -35,6 +35,11 @@ Next.js 16 конвенции.
 `pnpm typecheck && pnpm lint && pnpm test && pnpm lint:md` — все зелёные.
 Повторный Playwright-свип: 0 console-ошибок по всем ролям.
 
+## Wave 1 split
+
+Wave 1-light выделена в отдельный change `uat-feedback-2026-05-26`
+(feedback only, без фиксов, 2026-05-26). Wave 2–5 ждут следующей сессии.
+
 ## Start condition
 
 Начать по явному «вперёд» от пользователя.
