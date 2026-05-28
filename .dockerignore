@@ -31,7 +31,6 @@ test-results
 playwright-report
 coverage
 **/coverage
-graphify-out
 apps/api/.logs
 **/.logs
 apps/web/.tmp
@@ -46,6 +45,5 @@ apps/web/.tmp
 .env.local
 **/.env.local
 .claude/
-.graphifyignore
 *.png
 **/*.png
