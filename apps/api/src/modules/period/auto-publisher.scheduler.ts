@@ -80,17 +80,16 @@ export class AutoPublisherScheduler {
     const publishedIds: string[] = [];
     for (const candidate of candidates) {
       try {
+        // refactor-period-transition-writer: `publishAuto` now writes the
+        // COMPLETE autoPublish field set (status, periodStatus, periodState,
+        // publishedAt, publishedById=null, autoPublished=true) in a single
+        // update via the transition builder. The previous second
+        // `report.update` here was both redundant (it re-wrote periodState)
+        // and a torn-write hazard: if it failed after publishAuto committed,
+        // the now-`status=published` row was never re-selected by the
+        // `status:"draft"` candidate query, leaving autoPublished=false
+        // forever. Deleting it closes that window.
         await this.publicationService.publishAuto(candidate.id);
-
-        // UFB-053 / Phase 51-C: stamp the explicit state column AND the
-        // `autoPublished` audit flag from 51-A. The legacy `status` and
-        // `periodStatus` writes already happened inside `publishAuto`
-        // (see publication.prisma-repository); this update is additive
-        // and idempotent.
-        await this.prisma.report.update({
-          where: { id: candidate.id },
-          data: { periodState: "published", autoPublished: true },
-        });
 
         // Count sections that never reached `submitted` status; these
         // render as «Не сдал» placeholders downstream. Counted post-
