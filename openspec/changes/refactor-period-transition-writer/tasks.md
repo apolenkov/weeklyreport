@@ -40,10 +40,15 @@ ctx)` returning the governed-field subset for all kinds (`create`,
 
 ## API — enforcement & tests
 
-- [ ] Add a CI gate (lint rule or grep check, mirroring the role-coverage-gate
+- [x] Add a CI gate (lint rule or grep check, mirroring the role-coverage-gate
       pattern) that fails when `report.update`/`report.create` writes any
       lifecycle field (`periodState`, `status`, `periodStatus`, `archived`,
       `autoPublished`, `autoArchived`) outside the transition module.
+      Implemented as a TS-AST vitest scan with a greppable call-site opt-out
+      marker. The gate surfaced an UNLISTED writer — `admin applySnapshot`
+      writes `status` without `periodState`; exempted (snapshot restore is not
+      a transition; deriving the set would corrupt reopened rows) with a
+      `TODO(snapshot-lifecycle-restore)` trace for a follow-up change.
 - [ ] Add the `period-dual-state`-required atomicity integration test: a
       rolled-back transition leaves neither `periodState` nor the legacy fields
       partially updated.
