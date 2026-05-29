@@ -101,6 +101,22 @@ function projectStatusId(
   return `a0000000-0000-4000-8000-000000006${reportSuffix}${leadIndex}${prodSeq}`;
 }
 
+function stageStatusId(
+  leadIndex: number,
+  prodSeq: number,
+  stageSeq: number,
+): string {
+  // "f0" marker (2) + lead(2) + prod(4) + stage(4) = 12 hex chars. Each field is
+  // zero-padded so the (leadIndex, prodSeq, stageSeq) -> id mapping stays
+  // injective: the old unpadded concatenation collided once a lead owned >=10
+  // products (prodSeq became 2 digits), producing duplicate primary keys (P2002).
+  return `a0000000-0000-4000-8000-f0${leadIndex
+    .toString()
+    .padStart(2, "0")}${prodSeq.toString().padStart(4, "0")}${stageSeq
+    .toString()
+    .padStart(4, "0")}`;
+}
+
 function riskId(seq: number): string {
   // 0000000009 (10) + 2-digit seq = 12
   return `a0000000-0000-4000-8000-0000000009${seq.toString().padStart(2, "0")}`;
@@ -662,7 +678,7 @@ async function main() {
                 ]!,
             },
             create: {
-              id: `a0000000-0000-4000-8000-0000000f0${cfg.leadIndex}${pIdx + 1}${offset + 1}`,
+              id: stageStatusId(cfg.leadIndex, pIdx + 1, offset + 1),
               reportSectionId: secId,
               projectId: product.id,
               stageId: stage.id,
@@ -1323,8 +1339,14 @@ async function main() {
   ];
 
   for (const rule of reminderRules) {
+    // Upsert by the natural key (reportId, policyId), not the surrogate id: the
+    // reset-hard baseline (seed-simple) already created a rule for this
+    // (reportId, policyId) under a different id, so an id-keyed upsert would
+    // CREATE a duplicate and violate the unique constraint (P2002).
     await prisma.reminderRule.upsert({
-      where: { id: rule.id },
+      where: {
+        reportId_policyId: { reportId: rule.reportId, policyId: rule.policyId },
+      },
       update: {
         kind: rule.kind,
         fireAt: rule.fireAt,
