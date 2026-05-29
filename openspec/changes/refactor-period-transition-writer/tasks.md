@@ -49,7 +49,7 @@ ctx)` returning the governed-field subset for all kinds (`create`,
       writes `status` without `periodState`; exempted (snapshot restore is not
       a transition; deriving the set would corrupt reopened rows) with a
       `TODO(snapshot-lifecycle-restore)` trace for a follow-up change.
-- [ ] Add the `period-dual-state`-required atomicity integration test: a
+- [x] Add the `period-dual-state`-required atomicity integration test: a
       rolled-back transition leaves neither `periodState` nor the legacy fields
       partially updated.
 
