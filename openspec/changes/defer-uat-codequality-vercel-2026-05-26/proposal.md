@@ -61,3 +61,21 @@ Wave 1-light выделена в отдельный change `uat-feedback-2026-05
 ## Start condition
 
 Начать по явному «вперёд» от пользователя.
+
+## Child changes (planned 2026-05-29)
+
+Waves 3/5 + Biome + dep-upgrades разложены на отдельные openspec changes
+(plan only, код не тронут; grill-with-docs + планирующий workflow):
+
+- `migrate-to-biome` — Wave 3 фундамент (ESLint+Prettier → Biome, hybrid;
+  markdownlint остаётся). Лендится первым на integration-ветке.
+- `code-quality-modernization` — Wave 3 dead-code/simplify/структурные рефакторы
+  (HOT ZONE report-period под characterization-тестами).
+- `dependency-upgrades-minor` — Wave 3 батч minor/patch (21 пакет).
+- `upgrade-*-major` (×9) — изолированные major-бампы: typescript, types-node,
+  jsdom, lucide-react, types-cookie, react-email-components, bull-board-api,
+  bull-board-express, vitejs-plugin-react.
+- `final-gates-resweep` — Wave 5 финальный гейт (5 команд) + re-sweep 4 ролей.
+- `ui-ux-vercel-audit-research` — Wave 4 RESEARCH-ONLY (аудит-мемо, без кода).
+
+Wave 2 (фиксы UAT-багов) спекается после live-свипа — ещё не запущен.
