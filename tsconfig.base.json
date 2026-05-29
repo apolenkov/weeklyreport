@@ -15,12 +15,11 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "baseUrl": ".",
     "paths": {
-      "@customreport/shared": ["packages/shared/src/index.ts"],
-      "@customreport/shared/*": ["packages/shared/src/*"],
-      "@customreport/ui": ["packages/ui/src/index.ts"],
-      "@customreport/ui/*": ["packages/ui/src/*"]
+      "@customreport/shared": ["./packages/shared/src/index.ts"],
+      "@customreport/shared/*": ["./packages/shared/src/*"],
+      "@customreport/ui": ["./packages/ui/src/index.ts"],
+      "@customreport/ui/*": ["./packages/ui/src/*"]
     }
   }
 }
