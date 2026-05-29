@@ -28,8 +28,10 @@ ctx)` returning the governed-field subset for all kinds (`create`,
 - [x] Migrate `admin.prisma-repository.ts` `createPeriodManual` /
       `archivePeriod` / `unarchivePeriod`. Leave `updatePeriodManual` (Edit
       dialog, date/label only — no lifecycle field).
-- [ ] Migrate `auto-archiver.scheduler.ts` and `period-creator.scheduler.ts`
-      (create + SCHEDULED→OPEN flip).
+- [x] Migrate `auto-archiver.scheduler.ts` and `period-creator.scheduler.ts`
+      (create + SCHEDULED→OPEN flip). `initialPeriodState` is now exported from
+      `period-transition.ts` (the creation paths need the resolved narrow state
+      for audit/log/return); period-creator imports it from there.
 - [x] Migrate `publication.prisma-repository.ts` assemble/publish path.
       Done early (before auto-publisher): the periodStatus drift lives in the
       shared `saveAssembledReport`, so fixing it here repairs BOTH manual

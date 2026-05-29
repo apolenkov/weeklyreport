@@ -5,6 +5,7 @@ import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { AdminService } from "../admin/admin.service";
 import type { AuditLogger } from "../../lib/audit-logger.js";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
+import { buildTransition } from "./period-transition.js";
 
 /**
  * UFB-049 / Phase 50-B: daily scheduler that flips published Reports to
@@ -77,17 +78,12 @@ export class AutoArchiverScheduler {
     const archivedIds: string[] = [];
     for (const candidate of candidates) {
       try {
-        // UFB-053 / Phase 51-C: write the legacy `archived` boolean AND
-        // the new `periodState` column AND the 51-A `autoArchived` audit
-        // flag in a single update. Order matters only for downstream
-        // readers; this is atomic at the row level.
+        // refactor-period-transition-writer: the autoArchive transition writes
+        // the legacy `archived` boolean, the new `periodState` column, and the
+        // `autoArchived` audit flag as one atomic row-level field set.
         await this.prisma.report.update({
           where: { id: candidate.id },
-          data: {
-            archived: true,
-            periodState: "archived",
-            autoArchived: true,
-          },
+          data: buildTransition("autoArchive", {}),
         });
         this.logger.log(`auto-archive period=${candidate.id}`);
         this.auditLogger.periodAutoArchive({
