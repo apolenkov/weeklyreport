@@ -7,13 +7,13 @@ is sized to land in one commit. Gates after every step:
 ## API — module
 
 - [x] Add pure `modules/period/period-transition.ts`: `buildTransition(kind,
-  ctx)` returning the governed-field subset for all kinds (`create`,
+ctx)` returning the governed-field subset for all kinds (`create`,
       `schedule`, `open`, `publish`, `autoPublish`, `reopen`, `archive`,
       `autoArchive`, `unarchive`). Timestamp-stamping kinds take `now` via
       `ctx` (no internal `new Date()`). Move `legacyTupleToState` /
       `stateToLegacyTuple` / `initialPeriodState` in as internals. Unit-test
       every kind's field set (including the reopen asymmetry) with no DB.
-- [ ] Add thin `modules/period/period-transition.apply.ts`:
+- [x] Add thin `modules/period/period-transition.apply.ts`:
       `applyTransition(tx, reportId, kind, ctx)` running `tx.report.update` and
       returning the row; plus a no-tx convenience wrapper.
 
