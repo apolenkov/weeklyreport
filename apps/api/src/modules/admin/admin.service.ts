@@ -39,7 +39,7 @@ import { ReportStatus } from "@prisma/client";
 
 import { computeDeadline } from "../../lib/business-date.js";
 import { createNullLogger, type AppLogger } from "../../lib/logger";
-import { initialPeriodState } from "../weekly-report/period-state.js";
+import { initialPeriodState } from "../period/period-transition.js";
 
 export class AdminAccessError extends Error {
   constructor(message: string) {

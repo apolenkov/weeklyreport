@@ -55,10 +55,16 @@ ctx)` returning the governed-field subset for all kinds (`create`,
 
 ## Cleanup
 
-- [ ] Delete the `period-state.ts` shim once no caller imports its helpers.
+- [x] Delete the `period-state.ts` shim once no caller imports its helpers.
+      `initialPeriodState` moved to `period-transition.ts` (admin.service +
+      period-creator repointed); the legacy-tuple helpers were absorbed as
+      internals and had no remaining caller.
 
 ## Verification
 
-- [ ] Run `pnpm typecheck && pnpm lint && pnpm test && pnpm build`.
-- [ ] Run `pnpm lint:md` for the planning docs.
-- [ ] `openspec validate refactor-period-transition-writer` passes.
+- [x] Run `pnpm typecheck && pnpm lint && pnpm test && pnpm build`. (935 unit
+      tests green; build green.)
+- [x] Run `pnpm lint:md` for the planning docs. (0 errors.)
+- [x] `openspec validate refactor-period-transition-writer` passes.
+- [x] Atomicity + publication-regression integration tests verified locally
+      against a migrated `customreport_test` DB.
