@@ -25,7 +25,7 @@ ctx)` returning the governed-field subset for all kinds (`create`,
       atomic write now lives in `publishAuto` per the commit above.)
 - [x] Migrate `period.prisma-repository.ts` `publishPeriod` (keep the snapshot
       write in the same `$transaction`) and `reopenPeriod`.
-- [ ] Migrate `admin.prisma-repository.ts` `createPeriodManual` /
+- [x] Migrate `admin.prisma-repository.ts` `createPeriodManual` /
       `archivePeriod` / `unarchivePeriod`. Leave `updatePeriodManual` (Edit
       dialog, date/label only — no lifecycle field).
 - [ ] Migrate `auto-archiver.scheduler.ts` and `period-creator.scheduler.ts`
