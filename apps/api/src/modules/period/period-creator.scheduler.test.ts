@@ -178,7 +178,10 @@ describe("PeriodCreatorScheduler", () => {
         periodState: "scheduled",
         periodStart: { lte: expect.any(Date) },
       },
-      data: { periodState: "open" },
+      // refactor-period-transition-writer: the open transition writes the full
+      // field set (periodState + the draft/false legacy tuple already on the
+      // scheduled rows).
+      data: { periodState: "open", status: "draft", archived: false },
     });
   });
 

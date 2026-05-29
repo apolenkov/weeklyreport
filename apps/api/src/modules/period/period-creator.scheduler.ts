@@ -7,7 +7,10 @@ import type { AuditLogger } from "../../lib/audit-logger.js";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { computeDeadline } from "../../lib/business-date.js";
 import { getCurrentWeekBounds } from "../auth/auth.routes.js";
-import { initialPeriodState } from "../weekly-report/period-state.js";
+import {
+  buildTransition,
+  initialPeriodState,
+} from "./period-transition.js";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
 
 /**
@@ -82,7 +85,10 @@ export class PeriodCreatorScheduler {
     // SCHEDULED-time and stays that way at OPEN-time.
     await this.prisma.report.updateMany({
       where: { periodState: "scheduled", periodStart: { lte: now } },
-      data: { periodState: "open" },
+      // refactor-period-transition-writer: the open transition supplies the
+      // full field set (periodState='open' + the draft/false legacy tuple the
+      // scheduled rows already carry, so it is a no-op on those columns).
+      data: buildTransition("open", {}),
     });
 
     // Most recent period across the whole table. If it ends in the future
@@ -121,7 +127,16 @@ export class PeriodCreatorScheduler {
     const periodState = initialPeriodState(periodStart, now);
 
     const created = await this.prisma.report.create({
-      data: { periodStart, periodEnd, deadline, periodState },
+      // refactor-period-transition-writer: identity envelope + lifecycle field
+      // set from the transition builder. The resolved scheduled|open state
+      // maps to the schedule/open kind (both a draft/false legacy tuple); the
+      // narrow `periodState` local is kept for the audit/log/return below.
+      data: {
+        periodStart,
+        periodEnd,
+        deadline,
+        ...buildTransition(periodState === "scheduled" ? "schedule" : "open", {}),
+      },
       select: {
         id: true,
         periodStart: true,

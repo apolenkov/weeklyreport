@@ -103,11 +103,17 @@ function legacyTuple(state: PeriodState): {
 }
 
 /**
- * Internal: the initial state for a freshly-created period (formerly
- * `period-state.ts#initialPeriodState`). `scheduled` when the period has not
+ * The initial state for a freshly-created period (formerly
+ * `period-state.ts#initialPeriodState`): `scheduled` when the period has not
  * started yet (`periodStart > now`), otherwise `open`.
+ *
+ * Exported because the two creation paths (admin manual create and the
+ * period-creator scheduler) need the resolved narrow state for their audit
+ * envelope, log line, and return value — not only for the write. The write
+ * itself still flows through {@link buildTransition}. The legacy-tuple helpers
+ * have no such external consumer and stay private.
  */
-function initialState(
+export function initialPeriodState(
   periodStart: Date,
   now: Date,
 ): Extract<PeriodState, "scheduled" | "open"> {
@@ -125,7 +131,7 @@ export function buildTransition<K extends TransitionKind>(
   switch (kind) {
     case "create": {
       const { periodStart, now } = ctx as TransitionCtx["create"];
-      const state = initialState(periodStart, now);
+      const state = initialPeriodState(periodStart, now);
       return { periodState: state, ...legacyTuple(state) };
     }
     case "schedule":
