@@ -6,8 +6,8 @@ is sized to land in one commit. Gates after every step:
 
 ## API — module
 
-- [ ] Add pure `modules/period/period-transition.ts`: `buildTransition(kind,
-    ctx)` returning the governed-field subset for all kinds (`create`,
+- [x] Add pure `modules/period/period-transition.ts`: `buildTransition(kind,
+  ctx)` returning the governed-field subset for all kinds (`create`,
       `schedule`, `open`, `publish`, `autoPublish`, `reopen`, `archive`,
       `autoArchive`, `unarchive`). Timestamp-stamping kinds take `now` via
       `ctx` (no internal `new Date()`). Move `legacyTupleToState` /
