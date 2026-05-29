@@ -28,7 +28,10 @@ aspirational and is re-grounded by this change):
 
 - `period.prisma-repository.ts` — `publishPeriod`, `reopenPeriod`
 - `publication.prisma-repository.ts` — assemble/publish path
-- `admin.prisma-repository.ts` — create, archive, edit
+- `admin.prisma-repository.ts` — `createPeriodManual` (create), `archivePeriod`
+  (archive), `unarchivePeriod` (unarchive). NB: `updatePeriodManual` (the Edit
+  dialog) writes only the date/label envelope, never a lifecycle field, so it
+  is **not** governed and the CI gate must not flag it.
 - `period/auto-publisher.scheduler.ts`, `period/auto-archiver.scheduler.ts`
 - `period/period-creator.scheduler.ts` — create + SCHEDULED→OPEN flip
 
@@ -59,12 +62,43 @@ AFTER — intent in, complete atomic field set out
 reportId, kind, ctx)` that runs `tx.report.update` and returns the row.
   Accepts the caller's transaction client; never opens its own.
 
+### Return type and the `create` / `update` split
+
+`buildTransition` returns a plain **governed-field subset** object (only the
+lifecycle keys it owns: `periodState`, `status`, `archived`, `periodStatus`,
+`autoPublished` / `autoArchived`, the timestamps). The object is assignable to
+both `Prisma.ReportUpdateInput` and `Prisma.ReportCreateInput` because every
+value is a bare scalar (never a `{ set }` update wrapper).
+
+- **Existing-row transitions** (`publish`, `autoPublish`, `reopen`, `archive`,
+  `autoArchive`, `open`, `unarchive`) flow through `applyTransition`, which runs
+  `tx.report.update({ data: buildTransition(...) })`.
+- **`create`** is special: it is a `report.create`, and the row also needs the
+  non-governed identity envelope (`periodStart` / `periodEnd` / `deadline` /
+  `weekLabel`) that the module does **not** own. The caller spreads the
+  governed subset into its own create:
+  `report.create({ data: { ...identity, ...buildTransition("create", ctx) } })`.
+  There is no create variant of `applyTransition`. The CI gate stays satisfied
+  because the lifecycle keys arrive via the `buildTransition(...)` spread, not
+  as inline literals.
+- The SCHEDULED→OPEN flip in `period-creator` is an `updateMany`, not a
+  single-row update; it spreads `buildTransition("open", …)` into the
+  `updateMany` data for the same reason.
+
+To keep `buildTransition` pure and unit-testable, transitions that stamp a
+timestamp (`publish`, `autoPublish`, `reopen`) take `now` via `ctx` rather than
+calling `new Date()` internally.
+
 ### Why accept `tx` rather than own it
 
 `publishPeriod` builds and writes the published snapshot from the **updated**
-row inside the same `$transaction`. If the module opened its own transaction the
-snapshot write could no longer be atomic with the state write. Callers that have
-no transaction of their own use a one-line convenience wrapper.
+row inside the same `$transaction`. It therefore calls
+`tx.report.update({ data: buildTransition("publish", ctx), include: … })`
+directly (still sourcing every lifecycle value from the module) rather than
+`applyTransition`, because it needs the snapshot `include` on the same call. If
+the module opened its own transaction the snapshot write could no longer be
+atomic with the state write. Callers that have no transaction of their own use a
+one-line convenience wrapper.
 
 ## Invariant impact
 
@@ -74,9 +108,12 @@ write one representation without the others. The module is the single
 enforcement point; the new CI gate (forbid raw lifecycle-field writes outside
 the module) converts the spec's review-only contract into a machine-checked one.
 
-The auto-publisher two-transaction divergence is fixed as a side effect: the
-`autoPublish` transition writes the legacy fields and `periodState` in one
-update, closing the window.
+The auto-publisher divergences are fixed as a side effect. The `autoPublish`
+transition writes `status`, `periodStatus`, `periodState`, and `autoPublished`
+in one update — closing the torn-write window (tx2 can no longer fail
+independently) and correcting the permanent `periodStatus="open"` drift that
+the current auto path leaves on every published report (it never wrote
+`periodStatus` at all).
 
 ## Rollout — strangler, one writer per commit
 

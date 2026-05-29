@@ -15,12 +15,24 @@ new column from the legacy fields is _passive_ — `publishPeriod`,
 `reopenPeriod`, and the auto-publisher inline their assignments and never call
 it. Only `initialPeriodState()` is actually used.
 
-The concrete failure: `auto-publisher` writes the legacy fields in one
-transaction (`publishAuto`) and `periodState` in a **second** transaction. The
-candidate query selects `status: "draft"`, so if the first transaction commits
-and the second fails, the now-published report is never re-selected and stays
-permanently divergent (`status="published"`, `periodState` stale). This is a
-live violation of the invariant's "never in separate database round-trips" rule.
+The concrete failure (verified against the tree): `auto-publisher` publishes in
+two database round-trips. `publishAuto → saveAssembledReport` (tx1) writes
+`status` and `periodState` together — but **never `periodStatus`** — then the
+scheduler's own `report.update` (tx2) adds `autoPublished` (and a redundant
+`periodState`). Two distinct divergences result:
+
+1. **Permanent, even when both transactions succeed.** Manual `publishPeriod`
+   writes `periodStatus="published"`; the auto path writes it in neither tx1
+   nor tx2, so an auto-published report is stuck at the default
+   `periodStatus="open"` forever. The reopen-flavour machine silently disagrees
+   with `status`/`periodState` on every auto-published report.
+2. **A torn-write window.** If tx1 commits and tx2 fails, the candidate query
+   (`status: "draft"`) never re-selects the now-`published` row, so
+   `autoPublished` stays `false` permanently.
+
+Both are live violations of the invariant's "assemble the complete field set in
+one round-trip" rule — the auto path assembles the set neither completely nor
+atomically.
 
 ## Solution
 

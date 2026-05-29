@@ -12,8 +12,9 @@ tuple (`year`, `week`, `quarter`) is written only at creation and is NOT
 governed by this requirement.
 
 Each transition (`create`, `schedule`, `open`, `publish`, `autoPublish`,
-`reopen`, `archive`, `autoArchive`) MUST produce the complete field set for
-that transition so that no representation can be written without the others.
+`reopen`, `archive`, `autoArchive`, `unarchive`) MUST produce the complete field
+set for that transition so that no representation can be written without the
+others.
 
 #### Scenario: Writer mutates lifecycle state via the transition module
 
@@ -24,13 +25,15 @@ that transition so that no representation can be written without the others.
 - **AND** the resulting `report.update` writes the complete governed field set
   for that transition in a single round-trip
 
-#### Scenario: Auto-publish writes legacy fields and periodState atomically
+#### Scenario: Auto-publish writes the full lifecycle set atomically
 
 - **WHEN** the auto-publisher promotes a draft `Report` past its deadline
 - **THEN** `status`, `periodStatus`, `periodState`, and `autoPublished` are
   written in the same transaction
-- **AND** there is no intermediate committed state where `status` is
-  `"published"` while `periodState` is stale
+- **AND** the published report's `periodStatus` is `"published"` (not left at
+  the default `"open"`), matching the manual publish path
+- **AND** there is no committed state where `status` is `"published"` while
+  `autoPublished` is still `false`
 
 ### Requirement: Raw Lifecycle-Field Writes Are Forbidden Outside the Module
 
