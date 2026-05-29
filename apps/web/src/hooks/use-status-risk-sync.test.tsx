@@ -6,7 +6,7 @@ import type {
   StageStatus,
 } from "../components/lead/mock-data";
 import { expectDefined } from "../test-utils/expect-defined.js";
-import { type SyncSource, useStatusRiskSync } from "./use-status-risk-sync";
+import { type SyncSource, useStatusRiskSync } from "./use-status-risk";
 
 function buildProduct(overrides?: Partial<Product>): Product {
   return {

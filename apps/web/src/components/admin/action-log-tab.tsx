@@ -80,8 +80,7 @@ export function ActionLogTab() {
 
   const pagination = useCursorPagination<ActionLogRow>(
     (input) =>
-      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
-      (trpc.admin.actionLog.list as any).infiniteQueryOptions(
+      trpc.admin.actionLog.list.infiniteQueryOptions(
         { limit: input.limit ?? PAGE_SIZE },
         {
           getNextPageParam: (last: { nextCursor: string | null }) =>
