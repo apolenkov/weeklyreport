@@ -90,11 +90,45 @@ describe("PublicationPrismaRepository (integration)", () => {
     });
     expect(expectDefined(reloaded).status).toBe("published");
     expect(expectDefined(reloaded).publishedById).toBe(testData.head.id);
+    // refactor-period-transition-writer regression: a manual assemble-publish
+    // MUST move all three lifecycle machines to published. The old
+    // hand-assembled write never set periodStatus, leaving it at the default
+    // "open" — which made the report invisible to viewers. The transition
+    // builder fixes this.
+    expect(expectDefined(reloaded).periodStatus).toBe("published");
+    expect(expectDefined(reloaded).periodState).toBe("published");
     expect(expectDefined(reloaded).publishedSnapshot).not.toBeNull();
     expect(expectDefined(reloaded).publishedSnapshot).toMatchObject({
       reportId: testData.report.id,
       status: "published",
       publishedById: testData.head.id,
     });
+  });
+
+  it("saveAssembledReport with { auto: true } writes the full autoPublish set", async () => {
+    const assembled = await repo.getAssembledReport(testData.report.id);
+    expect(assembled).not.toBeNull();
+
+    const publishedAt = new Date("2026-04-12T10:00:00.000Z");
+    const published = {
+      ...expectDefined(assembled),
+      status: "published" as const,
+      publishedAt,
+      publishedById: null,
+    };
+
+    await repo.saveAssembledReport(published, { auto: true });
+
+    const reloaded = await prisma.report.findUnique({
+      where: { id: testData.report.id },
+    });
+    // The auto path used to leave periodStatus="open" and rely on a SECOND
+    // transaction for autoPublished — a torn-write window. autoPublish now
+    // writes the complete set in one update.
+    expect(expectDefined(reloaded).status).toBe("published");
+    expect(expectDefined(reloaded).periodStatus).toBe("published");
+    expect(expectDefined(reloaded).periodState).toBe("published");
+    expect(expectDefined(reloaded).autoPublished).toBe(true);
+    expect(expectDefined(reloaded).publishedById).toBeNull();
   });
 });

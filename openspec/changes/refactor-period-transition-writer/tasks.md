@@ -28,7 +28,11 @@ ctx)` returning the governed-field subset for all kinds (`create`,
       dialog, date/label only — no lifecycle field).
 - [ ] Migrate `auto-archiver.scheduler.ts` and `period-creator.scheduler.ts`
       (create + SCHEDULED→OPEN flip).
-- [ ] Migrate `publication.prisma-repository.ts` assemble/publish path.
+- [x] Migrate `publication.prisma-repository.ts` assemble/publish path.
+      Done early (before auto-publisher): the periodStatus drift lives in the
+      shared `saveAssembledReport`, so fixing it here repairs BOTH manual
+      `publishReport` and scheduler `publishAuto`, and makes `autoPublish`
+      atomic — which is what lets the scheduler's tx2 be deleted next.
 
 ## API — enforcement & tests
 

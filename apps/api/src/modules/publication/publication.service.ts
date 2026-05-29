@@ -34,7 +34,15 @@ export class PublicationAccessError extends Error {
 
 export interface PublicationRepository {
   getAssembledReport(activeReportId: string): Promise<AssembledReport | null>;
-  saveAssembledReport(report: AssembledReport): Promise<AssembledReport>;
+  /**
+   * Persist the assembled report. `options.auto` selects the `autoPublish`
+   * transition (scheduler-driven, `publishedById=null`, `autoPublished=true`)
+   * over the manual `publish` transition; it is ignored for draft saves.
+   */
+  saveAssembledReport(
+    report: AssembledReport,
+    options?: { auto?: boolean },
+  ): Promise<AssembledReport>;
 }
 
 function compareSections(
@@ -236,6 +244,10 @@ export class PublicationService {
         publishedById: null,
         publishedByName: "system",
       }),
+      // Scheduler-driven: routes through the `autoPublish` transition so
+      // `autoPublished=true` and `periodStatus="published"` are written
+      // atomically with `status`/`periodState` — no separate round-trip.
+      { auto: true },
     );
     // Phase 52-A: same telemetry as publishReport. Same `state` label so
     // ops can aggregate without `or` predicates — the manual-vs-auto
