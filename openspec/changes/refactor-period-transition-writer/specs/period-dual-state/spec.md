@@ -42,9 +42,25 @@ A continuous-integration gate MUST fail the build when a `report.update` or
 transition module. This converts the dual-state contract from a review-only
 convention into a machine-checked invariant.
 
+A write that is demonstrably NOT a lifecycle transition — specifically a
+snapshot restoration that reinstates independently-persisted values rather than
+coupling the three machines into one intent — MAY opt out via an explicit,
+reviewed call-site marker that names a follow-up reference. Deriving such a
+write through the transition module would corrupt legitimately-divergent rows
+(a reopened period is `status="published"` while `periodState="open"`). Every
+other governed-field write outside the module MUST fail the gate.
+
 #### Scenario: A new writer bypasses the transition module
 
 - **WHEN** code is added that writes `periodState`, `status`, `periodStatus`,
   `archived`, `autoPublished`, or `autoArchived` directly via Prisma outside the
   transition module
 - **THEN** the CI gate fails and the build is rejected
+
+#### Scenario: A non-transition restore opts out via an explicit marker
+
+- **WHEN** a write that reinstates persisted values (not a transition) carries
+  an explicit call-site opt-out marker naming a follow-up reference
+- **THEN** the CI gate skips that specific call site
+- **AND** the same write WITHOUT the marker still fails the gate, so the opt-out
+  is per-site and reviewable, never a blanket off-switch
