@@ -1,9 +1,5 @@
 "use client";
 
-import * as React from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
-
-import { cn } from "@customreport/ui/lib/utils";
 import {
   Table,
   TableBody,
@@ -12,6 +8,9 @@ import {
   TableHeader,
   TableRow,
 } from "@customreport/ui/components/ui/table";
+import { cn } from "@customreport/ui/lib/utils";
+import { ChevronDown, ChevronUp } from "lucide-react";
+import * as React from "react";
 
 export type Column<T> = {
   key: string;

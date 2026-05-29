@@ -28,14 +28,13 @@
  */
 
 import type {
-  WeeklyReportReadModel,
   PortfolioProductOverview,
   ReportSectionReadModel,
+  WeeklyReportReadModel,
 } from "@customreport/shared";
-
+import { formatPeriodRangeWithYear, formatWeekLabel } from "../format-date";
 import { deriveItemStatus, type ItemStatus } from "./item-status";
 import { trafficToStageStatus } from "./traffic-light";
-import { formatPeriodRangeWithYear, formatWeekLabel } from "../format-date";
 
 // ---- Self-contained presentation types ----
 

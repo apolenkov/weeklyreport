@@ -107,26 +107,26 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
               that Recharts injects by default — the chart has no interactive value
               for keyboard users so we remove it from the focus order entirely (D-35). */}
           <div aria-hidden="true" tabIndex={-1} className="h-full w-full">
-          <ResponsiveContainer width="100%" height="100%" minWidth={1}>
-            <LineChart
-              data={sparklineRows}
-              margin={{ top: 4, right: 4, left: 4, bottom: 0 }}
-            >
-              <YAxis hide domain={[0, 100]} />
-              <Tooltip
-                formatter={(value) => [`${value}%`, "on-time"]}
-                labelFormatter={(label) => `Period ${String(label)}`}
-              />
-              <Line
-                type="monotone"
-                dataKey="onTime"
-                stroke="var(--color-starbucks-accent, #00754A)"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-                isAnimationActive={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+            <ResponsiveContainer width="100%" height="100%" minWidth={1}>
+              <LineChart
+                data={sparklineRows}
+                margin={{ top: 4, right: 4, left: 4, bottom: 0 }}
+              >
+                <YAxis hide domain={[0, 100]} />
+                <Tooltip
+                  formatter={(value) => [`${value}%`, "on-time"]}
+                  labelFormatter={(label) => `Period ${String(label)}`}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="onTime"
+                  stroke="var(--color-starbucks-accent, #00754A)"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  isAnimationActive={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </div>
       )}

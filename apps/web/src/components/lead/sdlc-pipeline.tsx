@@ -1,8 +1,8 @@
 "use client";
 
 import { OnTrackIcon } from "../ai/on-track-icon";
-import { StageChip } from "./stage-chip";
 import type { Product, RiskEntry, StageStatus } from "./mock-data";
+import { StageChip } from "./stage-chip";
 import { canonicalStageName, splitStageNames } from "./stage-tags";
 
 export type CrossAuthorEntry = {
@@ -105,7 +105,9 @@ export function SdlcPipeline({
         : splitStageNames(r.stageName);
     const keys =
       stageTags.length > 0
-        ? stageTags.map((stageName) => `${r.productId}::${canonicalStageName(stageName)}`)
+        ? stageTags.map(
+            (stageName) => `${r.productId}::${canonicalStageName(stageName)}`,
+          )
         : (product?.stages ?? []).map(
             (stage) => `${r.productId}::${canonicalStageName(stage.stageName)}`,
           );

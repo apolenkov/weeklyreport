@@ -1,17 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
-
 import {
-  adminReminderExecutionSchema,
   type AdminReminderExecution,
   type AdminReminderRule,
+  adminReminderExecutionSchema,
 } from "@customreport/shared";
-
+import { describe, expect, it, vi } from "vitest";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   ReminderDomainError,
-  RemindersService,
   type RemindersRepository,
+  RemindersService,
 } from "./reminders.service";
-import { expectDefined } from "../../test-utils/expect-defined.js";
 
 // ---------------------------------------------------------------------------
 // Fixtures

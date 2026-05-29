@@ -18,11 +18,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 type QueryKey = unknown[];
 type QueryOptions = { queryKey: QueryKey };
 
-const queryOptionsSpy = vi.fn((arg?: unknown): QueryOptions => ({
-  // Return a key that encodes the argument so diverging args produce
-  // different keys — the same trick the real tRPC adapter uses.
-  queryKey: arg === undefined ? ["activity.live"] : ["activity.live", arg],
-}));
+const queryOptionsSpy = vi.fn(
+  (arg?: unknown): QueryOptions => ({
+    // Return a key that encodes the argument so diverging args produce
+    // different keys — the same trick the real tRPC adapter uses.
+    queryKey: arg === undefined ? ["activity.live"] : ["activity.live", arg],
+  }),
+);
 
 const useQuerySpy = vi.fn((_options: QueryOptions) => ({
   data: undefined,

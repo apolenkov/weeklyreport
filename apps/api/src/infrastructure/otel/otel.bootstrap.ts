@@ -17,19 +17,23 @@
  * spans. Errors during start are non-fatal — the api boots even if the
  * collector is unreachable, just without traces.
  */
-import { NodeSDK } from "@opentelemetry/sdk-node";
-import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
-import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
-import { TraceIdRatioBasedSampler } from "@opentelemetry/sdk-trace-base";
-import { LoggerProvider, BatchLogRecordProcessor } from "@opentelemetry/sdk-logs";
+
 import { logs } from "@opentelemetry/api-logs";
+import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
+import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { resourceFromAttributes } from "@opentelemetry/resources";
+import {
+  BatchLogRecordProcessor,
+  LoggerProvider,
+} from "@opentelemetry/sdk-logs";
+import { NodeSDK } from "@opentelemetry/sdk-node";
+import { TraceIdRatioBasedSampler } from "@opentelemetry/sdk-trace-base";
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
-import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
-import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
 import { PrismaInstrumentation } from "@prisma/instrumentation";
 
 export type OtelBootstrapResult =
@@ -108,14 +112,13 @@ export function startOtel(
 
   // Best-effort shutdown on SIGTERM — flush pending spans + logs within ~5s.
   const shutdown = () => {
-    void Promise.all([
-      sdk?.shutdown(),
-      loggerProvider?.shutdown(),
-    ]).catch((err) => {
-      process.stderr.write(
-        `[otel] shutdown error: ${err instanceof Error ? err.message : String(err)}\n`,
-      );
-    });
+    void Promise.all([sdk?.shutdown(), loggerProvider?.shutdown()]).catch(
+      (err) => {
+        process.stderr.write(
+          `[otel] shutdown error: ${err instanceof Error ? err.message : String(err)}\n`,
+        );
+      },
+    );
   };
   process.once("SIGTERM", shutdown);
   process.once("SIGINT", shutdown);

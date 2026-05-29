@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
-import superjson from "superjson";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import superjson from "superjson";
+import { describe, expect, it } from "vitest";
 
 describe("superjson Date roundtrip (smoke)", () => {
   it("serializes and deserializes Date objects identically", () => {

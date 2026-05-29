@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { ScopeToggle, type ScopeValue } from "./scope-toggle";
 
@@ -13,7 +13,9 @@ describe("ScopeToggle", () => {
       />,
     );
     expect(screen.getByRole("radio", { name: "Own" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "By product" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("radio", { name: "By product" }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("radio", { name: "By lead" }),
     ).not.toBeInTheDocument();
@@ -53,14 +55,11 @@ describe("ScopeToggle", () => {
 
   it("renders all three scopes by default when allowedScopes is omitted", () => {
     const onChange = vi.fn();
-    render(
-      <ScopeToggle
-        value={"own" as ScopeValue}
-        onChange={onChange}
-      />,
-    );
+    render(<ScopeToggle value={"own" as ScopeValue} onChange={onChange} />);
     expect(screen.getByRole("radio", { name: "Own" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "By product" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("radio", { name: "By product" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "By lead" })).toBeInTheDocument();
   });
 });

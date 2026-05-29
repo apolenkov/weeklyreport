@@ -1,12 +1,10 @@
-import { describe, expect, it } from "vitest";
-
 import {
-  submissionDashboardRowSchema,
   type SubmissionDashboardRow,
+  submissionDashboardRowSchema,
 } from "@customreport/shared";
-
-import { ReviewService, type ReviewRepository } from "./review.service";
+import { describe, expect, it } from "vitest";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { type ReviewRepository, ReviewService } from "./review.service";
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */

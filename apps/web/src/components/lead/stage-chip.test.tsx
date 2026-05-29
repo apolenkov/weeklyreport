@@ -86,11 +86,7 @@ describe("StageChip — locked stage color (F2)", () => {
   });
 
   it("locked chip is not editable — no status popover on click", () => {
-    render(
-      <StageChip
-        stage={{ ...BASE_LOCKED, status: "at-risk" }}
-      />,
-    );
+    render(<StageChip stage={{ ...BASE_LOCKED, status: "at-risk" }} />);
     screen.getByRole("button").click();
     expect(screen.queryByText("✓ On Track")).not.toBeInTheDocument();
     expect(screen.queryByText("✕ Blocked")).not.toBeInTheDocument();

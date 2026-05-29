@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import {
-  metricsRegistry,
   dlqFailedTotal,
-  rateLimitHitsTotal,
-  loginAttemptsTotal,
   httpRequestDurationSeconds,
+  loginAttemptsTotal,
+  metricsRegistry,
+  rateLimitHitsTotal,
 } from "./metrics.registry.js";
 
 describe("37-02 metrics registry", () => {

@@ -1,12 +1,12 @@
-import { Prisma } from "@prisma/client";
 import {
-  assembledReportSchema,
   type AssembledReport,
+  assembledReportSchema,
   type Escalation,
   type PortfolioOverview,
   type PortfolioProductOverview,
   type ReportSectionReadModel,
 } from "@customreport/shared";
+import { Prisma } from "@prisma/client";
 
 import {
   mapPrismaToReportSection,

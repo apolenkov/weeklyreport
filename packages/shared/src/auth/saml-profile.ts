@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { sessionRoleSchema, type Role } from "../schemas/auth";
+import { type Role, sessionRoleSchema } from "../schemas/auth";
 
 /**
  * AUTH-02 (Phase 29-02): strict schema for the SAML assertion profile we

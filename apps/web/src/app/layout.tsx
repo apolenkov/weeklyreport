@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { AgentationDevtools } from "../components/agentation-devtools";
-import { WebVitalsReporter } from "../components/web-vitals-reporter";
 import { QueryErrorBoundary } from "../components/error-boundary";
-import { TRPCProvider } from "../lib/trpc-provider";
+import { WebVitalsReporter } from "../components/web-vitals-reporter";
 import { getOrgPublic } from "../lib/server/get-org-public";
+import { TRPCProvider } from "../lib/trpc-provider";
 import "../styles/app.css";
 
 type RootLayoutProps = Readonly<{

@@ -1,22 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { toast } from "sonner";
-
+import { mapAdminSettings, mapAdminSnapshot } from "../../lib/mappers";
 import { useTRPC } from "../../lib/trpc-context";
-import { mapAdminSnapshot, mapAdminSettings } from "../../lib/mappers";
-
-import { UsersTab } from "./users-tab";
-import { GroupsTab } from "./groups-tab";
-import { ProductsTab } from "./products-tab";
-import { PeriodsTab } from "./periods-tab";
-import { RemindersTab } from "./reminders-tab";
-import { SettingsTab } from "./settings-tab";
-import { ReopenTab } from "./reopen-tab";
-import { JobsTab } from "./jobs-tab";
 import { ActionLogTab } from "./action-log-tab";
 import { AdminTabSkeleton } from "./admin-skeleton";
+import { GroupsTab } from "./groups-tab";
+import { JobsTab } from "./jobs-tab";
+import { PeriodsTab } from "./periods-tab";
+import { ProductsTab } from "./products-tab";
+import { RemindersTab } from "./reminders-tab";
+import { ReopenTab } from "./reopen-tab";
+import { SettingsTab } from "./settings-tab";
+import { UsersTab } from "./users-tab";
 
 type AdminPanelProps = {
   readonly activeTab: string;

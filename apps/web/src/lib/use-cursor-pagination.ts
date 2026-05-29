@@ -31,12 +31,12 @@
  * names. No request side-effects beyond what `useInfiniteQuery` performs.
  */
 
-import { useMemo } from "react";
 import {
-  useInfiniteQuery,
   type InfiniteData,
   type UseInfiniteQueryOptions,
+  useInfiniteQuery,
 } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 export type CursorPaginationInput = {
   cursor?: string;

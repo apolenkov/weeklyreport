@@ -1,8 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
-
-import { SaveNowButton } from "./save-now-button";
+import { act, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AutosaveSnapshot } from "../../hooks/use-lead-form-autosave";
+import { SaveNowButton } from "./save-now-button";
 
 function makeSnapshot(
   overrides: Partial<AutosaveSnapshot> = {},
@@ -53,9 +52,7 @@ describe("SaveNowButton", () => {
     // The textual labels from the old pill ("Save now" / "Saving…" / "Saved" /
     // "Retry save") must not appear in the rendered DOM. The aria-label/title
     // attribute carries the accessible name instead.
-    expect(
-      screen.queryByText(/save now|saving|saved|retry save/i),
-    ).toBeNull();
+    expect(screen.queryByText(/save now|saving|saved|retry save/i)).toBeNull();
   });
 
   it("is enabled only when state is pending or error", () => {
@@ -98,13 +95,9 @@ describe("SaveNowButton", () => {
         autosave={makeSnapshot({ state: "saving", isInFlight: true })}
       />,
     );
-    expect(
-      screen.getByRole("button", { name: /saving draft/i }),
-    ).toBeDefined();
+    expect(screen.getByRole("button", { name: /saving draft/i })).toBeDefined();
     // Spinner is identified by a stable data attribute.
-    expect(
-      screen.getByTestId("save-now-spinner"),
-    ).toBeDefined();
+    expect(screen.getByTestId("save-now-spinner")).toBeDefined();
   });
 
   it("shows check icon for ~1500ms after success, then reverts to disc + 'Save draft now'", () => {
@@ -124,9 +117,7 @@ describe("SaveNowButton", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("button", { name: /draft saved/i }),
-    ).toBeDefined();
+    expect(screen.getByRole("button", { name: /draft saved/i })).toBeDefined();
     expect(screen.getByTestId("save-now-check")).toBeDefined();
 
     act(() => {
@@ -161,9 +152,7 @@ describe("SaveNowButton", () => {
   it("does not call forceSave when button is disabled (idle state)", () => {
     const forceSave = vi.fn();
     render(
-      <SaveNowButton
-        autosave={makeSnapshot({ state: "idle", forceSave })}
-      />,
+      <SaveNowButton autosave={makeSnapshot({ state: "idle", forceSave })} />,
     );
 
     const btn = screen.getByRole("button") as HTMLButtonElement;

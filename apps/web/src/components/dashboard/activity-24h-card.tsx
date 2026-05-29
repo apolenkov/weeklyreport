@@ -24,7 +24,8 @@ export function Activity24hCard() {
     if (!query.data?.rows) return null;
     const cutoff = Date.now() - MS_24H;
     return query.data.rows.filter(
-      (row) => row.lastEditAt !== null && new Date(row.lastEditAt).getTime() > cutoff,
+      (row) =>
+        row.lastEditAt !== null && new Date(row.lastEditAt).getTime() > cutoff,
     ).length;
   })();
 

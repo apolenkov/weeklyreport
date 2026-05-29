@@ -6,9 +6,10 @@
  *             setText(initial.text) wipes user input.
  * After fix:  stagesForProduct removed from deps → text preserved.
  */
+
+import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { ItemEditDialog } from "./item-edit-dialog";
 import type { KanbanItem, Product } from "./mock-data";
@@ -165,9 +166,10 @@ describe("ItemEditDialog — T-D12 save+reopen status reset", () => {
     );
 
     // Verify initial status chip reflects item.status = "completed"
-    expect(
-      screen.getByRole("button", { name: /Completed/i }),
-    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /Completed/i })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
     // User clicks "In Progress" chip then saves
     fireEvent.click(screen.getByRole("button", { name: /In Progress/i }));
@@ -208,9 +210,10 @@ describe("ItemEditDialog — T-D12 save+reopen status reset", () => {
     expect(
       screen.getByRole("button", { name: /In Progress/i }),
     ).toHaveAttribute("aria-pressed", "true");
-    expect(
-      screen.getByRole("button", { name: /Completed/i }),
-    ).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /Completed/i })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 });
 
@@ -245,7 +248,7 @@ describe("ItemEditDialog — P-RANK-01 unique rank picker", () => {
     const opt1 = Array.from(select.options).find((o) => o.value === "1");
 
     expect(opt2?.disabled).toBe(false); // own rank — selectable
-    expect(opt3?.disabled).toBe(true);  // taken by another item — disabled
+    expect(opt3?.disabled).toBe(true); // taken by another item — disabled
     expect(opt1?.disabled).toBe(false); // free rank — selectable
   });
 
@@ -377,7 +380,9 @@ describe("ItemEditDialog — ITEM-T4 type immediately on open", () => {
     );
 
     const textField = screen.getByLabelText(/Description \*/i);
-    fireEvent.change(textField, { target: { value: "existing text — amended" } });
+    fireEvent.change(textField, {
+      target: { value: "existing text — amended" },
+    });
 
     expect(textField).toHaveValue("existing text — amended");
   });

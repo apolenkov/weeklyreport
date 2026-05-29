@@ -2,10 +2,10 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  type TouchEvent as ReactTouchEvent,
   useCallback,
   useMemo,
   useRef,
-  type TouchEvent as ReactTouchEvent,
 } from "react";
 
 import type { ReportPeriod } from "./mock-data";

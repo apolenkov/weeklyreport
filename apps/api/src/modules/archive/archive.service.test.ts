@@ -1,15 +1,14 @@
-import { describe, expect, it, vi } from "vitest";
-
 import type {
   ArchiveReportDetail,
   ArchiveReportSummary,
 } from "@customreport/shared";
+import { describe, expect, it, vi } from "vitest";
 
 import { archiveRouter } from "./archive.router";
 import {
   ArchiveDomainError,
-  ArchiveService,
   type ArchiveRepository,
+  ArchiveService,
 } from "./archive.service";
 
 const reportId = "22222222-2222-4222-8222-222222222222";

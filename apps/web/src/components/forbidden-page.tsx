@@ -1,4 +1,4 @@
-import Link from "next/link";
+import type { Role } from "@customreport/shared";
 
 import { Button } from "@customreport/ui/components/ui/button";
 import {
@@ -7,8 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@customreport/ui/components/ui/card";
-
-import type { Role } from "@customreport/shared";
+import Link from "next/link";
 
 /**
  * AUTH-07 (Phase 29-03): shared 403 page composed into each (app)/route-group

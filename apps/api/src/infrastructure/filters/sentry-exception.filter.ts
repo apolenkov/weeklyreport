@@ -1,5 +1,5 @@
-import { Catch, HttpException } from "@nestjs/common";
 import type { ArgumentsHost } from "@nestjs/common";
+import { Catch, HttpException } from "@nestjs/common";
 import { BaseExceptionFilter } from "@nestjs/core";
 import * as Sentry from "@sentry/nestjs";
 

@@ -1,15 +1,14 @@
-import { describe, expect, it } from "vitest";
-
 import type {
   AdminReminderExecution,
   AdminReminderRule,
 } from "@customreport/shared";
+import { describe, expect, it } from "vitest";
 
 import { remindersRouter } from "./reminders.router";
 import {
   ReminderDomainError,
-  RemindersService,
   type RemindersRepository,
+  RemindersService,
 } from "./reminders.service";
 
 const activeRule: AdminReminderRule = {
@@ -297,7 +296,12 @@ describe("dispatchPending — no-matching-section branch", () => {
     reason?: string;
   } {
     if (leadId !== undefined && draftSections.length === 0) {
-      return { dispatched: 0, alreadySent: 0, skipped: 0, reason: "no-matching-section" };
+      return {
+        dispatched: 0,
+        alreadySent: 0,
+        skipped: 0,
+        reason: "no-matching-section",
+      };
     }
     // Normal path (not exercised by this test suite — covered by integration tests)
     return { dispatched: draftSections.length, alreadySent: 0, skipped: 0 };

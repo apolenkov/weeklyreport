@@ -1,5 +1,5 @@
-import rateLimit, { ipKeyGenerator, type Options } from "express-rate-limit";
 import type { RequestHandler } from "express";
+import rateLimit, { ipKeyGenerator, type Options } from "express-rate-limit";
 
 import type { AppLogger } from "../../lib/logger";
 import { rateLimitHitsTotal } from "../metrics/metrics.registry.js";

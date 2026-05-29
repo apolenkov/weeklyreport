@@ -10,11 +10,11 @@
  * Phase 3.5: required stage selection (empty = validation error);
  * bidirectional severity decouple; context strip from pipeline.
  */
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
 
-import { RiskEditDialog } from "./risk-edit-dialog";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import type { Product } from "./mock-data";
+import { RiskEditDialog } from "./risk-edit-dialog";
 
 const products: Product[] = [
   {
@@ -68,8 +68,18 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
         name: "CRM",
         overallStatus: "at-risk",
         stages: [
-          { stageName: "Dev", status: "blocked", ownership: "mine", assignee: "Lead" },
-          { stageName: "Testing", status: "on-track", ownership: "mine", assignee: "Lead" },
+          {
+            stageName: "Dev",
+            status: "blocked",
+            ownership: "mine",
+            assignee: "Lead",
+          },
+          {
+            stageName: "Testing",
+            status: "on-track",
+            ownership: "mine",
+            assignee: "Lead",
+          },
         ],
       },
     ];
@@ -193,8 +203,18 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
         name: "CRM",
         overallStatus: "blocked",
         stages: [
-          { stageName: "Dev", status: "blocked", ownership: "mine", assignee: "Lead" },
-          { stageName: "Testing", status: "on-track", ownership: "mine", assignee: "Lead" },
+          {
+            stageName: "Dev",
+            status: "blocked",
+            ownership: "mine",
+            assignee: "Lead",
+          },
+          {
+            stageName: "Testing",
+            status: "on-track",
+            ownership: "mine",
+            assignee: "Lead",
+          },
         ],
       },
     ];
@@ -212,7 +232,9 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
     );
 
     // Phase 3.8: stage checkboxes start empty on create regardless of pipeline aliases.
-    expect(screen.getByRole("checkbox", { name: "Development" })).not.toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "Development" }),
+    ).not.toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Testing" })).not.toBeChecked();
   });
 
@@ -223,8 +245,18 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
         name: "CRM",
         overallStatus: "blocked",
         stages: [
-          { stageName: "Dev", status: "blocked", ownership: "mine", assignee: "Lead" },
-          { stageName: "Testing", status: "at-risk", ownership: "mine", assignee: "Lead" },
+          {
+            stageName: "Dev",
+            status: "blocked",
+            ownership: "mine",
+            assignee: "Lead",
+          },
+          {
+            stageName: "Testing",
+            status: "at-risk",
+            ownership: "mine",
+            assignee: "Lead",
+          },
         ],
       },
     ];
@@ -374,12 +406,14 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
     );
 
     // Edit mode: risk.severity="at-risk" must win over pipeline's "blocked".
-    expect(
-      screen.getByRole("button", { name: /At Risk/i }),
-    ).toHaveAttribute("aria-pressed", "true");
-    expect(
-      screen.getByRole("button", { name: /Blocked/i }),
-    ).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: /At Risk/i })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: /Blocked/i })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 
   // P3.6 layout smoke tests
@@ -416,8 +450,7 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
     );
 
     // The form grid wrapping both columns.
-    const grid = document
-      .querySelector('[class*="md:grid-cols-"]');
+    const grid = document.querySelector('[class*="md:grid-cols-"]');
     expect(grid).not.toBeNull();
   });
 });

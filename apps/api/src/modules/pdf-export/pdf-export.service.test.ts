@@ -1,17 +1,15 @@
-import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
-import jwt from "jsonwebtoken";
-
 import type { AssembledReport, PdfExportJob } from "@customreport/shared";
-
+import jwt from "jsonwebtoken";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { customreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import { pdfExportRouter } from "./pdf-export.router";
 import {
   PdfExportDomainError,
-  PdfExportService,
   type PdfExportJobRecord,
   type PdfExportRepository,
+  PdfExportService,
 } from "./pdf-export.service";
-import { expectDefined } from "../../test-utils/expect-defined.js";
-import { customreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 
 const reportId = "22222222-2222-4222-8222-222222222222";
 
@@ -208,10 +206,10 @@ describe("PdfExportService", () => {
   });
 });
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 async function getCounterValue(
   counter: {
     get(): Promise<{
+      // biome-ignore lint/suspicious/noExplicitAny: prom-client label record (migrated from eslint-disable)
       values: Array<{ value: number; labels: Record<string, any> }>;
     }>;
   },
@@ -223,7 +221,6 @@ async function getCounterValue(
   );
   return match?.value ?? 0;
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ---------------------------------------------------------------------------
 // AUTH-05 (Phase 28-02): the 5-min PDF export JWT cookie seam.

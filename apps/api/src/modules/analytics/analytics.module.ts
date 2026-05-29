@@ -1,8 +1,7 @@
 import { Module } from "@nestjs/common";
-
-import { AnalyticsService } from "./analytics.service.js";
-import { AnalyticsPrismaRepository } from "./analytics.prisma-repository.js";
 import { AnalyticsCache } from "./analytics.cache.js";
+import { AnalyticsPrismaRepository } from "./analytics.prisma-repository.js";
+import { AnalyticsService } from "./analytics.service.js";
 
 @Module({
   providers: [

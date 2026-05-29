@@ -1,9 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-
-import { createNullAuditLogger } from "../../lib/audit-logger.js";
-import { createNullLogger } from "../../lib/logger.js";
 import { adminProcedure } from "../../infrastructure/trpc/trpc.middleware.js";
 import { createAppRouter } from "../../infrastructure/trpc/trpc.router.js";
+import { createNullAuditLogger } from "../../lib/audit-logger.js";
+import { createNullLogger } from "../../lib/logger.js";
 import type { AdminService } from "./admin.service.js";
 
 /**

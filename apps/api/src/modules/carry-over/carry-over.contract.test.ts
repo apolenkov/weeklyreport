@@ -1,18 +1,16 @@
-import { describe, expect, it } from "vitest";
-
 import type {
   CarryOverExecution,
   CarryOverRecord,
   ReportSectionReadModel,
 } from "@customreport/shared";
-
+import { describe, expect, it } from "vitest";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   CarryOverDomainError,
-  CarryOverService,
   type CarryOverRepository,
   type CarryOverResult,
+  CarryOverService,
 } from "./carry-over.service";
-import { expectDefined } from "../../test-utils/expect-defined.js";
 
 // ---------------------------------------------------------------------------
 // Fixture IDs

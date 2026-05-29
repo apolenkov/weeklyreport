@@ -1,24 +1,22 @@
-import { describe, expect, it } from "vitest";
-
 import type {
-  ReportSectionReadModel,
   MyHistoryEntry,
+  ReportSectionReadModel,
   VersionSnapshot,
 } from "@customreport/shared";
-
+import { describe, expect, it } from "vitest";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
-  mapLeadFormData,
-  mapLeadProducts,
-  mapLeadItems,
-  mapLeadRisks,
   mapLeadDecisions,
-  mapLeadPriorities,
+  mapLeadFormData,
+  mapLeadItems,
   mapLeadPeriods,
+  mapLeadPriorities,
+  mapLeadProducts,
+  mapLeadRisks,
   mapLeadVersions,
   ownedStagesForProject,
   stageNamesMatch,
 } from "./lead-form";
-import { expectDefined } from "../../test-utils/expect-defined.js";
 
 const SECTION_ID = "11111111-1111-4111-8111-111111111111";
 const REPORT_ID = "22222222-2222-4222-8222-222222222222";
@@ -243,7 +241,12 @@ describe("mapLeadProducts", () => {
           projectName: "CRM Platform",
           trafficLight: "green",
           ownedStages: [
-            { stageId: "s-dev-a", stageName: "Development", sortOrder: 3, status: "green" },
+            {
+              stageId: "s-dev-a",
+              stageName: "Development",
+              sortOrder: 3,
+              status: "green",
+            },
           ],
         },
         {
@@ -251,7 +254,12 @@ describe("mapLeadProducts", () => {
           projectName: "Portal",
           trafficLight: "green",
           ownedStages: [
-            { stageId: "s-dev-b", stageName: "Development", sortOrder: 3, status: "green" },
+            {
+              stageId: "s-dev-b",
+              stageName: "Development",
+              sortOrder: 3,
+              status: "green",
+            },
           ],
         },
       ],
@@ -583,7 +591,14 @@ describe("ownedStagesForProject", () => {
           projectId: PROJECT_A,
           projectName: "CRM",
           trafficLight: "green",
-          ownedStages: [{ stageId: "s1", stageName: "Development", sortOrder: 3, status: "green" }],
+          ownedStages: [
+            {
+              stageId: "s1",
+              stageName: "Development",
+              sortOrder: 3,
+              status: "green",
+            },
+          ],
         },
       ],
     });
@@ -600,7 +615,12 @@ describe("ownedStagesForProject", () => {
           projectName: "CRM",
           trafficLight: "green",
           ownedStages: [
-            { stageId: "s1", stageName: "Development", sortOrder: 3, status: "green" },
+            {
+              stageId: "s1",
+              stageName: "Development",
+              sortOrder: 3,
+              status: "green",
+            },
             { stageId: "s2", stageName: "Testing", sortOrder: 4, status: null },
           ],
         },
@@ -609,7 +629,12 @@ describe("ownedStagesForProject", () => {
           projectName: "ERP",
           trafficLight: "yellow",
           ownedStages: [
-            { stageId: "s3", stageName: "Planning", sortOrder: 1, status: null },
+            {
+              stageId: "s3",
+              stageName: "Planning",
+              sortOrder: 1,
+              status: null,
+            },
           ],
         },
       ],
@@ -628,13 +653,22 @@ describe("ownedStagesForProject", () => {
           projectId: PROJECT_A,
           projectName: "CRM",
           trafficLight: "green",
-          ownedStages: [{ stageId: "s1", stageName: "Dev", sortOrder: 3, status: "green" }],
+          ownedStages: [
+            { stageId: "s1", stageName: "Dev", sortOrder: 3, status: "green" },
+          ],
         },
         {
           projectId: PROJECT_B,
           projectName: "ERP",
           trafficLight: null,
-          ownedStages: [{ stageId: "s2", stageName: "Planning", sortOrder: 1, status: null }],
+          ownedStages: [
+            {
+              stageId: "s2",
+              stageName: "Planning",
+              sortOrder: 1,
+              status: null,
+            },
+          ],
         },
       ],
     });
@@ -650,7 +684,12 @@ describe("ownedStagesForProject", () => {
           projectName: "CRM",
           trafficLight: "green",
           ownedStages: [
-            { stageId: "s1", stageName: "Development", sortOrder: 3, status: "green" },
+            {
+              stageId: "s1",
+              stageName: "Development",
+              sortOrder: 3,
+              status: "green",
+            },
             { stageId: "s2", stageName: "Testing", sortOrder: 4, status: null },
           ],
         },
@@ -658,9 +697,10 @@ describe("ownedStagesForProject", () => {
     });
     const ownedNames = ownedStagesForProject(section, PROJECT_A);
     const products = mapLeadProducts(section);
-    const mineInGrid = products[0]?.stages
-      .filter((s) => s.ownership === "mine")
-      .map((s) => s.stageName) ?? [];
+    const mineInGrid =
+      products[0]?.stages
+        .filter((s) => s.ownership === "mine")
+        .map((s) => s.stageName) ?? [];
     expect(ownedNames.sort()).toEqual(mineInGrid.sort());
   });
 });

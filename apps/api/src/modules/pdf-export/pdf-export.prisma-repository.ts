@@ -1,20 +1,20 @@
-import { Injectable } from "@nestjs/common";
 import {
-  pdfExportJobSchema,
+  type AssembledReport,
   assembledReportSchema,
   type PdfExportJob,
-  type AssembledReport,
   type PortfolioOverview,
+  pdfExportJobSchema,
 } from "@customreport/shared";
+import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import {
+  mapPrismaToReportSection,
+  reportSectionFullInclude,
+} from "../report-sections/report-sections.prisma-repository.js";
 import type {
   PdfExportJobRecord,
   PdfExportRepository,
 } from "./pdf-export.service.js";
-import {
-  reportSectionFullInclude,
-  mapPrismaToReportSection,
-} from "../report-sections/report-sections.prisma-repository.js";
 
 const pdfStatusToDb: Record<string, string> = {
   queued: "pending",
@@ -152,10 +152,10 @@ function computePortfolioOverview(
   return { status: overallStatus, totals };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
 function toAssembledReport(report: any): AssembledReport {
   const portfolio = computePortfolioOverview(report.sections);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
   const sections = (report.sections as any[]).map(mapPrismaToReportSection);
 
   return assembledReportSchema.parse({

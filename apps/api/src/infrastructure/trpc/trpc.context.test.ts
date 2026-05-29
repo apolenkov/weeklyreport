@@ -1,9 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import type { Request } from "express";
 import type { INestApplication } from "@nestjs/common";
-
-import { createContextFactory } from "./trpc.context";
+import type { Request } from "express";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createNullLogger } from "../../lib/logger";
+import { createContextFactory } from "./trpc.context";
 
 /**
  * AUTH-01 / Phase 28-02 contract tests for the four flag combinations.

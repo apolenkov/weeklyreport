@@ -20,7 +20,7 @@ import {
   type OnModuleDestroy,
   type OnModuleInit,
 } from "@nestjs/common";
-import { Worker, type Job } from "bullmq";
+import { type Job, Worker } from "bullmq";
 
 import { getBullMQOptions } from "../../infrastructure/bullmq/bullmq-options";
 import { TELEGRAM_ADAPTER, type TelegramAdapter } from "./telegram.adapter.js";

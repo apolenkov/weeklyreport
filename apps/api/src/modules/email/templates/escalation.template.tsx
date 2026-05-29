@@ -1,15 +1,15 @@
-import * as React from "react";
 import {
-  Html,
-  Head,
-  Preview,
-  Tailwind,
   Body,
   Container,
+  Head,
   Heading,
-  Text,
+  Html,
+  Preview,
   Section,
+  Tailwind,
+  Text,
 } from "@react-email/components";
+import * as React from "react";
 
 /**
  * NOTIF-02 (Phase 29-05): T+2h escalation digest sent to the head when leads

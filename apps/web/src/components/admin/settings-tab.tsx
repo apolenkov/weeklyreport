@@ -1,25 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-
+import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
 import {
   Tabs,
+  TabsContent,
   TabsList,
   TabsTrigger,
-  TabsContent,
 } from "@customreport/ui/components/ui/tabs";
-import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Calendar } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../lib/cache-keys";
 import { useTRPC } from "../../lib/trpc-context";
-
+import type { MockSettings } from "./mock-data";
 import { TabHeader } from "./tab-header";
 import { TIMEZONE_OPTIONS } from "./timezone-options";
-
-import type { MockSettings } from "./mock-data";
 
 type SettingsTabProps = {
   readonly settings: MockSettings;
@@ -88,9 +85,9 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
         <TabsContent value="holidays" className="pt-6">
           <div className="max-w-lg space-y-5">
             <p className="text-sm text-[var(--color-muted-foreground)]">
-              Holiday calendar management coming soon. Schedule organization-wide
-              closures to exclude from deadline calculations and report period
-              boundaries.
+              Holiday calendar management coming soon. Schedule
+              organization-wide closures to exclude from deadline calculations
+              and report period boundaries.
             </p>
           </div>
         </TabsContent>
@@ -1098,8 +1095,8 @@ function IntegrationsSubTab() {
               CI Integration
             </h3>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Trigger report generation automatically from CI/CD pipelines —
-              no manual deadline tracking needed.
+              Trigger report generation automatically from CI/CD pipelines — no
+              manual deadline tracking needed.
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-auto sm:justify-end">
@@ -1136,8 +1133,8 @@ function IntegrationsSubTab() {
               Slack
             </h3>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Daily digest and deadline alerts to a team Slack channel —
-              keeps everyone updated without checking the dashboard.
+              Daily digest and deadline alerts to a team Slack channel — keeps
+              everyone updated without checking the dashboard.
             </p>
           </div>
           <ComingSoonBadge
@@ -1159,8 +1156,8 @@ function IntegrationsSubTab() {
               AI Summary
             </h3>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Auto-summary of statuses and extracted risks — 5-second
-              read instead of reviewing 30 minutes of section data.
+              Auto-summary of statuses and extracted risks — 5-second read
+              instead of reviewing 30 minutes of section data.
             </p>
           </div>
           <ComingSoonBadge

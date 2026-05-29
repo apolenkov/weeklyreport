@@ -1,3 +1,5 @@
+import type { AppRouter } from "@customreport/api/infrastructure/trpc/trpc.router";
+import type { QueryClient } from "@tanstack/react-query";
 import {
   createTRPCClient as createTRPCClientCore,
   httpBatchLink,
@@ -6,10 +8,7 @@ import {
 } from "@trpc/client";
 import { observable } from "@trpc/server/observable";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
-import type { QueryClient } from "@tanstack/react-query";
 import superjson from "superjson";
-
-import type { AppRouter } from "@customreport/api/infrastructure/trpc/trpc.router";
 
 // ---------------------------------------------------------------------------
 // 401 interceptor — redirect logic

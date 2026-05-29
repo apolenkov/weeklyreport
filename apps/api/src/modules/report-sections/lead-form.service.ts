@@ -44,7 +44,10 @@ export interface LeadFormRepository {
     sourceSectionId: string,
   ): Promise<number>;
   listVersions(sectionId: string): Promise<VersionSnapshot[]>;
-  getVersion(sectionId: string, version: number): Promise<Record<string, unknown> | null>;
+  getVersion(
+    sectionId: string,
+    version: number,
+  ): Promise<Record<string, unknown> | null>;
   restoreVersion(sectionId: string, version: number): Promise<number>;
   createVersionSnapshot(sectionId: string): Promise<number>;
   /** Returns the most recent snapshot for a section, or null if none exists. */
@@ -69,7 +72,10 @@ export interface LeadFormRepository {
       authorId: string;
       authorName: string;
       stageNames: string[];
-      stages: { stageName: string; status: "green" | "yellow" | "red" | null }[];
+      stages: {
+        stageName: string;
+        status: "green" | "yellow" | "red" | null;
+      }[];
       itemCount: number;
       riskCount: number;
     }[]
@@ -81,10 +87,7 @@ export interface LeadFormRepository {
     userId: string,
   ): Promise<CrossAuthorSectionRow[]>;
   /** SC-165: Revoke every submitted section in a report in one transaction. */
-  revokeAllSubmitted(
-    reportId: string,
-    revokedBy: string,
-  ): Promise<number>;
+  revokeAllSubmitted(reportId: string, revokedBy: string): Promise<number>;
 }
 
 export interface CrossAuthorSectionRow {
@@ -325,7 +328,8 @@ export class LeadFormService {
 
       // Content dedup: skip if data is byte-identical to the latest snapshot.
       // Compare two snapshot projections (same shape) — not section vs snapshot.
-      const currentProjection = await this.repository.buildSnapshotProjection(sectionId);
+      const currentProjection =
+        await this.repository.buildSnapshotProjection(sectionId);
       if (stableStringify(latest.data) === stableStringify(currentProjection)) {
         return { version: latest.version, skipped: true, reason: "no-change" };
       }
@@ -405,7 +409,10 @@ export class LeadFormService {
       authorId: string;
       authorName: string;
       stageNames: string[];
-      stages: { stageName: string; status: "green" | "yellow" | "red" | null }[];
+      stages: {
+        stageName: string;
+        status: "green" | "yellow" | "red" | null;
+      }[];
       itemCount: number;
       riskCount: number;
     }[]

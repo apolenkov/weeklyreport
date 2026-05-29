@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { Lock } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { useSdlcTooltip } from "../ui/sdlc-tooltip";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";

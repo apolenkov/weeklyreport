@@ -1,14 +1,13 @@
 import {
   Injectable,
-  type OnModuleInit,
   type OnModuleDestroy,
+  type OnModuleInit,
 } from "@nestjs/common";
-import { Worker, type Job } from "bullmq";
-
-import { RemindersService } from "../../modules/reminders/reminders.service";
+import { type Job, Worker } from "bullmq";
 import { AdminService } from "../../modules/admin/admin.service";
-import { EmailService } from "../email/email.service";
 import { renderEmail } from "../../modules/email/render-template";
+import { RemindersService } from "../../modules/reminders/reminders.service";
+import { EmailService } from "../email/email.service";
 import { getBullMQOptions } from "./bullmq-options";
 
 /**

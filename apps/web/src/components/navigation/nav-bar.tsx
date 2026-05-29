@@ -1,7 +1,14 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { DEFAULT_ORGANIZATION_IDENTITY, type Role } from "@customreport/shared";
+import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@customreport/ui/components/ui/sheet";
 import {
   BarChart3,
   Clock,
@@ -12,21 +19,11 @@ import {
   Presentation,
   Settings,
 } from "lucide-react";
-
-import { DEFAULT_ORGANIZATION_IDENTITY, type Role } from "@customreport/shared";
-
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@customreport/ui/components/ui/sheet";
-import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
-
-import { DevRoleSwitcher } from "../dev/role-switcher";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useState, useSyncExternalStore } from "react";
 import { roleHomePath } from "../../lib/role-home";
 import { useSession } from "../../lib/session-provider";
+import { DevRoleSwitcher } from "../dev/role-switcher";
 
 type NavLink = {
   href: string;
@@ -263,7 +260,9 @@ export function NavBar() {
   const orgShortName = orgResolved
     ? visibleOrganization.shortName
     : DEFAULT_ORGANIZATION_IDENTITY.shortName;
-  const homeLabel = visibleUser ? visibleUser.name + " home" : "Profile loading";
+  const homeLabel = visibleUser
+    ? visibleUser.name + " home"
+    : "Profile loading";
   const identityMeta = [
     orgResolved ? orgShortName : null,
     visibleUser?.reportingGroupName,

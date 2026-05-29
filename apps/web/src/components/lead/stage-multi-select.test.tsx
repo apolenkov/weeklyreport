@@ -21,9 +21,9 @@ describe("StageMultiSelect", () => {
     // Each selected stage appears exactly once (in the checkbox label — not duplicated as pills).
     const checkboxes = screen.getAllByRole("checkbox");
     expect(checkboxes).toHaveLength(3);
-    expect(
-      checkboxes.every((cb) => (cb as HTMLInputElement).checked),
-    ).toBe(true);
+    expect(checkboxes.every((cb) => (cb as HTMLInputElement).checked)).toBe(
+      true,
+    );
 
     // No "Scope:" duplicate summary — the commit removed it when stages are selected.
     expect(screen.queryByText("Scope:")).not.toBeInTheDocument();

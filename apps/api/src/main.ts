@@ -4,6 +4,7 @@ import "reflect-metadata";
 // Sentry hooks Node's `http` module for error context; OTel also patches it.
 // Sentry must run first so its instrumentation wraps the original http, not OTel's wrapper.
 import * as Sentry from "@sentry/nestjs";
+
 if (process.env["SENTRY_DSN"]) {
   Sentry.init({
     dsn: process.env["SENTRY_DSN"],
@@ -17,62 +18,57 @@ if (process.env["SENTRY_DSN"]) {
 // no-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set and OTEL_SDK_DISABLED
 // is not 'true'.
 import { startOtel } from "./infrastructure/otel/otel.bootstrap";
+
 const otelDecision = startOtel();
 
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-
-import { NestFactory } from "@nestjs/core";
-import { HttpAdapterHost } from "@nestjs/core";
-import { ClsMiddleware, ClsService } from "nestjs-cls";
-
-import { SentryExceptionFilter } from "./infrastructure/filters/sentry-exception.filter";
-import { NestAppLoggerAdapter } from "./lib/nest-app-logger.adapter";
-
-import { CorrelationIdMiddleware } from "./infrastructure/middleware/correlation-id.middleware";
+import { HttpAdapterHost, NestFactory } from "@nestjs/core";
 import * as trpcExpress from "@trpc/server/adapters/express";
 import { Queue } from "bullmq";
 import cookieParser from "cookie-parser";
 import express, { type RequestHandler } from "express";
 import helmet from "helmet";
-
+import { ClsMiddleware, ClsService } from "nestjs-cls";
 import { AppModule } from "./app.module";
-import { createAppRouter } from "./infrastructure/trpc/trpc.router";
-import { createContextFactory } from "./infrastructure/trpc/trpc.context";
+import { mountBullBoard } from "./infrastructure/bullmq/bull-board.module";
+import { getBullMQOptions } from "./infrastructure/bullmq/bullmq-options";
 import { validateEnv } from "./infrastructure/config/env.schema";
-import { createAppLogger } from "./lib/logger";
+import { SentryExceptionFilter } from "./infrastructure/filters/sentry-exception.filter";
+import { httpRequestDurationSeconds } from "./infrastructure/metrics/metrics.registry";
+import { CorrelationIdMiddleware } from "./infrastructure/middleware/correlation-id.middleware";
+import { PrismaService } from "./infrastructure/prisma/prisma.service";
+import { createRateLimits } from "./infrastructure/throttler/rate-limit.middleware";
+import { createContextFactory } from "./infrastructure/trpc/trpc.context";
+import { createAppRouter } from "./infrastructure/trpc/trpc.router";
 import { createAuditLogger } from "./lib/audit-logger";
-import { mountAuthRoutes } from "./modules/auth/auth.routes";
+import { createAppLogger } from "./lib/logger";
+import { NestAppLoggerAdapter } from "./lib/nest-app-logger.adapter";
+import { ActivityService } from "./modules/activity/activity.service";
+import { AdminService } from "./modules/admin/admin.service";
+import { JobsService } from "./modules/admin/jobs.service";
+import { AiService } from "./modules/ai/ai.service";
+import { AiSummaryService } from "./modules/ai/ai-summary.service";
+import { AnalyticsService } from "./modules/analytics/analytics.service";
+import { ArchiveService } from "./modules/archive/archive.service";
 import { createAuthController } from "./modules/auth/auth.controller";
+import { mountAuthRoutes } from "./modules/auth/auth.routes";
 import {
   createSamlStrategy,
   createSamlStrategyOptions,
 } from "./modules/auth/saml.strategy";
-import { PrismaService } from "./infrastructure/prisma/prisma.service";
-import { mountBullBoard } from "./infrastructure/bullmq/bull-board.module";
-import { getBullMQOptions } from "./infrastructure/bullmq/bullmq-options";
-import { createRateLimits } from "./infrastructure/throttler/rate-limit.middleware";
-import { httpRequestDurationSeconds } from "./infrastructure/metrics/metrics.registry";
-
+import { CarryOverService } from "./modules/carry-over/carry-over.service";
+import { OrganizationService } from "./modules/organization/organization.service";
+import { PdfExportService } from "./modules/pdf-export/pdf-export.service";
+import { PeriodService } from "./modules/period/period.service";
+import { PublicationService } from "./modules/publication/publication.service";
+import { RemindersService } from "./modules/reminders/reminders.service";
+import { LeadFormService } from "./modules/report-sections/lead-form.service";
 import { ReportSectionsService } from "./modules/report-sections/report-sections.service";
 import { ReviewService } from "./modules/review/review.service";
-import { PublicationService } from "./modules/publication/publication.service";
-import { PdfExportService } from "./modules/pdf-export/pdf-export.service";
-import { AdminService } from "./modules/admin/admin.service";
-import { OrganizationService } from "./modules/organization/organization.service";
-import { RemindersService } from "./modules/reminders/reminders.service";
-import { CarryOverService } from "./modules/carry-over/carry-over.service";
-import { ArchiveService } from "./modules/archive/archive.service";
-import { PeriodService } from "./modules/period/period.service";
-import { WeeklyReportService } from "./modules/weekly-report/weekly-report.service";
-import { LeadFormService } from "./modules/report-sections/lead-form.service";
-import { AnalyticsService } from "./modules/analytics/analytics.service";
-import { AiService } from "./modules/ai/ai.service";
-import { AiSummaryService } from "./modules/ai/ai-summary.service";
 import { SearchService } from "./modules/search/search.service";
-import { ActivityService } from "./modules/activity/activity.service";
-import { JobsService } from "./modules/admin/jobs.service";
 import { TelemetryService } from "./modules/telemetry/telemetry.service";
+import { WeeklyReportService } from "./modules/weekly-report/weekly-report.service";
 
 const UUID_SEGMENT_RE =
   /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
@@ -111,7 +107,9 @@ async function bootstrap() {
 
   console.log("[bootstrap] starting customreport-api");
 
-  const app = await NestFactory.create(AppModule, { logger: nestLoggerAdapter });
+  const app = await NestFactory.create(AppModule, {
+    logger: nestLoggerAdapter,
+  });
 
   // Phase 68: global Sentry exception filter — captures 5xx and non-HTTP errors.
   const { httpAdapter } = app.get(HttpAdapterHost);
@@ -197,8 +195,7 @@ async function bootstrap() {
         // other 2xx/3xx → info so successful non-tRPC requests are visible in prod.
         const status = res.statusCode;
         const isHealthPath =
-          req.path === "/health" ||
-          req.path.startsWith("/health/");
+          req.path === "/health" || req.path.startsWith("/health/");
         const level =
           status >= 500
             ? "error"

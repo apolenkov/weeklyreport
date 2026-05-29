@@ -1,5 +1,5 @@
-import { Suspense } from "react";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { HeadPresentClient } from "../../../../../components/head/head-present-client";
 import { WeeklyReportSkeleton } from "../../../../../components/weekly-report/weekly-report-skeleton";
@@ -36,7 +36,10 @@ export default async function PublishedReportPresentPage({ params }: Props) {
         </header>
 
         <Suspense fallback={<WeeklyReportSkeleton />}>
-          <HeadPresentClient reportId={reportId} exitHref={`/reports/${reportId}`} />
+          <HeadPresentClient
+            reportId={reportId}
+            exitHref={`/reports/${reportId}`}
+          />
         </Suspense>
       </div>
     </main>

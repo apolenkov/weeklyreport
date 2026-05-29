@@ -11,10 +11,10 @@
  * Prereqs: docker compose stack running (postgres + redis healthy).
  */
 
-import { config as loadEnv } from "dotenv";
-import { resolve } from "node:path";
-import net from "node:net";
 import { spawnSync } from "node:child_process";
+import net from "node:net";
+import { resolve } from "node:path";
+import { config as loadEnv } from "dotenv";
 
 // Load .env from the repo root regardless of cwd. The script may be invoked
 // via `pnpm --filter @customreport/api exec tsx ../../prisma/reset-hard.ts`,
@@ -22,9 +22,9 @@ import { spawnSync } from "node:child_process";
 const REPO_ROOT = resolve(__dirname, "..");
 loadEnv({ path: resolve(REPO_ROOT, ".env") });
 
-import pg from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+import pg from "pg";
 import { assertNonProdDestructive } from "./_destructive-guard.js";
 
 const DATABASE_URL: string = (() => {

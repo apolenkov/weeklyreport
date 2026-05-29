@@ -1,7 +1,7 @@
-import { Injectable } from "@nestjs/common";
 import type { OnModuleDestroy } from "@nestjs/common";
-import { HealthCheckError, HealthIndicator } from "@nestjs/terminus";
+import { Injectable } from "@nestjs/common";
 import type { HealthIndicatorResult } from "@nestjs/terminus";
+import { HealthCheckError, HealthIndicator } from "@nestjs/terminus";
 import Redis from "ioredis";
 
 @Injectable()

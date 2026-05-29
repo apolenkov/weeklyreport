@@ -1,18 +1,17 @@
 import {
-  draftSaveSchema,
-  assembledReportSchema,
   type AssembledReport,
+  assembledReportSchema,
   type DraftSavePayload,
+  draftSaveSchema,
   type PortfolioOverview,
   type ReportSectionReadModel,
   type UserSession,
 } from "@customreport/shared";
-
-import { createNullLogger, type AppLogger } from "../../lib/logger";
 import {
   customreportPeriodStateTransitionsTotal,
   customreportReportsSubmittedTotal,
 } from "../../infrastructure/metrics/metrics.registry.js";
+import { type AppLogger, createNullLogger } from "../../lib/logger";
 
 /**
  * Phase 54 (UFB-055): fire-and-forget ingestion seam. Wired by

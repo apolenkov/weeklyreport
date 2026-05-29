@@ -1,13 +1,13 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 // Phase 31 (AI-01) — Executive summary card. Renders above the assembled
 // report; never overwrites the head's own narrative. Dismissible per
 // session via local useState (no DB persistence). Regenerate button is
 // gated by the head role — non-heads only see the summary itself.
 import { useContext, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useTRPC } from "../../lib/trpc-context";
 import { SessionContext } from "../../lib/session-provider";
+import { useTRPC } from "../../lib/trpc-context";
 
 type Props = {
   readonly reportId: string;

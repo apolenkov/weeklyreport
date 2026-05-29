@@ -10,9 +10,9 @@
  */
 import "@testing-library/jest-dom/vitest";
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const push = vi.fn();
 const replace = vi.fn();
@@ -25,8 +25,8 @@ vi.mock("next/navigation", () => ({
   usePathname: () => mockPathname,
 }));
 
-import { HeadPeriodNavigator } from "./period-navigator";
 import type { ReportPeriod } from "../dashboard/mock-data";
+import { HeadPeriodNavigator } from "./period-navigator";
 
 const PERIODS: ReportPeriod[] = [
   {

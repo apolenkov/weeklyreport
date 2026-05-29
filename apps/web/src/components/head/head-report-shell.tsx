@@ -1,24 +1,22 @@
 "use client";
 
-import { Suspense, useCallback, useMemo, useState } from "react";
-import { FileDown, Presentation } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-
 import type { CompiledHistoryResult } from "@customreport/shared";
-
-import { useTRPC } from "../../lib/trpc-context";
+import { useQuery } from "@tanstack/react-query";
+import { FileDown, Presentation } from "lucide-react";
+import { Suspense, useCallback, useMemo, useState } from "react";
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
+import { useTRPC } from "../../lib/trpc-context";
 import type { ReportPeriod } from "../lead/mock-data";
 import { PeriodNavigator } from "../lead/period-navigator";
+import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../report-shell/archive-toggle";
 import { ReportToolbar } from "../report-shell/report-toolbar";
-import { ViewModeToggle } from "../report-shell/view-mode-toggle";
 import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
-import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
-import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
-import { WeeklyReportSkeleton } from "../weekly-report/weekly-report-skeleton";
+import { ViewModeToggle } from "../report-shell/view-mode-toggle";
 import { HeadSlidesClient } from "../slides/head-slides-client";
 import { SlideSkeleton } from "../slides/slide-skeleton";
+import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
+import { WeeklyReportSkeleton } from "../weekly-report/weekly-report-skeleton";
 
 type HeadReportShellProps = {
   readonly reportId: string;
@@ -100,7 +98,10 @@ export function HeadReportShell({
           ) : undefined
         }
         archiveToggle={
-          <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
+          <ArchiveToggle
+            checked={includeArchive}
+            onChange={setIncludeArchive}
+          />
         }
       />
       {/* Action row parity with the lead report header (UAT 2026-05-22,

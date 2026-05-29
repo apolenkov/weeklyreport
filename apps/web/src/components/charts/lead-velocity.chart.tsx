@@ -1,13 +1,12 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis } from "recharts";
+import type { LeadVelocityOutput } from "@customreport/shared";
 
 import {
   ChartContainer,
   ChartTooltip,
 } from "@customreport/ui/components/ui/chart";
-
-import type { LeadVelocityOutput } from "@customreport/shared";
+import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis } from "recharts";
 
 /**
  * ANAL-04 (Phase 30-03): stacked-bar of submitted-section counts per lead per period.

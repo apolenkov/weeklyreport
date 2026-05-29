@@ -1,6 +1,6 @@
 import {
-  submissionDashboardRowSchema,
   type SubmissionDashboardRow,
+  submissionDashboardRowSchema,
   type UserSession,
 } from "@customreport/shared";
 

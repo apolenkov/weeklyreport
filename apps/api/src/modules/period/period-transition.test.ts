@@ -37,9 +37,11 @@ describe("buildTransition — create", () => {
   });
 
   it("periodStart === now → open (boundary)", () => {
-    expect(
-      buildTransition("create", { periodStart: NOW, now: NOW }),
-    ).toEqual({ periodState: "open", status: "draft", archived: false });
+    expect(buildTransition("create", { periodStart: NOW, now: NOW })).toEqual({
+      periodState: "open",
+      status: "draft",
+      archived: false,
+    });
   });
 });
 
@@ -63,9 +65,7 @@ describe("buildTransition — schedule / open", () => {
 
 describe("buildTransition — publish", () => {
   it("moves all three machines to published and stamps the publisher", () => {
-    expect(
-      buildTransition("publish", { now: NOW, userId: "user-1" }),
-    ).toEqual({
+    expect(buildTransition("publish", { now: NOW, userId: "user-1" })).toEqual({
       status: "published",
       periodStatus: "published",
       periodState: "published",
@@ -130,8 +130,9 @@ describe("buildTransition — unarchive", () => {
   });
 
   it("clears archived and sets the caller-derived next state (open)", () => {
-    expect(
-      buildTransition("unarchive", { nextPeriodState: "open" }),
-    ).toEqual({ archived: false, periodState: "open" });
+    expect(buildTransition("unarchive", { nextPeriodState: "open" })).toEqual({
+      archived: false,
+      periodState: "open",
+    });
   });
 });

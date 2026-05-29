@@ -2,8 +2,8 @@
 // Larger probe-helpers from apps/web/.tmp/uat-suite/ are NOT mirrored here —
 // the tracked scripts are intentionally lightweight so CI can run them.
 
-import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

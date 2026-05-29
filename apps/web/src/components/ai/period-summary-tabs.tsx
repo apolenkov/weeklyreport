@@ -12,8 +12,6 @@
 // (head + admin + viewer) — leads visiting `/reports/<id>` will get a
 // FORBIDDEN which we render as an empty state.
 
-import { useQuery } from "@tanstack/react-query";
-
 import { Badge } from "@customreport/ui/components/ui/badge";
 import {
   Tabs,
@@ -21,6 +19,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@customreport/ui/components/ui/tabs";
+import { useQuery } from "@tanstack/react-query";
 
 import { useTRPC } from "../../lib/trpc-context";
 

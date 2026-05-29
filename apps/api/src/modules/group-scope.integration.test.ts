@@ -1,12 +1,11 @@
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import type { UserSession } from "@customreport/shared";
-
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { groupScopeFilter } from "../lib/group-scope";
 import {
-  createTestPrisma,
   cleanDatabase,
+  createTestPrisma,
   disconnectTestPrisma,
 } from "../test-utils/prisma-test-helper";
-import { groupScopeFilter } from "../lib/group-scope";
 
 /**
  * TD-02 / Phase 46-05 follow-up: live-Prisma cross-group visibility matrix.
@@ -48,21 +47,78 @@ describe("group-scope visibility matrix (integration, TD-02)", () => {
     });
     await prisma.user.createMany({
       data: [
-        { id: IDS.headA, email: "headA@t.local", name: "Head A", role: "head", samlId: "hA", reportingGroupId: IDS.groupA },
-        { id: IDS.leadA, email: "leadA@t.local", name: "Lead A", role: "lead", samlId: "lA", reportingGroupId: IDS.groupA },
-        { id: IDS.headB, email: "headB@t.local", name: "Head B", role: "head", samlId: "hB", reportingGroupId: IDS.groupB },
-        { id: IDS.leadB, email: "leadB@t.local", name: "Lead B", role: "lead", samlId: "lB", reportingGroupId: IDS.groupB },
-        { id: IDS.admin, email: "admin@t.local", name: "Admin", role: "admin", samlId: "adm", reportingGroupId: IDS.groupA },
-        { id: IDS.viewer, email: "viewer@t.local", name: "Viewer", role: "viewer", samlId: "vwr", reportingGroupId: IDS.groupA },
+        {
+          id: IDS.headA,
+          email: "headA@t.local",
+          name: "Head A",
+          role: "head",
+          samlId: "hA",
+          reportingGroupId: IDS.groupA,
+        },
+        {
+          id: IDS.leadA,
+          email: "leadA@t.local",
+          name: "Lead A",
+          role: "lead",
+          samlId: "lA",
+          reportingGroupId: IDS.groupA,
+        },
+        {
+          id: IDS.headB,
+          email: "headB@t.local",
+          name: "Head B",
+          role: "head",
+          samlId: "hB",
+          reportingGroupId: IDS.groupB,
+        },
+        {
+          id: IDS.leadB,
+          email: "leadB@t.local",
+          name: "Lead B",
+          role: "lead",
+          samlId: "lB",
+          reportingGroupId: IDS.groupB,
+        },
+        {
+          id: IDS.admin,
+          email: "admin@t.local",
+          name: "Admin",
+          role: "admin",
+          samlId: "adm",
+          reportingGroupId: IDS.groupA,
+        },
+        {
+          id: IDS.viewer,
+          email: "viewer@t.local",
+          name: "Viewer",
+          role: "viewer",
+          samlId: "vwr",
+          reportingGroupId: IDS.groupA,
+        },
       ],
     });
     await prisma.report.create({
-      data: { id: IDS.report, periodStart: new Date("2026-05-05"), periodEnd: new Date("2026-05-11"), deadline: new Date("2026-05-09") },
+      data: {
+        id: IDS.report,
+        periodStart: new Date("2026-05-05"),
+        periodEnd: new Date("2026-05-11"),
+        deadline: new Date("2026-05-09"),
+      },
     });
     await prisma.reportSection.createMany({
       data: [
-        { id: IDS.sectionA, reportId: IDS.report, authorId: IDS.leadA, status: "draft" },
-        { id: IDS.sectionB, reportId: IDS.report, authorId: IDS.leadB, status: "draft" },
+        {
+          id: IDS.sectionA,
+          reportId: IDS.report,
+          authorId: IDS.leadA,
+          status: "draft",
+        },
+        {
+          id: IDS.sectionB,
+          reportId: IDS.report,
+          authorId: IDS.leadB,
+          status: "draft",
+        },
       ],
     });
   });
@@ -72,8 +128,20 @@ describe("group-scope visibility matrix (integration, TD-02)", () => {
     await disconnectTestPrisma();
   });
 
-  function makeSession(userId: string, role: UserSession["role"], groupId: string, viewerGroupAccess: string[] = []): UserSession {
-    return { userId, role, reportingGroupId: groupId, viewerGroupAccess, name: "", email: "" };
+  function makeSession(
+    userId: string,
+    role: UserSession["role"],
+    groupId: string,
+    viewerGroupAccess: string[] = [],
+  ): UserSession {
+    return {
+      userId,
+      role,
+      reportingGroupId: groupId,
+      viewerGroupAccess,
+      name: "",
+      email: "",
+    };
   }
 
   async function querySections(session: UserSession): Promise<string[]> {
@@ -101,27 +169,37 @@ describe("group-scope visibility matrix (integration, TD-02)", () => {
   });
 
   it("admin sees both sections", async () => {
-    const ids = await querySections(makeSession(IDS.admin, "admin", IDS.groupA));
+    const ids = await querySections(
+      makeSession(IDS.admin, "admin", IDS.groupA),
+    );
     expect(ids).toEqual([IDS.sectionA, IDS.sectionB].sort());
   });
 
   it("viewer with group-A access sees only group-A section", async () => {
-    const ids = await querySections(makeSession(IDS.viewer, "viewer", IDS.groupA, [IDS.groupA]));
+    const ids = await querySections(
+      makeSession(IDS.viewer, "viewer", IDS.groupA, [IDS.groupA]),
+    );
     expect(ids).toEqual([IDS.sectionA]);
   });
 
   it("viewer with group-B access sees only group-B section", async () => {
-    const ids = await querySections(makeSession(IDS.viewer, "viewer", IDS.groupA, [IDS.groupB]));
+    const ids = await querySections(
+      makeSession(IDS.viewer, "viewer", IDS.groupA, [IDS.groupB]),
+    );
     expect(ids).toEqual([IDS.sectionB]);
   });
 
   it("viewer with both groups sees both sections", async () => {
-    const ids = await querySections(makeSession(IDS.viewer, "viewer", IDS.groupA, [IDS.groupA, IDS.groupB]));
+    const ids = await querySections(
+      makeSession(IDS.viewer, "viewer", IDS.groupA, [IDS.groupA, IDS.groupB]),
+    );
     expect(ids).toEqual([IDS.sectionA, IDS.sectionB].sort());
   });
 
   it("viewer with empty access sees zero sections", async () => {
-    const ids = await querySections(makeSession(IDS.viewer, "viewer", IDS.groupA, []));
+    const ids = await querySections(
+      makeSession(IDS.viewer, "viewer", IDS.groupA, []),
+    );
     expect(ids).toHaveLength(0);
   });
 });

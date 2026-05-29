@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { AlertTriangle, Check, Circle } from "lucide-react";
+import type { ReactNode } from "react";
 
 import type { SectionSlideModel } from "./section-slide-utils";
 
@@ -32,21 +32,15 @@ function toneConfig(tone: ToneVariant): {
       return {
         label: "Blockers",
         // red-100 bg + red-950 text → WCAG AA pass for small text
-        className:
-          "border-[rgba(200,32,20,0.24)] bg-[#fee2e2] text-[#7f1d1d]",
-        icon: (
-          <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-        ),
+        className: "border-[rgba(200,32,20,0.24)] bg-[#fee2e2] text-[#7f1d1d]",
+        icon: <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />,
       };
     case "at-risk":
       return {
         label: "At risk",
         // amber-100 bg + amber-900 text → WCAG AA pass for small text
-        className:
-          "border-[rgba(212,160,23,0.38)] bg-[#fef3c7] text-[#78350f]",
-        icon: (
-          <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-        ),
+        className: "border-[rgba(212,160,23,0.38)] bg-[#fef3c7] text-[#78350f]",
+        icon: <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />,
       };
     case "on-track":
       return {
@@ -98,10 +92,18 @@ type Props = {
   readonly heroControls?: ReactNode;
 };
 
-export function LeadSlideHero({ slide, authorName, periodLabel, heroControls }: Props) {
+export function LeadSlideHero({
+  slide,
+  authorName,
+  periodLabel,
+  heroControls,
+}: Props) {
   const tone = worstProductTone(slide.productSlides);
-  const { label: toneLabel, className: toneClassName, icon: toneIcon } =
-    toneConfig(tone);
+  const {
+    label: toneLabel,
+    className: toneClassName,
+    icon: toneIcon,
+  } = toneConfig(tone);
   const onTrackPct = computeOnTrackPct(slide.productSlides);
   const displayName = authorName ?? slide.ownerName;
   const displayPeriod = periodLabel ?? slide.ownerRole;

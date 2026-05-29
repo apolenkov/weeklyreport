@@ -23,9 +23,9 @@ vi.mock("@anthropic-ai/sdk", () => {
 });
 
 import {
+  _resetAiClientForTests,
   AiRateLimitError,
   AiUnavailableError,
-  _resetAiClientForTests,
   extractUsage,
   runStructured,
 } from "./ai-client.js";

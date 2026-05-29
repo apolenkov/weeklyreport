@@ -1,8 +1,7 @@
-import { describe, expect, it } from "vitest";
 import { TRPCError } from "@trpc/server";
-
-import { assertRole } from "./role";
+import { describe, expect, it } from "vitest";
 import type { UserSession } from "../../schemas/auth";
+import { assertRole } from "./role";
 
 // ---------------------------------------------------------------------------
 // Unit tests target `assertRole` — the pure role-check contract that

@@ -9,9 +9,9 @@
  */
 import "@testing-library/jest-dom/vitest";
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const replace = vi.fn();
 const push = vi.fn();
@@ -24,8 +24,8 @@ vi.mock("next/navigation", () => ({
   usePathname: () => mockPathname,
 }));
 
-import { PeriodNavigator } from "./period-navigator";
 import type { ReportPeriod } from "./mock-data";
+import { PeriodNavigator } from "./period-navigator";
 
 const PERIODS: ReportPeriod[] = [
   {
@@ -108,7 +108,9 @@ describe("PeriodNavigator (lead)", () => {
       "Select reporting period",
     ) as HTMLSelectElement;
 
-    expect(select.selectedOptions[0]?.textContent).toBe("Apr 21–27, 2026 (Current)");
+    expect(select.selectedOptions[0]?.textContent).toBe(
+      "Apr 21–27, 2026 (Current)",
+    );
     expect(select.selectedOptions[0]?.textContent).not.toContain("Period");
     expect(select.selectedOptions[0]?.textContent).not.toContain("Week");
   });

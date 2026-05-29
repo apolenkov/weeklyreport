@@ -1,13 +1,12 @@
-import { describe, expect, it } from "vitest";
 import { TRPCError } from "@trpc/server";
-
-import { router, publicProcedure, headProcedure } from "../trpc.middleware.js";
-import type { AppLogger } from "../../../lib/logger.js";
+import { describe, expect, it } from "vitest";
 import {
-  createAuditLogger,
   type AuditLogger,
+  createAuditLogger,
 } from "../../../lib/audit-logger.js";
+import type { AppLogger } from "../../../lib/logger.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
+import { headProcedure, publicProcedure, router } from "../trpc.middleware.js";
 
 // ---------------------------------------------------------------------------
 // AUTH-08 audit-events end-to-end signal test (Phase 29-01).

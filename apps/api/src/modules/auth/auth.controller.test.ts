@@ -1,7 +1,6 @@
-import { describe, expect, it } from "vitest";
-import jwt from "jsonwebtoken";
-
 import type { UserSession } from "@customreport/shared";
+import jwt from "jsonwebtoken";
+import { describe, expect, it } from "vitest";
 
 import { createJwtSigner } from "./auth.controller";
 

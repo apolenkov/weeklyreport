@@ -12,14 +12,15 @@
  * path; this test guarantees the helper itself routes correctly so any future
  * regression in cache-keys.ts is caught here.
  */
-import { describe, it, expect, vi } from "vitest";
+
 import { QueryClient } from "@tanstack/react-query";
+import { describe, expect, it, vi } from "vitest";
 
 import {
+  invalidateAdmin,
   invalidateDashboard,
   invalidateLeadForm,
   invalidateLeadHistory,
-  invalidateAdmin,
 } from "./cache-keys";
 import type { TRPCProxy } from "./trpc";
 

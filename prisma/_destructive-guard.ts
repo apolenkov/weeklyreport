@@ -60,9 +60,7 @@ export function assertNonProdDestructive(scriptName: string): void {
   // staging compose stack can use the same service name while pointing at
   // production data, so we require an explicit non-prod suffix for it.
   const isTrulyLocal =
-    host === "localhost" ||
-    host === "127.0.0.1" ||
-    host.endsWith(".local");
+    host === "localhost" || host === "127.0.0.1" || host.endsWith(".local");
 
   const isExplicitNonProdName = /_(uat|dev|test|local|staging)$/i.test(
     lastSegment,

@@ -32,12 +32,12 @@
  * real secrets — labelled CN=customreport-test-{idp,sp}.
  */
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-
-import { describe, it, expect, beforeAll } from "vitest";
+import { fileURLToPath } from "node:url";
 import samlify from "samlify";
+import { beforeAll, describe, expect, it } from "vitest";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+
 // `validator` shipped by samlify is required-but-not-bundled to avoid the
 // xmldom transitive surface. We swap in a permissive validator for tests
 // because the assertion XML we mint is well-formed by construction; the

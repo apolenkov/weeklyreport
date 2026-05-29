@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { deriveEffectiveStageStatus } from "./stage-status";
 
 describe("deriveEffectiveStageStatus", () => {
@@ -7,19 +7,27 @@ describe("deriveEffectiveStageStatus", () => {
   });
 
   it("elevates to at-risk from a single at-risk risk", () => {
-    expect(deriveEffectiveStageStatus("empty", [{ severity: "at-risk" }], [])).toBe("at-risk");
+    expect(
+      deriveEffectiveStageStatus("empty", [{ severity: "at-risk" }], []),
+    ).toBe("at-risk");
   });
 
   it("elevates to blocked from a single blocked risk", () => {
-    expect(deriveEffectiveStageStatus("empty", [{ severity: "blocked" }], [])).toBe("blocked");
+    expect(
+      deriveEffectiveStageStatus("empty", [{ severity: "blocked" }], []),
+    ).toBe("blocked");
   });
 
   it("elevates to blocked from a blocked KanbanItem", () => {
-    expect(deriveEffectiveStageStatus("empty", [], [{ workflowStatus: "blocked" }])).toBe("blocked");
+    expect(
+      deriveEffectiveStageStatus("empty", [], [{ workflowStatus: "blocked" }]),
+    ).toBe("blocked");
   });
 
   it("max wins: explicit on-track + at-risk risk → at-risk", () => {
-    expect(deriveEffectiveStageStatus("on-track", [{ severity: "at-risk" }], [])).toBe("at-risk");
+    expect(
+      deriveEffectiveStageStatus("on-track", [{ severity: "at-risk" }], []),
+    ).toBe("at-risk");
   });
 
   it("stays blocked when explicit is blocked and no risks/items", () => {

@@ -1,17 +1,15 @@
-import { describe, expect, it } from "vitest";
-
 import {
-  weeklyReportReadModelSchema,
-  weeklyReportGetResponseSchema,
   type WeeklyReportReadModel,
+  weeklyReportGetResponseSchema,
+  weeklyReportReadModelSchema,
 } from "@customreport/shared";
-
+import { describe, expect, it } from "vitest";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
-  WeeklyReportService,
   WeeklyReportDomainError,
   type WeeklyReportRepository,
+  WeeklyReportService,
 } from "./weekly-report.service";
-import { expectDefined } from "../../test-utils/expect-defined.js";
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */

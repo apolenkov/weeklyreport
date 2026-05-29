@@ -1,20 +1,19 @@
 import { Module } from "@nestjs/common";
-
-import { PeriodService } from "./period.service.js";
-import { PeriodPrismaRepository } from "./period.prisma-repository.js";
-import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
-import { AutoPublisherScheduler } from "./auto-publisher.scheduler.js";
-import { AutoArchiverScheduler } from "./auto-archiver.scheduler.js";
-import { AnalyticsModule } from "../analytics/analytics.module.js";
-import { AnalyticsCache } from "../analytics/analytics.cache.js";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { AdminModule } from "../admin/admin.module.js";
 import { AdminService } from "../admin/admin.service.js";
-import { PublicationModule } from "../publication/publication.module.js";
-import { PublicationService } from "../publication/publication.service.js";
 import { AiModule } from "../ai/ai.module.js";
 import { AiIngestionService } from "../ai/ai-ingestion.service.js";
-import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { AnalyticsCache } from "../analytics/analytics.cache.js";
+import { AnalyticsModule } from "../analytics/analytics.module.js";
+import { PublicationModule } from "../publication/publication.module.js";
+import { PublicationService } from "../publication/publication.service.js";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
+import { AutoArchiverScheduler } from "./auto-archiver.scheduler.js";
+import { AutoPublisherScheduler } from "./auto-publisher.scheduler.js";
+import { PeriodPrismaRepository } from "./period.prisma-repository.js";
+import { PeriodService } from "./period.service.js";
+import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
 
 /**
  * UFB-049 / Phase 50-B: three scheduler classes (`PeriodCreatorScheduler`,
@@ -88,7 +87,8 @@ import { PolicyApplicatorService } from "../reminders/policy-applicator.service.
         prisma: PrismaService,
         admin: AdminService,
         policyApplicator: PolicyApplicatorService,
-      ) => new PeriodCreatorScheduler(prisma, admin, undefined, policyApplicator),
+      ) =>
+        new PeriodCreatorScheduler(prisma, admin, undefined, policyApplicator),
       inject: [PrismaService, AdminService, PolicyApplicatorService],
     },
     {

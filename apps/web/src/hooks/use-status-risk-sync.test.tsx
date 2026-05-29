@@ -1,13 +1,12 @@
-import { describe, it, expect, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
-
-import { useStatusRiskSync, type SyncSource } from "./use-status-risk-sync";
+import { describe, expect, it, vi } from "vitest";
 import type {
   Product,
   RiskEntry,
   StageStatus,
 } from "../components/lead/mock-data";
 import { expectDefined } from "../test-utils/expect-defined.js";
+import { type SyncSource, useStatusRiskSync } from "./use-status-risk-sync";
 
 function buildProduct(overrides?: Partial<Product>): Product {
   return {

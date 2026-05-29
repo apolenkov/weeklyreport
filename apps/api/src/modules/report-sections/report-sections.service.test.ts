@@ -1,18 +1,16 @@
+import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import type { ReportSectionReadModel } from "@customreport/shared";
-
 import {
-  customreportSectionsSubmittedTotal,
   customreportSectionSubmissionLatencySeconds,
+  customreportSectionsSubmittedTotal,
 } from "../../infrastructure/metrics/metrics.registry.js";
-
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   ReportSectionAccessError,
-  ReportSectionsService,
   type ReportSectionsRepository,
+  ReportSectionsService,
 } from "./report-sections.service";
-import { expectDefined } from "../../test-utils/expect-defined.js";
 
 const baseSection: ReportSectionReadModel = {
   reportSectionId: "11111111-1111-4111-8111-111111111111",
@@ -117,7 +115,7 @@ describe("ReportSectionsService", () => {
           items: baseSection.items,
           risks: [],
           decisions: [],
-            },
+        },
         "55555555-5555-4555-8555-555555555555",
       ),
     ).rejects.toBeInstanceOf(ReportSectionAccessError);
@@ -140,7 +138,7 @@ describe("ReportSectionsService", () => {
         items: baseSection.items,
         risks: [],
         decisions: [],
-        }),
+      }),
     ).rejects.toMatchObject({
       code: "MISSING_TRAFFIC_LIGHT",
     });
@@ -164,7 +162,7 @@ describe("ReportSectionsService", () => {
           items: baseSection.items,
           risks: [],
           decisions: [],
-            },
+        },
         "55555555-5555-4555-8555-555555555555",
       ),
     ).rejects.toBeInstanceOf(ReportSectionAccessError);
@@ -216,7 +214,7 @@ describe("ReportSectionsService", () => {
           items: baseSection.items,
           risks: [],
           decisions: [],
-            }),
+        }),
       ).rejects.toMatchObject({
         code: "SECTION_ALREADY_SUBMITTED",
         message: "Cannot edit sections of a published report.",
@@ -240,7 +238,7 @@ describe("ReportSectionsService", () => {
         items: baseSection.items,
         risks: [],
         decisions: [],
-        });
+      });
 
       expect(saved.status).toBe("draft");
       expect(saved.projects[0]?.trafficLight).toBe("green");
@@ -269,7 +267,7 @@ describe("ReportSectionsService", () => {
         items: baseSection.items,
         risks: [],
         decisions: [],
-        });
+      });
 
       expect(calls).toEqual([baseSection.reportId]);
     });
@@ -302,7 +300,7 @@ describe("ReportSectionsService", () => {
           items: baseSection.items,
           risks: [],
           decisions: [],
-            }),
+        }),
       ).rejects.toMatchObject({
         code: "SECTION_ALREADY_SUBMITTED",
         message: "Submitted sections are read-only.",
@@ -336,7 +334,7 @@ describe("ReportSectionsService", () => {
         items: baseSection.items,
         risks: [],
         decisions: [],
-        }),
+      }),
     ).rejects.toMatchObject({
       code: "SECTION_ALREADY_SUBMITTED",
     });
@@ -633,10 +631,10 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
   });
 });
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 async function counterValue(
   counter: {
     get(): Promise<{
+      // biome-ignore lint/suspicious/noExplicitAny: prom-client label record (migrated from eslint-disable)
       values: Array<{ value: number; labels: Record<string, any> }>;
     }>;
   },
@@ -656,4 +654,3 @@ async function histogramSum(hist: {
   const sum = snapshot.values.find((e) => e.metricName?.endsWith("_sum"));
   return sum?.value ?? 0;
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */

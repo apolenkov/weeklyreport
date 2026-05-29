@@ -1,9 +1,8 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-
-import { TrafficLightHistoryChart } from "./traffic-light-history.chart";
+import { describe, expect, it } from "vitest";
 import { LeadVelocityChart } from "./lead-velocity.chart";
 import { PeriodComparisonChart } from "./period-comparison.chart";
+import { TrafficLightHistoryChart } from "./traffic-light-history.chart";
 
 describe("TrafficLightHistoryChart", () => {
   it("renders the empty-state message when no periods", () => {

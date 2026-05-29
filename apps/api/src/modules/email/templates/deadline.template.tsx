@@ -1,16 +1,16 @@
-import * as React from "react";
 import {
-  Html,
-  Head,
-  Preview,
-  Tailwind,
   Body,
-  Container,
-  Heading,
-  Text,
   Button,
+  Container,
+  Head,
+  Heading,
+  Html,
+  Preview,
   Section,
+  Tailwind,
+  Text,
 } from "@react-email/components";
+import * as React from "react";
 
 /**
  * NOTIF-01/03 (Phase 28-03): T-24h deadline reminder email.

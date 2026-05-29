@@ -1,12 +1,11 @@
-import { describe, expect, it } from "vitest";
-
 import type {
   AdminSnapshot,
   AppSettings,
   StageAssignment,
 } from "@customreport/shared";
+import { describe, expect, it } from "vitest";
 
-import { AdminService, type AdminRepository } from "./admin.service";
+import { type AdminRepository, AdminService } from "./admin.service";
 
 /* ------------------------------------------------------------------ */
 /*  Constants & defaults                                               */

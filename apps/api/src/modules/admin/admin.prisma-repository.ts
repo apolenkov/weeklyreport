@@ -1,29 +1,29 @@
-import { Injectable } from "@nestjs/common";
 import {
-  adminSnapshotSchema,
-  adminUserSchema,
-  adminProjectSchema,
-  appSettingsSchema,
-  groupProductSchema,
-  reminderPolicySchema,
-  reportingGroupSchema,
-  stageAssignmentSchema,
-  reportPeriodSchema,
-  adminReminderRuleSchema,
-  adminReminderExecutionSchema,
   type AdminProject,
   type AdminSnapshot,
   type AppSettings,
+  adminProjectSchema,
+  adminReminderExecutionSchema,
+  adminReminderRuleSchema,
+  adminSnapshotSchema,
+  adminUserSchema,
+  appSettingsSchema,
   type GroupProduct,
   type GroupProductEdgeInput,
+  groupProductSchema,
   type PeriodState,
   type PeriodStatus,
   type ReminderAudience,
   type ReminderPolicy,
   type ReportingGroup,
+  reminderPolicySchema,
+  reportingGroupSchema,
+  reportPeriodSchema,
   type StageAssignment,
+  stageAssignmentSchema,
   type WorkingDays,
 } from "@customreport/shared";
+import { Injectable } from "@nestjs/common";
 import {
   ReminderAudience as PrismaReminderAudience,
   WorkingDays as PrismaWorkingDays,
@@ -31,10 +31,10 @@ import {
 } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import { PolicyApplicatorService } from "../reminders/policy-applicator.service";
 import { buildTransition } from "../period/period-transition.js";
-import { resolveLifecycle } from "./snapshot-lifecycle.js";
+import { PolicyApplicatorService } from "../reminders/policy-applicator.service";
 import type { AdminRepository, PeriodRowFromRepo } from "./admin.service";
+import { resolveLifecycle } from "./snapshot-lifecycle.js";
 
 /**
  * UFB-036 (Phase 44-02): wire format ↔ Prisma enum mappers for
@@ -895,7 +895,10 @@ export class AdminPrismaRepository implements AdminRepository {
         // hand-assembled. The service resolves the initial state to
         // 'scheduled' | 'open'; both map to a draft/false legacy tuple, which
         // the schedule/open transitions produce.
-        ...buildTransition(input.periodState === "scheduled" ? "schedule" : "open", {}),
+        ...buildTransition(
+          input.periodState === "scheduled" ? "schedule" : "open",
+          {},
+        ),
       },
       select: {
         id: true,

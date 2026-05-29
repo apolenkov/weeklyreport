@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-
 import type { Queue } from "bullmq";
+import { describe, expect, it, vi } from "vitest";
 
 import { JobsService } from "./jobs.service";
 

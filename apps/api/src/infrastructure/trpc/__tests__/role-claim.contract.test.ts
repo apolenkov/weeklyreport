@@ -1,11 +1,10 @@
-import { describe, expect, it } from "vitest";
-
-import {
-  verifySamlProfile,
-  type SamlStrategyOptions,
-} from "../../../modules/auth/saml.strategy.js";
-import { createAuthController } from "../../../modules/auth/auth.controller.js";
 import type { UserSession } from "@customreport/shared";
+import { describe, expect, it } from "vitest";
+import { createAuthController } from "../../../modules/auth/auth.controller.js";
+import {
+  type SamlStrategyOptions,
+  verifySamlProfile,
+} from "../../../modules/auth/saml.strategy.js";
 
 // ---------------------------------------------------------------------------
 // AUTH-02 contract test (Phase 29-02): SAML profile.role survives the full

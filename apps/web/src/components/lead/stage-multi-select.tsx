@@ -60,8 +60,8 @@ export function StageMultiSelect({
         className="mb-2 text-[11px] text-[var(--color-muted-foreground)]"
       >
         Optional. Leave empty to apply to all assigned stages. Tip: mark the
-        stage as blocked on the SDLC pipeline above before pinning a risk —
-        that keeps your blocker scope honest.
+        stage as blocked on the SDLC pipeline above before pinning a risk — that
+        keeps your blocker scope honest.
       </p>
       {bannerText && (
         <div

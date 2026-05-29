@@ -1,26 +1,26 @@
-import { Injectable } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
 import {
-  archiveReportSummarySchema,
-  archiveReportDetailSchema,
-  type ArchiveReportSummary,
   type ArchiveReportDetail,
+  type ArchiveReportSummary,
   type AssembledReport,
+  archiveReportDetailSchema,
+  archiveReportSummarySchema,
   type PortfolioOverview,
 } from "@customreport/shared";
+import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter } from "../../lib/group-scope.js";
-import type {
-  ArchiveReadFilter,
-  ArchiveRepository,
-  ArchiveScopeSession,
-} from "./archive.service.js";
-import { reportSectionFullInclude } from "../report-sections/report-sections.prisma-repository.js";
 import {
   buildAssembledReportFromPrismaRow,
   filterSnapshotSections,
   parsePublishedSnapshot,
 } from "../published-report-snapshot.js";
+import { reportSectionFullInclude } from "../report-sections/report-sections.prisma-repository.js";
+import type {
+  ArchiveReadFilter,
+  ArchiveRepository,
+  ArchiveScopeSession,
+} from "./archive.service.js";
 
 /**
  * AUTH-04 (Phase 28-01): defense-in-depth status floor.

@@ -3,9 +3,8 @@
 // (kind, contentHash) per AiInsight @@unique.
 import { createHash } from "node:crypto";
 import type { AiInsightKind } from "@prisma/client";
-
-import type { AiFacade, AiInsightRow } from "./ai-facade.js";
 import type { AnthropicUsage } from "./ai-client.js";
+import type { AiFacade, AiInsightRow } from "./ai-facade.js";
 
 /**
  * Stable JSON.stringify with sorted keys so equivalent inputs hit the same

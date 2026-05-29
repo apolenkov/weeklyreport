@@ -129,82 +129,82 @@ export function LeadSummaryTable({ leads, reportId }: LeadSummaryTableProps) {
             {leads.map((lead) => {
               const inactive = isInactive24h(lead.lastActivity);
               return (
-              <tr
-                key={lead.id}
-                className={
-                  "border-b border-[var(--color-border)] last:border-0" +
-                  (inactive ? " bg-muted/30 opacity-60" : "")
-                }
-                data-testid={inactive ? "lead-row-inactive-24h" : undefined}
-              >
-                <th scope="row" className="px-5 py-3 text-left">
-                  <div className="flex items-center gap-3">
-                    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-muted)] text-xs font-bold text-[var(--color-primary)]">
-                      {lead.initials}
-                    </span>
-                    <div className="min-w-0">
-                      <span className="block truncate font-semibold text-[var(--color-foreground)]">
-                        {lead.name}
+                <tr
+                  key={lead.id}
+                  className={
+                    "border-b border-[var(--color-border)] last:border-0" +
+                    (inactive ? " bg-muted/30 opacity-60" : "")
+                  }
+                  data-testid={inactive ? "lead-row-inactive-24h" : undefined}
+                >
+                  <th scope="row" className="px-5 py-3 text-left">
+                    <div className="flex items-center gap-3">
+                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-muted)] text-xs font-bold text-[var(--color-primary)]">
+                        {lead.initials}
                       </span>
-                      <span className="block truncate text-xs text-[var(--color-muted-foreground)]">
-                        {lead.role}
-                      </span>
+                      <div className="min-w-0">
+                        <span className="block truncate font-semibold text-[var(--color-foreground)]">
+                          {lead.name}
+                        </span>
+                        <span className="block truncate text-xs text-[var(--color-muted-foreground)]">
+                          {lead.role}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </th>
-                <td className="px-5 py-3">
-                  <span
-                    className={
-                      "inline-flex items-center rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-xs font-semibold " +
-                      STATUS_CLASSES[lead.status]
-                    }
-                  >
-                    {STATUS_LABELS[lead.status]}
-                  </span>
-                </td>
-                <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
-                  {lead.productCount ?? 0}
-                </td>
-                <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
-                  {lead.currentItemCount ?? 0}
-                </td>
-                <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
-                  {lead.nextItemCount ?? 0}
-                </td>
-                <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
-                  {lead.riskCount ?? 0}
-                </td>
-                <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
-                  {lead.decisionCount ?? 0}
-                </td>
-                <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
-                  {lead.priorityCount ?? 0}
-                </td>
-                <td className="px-5 py-3 text-[var(--color-muted-foreground)]">
-                  {lead.submittedAtLabel ?? "-"}
-                </td>
-                <td className="px-5 py-3 text-right">
-                  {reportId && lead.status === "draft" ? (
-                    <RemindLeadButton
-                      reportId={reportId}
-                      leadId={lead.id}
-                      leadName={lead.name}
-                    />
-                  ) : lead.status === "submitted" && lead.reportSectionId ? (
-                    <RevokeSectionButton
-                      reportSectionId={lead.reportSectionId}
-                      leadName={lead.name}
-                    />
-                  ) : (
+                  </th>
+                  <td className="px-5 py-3">
                     <span
-                      className="text-xs text-[var(--color-muted-foreground)]"
-                      aria-hidden="true"
+                      className={
+                        "inline-flex items-center rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-xs font-semibold " +
+                        STATUS_CLASSES[lead.status]
+                      }
                     >
-                      —
+                      {STATUS_LABELS[lead.status]}
                     </span>
-                  )}
-                </td>
-              </tr>
+                  </td>
+                  <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
+                    {lead.productCount ?? 0}
+                  </td>
+                  <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
+                    {lead.currentItemCount ?? 0}
+                  </td>
+                  <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
+                    {lead.nextItemCount ?? 0}
+                  </td>
+                  <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
+                    {lead.riskCount ?? 0}
+                  </td>
+                  <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
+                    {lead.decisionCount ?? 0}
+                  </td>
+                  <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
+                    {lead.priorityCount ?? 0}
+                  </td>
+                  <td className="px-5 py-3 text-[var(--color-muted-foreground)]">
+                    {lead.submittedAtLabel ?? "-"}
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    {reportId && lead.status === "draft" ? (
+                      <RemindLeadButton
+                        reportId={reportId}
+                        leadId={lead.id}
+                        leadName={lead.name}
+                      />
+                    ) : lead.status === "submitted" && lead.reportSectionId ? (
+                      <RevokeSectionButton
+                        reportSectionId={lead.reportSectionId}
+                        leadName={lead.name}
+                      />
+                    ) : (
+                      <span
+                        className="text-xs text-[var(--color-muted-foreground)]"
+                        aria-hidden="true"
+                      >
+                        —
+                      </span>
+                    )}
+                  </td>
+                </tr>
               );
             })}
           </tbody>

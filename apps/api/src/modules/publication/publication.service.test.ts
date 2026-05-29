@@ -1,10 +1,9 @@
-import { describe, expect, it } from "vitest";
-
 import type {
   AssembledReport,
   DraftSavePayload,
   UserSession,
 } from "@customreport/shared";
+import { describe, expect, it } from "vitest";
 
 import {
   customreportPeriodStateTransitionsTotal,
@@ -14,8 +13,8 @@ import {
 import { publicationRouter } from "./publication.router";
 import {
   PublicationAccessError,
-  PublicationService,
   type PublicationRepository,
+  PublicationService,
 } from "./publication.service";
 
 const reportId = "22222222-2222-4222-8222-222222222222";
@@ -304,10 +303,10 @@ describe("PublicationService", () => {
  * leaking prom-client internals into every test file: the registry tracks
  * (labels → value) pairs and we just find the matching tuple.
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 async function getCounterValue(
   counter: {
     get(): Promise<{
+      // biome-ignore lint/suspicious/noExplicitAny: prom-client label record (migrated from eslint-disable)
       values: Array<{ value: number; labels: Record<string, any> }>;
     }>;
   },
@@ -319,7 +318,6 @@ async function getCounterValue(
   );
   return match?.value ?? 0;
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 describe("publicationRouter", () => {
   it("allows a head session to read the assembled report", async () => {

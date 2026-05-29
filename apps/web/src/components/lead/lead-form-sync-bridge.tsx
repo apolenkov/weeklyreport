@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import {
   createContext,
   useCallback,
@@ -7,15 +8,17 @@ import {
   useMemo,
   useState,
 } from "react";
-import type { ReactNode } from "react";
-
-import { ConfirmationDialog } from "../ui/confirmation-dialog";
 import { useStatusRiskSync } from "../../hooks/use-status-risk-sync";
+import { ConfirmationDialog } from "../ui/confirmation-dialog";
 import type { Product, RiskEntry, StageStatus } from "./mock-data";
 import { RisksSection } from "./risks-section";
-import { SdlcPipeline } from "./sdlc-pipeline";
 import type { CrossAuthorEntry } from "./sdlc-pipeline";
-import { canonicalStageName, riskCoversStage, splitStageNames } from "./stage-tags";
+import { SdlcPipeline } from "./sdlc-pipeline";
+import {
+  canonicalStageName,
+  riskCoversStage,
+  splitStageNames,
+} from "./stage-tags";
 
 /**
  * Promotes a stage status based on a risk's severity.
@@ -103,7 +106,9 @@ function riskStageKeys(products: Product[], risk: RiskEntry): string[] {
       ? risk.stageIds
       : splitStageNames(risk.stageName);
   if (tags.length > 0) {
-    return tags.map((stageName) => `${risk.productId}::${canonicalStageName(stageName)}`);
+    return tags.map(
+      (stageName) => `${risk.productId}::${canonicalStageName(stageName)}`,
+    );
   }
   const product = products.find((item) => item.id === risk.productId);
   return (product?.stages ?? []).map(

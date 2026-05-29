@@ -2,16 +2,13 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import { AdminService } from "../admin/admin.service";
 import type { AuditLogger } from "../../lib/audit-logger.js";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { computeDeadline } from "../../lib/business-date.js";
+import { AdminService } from "../admin/admin.service";
 import { getCurrentWeekBounds } from "../auth/auth.routes.js";
-import {
-  buildTransition,
-  initialPeriodState,
-} from "./period-transition.js";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
+import { buildTransition, initialPeriodState } from "./period-transition.js";
 
 /**
  * UFB-049 / Phase 50-B: daily scheduler that creates the next Period when
@@ -135,7 +132,10 @@ export class PeriodCreatorScheduler {
         periodStart,
         periodEnd,
         deadline,
-        ...buildTransition(periodState === "scheduled" ? "schedule" : "open", {}),
+        ...buildTransition(
+          periodState === "scheduled" ? "schedule" : "open",
+          {},
+        ),
       },
       select: {
         id: true,

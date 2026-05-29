@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 // Mock the @tanstack/react-query useQuery hook and the tRPC context so
 // the component reads from a stub instead of a real network round-trip.

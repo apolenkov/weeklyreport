@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { Maximize2, Minimize2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
 type SlideFullscreenButtonProps = {
   readonly targetRef: React.RefObject<HTMLElement | null>;

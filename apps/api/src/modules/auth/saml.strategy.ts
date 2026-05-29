@@ -1,10 +1,9 @@
+import { type Role, SamlProfileSchema } from "@customreport/shared";
 import {
-  Strategy as SamlStrategy,
   type PassportSamlConfig,
+  Strategy as SamlStrategy,
   type VerifyWithoutRequest,
 } from "@node-saml/passport-saml";
-
-import { SamlProfileSchema, type Role } from "@customreport/shared";
 
 export type SamlStrategyOptions = PassportSamlConfig & {
   devMode: boolean;

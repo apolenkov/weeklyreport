@@ -1,8 +1,7 @@
-import { Module } from "@nestjs/common";
 import { BullModule } from "@nestjs/bullmq";
-
-import { DLQMonitorService } from "./dlq-monitor.service.js";
+import { Module } from "@nestjs/common";
 import { getBullMQOptions } from "./bullmq-options";
+import { DLQMonitorService } from "./dlq-monitor.service.js";
 
 /**
  * BullMQ infrastructure module.

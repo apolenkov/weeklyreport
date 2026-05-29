@@ -1,13 +1,11 @@
-import { describe, expect, it } from "vitest";
-
 import type { ReportSectionReadModel } from "@customreport/shared";
-
+import { describe, expect, it } from "vitest";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   ReportSectionDomainError,
-  ReportSectionsService,
   type ReportSectionsRepository,
+  ReportSectionsService,
 } from "./report-sections.service";
-import { expectDefined } from "../../test-utils/expect-defined.js";
 
 // ---------------------------------------------------------------------------
 // Fixtures

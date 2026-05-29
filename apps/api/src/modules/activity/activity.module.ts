@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
-
-import { ActivityService } from "./activity.service.js";
 import { ActivityPrismaRepository } from "./activity.prisma-repository.js";
+import { ActivityService } from "./activity.service.js";
 
 @Module({
   providers: [

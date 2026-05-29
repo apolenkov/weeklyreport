@@ -1,13 +1,10 @@
-import { TRPCError } from "@trpc/server";
-import { initTRPC } from "@trpc/server";
-import superjson from "superjson";
-
-import { assertRole } from "@customreport/shared/trpc";
 import type { Role, UserSession } from "@customreport/shared";
-
-import type { TrpcContext } from "./trpc.context.js";
+import { assertRole } from "@customreport/shared/trpc";
+import { initTRPC, TRPCError } from "@trpc/server";
+import superjson from "superjson";
 import { httpRequestDurationSeconds } from "../metrics/metrics.registry.js";
 import { trpcMetricsMiddleware as recordTrpcMetrics } from "../metrics/trpc-metrics.middleware.js";
+import type { TrpcContext } from "./trpc.context.js";
 
 /**
  * Describe a tRPC response shape for debug logs without exposing values.

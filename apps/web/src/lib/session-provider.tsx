@@ -1,16 +1,15 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import {
   createContext,
+  type ReactNode,
   useContext,
   useEffect,
   useMemo,
-  type ReactNode,
 } from "react";
-import { useQuery } from "@tanstack/react-query";
-
+import { type LastRole, writeLastRole } from "./last-role";
 import { useTRPC } from "./trpc-context";
-import { writeLastRole, type LastRole } from "./last-role";
 
 /**
  * SessionProvider — exposes the currently logged-in user across (app)/ pages.

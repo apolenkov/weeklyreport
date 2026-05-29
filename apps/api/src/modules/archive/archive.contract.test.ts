@@ -1,6 +1,3 @@
-import { describe, expect, it } from "vitest";
-import { ZodError } from "zod";
-
 import type {
   ArchiveReportDetail,
   ArchiveReportSummary,
@@ -10,13 +7,14 @@ import {
   archiveReportDetailSchema,
   archiveReportSummarySchema,
 } from "@customreport/shared";
-
+import { describe, expect, it } from "vitest";
+import { ZodError } from "zod";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   ArchiveDomainError,
-  ArchiveService,
   type ArchiveRepository,
+  ArchiveService,
 } from "./archive.service";
-import { expectDefined } from "../../test-utils/expect-defined.js";
 
 // ---------------------------------------------------------------------------
 // Fixture data

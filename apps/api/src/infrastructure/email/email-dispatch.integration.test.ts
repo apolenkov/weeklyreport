@@ -20,8 +20,9 @@
  * Worker which requires Redis. We skip onModuleInit and call the private
  * `processJob` directly via the same cast used in the unit tests.
  */
-import { describe, it, expect, beforeAll, vi } from "vitest";
+
 import type { Job } from "bullmq";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Decorator stubs — keep NestJS decorators inert in vitest (no DI container).
@@ -49,16 +50,16 @@ process.env["SMTP_HOST"] = "localhost";
 process.env["SMTP_PORT"] = "1025";
 process.env["SMTP_FROM"] = "test-integration@customreport.local";
 
+import {
+  clearMessages,
+  isMailpitUp,
+  pollForMessage,
+} from "../../test-utils/mailpit.js";
 // ---------------------------------------------------------------------------
 // Subject-under-test (imported after env + mocks are in place)
 // ---------------------------------------------------------------------------
 import { EmailReminderProcessor } from "../bullmq/email-reminder.processor.js";
 import { EmailService } from "./email.service.js";
-import {
-  isMailpitUp,
-  clearMessages,
-  pollForMessage,
-} from "../../test-utils/mailpit.js";
 
 // ---------------------------------------------------------------------------
 // Availability probe — resolved once before any test body runs.
@@ -141,7 +142,7 @@ describe("email-dispatch integration (P8)", () => {
     const message = await pollForMessage(recipient);
 
     expect(message).not.toBeNull();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    // biome-ignore lint/style/noNonNullAssertion: intentional non-null assertion (migrated from eslint-disable)
     const msg = message!;
 
     // Recipient
@@ -198,7 +199,7 @@ describe("email-dispatch integration (P8)", () => {
 
     const message = await pollForMessage(headRecipient);
     expect(message).not.toBeNull();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    // biome-ignore lint/style/noNonNullAssertion: intentional non-null assertion (migrated from eslint-disable)
     const msg = message!;
 
     expect(msg.To.some((a) => a.Address === headRecipient)).toBe(true);

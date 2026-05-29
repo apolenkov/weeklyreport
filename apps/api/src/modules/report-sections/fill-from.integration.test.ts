@@ -1,9 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
-
 import type { ReportSectionReadModel } from "@customreport/shared";
-
-import { LeadFormService, type LeadFormRepository } from "./lead-form.service";
+import { describe, expect, it, vi } from "vitest";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { type LeadFormRepository, LeadFormService } from "./lead-form.service";
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */

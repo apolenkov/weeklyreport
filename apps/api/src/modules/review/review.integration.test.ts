@@ -1,12 +1,12 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
-  createTestPrisma,
   cleanDatabase,
-  seedTestData,
+  createTestPrisma,
   disconnectTestPrisma,
+  seedTestData,
 } from "../../test-utils/prisma-test-helper";
 import { ReviewPrismaRepository } from "./review.prisma-repository";
-import { expectDefined } from "../../test-utils/expect-defined.js";
 
 describe("ReviewPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();

@@ -4,7 +4,7 @@
 // replaces) the lead's chosen traffic-light. Sized 16px to match small
 // status indicators; hidden when AI is unavailable.
 import { useQuery } from "@tanstack/react-query";
-import { Check, AlertTriangle, X } from "lucide-react";
+import { AlertTriangle, Check, X } from "lucide-react";
 import { useTRPC } from "../../lib/trpc-context";
 
 type Props = {

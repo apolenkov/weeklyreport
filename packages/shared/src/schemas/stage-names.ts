@@ -16,4 +16,3 @@ export const STAGE_NAMES: readonly StageName[] = [
   "DevOps",
   "Support",
 ] as const;
-

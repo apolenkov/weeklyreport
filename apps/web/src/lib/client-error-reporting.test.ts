@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
 import { TRPCClientError } from "@trpc/client";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   buildClientErrorLogEntry,

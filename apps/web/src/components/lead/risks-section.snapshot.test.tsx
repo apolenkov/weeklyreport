@@ -23,7 +23,9 @@ const BASE_RISK = {
 
 describe("RisksSection meta-row — pre-extract snapshot", () => {
   it("renders author name in the left slot of the meta-row", () => {
-    render(<RisksSection risks={[BASE_RISK]} sectionAuthorName="Vasily Lead" />);
+    render(
+      <RisksSection risks={[BASE_RISK]} sectionAuthorName="Vasily Lead" />,
+    );
     expect(screen.getByText("Vasily Lead")).toBeInTheDocument();
   });
 
@@ -32,7 +34,9 @@ describe("RisksSection meta-row — pre-extract snapshot", () => {
       <RisksSection risks={[BASE_RISK]} sectionAuthorName="Anna" />,
     );
     expect(screen.getByText("All stages")).toBeInTheDocument();
-    const stageDiv = container.querySelector('[aria-label="Risk stages: all stages"]');
+    const stageDiv = container.querySelector(
+      '[aria-label="Risk stages: all stages"]',
+    );
     expect(stageDiv).toMatchSnapshot();
   });
 

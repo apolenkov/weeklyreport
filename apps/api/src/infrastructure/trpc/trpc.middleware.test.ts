@@ -1,15 +1,14 @@
-import { describe, expect, it, vi } from "vitest";
 import { TRPCError } from "@trpc/server";
-
-import {
-  router,
-  publicProcedure,
-  protectedProcedure,
-  headProcedure,
-} from "./trpc.middleware.js";
-import { createNullLogger, type AppLogger } from "../../lib/logger.js";
+import { describe, expect, it, vi } from "vitest";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
+import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import {
+  headProcedure,
+  protectedProcedure,
+  publicProcedure,
+  router,
+} from "./trpc.middleware.js";
 
 const nullAuditLogger = createNullAuditLogger();
 const TEST_IP = "test-ip";

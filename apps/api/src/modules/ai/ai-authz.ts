@@ -13,10 +13,10 @@
 //
 // Throws TRPCError({code: 'FORBIDDEN'}) when the caller cannot read the
 // requested resource. Returns void on success.
-import { TRPCError } from "@trpc/server";
-import type { PrismaClient } from "@prisma/client";
 
 import type { UserSession } from "@customreport/shared";
+import type { PrismaClient } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 
 /**
  * Build a Prisma `where` clause that returns ≤ 1 Report row only when the

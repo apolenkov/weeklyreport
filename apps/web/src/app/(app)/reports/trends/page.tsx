@@ -1,13 +1,12 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useQuery } from "@tanstack/react-query";
-
 import type {
   LeadVelocityOutput,
   PeriodComparisonOutput,
   TrafficLightHistoryOutput,
 } from "@customreport/shared";
+import { useQuery } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 
 import { useTRPC } from "../../../../lib/trpc-context";
 

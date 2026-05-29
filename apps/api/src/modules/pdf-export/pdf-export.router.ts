@@ -1,4 +1,4 @@
-import { pdfExportJobSchema, type PdfExportJob } from "@customreport/shared";
+import { type PdfExportJob, pdfExportJobSchema } from "@customreport/shared";
 
 import { type PdfExportService } from "./pdf-export.service";
 

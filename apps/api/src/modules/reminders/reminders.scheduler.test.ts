@@ -1,20 +1,18 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-
 import type {
   AdminReminderExecution,
   AdminReminderRule,
 } from "@customreport/shared";
-
-import { RemindersScheduler } from "./reminders.scheduler";
-import {
-  RemindersService,
-  type RemindersRepository,
-} from "./reminders.service";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { OrganizationService } from "../organization/organization.service";
 import type {
   DueDeadlineRule,
   DueEscalationRule,
 } from "./reminders.prisma-repository";
-import type { OrganizationService } from "../organization/organization.service";
+import { RemindersScheduler } from "./reminders.scheduler";
+import {
+  type RemindersRepository,
+  RemindersService,
+} from "./reminders.service";
 
 // UFB-047 / Phase 49-01: stub OrganizationService used by the scheduler
 // to snapshot the brand identity onto every BullMQ job. Tests drive

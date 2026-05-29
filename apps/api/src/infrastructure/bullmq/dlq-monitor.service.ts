@@ -1,6 +1,6 @@
+import type { OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { Injectable, Logger } from "@nestjs/common";
-import type { OnModuleInit, OnModuleDestroy } from "@nestjs/common";
-import { QueueEvents, Queue } from "bullmq";
+import { Queue, QueueEvents } from "bullmq";
 
 import { dlqFailedTotal } from "../metrics/metrics.registry.js";
 import { getBullMQOptions } from "./bullmq-options";

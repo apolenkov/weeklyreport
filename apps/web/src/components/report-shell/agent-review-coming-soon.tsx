@@ -1,6 +1,5 @@
-import { BotMessageSquare } from "lucide-react";
-
 import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
+import { BotMessageSquare } from "lucide-react";
 
 /**
  * Inert placeholder for the future agent-review surface.
@@ -8,7 +7,11 @@ import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
  *
  * compact — strips touch-target min-height for slides header where space is tight.
  */
-export function AgentReviewComingSoon({ compact = false }: { compact?: boolean }) {
+export function AgentReviewComingSoon({
+  compact = false,
+}: {
+  compact?: boolean;
+}) {
   return (
     <div className="group relative inline-flex">
       <button

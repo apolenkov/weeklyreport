@@ -11,8 +11,8 @@ vi.mock("next/headers", () => ({
   cookies: () => Promise.resolve(cookieStore),
 }));
 
-import { decodeAuthMeResponse, getServerSession } from "./get-server-session";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { decodeAuthMeResponse, getServerSession } from "./get-server-session";
 
 const SESSION = {
   userId: "a0000000-0000-4000-8000-000000000001",

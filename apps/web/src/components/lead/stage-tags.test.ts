@@ -1,5 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { canonicalStageName, riskCoversStage, splitStageNames, stageNameMatches } from "./stage-tags";
+import { describe, expect, it } from "vitest";
+import {
+  canonicalStageName,
+  riskCoversStage,
+  splitStageNames,
+  stageNameMatches,
+} from "./stage-tags";
 
 describe("splitStageNames", () => {
   it("returns empty for null/undefined/empty", () => {
@@ -60,8 +65,12 @@ describe("riskCoversStage — new stageIds format", () => {
 
 describe("riskCoversStage — legacy stageName fallback", () => {
   it("falls back to stageName CSV when stageIds is absent", () => {
-    expect(riskCoversStage({ stageName: "Development" }, "Development")).toBe(true);
-    expect(riskCoversStage({ stageName: "Development" }, "Testing")).toBe(false);
+    expect(riskCoversStage({ stageName: "Development" }, "Development")).toBe(
+      true,
+    );
+    expect(riskCoversStage({ stageName: "Development" }, "Testing")).toBe(
+      false,
+    );
   });
 
   it("legacy undefined stageName means all stages (backward compat)", () => {
@@ -75,7 +84,9 @@ describe("riskCoversStage — Dev↔Development alias", () => {
   });
 
   it("canonical name 'Development' matches stageIds containing canonical", () => {
-    expect(riskCoversStage({ stageIds: ["Development"] }, "Development")).toBe(true);
+    expect(riskCoversStage({ stageIds: ["Development"] }, "Development")).toBe(
+      true,
+    );
   });
 
   it("unrelated stage is still rejected after alias normalisation", () => {

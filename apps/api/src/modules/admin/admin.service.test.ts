@@ -1,21 +1,19 @@
-import { describe, expect, it } from "vitest";
-
 import type {
   AdminSnapshot,
   AppSettings,
   StageAssignment,
   UserSession,
 } from "@customreport/shared";
-
+import { describe, expect, it } from "vitest";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import { adminRouter } from "./admin.router";
 import {
   AdminAccessError,
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
-  AdminService,
   type AdminRepository,
+  AdminService,
 } from "./admin.service";
-import { expectDefined } from "../../test-utils/expect-defined.js";
 
 const headSession: UserSession = {
   userId: "00000000-0000-4000-8000-000000000001",
@@ -1397,9 +1395,7 @@ describe("AdminService — createPeriodManual (UFB-063)", () => {
     expect(result.periodEnd.toISOString()).toBe("2026-05-25T23:59:59.999Z");
 
     const last = repo.readLastCreated();
-    expect(last?.periodStart.toISOString()).toBe(
-      "2026-05-19T00:00:00.000Z",
-    );
+    expect(last?.periodStart.toISOString()).toBe("2026-05-19T00:00:00.000Z");
   });
 
   it("computes default deadline from AppSettings (defaultDeadlineDays + workingDays + deadlineTime)", async () => {

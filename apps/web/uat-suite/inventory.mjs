@@ -11,11 +11,11 @@
 //   apps/web/uat-suite/inventory.json — machine-readable
 //   apps/web/uat-suite/inventory.md   — readable summary
 
-import { chromium } from "@playwright/test";
 import { writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { loginAs, waitForAppReady, emit, note } from "./helpers.mjs";
+import { fileURLToPath } from "node:url";
+import { chromium } from "@playwright/test";
+import { emit, loginAs, note, waitForAppReady } from "./helpers.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -190,7 +190,7 @@ async function dumpRoute(page, target) {
   );
   lines.push("| --- | --- | --: | --: | --: | --: | --: | --: | --: |");
   let grandTotal = 0;
-  for (const [key, entry] of Object.entries(inventory)) {
+  for (const [_key, entry] of Object.entries(inventory)) {
     if (!entry.elements) {
       lines.push(
         `| ${entry.role} | ${entry.route} | — | — | — | — | — | — | (error: ${entry.error}) |`,
@@ -230,7 +230,7 @@ async function dumpRoute(page, target) {
   lines.push("");
 
   // Per-route detail blocks for spot-checking.
-  for (const [key, entry] of Object.entries(inventory)) {
+  for (const [_key, entry] of Object.entries(inventory)) {
     if (!entry.elements) continue;
     lines.push(
       `## ${entry.role} → \`${entry.route}\` (${entry.elementCount} nodes)`,

@@ -1,5 +1,5 @@
-import { Suspense } from "react";
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 
 import { NavBar } from "../../components/navigation/nav-bar";
 import { NavBarSkeleton } from "../../components/navigation/nav-bar-skeleton";

@@ -1,21 +1,21 @@
-import { Injectable } from "@nestjs/common";
 import {
-  carryOverExecutionSchema,
-  carryOverRecordSchema,
   type CarryOverExecution,
   type CarryOverRecord,
+  carryOverExecutionSchema,
+  carryOverRecordSchema,
   type ReportSectionReadModel,
 } from "@customreport/shared";
+import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import {
+  mapPrismaToReportSection,
+  reportSectionFullInclude,
+} from "../report-sections/report-sections.prisma-repository";
 import type {
   CarryOverRepository,
   CarryOverResult,
 } from "./carry-over.service";
-import {
-  reportSectionFullInclude,
-  mapPrismaToReportSection,
-} from "../report-sections/report-sections.prisma-repository";
 
 /**
  * Maps a Prisma CarryOverExecution row (+ records) to the domain CarryOverExecution shape.
@@ -98,7 +98,7 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
       include: reportSectionFullInclude,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
     return rows.map((row) => mapPrismaToReportSection(row as any));
   }
 
@@ -110,7 +110,7 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
       include: reportSectionFullInclude,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
     return rows.map((row) => mapPrismaToReportSection(row as any));
   }
 

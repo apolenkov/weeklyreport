@@ -1,7 +1,6 @@
 import { Suspense } from "react";
-
-import { WeeklyReportSkeleton } from "../../../../../components/weekly-report/weekly-report-skeleton";
 import { HeadReportShell } from "../../../../../components/head/head-report-shell";
+import { WeeklyReportSkeleton } from "../../../../../components/weekly-report/weekly-report-skeleton";
 
 type Props = {
   params: Promise<{ reportId: string }>;
@@ -28,7 +27,11 @@ export default async function HeadReportByIdPage({
     >
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <Suspense fallback={<WeeklyReportSkeleton />}>
-          <HeadReportShell reportId={reportId} mode={mode} authorId={authorId} />
+          <HeadReportShell
+            reportId={reportId}
+            mode={mode}
+            authorId={authorId}
+          />
         </Suspense>
       </div>
     </main>

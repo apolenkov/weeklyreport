@@ -7,7 +7,7 @@
  *
  * See .planning/phases/54-ai-rag/54-PHASE-SUMMARY.md "Activation Playbook".
  */
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { selectAiAdapter } from "./ai.module.js";
 

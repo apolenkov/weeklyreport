@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-
 import type { PeriodListItem, PeriodState } from "@customreport/shared";
-
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { invalidateAdmin } from "../../lib/cache-keys";
 import {
   formatPeriodLabel,
   formatPeriodRange,
@@ -13,7 +12,6 @@ import {
   formatWeekLabel,
   joinPeriodLabel,
 } from "../../lib/format-date";
-import { invalidateAdmin } from "../../lib/cache-keys";
 import { useTRPC } from "../../lib/trpc-context";
 
 import { TabHeader, TabSearch } from "./tab-header";

@@ -1,6 +1,5 @@
-import { describe, it, expect } from "vitest";
-
 import type { Role } from "@customreport/shared";
+import { describe, expect, it } from "vitest";
 
 import { isRouteVisible, ROUTE_ROLE_MAP } from "./role-visibility";
 

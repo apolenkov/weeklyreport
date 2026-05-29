@@ -1,11 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
-
 import type { SearchHit, UserSession } from "@customreport/shared";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   SearchAuthorizationError,
-  SearchService,
   type SearchRepository,
+  SearchService,
 } from "./search.service.js";
 
 const userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";

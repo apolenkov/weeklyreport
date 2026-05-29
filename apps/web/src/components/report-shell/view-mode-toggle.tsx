@@ -32,8 +32,7 @@ export function ViewModeToggle({
   slidesHref,
   mode = "edit",
 }: ViewModeToggleProps) {
-  const activeClass =
-    "bg-[var(--color-starbucks-accent)] text-white";
+  const activeClass = "bg-[var(--color-starbucks-accent)] text-white";
   const inactiveClass =
     "bg-[var(--color-surface)] text-[var(--color-starbucks-accent)]";
 

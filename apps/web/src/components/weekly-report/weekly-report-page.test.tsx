@@ -10,11 +10,12 @@
  * mutation fires with `{ reportId }`; on success, cache invalidation helpers
  * fire and a toast confirms.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, act } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
 
@@ -51,8 +52,8 @@ import {
   invalidateLeadHistory,
 } from "../../lib/cache-keys";
 import { SessionContext, type SessionUser } from "../../lib/session-provider";
-import { WeeklyReportPage } from "./weekly-report-page";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { WeeklyReportPage } from "./weekly-report-page";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const AUTHOR_ID_A = "11111111-1111-4111-8111-aaaaaaaaaaaa";

@@ -197,7 +197,11 @@ export function buildSectionSlideModel(
     // T-G3: capture per-text rank so the unified slide can render P{N}
     // chips on whichever bullet bucket the item lands in.
     itemRanks: section.items.reduce<Record<string, number>>((acc, item) => {
-      if (item.projectId === project.projectId && item.priorityRank != null && nonEmpty(item.text)) {
+      if (
+        item.projectId === project.projectId &&
+        item.priorityRank != null &&
+        nonEmpty(item.text)
+      ) {
         acc[item.text.trim()] = item.priorityRank;
       }
       return acc;
@@ -655,7 +659,10 @@ const TRAFFIC_RANK: Record<"green" | "yellow" | "red", number> = {
   red: 2,
 };
 
-function worstTraffic(a: SlideStageStatus, b: SlideStageStatus): SlideStageStatus {
+function worstTraffic(
+  a: SlideStageStatus,
+  b: SlideStageStatus,
+): SlideStageStatus {
   if (a == null) return b;
   if (b == null) return a;
   return TRAFFIC_RANK[a] >= TRAFFIC_RANK[b] ? a : b;
@@ -754,7 +761,7 @@ export function buildProductScopedSlides(
 
     const bucketFor = (productId: string | null | undefined): ProductAcc =>
       productId && owned.has(productId)
-        ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        ? // biome-ignore lint/style/noNonNullAssertion: intentional non-null assertion (migrated from eslint-disable)
           products.get(productId)!
         : ensure(SHARED_PRODUCT_ID, SHARED_PRODUCT_NAME);
 
@@ -805,7 +812,8 @@ export function buildProductScopedSlides(
       ownerRole: "product",
       // Subtitle / nav rail show contributing leads instead of the (single)
       // product name, which the h2 owner heading already displays.
-      products: acc.contributors.length > 0 ? [...acc.contributors] : model.products,
+      products:
+        acc.contributors.length > 0 ? [...acc.contributors] : model.products,
     };
   });
 }

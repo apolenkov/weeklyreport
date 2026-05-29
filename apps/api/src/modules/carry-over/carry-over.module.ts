@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
-
-import { CarryOverService } from "./carry-over.service";
 import { CarryOverPrismaRepository } from "./carry-over.prisma-repository";
+import { CarryOverService } from "./carry-over.service";
 
 @Module({
   providers: [

@@ -6,11 +6,12 @@
  * .mutationOptions`. We don't drive a real network — we drive
  * captured.retryMutationFn directly and assert it received the right input.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
 

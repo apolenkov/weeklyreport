@@ -1,10 +1,10 @@
 import {
-  searchQueryInputSchema,
-  searchQueryOutputSchema,
-  type UserSession,
   type SearchHit,
   type SearchQueryInput,
   type SearchQueryOutput,
+  searchQueryInputSchema,
+  searchQueryOutputSchema,
+  type UserSession,
 } from "@customreport/shared";
 import { createAppLogger } from "../../lib/logger.js";
 

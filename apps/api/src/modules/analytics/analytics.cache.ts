@@ -1,5 +1,5 @@
-import { Injectable, Logger } from "@nestjs/common";
 import type { OnModuleDestroy } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import Redis from "ioredis";
 
 import type { AnalyticsCachePort } from "./analytics.service.js";

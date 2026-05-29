@@ -1,11 +1,10 @@
 "use client";
 
-import * as React from "react";
+import { Button } from "@customreport/ui/components/ui/button";
+import { cn } from "@customreport/ui/lib/utils";
 import { XIcon } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
-
-import { cn } from "@customreport/ui/lib/utils";
-import { Button } from "@customreport/ui/components/ui/button";
+import * as React from "react";
 
 function Dialog({
   ...props

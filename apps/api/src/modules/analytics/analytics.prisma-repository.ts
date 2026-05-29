@@ -1,13 +1,13 @@
-import { Injectable } from "@nestjs/common";
 import type {
-  TrafficLightHistoryInput,
-  TrafficLightHistoryOutput,
   LeadVelocityInput,
   LeadVelocityOutput,
   PeriodComparisonInput,
   PeriodComparisonOutput,
   TrafficLightCell,
+  TrafficLightHistoryInput,
+  TrafficLightHistoryOutput,
 } from "@customreport/shared";
+import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { AnalyticsRepository } from "./analytics.service.js";
 

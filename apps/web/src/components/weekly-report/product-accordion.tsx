@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-import type { ProductReport } from "../dashboard/mock-data";
-import { RiskSentimentBadge } from "../ai/risk-sentiment-badge";
 import { OnTrackIcon } from "../ai/on-track-icon";
+import { RiskSentimentBadge } from "../ai/risk-sentiment-badge";
+import type { ProductReport } from "../dashboard/mock-data";
 
 type ProductAccordionProps = {
   readonly report: ProductReport;
