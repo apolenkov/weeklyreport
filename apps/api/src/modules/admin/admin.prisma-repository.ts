@@ -649,6 +649,18 @@ export class AdminPrismaRepository implements AdminRepository {
 
     for (const period of snapshot.periods) {
       if (currentReportIds.has(period.id)) {
+        // lifecycle-write-gate-allow: snapshot restore reinstates an
+        // independently-persisted `status`, it is NOT a lifecycle transition —
+        // routing it through buildTransition would derive a coherent set and
+        // corrupt legitimately-divergent rows (a reopened period is
+        // status='published' while periodState='open'). See
+        // TODO(snapshot-lifecycle-restore).
+        // TODO(snapshot-lifecycle-restore): the admin snapshot schema carries
+        // only `status` (+ optional periodState); it cannot round-trip
+        // periodStatus/archived, so restore leaves periodState potentially
+        // out of sync (the create branch below defaults periodState='open'
+        // even for a published/archived snapshot). Fixing this needs a richer
+        // snapshot model and belongs in its own change, not this refactor.
         await this.prisma.report.update({
           where: { id: period.id },
           data: {
@@ -659,6 +671,8 @@ export class AdminPrismaRepository implements AdminRepository {
           },
         });
       } else {
+        // lifecycle-write-gate-allow: see the update branch above and
+        // TODO(snapshot-lifecycle-restore) — snapshot restore, not a transition.
         await this.prisma.report.create({
           data: {
             id: period.id,
