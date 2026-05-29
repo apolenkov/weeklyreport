@@ -111,8 +111,9 @@ Observations:
 
 - Instrumentation already exists: `apps/web/src/lib/web-vitals.ts` and
   `apps/web/src/components/web-vitals-reporter.tsx`, wired in
-  `apps/web/src/app/layout.tsx`. The `web-vitals` library is at 5.2.0
-  (5.3.0 available). The plumbing to capture LCP/INP/CLS is therefore present.
+  `apps/web/src/app/layout.tsx`. The `web-vitals` library is pinned at
+  `^5.3.0` (installed 5.3.0). The plumbing to capture LCP/INP/CLS is therefore
+  present.
 - No CWV numbers are reported in this memo. Producing real figures requires
   running the app (dev/build + a measurement run), which is out of scope under
   the locked planning-only decision.
@@ -128,6 +129,28 @@ What to measure later (plan, not executed here):
 - Wire the existing `web-vitals-reporter` output to an aggregation sink
   (or Vercel Analytics / Speed Insights) so the numbers are continuous, not a
   one-off snapshot.
+
+## Consolidated prioritized recommendations
+
+For a future implementation branch, ranked highest-leverage first. None of these
+are executed in this change; each is gated on explicit direction.
+
+1. **Slide 2-column breakpoint** (`v8.4.3-slide-redesign`,
+   `apps/web/src/components/slides/status-slide-deck.tsx:228`). The one concrete,
+   already-acknowledged UX defect; anchor any slide redesign here. HOT ZONE —
+   guard with existing green slide tests plus a characterization test.
+2. **Font strategy via `next/font`** (`VERCEL-FONT`,
+   `apps/web/src/app/layout.tsx:35`). Removes layout-shift risk (CLS) and ties
+   into Lane 1 typographic rhythm and the slide redesign.
+3. **Automated a11y pass** (axe via Playwright). Verify focus order/visible focus
+   on report form, stage chips, and slides nav; confirm `TrafficLightBadge`
+   status is not color-only.
+4. **Wire `web-vitals-reporter` to a continuous sink** (Vercel Analytics / Speed
+   Insights or an aggregation endpoint) so LCP/INP/CLS are tracked over time, not
+   captured once.
+5. **Server/client boundary + caching audit.** Verify client components are
+   minimized (e.g. `login-page.client.tsx`), confirm `next/image` usage, and
+   review `revalidate`/caching on published-report read paths (viewer role).
 
 ## Alternatives considered
 
