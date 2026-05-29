@@ -1,0 +1,48 @@
+# Tasks
+
+Grouped by repo target (api only — no shared/ui/web surface changes). Each item
+is sized to land in one commit. Gates after every step:
+`pnpm typecheck && pnpm lint && pnpm test`.
+
+## API — module
+
+- [ ] Add pure `modules/period/period-transition.ts`:
+      `buildTransition(kind, ctx) → Prisma.ReportUpdateInput` for all kinds
+      (`create`, `schedule`, `open`, `publish`, `autoPublish`, `reopen`,
+      `archive`, `autoArchive`). Move `legacyTupleToState` /
+      `stateToLegacyTuple` / `initialPeriodState` in as internals. Unit-test
+      every kind's field set (including the reopen asymmetry) with no DB.
+- [ ] Add thin `modules/period/period-transition.apply.ts`:
+      `applyTransition(tx, reportId, kind, ctx)` running `tx.report.update` and
+      returning the row; plus a no-tx convenience wrapper.
+
+## API — migrate writers (one per commit)
+
+- [ ] Migrate `auto-publisher.scheduler.ts` to a single `autoPublish`
+      transition inside one transaction — closes the tx1/tx2 divergence window.
+- [ ] Migrate `period.prisma-repository.ts` `publishPeriod` (keep the snapshot
+      write in the same `$transaction`) and `reopenPeriod`.
+- [ ] Migrate `admin.prisma-repository.ts` create / archive / edit paths.
+- [ ] Migrate `auto-archiver.scheduler.ts` and `period-creator.scheduler.ts`
+      (create + SCHEDULED→OPEN flip).
+- [ ] Migrate `publication.prisma-repository.ts` assemble/publish path.
+
+## API — enforcement & tests
+
+- [ ] Add a CI gate (lint rule or grep check, mirroring the role-coverage-gate
+      pattern) that fails when `report.update`/`report.create` writes any
+      lifecycle field (`periodState`, `status`, `periodStatus`, `archived`,
+      `autoPublished`, `autoArchived`) outside the transition module.
+- [ ] Add the `period-dual-state`-required atomicity integration test: a
+      rolled-back transition leaves neither `periodState` nor the legacy fields
+      partially updated.
+
+## Cleanup
+
+- [ ] Delete the `period-state.ts` shim once no caller imports its helpers.
+
+## Verification
+
+- [ ] Run `pnpm typecheck && pnpm lint && pnpm test && pnpm build`.
+- [ ] Run `pnpm lint:md` for the planning docs.
+- [ ] `openspec validate refactor-period-transition-writer` passes.
