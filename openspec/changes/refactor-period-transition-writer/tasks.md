@@ -23,7 +23,7 @@ ctx)` returning the governed-field subset for all kinds (`create`,
       transition inside one transaction — closes the tx1/tx2 divergence window.
       (Done by deleting the scheduler's redundant second `report.update`; the
       atomic write now lives in `publishAuto` per the commit above.)
-- [ ] Migrate `period.prisma-repository.ts` `publishPeriod` (keep the snapshot
+- [x] Migrate `period.prisma-repository.ts` `publishPeriod` (keep the snapshot
       write in the same `$transaction`) and `reopenPeriod`.
 - [ ] Migrate `admin.prisma-repository.ts` `createPeriodManual` /
       `archivePeriod` / `unarchivePeriod`. Leave `updatePeriodManual` (Edit

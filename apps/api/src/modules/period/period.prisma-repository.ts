@@ -6,6 +6,8 @@ import {
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
 } from "../published-report-snapshot.js";
+import { buildTransition } from "./period-transition.js";
+import { applyTransition } from "./period-transition.apply.js";
 import type { PeriodRepository } from "./period.service.js";
 
 @Injectable()
@@ -33,20 +35,16 @@ export class PeriodPrismaRepository implements PeriodRepository {
 
   async publishPeriod(reportId: string, userId: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      const publishedAt = new Date();
+      // refactor-period-transition-writer: the complete publish field set
+      // (status, periodStatus, periodState, publishedAt, publishedById) comes
+      // from the transition builder. We call `tx.report.update` directly here
+      // rather than `applyTransition` because we need the snapshot `include`
+      // on the same call — still sourcing every lifecycle value from the
+      // module. The snapshot write stays in this same transaction so the
+      // state and snapshot remain atomic.
       const published = await tx.report.update({
         where: { id: reportId },
-        data: {
-          status: "published",
-          periodStatus: "published",
-          // UFB-053 / Phase 51-C: write the new state column atomically
-          // with the legacy fields. `periodState` and `periodStatus` are
-          // separate state machines — both move together on a head-driven
-          // publish (open → published on both).
-          periodState: "published",
-          publishedAt,
-          publishedById: userId,
-        },
+        data: buildTransition("publish", { now: new Date(), userId }),
         include: reportFullIncludeForSnapshot,
       });
 
@@ -77,20 +75,10 @@ export class PeriodPrismaRepository implements PeriodRepository {
 
   async reopenPeriod(reportId: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      await tx.report.update({
-        where: { id: reportId },
-        data: {
-          periodStatus: "reopened",
-          // UFB-053 / Phase 51-C: on reopen, revert `periodState` to
-          // 'open' (the closest of the four states to "editable again").
-          // `periodStatus` stays distinct with the 'reopened' marker so
-          // consumers that care about reopen-flavour can still discriminate.
-          // See "Open Questions" in the 51-C SUMMARY for the asymmetry
-          // rationale.
-          periodState: "open",
-          reopenedAt: new Date(),
-        },
-      });
+      // refactor-period-transition-writer: the reopen transition encodes the
+      // intentional asymmetry (periodState→'open', periodStatus→'reopened',
+      // legacy tuple untouched) and stamps reopenedAt. See period-transition.ts.
+      await applyTransition(tx, reportId, "reopen", { now: new Date() });
 
       await tx.reportSection.updateMany({
         where: {
