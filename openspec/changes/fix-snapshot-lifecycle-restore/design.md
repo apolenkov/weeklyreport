@@ -92,8 +92,8 @@ opt-out stays greppable and reviewable.
 
 - **Backward compatibility:** all new schema fields optional; legacy snapshots
   parse and restore via the fallback. New snapshots are a superset.
-- **No migration:** the `Report` columns already exist; this is a shared-schema
-  - repository change only.
+- **No migration:** the `Report` columns already exist; this is a
+  shared-schema and repository change only.
 - **Test surface:** unit tests for `resolveLifecycle` (present vs legacy
   fallback, incl. the reopened-period round-trip that must NOT be flattened);
   an integration test asserting a published and a reopened period survive a
