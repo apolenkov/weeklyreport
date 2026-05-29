@@ -116,29 +116,24 @@ rules:
     - Name the consumer surface explicitly (tRPC procedure, repository
       method, React route, Prisma model) so future changes can grep for it.
   change_lifecycle:
-    create_when: |
-      Agent starts a new feature task that will produce >= 1 commit.
-      Before writing code, run `openspec list` and create a change via
-      `openspec change new <slug>` if no relevant active change exists.
-      Exceptions (no change needed): typo/comment fix, dependency bump
-      without behaviour change, mechanical lint/format-only commit.
-    archive_when: |
-      PR is merged to main. Run `openspec archive <name>` on main,
-      commit `chore(openspec): archive <name>`, push. This is the only
-      mechanism that moves a change out of the active list.
-    slug_format: |
-      <verb>-<noun> in kebab-case. Verb is one of: add, fix, refactor,
-      remove, hoist, rename, import. Noun describes the user-visible
-      surface (save-disc-stage-banner, holidays-calendar, jira-linkage).
-    required_artifacts:
-      - proposal.md  (problem + solution + non-goals, <= 400 words)
-      - tasks.md     (checklist; one item ~= one commit)
-    optional_artifacts:
-      - design.md    (required when schema, data-flow, or shared contract changes)
-      - specs/<capability>/spec.md  (required when change touches a documented invariant)
-    link_specs_when:
-      - "change adds or modifies a tRPC procedure  ->  link role-coverage-gate"
-      - "change touches the Report write path       ->  link period-dual-state"
-      - "change touches the AI module               ->  link ai-module-facade"
-      - "change adds a deferred UI element          ->  link deferred-feature-pattern"
-      - "change touches prisma/_destructive-guard   ->  link destructive-db-guard"
+    - "create_when: agent starts a new feature task that will produce >= 1
+      commit. Before writing code, run `openspec list` and create a change via
+      `openspec new change <slug>` if no relevant active change exists.
+      Exceptions (no change needed): typo/comment fix, dependency bump without
+      behaviour change, mechanical lint/format-only commit."
+    - "archive_when: PR is merged to main. Run `openspec archive <name>` on
+      main, commit `chore(openspec): archive <name>`, push. This is the only
+      mechanism that moves a change out of the active list."
+    - "slug_format: <verb>-<noun> in kebab-case. Verb is one of: add, fix,
+      refactor, remove, hoist, rename, import. Noun describes the user-visible
+      surface (save-disc-stage-banner, holidays-calendar, jira-linkage)."
+    - "required_artifacts: proposal.md (problem + solution + non-goals, <= 400
+      words) and tasks.md (checklist; one item ~= one commit)."
+    - "optional_artifacts: design.md (required when schema, data-flow, or
+      shared contract changes) and specs/<capability>/spec.md (required when
+      change touches a documented invariant)."
+    - "link_specs_when: change adds or modifies a tRPC procedure -> link
+      role-coverage-gate; change touches the Report write path -> link
+      period-dual-state; change touches the AI module -> link ai-module-facade;
+      change adds a deferred UI element -> link deferred-feature-pattern;
+      change touches prisma/_destructive-guard -> link destructive-db-guard."
