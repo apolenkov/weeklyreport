@@ -99,13 +99,14 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
 // ─── Holidays Coming Soon Control ────────────────────────────────────────
 
 function HolidaysComingSoonControl() {
-  // TODO(holidays-activation): replace with real holidays calendar form
-  // when dedicated holiday-management phase ships (see
-  // .planning/todos/pending/2026-05-21-holidays-calendar.md).
+  // TODO(holidays-activation): replace with real holidays calendar form when
+  // the dedicated holiday-management phase ships.
+  // Rendered as a <span>, not a <button>: this control is inert and lives inside
+  // the holidays TabsTrigger (itself a <button>), so a nested <button> would be
+  // invalid HTML and trigger a React hydration error.
   return (
     <div className="group relative inline-flex">
-      <button
-        type="button"
+      <span
         aria-disabled="true"
         aria-label="Holidays calendar is coming soon"
         title="Coming Soon"
@@ -114,7 +115,7 @@ function HolidaysComingSoonControl() {
       >
         <Calendar size={14} strokeWidth={2} aria-hidden="true" />
         <span className="hidden xl:inline">Holidays</span>
-      </button>
+      </span>
       <ComingSoonBadge
         role="tooltip"
         className="pointer-events-none absolute right-0 top-[calc(100%+6px)] z-30 opacity-0 shadow-[0_8px_18px_-14px_rgba(0,0,0,0.22),0_1px_2px_rgba(0,0,0,0.08)] transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
