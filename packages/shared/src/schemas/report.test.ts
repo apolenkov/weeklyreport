@@ -842,6 +842,45 @@ describe("periodStateSchema (UFB-053)", () => {
     });
     expect(parsed.periodState).toBe("open");
   });
+
+  it("reportPeriodSchema: the full governed lifecycle set is optional (back-compat)", () => {
+    // fix-snapshot-lifecycle-restore: a legacy snapshot (only the date
+    // envelope + status) must still parse so old admin exports restore.
+    const parsed = reportPeriodSchema.safeParse({
+      id: randomUUID(),
+      periodStart: "2026-05-11",
+      periodEnd: "2026-05-17",
+      deadline: "2026-05-15",
+      status: "published",
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("reportPeriodSchema: the full governed lifecycle set carries through", () => {
+    // fix-snapshot-lifecycle-restore: a reopened period keeps three distinct
+    // values; the schema must round-trip them verbatim.
+    const parsed = reportPeriodSchema.parse({
+      id: randomUUID(),
+      periodStart: "2026-05-11",
+      periodEnd: "2026-05-17",
+      deadline: "2026-05-15",
+      status: "published",
+      periodState: "open",
+      periodStatus: "reopened",
+      archived: false,
+      autoPublished: true,
+      autoArchived: false,
+      publishedAt: "2026-05-16T10:00:00.000Z",
+      publishedById: randomUUID(),
+      reopenedAt: "2026-05-18T09:00:00.000Z",
+    });
+    expect(parsed.periodState).toBe("open");
+    expect(parsed.periodStatus).toBe("reopened");
+    expect(parsed.status).toBe("published");
+    expect(parsed.autoPublished).toBe(true);
+    expect(parsed.publishedAt).toBeInstanceOf(Date);
+    expect(parsed.reopenedAt).toBeInstanceOf(Date);
+  });
 });
 
 // ---------------------------------------------------------------------------

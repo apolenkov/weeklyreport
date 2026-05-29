@@ -158,6 +158,126 @@ describe("AdminPrismaRepository (integration)", () => {
     expect(after.map((g) => g.id)).not.toContain(leadGroupId);
   });
 
+  // -------------------------------------------------------------------
+  // fix-snapshot-lifecycle-restore: a snapshot getSnapshot → saveSnapshot
+  // round-trip MUST preserve a Report's complete governed lifecycle field
+  // set, so a restored period is never left in a state the
+  // `period-dual-state` invariant forbids (the bug the
+  // refactor-period-transition-writer gate had to exempt).
+  // -------------------------------------------------------------------
+
+  // These restore through the CREATE branch (capture → delete → saveSnapshot
+  // re-creates the row), which is where the data loss the proposal describes
+  // lives: the old create branch wrote only `status` and defaulted
+  // periodState='open' even for a published/archived snapshot. Stubbing
+  // `resolveLifecycle` to `{ status }` turns both assertions red.
+
+  it("re-creates a published period with its full lifecycle, not flattened (fix-snapshot-lifecycle-restore)", async () => {
+    const publishedAt = new Date("2026-04-12T10:00:00.000Z");
+    // Promote the seeded period to a fully-published lifecycle state.
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        status: "published",
+        periodState: "published",
+        periodStatus: "published",
+        archived: false,
+        autoPublished: true,
+        publishedAt,
+        publishedById: testData.head.id,
+      },
+    });
+
+    const snapshot = await repo.getSnapshot();
+    // Drop the row so the restore must re-CREATE it (the buggy branch). Its
+    // section FK goes first.
+    await prisma.reportSection.deleteMany({
+      where: { reportId: testData.report.id },
+    });
+    await prisma.report.delete({ where: { id: testData.report.id } });
+
+    // Full-snapshot restore (users included) so the publishedById FK resolves.
+    await repo.saveSnapshot(snapshot);
+
+    const restored = expectDefined(
+      await prisma.report.findUnique({ where: { id: testData.report.id } }),
+    );
+    expect(restored.status).toBe("published");
+    expect(restored.periodStatus).toBe("published"); // viewer-visible
+    expect(restored.periodState).toBe("published"); // NOT the default 'open'
+    expect(restored.archived).toBe(false);
+    expect(restored.autoPublished).toBe(true);
+    expect(restored.publishedAt?.toISOString()).toBe(publishedAt.toISOString());
+    expect(restored.publishedById).toBe(testData.head.id);
+  });
+
+  it("re-creates a reopened period keeping its three distinct values (fix-snapshot-lifecycle-restore)", async () => {
+    const reopenedAt = new Date("2026-04-20T09:00:00.000Z");
+    // A reopened period is the canonical legitimately-divergent row.
+    const reopened = await prisma.report.create({
+      data: {
+        id: TEST_IDS.targetReport,
+        periodStart: new Date("2026-04-14"),
+        periodEnd: new Date("2026-04-20"),
+        deadline: new Date("2026-04-18"),
+        status: "published",
+        periodState: "open",
+        periodStatus: "reopened",
+        archived: false,
+        publishedAt: new Date("2026-04-19T10:00:00.000Z"),
+        publishedById: testData.head.id,
+        reopenedAt,
+      },
+    });
+
+    const snapshot = await repo.getSnapshot();
+    // No section on this row — delete it directly so the restore re-CREATEs it.
+    await prisma.report.delete({ where: { id: reopened.id } });
+
+    await repo.saveSnapshot(snapshot);
+
+    const restored = expectDefined(
+      await prisma.report.findUnique({ where: { id: reopened.id } }),
+    );
+    // Deriving any machine from another would flatten the row: status from
+    // periodState='open' would flip status to "draft"; periodStatus would
+    // default to "open", losing the reopen flavour. The restore must NOT.
+    expect(restored.status).toBe("published");
+    expect(restored.periodState).toBe("open");
+    expect(restored.periodStatus).toBe("reopened");
+    expect(restored.reopenedAt?.toISOString()).toBe(reopenedAt.toISOString());
+  });
+
+  it("repairs a divergent live period via the update branch (fix-snapshot-lifecycle-restore)", async () => {
+    // Capture a healthy published row, then corrupt the LIVE row before
+    // restoring. The old update branch wrote only `status`, leaving the
+    // corruption in place; the fix overwrites the full governed set.
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        status: "published",
+        periodState: "published",
+        periodStatus: "published",
+      },
+    });
+
+    const snapshot = await repo.getSnapshot();
+
+    // Corrupt the persisted lifecycle (row still exists → update branch).
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: { periodState: "open", periodStatus: "open" },
+    });
+
+    await repo.saveSnapshot(snapshot);
+
+    const restored = expectDefined(
+      await prisma.report.findUnique({ where: { id: testData.report.id } }),
+    );
+    expect(restored.periodState).toBe("published");
+    expect(restored.periodStatus).toBe("published");
+  });
+
   it("attachProductToGroup rejects moving a product from another group (UAT v7)", async () => {
     await prisma.groupProduct.deleteMany({});
     const leadGroupId = expectDefined(testData.lead.reportingGroupId);

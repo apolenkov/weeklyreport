@@ -353,6 +353,22 @@ export const reportPeriodSchema = z.object({
    * tuple. 51-B Admin Periods tab consumes this field directly.
    */
   periodState: periodStateSchema.optional(),
+  /**
+   * fix-snapshot-lifecycle-restore: the rest of the governed lifecycle
+   * field set, so an admin snapshot round-trips a Report's complete state
+   * (periodState + the legacy status/archived tuple + periodStatus + audit
+   * flags + publish/reopen timestamps) instead of silently re-introducing
+   * the divergence the `period-dual-state` invariant forbids. All optional
+   * so snapshots taken before this field set existed still parse and restore
+   * via the documented legacy-tuple backfill (see `resolveLifecycle`).
+   */
+  periodStatus: periodStatusSchema.optional(),
+  archived: z.boolean().optional(),
+  autoPublished: z.boolean().optional(),
+  autoArchived: z.boolean().optional(),
+  publishedAt: z.coerce.date().nullable().optional(),
+  publishedById: z.string().nullable().optional(),
+  reopenedAt: z.coerce.date().nullable().optional(),
 });
 
 /**

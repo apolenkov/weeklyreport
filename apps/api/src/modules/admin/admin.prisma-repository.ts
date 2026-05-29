@@ -33,6 +33,7 @@ import {
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service";
 import { buildTransition } from "../period/period-transition.js";
+import { resolveLifecycle } from "./snapshot-lifecycle.js";
 import type { AdminRepository, PeriodRowFromRepo } from "./admin.service";
 
 /**
@@ -460,6 +461,17 @@ export class AdminPrismaRepository implements AdminRepository {
           periodEnd: r.periodEnd,
           deadline: r.deadline,
           status: r.status,
+          // fix-snapshot-lifecycle-restore: capture the complete governed
+          // lifecycle set so restore can reinstate it verbatim. `findMany()`
+          // above already returns every column — no query change.
+          periodState: r.periodState,
+          periodStatus: r.periodStatus,
+          archived: r.archived,
+          autoPublished: r.autoPublished,
+          autoArchived: r.autoArchived,
+          publishedAt: r.publishedAt,
+          publishedById: r.publishedById,
+          reopenedAt: r.reopenedAt,
         }),
       ),
       reminderRules: reminderRules.map((rule) =>
@@ -649,37 +661,35 @@ export class AdminPrismaRepository implements AdminRepository {
 
     for (const period of snapshot.periods) {
       if (currentReportIds.has(period.id)) {
-        // lifecycle-write-gate-allow: snapshot restore reinstates an
-        // independently-persisted `status`, it is NOT a lifecycle transition —
-        // routing it through buildTransition would derive a coherent set and
-        // corrupt legitimately-divergent rows (a reopened period is
-        // status='published' while periodState='open'). See
-        // TODO(snapshot-lifecycle-restore).
-        // TODO(snapshot-lifecycle-restore): the admin snapshot schema carries
-        // only `status` (+ optional periodState); it cannot round-trip
-        // periodStatus/archived, so restore leaves periodState potentially
-        // out of sync (the create branch below defaults periodState='open'
-        // even for a published/archived snapshot). Fixing this needs a richer
-        // snapshot model and belongs in its own change, not this refactor.
+        // lifecycle-write-gate-allow: snapshot restore reinstates a Report's
+        // independently-persisted lifecycle values, it is NOT a lifecycle
+        // transition — routing it through buildTransition would derive the
+        // coupled set from a single field and corrupt legitimately-divergent
+        // rows (a reopened period is status='published' while periodState='open'
+        // and periodStatus='reopened'). The marker stays because the intent is
+        // a deliberate non-transition write; `resolveLifecycle` writes the full
+        // governed set verbatim (legacy snapshots backfill from the tuple).
         await this.prisma.report.update({
           where: { id: period.id },
           data: {
             periodStart: period.periodStart,
             periodEnd: period.periodEnd,
             deadline: period.deadline,
-            status: period.status,
+            ...resolveLifecycle(period),
           },
         });
       } else {
-        // lifecycle-write-gate-allow: see the update branch above and
-        // TODO(snapshot-lifecycle-restore) — snapshot restore, not a transition.
+        // lifecycle-write-gate-allow: snapshot restore, not a transition — see
+        // the update branch above. `resolveLifecycle` reinstates the full
+        // governed set so a created row is never left status='published' with a
+        // stale default periodState='open'.
         await this.prisma.report.create({
           data: {
             id: period.id,
             periodStart: period.periodStart,
             periodEnd: period.periodEnd,
             deadline: period.deadline,
-            status: period.status,
+            ...resolveLifecycle(period),
           },
         });
         newlyCreatedPeriods.push({
