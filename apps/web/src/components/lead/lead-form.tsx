@@ -16,7 +16,7 @@ import {
 import {
   computeCoupling,
   validateCoupling,
-} from "../../hooks/use-status-risk-coupling";
+} from "../../hooks/use-status-risk";
 import {
   invalidateDashboard,
   invalidateLeadForm,

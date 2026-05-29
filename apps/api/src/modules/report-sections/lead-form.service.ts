@@ -5,150 +5,47 @@ import type {
 } from "@customreport/shared";
 
 import { customreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
+import {
+  type CrossAuthorSectionRow,
+  LeadFormDomainError,
+  type LeadFormRepository,
+} from "./lead-form-shared";
+import { SnapshotService } from "./snapshot.service";
+import { VersionHistoryService } from "./version-history.service";
 
-export class LeadFormDomainError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "LeadFormDomainError";
-  }
-}
-
-export class LeadFormAccessError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "LeadFormAccessError";
-  }
-}
-
-/** Minimal shape returned by getLatestSnapshot for throttle/dedup checks. */
-export interface SnapshotLatestRow {
-  data: Record<string, unknown>;
-  createdAt: Date;
-  version: number;
-}
-
-/** Result shape returned by the public createSnapshot API. */
-export type CreateSnapshotResult =
-  | { version: number; skipped?: false }
-  | { version: number; skipped: true; reason: "throttled" | "no-change" };
-
-export interface LeadFormRepository {
-  getSectionById(sectionId: string): Promise<ReportSectionReadModel | null>;
-  getSectionForPeriod(
-    reportId: string,
-    userId: string,
-  ): Promise<{ section: ReportSectionReadModel; readOnly: boolean } | null>;
-  revokeSectionSubmission(sectionId: string, revokedBy: string): Promise<void>;
-  fillFromSection(
-    targetSectionId: string,
-    sourceSectionId: string,
-  ): Promise<number>;
-  listVersions(sectionId: string): Promise<VersionSnapshot[]>;
-  getVersion(
-    sectionId: string,
-    version: number,
-  ): Promise<Record<string, unknown> | null>;
-  restoreVersion(sectionId: string, version: number): Promise<number>;
-  createVersionSnapshot(sectionId: string): Promise<number>;
-  /** Returns the most recent snapshot for a section, or null if none exists. */
-  getLatestSnapshot(sectionId: string): Promise<SnapshotLatestRow | null>;
-  /** Returns the snapshot projection for a section (same shape stored in VersionSnapshot.data). */
-  buildSnapshotProjection(sectionId: string): Promise<Record<string, unknown>>;
-  createReopenRequest(
-    sectionId: string,
-    userId: string,
-    reason?: string,
-  ): Promise<void>;
-  /** Returns true when both users share at least one assigned project. */
-  hasSharedProduct(userId1: string, userId2: string): Promise<boolean>;
-  /** Returns other authors who share at least one project with userId, with per-project stats. */
-  getCrossAuthors(
-    reportId: string,
-    userId: string,
-  ): Promise<
-    {
-      projectId: string;
-      projectName: string;
-      authorId: string;
-      authorName: string;
-      stageNames: string[];
-      stages: {
-        stageName: string;
-        status: "green" | "yellow" | "red" | null;
-      }[];
-      itemCount: number;
-      riskCount: number;
-    }[]
-  >;
-  /** Returns full section content (items/risks/decisions) for cross-author leads
-   *  who share at least one product with the requesting user, filtered to shared products only. */
-  getCrossAuthorSections(
-    reportId: string,
-    userId: string,
-  ): Promise<CrossAuthorSectionRow[]>;
-  /** SC-165: Revoke every submitted section in a report in one transaction. */
-  revokeAllSubmitted(reportId: string, revokedBy: string): Promise<number>;
-}
-
-export interface CrossAuthorSectionRow {
-  authorId: string;
-  authorName: string;
-  sharedProductIds: string[];
-  items: {
-    id: string;
-    projectId: string;
-    type: string;
-    text: string;
-    tag: string;
-    workflowStatus: string;
-    carriedOver: boolean;
-    completed: boolean | null;
-    priorityRank: number | null;
-    stageNames: string[];
-  }[];
-  risks: {
-    id: string;
-    projectId: string;
-    risk: string;
-    impact: string;
-    mitigation: string;
-    severity: string;
-    stageNames: string[];
-  }[];
-  decisions: {
-    id: string;
-    productId: string;
-    text: string;
-    owner: string;
-    deadline: Date | null;
-    impact: string;
-    resolvedAt: Date | null;
-    stageNames: string[];
-  }[];
-}
-
-/** Minimum time between autosave-triggered snapshots for a single section. */
-const SNAPSHOT_THROTTLE_MS = 60_000;
+// Re-export the error classes and shared types from their original module
+// path so every existing importer (`./lead-form.service`) resolves unchanged
+// after the version/snapshot extraction (code-quality-modernization, Wave 3).
+// The error classes have a single definition (in `lead-form-shared.ts`) so
+// `instanceof` checks in the tRPC error-mapper stay valid.
+export {
+  LeadFormAccessError,
+  LeadFormDomainError,
+} from "./lead-form-shared";
+export type {
+  CreateSnapshotResult,
+  CrossAuthorSectionRow,
+  LeadFormRepository,
+  SnapshotLatestRow,
+} from "./lead-form-shared";
 
 /**
- * Stable JSON serialisation with sorted object keys so equivalent payloads
- * compare equal regardless of property insertion order.
- * Used for content-based dedup in createSnapshot.
+ * Lead-form facade. The version-history surface (fill-from, list/get/
+ * restore) and the autosave snapshot surface (throttle + dedup) were
+ * extracted into `VersionHistoryService` / `SnapshotService`
+ * (code-quality-modernization, Wave 3, HOT ZONE). This class keeps the
+ * reopen / cross-author / revoke / by-period surface and delegates the
+ * version + snapshot methods verbatim, so the public method surface,
+ * signatures, and behavior are unchanged.
  */
-function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value))
-    return `[${(value as unknown[]).map(stableStringify).join(",")}]`;
-  const keys = Object.keys(value as Record<string, unknown>).sort();
-  const parts = keys.map((k) => {
-    const v = (value as Record<string, unknown>)[k];
-    return `${JSON.stringify(k)}:${stableStringify(v)}`;
-  });
-  return `{${parts.join(",")}}`;
-}
-
 export class LeadFormService {
-  constructor(private readonly repository: LeadFormRepository) {}
+  private readonly versionHistory: VersionHistoryService;
+  private readonly snapshots: SnapshotService;
+
+  constructor(private readonly repository: LeadFormRepository) {
+    this.versionHistory = new VersionHistoryService(repository);
+    this.snapshots = new SnapshotService(repository);
+  }
 
   /** API-03: Revoke a lead's submission (head-only). */
   async revokeSubmission(
@@ -170,173 +67,55 @@ export class LeadFormService {
   }
 
   /** API-07: Fill current form from a past period's data. */
-  async fillFrom(
+  fillFrom(
     targetSectionId: string,
     sourceSectionId: string,
     userId: string,
   ): Promise<{ success: true; copiedItems: number }> {
-    const target = await this.repository.getSectionById(targetSectionId);
-
-    if (!target) {
-      throw new Error(`Target section ${targetSectionId} not found.`);
-    }
-
-    if (target.authorId !== userId) {
-      throw new Error("Can only fill your own section.");
-    }
-
-    if (target.status === "submitted") {
-      throw new Error("Cannot fill a submitted section.");
-    }
-
-    // Create a version snapshot before overwriting
-    await this.repository.createVersionSnapshot(targetSectionId);
-    const copiedItems = await this.repository.fillFromSection(
+    return this.versionHistory.fillFrom(
       targetSectionId,
       sourceSectionId,
+      userId,
     );
-
-    return { success: true, copiedItems };
   }
 
   /** API-08: List version snapshots for a section. */
-  async listVersions(
+  listVersions(
     sectionId: string,
     userId: string,
     role?: Role,
   ): Promise<VersionSnapshot[]> {
-    const section = await this.repository.getSectionById(sectionId);
-
-    if (!section) {
-      throw new LeadFormDomainError(`Section ${sectionId} not found.`);
-    }
-
-    const isHeadLike = role === "head" || role === "admin";
-    const canView =
-      section.authorId === userId ||
-      isHeadLike ||
-      (role === "lead" &&
-        (await this.repository.hasSharedProduct(userId, section.authorId)));
-    if (!canView) {
-      throw new LeadFormAccessError(
-        "Can only list versions for your own section.",
-      );
-    }
-
-    return this.repository.listVersions(sectionId);
+    return this.versionHistory.listVersions(sectionId, userId, role);
   }
 
-  async getVersion(
+  getVersion(
     sectionId: string,
     version: number,
     userId: string,
     role?: Role,
   ): Promise<Record<string, unknown> | null> {
-    const section = await this.repository.getSectionById(sectionId);
-    if (!section) {
-      throw new LeadFormDomainError(`Section ${sectionId} not found.`);
-    }
-    const isHeadLike = role === "head" || role === "admin";
-    const canView =
-      section.authorId === userId ||
-      isHeadLike ||
-      (role === "lead" &&
-        (await this.repository.hasSharedProduct(userId, section.authorId)));
-    if (!canView) {
-      throw new LeadFormAccessError("Access denied.");
-    }
-    return this.repository.getVersion(sectionId, version);
+    return this.versionHistory.getVersion(sectionId, version, userId, role);
   }
 
   /** API-09: Restore a section to a specific version. */
-  async restoreVersion(
+  restoreVersion(
     sectionId: string,
     version: number,
     userId: string,
   ): Promise<{ success: true; restoredVersion: number }> {
-    const section = await this.repository.getSectionById(sectionId);
-
-    if (!section) {
-      throw new Error(`Section ${sectionId} not found.`);
-    }
-
-    if (section.authorId !== userId) {
-      throw new Error("Can only restore your own section.");
-    }
-
-    if (section.status === "submitted") {
-      throw new Error("Cannot restore a submitted section.");
-    }
-
-    // Create snapshot of current state before restoring
-    await this.repository.createVersionSnapshot(sectionId);
-    const restoredVersion = await this.repository.restoreVersion(
-      sectionId,
-      version,
-    );
-
-    return { success: true, restoredVersion };
+    return this.versionHistory.restoreVersion(sectionId, version, userId);
   }
 
   /**
    * Create an explicit version snapshot of the current section state.
-   *
-   * Used by:
-   * - The "Save Version" button on the lead form (manual checkpoint).
-   * - The autosave hook on every successful autosave (silent safety net).
-   *
-   * Validates ownership and skips when the section is submitted (locked
-   * sections shouldn't accumulate snapshots — there's nothing changing).
-   *
-   * Server-side throttle + dedup applied before writing:
-   * - Throttle: at most one snapshot per 60 s per section (silently skipped).
-   * - Content dedup: if the section data hasn't changed vs. the last snapshot,
-   *   the write is silently skipped.
-   * Time-based retention (all <24 h / hourly 24 h–7 d / daily 7–30 d /
-   * drop >30 d) is enforced inside the repository.
-   *
-   * Internal callers (fillFrom, restoreVersion) call
-   * repository.createVersionSnapshot() directly and bypass throttle — those
-   * are safety-net snapshots that must always fire.
+   * Delegated to {@link SnapshotService}; throttle + content-dedup
+   * semantics are unchanged.
    */
-  async createSnapshot(
+  createSnapshot(
     sectionId: string,
     userId: string,
-  ): Promise<CreateSnapshotResult> {
-    const section = await this.repository.getSectionById(sectionId);
-
-    if (!section) {
-      throw new Error(`Section ${sectionId} not found.`);
-    }
-
-    if (section.authorId !== userId) {
-      throw new Error("Can only snapshot your own section.");
-    }
-
-    if (section.status === "submitted") {
-      throw new Error("Cannot snapshot a submitted section.");
-    }
-
-    const latest = await this.repository.getLatestSnapshot(sectionId);
-
-    if (latest) {
-      // Throttle: skip if last snapshot is less than 60 seconds ago
-      const ageMs = Date.now() - latest.createdAt.getTime();
-      if (ageMs < SNAPSHOT_THROTTLE_MS) {
-        return { version: latest.version, skipped: true, reason: "throttled" };
-      }
-
-      // Content dedup: skip if data is byte-identical to the latest snapshot.
-      // Compare two snapshot projections (same shape) — not section vs snapshot.
-      const currentProjection =
-        await this.repository.buildSnapshotProjection(sectionId);
-      if (stableStringify(latest.data) === stableStringify(currentProjection)) {
-        return { version: latest.version, skipped: true, reason: "no-change" };
-      }
-    }
-
-    const version = await this.repository.createVersionSnapshot(sectionId);
-    return { version };
+  ): ReturnType<SnapshotService["createSnapshot"]> {
+    return this.snapshots.createSnapshot(sectionId, userId);
   }
 
   /** API-04: Request the head to reopen a submitted section. */

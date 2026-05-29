@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useStatusRiskSync } from "../../hooks/use-status-risk-sync";
+import { useStatusRiskSync } from "../../hooks/use-status-risk";
 import { ConfirmationDialog } from "../ui/confirmation-dialog";
 import type { Product, RiskEntry, StageStatus } from "./mock-data";
 import { RisksSection } from "./risks-section";

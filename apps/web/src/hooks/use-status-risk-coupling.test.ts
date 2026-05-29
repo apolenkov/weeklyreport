@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Product, RiskEntry } from "../components/lead/mock-data";
-import { computeCoupling, validateCoupling } from "./use-status-risk-coupling";
+import { computeCoupling, validateCoupling } from "./use-status-risk";
 
 function makeProduct(
   id: string,
