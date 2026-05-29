@@ -71,7 +71,8 @@ describe("AutoPublisherScheduler", () => {
     const prisma = {
       report: {
         findMany: vi.fn().mockResolvedValue([{ id: "rep-1" }]),
-        // UFB-053: state-machine write happens after publishAuto succeeds.
+        // refactor-period-transition-writer: the scheduler no longer writes
+        // lifecycle fields itself — publishAuto owns the complete atomic write.
         update: vi.fn().mockResolvedValue({}),
       },
       reportSection: { count: vi.fn().mockResolvedValue(2) },
@@ -96,12 +97,11 @@ describe("AutoPublisherScheduler", () => {
 
     expect(result).toEqual({ published: true, periodIds: ["rep-1"] });
     expect(publication.publishAuto).toHaveBeenCalledWith("rep-1");
-    // UFB-053: explicit state-machine write to periodState='published' +
-    // 51-A autoPublished flag.
-    expect(prisma.report.update).toHaveBeenCalledWith({
-      where: { id: "rep-1" },
-      data: { periodState: "published", autoPublished: true },
-    });
+    // refactor-period-transition-writer: the lifecycle write is now owned by
+    // publishAuto (atomic, via the transition builder). The scheduler must NOT
+    // issue its own report.update — that second round-trip was the torn-write
+    // bug this change closes.
+    expect(prisma.report.update).not.toHaveBeenCalled();
     expect(audit.periodAutoPublish).toHaveBeenCalledWith({
       periodId: "rep-1",
       missingSectionsCount: 2,
@@ -145,7 +145,8 @@ describe("AutoPublisherScheduler", () => {
         findMany: vi
           .fn()
           .mockResolvedValue([{ id: "rep-bad" }, { id: "rep-good" }]),
-        // UFB-053: state write only for the succeeding row.
+        // refactor-period-transition-writer: scheduler issues no lifecycle
+        // write of its own; publishAuto owns it.
         update: vi.fn().mockResolvedValue({}),
       },
       reportSection: { count: vi.fn().mockResolvedValue(0) },
@@ -183,11 +184,8 @@ describe("AutoPublisherScheduler", () => {
       from: "open",
       to: "published",
     });
-    // UFB-053: state-machine write only fires for the succeeding row.
-    expect(prisma.report.update).toHaveBeenCalledTimes(1);
-    expect(prisma.report.update).toHaveBeenCalledWith({
-      where: { id: "rep-good" },
-      data: { periodState: "published", autoPublished: true },
-    });
+    // refactor-period-transition-writer: no scheduler-issued lifecycle write,
+    // for the succeeding row or otherwise — publishAuto owns it atomically.
+    expect(prisma.report.update).not.toHaveBeenCalled();
   });
 });

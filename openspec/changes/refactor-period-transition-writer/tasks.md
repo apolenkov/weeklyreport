@@ -19,8 +19,10 @@ ctx)` returning the governed-field subset for all kinds (`create`,
 
 ## API — migrate writers (one per commit)
 
-- [ ] Migrate `auto-publisher.scheduler.ts` to a single `autoPublish`
+- [x] Migrate `auto-publisher.scheduler.ts` to a single `autoPublish`
       transition inside one transaction — closes the tx1/tx2 divergence window.
+      (Done by deleting the scheduler's redundant second `report.update`; the
+      atomic write now lives in `publishAuto` per the commit above.)
 - [ ] Migrate `period.prisma-repository.ts` `publishPeriod` (keep the snapshot
       write in the same `$transaction`) and `reopenPeriod`.
 - [ ] Migrate `admin.prisma-repository.ts` `createPeriodManual` /
