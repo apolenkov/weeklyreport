@@ -6,10 +6,11 @@ is sized to land in one commit. Gates after every step:
 
 ## API — module
 
-- [ ] Add pure `modules/period/period-transition.ts`:
-      `buildTransition(kind, ctx) → Prisma.ReportUpdateInput` for all kinds
-      (`create`, `schedule`, `open`, `publish`, `autoPublish`, `reopen`,
-      `archive`, `autoArchive`). Move `legacyTupleToState` /
+- [ ] Add pure `modules/period/period-transition.ts`: `buildTransition(kind,
+    ctx)` returning the governed-field subset for all kinds (`create`,
+      `schedule`, `open`, `publish`, `autoPublish`, `reopen`, `archive`,
+      `autoArchive`, `unarchive`). Timestamp-stamping kinds take `now` via
+      `ctx` (no internal `new Date()`). Move `legacyTupleToState` /
       `stateToLegacyTuple` / `initialPeriodState` in as internals. Unit-test
       every kind's field set (including the reopen asymmetry) with no DB.
 - [ ] Add thin `modules/period/period-transition.apply.ts`:
@@ -22,7 +23,9 @@ is sized to land in one commit. Gates after every step:
       transition inside one transaction — closes the tx1/tx2 divergence window.
 - [ ] Migrate `period.prisma-repository.ts` `publishPeriod` (keep the snapshot
       write in the same `$transaction`) and `reopenPeriod`.
-- [ ] Migrate `admin.prisma-repository.ts` create / archive / edit paths.
+- [ ] Migrate `admin.prisma-repository.ts` `createPeriodManual` /
+      `archivePeriod` / `unarchivePeriod`. Leave `updatePeriodManual` (Edit
+      dialog, date/label only — no lifecycle field).
 - [ ] Migrate `auto-archiver.scheduler.ts` and `period-creator.scheduler.ts`
       (create + SCHEDULED→OPEN flip).
 - [ ] Migrate `publication.prisma-repository.ts` assemble/publish path.
