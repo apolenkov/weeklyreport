@@ -32,6 +32,7 @@ import {
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service";
+import { buildTransition } from "../period/period-transition.js";
 import type { AdminRepository, PeriodRowFromRepo } from "./admin.service";
 
 /**
@@ -864,8 +865,13 @@ export class AdminPrismaRepository implements AdminRepository {
         periodStart: input.periodStart,
         periodEnd: input.periodEnd,
         deadline: input.deadline,
-        periodState: input.periodState,
         weekLabel: input.weekLabel,
+        // refactor-period-transition-writer: lifecycle fields (periodState +
+        // legacy status/archived tuple) come from the transition builder, not
+        // hand-assembled. The service resolves the initial state to
+        // 'scheduled' | 'open'; both map to a draft/false legacy tuple, which
+        // the schedule/open transitions produce.
+        ...buildTransition(input.periodState === "scheduled" ? "schedule" : "open", {}),
       },
       select: {
         id: true,
@@ -977,10 +983,8 @@ export class AdminPrismaRepository implements AdminRepository {
   async archivePeriod(periodId: string): Promise<void> {
     await this.prisma.report.update({
       where: { id: periodId },
-      data: {
-        archived: true,
-        periodState: "archived",
-      },
+      // refactor-period-transition-writer: archive field set from the builder.
+      data: buildTransition("archive", {}),
     });
   }
 
@@ -1018,10 +1022,10 @@ export class AdminPrismaRepository implements AdminRepository {
     const nextPeriodStatus = row.periodStatus as PeriodStatus;
     await this.prisma.report.update({
       where: { id: periodId },
-      data: {
-        archived: false,
-        periodState: nextPeriodState,
-      },
+      // refactor-period-transition-writer: the caller-derived next state (read
+      // from the surviving legacy tuple above) flows into the unarchive
+      // transition, which clears `archived` and sets `periodState`.
+      data: buildTransition("unarchive", { nextPeriodState }),
     });
     return { nextPeriodState, nextPeriodStatus };
   }
