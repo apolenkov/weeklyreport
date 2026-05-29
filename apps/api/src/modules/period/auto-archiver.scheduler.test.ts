@@ -1,9 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
-
 import type { AppSettings } from "@customreport/shared";
-
-import { AutoArchiverScheduler } from "./auto-archiver.scheduler.js";
+import { describe, expect, it, vi } from "vitest";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
+import { AutoArchiverScheduler } from "./auto-archiver.scheduler.js";
 
 function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   return {
@@ -32,7 +30,7 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
 const asAny = (x: unknown) => x as any;
 
 describe("AutoArchiverScheduler", () => {

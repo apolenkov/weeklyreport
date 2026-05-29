@@ -2,9 +2,8 @@ import "@testing-library/jest-dom/vitest";
 
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-
-import { LeadSummaryTable } from "./lead-summary-table";
 import type { LeadInfo } from "../../lib/mappers/dashboard";
+import { LeadSummaryTable } from "./lead-summary-table";
 
 const baseLeadSubmitted: LeadInfo = {
   id: "lead-1",

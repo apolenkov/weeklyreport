@@ -32,7 +32,10 @@ export class WebVitalsController {
   record(@Body() dto: WebVitalDto): void {
     const gauge = GAUGE_MAP[dto.name as VitalName];
     if (gauge) {
-      gauge.set({ navigation_type: dto.navigationType ?? "unknown" }, dto.value);
+      gauge.set(
+        { navigation_type: dto.navigationType ?? "unknown" },
+        dto.value,
+      );
     }
     this.logger.log(
       `web vital ${dto.name}=${dto.value.toFixed(2)} nav=${dto.navigationType ?? "unknown"}`,

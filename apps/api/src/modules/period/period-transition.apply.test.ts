@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-
 import type { Prisma } from "@prisma/client";
+import { describe, expect, it, vi } from "vitest";
 
 import { applyTransition, runTransition } from "./period-transition.apply.js";
 import { buildTransition } from "./period-transition.js";
@@ -35,8 +34,8 @@ describe("runTransition", () => {
     const update = vi.fn().mockResolvedValue(updated);
     const tx = { report: { update } };
     const prisma = {
-      $transaction: vi.fn(
-        (cb: (client: typeof tx) => Promise<unknown>) => cb(tx),
+      $transaction: vi.fn((cb: (client: typeof tx) => Promise<unknown>) =>
+        cb(tx),
       ),
     } as unknown as Parameters<typeof runTransition>[0];
 

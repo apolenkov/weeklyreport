@@ -1,13 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { toast } from "sonner";
-import type { ReactNode } from "react";
-
-import { useLeadFormAutosave } from "./use-lead-form-autosave";
-import { TRPCProxyContext } from "../lib/trpc-context";
-
 import type { DraftSavePayload } from "@customreport/shared";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { toast } from "sonner";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { TRPCProxyContext } from "../lib/trpc-context";
+import { useLeadFormAutosave } from "./use-lead-form-autosave";
 
 vi.mock("sonner", () => ({
   toast: {
@@ -51,9 +49,7 @@ async function flushAll() {
 }
 
 function buildHarness(
-  opts: {
-    mutationFn?: (vars: unknown) => Promise<unknown>;
-  } = {},
+  opts: { mutationFn?: (vars: unknown) => Promise<unknown> } = {},
 ) {
   const calls: unknown[] = [];
   const userMutationFn =

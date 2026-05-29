@@ -6,9 +6,9 @@ import {
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
 } from "../published-report-snapshot.js";
-import { buildTransition } from "./period-transition.js";
-import { applyTransition } from "./period-transition.apply.js";
 import type { PeriodRepository } from "./period.service.js";
+import { applyTransition } from "./period-transition.apply.js";
+import { buildTransition } from "./period-transition.js";
 
 @Injectable()
 export class PeriodPrismaRepository implements PeriodRepository {

@@ -1,11 +1,11 @@
 /**
  * @vitest-environment jsdom
  */
-import * as React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render } from "@testing-library/react";
 
 import type { Role } from "@customreport/shared";
+import { render } from "@testing-library/react";
+import * as React from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const navigationMock = vi.hoisted(() => ({
   pathname: "/lead/report",

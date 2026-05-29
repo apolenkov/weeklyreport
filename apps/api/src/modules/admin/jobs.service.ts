@@ -1,6 +1,6 @@
 import type { Queue } from "bullmq";
 
-import { createNullLogger, type AppLogger } from "../../lib/logger";
+import { type AppLogger, createNullLogger } from "../../lib/logger";
 
 /**
  * Phase 35-06 — admin BullMQ DLQ surface.

@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import type { NextFunction, Request, Response } from "express";
 import type { ClsService } from "nestjs-cls";
-import type { Request, Response, NextFunction } from "express";
+import { describe, expect, it, vi } from "vitest";
 
 import { CorrelationIdMiddleware } from "./correlation-id.middleware.js";
 

@@ -1,21 +1,20 @@
 "use client";
 
-import { useCallback, useContext, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, RefreshCw, RotateCcw } from "lucide-react";
+import dynamic from "next/dynamic";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
-
-import { useTRPC } from "../../lib/trpc-context";
-import { mapDashboardData } from "../../lib/mappers";
-import { SessionContext } from "../../lib/session-provider";
 import {
   formatClientErrorMessage,
   logClientError,
 } from "../../lib/client-error-reporting";
-
-import dynamic from "next/dynamic";
+import { mapDashboardData } from "../../lib/mappers";
+import { SessionContext } from "../../lib/session-provider";
+import { useTRPC } from "../../lib/trpc-context";
 
 import { KpiCards } from "./kpi-cards";
+
 // Vercel audit win #3: ProductKpiCard pulls the full Recharts bundle (~130kB)
 // for a below-fold card. Load it lazily (client-only) so it stays out of the
 // initial dashboard chunk.
@@ -33,13 +32,14 @@ const ProductKpiCard = dynamic(
     ),
   },
 );
+
+import { ConfirmationDialog } from "../ui/confirmation-dialog";
+import { Activity24hCard } from "./activity-24h-card";
+import { ActivityLivePanel } from "./activity-live-panel";
 import { AlertBar } from "./alert-bar";
 import { BlockedAtRiskTable } from "./blocked-at-risk-table";
 import { DashboardSkeleton } from "./dashboard-skeleton";
-import { ActivityLivePanel } from "./activity-live-panel";
 import { LeadSummaryTable } from "./lead-summary-table";
-import { Activity24hCard } from "./activity-24h-card";
-import { ConfirmationDialog } from "../ui/confirmation-dialog";
 
 export const DASHBOARD_LOAD_STALL_MS = 8_000;
 

@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { MockTelegramAdapter } from "./mock-telegram.adapter";
+import type { TelegramAdapter, TelegramSendResult } from "./telegram.adapter";
 import {
   TELEGRAM_OUTBOUND_JOB_OPTS,
   TELEGRAM_OUTBOUND_QUEUE_NAME,
-  TelegramProcessor,
   type TelegramOutboundJobData,
+  TelegramProcessor,
 } from "./telegram.queue";
-import type { TelegramAdapter, TelegramSendResult } from "./telegram.adapter";
 
 // Verifies the processor's pure dispatch logic without instantiating a real
 // BullMQ Worker — we invoke the private `processJob` through a thin shim so

@@ -1,65 +1,69 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useContext } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter, useSearchParams } from "next/navigation";
-import { ArchiveToggle } from "../report-shell/archive-toggle";
+import type {
+  DraftSavePayload,
+  ReportSectionReadModel,
+} from "@customreport/shared";
 import { Separator } from "@customreport/ui/components/ui/separator";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-
-import { useTRPC } from "../../lib/trpc-context";
 import {
-  invalidateLeadForm,
-  invalidateLeadHistory,
-  invalidateDashboard,
-} from "../../lib/cache-keys";
-import { SessionContext } from "../../lib/session-provider";
-import { logClientError } from "../../lib/client-error-reporting";
-import { mapLeadFormData } from "../../lib/mappers";
-import { ownedStagesForProject, normalizeStageName, stageNamesMatch } from "../../lib/mappers/lead-form";
-import { stageStatusToTraffic, trafficToStageStatus } from "../../lib/mappers/traffic-light";
-import { deriveEffectiveStageStatus } from "../../lib/stage-status";
-import { isoWeekNumber, formatDateRange } from "../../lib/mappers/lead-history";
-import {
-  useLeadFormAutosave,
   stableStringify,
+  useLeadFormAutosave,
 } from "../../hooks/use-lead-form-autosave";
 import {
   computeCoupling,
   validateCoupling,
 } from "../../hooks/use-status-risk-coupling";
-import { LeadFormSkeleton } from "./lead-form-skeleton";
-import { LeadFormSyncBridge } from "./lead-form-sync-bridge";
-import { SdlcTooltipProvider } from "../ui/sdlc-tooltip";
-import { PeriodNavigator } from "./period-navigator";
-import { FillFromButton } from "./fill-from-button";
-import { VersionHistoryNav } from "./version-history-nav";
-import { CurrentWeekSection } from "./current-week-section";
-import { NextWeekSection } from "./next-week-section";
-import { DecisionsSection } from "./decisions-section";
-import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
-import { RequestReopenDialog } from "./request-reopen-dialog";
-import { LeadSlidesClient } from "../slides/lead-slides-client";
-import { SlideFullscreenButton } from "../slides/slide-fullscreen-button";
+import {
+  invalidateDashboard,
+  invalidateLeadForm,
+  invalidateLeadHistory,
+} from "../../lib/cache-keys";
+import { logClientError } from "../../lib/client-error-reporting";
+import { mapLeadFormData } from "../../lib/mappers";
+import {
+  normalizeStageName,
+  ownedStagesForProject,
+  stageNamesMatch,
+} from "../../lib/mappers/lead-form";
+import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
+import {
+  stageStatusToTraffic,
+  trafficToStageStatus,
+} from "../../lib/mappers/traffic-light";
+import { SessionContext } from "../../lib/session-provider";
+import { deriveEffectiveStageStatus } from "../../lib/stage-status";
+import { useTRPC } from "../../lib/trpc-context";
 import { AccordionSection } from "../report-shell/accordion-section";
-import { ViewModeToggle } from "../report-shell/view-mode-toggle";
+import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
+import { ArchiveToggle } from "../report-shell/archive-toggle";
 import { ReportToolbar } from "../report-shell/report-toolbar";
 import { SaveNowButton } from "../report-shell/save-now-button";
-import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
-
+import { ViewModeToggle } from "../report-shell/view-mode-toggle";
+import { LeadSlidesClient } from "../slides/lead-slides-client";
+import { SlideFullscreenButton } from "../slides/slide-fullscreen-button";
+import { SdlcTooltipProvider } from "../ui/sdlc-tooltip";
+import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
+import { CurrentWeekSection } from "./current-week-section";
+import { DecisionsSection } from "./decisions-section";
+import { FillFromButton } from "./fill-from-button";
+import { LeadFormSkeleton } from "./lead-form-skeleton";
+import { LeadFormSyncBridge } from "./lead-form-sync-bridge";
 import type {
-  Product,
-  KanbanItem,
-  RiskEntry,
   DecisionEntry,
+  KanbanItem,
+  Product,
   ReportPeriod,
+  RiskEntry,
   VersionSnapshot,
 } from "./mock-data";
-
-import type {
-  ReportSectionReadModel,
-  DraftSavePayload,
-} from "@customreport/shared";
+import { NextWeekSection } from "./next-week-section";
+import { PeriodNavigator } from "./period-navigator";
+import { RequestReopenDialog } from "./request-reopen-dialog";
+import { VersionHistoryNav } from "./version-history-nav";
 
 type LeadFormProps = {
   readonly period?: string;
@@ -260,7 +264,6 @@ function sectionToDraftPayload(
   };
 }
 
-
 function aggregateTrafficLight(
   stages: readonly { status?: "green" | "yellow" | "red" | null }[],
 ): "green" | "yellow" | "red" | null {
@@ -359,7 +362,9 @@ export function LeadForm({
   });
 
   // F3.4: non-null when user navigates to a historical snapshot via ← › arrows.
-  const [viewedSnapshotVersion, setViewedSnapshotVersion] = useState<number | null>(null);
+  const [viewedSnapshotVersion, setViewedSnapshotVersion] = useState<
+    number | null
+  >(null);
 
   // F3.4: fetch full snapshot data for a historical version when the user
   // navigates to it via VersionHistoryNav ← › arrows.
@@ -749,7 +754,13 @@ export function LeadForm({
   // ownership:"locked" with their name and real risk color instead of gray "empty".
   const _crossAuthorStageMap = new Map<
     string,
-    Map<string, { assignee: string; status: import("../../lib/mappers/traffic-light").StageStatus }>
+    Map<
+      string,
+      {
+        assignee: string;
+        status: import("../../lib/mappers/traffic-light").StageStatus;
+      }
+    >
   >();
   // Join with crossAuthorSectionsQ to incorporate risk severity and blocked items
   // into stage chip color. enrichedCrossAuthors drops stageName so we use the
@@ -765,14 +776,18 @@ export function LeadForm({
     }
     for (const sn of ca.stageNames) {
       const norm = normalizeStageName(sn);
-      const stageEntry = ca.stages?.find((s) => stageNamesMatch(s.stageName, sn));
+      const stageEntry = ca.stages?.find((s) =>
+        stageNamesMatch(s.stageName, sn),
+      );
       const caSection = _caSectionByAuthorId.get(ca.authorId);
       const stageRisks = (caSection?.risks ?? []).filter(
-        (r) => r.projectId === ca.projectId &&
+        (r) =>
+          r.projectId === ca.projectId &&
           r.stageNames.some((n) => normalizeStageName(n) === norm),
       );
       const stageItems = (caSection?.items ?? []).filter(
-        (i) => i.projectId === ca.projectId &&
+        (i) =>
+          i.projectId === ca.projectId &&
           i.stageNames.some((n) => normalizeStageName(n) === norm),
       );
       const status = deriveEffectiveStageStatus(
@@ -792,7 +807,12 @@ export function LeadForm({
         if (stage.ownership !== "unassigned") return stage;
         const entry = stageMap.get(normalizeStageName(stage.stageName));
         if (!entry) return stage;
-        return { ...stage, ownership: "locked" as const, assignee: entry.assignee, status: entry.status };
+        return {
+          ...stage,
+          ownership: "locked" as const,
+          assignee: entry.assignee,
+          status: entry.status,
+        };
       }),
     };
   });
@@ -802,9 +822,21 @@ export function LeadForm({
   const snapshotStageMap = (() => {
     if (!getVersionQ.data) return null;
     const raw = getVersionQ.data as {
-      stageStatuses?: Array<{ projectId: string; stageName: string; status: string }>;
-      risks?: Array<{ projectId: string; stageName?: string | null; severity?: string }>;
-      items?: Array<{ projectId: string; stageName?: string | null; workflowStatus: string }>;
+      stageStatuses?: Array<{
+        projectId: string;
+        stageName: string;
+        status: string;
+      }>;
+      risks?: Array<{
+        projectId: string;
+        stageName?: string | null;
+        severity?: string;
+      }>;
+      items?: Array<{
+        projectId: string;
+        stageName?: string | null;
+        workflowStatus: string;
+      }>;
     };
     type SnapEntry = {
       traffic: string;
@@ -814,8 +846,15 @@ export function LeadForm({
     const map = new Map<string, Map<string, SnapEntry>>();
     for (const ss of raw.stageStatuses ?? []) {
       let pm = map.get(ss.projectId);
-      if (!pm) { pm = new Map(); map.set(ss.projectId, pm); }
-      pm.set(normalizeStageName(ss.stageName), { traffic: ss.status, risks: [], items: [] });
+      if (!pm) {
+        pm = new Map();
+        map.set(ss.projectId, pm);
+      }
+      pm.set(normalizeStageName(ss.stageName), {
+        traffic: ss.status,
+        risks: [],
+        items: [],
+      });
     }
     for (const r of raw.risks ?? []) {
       if (!r.stageName) continue;
@@ -824,7 +863,9 @@ export function LeadForm({
     }
     for (const item of raw.items ?? []) {
       if (!item.stageName) continue;
-      const entry = map.get(item.projectId)?.get(normalizeStageName(item.stageName));
+      const entry = map
+        .get(item.projectId)
+        ?.get(normalizeStageName(item.stageName));
       if (entry) entry.items.push({ workflowStatus: item.workflowStatus });
     }
     return map;
@@ -845,8 +886,19 @@ export function LeadForm({
           if (!snap) return s;
           // snap.traffic is a raw Prisma TrafficLight value; map to StageStatus first,
           // then derive the effective status incorporating captured risks and items.
-          const explicit = trafficToStageStatus(snap.traffic as import("../../lib/mappers/traffic-light").TrafficLightStatus | null);
-          return { ...s, status: deriveEffectiveStageStatus(explicit, snap.risks, snap.items) };
+          const explicit = trafficToStageStatus(
+            snap.traffic as
+              | import("../../lib/mappers/traffic-light").TrafficLightStatus
+              | null,
+          );
+          return {
+            ...s,
+            status: deriveEffectiveStageStatus(
+              explicit,
+              snap.risks,
+              snap.items,
+            ),
+          };
         }),
       };
     });
@@ -858,16 +910,28 @@ export function LeadForm({
   // from the snapshot payload instead of the current draft.
   type SnapPayload = {
     items?: Array<{
-      projectId: string; type: string; text: string; workflowStatus: string;
-      stageName?: string | null; priorityRank?: number | null;
+      projectId: string;
+      type: string;
+      text: string;
+      workflowStatus: string;
+      stageName?: string | null;
+      priorityRank?: number | null;
     }>;
     risks?: Array<{
-      projectId: string; risk: string; impact: string; mitigation: string;
-      severity?: string; stageName?: string | null;
+      projectId: string;
+      risk: string;
+      impact: string;
+      mitigation: string;
+      severity?: string;
+      stageName?: string | null;
     }>;
     decisions?: Array<{
-      productId?: string | null; text: string; owner: string;
-      impact: string; deadline?: string | null; stageName?: string | null;
+      productId?: string | null;
+      text: string;
+      owner: string;
+      impact: string;
+      deadline?: string | null;
+      stageName?: string | null;
     }>;
   };
 
@@ -878,7 +942,10 @@ export function LeadForm({
     return "planned";
   }
 
-  const snapRaw = viewedSnapshotVersion !== null ? (getVersionQ.data as SnapPayload | null) : null;
+  const snapRaw =
+    viewedSnapshotVersion !== null
+      ? (getVersionQ.data as SnapPayload | null)
+      : null;
   const snapshotAuthor = draftSection.authorName ?? "";
 
   // When in snapshot mode but snapRaw is null (still loading or API returned
@@ -889,16 +956,18 @@ export function LeadForm({
   const currentWeekItems: KanbanItem[] = snapRaw?.items
     ? snapRaw.items
         .filter((i) => i.type === "current")
-        .map((i, idx): KanbanItem => ({
-          id: `snap:cw:${idx}`,
-          productId: i.projectId,
-          productName: productNameById.get(i.projectId) ?? i.projectId,
-          stageName: i.stageName ?? undefined,
-          status: snapWorkflowToStatus(i.workflowStatus),
-          text: i.text,
-          author: snapshotAuthor,
-          priorityRank: i.priorityRank ?? null,
-        }))
+        .map(
+          (i, idx): KanbanItem => ({
+            id: `snap:cw:${idx}`,
+            productId: i.projectId,
+            productName: productNameById.get(i.projectId) ?? i.projectId,
+            stageName: i.stageName ?? undefined,
+            status: snapWorkflowToStatus(i.workflowStatus),
+            text: i.text,
+            author: snapshotAuthor,
+            priorityRank: i.priorityRank ?? null,
+          }),
+        )
     : inSnapMode
       ? []
       : (data.currentWeekItems as KanbanItem[]);
@@ -906,46 +975,52 @@ export function LeadForm({
   const nextWeekItems: KanbanItem[] = snapRaw?.items
     ? snapRaw.items
         .filter((i) => i.type === "next")
-        .map((i, idx): KanbanItem => ({
-          id: `snap:nw:${idx}`,
-          productId: i.projectId,
-          productName: productNameById.get(i.projectId) ?? i.projectId,
-          stageName: i.stageName ?? undefined,
-          status: snapWorkflowToStatus(i.workflowStatus),
-          text: i.text,
-          author: snapshotAuthor,
-          priorityRank: i.priorityRank ?? null,
-        }))
+        .map(
+          (i, idx): KanbanItem => ({
+            id: `snap:nw:${idx}`,
+            productId: i.projectId,
+            productName: productNameById.get(i.projectId) ?? i.projectId,
+            stageName: i.stageName ?? undefined,
+            status: snapWorkflowToStatus(i.workflowStatus),
+            text: i.text,
+            author: snapshotAuthor,
+            priorityRank: i.priorityRank ?? null,
+          }),
+        )
     : inSnapMode
       ? []
       : (data.nextWeekItems as KanbanItem[]);
 
   const risks: RiskEntry[] = snapRaw?.risks
-    ? snapRaw.risks.map((r, idx): RiskEntry => ({
-        id: `snap:risk:${idx}`,
-        productId: r.projectId,
-        productName: productNameById.get(r.projectId) ?? r.projectId,
-        stageName: r.stageName ?? undefined,
-        severity: r.severity === "blocked" ? "blocked" : "at-risk",
-        text: r.risk,
-        impact: r.impact,
-        mitigation: r.mitigation,
-      }))
+    ? snapRaw.risks.map(
+        (r, idx): RiskEntry => ({
+          id: `snap:risk:${idx}`,
+          productId: r.projectId,
+          productName: productNameById.get(r.projectId) ?? r.projectId,
+          stageName: r.stageName ?? undefined,
+          severity: r.severity === "blocked" ? "blocked" : "at-risk",
+          text: r.risk,
+          impact: r.impact,
+          mitigation: r.mitigation,
+        }),
+      )
     : inSnapMode
       ? []
       : (data.risks as RiskEntry[]);
 
   const decisions: DecisionEntry[] = snapRaw?.decisions
-    ? snapRaw.decisions.map((d, idx): DecisionEntry => ({
-        id: `snap:dec:${idx}`,
-        productId: d.productId ?? "",
-        productName: productNameById.get(d.productId ?? "") ?? "",
-        text: d.text,
-        owner: d.owner,
-        impact: d.impact,
-        deadline: d.deadline ?? null,
-        stageName: d.stageName ?? undefined,
-      }))
+    ? snapRaw.decisions.map(
+        (d, idx): DecisionEntry => ({
+          id: `snap:dec:${idx}`,
+          productId: d.productId ?? "",
+          productName: productNameById.get(d.productId ?? "") ?? "",
+          text: d.text,
+          owner: d.owner,
+          impact: d.impact,
+          deadline: d.deadline ?? null,
+          stageName: d.stageName ?? undefined,
+        }),
+      )
     : inSnapMode
       ? []
       : (data.decisions as DecisionEntry[]);
@@ -1077,7 +1152,8 @@ export function LeadForm({
 
   // F3.4: viewing a historical snapshot forces read-only mode.
   const isViewingSnapshot = viewedSnapshotVersion !== null;
-  const isReadOnly = data.readOnly || !!period || isSubmitted || isViewingSnapshot;
+  const isReadOnly =
+    data.readOnly || !!period || isSubmitted || isViewingSnapshot;
 
   // 35-04: per-project stages-the-lead-owns selector. Forwarded into the
   // Item / Risk dialogs so the SDLC stage dropdown is scoped per project.

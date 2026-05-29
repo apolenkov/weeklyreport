@@ -1,10 +1,10 @@
-import { Injectable } from "@nestjs/common";
 import {
-  organizationSchema,
   DEFAULT_ORGANIZATION_IDENTITY,
   type Organization,
   type OrganizationUpdate,
+  organizationSchema,
 } from "@customreport/shared";
+import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { OrganizationRepository } from "./organization.service.js";

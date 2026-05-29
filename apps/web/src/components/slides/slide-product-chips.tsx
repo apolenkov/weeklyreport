@@ -63,7 +63,9 @@ export function SlideProductChips({
             ].join(" ")}
           >
             {statusDot(product.worstStatus)}
-            <span className="line-clamp-2 break-words">{product.productName}</span>
+            <span className="line-clamp-2 break-words">
+              {product.productName}
+            </span>
           </button>
         );
       })}

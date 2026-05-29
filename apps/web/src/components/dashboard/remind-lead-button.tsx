@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, BellRing, Check } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
+import { Bell, BellRing, Check } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useTRPC } from "../../lib/trpc-context";
 
@@ -110,7 +110,12 @@ export function RemindLeadButton({
       <button
         type="button"
         onClick={handleClick}
-        disabled={busy || confirm === "sent" || confirm === "already" || confirm === "no-section"}
+        disabled={
+          busy ||
+          confirm === "sent" ||
+          confirm === "already" ||
+          confirm === "no-section"
+        }
         aria-busy={busy}
         aria-label={`Send reminder to ${leadName}`}
         title={`Send reminder to ${leadName}`}

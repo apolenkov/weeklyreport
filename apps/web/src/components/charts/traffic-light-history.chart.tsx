@@ -1,16 +1,15 @@
 "use client";
 
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import type {
+  TrafficLightCell,
+  TrafficLightHistoryOutput,
+} from "@customreport/shared";
 
 import {
   ChartContainer,
   ChartTooltip,
 } from "@customreport/ui/components/ui/chart";
-
-import type {
-  TrafficLightHistoryOutput,
-  TrafficLightCell,
-} from "@customreport/shared";
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
 /**
  * ANAL-04 (Phase 30-03): traffic-light history sparkline.

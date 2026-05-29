@@ -1,0 +1,104 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**",
+      "!**/node_modules/**",
+      "!**/dist/**",
+      "!**/.next/**",
+      "!**/.next-e2e/**",
+      "!**/coverage/**",
+      "!**/.turbo/**",
+      "!**/prisma/generated/**",
+      "!prisma/seed.ts",
+      "!prisma/seed-simple.ts",
+      "!prisma/seed-constants.ts",
+      "!**/e2e/**"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 80
+  },
+  "javascript": {
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    },
+    "formatter": {
+      "quoteStyle": "double"
+    }
+  },
+  "json": {
+    "formatter": {
+      "enabled": true
+    }
+  },
+  "css": {
+    "parser": {
+      "cssModules": false,
+      "tailwindDirectives": true
+    },
+    "formatter": {
+      "enabled": true
+    },
+    "linter": {
+      "enabled": true
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": false,
+      "suspicious": {
+        "noExplicitAny": "error"
+      },
+      "style": {
+        "noNonNullAssertion": "warn"
+      },
+      "correctness": {
+        "noUnusedVariables": {
+          "level": "error",
+          "options": {
+            "ignoreRestSiblings": true
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "apps/api/src/modules/ai/**/*.ts",
+        "!apps/api/src/modules/ai/ai-facade.ts",
+        "!apps/api/src/modules/ai/ai-cache.ts",
+        "!apps/api/src/modules/ai/ai-authz.ts",
+        "!apps/api/src/modules/ai/__tests__/**",
+        "!apps/api/src/modules/ai/__fixtures__/**",
+        "!apps/api/src/modules/ai/*.test.ts",
+        "!apps/api/src/modules/ai/*.spec.ts",
+        "!apps/api/src/modules/ai/*.eval.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@prisma/client": "AI module: import Prisma only via ai-facade.ts (CC-3 / module isolation per AI-SPEC §5.2)."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

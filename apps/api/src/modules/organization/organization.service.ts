@@ -1,12 +1,12 @@
 import {
-  organizationSchema,
-  organizationPublicSchema,
   type Organization,
   type OrganizationPublic,
   type OrganizationUpdate,
+  organizationPublicSchema,
+  organizationSchema,
 } from "@customreport/shared";
 
-import { createNullLogger, type AppLogger } from "../../lib/logger.js";
+import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 
 export interface OrganizationRepository {
   /**

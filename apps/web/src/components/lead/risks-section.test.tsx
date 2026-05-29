@@ -6,8 +6,8 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { SdlcTooltipProvider } from "../ui/sdlc-tooltip";
-import { RisksSection } from "./risks-section";
 import type { RiskEntry } from "./mock-data";
+import { RisksSection } from "./risks-section";
 
 const baseRisk: RiskEntry = {
   id: "risk-1",
@@ -37,7 +37,9 @@ describe("RisksSection LockBadge (Phase 3.8)", () => {
       <SdlcTooltipProvider>
         <RisksSection
           risks={[foreignRisk]}
-          products={[{ id: "p1", name: "Product", overallStatus: "at-risk", stages: [] }]}
+          products={[
+            { id: "p1", name: "Product", overallStatus: "at-risk", stages: [] },
+          ]}
         />
       </SdlcTooltipProvider>,
     );
@@ -58,7 +60,9 @@ describe("RisksSection LockBadge (Phase 3.8)", () => {
       <SdlcTooltipProvider>
         <RisksSection
           risks={[{ ...foreignRisk, foreign: false, authorName: "Alice" }]}
-          products={[{ id: "p1", name: "Product", overallStatus: "at-risk", stages: [] }]}
+          products={[
+            { id: "p1", name: "Product", overallStatus: "at-risk", stages: [] },
+          ]}
         />
       </SdlcTooltipProvider>,
     );
@@ -87,7 +91,9 @@ describe("RisksSection LockBadge (Phase 3.8)", () => {
       <SdlcTooltipProvider>
         <RisksSection
           risks={[riskWithoutAuthor]}
-          products={[{ id: "p1", name: "Product", overallStatus: "at-risk", stages: [] }]}
+          products={[
+            { id: "p1", name: "Product", overallStatus: "at-risk", stages: [] },
+          ]}
           sectionAuthorName="Bob"
         />
       </SdlcTooltipProvider>,

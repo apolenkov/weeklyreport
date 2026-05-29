@@ -16,8 +16,7 @@ export function MetaRow({
   className = "mt-3",
   foreign = false,
 }: MetaRowProps) {
-  const title =
-    stageTags.length === 0 ? "All stages" : stageTags.join(", ");
+  const title = stageTags.length === 0 ? "All stages" : stageTags.join(", ");
 
   return (
     <div
@@ -35,10 +34,7 @@ export function MetaRow({
           </span>
         ) : null}
       </span>
-      <span
-        className="inline-flex flex-wrap items-center gap-1"
-        title={title}
-      >
+      <span className="inline-flex flex-wrap items-center gap-1" title={title}>
         {stageTags.length === 0 ? (
           <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-muted-foreground)]">
             All stages

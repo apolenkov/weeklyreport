@@ -1,9 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
-
 import type { AppSettings } from "@customreport/shared";
-
-import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
+import { describe, expect, it, vi } from "vitest";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
+import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -75,7 +73,7 @@ function makePrismaStub(opts: {
 // Cast to never via Nest DI seam — the scheduler types its constructor on
 // PrismaService + AdminService; tests pass a minimal shape with only the
 // methods exercised.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
 const asAny = (x: unknown) => x as any;
 
 // ---------------------------------------------------------------------------
@@ -194,7 +192,9 @@ describe("PeriodCreatorScheduler", () => {
       createdId: "period-td06",
     });
     const admin = { getSettings: vi.fn().mockResolvedValue(makeSettings()) };
-    const policyApplicator = { applyToPeriod: vi.fn().mockResolvedValue(undefined) };
+    const policyApplicator = {
+      applyToPeriod: vi.fn().mockResolvedValue(undefined),
+    };
     const scheduler = new PeriodCreatorScheduler(
       asAny(prisma),
       asAny(admin),

@@ -109,9 +109,7 @@ function collectJsFiles(directory, output) {
 }
 
 function hasExtension(specifier) {
-  return [".cjs", ".js", ".json", ".mjs", ".node"].includes(
-    extname(specifier),
-  );
+  return [".cjs", ".js", ".json", ".mjs", ".node"].includes(extname(specifier));
 }
 
 function resolveRelativeSpecifier(filePath, specifier) {

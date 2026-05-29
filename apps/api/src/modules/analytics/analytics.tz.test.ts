@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
-  AnalyticsService,
-  type AnalyticsRepository,
   type AnalyticsCachePort,
+  type AnalyticsRepository,
+  AnalyticsService,
 } from "./analytics.service.js";
 
 /**

@@ -1,5 +1,5 @@
-import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
 import { LeadForm } from "../../../../../components/lead/lead-form";
 import { LeadFormSkeleton } from "../../../../../components/lead/lead-form-skeleton";

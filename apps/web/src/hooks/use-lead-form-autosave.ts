@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-
-import { useTRPC } from "../lib/trpc-context";
-import { invalidateLeadForm } from "../lib/cache-keys";
-
 import type { DraftSavePayload } from "@customreport/shared";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { invalidateLeadForm } from "../lib/cache-keys";
+import { useTRPC } from "../lib/trpc-context";
 
 export type AutosaveState = "idle" | "pending" | "saving" | "saved" | "error";
 
@@ -102,7 +100,9 @@ export function useLeadFormAutosave(
   // Hold the latest onSaveSuccess in a ref so changing the callback identity
   // never re-runs the debounce effect. The mutation closure reads through
   // the ref at fire time.
-  const onSaveSuccessRef = useRef<(() => void) | undefined>(args.onSaveSuccessAction);
+  const onSaveSuccessRef = useRef<(() => void) | undefined>(
+    args.onSaveSuccessAction,
+  );
   onSaveSuccessRef.current = args.onSaveSuccessAction;
 
   // Mutable ref holding the active debounce timer id so forceSave can cancel it.
@@ -134,10 +134,17 @@ export function useLeadFormAutosave(
           queuedKeyRef.current = null;
           queuedPayloadRef.current = null;
           const queuedSectionId = reportSectionIdRef.current;
-          if (queued !== null && queuedKey !== lastSavedRef.current && queuedSectionId !== null) {
+          if (
+            queued !== null &&
+            queuedKey !== lastSavedRef.current &&
+            queuedSectionId !== null
+          ) {
             setState("saving");
             inFlightRef.current = queuedKey;
-            void mutateAsyncRef.current({ ...queued, reportSectionId: queuedSectionId });
+            void mutateAsyncRef.current({
+              ...queued,
+              reportSectionId: queuedSectionId,
+            });
           }
         }
       },

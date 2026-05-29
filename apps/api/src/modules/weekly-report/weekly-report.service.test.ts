@@ -1,14 +1,13 @@
+import {
+  type WeeklyReportReadModel,
+  weeklyReportReadModelSchema,
+} from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  weeklyReportReadModelSchema,
-  type WeeklyReportReadModel,
-} from "@customreport/shared";
-
-import {
-  WeeklyReportService,
   WeeklyReportDomainError,
   type WeeklyReportRepository,
+  WeeklyReportService,
 } from "./weekly-report.service";
 
 /* ------------------------------------------------------------------ */

@@ -1,6 +1,5 @@
-import { describe, expect, it } from "vitest";
-
 import { reminderPolicySchema } from "@customreport/shared";
+import { describe, expect, it } from "vitest";
 
 /**
  * UFB-036 (Phase 44-05): wire-format contract tests for ReminderPolicy.

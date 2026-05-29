@@ -14,10 +14,10 @@
  * not yet cursor-paginated at v5.0 — see SUMMARY.md.
  */
 
+import type { ArchiveReportSummary } from "@customreport/shared";
+import { formatDate, formatPeriodLabel } from "../../lib/format-date";
 import { useTRPC } from "../../lib/trpc-context";
 import { useCursorPagination } from "../../lib/use-cursor-pagination";
-import { formatDate, formatPeriodLabel } from "../../lib/format-date";
-import type { ArchiveReportSummary } from "@customreport/shared";
 
 type ReportArchiveSectionProps = {
   readonly currentReportId?: string | null;
@@ -88,7 +88,7 @@ export function ReportArchiveSection({
       // The trpc proxy exposes `infiniteQueryOptions` per
       // @trpc/tanstack-react-query 11.16+. Cast to satisfy the hook's
       // useInfiniteQuery typings; runtime shape matches.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
       (trpc.archive.list as any).infiniteQueryOptions(
         { limit: input.limit ?? PAGE_SIZE },
         {

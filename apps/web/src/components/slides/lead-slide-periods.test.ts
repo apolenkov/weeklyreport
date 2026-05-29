@@ -1,6 +1,5 @@
-import { describe, expect, it } from "vitest";
-
 import type { MyHistoryEntry } from "@customreport/shared";
+import { describe, expect, it } from "vitest";
 
 import {
   buildLeadSlidePeriodOptions,

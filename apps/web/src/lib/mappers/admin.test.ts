@@ -1,14 +1,12 @@
-import { describe, expect, it } from "vitest";
-
 import {
-  adminSnapshotSchema,
-  appSettingsSchema,
   type AdminSnapshot,
   type AppSettings,
+  adminSnapshotSchema,
+  appSettingsSchema,
 } from "@customreport/shared";
-
-import { mapAdminSnapshot, mapAdminSettings, __testing } from "./admin";
+import { describe, expect, it } from "vitest";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { __testing, mapAdminSettings, mapAdminSnapshot } from "./admin";
 
 const { mapReminder } = __testing;
 

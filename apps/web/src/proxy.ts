@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 // Next.js 16 proxy.ts must live HERE (apps/web/src/proxy.ts) because the
 // project uses a src/ directory layout (apps/web/src/app/...). Per Next.js

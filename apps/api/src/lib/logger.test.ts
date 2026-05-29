@@ -9,11 +9,10 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ClsService } from "nestjs-cls";
-
-import { createAppLogger, createNullLogger } from "./logger.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { expectDefined } from "../test-utils/expect-defined.js";
+import { createAppLogger, createNullLogger } from "./logger.js";
 
 // Allow fire-and-forget file writes to drain. The sink chains writes onto a
 // promise, so a few microtask flushes are enough. We poll the in-flight queue

@@ -1,6 +1,5 @@
+import { type UserSession, userSessionSchema } from "@customreport/shared";
 import { parse } from "cookie";
-
-import { userSessionSchema, type UserSession } from "@customreport/shared";
 
 const AUTH_COOKIE_NAME = "customreport_session";
 

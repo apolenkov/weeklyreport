@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   createSamlStrategyOptions,
-  verifySamlProfile,
   type SamlStrategyOptions,
+  verifySamlProfile,
 } from "./saml.strategy.js";
 
 const baseOptions = {

@@ -1,10 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { PeriodListItem } from "@customreport/shared";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-
-import type { PeriodListItem } from "@customreport/shared";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
 

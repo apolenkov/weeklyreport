@@ -1,8 +1,19 @@
 import { defineConfig, globalIgnores } from "eslint/config";
-import tseslint from "typescript-eslint";
-import reactHooks from "eslint-plugin-react-hooks";
 import reactCompiler from "eslint-plugin-react-compiler";
+import reactHooks from "eslint-plugin-react-hooks";
+import tseslint from "typescript-eslint";
 
+// RESIDUAL ESLint config (migrate-to-biome): Biome now owns formatting and the
+// strict-preset lint rules (no-explicit-any, no-unused-vars, no-non-null-
+// assertion) plus the AI no-restricted-imports Prisma-isolation rule. This file
+// retains ONLY the rules with no stable Biome equivalent:
+//   - react-compiler/react-compiler (no Biome equivalent; React 19 correctness)
+//   - react-hooks/rules-of-hooks + exhaustive-deps (Biome hook parity not
+//     guaranteed; ESLint must run anyway)
+//   - @typescript-eslint/no-floating-promises (type-aware; Biome's equivalent is
+//     nursery/experimental — keep the hard-error guarantee here)
+//   - the AI no-restricted-syntax logger-secrets selector (no Biome rule;
+//     protects the ai-module-facade / PITFALLS C-3 secret-logging guard)
 export default defineConfig([
   globalIgnores([
     "**/node_modules/**",
@@ -28,13 +39,18 @@ export default defineConfig([
   ]),
   {
     files: ["**/*.ts", "**/*.tsx"],
-    extends: [tseslint.configs.strict],
     plugins: {
+      // Registers the @typescript-eslint plugin (provides
+      // no-floating-promises) and parser; supplied by the typescript-eslint
+      // meta-package so the standalone @typescript-eslint/* deps aren't needed.
+      "@typescript-eslint": tseslint.plugin,
       "react-hooks": reactHooks,
       "react-compiler": reactCompiler,
     },
     languageOptions: {
+      parser: tseslint.parser,
       parserOptions: {
+        // Type-aware lint machinery is required for no-floating-promises.
         projectService: {
           allowDefaultProject: [
             "*.config.ts",
@@ -51,33 +67,20 @@ export default defineConfig([
       },
     },
     rules: {
-      "@typescript-eslint/no-explicit-any": "error",
+      // Type-aware; intentionally NOT delegated to Biome's nursery
+      // noFloatingPromises so the hard-error guarantee never weakens.
       "@typescript-eslint/no-floating-promises": "error",
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        {
-          argsIgnorePattern: "^_",
-          caughtErrorsIgnorePattern: "^_",
-          varsIgnorePattern: "^_",
-          destructuredArrayIgnorePattern: "^_",
-          ignoreRestSiblings: true,
-        },
-      ],
-      "@typescript-eslint/no-non-null-assertion": "warn",
-      "@typescript-eslint/no-extraneous-class": "off",
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
       "react-compiler/react-compiler": "error",
     },
   },
-  // Phase 31 (AI-SPEC §5.2 / PITFALLS C-3): module-isolation rules for
-  // the AI module. Raw @prisma/client imports are restricted to the
-  // facade boundary (ai-facade.ts, ai-cache.ts, ai-authz.ts) only; every
-  // other ai/** file must access DB through the facade.
-  // ai-authz.ts is an authorization helper that needs Prisma directly
-  // to evaluate visibility joins (M-02 / Phase 32-A3).
-  // Test files and fixtures are also exempt because they construct
-  // facade fakes that need the AiInsightKind enum type.
+  // Phase 31 (AI-SPEC §5.2 / PITFALLS C-3): the AI no-restricted-imports
+  // Prisma-isolation rule now lives in biome.json (noRestrictedImports). This
+  // residual selector keeps the logger-secrets guard, which has no Biome rule.
+  // Ban logging of named identifiers `prompt`, `messages`, `response` when
+  // passed to a `logger.*` call. Narrow AST selector to ai/** files only —
+  // unrelated modules retain freedom. Facade/test/fixture files are exempt.
   {
     files: ["apps/api/src/modules/ai/**/*.ts"],
     ignores: [
@@ -91,21 +94,6 @@ export default defineConfig([
       "apps/api/src/modules/ai/*.eval.ts",
     ],
     rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          paths: [
-            {
-              name: "@prisma/client",
-              message:
-                "AI module: import Prisma only via ai-facade.ts (CC-3 / module isolation per AI-SPEC §5.2).",
-            },
-          ],
-        },
-      ],
-      // Ban logging of named identifiers `prompt`, `messages`, `response`
-      // when passed to a `logger.*` call. Narrow AST selector to
-      // ai/** files only — unrelated modules retain freedom.
       "no-restricted-syntax": [
         "error",
         {

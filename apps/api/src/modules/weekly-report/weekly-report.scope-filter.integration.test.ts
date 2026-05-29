@@ -1,13 +1,12 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
-
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
-  createTestPrisma,
   cleanDatabase,
+  createTestPrisma,
   disconnectTestPrisma,
 } from "../../test-utils/prisma-test-helper";
 import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository";
 import type { WeeklyReportScopeSession } from "./weekly-report.service";
-import { expectDefined } from "../../test-utils/expect-defined.js";
 
 /**
  * UFB-054 / Phase 56-D consumer migration: verify that the

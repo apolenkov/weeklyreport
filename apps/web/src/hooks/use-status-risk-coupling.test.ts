@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Product, RiskEntry } from "../components/lead/mock-data";
-import {
-  computeCoupling,
-  validateCoupling,
-} from "./use-status-risk-coupling";
+import { computeCoupling, validateCoupling } from "./use-status-risk-coupling";
 
 function makeProduct(
   id: string,
@@ -109,7 +106,12 @@ describe("computeCoupling", () => {
 describe("computeCoupling — stagesWithoutRiskCoverage (F10)", () => {
   it("flags blocked stage with no covering risk row", () => {
     const product = makeProduct("p1", "blocked", "P1", [
-      { stageName: "dev", status: "blocked", ownership: "mine", assignee: null },
+      {
+        stageName: "dev",
+        status: "blocked",
+        ownership: "mine",
+        assignee: null,
+      },
     ]);
     const result = computeCoupling([product], []);
     expect(result[0].stagesWithoutRiskCoverage).toEqual([
@@ -119,7 +121,12 @@ describe("computeCoupling — stagesWithoutRiskCoverage (F10)", () => {
 
   it("clears flag when risk row covers the stage via stageIds", () => {
     const product = makeProduct("p1", "at-risk", "P1", [
-      { stageName: "planning", status: "at-risk", ownership: "mine", assignee: null },
+      {
+        stageName: "planning",
+        status: "at-risk",
+        ownership: "mine",
+        assignee: null,
+      },
     ]);
     const risk = makeRisk("r1", "p1", ["planning"]);
     const result = computeCoupling([product], [risk]);
@@ -128,7 +135,12 @@ describe("computeCoupling — stagesWithoutRiskCoverage (F10)", () => {
 
   it("clears flag when risk row has empty stageIds (covers all stages)", () => {
     const product = makeProduct("p1", "blocked", "P1", [
-      { stageName: "dev", status: "blocked", ownership: "mine", assignee: null },
+      {
+        stageName: "dev",
+        status: "blocked",
+        ownership: "mine",
+        assignee: null,
+      },
     ]);
     const risk = makeRisk("r1", "p1", []);
     const result = computeCoupling([product], [risk]);
@@ -137,7 +149,12 @@ describe("computeCoupling — stagesWithoutRiskCoverage (F10)", () => {
 
   it("ignores on-track stages", () => {
     const product = makeProduct("p1", "at-risk", "P1", [
-      { stageName: "qa", status: "on-track", ownership: "mine", assignee: null },
+      {
+        stageName: "qa",
+        status: "on-track",
+        ownership: "mine",
+        assignee: null,
+      },
     ]);
     const result = computeCoupling([product], []);
     expect(result[0].stagesWithoutRiskCoverage).toEqual([]);

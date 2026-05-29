@@ -1,5 +1,5 @@
-import { vi } from "vitest";
 import { Logger } from "@nestjs/common";
+import { vi } from "vitest";
 
 /**
  * Silence raw process.stderr writes for a single negative-path test.

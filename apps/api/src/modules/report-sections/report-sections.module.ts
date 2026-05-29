@@ -1,11 +1,10 @@
 import { Module } from "@nestjs/common";
-
-import { ReportSectionsService } from "./report-sections.service";
-import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
-import { LeadFormService } from "./lead-form.service";
-import { LeadFormPrismaRepository } from "./lead-form.prisma-repository";
 import { AdminModule } from "../admin/admin.module";
 import { AdminService } from "../admin/admin.service";
+import { LeadFormPrismaRepository } from "./lead-form.prisma-repository";
+import { LeadFormService } from "./lead-form.service";
+import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
+import { ReportSectionsService } from "./report-sections.service";
 
 @Module({
   // UFB-049 / Phase 50-B: AdminModule is imported so ReportSectionsService

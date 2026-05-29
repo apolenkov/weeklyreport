@@ -1,7 +1,5 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
-import Link from "next/link";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -13,13 +11,14 @@ import {
   Layers,
   Target,
 } from "lucide-react";
-
-import type { SectionSlideModel, SlideTone } from "./section-slide-utils";
-import { SlideFullscreenButton } from "./slide-fullscreen-button";
-import { buildUnifiedSlideModel } from "./section-slide-utils";
-import { LeadUnifiedSlide } from "./lead-unified-slide";
-import { LeadSlideHero } from "./lead-slide-hero";
+import Link from "next/link";
+import { type ReactNode, useRef } from "react";
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
+import { LeadSlideHero } from "./lead-slide-hero";
+import { LeadUnifiedSlide } from "./lead-unified-slide";
+import type { SectionSlideModel, SlideTone } from "./section-slide-utils";
+import { buildUnifiedSlideModel } from "./section-slide-utils";
+import { SlideFullscreenButton } from "./slide-fullscreen-button";
 import {
   type ProductChipEntry,
   SlideProductChips,
@@ -184,7 +183,10 @@ function LeadSlideArticle({
 function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
   const articleRef = useRef<HTMLElement>(null);
   return (
-    <article ref={articleRef} className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(247,249,246,0.92)_100%)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_12px_24px_-18px_rgba(0,0,0,0.25),0_1px_2px_rgba(0,0,0,0.05)]">
+    <article
+      ref={articleRef}
+      className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(247,249,246,0.92)_100%)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_12px_24px_-18px_rgba(0,0,0,0.25),0_1px_2px_rgba(0,0,0,0.05)]"
+    >
       <SlideFullscreenButton targetRef={articleRef} variant="floating" />
       <div className="grid gap-5 xl:grid-cols-[1fr_310px]">
         <div className="min-w-0 space-y-5">
@@ -251,7 +253,6 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
               </div>
               {textList(slide.risks, "No risks raised")}
             </section>
-
           </div>
 
           {slide.decisions.length > 0 ? (
@@ -261,7 +262,11 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
                 Decisions
               </div>
               <div className="max-h-[300px] overflow-y-auto">
-                {textList(slide.decisions, "No decisions", slide.decisions.length)}
+                {textList(
+                  slide.decisions,
+                  "No decisions",
+                  slide.decisions.length,
+                )}
               </div>
             </section>
           ) : null}

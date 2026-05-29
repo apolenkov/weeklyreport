@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
-import { ArchiveService } from "./archive.service.js";
 import { ArchivePrismaRepository } from "./archive.prisma-repository.js";
+import { ArchiveService } from "./archive.service.js";
 
 @Module({
   providers: [

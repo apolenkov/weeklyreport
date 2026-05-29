@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../lib/cache-keys";
@@ -9,12 +9,10 @@ import { toAdminProjectInput } from "../../lib/mappers";
 import { useTRPC } from "../../lib/trpc-context";
 import { ConfirmDeleteDialog } from "../lead/confirm-delete-dialog";
 import { SearchInput } from "../search/search-input";
-
-import { TabHeader, TabSearch } from "./tab-header";
-import { ProductGroupChips } from "./product-group-chips";
-
 import type { MockProduct, MockUser } from "./mock-data";
+import { ProductGroupChips } from "./product-group-chips";
 import { StageAssignmentEditor } from "./stage-assignment-editor";
+import { TabHeader, TabSearch } from "./tab-header";
 
 type ProductsTabProps = {
   readonly products: MockProduct[];

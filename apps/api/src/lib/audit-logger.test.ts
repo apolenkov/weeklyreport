@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
-
-import type { AppLogger } from "./logger.js";
-import { createAuditLogger, createNullAuditLogger } from "./audit-logger.js";
 import { expectDefined } from "../test-utils/expect-defined.js";
+import { createAuditLogger, createNullAuditLogger } from "./audit-logger.js";
+import type { AppLogger } from "./logger.js";
 
 type Captured = {
   level: "info" | "warn" | "error" | "debug";
@@ -247,7 +246,7 @@ describe("createAuditLogger — scopeDenied (UFB-040 / 46-05)", () => {
         /* not used here */
       },
       child: () => logger,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
     } as any;
 
     const audit = createAuditLogger(logger);

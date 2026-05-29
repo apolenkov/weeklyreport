@@ -1,9 +1,7 @@
-import { describe, expect, it } from "vitest";
-
 import type { WeeklyReportReadModel } from "@customreport/shared";
-
-import { mapWeeklyReport, formatWeekRange, __testing } from "./weekly-report";
+import { describe, expect, it } from "vitest";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { __testing, formatWeekRange, mapWeeklyReport } from "./weekly-report";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const PROJECT_A = "22222222-2222-4222-8222-222222222222";

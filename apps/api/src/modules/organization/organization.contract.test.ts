@@ -1,10 +1,9 @@
-import { describe, it, expect } from "vitest";
-
 import {
+  organizationPublicSchema,
   organizationSchema,
   organizationUpdateSchema,
-  organizationPublicSchema,
 } from "@customreport/shared";
+import { describe, expect, it } from "vitest";
 
 /**
  * UFB-047 / Phase 48-A: contract tests for the Organization zod schemas.

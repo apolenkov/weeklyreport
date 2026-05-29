@@ -1,18 +1,16 @@
-import { describe, expect, it, vi } from "vitest";
-
 import type {
   ReportSectionReadModel,
   VersionSnapshot,
 } from "@customreport/shared";
-
+import { describe, expect, it, vi } from "vitest";
+import { customreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   LeadFormDomainError,
-  LeadFormService,
   type LeadFormRepository,
+  LeadFormService,
   type SnapshotLatestRow,
 } from "./lead-form.service";
-import { expectDefined } from "../../test-utils/expect-defined.js";
-import { customreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -309,7 +307,11 @@ describe("LeadFormService — listVersions", () => {
     });
     const service = new LeadFormService(repo);
 
-    const versions = await service.listVersions(SECTION_ID, OTHER_USER_ID, "head");
+    const versions = await service.listVersions(
+      SECTION_ID,
+      OTHER_USER_ID,
+      "head",
+    );
 
     expect(versions).toHaveLength(3);
   });
@@ -322,7 +324,11 @@ describe("LeadFormService — listVersions", () => {
     });
     const service = new LeadFormService(repo);
 
-    const versions = await service.listVersions(SECTION_ID, OTHER_USER_ID, "lead");
+    const versions = await service.listVersions(
+      SECTION_ID,
+      OTHER_USER_ID,
+      "lead",
+    );
 
     expect(versions).toHaveLength(3);
   });
@@ -604,10 +610,10 @@ describe("LeadFormService — requestReopen", () => {
   });
 });
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 async function getCounterValue(
   counter: {
     get(): Promise<{
+      // biome-ignore lint/suspicious/noExplicitAny: prom-client label record (migrated from eslint-disable)
       values: Array<{ value: number; labels: Record<string, any> }>;
     }>;
   },
@@ -619,7 +625,6 @@ async function getCounterValue(
   );
   return match?.value ?? 0;
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 // ---------------------------------------------------------------------------
 // createSnapshot (Save Version)
@@ -700,7 +705,19 @@ describe("LeadFormService — createSnapshot", () => {
     // buildSnapshotProjection returns the same projection shape that is stored
     // in VersionSnapshot.data — both sides of the comparison are now the same shape.
     const snapshotProjection: Record<string, unknown> = {
-      items: [{ projectId: "p1", type: "current", text: "Deliver feature X", tag: "feature", workflowStatus: "in_progress", carriedOver: false, completed: null, priorityRank: null, stageNames: [] }],
+      items: [
+        {
+          projectId: "p1",
+          type: "current",
+          text: "Deliver feature X",
+          tag: "feature",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+          completed: null,
+          priorityRank: null,
+          stageNames: [],
+        },
+      ],
       risks: [],
       decisions: [],
       stageStatuses: [],
@@ -713,7 +730,9 @@ describe("LeadFormService — createSnapshot", () => {
     const repo = createMockRepository({
       getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
       getLatestSnapshot: vi.fn().mockResolvedValue(oldSnapshot),
-      buildSnapshotProjection: vi.fn().mockResolvedValue(structuredClone(snapshotProjection)),
+      buildSnapshotProjection: vi
+        .fn()
+        .mockResolvedValue(structuredClone(snapshotProjection)),
     });
     const service = new LeadFormService(repo);
 

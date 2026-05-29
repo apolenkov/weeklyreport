@@ -2,9 +2,8 @@
 // adapter implementation in this phase, so its deterministic shape is
 // load-bearing for cache keys and UI badge logic downstream.
 import { describe, expect, it } from "vitest";
-
-import { MockAiAdapter } from "./mock-ai.adapter.js";
 import { selectAiAdapter } from "./ai.module.js";
+import { MockAiAdapter } from "./mock-ai.adapter.js";
 
 describe("MockAiAdapter (Phase 54 / UFB-055)", () => {
   it("emits the [mock-summary] sentinel with section count and period id", async () => {

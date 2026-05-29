@@ -16,7 +16,10 @@ export type ProductCoupling = {
    * risk row (F10). A risk row covers a stage when its stageIds is empty
    * (= all stages) OR explicitly includes this stageName.
    */
-  stagesWithoutRiskCoverage: { stageName: string; severity: "at-risk" | "blocked" }[];
+  stagesWithoutRiskCoverage: {
+    stageName: string;
+    severity: "at-risk" | "blocked";
+  }[];
 };
 
 export type CouplingState = ProductCoupling[];

@@ -1,10 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
-import { silenceNestLogger } from "../../test-utils/silence-logs";
-
 import type { AppSettings } from "@customreport/shared";
-
-import { AutoPublisherScheduler } from "./auto-publisher.scheduler.js";
+import { describe, expect, it, vi } from "vitest";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
+import { silenceNestLogger } from "../../test-utils/silence-logs";
+import { AutoPublisherScheduler } from "./auto-publisher.scheduler.js";
 
 function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   return {
@@ -32,7 +30,7 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
 const asAny = (x: unknown) => x as any;
 
 describe("AutoPublisherScheduler", () => {

@@ -2,12 +2,12 @@ import { Module } from "@nestjs/common";
 
 import { PrismaModule } from "../../infrastructure/prisma/prisma.module.js";
 import { AI_ADAPTER, type AiAdapter } from "./ai.adapter.js";
-import { AiIngestionService } from "./ai-ingestion.service.js";
+import { AiService } from "./ai.service.js";
 import { AiPrismaFacade } from "./ai-facade.js";
+import { AiIngestionService } from "./ai-ingestion.service.js";
 import { AiSummaryCache, NullAiSummaryCache } from "./ai-summary.cache.js";
 import { AiSummaryPrismaRepository } from "./ai-summary.prisma-repository.js";
 import { AiSummaryService } from "./ai-summary.service.js";
-import { AiService } from "./ai.service.js";
 import { MockAiAdapter } from "./mock-ai.adapter.js";
 
 /**

@@ -1,13 +1,13 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
-  createTestPrisma,
   cleanDatabase,
-  seedTestData,
+  createTestPrisma,
   disconnectTestPrisma,
+  seedTestData,
 } from "../../test-utils/prisma-test-helper";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 import { ReportSectionsService } from "./report-sections.service";
-import { expectDefined } from "../../test-utils/expect-defined.js";
 
 describe("ReportSectionsPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
@@ -384,5 +384,4 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
       testData.project.id,
     );
   });
-
 });

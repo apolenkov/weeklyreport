@@ -1,6 +1,5 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
-
 import type { UserSession } from "@customreport/shared";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
   cleanDatabase,

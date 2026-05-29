@@ -1,12 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
-
 import type {
   ReportSectionReadModel,
   VersionSnapshot,
 } from "@customreport/shared";
-
-import { LeadFormService, type LeadFormRepository } from "./lead-form.service";
+import { describe, expect, it, vi } from "vitest";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { type LeadFormRepository, LeadFormService } from "./lead-form.service";
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */
@@ -88,7 +86,9 @@ function createMockRepository(
       return 0;
     },
     listVersions: listVersionsFn,
-    async getVersion() { return null; },
+    async getVersion() {
+      return null;
+    },
     restoreVersion: restoreVersionFn,
     createVersionSnapshot: createSnapshotFn,
     async getLatestSnapshot() {

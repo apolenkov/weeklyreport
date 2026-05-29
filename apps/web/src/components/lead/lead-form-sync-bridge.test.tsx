@@ -1,11 +1,13 @@
-import { describe, it, expect, vi } from "vitest";
-import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-
-import { LeadFormSyncBridge, promoteStageStatus } from "./lead-form-sync-bridge";
-import type { Product, RiskEntry } from "./mock-data";
+import { useState } from "react";
+import { describe, expect, it, vi } from "vitest";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import {
+  LeadFormSyncBridge,
+  promoteStageStatus,
+} from "./lead-form-sync-bridge";
+import type { Product, RiskEntry } from "./mock-data";
 
 function buildProduct(overrides?: Partial<Product>): Product {
   return {
@@ -87,10 +89,7 @@ function Harness({
       <section>
         <h2>Risks</h2>
         {!readOnly && (
-          <button
-            type="button"
-            onClick={() => setRisksAddSignal((v) => v + 1)}
-          >
+          <button type="button" onClick={() => setRisksAddSignal((v) => v + 1)}>
             + Add Risk
           </button>
         )}
@@ -286,12 +285,9 @@ describe("promoteStageStatus pure function", () => {
     ["at-risk", "at-risk", "at-risk"],
     ["blocked", "at-risk", "blocked"],
     ["blocked", "blocked", "blocked"],
-  ] as const)(
-    "current=%s + riskSeverity=%s → %s",
-    (current, riskSeverity, expected) => {
-      expect(promoteStageStatus(current, riskSeverity)).toBe(expected);
-    },
-  );
+  ] as const)("current=%s + riskSeverity=%s → %s", (current, riskSeverity, expected) => {
+    expect(promoteStageStatus(current, riskSeverity)).toBe(expected);
+  });
 });
 
 describe("LeadFormSyncBridge — up-flow stage promotion", () => {

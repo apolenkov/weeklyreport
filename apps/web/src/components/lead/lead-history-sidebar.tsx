@@ -106,8 +106,7 @@ export function LeadHistorySidebar({
                 </p>
               ) : streak === 1 ? (
                 <p className="text-[13px] text-[var(--color-foreground)]">
-                  Last week submitted.{" "}
-                  {!viewerMode && "Keep the streak going."}
+                  Last week submitted. {!viewerMode && "Keep the streak going."}
                 </p>
               ) : total === 0 ? (
                 <p className="text-[13px] text-[var(--color-muted-foreground)]">

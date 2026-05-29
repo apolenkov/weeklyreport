@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -114,7 +114,10 @@ export function findLifecycleViolationsInSource(
   const isExempt = (node: ts.Node): boolean => {
     let current: ts.Node | undefined = node;
     while (current) {
-      const ranges = ts.getLeadingCommentRanges(fullText, current.getFullStart());
+      const ranges = ts.getLeadingCommentRanges(
+        fullText,
+        current.getFullStart(),
+      );
       if (
         ranges?.some((r) =>
           fullText.slice(r.pos, r.end).includes(EXEMPT_MARKER),
@@ -129,7 +132,10 @@ export function findLifecycleViolationsInSource(
   };
 
   const visit = (node: ts.Node): void => {
-    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression)
+    ) {
       const method = node.expression.name.text;
       const receiver = node.expression.expression;
       // Receiver must end in `.report` (the Prisma model delegate) — this is

@@ -1,4 +1,4 @@
-import { type UserSession, adminSnapshotSchema } from "@customreport/shared";
+import { adminSnapshotSchema, type UserSession } from "@customreport/shared";
 
 import { createRoleGuard } from "../auth/roles.guard";
 import { AdminAccessError, type AdminService } from "./admin.service";

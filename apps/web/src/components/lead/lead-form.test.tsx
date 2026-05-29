@@ -4,15 +4,15 @@
  * myHistory) are mocked at the tRPC-proxy boundary, mirroring the autosave
  * hook test harness.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { toast } from "sonner";
-import type { ReactNode } from "react";
 
-import { LeadForm } from "./lead-form";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { toast } from "sonner";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TRPCProxyContext } from "../../lib/trpc-context";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { LeadForm } from "./lead-form";
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -554,7 +554,9 @@ describe("LeadForm mutation wiring", () => {
     });
 
     // Open the version history modal via its trigger button.
-    const historyTrigger = screen.getByTitle(/Snapshots and edits within this report/i);
+    const historyTrigger = screen.getByTitle(
+      /Snapshots and edits within this report/i,
+    );
     act(() => {
       historyTrigger.click();
     });
@@ -604,7 +606,9 @@ describe("LeadForm mutation wiring", () => {
       await flushAll();
     });
 
-    expect(screen.getByTitle(/Snapshots and edits within this report/i)).toHaveTextContent("v2");
+    expect(
+      screen.getByTitle(/Snapshots and edits within this report/i),
+    ).toHaveTextContent("v2");
 
     act(() => {
       screen.getByRole("button", { name: /^Previous version$/i }).click();
@@ -613,7 +617,9 @@ describe("LeadForm mutation wiring", () => {
       await flushAll();
     });
 
-    expect(screen.getByTitle(/Snapshots and edits within this report/i)).toHaveTextContent("v1");
+    expect(
+      screen.getByTitle(/Snapshots and edits within this report/i),
+    ).toHaveTextContent("v1");
     expect(calls.filter((c) => c.type === "restoreVersion")).toHaveLength(0);
   });
 

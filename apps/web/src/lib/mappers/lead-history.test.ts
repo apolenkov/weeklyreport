@@ -1,9 +1,8 @@
-import { describe, expect, it } from "vitest";
-
 import type {
   CompiledHistoryEntry,
   MyHistoryEntry,
 } from "@customreport/shared";
+import { describe, expect, it } from "vitest";
 
 import {
   formatDateRange,

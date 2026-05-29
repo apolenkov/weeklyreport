@@ -13,8 +13,8 @@
 // - summary narrative ≤ 3 sentences
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import type { AiInsightKind } from "@prisma/client";
 import { describe, expect, it } from "vitest";
-
 import { AiService } from "./ai.service.js";
 import type {
   AiFacade,
@@ -24,7 +24,6 @@ import type {
   ReportForSummary,
   RiskForSentiment,
 } from "./ai-facade.js";
-import type { AiInsightKind } from "@prisma/client";
 
 type FixtureRisk = RiskForSentiment & {
   // Fixtures use `id` for human readability; loadFixtures normalises it

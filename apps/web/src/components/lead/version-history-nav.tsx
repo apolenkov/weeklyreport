@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import type { VersionSnapshot } from "./mock-data";
 import { PERIOD_NAV_ARROW_BUTTON_CLASS } from "./period-navigator";
@@ -132,7 +132,9 @@ export function VersionHistoryNav({
     const nextIndex = currentIndex - 1;
     setCurrentIndex(nextIndex);
     // F3.4: notify parent — nextIndex 0 = latest (exit snapshot mode).
-    onViewVersion?.(nextIndex === 0 ? null : (versions[nextIndex]?.version ?? null));
+    onViewVersion?.(
+      nextIndex === 0 ? null : (versions[nextIndex]?.version ?? null),
+    );
   }
 
   function handleRestore(version: number) {
@@ -190,7 +192,6 @@ export function VersionHistoryNav({
           <span className="text-xs font-medium xl:hidden">Next</span>
           <ChevronRight />
         </button>
-
       </div>
 
       {/* Version History Modal */}

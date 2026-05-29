@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { DateTime } from "luxon";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
-  createTestPrisma,
   cleanDatabase,
-  seedTestData,
+  createTestPrisma,
   disconnectTestPrisma,
+  seedTestData,
 } from "../../test-utils/prisma-test-helper";
 import { PolicyApplicatorService } from "./policy-applicator.service";
 

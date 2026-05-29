@@ -1,26 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Archive } from "lucide-react";
-import { toast } from "sonner";
-
 import type {
   CompiledHistoryResult,
   MyHistoryEntry,
 } from "@customreport/shared";
+import { useQuery } from "@tanstack/react-query";
+import { Archive } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { LeadHistoryList } from "../../../components/lead/lead-history-list";
 import { LeadHistorySidebar } from "../../../components/lead/lead-history-sidebar";
 import { LeadHistorySkeleton } from "../../../components/lead/lead-history-skeleton";
 import { SearchInput } from "../../../components/search/search-input";
-import { useSession } from "../../../lib/session-provider";
 import {
+  type HistoryEntry,
   mapCompiledHistoryEntries,
   mapHistoryEntries,
-  type HistoryEntry,
 } from "../../../lib/mappers";
+import { useSession } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
 
 /**
@@ -263,7 +262,10 @@ function HistoryArchiveToggle({
 }) {
   return (
     <div className="flex min-h-10 shrink-0 items-center">
-      <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-white px-3 text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] hover:text-[var(--color-starbucks-accent)]" title="Past weeks and closed reports">
+      <label
+        className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-white px-3 text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] hover:text-[var(--color-starbucks-accent)]"
+        title="Past weeks and closed reports"
+      >
         <input
           type="checkbox"
           checked={checked}

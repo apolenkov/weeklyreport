@@ -1,6 +1,5 @@
-import { describe, expect, it } from "vitest";
-
 import type { Role } from "@customreport/shared";
+import { describe, expect, it } from "vitest";
 
 import { createRoleGuard, type GuardContext } from "./roles.guard";
 

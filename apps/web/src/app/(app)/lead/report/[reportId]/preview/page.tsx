@@ -1,8 +1,7 @@
-import { Suspense } from "react";
 import Link from "next/link";
-
-import { WeeklyReportSkeleton } from "../../../../../../components/weekly-report/weekly-report-skeleton";
+import { Suspense } from "react";
 import { LeadSectionPreviewAuth } from "../../../../../../components/lead/lead-section-preview-auth";
+import { WeeklyReportSkeleton } from "../../../../../../components/weekly-report/weekly-report-skeleton";
 
 type Props = {
   params: Promise<{ reportId: string }>;

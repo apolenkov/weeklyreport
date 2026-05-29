@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
-  AnalyticsService,
-  type AnalyticsRepository,
   type AnalyticsCachePort,
+  type AnalyticsRepository,
+  AnalyticsService,
 } from "./analytics.service.js";
 
 function makeCache(): {

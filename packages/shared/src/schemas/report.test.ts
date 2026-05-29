@@ -1,45 +1,45 @@
-import { describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
+import { describe, expect, it } from "vitest";
 
 import {
-  draftSaveSchema,
-  submitSectionSchema,
-  itemInputSchema,
-  riskInputSchema,
-  riskSeveritySchema,
-  decisionInputSchema,
-  trafficLightStatusSchema,
-  itemTypeSchema,
-  itemWorkflowStatusSchema,
-  reportSectionStatusSchema,
-  reportStatusSchema,
-  carryOverStatusSchema,
-  assembledReportSchema,
-  reportPeriodSchema,
-  projectStatusInputSchema,
-  portfolioOverviewSchema,
-  compiledHistoryInputSchema,
-  compiledHistoryEntrySchema,
-  compiledHistoryResultSchema,
-  archiveReportSummarySchema,
-  periodStatusSchema,
-  periodStateSchema,
-  periodListBucketSchema,
-  periodListItemSchema,
-  stageSchema,
-  stageAssignmentSchema,
-  versionSnapshotSchema,
   appSettingsSchema,
   appSettingsUpdateSchema,
-  weeklyReportReadModelSchema,
+  archiveReportSummarySchema,
+  assembledReportSchema,
+  carryOverStatusSchema,
+  compiledHistoryEntrySchema,
+  compiledHistoryInputSchema,
+  compiledHistoryResultSchema,
+  decisionInputSchema,
+  draftSaveSchema,
   escalationSchema,
-  myHistoryEntrySchema,
-  portfolioProductOverviewSchema,
-  validateSubmitInput,
-  groupProductSchema,
   groupProductEdgeInputSchema,
+  groupProductSchema,
+  itemInputSchema,
+  itemTypeSchema,
+  itemWorkflowStatusSchema,
+  myHistoryEntrySchema,
+  periodListBucketSchema,
+  periodListItemSchema,
+  periodStateSchema,
+  periodStatusSchema,
+  portfolioOverviewSchema,
+  portfolioProductOverviewSchema,
+  projectStatusInputSchema,
   type ReportSectionReadModel,
+  reportPeriodSchema,
+  reportSectionStatusSchema,
+  reportStatusSchema,
+  riskInputSchema,
+  riskSeveritySchema,
   type SubmitSectionPayload,
+  stageAssignmentSchema,
+  stageSchema,
+  submitSectionSchema,
+  trafficLightStatusSchema,
+  validateSubmitInput,
+  versionSnapshotSchema,
+  weeklyReportReadModelSchema,
 } from "./report";
 
 // ---------------------------------------------------------------------------
@@ -403,27 +403,42 @@ describe("itemInputSchema priorityRank", () => {
   });
 
   it("accepts item with priorityRank null", () => {
-    const result = itemInputSchema.safeParse({ ...validItem(), priorityRank: null });
+    const result = itemInputSchema.safeParse({
+      ...validItem(),
+      priorityRank: null,
+    });
     expect(result.success).toBe(true);
   });
 
   it("accepts item with priorityRank 1", () => {
-    const result = itemInputSchema.safeParse({ ...validItem(), priorityRank: 1 });
+    const result = itemInputSchema.safeParse({
+      ...validItem(),
+      priorityRank: 1,
+    });
     expect(result.success).toBe(true);
   });
 
   it("accepts item with priorityRank 99 (no upper limit)", () => {
-    const result = itemInputSchema.safeParse({ ...validItem(), priorityRank: 99 });
+    const result = itemInputSchema.safeParse({
+      ...validItem(),
+      priorityRank: 99,
+    });
     expect(result.success).toBe(true);
   });
 
   it("rejects priorityRank 0 (below min)", () => {
-    const result = itemInputSchema.safeParse({ ...validItem(), priorityRank: 0 });
+    const result = itemInputSchema.safeParse({
+      ...validItem(),
+      priorityRank: 0,
+    });
     expect(result.success).toBe(false);
   });
 
   it("rejects non-integer priorityRank (1.5)", () => {
-    const result = itemInputSchema.safeParse({ ...validItem(), priorityRank: 1.5 });
+    const result = itemInputSchema.safeParse({
+      ...validItem(),
+      priorityRank: 1.5,
+    });
     expect(result.success).toBe(false);
   });
 });
@@ -888,12 +903,16 @@ describe("periodStateSchema (UFB-053)", () => {
 // ---------------------------------------------------------------------------
 
 describe("periodListBucketSchema (UFB-052)", () => {
-  it.each(["active", "archive", "scheduled", "open", "published", "archived"])(
-    "accepts %s",
-    (bucket) => {
-      expect(periodListBucketSchema.safeParse(bucket).success).toBe(true);
-    },
-  );
+  it.each([
+    "active",
+    "archive",
+    "scheduled",
+    "open",
+    "published",
+    "archived",
+  ])("accepts %s", (bucket) => {
+    expect(periodListBucketSchema.safeParse(bucket).success).toBe(true);
+  });
 
   it('rejects "reopened" (not a state, lives on periodStatus)', () => {
     expect(periodListBucketSchema.safeParse("reopened").success).toBe(false);

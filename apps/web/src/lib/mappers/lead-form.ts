@@ -53,22 +53,21 @@
  */
 
 import type {
-  ReportSectionReadModel,
-  MyHistoryEntry,
   VersionSnapshot as ApiVersionSnapshot,
+  MyHistoryEntry,
+  ReportSectionReadModel,
 } from "@customreport/shared";
-
-import { deriveItemStatus, type ItemStatus } from "./item-status";
-import {
-  trafficToStageStatus,
-  type StageStatus,
-  type TrafficLightStatus,
-} from "./traffic-light";
-import { deriveEffectiveStageStatus } from "../stage-status";
 import {
   formatPeriodRangeWithYear,
   isoWeekNumber as sharedIsoWeekNumber,
 } from "../format-date";
+import { deriveEffectiveStageStatus } from "../stage-status";
+import { deriveItemStatus, type ItemStatus } from "./item-status";
+import {
+  type StageStatus,
+  type TrafficLightStatus,
+  trafficToStageStatus,
+} from "./traffic-light";
 
 // ---- Self-contained re-declarations of presentation types ----
 //
@@ -300,10 +299,12 @@ export function ownedStagesForProject(
   const rawOwned: string[] = [];
   if (projectId) {
     const project = section.projects.find((p) => p.projectId === projectId);
-    for (const stage of project?.ownedStages ?? []) rawOwned.push(stage.stageName);
+    for (const stage of project?.ownedStages ?? [])
+      rawOwned.push(stage.stageName);
   } else {
     for (const project of section.projects)
-      for (const stage of project.ownedStages ?? []) rawOwned.push(stage.stageName);
+      for (const stage of project.ownedStages ?? [])
+        rawOwned.push(stage.stageName);
   }
   return STAGE_NAMES.filter((canonical) =>
     rawOwned.some((raw) => stageNamesMatch(canonical, raw)),
@@ -335,18 +336,26 @@ function buildStageGrid(
     status?: TrafficLightStatus | null;
   }[],
   risks: readonly { stageIds?: readonly string[]; severity?: string }[] = [],
-  items: readonly { stageIds?: readonly string[]; workflowStatus: string }[] = [],
+  items: readonly {
+    stageIds?: readonly string[];
+    workflowStatus: string;
+  }[] = [],
 ): LeadStageAssignment[] {
   return STAGE_NAMES.map((stageName) => {
     const norm = normalizeStageName(stageName);
-    const ownedStage = ownedStages.find((s) => stageNamesMatch(s.stageName, stageName)) ?? null;
+    const ownedStage =
+      ownedStages.find((s) => stageNamesMatch(s.stageName, stageName)) ?? null;
     if (ownedStage) {
       return {
         stageName,
         status: deriveEffectiveStageStatus(
           trafficToStageStatus(ownedStage.status ?? null),
-          risks.filter((r) => r.stageIds?.some((s) => normalizeStageName(s) === norm)),
-          items.filter((i) => i.stageIds?.some((s) => normalizeStageName(s) === norm)),
+          risks.filter((r) =>
+            r.stageIds?.some((s) => normalizeStageName(s) === norm),
+          ),
+          items.filter((i) =>
+            i.stageIds?.some((s) => normalizeStageName(s) === norm),
+          ),
         ),
         ownership: "mine" as const,
         assignee: ownerLabel,

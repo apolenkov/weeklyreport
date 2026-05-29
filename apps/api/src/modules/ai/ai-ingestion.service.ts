@@ -16,7 +16,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import { createNullLogger, type AppLogger } from "../../lib/logger.js";
+import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 
 /**
  * Port used by callers to push section ids without depending on the

@@ -22,7 +22,9 @@ function inlineProductMarker(productName: string): ReactNode {
         aria-hidden="true"
         className="mt-[3px] h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-muted-foreground)]"
       />
-      <span className="line-clamp-2 min-w-0 text-[11px] leading-tight">{productName}</span>
+      <span className="line-clamp-2 min-w-0 text-[11px] leading-tight">
+        {productName}
+      </span>
     </span>
   );
 }

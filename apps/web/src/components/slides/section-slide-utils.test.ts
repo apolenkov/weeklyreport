@@ -1,6 +1,5 @@
-import { describe, expect, it } from "vitest";
-
 import type { ReportSectionReadModel } from "@customreport/shared";
+import { describe, expect, it } from "vitest";
 
 import {
   buildActivitySlideModel,

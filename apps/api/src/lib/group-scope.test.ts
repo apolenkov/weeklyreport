@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import type { UserSession } from "@customreport/shared";
+import { describe, expect, it } from "vitest";
 
 import { groupScopeFilter, guardGroupScope } from "./group-scope.js";
 

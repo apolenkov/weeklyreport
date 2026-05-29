@@ -1,13 +1,11 @@
 "use client";
 
-import { useContext, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-
-import { formatWeekRange } from "../../lib/mappers/weekly-report";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { logClientError } from "../../lib/client-error-reporting";
+import { formatWeekRange } from "../../lib/mappers/weekly-report";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
-import { SlideSkeleton } from "./slide-skeleton";
 import { ReportSlides } from "./report-slides";
 import {
   buildActivitySlideModel,
@@ -16,6 +14,7 @@ import {
   paginateSectionSlides,
   sortSlidesForReview,
 } from "./section-slide-utils";
+import { SlideSkeleton } from "./slide-skeleton";
 
 function SlideEmptyState({
   title,

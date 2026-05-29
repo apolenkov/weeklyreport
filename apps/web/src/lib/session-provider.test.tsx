@@ -1,6 +1,6 @@
 import { renderHook } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Mocks — replace useTRPC and useQuery before importing the module under test.

@@ -1,10 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 
-import { PublishLockButton } from "./publish-lock-button";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { PublishLockButton } from "./publish-lock-button";
 
 describe("PublishLockButton (Phase 22 — plan 22-05)", () => {
   it('renders "Publish & Lock" when periodStatus is open', () => {

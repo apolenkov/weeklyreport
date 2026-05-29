@@ -11,10 +11,10 @@
 //   node apps/web/uat-suite/mutation-audit.mjs
 //   node apps/web/uat-suite/mutation-audit.mjs --update-allowlist
 
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { execSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

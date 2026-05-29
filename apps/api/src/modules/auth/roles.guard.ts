@@ -1,4 +1,4 @@
-import { roleSchema, type Role } from "@customreport/shared";
+import { type Role, roleSchema } from "@customreport/shared";
 
 export type GuardContext = {
   user?: {

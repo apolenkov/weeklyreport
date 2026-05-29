@@ -1,16 +1,15 @@
-import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
-import type { INestApplication } from "@nestjs/common";
 import {
   DEFAULT_ORGANIZATION_IDENTITY,
   type UserSession,
 } from "@customreport/shared";
-
+import type { INestApplication } from "@nestjs/common";
+import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
+import { type AuditLogger, createAuditLogger } from "../../lib/audit-logger.js";
+import type { AppLogger } from "../../lib/logger.js";
+import { SessionRevocationService } from "../../modules/admin/session-revocation.service.js";
 import { createAuthController } from "../../modules/auth/auth.controller.js";
 import { verifyPdfExportToken } from "../../modules/pdf-export/pdf-export.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
-import { SessionRevocationService } from "../../modules/admin/session-revocation.service.js";
-import type { AppLogger } from "../../lib/logger.js";
-import { createAuditLogger, type AuditLogger } from "../../lib/audit-logger.js";
 
 // D-32: DEV_SESSION must carry reportingGroupId so groupScopeFilter scopes
 // the activity panel to the head's group in dev / integration mode.

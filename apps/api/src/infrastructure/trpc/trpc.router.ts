@@ -1,79 +1,75 @@
-import { TRPCError } from "@trpc/server";
-import { z } from "zod";
-
 import {
-  draftSaveSchema,
-  submitSectionSchema,
-  myHistoryEntrySchema,
-  paginationInputSchema,
-  compiledHistoryInputSchema,
-  compiledHistoryResultSchema,
   adminCreatePeriodManualSchema,
+  adminProjectSchema,
+  adminReminderRuleSchema,
+  adminTestTelegramSendSchema,
   adminUpdatePeriodManualSchema,
   adminUserSchema,
-  adminProjectSchema,
+  appSettingsUpdateSchema,
+  compiledHistoryInputSchema,
+  compiledHistoryResultSchema,
+  DEFAULT_ORGANIZATION_IDENTITY,
+  draftSaveSchema,
   groupProductEdgeInputSchema,
+  leadVelocityInputSchema,
+  myHistoryEntrySchema,
+  organizationUpdateSchema,
+  paginationInputSchema,
+  periodComparisonInputSchema,
+  periodListBucketSchema,
+  queueNameSchema,
+  reminderPolicySchema,
   reportingGroupSchema,
   reportPeriodSchema,
-  adminReminderRuleSchema,
-  appSettingsUpdateSchema,
-  periodListBucketSchema,
-  reminderPolicySchema,
-  trafficLightHistoryInputSchema,
-  leadVelocityInputSchema,
-  periodComparisonInputSchema,
   searchQueryInputSchema,
-  queueNameSchema,
-  organizationUpdateSchema,
-  adminTestTelegramSendSchema,
-  DEFAULT_ORGANIZATION_IDENTITY,
+  submitSectionSchema,
+  trafficLightHistoryInputSchema,
 } from "@customreport/shared";
-
-import {
-  router,
-  publicProcedure,
-  protectedProcedure,
-  headProcedure,
-  adminProcedure,
-  anyRoleProcedure,
-  leadershipProcedure,
-} from "./trpc.middleware.js";
-import { mapDomainError } from "./trpc.error-mapper.js";
-import { clearOrgCache } from "./trpc.context.js";
-import { customreportReopenRequestsTotal } from "../metrics/metrics.registry.js";
-
 import type { Prisma, PrismaClient } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 import type { Queue } from "bullmq";
-
-import type { ReportSectionsService } from "../../modules/report-sections/report-sections.service.js";
-import type { ReviewService } from "../../modules/review/review.service.js";
-import type { PublicationService } from "../../modules/publication/publication.service.js";
-import type { PdfExportService } from "../../modules/pdf-export/pdf-export.service.js";
-import type { AdminService } from "../../modules/admin/admin.service.js";
-import type { OrganizationService } from "../../modules/organization/organization.service.js";
-import type { JobsService } from "../../modules/admin/jobs.service.js";
-import type { RemindersService } from "../../modules/reminders/reminders.service.js";
-import type { CarryOverService } from "../../modules/carry-over/carry-over.service.js";
-import type { ArchiveService } from "../../modules/archive/archive.service.js";
-import type { PeriodService } from "../../modules/period/period.service.js";
-import type { WeeklyReportService } from "../../modules/weekly-report/weekly-report.service.js";
-import type { LeadFormService } from "../../modules/report-sections/lead-form.service.js";
-import type { AnalyticsService } from "../../modules/analytics/analytics.service.js";
-import type { AiService } from "../../modules/ai/ai.service.js";
-import type { AiSummaryService } from "../../modules/ai/ai-summary.service.js";
-import {
-  SearchAuthorizationError,
-  type SearchService,
-} from "../../modules/search/search.service.js";
+import { z } from "zod";
 import { groupScopeFilter } from "../../lib/group-scope.js";
 import type { ActivityService } from "../../modules/activity/activity.service.js";
-import type { TelemetryService } from "../../modules/telemetry/telemetry.service.js";
+import type { AdminService } from "../../modules/admin/admin.service.js";
+import type { JobsService } from "../../modules/admin/jobs.service.js";
 import type { SessionRevocationService } from "../../modules/admin/session-revocation.service.js";
+import type { AiService } from "../../modules/ai/ai.service.js";
 import {
   assertCanReadReport,
   assertCanReadRisk,
   assertCanReadSection,
 } from "../../modules/ai/ai-authz.js";
+import type { AiSummaryService } from "../../modules/ai/ai-summary.service.js";
+import type { AnalyticsService } from "../../modules/analytics/analytics.service.js";
+import type { ArchiveService } from "../../modules/archive/archive.service.js";
+import type { CarryOverService } from "../../modules/carry-over/carry-over.service.js";
+import type { OrganizationService } from "../../modules/organization/organization.service.js";
+import type { PdfExportService } from "../../modules/pdf-export/pdf-export.service.js";
+import type { PeriodService } from "../../modules/period/period.service.js";
+import type { PublicationService } from "../../modules/publication/publication.service.js";
+import type { RemindersService } from "../../modules/reminders/reminders.service.js";
+import type { LeadFormService } from "../../modules/report-sections/lead-form.service.js";
+import type { ReportSectionsService } from "../../modules/report-sections/report-sections.service.js";
+import type { ReviewService } from "../../modules/review/review.service.js";
+import {
+  SearchAuthorizationError,
+  type SearchService,
+} from "../../modules/search/search.service.js";
+import type { TelemetryService } from "../../modules/telemetry/telemetry.service.js";
+import type { WeeklyReportService } from "../../modules/weekly-report/weekly-report.service.js";
+import { customreportReopenRequestsTotal } from "../metrics/metrics.registry.js";
+import { clearOrgCache } from "./trpc.context.js";
+import { mapDomainError } from "./trpc.error-mapper.js";
+import {
+  adminProcedure,
+  anyRoleProcedure,
+  headProcedure,
+  leadershipProcedure,
+  protectedProcedure,
+  publicProcedure,
+  router,
+} from "./trpc.middleware.js";
 
 type RouterDeps = {
   prisma: PrismaClient;
@@ -416,7 +412,8 @@ export function createAppRouter(deps: RouterDeps) {
               itemCount: s.items.length,
               riskCount: s.risks.length,
               decisionCount: s.decisions.length,
-              priorityCount: s.items.filter((i) => i.priorityRank != null).length,
+              priorityCount: s.items.filter((i) => i.priorityRank != null)
+                .length,
               productCount: productIds.size,
               versionCount: s.versionSnapshots.length,
               latestVersion: latestVersion?.version ?? null,
@@ -460,7 +457,9 @@ export function createAppRouter(deps: RouterDeps) {
                   sections: {
                     where: sectionScope,
                     select: {
-                      items: { select: { projectId: true, priorityRank: true } },
+                      items: {
+                        select: { projectId: true, priorityRank: true },
+                      },
                       risks: { select: { projectId: true } },
                       decisions: { select: { productId: true } },
                       projectStatuses: {
@@ -1592,7 +1591,10 @@ export function createAppRouter(deps: RouterDeps) {
             // scope filtered out all sections. May false-positive on reports
             // that genuinely have no sections; acceptable given the low rate
             // of empty published reports in this domain.
-            if (ctx.session.role !== "admin" && detail.report.sections.length === 0) {
+            if (
+              ctx.session.role !== "admin" &&
+              detail.report.sections.length === 0
+            ) {
               ctx.auditLogger.scopeDenied({
                 userId: ctx.session.userId,
                 role: ctx.session.role,

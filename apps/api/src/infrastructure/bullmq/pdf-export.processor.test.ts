@@ -1,6 +1,6 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { silenceStderr } from "../../test-utils/silence-logs";
 import type { Job } from "bullmq";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { silenceStderr } from "../../test-utils/silence-logs";
 
 // ---------------------------------------------------------------------------
 // Module mocks — factories use vi.fn() inline (no outer variable references)
@@ -80,9 +80,9 @@ vi.mock("node:crypto", () => ({
 // Import after mocks
 // ---------------------------------------------------------------------------
 
-import { chromium } from "playwright";
-import { Worker } from "bullmq";
 import { createHash } from "node:crypto";
+import { Worker } from "bullmq";
+import { chromium } from "playwright";
 import { PdfExportProcessor } from "./pdf-export.processor.js";
 
 // ---------------------------------------------------------------------------

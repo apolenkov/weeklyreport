@@ -1,15 +1,15 @@
-import * as React from "react";
 import { render } from "@react-email/render";
+import * as React from "react";
 
 import {
   DeadlineEmail,
-  deadlineEmailPlaintext,
   type DeadlineEmailProps,
+  deadlineEmailPlaintext,
 } from "./templates/deadline.template.js";
 import {
   EscalationEmail,
-  escalationEmailPlaintext,
   type EscalationEmailProps,
+  escalationEmailPlaintext,
 } from "./templates/escalation.template.js";
 
 /**

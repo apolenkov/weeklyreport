@@ -1,8 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 
+import { useQuery } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { useQuery } from "@tanstack/react-query";
 
 import { ProductKpiCard } from "./product-kpi-card";
 
@@ -29,7 +29,7 @@ class ResizeObserverStub {
   unobserve() {}
   disconnect() {}
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
 (globalThis as any).ResizeObserver = ResizeObserverStub;
 
 const mockUseQuery = vi.mocked(useQuery);
@@ -50,7 +50,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: summary,
       isLoading: false,
       isError: false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
     } as any);
 
     render(<ProductKpiCard role="head" />);
@@ -75,7 +75,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: undefined,
       isLoading: false,
       isError: false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
     } as any);
 
     const { container } = render(<ProductKpiCard role="lead" />);
@@ -91,7 +91,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: summary,
       isLoading: false,
       isError: false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
     } as any);
 
     render(<ProductKpiCard role="viewer" />);
@@ -106,7 +106,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: { ...summary, onTimeRatio: null, sparkline: [] },
       isLoading: false,
       isError: false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
     } as any);
 
     render(<ProductKpiCard role="admin" />);
@@ -119,7 +119,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: undefined,
       isLoading: true,
       isError: false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
     } as any);
 
     render(<ProductKpiCard role="head" />);
@@ -132,13 +132,11 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: undefined,
       isLoading: false,
       isError: true,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
     } as any);
 
     render(<ProductKpiCard role="head" />);
 
-    expect(
-      screen.getByText("Failed to load telemetry."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Failed to load telemetry.")).toBeInTheDocument();
   });
 });

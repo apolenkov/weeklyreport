@@ -1,16 +1,15 @@
+import {
+  type ArchiveReportSummary,
+  archiveReportSummarySchema,
+  type PaginatedResult,
+  type SubmissionDashboardRow,
+  submissionDashboardRowSchema,
+  type WeeklyReportReadModel,
+  weeklyReportReadModelSchema,
+} from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import {
-  weeklyReportReadModelSchema,
-  archiveReportSummarySchema,
-  submissionDashboardRowSchema,
-  type SubmissionDashboardRow,
-  type WeeklyReportReadModel,
-  type ArchiveReportSummary,
-  type PaginatedResult,
-} from "@customreport/shared";
-
-import { mapDashboardData, formatRelativeDeadline } from "./dashboard";
+import { formatRelativeDeadline, mapDashboardData } from "./dashboard";
 
 // v4-shape UUIDs (4 in position 13, 8/9/a/b in position 17).
 const REPORT_ID = "11111111-1111-4111-8111-aaaaaaaaaaaa";

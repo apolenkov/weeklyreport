@@ -1,6 +1,5 @@
-import { ExtractJwt, type StrategyOptions } from "passport-jwt";
-
 import { userSessionSchema } from "@customreport/shared";
+import { ExtractJwt, type StrategyOptions } from "passport-jwt";
 
 export type JwtStrategyOptions = StrategyOptions & {
   jwtCookieName: string;

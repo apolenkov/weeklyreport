@@ -1,14 +1,13 @@
+import { TRPCError } from "@trpc/server";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-
-import {
-  router,
-  protectedProcedure,
-  leadProcedure,
-} from "./trpc.middleware.js";
-import { createNullLogger } from "../../lib/logger.js";
 import type { AuditLogger } from "../../lib/audit-logger.js";
+import { createNullLogger } from "../../lib/logger.js";
+import {
+  leadProcedure,
+  protectedProcedure,
+  router,
+} from "./trpc.middleware.js";
 
 /**
  * 36-02 mutation-audit middleware tests.

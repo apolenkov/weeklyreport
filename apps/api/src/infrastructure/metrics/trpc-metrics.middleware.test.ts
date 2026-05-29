@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
 import { TRPCError } from "@trpc/server";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   metricsRegistry,

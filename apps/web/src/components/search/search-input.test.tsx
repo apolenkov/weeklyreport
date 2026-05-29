@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // 39-05: search-input renders results from `trpc.search.query`. Mock the
 // tRPC context + useQuery so we can drive the data path without a real

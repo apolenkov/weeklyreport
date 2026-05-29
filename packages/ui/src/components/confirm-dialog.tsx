@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Button } from "@customreport/ui/components/ui/button";
 
 import {
   Dialog,
@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@customreport/ui/components/ui/dialog";
-import { Button } from "@customreport/ui/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 type ConfirmDialogProps = {
   open: boolean;

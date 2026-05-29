@@ -1,8 +1,13 @@
-import { existsSync, mkdirSync } from "node:fs";
-import { promises as fs, createReadStream, createWriteStream } from "node:fs";
+import {
+  createReadStream,
+  createWriteStream,
+  existsSync,
+  promises as fs,
+  mkdirSync,
+} from "node:fs";
 import { join } from "node:path";
-import { createGzip } from "node:zlib";
 import { pipeline } from "node:stream/promises";
+import { createGzip } from "node:zlib";
 
 import { trace } from "@opentelemetry/api";
 import { logs, SeverityNumber } from "@opentelemetry/api-logs";

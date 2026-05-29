@@ -1,6 +1,6 @@
+import react from "@vitejs/plugin-react";
 import { createRequire } from "module";
 import path from "path";
-import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 const require = createRequire(
@@ -47,7 +47,10 @@ export default defineConfig({
       zod: path.dirname(require.resolve("zod/package.json")),
       // Replace the `server-only` guard with an empty stub so RSC helper
       // modules can be imported in jsdom tests without throwing.
-      "server-only": path.resolve(__dirname, "src/test-utils/server-only-mock.ts"),
+      "server-only": path.resolve(
+        __dirname,
+        "src/test-utils/server-only-mock.ts",
+      ),
     },
   },
 });

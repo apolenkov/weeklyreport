@@ -2,7 +2,7 @@
 // component file ('.tsx') and the hook file ('.ts') split mirrors the
 // useTRPC / TRPCProxyContext pattern in trpc-context.ts + trpc.ts.
 export {
-  useSession,
   type SessionState,
   type SessionUser,
+  useSession,
 } from "./session-provider";

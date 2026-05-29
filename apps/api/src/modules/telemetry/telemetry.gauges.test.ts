@@ -24,9 +24,9 @@ function buildPort(opts: {
   };
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 async function gaugeValue(gauge: {
   get(): Promise<{
+    // biome-ignore lint/suspicious/noExplicitAny: prom-client label record (migrated from eslint-disable)
     values: Array<{ value: number; labels: Record<string, any> }>;
   }>;
 }): Promise<number | null> {
@@ -34,7 +34,6 @@ async function gaugeValue(gauge: {
   const first = snapshot.values[0];
   return first?.value ?? null;
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 describe("TelemetryGauges — Phase 52-A (UFB-054)", () => {
   it("on-time ratio gauge updates from the port at scrape time", async () => {

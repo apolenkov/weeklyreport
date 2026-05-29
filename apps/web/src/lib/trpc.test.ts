@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TRPCClientError } from "@trpc/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAuthRedirectHandler } from "./trpc";
 

@@ -123,7 +123,11 @@ export function CurrentWeekSection({
         className="btn-press inline-flex min-h-[40px] min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
         onClick={() => defaultProduct && handleAdd(defaultProduct.id)}
         disabled={!hasProducts}
-        title={hasProducts ? `Add item to ${defaultProduct?.name}` : "No products assigned — contact admin"}
+        title={
+          hasProducts
+            ? `Add item to ${defaultProduct?.name}`
+            : "No products assigned — contact admin"
+        }
       >
         + Add Item
       </button>
@@ -140,7 +144,11 @@ export function CurrentWeekSection({
     if (addSignal === 0) return;
     if (readOnly || !defaultProductId) return;
     setOpenSeq((n) => n + 1);
-    setDialogState({ open: true, mode: "create", seedProductId: defaultProductId });
+    setDialogState({
+      open: true,
+      mode: "create",
+      seedProductId: defaultProductId,
+    });
   }, [addSignal, defaultProductId, readOnly]);
 
   function handleDelete(id: string) {

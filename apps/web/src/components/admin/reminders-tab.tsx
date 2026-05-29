@@ -1,22 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../lib/cache-keys";
-import { toReminderPolicyInput } from "../../lib/mappers";
 import type { AdminReminderPolicyFormInput } from "../../lib/mappers";
+import { toReminderPolicyInput } from "../../lib/mappers";
 import { useTRPC } from "../../lib/trpc-context";
 import { ConfirmDeleteDialog } from "../lead/confirm-delete-dialog";
-
-import { TabHeader, TabSearch } from "./tab-header";
 import { DerivedRulesPanel } from "./derived-rules-panel";
+import type { MockPeriod, MockReminder, MockReminderPolicy } from "./mock-data";
+import { TabHeader, TabSearch } from "./tab-header";
 // UFB-035: timezone catalog moved to ./timezone-options so the Settings →
 // Reminders sub-tab (UFB-048 / Phase 48-B) can reuse the same curated list.
 import { TIMEZONE_OPTIONS } from "./timezone-options";
-
-import type { MockPeriod, MockReminder, MockReminderPolicy } from "./mock-data";
 
 const KIND_OPTIONS: ReadonlyArray<{
   value: MockReminderPolicy["kind"];

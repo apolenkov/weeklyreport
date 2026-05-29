@@ -1,6 +1,5 @@
-import type { ReactNode } from "react";
-
 import type { Role } from "@customreport/shared";
+import type { ReactNode } from "react";
 
 import { ForbiddenPage } from "../../../../components/forbidden-page";
 import { getServerSession } from "../../../../lib/server/get-server-session";

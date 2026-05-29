@@ -1,12 +1,11 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-
+import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
   seedTestData,
 } from "../../test-utils/prisma-test-helper";
-import { expectDefined } from "../../test-utils/expect-defined.js";
 import { applyTransition } from "./period-transition.apply.js";
 
 // ---------------------------------------------------------------------------

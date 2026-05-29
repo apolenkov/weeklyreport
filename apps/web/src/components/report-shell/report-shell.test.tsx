@@ -1,17 +1,19 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-
-import { ViewModeToggle } from "./view-mode-toggle";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { AccordionSection } from "./accordion-section";
 import { ArchiveToggle } from "./archive-toggle";
 import { MetaRow } from "./meta-row";
-import { AccordionSection } from "./accordion-section";
+import { ViewModeToggle } from "./view-mode-toggle";
 
 // ViewModeToggle ----------------------------------------------------------------
 
 describe("ViewModeToggle", () => {
   it("renders Edit link with correct href", () => {
     render(
-      <ViewModeToggle editHref="/lead/report/abc" slidesHref="/lead/report/abc?mode=slides" />,
+      <ViewModeToggle
+        editHref="/lead/report/abc"
+        slidesHref="/lead/report/abc?mode=slides"
+      />,
     );
     const edit = screen.getByRole("link", { name: /edit/i });
     expect(edit).toHaveAttribute("href", "/lead/report/abc");
@@ -19,7 +21,10 @@ describe("ViewModeToggle", () => {
 
   it("renders Slides link with correct href", () => {
     render(
-      <ViewModeToggle editHref="/lead/report/abc" slidesHref="/lead/report/abc?mode=slides" />,
+      <ViewModeToggle
+        editHref="/lead/report/abc"
+        slidesHref="/lead/report/abc?mode=slides"
+      />,
     );
     const slides = screen.getByRole("link", { name: /slides/i });
     expect(slides).toHaveAttribute("href", "/lead/report/abc?mode=slides");
@@ -135,7 +140,12 @@ describe("AccordionSection", () => {
 
   it("syncs to groupExpanded when groupSyncKey changes", () => {
     const { rerender } = render(
-      <AccordionSection icon={null} title="T" groupSyncKey={0} groupExpanded={true}>
+      <AccordionSection
+        icon={null}
+        title="T"
+        groupSyncKey={0}
+        groupExpanded={true}
+      >
         Content
       </AccordionSection>,
     );
@@ -143,7 +153,12 @@ describe("AccordionSection", () => {
     expect(btn).toHaveAttribute("aria-expanded", "true");
 
     rerender(
-      <AccordionSection icon={null} title="T" groupSyncKey={1} groupExpanded={false}>
+      <AccordionSection
+        icon={null}
+        title="T"
+        groupSyncKey={1}
+        groupExpanded={false}
+      >
         Content
       </AccordionSection>,
     );

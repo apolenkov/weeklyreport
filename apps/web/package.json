@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
-    "lint": "tsc --noEmit -p tsconfig.json && eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "visual:setup": "pnpm -w exec prisma migrate reset --force --skip-seed && pnpm -w db:seed:simple",

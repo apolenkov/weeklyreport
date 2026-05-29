@@ -5,13 +5,13 @@
  * Baseline before Wave 1 A1 extracts this markup to report-shell/view-mode-toggle.tsx.
  * After extraction, these tests must pass without changes.
  */
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
 
-import { LeadForm } from "./lead-form";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { TRPCProxyContext } from "../../lib/trpc-context";
+import { LeadForm } from "./lead-form";
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -199,7 +199,9 @@ describe("LeadForm view-mode toggle — pre-extract snapshot", () => {
     await act(flushAll);
 
     const editLink = screen.queryByRole("link", { name: /^Edit$/i });
-    const slidesLink = screen.queryByRole("link", { name: /Open slides mode/i });
+    const slidesLink = screen.queryByRole("link", {
+      name: /Open slides mode/i,
+    });
 
     expect(editLink).toBeInTheDocument();
     expect(slidesLink).toBeInTheDocument();

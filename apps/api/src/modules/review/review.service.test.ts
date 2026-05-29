@@ -1,12 +1,11 @@
-import { describe, expect, it } from "vitest";
-
 import type { SubmissionDashboardRow, UserSession } from "@customreport/shared";
+import { describe, expect, it } from "vitest";
 
 import { reviewRouter } from "./review.router";
 import {
   ReviewAccessError,
-  ReviewService,
   type ReviewRepository,
+  ReviewService,
 } from "./review.service";
 
 const reportId = "22222222-2222-4222-8222-222222222222";

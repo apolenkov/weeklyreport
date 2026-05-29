@@ -1,6 +1,6 @@
-import { Injectable } from "@nestjs/common";
 import type { TelemetrySummary } from "@customreport/shared";
 import { telemetrySummarySchema } from "@customreport/shared";
+import { Injectable } from "@nestjs/common";
 
 /**
  * Port shape consumed by TelemetryService — Prisma-agnostic so unit

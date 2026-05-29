@@ -28,8 +28,6 @@
 import "dotenv/config";
 
 import net from "node:net";
-
-import pg from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import {
   PeriodState,
@@ -42,7 +40,8 @@ import {
   ReportStatus,
   Role,
 } from "@prisma/client";
-
+import pg from "pg";
+import { assertNonProdDestructive } from "./_destructive-guard.js";
 import {
   ACTIVE_REPORT_ID,
   DEFAULT_REPORTING_GROUP_ID,
@@ -56,7 +55,6 @@ import {
   SEED_REPORTS,
   VIEWER_USER_ID,
 } from "./seed-constants.js";
-import { assertNonProdDestructive } from "./_destructive-guard.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);

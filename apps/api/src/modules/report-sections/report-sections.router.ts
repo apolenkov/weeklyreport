@@ -1,14 +1,13 @@
-import {
-  draftSaveSchema,
-  reportSectionReadModelSchema,
-  submitSectionSchema,
-} from "@customreport/shared";
-
 import type {
   DraftSavePayload,
   ReportSectionReadModel,
   SubmitSectionPayload,
   UserSession,
+} from "@customreport/shared";
+import {
+  draftSaveSchema,
+  reportSectionReadModelSchema,
+  submitSectionSchema,
 } from "@customreport/shared";
 
 import type { ReportSectionsService } from "./report-sections.service";

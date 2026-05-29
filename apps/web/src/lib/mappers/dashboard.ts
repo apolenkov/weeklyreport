@@ -25,18 +25,17 @@
  */
 
 import type {
+  ArchiveReportSummary,
+  Escalation,
+  PaginatedResult,
+  PortfolioProductOverview,
+  ReportSectionReadModel,
   SubmissionDashboardRow,
   WeeklyReportReadModel,
-  ArchiveReportSummary,
-  PaginatedResult,
-  Escalation,
-  ReportSectionReadModel,
-  PortfolioProductOverview,
 } from "@customreport/shared";
-
+import { formatPeriodRangeWithYear, formatWeekLabel } from "../format-date";
 import { deriveLeadStatus, type LeadStatus } from "./lead-status";
 import { trafficToStageStatus } from "./traffic-light";
-import { formatPeriodRangeWithYear, formatWeekLabel } from "../format-date";
 
 // ---- Self-contained re-declarations of presentation types ----
 

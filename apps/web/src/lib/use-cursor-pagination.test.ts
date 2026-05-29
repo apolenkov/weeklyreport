@@ -8,10 +8,11 @@
  * `infiniteQueryOptions` object so the tests do not depend on a real tRPC
  * client.
  */
-import { describe, it, expect, vi } from "vitest";
-import { renderHook, waitFor, act } from "@testing-library/react";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import * as React from "react";
+import { describe, expect, it, vi } from "vitest";
 
 import { useCursorPagination } from "./use-cursor-pagination";
 

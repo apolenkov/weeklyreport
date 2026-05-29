@@ -9,39 +9,39 @@ import { computeContentHash, withCache } from "./ai-cache.js";
 import {
   AiRateLimitError,
   AiUnavailableError,
-  runStructured,
   type AnthropicClientFactory,
   type RunStructuredResult,
+  runStructured,
 } from "./ai-client.js";
 import type { AiFacade } from "./ai-facade.js";
 import {
-  SUMMARY_MODEL,
-  SUMMARY_SYSTEM_PROMPT,
-  SUMMARY_TOOL_DESCRIPTION,
-  SUMMARY_TOOL_NAME,
-  buildSummaryUserPrompt,
-  condenseReportForPrompt,
-  summarySchema,
-  type SummaryResult,
-} from "./prompts/summary.js";
-import {
-  SENTIMENT_MODEL,
-  SENTIMENT_SYSTEM_PROMPT,
-  SENTIMENT_TOOL_DESCRIPTION,
-  SENTIMENT_TOOL_NAME,
-  buildSentimentUserPrompt,
-  sentimentSchema,
-  type SentimentResult,
-} from "./prompts/sentiment.js";
-import {
+  buildOnTrackUserPrompt,
   ON_TRACK_MODEL,
   ON_TRACK_SYSTEM_PROMPT,
   ON_TRACK_TOOL_DESCRIPTION,
   ON_TRACK_TOOL_NAME,
-  buildOnTrackUserPrompt,
-  onTrackSchema,
   type OnTrackResult,
+  onTrackSchema,
 } from "./prompts/on-track.js";
+import {
+  buildSentimentUserPrompt,
+  SENTIMENT_MODEL,
+  SENTIMENT_SYSTEM_PROMPT,
+  SENTIMENT_TOOL_DESCRIPTION,
+  SENTIMENT_TOOL_NAME,
+  type SentimentResult,
+  sentimentSchema,
+} from "./prompts/sentiment.js";
+import {
+  buildSummaryUserPrompt,
+  condenseReportForPrompt,
+  SUMMARY_MODEL,
+  SUMMARY_SYSTEM_PROMPT,
+  SUMMARY_TOOL_DESCRIPTION,
+  SUMMARY_TOOL_NAME,
+  type SummaryResult,
+  summarySchema,
+} from "./prompts/summary.js";
 
 export type AiInsightAvailable<R> = {
   available: true;

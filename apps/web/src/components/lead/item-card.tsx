@@ -98,7 +98,10 @@ export function ItemCard({
   const stageTagsLabel =
     stageTags.length === 0 ? "All stages" : stageTags.join(", ");
   const visibleStageTags = stageTags.slice(0, 2);
-  const hiddenStageCount = Math.max(stageTags.length - visibleStageTags.length, 0);
+  const hiddenStageCount = Math.max(
+    stageTags.length - visibleStageTags.length,
+    0,
+  );
 
   // Local draft for the inline textarea. Reset every time edit mode opens so
   // the field tracks the latest committed text.
@@ -157,7 +160,6 @@ export function ItemCard({
         opacity: item.foreign ? 0.7 : 1,
       }}
     >
-
       {/* Card top line: status on the left, item actions on the right. */}
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="flex shrink-0 flex-wrap items-center gap-1.5">

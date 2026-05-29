@@ -6,11 +6,12 @@
  * .mutationOptions`. We assert the Save button drives the mutation with
  * the form values and the success toast fires.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
 
@@ -24,8 +25,8 @@ vi.mock("sonner", () => ({
   },
 }));
 
-import { SettingsTab } from "./settings-tab";
 import type { MockSettings } from "./mock-data";
+import { SettingsTab } from "./settings-tab";
 
 type Captured = {
   updateOrgFn: ReturnType<typeof vi.fn>;

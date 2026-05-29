@@ -1,8 +1,8 @@
-import { Injectable } from "@nestjs/common";
 import {
-  reportSectionReadModelSchema,
   type ReportSectionReadModel,
+  reportSectionReadModelSchema,
 } from "@customreport/shared";
+import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { ReportSectionsRepository } from "./report-sections.service";
@@ -237,7 +237,9 @@ export function mapPrismaToReportSection(
 }
 
 @Injectable()
-export class ReportSectionsPrismaRepository implements ReportSectionsRepository {
+export class ReportSectionsPrismaRepository
+  implements ReportSectionsRepository
+{
   constructor(private readonly prisma: PrismaService) {}
 
   async getReportStatus(reportId: string): Promise<string | null> {
@@ -386,7 +388,6 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
             })),
           });
         }
-
       },
       { timeout: 15000 },
     );

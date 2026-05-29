@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { renderEmail } from "./render-template";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { renderEmail } from "./render-template";
 
 // UFB-047 / Phase 49-01: brand snapshot now travels with every Phase-28+
 // payload. The renderer reads it; the BullMQ enqueue path snapshots it

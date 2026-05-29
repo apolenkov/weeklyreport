@@ -1,39 +1,36 @@
 "use client";
 
-import { useContext, useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useContext, useEffect, useMemo } from "react";
 import { toast } from "sonner";
-
-import { isoWeekNumber, formatDateRange } from "../../lib/mappers/lead-history";
-import { joinPeriodLabel } from "../../lib/format-date";
-
-import { useTRPC } from "../../lib/trpc-context";
-import { SessionContext } from "../../lib/session-provider";
-import {
-  formatClientErrorMessage,
-  logClientError,
-} from "../../lib/client-error-reporting";
-import { mapWeeklyReport } from "../../lib/mappers";
 import {
   invalidateDashboard,
   invalidateLeadForm,
   invalidateLeadHistory,
 } from "../../lib/cache-keys";
+import {
+  formatClientErrorMessage,
+  logClientError,
+} from "../../lib/client-error-reporting";
+import { joinPeriodLabel } from "../../lib/format-date";
+import { mapWeeklyReport } from "../../lib/mappers";
+import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
+import { SessionContext } from "../../lib/session-provider";
+import { useTRPC } from "../../lib/trpc-context";
+import { AiSummaryCard } from "../ai/ai-summary-card";
 import type {
   PortfolioProduct,
   ProductReport,
   ReportPeriod,
 } from "../dashboard/mock-data";
-
+import { ExportPdfButton } from "./export-pdf-button";
 import { HeadPeriodNavigator } from "./period-navigator";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
 import { ProductAccordion } from "./product-accordion";
 import { PublishLockButton } from "./publish-lock-button";
-import { ExportPdfButton } from "./export-pdf-button";
 import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
-import { AiSummaryCard } from "../ai/ai-summary-card";
 
 type WeeklyReportPageProps = {
   /**
@@ -440,7 +437,9 @@ export function WeeklyReportPage({
                   report={report}
                   defaultOpen={focusedProductId === report.id}
                   highlighted={focusedProductId === report.id}
-                  scrollIntoViewOnHighlight={scrollTargetProductId === report.id}
+                  scrollIntoViewOnHighlight={
+                    scrollTargetProductId === report.id
+                  }
                 />
               ))}
             </div>

@@ -1,7 +1,6 @@
+import { type UserSession, userSessionSchema } from "@customreport/shared";
 import { serialize } from "cookie";
 import jwt from "jsonwebtoken";
-
-import { userSessionSchema, type UserSession } from "@customreport/shared";
 
 const ONE_HOUR_IN_SECONDS = 60 * 60;
 

@@ -1,10 +1,9 @@
-import { Injectable } from "@nestjs/common";
-
 import type {
   ActivityLiveResponse,
   ActivityLiveRow,
   UserSession,
 } from "@customreport/shared";
+import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter } from "../../lib/group-scope.js";
@@ -111,7 +110,8 @@ export class ActivityPrismaRepository implements ActivityRepository {
         itemCount: section.items.length,
         riskCount: section.risks.length,
         decisionCount: section.decisions.length,
-        priorityCount: section.items.filter((x) => x.priorityRank != null).length,
+        priorityCount: section.items.filter((x) => x.priorityRank != null)
+          .length,
         lastEditAt,
         submittedAt: section.submittedAt,
       };

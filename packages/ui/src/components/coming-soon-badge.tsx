@@ -1,5 +1,5 @@
-import type { HTMLAttributes } from "react";
 import { cn } from "@customreport/ui/lib/utils";
+import type { HTMLAttributes } from "react";
 
 type ComingSoonBadgeProps = HTMLAttributes<HTMLSpanElement>;
 

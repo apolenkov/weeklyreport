@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-
 import type { SearchHit } from "@customreport/shared";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { useTRPC } from "../../lib/trpc-context";
 

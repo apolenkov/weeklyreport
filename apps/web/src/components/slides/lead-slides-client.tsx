@@ -1,34 +1,34 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
+  type RefObject,
   useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
-  type RefObject,
 } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
 
 import { logClientError } from "../../lib/client-error-reporting";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
+import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
+import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
+import { LeadProductGrid } from "./lead-product-grid";
+import { LeadSlideHero } from "./lead-slide-hero";
 import {
   buildLeadSlidePeriodOptions,
   resolveLeadSlideReportId,
 } from "./lead-slide-periods";
-import { SlideSkeleton } from "./slide-skeleton";
 import { ReportSlides } from "./report-slides";
 import {
   buildSectionSlideModel,
   paginateSectionSlides,
 } from "./section-slide-utils";
-import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
-import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
 import { SlideFullscreenButton } from "./slide-fullscreen-button";
-import { LeadProductGrid } from "./lead-product-grid";
-import { LeadSlideHero } from "./lead-slide-hero";
+import { SlideSkeleton } from "./slide-skeleton";
 
 function SlideEmptyState({
   title,
@@ -56,7 +56,6 @@ type LeadSlidesClientProps = {
    *  caller (lead-form header) can host the fullscreen button. */
   readonly deckRef?: RefObject<HTMLDivElement | null>;
 };
-
 
 export function LeadSlidesClient({
   initialReportId = null,
@@ -215,7 +214,9 @@ export function LeadSlidesClient({
         sourceLabel="Open source section"
         hideSourceLink={inReportMode}
         heroControls={
-          <div className="flex flex-wrap items-center gap-2">{scopeControls}</div>
+          <div className="flex flex-wrap items-center gap-2">
+            {scopeControls}
+          </div>
         }
         toolbar={
           !inReportMode ? (

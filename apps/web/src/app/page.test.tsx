@@ -1,16 +1,17 @@
 /**
  * @vitest-environment jsdom
  */
+
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import {
   afterEach,
   beforeEach,
   describe,
   expect,
   it,
-  vi,
   type Mock,
+  vi,
 } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { LAST_ROLE_STORAGE_KEY } from "../lib/last-role";
 

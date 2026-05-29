@@ -8,7 +8,7 @@
  *   > 30 d    → delete all
  */
 
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
   cleanDatabase,
@@ -73,8 +73,7 @@ describe("LeadFormPrismaRepository — time-based retention", () => {
     // hour-boundary flakiness. Use :10, :20, :50 within that hour.
     const hourStart = new Date(Date.now() - (3 * 24 + 2) * 3_600_000);
     hourStart.setUTCMinutes(0, 0, 0);
-    const sameHour = (m: number) =>
-      new Date(hourStart.getTime() + m * 60_000);
+    const sameHour = (m: number) => new Date(hourStart.getTime() + m * 60_000);
 
     await insertAt(1, sameHour(10)); // HH:10 — oldest
     await insertAt(2, sameHour(20)); // HH:20
@@ -100,8 +99,7 @@ describe("LeadFormPrismaRepository — time-based retention", () => {
     // midnight-boundary flakiness when daysAgo fractions straddle midnight.
     const dayStart = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
     dayStart.setUTCHours(0, 0, 0, 0);
-    const sameDay = (h: number) =>
-      new Date(dayStart.getTime() + h * 3_600_000);
+    const sameDay = (h: number) => new Date(dayStart.getTime() + h * 3_600_000);
 
     await insertAt(1, sameDay(8)); // 08:00 UTC — oldest
     await insertAt(2, sameDay(10)); // 10:00 UTC

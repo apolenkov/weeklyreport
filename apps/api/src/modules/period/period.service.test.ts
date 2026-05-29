@@ -1,11 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
-
 import type { UserSession } from "@customreport/shared";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   PeriodAccessError,
-  PeriodService,
   type PeriodRepository,
+  PeriodService,
 } from "./period.service";
 
 /* ------------------------------------------------------------------ */

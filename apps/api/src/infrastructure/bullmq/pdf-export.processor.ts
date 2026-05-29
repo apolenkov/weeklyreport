@@ -1,13 +1,13 @@
+import { createHash } from "node:crypto";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import {
   Injectable,
-  type OnModuleInit,
   type OnModuleDestroy,
+  type OnModuleInit,
 } from "@nestjs/common";
-import { Worker, type Job } from "bullmq";
+import { type Job, Worker } from "bullmq";
 import { chromium } from "playwright";
-import { createHash } from "node:crypto";
-import { writeFileSync, mkdirSync } from "node:fs";
-import { join, resolve } from "node:path";
 
 import { PdfExportService } from "../../modules/pdf-export/pdf-export.service";
 import { getBullMQOptions } from "./bullmq-options";

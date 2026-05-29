@@ -4,11 +4,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  LAST_ROLE_STORAGE_KEY,
   clearLastRole,
+  LAST_ROLE_STORAGE_KEY,
+  type LastRoleRecord,
   readLastRole,
   writeLastRole,
-  type LastRoleRecord,
 } from "./last-role";
 
 /**

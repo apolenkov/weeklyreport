@@ -80,7 +80,7 @@ export function ActionLogTab() {
 
   const pagination = useCursorPagination<ActionLogRow>(
     (input) =>
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
       (trpc.admin.actionLog.list as any).infiniteQueryOptions(
         { limit: input.limit ?? PAGE_SIZE },
         {

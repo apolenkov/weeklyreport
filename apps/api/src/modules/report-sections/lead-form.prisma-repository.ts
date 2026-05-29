@@ -1,20 +1,20 @@
-import { Injectable } from "@nestjs/common";
 import type {
   ReportSectionReadModel,
   VersionSnapshot,
 } from "@customreport/shared";
 import { versionSnapshotSchema } from "@customreport/shared";
+import { Injectable } from "@nestjs/common";
 import type { ItemType, ItemWorkflowStatus, Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import {
-  reportSectionFullInclude,
-  mapPrismaToReportSection,
-} from "./report-sections.prisma-repository";
 import type {
-  LeadFormRepository,
   CrossAuthorSectionRow,
+  LeadFormRepository,
 } from "./lead-form.service";
+import {
+  mapPrismaToReportSection,
+  reportSectionFullInclude,
+} from "./report-sections.prisma-repository";
 
 @Injectable()
 export class LeadFormPrismaRepository implements LeadFormRepository {
@@ -313,7 +313,10 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               carriedOver: i.carriedOver,
               completed: i.completed ?? null,
               priorityRank: i.priorityRank ?? null,
-              stageNames: i.stageNames ?? i.stageIds ?? (i.stageName ? [i.stageName] : []),
+              stageNames:
+                i.stageNames ??
+                i.stageIds ??
+                (i.stageName ? [i.stageName] : []),
             })),
           });
         }
@@ -327,7 +330,10 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               impact: r.impact,
               mitigation: r.mitigation,
               severity: r.severity ?? "at-risk",
-              stageNames: r.stageNames ?? r.stageIds ?? (r.stageName ? [r.stageName] : []),
+              stageNames:
+                r.stageNames ??
+                r.stageIds ??
+                (r.stageName ? [r.stageName] : []),
             })),
           });
         }
@@ -342,7 +348,10 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               deadline: d.deadline ? new Date(d.deadline) : null,
               impact: d.impact,
               resolvedAt: d.resolvedAt ? new Date(d.resolvedAt) : null,
-              stageNames: d.stageNames ?? d.stageIds ?? (d.stageName ? [d.stageName] : []),
+              stageNames:
+                d.stageNames ??
+                d.stageIds ??
+                (d.stageName ? [d.stageName] : []),
               productId: d.productId as string,
             })),
           });
@@ -384,7 +393,9 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
   }
 
   private buildSnapshotData(
-    section: Prisma.ReportSectionGetPayload<{ include: typeof reportSectionFullInclude }>,
+    section: Prisma.ReportSectionGetPayload<{
+      include: typeof reportSectionFullInclude;
+    }>,
   ): Record<string, unknown> {
     return {
       items: section.items.map((i) => ({
@@ -419,20 +430,25 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       stageStatuses: section.stageStatuses.map((ss) => ({
         projectId: ss.projectId,
         stageId: ss.stageId,
-        stageName: (ss as { stage?: { name: string } }).stage?.name ?? ss.stageId,
+        stageName:
+          (ss as { stage?: { name: string } }).stage?.name ?? ss.stageId,
         status: ss.status,
       })),
     };
   }
 
-  async buildSnapshotProjection(sectionId: string): Promise<Record<string, unknown>> {
+  async buildSnapshotProjection(
+    sectionId: string,
+  ): Promise<Record<string, unknown>> {
     const section = await this.prisma.reportSection.findUnique({
       where: { id: sectionId },
       include: reportSectionFullInclude,
     });
 
     if (!section) {
-      throw new Error(`Section ${sectionId} not found for snapshot projection.`);
+      throw new Error(
+        `Section ${sectionId} not found for snapshot projection.`,
+      );
     }
 
     return this.buildSnapshotData(section);
@@ -555,7 +571,10 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       authorId: string;
       authorName: string;
       stageNames: string[];
-      stages: { stageName: string; status: "green" | "yellow" | "red" | null }[];
+      stages: {
+        stageName: string;
+        status: "green" | "yellow" | "red" | null;
+      }[];
       itemCount: number;
       riskCount: number;
     }[]
@@ -587,7 +606,9 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         authorId: true,
         items: { select: { projectId: true } },
         risks: { select: { projectId: true } },
-        stageStatuses: { select: { projectId: true, stageId: true, status: true } },
+        stageStatuses: {
+          select: { projectId: true, stageId: true, status: true },
+        },
       },
     });
     const sectionByAuthor = new Map(sections.map((s) => [s.authorId, s]));
@@ -597,7 +618,10 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     for (const s of sections) {
       for (const ss of s.stageStatuses) {
         if (ss.status !== null) {
-          statusMap.set(`${s.authorId}::${ss.projectId}::${ss.stageId}`, ss.status);
+          statusMap.set(
+            `${s.authorId}::${ss.projectId}::${ss.stageId}`,
+            ss.status,
+          );
         }
       }
     }
@@ -611,7 +635,10 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         authorId: string;
         authorName: string;
         stageNames: Set<string>;
-        stageEntries: { stageName: string; status: "green" | "yellow" | "red" | null }[];
+        stageEntries: {
+          stageName: string;
+          status: "green" | "yellow" | "red" | null;
+        }[];
         itemCount: number;
         riskCount: number;
       }
@@ -621,7 +648,8 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       if (row.project.archived) continue;
       const key = `${row.projectId}::${row.user.id}`;
       const stageStatus =
-        statusMap.get(`${row.user.id}::${row.projectId}::${row.stageId}`) ?? null;
+        statusMap.get(`${row.user.id}::${row.projectId}::${row.stageId}`) ??
+        null;
       if (!grouped.has(key)) {
         const section = sectionByAuthor.get(row.user.id);
         const itemCount = section
@@ -643,7 +671,10 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       } else {
         const entry = grouped.get(key);
         entry?.stageNames.add(row.stage.name);
-        entry?.stageEntries.push({ stageName: row.stage.name, status: stageStatus });
+        entry?.stageEntries.push({
+          stageName: row.stage.name,
+          status: stageStatus,
+        });
       }
     }
 

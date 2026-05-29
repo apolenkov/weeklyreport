@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   NullTelemetryCache,
-  TelemetryService,
   type TelemetryCachePort,
   type TelemetryRepository,
+  TelemetryService,
 } from "./telemetry.service.js";
 
 function buildRepo(

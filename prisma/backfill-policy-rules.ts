@@ -19,12 +19,11 @@
  * brand-new periods.
  */
 
-import { config as loadEnv } from "dotenv";
 import { resolve } from "node:path";
-
-import pg from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+import { config as loadEnv } from "dotenv";
+import pg from "pg";
 
 // Load .env from repo root regardless of cwd.
 const REPO_ROOT = resolve(__dirname, "..");

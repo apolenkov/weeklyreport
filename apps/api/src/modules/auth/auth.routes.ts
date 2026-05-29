@@ -1,17 +1,15 @@
-import type { Express, Request, Response, NextFunction } from "express";
-import express from "express";
-import passport from "passport";
+import type { UserSession } from "@customreport/shared";
 import type { Strategy as SamlStrategy } from "@node-saml/passport-saml";
 import type { PrismaClient, Role } from "@prisma/client";
-
-import type { UserSession } from "@customreport/shared";
-
-import type { createAuthController } from "./auth.controller.js";
-import {
-  createNullAuditLogger,
-  type AuditLogger,
-} from "../../lib/audit-logger.js";
+import type { Express, NextFunction, Request, Response } from "express";
+import express from "express";
+import passport from "passport";
 import { loginAttemptsTotal } from "../../infrastructure/metrics/metrics.registry.js";
+import {
+  type AuditLogger,
+  createNullAuditLogger,
+} from "../../lib/audit-logger.js";
+import type { createAuthController } from "./auth.controller.js";
 
 export type SamlProfile = {
   samlId: string;

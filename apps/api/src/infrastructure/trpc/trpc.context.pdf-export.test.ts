@@ -1,10 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import jwt from "jsonwebtoken";
-import type { Request } from "express";
 import type { INestApplication } from "@nestjs/common";
-
-import { createContextFactory } from "./trpc.context";
+import type { Request } from "express";
+import jwt from "jsonwebtoken";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createNullLogger } from "../../lib/logger";
+import { createContextFactory } from "./trpc.context";
 
 /**
  * Phase 32-B1 (H-04) — PDF JWT verifier path on the receiving end.
@@ -202,12 +201,12 @@ describe("createContextFactory — Phase 32-B1 PDF JWT verifier path (H-04)", ()
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { createAuditLogger } from "../../lib/audit-logger";
+import type { TrpcContext } from "./trpc.context";
 import {
-  router as testTrpcRouter,
   anyRoleProcedure,
   headProcedure,
+  router as testTrpcRouter,
 } from "./trpc.middleware";
-import type { TrpcContext } from "./trpc.context";
 
 describe("pdfExportGuard — Phase 32-B1 PDF synthetic session restrictions", () => {
   // We rebuild a tiny router exposing the same procedure helpers so we can

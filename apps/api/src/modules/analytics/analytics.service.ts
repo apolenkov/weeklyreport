@@ -1,16 +1,16 @@
 import {
-  trafficLightHistoryInputSchema,
-  trafficLightHistoryOutputSchema,
+  type LeadVelocityInput,
+  type LeadVelocityOutput,
   leadVelocityInputSchema,
   leadVelocityOutputSchema,
+  type PeriodComparisonInput,
+  type PeriodComparisonOutput,
   periodComparisonInputSchema,
   periodComparisonOutputSchema,
   type TrafficLightHistoryInput,
   type TrafficLightHistoryOutput,
-  type LeadVelocityInput,
-  type LeadVelocityOutput,
-  type PeriodComparisonInput,
-  type PeriodComparisonOutput,
+  trafficLightHistoryInputSchema,
+  trafficLightHistoryOutputSchema,
 } from "@customreport/shared";
 
 /**

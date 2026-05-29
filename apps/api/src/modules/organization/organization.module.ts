@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
-
-import { OrganizationService } from "./organization.service.js";
 import { OrganizationPrismaRepository } from "./organization.prisma-repository.js";
+import { OrganizationService } from "./organization.service.js";
 
 /**
  * UFB-047 / Phase 48-A: Organization identity module.

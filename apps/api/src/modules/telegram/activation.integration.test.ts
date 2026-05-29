@@ -7,7 +7,7 @@
  *
  * See .planning/phases/55-telegram/55-PHASE-SUMMARY.md "Activation Playbook".
  */
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 const hasBotToken = !!process.env["TG_BOT_TOKEN"]?.trim();
 

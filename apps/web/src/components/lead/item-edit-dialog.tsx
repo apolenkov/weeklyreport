@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { KanbanItem, ItemStatus, Product } from "./mock-data";
+import type { ItemStatus, KanbanItem, Product } from "./mock-data";
 import { StageMultiSelect } from "./stage-multi-select";
 
 type ItemEditDialogProps = {
@@ -165,10 +165,7 @@ function ItemEditDialogContent({
   // Offer options 1..10 plus any legacy rank above 10 already on the item.
   const MAX_RANK = 10;
   const rankOptions = Array.from({ length: MAX_RANK }, (_, i) => i + 1);
-  if (
-    item?.priorityRank != null &&
-    item.priorityRank > MAX_RANK
-  ) {
+  if (item?.priorityRank != null && item.priorityRank > MAX_RANK) {
     rankOptions.push(item.priorityRank);
   }
 
@@ -295,7 +292,9 @@ function ItemEditDialogContent({
               htmlFor="item-priority-rank"
             >
               Priority rank{" "}
-              <span className="font-normal">(optional — leave blank if not a priority)</span>
+              <span className="font-normal">
+                (optional — leave blank if not a priority)
+              </span>
             </label>
             <select
               id="item-priority-rank"
@@ -311,7 +310,8 @@ function ItemEditDialogContent({
                 const taken = takenRanks.has(r);
                 return (
                   <option key={r} value={r} disabled={taken}>
-                    {r}{taken ? " (taken)" : ""}
+                    {r}
+                    {taken ? " (taken)" : ""}
                   </option>
                 );
               })}

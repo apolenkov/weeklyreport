@@ -2,8 +2,8 @@ import { Module } from "@nestjs/common";
 import Redis from "ioredis";
 
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service";
-import { AdminService } from "./admin.service";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
+import { AdminService } from "./admin.service";
 import { SessionRevocationService } from "./session-revocation.service";
 
 @Module({

@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import { LockBadge } from "../report-shell/lock-badge";
 import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
-import { RiskEditDialog } from "./risk-edit-dialog";
 import type { Product, RiskEntry } from "./mock-data";
+import { RiskEditDialog } from "./risk-edit-dialog";
 import { canonicalStageName, splitStageNames } from "./stage-tags";
 
 type RisksSectionProps = {
@@ -224,7 +224,9 @@ export function RisksSection({
                   </div>
                 ) : risk.foreign === true ? (
                   <div className="ml-auto flex gap-1">
-                    <LockBadge authorName={risk.authorName ?? sectionAuthorName} />
+                    <LockBadge
+                      authorName={risk.authorName ?? sectionAuthorName}
+                    />
                   </div>
                 ) : null}
               </div>
@@ -266,7 +268,8 @@ export function RisksSection({
               {/* F4: required-mark when product is at-risk/blocked but no stage selected */}
               {needsStage && (
                 <p className="mt-2 text-[11px] font-semibold text-[#8a6d1b]">
-                  ⚠ Select at least one stage — required for at-risk/blocked products.
+                  ⚠ Select at least one stage — required for at-risk/blocked
+                  products.
                 </p>
               )}
               {/* P5: unified [author …… chip] meta-row */}

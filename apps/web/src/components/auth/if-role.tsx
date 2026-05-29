@@ -1,8 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
 import type { Role } from "@customreport/shared";
+import { useQuery } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 
 import { useTRPC } from "../../lib/trpc-context";
 

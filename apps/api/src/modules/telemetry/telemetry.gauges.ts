@@ -1,14 +1,13 @@
 import {
   Injectable,
-  type OnModuleInit,
   type OnModuleDestroy,
+  type OnModuleInit,
 } from "@nestjs/common";
-
-import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {
   customreportActiveLeadsTotal,
   customreportReportsOnTimeRatio,
 } from "../../infrastructure/metrics/metrics.registry.js";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 
 /**
  * Port shape used by the gauges service. Declared as an interface so unit

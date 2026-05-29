@@ -1,14 +1,14 @@
-import { Injectable } from "@nestjs/common";
 import { type AssembledReport } from "@customreport/shared";
+import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import type { PublicationRepository } from "./publication.service";
+import { buildTransition } from "../period/period-transition.js";
 import {
   buildAssembledReportFromPrismaRow,
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
 } from "../published-report-snapshot";
-import { buildTransition } from "../period/period-transition.js";
+import type { PublicationRepository } from "./publication.service";
 
 @Injectable()
 export class PublicationPrismaRepository implements PublicationRepository {

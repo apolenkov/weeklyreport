@@ -3,7 +3,7 @@
 // modules/ai/**. This file (and ai-cache.ts) are the whitelisted facade
 // boundary.
 import { Injectable } from "@nestjs/common";
-import { Prisma, type PrismaClient, type AiInsightKind } from "@prisma/client";
+import { type AiInsightKind, Prisma, type PrismaClient } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 

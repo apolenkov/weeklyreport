@@ -25,7 +25,10 @@ export function deriveEffectiveStageStatus(
     if (PRECEDENCE[s] > PRECEDENCE[best]) best = s;
   }
   for (const i of items) {
-    if (i.workflowStatus === "blocked" && PRECEDENCE.blocked > PRECEDENCE[best]) {
+    if (
+      i.workflowStatus === "blocked" &&
+      PRECEDENCE.blocked > PRECEDENCE[best]
+    ) {
       best = "blocked";
     }
   }

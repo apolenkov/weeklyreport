@@ -1,5 +1,5 @@
-import { cn } from "@customreport/ui/lib/utils";
 import { Badge } from "@customreport/ui/components/ui/badge";
+import { cn } from "@customreport/ui/lib/utils";
 
 export type TrafficLightStatus = "green" | "yellow" | "red" | "unset";
 

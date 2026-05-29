@@ -1,20 +1,19 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
-
 import {
   DEFAULT_ORGANIZATION_IDENTITY,
   type OrganizationPublic,
 } from "@customreport/shared";
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
+import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
 import { PulseBackground } from "../components/landing/pulse-background";
 import { PulseMark } from "../components/landing/pulse-mark";
 import { TaglineCycler } from "../components/landing/tagline-cycler";
+import { type LastRoleRecord, readLastRole } from "../lib/last-role";
 import { useTRPC } from "../lib/trpc-context";
-import { readLastRole, type LastRoleRecord } from "../lib/last-role";
 
 const AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB === "true";
 

@@ -1,29 +1,29 @@
-import { Injectable } from "@nestjs/common";
 import {
-  weeklyReportReadModelSchema,
-  type WeeklyReportReadModel,
-  type PortfolioProductOverview,
   type Escalation,
+  type PortfolioProductOverview,
+  type WeeklyReportReadModel,
+  weeklyReportReadModelSchema,
 } from "@customreport/shared";
+import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {
-  groupScopeFilter,
   type GroupScopeOptions,
+  groupScopeFilter,
 } from "../../lib/group-scope.js";
-import type {
-  WeeklyReportRepository,
-  WeeklyReportScopeSession,
-} from "./weekly-report.service.js";
-import {
-  reportSectionFullInclude,
-  mapPrismaToReportSection,
-} from "../report-sections/report-sections.prisma-repository.js";
 import {
   buildEscalationsFromSnapshotSections,
   buildPortfolioProductsFromSnapshotSections,
   filterSnapshotSections,
   parsePublishedSnapshot,
 } from "../published-report-snapshot.js";
+import {
+  mapPrismaToReportSection,
+  reportSectionFullInclude,
+} from "../report-sections/report-sections.prisma-repository.js";
+import type {
+  WeeklyReportRepository,
+  WeeklyReportScopeSession,
+} from "./weekly-report.service.js";
 
 @Injectable()
 export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
@@ -164,7 +164,7 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
     const leadSections = (report.sections as any[]).map(
       mapPrismaToReportSection,
     );

@@ -1,10 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-
 import { Button } from "@customreport/ui/components/ui/button";
-import { Users } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +9,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@customreport/ui/components/ui/dropdown-menu";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Users } from "lucide-react";
+import { useState } from "react";
 
 import { useTRPC } from "../../lib/trpc-context";
 
@@ -47,7 +46,10 @@ export function DevRoleSwitcher() {
     trpc.dev.wipeAndReseed.mutationOptions({
       onSuccess: () => {
         // Logout then redirect to landing so the next role pick starts clean.
-        void fetch("/auth/logout", { method: "POST", credentials: "include" }).finally(() => {
+        void fetch("/auth/logout", {
+          method: "POST",
+          credentials: "include",
+        }).finally(() => {
           window.location.href = "/";
         });
       },
@@ -69,7 +71,10 @@ export function DevRoleSwitcher() {
       role: identity.role,
       email: identity.email,
     });
-    void fetch("/auth/logout", { method: "POST", credentials: "include" }).finally(() => {
+    void fetch("/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    }).finally(() => {
       window.location.href = `/auth/dev-login?${params.toString()}`;
     });
   };

@@ -1,12 +1,12 @@
-import { Injectable, Logger } from "@nestjs/common";
 import type {
-  OnModuleInit,
-  OnModuleDestroy,
   BeforeApplicationShutdown,
+  OnModuleDestroy,
+  OnModuleInit,
 } from "@nestjs/common";
-import pg from "pg";
+import { Injectable, Logger } from "@nestjs/common";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
+import pg from "pg";
 
 const SLOW_QUERY_MS = 100;
 
@@ -43,7 +43,7 @@ export class PrismaService
     // narrows differently depending on the constructor's `log` shape and
     // TypeScript can't always reconcile the two.
     const debugEnabled = (process.env.LOG_LEVEL ?? "info") === "debug";
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
     const self = this as any;
 
     self.$on?.(

@@ -8,16 +8,16 @@
 // The integration check (real Prisma roundtrip) is captured by the
 // "viewer cannot call ai.sentiment on a draft Risk row" test case below,
 // using a Prisma mock that returns null when visibility filters reject.
-import { describe, expect, it, vi } from "vitest";
-import { TRPCError } from "@trpc/server";
 
+import type { UserSession } from "@customreport/shared";
+import { TRPCError } from "@trpc/server";
+import { describe, expect, it, vi } from "vitest";
 import {
   assertCanReadReport,
   assertCanReadRisk,
   assertCanReadSection,
   reportVisibilityWhere,
 } from "./ai-authz.js";
-import type { UserSession } from "@customreport/shared";
 
 const VIEWER: UserSession = {
   userId: "11111111-1111-4111-8111-111111111111",

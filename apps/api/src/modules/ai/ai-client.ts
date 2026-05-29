@@ -7,7 +7,7 @@
 // - All SDK errors are normalised to AiUnavailableError so callers have
 //   one catch-target.
 import Anthropic from "@anthropic-ai/sdk";
-import { z, type ZodType } from "zod";
+import { type ZodType, z } from "zod";
 
 export class AiUnavailableError extends Error {
   public readonly underlying?: unknown;

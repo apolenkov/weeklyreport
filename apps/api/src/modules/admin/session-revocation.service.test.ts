@@ -5,7 +5,7 @@
  * so the tests run without infrastructure. The stub implements the three
  * ioredis methods the service calls: sadd, srem, sismember.
  */
-import { describe, expect, it, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { SessionRevocationService } from "./session-revocation.service.js";
 

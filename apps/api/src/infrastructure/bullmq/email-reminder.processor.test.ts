@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { Job } from "bullmq";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock NestJS common so decorators are no-ops in tests
 vi.mock("@nestjs/common", () => ({

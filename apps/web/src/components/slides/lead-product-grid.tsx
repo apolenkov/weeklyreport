@@ -37,10 +37,18 @@ function StatusBadge({ status }: { status: SlideProduct["status"] }) {
   );
 }
 
-function ItemList({ items, empty }: { items: readonly string[]; empty: string }) {
+function ItemList({
+  items,
+  empty,
+}: {
+  items: readonly string[];
+  empty: string;
+}) {
   if (items.length === 0) {
     return (
-      <p className="text-xs italic text-[var(--color-muted-foreground)]">{empty}</p>
+      <p className="text-xs italic text-[var(--color-muted-foreground)]">
+        {empty}
+      </p>
     );
   }
   return (

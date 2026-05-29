@@ -1,9 +1,8 @@
 "use client";
 
+import { cn } from "@customreport/ui/lib/utils";
 import * as React from "react";
 import { ResponsiveContainer, Tooltip } from "recharts";
-
-import { cn } from "@customreport/ui/lib/utils";
 
 /**
  * Minimal chart wrapper around recharts — Tailwind-friendly height/width

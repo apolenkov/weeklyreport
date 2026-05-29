@@ -1,17 +1,16 @@
-import { describe, expect, it } from "vitest";
-
 import type {
   AdminSnapshot,
   AppSettings,
   StageAssignment,
   UserSession,
 } from "@customreport/shared";
+import { describe, expect, it } from "vitest";
 
 import { adminRouter } from "./admin.router";
 import {
   AdminAccessError,
-  AdminService,
   type AdminRepository,
+  AdminService,
 } from "./admin.service";
 
 /* ------------------------------------------------------------------ */

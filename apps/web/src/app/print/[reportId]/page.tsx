@@ -1,16 +1,15 @@
 "use client";
 
-import { use, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { use, useEffect } from "react";
 import { toast } from "sonner";
-
-import { useTRPC } from "../../../lib/trpc-context";
-import { mapWeeklyReport } from "../../../lib/mappers";
-import { joinPeriodLabel } from "../../../lib/format-date";
 import type {
   PortfolioProduct,
   ProductReport,
 } from "../../../components/dashboard/mock-data";
+import { joinPeriodLabel } from "../../../lib/format-date";
+import { mapWeeklyReport } from "../../../lib/mappers";
+import { useTRPC } from "../../../lib/trpc-context";
 
 /* ------------------------------------------------------------------ */
 /*  Print/PDF Template — Client Component (Phase 21)                  */
