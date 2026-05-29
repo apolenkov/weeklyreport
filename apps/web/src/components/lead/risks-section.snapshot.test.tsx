@@ -35,7 +35,7 @@ describe("RisksSection meta-row — pre-extract snapshot", () => {
     );
     expect(screen.getByText("All stages")).toBeInTheDocument();
     const stageDiv = container.querySelector(
-      '[aria-label="Risk stages: all stages"]',
+      '[aria-label="Risk stages: All stages"]',
     );
     expect(stageDiv).toMatchSnapshot();
   });
