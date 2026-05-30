@@ -1,5 +1,24 @@
 # Upgrade `@react-email/components` off the deprecated release
 
+## Outcome (2026-05-30): retain `^1.0.12` as recorded fallback
+
+Investigation is complete and the result is **no migration**. Verified against
+the registry on 2026-05-30:
+
+- `@react-email/components` is deprecated with the generic boilerplate
+  ("Package no longer supported. Contact Support…") across the whole version
+  line; `1.0.12` is the latest published version (no newer target exists).
+- The `react-email` umbrella (`6.5.0`) is the CLI/preview tool, not the
+  component set, so it does not re-export the imported components.
+- No republished package and no individual `@react-email/<component>` scoped set
+  covers the imported components either.
+- The companion `@react-email/render@^2.0.8` is **not** deprecated and stays.
+
+Per the "No maintained successor exists" path, `^1.0.12` is kept as the
+deliberate fallback, guarded by `render-template.test.ts`, and revisited when a
+maintained successor ships. The spec delta records this as the durable
+requirement. This change is archived as the record of that decision.
+
 ## Why
 
 `@react-email/components` (`^1.0.12`, declared in `apps/api/package.json`) is
