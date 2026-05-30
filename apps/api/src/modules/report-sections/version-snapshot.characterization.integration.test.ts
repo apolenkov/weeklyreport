@@ -81,9 +81,7 @@ function createLeadFormRepo(opts: {
   restoreVersion: ReturnType<typeof vi.fn>;
   snapshots: SnapshotRow[];
 } {
-  const snapshots: SnapshotRow[] = opts.snapshots
-    ? [...opts.snapshots]
-    : [];
+  const snapshots: SnapshotRow[] = opts.snapshots ? [...opts.snapshots] : [];
   let projection: Record<string, unknown> = opts.projection ?? {};
 
   const createVersionSnapshot = vi.fn(async () => {
@@ -307,9 +305,9 @@ describe("characterization: section submission + lifecycle gate", () => {
     const repo = createReportSectionsRepo({ section: makeSection() });
     const service = new ReportSectionsService(repo);
 
-    await expect(service.submitSection(submitInput, otherUserId)).rejects.toThrow(
-      "Can only edit your own section.",
-    );
+    await expect(
+      service.submitSection(submitInput, otherUserId),
+    ).rejects.toThrow("Can only edit your own section.");
   });
 });
 

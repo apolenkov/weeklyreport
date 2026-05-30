@@ -18,15 +18,15 @@ import { VersionHistoryService } from "./version-history.service";
 // after the version/snapshot extraction (code-quality-modernization, Wave 3).
 // The error classes have a single definition (in `lead-form-shared.ts`) so
 // `instanceof` checks in the tRPC error-mapper stay valid.
-export {
-  LeadFormAccessError,
-  LeadFormDomainError,
-} from "./lead-form-shared";
 export type {
   CreateSnapshotResult,
   CrossAuthorSectionRow,
   LeadFormRepository,
   SnapshotLatestRow,
+} from "./lead-form-shared";
+export {
+  LeadFormAccessError,
+  LeadFormDomainError,
 } from "./lead-form-shared";
 
 /**

@@ -31,12 +31,12 @@ import { SnapshotAdminService } from "./snapshot-admin.service";
 // after the decomposition (code-quality-modernization, Wave 3). The error
 // classes have exactly one definition (in `admin-shared.ts`) so `instanceof`
 // checks in the tRPC error-mapper stay valid.
+export type { AdminRepository, PeriodRowFromRepo } from "./admin-shared";
 export {
   AdminAccessError,
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
 } from "./admin-shared";
-export type { AdminRepository, PeriodRowFromRepo } from "./admin-shared";
 
 /**
  * Thin delegating facade over four focused admin services

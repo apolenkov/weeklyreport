@@ -5,7 +5,7 @@
 // unchanged. No symbol was renamed — the legacy-misnamed `stageIds` field
 // keeps its name (TODO(STAGE-NAMING-01)).
 export * from "./period.schema";
-export * from "./report-primitives.schema";
 export * from "./report.schema";
+export * from "./report-primitives.schema";
 export * from "./section.schema";
 export * from "./stage.schema";
