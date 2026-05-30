@@ -7,7 +7,7 @@ The repository MUST pass a single final acceptance gate before the
 consists of five commands that all exit 0:
 `pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm lint:md`.
 The chain MUST include `pnpm build` so the gate matches the production build,
-and `pnpm lint:md` so planning docs are clean.
+and `pnpm lint:md` so the Markdown surface it covers (`README.md`) is clean.
 
 #### Scenario: All five gate commands are green
 

@@ -15,13 +15,16 @@ Gates after every step: `pnpm typecheck && pnpm lint && pnpm test`.
 ## Final acceptance gate (five-command chain)
 
 - [ ] FGR-G1: Run `pnpm typecheck`; confirm exit 0.
-- [ ] FGR-G2: Run `pnpm lint`; confirm exit 0. Note this aggregates the Turbo
-      `lint` task plus `pnpm lint:prisma:typecheck` (see `package.json`).
+- [ ] FGR-G2: Run `pnpm lint`; confirm exit 0. Note this runs
+      `biome check . && eslint . && pnpm lint:prisma:typecheck` as a single root
+      pass (see `package.json`) — Biome owns lint+format, residual ESLint keeps
+      only the rules Biome cannot replace.
 - [ ] FGR-G3: Run `pnpm test`; confirm exit 0.
 - [ ] FGR-G4: Run `pnpm build`; confirm exit 0.
-- [ ] FGR-G5: Run `pnpm lint:md`; confirm exit 0. Note this lints
-      `.planning/**` (excluding `.planning/local-archive/**`) and `README.md`
-      per the `lint:md` script — it does not lint `openspec/` change docs.
+- [ ] FGR-G5: Run `pnpm lint:md`; confirm exit 0. Note the `lint:md` script is
+      `markdownlint-cli2 "README.md"` — it lints ONLY `README.md`, not
+      `.planning/**` or `openspec/` change docs. This is a deliberately thin
+      Markdown gate; treat a green result as covering README only.
 - [ ] FGR-G6: Run the full chain in one line and confirm a single green exit:
       `pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm lint:md`.
 
