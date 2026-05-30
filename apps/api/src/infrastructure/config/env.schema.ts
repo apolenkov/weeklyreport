@@ -2,13 +2,13 @@ import { z } from "zod";
 
 export const envSchema = z
   .object({
-    DATABASE_URL: z.string().url().startsWith("postgresql://"),
-    DIRECT_URL: z.string().url().startsWith("postgresql://").optional(),
+    DATABASE_URL: z.url().startsWith("postgresql://"),
+    DIRECT_URL: z.url().startsWith("postgresql://").optional(),
     PORT: z.coerce.number().int().positive().default(3001),
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),
-    FRONTEND_URL: z.string().url().default("http://localhost:3000"),
+    FRONTEND_URL: z.url().default("http://localhost:3000"),
     // 36-04: optional CSV of additional allowed origins for CORS. Lets
     // prod accept e.g. customreport.example.com + admin.customreport.
     // example.com from the same API instance. Wildcards (*) are rejected
@@ -25,8 +25,8 @@ export const envSchema = z
     AUTH_JWT_SECRET: z.string().min(32).optional(),
 
     // SAML / Keycloak (validated at runtime by saml.strategy.ts requireEnv)
-    KEYCLOAK_SAML_CALLBACK_URL: z.string().url().optional(),
-    KEYCLOAK_SAML_ENTRY_POINT: z.string().url().optional(),
+    KEYCLOAK_SAML_CALLBACK_URL: z.url().optional(),
+    KEYCLOAK_SAML_ENTRY_POINT: z.url().optional(),
     KEYCLOAK_SAML_ISSUER: z.string().optional(),
     KEYCLOAK_SAML_CERT: z.string().optional(),
 
@@ -45,14 +45,14 @@ export const envSchema = z
     // OpenTelemetry (37-01). All optional — SDK only starts when
     // OTEL_EXPORTER_OTLP_ENDPOINT is set AND OTEL_SDK_DISABLED is not
     // 'true'. See apps/api/src/infrastructure/otel/otel.bootstrap.ts.
-    OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
+    OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
     OTEL_SDK_DISABLED: z.string().default("false"),
     OTEL_TRACES_SAMPLER_ARG: z.coerce.number().min(0).max(1).default(0.1),
     OTEL_SERVICE_NAME: z.string().optional(),
     OTEL_SERVICE_VERSION: z.string().optional(),
 
     // PDF generation
-    PDF_BASE_URL: z.string().url().default("http://localhost:3000"),
+    PDF_BASE_URL: z.url().default("http://localhost:3000"),
     // Phase 23-01: directory where the BullMQ worker writes generated PDFs and
     // where /pdfs static mount serves them. Resolved relative to the API's cwd
     // (apps/api/) at runtime — `./storage/pdfs` lands at `apps/api/storage/pdfs`

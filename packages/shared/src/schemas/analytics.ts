@@ -3,8 +3,8 @@ import { z } from "zod";
 const isoDateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 export const trafficLightHistoryInputSchema = z.object({
-  projectId: z.string().uuid().optional(),
-  leadId: z.string().uuid().optional(),
+  projectId: z.uuid().optional(),
+  leadId: z.uuid().optional(),
   periodFrom: isoDateOnly,
   periodTo: isoDateOnly,
 });
@@ -18,7 +18,7 @@ export const trafficLightCellSchema = z
 export type TrafficLightCell = z.infer<typeof trafficLightCellSchema>;
 
 export const trafficLightRowSchema = z.object({
-  projectId: z.string().uuid(),
+  projectId: z.uuid(),
   projectName: z.string(),
   statuses: z.array(trafficLightCellSchema),
 });
@@ -42,7 +42,7 @@ export const leadVelocityRowSchema = z.object({
   periodLabel: isoDateOnly,
   leads: z.array(
     z.object({
-      leadId: z.string().uuid(),
+      leadId: z.uuid(),
       leadName: z.string(),
       submittedSections: z.number().int().nonnegative(),
     }),
@@ -58,7 +58,7 @@ export const periodComparisonInputSchema = z.object({
 export type PeriodComparisonInput = z.infer<typeof periodComparisonInputSchema>;
 
 export const periodComparisonRowSchema = z.object({
-  projectId: z.string().uuid(),
+  projectId: z.uuid(),
   projectName: z.string(),
   statusA: trafficLightCellSchema,
   statusB: trafficLightCellSchema,

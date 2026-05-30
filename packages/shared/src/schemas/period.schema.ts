@@ -8,7 +8,7 @@ import {
 } from "./report-primitives.schema";
 
 export const reportPeriodSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   periodStart: reportDate(),
   periodEnd: reportDate(),
   deadline: reportDate(),
@@ -71,7 +71,7 @@ export const periodListBucketSchema = z.enum([
  *   - `canArchive` mirrors the publish state (and skips already-archived).
  */
 export const periodListItemSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   periodStart: reportDate(),
   periodEnd: reportDate(),
   deadline: reportDate(),
@@ -130,7 +130,7 @@ export type AdminCreatePeriodManualInput = z.infer<
  * afterwards, so we don't need to return the full `PeriodListItem`.
  */
 export const adminCreatePeriodManualResultSchema = z.object({
-  periodId: z.string().uuid(),
+  periodId: z.uuid(),
   periodStart: reportDate(),
   periodEnd: reportDate(),
   deadline: reportDate(),
@@ -159,7 +159,7 @@ export type AdminCreatePeriodManualResult = z.infer<
  * `nullable()` keeps the distinction explicit at the wire layer.
  */
 export const adminUpdatePeriodManualSchema = z.object({
-  reportId: z.string().uuid(),
+  reportId: z.uuid(),
   periodStart: z.coerce.date().optional(),
   periodEnd: z.coerce.date().optional(),
   deadline: z.coerce.date().optional(),
@@ -178,7 +178,7 @@ export type AdminUpdatePeriodManualInput = z.infer<
  * stays parallel for consistency).
  */
 export const adminUpdatePeriodManualResultSchema = z.object({
-  periodId: z.string().uuid(),
+  periodId: z.uuid(),
   periodStart: reportDate(),
   periodEnd: reportDate(),
   deadline: reportDate(),
@@ -238,9 +238,7 @@ export const appSettingsSchema = z.object({
     reminderAudienceWireSchema.default("lead-with-draft"),
   // ---- UFB-048: Notifications knobs -----------------------------------
   // Nullable email; `''` is rejected (admins can clear by sending null).
-  notificationFromEmail: z
-    .union([z.string().email().max(254), z.null()])
-    .default(null),
+  notificationFromEmail: z.union([z.email().max(254), z.null()]).default(null),
   // ---- UFB-051 (Phase 51-A): Period-cycle knobs -----------------------
   // Calendar anchoring + concurrency + publish/reopen gating. All carry
   // `.default()` so pre-51-A fixtures (and partial PATCH payloads from
@@ -273,7 +271,7 @@ export const appSettingsUpdateSchema = appSettingsSchema.partial();
 // ---------------------------------------------------------------------------
 
 export const periodReadModelSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   periodStart: reportDate(),
   periodEnd: reportDate(),
   deadline: reportDate(),

@@ -5,16 +5,16 @@ import { z } from "zod";
 // ---------------------------------------------------------------------------
 
 export const stageSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string().min(1),
   sortOrder: z.number().int().min(0),
 });
 
 export const stageAssignmentSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string().uuid(),
-  stageId: z.string().uuid(),
-  projectId: z.string().uuid(),
+  id: z.uuid(),
+  userId: z.uuid(),
+  stageId: z.uuid(),
+  projectId: z.uuid(),
   stageName: z.string().min(1),
   userName: z.string().min(1).optional(),
 });
@@ -24,8 +24,8 @@ export const stageAssignmentSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export const versionSnapshotSchema = z.object({
-  id: z.string().uuid(),
-  reportSectionId: z.string().uuid(),
+  id: z.uuid(),
+  reportSectionId: z.uuid(),
   version: z.number().int().positive(),
   createdAt: z.coerce.date(),
   /**

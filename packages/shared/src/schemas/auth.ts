@@ -21,12 +21,12 @@ export const roleSchema = z.enum(["lead", "head", "admin", "viewer"]);
 export const sessionRoleSchema = z.enum(["lead", "head", "admin", "viewer"]);
 
 export const userSessionSchema = z.object({
-  userId: z.string().uuid(),
+  userId: z.uuid(),
   email: z.email(),
   name: z.string().min(1),
   role: sessionRoleSchema,
-  activeReportId: z.string().uuid().nullable().optional(),
-  activeReportSectionId: z.string().uuid().nullable().optional(),
+  activeReportId: z.uuid().nullable().optional(),
+  activeReportSectionId: z.uuid().nullable().optional(),
   /**
    * UFB-040 / Phase 46-01: the user's owning reporting group (mirrors
    * `User.reportingGroupId` in Prisma). Optional on the session shape
@@ -35,7 +35,7 @@ export const userSessionSchema = z.object({
    * consumers (groupScopeFilter) treat `undefined` as "no head/lead
    * group context" and fall through to viewer-style empty filter.
    */
-  reportingGroupId: z.string().uuid().optional(),
+  reportingGroupId: z.uuid().optional(),
   /**
    * Display name for the owning reporting group. Hydrated per request by the
    * API context so long-lived JWTs can keep carrying only the stable group id
@@ -50,7 +50,7 @@ export const userSessionSchema = z.object({
    * the viewer has been provisioned but granted access to no groups,
    * which `groupScopeFilter` translates into a zero-row filter.
    */
-  viewerGroupAccess: z.array(z.string().uuid()).optional(),
+  viewerGroupAccess: z.array(z.uuid()).optional(),
   /**
    * UFB-047 / Phase 48-A: organization identity hydrated per-request from
    * the `Organization` singleton in the tRPC context factory. Optional on

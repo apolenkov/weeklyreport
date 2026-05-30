@@ -12,19 +12,19 @@ import {
 } from "./report-primitives.schema";
 
 export const projectStatusInputSchema = z.object({
-  projectId: z.string().uuid(),
+  projectId: z.uuid(),
   status: trafficLightStatusSchema.optional(),
 });
 
 export const stageStatusInputSchema = z.object({
-  projectId: z.string().uuid(),
-  stageId: z.string().uuid(),
+  projectId: z.uuid(),
+  stageId: z.uuid(),
   status: trafficLightStatusSchema.nullable().optional(),
 });
 
 export const itemInputSchema = z.object({
-  id: z.string().uuid().optional(),
-  projectId: z.string().uuid(),
+  id: z.uuid().optional(),
+  projectId: z.uuid(),
   type: itemTypeSchema,
   text: safeText({ max: 500 }),
   tag: safeText({ max: 50 }),
@@ -36,8 +36,8 @@ export const itemInputSchema = z.object({
 });
 
 export const riskInputSchema = z.object({
-  id: z.string().uuid().optional(),
-  projectId: z.string().uuid(),
+  id: z.uuid().optional(),
+  projectId: z.uuid(),
   risk: safeText({ max: 500 }),
   impact: safeText({ max: 500 }),
   mitigation: safeText({ max: 500 }),
@@ -46,18 +46,18 @@ export const riskInputSchema = z.object({
 });
 
 export const decisionInputSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: z.uuid().optional(),
   text: safeText({ max: 500 }),
   owner: safeText({ max: 200 }),
   deadline: z.coerce.date().nullable().optional(),
   impact: safeText({ max: 500 }),
   resolvedAt: z.coerce.date().nullable().optional(),
   stageIds: stageIdsField,
-  productId: z.string().uuid().nullable().optional(),
+  productId: z.uuid().nullable().optional(),
 });
 
 export const draftSaveSchema = z.object({
-  reportSectionId: z.string().uuid(),
+  reportSectionId: z.uuid(),
   status: reportSectionStatusSchema.default("draft"),
   projectStatuses: z.array(projectStatusInputSchema),
   stageStatuses: z.array(stageStatusInputSchema).default([]),
@@ -83,14 +83,14 @@ export const submitSectionSchema = draftSaveSchema.extend({
 // in which case the lead-form renders the project's stages as
 // `unassigned` chips with assignee=null.
 export const ownedStageSchema = z.object({
-  stageId: z.string().uuid(),
+  stageId: z.uuid(),
   stageName: z.string().min(1),
   sortOrder: z.number().int().min(0),
   status: trafficLightStatusSchema.nullable().optional(),
 });
 
 export const projectReadModelSchema = z.object({
-  projectId: z.string().uuid(),
+  projectId: z.uuid(),
   projectName: z.string().min(1),
   trafficLight: trafficLightStatusSchema.nullable(),
   /**
@@ -110,9 +110,9 @@ export const projectReadModelSchema = z.object({
 // Optional so legacy fixtures continue to parse — consumers that gate
 // on the role default to `'lead'` when missing.
 export const reportSectionReadModelSchema = z.object({
-  reportSectionId: z.string().uuid(),
-  reportId: z.string().uuid(),
-  authorId: z.string().uuid(),
+  reportSectionId: z.uuid(),
+  reportId: z.uuid(),
+  authorId: z.uuid(),
   authorName: z.string().min(1),
   authorRole: roleSchema.optional(),
   // UFB-047 / Phase 49-01: `departmentName` removed. Consumers that
@@ -136,7 +136,7 @@ export const reportSectionReadModelSchema = z.object({
 });
 
 export const submissionDashboardRowSchema = z.object({
-  leadId: z.string().uuid(),
+  leadId: z.uuid(),
   leadName: z.string().min(1),
   role: roleSchema,
   projectNames: z.array(z.string().min(1)),

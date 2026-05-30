@@ -21,11 +21,11 @@ import { reportSectionReadModelSchema } from "./section.schema";
  * dashboard.
  */
 export const activityLiveRowSchema = z.object({
-  reportId: z.string().uuid(),
-  reportSectionId: z.string().uuid().nullable(),
-  leadId: z.string().uuid(),
+  reportId: z.uuid(),
+  reportSectionId: z.uuid().nullable(),
+  leadId: z.uuid(),
   leadName: z.string().min(1),
-  email: z.string().email(),
+  email: z.email(),
   status: reportSectionStatusSchema,
   itemCount: z.number().int().min(0),
   riskCount: z.number().int().min(0),
@@ -38,7 +38,7 @@ export const activityLiveRowSchema = z.object({
 export type ActivityLiveRow = z.infer<typeof activityLiveRowSchema>;
 
 export const activityLiveResponseSchema = z.object({
-  reportId: z.string().uuid().nullable(),
+  reportId: z.uuid().nullable(),
   periodStart: reportDate().nullable(),
   periodEnd: reportDate().nullable(),
   periodStatus: periodStatusSchema.nullable(),
@@ -57,13 +57,13 @@ export const portfolioOverviewSchema = z.object({
 });
 
 export const assembledReportSchema = z.object({
-  reportId: z.string().uuid(),
+  reportId: z.uuid(),
   periodStart: reportDate(),
   periodEnd: reportDate(),
   deadline: reportDate(),
   status: reportStatusSchema,
   publishedAt: z.coerce.date().nullable().default(null),
-  publishedById: z.string().uuid().nullable().default(null),
+  publishedById: z.uuid().nullable().default(null),
   publishedByName: z.string().min(1).nullable().default(null),
   portfolioOverview: portfolioOverviewSchema,
   sections: z.array(reportSectionReadModelSchema),
@@ -77,12 +77,12 @@ export const pdfExportStatusSchema = z.enum([
 ]);
 
 export const pdfExportRequestSchema = z.object({
-  reportId: z.string().uuid(),
+  reportId: z.uuid(),
 });
 
 export const pdfExportJobSchema = z.object({
-  jobId: z.string().uuid(),
-  reportId: z.string().uuid(),
+  jobId: z.uuid(),
+  reportId: z.uuid(),
   status: pdfExportStatusSchema,
   requestedAt: z.coerce.date(),
   completedAt: z.coerce.date().nullable(),
@@ -92,11 +92,11 @@ export const pdfExportJobSchema = z.object({
 });
 
 export const adminUserSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   email: z.email(),
   name: z.string().min(1),
   role: roleSchema,
-  reportingGroupId: z.string().uuid().nullable().optional(),
+  reportingGroupId: z.uuid().nullable().optional(),
   reportingGroupName: z.string().min(1).max(200).nullable().optional(),
   // A2 (UAT-v7 2026-05-12): soft-deactivation flag. Defaults to true so
   // existing snapshot rows (created before this field existed) parse cleanly.
@@ -104,20 +104,20 @@ export const adminUserSchema = z.object({
 });
 
 export const reportingGroupSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string().min(1).max(200),
   description: z.string().max(500).nullable().optional(),
   archived: z.boolean(),
   // UFB-039: optional FK to the User (role=head or admin) that runs this
   // group. null when the admin has not yet assigned a leader.
-  headUserId: z.string().uuid().nullable().optional(),
+  headUserId: z.uuid().nullable().optional(),
 });
 
 export const adminProjectSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string().min(1),
   archived: z.boolean(),
-  leadId: z.string().uuid(),
+  leadId: z.uuid(),
   leadName: z.string().min(1),
 });
 
@@ -128,9 +128,9 @@ export const adminProjectSchema = z.object({
  * (groupId, productId) tuple.
  */
 export const groupProductSchema = z.object({
-  id: z.string().uuid(),
-  groupId: z.string().uuid(),
-  productId: z.string().uuid(),
+  id: z.uuid(),
+  groupId: z.uuid(),
+  productId: z.uuid(),
   createdAt: z.coerce.date(),
 });
 
@@ -140,8 +140,8 @@ export const groupProductSchema = z.object({
  * identifies the edge on both sides of the M:M relation.
  */
 export const groupProductEdgeInputSchema = z.object({
-  groupId: z.string().uuid(),
-  productId: z.string().uuid(),
+  groupId: z.uuid(),
+  productId: z.uuid(),
 });
 
 // NOTIF-02 (Phase 29-05): 'escalation' added for T+2h heads-only digest.
@@ -154,8 +154,8 @@ export const adminReminderRuleKindSchema = z.enum([
 export const adminReminderRuleStatusSchema = z.enum(["active", "paused"]);
 
 export const adminReminderRuleSchema = z.object({
-  id: z.string().uuid(),
-  reportId: z.string().uuid().nullable(),
+  id: z.uuid(),
+  reportId: z.uuid().nullable(),
   /**
    * UFB-036 (Phase 44-04): the FK back to {@link reminderPolicySchema}.
    * Optional on input + transform to `null` so existing fixtures that
@@ -164,7 +164,7 @@ export const adminReminderRuleSchema = z.object({
    * policy in the "Active rules per period" read-only expander without
    * having to handle `undefined`.
    */
-  policyId: z.string().uuid().nullable().default(null),
+  policyId: z.uuid().nullable().default(null),
   kind: adminReminderRuleKindSchema,
   fireAt: z.coerce.date(),
   timezone: z.string().min(1),
@@ -179,9 +179,9 @@ export const adminReminderExecutionStatusSchema = z.enum([
 ]);
 
 export const adminReminderExecutionSchema = z.object({
-  id: z.string().uuid(),
-  ruleId: z.string().uuid(),
-  reportId: z.string().uuid().nullable(),
+  id: z.uuid(),
+  ruleId: z.uuid(),
+  reportId: z.uuid().nullable(),
   dedupeKey: z.string().min(1),
   status: adminReminderExecutionStatusSchema,
   scheduledFor: z.coerce.date(),
@@ -193,21 +193,21 @@ export const adminReminderExecutionSchema = z.object({
 export const carryOverStatusSchema = z.enum(["pending", "completed", "failed"]);
 
 export const carryOverRecordSchema = z.object({
-  id: z.string().uuid(),
-  sourceReportId: z.string().uuid(),
-  targetReportId: z.string().uuid(),
-  sourceItemId: z.string().uuid().nullable(),
-  targetItemId: z.string().uuid().nullable(),
-  sourceDecisionId: z.string().uuid().nullable(),
-  targetDecisionId: z.string().uuid().nullable(),
+  id: z.uuid(),
+  sourceReportId: z.uuid(),
+  targetReportId: z.uuid(),
+  sourceItemId: z.uuid().nullable(),
+  targetItemId: z.uuid().nullable(),
+  sourceDecisionId: z.uuid().nullable(),
+  targetDecisionId: z.uuid().nullable(),
   status: carryOverStatusSchema,
   carriedAt: z.coerce.date(),
 });
 
 export const carryOverExecutionSchema = z.object({
-  id: z.string().uuid(),
-  sourceReportId: z.string().uuid(),
-  targetReportId: z.string().uuid(),
+  id: z.uuid(),
+  sourceReportId: z.uuid(),
+  targetReportId: z.uuid(),
   dedupeKey: z.string().min(1),
   status: carryOverStatusSchema,
   startedAt: z.coerce.date(),
@@ -217,7 +217,7 @@ export const carryOverExecutionSchema = z.object({
 });
 
 export const archiveReportSummarySchema = z.object({
-  reportId: z.string().uuid(),
+  reportId: z.uuid(),
   periodStart: reportDate(),
   periodEnd: reportDate(),
   publishedAt: reportDate(),
@@ -235,7 +235,7 @@ export const compiledHistoryInputSchema = z.object({
 });
 
 export const compiledHistoryEntrySchema = z.object({
-  reportId: z.string().uuid(),
+  reportId: z.uuid(),
   periodStart: reportDate(),
   periodEnd: reportDate(),
   publishedAt: z.coerce.date().nullable(),
@@ -313,7 +313,7 @@ export type QueueName = z.infer<typeof queueNameSchema>;
 // ---------------------------------------------------------------------------
 
 export const portfolioProductOverviewSchema = z.object({
-  productId: z.string().uuid(),
+  productId: z.uuid(),
   productName: z.string().min(1),
   worstStatus: trafficLightStatusSchema.nullable(),
   stageCount: z.number().int().min(0),
@@ -329,7 +329,7 @@ export const escalationSchema = z.object({
 });
 
 export const weeklyReportReadModelSchema = z.object({
-  reportId: z.string().uuid(),
+  reportId: z.uuid(),
   periodStart: reportDate(),
   periodEnd: reportDate(),
   deadline: reportDate(),
@@ -399,8 +399,8 @@ export type CompiledHistoryEntry = z.infer<typeof compiledHistoryEntrySchema>;
 export type CompiledHistoryResult = z.infer<typeof compiledHistoryResultSchema>;
 
 export const myHistoryEntrySchema = z.object({
-  sectionId: z.string().uuid(),
-  reportId: z.string().uuid(),
+  sectionId: z.uuid(),
+  reportId: z.uuid(),
   periodStart: z.coerce.date(),
   periodEnd: z.coerce.date(),
   reportStatus: reportStatusSchema,
@@ -435,7 +435,7 @@ export type MyHistoryEntry = z.infer<typeof myHistoryEntrySchema>;
 // ---------------------------------------------------------------------------
 
 export const paginationInputSchema = z.object({
-  cursor: z.string().uuid().optional(),
+  cursor: z.uuid().optional(),
   limit: z.number().int().min(1).max(100).default(20),
 });
 
