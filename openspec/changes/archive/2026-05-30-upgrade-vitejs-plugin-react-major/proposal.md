@@ -57,3 +57,47 @@ Vitest 4 / React 19 / jsdom test setup — but the full gate must prove it.
   design so a regression here does not block the rest of the dependency wave.
 - **Out of scope:** other Wave-3 majors (`jsdom`, `typescript`, `lucide-react`,
   `@types/node`, `@bull-board/*`) — each is its own isolated change.
+
+## Grill findings — 2026-05-30
+
+Adversarial review of the explorer analysis. All load-bearing claims
+re-verified against the working tree.
+
+- **currentState = done-in-reality: CONFIRMED.** Commit `e278befc`
+  ("build(web): upgrade @vitejs/plugin-react 5 -> 6 (isolated)") is on `main`.
+  `apps/web/package.json` declares `@vitejs/plugin-react ^6.0.2` and
+  `vite ^8.0.0`; installed resolutions are `6.0.2` and `8.0.14`. Both required
+  bumps landed.
+- **Babel-removal regression guard: re-ran empirically.** `vitest run --root
+  apps/web` = 70 files / 579 tests passing, zero JSX/React-Refresh transform
+  errors. `vitest.config.ts` line 11 is `plugins: [react()]` — bare call, no
+  `babel` option, no react-compiler wiring. Conditional `@rolldown/plugin-babel`
+  pairing correctly NOT added. (Explorer cited 587 tests; actual is 579 — count
+  drift, immaterial, suite is green either way.)
+- **Isolation: CONFIRMED.** Commit `e278befc` touched only
+  `apps/web/package.json`, `pnpm-lock.yaml`, and the change's `tasks.md`. No
+  `apps/api`, `packages/shared`, or `packages/ui` manifest changed. Mergeable
+  independently of the rest of the Wave-3 dependency wave.
+- **sharedFiles `pnpm-lock.yaml` + `package.json` (root): CONFIRMED collision
+  surface.** This change cannot run as a parallel git worktree alongside any
+  other dependency-currency change that touches the root lockfile (jsdom,
+  typescript, lucide-react, @types/node, @bull-board/*). Those serialize on the
+  lockfile — but they are already landed sequentially on `main`, so this is moot
+  for execution.
+- **blastRadius LOW: CONFIRMED, not understated.** 4-line manifest diff plus a
+  net lockfile shrink (`-94 / +35` per `git show --stat`). Plain gates
+  (typecheck/lint/test/build) are sufficient; no diff-scale human review needed.
+  This is not a Biome `recommended:true` big-bang flip.
+- **dependsOn = []: CONFIRMED.** No edge to the Biome trio or the markdown
+  change; the only ordering constraint is the shared lockfile, already resolved.
+- **Open tasks are non-code ceremony.** The two unchecked tasks
+  (`visual:test`, "surface gate results / merge decision") are an environmental
+  test (needs live DB + Playwright; cannot exercise the bumped plugin anyway
+  because Next build/dev use `--webpack`, never loading Vite or this plugin) and
+  a user-facing report. Neither blocks correctness.
+
+**Revised recommendation: archive.** Implementation is complete and verified on
+`main`; the only remaining items are ceremonial/environmental, not code work.
+"finish" overstates the remaining effort — there is no code left to write. Run
+`openspec verify` then archive. No proposal/design/tasks edits required to make
+it implementation-ready (it is already implemented).
