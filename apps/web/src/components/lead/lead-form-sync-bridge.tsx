@@ -66,13 +66,6 @@ type BridgeContextValue = {
   risks: RiskEntry[];
   readOnly: boolean;
   /**
-   * Active `ReportSection.id` UUID. Optional because the form may render
-   * before the first byPeriod query settles. When defined, child components
-   * may use it to wire features that need the section UUID (Phase 31 AI-03
-   * `<OnTrackIcon>`).
-   */
-  sectionId?: string;
-  /**
    * 35-04: stages-the-lead-owns selector forwarded into RisksSection ->
    * RiskEditDialog so the SDLC stage dropdown is per-project. Optional
    * because the harness used in tests doesn't always feed it.
@@ -133,12 +126,6 @@ export type LeadFormSyncBridgeProviderProps = {
   readonly onRisksChange: (next: RiskEntry[]) => void;
   readonly readOnly?: boolean;
   /**
-   * Active `ReportSection.id` UUID. Threaded into the bridge so children
-   * (notably `Pipeline` -> `SdlcPipeline`) can mount section-scoped AI
-   * advisory features without prop-drilling.
-   */
-  readonly sectionId?: string;
-  /**
    * 35-04: per-project stages-the-lead-owns lookup. Forwarded by the
    * Risks consumer into RiskEditDialog. Optional — tests can omit it.
    */
@@ -162,7 +149,6 @@ function Provider({
   onProductsChange,
   onRisksChange,
   readOnly = false,
-  sectionId,
   stagesForProduct,
   sectionAuthorName,
   risksAddSignal,
@@ -291,7 +277,6 @@ function Provider({
       products,
       risks,
       readOnly,
-      ...(sectionId !== undefined ? { sectionId } : {}),
       ...(stagesForProduct !== undefined ? { stagesForProduct } : {}),
       ...(sectionAuthorName !== undefined ? { sectionAuthorName } : {}),
       ...(risksAddSignal !== undefined ? { risksAddSignal } : {}),
@@ -305,7 +290,6 @@ function Provider({
       products,
       risks,
       readOnly,
-      sectionId,
       stagesForProduct,
       sectionAuthorName,
       risksAddSignal,
@@ -393,7 +377,6 @@ function Pipeline() {
       onStatusChange={ctx.handleStageStatusChange}
       risks={ctx.risks}
       unbackedStages={unbackedStages}
-      {...(ctx.sectionId !== undefined ? { sectionId: ctx.sectionId } : {})}
       {...(ctx.crossAuthors !== undefined
         ? { crossAuthors: ctx.crossAuthors }
         : {})}

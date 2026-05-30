@@ -2,8 +2,6 @@ import { Module } from "@nestjs/common";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { AdminModule } from "../admin/admin.module.js";
 import { AdminService } from "../admin/admin.service.js";
-import { AiModule } from "../ai/ai.module.js";
-import { AiIngestionService } from "../ai/ai-ingestion.service.js";
 import { AnalyticsCache } from "../analytics/analytics.cache.js";
 import { AnalyticsModule } from "../analytics/analytics.module.js";
 import { PublicationModule } from "../publication/publication.module.js";
@@ -32,7 +30,7 @@ import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
  * (audit data still goes through the Nest `Logger` debug stream).
  */
 @Module({
-  imports: [AnalyticsModule, AdminModule, PublicationModule, AiModule],
+  imports: [AnalyticsModule, AdminModule, PublicationModule],
   providers: [
     PeriodPrismaRepository,
     {
@@ -41,7 +39,6 @@ import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
         repo: PeriodPrismaRepository,
         cache: AnalyticsCache,
         admin: AdminService,
-        ingestion: AiIngestionService,
       ) =>
         new PeriodService(
           repo,
@@ -57,18 +54,11 @@ import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
               reopenWindowHours: settings.reopenWindowHours,
             };
           },
-          // Phase 54 (UFB-055): ingestion hook wired to the
-          // AiIngestionService. Fire-and-forget; service swallows
-          // its own errors so this hook is effectively infallible
-          // from the perspective of the publish path.
-          (sectionIds) => ingestion.enqueueSections(sectionIds),
+          // The AI ingestion module was removed (see
+          // apps/api/src/modules/ai/HANDOFF.md); PeriodService's ingestion
+          // hook falls back to its no-op default until the AI rebuild.
         ),
-      inject: [
-        PeriodPrismaRepository,
-        AnalyticsCache,
-        AdminService,
-        AiIngestionService,
-      ],
+      inject: [PeriodPrismaRepository, AnalyticsCache, AdminService],
     },
     // Schedulers use explicit factories so the optional AuditLogger
     // constructor arg stays optional under Nest DI. Without the factory,

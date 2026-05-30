@@ -34,13 +34,6 @@ import type { ActivityService } from "../../modules/activity/activity.service.js
 import type { AdminService } from "../../modules/admin/admin.service.js";
 import type { JobsService } from "../../modules/admin/jobs.service.js";
 import type { SessionRevocationService } from "../../modules/admin/session-revocation.service.js";
-import type { AiService } from "../../modules/ai/ai.service.js";
-import {
-  assertCanReadReport,
-  assertCanReadRisk,
-  assertCanReadSection,
-} from "../../modules/ai/ai-authz.js";
-import type { AiSummaryService } from "../../modules/ai/ai-summary.service.js";
 import type { AnalyticsService } from "../../modules/analytics/analytics.service.js";
 import type { ArchiveService } from "../../modules/archive/archive.service.js";
 import type { CarryOverService } from "../../modules/carry-over/carry-over.service.js";
@@ -101,19 +94,6 @@ type RouterDeps = {
    * invalidation on PeriodService.publishPeriod / reopenPeriod.
    */
   analyticsService: AnalyticsService;
-  /**
-   * Phase 31 (AI-01/02/03): AI insights service — read-through cache via
-   * AiInsight Prisma rows; sync surface for tRPC. Returns sentinel union
-   * on outage / missing key / rate limit / budget exceeded.
-   */
-  aiService: AiService;
-  /**
-   * Phase 54 (UFB-055): period-level RAG summary surface — seeds-only.
-   * Returns a mock-source payload while AI_PROVIDER is unset/`mock`;
-   * the same surface flips to `source: 'ai'` when the org wires a real
-   * provider. Optional so role-coverage test fixtures stay green.
-   */
-  aiSummaryService?: AiSummaryService;
   /**
    * Phase 39-05 (PERF-05): full-text search across Item / Risk / Decision
    * / Project. tsvector + GIN, Russian text-search config. Role-gated
@@ -2193,106 +2173,6 @@ export function createAppRouter(deps: RouterDeps) {
           throw mapDomainError(error);
         }
       }),
-    }),
-
-    // === AI Insights namespace (Phase 31 — AI-01/02/03) ===
-    // ai.* procedures are excluded from loggingMiddleware (PITFALLS C-3 /
-    // AI-SPEC §5.3). The service returns a discriminated-union sentinel
-    // so the tRPC error mapper never sees raw SDK exceptions.
-    //
-    // Phase 32-A3 (M-02): each procedure asserts the caller can read the
-    // requested resource before invoking AiService. Visibility mirrors the
-    // archive PUBLISHED_FLOOR pattern: viewer → published-only;
-    // head/admin → all; lead → published OR sections they author.
-    // Throws FORBIDDEN before any Anthropic call (combines with C-01's
-    // budget guard so authentication-only abuse cannot drive spend).
-    ai: router({
-      // AI-01: executive summary card on assembled report.
-      summary: protectedProcedure
-        .input(z.object({ reportId: z.uuid() }))
-        .query(async ({ input, ctx }) => {
-          try {
-            await assertCanReadReport(deps.prisma, ctx.session, input.reportId);
-            return await deps.aiService.summary(input.reportId);
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-      // AI-01: head-only Regenerate button.
-      regenerateSummary: headProcedure
-        .input(z.object({ reportId: z.uuid() }))
-        .mutation(async ({ input, ctx }) => {
-          try {
-            await assertCanReadReport(deps.prisma, ctx.session, input.reportId);
-            return await deps.aiService.regenerateSummary(input.reportId);
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-      // AI-02: per-Risk sentiment classification badge.
-      sentiment: protectedProcedure
-        .input(z.object({ riskId: z.uuid() }))
-        .query(async ({ input, ctx }) => {
-          try {
-            await assertCanReadRisk(deps.prisma, ctx.session, input.riskId);
-            return await deps.aiService.sentiment(input.riskId);
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-      // Phase 54 (UFB-055): period-level RAG summary — seeds-only.
-      // Reads the period (Report) + its sections, delegates to the
-      // pluggable AiAdapter (MockAiAdapter today), cached for 60s in
-      // Redis. Authz: leadershipProcedure (head + admin + viewer);
-      // lead is excluded — leads consume their own section view, not
-      // a portfolio summary.
-      //
-      // Returns aiSummarySchema: { summary, source: 'mock'|'ai',
-      // citationIds }. The UI badges `source === 'mock'` as a stub.
-      periodSummary: leadershipProcedure
-        .input(z.object({ periodId: z.uuid() }))
-        .query(async ({ input }) => {
-          try {
-            if (!deps.aiSummaryService) {
-              // Fixture mode (createAppRouter({}) for role-coverage
-              // harnesses): empty mock payload that still parses
-              // aiSummarySchema so the role-coverage harness can hit
-              // the surface without a 500.
-              return {
-                summary: "",
-                source: "mock" as const,
-                citationIds: [] as string[],
-              };
-            }
-            return await deps.aiSummaryService.getSummary(input.periodId);
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-      // AI-03: per-cell on-track advisory verdict (✓ ⚠ ✗).
-      // Advisory only — never replaces lead's chosen traffic-light colour.
-      onTrack: protectedProcedure
-        .input(
-          z.object({
-            sectionId: z.uuid(),
-            projectId: z.uuid(),
-          }),
-        )
-        .query(async ({ input, ctx }) => {
-          try {
-            await assertCanReadSection(
-              deps.prisma,
-              ctx.session,
-              input.sectionId,
-            );
-            return await deps.aiService.onTrack(
-              input.sectionId,
-              input.projectId,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
     }),
 
     // === Telemetry namespace (Phase 52 / UFB-054) ===

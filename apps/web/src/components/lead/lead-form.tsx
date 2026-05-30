@@ -1666,9 +1666,6 @@ export function LeadForm({
               onRisksChange={handleRisksChange}
               readOnly={isReadOnly}
               stagesForProduct={stagesForProduct}
-              {...(sectionIdForActions
-                ? { sectionId: sectionIdForActions }
-                : {})}
               {...(draftSection.authorName
                 ? { sectionAuthorName: draftSection.authorName }
                 : {})}

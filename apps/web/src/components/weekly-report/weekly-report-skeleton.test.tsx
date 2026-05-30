@@ -49,14 +49,6 @@ describe("WeeklyReportSkeleton", () => {
     expect(grid?.children.length).toBe(6);
   });
 
-  it("includes an AI Insights placeholder slot (UFB-072 regression)", () => {
-    const { container } = render(<WeeklyReportSkeleton />);
-    // Top-level children of the root must be exactly 5: header,
-    // period-nav, AI card, portfolio card, accordion list.
-    const root = getRoot(container);
-    expect(root.children.length).toBe(5);
-  });
-
   it("renders 6 accordion placeholders to match the seeded product count", () => {
     const { container } = render(<WeeklyReportSkeleton />);
     const root = getRoot(container);

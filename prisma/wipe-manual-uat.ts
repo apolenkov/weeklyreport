@@ -166,7 +166,6 @@ async function main() {
       //   - userActionLog        (audit log clutter — Phase 40+)
       //   - reminderPolicy       (Phase 44 templates — wipe all)
       //   - groupProduct         (Phase 56 M:M — must drop before Project)
-      //   - aiIngestionJob       (Phase 54 stub — already in seed-simple)
       //   - telegramBinding      (Phase 55 stub — must drop before User)
       //   - organization         (singleton; reseed to Demo brand below)
       //   - appSettings          (force-reset to schema defaults)
@@ -175,8 +174,6 @@ async function main() {
       // in Postgres. We delete ALL reminder rules (including no-reportId
       // templates) before any policy so the policy delete doesn't FK-fail.
       const deleted: CountMap = {
-        aiIngestionJob: (await tx.aiIngestionJob.deleteMany({})).count,
-        aiInsight: (await tx.aiInsight.deleteMany({})).count,
         reminderExecution: (await tx.reminderExecution.deleteMany({})).count,
         reminderRule: (await tx.reminderRule.deleteMany({})).count,
         reminderPolicy: (await tx.reminderPolicy.deleteMany({})).count,
@@ -595,7 +592,6 @@ async function main() {
         reminderPolicies: await tx.reminderPolicy.count(),
         userActionLog: await tx.userActionLog.count(),
         telegramBindings: await tx.telegramBinding.count(),
-        aiIngestionJobs: await tx.aiIngestionJob.count(),
       };
 
       return {

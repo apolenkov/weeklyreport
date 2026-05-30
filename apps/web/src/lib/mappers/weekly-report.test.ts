@@ -225,31 +225,6 @@ describe("mapWeeklyReport", () => {
     expect(expectDefined(crmReport?.nextWeek[0]).stageLead).toBe("Planned");
     expect(crmReport?.risks).toHaveLength(1);
     expect(expectDefined(crmReport?.risks[0]).severity).toBe("at-risk");
-    // Phase 31 (AI-03): sectionId threaded from the first lead section
-    // whose projects[] contains the productId. Required for OnTrackIcon
-    // mount in product-accordion.
-    expect(crmReport?.sectionId).toBe(SECTION_A);
-    const mobileReport = result.products.find((p) => p.id === PROJECT_B);
-    expect(mobileReport?.sectionId).toBe(SECTION_B);
-  });
-
-  it("omits sectionId when no lead section authored content for a product (AI-03)", () => {
-    const result = mapWeeklyReport(
-      baseReport({
-        portfolioOverview: [
-          {
-            productId: PROJECT_A,
-            productName: "Orphan",
-            worstStatus: null,
-            stageCount: 0,
-            leadNames: [],
-          },
-        ],
-        leadSections: [],
-      }),
-    );
-    const orphan = result.products.find((p) => p.id === PROJECT_A);
-    expect(orphan?.sectionId).toBeUndefined();
   });
 
   it("infers risk severity as blocked when project has any blocked item", () => {

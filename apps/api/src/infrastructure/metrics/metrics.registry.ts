@@ -221,39 +221,6 @@ export const customreportPeriodStateTransitionsTotal = new Counter({
 });
 
 // ============================================================
-// Phase 54 (AI/RAG) — day-1 metrics per TODO discipline rule.
-// Declared here even while MockAiAdapter is the only active path.
-// `provider="mock"` counts are expected in UAT; a real provider
-// will appear under its own label when activated.
-// ============================================================
-
-/**
- * 54 — every AI summary generation attempt. `provider` distinguishes
- * the adapter (mock / anthropic / openai / yandexgpt / llama). `status`
- * is `ok` | `error` so the dashboard can surface error rates without
- * a separate counter.
- */
-export const aiSummaryGeneratedTotal = new Counter({
-  name: "customreport_ai_summary_generated_total",
-  help: "Total AI summary generation attempts",
-  labelNames: ["provider", "status"] as const,
-  registers: [metricsRegistry],
-});
-
-/**
- * 54 — end-to-end AI generation latency (adapter.generate call only,
- * not Redis cache hits). Buckets skewed toward the LLM response-time
- * range: 0.1s–30s. Cache-served results are not observed here.
- */
-export const aiSummaryDurationSeconds = new Histogram({
-  name: "customreport_ai_summary_duration_seconds",
-  help: "AI summary generation duration in seconds (adapter call only)",
-  labelNames: ["provider"] as const,
-  buckets: [0.1, 0.25, 0.5, 1, 2, 5, 10, 20, 30],
-  registers: [metricsRegistry],
-});
-
-// ============================================================
 // Phase 55 (Telegram) — day-1 metrics per TODO discipline rule.
 // Declared here even while MockTelegramAdapter is the only path.
 // ============================================================

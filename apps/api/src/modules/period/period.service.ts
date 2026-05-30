@@ -17,11 +17,11 @@ export interface PeriodRepository {
   publishPeriod(reportId: string, userId: string): Promise<void>;
   reopenPeriod(reportId: string): Promise<void>;
   /**
-   * Phase 54 (UFB-055): list of section ids tied to a report — used by
-   * the ingestion seam to enqueue one stub `AiIngestionJob` row per
-   * section after a period publishes. Optional on the port so existing
-   * unit-test fixtures that don't care about ingestion stay green; the
-   * production repo implements it.
+   * List of section ids tied to a report — read by the post-publish
+   * ingestion seam (see {@link IngestionPublishHook}) so a future async
+   * consumer can enqueue per-section work after a period publishes.
+   * Optional on the port so existing unit-test fixtures that don't care
+   * about ingestion stay green; the production repo implements it.
    */
   listSectionIds?(reportId: string): Promise<string[]>;
 }
@@ -49,13 +49,18 @@ export type ReopenPolicyReader = () => Promise<{
 } | null>;
 
 /**
- * Phase 54 (UFB-055): fire-and-forget ingestion hook called after a
- * successful `publishPeriod`. Defaults to a no-op so existing tests
- * (88+) that don't care about ingestion stay green. Errors are
- * swallowed by the caller so a downstream RAG-pipeline blip cannot
- * fail a real-user publish action.
+ * Fire-and-forget post-publish ingestion seam, called after a
+ * successful `publishPeriod` with the just-published section ids.
+ * Defaults to a no-op so existing tests (88+) that don't care about
+ * ingestion stay green. Errors are swallowed by the caller so a
+ * downstream consumer blip cannot fail a real-user publish action.
+ *
+ * The original AI/RAG consumer was removed (see
+ * apps/api/src/modules/ai/HANDOFF.md); the seam is kept so a rebuilt
+ * pipeline — or any other async consumer — can re-wire without
+ * touching the publish path.
  */
-export type AiIngestionPublishHook = (
+export type IngestionPublishHook = (
   sectionIds: readonly string[],
 ) => Promise<void>;
 
@@ -73,11 +78,11 @@ export class PeriodService {
      */
     private readonly readReopenPolicy: ReopenPolicyReader = async () => null,
     /**
-     * Phase 54 (UFB-055): on every successful publishPeriod, called
-     * with the section ids of the just-published period. No-op by
-     * default; production wires AiIngestionService.enqueueSections.
+     * On every successful publishPeriod, called with the section ids of
+     * the just-published period. No-op by default; production may wire a
+     * real ingestion consumer here (see {@link IngestionPublishHook}).
      */
-    private readonly ingestionHook: AiIngestionPublishHook = async () =>
+    private readonly ingestionHook: IngestionPublishHook = async () =>
       undefined,
   ) {}
 
@@ -98,11 +103,11 @@ export class PeriodService {
     await this.repository.publishPeriod(reportId, session.userId);
     await this.invalidateAnalyticsCache();
 
-    // Phase 54 (UFB-055): fire-and-forget ingestion enqueue. Read the
-    // section ids AFTER the publish transaction so any sections that
-    // raced into the period before commit are still picked up. Errors
-    // never bubble — a RAG pipeline blip must not turn a successful
-    // publish into a 5xx.
+    // Fire-and-forget post-publish ingestion enqueue. Read the section
+    // ids AFTER the publish transaction so any sections that raced into
+    // the period before commit are still picked up. Errors never bubble —
+    // a downstream consumer blip must not turn a successful publish into
+    // a 5xx.
     if (this.repository.listSectionIds) {
       try {
         const sectionIds = await this.repository.listSectionIds(reportId);

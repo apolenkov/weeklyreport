@@ -1,27 +1,20 @@
 import { Module } from "@nestjs/common";
 
-import { AiModule } from "../ai/ai.module.js";
-import { AiIngestionService } from "../ai/ai-ingestion.service.js";
 import { PublicationPrismaRepository } from "./publication.prisma-repository";
 import { PublicationService } from "./publication.service";
 
 @Module({
-  // Phase 54 (UFB-055): AiModule provides AiIngestionService; the
-  // ingestion hook is fire-and-forget and never breaks the publish
-  // path even when AI infra is degraded.
-  imports: [AiModule],
+  // The AI ingestion module was removed (see
+  // apps/api/src/modules/ai/HANDOFF.md). PublicationService keeps its
+  // optional ingestion hook, which now falls back to its no-op default;
+  // the rebuilt AI module re-wires it.
   providers: [
     PublicationPrismaRepository,
     {
       provide: PublicationService,
-      useFactory: (
-        repo: PublicationPrismaRepository,
-        ingestion: AiIngestionService,
-      ) =>
-        new PublicationService(repo, undefined, (sectionIds) =>
-          ingestion.enqueueSections(sectionIds),
-        ),
-      inject: [PublicationPrismaRepository, AiIngestionService],
+      useFactory: (repo: PublicationPrismaRepository) =>
+        new PublicationService(repo),
+      inject: [PublicationPrismaRepository],
     },
   ],
   exports: [PublicationService],

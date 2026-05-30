@@ -92,3 +92,11 @@ alone". The end state is \*\*Biome + a minimal residual ESLint + markdownlint-cl
   Biome's experimental `types` domain / `noFloatingPromises` nursery rule
   (`no-floating-promises` stays enforced in the residual ESLint config so the
   guarantee is never weakened).
+
+> **Update (2026-05-30, AI backend removal):** the two AI-specific lint rules
+> referenced above — the `noRestrictedImports` Prisma-outside-facade ban and the
+> `no-restricted-syntax` logger-secrets guard (both scoped to
+> `apps/api/src/modules/ai/**`) — were removed together with the AI module on
+> branch `chore/remove-ai-module-ui-coming-soon`. Those port/guard-test sub-tasks
+> are now void; the `ai-module-facade` durable spec they protected was deleted in
+> the same change. The rest of the Biome migration is unaffected.

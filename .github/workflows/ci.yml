@@ -271,9 +271,8 @@ jobs:
   # ------------------------------------------------------------------
   # Runs Playwright's `--project=visual` against the same Postgres + Redis
   # services as the main e2e job, but seeds with `seed-simple` for byte-
-  # stable fixtures and stubs Anthropic via AI_VISUAL_STUB=true. Compares
-  # rendered pages against committed baselines under
-  # apps/web/e2e/visual/*-snapshots/<name>-visual-linux.png.
+  # stable fixtures. Compares rendered pages against committed baselines
+  # under apps/web/e2e/visual/*-snapshots/<name>-visual-linux.png.
   #
   # First run on a brand-new spec: PRs missing the linux baseline must
   # locally regenerate via `visual:update`, OR a maintainer triggers a
