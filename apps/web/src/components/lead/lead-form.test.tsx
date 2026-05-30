@@ -297,17 +297,6 @@ function buildHarness(
         pathFilter: () => ({ queryKey: ["leadForm.getVersion"] }),
       },
     },
-    ai: {
-      // Phase 31 (AI-03): OnTrackIcon is mounted in SdlcPipeline; provide a
-      // stub so the lead-form test mock satisfies its useQuery call.
-      onTrack: {
-        queryOptions: () => ({
-          queryKey: ["ai.onTrack"],
-          queryFn: async () => ({ available: false }) as const,
-        }),
-        pathFilter: () => ({ queryKey: ["ai.onTrack"] }),
-      },
-    },
     review: {
       dashboard: { pathFilter: () => ({ queryKey: ["review.dashboard"] }) },
     },

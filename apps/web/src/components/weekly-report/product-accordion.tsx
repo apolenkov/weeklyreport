@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { OnTrackIcon } from "../ai/on-track-icon";
-import { RiskSentimentBadge } from "../ai/risk-sentiment-badge";
 import type { ProductReport } from "../dashboard/mock-data";
 
 type ProductAccordionProps = {
@@ -161,12 +159,6 @@ export function ProductAccordion({
           >
             {statusLabel}
           </span>
-          {/* Phase 31 (AI-03): on-track advisory icon next to the status
-              badge. Renders ALONGSIDE — never replaces — the human-authored
-              colour. Hidden when AI is unavailable or sectionId is missing. */}
-          {!isEmpty && report.sectionId ? (
-            <OnTrackIcon sectionId={report.sectionId} projectId={report.id} />
-          ) : null}
           <span
             className={`inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-medium ${
               isEmpty
@@ -317,9 +309,6 @@ export function ProductAccordion({
                             {risk.badge}
                           </span>
                           {risk.text}
-                          {/* Phase 31 (AI-02): per-Risk sentiment badge.
-                            Hidden when AI is unavailable; never blocks the row. */}
-                          <RiskSentimentBadge riskId={risk.id} />
                         </div>
                       );
                     })}

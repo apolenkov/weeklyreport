@@ -5,15 +5,14 @@ import tseslint from "typescript-eslint";
 
 // RESIDUAL ESLint config (migrate-to-biome): Biome now owns formatting and the
 // strict-preset lint rules (no-explicit-any, no-unused-vars, no-non-null-
-// assertion) plus the AI no-restricted-imports Prisma-isolation rule. This file
-// retains ONLY the rules with no stable Biome equivalent:
+// assertion). This file retains ONLY the rules with no stable Biome equivalent:
 //   - react-compiler/react-compiler (no Biome equivalent; React 19 correctness)
 //   - react-hooks/rules-of-hooks + exhaustive-deps (Biome hook parity not
 //     guaranteed; ESLint must run anyway)
 //   - @typescript-eslint/no-floating-promises (type-aware; Biome's equivalent is
 //     nursery/experimental — keep the hard-error guarantee here)
-//   - the AI no-restricted-syntax logger-secrets selector (no Biome rule;
-//     protects the ai-module-facade / PITFALLS C-3 secret-logging guard)
+// The former AI logger-secrets no-restricted-syntax selector was removed with
+// the AI module (see apps/api/src/modules/ai/HANDOFF.md).
 export default defineConfig([
   globalIgnores([
     "**/node_modules/**",
@@ -73,36 +72,6 @@ export default defineConfig([
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
       "react-compiler/react-compiler": "error",
-    },
-  },
-  // Phase 31 (AI-SPEC §5.2 / PITFALLS C-3): the AI no-restricted-imports
-  // Prisma-isolation rule now lives in biome.json (noRestrictedImports). This
-  // residual selector keeps the logger-secrets guard, which has no Biome rule.
-  // Ban logging of named identifiers `prompt`, `messages`, `response` when
-  // passed to a `logger.*` call. Narrow AST selector to ai/** files only —
-  // unrelated modules retain freedom. Facade/test/fixture files are exempt.
-  {
-    files: ["apps/api/src/modules/ai/**/*.ts"],
-    ignores: [
-      "apps/api/src/modules/ai/ai-facade.ts",
-      "apps/api/src/modules/ai/ai-cache.ts",
-      "apps/api/src/modules/ai/ai-authz.ts",
-      "apps/api/src/modules/ai/__tests__/**",
-      "apps/api/src/modules/ai/__fixtures__/**",
-      "apps/api/src/modules/ai/*.test.ts",
-      "apps/api/src/modules/ai/*.spec.ts",
-      "apps/api/src/modules/ai/*.eval.ts",
-    ],
-    rules: {
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector:
-            "CallExpression[callee.object.name='logger'] Identifier[name=/^(prompt|messages|response)$/]",
-          message:
-            "AI module: never log prompts/messages/response content (PITFALLS C-3).",
-        },
-      ],
     },
   },
 ]);

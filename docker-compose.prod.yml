@@ -173,7 +173,6 @@ services:
       KEYCLOAK_SAML_ENTRY_POINT: ${KEYCLOAK_SAML_ENTRY_POINT:?KEYCLOAK_SAML_ENTRY_POINT must be set}
       KEYCLOAK_SAML_ISSUER: ${KEYCLOAK_SAML_ISSUER:?KEYCLOAK_SAML_ISSUER must be set}
       KEYCLOAK_SAML_CERT: ${KEYCLOAK_SAML_CERT:?KEYCLOAK_SAML_CERT must be set}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     depends_on:
       migrate:
         condition: service_completed_successfully

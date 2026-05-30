@@ -2,7 +2,6 @@
 
 import { Suspense, use } from "react";
 
-import { PeriodSummaryTabs } from "../../../../components/ai/period-summary-tabs";
 import { WeeklyReportPage } from "../../../../components/weekly-report/weekly-report-page";
 import { WeeklyReportSkeleton } from "../../../../components/weekly-report/weekly-report-skeleton";
 
@@ -82,15 +81,12 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
           </div>
         </div>
 
-        {/* Phase 54 (UFB-055): «AI Summary» tab on /reports/<id> page.
-            Default tab renders the existing assembled report; switching to
-            «AI Summary» fires the mock period-summary tRPC query and
-            renders the result with a clear (заглушка) badge until the
-            org wires a real LLM provider. */}
+        {/* The AI period-summary surface was removed (see
+            apps/api/src/modules/ai/HANDOFF.md); the assembled report renders
+            directly. The agent-review «coming soon» entry lives in the slide
+            decks / report shells. */}
         <Suspense fallback={<WeeklyReportSkeleton />}>
-          <PeriodSummaryTabs periodId={reportId}>
-            <WeeklyReportPage reportId={reportId} authorId={authorId} />
-          </PeriodSummaryTabs>
+          <WeeklyReportPage reportId={reportId} authorId={authorId} />
         </Suspense>
       </div>
     </main>

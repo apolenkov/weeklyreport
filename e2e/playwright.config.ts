@@ -44,7 +44,7 @@ export default defineConfig({
     // Phase 39-06: visual regression baselines. Locked viewport + locale +
     // colour scheme + low pixel-diff threshold so any genuine UI change
     // surfaces immediately. Determinism is enforced inside each spec via
-    // page.clock.install (frozen time) and AI_VISUAL_STUB on the API.
+    // page.clock.install (frozen time).
     //
     // Snapshot dir is OS-pinned by Playwright (foo.spec.ts-snapshots/<name>-<project>-<platform>.png)
     // so darwin baselines are stored separately from linux baselines. CI
@@ -92,10 +92,6 @@ export default defineConfig({
         NODE_ENV: "test",
         FRONTEND_URL: WEB_URL,
         LOG_DIR: ".logs/e2e",
-        // Phase 39-06: stub Anthropic so the AI summary card renders a
-        // frozen narrative — without this the screenshot diff would catch
-        // every probabilistic re-roll from Haiku as a regression.
-        AI_VISUAL_STUB: "true",
       },
     },
     {

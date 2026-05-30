@@ -1,6 +1,5 @@
 "use client";
 
-import { OnTrackIcon } from "../ai/on-track-icon";
 import type { Product, RiskEntry, StageStatus } from "./mock-data";
 import { StageChip } from "./stage-chip";
 import { canonicalStageName, splitStageNames } from "./stage-tags";
@@ -29,13 +28,6 @@ type SdlcPipelineProps = {
     stageName: string,
     newStatus: StageStatus,
   ) => void;
-  /**
-   * Active `ReportSection.id` UUID — required to wire the Phase 31 AI-03
-   * on-track advisory icon next to each product status badge. When absent,
-   * the icon is silently skipped (e.g. data not yet settled, or running in
-   * Storybook with mock data).
-   */
-  readonly sectionId?: string;
   /**
    * Used to count risks linked to each (product, stage) pair so the chip's
    * Clear-confirmation knows whether to prompt. The pipeline is the right
@@ -80,7 +72,6 @@ export function SdlcPipeline({
   products,
   readOnly = false,
   onStatusChange,
-  sectionId,
   risks,
   unbackedStages = [],
   crossAuthors = [],
@@ -207,14 +198,6 @@ export function SdlcPipeline({
                 </span>
               )}
             </div>
-            {sectionId ? (
-              <div className="flex flex-wrap items-center gap-1.5">
-                {/* Phase 31 (AI-03): on-track advisory icon next to the
-                    product header. Renders ALONGSIDE — never replaces.
-                    Skipped when sectionId is unavailable (mock data, pre-load). */}
-                <OnTrackIcon sectionId={sectionId} projectId={product.id} />
-              </div>
-            ) : null}
           </div>
 
           {/* Stages row */}

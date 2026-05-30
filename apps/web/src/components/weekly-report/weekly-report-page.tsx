@@ -19,7 +19,6 @@ import { mapWeeklyReport } from "../../lib/mappers";
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
-import { AiSummaryCard } from "../ai/ai-summary-card";
 import type {
   PortfolioProduct,
   ProductReport,
@@ -370,11 +369,6 @@ export function WeeklyReportPage({
           </span>
         </div>
       </div>
-
-      {/* Phase 31 (AI-01): executive summary card — appears above the
-          assembled report, never overwrites head-authored narrative.
-          Dismissible per session via local useState; head-only Regenerate. */}
-      <AiSummaryCard reportId={view.period.reportId} />
 
       {/* A32: empty-state — no submissions in current open/reopened period.
           When submissionCount === 0 and the period is not yet published,

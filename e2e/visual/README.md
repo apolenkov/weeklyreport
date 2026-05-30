@@ -10,22 +10,19 @@ fails on >0.1% pixel drift.
 | ------------------------ | ------------------------ | ----------------------- | ---------------------------------------- |
 | `landing.spec.ts`        | `/` (logged out)         | none (`AUTH_STUB=true`) | First impression — dev-login picker grid |
 | `lead-report.spec.ts`    | `/lead/report`           | seeded lead             | The form 6 leads fill in every week      |
-| `head-dashboard.spec.ts` | `/head/dashboard`        | seeded head             | Includes AI summary card + activity feed |
+| `head-dashboard.spec.ts` | `/head/dashboard`        | seeded head             | Traffic-light overview + activity feed   |
 | `reports.spec.ts`        | `/reports?tab=published` | seeded head             | Archive view of published reports        |
 | `admin.spec.ts`          | `/admin?tab=jobs`        | seeded head             | BullMQ DLQ admin UI                      |
 
-## Determinism — three knobs
+## Determinism — two knobs
 
-A baseline is worthless if it's flaky. Three sources of non-determinism are
+A baseline is worthless if it's flaky. Two sources of non-determinism are
 locked down:
 
 1. **Clock** — `page.clock.install({ time: 2026-05-06T10:00:00Z })` is
    called BEFORE every `goto()` in `_helpers.ts → freezeClock()`. Patches
    `Date.now`, `setTimeout`, `setInterval`, `requestAnimationFrame`, etc.
-2. **AI summary** — `AI_VISUAL_STUB=true` on the API webServer makes
-   `AiService.summary` / `.sentiment` / `.onTrack` return frozen content
-   without calling Anthropic. See `apps/api/src/modules/ai/ai.service.ts`.
-3. **Seed data** — `seed-simple` uses hard-coded UUIDs and an
+2. **Seed data** — `seed-simple` uses hard-coded UUIDs and an
    anchor-week-derived period so every reset produces byte-identical rows.
    Run `pnpm --filter @customreport/web visual:setup` before capturing.
 

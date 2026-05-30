@@ -6,13 +6,11 @@
  * Section-by-section parity (top to bottom, mirrors the real page):
  *   1. Page header  — title + Live pill | ExportPdf + PublishLock (2 buttons)
  *   2. Period nav   — HeadPeriodNavigator | "{org} · Live portfolio review"
- *   3. AI Insights  — full Portfolio-style card (AiSummaryCard pending shape)
- *   4. Portfolio    — single gradient card + sm:grid-cols-2 product cards
- *   5. Accordions   — gradient cards × N matching ProductAccordion header
+ *   3. Portfolio    — single gradient card + sm:grid-cols-2 product cards
+ *   4. Accordions   — gradient cards × N matching ProductAccordion header
  *
- * UFB-072 (2026-05-11): rewritten to remove the old 6-col table skeleton
- * (Portfolio is a card grid, not a table) and to add the missing AI Insights
- * slot the user reported («не вижу секции AI в skeleton»).
+ * The AI Insights slot was removed with the AI module (see
+ * apps/api/src/modules/ai/HANDOFF.md).
  *
  * Stateless and hook-free — safe to render server-side.
  */
@@ -36,37 +34,6 @@ function PortfolioCardSkeleton() {
         <Skeleton className="h-3 w-40" />
       </div>
       <span className="h-6 w-6" aria-hidden="true" />
-    </div>
-  );
-}
-
-/**
- * Mirrors the {@link AiSummaryCard} `pending` state header + body
- * (sparkle icon + «AI Insights» + pending pill, then 2 shimmer lines,
- * 3 chip placeholders, and a hint line).
- */
-function AiSummarySkeleton() {
-  return (
-    <div className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]">
-      <div className="flex w-full items-center justify-between p-4">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-5 w-5 rounded-sm" />
-          <Skeleton className="h-5 w-28" />
-          <Skeleton className="h-5 w-16 rounded-full" />
-        </div>
-      </div>
-      <div className="px-4 pb-4">
-        <div className="space-y-2">
-          <div className="h-3 w-11/12 rounded bg-[rgba(0,0,0,0.06)]" />
-          <div className="h-3 w-8/12 rounded bg-[rgba(0,0,0,0.05)]" />
-        </div>
-        <div className="mt-3 flex gap-2">
-          <div className="h-5 w-20 rounded-md bg-[rgba(0,0,0,0.05)]" />
-          <div className="h-5 w-16 rounded-md bg-[rgba(0,0,0,0.05)]" />
-          <div className="h-5 w-24 rounded-md bg-[rgba(0,0,0,0.05)]" />
-        </div>
-        <div className="mt-4 h-3 w-9/12 rounded bg-[rgba(0,0,0,0.04)]" />
-      </div>
     </div>
   );
 }
@@ -150,10 +117,6 @@ export function WeeklyReportSkeleton() {
           <Skeleton className="h-4 w-32" />
         </div>
       </div>
-
-      {/* 3. AI Insights slot — matches AiSummaryCard pending state shape so
-          the swap from skeleton → real card is zero-CLS. */}
-      <AiSummarySkeleton />
 
       {/* 4. Portfolio Overview — single gradient card containing a 2-col
           card grid (6 placeholders to match the seeded product count). */}

@@ -2,9 +2,8 @@
  * Phase 39-06 (visual baseline 3/5) — Head dashboard.
  *
  * Uses headPage fixture (head@customreport.local). The dashboard renders
- * the AI summary card (stubbed via AI_VISUAL_STUB=true on the API), the
- * traffic-light overview, and the activity-live panel — all of which are
- * sensitive to time / AI output, so determinism matters here most.
+ * the traffic-light overview and the activity-live panel — both of which
+ * are time-sensitive, so determinism matters here most.
  */
 import { test, expect } from "../fixtures";
 import { driftyMasks, freezeClock, waitForVisualStable } from "./_helpers";

@@ -12,9 +12,8 @@ Codex repo overlay.
 Use current files instead of memory:
 
 - `openspec/changes/` - active backlog (run `openspec list`).
-- `openspec/specs/` - 5 durable invariants (destructive-db-guard,
-  deferred-feature-pattern, role-coverage-gate, period-dual-state,
-  ai-module-facade).
+- `openspec/specs/` - 4 durable invariants (destructive-db-guard,
+  deferred-feature-pattern, role-coverage-gate, period-dual-state).
 - `openspec/config.yaml` - project context + change-lifecycle rules.
 - `.env.example`, `.env.test.example` - runtime switches and port assumptions.
 

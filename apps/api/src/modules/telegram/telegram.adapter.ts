@@ -4,7 +4,8 @@
 // adapter built on `TG_BOT_TOKEN`) is deferred to a follow-on phase that
 // explicitly activates the bot.
 //
-// The shape intentionally mirrors `AiAdapter` (Phase 54 / UFB-055):
+// The shape follows the same single-method async adapter pattern used
+// elsewhere in this codebase:
 //   - one method, async, returns a small typed result
 //   - selection via env at module-construction time
 //   - DI token is a string literal because Nest cannot bind interfaces

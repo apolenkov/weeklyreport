@@ -13,7 +13,6 @@ import { PrismaModule } from "./infrastructure/prisma/prisma.module";
 import { assertNoDevAuthInProduction } from "./lib/dev-auth-fence";
 import { ActivityModule } from "./modules/activity/activity.module";
 import { AdminModule } from "./modules/admin/admin.module";
-import { AiModule } from "./modules/ai/ai.module";
 import { AnalyticsModule } from "./modules/analytics/analytics.module";
 import { ArchiveModule } from "./modules/archive/archive.module";
 import { CarryOverModule } from "./modules/carry-over/carry-over.module";
@@ -60,7 +59,6 @@ import { WeeklyReportModule } from "./modules/weekly-report/weekly-report.module
     AdminModule,
     OrganizationModule,
     AnalyticsModule,
-    AiModule,
     SearchModule,
     ActivityModule,
     TelemetryModule,

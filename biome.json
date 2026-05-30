@@ -71,34 +71,5 @@
         }
       }
     }
-  },
-  "overrides": [
-    {
-      "includes": [
-        "apps/api/src/modules/ai/**/*.ts",
-        "!apps/api/src/modules/ai/ai-facade.ts",
-        "!apps/api/src/modules/ai/ai-cache.ts",
-        "!apps/api/src/modules/ai/ai-authz.ts",
-        "!apps/api/src/modules/ai/__tests__/**",
-        "!apps/api/src/modules/ai/__fixtures__/**",
-        "!apps/api/src/modules/ai/*.test.ts",
-        "!apps/api/src/modules/ai/*.spec.ts",
-        "!apps/api/src/modules/ai/*.eval.ts"
-      ],
-      "linter": {
-        "rules": {
-          "style": {
-            "noRestrictedImports": {
-              "level": "error",
-              "options": {
-                "paths": {
-                  "@prisma/client": "AI module: import Prisma only via ai-facade.ts (CC-3 / module isolation per AI-SPEC §5.2)."
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  ]
+  }
 }

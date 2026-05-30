@@ -100,7 +100,7 @@ rules:
       Prisma writes, or shared schemas.
     - Identify which of the load-bearing invariants the change preserves,
       mutates, or relaxes (period dual-state, role-coverage gate,
-      destructive-db guard, ai-module facade, deferred-feature pattern).
+      destructive-db guard, deferred-feature pattern).
     - Surface rollout concerns — migration order, feature-flag gating,
       destructive ops, downstream consumers in apps/web and apps/api.
   tasks:
@@ -134,6 +134,6 @@ rules:
       change touches a documented invariant)."
     - "link_specs_when: change adds or modifies a tRPC procedure -> link
       role-coverage-gate; change touches the Report write path -> link
-      period-dual-state; change touches the AI module -> link ai-module-facade;
+      period-dual-state;
       change adds a deferred UI element -> link deferred-feature-pattern;
       change touches prisma/_destructive-guard -> link destructive-db-guard."

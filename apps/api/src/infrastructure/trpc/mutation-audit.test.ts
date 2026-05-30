@@ -15,7 +15,7 @@ import {
  * Asserts the middleware:
  *   - emits exactly one `mutation` event per authenticated mutation
  *   - skips queries
- *   - skips auth.* and ai.* (covered elsewhere / privacy)
+ *   - skips auth.* (covered by login events)
  *   - emits status=fail with reason on TRPCError
  *   - extracts `target` from common input id keys
  */
@@ -84,13 +84,6 @@ const auditTestRouter = router({
 
   // Query — should NOT trigger mutation event.
   queryRoute: protectedProcedure.query(() => "q-ok"),
-
-  // ai.* mutation — should be skipped (privacy).
-  ai: router({
-    fakeMutation: protectedProcedure
-      .input(z.object({ id: z.string() }))
-      .mutation(() => "ai-ok"),
-  }),
 
   // auth.* mutation — should be skipped (covered by login events).
   auth: router({
@@ -196,7 +189,7 @@ describe("36-02 mutation-audit middleware", () => {
     expect(mutation).not.toHaveBeenCalled();
   });
 
-  it("skips ai.* and auth.* mutations", async () => {
+  it("skips auth.* mutations", async () => {
     const { audit, mutation } = makeAuditSpy();
     const caller = auditTestRouter.createCaller({
       session: leadSession,
@@ -207,7 +200,6 @@ describe("36-02 mutation-audit middleware", () => {
       pdfReportId: null,
     });
 
-    await caller.ai.fakeMutation({ id: "a" });
     await caller.auth.fakeMutation({ id: "b" });
 
     expect(mutation).not.toHaveBeenCalled();

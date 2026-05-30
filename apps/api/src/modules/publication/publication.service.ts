@@ -14,13 +14,17 @@ import {
 import { type AppLogger, createNullLogger } from "../../lib/logger";
 
 /**
- * Phase 54 (UFB-055): fire-and-forget ingestion seam. Wired by
- * PublicationModule to {@link AiIngestionService.enqueueSections};
- * unit tests default to a no-op so the 200+ existing tests stay green.
- * Errors thrown by the port are swallowed by the publish path — the
- * publish must succeed even when the future RAG pipeline is degraded.
+ * Fire-and-forget post-publish ingestion seam. Unit tests default to a
+ * no-op so the 200+ existing tests stay green. Errors thrown by the port
+ * are swallowed by the publish path — the publish must succeed even when
+ * a downstream consumer is degraded.
+ *
+ * The original AI/RAG consumer was removed (see
+ * apps/api/src/modules/ai/HANDOFF.md); the seam is kept so a rebuilt
+ * pipeline — or any other async consumer — can re-wire without touching
+ * the publish path.
  */
-export type AiIngestionPublishHook = (
+export type IngestionPublishHook = (
   sectionIds: readonly string[],
 ) => Promise<void>;
 
@@ -96,16 +100,16 @@ export class PublicationService {
      * Errors are swallowed below — publish never fails because of
      * ingestion bookkeeping.
      */
-    private readonly ingestionHook: AiIngestionPublishHook = async () =>
+    private readonly ingestionHook: IngestionPublishHook = async () =>
       undefined,
   ) {
     this.logger = logger ?? createNullLogger();
   }
 
   /**
-   * Phase 54 (UFB-055): private helper — invokes the ingestion hook
-   * with every section id in the assembled report and swallows any
-   * error so the calling publish path always returns the report.
+   * Private helper — invokes the post-publish ingestion hook with every
+   * section id in the assembled report and swallows any error so the
+   * calling publish path always returns the report.
    */
   private async enqueueIngestion(report: AssembledReport): Promise<void> {
     const ids = report.sections.map((s) => s.reportSectionId);
@@ -113,7 +117,7 @@ export class PublicationService {
     try {
       await this.ingestionHook(ids);
     } catch (err) {
-      this.logger.warn("ai ingestion hook failed", {
+      this.logger.warn("ingestion hook failed", {
         error: err instanceof Error ? err.message : String(err),
       });
     }

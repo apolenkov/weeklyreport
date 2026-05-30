@@ -254,40 +254,6 @@ function makeMockTRPC(
         pathFilter: () => ({ queryKey: ["admin", "getSettings"] }),
       },
     },
-    // Phase 31 (AI-01): AiSummaryCard is mounted inside WeeklyReportPage.
-    // It calls ai.summary.queryOptions and conditionally ai.regenerateSummary.
-    // mutationOptions. These tests do not exercise AI behaviour — provide
-    // a structurally valid mock so the card renders its loading/empty state.
-    ai: {
-      onTrack: {
-        queryOptions: () => ({
-          queryKey: ["ai", "onTrack"],
-          queryFn: async () => ({ available: false }) as const,
-          enabled: false,
-        }),
-      },
-      summary: {
-        queryOptions: () => ({
-          queryKey: ["ai", "summary"],
-          queryFn: async () => null,
-          enabled: false,
-        }),
-        queryKey: () => ["ai", "summary"],
-      },
-      regenerateSummary: {
-        mutationOptions: (opts: { onSuccess?: () => void } | undefined) => ({
-          mutationFn: vi.fn(),
-          onSuccess: opts?.onSuccess,
-        }),
-      },
-      sentiment: {
-        queryOptions: () => ({
-          queryKey: ["ai", "sentiment"],
-          queryFn: async () => null,
-          enabled: false,
-        }),
-      },
-    },
   } as never;
 }
 

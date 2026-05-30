@@ -104,13 +104,6 @@ export const metricsMiddleware = t.middleware(({ path, type, next }) =>
  */
 export const loggingMiddleware = t.middleware(
   async ({ ctx, next, path, type, getRawInput }) => {
-    // Phase 31 (AI-SPEC §5.3 / PITFALLS C-3): AI prompts and responses must
-    // never reach the structured log stream. Token usage and timing are
-    // recorded in AiInsight rows instead.
-    if (path.startsWith("ai.")) {
-      return next();
-    }
-
     const start = performance.now();
     const userId = ctx.session?.userId ?? null;
     const role = ctx.session?.role ?? null;
@@ -242,9 +235,7 @@ export const loggingMiddleware = t.middleware(
  * Captures every authenticated tRPC mutation through the existing
  * AuditLogger (so audit signal flows through the same AppLogger envelope as
  * login-success / login-fail / role-denied). The middleware is a no-op for
- * queries and for `auth.*` (covered by login events) and `ai.*` (privacy:
- * AI prompts/responses must never reach the audit stream — see Phase 31
- * AI-SPEC §5.3 / PITFALLS C-3).
+ * queries and for `auth.*` (covered by login events).
  *
  * `target` extraction is best-effort: we read whichever common id key is
  * present in the input (sectionId / reportId / periodId / projectId /
@@ -272,7 +263,7 @@ function truncateReason(reason: string, max = 500): string {
 export const mutationAuditMiddleware = t.middleware(
   async ({ ctx, next, path, type, getRawInput }) => {
     if (type !== "mutation") return next();
-    if (path.startsWith("auth.") || path.startsWith("ai.")) return next();
+    if (path.startsWith("auth.")) return next();
 
     const start = performance.now();
     const result = await next();

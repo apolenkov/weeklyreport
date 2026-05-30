@@ -268,15 +268,6 @@ function buildHarness(opts: {
         pathFilter: () => ({ queryKey: ["leadForm.getVersion"] }),
       },
     },
-    ai: {
-      onTrack: {
-        queryOptions: () => ({
-          queryKey: ["ai.onTrack"],
-          queryFn: async () => ({ available: false }) as const,
-        }),
-        pathFilter: () => ({ queryKey: ["ai.onTrack"] }),
-      },
-    },
   };
 
   return trpcMock;
