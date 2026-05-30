@@ -59,10 +59,10 @@ export class PeriodPrismaRepository implements PeriodRepository {
   }
 
   /**
-   * Phase 54 (UFB-055): all section ids for a report. Used by the
-   * ingestion seam to enqueue one stub `AiIngestionJob` row per
-   * section after `publishPeriod` resolves. Returns an empty array
-   * when the report has no sections (legal — period was published
+   * All section ids for a report. Read by the post-publish ingestion seam
+   * (see `IngestionPublishHook`) so a future async consumer can enqueue
+   * per-section work after `publishPeriod` resolves. Returns an empty
+   * array when the report has no sections (legal — period was published
    * without anyone filling in their section).
    */
   async listSectionIds(reportId: string): Promise<string[]> {
