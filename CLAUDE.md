@@ -203,3 +203,21 @@ branch in the same session.
   `prisma/_destructive-guard.ts`.
 - For product/group/report-period behavior, inspect existing tests before
   changing query semantics; this area has had regression-heavy UAT work.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues for `apolenkov/yourpulse` (via the `gh` CLI).
+See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Canonical vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`,
+`ready-for-human`, `wontfix`); only `wontfix` exists today, the rest are
+created on first use. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root.
+See `docs/agents/domain.md`.
