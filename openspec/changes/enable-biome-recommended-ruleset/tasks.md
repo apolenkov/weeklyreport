@@ -5,8 +5,10 @@
   `correctness.useHookAtTopLevel` (set to `"off"`) — ESLint owns hooks
 - [ ] 1.3 Add `complexity.noExcessiveCognitiveComplexity` at `"warn"` with
   `options.maxAllowedComplexity: 15`
-- [ ] 1.4 Confirm existing overrides are intact: AI-module `noRestrictedImports`,
-  `noExplicitAny: error`, `noNonNullAssertion: warn`
+- [ ] 1.4 Confirm existing overrides are intact: `noExplicitAny: error`,
+  `noNonNullAssertion: warn`, `noUnusedVariables: error` (`ignoreRestSiblings`).
+  (The AI-module `noRestrictedImports` override was removed with the AI module in
+  `45ffbe23` and is no longer present.)
 
 ## 2. Autofix the mechanical bulk
 
@@ -37,7 +39,7 @@
 ## 5. Docs + durable spec
 
 - [ ] 5.1 Update the `eslint.config.ts` header comment to reference the
-  `lint-toolchain-ownership` spec (Biome owns recommended; ESLint owns the four;
+  `lint-toolchain-ownership` spec (Biome owns recommended; ESLint owns the three;
   `tsc` separate)
 - [ ] 5.2 Confirm `complexity/noExcessiveCognitiveComplexity` warnings (65) are
   visible and explicitly out of scope here (handed to architecture change B)

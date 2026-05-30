@@ -6,9 +6,9 @@ The root `biome.json` linter MUST enable Biome's `recommended` ruleset
 (`linter.rules.recommended: true`). Biome MUST own formatting and the full
 recommended lint surface for the code surface it already covers
 (`*.{ts,tsx,js,jsx,mjs}`, `*.{json,jsonc}`, `*.css`). Repo-specific overrides
-(`noExplicitAny: error`, `noNonNullAssertion: warn`, the AI-module
-`noRestrictedImports` Prisma-isolation rule) MUST be preserved on top of the
-recommended baseline, not replaced by it.
+(`noExplicitAny: error`, `noNonNullAssertion: warn`, `noUnusedVariables: error`
+with `ignoreRestSiblings`) MUST be preserved on top of the recommended baseline,
+not replaced by it.
 
 #### Scenario: recommended ruleset is enabled
 
@@ -21,24 +21,25 @@ recommended baseline, not replaced by it.
 
 - **WHEN** Biome evaluates a file that uses `any`
 - **THEN** `noExplicitAny` is reported at `error` (override retained)
-- **AND** the AI-module `noRestrictedImports` Prisma-isolation rule still
-  applies to `apps/api/src/modules/ai/**` per its existing override scope
+- **AND** an unused variable is still reported at `error` via the retained
+  `noUnusedVariables` override (not relaxed to the recommended default)
 
 ### Requirement: ESLint owns the rules Biome cannot provide
 
 A residual ESLint config (`eslint.config.ts`) MUST remain in the lint gate to
-own the four checks Biome cannot stably provide: `react-compiler/react-compiler`
+own the three checks Biome cannot stably provide: `react-compiler/react-compiler`
 (no Biome equivalent), the type-aware `@typescript-eslint/no-floating-promises`,
-`react-hooks/rules-of-hooks` + `react-hooks/exhaustive-deps`, and the AI
-logger-secrets `no-restricted-syntax` selector scoped to `ai/**`. ESLint MUST
-NOT be removed while any of these four checks lacks a stable Biome owner.
+and `react-hooks/rules-of-hooks` + `react-hooks/exhaustive-deps`. ESLint MUST
+NOT be removed while any of these three checks lacks a stable Biome owner. (The
+former AI logger-secrets `no-restricted-syntax` selector was removed with the AI
+module in `45ffbe23` and is no longer part of this set.)
 
 #### Scenario: ESLint still runs in the lint gate
 
 - **WHEN** `pnpm lint` runs
 - **THEN** `eslint .` executes after `biome check .`
-- **AND** a floating promise, a hook-rule violation, a react-compiler violation,
-  or an AI logger-secrets violation fails the gate via ESLint
+- **AND** a floating promise, a hook-rule violation, or a react-compiler
+  violation fails the gate via ESLint
 
 ### Requirement: React hook rules are single-owned by ESLint
 
