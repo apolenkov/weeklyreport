@@ -25,7 +25,7 @@ import { z } from "zod";
 export const aiSummarySchema = z.object({
   summary: z.string(),
   source: z.enum(["mock", "ai"]),
-  citationIds: z.array(z.string().uuid()),
+  citationIds: z.array(z.uuid()),
 });
 
 export type AiSummary = z.infer<typeof aiSummarySchema>;

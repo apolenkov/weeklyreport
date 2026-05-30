@@ -638,7 +638,7 @@ export function createAppRouter(deps: RouterDeps) {
     // === PDF Export namespace ===
     pdfExport: router({
       request: headProcedure
-        .input(z.object({ reportId: z.string().uuid() }))
+        .input(z.object({ reportId: z.uuid() }))
         .mutation(async ({ input, ctx }) => {
           try {
             // Phase 23-01: thread session userId so the pdf_export_jobs row
@@ -657,7 +657,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       status: headProcedure
-        .input(z.object({ jobId: z.string().uuid() }))
+        .input(z.object({ jobId: z.uuid() }))
         .query(async ({ input, ctx }) => {
           try {
             return await deps.pdfExportService.getPdfExportStatus(
@@ -851,7 +851,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       archiveReportingGroup: adminProcedure
-        .input(z.object({ groupId: z.string().uuid() }))
+        .input(z.object({ groupId: z.uuid() }))
         .mutation(async ({ input }) => {
           try {
             return await deps.adminService.archiveReportingGroup(input.groupId);
@@ -947,7 +947,7 @@ export function createAppRouter(deps: RouterDeps) {
        * envelope.
        */
       removePolicy: adminProcedure
-        .input(z.object({ id: z.string().uuid() }))
+        .input(z.object({ id: z.uuid() }))
         .mutation(async ({ ctx, input }) => {
           try {
             const result = await deps.adminService.removePolicy(input.id);
@@ -1091,7 +1091,7 @@ export function createAppRouter(deps: RouterDeps) {
        * invariant from 51-C is preserved.
        */
       archivePeriod: adminProcedure
-        .input(z.object({ periodId: z.string().uuid() }))
+        .input(z.object({ periodId: z.uuid() }))
         .mutation(async ({ input }) => {
           try {
             return await deps.adminService.archivePeriod(input.periodId);
@@ -1108,7 +1108,7 @@ export function createAppRouter(deps: RouterDeps) {
        * with 'archived').
        */
       unarchivePeriod: adminProcedure
-        .input(z.object({ periodId: z.string().uuid() }))
+        .input(z.object({ periodId: z.uuid() }))
         .mutation(async ({ input }) => {
           try {
             return await deps.adminService.unarchivePeriod(input.periodId);
@@ -1122,7 +1122,7 @@ export function createAppRouter(deps: RouterDeps) {
        * Guard: cannot delete published periods.
        */
       deleteReport: adminProcedure
-        .input(z.object({ reportId: z.string().uuid() }))
+        .input(z.object({ reportId: z.uuid() }))
         .mutation(async ({ input }) => {
           try {
             return await deps.adminService.deleteReport(input.reportId);
@@ -1132,7 +1132,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       deleteUser: adminProcedure
-        .input(z.object({ userId: z.string().uuid() }))
+        .input(z.object({ userId: z.uuid() }))
         .mutation(async ({ input }) => {
           try {
             return await deps.adminService.removeUser(input.userId);
@@ -1147,7 +1147,7 @@ export function createAppRouter(deps: RouterDeps) {
        * JWT session is rejected immediately by the context factory.
        */
       deactivateUser: adminProcedure
-        .input(z.object({ userId: z.string().uuid() }))
+        .input(z.object({ userId: z.uuid() }))
         .mutation(async ({ input }) => {
           try {
             await deps.prisma.user.update({
@@ -1167,7 +1167,7 @@ export function createAppRouter(deps: RouterDeps) {
        * can proceed normally.
        */
       activateUser: adminProcedure
-        .input(z.object({ userId: z.string().uuid() }))
+        .input(z.object({ userId: z.uuid() }))
         .mutation(async ({ input }) => {
           try {
             await deps.prisma.user.update({
@@ -1182,7 +1182,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       deleteProject: adminProcedure
-        .input(z.object({ projectId: z.string().uuid() }))
+        .input(z.object({ projectId: z.uuid() }))
         .mutation(async ({ input }) => {
           try {
             return await deps.adminService.removeProject(input.projectId);
@@ -1192,7 +1192,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       deleteReminderRule: adminProcedure
-        .input(z.object({ ruleId: z.string().uuid() }))
+        .input(z.object({ ruleId: z.uuid() }))
         .mutation(async ({ input }) => {
           try {
             return await deps.adminService.removeReminderRule(input.ruleId);
@@ -1204,9 +1204,9 @@ export function createAppRouter(deps: RouterDeps) {
       saveStageAssignment: adminProcedure
         .input(
           z.object({
-            userId: z.string().uuid(),
-            stageId: z.string().uuid(),
-            projectId: z.string().uuid(),
+            userId: z.uuid(),
+            stageId: z.uuid(),
+            projectId: z.uuid(),
           }),
         )
         .mutation(async ({ input }) => {
@@ -1218,7 +1218,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       deleteStageAssignment: adminProcedure
-        .input(z.object({ id: z.string().uuid() }))
+        .input(z.object({ id: z.uuid() }))
         .mutation(async ({ input }) => {
           try {
             return await deps.adminService.deleteStageAssignment(input.id);
@@ -1228,7 +1228,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       listStageAssignments: adminProcedure
-        .input(z.object({ projectId: z.string().uuid() }))
+        .input(z.object({ projectId: z.uuid() }))
         .query(async ({ input }) => {
           try {
             return await deps.adminService.listStageAssignments(
@@ -1306,7 +1306,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       listGroupProducts: adminProcedure
-        .input(z.object({ groupId: z.string().uuid() }))
+        .input(z.object({ groupId: z.uuid() }))
         .query(async ({ input }) => {
           try {
             return await deps.adminService.listGroupProducts(input.groupId);
@@ -1316,7 +1316,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       listProductGroups: adminProcedure
-        .input(z.object({ productId: z.string().uuid() }))
+        .input(z.object({ productId: z.uuid() }))
         .query(async ({ input }) => {
           try {
             return await deps.adminService.listProductGroups(input.productId);
@@ -1494,7 +1494,7 @@ export function createAppRouter(deps: RouterDeps) {
       respondReopenRequest: adminProcedure
         .input(
           z.object({
-            id: z.string().uuid(),
+            id: z.uuid(),
             decision: z.enum(["approved", "rejected"]),
             note: z.string().max(500).optional(),
           }),
@@ -1579,7 +1579,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       detail: anyRoleProcedure
-        .input(z.object({ reportId: z.string().uuid() }))
+        .input(z.object({ reportId: z.uuid() }))
         .query(async ({ input, ctx }) => {
           try {
             const detail = await deps.archiveService.getArchiveReport(
@@ -1617,7 +1617,7 @@ export function createAppRouter(deps: RouterDeps) {
        * shown in the "recently published" surface.
        */
       archiveReport: headProcedure
-        .input(z.object({ reportId: z.string().uuid() }))
+        .input(z.object({ reportId: z.uuid() }))
         .mutation(async ({ input }) => {
           try {
             await deps.adminService.archivePeriod(input.reportId);
@@ -1633,7 +1633,7 @@ export function createAppRouter(deps: RouterDeps) {
        * adminService.unarchivePeriod and removes it from archive.list.
        */
       unarchiveReport: headProcedure
-        .input(z.object({ reportId: z.string().uuid() }))
+        .input(z.object({ reportId: z.uuid() }))
         .mutation(async ({ input }) => {
           try {
             await deps.adminService.unarchivePeriod(input.reportId);
@@ -1649,8 +1649,8 @@ export function createAppRouter(deps: RouterDeps) {
       execute: headProcedure
         .input(
           z.object({
-            ruleId: z.string().uuid(),
-            recipientEmail: z.string().email(),
+            ruleId: z.uuid(),
+            recipientEmail: z.email(),
           }),
         )
         .mutation(async ({ input }) => {
@@ -1666,9 +1666,7 @@ export function createAppRouter(deps: RouterDeps) {
 
       listExecutions: headProcedure
         .input(
-          z
-            .object({ ruleId: z.string().uuid() })
-            .merge(paginationInputSchema.partial()),
+          z.object({ ruleId: z.uuid() }).merge(paginationInputSchema.partial()),
         )
         .query(async ({ input }) => {
           try {
@@ -1692,14 +1690,14 @@ export function createAppRouter(deps: RouterDeps) {
       dispatchPending: headProcedure
         .input(
           z.object({
-            reportId: z.string().uuid(),
-            ruleId: z.string().uuid().optional(),
+            reportId: z.uuid(),
+            ruleId: z.uuid().optional(),
             // T-F4-4 (plan §23.4): scope dispatch to a single lead so the
             // Head Dashboard Remind button can ping one author without
             // exposing emails to the client. When undefined, falls back to
             // the original "every draft author" behaviour used by the
             // bulk AlertBar action.
-            leadId: z.string().uuid().optional(),
+            leadId: z.uuid().optional(),
           }),
         )
         .output(
@@ -1800,8 +1798,8 @@ export function createAppRouter(deps: RouterDeps) {
       execute: headProcedure
         .input(
           z.object({
-            sourceReportId: z.string().uuid(),
-            targetReportId: z.string().uuid(),
+            sourceReportId: z.uuid(),
+            targetReportId: z.uuid(),
           }),
         )
         .mutation(async ({ input }) => {
@@ -1819,7 +1817,7 @@ export function createAppRouter(deps: RouterDeps) {
     // === Period lifecycle namespace (v4.0) ===
     period: router({
       publish: headProcedure
-        .input(z.object({ reportId: z.string().uuid() }))
+        .input(z.object({ reportId: z.uuid() }))
         .mutation(async ({ input, ctx }) => {
           try {
             return await deps.periodService.publishPeriod(
@@ -1832,7 +1830,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       reopen: headProcedure
-        .input(z.object({ reportId: z.string().uuid() }))
+        .input(z.object({ reportId: z.uuid() }))
         .mutation(async ({ input }) => {
           try {
             return await deps.periodService.reopenPeriod(input.reportId);
@@ -1848,7 +1846,7 @@ export function createAppRouter(deps: RouterDeps) {
     // service layer scopes the read to published periods for viewers.
     weeklyReport: router({
       get: anyRoleProcedure
-        .input(z.object({ reportId: z.string().uuid().optional() }).optional())
+        .input(z.object({ reportId: z.uuid().optional() }).optional())
         .query(async ({ input, ctx }) => {
           const requestedReportId = input?.reportId ?? null;
           try {
@@ -1907,8 +1905,8 @@ export function createAppRouter(deps: RouterDeps) {
       byPeriod: protectedProcedure
         .input(
           z.object({
-            reportId: z.string().uuid(),
-            authorId: z.string().uuid().optional(),
+            reportId: z.uuid(),
+            authorId: z.uuid().optional(),
           }),
         )
         .query(async ({ input, ctx }) => {
@@ -1955,8 +1953,8 @@ export function createAppRouter(deps: RouterDeps) {
       fillFrom: protectedProcedure
         .input(
           z.object({
-            targetSectionId: z.string().uuid(),
-            sourceSectionId: z.string().uuid(),
+            targetSectionId: z.uuid(),
+            sourceSectionId: z.uuid(),
           }),
         )
         .mutation(async ({ input, ctx }) => {
@@ -1972,7 +1970,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       versions: protectedProcedure
-        .input(z.object({ reportSectionId: z.string().uuid() }))
+        .input(z.object({ reportSectionId: z.uuid() }))
         .query(async ({ input, ctx }) => {
           try {
             return await deps.leadFormService.listVersions(
@@ -1988,7 +1986,7 @@ export function createAppRouter(deps: RouterDeps) {
       restoreVersion: protectedProcedure
         .input(
           z.object({
-            reportSectionId: z.string().uuid(),
+            reportSectionId: z.uuid(),
             version: z.number().int().positive(),
           }),
         )
@@ -2007,7 +2005,7 @@ export function createAppRouter(deps: RouterDeps) {
       getVersion: protectedProcedure
         .input(
           z.object({
-            reportSectionId: z.string().uuid(),
+            reportSectionId: z.uuid(),
             version: z.number().int().positive(),
           }),
         )
@@ -2027,7 +2025,7 @@ export function createAppRouter(deps: RouterDeps) {
       createSnapshot: protectedProcedure
         .input(
           z.object({
-            reportSectionId: z.string().uuid(),
+            reportSectionId: z.uuid(),
           }),
         )
         .mutation(async ({ input, ctx }) => {
@@ -2042,7 +2040,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       revoke: headProcedure
-        .input(z.object({ reportSectionId: z.string().uuid() }))
+        .input(z.object({ reportSectionId: z.uuid() }))
         .mutation(async ({ input, ctx }) => {
           try {
             return await deps.leadFormService.revokeSubmission(
@@ -2055,7 +2053,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       revokeAllSubmitted: headProcedure
-        .input(z.object({ reportId: z.string().uuid() }))
+        .input(z.object({ reportId: z.uuid() }))
         .mutation(async ({ input, ctx }) => {
           try {
             return await deps.leadFormService.revokeAllSubmitted(
@@ -2070,7 +2068,7 @@ export function createAppRouter(deps: RouterDeps) {
       requestReopen: protectedProcedure
         .input(
           z.object({
-            reportSectionId: z.string().uuid(),
+            reportSectionId: z.uuid(),
             reason: z.string().max(500).optional(),
           }),
         )
@@ -2087,7 +2085,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       crossAuthors: protectedProcedure
-        .input(z.object({ reportId: z.string().uuid() }))
+        .input(z.object({ reportId: z.uuid() }))
         .query(async ({ input, ctx }) => {
           try {
             return await deps.leadFormService.getCrossAuthors(
@@ -2100,7 +2098,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
 
       crossAuthorSections: protectedProcedure
-        .input(z.object({ reportId: z.string().uuid() }))
+        .input(z.object({ reportId: z.uuid() }))
         .query(async ({ input, ctx }) => {
           try {
             return await deps.leadFormService.getCrossAuthorSections(
@@ -2211,7 +2209,7 @@ export function createAppRouter(deps: RouterDeps) {
     ai: router({
       // AI-01: executive summary card on assembled report.
       summary: protectedProcedure
-        .input(z.object({ reportId: z.string().uuid() }))
+        .input(z.object({ reportId: z.uuid() }))
         .query(async ({ input, ctx }) => {
           try {
             await assertCanReadReport(deps.prisma, ctx.session, input.reportId);
@@ -2222,7 +2220,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
       // AI-01: head-only Regenerate button.
       regenerateSummary: headProcedure
-        .input(z.object({ reportId: z.string().uuid() }))
+        .input(z.object({ reportId: z.uuid() }))
         .mutation(async ({ input, ctx }) => {
           try {
             await assertCanReadReport(deps.prisma, ctx.session, input.reportId);
@@ -2233,7 +2231,7 @@ export function createAppRouter(deps: RouterDeps) {
         }),
       // AI-02: per-Risk sentiment classification badge.
       sentiment: protectedProcedure
-        .input(z.object({ riskId: z.string().uuid() }))
+        .input(z.object({ riskId: z.uuid() }))
         .query(async ({ input, ctx }) => {
           try {
             await assertCanReadRisk(deps.prisma, ctx.session, input.riskId);
@@ -2252,7 +2250,7 @@ export function createAppRouter(deps: RouterDeps) {
       // Returns aiSummarySchema: { summary, source: 'mock'|'ai',
       // citationIds }. The UI badges `source === 'mock'` as a stub.
       periodSummary: leadershipProcedure
-        .input(z.object({ periodId: z.string().uuid() }))
+        .input(z.object({ periodId: z.uuid() }))
         .query(async ({ input }) => {
           try {
             if (!deps.aiSummaryService) {
@@ -2276,8 +2274,8 @@ export function createAppRouter(deps: RouterDeps) {
       onTrack: protectedProcedure
         .input(
           z.object({
-            sectionId: z.string().uuid(),
-            projectId: z.string().uuid(),
+            sectionId: z.uuid(),
+            projectId: z.uuid(),
           }),
         )
         .query(async ({ input, ctx }) => {

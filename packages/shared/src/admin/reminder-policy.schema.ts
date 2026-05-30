@@ -28,7 +28,7 @@ export const reminderPolicyKindSchema = z.enum([
 
 export const reminderPolicySchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.uuid(),
     kind: reminderPolicyKindSchema,
     offsetMinutes: z.number().int(),
     timezone: z.string().min(1),

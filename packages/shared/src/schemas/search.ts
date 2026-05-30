@@ -22,7 +22,7 @@ export type SearchHitType = z.infer<typeof searchHitTypeSchema>;
 
 export const searchHitSchema = z.object({
   type: searchHitTypeSchema,
-  id: z.string().uuid(),
+  id: z.uuid(),
   /** First line / projection of the matched field — used as the result row's
    * primary label. */
   title: z.string(),
@@ -32,11 +32,11 @@ export const searchHitSchema = z.object({
   /** ts_rank float — strictly informational; ordering is server-side. */
   rank: z.number(),
   /** Optional FK pointers used to build the click-through URL. */
-  projectId: z.string().uuid().optional(),
-  reportId: z.string().uuid().optional(),
-  reportSectionId: z.string().uuid().optional(),
+  projectId: z.uuid().optional(),
+  reportId: z.uuid().optional(),
+  reportSectionId: z.uuid().optional(),
   /** ISO timestamp of the underlying row (Item/Risk/Decision/Project.createdAt). */
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
 });
 export type SearchHit = z.infer<typeof searchHitSchema>;
 
