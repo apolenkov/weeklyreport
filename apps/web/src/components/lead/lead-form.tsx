@@ -13,10 +13,7 @@ import {
   stableStringify,
   useLeadFormAutosave,
 } from "../../hooks/use-lead-form-autosave";
-import {
-  computeCoupling,
-  validateCoupling,
-} from "../../hooks/use-status-risk";
+import { computeCoupling, validateCoupling } from "../../hooks/use-status-risk";
 import {
   invalidateDashboard,
   invalidateLeadForm,

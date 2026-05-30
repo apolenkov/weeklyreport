@@ -1,4 +1,7 @@
-import type { CreateSnapshotResult, LeadFormRepository } from "./lead-form-shared";
+import type {
+  CreateSnapshotResult,
+  LeadFormRepository,
+} from "./lead-form-shared";
 
 /** Minimum time between autosave-triggered snapshots for a single section. */
 const SNAPSHOT_THROTTLE_MS = 60_000;

@@ -1,4 +1,7 @@
-import type { ReportSectionReadModel, VersionSnapshot } from "@customreport/shared";
+import type {
+  ReportSectionReadModel,
+  VersionSnapshot,
+} from "@customreport/shared";
 
 export class LeadFormDomainError extends Error {
   constructor(message: string) {
