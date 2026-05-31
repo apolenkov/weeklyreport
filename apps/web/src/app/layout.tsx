@@ -52,7 +52,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         <script
           id="__org_data"
           type="application/json"
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted server-fetched org identity serialized via JSON.stringify into an application/json script for zero-flash first paint
+          // eslint-disable-next-line react/no-danger -- trusted server-fetched org identity serialized via JSON.stringify into an application/json script for zero-flash first paint
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgPublic) }}
         />
       </head>

@@ -73,7 +73,7 @@ function makePrismaStub(opts: {
 // Cast to never via Nest DI seam — the scheduler types its constructor on
 // PrismaService + AdminService; tests pass a minimal shape with only the
 // methods exercised.
-// biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
 const asAny = (x: unknown) => x as any;
 
 // ---------------------------------------------------------------------------

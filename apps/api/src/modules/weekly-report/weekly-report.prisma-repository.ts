@@ -164,7 +164,7 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       });
     }
 
-    // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
     const leadSections = (report.sections as any[]).map(
       mapPrismaToReportSection,
     );

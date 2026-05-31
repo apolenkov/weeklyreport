@@ -43,7 +43,7 @@ export class PrismaService
     // narrows differently depending on the constructor's `log` shape and
     // TypeScript can't always reconcile the two.
     const debugEnabled = (process.env.LOG_LEVEL ?? "info") === "debug";
-    // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
     const self = this as any;
 
     self.$on?.(

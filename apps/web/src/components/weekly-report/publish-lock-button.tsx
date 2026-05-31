@@ -116,7 +116,7 @@ export function PublishLockButton({
             aria-modal="true"
             aria-label="Confirm publish"
             tabIndex={-1}
-            // biome-ignore lint/a11y/noAutofocus: intentional initial focus for this modal dialog
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
             autoFocus
             onKeyDown={(e) => {
               if (e.key === "Escape") setShowDialog(false);

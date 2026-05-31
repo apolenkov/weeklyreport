@@ -133,7 +133,6 @@ export function HeadPeriodNavigator({
   }
 
   return (
-    // biome-ignore lint/a11y/useSemanticElements: fieldset default border/padding/margin would break the flex strip layout
     <div
       className="flex items-center gap-2"
       onTouchStart={handleTouchStart}

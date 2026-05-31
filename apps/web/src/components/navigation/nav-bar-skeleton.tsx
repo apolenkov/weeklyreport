@@ -21,7 +21,7 @@
  */
 export function NavBarSkeleton() {
   return (
-    // biome-ignore lint/a11y/noAriaHiddenOnFocusable: skeleton has no focusable children; aria-hidden hides the entire placeholder from AT
+    // eslint-disable-next-line jsx-a11y/no-aria-hidden-on-focusable -- skeleton has no focusable children; aria-hidden hides the entire placeholder from AT
     <header
       className="w-full bg-[var(--color-card)]"
       data-testid="nav-bar-skeleton"

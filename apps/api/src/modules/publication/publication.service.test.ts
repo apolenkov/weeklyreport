@@ -306,7 +306,7 @@ describe("PublicationService", () => {
 async function getCounterValue(
   counter: {
     get(): Promise<{
-      // biome-ignore lint/suspicious/noExplicitAny: prom-client label record (migrated from eslint-disable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- prom-client label record (migrated from eslint-disable)
       values: Array<{ value: number; labels: Record<string, any> }>;
     }>;
   },

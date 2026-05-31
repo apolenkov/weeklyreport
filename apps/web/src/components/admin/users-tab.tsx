@@ -368,14 +368,14 @@ export function UsersTab({ users, groups }: UsersTabProps) {
 
       {/* Add/Edit Dialog */}
       {showDialog && (
-        // biome-ignore lint/a11y/noStaticElementInteractions: backdrop is a mouse convenience; dialog is keyboard-closable via Escape + Cancel button
+        // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- backdrop is a mouse convenience; dialog is keyboard-closable via Escape + Cancel button
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
           onClick={() => setShowDialog(false)}
           role="presentation"
           data-testid="crud-sheet"
         >
-          {/* biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops mouse-click propagation to the backdrop; the dialog is keyboard-closable via Escape + Cancel button */}
+          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops mouse-click propagation to the backdrop; the dialog is keyboard-closable via Escape + Cancel button */}
           <div
             className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
             role="dialog"

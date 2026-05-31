@@ -769,7 +769,7 @@ export function buildProductScopedSlides(
 
     const bucketFor = (productId: string | null | undefined): ProductAcc =>
       productId && owned.has(productId)
-        ? // biome-ignore lint/style/noNonNullAssertion: intentional non-null assertion (migrated from eslint-disable)
+        ? // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- intentional non-null assertion (migrated from eslint-disable)
           products.get(productId)!
         : ensure(SHARED_PRODUCT_ID, SHARED_PRODUCT_NAME);
 
