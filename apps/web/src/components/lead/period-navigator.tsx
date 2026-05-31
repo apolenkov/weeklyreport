@@ -38,6 +38,7 @@ function ChevronLeft() {
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
+      aria-hidden="true"
     >
       <path d="M15 18l-6-6 6-6" />
     </svg>
@@ -54,6 +55,7 @@ function ChevronRight() {
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
+      aria-hidden="true"
     >
       <path d="M9 18l6-6-6-6" />
     </svg>
@@ -146,6 +148,7 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
   }
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: fieldset has browser-default border/min-width that breaks flex layout here
     <div
       className="flex min-w-0 items-center gap-3 px-3 py-2"
       onTouchStart={handleTouchStart}

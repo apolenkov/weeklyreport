@@ -9,7 +9,7 @@ import {
 import { type Job, Worker } from "bullmq";
 import { chromium } from "playwright";
 
-import { PdfExportService } from "../../modules/pdf-export/pdf-export.service";
+import type { PdfExportService } from "../../modules/pdf-export/pdf-export.service";
 import { getBullMQOptions } from "./bullmq-options";
 
 type PdfExportJobData = {

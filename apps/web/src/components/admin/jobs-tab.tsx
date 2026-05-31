@@ -253,6 +253,7 @@ function JobsSkeleton() {
     <div
       className="rounded-[var(--radius)] border border-[var(--color-border)]"
       data-testid="jobs-loading-state"
+      role="status"
       aria-label="Loading failed jobs"
       aria-live="polite"
     >

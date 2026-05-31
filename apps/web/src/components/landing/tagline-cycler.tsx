@@ -50,7 +50,6 @@ export function TaglineCycler() {
   return (
     <p
       className="pulse-tagline"
-      role="text"
       style={{ opacity: visible ? 1 : 0 }}
       suppressHydrationWarning
     >

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { DateTime } from "luxon";
 
-import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 
 /**
  * UFB-036 (Phase 44-03): the seam that turns ReminderPolicy templates

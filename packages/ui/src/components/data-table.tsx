@@ -154,7 +154,7 @@ export function DataTable<T>({
           </TableRow>
         ) : (
           sortedData.map((row, index) => (
-            <TableRow
+            <TableRow // biome-ignore lint/suspicious/noArrayIndexKey: DataTable is generic (T has no id constraint); no stable key is derivable without changing the public API
               key={index}
               className={cn(
                 "border-b border-border hover:bg-muted/50",

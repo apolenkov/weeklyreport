@@ -20,6 +20,7 @@ function TrafficDot({
 }) {
   return (
     <span
+      role="img"
       className="inline-flex h-7 min-w-12 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.08)] bg-white/70 px-2 text-[12px] font-semibold text-[var(--color-foreground)]"
       aria-label={label + ": " + count}
     >

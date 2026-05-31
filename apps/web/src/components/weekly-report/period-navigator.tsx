@@ -31,6 +31,7 @@ function ChevronLeft() {
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
+      aria-hidden="true"
     >
       <path d="M15 18l-6-6 6-6" />
     </svg>
@@ -47,6 +48,7 @@ function ChevronRight() {
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
+      aria-hidden="true"
     >
       <path d="M9 18l6-6-6-6" />
     </svg>
@@ -131,6 +133,7 @@ export function HeadPeriodNavigator({
   }
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: fieldset default border/padding/margin would break the flex strip layout
     <div
       className="flex items-center gap-2"
       onTouchStart={handleTouchStart}

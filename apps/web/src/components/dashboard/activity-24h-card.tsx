@@ -32,7 +32,7 @@ export function Activity24hCard() {
   const isLoading = query.isLoading && count === null;
 
   return (
-    <div
+    <section
       className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
       style={{ borderLeft: "3px solid var(--color-starbucks-accent)" }}
       aria-label={`24h Activity: ${count ?? "loading"} updates in last 24 hours`}
@@ -53,6 +53,6 @@ export function Activity24hCard() {
           </p>
         </>
       )}
-    </div>
+    </section>
   );
 }

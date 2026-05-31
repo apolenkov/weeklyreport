@@ -180,14 +180,13 @@ function ActivityRow({
         <div
           className={draftClassName}
           title="Lead is still working, report not submitted"
-          aria-label={`${row.leadName} report is in draft — not yet submitted`}
         >
           {content}
         </div>
       ) : (
         <div
           className={emptyClassName}
-          aria-label={`${row.leadName} has no report content yet`}
+          title={`${row.leadName} has no report content yet`}
         >
           {content}
         </div>

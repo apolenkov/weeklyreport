@@ -63,6 +63,7 @@ function ChevronDown({ expanded }: { readonly expanded: boolean }) {
       fill="none"
       strokeWidth={2}
       style={{ transform: expanded ? "rotate(0deg)" : "rotate(-90deg)" }}
+      aria-hidden="true"
     >
       <path d="M6 9l6 6 6-6" />
     </svg>
@@ -346,9 +347,9 @@ export function ProductAccordion({
                     Top Priorities
                   </div>
                   <ol className="space-y-1 text-sm">
-                    {report.priorities.map((p, idx) => (
+                    {report.priorities.map((p) => (
                       <li
-                        key={`${p.rank}-${idx}`}
+                        key={p.rank}
                         className="flex items-center gap-2 rounded p-2"
                         style={{
                           background:

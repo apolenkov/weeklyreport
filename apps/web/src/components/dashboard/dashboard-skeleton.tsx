@@ -63,6 +63,7 @@ export function DashboardSkeleton() {
             {/* thead placeholder */}
             <div className="flex gap-4 border-b border-[var(--color-border)] px-5 py-3">
               {[120, 80, 80, 80, 100].map((w, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: static column-width array, order never changes
                 <Skeleton key={i} className={`h-3 w-[${w}px]`} />
               ))}
             </div>

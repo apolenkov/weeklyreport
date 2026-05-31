@@ -261,10 +261,7 @@ export function SearchInput({
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span
-                    aria-label={badge.aria}
-                    className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]"
-                  >
+                  <span className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
                     {badge.label}
                   </span>
                   <span className="text-[11px] text-[var(--color-muted-foreground)]">

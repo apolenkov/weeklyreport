@@ -36,6 +36,7 @@ function TrafficDot({
 }) {
   return (
     <span
+      role="img"
       className="inline-flex h-7 min-w-12 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.08)] bg-white/70 px-2 text-[12px] font-semibold text-[var(--color-foreground)]"
       aria-label={label + ": " + count}
     >
@@ -217,10 +218,21 @@ export function ReportArchiveSection({
   );
 }
 
+const SKELETON_KEYS = [
+  "sk-0",
+  "sk-1",
+  "sk-2",
+  "sk-3",
+  "sk-4",
+  "sk-5",
+  "sk-6",
+  "sk-7",
+] as const;
+
 function ArchiveSkeletonGrid() {
-  return Array.from({ length: 8 }, (_, idx) => (
+  return SKELETON_KEYS.map((key) => (
     <div
-      key={idx}
+      key={key}
       aria-hidden="true"
       className="min-h-[201px] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5"
       style={{ borderLeft: "3px solid var(--color-border)" }}

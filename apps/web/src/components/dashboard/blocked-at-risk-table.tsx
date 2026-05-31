@@ -19,6 +19,7 @@ function AlertIcon() {
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
+      aria-hidden="true"
     >
       <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
       <line x1="12" y1="9" x2="12" y2="13" />
@@ -36,6 +37,7 @@ function ChevronDown({ expanded }: { readonly expanded: boolean }) {
       fill="none"
       strokeWidth={2}
       style={{ transform: expanded ? "rotate(0deg)" : "rotate(-90deg)" }}
+      aria-hidden="true"
     >
       <path d="M6 9l6 6 6-6" />
     </svg>

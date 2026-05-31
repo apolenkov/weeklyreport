@@ -7,7 +7,7 @@ import {
   customreportActiveLeadsTotal,
   customreportReportsOnTimeRatio,
 } from "../../infrastructure/metrics/metrics.registry.js";
-import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 
 /**
  * Port shape used by the gauges service. Declared as an interface so unit

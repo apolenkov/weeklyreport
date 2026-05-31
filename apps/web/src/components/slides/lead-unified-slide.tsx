@@ -14,7 +14,6 @@ type Props = { readonly model: UnifiedSlideModel };
 function inlineProductMarker(productName: string): ReactNode {
   return (
     <span
-      aria-label={`Product: ${productName}`}
       className="inline-flex w-[130px] shrink-0 items-start gap-1 overflow-hidden text-[10px] font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]"
       title={productName}
     >
@@ -32,6 +31,7 @@ function inlineProductMarker(productName: string): ReactNode {
 function priorityChip(rank: number): ReactNode {
   return (
     <span
+      role="img"
       aria-label={`Priority ${rank}`}
       className="inline-flex shrink-0 items-center justify-center rounded-sm bg-[var(--color-starbucks-gold)] px-1 text-[10px] font-bold leading-4 text-white"
       title={`Priority rank ${rank}`}

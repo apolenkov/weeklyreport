@@ -6,7 +6,7 @@ import { versionSnapshotSchema } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 import type { ItemType, ItemWorkflowStatus, Prisma } from "@prisma/client";
 
-import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type {
   CrossAuthorSectionRow,
   LeadFormRepository,

@@ -4,7 +4,7 @@ import { Button } from "@customreport/ui/components/ui/button";
 import { cn } from "@customreport/ui/lib/utils";
 import { XIcon } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
-import * as React from "react";
+import type * as React from "react";
 
 function Dialog({
   ...props

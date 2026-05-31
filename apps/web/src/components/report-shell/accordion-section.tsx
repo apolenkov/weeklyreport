@@ -11,6 +11,7 @@ function ChevronDown({ expanded }: { readonly expanded: boolean }) {
       fill="none"
       strokeWidth={2}
       style={{ transform: expanded ? "rotate(0deg)" : "rotate(-90deg)" }}
+      aria-hidden="true"
     >
       <path d="M6 9l6 6 6-6" />
     </svg>

@@ -1,6 +1,6 @@
 import { type PdfExportJob, pdfExportJobSchema } from "@customreport/shared";
 
-import { type PdfExportService } from "./pdf-export.service";
+import type { PdfExportService } from "./pdf-export.service";
 
 export type PdfExportRouterRequestContext = {
   pdfExportService: PdfExportService;

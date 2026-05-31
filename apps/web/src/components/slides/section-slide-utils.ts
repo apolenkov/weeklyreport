@@ -579,30 +579,38 @@ export function buildUnifiedSlideModel(
         : { text, productName: name };
     };
     if (product.currentItems.length > 0) {
-      product.currentItems.forEach((text) => current.push(withRank(text)));
+      product.currentItems.forEach((text) => {
+        current.push(withRank(text));
+      });
     } else {
       emptyProducts.current.push(name);
     }
     if (product.nextItems.length > 0) {
-      product.nextItems.forEach((text) => next.push(withRank(text)));
+      product.nextItems.forEach((text) => {
+        next.push(withRank(text));
+      });
     } else {
       emptyProducts.next.push(name);
     }
     if (product.risks.length > 0) {
       // Risks don't carry priorityRank, but keep the row shape uniform.
-      product.risks.forEach((text) => risks.push({ text, productName: name }));
+      product.risks.forEach((text) => {
+        risks.push({ text, productName: name });
+      });
     } else {
       emptyProducts.risks.push(name);
     }
     if (product.priorities.length > 0) {
-      product.priorities.forEach((text) => priorities.push(withRank(text)));
+      product.priorities.forEach((text) => {
+        priorities.push(withRank(text));
+      });
     } else {
       emptyProducts.priorities.push(name);
     }
     if (product.decisions.length > 0) {
-      product.decisions.forEach((text) =>
-        decisions.push({ text, productName: name }),
-      );
+      product.decisions.forEach((text) => {
+        decisions.push({ text, productName: name });
+      });
     } else {
       emptyProducts.decisions.push(name);
     }

@@ -1,6 +1,11 @@
 export function SlideSkeleton() {
   return (
-    <div className="space-y-5" aria-busy="true" aria-label="Loading slides">
+    <div
+      className="space-y-5"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading slides"
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2">
           <div className="h-7 w-56 animate-pulse rounded-[var(--radius)] bg-[var(--color-muted)]" />
@@ -10,9 +15,9 @@ export function SlideSkeleton() {
       </div>
       <div className="grid gap-5 lg:grid-cols-[minmax(220px,300px)_1fr]">
         <div className="hidden space-y-2 lg:block">
-          {Array.from({ length: 4 }).map((_, index) => (
+          {[0, 1, 2, 3].map((n) => (
             <div
-              key={index}
+              key={n}
               className="h-24 animate-pulse rounded-[var(--radius)] bg-[var(--color-muted)]"
             />
           ))}

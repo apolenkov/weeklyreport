@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@customreport/ui/lib/utils";
-import * as React from "react";
+import type * as React from "react";
 import { ResponsiveContainer, Tooltip } from "recharts";
 
 /**

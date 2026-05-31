@@ -9,7 +9,7 @@ import {
   Tailwind,
   Text,
 } from "@react-email/components";
-import * as React from "react";
+import type * as React from "react";
 
 /**
  * NOTIF-02 (Phase 29-05): T+2h escalation digest sent to the head when leads
@@ -74,8 +74,11 @@ export function EscalationEmail({
             </Text>
             <Section className="my-4">
               <ul className="list-disc pl-6 text-gray-800">
-                {lateLeads.map((lead, index) => (
-                  <li key={`${lead.leadName}-${index}`} className="my-1">
+                {lateLeads.map((lead) => (
+                  <li
+                    key={`${lead.leadName}-${lead.sectionTitle}`}
+                    className="my-1"
+                  >
                     <strong>{lead.leadName}</strong> — {lead.sectionTitle}{" "}
                     (deadline {lead.deadlineIso})
                   </li>

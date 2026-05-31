@@ -10,7 +10,7 @@ import {
   Tailwind,
   Text,
 } from "@react-email/components";
-import * as React from "react";
+import type * as React from "react";
 
 /**
  * NOTIF-01/03 (Phase 28-03): T-24h deadline reminder email.

@@ -56,6 +56,7 @@ function EditIcon() {
       stroke="currentColor"
       fill="none"
       strokeWidth={2}
+      aria-hidden="true"
     >
       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
       <path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -71,6 +72,7 @@ function DeleteIcon() {
       stroke="currentColor"
       fill="none"
       strokeWidth={2}
+      aria-hidden="true"
     >
       <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
     </svg>
@@ -171,6 +173,7 @@ export function ItemCard({
           </span>
           {item.priorityRank != null && (
             <span
+              role="img"
               className="inline-flex w-fit shrink-0 items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-bold tabular-nums"
               style={{ background: "#cba258", color: "#fff" }}
               aria-label={`Priority ${item.priorityRank}`}
@@ -239,6 +242,7 @@ export function ItemCard({
         </div>
         <div className="flex min-w-0 max-w-[72%] flex-wrap items-center justify-end gap-1">
           <span
+            role="img"
             className="inline-flex min-w-0 flex-wrap items-center justify-end gap-1"
             aria-label={"Item stages: " + stageTagsLabel}
             title={stageTagsLabel}

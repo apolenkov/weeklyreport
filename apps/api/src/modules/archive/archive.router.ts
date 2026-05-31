@@ -7,10 +7,7 @@ import {
   type Role,
 } from "@customreport/shared";
 
-import {
-  type ArchiveScopeSession,
-  type ArchiveService,
-} from "./archive.service";
+import type { ArchiveScopeSession, ArchiveService } from "./archive.service";
 
 export type ArchiveListContext = {
   archiveService: ArchiveService;

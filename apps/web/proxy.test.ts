@@ -16,11 +16,9 @@ function makeRequest(
 ): import("next/server").NextRequest {
   const url = `http://localhost:3000${pathname}${search}`;
   const cookieApi = {
-    has: (name: string) => Object.prototype.hasOwnProperty.call(cookies, name),
+    has: (name: string) => Object.hasOwn(cookies, name),
     get: (name: string) =>
-      Object.prototype.hasOwnProperty.call(cookies, name)
-        ? { name, value: cookies[name] }
-        : undefined,
+      Object.hasOwn(cookies, name) ? { name, value: cookies[name] } : undefined,
   };
   const nextUrl = {
     pathname,
