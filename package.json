@@ -18,8 +18,9 @@
     "dev:fresh": "rm -rf apps/web/.next && turbo run dev --parallel",
     "dev:watch": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --watch",
     "build": "turbo run build",
-    "lint": "biome check . && eslint . && pnpm lint:prisma:typecheck",
-    "format": "biome format --write .",
+    "lint": "eslint . && stylelint \"**/*.css\" --allow-empty-input && pnpm lint:prisma:typecheck",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint:prisma:typecheck": "tsc --project tsconfig.prisma.json --noEmit",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
@@ -43,7 +44,6 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.16",
     "@commitlint/cli": "^21.0.2",
     "@commitlint/config-conventional": "^21.0.2",
     "@types/luxon": "^3.7.1",
@@ -53,12 +53,17 @@
     "@types/react-dom": "^19.2.3",
     "@vitest/coverage-v8": "^4.1.7",
     "eslint": "^10.2.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-compiler": "19.1.0-rc.2",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-unused-imports": "^4.4.1",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.5",
     "prettier": "3.4.2",
     "prisma": "^7.8.0",
+    "stylelint": "^17.12.0",
+    "stylelint-config-standard": "^40.0.0",
     "tsx": "^4.22.3",
     "turbo": "^2.9.16",
     "typescript": "^6.0.3",
@@ -88,11 +93,9 @@
     }
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,mjs}": [
-      "biome check --write --no-errors-on-unmatched",
-      "eslint --fix --max-warnings=0 --no-warn-ignored"
-    ],
-    "*.{json,jsonc,css}": "biome check --write --no-errors-on-unmatched",
+    "*.{ts,tsx,js,jsx,mjs}": ["eslint --fix --max-warnings=0 --no-warn-ignored", "prettier --write"],
+    "*.css": ["stylelint --fix", "prettier --write"],
+    "*.{json,jsonc}": "prettier --write",
     "*.{yml,yaml,md}": "prettier --write"
   }
 }

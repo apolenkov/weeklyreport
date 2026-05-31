@@ -1,38 +1,37 @@
 import { defineConfig, globalIgnores } from "eslint/config";
+import jsxA11y from "eslint-plugin-jsx-a11y";
+import react from "eslint-plugin-react";
 import reactCompiler from "eslint-plugin-react-compiler";
 import reactHooks from "eslint-plugin-react-hooks";
+import unusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
 
-// RESIDUAL ESLint config (migrate-to-biome): Biome now owns formatting and the
-// recommended ruleset plus repo overrides (no-explicit-any, no-unused-vars,
-// no-non-null-assertion) — see the `lint-toolchain-ownership` spec for the
-// tool-ownership boundary. This file retains ONLY the rules with no stable
-// Biome equivalent:
-//   - react-compiler/react-compiler (no Biome equivalent; React 19 correctness)
-//   - react-hooks/rules-of-hooks + exhaustive-deps (Biome hook parity not
-//     guaranteed; ESLint must run anyway)
-//   - @typescript-eslint/no-floating-promises (type-aware; Biome's equivalent is
-//     nursery/experimental — keep the hard-error guarantee here)
-// The former AI logger-secrets no-restricted-syntax selector was removed with
-// the AI module (see apps/api/src/modules/ai/HANDOFF.md).
+// Phase 1 (migrate-lint-to-eslint-prettier): Biome removed; ESLint owns logic,
+// Prettier owns format, stylelint owns CSS. This config ports Biome's
+// `recommended` surface 1:1 — BEHAVIOR-PRESERVING, NO NEW RULES. The
+// max-strictness regime (strictTypeChecked, import-sort, sonarjs, unicorn,
+// max-lines, jsdoc) is Phase 2 (declare) + Phase 3 (ratchet), NOT here.
+//
+// Retained from the residual config: projectService, no-floating-promises
+// (type-aware), react-compiler, react-hooks.
+// Added to absorb Biome `recommended`: @typescript-eslint individual rules
+// (NOT the recommended array — it would smuggle ~20 rules Biome lacks),
+// eslint-plugin-react (no-array-index-key, no-danger, …),
+// eslint-plugin-jsx-a11y (a11y parity; preset is a pragmatic ~match, NOT exact —
+// any jsx-a11y rule with no Biome counterpart that fires NEW must be turned
+// off here to preserve 1:1), unused-imports (no-unused-vars parity).
+// NOTE: simple-import-sort is intentionally NOT here — Biome does not sort
+// imports today (no assist/organizeImports config), so it is net-new and
+// belongs to Phase 3.
 export default defineConfig([
   globalIgnores([
     "**/node_modules/**",
     "**/dist/**",
     "**/.next/**",
-    // Phase 39-06: Playwright visual project uses a distinct distDir
-    // (.next-e2e) so it can coexist with the user's `pnpm dev` instance.
-    // The folder is generated, not authored, and its TS type-validators
-    // aren't in any tsconfig project — must be ignored explicitly because
-    // the `**/.next/**` glob doesn't match the suffixed name.
     "**/.next-e2e/**",
     "**/coverage/**",
     "**/.turbo/**",
     "**/prisma/generated/**",
-    // Phase 35-08: prisma/seed*.ts run via `tsx` and aren't part of
-    // any tsconfig project graph, so eslint's `projectService`
-    // can't parse them. Excluded so lint-staged doesn't choke on
-    // every seed-touching commit; the scripts validate at run time.
     "prisma/seed.ts",
     "prisma/seed-simple.ts",
     "prisma/seed-constants.ts",
@@ -41,17 +40,16 @@ export default defineConfig([
   {
     files: ["**/*.ts", "**/*.tsx"],
     plugins: {
-      // Registers the @typescript-eslint plugin (provides
-      // no-floating-promises) and parser; supplied by the typescript-eslint
-      // meta-package so the standalone @typescript-eslint/* deps aren't needed.
       "@typescript-eslint": tseslint.plugin,
+      react,
+      "jsx-a11y": jsxA11y,
       "react-hooks": reactHooks,
       "react-compiler": reactCompiler,
+      "unused-imports": unusedImports,
     },
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {
-        // Type-aware lint machinery is required for no-floating-promises.
         projectService: {
           allowDefaultProject: [
             "*.config.ts",
@@ -68,12 +66,45 @@ export default defineConfig([
       },
     },
     rules: {
-      // Type-aware; intentionally NOT delegated to Biome's nursery
-      // noFloatingPromises so the hard-error guarantee never weakens.
+      // Biome repo overrides (preserve severities exactly)
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-non-null-assertion": "warn",
+      "@typescript-eslint/no-unused-vars": "off", // delegated to unused-imports
+      "unused-imports/no-unused-vars": ["error", { ignoreRestSiblings: true }],
+      "unused-imports/no-unused-imports": "warn",
+
+      // React rules Biome recommended enforced
+      "react/jsx-no-useless-fragment": "warn",
+      "react/no-array-index-key": "error",
+      "react/no-danger": "error",
+
+      // jsx-a11y parity (pragmatic preset; prune net-new firers to stay 1:1)
+      ...jsxA11y.configs.recommended.rules,
+
+      // ESLint core mapped from Biome recommended (warn = won't gate)
+      "prefer-rest-params": "error",
+      "prefer-template": "warn",
+      "no-template-curly-in-string": "warn",
+      "no-unused-private-class-members": "warn",
+
+      // Type-aware (retained hard-error + Biome-recommended equivalents)
       "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/dot-notation": "warn",
+      "@typescript-eslint/prefer-optional-chain": "warn",
+
+      // React hooks (single-owned by ESLint)
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
+
+      // React Compiler (React 19, no Biome equivalent)
       "react-compiler/react-compiler": "error",
     },
+  },
+  // Test-file override: disable jsx-a11y (mirror biome.json a11y:off on tests)
+  {
+    files: ["**/*.test.ts", "**/*.test.tsx"],
+    rules: Object.fromEntries(
+      Object.keys(jsxA11y.configs.recommended.rules).map((rule) => [rule, "off"]),
+    ),
   },
 ]);
