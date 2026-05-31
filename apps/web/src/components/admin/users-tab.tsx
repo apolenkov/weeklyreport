@@ -294,10 +294,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                     <span className="flex items-center gap-2">
                       {user.name}
                       {!user.isActive && (
-                        <span
-                          className="inline-flex items-center rounded-[var(--radius-pill)] bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-500"
-                          aria-label="Inactive user"
-                        >
+                        <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-500">
                           inactive
                         </span>
                       )}
@@ -371,12 +368,14 @@ export function UsersTab({ users, groups }: UsersTabProps) {
 
       {/* Add/Edit Dialog */}
       {showDialog && (
+        // biome-ignore lint/a11y/noStaticElementInteractions: backdrop is a mouse convenience; dialog is keyboard-closable via Escape + Cancel button
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
           onClick={() => setShowDialog(false)}
           role="presentation"
           data-testid="crud-sheet"
         >
+          {/* biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops mouse-click propagation to the backdrop; the dialog is keyboard-closable via Escape + Cancel button */}
           <div
             className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
             role="dialog"
@@ -577,6 +576,7 @@ function PlusIcon() {
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
+      aria-hidden="true"
     >
       <line x1="12" y1="5" x2="12" y2="19" />
       <line x1="5" y1="12" x2="19" y2="12" />

@@ -103,11 +103,13 @@ export function ConfirmDeleteDialog({
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
+    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop is a mouse convenience; dialog is keyboard-closable via Escape + close button
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
       onClick={onCancel}
       role="presentation"
     >
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops backdrop-close propagation for inside clicks; no keyboard equivalent needed */}
       <div
         className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
         role="dialog"

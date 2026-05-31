@@ -136,12 +136,14 @@ export function DecisionEditDialog({
   }
 
   return createPortal(
+    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop is a mouse convenience; dialog is keyboard-closable via Escape + Cancel button
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
       onClick={onCancel}
       onKeyDown={handleKeyDown}
       role="presentation"
     >
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops propagation to the backdrop; Escape is handled by the backdrop's onKeyDown which bubbles up */}
       <div
         className="w-full max-w-lg rounded-[var(--radius)] bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
@@ -192,6 +194,7 @@ export function DecisionEditDialog({
             </p>
             <textarea
               id="dec-text"
+              // biome-ignore lint/a11y/noAutofocus: intentional initial focus for this modal dialog
               autoFocus
               aria-invalid={errors.text ? "true" : "false"}
               aria-describedby={errors.text ? "dec-text-error" : undefined}

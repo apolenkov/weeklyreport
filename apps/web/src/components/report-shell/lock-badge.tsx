@@ -37,7 +37,7 @@ export function LockBadge({ authorName, variant = "default" }: LockBadgeProps) {
     <div
       ref={ref}
       className={`flex ${sizing} cursor-default items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white text-[var(--color-muted-foreground)]`}
-      tabIndex={0}
+      role="img"
       aria-label={`Read-only — authored by ${authorName ?? "another lead"}`}
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}

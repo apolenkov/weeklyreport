@@ -79,6 +79,20 @@ export function PeriodsTab() {
     null,
   );
 
+  // A27: Esc-to-close for the delete confirmation dialog (matches the
+  // create/edit dialog pattern below). Backdrop click and Cancel also close.
+  useEffect(() => {
+    if (!deleteConfirm) return;
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setDeleteConfirm(null);
+      }
+    }
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [deleteConfirm]);
+
   // A3: text search over active periods (weekLabel + date range)
   const [search, setSearch] = useState("");
 
@@ -378,12 +392,14 @@ export function PeriodsTab() {
 
       {/* A27: Delete confirmation dialog */}
       {deleteConfirm && (
+        // biome-ignore lint/a11y/noStaticElementInteractions: backdrop is a mouse convenience; dialog is keyboard-closable via Escape + Cancel button
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
           onClick={() => setDeleteConfirm(null)}
           role="presentation"
           data-testid="periods-delete-dialog"
         >
+          {/* biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops propagation to the backdrop; not a user interaction, no keyboard equivalent applies */}
           <div
             className="animate-scale-in mx-4 w-full max-w-sm rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
             role="dialog"
@@ -681,6 +697,7 @@ function ActionIconRow({
   readonly row: PeriodListItem;
 } & Omit<PeriodTableProps, "rows" | "testIdPrefix">) {
   return (
+    // biome-ignore lint/a11y/useSemanticElements: <fieldset> is for form-control grouping; this is an action-icon toolbar, so role="group" is the correct ARIA
     <div
       className="inline-flex items-center gap-1"
       role="group"
@@ -1109,6 +1126,7 @@ function CreatePeriodDialog({
       : "Create";
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop is a mouse convenience; dialog is keyboard-closable via Escape + Cancel button
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
       onClick={onCancel}
@@ -1116,6 +1134,7 @@ function CreatePeriodDialog({
       data-testid="periods-create-dialog"
       data-dialog-mode={mode}
     >
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops propagation to the backdrop; not a user interaction, no keyboard equivalent applies */}
       <div
         className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
         role="dialog"
