@@ -6,20 +6,20 @@ TBD - created by archiving change enable-biome-recommended-ruleset. Update Purpo
 
 ## Requirements
 
-### Requirement: ESLint owns the rules Biome cannot provide
+### Requirement: ESLint owns react-compiler, no-floating-promises, and react-hooks
 
-A residual ESLint config (`eslint.config.ts`) MUST remain in the lint gate to
-own the three checks Biome cannot stably provide: `react-compiler/react-compiler`
-(no Biome equivalent), the type-aware `@typescript-eslint/no-floating-promises`,
-and `react-hooks/rules-of-hooks` + `react-hooks/exhaustive-deps`. ESLint MUST
-NOT be removed while any of these three checks lacks a stable Biome owner. (The
-former AI logger-secrets `no-restricted-syntax` selector was removed with the AI
-module in `45ffbe23` and is no longer part of this set.)
+The ESLint config (`eslint.config.ts`) MUST own these checks in the lint gate:
+`react-compiler/react-compiler`, the type-aware
+`@typescript-eslint/no-floating-promises`, and `react-hooks/rules-of-hooks` +
+`react-hooks/exhaustive-deps`. None has a stable owner outside ESLint, so the
+ESLint pass MUST stay in the gate. (The former AI logger-secrets
+`no-restricted-syntax` selector was removed with the AI module in `45ffbe23` and
+is no longer part of this set.)
 
-#### Scenario: ESLint still runs in the lint gate
+#### Scenario: ESLint enforces these checks in the lint gate
 
 - **WHEN** `pnpm lint` runs
-- **THEN** `eslint .` executes after `biome check .`
+- **THEN** `eslint .` executes (no `biome check` step exists)
 - **AND** a floating promise, a hook-rule violation, or a react-compiler
   violation fails the gate via ESLint
 
