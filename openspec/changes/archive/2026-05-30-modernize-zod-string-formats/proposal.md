@@ -32,7 +32,7 @@ behaves as before, and `z.iso.datetime()` matches the old `.datetime()`.
 - **Affected files:** `apps/api/src/infrastructure/config/env.schema.ts`,
   `apps/api/src/infrastructure/trpc/trpc.router.ts`, and
   `packages/shared/src/schemas/{report,section,stage,period,search,auth,
-  analytics,ai-summary}.schema.ts` plus
+analytics,ai-summary}.schema.ts` plus
   `packages/shared/src/admin/reminder-policy.schema.ts`.
 - **Risk:** Low. Behavior-preserving; guarded by the full test suite and
   `pnpm typecheck`.

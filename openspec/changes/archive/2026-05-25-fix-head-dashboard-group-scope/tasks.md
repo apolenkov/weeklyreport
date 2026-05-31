@@ -13,6 +13,7 @@
 
 - [x] **GROUP-T3** — Added two integration tests to
       `apps/api/src/modules/review/review.integration.test.ts`:
+
   - "GROUP-T3 / head sees only own-group sections"
   - "GROUP-T3 / admin sees all sections across groups"
     (Note: `users-tab.test.tsx` is admin-only frontend; incorrect target in

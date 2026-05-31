@@ -10,6 +10,6 @@
 - [ ] T5: Clear the message after 5 seconds
 - [ ] T6: Add test cases asserting aria-live content changes on success/error
 - [ ] T7: Commit — `feat(remind-button): add aria-live announcements for
-  accessibility`
+accessibility`
 - [ ] T-V: Verification — `pnpm typecheck`, `pnpm lint`, `pnpm test`; test
       with a screen reader in dev UI

@@ -1,6 +1,6 @@
 ## Why
 
-Markdown in this repo is owned by markdownlint-cli2 — a *linter* that emits
+Markdown in this repo is owned by markdownlint-cli2 — a _linter_ that emits
 errors (MD022, MD032, …) a contributor must stop and hand-fix, even though
 Prettier (already a dependency, already owning YAML) formats Markdown natively
 as one of its core languages. The lint friction buys structural checks nobody is
@@ -36,12 +36,13 @@ blocks with errors.
 ## Capabilities
 
 ### New Capabilities
+
 <!-- none -->
 
 ### Modified Capabilities
 
 - `lint-toolchain-ownership`: adds Markdown to the ownership contract — Markdown
-  is *formatted* by Prettier and *not linted*; markdownlint is removed. (This
+  is _formatted_ by Prettier and _not linted_; markdownlint is removed. (This
   capability is introduced by the `enable-biome-recommended-ruleset` change; this
   change contributes an additional ADDED requirement to it.)
 
@@ -63,13 +64,13 @@ Adversarial review of the explorer analysis. Surviving findings:
   `openspec/specs/` — the proposal itself states biome introduces it. (b)
   `enable-biome-recommended-ruleset` task 6.5 verifies `pnpm lint:md` is green,
   and this change deletes that script. Clean order:
-  biome → markdown-format-only → dep-upgrades. NB: this is an *ordering* edge, not
+  biome → markdown-format-only → dep-upgrades. NB: this is an _ordering_ edge, not
   a hard validate failure — `openspec validate markdown-format-only --strict`
   passes today (ADDED-to-a-missing-capability is allowed in isolation); `archive`
   was not tested.
 - **major — gatesSufficient is false (explorer said true).** `pnpm typecheck &&
-  lint && test && build` do not read Markdown at all; after this change Markdown
-  is explicitly *not* gated, so those gates are green-by-construction and prove
+lint && test && build` do not read Markdown at all; after this change Markdown
+  is explicitly _not_ gated, so those gates are green-by-construction and prove
   nothing about this change's risk. The real check is `openspec list` +
   `openspec validate --strict` across **all** changes after the one-time format
   pass, plus a human diff review. Task 2.2's one-line "spot-check" under-scopes

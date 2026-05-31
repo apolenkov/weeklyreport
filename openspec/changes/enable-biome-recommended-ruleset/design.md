@@ -56,7 +56,7 @@ Decision: disable both Biome rules; ESLint stays the single owner.
 
 **D4 — a11y fixed now (error); cognitive complexity deferred (warn).**
 Both are large, judgment-heavy, non-autofixable buckets, which is an apparent
-asymmetry. It is justified by *nature*: a11y is a **correctness defect**
+asymmetry. It is justified by _nature_: a11y is a **correctness defect**
 (accessibility is observable behavior) with element-bounded fixes → fix in this
 change at `error`. Cognitive complexity is **open-ended refactoring** that
 overlaps the architecture pass → `warn` target here, fixed and escalated to

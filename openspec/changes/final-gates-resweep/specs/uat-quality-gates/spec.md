@@ -4,21 +4,22 @@
 
 The repository MUST pass a single final acceptance gate before the
 `defer-uat-codequality-vercel-2026-05-26` track is marked done. The gate
-consists of five commands that all exit 0:
-`pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm lint:md`.
-The chain MUST include `pnpm build` so the gate matches the production build,
-and `pnpm lint:md` so the Markdown surface it covers (`README.md`) is clean.
+consists of four commands that all exit 0:
+`pnpm typecheck && pnpm lint && pnpm test && pnpm build`.
+The chain MUST include `pnpm build` so the gate matches the production build.
+There is no Markdown lint command in the chain: `markdown-format-only` removed
+`lint:md`, so Markdown is formatted by Prettier on commit, not gated.
 
 #### Scenario: All five gate commands are green
 
 - **WHEN** a maintainer runs
-  `pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm lint:md`
+  `pnpm typecheck && pnpm lint && pnpm test && pnpm build`
 - **THEN** every command exits 0
 - **AND** the chain reports a single green result with no findings
 
 #### Scenario: A single gate command fails
 
-- **WHEN** any one of `typecheck`, `lint`, `test`, `build`, or `lint:md` exits
+- **WHEN** any one of `typecheck`, `lint`, `test`, or `build` exits
   non-zero
 - **THEN** the final acceptance gate is considered failed
 - **AND** the responsible earlier-wave change is reopened to fix the cause

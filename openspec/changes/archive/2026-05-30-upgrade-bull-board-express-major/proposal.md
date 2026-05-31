@@ -60,9 +60,9 @@ findings:
   `^7.1.5` lockstep + migrate `bull-board.module.ts`). The honest disposition
   for a duplicate whose work shipped under another change is **cancel**, not
   archive.
-- **Spec-delta collision confirms duplication.** Both changes add the *same*
+- **Spec-delta collision confirms duplication.** Both changes add the _same_
   `ADDED Requirements` headers ("Bull-Board Packages MUST Move In Lockstep…",
-  route-mounted-and-guarded, full-gate) to the *same* capability
+  route-mounted-and-guarded, full-gate) to the _same_ capability
   `dependency-currency`. The durable `openspec/specs/dependency-currency/spec.md`
   does **not** yet contain these requirements, so exactly one change should
   seed them on archive. api-major owns the implementation commit and is
@@ -74,8 +74,8 @@ findings:
   `upgrade-bull-board-api-major`. These two changes cannot run as parallel git
   worktrees — hard collision on all three.
 - **dependsOn edge mischaracterized.** The relation to
-  `upgrade-bull-board-api-major` is not build-order; it is *duplicate-of /
-  superseded-by*. No "implement after api-major" sequencing applies.
+  `upgrade-bull-board-api-major` is not build-order; it is _duplicate-of /
+  superseded-by_. No "implement after api-major" sequencing applies.
 - **currentState `done-in-reality` is honest for the code.** Both packages are
   at `^7.1.5` (apps/api/package.json:16-17), the lockfile resolves a single
   `7.1.5` line with no v6 residue, and `bull-board.module.ts` is byte-identical
