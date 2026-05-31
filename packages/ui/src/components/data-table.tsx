@@ -154,8 +154,8 @@ export function DataTable<T>({
           </TableRow>
         ) : (
           sortedData.map((row, index) => (
-            // eslint-disable-next-line react/no-array-index-key -- DataTable is generic (T has no id constraint); no stable key is derivable without changing the public API
             <TableRow
+              // eslint-disable-next-line react/no-array-index-key -- DataTable is generic (T has no id constraint); no stable key is derivable without changing the public API
               key={index}
               className={cn(
                 "border-b border-border hover:bg-muted/50",
