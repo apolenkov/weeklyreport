@@ -112,6 +112,7 @@ function textList(items: readonly string[], empty: string, limit = 3) {
     <ul className="space-y-2">
       {items.slice(0, limit).map((item, index) => (
         <li
+          // biome-ignore lint/suspicious/noArrayIndexKey: index disambiguates duplicate bullet strings in a render-only, never-reordered list
           key={item + "-" + index}
           className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/80 px-3 py-2 text-sm leading-5 text-[var(--color-foreground)]"
         >
@@ -158,6 +159,7 @@ function LeadSlideArticle({
     }));
 
   return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents: click anywhere exits fullscreen; the browser already exits fullscreen on Escape, so no keyboard equivalent is needed
     <article
       className="slide-frame rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-3 shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
       onClick={() => {
@@ -346,6 +348,8 @@ export function StatusSlideDeck({
     <section
       className="space-y-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
       data-testid={mode + "-slides-deck"}
+      aria-label="Status slide deck (use arrow keys to navigate slides)"
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: focusable keyboard-navigation region for arrow-key slide control
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
@@ -398,8 +402,10 @@ export function StatusSlideDeck({
       ) : (
         <>
           {showLeadControls ? (
+            // biome-ignore lint/a11y/useSemanticElements: no semantic element groups a row of carousel buttons; role="group" is the correct mapping
             <div
               className="flex items-center justify-center gap-3"
+              role="group"
               aria-label="Slide carousel controls"
             >
               <button

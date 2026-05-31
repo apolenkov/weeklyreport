@@ -66,6 +66,7 @@ export function PublishLockButton({
             stroke="currentColor"
             fill="none"
             strokeWidth={2}
+            aria-hidden="true"
           >
             <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
             <path d="M21 3v5h-5" />
@@ -115,6 +116,7 @@ export function PublishLockButton({
             aria-modal="true"
             aria-label="Confirm publish"
             tabIndex={-1}
+            // biome-ignore lint/a11y/noAutofocus: intentional initial focus for this modal dialog
             autoFocus
             onKeyDown={(e) => {
               if (e.key === "Escape") setShowDialog(false);

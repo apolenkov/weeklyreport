@@ -356,11 +356,13 @@ export function ProductsTab({
 
       {/* Add/Edit Dialog */}
       {showDialog && (
+        // biome-ignore lint/a11y/noStaticElementInteractions: backdrop is a mouse convenience; dialog is keyboard-closable via Escape + Cancel button
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
           onClick={() => setShowDialog(false)}
           role="presentation"
         >
+          {/* biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops backdrop close-propagation; no keyboard equivalent needed (dialog closes via Escape + Cancel button) */}
           <div
             className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
             role="dialog"
@@ -454,6 +456,7 @@ export function ProductsTab({
 function PlusIcon() {
   return (
     <svg
+      aria-hidden="true"
       viewBox="0 0 24 24"
       className="h-4 w-4"
       stroke="currentColor"
@@ -471,6 +474,7 @@ function PlusIcon() {
 function ChevronIcon({ expanded }: { readonly expanded: boolean }) {
   return (
     <svg
+      aria-hidden="true"
       viewBox="0 0 24 24"
       className="h-4 w-4 transition-transform duration-200"
       stroke="currentColor"

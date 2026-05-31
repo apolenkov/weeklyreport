@@ -84,6 +84,7 @@ export function ConfirmationDialog({
   if (!open) return null;
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop is a mouse convenience; dialog is keyboard-closable via Escape + cancel button
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
       onClick={(e) => {

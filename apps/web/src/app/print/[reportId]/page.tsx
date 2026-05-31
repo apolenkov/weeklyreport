@@ -509,6 +509,7 @@ export default function PrintReportPage({ params }: Props) {
     <>
       {/* Print-specific styles */}
       <style
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: static, hardcoded print CSS with no user input
         dangerouslySetInnerHTML={{
           __html: `
             @media print {
