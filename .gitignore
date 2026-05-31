@@ -29,3 +29,6 @@ apps/web/next-env.d.ts
 
 .scratch/
 .goals
+
+# CodeGraph local index (machine-specific, not part of repo)
+.codegraph/
