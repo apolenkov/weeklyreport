@@ -93,8 +93,14 @@
     }
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,mjs}": ["eslint --fix --max-warnings=0 --no-warn-ignored", "prettier --write"],
-    "*.css": ["stylelint --fix", "prettier --write"],
+    "*.{ts,tsx,js,jsx,mjs}": [
+      "eslint --fix --max-warnings=0 --no-warn-ignored",
+      "prettier --write"
+    ],
+    "*.css": [
+      "stylelint --fix",
+      "prettier --write"
+    ],
     "*.{json,jsonc}": "prettier --write",
     "*.{yml,yaml,md}": "prettier --write"
   }

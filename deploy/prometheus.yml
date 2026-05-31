@@ -43,7 +43,6 @@ scrape_configs:
           - redis-exporter:9121
         labels:
           service: redis
-
 # Alertmanager wiring intentionally commented out — alert routing is org-side.
 # alerting:
 #   alertmanagers:

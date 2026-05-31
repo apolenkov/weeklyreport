@@ -24,10 +24,7 @@ export type {
   LeadFormRepository,
   SnapshotLatestRow,
 } from "./lead-form-shared";
-export {
-  LeadFormAccessError,
-  LeadFormDomainError,
-} from "./lead-form-shared";
+export { LeadFormAccessError, LeadFormDomainError } from "./lead-form-shared";
 
 /**
  * Lead-form facade. The version-history surface (fill-from, list/get/

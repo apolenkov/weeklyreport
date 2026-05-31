@@ -118,7 +118,10 @@ export default defineConfig([
   {
     files: ["**/*.test.ts", "**/*.test.tsx"],
     rules: Object.fromEntries(
-      Object.keys(jsxA11y.configs.recommended.rules).map((rule) => [rule, "off"]),
+      Object.keys(jsxA11y.configs.recommended.rules).map((rule) => [
+        rule,
+        "off",
+      ]),
     ),
   },
 ]);

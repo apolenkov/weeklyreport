@@ -105,8 +105,7 @@
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  background:
-    radial-gradient(
+  background: radial-gradient(
       120% 80% at 50% 110%,
       transparent 0%,
       rgba(12, 38, 32, 0.55) 70%
