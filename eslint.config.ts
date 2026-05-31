@@ -36,6 +36,7 @@ export default defineConfig([
     "prisma/seed-simple.ts",
     "prisma/seed-constants.ts",
     "**/e2e/**",
+    "openspec/**",
   ]),
   {
     files: ["**/*.ts", "**/*.tsx"],
@@ -70,7 +71,17 @@ export default defineConfig([
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-non-null-assertion": "warn",
       "@typescript-eslint/no-unused-vars": "off", // delegated to unused-imports
-      "unused-imports/no-unused-vars": ["error", { ignoreRestSiblings: true }],
+      "unused-imports/no-unused-vars": [
+        "error",
+        {
+          ignoreRestSiblings: true,
+          // Biome convention: leading underscore marks intentionally unused vars/args
+          varsIgnorePattern: "^_",
+          argsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+        },
+      ],
       "unused-imports/no-unused-imports": "warn",
 
       // React rules Biome recommended enforced
@@ -80,6 +91,9 @@ export default defineConfig([
 
       // jsx-a11y parity (pragmatic preset; prune net-new firers to stay 1:1)
       ...jsxA11y.configs.recommended.rules,
+      // Net-new vs Biome (no Biome counterpart; out of Phase-1 1:1 scope):
+      "jsx-a11y/no-noninteractive-element-interactions": "off",
+      "jsx-a11y/label-has-associated-control": "off",
 
       // ESLint core mapped from Biome recommended (warn = won't gate)
       "prefer-rest-params": "error",
