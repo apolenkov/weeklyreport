@@ -1,0 +1,12 @@
+node_modules
+dist
+.next
+.next-e2e
+coverage
+.turbo
+prisma/generated
+prisma/seed.ts
+prisma/seed-simple.ts
+prisma/seed-constants.ts
+e2e
+pnpm-lock.yaml

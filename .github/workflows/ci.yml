@@ -44,11 +44,13 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm exec prisma generate
 
-      # Single root pass: Biome (code surface) + residual ESLint
-      # (react-compiler, react-hooks, no-floating-promises, AI logger-secrets)
+      # Single root pass: ESLint (code surface) + stylelint (CSS)
       # + the Prisma script typecheck (all chained inside `pnpm lint`).
       - name: Lint
         run: pnpm lint
+
+      - name: Format check
+        run: pnpm format:check
 
       - name: Typecheck
         run: pnpm turbo typecheck
