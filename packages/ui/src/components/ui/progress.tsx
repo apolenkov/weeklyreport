@@ -2,7 +2,7 @@
 
 import { cn } from "@customreport/ui/lib/utils";
 import { Progress as ProgressPrimitive } from "radix-ui";
-import * as React from "react";
+import type * as React from "react";
 
 function Progress({
   className,

@@ -24,10 +24,7 @@ export type ForbiddenPageProps = {
 export function ForbiddenPage({ requiredRoles }: ForbiddenPageProps) {
   const rolesLabel = requiredRoles.join(" or ");
   return (
-    <main
-      role="main"
-      className="flex min-h-screen items-center justify-center bg-background px-6"
-    >
+    <main className="flex min-h-screen items-center justify-center bg-background px-6">
       <Card className="max-w-md">
         <CardHeader>
           <CardTitle>Page unavailable for your role</CardTitle>

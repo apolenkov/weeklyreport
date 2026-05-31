@@ -1,12 +1,10 @@
 @import "tailwindcss";
+@import "@customreport/ui/styles/globals.css" layer(base);
+/* UFB-058 / Phase 58: «Your PULSE?» landing rebrand */
+@import "./pulse.css";
 @source "../";
 @source "../../../../packages/ui/src";
 @source "./tailwind-safelist.txt";
-
-@import "@customreport/ui/styles/globals.css" layer(base);
-
-/* UFB-058 / Phase 58: «Your PULSE?» landing rebrand */
-@import "./pulse.css";
 
 @layer base {
   body {

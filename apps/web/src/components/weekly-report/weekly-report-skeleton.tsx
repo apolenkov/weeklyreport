@@ -88,6 +88,7 @@ function AccordionSkeleton() {
 export function WeeklyReportSkeleton() {
   return (
     <div
+      role="status"
       className="space-y-4"
       aria-busy="true"
       aria-label="Loading status report"

@@ -1,4 +1,4 @@
-import { type UserSession } from "@customreport/shared";
+import type { UserSession } from "@customreport/shared";
 
 export class PeriodAccessError extends Error {
   constructor(message: string) {

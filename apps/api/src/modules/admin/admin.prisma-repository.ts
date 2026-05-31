@@ -24,15 +24,15 @@ import {
   type WorkingDays,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
-import {
+import type {
   ReminderAudience as PrismaReminderAudience,
   WorkingDays as PrismaWorkingDays,
   ReportStatus,
 } from "@prisma/client";
 
-import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { buildTransition } from "../period/period-transition.js";
-import { PolicyApplicatorService } from "../reminders/policy-applicator.service";
+import type { PolicyApplicatorService } from "../reminders/policy-applicator.service";
 import type { AdminRepository, PeriodRowFromRepo } from "./admin.service";
 import { resolveLifecycle } from "./snapshot-lifecycle.js";
 

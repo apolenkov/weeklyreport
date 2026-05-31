@@ -100,6 +100,7 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
       </div>
       {sparklineRows.length > 0 && (
         <div
+          role="img"
           className="mt-4 h-16 w-full"
           aria-label="On-time ratio sparkline over the last 4 periods"
         >
@@ -136,10 +137,7 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div
-      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-3"
-      aria-label={`${label}: ${value}`}
-    >
+    <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-3">
       <p className="text-[11px] uppercase tracking-wider text-[var(--color-muted-foreground)]">
         {label}
       </p>

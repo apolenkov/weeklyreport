@@ -391,6 +391,7 @@ export function RemindersTab({
                 <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-border)]">
                   {/* Bell icon */}
                   <svg
+                    aria-hidden="true"
                     className="h-5 w-5 text-[var(--color-muted-foreground)]"
                     fill="none"
                     viewBox="0 0 24 24"

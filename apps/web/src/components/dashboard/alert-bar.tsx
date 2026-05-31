@@ -15,6 +15,7 @@ type AlertBarProps = {
 function AlertIcon() {
   return (
     <svg
+      aria-hidden="true"
       viewBox="0 0 24 24"
       className="h-5 w-5 flex-shrink-0"
       style={{ color: "var(--color-starbucks-gold)" }}
@@ -79,7 +80,7 @@ export function AlertBar({
     const isLast = i === pendingLeads.length - 1;
     const isDraft = i === 0;
     return (
-      <span key={`${name}-${i}`}>
+      <span key={name}>
         <strong>{name}</strong> ({isDraft ? "Draft" : "Not started"})
         {!isLast && " and "}
       </span>
@@ -109,6 +110,7 @@ export function AlertBar({
         {dispatchMut.isPending ? "Sending…" : "Send Reminder"}
       </button>
       {!canSendReminder && (
+        // biome-ignore lint/a11y/useValidAriaRole: role is a custom prop on IfRole component, not an HTML aria role
         <IfRole role="admin">
           <a
             href="/admin?tab=reminders"

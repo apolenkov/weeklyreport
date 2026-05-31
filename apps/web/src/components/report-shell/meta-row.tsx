@@ -19,14 +19,17 @@ export function MetaRow({
   const title = stageTags.length === 0 ? "All stages" : stageTags.join(", ");
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: fieldset is a form element; group on a div is correct for a non-form metadata row
     <div
       className={`${className} flex items-center justify-between gap-2`}
+      role="group"
       aria-label={ariaLabel}
     >
       <span className="truncate text-[11px] font-medium text-[var(--color-muted-foreground)]">
         {authorName ?? ""}
         {foreign && authorName ? (
           <span
+            role="img"
             aria-label="Read-only — authored by another lead"
             title="Read-only — authored by another lead"
           >

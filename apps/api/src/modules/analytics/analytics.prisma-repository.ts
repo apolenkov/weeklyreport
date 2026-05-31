@@ -8,7 +8,7 @@ import type {
   TrafficLightHistoryOutput,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
-import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { AnalyticsRepository } from "./analytics.service.js";
 
 /**

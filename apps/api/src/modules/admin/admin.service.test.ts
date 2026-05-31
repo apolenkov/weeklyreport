@@ -846,7 +846,7 @@ describe("AdminService — stage assignments", () => {
 // UFB-052 (Phase 51-B): listPeriodsByState + archivePeriod + unarchivePeriod
 // ---------------------------------------------------------------------------
 
-import { type PeriodRowFromRepo } from "./admin.service";
+import type { PeriodRowFromRepo } from "./admin.service";
 
 const PERIOD_ID_OPEN = "11111111-1111-4111-8111-111111111101";
 const PERIOD_ID_PUBLISHED_FRESH = "11111111-1111-4111-8111-111111111102";

@@ -1,11 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
-import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { AuditLogger } from "../../lib/audit-logger.js";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
-import { AdminService } from "../admin/admin.service";
-import { PublicationService } from "../publication/publication.service";
+import type { AdminService } from "../admin/admin.service";
+import type { PublicationService } from "../publication/publication.service";
 
 /**
  * UFB-049 / Phase 50-B: hourly scheduler that auto-publishes draft Reports

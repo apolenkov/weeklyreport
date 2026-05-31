@@ -4,7 +4,7 @@ import {
   reportSectionReadModelSchema,
 } from "@customreport/shared";
 
-import { type CarryOverService } from "./carry-over.service";
+import type { CarryOverService } from "./carry-over.service";
 
 export type CarryOverRouterContext = {
   carryOverService: CarryOverService;

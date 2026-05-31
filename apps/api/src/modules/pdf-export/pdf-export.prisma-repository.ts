@@ -6,7 +6,7 @@ import {
   pdfExportJobSchema,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
-import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {
   mapPrismaToReportSection,
   reportSectionFullInclude,

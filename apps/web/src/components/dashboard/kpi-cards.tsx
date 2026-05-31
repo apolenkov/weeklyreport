@@ -12,7 +12,7 @@ export function KpiCards({ data }: KpiCardsProps) {
   return (
     <div className="grid gap-4 sm:grid-cols-3">
       {/* Submissions */}
-      <div
+      <section
         className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
         style={{ borderLeft: "3px solid var(--color-starbucks-accent)" }}
         aria-label={`Submissions: ${data.submitted} of ${data.total}, ${data.pendingCount} pending`}
@@ -48,10 +48,10 @@ export function KpiCards({ data }: KpiCardsProps) {
             )}
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Deadline */}
-      <div
+      <section
         className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
         style={{ borderLeft: "3px solid var(--color-warning)" }}
         aria-label={`Deadline: ${data.deadlineLabel}, ${data.deadlineTime}`}
@@ -65,10 +65,10 @@ export function KpiCards({ data }: KpiCardsProps) {
         <p className="mt-2 text-[13px] text-[var(--color-muted-foreground)]">
           {data.deadlineTime}
         </p>
-      </div>
+      </section>
 
       {/* Risks & Blockers */}
-      <div
+      <section
         className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
         style={{ borderLeft: "3px solid var(--color-destructive)" }}
         aria-label={`Risks: ${data.blockedCount} blocked, ${data.atRiskCount} at risk, ${data.decisionCount} decisions`}
@@ -102,7 +102,7 @@ export function KpiCards({ data }: KpiCardsProps) {
             </div>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { cn } from "@customreport/ui/lib/utils";
 import { Label as LabelPrimitive } from "radix-ui";
-import * as React from "react";
+import type * as React from "react";
 
 function Label({
   className,

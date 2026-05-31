@@ -5,7 +5,7 @@ import {
   adminReminderRuleSchema,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
-import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { RemindersRepository } from "./reminders.service.js";
 
 const execStatusToDb: Record<string, string> = {

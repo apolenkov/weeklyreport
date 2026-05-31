@@ -17,7 +17,7 @@
  */
 export function PulseMark() {
   return (
-    <div className="pulse-mark" aria-label="Your PULSE">
+    <div className="pulse-mark" role="img" aria-label="Your PULSE">
       <span className="pulse-word" aria-hidden="true">
         YOUR
       </span>

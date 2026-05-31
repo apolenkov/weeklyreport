@@ -4,7 +4,7 @@ import { reminderPolicySchema } from "../admin/reminder-policy.schema";
 import { roleSchema } from "./auth";
 import { reportPeriodSchema } from "./period.schema";
 import {
-  periodStateSchema,
+  type periodStateSchema,
   periodStatusSchema,
   reportDate,
   reportSectionStatusSchema,

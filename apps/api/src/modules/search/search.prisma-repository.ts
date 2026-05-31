@@ -2,7 +2,7 @@ import type { SearchHit } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
-import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { SearchRepository } from "./search.service.js";
 
 /**

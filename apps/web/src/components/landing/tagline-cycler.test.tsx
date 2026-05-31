@@ -25,7 +25,7 @@ describe("LANDING_TAGLINES", () => {
 describe("TaglineCycler", () => {
   it("renders one of the taglines on mount", () => {
     render(<TaglineCycler />);
-    const el = screen.getByRole("text");
+    const el = screen.getByRole("paragraph");
     expect(LANDING_TAGLINES).toContain(el.textContent);
   });
 
@@ -35,13 +35,13 @@ describe("TaglineCycler", () => {
     act(() => {
       vi.advanceTimersByTime(3_000 + 250 + 1);
     });
-    const second = screen.getByRole("text").textContent;
+    const second = screen.getByRole("paragraph").textContent;
     expect(LANDING_TAGLINES).toContain(second);
   });
 
   it("opacity is 1 initially and 0 during fade-out", () => {
     render(<TaglineCycler />);
-    const el = screen.getByRole("text");
+    const el = screen.getByRole("paragraph");
     expect(el).toHaveStyle({ opacity: "1" });
     // Advance into fade-out window (visible period elapsed but fade not done)
     act(() => {

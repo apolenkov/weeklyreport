@@ -1,14 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
-import { OrganizationService } from "../organization/organization.service";
-import {
-  type DueDeadlineRule,
-  type DueEscalationRule,
+import type { OrganizationService } from "../organization/organization.service";
+import type {
+  DueDeadlineRule,
+  DueEscalationRule,
   RemindersPrismaRepository,
 } from "./reminders.prisma-repository";
-import {
-  type ReminderOrganization,
+import type {
+  ReminderOrganization,
   RemindersService,
 } from "./reminders.service";
 

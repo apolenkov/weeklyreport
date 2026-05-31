@@ -38,6 +38,7 @@ export function PulseBackground() {
         viewBox="0 0 2400 200"
         preserveAspectRatio="none"
         focusable="false"
+        aria-hidden="true"
       >
         <path d={ECG_PRIMARY_D} />
         <path
