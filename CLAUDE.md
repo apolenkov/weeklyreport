@@ -59,25 +59,37 @@ pnpm test
 pnpm build
 ```
 
-Lint stack (Biome landed first on the Wave-3 integration branch as one
-repo-wide reformat). `pnpm lint` runs as a single root pass:
+Lint stack. Biome was removed in Phase 1 of `migrate-lint-to-eslint-prettier`
+(behavior-preserving 1:1 port; no new rules) — the toolchain is now the
+mainstream ESLint + Prettier + stylelint trio. `pnpm lint` =
+`eslint . && stylelint "**/*.css" --allow-empty-input && pnpm lint:prisma:typecheck`:
 
-- **Biome** (`biome.json`) owns lint + format for the code surface
-  (`*.{ts,tsx,js,jsx,mjs}`, `*.{json,jsonc}`, `*.css`) with the `recommended`
-  ruleset enabled (see the `lint-toolchain-ownership` spec). Repo overrides:
-  `noExplicitAny: error`, `noNonNullAssertion: warn`, `noUnusedVariables: error`;
-  React hook rules are disabled in Biome and single-owned by ESLint;
-  `noExcessiveCognitiveComplexity` runs at `warn` (non-blocking). `pnpm format`
-  = `biome format --write .`.
-- **Residual ESLint** (`eslint.config.ts`, shrunk) keeps only the rules Biome
-  cannot replace: `react-compiler`, `react-hooks` (rules-of-hooks +
-  exhaustive-deps), and type-aware `no-floating-promises`. (The AI
-  `no-restricted-syntax` logger-secrets guard was removed with the AI module.)
-- **Prettier** is a residual _formatter_ for YAML and Markdown (Biome has no
-  stable formatter for either); it runs via `lint-staged` on
-  `*.{yml,yaml,md}`. Markdown is formatted, not linted — markdownlint was
-  removed, so there is no Markdown lint gate (no `lint:md` script, no CI job).
-  Future trigger: revisit if Biome ships stable Markdown support.
+- **ESLint** (`eslint.config.ts`) owns the full logic lint surface for
+  `*.{ts,tsx,js,jsx,mjs}`, absorbing Biome's former `recommended` coverage 1:1
+  via `@typescript-eslint` (individual rules, NOT the `recommended`/strict
+  arrays), `eslint-plugin-react`, `eslint-plugin-jsx-a11y`, `react-hooks`,
+  `react-compiler`, and `unused-imports`. Repo overrides preserved at their
+  Biome severities: `no-explicit-any: error`, `no-non-null-assertion: warn`,
+  unused vars `error` (via `unused-imports/no-unused-vars`), type-aware
+  `no-floating-promises: error`. React hook rules are structurally single-owned
+  (no Biome to disable). jsx-a11y firers Biome did not enforce are turned `off`
+  inline to stay 1:1. The 73 `biome-ignore` suppressions were converted to
+  `eslint-disable-next-line` (6 `useSemanticElements` sites dropped — no
+  equivalent). Cognitive-complexity (`noExcessiveCognitiveComplexity`, no ESLint
+  equivalent) was a non-gating `warn`; deferred to Phase 2 sonarjs.
+- **Prettier** (`.prettierrc.json`) is the formatter of record for the whole
+  surface — TS/JS/JSON/CSS **and** YAML/Markdown. Settings mirror the old Biome
+  block (printWidth 80, tabWidth 2, double quotes, semi, trailingComma all).
+  `pnpm format` = `prettier --write .`; `pnpm format:check` = `prettier --check .`.
+  Markdown is formatted, not linted — markdownlint stays removed (no `lint:md`,
+  no CI job).
+- **stylelint** (`.stylelintrc.json`, `stylelint-config-standard` + Tailwind
+  at-rule allowance) owns CSS lint for the 4 CSS files; the two Biome-carried
+  CSS rules run at `warning`. A deliberate third tool (CSS parity over a strict
+  2-tool count).
+
+Phases 2 (declare max-strictness) and 3 (ratchet to green) are separate
+follow-up OpenSpec changes — see `migrate-lint-to-eslint-prettier/proposal.md`.
 
 Useful local operations:
 

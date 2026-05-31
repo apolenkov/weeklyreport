@@ -11,9 +11,13 @@ green static gate (`typecheck`/`lint`/`test`/`build`) alone MUST NOT be treated
 as proof that an interaction or a suppressed-backdrop dialog still works.
 
 In particular, every dialog whose backdrop carries a
-`biome-ignore lint/a11y/noStaticElementInteractions` (or `useKeyWithClickEvents`)
-suppression justified as "keyboard-closable via Escape + close button" MUST have
-a regression test that proves that claim at runtime.
+`eslint-disable-next-line jsx-a11y/no-static-element-interactions` (or
+`jsx-a11y/click-events-have-key-events`) suppression — the former
+`biome-ignore lint/a11y/noStaticElementInteractions` / `useKeyWithClickEvents`
+comments, converted 1:1 in `migrate-lint-to-eslint-prettier` Phase 1 — justified
+as "keyboard-closable via Escape + close button" MUST have a regression test
+that proves that claim at runtime. (The suppression's comment FORM is incidental;
+the regression target is the runtime behavior, which is tool-independent.)
 
 #### Scenario: a suppressed-backdrop dialog is proven keyboard-closable
 
