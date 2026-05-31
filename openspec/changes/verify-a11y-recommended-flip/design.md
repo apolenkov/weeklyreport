@@ -2,6 +2,8 @@
 
 Derived BY LOGIC (workflow `a11y-regression-catalog`, 58 agents) from the actual diff of each changed file against pre-flip `3b2785c2`, at the granularity the request asked for: **per file → per code block → DOM-model assertion → interaction**. This is the description of what regression coverage is _possible_; it is not yet implemented test code (see `tasks.md` for the run/implement plan).
 
+> **Suppression-form note (post `migrate-lint-to-eslint-prettier` Phase 1):** the per-file descriptions below say "_Added biome-ignore …_" because they record each file's diff as it was at flip commit `c4610797`, when Biome was the linter. Those comments were converted 1:1 to `eslint-disable-next-line` form when Biome was removed (`noStaticElementInteractions → jsx-a11y/no-static-element-interactions`, `useKeyWithClickEvents → jsx-a11y/click-events-have-key-events`, `noAutofocus → jsx-a11y/no-autofocus`; the 6 `useSemanticElements` sites were dropped — no ESLint equivalent). The historical descriptions are left verbatim as an accurate diff record. **The regression target is runtime behavior (Escape-closability, focus, ARIA attributes), which is tool-independent — the comment form is incidental.** Any catalog row that asserted "renders without Biome linting error" should assert the DOM attribute it implies, not the lint tool.
+
 ## Summary
 
 - **480 regression tests** across **58 files**.
