@@ -73,17 +73,11 @@ repo-wide reformat). `pnpm lint` runs as a single root pass:
   cannot replace: `react-compiler`, `react-hooks` (rules-of-hooks +
   exhaustive-deps), and type-aware `no-floating-promises`. (The AI
   `no-restricted-syntax` logger-secrets guard was removed with the AI module.)
-- **markdownlint-cli2** owns Markdown (`pnpm lint:md` / `lint:md:fix`); Biome
-  has no stable Markdown support.
-- **Prettier** is a residual formatter for YAML only (Biome has no stable YAML
-  formatter); it runs via `lint-staged` on `*.{yml,yaml}`.
-
-Planning docs:
-
-```bash
-pnpm lint:md
-pnpm lint:md:fix
-```
+- **Prettier** is a residual _formatter_ for YAML and Markdown (Biome has no
+  stable formatter for either); it runs via `lint-staged` on
+  `*.{yml,yaml,md}`. Markdown is formatted, not linted — markdownlint was
+  removed, so there is no Markdown lint gate (no `lint:md` script, no CI job).
+  Future trigger: revisit if Biome ships stable Markdown support.
 
 Useful local operations:
 

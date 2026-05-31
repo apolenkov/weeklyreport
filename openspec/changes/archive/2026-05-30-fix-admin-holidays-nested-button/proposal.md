@@ -47,7 +47,7 @@ Adversarial re-review of the explorer analysis (which recommended `finish`).
 
 - **Recommendation corrected: `archive`, not `finish`.** The explorer reported
   `currentState: done-in-reality`, `estTaskCount: 0`, yet `recommendation:
-  finish`. That is internally inconsistent — `finish` implies remaining
+finish`. That is internally inconsistent — `finish` implies remaining
   implementation work, and there is none. Code is committed (`c0ec36fe`), the
   working tree is clean, and `openspec validate --strict` passes. The two
   unchecked Verify boxes reflect work already performed (test gate + the manual
@@ -60,7 +60,7 @@ Adversarial re-review of the explorer analysis (which recommended `finish`).
 - **Spec-sync claim corrected (info).** The explorer said the NEW
   `admin-settings-ui/spec.md` requirement needs "no sync to main specs; belongs
   in change archive." `openspec/specs/` has no `admin-settings-ui/` yet, so
-  archiving will *promote* this ADDED requirement into a new durable main spec.
+  archiving will _promote_ this ADDED requirement into a new durable main spec.
   That is correct and intended — but "no sync needed" mis-describes it; the
   archive step creates the durable spec.
 - **No automated regression guard (minor, non-blocking).** The button→span fix

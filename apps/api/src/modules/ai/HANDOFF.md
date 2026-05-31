@@ -3,7 +3,7 @@
 **Status as of 2026-05-30.** This module is a **deferred, mock-only scaffold**.
 It is hidden from users behind a "coming soon" UI and runs no real LLM in any
 environment. It is meant to be **rebuilt from scratch architecturally** by its
-next owner. Treat the current code as *reference, not constraint*.
+next owner. Treat the current code as _reference, not constraint_.
 
 ---
 
@@ -53,7 +53,7 @@ prompts (`prompts/`, `prompts.sanitize.test.ts`).
 ## Current safety contracts — the durable invariant (all up for re-decision)
 
 The spec `openspec/specs/ai-module-facade/spec.md` asserts four requirements.
-The next owner should treat these as the *current* design intent, not fixed law:
+The next owner should treat these as the _current_ design intent, not fixed law:
 
 1. **Facade — no direct Prisma in the AI module.** Enforced by a **Biome**
    `noRestrictedImports` override scoped to `apps/api/src/modules/ai/**`
@@ -63,7 +63,7 @@ The next owner should treat these as the *current* design intent, not fixed law:
 2. **Token-budget guard** — 50 000 tokens/hour/user, Redis counter (1h TTL),
    reject with `AiBudgetExceededError`, no silent truncation.
 3. **Sanitize layer** — 8 redact patterns; a branded `SanitizedPayload` type is
-   meant to make sending an unsanitized string to the provider a *compile-time*
+   meant to make sending an unsanitized string to the provider a _compile-time_
    error. **This is the real PII-to-LLM gate** (independent of the import ban).
    **Verify it is actually implemented, not only specced**, before relying on it
    — and before relaxing the import ban.

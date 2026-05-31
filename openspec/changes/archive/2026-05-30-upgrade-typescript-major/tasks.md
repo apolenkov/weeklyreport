@@ -16,7 +16,7 @@ Gates after every step: `pnpm typecheck && pnpm lint && pnpm test`.
       so the bump set is exactly these four entries.
 - [x] Inventory the typecheck surface to validate against: `apps/api`,
       `apps/web`, `packages/shared`, `packages/ui` (each runs `tsc --noEmit -p
-    tsconfig.json`), plus the root `tsconfig.prisma.json`
+tsconfig.json`), plus the root `tsconfig.prisma.json`
       (`pnpm lint:prisma:typecheck`), plus ESLint type-aware linting via
       `projectService` in `eslint.config.ts`.
 

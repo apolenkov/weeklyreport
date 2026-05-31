@@ -15,7 +15,7 @@ Gates after every step: `pnpm typecheck && pnpm lint && pnpm test`.
       (`grep -rn 'from "cookie"' apps/api/src apps/web/src`).
 - [x] Confirm no `tsconfig` `compilerOptions.types` allowlist names `cookie`
       (`grep -rn '"types"' apps/api/tsconfig*.json apps/web/tsconfig*.json
-    tsconfig*.json`); if one does, stop and report — removal would break the
+tsconfig*.json`); if one does, stop and report — removal would break the
       ambient include.
 - [x] Confirm `@types/cookie-parser` does not depend on `@types/cookie`
       (resolved package `dependencies` is empty and its `index.d.ts` does not

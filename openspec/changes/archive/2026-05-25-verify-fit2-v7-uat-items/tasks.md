@@ -10,6 +10,6 @@
       (T3 in fix-multitab-lead-form-sync) and React Query window-focus refetch.
 - [x] T5: Run UAT Playwright spec — `pnpm test:uat` should exit 0 with all 45+
       tests passing (22/22 pass via `cd apps/web && pnpm exec playwright test
-  e2e/regression-uat-v7.spec.ts --project=chromium`)
+e2e/regression-uat-v7.spec.ts --project=chromium`)
 - [x] T-V: Verification — `pnpm typecheck` ✓, `pnpm lint` ✓,
       `pnpm test` ✓ (569 pass); e2e regression 22/22 green

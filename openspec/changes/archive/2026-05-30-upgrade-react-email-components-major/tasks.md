@@ -21,7 +21,7 @@ Gates after every step: `pnpm typecheck && pnpm lint && pnpm test`.
       covers the imports.
 - [x] Read the successor's release notes / migration guide and list every
       breaking change touching the imported set: `Html, Head, Preview, Tailwind,
-    Body, Container, Heading, Text, Button, Section` (renames, removals,
+Body, Container, Heading, Text, Button, Section` (renames, removals,
       changed props, `<Tailwind>` behavior).
       → N/A: no successor exists to read notes for.
 - [x] Confirm the successor's peer-dep / React baseline is satisfied by

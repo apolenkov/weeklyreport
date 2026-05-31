@@ -40,8 +40,6 @@
     "uat:audit": "node apps/web/uat-suite/mutation-audit.mjs",
     "uat:audit:update": "node apps/web/uat-suite/mutation-audit.mjs --update-allowlist",
     "uat:inventory": "node apps/web/uat-suite/inventory.mjs",
-    "lint:md": "markdownlint-cli2 \"README.md\"",
-    "lint:md:fix": "markdownlint-cli2 --fix \"README.md\"",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -59,7 +57,6 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.5",
-    "markdownlint-cli2": "^0.22.1",
     "prettier": "3.4.2",
     "prisma": "^7.8.0",
     "tsx": "^4.22.3",
@@ -96,7 +93,6 @@
       "eslint --fix --max-warnings=0 --no-warn-ignored"
     ],
     "*.{json,jsonc,css}": "biome check --write --no-errors-on-unmatched",
-    "*.{yml,yaml}": "prettier --write",
-    "*.md": "markdownlint-cli2 --fix"
+    "*.{yml,yaml,md}": "prettier --write"
   }
 }

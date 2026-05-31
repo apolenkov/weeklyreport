@@ -11,7 +11,7 @@ silently formatted on commit, never an error gate.
 
 **Goals:**
 
-- Replace the Markdown *linter* with a Markdown *formatter* that runs in the
+- Replace the Markdown _linter_ with a Markdown _formatter_ that runs in the
   background and never blocks a commit with errors.
 - Add no new tool/dependency to the stack.
 

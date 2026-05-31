@@ -21,12 +21,11 @@ Gates after every step: `pnpm typecheck && pnpm lint && pnpm test`.
       only the rules Biome cannot replace.
 - [ ] FGR-G3: Run `pnpm test`; confirm exit 0.
 - [ ] FGR-G4: Run `pnpm build`; confirm exit 0.
-- [ ] FGR-G5: Run `pnpm lint:md`; confirm exit 0. Note the `lint:md` script is
-      `markdownlint-cli2 "README.md"` — it lints ONLY `README.md`, not
-      `.planning/**` or `openspec/` change docs. This is a deliberately thin
-      Markdown gate; treat a green result as covering README only.
+      (There is no Markdown gate: `markdown-format-only` removed `lint:md` —
+      Markdown is formatted by Prettier on commit, not linted. The acceptance
+      chain is four commands, not five.)
 - [ ] FGR-G6: Run the full chain in one line and confirm a single green exit:
-      `pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm lint:md`.
+      `pnpm typecheck && pnpm lint && pnpm test && pnpm build`.
 
 ## Playwright role re-sweep (0 console ERRORS)
 

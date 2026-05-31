@@ -69,7 +69,7 @@ re-verified against the working tree.
   `vite ^8.0.0`; installed resolutions are `6.0.2` and `8.0.14`. Both required
   bumps landed.
 - **Babel-removal regression guard: re-ran empirically.** `vitest run --root
-  apps/web` = 70 files / 579 tests passing, zero JSX/React-Refresh transform
+apps/web` = 70 files / 579 tests passing, zero JSX/React-Refresh transform
   errors. `vitest.config.ts` line 11 is `plugins: [react()]` — bare call, no
   `babel` option, no react-compiler wiring. Conditional `@rolldown/plugin-babel`
   pairing correctly NOT added. (Explorer cited 587 tests; actual is 579 — count
@@ -81,7 +81,7 @@ re-verified against the working tree.
 - **sharedFiles `pnpm-lock.yaml` + `package.json` (root): CONFIRMED collision
   surface.** This change cannot run as a parallel git worktree alongside any
   other dependency-currency change that touches the root lockfile (jsdom,
-  typescript, lucide-react, @types/node, @bull-board/*). Those serialize on the
+  typescript, lucide-react, @types/node, @bull-board/\*). Those serialize on the
   lockfile — but they are already landed sequentially on `main`, so this is moot
   for execution.
 - **blastRadius LOW: CONFIRMED, not understated.** 4-line manifest diff plus a

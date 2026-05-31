@@ -49,6 +49,7 @@ Biome's recommended ruleset would reject. This change turns the implied
   must not be double-owned.
 
 ### Modified Capabilities
+
 <!-- none: no existing lint/quality spec to modify -->
 
 ## Impact
@@ -73,6 +74,7 @@ spec is unsatisfiable as written and `openspecDelta` is NOT "none".
 
 - **[major] Stale AI-module references make the spec unsatisfiable.** The AI
   backend was removed in `45ffbe23` (same day as this change). Consequences:
+
   - `biome.json` has **no** `noRestrictedImports` AI override — so task 1.4
     ("confirm AI-module `noRestrictedImports` intact") and proposal What-Changes
     line 24 ("Preserve … AI-module `noRestrictedImports` Prisma-isolation")
