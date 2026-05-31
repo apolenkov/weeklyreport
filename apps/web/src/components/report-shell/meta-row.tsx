@@ -19,7 +19,6 @@ export function MetaRow({
   const title = stageTags.length === 0 ? "All stages" : stageTags.join(", ");
 
   return (
-    // biome-ignore lint/a11y/useSemanticElements: fieldset is a form element; group on a div is correct for a non-form metadata row
     <div
       className={`${className} flex items-center justify-between gap-2`}
       role="group"

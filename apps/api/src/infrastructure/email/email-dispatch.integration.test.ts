@@ -142,7 +142,7 @@ describe("email-dispatch integration (P8)", () => {
     const message = await pollForMessage(recipient);
 
     expect(message).not.toBeNull();
-    // biome-ignore lint/style/noNonNullAssertion: intentional non-null assertion (migrated from eslint-disable)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- intentional non-null assertion (migrated from eslint-disable)
     const msg = message!;
 
     // Recipient
@@ -199,7 +199,7 @@ describe("email-dispatch integration (P8)", () => {
 
     const message = await pollForMessage(headRecipient);
     expect(message).not.toBeNull();
-    // biome-ignore lint/style/noNonNullAssertion: intentional non-null assertion (migrated from eslint-disable)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- intentional non-null assertion (migrated from eslint-disable)
     const msg = message!;
 
     expect(msg.To.some((a) => a.Address === headRecipient)).toBe(true);

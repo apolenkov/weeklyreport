@@ -152,10 +152,10 @@ function computePortfolioOverview(
   return { status: overallStatus, totals };
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
 function toAssembledReport(report: any): AssembledReport {
   const portfolio = computePortfolioOverview(report.sections);
-  // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
   const sections = (report.sections as any[]).map(mapPrismaToReportSection);
 
   return assembledReportSchema.parse({

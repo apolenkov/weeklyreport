@@ -219,14 +219,14 @@ function ItemEditDialogContent({
   }
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop is a mouse convenience; dialog is keyboard-closable via Escape + close button
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- backdrop is a mouse convenience; dialog is keyboard-closable via Escape + close button
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
       onClick={onCancel}
       onKeyDown={handleKeyDown}
       role="presentation"
     >
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops propagation to keep clicks inside the dialog from closing it; there is no keyboard action to mirror */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops propagation to keep clicks inside the dialog from closing it; there is no keyboard action to mirror */}
       <div
         className="w-full max-w-lg rounded-[var(--radius)] bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
@@ -254,7 +254,7 @@ function ItemEditDialogContent({
             </label>
             <textarea
               id="item-text"
-              // biome-ignore lint/a11y/noAutofocus: intentional initial focus for this modal dialog
+              // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
               autoFocus
               aria-invalid={errors.text ? "true" : "false"}
               aria-describedby={errors.text ? "item-text-error" : undefined}

@@ -98,7 +98,7 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
       include: reportSectionFullInclude,
     });
 
-    // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
     return rows.map((row) => mapPrismaToReportSection(row as any));
   }
 
@@ -110,7 +110,7 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
       include: reportSectionFullInclude,
     });
 
-    // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
     return rows.map((row) => mapPrismaToReportSection(row as any));
   }
 

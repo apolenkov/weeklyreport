@@ -110,7 +110,7 @@ export function AlertBar({
         {dispatchMut.isPending ? "Sending…" : "Send Reminder"}
       </button>
       {!canSendReminder && (
-        // biome-ignore lint/a11y/useValidAriaRole: role is a custom prop on IfRole component, not an HTML aria role
+        // eslint-disable-next-line jsx-a11y/aria-role -- role is a custom prop on IfRole component, not an HTML aria role
         <IfRole role="admin">
           <a
             href="/admin?tab=reminders"

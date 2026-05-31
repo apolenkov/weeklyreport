@@ -148,7 +148,6 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
   }
 
   return (
-    // biome-ignore lint/a11y/useSemanticElements: fieldset has browser-default border/min-width that breaks flex layout here
     <div
       className="flex min-w-0 items-center gap-3 px-3 py-2"
       onTouchStart={handleTouchStart}

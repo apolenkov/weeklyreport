@@ -89,7 +89,7 @@ export function ReportArchiveSection({
       // The trpc proxy exposes `infiniteQueryOptions` per
       // @trpc/tanstack-react-query 11.16+. Cast to satisfy the hook's
       // useInfiniteQuery typings; runtime shape matches.
-      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
       (trpc.archive.list as any).infiniteQueryOptions(
         { limit: input.limit ?? PAGE_SIZE },
         {

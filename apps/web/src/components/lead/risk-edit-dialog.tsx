@@ -250,14 +250,14 @@ export function RiskEditDialog({
   }
 
   return createPortal(
-    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop is a mouse convenience; dialog is keyboard-closable via Escape + close button
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- backdrop is a mouse convenience; dialog is keyboard-closable via Escape + close button
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
       onClick={onCancel}
       onKeyDown={handleKeyDown}
       role="presentation"
     >
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops backdrop click-through; not an interactive action, so no keyboard equivalent applies */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop click-through; not an interactive action, so no keyboard equivalent applies */}
       <div
         className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[var(--radius)] bg-white p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
@@ -305,7 +305,7 @@ export function RiskEditDialog({
               </label>
               <textarea
                 id="risk-text"
-                // biome-ignore lint/a11y/noAutofocus: intentional initial focus for this modal dialog
+                // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
                 autoFocus
                 aria-invalid={errors.text ? "true" : "false"}
                 aria-describedby={errors.text ? "risk-text-error" : undefined}

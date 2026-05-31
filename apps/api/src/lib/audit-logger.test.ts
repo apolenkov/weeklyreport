@@ -246,7 +246,7 @@ describe("createAuditLogger — scopeDenied (UFB-040 / 46-05)", () => {
         /* not used here */
       },
       child: () => logger,
-      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
     } as any;
 
     const audit = createAuditLogger(logger);

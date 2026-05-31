@@ -30,7 +30,7 @@ function PlaceholderAccordion({
       </div>
       <div className="space-y-2">
         {Array.from({ length: rows }, (_, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: skeleton rows are static placeholders with no identity; order is fixed and immutable
+          // eslint-disable-next-line react/no-array-index-key -- skeleton rows are static placeholders with no identity; order is fixed and immutable
           <Skeleton key={i} className="h-12 w-full rounded-lg" />
         ))}
       </div>

@@ -22,7 +22,7 @@ export function LeadHistorySkeleton({ count = 6 }: LeadHistorySkeletonProps) {
     >
       {Array.from({ length: count }, (_, i) => (
         <div
-          // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders have no stable identity; fixed-length list never reorders
+          // eslint-disable-next-line react/no-array-index-key -- skeleton placeholders have no stable identity; fixed-length list never reorders
           key={i}
           className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]"
         >

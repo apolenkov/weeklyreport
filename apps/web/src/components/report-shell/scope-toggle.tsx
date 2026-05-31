@@ -33,7 +33,6 @@ export function ScopeToggle({
     >
       {allowedScopes.map((s) => {
         return (
-          // biome-ignore lint/a11y/useSemanticElements: <input type="radio"> would require label/name wiring that changes layout; <button role="radio"> is valid per ARIA spec
           <button
             key={s}
             type="button"

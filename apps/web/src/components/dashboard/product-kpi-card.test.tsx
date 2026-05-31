@@ -29,7 +29,7 @@ class ResizeObserverStub {
   unobserve() {}
   disconnect() {}
 }
-// biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
 (globalThis as any).ResizeObserver = ResizeObserverStub;
 
 const mockUseQuery = vi.mocked(useQuery);
@@ -50,7 +50,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: summary,
       isLoading: false,
       isError: false,
-      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
     } as any);
 
     render(<ProductKpiCard role="head" />);
@@ -75,7 +75,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: undefined,
       isLoading: false,
       isError: false,
-      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
     } as any);
 
     const { container } = render(<ProductKpiCard role="lead" />);
@@ -91,7 +91,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: summary,
       isLoading: false,
       isError: false,
-      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
     } as any);
 
     render(<ProductKpiCard role="viewer" />);
@@ -106,7 +106,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: { ...summary, onTimeRatio: null, sparkline: [] },
       isLoading: false,
       isError: false,
-      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
     } as any);
 
     render(<ProductKpiCard role="admin" />);
@@ -119,7 +119,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: undefined,
       isLoading: true,
       isError: false,
-      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
     } as any);
 
     render(<ProductKpiCard role="head" />);
@@ -132,7 +132,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: undefined,
       isLoading: false,
       isError: true,
-      // biome-ignore lint/suspicious/noExplicitAny: intentional any for test/runtime escape hatch (migrated from eslint-disable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
     } as any);
 
     render(<ProductKpiCard role="head" />);
