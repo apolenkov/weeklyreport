@@ -91,8 +91,17 @@ export default defineConfig([
 
       // jsx-a11y parity (pragmatic preset; prune net-new firers to stay 1:1)
       ...jsxA11y.configs.recommended.rules,
-      // Net-new vs Biome (no Biome counterpart; out of Phase-1 1:1 scope):
+      // Net-new firers vs Biome (out of Phase-1 1:1 scope):
+      // noNoninteractiveElementInteractions: Biome 2.4.16 has the rule but it is
+      //   NOT recommended (default info, must be explicitly enabled). jsx-a11y
+      //   enables it via recommended preset → net-new behavior.
       "jsx-a11y/no-noninteractive-element-interactions": "off",
+      // noLabelWithoutControl: Biome 2.4.16 DOES have this rule as recommended
+      //   (error). However Biome's check accepts wrapping-label patterns (label
+      //   wrapping input + sibling span) that jsx-a11y/label-has-associated-control
+      //   rejects. All 7 firing sites use the wrapping-label pattern and passed
+      //   Biome's check without suppressions → jsx-a11y is stricter here →
+      //   behavioral divergence, not enforcement gap. Off to preserve 1:1 surface.
       "jsx-a11y/label-has-associated-control": "off",
 
       // ESLint core mapped from Biome recommended (warn = won't gate)
