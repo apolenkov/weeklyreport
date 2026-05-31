@@ -8,17 +8,17 @@
   "files": {
     "includes": [
       "**",
-      "!**/node_modules/**",
-      "!**/dist/**",
-      "!**/.next/**",
-      "!**/.next-e2e/**",
-      "!**/coverage/**",
-      "!**/.turbo/**",
-      "!**/prisma/generated/**",
+      "!**/node_modules",
+      "!**/dist",
+      "!**/.next",
+      "!**/.next-e2e",
+      "!**/coverage",
+      "!**/.turbo",
+      "!**/prisma/generated",
       "!prisma/seed.ts",
       "!prisma/seed-simple.ts",
       "!prisma/seed-constants.ts",
-      "!**/e2e/**"
+      "!**/e2e"
     ]
   },
   "formatter": {
@@ -55,7 +55,15 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": false,
+      "recommended": true,
+      "complexity": {
+        "noExcessiveCognitiveComplexity": {
+          "level": "warn",
+          "options": {
+            "maxAllowedComplexity": 15
+          }
+        }
+      },
       "suspicious": {
         "noExplicitAny": "error"
       },
@@ -68,8 +76,20 @@
           "options": {
             "ignoreRestSiblings": true
           }
+        },
+        "useExhaustiveDependencies": "off",
+        "useHookAtTopLevel": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.test.tsx", "**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "a11y": "off"
         }
       }
     }
-  }
+  ]
 }

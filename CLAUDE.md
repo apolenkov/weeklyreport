@@ -63,13 +63,16 @@ Lint stack (Biome landed first on the Wave-3 integration branch as one
 repo-wide reformat). `pnpm lint` runs as a single root pass:
 
 - **Biome** (`biome.json`) owns lint + format for the code surface
-  (`*.{ts,tsx,js,jsx,mjs}`, `*.{json,jsonc}`, `*.css`), including the AI-module
-  Prisma-isolation `noRestrictedImports` rule. `pnpm format` =
-  `biome format --write .`.
+  (`*.{ts,tsx,js,jsx,mjs}`, `*.{json,jsonc}`, `*.css`) with the `recommended`
+  ruleset enabled (see the `lint-toolchain-ownership` spec). Repo overrides:
+  `noExplicitAny: error`, `noNonNullAssertion: warn`, `noUnusedVariables: error`;
+  React hook rules are disabled in Biome and single-owned by ESLint;
+  `noExcessiveCognitiveComplexity` runs at `warn` (non-blocking). `pnpm format`
+  = `biome format --write .`.
 - **Residual ESLint** (`eslint.config.ts`, shrunk) keeps only the rules Biome
   cannot replace: `react-compiler`, `react-hooks` (rules-of-hooks +
-  exhaustive-deps), type-aware `no-floating-promises`, and the AI
-  `no-restricted-syntax` logger-secrets guard.
+  exhaustive-deps), and type-aware `no-floating-promises`. (The AI
+  `no-restricted-syntax` logger-secrets guard was removed with the AI module.)
 - **markdownlint-cli2** owns Markdown (`pnpm lint:md` / `lint:md:fix`); Biome
   has no stable Markdown support.
 - **Prettier** is a residual formatter for YAML only (Biome has no stable YAML

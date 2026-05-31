@@ -4,8 +4,10 @@ import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
 // RESIDUAL ESLint config (migrate-to-biome): Biome now owns formatting and the
-// strict-preset lint rules (no-explicit-any, no-unused-vars, no-non-null-
-// assertion). This file retains ONLY the rules with no stable Biome equivalent:
+// recommended ruleset plus repo overrides (no-explicit-any, no-unused-vars,
+// no-non-null-assertion) — see the `lint-toolchain-ownership` spec for the
+// tool-ownership boundary. This file retains ONLY the rules with no stable
+// Biome equivalent:
 //   - react-compiler/react-compiler (no Biome equivalent; React 19 correctness)
 //   - react-hooks/rules-of-hooks + exhaustive-deps (Biome hook parity not
 //     guaranteed; ESLint must run anyway)
