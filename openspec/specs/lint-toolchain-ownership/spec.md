@@ -6,30 +6,6 @@ TBD - created by archiving change enable-biome-recommended-ruleset. Update Purpo
 
 ## Requirements
 
-### Requirement: Biome owns the recommended lint ruleset
-
-The root `biome.json` linter MUST enable Biome's `recommended` ruleset
-(`linter.rules.recommended: true`). Biome MUST own formatting and the full
-recommended lint surface for the code surface it already covers
-(`*.{ts,tsx,js,jsx,mjs}`, `*.{json,jsonc}`, `*.css`). Repo-specific overrides
-(`noExplicitAny: error`, `noNonNullAssertion: warn`, `noUnusedVariables: error`
-with `ignoreRestSiblings`) MUST be preserved on top of the recommended baseline,
-not replaced by it.
-
-#### Scenario: recommended ruleset is enabled
-
-- **WHEN** `pnpm lint` runs `biome check .`
-- **THEN** `biome.json` resolves `linter.rules.recommended` to `true`
-- **AND** a recommended-rule violation (e.g. `style/useImportType`) in any
-  non-excluded source file fails the lint gate
-
-#### Scenario: repo overrides survive the recommended baseline
-
-- **WHEN** Biome evaluates a file that uses `any`
-- **THEN** `noExplicitAny` is reported at `error` (override retained)
-- **AND** an unused variable is still reported at `error` via the retained
-  `noUnusedVariables` override (not relaxed to the recommended default)
-
 ### Requirement: ESLint owns the rules Biome cannot provide
 
 A residual ESLint config (`eslint.config.ts`) MUST remain in the lint gate to
@@ -49,32 +25,18 @@ module in `45ffbe23` and is no longer part of this set.)
 
 ### Requirement: React hook rules are single-owned by ESLint
 
-The system MUST disable Biome's `correctness/useExhaustiveDependencies` and
-`correctness/useHookAtTopLevel` in `biome.json` so React hook correctness is
-reported only once, by ESLint's `react-hooks/exhaustive-deps` and
-`react-hooks/rules-of-hooks`. No hook concern MUST be reported by both tools
-simultaneously.
+React hook correctness MUST be reported only once, by ESLint's
+`react-hooks/rules-of-hooks` (at `error`) and `react-hooks/exhaustive-deps` (at
+`warn`). With Biome removed, single ownership is structural — there is no second
+tool to disable. No Biome `useExhaustiveDependencies` / `useHookAtTopLevel`
+configuration remains, because `biome.json` no longer exists.
 
 #### Scenario: hook violation is reported once
 
 - **WHEN** a component reads a reactive value missing from a `useEffect`
   dependency array
 - **THEN** ESLint reports `react-hooks/exhaustive-deps`
-- **AND** Biome does not also report `useExhaustiveDependencies` (rule disabled)
-
-### Requirement: Cognitive complexity is a non-blocking visibility target
-
-`complexity/noExcessiveCognitiveComplexity` MUST be enabled at severity `warn`
-with `maxAllowedComplexity: 15`. It MUST NOT fail the lint gate. Escalation to
-`error` and the refactoring of the functions it surfaces are out of scope for
-this capability and belong to a separate architecture change.
-
-#### Scenario: over-complex function warns but does not block
-
-- **WHEN** `biome check .` evaluates a function whose cognitive complexity
-  exceeds 15
-- **THEN** Biome emits a `warn`-level `noExcessiveCognitiveComplexity` diagnostic
-- **AND** the lint gate still exits `0` on that diagnostic alone
+- **AND** no second tool reports the same concern (Biome is not installed)
 
 ### Requirement: Type-checking is not owned by the lint toolchain
 
@@ -111,3 +73,74 @@ block a commit with lint errors.
   `lint:md`/`lint:md:fix` scripts
 - **AND** no `.markdownlint.json` file exists
 - **AND** Prettier remains the owner of both `*.{yml,yaml}` and `*.md`
+
+### Requirement: ESLint owns the logic lint surface
+
+ESLint (`eslint.config.ts`) MUST own the full logic lint surface for
+`*.{ts,tsx,js,jsx,mjs}`, absorbing Biome's former `recommended` coverage 1:1 via
+mainstream plugins: `@typescript-eslint` (individual rules, NOT the
+`recommended`/`strictTypeChecked` arrays — those would smuggle rules Biome did
+not enforce), `eslint-plugin-react`, `eslint-plugin-jsx-a11y`,
+`eslint-plugin-react-hooks`, `eslint-plugin-react-compiler`, and
+`eslint-plugin-unused-imports`. The repo-specific overrides MUST be preserved at
+their Biome severities: `@typescript-eslint/no-explicit-any` at `error`,
+`@typescript-eslint/no-non-null-assertion` at `warn`, and unused-variable
+enforcement at `error` (via `unused-imports/no-unused-vars` with
+`ignoreRestSiblings` and a leading-underscore ignore pattern). The type-aware
+`@typescript-eslint/no-floating-promises` MUST remain at `error` with the
+`projectService` machinery intact. Biome MUST NOT be reintroduced for this
+surface.
+
+#### Scenario: recommended-equivalent surface fails the gate
+
+- **WHEN** `pnpm lint` runs `eslint .`
+- **THEN** a file using `any` is reported at `error` via
+  `@typescript-eslint/no-explicit-any`
+- **AND** a floating promise, an unused variable, a react-compiler violation, or
+  a Biome-recommended-equivalent React violation
+  (`react/no-array-index-key`, `react/no-danger`) fails the gate
+- **AND** the gate runs no `biome check` step
+
+#### Scenario: jsx-a11y net-new firers are turned off to preserve 1:1
+
+- **WHEN** the jsx-a11y `recommended` preset reports a rule Biome did not
+  enforce (`jsx-a11y/no-noninteractive-element-interactions`,
+  `jsx-a11y/label-has-associated-control`)
+- **THEN** that specific rule is set to `off` in `eslint.config.ts` with an
+  inline rationale tying it to Biome 2.4.16 behavior
+- **AND** no rule Biome DID enforce is disabled to force the gate green
+
+### Requirement: Prettier owns code-surface formatting
+
+Prettier MUST be the formatter of record for the entire code surface
+(`*.{ts,tsx,js,jsx,mjs}`, `*.{json,jsonc}`, `*.css`) in addition to the
+`*.{yml,yaml,md}` it already owned. `.prettierrc.json` MUST mirror the former
+Biome formatter block (`printWidth: 80`, `tabWidth: 2`, `useTabs: false`,
+`semi: true`, `singleQuote: false`, `trailingComma: "all"`), and
+`.prettierignore` MUST mirror the former `biome.json` exclusions. `pnpm format`
+MUST run `prettier --write .` and `pnpm format:check` MUST run
+`prettier --check .`. `biome format` MUST NOT appear in any script.
+
+#### Scenario: prettier is the single code formatter
+
+- **WHEN** `pnpm format:check` runs
+- **THEN** `prettier --check .` evaluates the TS/JS/JSON/CSS surface
+- **AND** a non-canonically formatted source file fails the check
+- **AND** no `biome format` invocation exists in `package.json`
+
+### Requirement: stylelint owns CSS lint
+
+stylelint MUST own lint for the CSS files (`stylelint-config-standard` plus a
+Tailwind at-rule/directive allowance), replacing Biome's built-in CSS lint
+rather than dropping it. The two CSS rules Biome enforced MUST be preserved at
+`warning` severity (`no-descending-specificity`, `declaration-no-important`).
+`pnpm lint` MUST invoke `stylelint "**/*.css" --allow-empty-input`. Prettier
+remains the CSS formatter.
+
+#### Scenario: stylelint runs in the lint gate
+
+- **WHEN** `pnpm lint` runs
+- **THEN** `stylelint "**/*.css" --allow-empty-input` executes
+- **AND** a Tailwind directive (`@tailwind`, `@apply`, `@theme`) does not
+  produce an `at-rule-no-unknown` error
+- **AND** the two Biome-carried CSS rules report at `warning`, not `error`
