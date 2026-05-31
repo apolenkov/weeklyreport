@@ -903,16 +903,12 @@ describe("periodStateSchema (UFB-053)", () => {
 // ---------------------------------------------------------------------------
 
 describe("periodListBucketSchema (UFB-052)", () => {
-  it.each([
-    "active",
-    "archive",
-    "scheduled",
-    "open",
-    "published",
-    "archived",
-  ])("accepts %s", (bucket) => {
-    expect(periodListBucketSchema.safeParse(bucket).success).toBe(true);
-  });
+  it.each(["active", "archive", "scheduled", "open", "published", "archived"])(
+    "accepts %s",
+    (bucket) => {
+      expect(periodListBucketSchema.safeParse(bucket).success).toBe(true);
+    },
+  );
 
   it('rejects "reopened" (not a state, lives on periodStatus)', () => {
     expect(periodListBucketSchema.safeParse("reopened").success).toBe(false);

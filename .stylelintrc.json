@@ -1,7 +1,24 @@
 {
   "extends": "stylelint-config-standard",
   "rules": {
-    "at-rule-no-unknown": [true, { "ignoreAtRules": ["import","apply","layer","config","keyframes","source","tailwind","theme","variants","utility","custom-variant"] }],
+    "at-rule-no-unknown": [
+      true,
+      {
+        "ignoreAtRules": [
+          "import",
+          "apply",
+          "layer",
+          "config",
+          "keyframes",
+          "source",
+          "tailwind",
+          "theme",
+          "variants",
+          "utility",
+          "custom-variant"
+        ]
+      }
+    ],
     "no-descending-specificity": [true, { "severity": "warning" }],
     "declaration-no-important": [true, { "severity": "warning" }],
 

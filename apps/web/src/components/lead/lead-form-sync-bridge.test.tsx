@@ -285,9 +285,12 @@ describe("promoteStageStatus pure function", () => {
     ["at-risk", "at-risk", "at-risk"],
     ["blocked", "at-risk", "blocked"],
     ["blocked", "blocked", "blocked"],
-  ] as const)("current=%s + riskSeverity=%s → %s", (current, riskSeverity, expected) => {
-    expect(promoteStageStatus(current, riskSeverity)).toBe(expected);
-  });
+  ] as const)(
+    "current=%s + riskSeverity=%s → %s",
+    (current, riskSeverity, expected) => {
+      expect(promoteStageStatus(current, riskSeverity)).toBe(expected);
+    },
+  );
 });
 
 describe("LeadFormSyncBridge — up-flow stage promotion", () => {
