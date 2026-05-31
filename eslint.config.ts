@@ -123,7 +123,7 @@ export default defineConfig([
       "react-compiler/react-compiler": "error",
     },
   },
-  // Test-file override: disable jsx-a11y (mirror biome.json a11y:off on tests)
+  // Test-file override: disable jsx-a11y (mirrors Biome's former a11y:off on tests)
   {
     files: ["**/*.test.ts", "**/*.test.tsx"],
     rules: Object.fromEntries(
