@@ -41,6 +41,7 @@ function createSpyRepository(
   publishPeriod: ReturnType<typeof vi.fn>;
   reopenPeriod: ReturnType<typeof vi.fn>;
 } {
+  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy satisfies the PeriodRepository.publishPeriod typed slot (must return Promise<void>)
   const publishFn = vi.fn(async (id: string) => {
     const r = reports.get(id);
     if (r) {
@@ -49,6 +50,7 @@ function createSpyRepository(
     }
   });
 
+  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy satisfies the PeriodRepository.reopenPeriod typed slot (must return Promise<void>)
   const reopenFn = vi.fn(async (id: string) => {
     const r = reports.get(id);
     if (r) {
@@ -57,6 +59,7 @@ function createSpyRepository(
   });
 
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
     async getReportById(id: string) {
       const r = reports.get(id);
       return r ? structuredClone(r) : null;
@@ -189,6 +192,7 @@ describe("PeriodService — publishPeriod (unit)", () => {
         },
       ],
     ]);
+    // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy satisfies the AnalyticsCacheInvalidator typed slot (must return Promise<void>)
     const invalidate = vi.fn(async () => undefined);
     const service = new PeriodService(createSpyRepository(reports), invalidate);
 
@@ -209,6 +213,7 @@ describe("PeriodService — publishPeriod (unit)", () => {
         },
       ],
     ]);
+    // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy satisfies the AnalyticsCacheInvalidator typed slot (must return Promise<void>)
     const invalidate = vi.fn(async () => undefined);
     const service = new PeriodService(createSpyRepository(reports), invalidate);
 
@@ -314,6 +319,7 @@ describe("PeriodService — reopenPeriod (unit)", () => {
         },
       ],
     ]);
+    // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy satisfies the AnalyticsCacheInvalidator typed slot (must return Promise<void>)
     const invalidate = vi.fn(async () => undefined);
     const service = new PeriodService(createSpyRepository(reports), invalidate);
 
@@ -366,7 +372,9 @@ describe("PeriodService — reopen policy gate (UFB-052)", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
+      // eslint-disable-next-line @typescript-eslint/require-await -- async stub satisfies the AnalyticsCacheInvalidator typed slot (must return Promise<void>)
       async () => undefined,
+      // eslint-disable-next-line @typescript-eslint/require-await -- async stub satisfies the ReopenPolicyReader typed slot (must return Promise<...>)
       async () => ({ allowReopenAfterPublish: false, reopenWindowHours: 72 }),
     );
 
@@ -392,7 +400,9 @@ describe("PeriodService — reopen policy gate (UFB-052)", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
+      // eslint-disable-next-line @typescript-eslint/require-await -- async stub satisfies the AnalyticsCacheInvalidator typed slot (must return Promise<void>)
       async () => undefined,
+      // eslint-disable-next-line @typescript-eslint/require-await -- async stub satisfies the ReopenPolicyReader typed slot (must return Promise<...>)
       async () => ({ allowReopenAfterPublish: true, reopenWindowHours: 72 }),
     );
 
@@ -418,7 +428,9 @@ describe("PeriodService — reopen policy gate (UFB-052)", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(
       repo,
+      // eslint-disable-next-line @typescript-eslint/require-await -- async stub satisfies the AnalyticsCacheInvalidator typed slot (must return Promise<void>)
       async () => undefined,
+      // eslint-disable-next-line @typescript-eslint/require-await -- async stub satisfies the ReopenPolicyReader typed slot (must return Promise<...>)
       async () => ({ allowReopenAfterPublish: true, reopenWindowHours: 72 }),
     );
 

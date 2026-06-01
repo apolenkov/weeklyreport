@@ -31,6 +31,7 @@ vi.mock("../../lib/trpc-context", () => ({
       get: {
         queryOptions: () => ({
           queryKey: ["weeklyReport", "get"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async queryFn contract expected by react-query (no awaitable work in the stub)
           queryFn: async () => null,
           enabled: false,
         }),

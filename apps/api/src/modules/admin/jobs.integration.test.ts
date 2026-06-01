@@ -29,6 +29,7 @@ describe("JobsService — integration (BullMQ failed jobs)", () => {
     queueEvents = new QueueEvents(queueName, options);
     worker = new Worker<unknown, unknown, string>(
       queueName,
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async BullMQ processor contract (no awaitable work in the stub)
       async (): Promise<void> => {
         throw new Error("forced reminder delivery failure");
       },

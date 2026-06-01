@@ -55,6 +55,7 @@ function createRepository(
   }) => SearchHit[],
 ): SearchRepository {
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async SearchRepository contract (no awaitable work in the stub)
     async search(params) {
       return handler(params);
     },

@@ -309,7 +309,7 @@ describe("RemindersTab (Phase 44-04)", () => {
   // audience from AppSettings instead of hardcoded constants. Without an
   // existing policy to pre-fill, the form opens automatically and we assert
   // the controls reflect the org defaults pumped through props.
-  it("UFB-048: prefills timezone + audience from org defaults on a fresh form", async () => {
+  it("UFB-048: prefills timezone + audience from org defaults on a fresh form", () => {
     renderTab({
       policies: [],
       derivedRulesByPolicyId: {},

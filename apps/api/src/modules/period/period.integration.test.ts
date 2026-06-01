@@ -43,6 +43,7 @@ function createSpyRepository(
   publishPeriod: ReturnType<typeof vi.fn>;
   reopenPeriod: ReturnType<typeof vi.fn>;
 } {
+  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock implements the async PeriodRepository.publishPeriod contract (no awaitable work in the stub)
   const publishFn = vi.fn(async (id: string) => {
     const r = reports.get(id);
     if (r) {
@@ -51,6 +52,7 @@ function createSpyRepository(
     }
   });
 
+  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock implements the async PeriodRepository.reopenPeriod contract (no awaitable work in the stub)
   const reopenFn = vi.fn(async (id: string) => {
     const r = reports.get(id);
     if (r) {
@@ -59,6 +61,7 @@ function createSpyRepository(
   });
 
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
     async getReportById(id: string) {
       const r = reports.get(id);
       return r ? structuredClone(r) : null;

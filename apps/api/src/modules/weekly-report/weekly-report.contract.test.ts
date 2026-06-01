@@ -98,9 +98,11 @@ function createRepository(
   activeId: string | null = null,
 ): WeeklyReportRepository {
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
     async getWeeklyReport(id: string) {
       return structuredClone(reports.get(id) ?? null);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
     async getActiveReportId() {
       return activeId;
     },

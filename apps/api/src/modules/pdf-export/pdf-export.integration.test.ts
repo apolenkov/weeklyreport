@@ -164,6 +164,7 @@ describe("AUTH-05 cookie seam (CC-1) — service against real Prisma repo", () =
     }
     const enqueued: EnqueuedJob[] = [];
     const fakeQueue = {
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async BullMQ Queue.add contract (no awaitable work in the stub)
       add: async (name: string, data: EnqueuedJob["data"]) => {
         enqueued.push({ name, data });
         return { id: "fake" };

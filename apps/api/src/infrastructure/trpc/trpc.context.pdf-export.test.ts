@@ -31,10 +31,12 @@ interface MockNestApp {
 function makePrismaStub() {
   return {
     reportSection: {
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma repository contract (no awaitable work in the stub)
       findFirst: vi.fn(async () => null),
     },
     // A2 (UAT-v7 2026-05-12): isActive check added to createContextFactory.
     user: {
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma repository contract (no awaitable work in the stub)
       findUnique: vi.fn(async () => ({ isActive: true })),
     },
     // UFB-047 / Phase 48-A: see trpc.context.test.ts — the regular session
@@ -42,6 +44,7 @@ function makePrismaStub() {
     // returning. PDF-export-token paths short-circuit before hitting this
     // stub, but the regular-JWT regression test does exercise it.
     organization: {
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma repository contract (no awaitable work in the stub)
       upsert: vi.fn(async () => ({
         shortName: "Demo",
         fullName: "Example Software Department",

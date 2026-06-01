@@ -46,6 +46,7 @@ function createRepository(
   let currentSection = structuredClone(section);
 
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
     async getSectionById(reportSectionId) {
       if (reportSectionId !== currentSection.reportSectionId) {
         return null;
@@ -53,9 +54,11 @@ function createRepository(
 
       return structuredClone(currentSection);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<string | null>); no awaitable work in stub
     async getReportStatus() {
       return "draft";
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<ReportSectionReadModel>); no awaitable work in stub
     async saveSection(nextSection) {
       currentSection = structuredClone(nextSection);
 
@@ -197,6 +200,7 @@ describe("ReportSectionsService", () => {
     it("rejects editing a section when the report is published", async () => {
       const repo = createRepository(baseSection);
       // Override getReportStatus to return 'published'
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository.getReportStatus contract (Promise<string | null>); no awaitable work in stub
       repo.getReportStatus = async () => "published";
 
       const service = new ReportSectionsService(repo);
@@ -375,16 +379,20 @@ describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
     };
     let currentSection = fixed;
     return {
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
       async getSectionById(id) {
         if (id !== currentSection.reportSectionId) return null;
         return structuredClone(currentSection);
       },
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<string | null>); no awaitable work in stub
       async getReportStatus() {
         return "draft";
       },
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
       async getReportMeta() {
         return { status: "draft", deadline: opts.deadline };
       },
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<ReportSectionReadModel>); no awaitable work in stub
       async saveSection(next) {
         currentSection = structuredClone(next);
         return structuredClone(currentSection);
@@ -415,6 +423,7 @@ describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
     const repo = createGracedRepository({
       deadline: new Date(Date.now() + 24 * ONE_HOUR),
     });
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements GetGraceSettings contract ((): Promise<...>); no awaitable work in stub
     const service = new ReportSectionsService(repo, async () => ({
       gracePeriodHours: 24,
       allowLateSubmissions: false,
@@ -430,6 +439,7 @@ describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
     const repo = createGracedRepository({
       deadline: new Date(Date.now() - 1 * ONE_HOUR),
     });
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements GetGraceSettings contract ((): Promise<...>); no awaitable work in stub
     const service = new ReportSectionsService(repo, async () => ({
       gracePeriodHours: 24,
       allowLateSubmissions: true,
@@ -445,6 +455,7 @@ describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
     const repo = createGracedRepository({
       deadline: new Date(Date.now() - 1 * ONE_HOUR),
     });
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements GetGraceSettings contract ((): Promise<...>); no awaitable work in stub
     const service = new ReportSectionsService(repo, async () => ({
       gracePeriodHours: 24,
       allowLateSubmissions: false,
@@ -460,6 +471,7 @@ describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
     const repo = createGracedRepository({
       deadline: new Date(Date.now() - 48 * ONE_HOUR),
     });
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements GetGraceSettings contract ((): Promise<...>); no awaitable work in stub
     const service = new ReportSectionsService(repo, async () => ({
       gracePeriodHours: 24,
       allowLateSubmissions: true,
@@ -475,10 +487,14 @@ describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
     const repo = createGracedRepository({
       deadline: new Date(Date.now() - 48 * ONE_HOUR),
     });
-    const service = new ReportSectionsService(repo, async () => ({
-      gracePeriodHours: 24,
-      allowLateSubmissions: false,
-    }));
+    const service = new ReportSectionsService(
+      repo,
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements GetGraceSettings contract ((): Promise<...>); no awaitable work in stub
+      async () => ({
+        gracePeriodHours: 24,
+        allowLateSubmissions: false,
+      }),
+    );
 
     await expect(
       service.submitSection(validSubmitPayload()),
@@ -525,16 +541,20 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
     };
     let current = section;
     return {
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
       async getSectionById(id) {
         if (id !== current.reportSectionId) return null;
         return structuredClone(current);
       },
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<string | null>); no awaitable work in stub
       async getReportStatus() {
         return "draft";
       },
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
       async getReportMeta() {
         return { status: "draft", deadline };
       },
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<ReportSectionReadModel>); no awaitable work in stub
       async saveSection(next) {
         current = structuredClone(next);
         return structuredClone(current);
@@ -554,6 +574,7 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
 
     const service = new ReportSectionsService(
       buildRepo(new Date(Date.now() + 6 * ONE_HOUR)),
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements GetGraceSettings contract ((): Promise<...>); no awaitable work in stub
       async () => ({ gracePeriodHours: 24, allowLateSubmissions: false }),
     );
     await service.submitSection({
@@ -598,6 +619,7 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
 
     const service = new ReportSectionsService(
       buildRepo(new Date(Date.now() - 2 * ONE_HOUR)),
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements GetGraceSettings contract ((): Promise<...>); no awaitable work in stub
       async () => ({ gracePeriodHours: 24, allowLateSubmissions: true }),
     );
     await service.submitSection({

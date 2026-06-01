@@ -23,16 +23,19 @@ function createFakeRedis(): FakeRedis {
   const data = new Set<string>();
   return {
     data,
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async FakeRedis interface (no awaitable work in the stub)
     async sadd(_key: string, member: string) {
       const wasAbsent = !data.has(member);
       data.add(member);
       return wasAbsent ? 1 : 0;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async FakeRedis interface (no awaitable work in the stub)
     async srem(_key: string, member: string) {
       const wasPresent = data.has(member);
       data.delete(member);
       return wasPresent ? 1 : 0;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async FakeRedis interface (no awaitable work in the stub)
     async sismember(_key: string, member: string) {
       return data.has(member) ? 1 : 0;
     },

@@ -44,6 +44,7 @@ function createRepository(
   const jobs = new Map<string, PdfExportJobRecord>();
 
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in this in-memory stub)
     async createExportJob(job: PdfExportJob, requestedBy?: string) {
       if (capture) {
         capture.lastRequestedBy = requestedBy;
@@ -54,13 +55,16 @@ function createRepository(
       });
       return structuredClone(job);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in this in-memory stub)
     async getExportJob(jobId: string) {
       const job = jobs.get(jobId);
       return job ? structuredClone(job) : null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in this in-memory stub)
     async getPublishedReport(activeReportId: string) {
       return activeReportId === reportId ? structuredClone(report) : null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in this in-memory stub)
     async saveExportJob(job: PdfExportJob) {
       jobs.set(job.jobId, {
         ...structuredClone(job),
@@ -68,6 +72,7 @@ function createRepository(
       });
       return structuredClone(job);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in this in-memory stub)
     async markExportFailed(jobId: string, _error: string) {
       const job = jobs.get(jobId);
       if (job) {
@@ -280,6 +285,7 @@ describe("AUTH-05 PDF export JWT signing", () => {
     }
     const enqueued: EnqueuedJob[] = [];
     const fakeQueue = {
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async queue.add contract (no awaitable work in this stub)
       add: async (name: string, data: EnqueuedJob["data"]) => {
         enqueued.push({ name, data });
         return { id: "fake" };
@@ -314,6 +320,7 @@ describe("AUTH-05 PDF export JWT signing", () => {
     }
     const enqueued: EnqueuedJob[] = [];
     const fakeQueue = {
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async queue.add contract (no awaitable work in this stub)
       add: async (name: string, data: EnqueuedJob["data"]) => {
         enqueued.push({ name, data });
         return { id: "fake" };

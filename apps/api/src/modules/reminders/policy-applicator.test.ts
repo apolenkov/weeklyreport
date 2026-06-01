@@ -120,6 +120,7 @@ function makeStubPrisma(policies: StubPolicy[], existingRules: Set<string>) {
     upsertCalls,
     prisma: {
       reminderPolicy: {
+        // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async prisma findMany (returns synchronously in test)
         findMany: vi.fn(async () => policies.filter((p) => p.active)),
       },
       reminderRule: {
@@ -128,6 +129,7 @@ function makeStubPrisma(policies: StubPolicy[], existingRules: Set<string>) {
             where: {
               reportId_policyId: { reportId: string; policyId: string };
             };
+            // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async prisma findUnique method (no awaitable work in the stub)
           }) => {
             const key = `${args.where.reportId_policyId.reportId}:${args.where.reportId_policyId.policyId}`;
             return existingRules.has(key) ? { id: "existing" } : null;
@@ -138,6 +140,7 @@ function makeStubPrisma(policies: StubPolicy[], existingRules: Set<string>) {
             where: unknown;
             create: Record<string, unknown>;
             update: Record<string, unknown>;
+            // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async prisma upsert method (no awaitable work in the stub)
           }) => {
             upsertCalls.push(args);
             return { id: "rule-id" };
@@ -250,10 +253,13 @@ describe("PolicyApplicatorService.applyToPeriod", () => {
     let firstCall = true;
     const prisma = {
       reminderPolicy: {
+        // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async prisma findMany (returns synchronously in test)
         findMany: vi.fn(async () => [policyA, policyC]),
       },
       reminderRule: {
+        // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async prisma findUnique (returns synchronously in test)
         findUnique: vi.fn(async () => null),
+        // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements the async prisma upsert method (throws or returns synchronously, no awaitable work)
         upsert: vi.fn(async (args: unknown) => {
           if (firstCall) {
             firstCall = false;

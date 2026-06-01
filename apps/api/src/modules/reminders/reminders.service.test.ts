@@ -33,6 +33,7 @@ function createRepository(initialRule: AdminReminderRule): RemindersRepository {
   const executions = new Map<string, AdminReminderExecution>();
 
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async findExecutionByDedupeKey(dedupeKey: string) {
       for (const execution of executions.values()) {
         if (execution.dedupeKey === dedupeKey) {
@@ -42,6 +43,7 @@ function createRepository(initialRule: AdminReminderRule): RemindersRepository {
 
       return null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async getRule(ruleId: string) {
       if (ruleId === initialRule.id) {
         return structuredClone(initialRule);
@@ -49,15 +51,18 @@ function createRepository(initialRule: AdminReminderRule): RemindersRepository {
 
       return null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async getExecution(executionId: string) {
       const execution = executions.get(executionId);
       return execution ? structuredClone(execution) : null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async listExecutions(ruleId: string) {
       return [...executions.values()]
         .filter((execution) => execution.ruleId === ruleId)
         .map((execution) => structuredClone(execution));
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async saveExecution(execution: AdminReminderExecution) {
       executions.set(execution.id, structuredClone(execution));
       return structuredClone(execution);

@@ -11,21 +11,27 @@ function buildRepo(
   overrides: Partial<TelemetryRepository> = {},
 ): TelemetryRepository {
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async TelemetryRepository contract (no awaitable work in the stub)
     async reportsThisPeriodCount() {
       return 6;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async TelemetryRepository contract (no awaitable work in the stub)
     async activeLeadsLastPublishedPeriod() {
       return 5;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async TelemetryRepository contract (no awaitable work in the stub)
     async lateSectionsLastPublishedPeriod() {
       return 1;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async TelemetryRepository contract (no awaitable work in the stub)
     async pendingReopenCount() {
       return 0;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async TelemetryRepository contract (no awaitable work in the stub)
     async pdfExportsLast7d() {
       return 12;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async TelemetryRepository contract (no awaitable work in the stub)
     async onTimeRatioPerPeriod() {
       return [0.8, 0.82, 0.85, 0.86];
     },
@@ -52,6 +58,7 @@ describe("TelemetryService — Phase 52-C (UFB-054)", () => {
   it("returns null onTimeRatio when there are no published periods yet", async () => {
     const service = new TelemetryService(
       buildRepo({
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async TelemetryRepository contract (no awaitable work in the stub)
         async onTimeRatioPerPeriod() {
           return [];
         },
@@ -65,6 +72,7 @@ describe("TelemetryService — Phase 52-C (UFB-054)", () => {
   it("runs through the cache port and only computes once for the same key", async () => {
     let computeCount = 0;
     const repo = buildRepo({
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async TelemetryRepository contract (no awaitable work in the stub)
       async reportsThisPeriodCount() {
         computeCount += 1;
         return 6;
@@ -99,6 +107,7 @@ describe("TelemetryService — Phase 52-C (UFB-054)", () => {
     let computeCount = 0;
     const service = new TelemetryService(
       buildRepo({
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async TelemetryRepository contract (no awaitable work in the stub)
         async reportsThisPeriodCount() {
           computeCount += 1;
           return 6;
@@ -116,6 +125,7 @@ describe("TelemetryService — Phase 52-C (UFB-054)", () => {
   it("passes the schema validator — rejects out-of-range repo data", async () => {
     const service = new TelemetryService(
       buildRepo({
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async TelemetryRepository contract (no awaitable work in the stub)
         async onTimeRatioPerPeriod() {
           return [1.5, 0.5];
         },

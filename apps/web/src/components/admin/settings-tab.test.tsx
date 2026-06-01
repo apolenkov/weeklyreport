@@ -55,6 +55,7 @@ function makeMockTRPC(
       getOrganization: {
         queryOptions: () => ({
           queryKey: ["admin", "getOrganization"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements React Query queryFn contract which must return Promise (no awaitable work in the stub)
           queryFn: async () => ({
             id: "singleton",
             shortName: "Demo",
@@ -90,6 +91,7 @@ function makeMockTRPC(
       integrationsStatus: {
         queryOptions: () => ({
           queryKey: ["admin", "integrationsStatus"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements React Query queryFn contract which must return Promise (no awaitable work in the stub)
           queryFn: async () => integrations,
         }),
         pathFilter: () => ({ tag: "admin.integrationsStatus" }),
@@ -139,7 +141,7 @@ describe("SettingsTab — Identity sub-tab (UFB-047 / Phase 48-A)", () => {
     toastError.mockReset();
   });
 
-  it("renders the five tabs in the documented order", async () => {
+  it("renders the five tabs in the documented order", () => {
     const captured: Captured = {
       updateOrgFn: vi.fn(),
       updateSettingsFn: vi.fn(),

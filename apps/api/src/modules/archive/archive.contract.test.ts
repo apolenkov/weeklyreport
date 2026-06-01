@@ -118,9 +118,11 @@ function createInMemoryRepository(
   details: Map<string, ArchiveReportDetail>,
 ): ArchiveRepository {
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async ArchiveRepository contract (no awaitable work in the stub)
     async listArchiveReports(): Promise<ArchiveReportSummary[]> {
       return structuredClone(summaries);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async ArchiveRepository contract (no awaitable work in the stub)
     async getArchiveReport(
       reportId: string,
     ): Promise<ArchiveReportDetail | null> {

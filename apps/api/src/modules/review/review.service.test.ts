@@ -57,6 +57,7 @@ const unsortedRows: SubmissionDashboardRow[] = [
 
 function createRepository(rows: SubmissionDashboardRow[]): ReviewRepository {
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReviewRepository contract (no awaitable work in the stub)
     async getSubmissionDashboard(activeReportId: string, _session) {
       if (activeReportId !== reportId) {
         return [];
@@ -133,6 +134,7 @@ describe("ReviewService", () => {
   it("UFB-040 / 46-02: passes the session through to the repository so scope filter applies", async () => {
     let capturedSession: unknown;
     const spyRepo: ReviewRepository = {
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReviewRepository contract (no awaitable work in the stub)
       async getSubmissionDashboard(_id, session) {
         capturedSession = session;
         return [];
@@ -149,6 +151,7 @@ describe("ReviewService", () => {
   it("UFB-040 / 46-02: viewer with empty viewerGroupAccess gets zero rows back (caller responsibility, repo still gets session)", async () => {
     let capturedSession: unknown;
     const spyRepo: ReviewRepository = {
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReviewRepository contract (no awaitable work in the stub)
       async getSubmissionDashboard(_id, session) {
         capturedSession = session;
         return [];

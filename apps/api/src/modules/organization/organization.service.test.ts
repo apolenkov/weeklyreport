@@ -25,7 +25,9 @@ function makeRepo(): OrganizationRepository {
     updatedAt: new Date("2026-05-10T00:00:00Z"),
   };
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async OrganizationRepository contract (no awaitable work in the stub)
     getOrganization: vi.fn(async () => baseRow),
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async OrganizationRepository contract (no awaitable work in the stub)
     updateOrganization: vi.fn(async (input) => ({
       ...baseRow,
       shortName: input.shortName,

@@ -82,20 +82,25 @@ function createRepository(
   const assignments = new Map<string, StageAssignment>();
 
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
     async getSnapshot() {
       return structuredClone(currentSnapshot);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
     async saveSnapshot(nextSnapshot) {
       currentSnapshot = structuredClone(nextSnapshot);
       return structuredClone(currentSnapshot);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
     async getSettings() {
       return structuredClone(currentSettings);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
     async updateSettings(data) {
       currentSettings = { ...currentSettings, ...data };
       return structuredClone(currentSettings);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
     async saveReportingGroup(group) {
       const existingIndex = currentSnapshot.groups.findIndex(
         (row) => row.id === group.id,
@@ -107,12 +112,14 @@ function createRepository(
       }
       return structuredClone(group);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
     async archiveReportingGroup(groupId) {
       const group = currentSnapshot.groups.find((row) => row.id === groupId);
       if (!group) throw new Error(`ReportingGroup ${groupId} not found.`);
       group.archived = true;
       return structuredClone(group);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
     async saveStageAssignment(data) {
       const existing = [...assignments.values()].find(
         (a) => a.stageId === data.stageId && a.projectId === data.projectId,
@@ -136,12 +143,14 @@ function createRepository(
       assignments.set(assignment.id, assignment);
       return structuredClone(assignment);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
     async deleteStageAssignment(id) {
       if (!assignments.has(id)) {
         throw new Error(`StageAssignment ${id} not found.`);
       }
       assignments.delete(id);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
     async listStageAssignments(projectId) {
       return [...assignments.values()]
         .filter((a) => a.projectId === projectId)

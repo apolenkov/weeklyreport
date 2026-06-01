@@ -97,20 +97,25 @@ function createRepository(
   const assignments = new Map<string, StageAssignment>();
 
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async getSnapshot() {
       return structuredClone(currentSnapshot);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async saveSnapshot(nextSnapshot) {
       currentSnapshot = structuredClone(nextSnapshot);
       return structuredClone(currentSnapshot);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async getSettings() {
       return structuredClone(currentSettings);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async updateSettings(data) {
       currentSettings = { ...currentSettings, ...data };
       return structuredClone(currentSettings);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async saveReportingGroup(group) {
       const existingIndex = currentSnapshot.groups.findIndex(
         (row) => row.id === group.id,
@@ -122,12 +127,14 @@ function createRepository(
       }
       return structuredClone(group);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async archiveReportingGroup(groupId) {
       const group = currentSnapshot.groups.find((row) => row.id === groupId);
       if (!group) throw new Error(`ReportingGroup ${groupId} not found.`);
       group.archived = true;
       return structuredClone(group);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async saveStageAssignment(data) {
       const existing = [...assignments.values()].find(
         (a) => a.stageId === data.stageId && a.projectId === data.projectId,
@@ -151,12 +158,14 @@ function createRepository(
       assignments.set(assignment.id, assignment);
       return structuredClone(assignment);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async deleteStageAssignment(id) {
       if (!assignments.has(id)) {
         throw new Error(`StageAssignment ${id} not found.`);
       }
       assignments.delete(id);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async listStageAssignments(projectId) {
       return [...assignments.values()]
         .filter((a) => a.projectId === projectId)
@@ -887,18 +896,21 @@ function makePeriodAwareRepository(
   const store = rows.map((r) => ({ ...r }));
   return {
     ...base,
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async listPeriodsByState(filter) {
       return store
         .filter((r) => filter.states.includes(r.periodState))
         .slice(0, filter.limit)
         .sort((a, b) => b.periodStart.getTime() - a.periodStart.getTime());
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async archivePeriod(periodId) {
       const row = store.find((r) => r.id === periodId);
       if (!row) throw new Error("not found");
       row.archived = true;
       row.periodState = "archived";
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async unarchivePeriod(periodId): Promise<{
       nextPeriodState: PeriodState;
       nextPeriodStatus: PeriodStatus;
@@ -1080,6 +1092,7 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
     >();
     return {
       ...base,
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
       async attachProductToGroup({ groupId, productId }) {
         const existing = edges.get(productId);
         if (existing) {
@@ -1108,9 +1121,11 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
         edges.set(productId, { id: row.id, groupId, createdAt: row.createdAt });
         return row;
       },
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
       async detachProductFromGroup({ productId }) {
         edges.delete(productId);
       },
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
       async listGroupProducts(groupId) {
         const productIds = [...edges.entries()]
           .filter(([, v]) => v.groupId === groupId)
@@ -1119,6 +1134,7 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
           ? snapshot.projects.filter((p) => productIds.includes(p.id))
           : [];
       },
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
       async listProductGroups(productId) {
         const entry = edges.get(productId);
         if (!entry) return [];
@@ -1294,6 +1310,7 @@ function makeCreatePeriodRepository(opts: {
   let counter = 0;
   return {
     ...base,
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async findOverlappingPeriod(input) {
       // Half-open intersect: existingStart <= newEnd && existingEnd >= newStart.
       const hit = seed
@@ -1311,6 +1328,7 @@ function makeCreatePeriodRepository(opts: {
           }
         : null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async createPeriodManual(input) {
       counter += 1;
       const id = `11111111-1111-4111-8111-1111111110${String(counter).padStart(
@@ -1518,6 +1536,7 @@ function makeUpdatePeriodRepository(opts: {
   > = null;
   return {
     ...base,
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async findOverlappingPeriod(input) {
       // Half-open intersect + optional self-exclusion (UFB-067).
       const hit = [...rows.values()]
@@ -1536,10 +1555,12 @@ function makeUpdatePeriodRepository(opts: {
           }
         : null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async readPeriodById(periodId) {
       const row = rows.get(periodId);
       return row ? { ...row } : null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
     async updatePeriodManual(input) {
       const row = rows.get(input.reportId);
       if (!row) {

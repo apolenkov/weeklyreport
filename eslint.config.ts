@@ -165,6 +165,12 @@ export default defineConfig([
       "@typescript-eslint/use-unknown-in-catch-callback-variable": "error",
       "@typescript-eslint/return-await": "error",
 
+      // Phase-3 ratchet — R2b-2 (ratchet-lint-to-strict). require-await repo-wide
+      // (the declared standard does NOT exempt tests for the type-aware base).
+      // src violations are fixed in code; test-mock methods that are async purely
+      // to satisfy an async interface contract carry a per-site disable.
+      "@typescript-eslint/require-await": "error",
+
       // React hooks (single-owned by ESLint)
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",

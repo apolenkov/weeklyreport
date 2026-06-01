@@ -113,6 +113,7 @@ function makeMockTRPC(opts: {
           opts.captured.listInputs.push(input);
           return {
             queryKey: ["admin", "listPeriodsByState", input.bucket],
+            // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async queryFn contract expected by react-query (no awaitable work in the stub)
             queryFn: async () =>
               input.bucket === "archive" ? opts.archive : opts.active,
           };

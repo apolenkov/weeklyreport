@@ -54,6 +54,7 @@ function makePrismaStub(opts: {
   return {
     report: {
       findFirst: vi.fn().mockResolvedValue(opts.mostRecent),
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma report.create contract (no awaitable work in the stub)
       create: vi.fn().mockImplementation(async ({ data }) => ({
         id: opts.createdId ?? "period-new",
         periodStart: data.periodStart,

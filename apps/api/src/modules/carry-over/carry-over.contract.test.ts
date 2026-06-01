@@ -179,6 +179,7 @@ function createInMemoryRepository(opts: {
   const savedRecords: CarryOverRecord[] = [];
 
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
     async findExecutionByDedupeKey(
       dedupeKey: string,
     ): Promise<CarryOverExecution | null> {
@@ -190,14 +191,17 @@ function createInMemoryRepository(opts: {
       return null;
     },
 
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
     async getSourceSections(): Promise<ReportSectionReadModel[]> {
       return opts.sourceSections.map((s) => structuredClone(s));
     },
 
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
     async getTargetSections(): Promise<ReportSectionReadModel[]> {
       return opts.targetSections.map((s) => structuredClone(s));
     },
 
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
     async saveCarryOver(
       execution: CarryOverExecution,
       records: CarryOverRecord[],
