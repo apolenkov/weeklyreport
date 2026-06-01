@@ -46,10 +46,9 @@ export class SearchAuthorizationError extends Error {
 export class SearchService {
   private readonly logger = createAppLogger({
     service: "SearchService",
-    logDir: process.env["LOG_DIR"],
+    logDir: process.env.LOG_DIR,
     minLevel:
-      (process.env["LOG_LEVEL"] as "debug" | "info" | "warn" | "error") ??
-      "info",
+      (process.env.LOG_LEVEL as "debug" | "info" | "warn" | "error") ?? "info",
   });
 
   constructor(private readonly repository: SearchRepository) {}

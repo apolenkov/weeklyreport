@@ -17,18 +17,18 @@ vi.mock("@nestjs/common", () => ({
 // Mock bullmq Worker so no Redis connection is attempted
 vi.mock("bullmq", () => ({
   Worker: class {
-    static instances: Array<{
+    static instances: {
       handlers: Record<string, (...args: never[]) => void>;
-    }> = [];
+    }[] = [];
 
     handlers: Record<string, (...args: never[]) => void> = {};
 
     constructor() {
       (
         this.constructor as typeof import("bullmq").Worker & {
-          instances: Array<{
+          instances: {
             handlers: Record<string, (...args: never[]) => void>;
-          }>;
+          }[];
         }
       ).instances.push(this);
     }
@@ -107,7 +107,11 @@ function createMockPdfExportService() {
   };
 }
 
-type PdfExportJobData = { reportId: string; jobId: string; authToken: string };
+interface PdfExportJobData {
+  reportId: string;
+  jobId: string;
+  authToken: string;
+}
 
 function createMockJob(data: PdfExportJobData): Job<PdfExportJobData> {
   return { data } as Job<PdfExportJobData>;
@@ -115,9 +119,9 @@ function createMockJob(data: PdfExportJobData): Job<PdfExportJobData> {
 
 // Test seam — `processJob` is `private` on the class, but tests need to invoke
 // it directly. Cast through this interface to call without `as any`.
-type ProcessorTestSeam = {
+interface ProcessorTestSeam {
   processJob(job: Job<PdfExportJobData>): Promise<void>;
-};
+}
 
 function setupMocks() {
   const mockPage = {
@@ -255,9 +259,9 @@ describe("PdfExportProcessor.onModuleInit", () => {
     vi.clearAllMocks();
     (
       Worker as unknown as {
-        instances: Array<{
+        instances: {
           handlers: Record<string, (...args: never[]) => void>;
-        }>;
+        }[];
       }
     ).instances = [];
   });
@@ -270,12 +274,12 @@ describe("PdfExportProcessor.onModuleInit", () => {
 
     const instances = (
       Worker as unknown as {
-        instances: Array<{
+        instances: {
           handlers: Record<string, (...args: never[]) => void>;
-        }>;
+        }[];
       }
     ).instances;
-    const failedHandler = instances.at(-1)?.handlers["failed"];
+    const failedHandler = instances.at(-1)?.handlers.failed;
     expect(failedHandler).toBeTypeOf("function");
 
     failedHandler?.(

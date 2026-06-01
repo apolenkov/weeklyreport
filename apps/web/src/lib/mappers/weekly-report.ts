@@ -40,7 +40,7 @@ import { trafficToStageStatus } from "./traffic-light";
 
 export type WeeklyProductStatus = "on-track" | "at-risk" | "blocked";
 
-export type WeeklyPortfolioProduct = {
+export interface WeeklyPortfolioProduct {
   id: string;
   initials: string;
   name: string;
@@ -50,34 +50,34 @@ export type WeeklyPortfolioProduct = {
   currentWeekCount: number;
   nextWeekCount: number;
   riskCount: number;
-};
+}
 
-export type WeeklyReportItem = {
+export interface WeeklyReportItem {
   id: string;
   stageLead: string;
   text: string;
   status: ItemStatus;
-};
+}
 
-export type WeeklyReportRisk = {
+export interface WeeklyReportRisk {
   id: string;
   badge: string;
   severity: "blocked" | "at-risk";
   text: string;
-};
+}
 
-export type WeeklyReportDecision = {
+export interface WeeklyReportDecision {
   id: string;
   badge: string;
   text: string;
-};
+}
 
-export type WeeklyReportPriority = {
+export interface WeeklyReportPriority {
   rank: number;
   text: string;
-};
+}
 
-export type WeeklyProductReport = {
+export interface WeeklyProductReport {
   id: string;
   authorIds: string[];
   initials: string;
@@ -92,9 +92,9 @@ export type WeeklyProductReport = {
   risks: WeeklyReportRisk[];
   decisions: WeeklyReportDecision[];
   priorities: WeeklyReportPriority[];
-};
+}
 
-export type WeeklyReportPeriod = {
+export interface WeeklyReportPeriod {
   id: string;
   /**
    * Concrete report identifier (UUID). Equal to `id` (which historically was
@@ -112,7 +112,7 @@ export type WeeklyReportPeriod = {
   weekLabel: string;
   dateRange: string;
   isCurrent: boolean;
-};
+}
 
 // ---- Helpers ----
 
@@ -343,7 +343,7 @@ function findNeedsAttention(
 
 // ---- Public mapper ----
 
-export type MapWeeklyReportResult = {
+export interface MapWeeklyReportResult {
   period: WeeklyReportPeriod;
   portfolio: WeeklyPortfolioProduct[];
   products: WeeklyProductReport[];
@@ -355,7 +355,7 @@ export type MapWeeklyReportResult = {
   submissionCount: number;
   /** Total leads (for top-of-page badge). */
   totalLeads: number;
-};
+}
 
 /**
  * Compose `weeklyReport.get` into the page's portfolio + per-product slices.

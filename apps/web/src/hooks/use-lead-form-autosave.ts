@@ -9,16 +9,16 @@ import { useTRPC } from "../lib/trpc-context";
 
 export type AutosaveState = "idle" | "pending" | "saving" | "saved" | "error";
 
-export type AutosaveSnapshot = {
+export interface AutosaveSnapshot {
   readonly state: AutosaveState;
   readonly lastSavedAt: Date | null;
   readonly dirty: boolean;
   readonly isInFlight: boolean;
   /** Cancels the debounce timer and triggers an immediate save. */
   readonly forceSave: () => Promise<void>;
-};
+}
 
-export type UseLeadFormAutosaveArgs = {
+export interface UseLeadFormAutosaveArgs {
   readonly reportSectionId: string | null;
   readonly payload: DraftSavePayload | null;
   readonly enabled: boolean;
@@ -42,7 +42,7 @@ export type UseLeadFormAutosaveArgs = {
    * serialization rules for "use client" entry files (TS71007).
    */
   readonly onSaveSuccessAction?: () => void;
-};
+}
 
 const DEFAULT_DEBOUNCE_MS = 5000;
 
@@ -54,17 +54,13 @@ const DEFAULT_DEBOUNCE_MS = 5000;
 export function stableStringify(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) {
-    return "[" + value.map(stableStringify).join(",") + "]";
+    return `[${value.map(stableStringify).join(",")}]`;
   }
   const obj = value as Record<string, unknown>;
   const keys = Object.keys(obj).sort();
-  return (
-    "{" +
-    keys
-      .map((k) => JSON.stringify(k) + ":" + stableStringify(obj[k]))
-      .join(",") +
-    "}"
-  );
+  return `{${keys
+    .map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`)
+    .join(",")}}`;
 }
 
 /**

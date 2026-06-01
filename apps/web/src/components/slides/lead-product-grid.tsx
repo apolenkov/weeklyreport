@@ -115,9 +115,9 @@ function ProductCard({ product }: { product: SlideProduct }) {
   );
 }
 
-type LeadProductGridProps = {
+interface LeadProductGridProps {
   readonly products: readonly SlideProduct[];
-};
+}
 
 export function LeadProductGrid({ products }: LeadProductGridProps) {
   if (products.length === 0) {

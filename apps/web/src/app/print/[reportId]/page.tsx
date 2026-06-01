@@ -18,9 +18,9 @@ import { useTRPC } from "../../../lib/trpc-context";
 /*  this page remains the visual template until then.                 */
 /* ------------------------------------------------------------------ */
 
-type Props = {
+interface Props {
   params: Promise<{ reportId: string }>;
-};
+}
 
 function statusColor(status: string): string {
   switch (status) {

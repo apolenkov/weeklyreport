@@ -243,7 +243,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     }
 
     const data = snapshot.data as {
-      items: Array<{
+      items: {
         projectId: string;
         type: string;
         text: string;
@@ -255,8 +255,8 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         stageName?: string | null;
         stageIds?: string[];
         stageNames?: string[];
-      }>;
-      risks: Array<{
+      }[];
+      risks: {
         projectId: string;
         risk: string;
         impact: string;
@@ -265,8 +265,8 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         stageName?: string | null;
         stageIds?: string[];
         stageNames?: string[];
-      }>;
-      decisions: Array<{
+      }[];
+      decisions: {
         text: string;
         owner: string;
         deadline: string | null;
@@ -276,13 +276,13 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         stageIds?: string[];
         stageNames?: string[];
         productId?: string | null;
-      }>;
-      stageStatuses?: Array<{
+      }[];
+      stageStatuses?: {
         projectId: string;
         stageId: string;
         stageName?: string;
         status: "green" | "yellow" | "red" | null;
-      }>;
+      }[];
     };
 
     await this.prisma.$transaction(

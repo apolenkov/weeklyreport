@@ -16,10 +16,10 @@ import { ReopenTab } from "./reopen-tab";
 import { SettingsTab } from "./settings-tab";
 import { UsersTab } from "./users-tab";
 
-type AdminPanelProps = {
+interface AdminPanelProps {
   readonly activeTab: string;
   readonly productFilter?: string | null;
-};
+}
 
 /**
  * Admin Panel container. Lifts the snapshot + settings queries into the parent

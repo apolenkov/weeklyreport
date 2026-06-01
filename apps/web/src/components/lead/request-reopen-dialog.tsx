@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-type RequestReopenDialogProps = {
+interface RequestReopenDialogProps {
   readonly open: boolean;
   /**
    * Whether the mutation is currently in flight. Drives the disabled
@@ -24,7 +24,7 @@ type RequestReopenDialogProps = {
    */
   readonly onConfirm: (reason: string | undefined) => void;
   readonly onCancel: () => void;
-};
+}
 
 /**
  * Lead-side modal for asking Head to reopen a submitted section.
@@ -74,7 +74,6 @@ export function RequestReopenDialog({
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- backdrop is a mouse convenience; dialog is keyboard-closable via Escape + Cancel button
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
       onClick={onCancel}

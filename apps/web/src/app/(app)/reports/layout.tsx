@@ -13,7 +13,7 @@ import { getServerSession } from "../../../lib/server/get-server-session";
  * service layer). The layout's job is only to deny anonymous traffic;
  * the service-layer filter is the actual security boundary.
  */
-const REQUIRED: ReadonlyArray<Role> = ["lead", "head", "admin", "viewer"];
+const REQUIRED: readonly Role[] = ["lead", "head", "admin", "viewer"];
 
 type Props = Readonly<{ children: ReactNode }>;
 

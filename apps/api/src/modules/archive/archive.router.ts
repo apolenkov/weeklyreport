@@ -9,18 +9,18 @@ import {
 
 import type { ArchiveScopeSession, ArchiveService } from "./archive.service";
 
-export type ArchiveListContext = {
+export interface ArchiveListContext {
   archiveService: ArchiveService;
   role?: Role;
   session?: ArchiveScopeSession;
-};
+}
 
-export type ArchiveDetailContext = {
+export interface ArchiveDetailContext {
   archiveService: ArchiveService;
   reportId: string;
   role?: Role;
   session?: ArchiveScopeSession;
-};
+}
 
 export const archiveRouter = {
   async listArchiveReports(

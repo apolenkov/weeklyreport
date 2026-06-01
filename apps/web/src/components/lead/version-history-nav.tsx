@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import type { VersionSnapshot } from "./mock-data";
 import { PERIOD_NAV_ARROW_BUTTON_CLASS } from "./period-navigator";
 
-type VersionHistoryNavProps = {
+interface VersionHistoryNavProps {
   readonly versions: VersionSnapshot[];
   readonly onRestore?: (version: number) => void;
   /**
@@ -23,7 +23,7 @@ type VersionHistoryNavProps = {
   // TODO(v8.5-B-pin): add `onPin?: (version: number, pinned: boolean) => void`
   // prop + ★ button in nav row — pin/unpin reverted in a95681f5/6d4726fe,
   // requires VersionSnapshot.kind enum change (plan section 15.4, cluster B).
-};
+}
 
 // Chevron icons — same family used by PeriodNavigator. The two control
 // groups (period vs version) sit on the same toolbar row, so the same

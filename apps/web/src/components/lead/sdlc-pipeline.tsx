@@ -4,7 +4,7 @@ import type { Product, RiskEntry, StageStatus } from "./mock-data";
 import { StageChip } from "./stage-chip";
 import { canonicalStageName, splitStageNames } from "./stage-tags";
 
-export type CrossAuthorEntry = {
+export interface CrossAuthorEntry {
   projectId: string;
   projectName: string;
   authorId: string;
@@ -18,9 +18,9 @@ export type CrossAuthorEntry = {
   risks: { severity: "blocked" | "at-risk"; text: string }[] | null;
   /** True when the author has no items and no risks for this product. */
   isEmpty: boolean;
-};
+}
 
-type SdlcPipelineProps = {
+interface SdlcPipelineProps {
   readonly products: Product[];
   readonly readOnly?: boolean;
   readonly onStatusChange?: (
@@ -54,7 +54,7 @@ type SdlcPipelineProps = {
    * rendered as a subtle "Other contributors" row below each product card.
    */
   readonly crossAuthors?: readonly CrossAuthorEntry[];
-};
+}
 
 function getProductBackground(status: StageStatus): string {
   if (status === "blocked") return "#fdf8f8";

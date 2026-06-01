@@ -1,8 +1,8 @@
-type TabCountPillProps = {
+interface TabCountPillProps {
   readonly ariaLabel: string;
   readonly count: number;
   readonly testId?: string;
-};
+}
 
 function formatTabCount(count: number): string {
   if (count > 99) return "99+";

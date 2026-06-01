@@ -12,7 +12,7 @@ import { TabHeader, TabSearch } from "./tab-header";
 
 type FilterStatus = "pending" | "approved" | "rejected" | "all";
 
-const FILTERS: ReadonlyArray<{ value: FilterStatus; label: string }> = [
+const FILTERS: readonly { value: FilterStatus; label: string }[] = [
   { value: "pending", label: "Pending" },
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" },

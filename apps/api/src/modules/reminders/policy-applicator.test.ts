@@ -110,11 +110,11 @@ interface StubPolicy {
 }
 
 function makeStubPrisma(policies: StubPolicy[], existingRules: Set<string>) {
-  const upsertCalls: Array<{
+  const upsertCalls: {
     where: unknown;
     create: Record<string, unknown>;
     update: Record<string, unknown>;
-  }> = [];
+  }[] = [];
 
   return {
     upsertCalls,
@@ -246,7 +246,7 @@ describe("PolicyApplicatorService.applyToPeriod", () => {
       offsetMinutes: -120, // T-2h, distinct rule
     };
 
-    const upsertCalls: Array<unknown> = [];
+    const upsertCalls: unknown[] = [];
     let firstCall = true;
     const prisma = {
       reminderPolicy: {

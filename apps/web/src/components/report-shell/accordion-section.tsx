@@ -18,7 +18,7 @@ function ChevronDown({ expanded }: { readonly expanded: boolean }) {
   );
 }
 
-type AccordionSectionProps = {
+interface AccordionSectionProps {
   readonly icon: React.ReactNode;
   readonly title: string;
   readonly titleColor?: string;
@@ -38,7 +38,7 @@ type AccordionSectionProps = {
   readonly testId?: string;
   readonly actions?: React.ReactNode;
   readonly children: React.ReactNode;
-};
+}
 
 export function AccordionSection({
   icon,

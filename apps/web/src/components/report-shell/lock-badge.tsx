@@ -7,11 +7,11 @@ import { useSdlcTooltip } from "../ui/sdlc-tooltip";
 
 type LockBadgeVariant = "default" | "slim";
 
-type LockBadgeProps = {
+interface LockBadgeProps {
   readonly authorName: string | null | undefined;
   /** Default = 34×34 (matches Edit/Delete buttons); slim = 24×24 for compact cards. */
   readonly variant?: LockBadgeVariant;
-};
+}
 
 export function LockBadge({ authorName, variant = "default" }: LockBadgeProps) {
   const ref = useRef<HTMLDivElement | null>(null);

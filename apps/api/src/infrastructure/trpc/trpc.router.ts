@@ -64,7 +64,7 @@ import {
   router,
 } from "./trpc.middleware.js";
 
-type RouterDeps = {
+interface RouterDeps {
   prisma: PrismaClient;
   reportSectionsService: ReportSectionsService;
   reviewService: ReviewService;
@@ -147,7 +147,7 @@ type RouterDeps = {
    * the Redis fast-path (sessions expire naturally via JWT TTL).
    */
   sessionRevocationService?: SessionRevocationService;
-};
+}
 
 export function createAppRouter(deps: RouterDeps) {
   return router({
@@ -197,7 +197,7 @@ export function createAppRouter(deps: RouterDeps) {
       // them (not just the 3 hardcoded role buckets). publicProcedure so
       // the picker works before any session exists.
       listUsers: publicProcedure.query(async () => {
-        if (process.env["AUTH_DEV_MODE"] !== "true") {
+        if (process.env.AUTH_DEV_MODE !== "true") {
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Dev mode is not enabled",
@@ -219,7 +219,7 @@ export function createAppRouter(deps: RouterDeps) {
           }),
         )
         .mutation(async ({ input }) => {
-          if (process.env["AUTH_DEV_MODE"] !== "true") {
+          if (process.env.AUTH_DEV_MODE !== "true") {
             throw new TRPCError({
               code: "FORBIDDEN",
               message: "Dev mode is not enabled",
@@ -239,8 +239,8 @@ export function createAppRouter(deps: RouterDeps) {
             input.variant === "manual-uat"
               ? manualUatWipe
               : input.variant === "advanced"
-                ? reset + " && " + advancedSeed
-                : reset + " && " + simpleSeed;
+                ? `${reset} && ${advancedSeed}`
+                : `${reset} && ${simpleSeed}`;
           // Resolve repo root in both dev TS execution and built dist images.
           // Built Docker paths include dist/apps/api/src/... so a fixed
           // relative hop from import.meta.url can land under /app/apps. Prefer
@@ -250,7 +250,7 @@ export function createAppRouter(deps: RouterDeps) {
           const url = await import("node:url");
           const __filename = url.fileURLToPath(import.meta.url);
           const repoRootCandidates = [
-            process.env["CUSTOMREPORT_REPO_ROOT"],
+            process.env.CUSTOMREPORT_REPO_ROOT,
             process.cwd(),
             path.resolve(process.cwd(), "../.."),
             path.resolve(path.dirname(__filename), "../../../../.."),
@@ -693,12 +693,11 @@ export function createAppRouter(deps: RouterDeps) {
        */
       integrationsStatus: adminProcedure.query(async () => {
         try {
-          const token = process.env["TG_BOT_TOKEN"]?.trim() ?? "";
+          const token = process.env.TG_BOT_TOKEN?.trim() ?? "";
           const bindings = await deps.prisma.telegramBinding.count({
             where: { active: true },
           });
-          const ciWebhookSecret =
-            process.env["CI_WEBHOOK_SECRET"]?.trim() ?? "";
+          const ciWebhookSecret = process.env.CI_WEBHOOK_SECRET?.trim() ?? "";
           return {
             telegram: {
               configured: token !== "",

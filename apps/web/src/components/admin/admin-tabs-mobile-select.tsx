@@ -24,7 +24,7 @@ type AdminTab =
   | "actions"
   | "settings";
 
-const TABS: ReadonlyArray<{ value: AdminTab; label: string }> = [
+const TABS: readonly { value: AdminTab; label: string }[] = [
   { value: "users", label: "Users" },
   { value: "groups", label: "Groups" },
   { value: "products", label: "Products" },
@@ -38,9 +38,9 @@ const TABS: ReadonlyArray<{ value: AdminTab; label: string }> = [
   { value: "settings", label: "Settings" },
 ];
 
-type Props = {
+interface Props {
   readonly activeTab: AdminTab;
-};
+}
 
 export function AdminTabsMobileSelect({ activeTab }: Props) {
   const router = useRouter();

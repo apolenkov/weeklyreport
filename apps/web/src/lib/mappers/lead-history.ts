@@ -21,7 +21,7 @@ import {
 // STATE.md, so consumers depend on this barrel rather than `mock-data.ts`.
 // ---------------------------------------------------------------------------
 
-export type HistoryEntry = {
+export interface HistoryEntry {
   id: string;
   periodId: string;
   href?: string;
@@ -44,7 +44,7 @@ export type HistoryEntry = {
   // HIST-4 (Phase 33-04): prefix the metric line with the lead's
   // assigned-product count for that period when available.
   productCount?: number;
-};
+}
 
 // ---------------------------------------------------------------------------
 // Helpers (pure, fully unit-testable -- no I/O, no React)

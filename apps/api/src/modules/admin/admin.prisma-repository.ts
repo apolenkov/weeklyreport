@@ -77,7 +77,7 @@ const DEFAULT_REPORTING_GROUP_NAME = "Software Development";
  * Extracts recipientEmail from dedupeKey format: "ruleId:isoDate:email".
  */
 function extractRecipientEmail(dedupeKey: string): string {
-  const emailMatch = dedupeKey.match(/Z:(.+)$/);
+  const emailMatch = /Z:(.+)$/.exec(dedupeKey);
   return emailMatch?.[1] ?? "";
 }
 
@@ -657,7 +657,7 @@ export class AdminPrismaRepository implements AdminRepository {
     // UFB-036 (Phase 44-03): track which periods are NEW so we can run
     // PolicyApplicator on them AFTER the upsert loop commits. Updates
     // do not re-trigger the applicator — policies attach once at create.
-    const newlyCreatedPeriods: Array<{ id: string; deadline: Date }> = [];
+    const newlyCreatedPeriods: { id: string; deadline: Date }[] = [];
 
     for (const period of snapshot.periods) {
       if (currentReportIds.has(period.id)) {
@@ -1100,7 +1100,7 @@ export class AdminPrismaRepository implements AdminRepository {
       const existing = await tx.groupProduct.findUnique({
         where: { productId: input.productId },
       });
-      if (existing && existing.groupId === input.groupId) return existing;
+      if (existing?.groupId === input.groupId) return existing;
       if (existing) {
         const currentGroup = await tx.reportingGroup.findUnique({
           where: { id: existing.groupId },

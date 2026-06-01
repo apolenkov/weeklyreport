@@ -28,22 +28,22 @@ import pg from "pg";
 import { assertNonProdDestructive } from "./_destructive-guard.js";
 
 const DATABASE_URL: string = (() => {
-  const url = process.env["DATABASE_URL"];
+  const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL must be set in .env");
   return url;
 })();
-type RedisEndpoint = {
+interface RedisEndpoint {
   readonly host: string;
   readonly port: number;
   readonly source: "REDIS_URL" | "REDIS_HOST/REDIS_PORT";
-};
+}
 
 const pool = new pg.Pool({ connectionString: DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 function getRedisEndpoint(): RedisEndpoint {
-  const redisUrl = process.env["REDIS_URL"];
+  const redisUrl = process.env.REDIS_URL;
   if (redisUrl) {
     const url = new URL(redisUrl);
     const port = Number(url.port || 6379);
@@ -57,12 +57,12 @@ function getRedisEndpoint(): RedisEndpoint {
     };
   }
 
-  const port = Number(process.env["REDIS_PORT"] ?? 6379);
+  const port = Number(process.env.REDIS_PORT ?? 6379);
   if (!Number.isInteger(port) || port <= 0) {
-    throw new Error(`Invalid REDIS_PORT: ${process.env["REDIS_PORT"]}`);
+    throw new Error(`Invalid REDIS_PORT: ${process.env.REDIS_PORT}`);
   }
   return {
-    host: process.env["REDIS_HOST"] ?? "localhost",
+    host: process.env.REDIS_HOST ?? "localhost",
     port,
     source: "REDIS_HOST/REDIS_PORT",
   };
@@ -71,13 +71,9 @@ function getRedisEndpoint(): RedisEndpoint {
 function writeRedisCommand(command: string, ...args: string[]): Buffer {
   const parts = [command, ...args];
   return Buffer.from(
-    "*" +
-      parts.length +
-      "\r\n" +
-      parts
-        .map((part) => "$" + Buffer.byteLength(part) + "\r\n" + part)
-        .join("\r\n") +
-      "\r\n",
+    `*${parts.length}\r\n${parts
+      .map((part) => `$${Buffer.byteLength(part)}\r\n${part}`)
+      .join("\r\n")}\r\n`,
     "utf8",
   );
 }
@@ -123,7 +119,7 @@ async function flushRedis(): Promise<void> {
 async function truncateAll(): Promise<void> {
   // Discover every table in the public schema except prisma's bookkeeping
   // table — schema drift between repo and DB doesn't break the wipe this way.
-  const rows = await prisma.$queryRawUnsafe<Array<{ tablename: string }>>(
+  const rows = await prisma.$queryRawUnsafe<{ tablename: string }[]>(
     `SELECT tablename FROM pg_tables
        WHERE schemaname = 'public'
          AND tablename NOT LIKE '\\_prisma%'

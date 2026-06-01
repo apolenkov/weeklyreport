@@ -85,13 +85,13 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
   };
 }
 
-type Capture = {
+interface Capture {
   submitOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
   revokeOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
   saveDraftOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
   fillFromOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
   restoreOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
-};
+}
 
 async function flushAll() {
   // Three rounds of flushing handles the cascade:
@@ -111,7 +111,7 @@ function buildHarness(
     submitFn?: () => Promise<unknown>;
     revokeFn?: () => Promise<unknown>;
     byPeriodReadOnly?: boolean;
-    versions?: Array<{
+    versions?: {
       id: string;
       reportSectionId: string;
       version: number;
@@ -119,7 +119,7 @@ function buildHarness(
       itemCount?: number;
       riskCount?: number;
       decisionCount?: number;
-    }>;
+    }[];
   } = {},
 ) {
   const cap: Capture = {};

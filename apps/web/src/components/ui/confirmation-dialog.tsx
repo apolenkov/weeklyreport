@@ -12,7 +12,7 @@ type ConfirmationDialogVariant =
   | "delete"
   | "default";
 
-type ConfirmationDialogProps = {
+interface ConfirmationDialogProps {
   /** Whether the dialog is visible */
   readonly open: boolean;
   /** Called when dialog is dismissed or cancelled */
@@ -31,7 +31,7 @@ type ConfirmationDialogProps = {
   readonly variant?: ConfirmationDialogVariant;
   /** Optional extra content between description and buttons */
   readonly children?: React.ReactNode;
-};
+}
 
 const DESTRUCTIVE_VARIANTS: ConfirmationDialogVariant[] = ["delete", "revoke"];
 
@@ -84,7 +84,6 @@ export function ConfirmationDialog({
   if (!open) return null;
 
   return (
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- backdrop is a mouse convenience; dialog is keyboard-closable via Escape + cancel button
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
       onClick={(e) => {
@@ -135,12 +134,12 @@ export function ConfirmationDialog({
 
 // ---- Preset dialog configurations ----
 
-type PresetConfig = {
+interface PresetConfig {
   title: string;
   description: string;
   confirmLabel: string;
   variant: ConfirmationDialogVariant;
-};
+}
 
 /**
  * Get preset dialog configuration for common actions.

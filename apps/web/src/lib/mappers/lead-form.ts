@@ -76,24 +76,24 @@ import {
 
 export type LeadStageOwnership = "mine" | "locked" | "unassigned";
 
-export type LeadStageAssignment = {
+export interface LeadStageAssignment {
   stageName: string;
   status: StageStatus;
   ownership: LeadStageOwnership;
   assignee: string | null;
   tooltip?: string;
-};
+}
 
-export type LeadProduct = {
+export interface LeadProduct {
   id: string;
   name: string;
   overallStatus: StageStatus;
   stages: LeadStageAssignment[];
   riskSummary?: string;
   riskCount?: number;
-};
+}
 
-export type LeadKanbanItem = {
+export interface LeadKanbanItem {
   id: string;
   productId: string;
   productName: string;
@@ -104,9 +104,9 @@ export type LeadKanbanItem = {
   status: ItemStatus;
   text: string;
   author: string;
-};
+}
 
-export type LeadRiskEntry = {
+export interface LeadRiskEntry {
   id: string;
   productId: string;
   productName: string;
@@ -121,9 +121,9 @@ export type LeadRiskEntry = {
   impact: string;
   /** Schema-required mitigation narrative; surfaced in the edit dialog. */
   mitigation: string;
-};
+}
 
-export type LeadDecisionEntry = {
+export interface LeadDecisionEntry {
   id: string;
   productId: string;
   productName: string;
@@ -138,9 +138,9 @@ export type LeadDecisionEntry = {
   stageName?: string;
   /** UFB-073 (R1): stage selection as array of stage names. */
   stageIds?: string[];
-};
+}
 
-export type LeadPriorityEntry = {
+export interface LeadPriorityEntry {
   rank: number;
   text: string;
   /** @deprecated Use stageIds. Kept for display back-compat via splitStageNames. */
@@ -150,9 +150,9 @@ export type LeadPriorityEntry = {
   /** R4-B: product this priority is scoped to. */
   productId?: string;
   productName?: string;
-};
+}
 
-export type LeadReportPeriod = {
+export interface LeadReportPeriod {
   id: string;
   /**
    * The source section id for this period (the lead's section within that
@@ -168,17 +168,17 @@ export type LeadReportPeriod = {
   itemCount?: number;
   riskCount?: number;
   productCount?: number;
-};
+}
 
-export type LeadVersionSnapshot = {
+export interface LeadVersionSnapshot {
   version: number;
   timestamp: string;
   itemCount: number;
   riskCount: number;
   decisionCount: number;
-};
+}
 
-export type LeadCurrentUser = {
+export interface LeadCurrentUser {
   name: string;
   initials: string;
   /**
@@ -193,7 +193,7 @@ export type LeadCurrentUser = {
    * `authorRole`.
    */
   authorRole: "lead" | "head" | "admin" | "viewer";
-};
+}
 
 // ---- Helpers ----
 
@@ -562,7 +562,7 @@ export function mapLeadVersions(
 
 // ---- Composer ----
 
-export type MapLeadFormArgs = {
+export interface MapLeadFormArgs {
   /**
    * The active section returned by `reports.getActive`. When `null`, no active
    * report is bound to the user's session — the caller should render an empty
@@ -579,9 +579,9 @@ export type MapLeadFormArgs = {
   history: readonly MyHistoryEntry[];
   /** Override `now` for deterministic version-timestamp tests. */
   now?: Date;
-};
+}
 
-export type MappedLeadForm = {
+export interface MappedLeadForm {
   products: LeadProduct[];
   currentWeekItems: LeadKanbanItem[];
   nextWeekItems: LeadKanbanItem[];
@@ -593,7 +593,7 @@ export type MappedLeadForm = {
   currentUser: LeadCurrentUser;
   /** Whether the section is locked for the current user (submitted or period published). */
   readOnly: boolean;
-};
+}
 
 /**
  * Compose all four queries into a single LeadForm-shaped payload. Caller is

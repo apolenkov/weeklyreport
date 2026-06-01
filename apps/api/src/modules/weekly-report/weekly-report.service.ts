@@ -34,10 +34,9 @@ export interface WeeklyReportRepository {
 export class WeeklyReportService {
   private readonly logger = createAppLogger({
     service: "WeeklyReportService",
-    logDir: process.env["LOG_DIR"],
+    logDir: process.env.LOG_DIR,
     minLevel:
-      (process.env["LOG_LEVEL"] as "debug" | "info" | "warn" | "error") ??
-      "info",
+      (process.env.LOG_LEVEL as "debug" | "info" | "warn" | "error") ?? "info",
   });
 
   constructor(private readonly repository: WeeklyReportRepository) {}

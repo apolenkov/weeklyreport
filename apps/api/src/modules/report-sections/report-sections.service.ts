@@ -142,10 +142,9 @@ function mergeSection(
 export class ReportSectionsService {
   private readonly logger = createAppLogger({
     service: "ReportSectionsService",
-    logDir: process.env["LOG_DIR"],
+    logDir: process.env.LOG_DIR,
     minLevel:
-      (process.env["LOG_LEVEL"] as "debug" | "info" | "warn" | "error") ??
-      "info",
+      (process.env.LOG_LEVEL as "debug" | "info" | "warn" | "error") ?? "info",
   });
 
   constructor(

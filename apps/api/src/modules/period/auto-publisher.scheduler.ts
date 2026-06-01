@@ -53,7 +53,7 @@ export class AutoPublisherScheduler {
     now: Date,
   ): Promise<
     | { published: false; reason: "disabled" }
-    | { published: true; periodIds: ReadonlyArray<string> }
+    | { published: true; periodIds: readonly string[] }
   > {
     const settings = await this.adminService.getSettings();
     if (!settings.autoPublishAfterDeadline) {

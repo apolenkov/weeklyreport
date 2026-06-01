@@ -5,23 +5,23 @@ import type {
 
 export type SlideTone = "ready" | "warning" | "blocked" | "empty";
 
-export type SlideReadinessItem = {
+export interface SlideReadinessItem {
   readonly id: string;
   readonly label: string;
   readonly status: "ready" | "needs-work" | "optional";
   readonly detail: string;
   readonly required: boolean;
-};
+}
 
 export type SlideStageStatus = "green" | "yellow" | "red" | null;
 
-export type SlideStage = {
+export interface SlideStage {
   readonly id: string;
   readonly name: string;
   readonly status: SlideStageStatus;
-};
+}
 
-export type SlideProduct = {
+export interface SlideProduct {
   readonly id: string;
   readonly name: string;
   readonly status: SlideStageStatus;
@@ -42,9 +42,9 @@ export type SlideProduct = {
    * preferable to threading rank through every string array.
    */
   readonly itemRanks?: Readonly<Record<string, number>>;
-};
+}
 
-export type SectionSlideModel = {
+export interface SectionSlideModel {
   readonly id: string;
   readonly ownerId: string;
   readonly ownerName: string;
@@ -73,7 +73,7 @@ export type SectionSlideModel = {
   readonly pageIndex?: number;
   /** Pagination: total number of pages for this section. Undefined = no pagination. */
   readonly pageTotal?: number;
-};
+}
 
 function nonEmpty(text: string | null | undefined): boolean {
   return typeof text === "string" && text.trim().length > 0;
@@ -113,9 +113,9 @@ function readinessScore(items: readonly SlideReadinessItem[]): number {
 function describeCount(
   count: number,
   singular: string,
-  plural = singular + "s",
+  plural = `${singular}s`,
 ) {
-  return count === 1 ? "1 " + singular : count + " " + plural;
+  return count === 1 ? `1 ${singular}` : `${count} ${plural}`;
 }
 
 export function buildSectionSlideModel(
@@ -526,14 +526,14 @@ export function paginateSectionSlides(
 
 // ---- Unified by-section slide model (W12) ----
 
-export type UnifiedSectionRow = {
+export interface UnifiedSectionRow {
   readonly text: string;
   readonly productName: string;
   /** T-G3: present when the source item carries a priorityRank. */
   readonly priorityRank?: number;
-};
+}
 
-export type UnifiedSlideModel = {
+export interface UnifiedSlideModel {
   readonly current: readonly UnifiedSectionRow[];
   readonly next: readonly UnifiedSectionRow[];
   readonly risks: readonly UnifiedSectionRow[];
@@ -546,7 +546,7 @@ export type UnifiedSlideModel = {
     readonly priorities: readonly string[];
     readonly decisions: readonly string[];
   };
-};
+}
 
 export function buildUnifiedSlideModel(
   slide: SectionSlideModel,
@@ -676,7 +676,7 @@ function worstTraffic(
   return TRAFFIC_RANK[a] >= TRAFFIC_RANK[b] ? a : b;
 }
 
-type ProductAcc = {
+interface ProductAcc {
   projectId: string;
   projectName: string;
   trafficLight: SlideStageStatus;
@@ -690,7 +690,7 @@ type ProductAcc = {
   anySubmitted: boolean;
   allSubmitted: boolean;
   latestSubmittedAt: Date | null;
-};
+}
 
 export function buildProductScopedSlides(
   sections: readonly ReportSectionReadModel[],
@@ -794,7 +794,7 @@ export function buildProductScopedSlides(
 
   return [...products.values()].map((acc) => {
     const pseudoSection: ReportSectionReadModel = {
-      reportSectionId: "product-" + acc.projectId,
+      reportSectionId: `product-${acc.projectId}`,
       reportId: fallbackReportId,
       authorId: acc.projectId,
       authorName: acc.projectName,

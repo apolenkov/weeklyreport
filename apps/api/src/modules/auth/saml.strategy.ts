@@ -10,6 +10,7 @@ export type SamlStrategyOptions = PassportSamlConfig & {
 };
 
 /** Verified profile shape downstream consumers (auth.routes) expect. */
+// eslint-disable-next-line @typescript-eslint/consistent-type-definitions -- must stay a type alias: it is passed where a `Record<string, unknown>` index signature is required (saml.strategy.ts:153), which an interface does not satisfy.
 export type VerifiedSamlProfile = {
   samlId: string;
   email: string;
@@ -100,13 +101,13 @@ export function verifySamlProfile(
 
   if (options.devMode) {
     const samlId = String(
-      rawProfile["nameID"] ?? rawProfile["email"] ?? "unknown-saml-id",
+      rawProfile.nameID ?? rawProfile.email ?? "unknown-saml-id",
     );
-    const email = String(rawProfile["email"] ?? "unknown@example.com");
+    const email = String(rawProfile.email ?? "unknown@example.com");
     const displayName = String(
-      rawProfile["displayName"] ?? rawProfile["cn"] ?? "Unknown User",
+      rawProfile.displayName ?? rawProfile.cn ?? "Unknown User",
     );
-    const rawRole = rawProfile["role"];
+    const rawRole = rawProfile.role;
     const role: Role =
       typeof rawRole === "string" &&
       ["lead", "head", "admin", "viewer"].includes(rawRole.toLowerCase())
@@ -116,10 +117,10 @@ export function verifySamlProfile(
   }
 
   const parsed = SamlProfileSchema.safeParse({
-    nameID: rawProfile["nameID"],
-    email: rawProfile["email"],
-    displayName: rawProfile["displayName"] ?? rawProfile["cn"],
-    role: rawProfile["role"],
+    nameID: rawProfile.nameID,
+    email: rawProfile.email,
+    displayName: rawProfile.displayName ?? rawProfile.cn,
+    role: rawProfile.role,
   });
 
   if (!parsed.success) {

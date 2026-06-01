@@ -2,7 +2,7 @@ import { type PdfExportJob, pdfExportJobSchema } from "@customreport/shared";
 
 import type { PdfExportService } from "./pdf-export.service";
 
-export type PdfExportRouterRequestContext = {
+export interface PdfExportRouterRequestContext {
   pdfExportService: PdfExportService;
   reportId: string;
   /**
@@ -11,13 +11,13 @@ export type PdfExportRouterRequestContext = {
    * always supply `ctx.session.userId`.
    */
   requestedBy?: string;
-};
+}
 
-export type PdfExportRouterStatusContext = {
+export interface PdfExportRouterStatusContext {
   pdfExportService: PdfExportService;
   jobId: string;
   requestedBy?: string;
-};
+}
 
 export const pdfExportRouter = {
   async requestPdfExport(

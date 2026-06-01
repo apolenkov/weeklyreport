@@ -36,7 +36,7 @@ import type { PeriodState } from "@customreport/shared";
  * `applyTransition`) and `Prisma.ReportCreateInput` (the `create` path, which
  * spreads it alongside the identity envelope).
  */
-export type LifecycleWrite = {
+export interface LifecycleWrite {
   periodState?: PeriodState;
   status?: "draft" | "published";
   archived?: boolean;
@@ -46,14 +46,14 @@ export type LifecycleWrite = {
   publishedAt?: Date | null;
   publishedById?: string | null;
   reopenedAt?: Date | null;
-};
+}
 
 /**
  * Per-kind context. The mapped type ties each `kind` to exactly the inputs that
  * transition needs, so a caller cannot, e.g., `publish` without a `userId` or
  * `unarchive` without the derived next state.
  */
-export type TransitionCtx = {
+export interface TransitionCtx {
   /** Mint a new period; initial state derived from whether it has started. */
   create: { periodStart: Date; now: Date };
   /** Force the scheduled state (future period minted ahead of its start). */
@@ -76,7 +76,7 @@ export type TransitionCtx = {
    * it in.
    */
   unarchive: { nextPeriodState: PeriodState };
-};
+}
 
 export type TransitionKind = keyof TransitionCtx;
 

@@ -28,7 +28,7 @@ vi.mock("sonner", () => ({
 
 import { JobsTab } from "./jobs-tab";
 
-type FailedJob = {
+interface FailedJob {
   id: string;
   name: string;
   failedReason: string;
@@ -36,9 +36,9 @@ type FailedJob = {
   attemptsMade: number;
   timestamp: number;
   data: unknown;
-};
+}
 
-type Captured = {
+interface Captured {
   retryOptions?: {
     onSuccess?: (result: {
       retried: boolean;
@@ -49,7 +49,7 @@ type Captured = {
     onError?: (err: Error) => void;
   };
   retryMutationFn: ReturnType<typeof vi.fn>;
-};
+}
 
 function makeMockTRPC(jobs: FailedJob[], captured: Captured) {
   return {

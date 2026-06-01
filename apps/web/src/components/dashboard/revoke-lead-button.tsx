@@ -8,10 +8,10 @@ import { toast } from "sonner";
 import { useTRPC } from "../../lib/trpc-context";
 import { ConfirmationDialog } from "../ui/confirmation-dialog";
 
-type RevokeSectionButtonProps = {
+interface RevokeSectionButtonProps {
   readonly reportSectionId: string;
   readonly leadName: string;
-};
+}
 
 /**
  * Per-lead Revoke button for the head dashboard (SC-160).

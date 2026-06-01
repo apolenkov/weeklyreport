@@ -162,10 +162,10 @@ export type DraftSaveValidationErrorCode =
   | "MISSING_TRAFFIC_LIGHT"
   | "MISSING_CURRENT_ITEM";
 
-export type DraftSaveValidationError = {
+export interface DraftSaveValidationError {
   code: DraftSaveValidationErrorCode;
   message: string;
-};
+}
 
 export function validateSubmitInput(
   section: ReportSectionReadModel,

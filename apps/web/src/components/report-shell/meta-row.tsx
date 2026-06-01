@@ -1,13 +1,13 @@
 "use client";
 
-type MetaRowProps = {
+interface MetaRowProps {
   readonly authorName: string | null | undefined;
   readonly stageTags: readonly string[];
   readonly ariaLabel?: string;
   readonly className?: string;
   /** When true, render a 🔒 after authorName to signal a foreign (read-only) row. */
   readonly foreign?: boolean;
-};
+}
 
 export function MetaRow({
   authorName,

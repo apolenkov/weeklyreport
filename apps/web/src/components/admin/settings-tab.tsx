@@ -18,9 +18,9 @@ import type { MockSettings } from "./mock-data";
 import { TabHeader } from "./tab-header";
 import { TIMEZONE_OPTIONS } from "./timezone-options";
 
-type SettingsTabProps = {
+interface SettingsTabProps {
   readonly settings: MockSettings;
-};
+}
 
 /**
  * UFB-047 / Phase 48-A + 49-01: Settings tab restructured into a tabbed layout.

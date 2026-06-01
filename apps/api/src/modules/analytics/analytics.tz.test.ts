@@ -66,14 +66,14 @@ describe("Analytics labels are TZ-stable @ANAL-02 @ANAL-03", () => {
   let originalTZ: string | undefined;
 
   beforeEach(() => {
-    originalTZ = process.env["TZ"];
+    originalTZ = process.env.TZ;
   });
 
   afterEach(() => {
     if (originalTZ === undefined) {
-      delete process.env["TZ"];
+      delete process.env.TZ;
     } else {
-      process.env["TZ"] = originalTZ;
+      process.env.TZ = originalTZ;
     }
   });
 
@@ -81,11 +81,11 @@ describe("Analytics labels are TZ-stable @ANAL-02 @ANAL-03", () => {
     const svc = new AnalyticsService(fakeRepo(), noopCache());
     const inputs = { periodFrom: "2026-04-01", periodTo: "2026-04-30" };
 
-    process.env["TZ"] = "Europe/Moscow";
+    process.env.TZ = "Europe/Moscow";
     const moscowHistory = await svc.trafficLightHistory(inputs);
     const moscowVelocity = await svc.leadVelocity(inputs);
 
-    process.env["TZ"] = "UTC";
+    process.env.TZ = "UTC";
     const utcHistory = await svc.trafficLightHistory(inputs);
     const utcVelocity = await svc.leadVelocity(inputs);
 
@@ -101,10 +101,10 @@ describe("Analytics labels are TZ-stable @ANAL-02 @ANAL-03", () => {
     // Node runtime semantics changed — escalate.
     const sample = new Date("2026-04-28T23:30:00.000Z");
 
-    process.env["TZ"] = "Europe/Moscow";
+    process.env.TZ = "Europe/Moscow";
     const moscowLabel = sample.toISOString().slice(0, 10);
 
-    process.env["TZ"] = "UTC";
+    process.env.TZ = "UTC";
     const utcLabel = sample.toISOString().slice(0, 10);
 
     expect(moscowLabel).toBe(utcLabel);

@@ -54,7 +54,7 @@ import { formatPeriodLabel } from "../format-date";
 
 export type UserRole = "lead" | "head" | "admin" | "viewer";
 
-export type MockUser = {
+export interface MockUser {
   id: string;
   name: string;
   email: string;
@@ -63,41 +63,41 @@ export type MockUser = {
   department: string;
   // A2 (UAT-v7 2026-05-12): soft-deactivation flag from the API.
   isActive: boolean;
-};
+}
 
-export type MockGroup = {
+export interface MockGroup {
   id: string;
   name: string;
   description: string | null;
   archived: boolean;
   headUserId: string | null;
-};
+}
 
-export type StageAssignment = {
+export interface StageAssignment {
   stage: import("@customreport/shared").StageName;
   assigneeId: string | null;
-};
+}
 
-export type MockProduct = {
+export interface MockProduct {
   id: string;
   name: string;
   leadOwnerId: string;
   stages: StageAssignment[];
   status: "active" | "archived";
-};
+}
 
 export type PeriodStatus = "open" | "published" | "reopened";
 
-export type MockPeriod = {
+export interface MockPeriod {
   id: string;
   weekLabel: string;
   startDate: string;
   endDate: string;
   deadline: string;
   status: PeriodStatus;
-};
+}
 
-export type MockReminder = {
+export interface MockReminder {
   id: string;
   name: string;
   description: string;
@@ -114,7 +114,7 @@ export type MockReminder = {
   // group derived rules under their owning policy in the read-only
   // expander. `null` for legacy rules (created before 44-01).
   policyId: string | null;
-};
+}
 
 /**
  * UFB-036 (Phase 44-04): presentation shape of {@link reminderPolicySchema}
@@ -122,7 +122,7 @@ export type MockReminder = {
  * the wire-only `id` is preserved verbatim — there is no name/description
  * synthesis here because the editor surfaces every column directly.
  */
-export type MockReminderPolicy = {
+export interface MockReminderPolicy {
   id: string;
   kind: ReminderPolicyKind;
   offsetMinutes: number;
@@ -132,7 +132,7 @@ export type MockReminderPolicy = {
   validFrom: Date;
   /** `null` means "forever" (no upper bound). */
   validUntil: Date | null;
-};
+}
 
 // UFB-048 (Phase 48-B): MockSettings expanded with 9 new admin-tunable fields
 // surfaced on the Periods / Reminders / Notifications sub-tabs. Field order
@@ -140,7 +140,7 @@ export type MockReminderPolicy = {
 // from the wire schema (`appSettingsSchema`).
 // UFB-047 / Phase 49-01: legacy `departmentName` removed alongside the
 // AppSettings column.
-export type MockSettings = {
+export interface MockSettings {
   autoCreatePeriods: boolean;
   defaultDeadlineDays: number;
   // Periods tab
@@ -163,7 +163,7 @@ export type MockSettings = {
   defaultReminderAudience: "lead-with-draft" | "head-of-late";
   // Notifications tab
   notificationFromEmail: string | null;
-};
+}
 
 // ---- Helpers ----
 
@@ -303,7 +303,7 @@ function mapReminderPolicy(api: ReminderPolicy): MockReminderPolicy {
 
 // ---- Public mappers ----
 
-export type MappedAdminSnapshot = {
+export interface MappedAdminSnapshot {
   groups: MockGroup[];
   users: MockUser[];
   products: MockProduct[];
@@ -311,7 +311,7 @@ export type MappedAdminSnapshot = {
   reminders: MockReminder[];
   /** UFB-036 (Phase 44-04): policies surfaced for the Reminders Tab editor. */
   policies: MockReminderPolicy[];
-};
+}
 
 /**
  * Translates `admin.snapshot` API output into the slices each admin tab needs.
@@ -383,12 +383,12 @@ function newId(): string {
   );
 }
 
-export type AdminUserFormInput = {
+export interface AdminUserFormInput {
   name: string;
   email: string;
   role: UserRole;
   groupId: string;
-};
+}
 
 /**
  * Maps the Users tab form state to the `adminUserSchema` payload. When editing
@@ -415,12 +415,12 @@ export function toAdminUserInput(
   };
 }
 
-export type ReportingGroupFormInput = {
+export interface ReportingGroupFormInput {
   name: string;
   description?: string | null;
   archived?: boolean;
   headUserId?: string | null;
-};
+}
 
 export function toReportingGroupInput(
   form: ReportingGroupFormInput,
@@ -441,12 +441,12 @@ export function toReportingGroupInput(
   };
 }
 
-export type AdminProjectFormInput = {
+export interface AdminProjectFormInput {
   name: string;
   leadOwnerId: string;
   leadName?: string;
   archived?: boolean;
-};
+}
 
 /**
  * Maps the Products tab form state to the `adminProjectSchema` payload.
@@ -472,12 +472,12 @@ export function toAdminProjectInput(
   };
 }
 
-export type ReportPeriodFormInput = {
+export interface ReportPeriodFormInput {
   startDate: string; // YYYY-MM-DD
   endDate: string;
   deadline: string;
   status?: "draft" | "published";
-};
+}
 
 /**
  * Maps the Periods tab form state to the `reportPeriodSchema` payload.
@@ -503,14 +503,14 @@ export function toReportPeriodInput(
   };
 }
 
-export type AdminReminderRuleFormInput = {
+export interface AdminReminderRuleFormInput {
   kind: "deadline" | "follow_up" | "escalation";
   fireAt: Date | string;
   timezone?: string;
   status?: "active" | "paused";
   reportId?: string | null;
   version?: number;
-};
+}
 
 /**
  * Maps the Reminders tab form state to the `adminReminderRuleSchema` payload.
@@ -551,7 +551,7 @@ export function toAdminReminderRuleInput(
  *   - `validUntilIso`: `YYYY-MM-DD` or `null`. `null` means the user has
  *     ticked the "forever" checkbox so the upper bound is open.
  */
-export type AdminReminderPolicyFormInput = {
+export interface AdminReminderPolicyFormInput {
   kind: ReminderPolicyKind;
   offsetMinutes: number;
   timezone: string;
@@ -559,7 +559,7 @@ export type AdminReminderPolicyFormInput = {
   active: boolean;
   validFromIso: string;
   validUntilIso: string | null;
-};
+}
 
 /**
  * Maps the policy form state to the `reminderPolicySchema` payload.

@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { ConfirmDeleteDialog } from "../lead/confirm-delete-dialog";
 
-type PublishLockButtonProps = {
+interface PublishLockButtonProps {
   readonly pendingCount: number;
   readonly totalLeads: number;
   /**
@@ -24,7 +24,7 @@ type PublishLockButtonProps = {
   /** Guard against publishing an empty period. */
   readonly canPublish?: boolean;
   readonly publishDisabledReason?: string;
-};
+}
 
 export function PublishLockButton({
   pendingCount,

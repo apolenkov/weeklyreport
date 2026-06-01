@@ -6,7 +6,7 @@ import { LockBadge } from "../report-shell/lock-badge";
 import type { KanbanItem } from "./mock-data";
 import { splitStageNames } from "./stage-tags";
 
-type ItemCardProps = {
+interface ItemCardProps {
   readonly item: KanbanItem;
   readonly onEdit?: (id: string) => void;
   readonly onDelete?: (id: string) => void;
@@ -25,9 +25,13 @@ type ItemCardProps = {
    * its `editingId` state.
    */
   readonly onTextSave?: (id: string, nextText: string) => void;
-};
+}
 
-type StatusBadge = { bg: string; text: string; label: string };
+interface StatusBadge {
+  bg: string;
+  text: string;
+  label: string;
+}
 
 const STATUS_BADGE = {
   "in-progress": {
@@ -244,7 +248,7 @@ export function ItemCard({
           <span
             role="img"
             className="inline-flex min-w-0 flex-wrap items-center justify-end gap-1"
-            aria-label={"Item stages: " + stageTagsLabel}
+            aria-label={`Item stages: ${stageTagsLabel}`}
             title={stageTagsLabel}
           >
             {stageTags.length === 0 ? (

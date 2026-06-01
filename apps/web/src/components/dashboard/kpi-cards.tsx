@@ -2,9 +2,9 @@
 
 import type { KpiData } from "./mock-data";
 
-type KpiCardsProps = {
+interface KpiCardsProps {
   readonly data: KpiData;
-};
+}
 
 export function KpiCards({ data }: KpiCardsProps) {
   const submissionPercent = Math.round((data.submitted / data.total) * 100);

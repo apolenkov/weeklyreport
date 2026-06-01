@@ -20,7 +20,7 @@ function formatTimestamp(value: string): string {
 
 function truncate(value: string, max: number): string {
   if (value.length <= max) return value;
-  return value.slice(0, max - 1).trimEnd() + "…";
+  return `${value.slice(0, max - 1).trimEnd()}…`;
 }
 
 /**
@@ -60,7 +60,7 @@ async function copyToClipboard(text: string): Promise<boolean> {
   return false;
 }
 
-type ActionLogRow = {
+interface ActionLogRow {
   id: string;
   createdAt: string;
   userId: string;
@@ -70,7 +70,7 @@ type ActionLogRow = {
   status: string;
   reason: string | null;
   correlationId: string;
-};
+}
 
 const PAGE_SIZE = 20;
 
@@ -213,12 +213,11 @@ export function ActionLogTab() {
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={
-                        "inline-flex rounded-[var(--radius-pill)] px-2 py-0.5 text-xs font-semibold " +
-                        (row.status === "success"
+                      className={`inline-flex rounded-[var(--radius-pill)] px-2 py-0.5 text-xs font-semibold ${
+                        row.status === "success"
                           ? "bg-[var(--color-success)] text-[var(--color-primary)]"
-                          : "bg-red-50 text-[var(--color-destructive)]")
-                      }
+                          : "bg-red-50 text-[var(--color-destructive)]"
+                      }`}
                     >
                       {statusLabel(row.status)}
                     </span>
@@ -275,12 +274,11 @@ function CorrelationCell({ value }: { readonly value: string }) {
     >
       <span>{truncate(value, 14)}</span>
       <span
-        className={
-          "text-[10px] " +
-          (copied
+        className={`text-[10px] ${
+          copied
             ? "text-[var(--color-primary)]"
-            : "text-[var(--color-muted-foreground)]")
-        }
+            : "text-[var(--color-muted-foreground)]"
+        }`}
         aria-hidden="true"
       >
         {copied ? "✓ copied" : "📋"}

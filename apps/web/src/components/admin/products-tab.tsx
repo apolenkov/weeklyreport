@@ -14,11 +14,11 @@ import { ProductGroupChips } from "./product-group-chips";
 import { StageAssignmentEditor } from "./stage-assignment-editor";
 import { TabHeader, TabSearch } from "./tab-header";
 
-type ProductsTabProps = {
+interface ProductsTabProps {
   readonly products: MockProduct[];
   readonly users: MockUser[];
   readonly productFilter?: string | null;
-};
+}
 
 export function ProductsTab({
   products,
@@ -356,7 +356,6 @@ export function ProductsTab({
 
       {/* Add/Edit Dialog */}
       {showDialog && (
-        // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- backdrop is a mouse convenience; dialog is keyboard-closable via Escape + Cancel button
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
           onClick={() => setShowDialog(false)}

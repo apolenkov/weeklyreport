@@ -2,13 +2,13 @@
 
 import type { HistoryEntry } from "../../lib/mappers";
 
-type LeadHistorySidebarProps = {
-  readonly entries: ReadonlyArray<HistoryEntry>;
+interface LeadHistorySidebarProps {
+  readonly entries: readonly HistoryEntry[];
   readonly summaryTitle?: string;
   readonly showStatus?: boolean;
   /** When true, renders third-person copy (head/viewer looking at someone else's section). */
   readonly viewerMode?: boolean;
-};
+}
 
 /**
  * HIST-2 (Phase 33-04): right-rail companion for the lead history page.
@@ -97,39 +97,37 @@ export function LeadHistorySidebar({
         </SidebarCard>
 
         {showStatus && (
-          <>
-            <SidebarCard title="Submission Status">
-              {streak >= 2 ? (
-                <p className="text-[13px] text-[var(--color-foreground)]">
-                  Submitted <strong>{streak}</strong>{" "}
-                  {streak === 1 ? "week" : "weeks"} in a row.
-                </p>
-              ) : streak === 1 ? (
-                <p className="text-[13px] text-[var(--color-foreground)]">
-                  Last week submitted. {!viewerMode && "Keep the streak going."}
-                </p>
-              ) : total === 0 ? (
-                <p className="text-[13px] text-[var(--color-muted-foreground)]">
-                  {viewerMode
-                    ? "No history yet."
-                    : "No history yet — your first submission lands here."}
-                </p>
-              ) : (
-                <p className="text-[13px] text-[var(--color-foreground)]">
-                  {viewerMode
-                    ? "Most recent week is still a draft."
-                    : "Most recent week is still a draft. Submit to extend your streak."}
-                </p>
-              )}
-              {totalRed > 0 && (
-                <p className="mt-2 text-[12px] text-[var(--color-muted-foreground)]">
-                  {totalRed} blocked traffic-light
-                  {totalRed === 1 ? "" : "s"} across history — review the
-                  affected periods for repeat patterns.
-                </p>
-              )}
-            </SidebarCard>
-          </>
+          <SidebarCard title="Submission Status">
+            {streak >= 2 ? (
+              <p className="text-[13px] text-[var(--color-foreground)]">
+                Submitted <strong>{streak}</strong>{" "}
+                {streak === 1 ? "week" : "weeks"} in a row.
+              </p>
+            ) : streak === 1 ? (
+              <p className="text-[13px] text-[var(--color-foreground)]">
+                Last week submitted. {!viewerMode && "Keep the streak going."}
+              </p>
+            ) : total === 0 ? (
+              <p className="text-[13px] text-[var(--color-muted-foreground)]">
+                {viewerMode
+                  ? "No history yet."
+                  : "No history yet — your first submission lands here."}
+              </p>
+            ) : (
+              <p className="text-[13px] text-[var(--color-foreground)]">
+                {viewerMode
+                  ? "Most recent week is still a draft."
+                  : "Most recent week is still a draft. Submit to extend your streak."}
+              </p>
+            )}
+            {totalRed > 0 && (
+              <p className="mt-2 text-[12px] text-[var(--color-muted-foreground)]">
+                {totalRed} blocked traffic-light
+                {totalRed === 1 ? "" : "s"} across history — review the affected
+                periods for repeat patterns.
+              </p>
+            )}
+          </SidebarCard>
         )}
       </div>
     </aside>

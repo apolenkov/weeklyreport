@@ -59,7 +59,7 @@ function makeReqWithRequestId(requestId: string): { req: Request } {
 }
 
 describe("createContextFactory — AUTH-01 dev-mode flag matrix (Phase 28-02)", () => {
-  const ORIGINAL_AUTH_JWT_SECRET = process.env["AUTH_JWT_SECRET"];
+  const ORIGINAL_AUTH_JWT_SECRET = process.env.AUTH_JWT_SECRET;
 
   beforeEach(() => {
     // createAuthController(env) reads AUTH_JWT_SECRET at factory creation.
@@ -70,7 +70,7 @@ describe("createContextFactory — AUTH-01 dev-mode flag matrix (Phase 28-02)", 
   afterEach(() => {
     vi.unstubAllEnvs();
     if (ORIGINAL_AUTH_JWT_SECRET !== undefined) {
-      process.env["AUTH_JWT_SECRET"] = ORIGINAL_AUTH_JWT_SECRET;
+      process.env.AUTH_JWT_SECRET = ORIGINAL_AUTH_JWT_SECRET;
     }
   });
 

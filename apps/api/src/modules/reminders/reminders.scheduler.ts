@@ -122,6 +122,6 @@ export class RemindersScheduler {
 }
 
 function buildSectionUrl(reportId: string): string {
-  const base = process.env["APP_BASE_URL"] ?? "http://localhost:3000";
+  const base = process.env.APP_BASE_URL ?? "http://localhost:3000";
   return `${base}/lead/report?reportId=${reportId}`;
 }

@@ -35,7 +35,7 @@ export function mountBullBoard(_app: INestApplication): void {
     res: Response,
     next: NextFunction,
   ): void => {
-    const token = req.cookies?.["customreport_session"] as string | undefined;
+    const token = req.cookies?.customreport_session as string | undefined;
 
     if (!token) {
       res.status(401).json({ error: "Authentication required" });

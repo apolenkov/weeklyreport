@@ -4,10 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
 
-type Props = {
+interface Props {
   readonly reportId: string;
   readonly exitHref?: string;
-};
+}
 
 /**
  * UFB-NEW-A34: Keyboard-navigable presentation wrapper around WeeklyReportPage.

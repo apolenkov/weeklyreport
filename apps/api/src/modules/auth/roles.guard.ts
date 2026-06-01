@@ -1,14 +1,14 @@
 import { type Role, roleSchema } from "@customreport/shared";
 
-export type GuardContext = {
+export interface GuardContext {
   user?: {
     role?: Role;
   };
-};
+}
 
-export type RoleGuard = {
+export interface RoleGuard {
   canActivate: (context: GuardContext) => boolean;
-};
+}
 
 export function createRoleGuard(requiredRole: Role): RoleGuard {
   roleSchema.parse(requiredRole);

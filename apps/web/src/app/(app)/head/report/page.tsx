@@ -3,9 +3,9 @@ import { Suspense } from "react";
 import { WeeklyReportPage } from "../../../../components/weekly-report/weekly-report-page";
 import { WeeklyReportSkeleton } from "../../../../components/weekly-report/weekly-report-skeleton";
 
-type Props = {
+interface Props {
   searchParams: Promise<{ authorId?: string; period?: string }>;
-};
+}
 
 /**
  * Bare `/head/report` route. Phase 35-07 introduces the addressed view

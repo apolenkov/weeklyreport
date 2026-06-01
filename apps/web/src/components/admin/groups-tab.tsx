@@ -22,12 +22,12 @@ import { GroupProductsEditor } from "./group-products-editor";
 
 import type { MockGroup, MockProduct, MockUser } from "./mock-data";
 
-type GroupFormData = {
+interface GroupFormData {
   name: string;
   description: string;
   headUserId: string; // empty string = no leader
   archived: boolean;
-};
+}
 
 const EMPTY_FORM: GroupFormData = {
   name: "",
@@ -36,7 +36,7 @@ const EMPTY_FORM: GroupFormData = {
   archived: false,
 };
 
-type GroupsTabProps = {
+interface GroupsTabProps {
   readonly groups: MockGroup[];
   readonly users: MockUser[];
   // UFB-054 / Phase 56-C: product roster for the «Products attached»
@@ -44,7 +44,7 @@ type GroupsTabProps = {
   // don't yet thread products through (e.g. unit tests) keep
   // compiling — the section short-circuits to an empty list.
   readonly products?: MockProduct[];
-};
+}
 
 export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
   // UFB-039: only head/admin users may lead a group. Filter the candidate
@@ -283,7 +283,6 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
       </div>
 
       {showDialog && (
-        // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- backdrop is a mouse convenience; dialog is keyboard-closable via Escape + Cancel button
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
           onClick={() => setShowDialog(false)}

@@ -17,9 +17,9 @@ import Link from "next/link";
  * actual role is intentionally NOT displayed, so a hostile viewer cannot
  * enumerate role state by hitting protected routes.
  */
-export type ForbiddenPageProps = {
-  readonly requiredRoles: ReadonlyArray<Role>;
-};
+export interface ForbiddenPageProps {
+  readonly requiredRoles: readonly Role[];
+}
 
 export function ForbiddenPage({ requiredRoles }: ForbiddenPageProps) {
   const rolesLabel = requiredRoles.join(" or ");

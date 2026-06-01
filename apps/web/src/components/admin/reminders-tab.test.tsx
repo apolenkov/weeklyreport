@@ -21,10 +21,10 @@ vi.mock("sonner", () => ({
   },
 }));
 
-type Captured = {
+interface Captured {
   saveMutationFn: ReturnType<typeof vi.fn>;
   removeMutationFn: ReturnType<typeof vi.fn>;
-};
+}
 
 const period: MockPeriod = {
   id: "a0000000-0000-4000-8000-000000000001",
@@ -76,9 +76,9 @@ function makeMutationOptions(
 ) {
   return {
     mutationFn,
-    onSuccess: opts["onSuccess"],
-    onError: opts["onError"],
-    onSettled: opts["onSettled"],
+    onSuccess: opts.onSuccess,
+    onError: opts.onError,
+    onSettled: opts.onSettled,
   };
 }
 

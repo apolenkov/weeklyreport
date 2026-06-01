@@ -24,7 +24,7 @@ import {
   SlideProductChips,
 } from "./slide-product-chips";
 
-type StatusSlideDeckProps = {
+interface StatusSlideDeckProps {
   readonly slides: readonly SectionSlideModel[];
   readonly selectedIndex: number;
   readonly onSelect: (index: number) => void;
@@ -39,7 +39,7 @@ type StatusSlideDeckProps = {
   readonly toolbar?: ReactNode;
   readonly heroControls?: ReactNode;
   readonly showChrome?: boolean;
-};
+}
 
 const toneClass: Record<SlideTone, string> = {
   ready:
@@ -113,7 +113,7 @@ function textList(items: readonly string[], empty: string, limit = 3) {
       {items.slice(0, limit).map((item, index) => (
         <li
           // eslint-disable-next-line react/no-array-index-key -- index disambiguates duplicate bullet strings in a render-only, never-reordered list
-          key={item + "-" + index}
+          key={`${item}-${index}`}
           className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/80 px-3 py-2 text-sm leading-5 text-[var(--color-foreground)]"
         >
           {item}
@@ -347,7 +347,7 @@ export function StatusSlideDeck({
   return (
     <section
       className="space-y-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
-      data-testid={mode + "-slides-deck"}
+      data-testid={`${mode}-slides-deck`}
       aria-label="Status slide deck (use arrow keys to navigate slides)"
       // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable keyboard-navigation region for arrow-key slide control
       tabIndex={0}

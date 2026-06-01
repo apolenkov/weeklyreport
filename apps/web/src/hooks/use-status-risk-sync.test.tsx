@@ -37,18 +37,18 @@ function buildProduct(overrides?: Partial<Product>): Product {
   };
 }
 
-type HookSetup = {
+interface HookSetup {
   products: Product[];
   risks: RiskEntry[];
-  productsCalls: Array<Product[]>;
-  risksCalls: Array<RiskEntry[]>;
-  confirmationCalls: Array<{
+  productsCalls: Product[][];
+  risksCalls: RiskEntry[][];
+  confirmationCalls: {
     productId: string;
     productName: string;
     stageName: string;
     suggestedStatus: "at-risk" | "blocked";
-  }>;
-};
+  }[];
+}
 
 function setup(initialProducts: Product[], initialRisks: RiskEntry[]) {
   const state: HookSetup = {

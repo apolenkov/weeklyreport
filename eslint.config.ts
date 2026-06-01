@@ -133,8 +133,25 @@ export default defineConfig([
 
       // Type-aware (retained hard-error + Biome-recommended equivalents)
       "@typescript-eslint/no-floating-promises": "error",
-      "@typescript-eslint/dot-notation": "warn",
       "@typescript-eslint/prefer-optional-chain": "warn",
+
+      // Phase-3 ratchet — R1a SAFE autofix cluster (ratchet-lint-to-strict).
+      // Purely syntactic / proven-noop rules only. EXCLUDED and deferred to a
+      // later reviewed cluster: no-confusing-void-expression & prefer-optional-chain
+      // (fixes alter runtime behavior); no-unnecessary-type-assertion &
+      // non-nullable-type-assertion-style (the lint program flags assertions the
+      // app tsconfig still needs — removing them breaks `tsc`, e.g. `as
+      // HTMLInputElement` in RTL tests, `as CompiledHistoryResult`).
+      "@typescript-eslint/dot-notation": "error",
+      "@typescript-eslint/consistent-type-definitions": "error",
+      "@typescript-eslint/array-type": "error",
+      "@typescript-eslint/prefer-regexp-exec": "error",
+      "@typescript-eslint/consistent-generic-constructors": "error",
+      "@typescript-eslint/no-unnecessary-type-arguments": "error",
+      "@typescript-eslint/consistent-indexed-object-style": "error",
+      "@typescript-eslint/no-unnecessary-template-expression": "error",
+      "@typescript-eslint/no-unnecessary-boolean-literal-compare": "error",
+      "@typescript-eslint/no-inferrable-types": "error",
 
       // React hooks (single-owned by ESLint)
       "react-hooks/rules-of-hooks": "error",

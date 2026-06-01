@@ -6,11 +6,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useTRPC } from "../../lib/trpc-context";
 
-type RemindLeadButtonProps = {
+interface RemindLeadButtonProps {
   readonly reportId: string;
   readonly leadId: string;
   readonly leadName: string;
-};
+}
 
 type ConfirmState = "idle" | "sent" | "already" | "no-section" | "error";
 

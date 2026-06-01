@@ -635,7 +635,7 @@ async function counterValue(
   counter: {
     get(): Promise<{
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- prom-client label record (migrated from eslint-disable)
-      values: Array<{ value: number; labels: Record<string, any> }>;
+      values: { value: number; labels: Record<string, any> }[];
     }>;
   },
   labels: Record<string, string>,
@@ -648,7 +648,7 @@ async function counterValue(
 }
 
 async function histogramSum(hist: {
-  get(): Promise<{ values: Array<{ value: number; metricName?: string }> }>;
+  get(): Promise<{ values: { value: number; metricName?: string }[] }>;
 }): Promise<number> {
   const snapshot = await hist.get();
   const sum = snapshot.values.find((e) => e.metricName?.endsWith("_sum"));

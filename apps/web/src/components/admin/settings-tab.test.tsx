@@ -28,20 +28,20 @@ vi.mock("sonner", () => ({
 import type { MockSettings } from "./mock-data";
 import { SettingsTab } from "./settings-tab";
 
-type Captured = {
+interface Captured {
   updateOrgFn: ReturnType<typeof vi.fn>;
   updateSettingsFn: ReturnType<typeof vi.fn>;
-};
+}
 
 // UFB-056 / Phase 55-5: Telegram integration status shape returned by
 // `admin.integrationsStatus`. Default to «not configured, 0 bindings» so
 // tests that don't care about Integrations don't have to opt out.
-type IntegrationStub = {
+interface IntegrationStub {
   telegram: {
     configured: boolean;
     bindings: number;
   };
-};
+}
 const DEFAULT_INTEGRATIONS: IntegrationStub = {
   telegram: { configured: false, bindings: 0 },
 };

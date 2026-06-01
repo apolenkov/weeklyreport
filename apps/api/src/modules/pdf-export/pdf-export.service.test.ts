@@ -210,7 +210,7 @@ async function getCounterValue(
   counter: {
     get(): Promise<{
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- prom-client label record (migrated from eslint-disable)
-      values: Array<{ value: number; labels: Record<string, any> }>;
+      values: { value: number; labels: Record<string, any> }[];
     }>;
   },
   labels: Record<string, string>,
@@ -274,10 +274,10 @@ describe("AUTH-05 PDF export JWT signing", () => {
   });
 
   it("requestPdfExport enqueues a JWT-shaped authToken bound to the reportId", async () => {
-    type EnqueuedJob = {
+    interface EnqueuedJob {
       name: string;
       data: { reportId: string; jobId: string; authToken: string };
-    };
+    }
     const enqueued: EnqueuedJob[] = [];
     const fakeQueue = {
       add: async (name: string, data: EnqueuedJob["data"]) => {
@@ -308,10 +308,10 @@ describe("AUTH-05 PDF export JWT signing", () => {
   });
 
   it("requestPdfExport allows pre-signed authToken pass-through (does not re-sign)", async () => {
-    type EnqueuedJob = {
+    interface EnqueuedJob {
       name: string;
       data: { reportId: string; jobId: string; authToken: string };
-    };
+    }
     const enqueued: EnqueuedJob[] = [];
     const fakeQueue = {
       add: async (name: string, data: EnqueuedJob["data"]) => {
@@ -352,7 +352,7 @@ describe("markExportFailed", () => {
 
   it("calls repository.markExportFailed with correct parameters", async () => {
     const repo = createRepository(publishedReport);
-    const markExportFailedCalls: Array<{ jobId: string; error: string }> = [];
+    const markExportFailedCalls: { jobId: string; error: string }[] = [];
     const originalMarkExportFailed = repo.markExportFailed.bind(repo);
     repo.markExportFailed = async (jobId: string, error: string) => {
       markExportFailedCalls.push({ jobId, error });

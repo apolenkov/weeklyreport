@@ -6,16 +6,16 @@ import {
 
 import type { RemindersService } from "./reminders.service";
 
-export type RemindersRequestContext = {
+export interface RemindersRequestContext {
   remindersService: RemindersService;
   recipientEmail: string;
   ruleId: string;
-};
+}
 
-export type RemindersListContext = {
+export interface RemindersListContext {
   remindersService: RemindersService;
   ruleId: string;
-};
+}
 
 export const remindersRouter = {
   async requestExecution(

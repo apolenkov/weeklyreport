@@ -18,11 +18,11 @@ import { SlideSkeleton } from "../slides/slide-skeleton";
 import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
 import { WeeklyReportSkeleton } from "../weekly-report/weekly-report-skeleton";
 
-type HeadReportShellProps = {
+interface HeadReportShellProps {
   readonly reportId: string;
   readonly mode: "form" | "slides";
   readonly authorId?: string;
-};
+}
 
 /**
  * Phase 61 (robust-baking-aurora): inline form ↔ slides mode toggle for the
@@ -75,9 +75,9 @@ export function HeadReportShell({
     ? `?authorId=${encodeURIComponent(authorId)}`
     : "";
   const editHref = `/head/report/${encodeURIComponent(reportId)}${authorSuffix}`;
-  const slidesHref =
-    `/head/report/${encodeURIComponent(reportId)}?mode=slides` +
-    (authorId ? `&authorId=${encodeURIComponent(authorId)}` : "");
+  const slidesHref = `/head/report/${encodeURIComponent(reportId)}?mode=slides${
+    authorId ? `&authorId=${encodeURIComponent(authorId)}` : ""
+  }`;
 
   // Grouping axis for the form-mode status pane (UAT 2026-05-22): product (the
   // classic per-product list) or lead (products bucketed under each lead).

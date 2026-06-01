@@ -26,10 +26,10 @@ import { getBullMQOptions } from "./bullmq-options";
 // payload. Legacy v2.0 (kind absent) does not carry it — that branch
 // hardcodes the brand and is scheduled for removal once Phase 28+ kinds
 // dominate the queue.
-type ReminderOrganizationJob = {
+interface ReminderOrganizationJob {
   shortName: string;
   fullName: string;
-};
+}
 
 type EmailReminderJobData =
   | {
@@ -54,11 +54,11 @@ type EmailReminderJobData =
       headName: string;
       cycleDate: string;
       reportPeriod: string;
-      lateLeads: ReadonlyArray<{
+      lateLeads: readonly {
         leadName: string;
         sectionTitle: string;
         deadlineIso: string;
-      }>;
+      }[];
       organization: ReminderOrganizationJob;
     };
 
@@ -106,7 +106,7 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
 
     this.worker.on("failed", (job, error) => {
       process.stderr.write(
-        JSON.stringify({
+        `${JSON.stringify({
           timestamp: new Date().toISOString(),
           level: "error",
           message: "email-reminder job failed",
@@ -114,7 +114,7 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
           recipientEmail: job?.data.recipientEmail,
           attempt: job?.attemptsMade,
           error: error.message,
-        }) + "\n",
+        })}\n`,
       );
     });
   }

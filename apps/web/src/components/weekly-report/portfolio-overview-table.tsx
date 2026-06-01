@@ -2,9 +2,9 @@
 
 import type { PortfolioProduct } from "../dashboard/mock-data";
 
-type PortfolioOverviewTableProps = {
+interface PortfolioOverviewTableProps {
   readonly products: PortfolioProduct[];
-};
+}
 
 const STATUS_BG: Record<string, string> = {
   "on-track": "var(--color-success)",

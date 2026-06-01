@@ -3,10 +3,10 @@ import { adminSnapshotSchema, type UserSession } from "@customreport/shared";
 import { createRoleGuard } from "../auth/roles.guard";
 import { AdminAccessError, type AdminService } from "./admin.service";
 
-export type AdminRouterContext = {
+export interface AdminRouterContext {
   adminService: AdminService;
   session: UserSession;
-};
+}
 
 const headRoleGuard = createRoleGuard("head");
 

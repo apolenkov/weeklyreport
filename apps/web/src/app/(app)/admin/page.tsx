@@ -3,9 +3,9 @@ import { AdminTabsMobileSelect } from "../../../components/admin/admin-tabs-mobi
 import { JobsTabLabel } from "../../../components/admin/jobs-tab-label";
 import { ReopenTabLabel } from "../../../components/admin/reopen-tab-label";
 
-type Props = {
+interface Props {
   searchParams: Promise<{ tab?: string; filter?: string }>;
-};
+}
 
 // Phase 35-06: 'jobs' tab — BullMQ DLQ admin UI. Order: after 'reopen',
 // before 'settings' so the failure-triage workflow lives next to other

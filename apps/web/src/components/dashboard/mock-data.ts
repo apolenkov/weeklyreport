@@ -9,12 +9,12 @@ export type LeadStatus = "submitted" | "draft" | "pending";
 
 export type ProductStatus = "on-track" | "at-risk" | "blocked";
 
-export type TrafficLight = {
+export interface TrafficLight {
   status: ProductStatus;
   icon: string;
-};
+}
 
-export type LeadInfo = {
+export interface LeadInfo {
   id: string;
   reportId?: string;
   initials: string;
@@ -26,11 +26,11 @@ export type LeadInfo = {
   isCurrentUser: boolean;
   productCount?: number;
   reportContentCount?: number;
-};
+}
 
 // ---- Dashboard Types ----
 
-export type KpiData = {
+export interface KpiData {
   submitted: number;
   total: number;
   lastWeekSubmitted: number;
@@ -41,18 +41,18 @@ export type KpiData = {
   blockedCount: number;
   atRiskCount: number;
   decisionCount: number;
-};
+}
 
-export type BlockedAtRiskItem = {
+export interface BlockedAtRiskItem {
   id: string;
   severity: "blocked" | "at-risk";
   product: string;
   stage: string;
   assignee: string;
   description: string;
-};
+}
 
-export type ArchiveReport = {
+export interface ArchiveReport {
   id: string;
   weekLabel: string;
   dateRange: string;
@@ -61,11 +61,11 @@ export type ArchiveReport = {
   productCount: number;
   riskCount: number;
   decisionCount: number;
-};
+}
 
 // ---- Weekly Report Types ----
 
-export type PortfolioProduct = {
+export interface PortfolioProduct {
   id: string;
   initials: string;
   name: string;
@@ -75,34 +75,34 @@ export type PortfolioProduct = {
   currentWeekCount: number;
   nextWeekCount: number;
   riskCount: number;
-};
+}
 
-export type ReportItem = {
+export interface ReportItem {
   id: string;
   stageLead: string;
   text: string;
   status: "in-progress" | "completed" | "blocked" | "planned";
-};
+}
 
-export type ReportRisk = {
+export interface ReportRisk {
   id: string;
   badge: string;
   severity: "blocked" | "at-risk";
   text: string;
-};
+}
 
-export type ReportDecision = {
+export interface ReportDecision {
   id: string;
   badge: string;
   text: string;
-};
+}
 
-export type ReportPriority = {
+export interface ReportPriority {
   rank: number;
   text: string;
-};
+}
 
-export type ProductReport = {
+export interface ProductReport {
   id: string;
   authorIds?: string[];
   initials: string;
@@ -124,14 +124,14 @@ export type ProductReport = {
   risks: ReportRisk[];
   decisions: ReportDecision[];
   priorities: ReportPriority[];
-};
+}
 
-export type ReportPeriod = {
+export interface ReportPeriod {
   id: string;
   weekLabel: string;
   dateRange: string;
   isCurrent: boolean;
-};
+}
 
 // ---- Mock Data: Dashboard ----
 

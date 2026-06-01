@@ -1270,7 +1270,7 @@ describe("AdminService — Group ↔ Product M:M (UFB-054)", () => {
 
 function makeCreatePeriodRepository(opts: {
   /** Pre-seeded periods used by the overlap gate. */
-  seedPeriods?: Array<{ id: string; periodStart: Date; periodEnd: Date }>;
+  seedPeriods?: { id: string; periodStart: Date; periodEnd: Date }[];
   /** Settings to override; falls back to defaultSettings. */
   settings?: AppSettings;
 }): AdminRepository & {
@@ -1482,14 +1482,14 @@ describe("AdminService — createPeriodManual (UFB-063)", () => {
 // UFB-067: updatePeriodManual — admin escape hatch for in-place edits
 // ---------------------------------------------------------------------------
 
-type EditableRow = {
+interface EditableRow {
   id: string;
   periodStart: Date;
   periodEnd: Date;
   deadline: Date;
   weekLabel: string | null;
   periodState: "scheduled" | "open" | "published" | "archived";
-};
+}
 
 function makeUpdatePeriodRepository(opts: {
   /** Pre-seeded periods used by both the read + overlap paths. */

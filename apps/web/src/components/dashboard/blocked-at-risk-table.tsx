@@ -4,9 +4,9 @@ import { useState } from "react";
 
 import type { BlockedAtRiskItem } from "./mock-data";
 
-type BlockedAtRiskTableProps = {
+interface BlockedAtRiskTableProps {
   readonly items: BlockedAtRiskItem[];
-};
+}
 
 function AlertIcon() {
   return (

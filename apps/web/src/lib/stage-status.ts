@@ -16,8 +16,8 @@ const PRECEDENCE: Record<StageStatus, number> = {
  */
 export function deriveEffectiveStageStatus(
   explicit: StageStatus,
-  risks: ReadonlyArray<{ severity?: string }>,
-  items: ReadonlyArray<{ workflowStatus: string }>,
+  risks: readonly { severity?: string }[],
+  items: readonly { workflowStatus: string }[],
 ): StageStatus {
   let best = explicit;
   for (const r of risks) {

@@ -46,12 +46,12 @@ export interface RemindersRepository {
  * snapshot, so a mid-flight admin edit of the brand strings does NOT
  * affect already-queued emails (one fewer race to debug).
  */
-export type ReminderOrganization = {
+export interface ReminderOrganization {
   shortName: string;
   fullName: string;
-};
+}
 
-export type DeadlineReminderPayload = {
+export interface DeadlineReminderPayload {
   kind: "deadline";
   cycleDate: string; // ISO YYYY-MM-DD UTC of the fireAt deadline
   leadName: string;
@@ -59,20 +59,20 @@ export type DeadlineReminderPayload = {
   deadlineIso: string;
   sectionUrl: string;
   organization: ReminderOrganization;
-};
+}
 
-export type EscalationReminderPayload = {
+export interface EscalationReminderPayload {
   kind: "escalation";
   cycleDate: string; // ISO YYYY-MM-DD UTC of the escalation fireAt
   headName: string;
   reportPeriod: string;
-  lateLeads: ReadonlyArray<{
+  lateLeads: readonly {
     leadName: string;
     sectionTitle: string;
     deadlineIso: string;
-  }>;
+  }[];
   organization: ReminderOrganization;
-};
+}
 
 export type ReminderExecutionPayload =
   | DeadlineReminderPayload

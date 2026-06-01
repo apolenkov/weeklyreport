@@ -6,7 +6,7 @@ import type { Product, RiskEntry } from "./mock-data";
 import { StageMultiSelect } from "./stage-multi-select";
 import { canonicalStageName } from "./stage-tags";
 
-type RiskEditDialogProps = {
+interface RiskEditDialogProps {
   readonly open: boolean;
   /** null = create mode, RiskEntry = edit mode. */
   readonly risk: RiskEntry | null;
@@ -32,15 +32,15 @@ type RiskEditDialogProps = {
    * "no stages assigned — contact admin" message.
    */
   readonly stagesForProduct?: (productId: string) => readonly string[];
-};
+}
 
-type SeverityChoice = {
+interface SeverityChoice {
   value: "at-risk" | "blocked";
   label: string;
   bg: string;
   color: string;
   border: string;
-};
+}
 const SEVERITY_CHOICES: readonly SeverityChoice[] = [
   {
     value: "at-risk",
@@ -250,7 +250,6 @@ export function RiskEditDialog({
   }
 
   return createPortal(
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- backdrop is a mouse convenience; dialog is keyboard-closable via Escape + close button
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
       onClick={onCancel}

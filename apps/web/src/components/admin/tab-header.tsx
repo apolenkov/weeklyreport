@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
  * still aligns visually because the row is a single flex container with a
  * consistent gap.
  */
-export type TabHeaderProps = {
+export interface TabHeaderProps {
   readonly title: string;
   readonly description?: string;
   /** Optional count chip rendered next to the title (e.g. "12 users"). */
@@ -23,7 +23,7 @@ export type TabHeaderProps = {
   readonly actions?: ReactNode;
   /** data-testid for E2E. Defaults to derived "<title>-tab-header". */
   readonly testId?: string;
-};
+}
 
 export function TabHeader({
   title,
@@ -72,13 +72,13 @@ export function TabHeader({
  * styling. Wrapping in a stable component keeps every tab visually aligned
  * without each one re-styling the input.
  */
-export type TabSearchProps = {
+export interface TabSearchProps {
   readonly value: string;
   readonly onChange: (next: string) => void;
   readonly placeholder?: string;
   readonly testId?: string;
   readonly ariaLabel?: string;
-};
+}
 
 export function TabSearch({
   value,
@@ -105,18 +105,18 @@ export function TabSearch({
  * that need a categorical dimension filter (e.g. role, status, group).
  * Options include a sentinel "All" entry with value "".
  */
-export type TabFilterOption = {
+export interface TabFilterOption {
   readonly value: string;
   readonly label: string;
-};
+}
 
-export type TabFilterProps = {
+export interface TabFilterProps {
   readonly value: string;
   readonly onChange: (next: string) => void;
   readonly options: readonly TabFilterOption[];
   readonly testId?: string;
   readonly ariaLabel?: string;
-};
+}
 
 export function TabFilter({
   value,

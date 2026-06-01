@@ -12,25 +12,25 @@ import { cn } from "@customreport/ui/lib/utils";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import * as React from "react";
 
-export type Column<T> = {
+export interface Column<T> {
   key: string;
   header: string;
   sortable?: boolean;
   cell?: (row: T) => React.ReactNode;
   className?: string;
-};
+}
 
 type SortState = {
   key: string;
   direction: "asc" | "desc";
 } | null;
 
-type DataTableProps<T> = {
+interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
   onRowClick?: (row: T) => void;
   "aria-label"?: string;
-};
+}
 
 function sortData<T>(data: readonly T[], sort: SortState): T[] {
   if (!sort) {
@@ -62,7 +62,7 @@ function sortData<T>(data: readonly T[], sort: SortState): T[] {
 }
 
 function cycleSort(current: SortState, key: string): SortState {
-  if (!current || current.key !== key) {
+  if (current?.key !== key) {
     return { key, direction: "asc" };
   }
   if (current.direction === "asc") {

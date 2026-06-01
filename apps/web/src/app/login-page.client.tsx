@@ -102,9 +102,9 @@ function sanitizeNext(value: string | null, fallback: string): string {
   return value;
 }
 
-type LoginPageClientProps = {
+interface LoginPageClientProps {
   initialOrg: OrganizationPublic;
-};
+}
 
 function isOrganizationPublic(value: unknown): value is OrganizationPublic {
   return (

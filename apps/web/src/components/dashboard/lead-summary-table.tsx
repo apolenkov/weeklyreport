@@ -45,10 +45,10 @@ const STATUS_CLASSES: Record<LeadInfo["status"], string> = {
     "border-[rgba(0,0,0,0.16)] bg-[var(--color-muted)] text-[var(--color-muted-foreground)]",
 };
 
-type LeadSummaryTableProps = {
+interface LeadSummaryTableProps {
   readonly leads: readonly LeadInfo[];
   readonly reportId?: string;
-};
+}
 
 export function LeadSummaryTable({ leads, reportId }: LeadSummaryTableProps) {
   if (leads.length === 0) {
@@ -131,10 +131,9 @@ export function LeadSummaryTable({ leads, reportId }: LeadSummaryTableProps) {
               return (
                 <tr
                   key={lead.id}
-                  className={
-                    "border-b border-[var(--color-border)] last:border-0" +
-                    (inactive ? " bg-muted/30 opacity-60" : "")
-                  }
+                  className={`border-b border-[var(--color-border)] last:border-0${
+                    inactive ? " bg-muted/30 opacity-60" : ""
+                  }`}
                   data-testid={inactive ? "lead-row-inactive-24h" : undefined}
                 >
                   <th scope="row" className="px-5 py-3 text-left">
@@ -154,10 +153,9 @@ export function LeadSummaryTable({ leads, reportId }: LeadSummaryTableProps) {
                   </th>
                   <td className="px-5 py-3">
                     <span
-                      className={
-                        "inline-flex items-center rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-xs font-semibold " +
+                      className={`inline-flex items-center rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-xs font-semibold ${
                         STATUS_CLASSES[lead.status]
-                      }
+                      }`}
                     >
                       {STATUS_LABELS[lead.status]}
                     </span>

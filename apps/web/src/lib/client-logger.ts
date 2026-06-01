@@ -10,14 +10,14 @@
 
 type Level = "debug" | "info" | "warn" | "error";
 
-type Entry = {
+interface Entry {
   level: Level;
   message: string;
   source: "console" | "window-error" | "unhandled-rejection";
   url?: string;
   stack?: string;
   ts: number;
-};
+}
 
 const FLUSH_MS = 2000;
 const FLUSH_AT_COUNT = 50;

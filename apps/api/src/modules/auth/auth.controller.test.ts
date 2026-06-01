@@ -57,7 +57,7 @@ describe("createJwtSigner — contract tests", () => {
     const token = signer.signSession(validSession);
 
     // Tamper with the token signature
-    const tamperedToken = token.slice(0, -5) + "xxxxx";
+    const tamperedToken = `${token.slice(0, -5)}xxxxx`;
 
     expect(() => signer.verifySession(tamperedToken)).toThrow();
   });
@@ -90,12 +90,12 @@ describe("createJwtSigner — contract tests", () => {
     const token = signer.signSession(validSession);
     const decoded = jwt.decode(token) as Record<string, unknown>;
 
-    expect(decoded["userId"]).toBe(validSession.userId);
-    expect(decoded["email"]).toBe(validSession.email);
-    expect(decoded["name"]).toBe(validSession.name);
-    expect(decoded["role"]).toBe(validSession.role);
-    expect(decoded["activeReportId"]).toBe(validSession.activeReportId);
-    expect(decoded["activeReportSectionId"]).toBeNull();
+    expect(decoded.userId).toBe(validSession.userId);
+    expect(decoded.email).toBe(validSession.email);
+    expect(decoded.name).toBe(validSession.name);
+    expect(decoded.role).toBe(validSession.role);
+    expect(decoded.activeReportId).toBe(validSession.activeReportId);
+    expect(decoded.activeReportSectionId).toBeNull();
   });
 
   it("signed token has exp claim (1 hour TTL)", () => {
@@ -103,10 +103,10 @@ describe("createJwtSigner — contract tests", () => {
     const token = signer.signSession(validSession);
     const decoded = jwt.decode(token) as Record<string, unknown>;
 
-    expect(typeof decoded["exp"]).toBe("number");
-    expect(typeof decoded["iat"]).toBe("number");
+    expect(typeof decoded.exp).toBe("number");
+    expect(typeof decoded.iat).toBe("number");
     // exp should be ~3600 seconds after iat
-    const diff = (decoded["exp"] as number) - (decoded["iat"] as number);
+    const diff = (decoded.exp as number) - (decoded.iat as number);
     expect(diff).toBe(3600);
   });
 });

@@ -94,13 +94,9 @@ const STAGE_SUPPORT = "a0000000-0000-4000-8000-000000000707";
 function writeRedisCommand(command: string, ...args: string[]): Buffer {
   const parts = [command, ...args];
   return Buffer.from(
-    "*" +
-      parts.length +
-      "\r\n" +
-      parts
-        .map((part) => "$" + Buffer.byteLength(part) + "\r\n" + part)
-        .join("\r\n") +
-      "\r\n",
+    `*${parts.length}\r\n${parts
+      .map((part) => `$${Buffer.byteLength(part)}\r\n${part}`)
+      .join("\r\n")}\r\n`,
     "utf8",
   );
 }
@@ -508,7 +504,7 @@ async function main() {
         LEAD_SERGEY_ID,
         FINANCE_LEAD_USER_ID,
       ];
-      const sections: Array<{ id: string; authorId: string }> = [];
+      const sections: { id: string; authorId: string }[] = [];
       for (const authorId of leadIds) {
         const section = await tx.reportSection.create({
           data: {
@@ -618,7 +614,7 @@ async function main() {
   const redis = await flushRedisDb();
 
   console.log(
-    "[wipe-manual-uat] Done: " + JSON.stringify({ ...result, redis }),
+    `[wipe-manual-uat] Done: ${JSON.stringify({ ...result, redis })}`,
   );
 }
 

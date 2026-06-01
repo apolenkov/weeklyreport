@@ -42,13 +42,13 @@ export type AuditEvent =
   | "period.auto-archive"
   | "period.manual-create";
 
-export type AuditEnvelope = {
+export interface AuditEnvelope {
   readonly event: AuditEvent;
   readonly userId: string;
   readonly role: Role | null;
-  readonly attemptedRole?: ReadonlyArray<Role> | Role;
+  readonly attemptedRole?: readonly Role[] | Role;
   readonly ip: string;
-};
+}
 
 type LoginSuccessInput = Omit<AuditEnvelope, "event" | "attemptedRole">;
 type LoginFailInput = Omit<AuditEnvelope, "event" | "attemptedRole"> & {
@@ -149,7 +149,7 @@ type OrganizationUpdateInput = Omit<
  * `periodAutoArchive` — fired per Report flipped to archived=true; carries
  * just the periodId for traceability.
  */
-type PeriodAutoCreateInput = {
+interface PeriodAutoCreateInput {
   readonly periodId: string;
   readonly periodStart: string;
   readonly periodEnd: string;
@@ -164,22 +164,22 @@ type PeriodAutoCreateInput = {
    */
   readonly from: PeriodState | null;
   readonly to: PeriodState;
-};
+}
 
-type PeriodAutoPublishInput = {
+interface PeriodAutoPublishInput {
   readonly periodId: string;
   readonly missingSectionsCount: number;
   /** UFB-053 / Phase 51-C: state transition (typically open → published). */
   readonly from: PeriodState;
   readonly to: PeriodState;
-};
+}
 
-type PeriodAutoArchiveInput = {
+interface PeriodAutoArchiveInput {
   readonly periodId: string;
   /** UFB-053 / Phase 51-C: state transition (typically published → archived). */
   readonly from: PeriodState;
   readonly to: PeriodState;
-};
+}
 
 /**
  * UFB-063: emitted when an admin manually mints a Period via

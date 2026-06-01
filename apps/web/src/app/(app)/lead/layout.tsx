@@ -11,7 +11,7 @@ import { getServerSession } from "../../../lib/server/get-server-session";
  * weekly section pass. head/admin keep access for impersonation /
  * troubleshooting (matches Phase 28-01's leadProcedure surface).
  */
-const REQUIRED: ReadonlyArray<Role> = ["lead", "head", "admin"];
+const REQUIRED: readonly Role[] = ["lead", "head", "admin"];
 
 type Props = Readonly<{ children: ReactNode }>;
 

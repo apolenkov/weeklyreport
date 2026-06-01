@@ -44,12 +44,12 @@ const activeRule: AdminReminderRule = {
 };
 
 function dueRuleFromRecipients(
-  recipients: Array<{
+  recipients: {
     userId: string;
     email: string;
     name: string;
     notificationOptOut?: boolean;
-  }>,
+  }[],
 ): DueDeadlineRule {
   return {
     id: activeRule.id,
@@ -100,7 +100,7 @@ function createServiceRepo(): RemindersRepository {
 /* ------------------------------------------------------------------ */
 
 describe("RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)", () => {
-  let queueAdds: Array<{ name: string; data: Record<string, unknown> }>;
+  let queueAdds: { name: string; data: Record<string, unknown> }[];
   let fakeQueue: { add: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
@@ -137,8 +137,8 @@ describe("RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)", () => {
     // Tick #1 at 16:00 UTC — same UTC day as the deadline (2026-04-19).
     await scheduler.runOnce(new Date("2026-04-19T16:00:00.000Z"));
     expect(queueAdds).toHaveLength(1);
-    expect(queueAdds[0]?.data["kind"]).toBe("deadline");
-    expect(queueAdds[0]?.data["recipientEmail"]).toBe("lead@test.local");
+    expect(queueAdds[0]?.data.kind).toBe("deadline");
+    expect(queueAdds[0]?.data.recipientEmail).toBe("lead@test.local");
 
     // Tick #2 at 17:00 UTC — same UTC day. Idempotent — service deduplicates
     // on the same `${rule.id}:deadline:${cycleDate}:${email}` key.
@@ -192,7 +192,7 @@ describe("RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)", () => {
     await scheduler.runOnce(new Date("2026-04-19T16:00:00.000Z"));
 
     expect(queueAdds).toHaveLength(2);
-    const emails = queueAdds.map((q) => q.data["recipientEmail"]);
+    const emails = queueAdds.map((q) => q.data.recipientEmail);
     expect(emails).toContain("a@test.local");
     expect(emails).toContain("b@test.local");
   });
@@ -221,11 +221,11 @@ describe("RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)", () => {
     await scheduler.runOnce(new Date("2026-04-19T16:00:00.000Z"));
 
     const data = queueAdds[0]?.data ?? {};
-    expect(data["kind"]).toBe("deadline");
-    expect(data["leadName"]).toBe("Lead Alpha");
-    expect(data["reportPeriod"]).toBe("2026-04-13 → 2026-04-19");
-    expect(data["deadlineIso"]).toBe("2026-04-19T15:00:00.000Z");
-    expect(String(data["sectionUrl"])).toContain(reportId);
+    expect(data.kind).toBe("deadline");
+    expect(data.leadName).toBe("Lead Alpha");
+    expect(data.reportPeriod).toBe("2026-04-13 → 2026-04-19");
+    expect(data.deadlineIso).toBe("2026-04-19T15:00:00.000Z");
+    expect(String(data.sectionUrl)).toContain(reportId);
   });
 
   it("two cycles: same lead in cycle N and N+1 receives two distinct emails", async () => {
@@ -304,11 +304,11 @@ describe("RemindersScheduler — NOTIF-02 escalation dispatch (Phase 29-05)", ()
   };
 
   function makeEscalationRule(
-    leads: Array<{
+    leads: {
       leadName: string;
       sectionTitle: string;
       deadlineIso: string;
-    }>,
+    }[],
   ): DueEscalationRule {
     return {
       id: escalationRuleId,
@@ -347,7 +347,7 @@ describe("RemindersScheduler — NOTIF-02 escalation dispatch (Phase 29-05)", ()
     };
   }
 
-  let queueAdds: Array<{ name: string; data: Record<string, unknown> }>;
+  let queueAdds: { name: string; data: Record<string, unknown> }[];
   let fakeQueue: { add: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
@@ -399,11 +399,11 @@ describe("RemindersScheduler — NOTIF-02 escalation dispatch (Phase 29-05)", ()
     // Tick #1 — same UTC day as escalation fireAt.
     await scheduler.runOnce(new Date("2026-04-19T17:30:00.000Z"));
     expect(queueAdds).toHaveLength(1);
-    expect(queueAdds[0]?.data["kind"]).toBe("escalation");
-    expect(queueAdds[0]?.data["recipientEmail"]).toBe("head@test.local");
-    const lateLeadsInJob = queueAdds[0]?.data["lateLeads"] as Array<{
+    expect(queueAdds[0]?.data.kind).toBe("escalation");
+    expect(queueAdds[0]?.data.recipientEmail).toBe("head@test.local");
+    const lateLeadsInJob = queueAdds[0]?.data.lateLeads as {
       leadName: string;
-    }>;
+    }[];
     expect(lateLeadsInJob).toHaveLength(3);
     expect(lateLeadsInJob.map((l) => l.leadName)).toEqual([
       "Alpha",
@@ -445,9 +445,9 @@ describe("RemindersScheduler — NOTIF-02 escalation dispatch (Phase 29-05)", ()
     await scheduler.runOnce(new Date("2026-04-19T17:30:00.000Z"));
 
     const data = queueAdds[0]?.data ?? {};
-    expect(data["headName"]).toBe("Department Head");
-    expect(data["cycleDate"]).toBe("2026-04-19");
-    expect(data["reportPeriod"]).toBe("2026-04-13 → 2026-04-19");
+    expect(data.headName).toBe("Department Head");
+    expect(data.cycleDate).toBe("2026-04-19");
+    expect(data.reportPeriod).toBe("2026-04-13 → 2026-04-19");
   });
 });
 
@@ -457,7 +457,7 @@ describe("RemindersScheduler — NOTIF-02 escalation dispatch (Phase 29-05)", ()
 // -----------------------------------------------------------------------
 
 describe("RemindersScheduler — NOTIF-05 opt-out (Phase 29-05)", () => {
-  let queueAdds: Array<{ name: string; data: Record<string, unknown> }>;
+  let queueAdds: { name: string; data: Record<string, unknown> }[];
   let fakeQueue: { add: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
@@ -510,7 +510,7 @@ describe("RemindersScheduler — NOTIF-05 opt-out (Phase 29-05)", () => {
     await scheduler.runOnce(new Date("2026-04-19T16:00:00.000Z"));
 
     expect(queueAdds).toHaveLength(1);
-    expect(queueAdds[0]?.data["recipientEmail"]).toBe("a@test.local");
+    expect(queueAdds[0]?.data.recipientEmail).toBe("a@test.local");
   });
 
   it("escalation digest IGNORES head.notificationOptOut (heads always notified)", async () => {
@@ -576,6 +576,6 @@ describe("RemindersScheduler — NOTIF-05 opt-out (Phase 29-05)", () => {
     await scheduler.runOnce(new Date("2026-04-19T17:30:00.000Z"));
 
     expect(queueAdds).toHaveLength(1);
-    expect(queueAdds[0]?.data["kind"]).toBe("escalation");
+    expect(queueAdds[0]?.data.kind).toBe("escalation");
   });
 });

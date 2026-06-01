@@ -7,7 +7,7 @@
 
 export type UserRole = "lead" | "head" | "admin" | "viewer";
 
-export type MockUser = {
+export interface MockUser {
   id: string;
   name: string;
   email: string;
@@ -16,9 +16,9 @@ export type MockUser = {
   department: string;
   // A2 (UAT-v7 2026-05-12): soft-deactivation flag from the API.
   isActive: boolean;
-};
+}
 
-export type MockGroup = {
+export interface MockGroup {
   id: string;
   name: string;
   description: string | null;
@@ -26,38 +26,38 @@ export type MockGroup = {
   // UFB-039: optional FK to a head/admin user (display name resolved via
   // AdminSnapshot.users on the consumer side).
   headUserId: string | null;
-};
+}
 
 export const DEFAULT_GROUP_ID = "g1";
 
 export type { StageName } from "@customreport/shared";
 export { STAGE_NAMES } from "@customreport/shared";
 
-export type StageAssignment = {
+export interface StageAssignment {
   stage: import("@customreport/shared").StageName;
   assigneeId: string | null;
-};
+}
 
-export type MockProduct = {
+export interface MockProduct {
   id: string;
   name: string;
   leadOwnerId: string;
   stages: StageAssignment[];
   status: "active" | "archived";
-};
+}
 
 export type PeriodStatus = "open" | "published" | "reopened";
 
-export type MockPeriod = {
+export interface MockPeriod {
   id: string;
   weekLabel: string;
   startDate: string;
   endDate: string;
   deadline: string;
   status: PeriodStatus;
-};
+}
 
-export type MockReminder = {
+export interface MockReminder {
   id: string;
   name: string;
   description: string;
@@ -69,13 +69,13 @@ export type MockReminder = {
   reportId: string | null;
   /** UFB-036 (Phase 44-04): policy FK so derived rules can be grouped. */
   policyId: string | null;
-};
+}
 
 /**
  * UFB-036 (Phase 44-04): presentation type for the Reminders Tab policy
  * editor. Mirrors `reminderPolicySchema` 1:1.
  */
-export type MockReminderPolicy = {
+export interface MockReminderPolicy {
   id: string;
   kind: "deadline" | "follow_up" | "escalation";
   offsetMinutes: number;
@@ -84,7 +84,7 @@ export type MockReminderPolicy = {
   active: boolean;
   validFrom: Date;
   validUntil: Date | null;
-};
+}
 
 // UFB-048 (Phase 48-B): MockSettings expanded with 9 new fields. Order
 // mirrors the tab grouping in settings-tab.tsx (Periods → Reminders →
@@ -92,7 +92,7 @@ export type MockReminderPolicy = {
 // UFB-047 / Phase 49-01: legacy `departmentName` removed.
 // UFB-051 (Phase 51-A): +8 period-cycle knobs on the Periods sub-tab —
 // see comment in `appSettingsSchema` for the semantics.
-export type MockSettings = {
+export interface MockSettings {
   autoCreatePeriods: boolean;
   defaultDeadlineDays: number;
   // Periods tab
@@ -115,7 +115,7 @@ export type MockSettings = {
   defaultReminderAudience: "lead-with-draft" | "head-of-late";
   // Notifications tab
   notificationFromEmail: string | null;
-};
+}
 
 // ---- Mock Users (8 total: 6 leads + 1 head + 1 viewer) ----
 

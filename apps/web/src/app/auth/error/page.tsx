@@ -1,6 +1,6 @@
-type Props = {
+interface Props {
   searchParams: Promise<{ reason?: string }>;
-};
+}
 
 export default async function AuthErrorPage({ searchParams }: Props) {
   const { reason } = await searchParams;

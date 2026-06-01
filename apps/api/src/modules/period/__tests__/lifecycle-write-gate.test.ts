@@ -63,12 +63,12 @@ const EXEMPT_SUFFIXES = [
 // follow-up ref, so every exemption is greppable and reviewable.
 const EXEMPT_MARKER = "lifecycle-write-gate-allow";
 
-export type LifecycleViolation = {
+export interface LifecycleViolation {
   file: string;
   line: number;
   field: string;
   method: string;
-};
+}
 
 /**
  * Find hand-assembled lifecycle-field writes to `report.<writeMethod>(...)` in
@@ -181,7 +181,7 @@ function collectSourceFiles(root: string): string[] {
         !p.endsWith(".test.ts") &&
         !p.endsWith(".integration.test.ts") &&
         !p.endsWith(".eval.test.ts") &&
-        !p.includes(`${join("/", "test-utils", "/")}`) &&
+        !p.includes(join("/", "test-utils", "/")) &&
         !EXEMPT_SUFFIXES.some((suffix) => p.endsWith(suffix)),
     );
 }

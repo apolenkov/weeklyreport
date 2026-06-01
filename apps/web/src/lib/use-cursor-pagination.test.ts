@@ -16,7 +16,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { useCursorPagination } from "./use-cursor-pagination";
 
-type Page<T> = { items: T[]; nextCursor: string | null };
+interface Page<T> {
+  items: T[];
+  nextCursor: string | null;
+}
 
 function makeWrapper() {
   const client = new QueryClient({

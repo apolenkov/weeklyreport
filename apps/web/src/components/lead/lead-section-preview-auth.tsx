@@ -5,9 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useTRPC } from "../../lib/trpc-context";
 import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
 
-type Props = {
+interface Props {
   readonly reportId: string;
-};
+}
 
 /**
  * UFB-NEW-A34: resolves the current lead's userId from auth.me and

@@ -54,14 +54,14 @@ export function promoteStageStatus(
  *   </LeadFormSyncBridge.Provider>
  */
 
-type SuggestionParams = {
+interface SuggestionParams {
   productId: string;
   productName: string;
   stageName: string;
   suggestedStatus: "at-risk" | "blocked";
-};
+}
 
-type BridgeContextValue = {
+interface BridgeContextValue {
   products: Product[];
   risks: RiskEntry[];
   readOnly: boolean;
@@ -89,7 +89,7 @@ type BridgeContextValue = {
   ) => void;
   handleRisksChange: (next: RiskEntry[]) => void;
   handleRiskFilled: (riskId: string) => void;
-};
+}
 
 const BridgeContext = createContext<BridgeContextValue | null>(null);
 
@@ -119,7 +119,7 @@ function useBridgeContext(componentName: string): BridgeContextValue {
   return ctx;
 }
 
-export type LeadFormSyncBridgeProviderProps = {
+export interface LeadFormSyncBridgeProviderProps {
   readonly products: Product[];
   readonly risks: RiskEntry[];
   readonly onProductsChange: (next: Product[]) => void;
@@ -141,7 +141,7 @@ export type LeadFormSyncBridgeProviderProps = {
   /** W5: merged risks for visual rendering; own-only risks drive sync hook. */
   readonly displayRisks?: RiskEntry[];
   readonly children: ReactNode;
-};
+}
 
 function Provider({
   products,

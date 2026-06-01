@@ -14,9 +14,9 @@ describe("JobsService — integration (BullMQ failed jobs)", () => {
   const prisma = createTestPrisma();
   const queueName = "email-reminder";
 
-  let queue: Queue<unknown, unknown, string>;
+  let queue: Queue<unknown, unknown>;
   let queueEvents: QueueEvents;
-  let worker: Worker<unknown, unknown, string>;
+  let worker: Worker<unknown, unknown>;
 
   beforeEach(async () => {
     await cleanDatabase(prisma);

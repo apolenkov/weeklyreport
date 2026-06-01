@@ -12,7 +12,7 @@ import { chromium } from "playwright";
 import type { PdfExportService } from "../../modules/pdf-export/pdf-export.service";
 import { getBullMQOptions } from "./bullmq-options";
 
-type PdfExportJobData = {
+interface PdfExportJobData {
   reportId: string;
   jobId: string;
   // AUTH-05 (Phase 28-02): short-lived (5min) JWT injected into the
@@ -20,7 +20,7 @@ type PdfExportJobData = {
   // page.goto. Required so the print page's tRPC fetch carries an
   // authenticated session — closes the cookie seam left open in Phase 24.
   authToken: string;
-};
+}
 
 /**
  * BullMQ worker for the pdf-export queue.
@@ -49,7 +49,7 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
           .markExportFailed(job.data.jobId, error.message)
           .catch((markError: unknown) => {
             process.stderr.write(
-              JSON.stringify({
+              `${JSON.stringify({
                 timestamp: new Date().toISOString(),
                 level: "error",
                 message: "pdf-export failed-state update failed",
@@ -58,13 +58,13 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
                   markError instanceof Error
                     ? markError.message
                     : String(markError),
-              }) + "\n",
+              })}\n`,
             );
           });
       }
 
       process.stderr.write(
-        JSON.stringify({
+        `${JSON.stringify({
           timestamp: new Date().toISOString(),
           level: "error",
           message: "pdf-export job failed",
@@ -74,7 +74,7 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
           // AUTH-05: never log the actual token; only its presence.
           authToken: job?.data.authToken ? "<redacted>" : "MISSING",
           error: error.message,
-        }) + "\n",
+        })}\n`,
       );
     });
   }
@@ -85,7 +85,7 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
 
   private async processJob(job: Job<PdfExportJobData>): Promise<void> {
     const { reportId, jobId, authToken } = job.data;
-    const baseUrl = process.env["PDF_BASE_URL"] ?? "http://localhost:3000";
+    const baseUrl = process.env.PDF_BASE_URL ?? "http://localhost:3000";
     const reportUrl = `${baseUrl}/print/${reportId}`;
 
     const browser = await chromium.launch({ headless: true });
@@ -109,9 +109,7 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
       // same directory regardless of the process cwd. Default is relative to
       // the API package cwd (apps/api/) — see env.schema.ts for the same
       // anti-double-path rationale.
-      const outputDir = resolve(
-        process.env["PDF_OUTPUT_DIR"] ?? "./storage/pdfs",
-      );
+      const outputDir = resolve(process.env.PDF_OUTPUT_DIR ?? "./storage/pdfs");
       mkdirSync(outputDir, { recursive: true });
 
       const filePath = join(outputDir, `${jobId}.pdf`);

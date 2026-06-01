@@ -3,9 +3,9 @@ import { Suspense } from "react";
 import { HeadPresentClient } from "../../../../../../components/head/head-present-client";
 import { WeeklyReportSkeleton } from "../../../../../../components/weekly-report/weekly-report-skeleton";
 
-type Props = {
+interface Props {
   params: Promise<{ reportId: string }>;
-};
+}
 
 /**
  * UFB-NEW-A34 (Phase 60 early activation): head presentation surface.

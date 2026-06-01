@@ -6,11 +6,11 @@ import { toast } from "sonner";
 import { useTRPC } from "../../lib/trpc-context";
 import { IfRole } from "../auth/if-role";
 
-type AlertBarProps = {
+interface AlertBarProps {
   readonly pendingLeads: string[];
   readonly reportId: string;
   readonly canSendReminder: boolean;
-};
+}
 
 function AlertIcon() {
   return (

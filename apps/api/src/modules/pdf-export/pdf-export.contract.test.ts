@@ -48,7 +48,7 @@ function createRepository(report: AssembledReport | null): PdfExportRepository {
 
   return {
     async getPublishedReport(id: string) {
-      if (report && id === report.reportId) {
+      if (id === report?.reportId) {
         return structuredClone(report);
       }
       return null;
@@ -141,8 +141,8 @@ describe("PdfExportService — contract tests", () => {
       // AUTH-05 (Phase 28-02): the queue payload now carries an authToken
       // signed with PDF_EXPORT_JWT_SECRET. Stub the secret for deterministic
       // signing.
-      const originalSecret = process.env["PDF_EXPORT_JWT_SECRET"];
-      process.env["PDF_EXPORT_JWT_SECRET"] = "a".repeat(32);
+      const originalSecret = process.env.PDF_EXPORT_JWT_SECRET;
+      process.env.PDF_EXPORT_JWT_SECRET = "a".repeat(32);
       try {
         const mockQueue = createMockQueue();
         const service = new PdfExportService(
@@ -165,9 +165,9 @@ describe("PdfExportService — contract tests", () => {
         );
       } finally {
         if (originalSecret === undefined) {
-          delete process.env["PDF_EXPORT_JWT_SECRET"];
+          delete process.env.PDF_EXPORT_JWT_SECRET;
         } else {
-          process.env["PDF_EXPORT_JWT_SECRET"] = originalSecret;
+          process.env.PDF_EXPORT_JWT_SECRET = originalSecret;
         }
       }
     });
@@ -313,7 +313,7 @@ describe("PdfExportService — contract tests", () => {
   describe("markExportFailed", () => {
     it("delegates to the repository", async () => {
       const repo = createRepository(publishedReport);
-      const markExportFailedCalls: Array<{ jobId: string; error: string }> = [];
+      const markExportFailedCalls: { jobId: string; error: string }[] = [];
       const originalFn = repo.markExportFailed.bind(repo);
       repo.markExportFailed = async (jobId: string, error: string) => {
         markExportFailedCalls.push({ jobId, error });

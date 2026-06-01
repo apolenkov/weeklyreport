@@ -4,10 +4,10 @@ import { Suspense } from "react";
 import { LeadForm } from "../../../../../components/lead/lead-form";
 import { LeadFormSkeleton } from "../../../../../components/lead/lead-form-skeleton";
 
-type Props = {
+interface Props {
   params: Promise<{ reportId: string }>;
   searchParams: Promise<{ mode?: string }>;
-};
+}
 
 /**
  * Phase 35-07 (UX-15): addressed lead form. The `[reportId]` segment pins
@@ -31,10 +31,9 @@ export default async function LeadReportByIdPage({
   if (mode && resolvedMode !== mode) {
     const normalizedMode = "edit";
     redirect(
-      "/lead/report/" +
-        encodeURIComponent(reportId) +
-        "?mode=" +
-        encodeURIComponent(normalizedMode),
+      `/lead/report/${encodeURIComponent(reportId)}?mode=${encodeURIComponent(
+        normalizedMode,
+      )}`,
     );
   }
 

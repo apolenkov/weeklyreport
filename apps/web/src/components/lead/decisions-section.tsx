@@ -9,7 +9,7 @@ import { DecisionEditDialog } from "./decision-edit-dialog";
 import type { DecisionEntry, Product } from "./mock-data";
 import { splitStageNames } from "./stage-tags";
 
-type DecisionsSectionProps = {
+interface DecisionsSectionProps {
   readonly decisions: DecisionEntry[];
   readonly readOnly?: boolean;
   readonly onChange?: (decisions: DecisionEntry[]) => void;
@@ -34,7 +34,7 @@ type DecisionsSectionProps = {
   readonly products?: readonly Product[];
   readonly defaultProductId?: string;
   readonly addSignal?: number;
-};
+}
 
 function isMine(owner: string | undefined, me: string | undefined): boolean {
   if (!me) return true; // No identity yet — be permissive.

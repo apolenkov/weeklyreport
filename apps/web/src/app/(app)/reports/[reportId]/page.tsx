@@ -11,10 +11,10 @@ import { WeeklyReportSkeleton } from "../../../../components/weekly-report/weekl
 /*  dynamic [reportId] route param.                                   */
 /* ------------------------------------------------------------------ */
 
-type Props = {
+interface Props {
   params: Promise<{ reportId: string }>;
   searchParams: Promise<{ authorId?: string }>;
-};
+}
 
 export default function PublishedReportPage({ params, searchParams }: Props) {
   const { reportId } = use(params);
