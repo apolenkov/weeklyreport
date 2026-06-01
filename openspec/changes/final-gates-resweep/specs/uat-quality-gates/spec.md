@@ -1,6 +1,6 @@
 ## ADDED Requirements
 
-### Requirement: Final Acceptance Gate MUST Pass As A Five-Command Chain
+### Requirement: Final Acceptance Gate MUST Pass As A Four-Command Chain
 
 The repository MUST pass a single final acceptance gate before the
 `defer-uat-codequality-vercel-2026-05-26` track is marked done. The gate
@@ -10,7 +10,7 @@ The chain MUST include `pnpm build` so the gate matches the production build.
 There is no Markdown lint command in the chain: `markdown-format-only` removed
 `lint:md`, so Markdown is formatted by Prettier on commit, not gated.
 
-#### Scenario: All five gate commands are green
+#### Scenario: All four gate commands are green
 
 - **WHEN** a maintainer runs
   `pnpm typecheck && pnpm lint && pnpm test && pnpm build`

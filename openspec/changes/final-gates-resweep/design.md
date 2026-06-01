@@ -17,9 +17,13 @@ this can be a durable acceptance bar:
 
 ## Decision
 
-**Gate chain is five commands, all exit 0:**
-`pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm lint:md`.
-`build` is included so the acceptance bar matches what ships.
+**Gate chain is four commands, all exit 0:**
+`pnpm typecheck && pnpm lint && pnpm test && pnpm build`.
+`build` is included so the acceptance bar matches what ships. There is no
+`pnpm lint:md`: the script no longer exists (Markdown is Prettier-formatted on
+commit, not linted). `pnpm lint` itself now runs
+`eslint . && stylelint "**/*.css" --allow-empty-input && pnpm lint:prisma:typecheck`
+(Biome was removed in the ESLint+Prettier+stylelint migration).
 
 **Console classification for the re-sweep:**
 
@@ -35,7 +39,7 @@ This change adds the requirements via `ADDED Requirements` deltas on the
 `uat-quality-gates` capability (the parent's capability). It is the explicit
 final-gates extension, so it shares the capability name rather than forking a
 new one. It does not use `MODIFIED` — the parent's requirements stay as written;
-this change only adds the authoritative five-command chain and the refined
+this change only adds the authoritative four-command chain and the refined
 console classification alongside them.
 
 ## Alternatives considered
@@ -47,8 +51,10 @@ console classification alongside them.
   the parent is unarchived, so `uat-quality-gates` is not yet in
   `openspec/specs/`; a `MODIFIED` delta would fail `--strict` ("requirement not
   found"). `ADDED` is both semantically correct (extend, not edit) and valid.
-- **Four-command chain (mirror the parent prose).** Rejected: omitting `build`
-  lets a broken production build pass the final gate.
+- **A chain without `build` (mirror the parent prose:
+  `typecheck && lint && test && lint:md`).** Rejected: omitting `build` lets a
+  broken production build pass the final gate. (The accepted chain keeps four
+  commands but swaps the now-removed `lint:md` for `build`.)
 - **Strict 0-console-output bar.** Rejected: benign warnings and the favicon
   404 make it unachievable; the classified bar (0 ERRORS, warnings logged,
   favicon-404 ignored) is enforceable and meaningful.

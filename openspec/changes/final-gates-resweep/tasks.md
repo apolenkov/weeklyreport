@@ -12,13 +12,14 @@ Gates after every step: `pnpm typecheck && pnpm lint && pnpm test`.
 - [ ] FGR-P3: Start a fresh dev server (`pnpm dev:fresh`) so the sweep runs
       against current code, not a stale build.
 
-## Final acceptance gate (five-command chain)
+## Final acceptance gate (four-command chain)
 
 - [ ] FGR-G1: Run `pnpm typecheck`; confirm exit 0.
 - [ ] FGR-G2: Run `pnpm lint`; confirm exit 0. Note this runs
-      `biome check . && eslint . && pnpm lint:prisma:typecheck` as a single root
-      pass (see `package.json`) — Biome owns lint+format, residual ESLint keeps
-      only the rules Biome cannot replace.
+      `eslint . && stylelint "**/*.css" --allow-empty-input && pnpm lint:prisma:typecheck`
+      as a single root pass (see `package.json`). Biome was removed in the
+      ESLint+Prettier+stylelint migration — ESLint owns logic lint, stylelint
+      owns CSS, Prettier owns formatting (no lint command).
 - [ ] FGR-G3: Run `pnpm test`; confirm exit 0.
 - [ ] FGR-G4: Run `pnpm build`; confirm exit 0.
       (There is no Markdown gate: `markdown-format-only` removed `lint:md` —

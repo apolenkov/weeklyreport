@@ -23,6 +23,27 @@ import tseslint from "typescript-eslint";
 // NOTE: simple-import-sort is intentionally NOT here — Biome does not sort
 // imports today (no assist/organizeImports config), so it is net-new and
 // belongs to Phase 3.
+//
+// Phase 2 (declare-lint-max-strictness): the durable max-strictness STANDARD is
+// declared spec-first in openspec — capability `lint-max-strictness-standard`
+// (the single source of truth). NO live strict rule is enabled here; this gate
+// stays exactly as green as Phase 1 left it. Phase 3 (ratchet-lint-to-strict)
+// flips each target below from absent → `error` with its fixup wave.
+// Phase-3 ratchet targets (see the spec for scope/threshold qualifiers):
+//   • base: @typescript-eslint strictTypeChecked + stylisticTypeChecked
+//   • plugins: sonarjs (incl. cognitive-complexity ≤ 15), unicorn (pruned
+//     off-list), jsdoc (packages/shared + packages/ui public API only),
+//     simple-import-sort (net-new), import-boundaries
+//   • core: max-lines 300 (skipBlankLines, skipComments), complexity ≤ 10
+//   • exempt dirs: *.test.*, e2e, prisma/generated, prisma/seed*.ts, *.config.ts
+//   • exclude-list seed (inherited a11y carve-outs, kept off, NOT reopened):
+//     jsx-a11y/no-noninteractive-element-interactions,
+//     jsx-a11y/label-has-associated-control, the test-file full-a11y-off override
+//   • severity reconciliation: no-non-null-assertion → error,
+//     jsx-no-useless-fragment → error, no-unused-imports → error,
+//     react-hooks/exhaustive-deps → stays warn (advisory, false-positive-prone)
+//   • web→api boundary carve-out: import type ALLOWED via
+//     @typescript-eslint/no-restricted-imports { allowTypeImports: true }
 export default defineConfig([
   globalIgnores([
     "**/node_modules/**",
