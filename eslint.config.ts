@@ -106,7 +106,9 @@ export default defineConfig([
       "unused-imports/no-unused-imports": "warn",
 
       // React rules Biome recommended enforced
-      "react/jsx-no-useless-fragment": "warn",
+      // jsx-no-useless-fragment promoted warn→error in Phase-3 ratchet R2a
+      // (declared severity-reconciliation target).
+      "react/jsx-no-useless-fragment": "error",
       "react/no-array-index-key": "error",
       "react/no-danger": "error",
 
@@ -152,6 +154,16 @@ export default defineConfig([
       "@typescript-eslint/no-unnecessary-template-expression": "error",
       "@typescript-eslint/no-unnecessary-boolean-literal-compare": "error",
       "@typescript-eslint/no-inferrable-types": "error",
+
+      // Phase-3 ratchet — R2a SAFE low-risk cluster (ratchet-lint-to-strict).
+      // In-scope declared targets, ascending-risk first wave: two type-aware
+      // rules whose fixes are noop/local, and one strict rule (return-await)
+      // whose fix is a genuine correctness gain (await inside try so the catch
+      // observes async rejections). jsx-no-useless-fragment is promoted in place
+      // above (it was already a Phase-1 warn).
+      "@typescript-eslint/no-unnecessary-type-conversion": "error",
+      "@typescript-eslint/use-unknown-in-catch-callback-variable": "error",
+      "@typescript-eslint/return-await": "error",
 
       // React hooks (single-owned by ESLint)
       "react-hooks/rules-of-hooks": "error",

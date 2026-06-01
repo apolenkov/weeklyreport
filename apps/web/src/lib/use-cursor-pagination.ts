@@ -126,7 +126,7 @@ export function useCursorPagination<
 
   return {
     items,
-    hasNextPage: !!query.hasNextPage,
+    hasNextPage: query.hasNextPage,
     isLoading: query.isLoading,
     isFetchingNextPage: query.isFetchingNextPage,
     isError: query.isError,

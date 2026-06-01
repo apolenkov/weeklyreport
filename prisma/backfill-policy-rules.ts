@@ -146,7 +146,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
   console.error("[backfill] failed:", err);
   process.exit(1);
 });

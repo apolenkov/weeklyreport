@@ -133,7 +133,7 @@ export function JobsTab() {
           data-testid="jobs-error-state"
           className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-red-50 p-4 text-sm text-red-800"
         >
-          Failed to load list: {String(listQuery.error?.message ?? "unknown")}
+          Failed to load list: {listQuery.error?.message ?? "unknown"}
         </div>
       )}
 

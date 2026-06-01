@@ -149,7 +149,7 @@ function enqueueWrite(sink: FileSink, entry: LogEntry): void {
   sink.queue = sink.queue
     .then(() => rotateIfNeeded(activePath, sink.logDir, sink.opts))
     .then(() => fs.appendFile(activePath, `${JSON.stringify(entry)}\n`))
-    .catch((err) => {
+    .catch((err: unknown) => {
       process.stderr.write(`[logger] file write failed: ${String(err)}\n`);
     });
 }

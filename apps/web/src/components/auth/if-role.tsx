@@ -46,5 +46,5 @@ export function IfRole({
     ? role.includes(me.data.role)
     : me.data.role === role;
 
-  return allowed ? <>{children}</> : null;
+  return allowed ? children : null;
 }

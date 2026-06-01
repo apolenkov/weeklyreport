@@ -20,5 +20,5 @@ export default async function HeadLayout({ children }: Props) {
   if (!session || !REQUIRED.includes(session.role)) {
     return <ForbiddenPage requiredRoles={REQUIRED} />;
   }
-  return <>{children}</>;
+  return children;
 }

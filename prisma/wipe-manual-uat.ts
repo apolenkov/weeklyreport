@@ -114,7 +114,7 @@ async function flushRedisDb(): Promise<
     return { flushed: false, reason: "invalid-redis-port" };
   }
 
-  return await new Promise((resolve) => {
+  return new Promise((resolve) => {
     const socket = net.createConnection({ host, port });
     const timer = setTimeout(() => {
       socket.destroy();
@@ -619,7 +619,7 @@ async function main() {
 }
 
 void main()
-  .catch((error) => {
+  .catch((error: unknown) => {
     console.error("[wipe-manual-uat] Failed:", error);
     process.exitCode = 1;
   })
