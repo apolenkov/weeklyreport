@@ -32,18 +32,18 @@ export class MockTelegramAdapter implements TelegramAdapter {
    * `email-reminder.processor.ts` so existing log dashboards stay
    * uniform.
    */
-  async send(chatId: string, text: string): Promise<TelegramSendResult> {
+  send(chatId: string, text: string): Promise<TelegramSendResult> {
     this.lastPayload = { chatId, text };
     process.stderr.write(
-      JSON.stringify({
+      `${JSON.stringify({
         timestamp: new Date().toISOString(),
         level: "info",
         message: "telegram-outbound mock send",
         chatId,
         textLength: text.length,
-      }) + "\n",
+      })}\n`,
     );
     telegramMessageSentTotal.inc({ status: "ok" });
-    return { ok: true };
+    return Promise.resolve({ ok: true });
   }
 }

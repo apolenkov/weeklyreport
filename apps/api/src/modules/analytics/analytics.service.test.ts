@@ -27,8 +27,11 @@ function makeRepo(
   overrides: Partial<AnalyticsRepository> = {},
 ): AnalyticsRepository {
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
     trafficLightHistory: vi.fn(async () => ({ periods: [], rows: [] })),
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
     leadVelocity: vi.fn(async () => []),
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
     periodComparison: vi.fn(async () => ({ rows: [] })),
     ...overrides,
   };
@@ -50,6 +53,7 @@ describe("AnalyticsService.trafficLightHistory", () => {
 
   it("returns multi-project, multi-period grid", async () => {
     const repo = makeRepo({
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
       trafficLightHistory: vi.fn(async () => ({
         periods: ["2026-04-21", "2026-04-28"],
         rows: [
@@ -81,6 +85,7 @@ describe("AnalyticsService.trafficLightHistory", () => {
   });
 
   it("cache hit short-circuits the repository on second call", async () => {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
     const trafficLightHistory = vi.fn(async () => ({
       periods: ["2026-04-28"],
       rows: [],
@@ -100,6 +105,7 @@ describe("AnalyticsService.trafficLightHistory", () => {
   });
 
   it("uses stable cache keys regardless of input property order", async () => {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
     const trafficLightHistory = vi.fn(async () => ({ periods: [], rows: [] }));
     const repo = makeRepo({ trafficLightHistory });
     const { cache } = makeCache();
@@ -132,6 +138,7 @@ describe("AnalyticsService.leadVelocity", () => {
   });
 
   it("cache hit short-circuits the repository", async () => {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
     const leadVelocity = vi.fn(async () => []);
     const repo = makeRepo({ leadVelocity });
     const { cache } = makeCache();
@@ -163,6 +170,7 @@ describe("AnalyticsService.periodComparison", () => {
   });
 
   it("cache hit short-circuits the repository", async () => {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
     const periodComparison = vi.fn(async () => ({ rows: [] }));
     const repo = makeRepo({ periodComparison });
     const { cache } = makeCache();

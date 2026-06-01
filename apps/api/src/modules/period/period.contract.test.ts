@@ -53,16 +53,18 @@ function createRepository(report: MockReport | null): PeriodRepository & {
   let current = report ? structuredClone(report) : null;
 
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
     async getReportById(id: string) {
-      if (!current || id !== current.id) {
+      if (id !== current?.id) {
         return null;
       }
 
       return structuredClone(current);
     },
 
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
     async publishPeriod(id: string, _userId: string) {
-      if (current && id === current.id) {
+      if (id === current?.id) {
         current = {
           ...current,
           status: "published",
@@ -72,8 +74,9 @@ function createRepository(report: MockReport | null): PeriodRepository & {
       }
     },
 
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
     async reopenPeriod(id: string) {
-      if (current && id === current.id) {
+      if (id === current?.id) {
         current = {
           ...current,
           periodStatus: "reopened",

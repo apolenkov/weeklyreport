@@ -84,6 +84,7 @@ function createLeadFormRepo(opts: {
   const snapshots: SnapshotRow[] = opts.snapshots ? [...opts.snapshots] : [];
   let projection: Record<string, unknown> = opts.projection ?? {};
 
+  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async LeadFormRepository.createVersionSnapshot contract (no await needed in stub)
   const createVersionSnapshot = vi.fn(async () => {
     const version = snapshots.length + 1;
     snapshots.push({
@@ -93,7 +94,9 @@ function createLeadFormRepo(opts: {
     });
     return version;
   });
+  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async LeadFormRepository.fillFromSection contract (no await needed in stub)
   const fillFromSection = vi.fn(async () => 3);
+  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async LeadFormRepository.restoreVersion contract (no await needed in stub)
   const restoreVersion = vi.fn(async (_id: string, version: number) => version);
 
   return {
@@ -101,13 +104,16 @@ function createLeadFormRepo(opts: {
     createVersionSnapshot,
     fillFromSection,
     restoreVersion,
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements async LeadFormRepository contract (stub returns value directly, no await)
     async getSectionById(id: string) {
       return id === opts.section.reportSectionId ? opts.section : null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements async LeadFormRepository contract (stub returns value directly, no await)
     async getSectionForPeriod() {
       return null;
     },
     async revokeSectionSubmission() {},
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements async LeadFormRepository contract (stub returns value directly, no await)
     async listVersions(): Promise<VersionSnapshot[]> {
       return snapshots.map((s) => ({
         id: `vvvv${String(s.version).padStart(4, "0")}-0000-4000-8000-000000000000`,
@@ -119,9 +125,11 @@ function createLeadFormRepo(opts: {
         decisionCount: 0,
       }));
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements async LeadFormRepository contract (stub returns value directly, no await)
     async getVersion(_id: string, version: number) {
       return snapshots.find((s) => s.version === version)?.data ?? null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements async LeadFormRepository contract (stub returns value directly, no await)
     async getLatestSnapshot(): Promise<SnapshotLatestRow | null> {
       const last = snapshots[snapshots.length - 1];
       if (!last) return null;
@@ -131,6 +139,7 @@ function createLeadFormRepo(opts: {
         version: last.version,
       };
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements async LeadFormRepository contract (stub returns value directly, no await)
     async buildSnapshotProjection() {
       return structuredClone(projection);
     },
@@ -139,15 +148,19 @@ function createLeadFormRepo(opts: {
       projection = next;
     },
     async createReopenRequest() {},
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements async LeadFormRepository contract (stub returns value directly, no await)
     async hasSharedProduct() {
       return false;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements async LeadFormRepository contract (stub returns value directly, no await)
     async getCrossAuthors() {
       return [];
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements async LeadFormRepository contract (stub returns value directly, no await)
     async getCrossAuthorSections() {
       return [];
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements async LeadFormRepository contract (stub returns value directly, no await)
     async revokeAllSubmitted() {
       return 0;
     },
@@ -170,18 +183,22 @@ function createReportSectionsRepo(opts: {
   meta?: { status: string; deadline: Date };
 }): ReportSectionsRepository & { saveSection: ReturnType<typeof vi.fn> } {
   let current = opts.section;
+  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async ReportSectionsRepository.saveSection contract (no await needed in stub)
   const saveSection = vi.fn(async (next: ReportSectionReadModel) => {
     current = next;
     return next;
   });
   return {
     saveSection,
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements async ReportSectionsRepository contract (stub returns value directly, no await)
     async getSectionById(id: string) {
       return id === current.reportSectionId ? current : null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements async ReportSectionsRepository contract (stub returns value directly, no await)
     async getReportStatus() {
       return opts.reportStatus ?? "draft";
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements async ReportSectionsRepository contract (stub returns value directly, no await)
     async getReportMeta() {
       return opts.meta ?? null;
     },
@@ -275,6 +292,7 @@ describe("characterization: section submission + lifecycle gate", () => {
       section: makeSection(),
       meta: { status: "open", deadline: pastDeadline },
     });
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements GetGraceSettings which must return Promise<{...}> (no await needed in stub)
     const service = new ReportSectionsService(repo, async () => ({
       gracePeriodHours: 1,
       allowLateSubmissions: false,
@@ -291,6 +309,7 @@ describe("characterization: section submission + lifecycle gate", () => {
       section: makeSection(),
       meta: { status: "open", deadline: pastDeadline },
     });
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements GetGraceSettings which must return Promise<{...}> (no await needed in stub)
     const service = new ReportSectionsService(repo, async () => ({
       gracePeriodHours: 1,
       allowLateSubmissions: true,

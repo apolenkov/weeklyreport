@@ -104,6 +104,7 @@ function buildHarness(opts: {
       getActive: {
         queryOptions: () => ({
           queryKey: ["reports.getActive"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (stub returns a resolved value)
           queryFn: async () => ({
             reportId: ACTIVE_REPORT_ID,
             reportSectionId: ACTIVE_SECTION_ID,
@@ -115,6 +116,7 @@ function buildHarness(opts: {
       myHistory: {
         queryOptions: () => ({
           queryKey: ["reports.myHistory"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (stub returns a resolved value)
           queryFn: async () => [
             {
               sectionId: ACTIVE_SECTION_ID,
@@ -148,6 +150,7 @@ function buildHarness(opts: {
           } = {},
         ) => ({
           ...passed,
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (stub returns a resolved value)
           mutationFn: async () => ({ ok: true }),
         }),
         pathFilter: () => ({ queryKey: ["reports.saveDraft"] }),
@@ -160,6 +163,7 @@ function buildHarness(opts: {
           } = {},
         ) => ({
           ...passed,
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (stub returns a resolved value)
           mutationFn: async () => ({ ok: true }),
         }),
         pathFilter: () => ({ queryKey: ["reports.submit"] }),
@@ -169,6 +173,7 @@ function buildHarness(opts: {
       byPeriod: {
         queryOptions: () => ({
           queryKey: ["leadForm.byPeriod"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (stub returns a resolved value)
           queryFn: async () => {
             opts.onByPeriodQuery?.();
             return {
@@ -182,6 +187,7 @@ function buildHarness(opts: {
       versions: {
         queryOptions: () => ({
           queryKey: ["leadForm.versions"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (stub returns a resolved value)
           queryFn: async () => [],
         }),
         pathFilter: () => ({ queryKey: ["leadForm.versions"] }),
@@ -194,6 +200,7 @@ function buildHarness(opts: {
           } = {},
         ) => ({
           ...passed,
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (stub returns a resolved value)
           mutationFn: async () => ({ ok: true }),
         }),
         pathFilter: () => ({ queryKey: ["leadForm.revoke"] }),
@@ -206,6 +213,7 @@ function buildHarness(opts: {
           } = {},
         ) => ({
           ...passed,
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (stub returns a resolved value)
           mutationFn: async () => ({ ok: true }),
         }),
         pathFilter: () => ({ queryKey: ["leadForm.fillFrom"] }),
@@ -218,6 +226,7 @@ function buildHarness(opts: {
           } = {},
         ) => ({
           ...passed,
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (stub returns a resolved value)
           mutationFn: async () => ({ ok: true }),
         }),
         pathFilter: () => ({ queryKey: ["leadForm.restoreVersion"] }),
@@ -230,6 +239,7 @@ function buildHarness(opts: {
           } = {},
         ) => ({
           ...passed,
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (stub returns a resolved value)
           mutationFn: async () => ({ ok: true }),
         }),
         pathFilter: () => ({ queryKey: ["leadForm.createSnapshot"] }),
@@ -242,6 +252,7 @@ function buildHarness(opts: {
           } = {},
         ) => ({
           ...passed,
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (stub returns a resolved value)
           mutationFn: async () => ({ ok: true }),
         }),
         pathFilter: () => ({ queryKey: ["leadForm.requestReopen"] }),
@@ -249,6 +260,7 @@ function buildHarness(opts: {
       crossAuthors: {
         queryOptions: () => ({
           queryKey: ["leadForm.crossAuthors"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (stub returns a resolved value)
           queryFn: async () => [] as never[],
         }),
         pathFilter: () => ({ queryKey: ["leadForm.crossAuthors"] }),
@@ -256,6 +268,7 @@ function buildHarness(opts: {
       crossAuthorSections: {
         queryOptions: () => ({
           queryKey: ["leadForm.crossAuthorSections"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (stub returns a resolved value)
           queryFn: async () => [] as never[],
         }),
         pathFilter: () => ({ queryKey: ["leadForm.crossAuthorSections"] }),
@@ -263,6 +276,7 @@ function buildHarness(opts: {
       getVersion: {
         queryOptions: () => ({
           queryKey: ["leadForm.getVersion"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (stub returns a resolved value)
           queryFn: async () => null,
         }),
         pathFilter: () => ({ queryKey: ["leadForm.getVersion"] }),

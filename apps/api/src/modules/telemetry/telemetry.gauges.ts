@@ -134,7 +134,7 @@ export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
     const activeLeads = customreportActiveLeadsTotal as unknown as {
       collect: () => Promise<void>;
     };
-    onTimeRatio.collect = async () => undefined;
-    activeLeads.collect = async () => undefined;
+    onTimeRatio.collect = () => Promise.resolve();
+    activeLeads.collect = () => Promise.resolve();
   }
 }

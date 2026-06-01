@@ -85,9 +85,11 @@ function createSpyRepository(
   activeId: string | null = null,
 ): WeeklyReportRepository {
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
     getWeeklyReport: vi.fn(async (id: string) =>
       structuredClone(reports.get(id) ?? null),
     ),
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
     getActiveReportId: vi.fn(async () => activeId),
   };
 }

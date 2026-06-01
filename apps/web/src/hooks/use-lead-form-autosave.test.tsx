@@ -54,6 +54,7 @@ function buildHarness(
   const calls: unknown[] = [];
   const userMutationFn =
     opts.mutationFn ??
+    // eslint-disable-next-line @typescript-eslint/require-await -- default mock satisfies the async mutationFn contract (no awaitable work in the stub)
     (async () => {
       return { ok: true };
     });
@@ -156,12 +157,14 @@ describe("useLeadFormAutosave", () => {
     expect(result.current.state).toBe("pending");
 
     // 1000ms in, change again -> debounce restarts.
+    // eslint-disable-next-line @typescript-eslint/require-await -- async required by act() signature; body has no awaitable work in this step
     await act(async () => {
       vi.advanceTimersByTime(1000);
     });
     rerender({ payload: makePayload("b") });
 
     // 1000ms more (2s total since first change, 1s since second).
+    // eslint-disable-next-line @typescript-eslint/require-await -- async required by act() signature; body has no awaitable work in this step
     await act(async () => {
       vi.advanceTimersByTime(1000);
     });
@@ -258,6 +261,7 @@ describe("useLeadFormAutosave", () => {
 
   it('on mutation error transitions to state="error" and calls toast.error', async () => {
     const { wrapper } = buildHarness({
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async mutationFn contract; throws synchronously but must satisfy Promise<unknown> return type
       mutationFn: async () => {
         throw new Error("Network down");
       },

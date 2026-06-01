@@ -43,10 +43,12 @@ function createRepository(...rules: AdminReminderRule[]): RemindersRepository {
   const executions = new Map<string, AdminReminderExecution>();
 
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async getRule(ruleId: string) {
       const found = rules.find((r) => r.id === ruleId);
       return found ? structuredClone(found) : null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async findExecutionByDedupeKey(dedupeKey: string) {
       for (const execution of executions.values()) {
         if (execution.dedupeKey === dedupeKey) {
@@ -55,14 +57,17 @@ function createRepository(...rules: AdminReminderRule[]): RemindersRepository {
       }
       return null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async saveExecution(execution: AdminReminderExecution) {
       executions.set(execution.id, structuredClone(execution));
       return structuredClone(execution);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async getExecution(executionId: string) {
       const execution = executions.get(executionId);
       return execution ? structuredClone(execution) : null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async listExecutions(ruleId: string) {
       return [...executions.values()]
         .filter((e) => e.ruleId === ruleId)

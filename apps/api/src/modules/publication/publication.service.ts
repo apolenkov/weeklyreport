@@ -100,8 +100,8 @@ export class PublicationService {
      * Errors are swallowed below — publish never fails because of
      * ingestion bookkeeping.
      */
-    private readonly ingestionHook: IngestionPublishHook = async () =>
-      undefined,
+    private readonly ingestionHook: IngestionPublishHook = () =>
+      Promise.resolve(undefined),
   ) {
     this.logger = logger ?? createNullLogger();
   }

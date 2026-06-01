@@ -32,6 +32,7 @@ describe("buildUserSession — admin SAML login (Phase 32-C / H-01)", () => {
     const existing = opts.existingUser ?? null;
     const fake = {
       user: {
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma user.findFirst contract (no awaitable work in the stub)
         findFirst: vi.fn(async () => existing),
         update: vi.fn(
           async ({
@@ -40,6 +41,7 @@ describe("buildUserSession — admin SAML login (Phase 32-C / H-01)", () => {
           }: {
             where: { id: string };
             data: Partial<{ samlId: string; name: string }>;
+            // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma user.update contract (no awaitable work in the stub)
           }) => ({
             ...(existing ?? { email: "unset", role: "lead" as Role }),
             id: where.id,
@@ -51,6 +53,7 @@ describe("buildUserSession — admin SAML login (Phase 32-C / H-01)", () => {
             data,
           }: {
             data: { samlId: string; email: string; name: string; role: Role };
+            // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma user.create contract (no awaitable work in the stub)
           }) => ({
             id: "new-user-id",
             ...data,
@@ -58,27 +61,34 @@ describe("buildUserSession — admin SAML login (Phase 32-C / H-01)", () => {
         ),
       },
       reportSection: {
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma reportSection.findFirst contract (no awaitable work in the stub)
         findFirst: vi.fn(async () => null),
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma reportSection.findUnique contract (no awaitable work in the stub)
         findUnique: vi.fn(async () => null),
         create: vi.fn(),
       },
       report: {
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma report.findFirst contract (no awaitable work in the stub)
         findFirst: vi.fn(async () => null),
         create: vi.fn(),
       },
       project: {
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma project.findMany contract (no awaitable work in the stub)
         findMany: vi.fn(async () => []),
       },
       projectStatus: {
         createMany: vi.fn(),
       },
       reportingGroup: {
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma reportingGroup.findFirst contract (no awaitable work in the stub)
         findFirst: vi.fn(async () => ({
           id: "a0000000-0000-4000-8000-000000000301",
         })),
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma reportingGroup.findUnique contract (no awaitable work in the stub)
         findUnique: vi.fn(async () => ({
           name: "Core Development",
         })),
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma reportingGroup.upsert contract (no awaitable work in the stub)
         upsert: vi.fn(async () => ({
           id: "a0000000-0000-4000-8000-000000000301",
         })),

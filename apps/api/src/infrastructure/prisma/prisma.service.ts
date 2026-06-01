@@ -79,7 +79,7 @@ export class PrismaService
     this.logger.log("Database connection established");
   }
 
-  async beforeApplicationShutdown(): Promise<void> {
+  beforeApplicationShutdown(): void {
     this.logger.log("Shutting down Prisma...");
   }
 

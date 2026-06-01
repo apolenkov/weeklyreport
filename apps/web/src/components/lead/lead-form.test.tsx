@@ -130,6 +130,7 @@ function buildHarness(
       getActive: {
         queryOptions: () => ({
           queryKey: ["reports.getActive"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC queryFn contract (TanStack expects a Promise-returning fn)
           queryFn: async () => ({
             reportId: REPORT_ID,
             reportSectionId: SECTION_ID,
@@ -141,6 +142,7 @@ function buildHarness(
       myHistory: {
         queryOptions: () => ({
           queryKey: ["reports.myHistory"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC queryFn contract (TanStack expects a Promise-returning fn)
           queryFn: async () => [],
         }),
         pathFilter: () => ({ queryKey: ["reports.myHistory"] }),
@@ -150,6 +152,7 @@ function buildHarness(
           cap.saveDraftOpts = passed;
           return {
             ...passed,
+            // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC mutationFn contract (TanStack expects a Promise-returning fn)
             mutationFn: async (vars: unknown) => {
               calls.push({ type: "saveDraft", vars });
               return { ok: true };
@@ -177,6 +180,7 @@ function buildHarness(
       byPeriod: {
         queryOptions: () => ({
           queryKey: ["leadForm.byPeriod"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC queryFn contract (TanStack expects a Promise-returning fn)
           queryFn: async () => ({
             section: makeSection({ status: opts.sectionStatus }),
             readOnly: opts.byPeriodReadOnly ?? false,
@@ -187,6 +191,7 @@ function buildHarness(
       versions: {
         queryOptions: () => ({
           queryKey: ["leadForm.versions"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC queryFn contract (TanStack expects a Promise-returning fn)
           queryFn: async () => opts.versions ?? [],
         }),
         pathFilter: () => ({ queryKey: ["leadForm.versions"] }),
@@ -210,6 +215,7 @@ function buildHarness(
           cap.fillFromOpts = passed;
           return {
             ...passed,
+            // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC mutationFn contract (TanStack expects a Promise-returning fn)
             mutationFn: async (vars: unknown) => {
               calls.push({ type: "fillFrom", vars });
               return { ok: true };
@@ -223,6 +229,7 @@ function buildHarness(
           cap.restoreOpts = passed;
           return {
             ...passed,
+            // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC mutationFn contract (TanStack expects a Promise-returning fn)
             mutationFn: async (vars: unknown) => {
               calls.push({ type: "restoreVersion", vars });
               return { ok: true };
@@ -244,6 +251,7 @@ function buildHarness(
         ) => {
           return {
             ...passed,
+            // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC mutationFn contract (TanStack expects a Promise-returning fn)
             mutationFn: async (vars: unknown) => {
               calls.push({ type: "createSnapshot", vars });
               return { ok: true };
@@ -266,6 +274,7 @@ function buildHarness(
         ) => {
           return {
             ...passed,
+            // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC mutationFn contract (TanStack expects a Promise-returning fn)
             mutationFn: async (vars: unknown) => {
               calls.push({ type: "requestReopen", vars });
               return { ok: true };
@@ -277,6 +286,7 @@ function buildHarness(
       crossAuthors: {
         queryOptions: () => ({
           queryKey: ["leadForm.crossAuthors"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC queryFn contract (TanStack expects a Promise-returning fn)
           queryFn: async () => [] as never[],
         }),
         pathFilter: () => ({ queryKey: ["leadForm.crossAuthors"] }),
@@ -284,6 +294,7 @@ function buildHarness(
       crossAuthorSections: {
         queryOptions: () => ({
           queryKey: ["leadForm.crossAuthorSections"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC queryFn contract (TanStack expects a Promise-returning fn)
           queryFn: async () => [] as never[],
         }),
         pathFilter: () => ({ queryKey: ["leadForm.crossAuthorSections"] }),
@@ -292,6 +303,7 @@ function buildHarness(
       getVersion: {
         queryOptions: () => ({
           queryKey: ["leadForm.getVersion"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC queryFn contract (TanStack expects a Promise-returning fn)
           queryFn: async () => null,
         }),
         pathFilter: () => ({ queryKey: ["leadForm.getVersion"] }),

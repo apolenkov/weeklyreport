@@ -198,9 +198,11 @@ describe("LeadFormService — fillFrom", () => {
 
     const repo = createMockRepository({
       getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
+      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async LeadFormRepository.createVersionSnapshot (mock returns synchronously, no awaitable work)
       createVersionSnapshot: vi.fn().mockImplementation(async () => {
         callOrder.push("snapshot");
       }),
+      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async LeadFormRepository.fillFromSection (mock returns synchronously, no awaitable work)
       fillFromSection: vi.fn().mockImplementation(async () => {
         callOrder.push("fill");
         return 7;
@@ -343,9 +345,11 @@ describe("LeadFormService — restoreVersion", () => {
     const callOrder: string[] = [];
     const repo = createMockRepository({
       getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
+      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async LeadFormRepository.createVersionSnapshot (mock returns synchronously, no awaitable work)
       createVersionSnapshot: vi.fn().mockImplementation(async () => {
         callOrder.push("snapshot");
       }),
+      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async LeadFormRepository.restoreVersion (mock returns synchronously, no awaitable work)
       restoreVersion: vi.fn().mockImplementation(async () => {
         callOrder.push("restore");
         return 2;

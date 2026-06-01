@@ -52,15 +52,18 @@ function createRepository(
   let currentSection = structuredClone(section);
 
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReportSectionsRepository contract (no awaitable work in the stub)
     async getSectionById(reportSectionId) {
       if (reportSectionId !== currentSection.reportSectionId) {
         return null;
       }
       return structuredClone(currentSection);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReportSectionsRepository contract (no awaitable work in the stub)
     async getReportStatus() {
       return reportStatus;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ReportSectionsRepository contract (no awaitable work in the stub)
     async saveSection(nextSection) {
       currentSection = structuredClone(nextSection);
       return structuredClone(currentSection);

@@ -50,9 +50,11 @@ const latestDetail: ArchiveReportDetail = {
 
 function createRepository(): ArchiveRepository {
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this in-memory stub)
     async getArchiveReport(reportIdInput: string) {
       return reportIdInput === reportId ? structuredClone(latestDetail) : null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this in-memory stub)
     async listArchiveReports() {
       return [
         structuredClone(latestDetail.summary),
@@ -120,7 +122,9 @@ describe("AUTH-04 viewer scoping", () => {
     listSpy: ReturnType<typeof vi.fn>;
     getSpy: ReturnType<typeof vi.fn>;
   } {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this stub)
     const listSpy = vi.fn(async () => [structuredClone(latestDetail.summary)]);
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this stub)
     const getSpy = vi.fn(async () => structuredClone(latestDetail));
     const repo: ArchiveRepository = {
       listArchiveReports: listSpy,
@@ -155,7 +159,9 @@ describe("AUTH-04 viewer scoping", () => {
 
   it("viewer requesting a non-published row through repository null receives ArchiveDomainError", async () => {
     const repo: ArchiveRepository = {
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this stub)
       listArchiveReports: vi.fn(async () => []),
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this stub)
       getArchiveReport: vi.fn(async () => null),
     };
     const service = new ArchiveService(repo);

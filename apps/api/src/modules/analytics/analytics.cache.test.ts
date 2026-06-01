@@ -30,6 +30,7 @@ function inMemoryCache(): {
         store.set(key, JSON.stringify(fresh));
         return fresh;
       },
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements InvalidatableCache interface (Promise<void> return type required by the port contract; no awaitable work in this in-memory stub)
       async invalidateAll() {
         for (const k of Array.from(store.keys())) {
           if (k.startsWith("customreport:analytics:")) store.delete(k);
@@ -42,6 +43,7 @@ function inMemoryCache(): {
 describe("AnalyticsCache contract", () => {
   it("hits the cache on the second call to the same key", async () => {
     const { cache } = inMemoryCache();
+    // eslint-disable-next-line @typescript-eslint/require-await -- fn parameter typed as () => Promise<T>; async is required to satisfy the contract (no awaitable work in this stub)
     const fn = vi.fn(async () => ({ ok: true }));
 
     await cache.getOrCompute("customreport:analytics:k", fn);
@@ -53,9 +55,11 @@ describe("AnalyticsCache contract", () => {
   it("invalidateAll clears prefixed keys and leaves others alone", async () => {
     const { cache, store } = inMemoryCache();
 
+    // eslint-disable-next-line @typescript-eslint/require-await -- fn parameter typed as () => Promise<T>; async is required to satisfy the contract (no awaitable work in this stub)
     await cache.getOrCompute("customreport:analytics:a", async () => ({
       a: 1,
     }));
+    // eslint-disable-next-line @typescript-eslint/require-await -- fn parameter typed as () => Promise<T>; async is required to satisfy the contract (no awaitable work in this stub)
     await cache.getOrCompute("customreport:analytics:b", async () => ({
       b: 2,
     }));
@@ -76,10 +80,12 @@ describe("AnalyticsCache contract", () => {
     };
     const seen = await cache.getOrCompute(
       "customreport:analytics:roundtrip",
+      // eslint-disable-next-line @typescript-eslint/require-await -- fn parameter typed as () => Promise<T>; async is required to satisfy the contract (no awaitable work in this stub)
       async () => value,
     );
     const cached = await cache.getOrCompute(
       "customreport:analytics:roundtrip",
+      // eslint-disable-next-line @typescript-eslint/require-await -- fn parameter typed as () => Promise<T>; async is required to satisfy the contract (no awaitable work in this stub)
       async () => ({ unreached: true }),
     );
     expect(seen).toEqual(value);

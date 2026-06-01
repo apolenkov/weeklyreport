@@ -35,6 +35,7 @@ describe("TelegramProcessor (Phase 55 / UFB-056)", () => {
 
   it("throws when the adapter returns { ok: false } so BullMQ retries", async () => {
     const failingAdapter: TelegramAdapter = {
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async TelegramAdapter contract (no awaitable work in the stub)
       async send(): Promise<TelegramSendResult> {
         return { ok: false };
       },
@@ -47,6 +48,7 @@ describe("TelegramProcessor (Phase 55 / UFB-056)", () => {
 
   it("propagates adapter exceptions (network errors fail the job)", async () => {
     const throwingAdapter: TelegramAdapter = {
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async TelegramAdapter contract (throws synchronously to simulate network error)
       async send(): Promise<TelegramSendResult> {
         throw new Error("ENETDOWN");
       },

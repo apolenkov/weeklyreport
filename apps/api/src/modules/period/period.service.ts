@@ -67,8 +67,8 @@ export type IngestionPublishHook = (
 export class PeriodService {
   constructor(
     private readonly repository: PeriodRepository,
-    private readonly invalidateAnalyticsCache: AnalyticsCacheInvalidator = async () =>
-      undefined,
+    private readonly invalidateAnalyticsCache: AnalyticsCacheInvalidator = () =>
+      Promise.resolve(undefined),
     /**
      * UFB-052 (Phase 51-B): reopen-policy gate. Defaults to a null
      * reader (no gating) so the 88+ unit/integration tests that pre-date
@@ -76,14 +76,15 @@ export class PeriodService {
      * allowed exactly as before. Production wiring is done in
      * period.module.ts.
      */
-    private readonly readReopenPolicy: ReopenPolicyReader = async () => null,
+    private readonly readReopenPolicy: ReopenPolicyReader = () =>
+      Promise.resolve(null),
     /**
      * On every successful publishPeriod, called with the section ids of
      * the just-published period. No-op by default; production may wire a
      * real ingestion consumer here (see {@link IngestionPublishHook}).
      */
-    private readonly ingestionHook: IngestionPublishHook = async () =>
-      undefined,
+    private readonly ingestionHook: IngestionPublishHook = () =>
+      Promise.resolve(undefined),
   ) {}
 
   async publishPeriod(

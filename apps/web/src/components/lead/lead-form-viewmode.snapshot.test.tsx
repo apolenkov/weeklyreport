@@ -49,6 +49,7 @@ function buildTRPC() {
       getActive: {
         queryOptions: () => ({
           queryKey: ["reports.getActive"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (no awaitable work in the stub)
           queryFn: async () => ({
             reportId: REPORT_ID,
             reportSectionId: SECTION_ID,
@@ -60,6 +61,7 @@ function buildTRPC() {
       myHistory: {
         queryOptions: () => ({
           queryKey: ["reports.myHistory"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (no awaitable work in the stub)
           queryFn: async () => [],
         }),
         pathFilter: () => ({ queryKey: ["reports.myHistory"] }),
@@ -67,6 +69,7 @@ function buildTRPC() {
       saveDraft: {
         mutationOptions: (p: object = {}) => ({
           ...p,
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
           mutationFn: async () => ({ ok: true }),
         }),
         pathFilter: () => ({ queryKey: ["reports.saveDraft"] }),
@@ -74,6 +77,7 @@ function buildTRPC() {
       submit: {
         mutationOptions: (p: object = {}) => ({
           ...p,
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
           mutationFn: async () => ({ ok: true }),
         }),
         pathFilter: () => ({ queryKey: ["reports.submit"] }),
@@ -83,6 +87,7 @@ function buildTRPC() {
       byPeriod: {
         queryOptions: () => ({
           queryKey: ["leadForm.byPeriod"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (no awaitable work in the stub)
           queryFn: async () => ({ section: makeSection(), readOnly: false }),
         }),
         pathFilter: () => ({ queryKey: ["leadForm.byPeriod"] }),
@@ -90,6 +95,7 @@ function buildTRPC() {
       versions: {
         queryOptions: () => ({
           queryKey: ["leadForm.versions"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (no awaitable work in the stub)
           queryFn: async () => [],
         }),
         pathFilter: () => ({ queryKey: ["leadForm.versions"] }),
@@ -97,6 +103,7 @@ function buildTRPC() {
       revoke: {
         mutationOptions: (p: object = {}) => ({
           ...p,
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
           mutationFn: async () => ({ ok: true }),
         }),
         pathFilter: () => ({ queryKey: ["leadForm.revoke"] }),
@@ -104,6 +111,7 @@ function buildTRPC() {
       fillFrom: {
         mutationOptions: (p: object = {}) => ({
           ...p,
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
           mutationFn: async () => ({ ok: true }),
         }),
         pathFilter: () => ({ queryKey: ["leadForm.fillFrom"] }),
@@ -111,6 +119,7 @@ function buildTRPC() {
       restoreVersion: {
         mutationOptions: (p: object = {}) => ({
           ...p,
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
           mutationFn: async () => ({ ok: true }),
         }),
         pathFilter: () => ({ queryKey: ["leadForm.restoreVersion"] }),
@@ -118,6 +127,7 @@ function buildTRPC() {
       createSnapshot: {
         mutationOptions: (p: object = {}) => ({
           ...p,
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
           mutationFn: async () => ({ ok: true }),
         }),
         pathFilter: () => ({ queryKey: ["leadForm.createSnapshot"] }),
@@ -125,6 +135,7 @@ function buildTRPC() {
       requestReopen: {
         mutationOptions: (p: object = {}) => ({
           ...p,
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
           mutationFn: async () => ({ ok: true }),
         }),
         pathFilter: () => ({ queryKey: ["leadForm.requestReopen"] }),
@@ -132,6 +143,7 @@ function buildTRPC() {
       crossAuthors: {
         queryOptions: () => ({
           queryKey: ["leadForm.crossAuthors"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (no awaitable work in the stub)
           queryFn: async () => [] as never[],
         }),
         pathFilter: () => ({ queryKey: ["leadForm.crossAuthors"] }),
@@ -139,6 +151,7 @@ function buildTRPC() {
       crossAuthorSections: {
         queryOptions: () => ({
           queryKey: ["leadForm.crossAuthorSections"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (no awaitable work in the stub)
           queryFn: async () => [] as never[],
         }),
         pathFilter: () => ({ queryKey: ["leadForm.crossAuthorSections"] }),
@@ -146,6 +159,7 @@ function buildTRPC() {
       getVersion: {
         queryOptions: () => ({
           queryKey: ["leadForm.getVersion"],
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (no awaitable work in the stub)
           queryFn: async () => null,
         }),
         pathFilter: () => ({ queryKey: ["leadForm.getVersion"] }),

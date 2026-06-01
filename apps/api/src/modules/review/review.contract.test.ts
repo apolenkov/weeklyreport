@@ -18,6 +18,7 @@ const reportId = "22222222-2222-4222-8222-222222222222";
 
 function createRepository(rows: SubmissionDashboardRow[]): ReviewRepository {
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async ReviewRepository contract (no awaitable work in the stub)
     async getSubmissionDashboard(activeReportId, _session) {
       if (activeReportId !== reportId) {
         return [];
@@ -131,6 +132,7 @@ describe("ReviewService — contract tests", () => {
     };
 
     const repo: ReviewRepository = {
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async ReviewRepository contract (no awaitable work in the stub)
       async getSubmissionDashboard() {
         return [structuredClone(rowWithExtra)];
       },

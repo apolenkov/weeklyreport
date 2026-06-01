@@ -116,6 +116,7 @@ function createRepository(report: AssembledReport): PublicationRepository {
   let currentReport = structuredClone(report);
 
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
     async getAssembledReport(activeReportId: string) {
       if (activeReportId !== reportId) {
         return null;
@@ -123,6 +124,7 @@ function createRepository(report: AssembledReport): PublicationRepository {
 
       return structuredClone(currentReport);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
     async saveAssembledReport(nextReport: AssembledReport) {
       currentReport = structuredClone(nextReport);
 

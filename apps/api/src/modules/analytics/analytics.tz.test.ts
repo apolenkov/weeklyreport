@@ -42,12 +42,15 @@ const fixedComparison = { rows: [] };
 
 function fakeRepo(): AnalyticsRepository {
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository port (no awaitable work in the stub)
     async trafficLightHistory() {
       return fixedHistory;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository port (no awaitable work in the stub)
     async leadVelocity() {
       return fixedVelocity;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository port (no awaitable work in the stub)
     async periodComparison() {
       return fixedComparison;
     },

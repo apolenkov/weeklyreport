@@ -78,6 +78,25 @@ review). Budget per cluster; no global ceiling.
         20 errors fixed by hand across 13 files (the rules' autofixers were
         no-ops here). 0 per-site disables needed. Gate green: lint 0 errors,
         typecheck 5/5, test 579 passed.
+  - [x] R2b-2 wave-3 `require-await` → error, repo-wide (the declared standard
+        does NOT exempt tests for the type-aware base). Fresh measure: 369
+        firings / 69 files, of which only 10 in src / 7 files; 359 in 62 test
+        files. The split (mostly test mocks) was surfaced to the user before any
+        churn — user chose the full repo-wide run over a test-scope carve-out.
+        • 10 src sites fixed BY HAND in code, ZERO disables (fix-don't-suppress):
+        `Promise.resolve(...)` where the contract strictly returns a Promise
+        (period x3, publication x1 hook defaults; mock-telegram `send`;
+        next.config `rewrites`), and `async`-dropped + `: void` where the
+        contract accepts void (telemetry gauges x2; Nest `onModuleInit` /
+        `beforeApplicationShutdown`).
+        • 359 test sites done by the FIRST per-file Workflow fan-out (14 Sonnet
+        agents, no worktree, plain parallel; advisor guardrails: drop-async
+        ONLY on bare test-runner callbacks, else per-site disable w/ contract
+        reason, bottom-to-top edit order, no `--fix`, no blanket disable, gate
+        AFTER the barrier). Result: 3 drop-async + 356 per-site disables, all
+        with `-- mock implements the async … contract` reasons.
+        Gate green: require-await 0 repo-wide, lint 0 errors / 13 pre-existing
+        warns, typecheck 5/5, test 579 passed. No out-of-scope file edits.
 - [ ] R2c Behavior-risky clusters get an Opus-level review before merge.
 
 ## 3. Plugin-surface clusters

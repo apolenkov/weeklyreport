@@ -15,9 +15,11 @@ function buildPort(opts: {
   activeLeads?: number;
 }): TelemetryGaugesPort {
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async TelemetryGaugesPort contract (no awaitable work in the stub)
     async onTimeRatioLastNPeriods() {
       return opts.onTimeRatio ?? null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async TelemetryGaugesPort contract (no awaitable work in the stub)
     async activeLeadsLastPublishedPeriod() {
       return opts.activeLeads ?? 0;
     },

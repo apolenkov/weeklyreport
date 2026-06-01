@@ -47,12 +47,14 @@ function createRepository(report: AssembledReport | null): PdfExportRepository {
   const jobs = new Map<string, PdfExportJobRecord>();
 
   return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in the stub)
     async getPublishedReport(id: string) {
       if (id === report?.reportId) {
         return structuredClone(report);
       }
       return null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in the stub)
     async createExportJob(job: PdfExportJob, requestedBy?: string) {
       jobs.set(job.jobId, {
         ...structuredClone(job),
@@ -60,10 +62,12 @@ function createRepository(report: AssembledReport | null): PdfExportRepository {
       });
       return structuredClone(job);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in the stub)
     async getExportJob(jobId: string) {
       const job = jobs.get(jobId);
       return job ? structuredClone(job) : null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in the stub)
     async saveExportJob(job: PdfExportJob) {
       jobs.set(job.jobId, {
         ...structuredClone(job),
@@ -71,6 +75,7 @@ function createRepository(report: AssembledReport | null): PdfExportRepository {
       });
       return structuredClone(job);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PdfExportRepository contract (no awaitable work in the stub)
     async markExportFailed(jobId: string, _error: string) {
       const job = jobs.get(jobId);
       if (job) {

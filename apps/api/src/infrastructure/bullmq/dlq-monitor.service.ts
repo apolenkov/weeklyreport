@@ -35,7 +35,7 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
   private readonly queues = new Map<QueueName, Queue>();
   private pollTimer: NodeJS.Timeout | null = null;
 
-  async onModuleInit(): Promise<void> {
+  onModuleInit(): void {
     const bullOptions = getBullMQOptions();
 
     for (const name of QUEUE_NAMES) {
