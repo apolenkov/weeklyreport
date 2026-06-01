@@ -80,7 +80,7 @@ export class JobsService {
     const rawJobs = await this.emailReminderQueue.getFailed(start, end);
 
     const jobs: FailedJob[] = rawJobs.map((job) => ({
-      id: String(job.id ?? ""),
+      id: job.id ?? "",
       name: job.name,
       failedReason: job.failedReason ?? "",
       stacktrace: Array.isArray(job.stacktrace) ? [...job.stacktrace] : [],

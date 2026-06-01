@@ -72,7 +72,7 @@ function observeTrpcDuration(
   httpRequestDurationSeconds.observe(
     {
       method: type.toUpperCase(),
-      route: "/trpc/" + path,
+      route: `/trpc/${path}`,
       status_code: statusCode,
     },
     durationMs / 1000,
@@ -430,7 +430,7 @@ function buildRoleMiddleware(allowed: Role | Role[]) {
   return t.middleware<{ session: UserSession }>(async ({ ctx, next }) => {
     try {
       const session = assertRole(ctx.session, allowed);
-      return next({ ctx: { session } });
+      return await next({ ctx: { session } });
     } catch (err) {
       if (err instanceof TRPCError && err.code === "FORBIDDEN") {
         // T2 mitigation: even when role/userId are missing, emit so the

@@ -307,21 +307,19 @@ export function NavBar() {
               <div className="mt-1 h-2.5 w-16 rounded bg-[var(--color-muted)]/30" />
             </div>
           ) : (
-            <>
-              {visibleUser && (
-                <div
-                  className={USER_IDENTITY_SLOT_CLASS}
-                  data-testid="nav-identity"
-                >
-                  <span className="min-w-0 max-w-full truncate whitespace-nowrap text-[13px] leading-4 text-[var(--color-foreground)]">
-                    <span className="font-semibold">{visibleUser.name}</span>
-                  </span>
-                  <span className="min-w-0 max-w-full truncate whitespace-nowrap text-[10px] font-semibold uppercase leading-3 tracking-normal text-[var(--color-muted-foreground)]">
-                    {identityMeta}
-                  </span>
-                </div>
-              )}
-            </>
+            visibleUser && (
+              <div
+                className={USER_IDENTITY_SLOT_CLASS}
+                data-testid="nav-identity"
+              >
+                <span className="min-w-0 max-w-full truncate whitespace-nowrap text-[13px] leading-4 text-[var(--color-foreground)]">
+                  <span className="font-semibold">{visibleUser.name}</span>
+                </span>
+                <span className="min-w-0 max-w-full truncate whitespace-nowrap text-[10px] font-semibold uppercase leading-3 tracking-normal text-[var(--color-muted-foreground)]">
+                  {identityMeta}
+                </span>
+              </div>
+            )
           )}
         </div>
 

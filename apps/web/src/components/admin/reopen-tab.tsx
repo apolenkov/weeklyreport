@@ -160,8 +160,7 @@ export function ReopenTab() {
 
       {listQuery.isError && (
         <div className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-red-50 p-4 text-sm text-red-800">
-          Failed to load requests:{" "}
-          {String(listQuery.error?.message ?? "unknown")}
+          Failed to load requests: {listQuery.error?.message ?? "unknown"}
         </div>
       )}
 

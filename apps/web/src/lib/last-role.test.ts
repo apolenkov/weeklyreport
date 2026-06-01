@@ -30,7 +30,7 @@ function makeMemoryStorage(): Storage {
     clear: () => map.clear(),
     getItem: (k: string) => (map.has(k) ? (map.get(k) as string) : null),
     setItem: (k: string, v: string) => {
-      map.set(k, String(v));
+      map.set(k, v);
     },
     removeItem: (k: string) => {
       map.delete(k);

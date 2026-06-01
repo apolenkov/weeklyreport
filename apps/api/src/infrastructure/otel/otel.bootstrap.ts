@@ -113,7 +113,7 @@ export function startOtel(
   // Best-effort shutdown on SIGTERM — flush pending spans + logs within ~5s.
   const shutdown = () => {
     void Promise.all([sdk?.shutdown(), loggerProvider?.shutdown()]).catch(
-      (err) => {
+      (err: unknown) => {
         process.stderr.write(
           `[otel] shutdown error: ${err instanceof Error ? err.message : String(err)}\n`,
         );

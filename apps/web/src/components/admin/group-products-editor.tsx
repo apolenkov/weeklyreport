@@ -168,7 +168,7 @@ export function GroupProductsEditor({
             );
             const hintId = `group-product-hint-${product.id}`;
             const disabled =
-              isPending || lockedByOtherGroup || Boolean(ownershipLoading);
+              isPending || lockedByOtherGroup || ownershipLoading;
 
             return (
               <li key={product.id}>

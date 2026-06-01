@@ -22,5 +22,5 @@ export default async function ReportsLayout({ children }: Props) {
   if (!session || !REQUIRED.includes(session.role)) {
     return <ForbiddenPage requiredRoles={REQUIRED} />;
   }
-  return <>{children}</>;
+  return children;
 }

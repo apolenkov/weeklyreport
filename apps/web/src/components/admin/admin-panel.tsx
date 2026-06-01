@@ -61,15 +61,12 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
 
   return (
     <div data-testid="admin-panel">
-      {activeTab === "settings" && (
-        <>
-          {!settings ? (
-            <AdminTabSkeleton variant="form" />
-          ) : (
-            <SettingsTab settings={settings} />
-          )}
-        </>
-      )}
+      {activeTab === "settings" &&
+        (!settings ? (
+          <AdminTabSkeleton variant="form" />
+        ) : (
+          <SettingsTab settings={settings} />
+        ))}
 
       {/* Reopen tab is self-contained — it owns its own queries, doesn't need
           the snapshot/settings context that the other tabs share. */}
