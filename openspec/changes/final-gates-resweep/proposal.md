@@ -11,16 +11,16 @@ browser.
 
 The parent change (`uat-quality-gates`) sketched a four-command gate and a
 console-error sweep. This change pins the final, authoritative version of that
-bar: a five-command chain that adds `pnpm build` and `pnpm lint:md`, plus a
-precise console-error classification (0 ERRORS; warnings logged but allowed;
-the favicon 404 ignored). Without a single codified acceptance gate, "done" is
-a matter of opinion per session.
+bar: a four-command chain that adds `pnpm build`, plus a precise console-error
+classification (0 ERRORS; warnings logged but allowed; the favicon 404 ignored).
+Without a single codified acceptance gate, "done" is a matter of opinion per
+session.
 
 ## What Changes
 
-- Define the final acceptance gate as a single five-command chain that MUST all
+- Define the final acceptance gate as a single four-command chain that MUST all
   exit 0:
-  `pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm lint:md`.
+  `pnpm typecheck && pnpm lint && pnpm test && pnpm build`.
 - Define a final Playwright re-sweep across all four roles
   (lead / head / admin / viewer) requiring **0 console ERRORS**, with warnings
   logged (not failing) and the favicon-404 request explicitly ignored.
@@ -34,13 +34,32 @@ a matter of opinion per session.
 - Affected specs: `uat-quality-gates` (ADDED requirements only; this change is
   the explicit final-gates extension of the parent capability).
 - Affected packages/files: none modified. The gate exercises existing scripts
-  in `package.json` (`typecheck`, `lint`, `test`, `build`, `lint:md`) and the
-  existing Playwright project under `e2e/`.
+  in `package.json` (`typecheck`, `lint`, `test`, `build`) and the existing
+  Playwright project under `e2e/`.
 - Risk: low. This is a verification/acceptance artifact. The only failure mode
   is that running the gate surfaces a real regression from an earlier wave — in
   which case the offending wave's change is reopened, not this one.
 - Sequencing: this change is gated by completion of Waves 2–4; it is the last to
   land in the track.
+
+## Update — 2026-06-01 (toolchain de-stale)
+
+The 2026-05-30 findings below were correct **for that day's toolchain (Biome
+hybrid)**. The toolchain has since moved again: Biome was fully removed and the
+repo reverted to ESLint + Prettier + stylelint (`migrate-lint-to-eslint-prettier`,
+Phase 1). Consequently this change's forward-looking gate definition has been
+de-staled to the **current** reality:
+
+- `pnpm lint` now =
+  `eslint . && stylelint "**/*.css" --allow-empty-input && pnpm lint:prisma:typecheck`
+  (no `biome check`).
+- There is **no** `pnpm lint:md` script — the chain is **four** commands
+  (`typecheck && lint && test && build`), not five. The earlier "hollow gate /
+  five-command" findings about `lint:md` are therefore moot (the command is gone).
+
+The historical findings below are kept as a dated record, not the live state.
+The change remains **blocked** behind defer-uat Waves 2–4 and its Playwright
+re-sweep (FGR-S1..S5) is still undone — de-staling does not unblock it.
 
 ## Grill findings — 2026-05-30
 
