@@ -3,9 +3,13 @@ import { describe, expect, it } from "vitest";
 
 import { isRouteVisible, ROUTE_ROLE_MAP } from "./role-visibility";
 
-type Case = { route: string; role: Role; expected: boolean };
+interface Case {
+  route: string;
+  role: Role;
+  expected: boolean;
+}
 
-const cases: ReadonlyArray<Case> = [
+const cases: readonly Case[] = [
   // viewer
   { route: "/admin", role: "viewer", expected: false },
   { route: "/head/dashboard", role: "viewer", expected: false },

@@ -3,9 +3,9 @@ import { Suspense } from "react";
 import { LeadForm } from "../../../../components/lead/lead-form";
 import { LeadFormSkeleton } from "../../../../components/lead/lead-form-skeleton";
 
-type Props = {
+interface Props {
   searchParams: Promise<{ period?: string; mode?: string }>;
-};
+}
 
 /**
  * Bare `/lead/report` route. Phase 35-07 introduces the addressed form

@@ -21,11 +21,11 @@ function SlidesViewIcon() {
   );
 }
 
-type ViewModeToggleProps = {
+interface ViewModeToggleProps {
   readonly editHref: string;
   readonly slidesHref: string;
   readonly mode?: "edit" | "slides";
-};
+}
 
 export function ViewModeToggle({
   editHref,

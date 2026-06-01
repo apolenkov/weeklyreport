@@ -166,7 +166,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
       "Source next item",
     ]);
     expect(items.every((item) => item.type === "current")).toBe(true);
-    expect(items.every((item) => item.carriedOver === false)).toBe(true);
+    expect(items.every((item) => !item.carriedOver)).toBe(true);
     expect(risks).toHaveLength(1);
     expect(expectDefined(risks[0]).severity).toBe("blocked");
     expect(expectDefined(risks[0]).stageNames).toEqual(["Dev"]);

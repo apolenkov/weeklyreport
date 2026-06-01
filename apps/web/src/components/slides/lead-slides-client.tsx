@@ -49,13 +49,13 @@ function SlideEmptyState({
   );
 }
 
-type LeadSlidesClientProps = {
+interface LeadSlidesClientProps {
   readonly initialReportId?: string | null;
   readonly chrome?: "full" | "content";
   /** W9.A: when provided, this ref is applied to the deck root div so the
    *  caller (lead-form header) can host the fullscreen button. */
   readonly deckRef?: RefObject<HTMLDivElement | null>;
-};
+}
 
 export function LeadSlidesClient({
   initialReportId = null,
@@ -210,7 +210,7 @@ export function LeadSlidesClient({
         groupLabel={
           inReportMode ? null : (session?.user?.reportingGroupName ?? null)
         }
-        sourceHref={"/lead/report/" + encodeURIComponent(targetReportId)}
+        sourceHref={`/lead/report/${encodeURIComponent(targetReportId)}`}
         sourceLabel="Open source section"
         hideSourceLink={inReportMode}
         heroControls={

@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { ItemStatus, KanbanItem, Product } from "./mock-data";
 import { StageMultiSelect } from "./stage-multi-select";
 
-type ItemEditDialogProps = {
+interface ItemEditDialogProps {
   /** Open/close state. Caller controls so it can wire submit/cancel. */
   readonly open: boolean;
   /**
@@ -46,15 +46,15 @@ type ItemEditDialogProps = {
   readonly ownPeriodRanks?: readonly number[];
   readonly onSave: (next: KanbanItem) => void;
   readonly onCancel: () => void;
-};
+}
 
-type Choice = {
+interface Choice {
   value: ItemStatus;
   label: string;
   bg: string;
   color: string;
   border: string;
-};
+}
 
 const CURRENT_WEEK_CHOICES: readonly Choice[] = [
   {
@@ -219,7 +219,6 @@ function ItemEditDialogContent({
   }
 
   return (
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- backdrop is a mouse convenience; dialog is keyboard-closable via Escape + close button
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
       onClick={onCancel}

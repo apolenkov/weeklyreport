@@ -29,7 +29,7 @@ function mapPrismaToExecution(row: {
   status: string;
   createdAt: Date;
   updatedAt: Date;
-  records: Array<{
+  records: {
     id: string;
     executionId: string;
     sourceItemId: string | null;
@@ -38,7 +38,7 @@ function mapPrismaToExecution(row: {
     targetDecisionId: string | null;
     recordType: string;
     createdAt: Date;
-  }>;
+  }[];
 }): { execution: CarryOverExecution; records: CarryOverRecord[] } {
   const execution = carryOverExecutionSchema.parse({
     id: row.id,

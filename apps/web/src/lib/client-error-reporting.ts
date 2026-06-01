@@ -45,14 +45,14 @@ export function getClientErrorDetails(error: unknown): ClientErrorDetails {
       ? (error.meta as Record<string, unknown>)
       : null;
   const requestIdFromShape =
-    typeof data?.["requestId"] === "string" ? data["requestId"] : null;
+    typeof data?.requestId === "string" ? data.requestId : null;
   const requestIdFromHeader = readResponseHeader(
-    meta?.["response"],
+    meta?.response,
     "x-request-id",
   );
   const httpStatus =
-    typeof data?.["httpStatus"] === "number" ? data["httpStatus"] : null;
-  const trpcCode = typeof data?.["code"] === "string" ? data["code"] : null;
+    typeof data?.httpStatus === "number" ? data.httpStatus : null;
+  const trpcCode = typeof data?.code === "string" ? data.code : null;
   const requestId = requestIdFromShape ?? requestIdFromHeader;
   const message = error instanceof Error ? error.message : "";
 

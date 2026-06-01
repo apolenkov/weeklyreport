@@ -1,6 +1,6 @@
 "use client";
 
-type StageMultiSelectProps = {
+interface StageMultiSelectProps {
   readonly id: string;
   readonly value: string[];
   readonly stages: readonly string[];
@@ -8,7 +8,7 @@ type StageMultiSelectProps = {
   readonly onChange: (next: string[]) => void;
   /** When provided, shows a consequence-preview banner above the stage chips. */
   readonly previewSeverity?: "at-risk" | "blocked";
-};
+}
 
 export function StageMultiSelect({
   id,
@@ -95,12 +95,11 @@ export function StageMultiSelect({
             return (
               <label
                 key={stage}
-                className={
-                  "inline-flex min-h-[34px] items-center gap-2 rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-semibold transition-colors " +
-                  (checked
+                className={`inline-flex min-h-[34px] items-center gap-2 rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-semibold transition-colors ${
+                  checked
                     ? "border-[var(--color-starbucks-accent)] bg-[var(--color-success)] text-[var(--color-primary)]"
-                    : "border-[rgba(0,0,0,0.18)] bg-white text-[var(--color-foreground)] hover:border-[var(--color-starbucks-accent)]")
-                }
+                    : "border-[rgba(0,0,0,0.18)] bg-white text-[var(--color-foreground)] hover:border-[var(--color-starbucks-accent)]"
+                }`}
               >
                 <input
                   type="checkbox"

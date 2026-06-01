@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import type { DecisionEntry, Product } from "./mock-data";
 import { StageMultiSelect } from "./stage-multi-select";
 
-type DecisionEditDialogProps = {
+interface DecisionEditDialogProps {
   readonly open: boolean;
   /** null = create mode, DecisionEntry = edit mode. */
   readonly decision: DecisionEntry | null;
@@ -28,7 +28,7 @@ type DecisionEditDialogProps = {
   readonly defaultProductId?: string;
   readonly onSave: (next: DecisionEntry) => void;
   readonly onCancel: () => void;
-};
+}
 
 export function DecisionEditDialog({
   open,
@@ -136,7 +136,6 @@ export function DecisionEditDialog({
   }
 
   return createPortal(
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- backdrop is a mouse convenience; dialog is keyboard-closable via Escape + Cancel button
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
       onClick={onCancel}

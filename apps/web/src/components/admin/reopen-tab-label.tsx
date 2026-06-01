@@ -5,9 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useTRPC } from "../../lib/trpc-context";
 import { TabCountPill } from "./tab-count-pill";
 
-type Props = {
+interface Props {
   readonly active?: boolean;
-};
+}
 
 /**
  * Tab label for the Reopen Requests admin tab. The count is an absolute

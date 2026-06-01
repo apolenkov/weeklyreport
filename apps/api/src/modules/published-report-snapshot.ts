@@ -18,12 +18,12 @@ export const reportFullIncludeForSnapshot = {
   publishedBy: true,
 } as const;
 
-type SnapshotSectionRow = {
+interface SnapshotSectionRow {
   id: string;
-  projectStatuses: Array<{ status: string | null }>;
-};
+  projectStatuses: { status: string | null }[];
+}
 
-type SnapshotReportRow = {
+interface SnapshotReportRow {
   id: string;
   periodStart: Date;
   periodEnd: Date;
@@ -33,7 +33,7 @@ type SnapshotReportRow = {
   publishedById: string | null;
   publishedBy: { name: string } | null;
   sections: SnapshotSectionRow[];
-};
+}
 
 export function buildAssembledReportFromPrismaRow(
   row: SnapshotReportRow,
@@ -120,7 +120,7 @@ export function buildPortfolioProductsFromSnapshotSections(
     {
       productId: string;
       productName: string;
-      statuses: Array<"green" | "yellow" | "red">;
+      statuses: ("green" | "yellow" | "red")[];
       stageCount: number;
       leadNames: Set<string>;
     }
@@ -217,9 +217,9 @@ export function buildEscalationsFromSnapshotSections(
 }
 
 function computePortfolioOverviewFromProjectStatuses(
-  sections: ReadonlyArray<{
-    projectStatuses: ReadonlyArray<{ status: string | null }>;
-  }>,
+  sections: readonly {
+    projectStatuses: readonly { status: string | null }[];
+  }[],
 ): PortfolioOverview {
   const totals = { green: 0, yellow: 0, red: 0 };
 
@@ -245,7 +245,7 @@ const statusSeverity: Record<"green" | "yellow" | "red", number> = {
 };
 
 function computeWorstStatus(
-  statuses: ReadonlyArray<"green" | "yellow" | "red">,
+  statuses: readonly ("green" | "yellow" | "red")[],
 ): "green" | "yellow" | "red" | null {
   if (statuses.length === 0) return null;
 

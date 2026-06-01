@@ -23,16 +23,16 @@ import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
  */
 function resolveApiUrl(): string {
   return (
-    process.env["API_URL"] ??
-    process.env["NEXT_PUBLIC_API_URL"] ??
+    process.env.API_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
     "http://localhost:3002"
   );
 }
 
-type TrpcBatchEntry = {
+interface TrpcBatchEntry {
   readonly result?: { readonly data?: unknown };
   readonly error?: { readonly message?: string };
-};
+}
 
 function decodeOrgPublicResponse(body: unknown): OrganizationPublic | null {
   if (!Array.isArray(body) || body.length === 0) return null;
@@ -47,9 +47,9 @@ function decodeOrgPublicResponse(body: unknown): OrganizationPublic | null {
       : data;
   if (!payload || typeof payload !== "object") return null;
   const p = payload as Record<string, unknown>;
-  if (typeof p["shortName"] !== "string" || typeof p["fullName"] !== "string")
+  if (typeof p.shortName !== "string" || typeof p.fullName !== "string")
     return null;
-  return { shortName: p["shortName"], fullName: p["fullName"] };
+  return { shortName: p.shortName, fullName: p.fullName };
 }
 
 export async function getOrgPublic(): Promise<OrganizationPublic> {

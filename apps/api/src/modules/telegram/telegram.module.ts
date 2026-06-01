@@ -21,7 +21,7 @@ import { TelegramProcessor } from "./telegram.queue.js";
  * arm and the throw becomes unreachable.
  */
 export function selectTelegramAdapter(): TelegramAdapter {
-  const token = process.env["TG_BOT_TOKEN"]?.trim() ?? "";
+  const token = process.env.TG_BOT_TOKEN?.trim() ?? "";
   if (token === "") {
     return new MockTelegramAdapter();
   }

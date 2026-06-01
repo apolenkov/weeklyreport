@@ -11,12 +11,12 @@ import {
 } from "../../lib/audit-logger.js";
 import type { createAuthController } from "./auth.controller.js";
 
-export type SamlProfile = {
+export interface SamlProfile {
   samlId: string;
   email: string;
   displayName: string;
   role: Role;
-};
+}
 
 /**
  * Get Monday 00:00:00.000 UTC and Sunday 23:59:59.999 UTC for the week
@@ -177,7 +177,7 @@ export async function buildUserSession(
     (await prisma.user.findFirst({ where: { samlId: profile.samlId } }));
 
   const needsOwningGroup =
-    profile.role !== "viewer" && (!existing || !existing.reportingGroupId);
+    profile.role !== "viewer" && !existing?.reportingGroupId;
   const fallbackReportingGroup = needsOwningGroup
     ? ((await prisma.reportingGroup.findFirst({
         where: { archived: false },

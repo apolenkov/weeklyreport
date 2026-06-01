@@ -158,10 +158,10 @@ describe("AUTH-05 cookie seam (CC-1) — service against real Prisma repo", () =
       },
     });
 
-    type EnqueuedJob = {
+    interface EnqueuedJob {
       name: string;
       data: { reportId: string; jobId: string; authToken: string };
-    };
+    }
     const enqueued: EnqueuedJob[] = [];
     const fakeQueue = {
       add: async (name: string, data: EnqueuedJob["data"]) => {

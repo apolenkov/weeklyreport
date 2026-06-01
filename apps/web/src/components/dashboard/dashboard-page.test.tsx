@@ -65,7 +65,7 @@ vi.mock("./blocked-at-risk-table", () => ({
   BlockedAtRiskTable: () => <div>Blocked</div>,
 }));
 
-type QueryState = {
+interface QueryState {
   data?: unknown;
   error?: Error | null;
   isError?: boolean;
@@ -73,7 +73,7 @@ type QueryState = {
   status?: "pending" | "error" | "success";
   fetchStatus?: "fetching" | "paused" | "idle";
   refetch?: ReturnType<typeof vi.fn>;
-};
+}
 
 const queryStates = new Map<string, Required<QueryState>>();
 

@@ -2,10 +2,10 @@ import { Suspense } from "react";
 import { HeadReportShell } from "../../../../../components/head/head-report-shell";
 import { WeeklyReportSkeleton } from "../../../../../components/weekly-report/weekly-report-skeleton";
 
-type Props = {
+interface Props {
   params: Promise<{ reportId: string }>;
   searchParams: Promise<{ authorId?: string; mode?: string }>;
-};
+}
 
 /**
  * Phase 35-07 (UX-15): addressed head report.

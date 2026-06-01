@@ -80,7 +80,7 @@ export function DevRoleSwitcher() {
   };
 
   const usersByRole = (usersQ.data ?? []).reduce<
-    Record<Role, Array<{ id: string; email: string; name: string; role: Role }>>
+    Record<Role, { id: string; email: string; name: string; role: Role }[]>
   >(
     (acc, u) => {
       const r = u.role as Role;

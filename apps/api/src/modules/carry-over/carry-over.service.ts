@@ -16,11 +16,11 @@ export class CarryOverDomainError extends Error {
   }
 }
 
-export type CarryOverResult = {
+export interface CarryOverResult {
   execution: CarryOverExecution;
   records: CarryOverRecord[];
   targetSection: ReportSectionReadModel;
-};
+}
 
 export interface CarryOverRepository {
   findExecutionByDedupeKey(
@@ -136,14 +136,14 @@ export class CarryOverService {
       );
     }
 
-    const allCarriedItems: Array<{
+    const allCarriedItems: {
       item: ReportSectionReadModel["items"][number];
       record: CarryOverRecord;
-    }> = [];
-    const allCarriedDecisions: Array<{
+    }[] = [];
+    const allCarriedDecisions: {
       decision: ReportSectionReadModel["decisions"][number];
       record: CarryOverRecord;
-    }> = [];
+    }[] = [];
 
     for (const sourceSection of sourceSections) {
       const sectionItems = sourceSection.items

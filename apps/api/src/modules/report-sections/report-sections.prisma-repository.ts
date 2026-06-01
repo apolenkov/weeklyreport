@@ -54,26 +54,26 @@ type PrismaReportSectionWithRelations = NonNullable<
     name: string;
     role: string;
     id: string;
-    stageAssignments: Array<{
+    stageAssignments: {
       userId: string;
       stageId: string;
       projectId: string;
       project: { id: string; name: string; archived: boolean };
       stage: { id: string; name: string; sortOrder: number };
-    }>;
+    }[];
   };
-  projectStatuses: Array<{
+  projectStatuses: {
     projectId: string;
     status: string;
     project: { id: string; name: string; archived: boolean };
-  }>;
-  stageStatuses: Array<{
+  }[];
+  stageStatuses: {
     projectId: string;
     stageId: string;
     status: string | null;
     stage: { id: string; name: string; sortOrder: number };
-  }>;
-  items: Array<{
+  }[];
+  items: {
     id: string;
     projectId: string;
     type: string;
@@ -84,8 +84,8 @@ type PrismaReportSectionWithRelations = NonNullable<
     completed: boolean | null;
     priorityRank: number | null;
     stageNames: string[];
-  }>;
-  risks: Array<{
+  }[];
+  risks: {
     id: string;
     projectId: string;
     risk: string;
@@ -93,8 +93,8 @@ type PrismaReportSectionWithRelations = NonNullable<
     mitigation: string;
     severity: string;
     stageNames: string[];
-  }>;
-  decisions: Array<{
+  }[];
+  decisions: {
     id: string;
     text: string;
     owner: string;
@@ -103,11 +103,11 @@ type PrismaReportSectionWithRelations = NonNullable<
     resolvedAt: Date | null;
     stageNames: string[];
     productId: string | null;
-  }>;
+  }[];
 };
 
 function aggregateStageTraffic(
-  stages: Array<{ status?: string | null }>,
+  stages: { status?: string | null }[],
 ): string | null {
   let severity = 0;
   for (const stage of stages) {

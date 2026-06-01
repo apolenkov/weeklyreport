@@ -99,9 +99,7 @@ interface LeafProcedure {
   _def: { middlewares: readonly unknown[] };
 }
 
-interface RouterRecord {
-  [key: string]: LeafProcedure | RouterShape;
-}
+type RouterRecord = Record<string, LeafProcedure | RouterShape>;
 
 interface RouterShape {
   _def: { procedures: RouterRecord; record?: RouterRecord };
@@ -130,8 +128,8 @@ function collectLeafProcedures(router: {
     procedures: Record<string, unknown>;
     record?: Record<string, unknown>;
   };
-}): Array<[string, LeafProcedure]> {
-  const leaves: Array<[string, LeafProcedure]> = [];
+}): [string, LeafProcedure][] {
+  const leaves: [string, LeafProcedure][] = [];
 
   // tRPC v11: `_def.procedures` is a flat record where keys are dot-separated
   // paths into nested namespaces (e.g. 'auth.me', 'reports.getActive'). Each
@@ -183,9 +181,11 @@ describe("AUTH-03 default-deny coverage gate", () => {
     if (offending.length > 0) {
       // Diagnostic surface for CI failures; the assertion below fails the test.
       console.error(
-        "[AUTH-03] Procedures lacking recognised role declaration:\n" +
-          offending.map((p) => `  - ${p}`).join("\n") +
-          "\nFix: rebuild on publicProcedure / protectedProcedure / leadProcedure / headProcedure / viewerProcedure.",
+        `[AUTH-03] Procedures lacking recognised role declaration:\n${offending
+          .map((p) => `  - ${p}`)
+          .join(
+            "\n",
+          )}\nFix: rebuild on publicProcedure / protectedProcedure / leadProcedure / headProcedure / viewerProcedure.`,
       );
     }
 

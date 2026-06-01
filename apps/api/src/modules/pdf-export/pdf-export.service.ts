@@ -67,7 +67,7 @@ const PDF_EXPORT_KIND = "pdf-export" as const;
  * `trpc.context.ts` after `verifySessionToken` fails.
  */
 export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
-  const secret = process.env["PDF_EXPORT_JWT_SECRET"];
+  const secret = process.env.PDF_EXPORT_JWT_SECRET;
   if (!secret || secret.length < 16) {
     throw new Error(
       "PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 16 chars).",
@@ -78,13 +78,13 @@ export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
     throw new Error("Invalid PDF export token payload");
   }
   const claims = decoded as Record<string, unknown>;
-  if (claims["kind"] !== PDF_EXPORT_KIND) {
+  if (claims.kind !== PDF_EXPORT_KIND) {
     throw new Error("Token is not a PDF export token (kind mismatch)");
   }
-  if (typeof claims["reportId"] !== "string" || !claims["reportId"]) {
+  if (typeof claims.reportId !== "string" || !claims.reportId) {
     throw new Error("PDF export token missing reportId claim");
   }
-  return { reportId: claims["reportId"], kind: PDF_EXPORT_KIND };
+  return { reportId: claims.reportId, kind: PDF_EXPORT_KIND };
 }
 
 export class PdfExportService {
@@ -108,7 +108,7 @@ export class PdfExportService {
    * time instead of silently producing a token nobody can verify.
    */
   signPdfExportToken(reportId: string): string {
-    const secret = process.env["PDF_EXPORT_JWT_SECRET"];
+    const secret = process.env.PDF_EXPORT_JWT_SECRET;
     if (!secret || secret.length < 16) {
       throw new PdfExportDomainError(
         "PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 16 chars).",
@@ -132,7 +132,7 @@ export class PdfExportService {
   ): Promise<PdfExportJob> {
     const report = await this.repository.getPublishedReport(reportId);
 
-    if (!report || report.status !== "published") {
+    if (report?.status !== "published") {
       throw new PdfExportDomainError("PDF export requires a published report.");
     }
 
@@ -232,13 +232,13 @@ export class PdfExportService {
    * cookie to a specific origin regardless of host shape, and it derives
    * the secure flag from the URL's protocol automatically.
    */
-  buildAuthCookies(authToken: string): Array<{
+  buildAuthCookies(authToken: string): {
     name: string;
     value: string;
     url: string;
     httpOnly: boolean;
     sameSite: "Lax" | "Strict" | "None";
-  }> {
+  }[] {
     const cookieName =
       process.env.AUTH_JWT_COOKIE_NAME ?? "customreport_session";
     const baseUrl = process.env.PDF_BASE_URL ?? "http://localhost:3000";

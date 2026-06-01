@@ -26,30 +26,30 @@ import { useTRPC } from "./trpc-context";
 
 // Phase 27 widened the session-level role enum (sessionRoleSchema) to include
 // 'admin' for SAML claim mapping. adminProcedure === headProcedure for v6.0.
-export type SessionUser = {
+export interface SessionUser {
   id: string;
   name: string;
   email: string;
   role: "lead" | "head" | "viewer" | "admin";
   reportingGroupName?: string;
-};
+}
 
 /**
  * UFB-047 / Phase 48-A: organization identity hydrated by the API on the
  * `auth.me` response. The nav-bar consumes `organization.shortName` for
  * the brand string; anonymous pages (landing) use `org.getPublic` instead.
  */
-export type SessionOrganization = {
+export interface SessionOrganization {
   shortName: string;
   fullName: string;
-};
+}
 
-export type SessionState = {
+export interface SessionState {
   user: SessionUser | null;
   organization: SessionOrganization | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-};
+}
 
 // Exported so consumer components can opt-in to graceful degradation when
 // rendered without a SessionProvider (e.g. narrow unit-test harnesses).

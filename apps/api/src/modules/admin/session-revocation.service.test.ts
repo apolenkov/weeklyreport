@@ -11,13 +11,13 @@ import { SessionRevocationService } from "./session-revocation.service.js";
 
 // ---- Minimal Redis stub ---------------------------------------------------
 
-type FakeRedis = {
+interface FakeRedis {
   data: Set<string>;
   sadd(key: string, member: string): Promise<number>;
   srem(key: string, member: string): Promise<number>;
   sismember(key: string, member: string): Promise<0 | 1>;
   quit(): Promise<void>;
-};
+}
 
 function createFakeRedis(): FakeRedis {
   const data = new Set<string>();

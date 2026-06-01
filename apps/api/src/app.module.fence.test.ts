@@ -25,9 +25,9 @@ describe("AppModule.onApplicationBootstrap (Phase 32-C / M-05)", () => {
   });
 
   it("throws when NODE_ENV=production AND AUTH_DEV_MODE=true", () => {
-    process.env["NODE_ENV"] = "production";
-    process.env["AUTH_DEV_MODE"] = "true";
-    delete process.env["AUTH_DEV_MODE_ALLOW_TEST"];
+    process.env.NODE_ENV = "production";
+    process.env.AUTH_DEV_MODE = "true";
+    delete process.env.AUTH_DEV_MODE_ALLOW_TEST;
 
     const module = new AppModule();
     expect(() => module.onApplicationBootstrap()).toThrow(
@@ -36,9 +36,9 @@ describe("AppModule.onApplicationBootstrap (Phase 32-C / M-05)", () => {
   });
 
   it("throws when NODE_ENV=production AND AUTH_DEV_MODE_ALLOW_TEST=true", () => {
-    process.env["NODE_ENV"] = "production";
-    delete process.env["AUTH_DEV_MODE"];
-    process.env["AUTH_DEV_MODE_ALLOW_TEST"] = "true";
+    process.env.NODE_ENV = "production";
+    delete process.env.AUTH_DEV_MODE;
+    process.env.AUTH_DEV_MODE_ALLOW_TEST = "true";
 
     const module = new AppModule();
     expect(() => module.onApplicationBootstrap()).toThrow(
@@ -47,17 +47,17 @@ describe("AppModule.onApplicationBootstrap (Phase 32-C / M-05)", () => {
   });
 
   it("does NOT throw when NODE_ENV=development AND AUTH_DEV_MODE=true", () => {
-    process.env["NODE_ENV"] = "development";
-    process.env["AUTH_DEV_MODE"] = "true";
+    process.env.NODE_ENV = "development";
+    process.env.AUTH_DEV_MODE = "true";
 
     const module = new AppModule();
     expect(() => module.onApplicationBootstrap()).not.toThrow();
   });
 
   it("does NOT throw when NODE_ENV=production AND neither dev flag is set", () => {
-    process.env["NODE_ENV"] = "production";
-    delete process.env["AUTH_DEV_MODE"];
-    delete process.env["AUTH_DEV_MODE_ALLOW_TEST"];
+    process.env.NODE_ENV = "production";
+    delete process.env.AUTH_DEV_MODE;
+    delete process.env.AUTH_DEV_MODE_ALLOW_TEST;
 
     const module = new AppModule();
     expect(() => module.onApplicationBootstrap()).not.toThrow();

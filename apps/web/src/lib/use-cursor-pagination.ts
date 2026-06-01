@@ -38,22 +38,22 @@ import {
 } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-export type CursorPaginationInput = {
+export interface CursorPaginationInput {
   cursor?: string;
   limit?: number;
-};
+}
 
-export type CursorPage<T> = {
+export interface CursorPage<T> {
   items: T[];
   nextCursor: string | null;
-};
+}
 
-export type CursorPaginationOptions = {
+export interface CursorPaginationOptions {
   /** When false, the underlying query is disabled and no fetch occurs. */
   enabled?: boolean;
-};
+}
 
-export type CursorPaginationResult<T> = {
+export interface CursorPaginationResult<T> {
   /** Flattened list of items across all loaded pages. Empty when no data. */
   items: T[];
   hasNextPage: boolean;
@@ -62,7 +62,7 @@ export type CursorPaginationResult<T> = {
   isError: boolean;
   error: unknown;
   fetchNextPage: () => void;
-};
+}
 
 /**
  * Factory signature: a function that takes the cursor-paginated input and

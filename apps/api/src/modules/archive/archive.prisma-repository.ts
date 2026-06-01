@@ -123,7 +123,7 @@ function sectionScopeWhere(
 function computePortfolioOverview(
   // Prisma returns `status: TrafficLightStatus | null`; null statuses
   // contribute nothing to the totals.
-  sections: Array<{ projectStatuses: Array<{ status: string | null }> }>,
+  sections: { projectStatuses: { status: string | null }[] }[],
 ): PortfolioOverview {
   const totals = { green: 0, yellow: 0, red: 0 };
 
@@ -149,7 +149,7 @@ function toArchiveSummary(report: {
   periodEnd: Date;
   publishedAt: Date | null;
   publishedBy: { name: string } | null;
-  sections: Array<{ projectStatuses: Array<{ status: string | null }> }>;
+  sections: { projectStatuses: { status: string | null }[] }[];
 }): ArchiveReportSummary {
   const portfolio = computePortfolioOverview(report.sections);
 
@@ -195,7 +195,7 @@ function toArchiveSummaryFromSnapshot(
 function readScopedSnapshot(
   report: {
     publishedSnapshot?: Prisma.JsonValue | null;
-    sections: Array<{ id: string }>;
+    sections: { id: string }[];
   },
   sectionScope: Record<string, unknown> | undefined,
 ): AssembledReport | null {

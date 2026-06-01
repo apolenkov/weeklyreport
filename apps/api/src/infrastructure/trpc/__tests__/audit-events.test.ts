@@ -19,11 +19,11 @@ import { headProcedure, publicProcedure, router } from "../trpc.middleware.js";
 // viewer-only filters) inherits the audit emit automatically.
 // ---------------------------------------------------------------------------
 
-type Captured = {
+interface Captured {
   level: "info" | "warn" | "error" | "debug";
   message: string;
   context?: Record<string, unknown>;
-};
+}
 
 function makeCapturingLogger(): { logger: AppLogger; entries: Captured[] } {
   const entries: Captured[] = [];
@@ -88,11 +88,11 @@ describe("AUTH-08 role-denied integration signal", () => {
     // accepts ['head', 'admin'] (admin inherits head capabilities). The
     // D-AUTH-03 alias adminProcedure === headProcedure was retired by
     // UFB-038; admin endpoints now use a separate adminProcedure (admin-only).
-    expect(audit.context?.["attemptedRole"]).toEqual(["head", "admin"]);
+    expect(audit.context?.attemptedRole).toEqual(["head", "admin"]);
 
     // Negative — no spurious login-success was emitted by the role-deny path.
     const loginSuccesses = entries.filter(
-      (e) => e.context?.["event"] === "login-success",
+      (e) => e.context?.event === "login-success",
     );
     expect(loginSuccesses).toHaveLength(0);
   });

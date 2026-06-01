@@ -25,7 +25,7 @@ import { roleHomePath } from "../../lib/role-home";
 import { useSession } from "../../lib/session-provider";
 import { DevRoleSwitcher } from "../dev/role-switcher";
 
-type NavLink = {
+interface NavLink {
   href: string;
   label: string;
   title?: string;
@@ -33,10 +33,10 @@ type NavLink = {
   // (head/admin can technically open /lead/report but should not see it
   // in their nav — lead-prefix routes are personal lead data, head has
   // their own dashboard for the same intent).
-  roles: ReadonlyArray<Role>;
-};
+  roles: readonly Role[];
+}
 
-const NAV_LINKS: ReadonlyArray<NavLink> = [
+const NAV_LINKS: readonly NavLink[] = [
   { href: "/lead/report", label: "Report", roles: ["lead"] },
   // UX-17 (Phase 35-08): one History page for both active and archived
   // report periods; archived visibility is toggled inside the page.
@@ -246,7 +246,7 @@ export function NavBar() {
   const visibleSessionLoading = sessionLoading || !hydrated;
 
   const role: Role | null = visibleUser?.role ?? null;
-  const visibleLinks: ReadonlyArray<NavLink> =
+  const visibleLinks: readonly NavLink[] =
     role === null ? [] : NAV_LINKS.filter((link) => link.roles.includes(role));
 
   const initials = visibleUser ? initialsFromName(visibleUser.name) : "?";
@@ -261,7 +261,7 @@ export function NavBar() {
     ? visibleOrganization.shortName
     : DEFAULT_ORGANIZATION_IDENTITY.shortName;
   const homeLabel = visibleUser
-    ? visibleUser.name + " home"
+    ? `${visibleUser.name} home`
     : "Profile loading";
   const identityMeta = [
     orgResolved ? orgShortName : null,
@@ -283,13 +283,11 @@ export function NavBar() {
             aria-label={homeLabel}
           >
             {visibleUser ? (
-              <>
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-starbucks-accent)] shadow-[0_0_0_1px_rgba(0,98,65,0.08)]">
-                  <span className="font-[family-name:var(--font-sans)] text-[11px] font-bold leading-none tracking-normal text-white">
-                    {initials}
-                  </span>
-                </div>
-              </>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-starbucks-accent)] shadow-[0_0_0_1px_rgba(0,98,65,0.08)]">
+                <span className="font-[family-name:var(--font-sans)] text-[11px] font-bold leading-none tracking-normal text-white">
+                  {initials}
+                </span>
+              </div>
             ) : (
               <>
                 {/* UFB-066: brand skeleton until session.organization resolves.
@@ -304,12 +302,10 @@ export function NavBar() {
           </a>
 
           {visibleSessionLoading ? (
-            <>
-              <div className={USER_IDENTITY_SLOT_CLASS} aria-hidden="true">
-                <div className="h-3 w-28 rounded bg-[var(--color-muted)]/40" />
-                <div className="mt-1 h-2.5 w-16 rounded bg-[var(--color-muted)]/30" />
-              </div>
-            </>
+            <div className={USER_IDENTITY_SLOT_CLASS} aria-hidden="true">
+              <div className="h-3 w-28 rounded bg-[var(--color-muted)]/40" />
+              <div className="mt-1 h-2.5 w-16 rounded bg-[var(--color-muted)]/30" />
+            </div>
           ) : (
             <>
               {visibleUser && (
@@ -446,7 +442,7 @@ function MobileNav({
   activeReportsTab,
   role,
 }: {
-  readonly links: ReadonlyArray<NavLink>;
+  readonly links: readonly NavLink[];
   readonly pathname: string;
   readonly activeReportsTab: string | null;
   readonly role: Role | null;

@@ -8,7 +8,7 @@ import { ItemEditDialog } from "./item-edit-dialog";
 import type { KanbanItem, Product } from "./mock-data";
 import { splitStageNames } from "./stage-tags";
 
-type NextWeekSectionProps = {
+interface NextWeekSectionProps {
   readonly items: KanbanItem[];
   readonly readOnly?: boolean;
   /**
@@ -34,7 +34,7 @@ type NextWeekSectionProps = {
    */
   readonly ownPeriodRanks?: readonly number[];
   readonly addSignal?: number;
-};
+}
 
 function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
   const map = new Map<string, KanbanItem[]>();

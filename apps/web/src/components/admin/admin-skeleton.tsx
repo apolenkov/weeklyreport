@@ -1,8 +1,8 @@
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
-type AdminTabSkeletonProps = {
+interface AdminTabSkeletonProps {
   readonly variant: "table" | "form";
-};
+}
 
 /**
  * Loading-state skeleton for admin tabs. Matches final UI dimensions to

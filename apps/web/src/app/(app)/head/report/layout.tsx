@@ -5,7 +5,7 @@ import { ForbiddenPage } from "../../../../components/forbidden-page";
 import { getServerSession } from "../../../../lib/server/get-server-session";
 
 /** Nested role gate for the head weekly-report submission surface. */
-const REQUIRED: ReadonlyArray<Role> = ["head", "admin"];
+const REQUIRED: readonly Role[] = ["head", "admin"];
 
 type Props = Readonly<{ children: ReactNode }>;
 

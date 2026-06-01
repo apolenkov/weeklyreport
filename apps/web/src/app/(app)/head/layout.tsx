@@ -11,7 +11,7 @@ import { getServerSession } from "../../../lib/server/get-server-session";
  * gate. admin is included because adminProcedure === headProcedure for
  * v6.0 (D-AUTH-03).
  */
-const REQUIRED: ReadonlyArray<Role> = ["head", "admin"];
+const REQUIRED: readonly Role[] = ["head", "admin"];
 
 type Props = Readonly<{ children: ReactNode }>;
 

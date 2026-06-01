@@ -18,34 +18,34 @@ import { type AppLogger, createNullLogger } from "../../lib/logger";
  * `userId/role/ip` envelope are emitted automatically.
  */
 
-export type FailedJob = {
+export interface FailedJob {
   id: string;
   name: string;
   failedReason: string;
-  stacktrace: ReadonlyArray<string>;
+  stacktrace: readonly string[];
   attemptsMade: number;
   /** ms since epoch — when the job was added to BullMQ. */
   timestamp: number;
   /** Best-effort serialisable copy of the job payload. */
   data: unknown;
-};
+}
 
-export type ListFailedResult = {
+export interface ListFailedResult {
   jobs: FailedJob[];
   /** BullMQ pagination cursor — next start index. `null` when exhausted. */
   nextCursor: number | null;
-};
+}
 
-export type RetryFailedResult = {
+export interface RetryFailedResult {
   retried: boolean;
   jobId: string;
   removed?: boolean;
   reason?: string;
-};
+}
 
-type JobsServiceOptions = {
+interface JobsServiceOptions {
   reminderExecutionExists?: (executionId: string) => Promise<boolean>;
-};
+}
 
 /**
  * 35-06: when the BullMQ Queue handle is absent (e.g. unit-test wiring with

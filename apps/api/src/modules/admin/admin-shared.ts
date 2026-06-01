@@ -169,7 +169,7 @@ export interface AdminRepository {
  * service holds the AppSettings references (`allowReopenAfterPublish`,
  * `reopenWindowHours`) so the repository stays settings-agnostic.
  */
-export type PeriodRowFromRepo = {
+export interface PeriodRowFromRepo {
   id: string;
   periodStart: Date;
   periodEnd: Date;
@@ -183,7 +183,7 @@ export type PeriodRowFromRepo = {
   submittedCount: number;
   totalCount: number;
   weekLabel: string | null;
-};
+}
 
 export function sortByName<T extends { name: string }>(rows: T[]): T[] {
   return [...rows].sort((left, right) =>

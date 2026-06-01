@@ -12,7 +12,7 @@ import {
 import { Loader2 } from "lucide-react";
 import type * as React from "react";
 
-type CrudSheetProps = {
+interface CrudSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
@@ -21,7 +21,7 @@ type CrudSheetProps = {
   onSubmit?: () => void;
   submitLabel?: string;
   loading?: boolean;
-};
+}
 
 export function CrudSheet({
   open,

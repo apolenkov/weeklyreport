@@ -31,11 +31,11 @@ import { useTRPC } from "../../lib/trpc-context";
  */
 type Scope = "mine" | "all";
 
-type SearchInputProps = {
+interface SearchInputProps {
   readonly scope: Scope;
   readonly placeholder?: string;
   readonly className?: string;
-};
+}
 
 const DEBOUNCE_MS = 300;
 const MIN_LEN = 2;

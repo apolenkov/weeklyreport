@@ -392,7 +392,6 @@ export function PeriodsTab() {
 
       {/* A27: Delete confirmation dialog */}
       {deleteConfirm && (
-        // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- backdrop is a mouse convenience; dialog is keyboard-closable via Escape + Cancel button
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
           onClick={() => setDeleteConfirm(null)}
@@ -446,7 +445,7 @@ export function PeriodsTab() {
 // Helper components
 // ---------------------------------------------------------------------
 
-type PeriodTableProps = {
+interface PeriodTableProps {
   readonly rows: PeriodListItem[];
   readonly testIdPrefix: "active" | "archive";
   readonly onPublish: (row: PeriodListItem) => void;
@@ -458,7 +457,7 @@ type PeriodTableProps = {
   // UFB-067: row-level edit opens the dialog in edit-mode prefilled
   // from this row.
   readonly onEdit: (row: PeriodListItem) => void;
-};
+}
 
 function PeriodTable({
   rows,
@@ -988,7 +987,7 @@ function nextMonday(from: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-type CreatePeriodValues = {
+interface CreatePeriodValues {
   periodStart: Date;
   // UFB-067: nullable in edit-mode so the dialog can clear an existing
   // weekLabel via explicit `null`. Create-mode submitters never pass
@@ -996,7 +995,7 @@ type CreatePeriodValues = {
   periodEnd?: Date;
   deadline?: Date;
   weekLabel?: string | null;
-};
+}
 
 /**
  * UFB-067: render a UTC Date as the `YYYY-MM-DD` value that
@@ -1125,7 +1124,6 @@ function CreatePeriodDialog({
       : "Create";
 
   return (
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- backdrop is a mouse convenience; dialog is keyboard-closable via Escape + Cancel button
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
       onClick={onCancel}

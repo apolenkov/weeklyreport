@@ -46,9 +46,9 @@ vi.mock("bullmq", () => ({
 // Env — must happen before EmailService is imported so the constructor reads
 // the real SMTP coordinates rather than falling back to jsonTransport.
 // ---------------------------------------------------------------------------
-process.env["SMTP_HOST"] = "localhost";
-process.env["SMTP_PORT"] = "1025";
-process.env["SMTP_FROM"] = "test-integration@customreport.local";
+process.env.SMTP_HOST = "localhost";
+process.env.SMTP_PORT = "1025";
+process.env.SMTP_FROM = "test-integration@customreport.local";
 
 import {
   clearMessages,
@@ -92,9 +92,9 @@ const adminStub = {
 };
 
 // Private processJob access seam — mirrors the unit-test pattern.
-type ProcessorSeam = {
+interface ProcessorSeam {
   processJob(job: Job<unknown>): Promise<void>;
-};
+}
 
 // ---------------------------------------------------------------------------
 // Tests

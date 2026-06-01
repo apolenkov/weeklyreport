@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import type { SectionSlideModel } from "./section-slide-utils";
 import { StatusSlideDeck } from "./status-slide-deck";
 
-type ReportSlidesProps = {
+interface ReportSlidesProps {
   readonly slides: readonly SectionSlideModel[];
   readonly selectedIndex: number;
   readonly onSelect: (index: number) => void;
@@ -21,7 +21,7 @@ type ReportSlidesProps = {
   readonly toolbar?: ReactNode;
   /** Rendered inside the lead slide hero, inline with the tone badge. */
   readonly heroControls?: ReactNode;
-};
+}
 
 export function ReportSlides({
   slides,

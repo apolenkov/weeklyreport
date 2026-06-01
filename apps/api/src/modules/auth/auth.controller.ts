@@ -4,10 +4,10 @@ import jwt from "jsonwebtoken";
 
 const ONE_HOUR_IN_SECONDS = 60 * 60;
 
-export type JwtSigner = {
+export interface JwtSigner {
   signSession: (payload: UserSession) => string;
   verifySession: (token: string) => UserSession;
-};
+}
 
 function requireJwtSecret(env: NodeJS.ProcessEnv): string {
   const secret = env.AUTH_JWT_SECRET;

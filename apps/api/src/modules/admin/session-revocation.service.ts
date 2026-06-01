@@ -27,8 +27,8 @@ export class SessionRevocationService implements OnModuleDestroy {
       this.redis = redis;
     } else {
       this.redis = new Redis({
-        host: process.env["REDIS_HOST"] ?? "localhost",
-        port: Number(process.env["REDIS_PORT"] ?? 6379),
+        host: process.env.REDIS_HOST ?? "localhost",
+        port: Number(process.env.REDIS_PORT ?? 6379),
         lazyConnect: true,
         maxRetriesPerRequest: 1,
         enableOfflineQueue: false,

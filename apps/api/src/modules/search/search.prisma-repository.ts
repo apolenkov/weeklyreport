@@ -10,7 +10,7 @@ import type { SearchRepository } from "./search.service.js";
  * same column list so the union compiles, then post-processing folds them
  * into typed SearchHit records.
  */
-type RawHit = {
+interface RawHit {
   type: "item" | "risk" | "decision" | "project";
   id: string;
   title: string;
@@ -20,7 +20,7 @@ type RawHit = {
   reportId: string | null;
   reportSectionId: string | null;
   createdAt: Date;
-};
+}
 
 /**
  * 39-05 (PERF-05): Prisma repository for full-text search.

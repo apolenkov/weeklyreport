@@ -20,9 +20,9 @@ import { useTRPC } from "../../lib/trpc-context";
  * this card; the component itself owns its data-fetching, schema, and
  * accessibility labelling.
  */
-type ProductKpiCardProps = {
+interface ProductKpiCardProps {
   readonly role?: "lead" | "head" | "admin" | "viewer" | null;
-};
+}
 
 export function ProductKpiCard({ role }: ProductKpiCardProps) {
   const trpc = useTRPC();

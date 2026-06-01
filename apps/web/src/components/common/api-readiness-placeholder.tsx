@@ -1,8 +1,8 @@
-type ApiReadinessPlaceholderProps = {
+interface ApiReadinessPlaceholderProps {
   readonly pageTitle: string;
   readonly roleLabel: string;
   readonly currentPath: string;
-};
+}
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3002";
 

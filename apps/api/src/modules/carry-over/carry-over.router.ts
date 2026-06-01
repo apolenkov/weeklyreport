@@ -6,11 +6,11 @@ import {
 
 import type { CarryOverService } from "./carry-over.service";
 
-export type CarryOverRouterContext = {
+export interface CarryOverRouterContext {
   carryOverService: CarryOverService;
   sourceReportId: string;
   targetReportId: string;
-};
+}
 
 export const carryOverRouter = {
   async executeCarryOver(ctx: CarryOverRouterContext) {

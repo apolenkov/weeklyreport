@@ -17,7 +17,7 @@ const SWIPE_THRESHOLD_PX = 50;
 const LEAD_REPORT_BASE = "/lead/report";
 const PERIOD_SELECT_WIDTH_CH = 24;
 
-type PeriodNavigatorProps = {
+interface PeriodNavigatorProps {
   readonly periods: ReportPeriod[];
   /**
    * Optional URL builder for navigation. When provided, replaces the default
@@ -26,7 +26,7 @@ type PeriodNavigatorProps = {
    * Receives the target periodId; must return the full href to push.
    */
   readonly urlBuilder?: (periodId: string) => string;
-};
+}
 
 function ChevronLeft() {
   return (
@@ -76,7 +76,7 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
   // for older links (the bare-route redirect handles those URLs at load).
   const pathReportId = useMemo(() => {
     if (!pathname) return null;
-    const match = pathname.match(/^\/lead\/report\/([^/]+)$/);
+    const match = /^\/lead\/report\/([^/]+)$/.exec(pathname);
     return match ? match[1] : null;
   }, [pathname]);
 

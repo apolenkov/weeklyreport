@@ -38,13 +38,13 @@ function buildProduct(overrides?: Partial<Product>): Product {
   };
 }
 
-type HarnessProps = {
+interface HarnessProps {
   initialProducts: Product[];
   initialRisks: RiskEntry[];
   readOnly?: boolean;
   onProductsChangeSpy?: (next: Product[]) => void;
   onRisksChangeSpy?: (next: RiskEntry[]) => void;
-};
+}
 
 function Harness({
   initialProducts,

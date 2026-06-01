@@ -9,11 +9,11 @@
  */
 import { describe, expect, it } from "vitest";
 
-const hasBotToken = !!process.env["TG_BOT_TOKEN"]?.trim();
+const hasBotToken = !!process.env.TG_BOT_TOKEN?.trim();
 
 describe.skipIf(!hasBotToken)("Telegram activation (real bot)", () => {
   it("TG_BOT_TOKEN is set and non-empty", () => {
-    const token = process.env["TG_BOT_TOKEN"]?.trim();
+    const token = process.env.TG_BOT_TOKEN?.trim();
     expect(token).toBeTruthy();
     expect(typeof token).toBe("string");
   });
@@ -25,6 +25,6 @@ describe.skipIf(!hasBotToken)("Telegram activation (real bot)", () => {
     //   expect(adapter).toBeInstanceOf(RealTelegramAdapter);
     // Also: nock `https://api.telegram.org/bot${token}/sendMessage` and
     // assert the adapter calls it with { chat_id, text } shape.
-    expect(process.env["TG_BOT_TOKEN"]?.length).toBeGreaterThan(0);
+    expect(process.env.TG_BOT_TOKEN?.length).toBeGreaterThan(0);
   });
 });

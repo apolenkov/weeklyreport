@@ -23,7 +23,7 @@ export interface AppLogger {
   child(context: Record<string, unknown>): AppLogger;
 }
 
-type LogEntry = {
+interface LogEntry {
   timestamp: string;
   level: LogLevel;
   message: string;
@@ -31,7 +31,7 @@ type LogEntry = {
   traceId?: string;
   spanId?: string;
   [key: string]: unknown;
-};
+}
 
 const LEVEL_PRIORITY: Record<LogLevel, number> = {
   debug: 0,
@@ -53,7 +53,7 @@ const ACTIVE_LOG_FILENAME = "app.log";
 const ARCHIVE_PREFIX = "app.log.";
 const ARCHIVE_SUFFIX = ".gz";
 
-export type LoggerOptions = {
+export interface LoggerOptions {
   /** Minimum log level to emit. Default: 'info'. */
   minLevel?: LogLevel;
   /** Directory for the active log file and gzip archives. If omitted, file logging is disabled. */
@@ -75,21 +75,21 @@ export type LoggerOptions = {
   maxBytes?: number;
   /** Archive retention in days (gzip files older than this are unlinked). Default 30. */
   maxAgeDays?: number;
-};
+}
 
-type ResolvedFileOpts = {
+interface ResolvedFileOpts {
   maxBytes: number;
   maxAgeDays: number;
-};
+}
 
 // Serialize file work per-logger (per-process per-logDir really) so concurrent
 // emit() calls do not interleave appendFile + rotation. Fire-and-forget at the
 // call site is preserved by chaining onto a shared promise.
-type FileSink = {
+interface FileSink {
   logDir: string;
   opts: ResolvedFileOpts;
   queue: Promise<void>;
-};
+}
 
 async function pruneOldArchives(
   logDir: string,
@@ -148,7 +148,7 @@ function enqueueWrite(sink: FileSink, entry: LogEntry): void {
   const activePath = join(sink.logDir, ACTIVE_LOG_FILENAME);
   sink.queue = sink.queue
     .then(() => rotateIfNeeded(activePath, sink.logDir, sink.opts))
-    .then(() => fs.appendFile(activePath, JSON.stringify(entry) + "\n"))
+    .then(() => fs.appendFile(activePath, `${JSON.stringify(entry)}\n`))
     .catch((err) => {
       process.stderr.write(`[logger] file write failed: ${String(err)}\n`);
     });
@@ -228,7 +228,7 @@ class AppLoggerImpl implements AppLogger {
 
   private resolveCorrelationId(): string {
     const cls = this.clsService;
-    if (cls && cls.isActive()) {
+    if (cls?.isActive()) {
       return cls.get<string>("correlationId") ?? "no-context";
     }
     return "no-context";
@@ -262,9 +262,9 @@ class AppLoggerImpl implements AppLogger {
     const formatted = JSON.stringify(entry);
 
     if (level === "error") {
-      process.stderr.write(formatted + "\n");
+      process.stderr.write(`${formatted}\n`);
     } else {
-      process.stdout.write(formatted + "\n");
+      process.stdout.write(`${formatted}\n`);
     }
 
     if (this.fileSink) {

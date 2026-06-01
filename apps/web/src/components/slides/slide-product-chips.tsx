@@ -1,16 +1,16 @@
 "use client";
 
-export type ProductChipEntry = {
+export interface ProductChipEntry {
   productId: string;
   productName: string;
   worstStatus: "blocked" | "at-risk" | "on-track" | "empty";
-};
+}
 
-type Props = {
+interface Props {
   readonly products: readonly ProductChipEntry[];
   readonly activeProductId?: string;
   readonly onSelect?: (productId: string) => void;
-};
+}
 
 function statusDot(status: ProductChipEntry["worstStatus"]) {
   const colorClass = {
@@ -52,7 +52,7 @@ export function SlideProductChips({
             role="tab"
             type="button"
             aria-selected={isActive}
-            aria-controls={"product-card-" + product.productId}
+            aria-controls={`product-card-${product.productId}`}
             title={product.productName}
             onClick={() => onSelect?.(product.productId)}
             className={[

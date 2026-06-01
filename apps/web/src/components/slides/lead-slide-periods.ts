@@ -2,7 +2,7 @@ import type { MyHistoryEntry } from "@customreport/shared";
 
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
 
-export type LeadSlidePeriodOption = {
+export interface LeadSlidePeriodOption {
   readonly reportId: string;
   readonly sectionId: string;
   readonly label: string;
@@ -12,7 +12,7 @@ export type LeadSlidePeriodOption = {
   readonly archived: boolean;
   readonly current: boolean;
   readonly submitted: boolean;
-};
+}
 
 export function buildLeadSlidePeriodOptions(
   history: readonly MyHistoryEntry[],
@@ -21,7 +21,7 @@ export function buildLeadSlidePeriodOptions(
   return [...history]
     .sort((a, b) => b.periodStart.getTime() - a.periodStart.getTime())
     .map((entry) => {
-      const periodLabel = "Period " + isoWeekNumber(entry.periodStart);
+      const periodLabel = `Period ${isoWeekNumber(entry.periodStart)}`;
       const dateRange = formatDateRange(entry.periodStart, entry.periodEnd);
       const current =
         activeReportId !== null && entry.reportId === activeReportId;
@@ -31,7 +31,7 @@ export function buildLeadSlidePeriodOptions(
       return {
         reportId: entry.reportId,
         sectionId: entry.sectionId,
-        label: periodLabel + " - " + dateRange + suffix,
+        label: `${periodLabel} - ${dateRange}${suffix}`,
         weekLabel: periodLabel,
         dateRange,
         periodStart: entry.periodStart,

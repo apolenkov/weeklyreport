@@ -18,11 +18,11 @@ const STAGE_COLORS: Record<StageName, string> = {
   Support: "var(--color-muted-foreground)",
 };
 
-type StageAssignmentEditorProps = {
+interface StageAssignmentEditorProps {
   readonly projectId: string;
   readonly projectName: string;
   readonly leads: MockUser[];
-};
+}
 
 /**
  * Stage Assignment Editor.

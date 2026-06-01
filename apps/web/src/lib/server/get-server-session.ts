@@ -33,16 +33,16 @@ function resolveApiUrl(): string {
   // the docker network or behind the corporate proxy. In the local regression
   // stack, the Nest API listens on :3002.
   return (
-    process.env["API_URL"] ??
-    process.env["NEXT_PUBLIC_API_URL"] ??
+    process.env.API_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
     "http://localhost:3002"
   );
 }
 
-type TrpcBatchEntry = {
+interface TrpcBatchEntry {
   readonly result?: { readonly data?: unknown };
   readonly error?: { readonly message?: string };
-};
+}
 
 /**
  * Decode a tRPC v11 superjson-batched query response.
@@ -68,9 +68,9 @@ export async function getServerSession(): Promise<UserSession | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
   const shouldUseDevFallback =
-    process.env["NODE_ENV"] !== "production" &&
-    (process.env["AUTH_DEV_MODE"] === "true" ||
-      process.env["AUTH_DEV_MODE_ALLOW_TEST"] === "true");
+    process.env.NODE_ENV !== "production" &&
+    (process.env.AUTH_DEV_MODE === "true" ||
+      process.env.AUTH_DEV_MODE_ALLOW_TEST === "true");
   if (!token && !shouldUseDevFallback) return null;
 
   const apiUrl = resolveApiUrl();

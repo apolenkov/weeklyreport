@@ -63,22 +63,22 @@ const PRODUCT_ID_B = "11111111-1111-4111-8111-dddddddddddd";
 function makeWeeklyReportData(
   periodStatus: "open" | "published" | "reopened",
   overrides?: {
-    readonly portfolioOverview?: Array<{
+    readonly portfolioOverview?: {
       readonly productId: string;
       readonly productName: string;
       readonly worstStatus: "green" | "yellow" | "red" | "empty";
       readonly stageCount: number;
       readonly leadNames: string[];
-    }>;
-    readonly leadSections?: Array<{
+    }[];
+    readonly leadSections?: {
       readonly reportSectionId: string;
       readonly reportId: string;
       readonly authorId: string;
       readonly authorName: string;
       readonly status: "submitted" | "draft" | "locked";
       readonly submittedAt: Date | null;
-      readonly projects: Array<{ projectId: string; projectName: string }>;
-      readonly items: Array<{
+      readonly projects: { projectId: string; projectName: string }[];
+      readonly items: {
         readonly id: string;
         readonly projectId: string;
         readonly type: "current" | "next";
@@ -92,11 +92,11 @@ function makeWeeklyReportData(
           | "not_started";
         readonly carriedOver: boolean;
         readonly completed: boolean;
-      }>;
+      }[];
       readonly risks: never[];
       readonly decisions: never[];
       readonly priorities: never[];
-    }>;
+    }[];
   },
 ) {
   return {
@@ -151,7 +151,7 @@ function makeWeeklyReportData(
   };
 }
 
-type Captured = {
+interface Captured {
   publishOptions?: { onSuccess?: () => void; onError?: (err: Error) => void };
   reopenOptions?: { onSuccess?: () => void; onError?: (err: Error) => void };
   pdfExportRequestOptions?: {
@@ -161,7 +161,7 @@ type Captured = {
   publishMutationFn: ReturnType<typeof vi.fn>;
   reopenMutationFn: ReturnType<typeof vi.fn>;
   pdfExportRequestMutationFn: ReturnType<typeof vi.fn>;
-};
+}
 
 function makeMockTRPC(
   data: ReturnType<typeof makeWeeklyReportData>,

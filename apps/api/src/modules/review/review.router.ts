@@ -7,10 +7,10 @@ import {
 import { createRoleGuard } from "../auth/roles.guard";
 import { ReviewAccessError, type ReviewService } from "./review.service";
 
-export type ReviewRouterContext = {
+export interface ReviewRouterContext {
   reviewService: ReviewService;
   session: UserSession;
-};
+}
 
 const headRoleGuard = createRoleGuard("head");
 

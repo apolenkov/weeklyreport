@@ -7,10 +7,10 @@
  * The full IANA list (~600 zones) would be unwieldy; this covers all Russian
  * time-zones plus the common EU/US/APAC zones the team works with.
  */
-export const TIMEZONE_OPTIONS: ReadonlyArray<{
+export const TIMEZONE_OPTIONS: readonly {
   group: string;
-  zones: ReadonlyArray<{ value: string; label: string }>;
-}> = [
+  zones: readonly { value: string; label: string }[];
+}[] = [
   {
     group: "Russia",
     zones: [

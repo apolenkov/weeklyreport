@@ -8,7 +8,7 @@ import { useSdlcTooltip } from "../ui/sdlc-tooltip";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import type { StageAssignment, StageStatus } from "./mock-data";
 
-type StageChipProps = {
+interface StageChipProps {
   readonly stage: StageAssignment;
   readonly onStatusChange?: (stageName: string, newStatus: StageStatus) => void;
   readonly readOnly?: boolean;
@@ -20,7 +20,7 @@ type StageChipProps = {
   readonly linkedRiskCount?: number;
   /** Cross-author stats shown in the tooltip when the stage is locked. */
   readonly crossAuthorInfo?: { itemCount: number; riskCount: number };
-};
+}
 
 const STATUS_CONFIG: Record<
   StageStatus,

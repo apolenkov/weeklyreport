@@ -31,7 +31,7 @@ import { ProductAccordion } from "./product-accordion";
 import { PublishLockButton } from "./publish-lock-button";
 import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
 
-type WeeklyReportPageProps = {
+interface WeeklyReportPageProps {
   /**
    * Period id (week label string) hint from the URL `?period=...` query param.
    * `weeklyReport.get` does NOT take a period filter at v5.0 — when no
@@ -64,7 +64,7 @@ type WeeklyReportPageProps = {
    * leads own their own phases, so the duplication is expected.
    */
   readonly scope?: "product" | "lead";
-};
+}
 
 export function WeeklyReportPage({
   period,

@@ -27,16 +27,16 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
-type TooltipState = {
+interface TooltipState {
   content: string;
   top: number;
   left: number;
-};
+}
 
-type ContextValue = {
+interface ContextValue {
   show: (rect: DOMRect, content: string) => void;
   hide: () => void;
-};
+}
 
 const SdlcTooltipContext = createContext<ContextValue | null>(null);
 

@@ -3,11 +3,11 @@ import { cn } from "@customreport/ui/lib/utils";
 
 export type TrafficLightStatus = "green" | "yellow" | "red" | "unset";
 
-type TrafficLightBadgeProps = {
+interface TrafficLightBadgeProps {
   status: TrafficLightStatus;
   label?: string;
   className?: string;
-};
+}
 
 const colorMap: Record<TrafficLightStatus, string> = {
   green:

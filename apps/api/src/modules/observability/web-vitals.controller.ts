@@ -17,12 +17,12 @@ const GAUGE_MAP = {
 
 type VitalName = keyof typeof GAUGE_MAP;
 
-type WebVitalDto = {
+interface WebVitalDto {
   name: string;
   value: number;
   id: string;
   navigationType?: string;
-};
+}
 
 @Controller("api")
 export class WebVitalsController {

@@ -3,11 +3,11 @@ import { expectDefined } from "../test-utils/expect-defined.js";
 import { createAuditLogger, createNullAuditLogger } from "./audit-logger.js";
 import type { AppLogger } from "./logger.js";
 
-type Captured = {
+interface Captured {
   level: "info" | "warn" | "error" | "debug";
   message: string;
   context?: Record<string, unknown>;
-};
+}
 
 function makeCapturingLogger(): { logger: AppLogger; entries: Captured[] } {
   const entries: Captured[] = [];
@@ -125,7 +125,7 @@ describe("createAuditLogger", () => {
       ip: "10.0.0.5",
     });
     // Strict guard against regression — must not be the legacy literal.
-    expect(expectDefined(entries[0]).context?.["role"]).not.toBe("unknown");
+    expect(expectDefined(entries[0]).context?.role).not.toBe("unknown");
   });
 
   it("logout emits {event, userId, role, ip} on info", () => {
@@ -235,7 +235,7 @@ describe("createNullAuditLogger", () => {
 
 describe("createAuditLogger — scopeDenied (UFB-040 / 46-05)", () => {
   it("emits the {event, userId, role, ip, attemptedScope, resourceId} envelope on warn", () => {
-    const calls: Array<{ level: string; meta: Record<string, unknown> }> = [];
+    const calls: { level: string; meta: Record<string, unknown> }[] = [];
     const logger = {
       info: () => {
         /* not used here */

@@ -10,10 +10,10 @@ import {
   type PublicationService,
 } from "./publication.service";
 
-export type PublicationRouterContext = {
+export interface PublicationRouterContext {
   publicationService: PublicationService;
   session: UserSession;
-};
+}
 
 const headRoleGuard = createRoleGuard("head");
 

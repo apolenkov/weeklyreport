@@ -10,12 +10,12 @@ import { useTRPC } from "../../lib/trpc-context";
 import type { MockGroup, MockUser, UserRole } from "./mock-data";
 import { TabFilter, TabHeader, TabSearch } from "./tab-header";
 
-type UserFormData = {
+interface UserFormData {
   name: string;
   email: string;
   role: UserRole;
   groupId: string;
-};
+}
 
 function emptyForm(groups: readonly MockGroup[]): UserFormData {
   return {
@@ -43,10 +43,10 @@ const STATUS_OPTIONS = [
 ] as const;
 type StatusFilterValue = (typeof STATUS_OPTIONS)[number]["value"];
 
-type UsersTabProps = {
+interface UsersTabProps {
   readonly users: MockUser[];
   readonly groups: MockGroup[];
-};
+}
 
 export function UsersTab({ users, groups }: UsersTabProps) {
   const trpc = useTRPC();
@@ -368,7 +368,6 @@ export function UsersTab({ users, groups }: UsersTabProps) {
 
       {/* Add/Edit Dialog */}
       {showDialog && (
-        // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- backdrop is a mouse convenience; dialog is keyboard-closable via Escape + Cancel button
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
           onClick={() => setShowDialog(false)}
@@ -473,7 +472,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                   )}
                   {groupOptions.map((group) => (
                     <option key={group.id} value={group.id}>
-                      {group.archived ? group.name + " (archived)" : group.name}
+                      {group.archived ? `${group.name} (archived)` : group.name}
                     </option>
                   ))}
                 </select>

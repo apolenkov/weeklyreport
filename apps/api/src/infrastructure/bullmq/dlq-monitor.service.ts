@@ -31,8 +31,8 @@ const POLL_INTERVAL_MS = 60_000;
 @Injectable()
 export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DLQMonitorService.name);
-  private readonly queueEvents: Map<QueueName, QueueEvents> = new Map();
-  private readonly queues: Map<QueueName, Queue> = new Map();
+  private readonly queueEvents = new Map<QueueName, QueueEvents>();
+  private readonly queues = new Map<QueueName, Queue>();
   private pollTimer: NodeJS.Timeout | null = null;
 
   async onModuleInit(): Promise<void> {
@@ -70,7 +70,7 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
     }
 
     const threshold = Number(
-      process.env["DLQ_ALERT_THRESHOLD"] ?? DEFAULT_THRESHOLD,
+      process.env.DLQ_ALERT_THRESHOLD ?? DEFAULT_THRESHOLD,
     );
     this.pollTimer = setInterval(() => {
       void this.checkThresholds(threshold);

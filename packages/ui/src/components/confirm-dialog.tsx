@@ -12,7 +12,7 @@ import {
 } from "@customreport/ui/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 
-type ConfirmDialogProps = {
+interface ConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
@@ -21,7 +21,7 @@ type ConfirmDialogProps = {
   onConfirm: () => void;
   variant?: "default" | "destructive";
   loading?: boolean;
-};
+}
 
 export function ConfirmDialog({
   open,

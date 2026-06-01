@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { JobsService } from "./jobs.service";
 
-type FakeJob = {
+interface FakeJob {
   id: string;
   name: string;
   failedReason?: string | null;
@@ -13,7 +13,7 @@ type FakeJob = {
   data: unknown;
   retry: ReturnType<typeof vi.fn>;
   remove: ReturnType<typeof vi.fn>;
-};
+}
 
 function makeJob(overrides: Partial<FakeJob> & { id: string }): FakeJob {
   return {

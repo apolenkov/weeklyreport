@@ -4,9 +4,9 @@ import { Suspense } from "react";
 import { HeadPresentClient } from "../../../../../components/head/head-present-client";
 import { WeeklyReportSkeleton } from "../../../../../components/weekly-report/weekly-report-skeleton";
 
-type Props = {
+interface Props {
   params: Promise<{ reportId: string }>;
-};
+}
 
 export default async function PublishedReportPresentPage({ params }: Props) {
   const { reportId } = await params;

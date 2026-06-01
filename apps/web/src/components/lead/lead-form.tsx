@@ -62,7 +62,7 @@ import { PeriodNavigator } from "./period-navigator";
 import { RequestReopenDialog } from "./request-reopen-dialog";
 import { VersionHistoryNav } from "./version-history-nav";
 
-type LeadFormProps = {
+interface LeadFormProps {
   readonly period?: string;
   /**
    * 35-07: explicit report identifier from the dynamic `[reportId]` route
@@ -84,7 +84,7 @@ type LeadFormProps = {
    * already on a `[reportId]` route.
    */
   readonly redirectToCanonical?: boolean;
-};
+}
 
 // SVG Icon components
 function GridIcon() {
@@ -825,27 +825,27 @@ export function LeadForm({
   const snapshotStageMap = (() => {
     if (!getVersionQ.data) return null;
     const raw = getVersionQ.data as {
-      stageStatuses?: Array<{
+      stageStatuses?: {
         projectId: string;
         stageName: string;
         status: string;
-      }>;
-      risks?: Array<{
+      }[];
+      risks?: {
         projectId: string;
         stageName?: string | null;
         severity?: string;
-      }>;
-      items?: Array<{
+      }[];
+      items?: {
         projectId: string;
         stageName?: string | null;
         workflowStatus: string;
-      }>;
+      }[];
     };
-    type SnapEntry = {
+    interface SnapEntry {
       traffic: string;
-      risks: Array<{ severity?: string }>;
-      items: Array<{ workflowStatus: string }>;
-    };
+      risks: { severity?: string }[];
+      items: { workflowStatus: string }[];
+    }
     const map = new Map<string, Map<string, SnapEntry>>();
     for (const ss of raw.stageStatuses ?? []) {
       let pm = map.get(ss.projectId);
@@ -911,32 +911,32 @@ export function LeadForm({
   const productNameById = new Map(displayProducts.map((p) => [p.id, p.name]));
   // F3.4: when viewing a historical snapshot, substitute items/risks/decisions
   // from the snapshot payload instead of the current draft.
-  type SnapPayload = {
-    items?: Array<{
+  interface SnapPayload {
+    items?: {
       projectId: string;
       type: string;
       text: string;
       workflowStatus: string;
       stageName?: string | null;
       priorityRank?: number | null;
-    }>;
-    risks?: Array<{
+    }[];
+    risks?: {
       projectId: string;
       risk: string;
       impact: string;
       mitigation: string;
       severity?: string;
       stageName?: string | null;
-    }>;
-    decisions?: Array<{
+    }[];
+    decisions?: {
       productId?: string | null;
       text: string;
       owner: string;
       impact: string;
       deadline?: string | null;
       stageName?: string | null;
-    }>;
-  };
+    }[];
+  }
 
   function snapWorkflowToStatus(ws: string): import("./mock-data").ItemStatus {
     if (ws === "in_progress") return "in-progress";
@@ -1518,14 +1518,14 @@ export function LeadForm({
               mode={isSlidesMode ? "slides" : "edit"}
               editHref={
                 targetReportId
-                  ? "/lead/report/" + encodeURIComponent(targetReportId)
+                  ? `/lead/report/${encodeURIComponent(targetReportId)}`
                   : "/lead/report"
               }
               slidesHref={
                 targetReportId
-                  ? "/lead/report/" +
-                    encodeURIComponent(targetReportId) +
-                    "?mode=slides"
+                  ? `/lead/report/${encodeURIComponent(
+                      targetReportId,
+                    )}?mode=slides`
                   : "/lead/report"
               }
             />

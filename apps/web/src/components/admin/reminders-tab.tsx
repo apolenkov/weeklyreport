@@ -16,26 +16,26 @@ import { TabHeader, TabSearch } from "./tab-header";
 // Reminders sub-tab (UFB-048 / Phase 48-B) can reuse the same curated list.
 import { TIMEZONE_OPTIONS } from "./timezone-options";
 
-const KIND_OPTIONS: ReadonlyArray<{
+const KIND_OPTIONS: readonly {
   value: MockReminderPolicy["kind"];
   label: string;
-}> = [
+}[] = [
   { value: "deadline", label: "Deadline reminder" },
   { value: "follow_up", label: "Follow-up reminder" },
   { value: "escalation", label: "Escalation digest" },
 ];
 
-const AUDIENCE_OPTIONS: ReadonlyArray<{
+const AUDIENCE_OPTIONS: readonly {
   value: MockReminderPolicy["audience"];
   label: string;
-}> = [
+}[] = [
   { value: "lead-with-draft", label: "Leads with draft" },
   { value: "head-of-late", label: "Head of late leads" },
 ];
 
-type RemindersTabProps = {
+interface RemindersTabProps {
   /** UFB-036 (Phase 44-04): policies are the new top-level editable rows. */
-  readonly policies: ReadonlyArray<MockReminderPolicy>;
+  readonly policies: readonly MockReminderPolicy[];
   /**
    * Read-only derived rules grouped by `policyId`. The Reminders Tab's
    * expander surfaces them under each policy. Rules whose `policyId`
@@ -43,10 +43,10 @@ type RemindersTabProps = {
    * exist in the DB but live outside the policy model.
    */
   readonly derivedRulesByPolicyId: Readonly<
-    Record<string, ReadonlyArray<MockReminder>>
+    Record<string, readonly MockReminder[]>
   >;
   /** Used by the derived-rules panel to render period labels. */
-  readonly periods: ReadonlyArray<MockPeriod>;
+  readonly periods: readonly MockPeriod[];
   /**
    * UFB-048 (Phase 48-B): organisation-wide defaults for new policies.
    * When the admin opens the «New Policy» form, the timezone and audience
@@ -56,7 +56,7 @@ type RemindersTabProps = {
    */
   readonly defaultTimezone?: string;
   readonly defaultAudience?: MockReminderPolicy["audience"];
-};
+}
 
 type PolicyFormState = AdminReminderPolicyFormInput & {
   /** ISO `YYYY-MM-DD` of "now" when this form was first opened. */
@@ -478,17 +478,17 @@ export function RemindersTab({
 // Sub-component: PolicyRow
 // ---------------------------------------------------------------------------
 
-type PolicyRowProps = {
+interface PolicyRowProps {
   readonly policy: MockReminderPolicy;
   readonly derivedCount: number;
   readonly isExpanded: boolean;
   readonly isMutating: boolean;
-  readonly derivedRules: ReadonlyArray<MockReminder>;
+  readonly derivedRules: readonly MockReminder[];
   readonly periodById: ReadonlyMap<string, MockPeriod>;
   readonly onToggle: () => void;
   readonly onEdit: () => void;
   readonly onRemove: () => void;
-};
+}
 
 function PolicyRow({
   policy,
@@ -602,7 +602,7 @@ function PolicyRow({
 // Sub-component: PolicyForm
 // ---------------------------------------------------------------------------
 
-type PolicyFormProps = {
+interface PolicyFormProps {
   readonly form: PolicyFormState;
   readonly editing: boolean;
   readonly isSaving: boolean;
@@ -612,7 +612,7 @@ type PolicyFormProps = {
   ) => void;
   readonly onCancel: () => void;
   readonly onSave: () => void;
-};
+}
 
 type OffsetUnit = "minutes" | "hours" | "days";
 

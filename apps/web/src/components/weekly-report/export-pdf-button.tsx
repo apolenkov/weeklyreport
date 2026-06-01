@@ -6,10 +6,10 @@ import { toast } from "sonner";
 
 import { useTRPC } from "../../lib/trpc-context";
 
-type ExportPdfButtonProps = {
+interface ExportPdfButtonProps {
   readonly reportId: string;
   readonly periodStatus: "open" | "published" | "reopened";
-};
+}
 
 /**
  * Export PDF button — Phase 23-01.

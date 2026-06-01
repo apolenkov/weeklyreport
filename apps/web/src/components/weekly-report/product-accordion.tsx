@@ -3,20 +3,24 @@
 import { useEffect, useState } from "react";
 import type { ProductReport } from "../dashboard/mock-data";
 
-type ProductAccordionProps = {
+interface ProductAccordionProps {
   readonly report: ProductReport;
   readonly defaultOpen?: boolean;
   readonly highlighted?: boolean;
   readonly scrollIntoViewOnHighlight?: boolean;
-};
+}
 
-type StatusConfig = {
+interface StatusConfig {
   bg: string;
   text: string;
   avatarBg: string;
   avatarText: string;
-};
-type ItemStatusBadge = { bg: string; text: string; label: string };
+}
+interface ItemStatusBadge {
+  bg: string;
+  text: string;
+  label: string;
+}
 
 const STATUS_CONFIG = {
   "on-track": {

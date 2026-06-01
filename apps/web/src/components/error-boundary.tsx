@@ -4,7 +4,10 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 import { toast } from "sonner";
 
 type Props = Readonly<{ children: ReactNode; fallback?: ReactNode }>;
-type State = { hasError: boolean; error: Error | null };
+interface State {
+  hasError: boolean;
+  error: Error | null;
+}
 
 export class QueryErrorBoundary extends Component<Props, State> {
   override state: State = { hasError: false, error: null };

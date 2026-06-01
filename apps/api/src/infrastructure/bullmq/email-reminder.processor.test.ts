@@ -71,11 +71,11 @@ function createMockAdminService(notificationFromEmail: string | null = null) {
   };
 }
 
-type EmailReminderJobData = {
+interface EmailReminderJobData {
   executionId: string;
   recipientEmail: string;
   reportPeriod: string;
-};
+}
 
 function createMockJob(data: EmailReminderJobData): Job<EmailReminderJobData> {
   return { data } as Job<EmailReminderJobData>;
@@ -83,9 +83,9 @@ function createMockJob(data: EmailReminderJobData): Job<EmailReminderJobData> {
 
 // Test seam — `processJob` is `private` on the class, but tests need to invoke
 // it directly. Cast through this interface to call without `as any`.
-type ProcessorTestSeam = {
+interface ProcessorTestSeam {
   processJob(job: Job<EmailReminderJobData>): Promise<void>;
-};
+}
 
 const defaultJobData: EmailReminderJobData = {
   executionId: "exec-1",

@@ -134,7 +134,11 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       fetchOne(input.periodB),
     ]);
 
-    type Cell = { status: TrafficLightCell; risks: number; name: string };
+    interface Cell {
+      status: TrafficLightCell;
+      risks: number;
+      name: string;
+    }
     const collect = (
       report: NonNullable<Awaited<ReturnType<typeof fetchOne>>> | null,
     ): Map<string, Cell> => {

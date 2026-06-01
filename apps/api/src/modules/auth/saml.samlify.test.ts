@@ -194,8 +194,8 @@ describe.skip("38-03 SAML hardening — samlify mock IdP integration", () => {
     // Locate the SignatureValue and flip one base64 char inside it. The
     // SignatureValue is the canonical "signed bytes" — any mutation must
     // cause the canonicalised hash to disagree with the decrypted signature.
-    const sigMatch = xml.match(
-      /<ds:SignatureValue>([\s\S]+?)<\/ds:SignatureValue>/,
+    const sigMatch = /<ds:SignatureValue>([\s\S]+?)<\/ds:SignatureValue>/.exec(
+      xml,
     );
     expect(sigMatch).not.toBeNull();
     const original = expectDefined(expectDefined(sigMatch)[1]);

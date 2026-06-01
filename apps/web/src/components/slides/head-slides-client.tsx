@@ -35,7 +35,7 @@ function SlideEmptyState({
   );
 }
 
-type HeadSlidesClientProps = {
+interface HeadSlidesClientProps {
   /** When provided, loads slides for that specific report period instead of
    * the current active period. Used by HeadReportShell slides mode. */
   readonly reportId?: string;
@@ -45,7 +45,7 @@ type HeadSlidesClientProps = {
    * content for that product. Driven by the head shell ScopeToggle.
    */
   readonly scope?: "lead" | "product";
-};
+}
 
 export function HeadSlidesClient({
   reportId,
@@ -99,16 +99,16 @@ export function HeadSlidesClient({
       : null;
   const reportLabel =
     weeklyQ.data && weeklyQ.data.status === "active"
-      ? (weeklyQ.data.weekLabel ?? "Current week") +
-        " - " +
-        formatWeekRange(weeklyQ.data.periodStart, weeklyQ.data.periodEnd)
+      ? `${weeklyQ.data.weekLabel ?? "Current week"} - ${formatWeekRange(
+          weeklyQ.data.periodStart,
+          weeklyQ.data.periodEnd,
+        )}`
       : null;
   const sourceHref =
     activeReportId && selectedSlide
-      ? "/head/report/" +
-        encodeURIComponent(activeReportId) +
-        "?authorId=" +
-        encodeURIComponent(selectedSlide.ownerId)
+      ? `/head/report/${encodeURIComponent(
+          activeReportId,
+        )}?authorId=${encodeURIComponent(selectedSlide.ownerId)}`
       : undefined;
 
   if (weeklyQ.isLoading || activityQ.isLoading) {

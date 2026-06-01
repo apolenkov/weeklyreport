@@ -5,10 +5,10 @@ export type ScopeValue = "own" | "product" | "lead";
 interface ScopeToggleProps {
   value: ScopeValue;
   onChange: (next: ScopeValue) => void;
-  allowedScopes?: ReadonlyArray<ScopeValue>;
+  allowedScopes?: readonly ScopeValue[];
 }
 
-const DEFAULT_SCOPES: ReadonlyArray<ScopeValue> = [
+const DEFAULT_SCOPES: readonly ScopeValue[] = [
   "own",
   "product",
   "lead",

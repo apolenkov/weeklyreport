@@ -52,7 +52,7 @@ export class AutoArchiverScheduler {
     now: Date,
   ): Promise<
     | { archived: false; reason: "disabled" }
-    | { archived: true; periodIds: ReadonlyArray<string> }
+    | { archived: true; periodIds: readonly string[] }
   > {
     const settings = await this.adminService.getSettings();
     if (settings.autoArchiveWeeksAfterPublish <= 0) {

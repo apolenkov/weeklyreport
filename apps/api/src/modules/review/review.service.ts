@@ -51,10 +51,9 @@ function sortRows(rows: SubmissionDashboardRow[]): SubmissionDashboardRow[] {
 export class ReviewService {
   private readonly logger = createAppLogger({
     service: "ReviewService",
-    logDir: process.env["LOG_DIR"],
+    logDir: process.env.LOG_DIR,
     minLevel:
-      (process.env["LOG_LEVEL"] as "debug" | "info" | "warn" | "error") ??
-      "info",
+      (process.env.LOG_LEVEL as "debug" | "info" | "warn" | "error") ?? "info",
   });
 
   constructor(private readonly repository: ReviewRepository) {}

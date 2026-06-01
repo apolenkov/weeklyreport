@@ -41,12 +41,12 @@ import { trafficToStageStatus } from "./traffic-light";
 
 export type ProductStatus = "on-track" | "at-risk" | "blocked";
 
-export type TrafficLight = {
+export interface TrafficLight {
   status: ProductStatus;
   icon: string;
-};
+}
 
-export type LeadInfo = {
+export interface LeadInfo {
   id: string;
   initials: string;
   name: string;
@@ -65,9 +65,9 @@ export type LeadInfo = {
   submittedAtLabel?: string | null;
   /** SC-160: The section UUID needed for the per-lead Revoke button. */
   reportSectionId?: string;
-};
+}
 
-export type KpiData = {
+export interface KpiData {
   submitted: number;
   total: number;
   lastWeekSubmitted: number;
@@ -78,18 +78,18 @@ export type KpiData = {
   blockedCount: number;
   atRiskCount: number;
   decisionCount: number;
-};
+}
 
-export type BlockedAtRiskItem = {
+export interface BlockedAtRiskItem {
   id: string;
   severity: "blocked" | "at-risk";
   product: string;
   stage: string;
   assignee: string;
   description: string;
-};
+}
 
-export type ArchiveReport = {
+export interface ArchiveReport {
   id: string;
   weekLabel: string;
   dateRange: string;
@@ -98,7 +98,7 @@ export type ArchiveReport = {
   productCount: number;
   riskCount: number;
   decisionCount: number;
-};
+}
 
 // ---- Helpers ----
 
@@ -231,7 +231,7 @@ export function mapArchiveSummary(
 
 // ---- Composer ----
 
-export type MapDashboardArgs = {
+export interface MapDashboardArgs {
   review: SubmissionDashboardRow[];
   archive: PaginatedResult<ArchiveReportSummary>;
   weeklyReport: WeeklyReportReadModel;
@@ -239,15 +239,15 @@ export type MapDashboardArgs = {
   now?: Date;
   /** Optional: identifier of the currently authenticated lead, used to flag isCurrentUser. */
   currentUserId?: string;
-};
+}
 
-export type MappedDashboard = {
+export interface MappedDashboard {
   kpi: KpiData;
   leads: LeadInfo[];
   blockedAtRisk: BlockedAtRiskItem[];
   archive: ArchiveReport[];
   pendingLeads: string[];
-};
+}
 
 export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
   const now = args.now ?? new Date();

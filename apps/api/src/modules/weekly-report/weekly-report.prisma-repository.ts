@@ -195,18 +195,18 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
 // ---------------------------------------------------------------------------
 
 function buildPortfolioOverview(
-  projects: Array<{
+  projects: {
     id: string;
     name: string;
-    stageAssignments: Array<{ id: string }>;
-  }>,
-  sections: Array<{
+    stageAssignments: { id: string }[];
+  }[],
+  sections: {
     // Prisma returns `status: TrafficLightStatus | null`; null statuses
     // skip the totals.
-    projectStatuses: Array<{ projectId: string; status: string | null }>;
+    projectStatuses: { projectId: string; status: string | null }[];
     authorId: string;
     author: { name: string };
-  }>,
+  }[],
 ): PortfolioProductOverview[] {
   return projects.map((project) => {
     const statuses: string[] = [];
@@ -265,26 +265,26 @@ function computeWorstStatus(
 // ---------------------------------------------------------------------------
 
 function buildEscalations(
-  sections: Array<{
+  sections: {
     authorId: string;
     author: { name: string };
     // Prisma yields `status: TrafficLightStatus | null`; null skips the row.
-    projectStatuses: Array<{
+    projectStatuses: {
       projectId: string;
       status: string | null;
       project: { id: string; name: string };
-    }>;
-    items: Array<{
+    }[];
+    items: {
       projectId: string;
       workflowStatus: string;
       text: string;
-    }>;
-    risks: Array<{
+    }[];
+    risks: {
       projectId: string;
       risk: string;
-    }>;
-  }>,
-  projects: Array<{ id: string; name: string }>,
+    }[];
+  }[],
+  projects: { id: string; name: string }[],
 ): Escalation[] {
   const projectNameMap = new Map(projects.map((p) => [p.id, p.name]));
   const escalations: Escalation[] = [];

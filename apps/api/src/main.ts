@@ -5,11 +5,11 @@ import "reflect-metadata";
 // Sentry must run first so its instrumentation wraps the original http, not OTel's wrapper.
 import * as Sentry from "@sentry/nestjs";
 
-if (process.env["SENTRY_DSN"]) {
+if (process.env.SENTRY_DSN) {
   Sentry.init({
-    dsn: process.env["SENTRY_DSN"],
+    dsn: process.env.SENTRY_DSN,
     tracesSampleRate: 0, // traces via OTel/Tempo, not Sentry
-    environment: process.env["NODE_ENV"] ?? "development",
+    environment: process.env.NODE_ENV ?? "development",
   });
 }
 
@@ -91,7 +91,7 @@ async function bootstrap() {
   // Sync Zod-applied defaults back into process.env so legacy callers that
   // still read process.env directly (e.g. pdf-export.service.signPdfExportToken)
   // see the validated/defaulted value instead of undefined.
-  process.env["PDF_EXPORT_JWT_SECRET"] ??= env.PDF_EXPORT_JWT_SECRET;
+  process.env.PDF_EXPORT_JWT_SECRET ??= env.PDF_EXPORT_JWT_SECRET;
 
   // Phase 68: pre-bootstrap logger (no CLS yet) routed through NestAppLoggerAdapter
   // so all NestJS Logger(context) calls in services/schedulers land in app.log.
@@ -230,7 +230,7 @@ async function bootstrap() {
   // Dev-only by default; turn on in prod with CLIENT_LOG_FORWARDING=true.
   const clientLogsEnabled =
     env.NODE_ENV === "development" ||
-    process.env["CLIENT_LOG_FORWARDING"] === "true";
+    process.env.CLIENT_LOG_FORWARDING === "true";
   app.use(
     "/api/client-logs",
     express.json({ limit: "128kb" }),
@@ -244,30 +244,30 @@ async function bootstrap() {
       for (const raw of entries.slice(0, 100)) {
         if (!raw || typeof raw !== "object") continue;
         const e = raw as Record<string, unknown>;
-        const lvl = e["level"];
+        const lvl = e.level;
         const level: "debug" | "info" | "warn" | "error" =
           lvl === "debug" || lvl === "info" || lvl === "warn" || lvl === "error"
             ? lvl
             : "info";
         const msg =
-          typeof e["message"] === "string"
-            ? (e["message"] as string).slice(0, 2000)
+          typeof e.message === "string"
+            ? (e.message as string).slice(0, 2000)
             : "<non-string>";
         logger[level](`client: ${msg}`, {
           phase: "web.client",
           source:
-            typeof e["source"] === "string"
-              ? (e["source"] as string).slice(0, 64)
+            typeof e.source === "string"
+              ? (e.source as string).slice(0, 64)
               : undefined,
           url:
-            typeof e["url"] === "string"
-              ? (e["url"] as string).slice(0, 500)
+            typeof e.url === "string"
+              ? (e.url as string).slice(0, 500)
               : undefined,
           stack:
-            typeof e["stack"] === "string"
-              ? (e["stack"] as string).slice(0, 4000)
+            typeof e.stack === "string"
+              ? (e.stack as string).slice(0, 4000)
               : undefined,
-          ts: e["ts"],
+          ts: e.ts,
           ua: req.get("user-agent")?.slice(0, 200),
           ip: req.ip,
         });

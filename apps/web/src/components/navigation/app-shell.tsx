@@ -4,13 +4,13 @@ import type { Role } from "@customreport/shared";
 import type { ReactNode } from "react";
 import { ApiReadinessPlaceholder } from "../common/api-readiness-placeholder";
 
-type AppShellProps = {
+interface AppShellProps {
   readonly activeReportId?: string | null;
   readonly role: Role;
   readonly currentPath: string;
   readonly userName?: string;
   readonly children: ReactNode;
-};
+}
 
 function getRoleLabel(role: Role): string {
   // Phase 27 widened `Role` to include 'admin' (sessionRoleSchema). For v6.0,

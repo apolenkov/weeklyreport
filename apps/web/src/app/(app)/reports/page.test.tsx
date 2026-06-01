@@ -59,10 +59,10 @@ vi.mock("../../../lib/trpc-context", () => ({
   }),
 }));
 
-type QueryOptions = {
+interface QueryOptions {
   readonly queryKey: readonly unknown[];
   readonly enabled?: boolean;
-};
+}
 
 function setRole(role: Role) {
   sessionMock.mockReturnValue({
@@ -163,7 +163,7 @@ function mockQueries() {
         isError: false,
       } as ReturnType<typeof useQuery>;
     }
-    throw new Error("Unexpected query " + String(name));
+    throw new Error(`Unexpected query ${String(name)}`);
   });
 }
 

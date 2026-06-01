@@ -441,7 +441,7 @@ export const paginationInputSchema = z.object({
 
 export type PaginationInput = z.infer<typeof paginationInputSchema>;
 
-export type PaginatedResult<T> = {
+export interface PaginatedResult<T> {
   items: T[];
   nextCursor: string | null;
-};
+}

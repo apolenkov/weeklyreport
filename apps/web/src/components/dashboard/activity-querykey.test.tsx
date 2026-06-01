@@ -16,7 +16,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // --- spies ---------------------------------------------------------------
 
 type QueryKey = unknown[];
-type QueryOptions = { queryKey: QueryKey };
+interface QueryOptions {
+  queryKey: QueryKey;
+}
 
 const queryOptionsSpy = vi.fn(
   (arg?: unknown): QueryOptions => ({

@@ -12,10 +12,10 @@ import {
 
 import type { ReportSectionsService } from "./report-sections.service";
 
-export type ReportSectionsRouterContext = {
+export interface ReportSectionsRouterContext {
   reportSectionsService: ReportSectionsService;
   session: UserSession;
-};
+}
 
 export const reportSectionsRouter = {
   async getActiveSection(

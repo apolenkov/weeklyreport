@@ -40,11 +40,11 @@ export type TrpcMiddlewareResult<T = unknown> =
  * High-cardinality labels (correlationId, userId, IP) would explode the
  * Prometheus time-series store and are deliberately NOT included.
  */
-type TrpcMiddlewareArgs<R extends TrpcMiddlewareResult> = {
+interface TrpcMiddlewareArgs<R extends TrpcMiddlewareResult> {
   path: string;
   type: "query" | "mutation" | "subscription";
   next: () => Promise<R>;
-};
+}
 
 export async function trpcMetricsMiddleware<R extends TrpcMiddlewareResult>(
   opts: TrpcMiddlewareArgs<R>,

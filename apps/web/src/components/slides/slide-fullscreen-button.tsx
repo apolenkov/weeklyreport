@@ -3,10 +3,10 @@
 import { Maximize2, Minimize2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-type SlideFullscreenButtonProps = {
+interface SlideFullscreenButtonProps {
   readonly targetRef: React.RefObject<HTMLElement | null>;
   readonly variant?: "default" | "floating";
-};
+}
 
 export function SlideFullscreenButton({
   targetRef,

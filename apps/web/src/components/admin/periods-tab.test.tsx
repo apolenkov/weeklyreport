@@ -76,7 +76,7 @@ const archivedRow = makeRow({
 
 // ----- tRPC test double ----------------------------------------------
 
-type Captured = {
+interface Captured {
   publishMutationFn: ReturnType<typeof vi.fn>;
   reopenMutationFn: ReturnType<typeof vi.fn>;
   archiveMutationFn: ReturnType<typeof vi.fn>;
@@ -87,8 +87,8 @@ type Captured = {
   updateMutationFn: ReturnType<typeof vi.fn>;
   // A27: delete period mutation.
   deleteMutationFn: ReturnType<typeof vi.fn>;
-  listInputs: Array<{ bucket: string }>;
-};
+  listInputs: { bucket: string }[];
+}
 
 function makeMockTRPC(opts: {
   active: PeriodListItem[];
@@ -122,16 +122,16 @@ function makeMockTRPC(opts: {
         pathFilter: () => ({ queryKey: ["admin", "archivePeriod"] }),
         mutationOptions: (mopts: Record<string, unknown>) => ({
           mutationFn: opts.captured.archiveMutationFn,
-          onSuccess: mopts["onSuccess"],
-          onError: mopts["onError"],
+          onSuccess: mopts.onSuccess,
+          onError: mopts.onError,
         }),
       },
       unarchivePeriod: {
         pathFilter: () => ({ queryKey: ["admin", "unarchivePeriod"] }),
         mutationOptions: (mopts: Record<string, unknown>) => ({
           mutationFn: opts.captured.unarchiveMutationFn,
-          onSuccess: mopts["onSuccess"],
-          onError: mopts["onError"],
+          onSuccess: mopts.onSuccess,
+          onError: mopts.onError,
         }),
       },
       // UFB-063: admin.createPeriodManual mutation surface. Captured
@@ -141,8 +141,8 @@ function makeMockTRPC(opts: {
         pathFilter: () => ({ queryKey: ["admin", "createPeriodManual"] }),
         mutationOptions: (mopts: Record<string, unknown>) => ({
           mutationFn: opts.captured.createMutationFn,
-          onSuccess: mopts["onSuccess"],
-          onError: mopts["onError"],
+          onSuccess: mopts.onSuccess,
+          onError: mopts.onError,
         }),
       },
       // UFB-067: admin.updatePeriodManual mutation surface used by the
@@ -152,8 +152,8 @@ function makeMockTRPC(opts: {
         pathFilter: () => ({ queryKey: ["admin", "updatePeriodManual"] }),
         mutationOptions: (mopts: Record<string, unknown>) => ({
           mutationFn: opts.captured.updateMutationFn,
-          onSuccess: mopts["onSuccess"],
-          onError: mopts["onError"],
+          onSuccess: mopts.onSuccess,
+          onError: mopts.onError,
         }),
       },
       // A27 (UAT-v7 2026-05-12): delete period (draft/scheduled only).
@@ -161,8 +161,8 @@ function makeMockTRPC(opts: {
         pathFilter: () => ({ queryKey: ["admin", "deleteReport"] }),
         mutationOptions: (mopts: Record<string, unknown>) => ({
           mutationFn: opts.captured.deleteMutationFn,
-          onSuccess: mopts["onSuccess"],
-          onError: mopts["onError"],
+          onSuccess: mopts.onSuccess,
+          onError: mopts.onError,
         }),
       },
     },
@@ -171,16 +171,16 @@ function makeMockTRPC(opts: {
         pathFilter: () => ({ queryKey: ["period", "publish"] }),
         mutationOptions: (mopts: Record<string, unknown>) => ({
           mutationFn: opts.captured.publishMutationFn,
-          onSuccess: mopts["onSuccess"],
-          onError: mopts["onError"],
+          onSuccess: mopts.onSuccess,
+          onError: mopts.onError,
         }),
       },
       reopen: {
         pathFilter: () => ({ queryKey: ["period", "reopen"] }),
         mutationOptions: (mopts: Record<string, unknown>) => ({
           mutationFn: opts.captured.reopenMutationFn,
-          onSuccess: mopts["onSuccess"],
-          onError: mopts["onError"],
+          onSuccess: mopts.onSuccess,
+          onError: mopts.onError,
         }),
       },
     },

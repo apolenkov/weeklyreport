@@ -39,12 +39,12 @@ export interface DueDeadlineRule {
   reportId: string;
   fireAt: Date;
   reportPeriodLabel: string;
-  recipients: Array<{
+  recipients: {
     userId: string;
     email: string;
     name: string;
     notificationOptOut: boolean;
-  }>;
+  }[];
 }
 
 /**
@@ -60,11 +60,11 @@ export interface DueEscalationRule {
   fireAt: Date;
   reportPeriodLabel: string;
   head: { userId: string; email: string; name: string };
-  lateLeads: Array<{
+  lateLeads: {
     leadName: string;
     sectionTitle: string;
     deadlineIso: string;
-  }>;
+  }[];
 }
 
 @Injectable()

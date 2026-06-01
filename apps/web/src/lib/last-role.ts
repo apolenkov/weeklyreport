@@ -22,11 +22,11 @@
 
 export type LastRole = "lead" | "head" | "admin" | "viewer";
 
-export type LastRoleRecord = {
+export interface LastRoleRecord {
   readonly role: LastRole;
   readonly email: string;
   readonly name: string;
-};
+}
 
 export const LAST_ROLE_STORAGE_KEY = "customreport:lastRole";
 

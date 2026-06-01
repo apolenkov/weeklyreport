@@ -2,10 +2,10 @@
 
 import { Archive } from "lucide-react";
 
-type ArchiveToggleProps = {
+interface ArchiveToggleProps {
   readonly checked: boolean;
   readonly onChange: (checked: boolean) => void;
-};
+}
 
 export function ArchiveToggle({ checked, onChange }: ArchiveToggleProps) {
   return (

@@ -30,10 +30,10 @@ import { TELEGRAM_ADAPTER, type TelegramAdapter } from "./telegram.adapter.js";
  * adapter is the only consumer, and the queue does not carry rendering
  * concerns (a future producer that wants templating renders before enqueue).
  */
-export type TelegramOutboundJobData = {
+export interface TelegramOutboundJobData {
   chatId: string;
   text: string;
-};
+}
 
 export const TELEGRAM_OUTBOUND_QUEUE_NAME = "telegram-outbound" as const;
 
@@ -75,14 +75,14 @@ export class TelegramProcessor implements OnModuleInit, OnModuleDestroy {
 
     this.worker.on("failed", (job, error) => {
       process.stderr.write(
-        JSON.stringify({
+        `${JSON.stringify({
           timestamp: new Date().toISOString(),
           level: "error",
           message: "telegram-outbound job failed",
           chatId: job?.data.chatId,
           attempt: job?.attemptsMade,
           error: error.message,
-        }) + "\n",
+        })}\n`,
       );
     });
   }

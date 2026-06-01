@@ -132,7 +132,7 @@ function toExportJob(row: {
 }
 
 function computePortfolioOverview(
-  sections: Array<{ projectStatuses: Array<{ status: string }> }>,
+  sections: { projectStatuses: { status: string }[] }[],
 ): PortfolioOverview {
   const totals = { green: 0, yellow: 0, red: 0 };
 

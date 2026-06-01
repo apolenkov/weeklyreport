@@ -13,11 +13,11 @@ import type { MockPeriod, MockReminder } from "./mock-data";
  * (e.g. policy was just created and no period has matched its validity
  * window) we show a short hint instead of an empty table.
  */
-export type DerivedRulesPanelProps = {
+export interface DerivedRulesPanelProps {
   readonly policyId: string;
-  readonly rules: ReadonlyArray<MockReminder>;
+  readonly rules: readonly MockReminder[];
   readonly periodById: ReadonlyMap<string, MockPeriod>;
-};
+}
 
 export function DerivedRulesPanel({
   policyId,

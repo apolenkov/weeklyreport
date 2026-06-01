@@ -371,11 +371,11 @@ export function DashboardPage() {
   );
 }
 
-type DashboardLoadIssueProps = {
+interface DashboardLoadIssueProps {
   title: string;
   description: string;
   onRetry: () => void;
-};
+}
 
 function DashboardLoadIssue({
   title,

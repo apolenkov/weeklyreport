@@ -9,26 +9,26 @@ export type StageStatus = "on-track" | "at-risk" | "blocked" | "empty";
 
 export type StageOwnership = "mine" | "locked" | "unassigned";
 
-export type StageAssignment = {
+export interface StageAssignment {
   stageName: string;
   status: StageStatus;
   ownership: StageOwnership;
   assignee: string | null;
   tooltip?: string;
-};
+}
 
-export type Product = {
+export interface Product {
   id: string;
   name: string;
   overallStatus: StageStatus;
   stages: StageAssignment[];
   riskSummary?: string;
   riskCount?: number;
-};
+}
 
 export type ItemStatus = "in-progress" | "completed" | "blocked" | "planned";
 
-export type KanbanItem = {
+export interface KanbanItem {
   id: string;
   productId: string;
   productName: string;
@@ -43,9 +43,9 @@ export type KanbanItem = {
   authorId?: string;
   /** Derived from Item.priorityRank. Null = not a priority item. */
   priorityRank?: number | null;
-};
+}
 
-export type RiskEntry = {
+export interface RiskEntry {
   id: string;
   productId: string;
   productName: string;
@@ -62,9 +62,9 @@ export type RiskEntry = {
   foreign?: boolean;
   authorId?: string;
   authorName?: string;
-};
+}
 
-export type DecisionEntry = {
+export interface DecisionEntry {
   id: string;
   productId: string;
   productName: string;
@@ -80,9 +80,9 @@ export type DecisionEntry = {
   stageIds?: string[];
   foreign?: boolean;
   authorId?: string;
-};
+}
 
-export type PriorityEntry = {
+export interface PriorityEntry {
   /** 1-indexed rank. Schema allows any positive int up to 50 per draft. */
   rank: number;
   text: string;
@@ -94,9 +94,9 @@ export type PriorityEntry = {
   foreign?: boolean;
   authorId?: string;
   authorName?: string;
-};
+}
 
-export type ReportPeriod = {
+export interface ReportPeriod {
   id: string;
   /**
    * Section id (per-lead) used for fillFrom mutation. Matches
@@ -111,17 +111,17 @@ export type ReportPeriod = {
   itemCount?: number;
   riskCount?: number;
   productCount?: number;
-};
+}
 
-export type VersionSnapshot = {
+export interface VersionSnapshot {
   version: number;
   timestamp: string;
   itemCount: number;
   riskCount: number;
   decisionCount: number;
-};
+}
 
-export type HistoryEntry = {
+export interface HistoryEntry {
   id: string;
   periodId: string;
   weekLabel: string;
@@ -132,7 +132,7 @@ export type HistoryEntry = {
   itemCount: number;
   riskCount: number;
   decisionCount: number;
-};
+}
 
 // ---- Mock Data ----
 

@@ -9,7 +9,9 @@ import type {
   UnifiedSlideModel,
 } from "./section-slide-utils";
 
-type Props = { readonly model: UnifiedSlideModel };
+interface Props {
+  readonly model: UnifiedSlideModel;
+}
 
 function inlineProductMarker(productName: string): ReactNode {
   return (
@@ -69,7 +71,7 @@ function SectionBlock({
           <ul className="mt-2 space-y-1.5">
             {items.slice(0, MAX_ITEMS_PER_SECTION).map((row, idx) => (
               <li
-                key={row.text + "-" + String(idx)}
+                key={`${row.text}-${String(idx)}`}
                 className="flex min-w-0 items-baseline gap-2"
               >
                 {/* Fixed-width slot so all item texts start at the same X. */}

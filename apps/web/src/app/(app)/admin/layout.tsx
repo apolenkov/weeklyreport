@@ -16,7 +16,7 @@ import { getServerSession } from "../../../lib/server/get-server-session";
  * Heads have /head/dashboard; the admin panel is not theirs. Both the
  * tRPC adminProcedure middleware and this layout enforce the same gate.
  */
-const REQUIRED: ReadonlyArray<Role> = ["admin"];
+const REQUIRED: readonly Role[] = ["admin"];
 
 type Props = Readonly<{ children: ReactNode }>;
 

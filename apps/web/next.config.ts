@@ -2,8 +2,8 @@ import { resolve } from "node:path";
 import type { NextConfig } from "next";
 
 const API_URL =
-  process.env["API_URL"] ??
-  process.env["NEXT_PUBLIC_API_URL"] ??
+  process.env.API_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
   "http://localhost:3002";
 
 const nextConfig: NextConfig = {
@@ -17,9 +17,7 @@ const nextConfig: NextConfig = {
   // matches by repo dir (not port), so the E2E webServer must use a
   // distinct .next dir to satisfy it. NEXT_DIST_DIR is set by
   // playwright.config.ts.
-  ...(process.env["NEXT_DIST_DIR"]
-    ? { distDir: process.env["NEXT_DIST_DIR"] }
-    : {}),
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   turbopack: {
     root: resolve(__dirname, "../.."),
   },

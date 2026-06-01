@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 
 import type { ReportPeriod } from "./mock-data";
 
-type FillFromButtonProps = {
+interface FillFromButtonProps {
   readonly periods: ReportPeriod[];
   /**
    * Called with the SECTION id of the chosen period (NOT the report id) so the
@@ -13,7 +13,7 @@ type FillFromButtonProps = {
    */
   readonly onFillFrom?: (sourceSectionId: string) => void;
   readonly disabled?: boolean;
-};
+}
 
 function CopyIcon() {
   return (

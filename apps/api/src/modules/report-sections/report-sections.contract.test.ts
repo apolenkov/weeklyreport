@@ -47,7 +47,7 @@ const baseSection: ReportSectionReadModel = {
 
 function createRepository(
   section: ReportSectionReadModel,
-  reportStatus: string = "draft",
+  reportStatus = "draft",
 ): ReportSectionsRepository {
   let currentSection = structuredClone(section);
 

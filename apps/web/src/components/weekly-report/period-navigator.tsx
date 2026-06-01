@@ -16,10 +16,10 @@ import type { ReportPeriod } from "../dashboard/mock-data";
 // the dropdown but small enough to feel responsive.
 const SWIPE_THRESHOLD_PX = 50;
 
-type PeriodNavigatorProps = {
+interface PeriodNavigatorProps {
   readonly periods: ReportPeriod[];
   readonly basePath?: string;
-};
+}
 
 function ChevronLeft() {
   return (
@@ -68,7 +68,7 @@ export function HeadPeriodNavigator({
   // addressed week even before the period dropdown carries query state.
   const pathReportId = useMemo(() => {
     if (!pathname) return null;
-    const match = pathname.match(/^\/head\/report\/([^/]+)$/);
+    const match = /^\/head\/report\/([^/]+)$/.exec(pathname);
     return match ? match[1] : null;
   }, [pathname]);
 

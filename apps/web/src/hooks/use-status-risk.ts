@@ -26,7 +26,7 @@ import { splitStageNames } from "../components/lead/stage-tags";
  * Coupling state for a single at-risk/blocked product.
  * Pure derived data — no side effects.
  */
-export type ProductCoupling = {
+export interface ProductCoupling {
   productId: string;
   productName: string;
   /** overallStatus narrowed to at-risk/blocked */
@@ -42,7 +42,7 @@ export type ProductCoupling = {
     stageName: string;
     severity: "at-risk" | "blocked";
   }[];
-};
+}
 
 export type CouplingState = ProductCoupling[];
 
@@ -132,14 +132,14 @@ export type SyncSource = "user" | "auto-sync";
 type ProductsUpdater = Product[] | ((prev: Product[]) => Product[]);
 type RisksUpdater = RiskEntry[] | ((prev: RiskEntry[]) => RiskEntry[]);
 
-export type StatusUpdateSuggestionParams = {
+export interface StatusUpdateSuggestionParams {
   productId: string;
   productName: string;
   stageName: string;
   suggestedStatus: "at-risk" | "blocked";
-};
+}
 
-export type UseStatusRiskSyncArgs = {
+export interface UseStatusRiskSyncArgs {
   products: Product[];
   risks: RiskEntry[];
   onProductsChange: (next: ProductsUpdater) => void;
@@ -153,9 +153,9 @@ export type UseStatusRiskSyncArgs = {
   requestStatusUpdateConfirmation: (
     params: StatusUpdateSuggestionParams,
   ) => void;
-};
+}
 
-export type UseStatusRiskSyncResult = {
+export interface UseStatusRiskSyncResult {
   handleStageStatusChange: (
     productId: string,
     stageName: string,
@@ -169,7 +169,7 @@ export type UseStatusRiskSyncResult = {
     status: StageStatus,
   ) => void;
   syncSource: () => SyncSource;
-};
+}
 
 /**
  * One-way Risk -> Stage coordination with SyncSource ref to prevent loops.

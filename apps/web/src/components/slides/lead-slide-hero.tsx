@@ -84,13 +84,13 @@ function computeOnTrackPct(
   return Math.round((green / real.length) * 100);
 }
 
-type Props = {
+interface Props {
   readonly slide: SectionSlideModel;
   readonly authorName?: string;
   readonly periodLabel?: string;
   /** Rendered inline with the tone badge, e.g. scope toggle + agent review. */
   readonly heroControls?: ReactNode;
-};
+}
 
 export function LeadSlideHero({
   slide,

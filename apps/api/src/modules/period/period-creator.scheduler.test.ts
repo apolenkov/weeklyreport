@@ -35,7 +35,7 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   };
 }
 
-type StubPrisma = {
+interface StubPrisma {
   report: {
     findFirst: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
@@ -43,7 +43,7 @@ type StubPrisma = {
     // each tick.
     updateMany: ReturnType<typeof vi.fn>;
   };
-};
+}
 
 function makePrismaStub(opts: {
   mostRecent: { id: string; periodEnd: Date } | null;

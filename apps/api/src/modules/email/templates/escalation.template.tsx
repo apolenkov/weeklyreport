@@ -46,7 +46,7 @@ export interface EscalationEmailProps {
   headName: string;
   cycleDate: string; // YYYY-MM-DD UTC
   reportPeriod: string; // human-readable e.g. "2026-04-13 → 2026-04-19"
-  lateLeads: ReadonlyArray<LateLead>;
+  lateLeads: readonly LateLead[];
   organization: OrganizationBrand;
 }
 

@@ -47,7 +47,7 @@ type SectionWithAuthor = Awaited<
     id: string;
     name: string;
     role: string;
-    ledProjects: Array<{ name: string }>;
+    ledProjects: { name: string }[];
   };
 };
 

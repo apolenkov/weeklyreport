@@ -65,11 +65,11 @@ function makeSection(
 /*  Stateful in-memory LeadFormRepository                              */
 /* ------------------------------------------------------------------ */
 
-type SnapshotRow = {
+interface SnapshotRow {
   version: number;
   createdAt: Date;
   data: Record<string, unknown>;
-};
+}
 
 function createLeadFormRepo(opts: {
   section: ReportSectionReadModel;
