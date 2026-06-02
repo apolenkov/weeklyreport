@@ -92,7 +92,7 @@ export function ProductsTab({
         setShowDialog(false);
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to save product");
+        toast.error(err.message);
       },
     }),
   );
@@ -104,7 +104,7 @@ export function ProductsTab({
         toast.success("Product archived");
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to archive product");
+        toast.error(err.message);
       },
     }),
   );

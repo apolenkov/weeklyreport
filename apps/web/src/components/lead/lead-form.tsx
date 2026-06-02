@@ -677,7 +677,9 @@ export function LeadForm({
   const autosave = useLeadFormAutosave({
     reportSectionId: sectionIdForActions || null,
     payload: draftPayload,
-    enabled: !isReadOnlyEarly && !isSubmitted && draftSection !== null,
+    // isReadOnlyEarly already subsumes isSubmitted (it is one of its OR
+    // operands), so !isReadOnlyEarly implies !isSubmitted.
+    enabled: !isReadOnlyEarly && draftSection !== null,
     initialSavedKey,
     onSaveSuccessAction: () => {
       // Every successful autosave creates a new version snapshot.

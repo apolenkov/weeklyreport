@@ -131,12 +131,11 @@ export function StageChip({
     .filter(Boolean)
     .join(" ");
 
-  const borderStyle =
-    isEmpty && isEditable
-      ? `1.5px dashed var(--color-starbucks-accent)`
-      : isUnassigned
-        ? "1.5px dashed rgba(0,0,0,0.15)"
-        : `1.5px solid ${config.border}`;
+  const borderStyle = isEmpty
+    ? `1.5px dashed var(--color-starbucks-accent)`
+    : isUnassigned
+      ? "1.5px dashed rgba(0,0,0,0.15)"
+      : `1.5px solid ${config.border}`;
 
   function handleChipClick() {
     if (!isEditable) return;

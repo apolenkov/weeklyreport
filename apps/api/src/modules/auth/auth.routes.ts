@@ -400,7 +400,7 @@ export function mountAuthRoutes(
       "/auth/dev-login",
       async (req: Request, res: Response, next: NextFunction) => {
         try {
-          const role = (req.query.role as string) ?? "head";
+          const role = (req.query.role as string | undefined) ?? "head";
           const validRoles: Role[] = ["lead", "head", "admin", "viewer"];
           if (!validRoles.includes(role as Role)) {
             loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });
@@ -435,7 +435,7 @@ export function mountAuthRoutes(
           // role was validated against `validRoles` above, so the lookup is
           // always defined — narrow explicitly to satisfy strict TS.
           const email =
-            (req.query.email as string) ??
+            (req.query.email as string | undefined) ??
             emailByRole[role] ??
             `${role}@customreport.local`;
           const isCustomEmail =
@@ -476,7 +476,9 @@ export function mountAuthRoutes(
             viewer: "/reports?tab=published",
           };
           const redirectPath =
-            (req.query.redirect as string) ?? redirectByRole[role] ?? "/";
+            (req.query.redirect as string | undefined) ??
+            redirectByRole[role] ??
+            "/";
           res.redirect(`${frontendUrl}${redirectPath}`);
         } catch (error) {
           loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });

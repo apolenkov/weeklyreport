@@ -89,7 +89,7 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
         setShowDialog(false);
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to save group");
+        toast.error(err.message);
       },
     }),
   );
@@ -102,7 +102,7 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
         setArchiveTarget(null);
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to archive group");
+        toast.error(err.message);
       },
     }),
   );

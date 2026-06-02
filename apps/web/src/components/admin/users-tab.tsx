@@ -22,7 +22,8 @@ function emptyForm(groups: readonly MockGroup[]): UserFormData {
     name: "",
     email: "",
     role: "lead",
-    groupId: groups.find((group) => !group.archived)?.id ?? groups[0]?.id ?? "",
+    groupId:
+      groups.find((group) => !group.archived)?.id ?? groups.at(0)?.id ?? "",
   };
 }
 
@@ -111,7 +112,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
         setShowDialog(false);
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to save user");
+        toast.error(err.message);
       },
     }),
   );
@@ -124,7 +125,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
         setDeleteTarget(null);
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to delete user");
+        toast.error(err.message);
       },
     }),
   );
@@ -138,7 +139,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
         toast.success("User deactivated");
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to deactivate user");
+        toast.error(err.message);
       },
     }),
   );
@@ -150,7 +151,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
         toast.success("User activated");
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to activate user");
+        toast.error(err.message);
       },
     }),
   );

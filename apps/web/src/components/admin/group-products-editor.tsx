@@ -67,7 +67,7 @@ export function GroupProductsEditor({
         ]);
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to attach product");
+        toast.error(err.message);
       },
     }),
   );
@@ -87,7 +87,7 @@ export function GroupProductsEditor({
         ]);
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to detach product");
+        toast.error(err.message);
       },
     }),
   );

@@ -571,7 +571,11 @@ export function buildUnifiedSlideModel(
   for (const product of products) {
     const name =
       product.id === "cross-product" ? "Shared context" : product.name;
-    const ranks = product.itemRanks ?? {};
+    // itemRanks is sparse (items without a rank have no key), so a present-key
+    // lookup is genuinely `number | undefined` at runtime. Annotate honestly —
+    // noUncheckedIndexedAccess is off, so the bare Record would lie non-null and
+    // the `rank != null` guard below would read as redundant.
+    const ranks: Record<string, number | undefined> = product.itemRanks ?? {};
     const withRank = (text: string): UnifiedSectionRow => {
       const rank = ranks[text];
       return rank != null

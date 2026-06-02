@@ -380,7 +380,7 @@ export function createAppRouter(deps: RouterDeps) {
             const lastEditAt = editDates.reduce((latest, date) =>
               date > latest ? date : latest,
             );
-            const latestVersion = s.versionSnapshots[0] ?? null;
+            const latestVersion = s.versionSnapshots.at(0) ?? null;
 
             return {
               sectionId: s.id,
@@ -801,8 +801,8 @@ export function createAppRouter(deps: RouterDeps) {
               await deps.organizationService.updateOrganization(input);
             clearOrgCache();
             ctx.auditLogger.organizationUpdate({
-              userId: ctx.session?.userId ?? "anonymous",
-              role: ctx.session?.role ?? null,
+              userId: ctx.session.userId,
+              role: ctx.session.role,
               ip: ctx.ip,
               previousShortName: previous.shortName,
               previousFullName: previous.fullName,
@@ -910,8 +910,8 @@ export function createAppRouter(deps: RouterDeps) {
             const existed = await deps.adminService.policyExists(input.id);
             const saved = await deps.adminService.savePolicy(input);
             ctx.auditLogger.policySave({
-              userId: ctx.session?.userId ?? "anonymous",
-              role: ctx.session?.role ?? null,
+              userId: ctx.session.userId,
+              role: ctx.session.role,
               ip: ctx.ip,
               policyId: saved.id,
               kind: saved.kind,
@@ -937,8 +937,8 @@ export function createAppRouter(deps: RouterDeps) {
           try {
             const result = await deps.adminService.removePolicy(input.id);
             ctx.auditLogger.policyRemove({
-              userId: ctx.session?.userId ?? "anonymous",
-              role: ctx.session?.role ?? null,
+              userId: ctx.session.userId,
+              role: ctx.session.role,
               ip: ctx.ip,
               policyId: input.id,
             });
@@ -990,8 +990,8 @@ export function createAppRouter(deps: RouterDeps) {
           try {
             const result = await deps.adminService.createPeriodManual(input);
             ctx.auditLogger.periodManualCreate({
-              userId: ctx.session?.userId ?? "anonymous",
-              role: ctx.session?.role ?? null,
+              userId: ctx.session.userId,
+              role: ctx.session.role,
               ip: ctx.ip,
               periodId: result.periodId,
               periodStart: result.periodStart.toISOString(),
@@ -1057,8 +1057,8 @@ export function createAppRouter(deps: RouterDeps) {
                 changes.weekLabel = diff.weekLabel;
               }
               ctx.auditLogger.periodManualEdit({
-                userId: ctx.session?.userId ?? "anonymous",
-                role: ctx.session?.role ?? null,
+                userId: ctx.session.userId,
+                role: ctx.session.role,
                 ip: ctx.ip,
                 periodId: result.periodId,
                 changes,

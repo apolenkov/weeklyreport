@@ -74,7 +74,7 @@ export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
     );
   }
   const decoded = jwt.verify(token, secret);
-  if (typeof decoded !== "object" || decoded === null) {
+  if (typeof decoded !== "object") {
     throw new Error("Invalid PDF export token payload");
   }
   const claims = decoded as Record<string, unknown>;
