@@ -1645,7 +1645,9 @@ export function createAppRouter(deps: RouterDeps) {
 
       listExecutions: headProcedure
         .input(
-          z.object({ ruleId: z.uuid() }).merge(paginationInputSchema.partial()),
+          z
+            .object({ ruleId: z.uuid() })
+            .extend(paginationInputSchema.partial().shape),
         )
         .query(async ({ input }) => {
           try {

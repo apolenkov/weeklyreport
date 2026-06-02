@@ -72,7 +72,7 @@ export const envSchema = z
   .superRefine((data, ctx) => {
     if (!data.AUTH_DEV_MODE && !data.AUTH_JWT_SECRET) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message:
           "AUTH_JWT_SECRET is required when AUTH_DEV_MODE is not true (min 32 chars)",
         path: ["AUTH_JWT_SECRET"],
@@ -83,7 +83,7 @@ export const envSchema = z
     if (data.NODE_ENV === "production") {
       if (data.AUTH_DEV_MODE) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: "AUTH_DEV_MODE=true is forbidden when NODE_ENV=production",
           path: ["AUTH_DEV_MODE"],
         });
@@ -93,7 +93,7 @@ export const envSchema = z
         "dev-only-replace-in-production-min-32-chars"
       ) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message:
             "PDF_EXPORT_JWT_SECRET must be overridden in production (default dev value detected)",
           path: ["PDF_EXPORT_JWT_SECRET"],
@@ -108,7 +108,7 @@ export const envSchema = z
           .filter(Boolean);
         if (origins.includes("*")) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: 'FRONTEND_URLS must not include "*" in production',
             path: ["FRONTEND_URLS"],
           });
@@ -124,7 +124,7 @@ export function validateEnv(): EnvConfig {
 
   if (!result.success) {
     console.error("Invalid environment configuration:");
-    console.error(result.error.format());
+    console.error(z.treeifyError(result.error));
     process.exit(1);
   }
 

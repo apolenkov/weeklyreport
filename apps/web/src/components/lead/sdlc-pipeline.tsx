@@ -93,7 +93,8 @@ export function SdlcPipeline({
     const stageTags =
       r.stageIds && r.stageIds.length > 0
         ? r.stageIds
-        : splitStageNames(r.stageName);
+        : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
+          splitStageNames(r.stageName);
     const keys =
       stageTags.length > 0
         ? stageTags.map(

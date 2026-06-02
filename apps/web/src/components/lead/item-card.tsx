@@ -100,7 +100,8 @@ export function ItemCard({
   const stageTags =
     item.stageIds && item.stageIds.length > 0
       ? item.stageIds
-      : splitStageNames(item.stageName);
+      : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
+        splitStageNames(item.stageName);
   const stageTagsLabel =
     stageTags.length === 0 ? "All stages" : stageTags.join(", ");
   const visibleStageTags = stageTags.slice(0, 2);

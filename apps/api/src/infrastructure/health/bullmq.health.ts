@@ -5,11 +5,15 @@ import { HealthCheckError, HealthIndicator } from "@nestjs/terminus";
 import type { Queue } from "bullmq";
 
 @Injectable()
+// TODO(ratchet-no-deprecated): migrate to HealthIndicatorService API
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- pending supervised migration, see TODO above
 export class BullMQHealthIndicator extends HealthIndicator {
   constructor(
     @InjectQueue("pdf-export") private readonly pdfQueue: Queue,
     @InjectQueue("email-reminder") private readonly emailQueue: Queue,
   ) {
+    // TODO(ratchet-no-deprecated): migrate to HealthIndicatorService API
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- pending supervised migration, see TODO above
     super();
   }
 
@@ -28,6 +32,8 @@ export class BullMQHealthIndicator extends HealthIndicator {
         },
       });
     } catch (error) {
+      // TODO(ratchet-no-deprecated): migrate to HealthIndicatorService API
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- pending supervised migration, see TODO above
       throw new HealthCheckError(
         `${key} health check failed`,
         this.getStatus(key, false, { message: (error as Error).message }),
