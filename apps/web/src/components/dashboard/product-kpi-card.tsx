@@ -115,7 +115,7 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
               >
                 <YAxis hide domain={[0, 100]} />
                 <Tooltip
-                  formatter={(value) => [`${value}%`, "on-time"]}
+                  formatter={(value) => [`${String(value)}%`, "on-time"]}
                   labelFormatter={(label) => `Period ${String(label)}`}
                 />
                 <Line

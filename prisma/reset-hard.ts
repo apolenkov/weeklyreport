@@ -59,7 +59,7 @@ function getRedisEndpoint(): RedisEndpoint {
 
   const port = Number(process.env.REDIS_PORT ?? 6379);
   if (!Number.isInteger(port) || port <= 0) {
-    throw new Error(`Invalid REDIS_PORT: ${process.env.REDIS_PORT}`);
+    throw new Error(`Invalid REDIS_PORT: ${process.env.REDIS_PORT ?? "unset"}`);
   }
   return {
     host: process.env.REDIS_HOST ?? "localhost",
@@ -159,7 +159,7 @@ async function main(): Promise<void> {
   });
   if (migrate.status !== 0) {
     throw new Error(
-      `prisma migrate deploy failed with exit code ${migrate.status}`,
+      `prisma migrate deploy failed with exit code ${migrate.status ?? "unknown"}`,
     );
   }
 
@@ -187,7 +187,7 @@ async function main(): Promise<void> {
     },
   );
   if (seed.status !== 0) {
-    throw new Error(`seed-simple exited with code ${seed.status}`);
+    throw new Error(`seed-simple exited with code ${seed.status ?? "unknown"}`);
   }
 
   console.log(

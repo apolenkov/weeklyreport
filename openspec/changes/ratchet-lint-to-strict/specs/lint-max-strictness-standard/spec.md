@@ -49,8 +49,8 @@ threshold, to force the gate green is forbidden.
 - **WHEN** a ramped rule offers a built-in option that encodes a language or
   framework design reality (e.g. `no-extraneous-class` `allowWithDecorator` for
   NestJS decorator-DI, where an empty `@Module` class is correct by design;
-  `restrict-template-expressions` `allowNumber` for the dominant `${number}`
-  case)
+  `restrict-template-expressions` `allowNumber` + `allowBoolean` for the
+  dominant `${number}` / `${boolean}` interpolation case)
 - **THEN** setting that option is a legitimate rule-scoping configuration that
   sits OUTSIDE the fix→disable→exclude ladder — it is neither a per-site
   suppression nor the rung-3 threshold-raise/exclude that the spec restricts
