@@ -97,6 +97,42 @@ review). Budget per cluster; no global ceiling.
         with `-- mock implements the async … contract` reasons.
         Gate green: require-await 0 repo-wide, lint 0 errors / 13 pre-existing
         warns, typecheck 5/5, test 579 passed. No out-of-scope file edits.
+  - [~] R2b-3 wave-2 cluster (4 rules) via overnight Workflow `ratchet-wave2-overnight`
+    (one cluster/commit, gate-green-or-scoped-revert, NO push; order
+    ascending-risk: empty-function → extraneous-class → deprecated →
+    misused-promises). Result 2 of 4 landed:
+    • [x] `no-empty-function` (17) → error — committed `3c647c38`, gate green.
+    Comment-in-body fix (ESLint treats commented bodies as non-empty), no
+    disables.
+    • [x] `no-deprecated` (27) → error — committed `019afdc7` (gate green
+    AFTER a supervised fix, see below). Internal `stageName` "kept for
+    legacy" reads → per-site disable; Terminus health classes → file-level
+    single-rule disable + `TODO(ratchet-no-deprecated)` (structural
+    migration to HealthIndicatorService deferred to supervised).
+    • [ ] `no-extraneous-class` (27) → NOT landed. Fan-out edit to a TEST file
+    (`email-reminder.processor.test.ts`) introduced a `vi.mock` hoisting
+    `ReferenceError` (mock factory class referenced before init). Test gate
+    caught it; cluster scoped-reverted clean. NestJS `@Module` src sites are
+    ~all disable-with-reason (never convert) — only the test-mock files need
+    a careful redo. SUPERVISED redo pending.
+    • [ ] `no-misused-promises` (4) → NOT landed. Its own fixes were green
+    (typecheck/test/build), but the cluster's repo-wide `pnpm lint` gate
+    tripped on a PRE-EXISTING error left by the no-deprecated commit (see
+    below), so it scoped-reverted. The 4 real-correctness sites remain;
+    riskiest cluster, no disable escape — left for SUPERVISED.
+    TWO METHODOLOGY FINDINGS from this run (fix before the next fan-out):
+    (a) prettier-vs-disable: `eslint-disable-next-line` / `eslint-disable-line`
+    CANNOT sit on a multi-line `extends X` heritage clause — pre-commit
+    `prettier --write` runs AFTER the gate's lint and hoists the comment above
+    `export class`, so the committed tree fails lint though the gated tree
+    passed. This is exactly how `019afdc7` landed red on `redis.health.ts:11`
+    and needed the supervised fix (→ file-level single-rule disable, which is
+    position-independent). The gate must re-lint AFTER staging/prettier, or
+    fixers must avoid line-positioned disables on heritage clauses.
+    (b) cross-cluster coupling: a cluster's gate runs repo-wide `pnpm lint`, so
+    a latent error from an EARLIER cluster reverts the CURRENT one and blames
+    it (misused-promises died for no-deprecated's sin). Gate should diff
+    firings vs the cluster's own files, not fail on pre-existing repo errors.
 - [ ] R2c Behavior-risky clusters get an Opus-level review before merge.
 
 ## 3. Plugin-surface clusters
