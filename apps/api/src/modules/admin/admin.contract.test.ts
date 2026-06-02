@@ -125,8 +125,8 @@ describe("admin reminder-policy contract (UFB-036, Phase 44-02)", () => {
       }),
     ).rejects.toMatchObject({
       code: "METHOD_NOT_SUPPORTED",
-      message: expect.stringContaining("admin.savePolicy"),
-    });
+      message: expect.stringContaining("admin.savePolicy") as unknown,
+    } as Record<string, unknown>);
 
     expect(upsertSpy).not.toHaveBeenCalled();
   });

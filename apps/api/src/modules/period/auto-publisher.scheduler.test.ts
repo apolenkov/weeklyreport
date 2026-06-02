@@ -30,8 +30,7 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-const asAny = (x: unknown) => x as any;
+const asAny = <T>(x: unknown): T => x as unknown as T;
 
 describe("AutoPublisherScheduler", () => {
   it("skip-when-disabled: autoPublishAfterDeadline=false → no DB scan", async () => {

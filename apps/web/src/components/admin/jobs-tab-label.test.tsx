@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const useQueryMock = vi.fn();
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: (opts: unknown) => useQueryMock(opts),
+  useQuery: (opts: unknown): unknown => useQueryMock(opts) as unknown,
 }));
 vi.mock("../../lib/trpc-context", () => ({
   useTRPC: () => ({

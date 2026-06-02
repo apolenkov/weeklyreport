@@ -13,7 +13,7 @@ const queryOptionsMock = vi.fn((args: unknown) => ({
 const pushMock = vi.fn();
 
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: (opts: unknown) => useQueryMock(opts),
+  useQuery: (opts: unknown) => useQueryMock(opts) as unknown,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -69,7 +69,9 @@ describe("SearchInput — 39-05 (PERF-05)", () => {
     });
 
     // `enabled` flag in useQuery options should be false until q.length >= 2.
-    const lastCall = useQueryMock.mock.calls.at(-1);
+    const lastCall = useQueryMock.mock.calls.at(-1) as
+      | [{ enabled?: boolean }, ...unknown[]]
+      | undefined;
     expect(lastCall?.[0]?.enabled).toBe(false);
   });
 

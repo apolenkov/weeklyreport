@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { MockInstance } from "vitest";
 
 import { MockTelegramAdapter } from "./mock-telegram.adapter";
 
 describe("MockTelegramAdapter (Phase 55 / UFB-056)", () => {
-  let writeSpy: ReturnType<typeof vi.spyOn>;
+  let writeSpy: MockInstance<typeof process.stderr.write>;
 
   beforeEach(() => {
     writeSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
@@ -32,7 +33,10 @@ describe("MockTelegramAdapter (Phase 55 / UFB-056)", () => {
     expect(writeSpy).toHaveBeenCalledTimes(1);
     const firstCall = writeSpy.mock.calls[0];
     expect(firstCall).toBeDefined();
-    const payload = JSON.parse((firstCall?.[0] as string).trim());
+    const payload = JSON.parse((firstCall?.[0] as string).trim()) as Record<
+      string,
+      unknown
+    >;
     expect(payload.message).toBe("telegram-outbound mock send");
     expect(payload.chatId).toBe("chat-1");
     expect(payload.textLength).toBe(4);

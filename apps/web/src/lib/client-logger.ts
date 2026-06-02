@@ -111,7 +111,7 @@ export function installClientLogger(): void {
   });
 
   window.addEventListener("unhandledrejection", (event) => {
-    const reason = event.reason;
+    const reason: unknown = event.reason;
     enqueue({
       level: "error",
       message: safeStringify(reason),

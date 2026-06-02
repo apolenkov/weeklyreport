@@ -1,7 +1,13 @@
 import type { UserSession } from "@customreport/shared";
 import type { Strategy as SamlStrategy } from "@node-saml/passport-saml";
 import type { PrismaClient, Role } from "@prisma/client";
-import type { Express, NextFunction, Request, Response } from "express";
+import type {
+  Express,
+  NextFunction,
+  Request,
+  RequestHandler,
+  Response,
+} from "express";
 import express from "express";
 import passport from "passport";
 import { loginAttemptsTotal } from "../../infrastructure/metrics/metrics.registry.js";
@@ -303,7 +309,8 @@ export function mountAuthRoutes(
     expressApp.get(
       "/auth/saml/login",
       passport.initialize(),
-      passport.authenticate("saml", { session: false }),
+      // @types/passport types authenticate() as `any`; it is a RequestHandler.
+      passport.authenticate("saml", { session: false }) as RequestHandler,
     );
   }
 
@@ -315,7 +322,7 @@ export function mountAuthRoutes(
     passport.authenticate("saml", {
       session: false,
       failureRedirect: `${frontendUrl}/auth/error?reason=invalid_assertion`,
-    }),
+    }) as RequestHandler,
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const profile = req.user as SamlProfile | undefined;

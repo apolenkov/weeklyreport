@@ -117,7 +117,10 @@ describe("buildUserSession — admin SAML login (Phase 32-C / H-01)", () => {
       typeof vi.fn
     >;
     expect(createMock).toHaveBeenCalledTimes(1);
-    expect(createMock.mock.calls[0]?.[0].data.role).toBe("admin");
+    const createArg = createMock.mock.calls[0]?.[0] as
+      | { data: { role: string } }
+      | undefined;
+    expect(createArg?.data.role).toBe("admin");
   });
 
   it("preserves role=admin on existing user update (samlId rebind)", async () => {

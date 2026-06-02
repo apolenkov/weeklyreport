@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 // Same pattern as other client query component tests.
 const useQueryMock = vi.fn();
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: (opts: unknown) => useQueryMock(opts),
+  useQuery: (opts: unknown) => useQueryMock(opts) as Record<string, unknown>,
 }));
 vi.mock("../../lib/trpc-context", () => ({
   useTRPC: () => ({

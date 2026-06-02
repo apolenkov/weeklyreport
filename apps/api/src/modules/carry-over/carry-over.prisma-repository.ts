@@ -10,6 +10,7 @@ import { Injectable } from "@nestjs/common";
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import {
   mapPrismaToReportSection,
+  type PrismaReportSectionWithRelations,
   reportSectionFullInclude,
 } from "../report-sections/report-sections.prisma-repository";
 import type {
@@ -98,8 +99,11 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
       include: reportSectionFullInclude,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-    return rows.map((row) => mapPrismaToReportSection(row as any));
+    return rows.map((row) =>
+      mapPrismaToReportSection(
+        row as unknown as PrismaReportSectionWithRelations,
+      ),
+    );
   }
 
   async getTargetSections(
@@ -110,8 +114,11 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
       include: reportSectionFullInclude,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-    return rows.map((row) => mapPrismaToReportSection(row as any));
+    return rows.map((row) =>
+      mapPrismaToReportSection(
+        row as unknown as PrismaReportSectionWithRelations,
+      ),
+    );
   }
 
   async saveCarryOver(

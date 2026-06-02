@@ -108,7 +108,9 @@ describe("36-02 mutation-audit middleware", () => {
     await caller.saveDraft({ sectionId: "sec-42", text: "hi" });
 
     expect(mutation).toHaveBeenCalledTimes(1);
-    const call = mutation.mock.calls[0]?.[0];
+    const call = mutation.mock.calls[0]?.[0] as
+      | Record<string, unknown>
+      | undefined;
     expect(call).toMatchObject({
       userId: "u1",
       role: "lead",
@@ -147,7 +149,7 @@ describe("36-02 mutation-audit middleware", () => {
         reason: null,
         ip: TEST_IP,
         correlationId: "req-action-1",
-      }),
+      }) as unknown,
     });
   });
 
@@ -165,7 +167,9 @@ describe("36-02 mutation-audit middleware", () => {
     await expect(caller.failingMutation({ id: "thing-1" })).rejects.toThrow();
 
     expect(mutation).toHaveBeenCalledTimes(1);
-    const call = mutation.mock.calls[0]?.[0];
+    const call = mutation.mock.calls[0]?.[0] as
+      | Record<string, unknown>
+      | undefined;
     expect(call).toMatchObject({
       procedure: "failingMutation",
       target: "thing-1",

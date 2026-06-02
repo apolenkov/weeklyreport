@@ -42,12 +42,12 @@ vi.mock("@tanstack/react-query", async () => {
   );
   return {
     ...actual,
-    useQuery: (...args: unknown[]) => useQueryMock(...args),
+    useQuery: (...args: unknown[]) => useQueryMock(...args) as unknown,
   };
 });
 
 vi.mock("next/navigation", () => ({
-  useSearchParams: () => useSearchParamsMock(),
+  useSearchParams: () => useSearchParamsMock() as unknown,
 }));
 
 vi.mock("../lib/trpc-context", () => ({

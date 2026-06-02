@@ -35,6 +35,13 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   };
 }
 
+interface ReportCreateData {
+  periodStart: Date;
+  periodEnd: Date;
+  deadline: Date;
+  periodState: "scheduled" | "open";
+}
+
 interface StubPrisma {
   report: {
     findFirst: ReturnType<typeof vi.fn>;
@@ -54,16 +61,19 @@ function makePrismaStub(opts: {
   return {
     report: {
       findFirst: vi.fn().mockResolvedValue(opts.mostRecent),
-      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async Prisma report.create contract (no awaitable work in the stub)
-      create: vi.fn().mockImplementation(async ({ data }) => ({
-        id: opts.createdId ?? "period-new",
-        periodStart: data.periodStart,
-        periodEnd: data.periodEnd,
-        deadline: data.deadline,
-        // UFB-053: echo the periodState the scheduler wrote so the
-        // returned shape matches the real prisma client surface.
-        periodState: data.periodState,
-      })),
+      // The scheduler `await`s create(); a plain object resolves the same, so the
+      // stub stays sync (no `async` → no require-await disable to keep in place).
+      create: vi
+        .fn()
+        .mockImplementation(({ data }: { data: ReportCreateData }) => ({
+          id: opts.createdId ?? "period-new",
+          periodStart: data.periodStart,
+          periodEnd: data.periodEnd,
+          deadline: data.deadline,
+          // UFB-053: echo the periodState the scheduler wrote so the
+          // returned shape matches the real prisma client surface.
+          periodState: data.periodState,
+        })),
       updateMany: vi
         .fn()
         .mockResolvedValue({ count: opts.scheduledFlipped ?? 0 }),
@@ -74,8 +84,7 @@ function makePrismaStub(opts: {
 // Cast to never via Nest DI seam — the scheduler types its constructor on
 // PrismaService + AdminService; tests pass a minimal shape with only the
 // methods exercised.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-const asAny = (x: unknown) => x as any;
+const asAny = <T>(x: unknown): T => x as unknown as T;
 
 // ---------------------------------------------------------------------------
 // Tests — three per processor (skip-when-disabled, fire-when-eligible,
@@ -134,6 +143,7 @@ describe("PeriodCreatorScheduler", () => {
     // week's Monday" which is <= now, so the period lands as 'open'.
     expect(prisma.report.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- expect.objectContaining() returns any; vitest asymmetric matcher has no precise type
         data: expect.objectContaining({ periodState: "open" }),
       }),
     );
@@ -175,6 +185,7 @@ describe("PeriodCreatorScheduler", () => {
     expect(prisma.report.updateMany).toHaveBeenCalledWith({
       where: {
         periodState: "scheduled",
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- expect.any() returns any; vitest asymmetric matcher has no precise type
         periodStart: { lte: expect.any(Date) },
       },
       // refactor-period-transition-writer: the open transition writes the full

@@ -1,10 +1,19 @@
+import type { ESLint, Linter } from "eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
-import jsxA11y from "eslint-plugin-jsx-a11y";
+import jsxA11yPlugin from "eslint-plugin-jsx-a11y";
 import react from "eslint-plugin-react";
 import reactCompiler from "eslint-plugin-react-compiler";
 import reactHooks from "eslint-plugin-react-hooks";
 import unusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
+
+// eslint-plugin-jsx-a11y ships no type declarations, so its default import is
+// implicitly `any` — the root of every no-unsafe-* firing in this config.
+// Describe the surface this file actually touches (the recommended preset's
+// rules + a valid plugin shape) so the rules have a concrete type to check.
+const jsxA11y = jsxA11yPlugin as ESLint.Plugin & {
+  configs: { recommended: { rules: Linter.RulesRecord } };
+};
 
 // Phase 1 (migrate-lint-to-eslint-prettier): Biome removed; ESLint owns logic,
 // Prettier owns format, stylelint owns CSS. This config ports Biome's
@@ -251,6 +260,23 @@ export default defineConfig([
         "error",
         { ignoreArrowShorthand: true },
       ],
+      // Phase-3 ratchet — R2b-6 wave-6b (ratchet-lint-to-strict): the `any`-flow
+      // family. 218 firings (54 src / 160 test). Every src firing was fixed at
+      // its ROOT by giving the value a real type instead of `any` — typed Prisma
+      // payloads (Prisma.ReportGetPayload / the shared PrismaReportSectionWith-
+      // Relations cast), `getInstance() as express.Express`, a structural
+      // PrismaLogEventEmitter for Prisma 7's $on, `: unknown` boundary
+      // annotations, and a typed tRPC-proxy shim — NET REMOVING several former
+      // no-explicit-any disables. One firing surfaced a real masked `null`
+      // (projectStatuses[].status). Test firings were typed at their any-source
+      // (JSON.parse → Record<string, unknown>, mock casts), with a documented
+      // per-site disable only where no real type is reachable. No rule option is
+      // softened here — the family runs at full strictTypeChecked strength.
+      "@typescript-eslint/no-unsafe-argument": "error",
+      "@typescript-eslint/no-unsafe-assignment": "error",
+      "@typescript-eslint/no-unsafe-call": "error",
+      "@typescript-eslint/no-unsafe-member-access": "error",
+      "@typescript-eslint/no-unsafe-return": "error",
 
       // React hooks (single-owned by ESLint)
       "react-hooks/rules-of-hooks": "error",
