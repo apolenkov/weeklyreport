@@ -41,6 +41,7 @@ export function mountBullBoard(_app: INestApplication): void {
     res: Response,
     next: NextFunction,
   ): void => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- req.cookies is populated by cookie-parser at runtime; the optional chain guards the unmounted-middleware case
     const token = req.cookies?.customreport_session as string | undefined;
 
     if (!token) {

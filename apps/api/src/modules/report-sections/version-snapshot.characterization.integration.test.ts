@@ -133,7 +133,7 @@ function createLeadFormRepo(opts: {
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- implements async LeadFormRepository contract (stub returns value directly, no await)
     async getLatestSnapshot(): Promise<SnapshotLatestRow | null> {
-      const last = snapshots[snapshots.length - 1];
+      const last = snapshots.at(-1);
       if (!last) return null;
       return {
         data: last.data,

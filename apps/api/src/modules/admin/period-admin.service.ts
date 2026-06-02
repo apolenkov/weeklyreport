@@ -240,7 +240,7 @@ export class PeriodAdminService {
     // matches the default "18:00"). When future plans add sub-hour
     // granularity, both this call site and the scheduler should be
     // updated together.
-    const [hourStr] = settings.deadlineTime.split(":");
+    const hourStr = settings.deadlineTime.split(":").at(0);
     const deadlineHour = Number(hourStr ?? "18");
 
     const deadline =

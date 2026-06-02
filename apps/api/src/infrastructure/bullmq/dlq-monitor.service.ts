@@ -56,10 +56,10 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
             const job = await queue.getJob(jobId);
             if (!job) return;
             const attemptsConfigured = job.opts.attempts ?? 1;
-            if ((job.attemptsMade ?? 0) >= attemptsConfigured) {
+            if (job.attemptsMade >= attemptsConfigured) {
               dlqFailedTotal.inc({ queue: name });
               this.logger.error(
-                `[dlq] job ${jobId} on ${name} exhausted ${attemptsConfigured} attempts: ${failedReason ?? "unknown"}`,
+                `[dlq] job ${jobId} on ${name} exhausted ${attemptsConfigured} attempts: ${failedReason}`,
               );
             }
           } catch (err) {
@@ -82,7 +82,7 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
       void this.checkThresholds(threshold);
     }, POLL_INTERVAL_MS);
     // Don't keep the event loop alive on shutdown.
-    this.pollTimer.unref?.();
+    this.pollTimer.unref();
 
     this.logger.log(
       `DLQ monitor active for queues=[${QUEUE_NAMES.join(",")}], alert threshold=${threshold}, poll=${POLL_INTERVAL_MS}ms`,

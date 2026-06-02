@@ -73,7 +73,7 @@ export function LeadSlidesClient({
   const activeQ = useQuery(trpc.reports.getActive.queryOptions());
   const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
   const activeReportId = activeQ.data?.reportId ?? null;
-  const inReportMode = pathname?.startsWith("/lead/report/");
+  const inReportMode = pathname.startsWith("/lead/report/");
   const requestedReportId = inReportMode
     ? initialReportId
     : searchParams.get("reportId");

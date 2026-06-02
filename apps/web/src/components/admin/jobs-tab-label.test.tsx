@@ -76,7 +76,7 @@ describe("admin tab alert labels", () => {
     const callArg = useQueryMock.mock.calls.at(-1)?.[0] as {
       refetchInterval?: number;
     };
-    expect(callArg?.refetchInterval).toBe(30_000);
+    expect(callArg.refetchInterval).toBe(30_000);
   });
 
   it("caps large tab counts without growing the tab", () => {

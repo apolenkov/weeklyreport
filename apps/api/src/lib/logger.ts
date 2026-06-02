@@ -229,6 +229,7 @@ class AppLoggerImpl implements AppLogger {
   private resolveCorrelationId(): string {
     const cls = this.clsService;
     if (cls?.isActive()) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- cls.get returns undefined when the key is unset despite the generic return type
       return cls.get<string>("correlationId") ?? "no-context";
     }
     return "no-context";

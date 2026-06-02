@@ -47,6 +47,7 @@ function toDisplayString(value: unknown): string {
   }
   if (typeof value === "object") {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- JSON.stringify returns undefined for undefined input despite the string return type
       return JSON.stringify(value) ?? "";
     } catch {
       // circular reference or non-serialisable — degrade gracefully, don't throw

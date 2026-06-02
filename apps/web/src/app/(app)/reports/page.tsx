@@ -45,7 +45,7 @@ export default function ReportsPage() {
       ? "all"
       : null;
 
-  const tabFromUrl = searchParams?.get("tab");
+  const tabFromUrl = searchParams.get("tab");
   const [includeArchive, setIncludeArchive] = useState(
     tabFromUrl === "published",
   );
@@ -68,19 +68,17 @@ export default function ReportsPage() {
 
   function toggleArchive(nextValue: boolean) {
     setIncludeArchive(nextValue);
-    const params = new URLSearchParams(searchParams?.toString());
+    const params = new URLSearchParams(searchParams.toString());
     params.set("tab", nextValue ? "published" : "drafts");
     router.push(`/reports?${params.toString()}`, { scroll: false });
   }
 
   useEffect(() => {
     if (isLead && historyQ.isError) {
-      toast.error(historyQ.error?.message ?? "Failed to load report history.");
+      toast.error(historyQ.error.message);
     }
     if (usesCompiledHistory && compiledHistoryQ.isError) {
-      toast.error(
-        compiledHistoryQ.error?.message ?? "Failed to load report history.",
-      );
+      toast.error(compiledHistoryQ.error.message);
     }
   }, [
     compiledHistoryQ.error,

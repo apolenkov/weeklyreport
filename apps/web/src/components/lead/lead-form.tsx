@@ -235,7 +235,7 @@ function sectionToDraftPayload(
         text: it.text,
         tag: it.tag,
         workflowStatus: it.workflowStatus,
-        carriedOver: it.carriedOver ?? false,
+        carriedOver: it.carriedOver,
         completed: it.completed ?? null,
         stageIds: it.stageIds,
         // F1: include priorityRank in the autosave payload (was omitted, so the
@@ -696,7 +696,7 @@ export function LeadForm({
   // history entry whose reportId matches the loaded section so the label
   // matches the dropdown. Restores the title on unmount.
   const titleHistoryEntry = useMemo(() => {
-    if (!byPeriodQ.data?.section?.reportId || !historyQ.data) return null;
+    if (!byPeriodQ.data?.section.reportId || !historyQ.data) return null;
     return (
       historyQ.data.find(
         (h) => h.reportId === byPeriodQ.data.section.reportId,
@@ -782,7 +782,7 @@ export function LeadForm({
     }
     for (const sn of ca.stageNames) {
       const norm = normalizeStageName(sn);
-      const stageEntry = ca.stages?.find((s) =>
+      const stageEntry = ca.stages.find((s) =>
         stageNamesMatch(s.stageName, sn),
       );
       const caSection = _caSectionByAuthorId.get(ca.authorId);
@@ -952,7 +952,7 @@ export function LeadForm({
     viewedSnapshotVersion !== null
       ? (getVersionQ.data as SnapPayload | null)
       : null;
-  const snapshotAuthor = draftSection.authorName ?? "";
+  const snapshotAuthor = draftSection.authorName;
 
   // When in snapshot mode but snapRaw is null (still loading or API returned
   // no data for this version), use empty arrays — never fall back to the
@@ -1274,6 +1274,7 @@ export function LeadForm({
           };
         }
         return {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- draft rows lack a persisted id at runtime despite the non-null form-row type
           id: r.id ?? `tmp-${crypto.randomUUID()}`,
           projectId: r.productId,
           risk: r.text,
@@ -1928,7 +1929,7 @@ export function LeadForm({
       <ConfirmDeleteDialog
         open={showRevokeDialog}
         title="Revoke this submission?"
-        preview={currentUser.name ?? "Lead submission"}
+        preview={currentUser.name}
         subtitle="Their form returns to Draft and they can edit again."
         consequence="The lead will be notified that their submission was revoked."
         confirmLabel="Revoke"

@@ -17,6 +17,7 @@ type RootLayoutProps = Readonly<{
 // correct on first paint and shareable links resolve a real title.
 export async function generateMetadata(): Promise<Metadata> {
   const org = await getOrgPublic();
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- getOrgPublic can resolve to no org (unseeded/early boot); the fallback brands metadata resiliently
   const name = org?.fullName ?? "CustomReport";
   return {
     title: { default: name, template: `%s · ${name}` },

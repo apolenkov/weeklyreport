@@ -73,8 +73,8 @@ function makeMockTRPC(
           onError?: (err: Error) => void;
         }) => ({
           mutationFn: captured.updateOrgFn,
-          onSuccess: opts?.onSuccess,
-          onError: opts?.onError,
+          onSuccess: opts.onSuccess,
+          onError: opts.onError,
         }),
       },
       updateSettings: {
@@ -83,8 +83,8 @@ function makeMockTRPC(
           onError?: (err: Error) => void;
         }) => ({
           mutationFn: captured.updateSettingsFn,
-          onSuccess: opts?.onSuccess,
-          onError: opts?.onError,
+          onSuccess: opts.onSuccess,
+          onError: opts.onError,
         }),
       },
       snapshot: { pathFilter: () => ({ tag: "admin.snapshot" }) },

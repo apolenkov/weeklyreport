@@ -45,7 +45,7 @@ export function HeadReportShell({
 
   const periods: ReportPeriod[] = useMemo(() => {
     const data = historyQ.data;
-    if (!data?.entries?.length) return [];
+    if (!data?.entries.length) return [];
     return data.entries.map((entry) => ({
       id: entry.reportId,
       weekLabel: `Week ${isoWeekNumber(new Date(entry.periodStart))}`,

@@ -1042,7 +1042,7 @@ function IntegrationsSubTab() {
   // The query type marks `ci` non-null, but the Phase-55 integrations payload
   // can omit it (the Zod contract only guarantees `telegram`), so the optional
   // chain is a real runtime guard, not a redundant one.
-
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- ci absent at runtime despite the optimistic query type (deferred Phase-55 contract)
   const isCiConfigured = ci?.configured ?? false;
 
   return (

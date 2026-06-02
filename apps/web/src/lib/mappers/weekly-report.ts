@@ -250,7 +250,7 @@ function groupDecisionsByProject(
   const decisions = new Map<string, WeeklyReportDecision[]>();
 
   for (const section of sections) {
-    const firstProject = section.projects[0];
+    const firstProject = section.projects.at(0);
     const projectsById = new Map(
       section.projects.map((project) => [project.projectId, project] as const),
     );

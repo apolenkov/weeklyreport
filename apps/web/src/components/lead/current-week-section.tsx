@@ -227,7 +227,7 @@ export function CurrentWeekSection({
           items: items.filter((it) => it.productId === p.id),
         }))
       : [...grouped.entries()].flatMap(([groupName, gItems]) => {
-          const first = gItems[0];
+          const first = gItems.at(0);
           if (!first) return [];
           return [
             {

@@ -435,9 +435,7 @@ export function mountAuthRoutes(
           // role was validated against `validRoles` above, so the lookup is
           // always defined — narrow explicitly to satisfy strict TS.
           const email =
-            (req.query.email as string | undefined) ??
-            emailByRole[role] ??
-            `${role}@customreport.local`;
+            (req.query.email as string | undefined) ?? emailByRole[role];
           const isCustomEmail =
             req.query.email && req.query.email !== emailByRole[role];
 
@@ -453,7 +451,7 @@ export function mountAuthRoutes(
             (isCustomEmail
               ? `dev-${email}`
               : (samlIdByRole[role] ?? `dev-${role}`));
-          const displayName = dbUser?.name ?? nameByRole[role] ?? role;
+          const displayName = dbUser?.name ?? nameByRole[role];
 
           const session = await buildUserSession(prisma, {
             samlId,
@@ -476,9 +474,7 @@ export function mountAuthRoutes(
             viewer: "/reports?tab=published",
           };
           const redirectPath =
-            (req.query.redirect as string | undefined) ??
-            redirectByRole[role] ??
-            "/";
+            (req.query.redirect as string | undefined) ?? redirectByRole[role];
           res.redirect(`${frontendUrl}${redirectPath}`);
         } catch (error) {
           loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });

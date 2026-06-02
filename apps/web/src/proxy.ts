@@ -77,8 +77,7 @@ export default function proxy(request: NextRequest): NextResponse {
   // preserved as ?next=<path>. URLSearchParams.set encodes the value, so
   // slashes and query strings are properly escaped.
   const loginUrl = new URL("/", request.url);
-  const originalPath =
-    request.nextUrl.pathname + (request.nextUrl.search ?? "");
+  const originalPath = request.nextUrl.pathname + request.nextUrl.search;
   loginUrl.searchParams.set("next", originalPath);
   return NextResponse.redirect(loginUrl, 307);
 }

@@ -45,6 +45,7 @@ function makeFactory<T>(
     queryFn: async ({ pageParam }: { pageParam?: string | null }) => {
       const key = pageParam ?? "__first__";
       const page = pages[key];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- pages is a sparse fixture Record keyed by arbitrary cursor
       if (!page) throw new Error(`Unknown page cursor: ${key}`);
       return page;
     },

@@ -112,7 +112,7 @@ export function RisksSection({
     if (readOnly) return;
     const wasEmpty =
       dialogState.open && dialogState.mode === "edit"
-        ? (dialogState.risk.text ?? "").trim().length === 0
+        ? dialogState.risk.text.trim().length === 0
         : true;
 
     if (dialogState.open && dialogState.mode === "create") {

@@ -79,7 +79,7 @@ export function HeadPeriodNavigator({
     return idx >= 0 ? idx : 0;
   }, [pathReportId, currentPeriodParam, periods]);
 
-  const selectedPeriod = periods[currentIndex];
+  const selectedPeriod = periods.at(currentIndex);
   const hasPrev = currentIndex < periods.length - 1;
   const hasNext = currentIndex > 0;
 
@@ -98,12 +98,12 @@ export function HeadPeriodNavigator({
   );
 
   function handlePrev() {
-    const prev = periods[currentIndex + 1];
+    const prev = periods.at(currentIndex + 1);
     if (hasPrev && prev) navigateTo(prev.id);
   }
 
   function handleNext() {
-    const next = periods[currentIndex - 1];
+    const next = periods.at(currentIndex - 1);
     if (hasNext && next) navigateTo(next.id);
   }
 
@@ -117,14 +117,14 @@ export function HeadPeriodNavigator({
   // report; the chevrons are now backed by the same gesture.
   const touchStartXRef = useRef<number | null>(null);
   function handleTouchStart(e: ReactTouchEvent<HTMLDivElement>) {
-    const t = e.touches[0];
+    const t = Array.from(e.touches).at(0);
     touchStartXRef.current = t ? t.clientX : null;
   }
   function handleTouchEnd(e: ReactTouchEvent<HTMLDivElement>) {
     const start = touchStartXRef.current;
     touchStartXRef.current = null;
     if (start === null) return;
-    const t = e.changedTouches[0];
+    const t = Array.from(e.changedTouches).at(0);
     if (!t) return;
     const deltaX = t.clientX - start;
     if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX) return;

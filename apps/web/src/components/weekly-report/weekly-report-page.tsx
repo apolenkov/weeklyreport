@@ -164,7 +164,7 @@ export function WeeklyReportPage({
   //   • the page already renders under `[reportId]` (reportId prop set)
   //   • there is no resolvable report (weeklyQ data not loaded or no-period)
   const resolvedReportId =
-    weeklyQ.data?.status === "active" ? (weeklyQ.data.reportId ?? null) : null;
+    weeklyQ.data?.status === "active" ? weeklyQ.data.reportId : null;
   useEffect(() => {
     if (!redirectToCanonical) return;
     if (period) return;
@@ -238,12 +238,9 @@ export function WeeklyReportPage({
     scope === "lead"
       ? (() => {
           const nameById = new Map<string, string>();
-          for (const section of weeklyQ.data.leadSections ?? []) {
+          for (const section of weeklyQ.data.leadSections) {
             if (section.authorId) {
-              nameById.set(
-                section.authorId,
-                section.authorName ?? section.authorId,
-              );
+              nameById.set(section.authorId, section.authorName);
             }
           }
           return [...nameById.entries()]

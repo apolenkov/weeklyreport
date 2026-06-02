@@ -79,7 +79,7 @@ export function HeadPresentClient({ reportId }: Props) {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      const tag = (e.target as HTMLElement)?.tagName;
+      const tag = (e.target as HTMLElement | null)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       if (e.key === "ArrowRight" || e.key === "j") goNext();
       else if (e.key === "ArrowLeft" || e.key === "k") goPrev();

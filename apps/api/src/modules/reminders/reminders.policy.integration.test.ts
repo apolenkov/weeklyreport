@@ -81,7 +81,7 @@ describe("PolicyApplicatorService (integration, Phase 44-05)", () => {
       where: { reportId: testData.report.id },
     });
     expect(rules).toHaveLength(1);
-    const rule = rules[0];
+    const rule = rules.at(0);
     if (!rule) throw new Error("expected one rule");
     expect(rule.policyId).toBe(policyDeadlineId);
     expect(rule.kind).toBe("deadline");
@@ -127,7 +127,7 @@ describe("PolicyApplicatorService (integration, Phase 44-05)", () => {
       where: { reportId: testData.report.id },
     });
     expect(rules).toHaveLength(1);
-    const rule = rules[0];
+    const rule = rules.at(0);
     if (!rule) throw new Error("expected one rule");
     expect(rule.fireAt.toISOString()).toBe("2026-03-29T18:00:00.000Z");
   });

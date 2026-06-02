@@ -116,7 +116,7 @@ export function VersionHistoryNav({
   const [showModal, setShowModal] = useState(false);
   const [showAllVersions, setShowAllVersions] = useState(false);
 
-  const currentVersion = versions[currentIndex];
+  const currentVersion = versions.at(currentIndex);
   const hasPrev = currentIndex < versions.length - 1;
   const hasNext = currentIndex > 0;
   const isLatest = currentIndex === 0;

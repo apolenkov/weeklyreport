@@ -154,6 +154,7 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
         rendered.text,
         fromOverride,
       );
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- job data is an external BullMQ-queue boundary; the kind check guards against unexpected/corrupt payloads though the narrowed union types it as always-escalation
     } else if ("kind" in data && data.kind === "escalation") {
       // NOTIF-02 (Phase 29-05): T+2h escalation digest — one email per
       // (rule, head) per cycle, body aggregates ALL late leads.

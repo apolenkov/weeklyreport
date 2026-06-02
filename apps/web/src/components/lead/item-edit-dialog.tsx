@@ -189,7 +189,7 @@ function ItemEditDialogContent({
       setErrors(next);
       return;
     }
-    const product = products.find((p) => p.id === productId) ?? products[0];
+    const product = products.find((p) => p.id === productId) ?? products.at(0);
     if (!product) {
       setErrors({ text: "No product available" });
       return;

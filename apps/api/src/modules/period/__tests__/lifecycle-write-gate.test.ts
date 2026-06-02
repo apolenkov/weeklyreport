@@ -92,6 +92,7 @@ export function findLifecycleViolationsInSource(
       // Spread (`...buildTransition(...)`) carries no literal key — compliant.
       if (ts.isSpreadAssignment(prop)) continue;
       const name = prop.name;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- ts.PropertyName access is defensively guarded in AST traversal
       if (!name) continue;
       const key = ts.isIdentifier(name)
         ? name.text
@@ -113,6 +114,7 @@ export function findLifecycleViolationsInSource(
   // multi-line call chains).
   const isExempt = (node: ts.Node): boolean => {
     let current: ts.Node | undefined = node;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- current is reassigned to node.parent (ts.Node | undefined) inside the loop
     while (current) {
       const ranges = ts.getLeadingCommentRanges(
         fullText,
@@ -145,6 +147,7 @@ export function findLifecycleViolationsInSource(
         receiver.name.text === "report";
       if (isReportDelegate && WRITE_METHODS.has(method) && !isExempt(node)) {
         const arg = node.arguments[0];
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- call argument may be undefined in the AST shape being traversed
         if (arg && ts.isObjectLiteralExpression(arg)) {
           for (const prop of arg.properties) {
             if (

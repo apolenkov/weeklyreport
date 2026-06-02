@@ -189,7 +189,7 @@ export function NextWeekSection({
           items: items.filter((it) => it.productId === p.id),
         }))
       : [...grouped.entries()].flatMap(([productName, gItems]) => {
-          const first = gItems[0];
+          const first = gItems.at(0);
           if (!first) return [];
           return [
             {

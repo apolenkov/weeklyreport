@@ -431,6 +431,7 @@ describe("LeadForm mutation wiring", () => {
     // Pick a different status from the menu — fires onStatusChange and
     // dirties the draft.
     const menuitem = screen.getAllByRole("menuitem").find((m) => {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- DOM textContent is nullable; defensive default in a test helper
       const label = m.textContent ?? "";
       return (
         /On Track|At Risk|Blocked|Clear/i.test(label) &&
@@ -540,6 +541,7 @@ describe("LeadForm mutation wiring", () => {
       await flushAll();
     });
     const menuitem = screen.getAllByRole("menuitem").find((m) => {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- DOM textContent is nullable; defensive default in a test helper
       const label = m.textContent ?? "";
       return (
         /On Track|At Risk|Blocked|Clear/i.test(label) &&
