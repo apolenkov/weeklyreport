@@ -45,7 +45,14 @@ export function useSdlcTooltip(): ContextValue {
   if (!ctx) {
     // Graceful no-op when provider is absent (e.g. Storybook, unit tests
     // rendering StageChip in isolation).
-    return { show: () => {}, hide: () => {} };
+    return {
+      show: () => {
+        /* intentionally empty: no-op when provider is absent (Storybook / unit tests) */
+      },
+      hide: () => {
+        /* intentionally empty: no-op when provider is absent (Storybook / unit tests) */
+      },
+    };
   }
   return ctx;
 }

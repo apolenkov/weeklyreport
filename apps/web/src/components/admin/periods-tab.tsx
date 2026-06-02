@@ -746,7 +746,9 @@ function ActionIconRow({
         <IconButton
           testId={`action-delete-${row.id}`}
           label="Cannot delete a published period"
-          onClick={() => {}}
+          onClick={() => {
+            /* intentionally empty: button is disabled for published periods, clicks are suppressed */
+          }}
           icon={<DeleteIcon />}
           tone="danger"
           disabled={true}

@@ -112,7 +112,9 @@ function createLeadFormRepo(opts: {
     async getSectionForPeriod() {
       return null;
     },
-    async revokeSectionSubmission() {},
+    async revokeSectionSubmission() {
+      /* intentionally empty: stub implements async LeadFormRepository contract; no submission-revoke side-effects needed in this test */
+    },
     // eslint-disable-next-line @typescript-eslint/require-await -- implements async LeadFormRepository contract (stub returns value directly, no await)
     async listVersions(): Promise<VersionSnapshot[]> {
       return snapshots.map((s) => ({
@@ -147,7 +149,9 @@ function createLeadFormRepo(opts: {
     setProjection(next: Record<string, unknown>) {
       projection = next;
     },
-    async createReopenRequest() {},
+    async createReopenRequest() {
+      /* intentionally empty: stub implements async LeadFormRepository contract; no reopen-request side-effects needed in this test */
+    },
     // eslint-disable-next-line @typescript-eslint/require-await -- implements async LeadFormRepository contract (stub returns value directly, no await)
     async hasSharedProduct() {
       return false;

@@ -123,7 +123,9 @@ describe("useCursorPagination", () => {
   it("exposes isError and error when the queryFn throws", async () => {
     const { Wrapper } = makeWrapper();
     // Silence TanStack's expected error log for this test.
-    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      /* intentionally empty: suppress TanStack expected-error log for this test */
+    });
     const factory = (input: { cursor?: string; limit?: number }) => ({
       queryKey: ["archive", "list", { limit: input.limit }] as const,
       initialPageParam: undefined as string | undefined,

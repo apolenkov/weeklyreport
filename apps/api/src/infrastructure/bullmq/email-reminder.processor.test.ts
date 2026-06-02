@@ -11,7 +11,9 @@ vi.mock("@nestjs/common", () => ({
 // Mock bullmq Worker so no Redis connection is attempted
 vi.mock("bullmq", () => ({
   Worker: class {
-    on() {}
+    on() {
+      /* intentionally empty: no-op event handler stub, prevents Redis connection in tests */
+    }
     close() {
       return Promise.resolve();
     }

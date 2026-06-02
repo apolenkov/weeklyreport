@@ -43,7 +43,9 @@ describe("client-error-reporting", () => {
   });
 
   it("logs the original Error so the browser forwarder can capture stack", () => {
-    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {
+      /* intentionally empty: suppress console output during test */
+    });
     const error = new Error("Unexpected error");
 
     logClientError("weeklyReport.get.load_failed", error, {
