@@ -225,6 +225,32 @@ serviceRepo.getRule` then bare `originalGetRule(rid)`) was fixed with
         try/catch) + Sonnet on the 22 unbound disables (all confirmed false positives,
         correctly placed). Gate green: all 3 rules 0 repo-wide, lint 0 errors, typecheck
         5/5, test 2559, build 5/5. Not pushed (morning human review).
+  - [~] R2b-6 wave-6 (the LAST + riskiest, Opus-reviewed) — 6a + 6b LANDED, 6c
+    PENDING (2026-06-02, NOT pushed). Fresh wave-6 measure: 852 firings / 9
+    rules. Sub-waved by JUDGMENT-density (advisor), not by rule.
+    • [x] 6a `no-confusing-void-expression` → error (commit `1d14b63c`): 274
+    firings, but 270 are arrow-shorthand void returns → `ignoreArrowShorthand:
+      true`. A documented SOFTENING, but it opens NO Promise hole — the only
+    dangerous arrow-shorthand-void case is a Promise in a void slot, already
+    rejected by `no-misused-promises` (error since wave 2). A STRONGER safety
+    argument than wave-5's ignorePrimitives (advisor-confirmed, user-chosen
+    over hand-fixing 270). 4 real `return <void>()` fixed by hand.
+    • [x] 6b `no-unsafe-*` family (5 rules) → error (commit `c81daf79`, the BIG
+    Workflow fan-out): 218 firings (54 src / 160 test). SRC 54→0 ALL fixed at
+    the ROOT by typing — net REMOVING 22 stale no-explicit-any disables, +2
+    added. NO option softened (full strictTypeChecked). Surfaced a REAL masked
+    null (projectStatuses[].status). TEST 160→0 via a 31-Sonnet-agent Workflow
+    (1/file, disjoint); 5 agents that didn't return a summary left their files
+    untouched → finished by hand. Adversarial: Opus on src (0 defects) + Sonnet
+    on test casts (0 masking). Finding (a) bit again (prettier shifted a
+    require-await disable) → fixed by dropping async, amended. Gate green.
+    • [ ] 6c `no-unnecessary-condition` (Opus-heavy, behaviour-sensitive) + the
+    assertion rules. FRESH RE-MEASURE (after 6b): no-unnecessary-condition 225
+    (175 src), no-unnecessary-type-assertion 134 (44 src), non-nullable-type-
+    assertion-style 9 (3 src). DO NOT blindly delete "always true" guards — if
+    a type lies (nullable Prisma cols), widen the type, don't delete. SUPERVISE,
+    not a Workflow. Assertion-rule autofix removes assertions tsc needs → verify
+    empirically, expect per-site disables. (PAUSED here at a clean boundary.)
 - [ ] R2c Behavior-risky clusters get an Opus-level review before merge.
 
 ## 3. Plugin-surface clusters
