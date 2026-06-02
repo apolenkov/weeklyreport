@@ -189,6 +189,42 @@ DATABASE_URL` resolving as `any` in the prisma program; ONE altitude fix
         to one root-cause fix the cluster was 1 type-fix + 6 trivial judgment sites —
         below the fan-out threshold, so done inline (advise-on-workflow-usage). The real
         fan-out target is wave 6 (`no-unsafe-*`, ~242).
+  - [x] R2b-5 wave-5 bundle (3 rules) → error — SUPERVISED landed (2026-06-02, NO
+        Workflow). 53 firings: prefer-nullish-coalescing 23, unbound-method 23,
+        no-base-to-string 7. Fresh measure; baseline clean.
+        • `prefer-nullish-coalescing` (23): SOFTENED via `ignorePrimitives: { string:
+true }` — a DELIBERATE relaxation from strictTypeChecked's default (not a
+        rule-own-default like wave-4 allowNumber, so weaker precedent; recorded here as
+        a softening-with-justification per the "softened rule is justified" requirement).
+        20 of 23 are string `||` where an empty string is a meaningful fall-through
+        (`name || "—"`, `productId || ""`, `week || range || "…"`); for strings `||`
+        and `??` differ only on "", which here SHOULD fall through, so `||` is the
+        intended idiom. All 20 were scanned to confirm none is a live `||`-should-be-`??`
+        bug. TRADE-OFF (honest): the option permanently blinds the rule to future string
+        `||`, including genuine ones. The 3 non-string firings fixed by hand: progress
+        `value || 0` → `?? 0` (fallback is also 0, so identical for number|null|undefined);
+        client-logger `if (!flushTimer) flushTimer = …` → `flushTimer ??= …` (Timeout is
+        truthy, equivalent); lead-form-sync-bridge `stageIds !== undefined ? : ` ternary
+        → `?? ` (kept the no-deprecated disable on the splitStageNames arm).
+        • `unbound-method` (23, all in tests): 22 are vitest spy assertions
+        (`expect(mock.method)`) / mock casts — the reference is a `vi.fn` with no `this`,
+        so per-site disable w/ reason (inserted bottom-to-top by a deterministic local
+        script, NOT a Workflow — 6 files is below the fan-out bar; lint 0 + unbound 0 +
+        0 unused-directives together prove every disable is correctly placed). The ONE
+        genuine method-capture (`reminders.scheduler.test` `const originalGetRule =
+serviceRepo.getRule` then bare `originalGetRule(rid)`) was fixed with
+        `.bind(serviceRepo)` (fix-don't-suppress), not a disable.
+        • `no-base-to-string` (7): real "[object Object]" risks on `unknown` operands,
+        each narrowed to a string at the source, ZERO disables. saml.strategy devMode →
+        a local `firstString(...)` type-guard helper (first string-typed candidate, else
+        fallback); data-table → a `toDisplayString(unknown)` helper (null→"", primitives
+        →String, object→JSON, symbol/function→"") used at the sort comparator + cell
+        render; trpc reseed → Buffer-aware narrowing of a spawn error's `stderr`.
+        Adversarial review: Opus on the behavioural fixes (0 active defects; flagged a
+        latent JSON.stringify-on-cyclic-object throw in toDisplayString → hardened with
+        try/catch) + Sonnet on the 22 unbound disables (all confirmed false positives,
+        correctly placed). Gate green: all 3 rules 0 repo-wide, lint 0 errors, typecheck
+        5/5, test 2559, build 5/5. Not pushed (morning human review).
 - [ ] R2c Behavior-risky clusters get an Opus-level review before merge.
 
 ## 3. Plugin-surface clusters

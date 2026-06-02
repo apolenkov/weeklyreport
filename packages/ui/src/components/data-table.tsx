@@ -32,6 +32,31 @@ interface DataTableProps<T> {
   "aria-label"?: string;
 }
 
+// Cell values are `unknown` (read off `Record<string, unknown>`). Narrow before
+// stringifying so an object never renders/sorts as "[object Object]"
+// (no-base-to-string): null → "", object → JSON, primitives → String.
+function toDisplayString(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return String(value);
+  }
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value) ?? "";
+    } catch {
+      // circular reference or non-serialisable — degrade gracefully, don't throw
+      return "";
+    }
+  }
+  // symbol / function — not meaningful content for a table cell
+  return "";
+}
+
 function sortData<T>(data: readonly T[], sort: SortState): T[] {
   if (!sort) {
     return [...data];
@@ -56,7 +81,7 @@ function sortData<T>(data: readonly T[], sort: SortState): T[] {
       return direction === "asc" ? aVal - bVal : bVal - aVal;
     }
 
-    const cmp = String(aVal).localeCompare(String(bVal));
+    const cmp = toDisplayString(aVal).localeCompare(toDisplayString(bVal));
     return direction === "asc" ? cmp : -cmp;
   });
 }
@@ -167,8 +192,8 @@ export function DataTable<T>({
                 <TableCell key={column.key} className={column.className}>
                   {column.cell
                     ? column.cell(row)
-                    : String(
-                        (row as Record<string, unknown>)[column.key] ?? "",
+                    : toDisplayString(
+                        (row as Record<string, unknown>)[column.key],
                       )}
                 </TableCell>
               ))}

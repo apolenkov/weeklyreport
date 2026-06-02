@@ -112,6 +112,7 @@ describe("buildUserSession — admin SAML login (Phase 32-C / H-01)", () => {
     expect(session.email).toBe("admin@customreport.local");
     expect(session.reportingGroupName).toBe("Software Development");
     // The Prisma create call must have received role='admin' verbatim
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     const createMock = prisma.user.create as unknown as ReturnType<
       typeof vi.fn
     >;
@@ -140,6 +141,7 @@ describe("buildUserSession — admin SAML login (Phase 32-C / H-01)", () => {
 
     expect(session.role).toBe("admin");
     // No admin section auto-creation (admin is not a lead)
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     const createSection = prisma.reportSection.create as unknown as ReturnType<
       typeof vi.fn
     >;

@@ -143,6 +143,7 @@ function setupMocks() {
     close: vi.fn().mockResolvedValue(undefined),
   };
 
+  // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
   vi.mocked(chromium.launch).mockResolvedValue(mockBrowser as never);
 
   vi.mocked(createHash).mockReturnValue({
@@ -174,6 +175,7 @@ describe("PdfExportProcessor.processJob", () => {
 
     await (processor as unknown as ProcessorTestSeam).processJob(job);
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(chromium.launch).toHaveBeenCalledWith({ headless: true });
   });
 

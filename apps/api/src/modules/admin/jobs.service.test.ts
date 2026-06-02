@@ -80,6 +80,7 @@ describe("JobsService — 35-06 BullMQ DLQ admin surface", () => {
     const service = new JobsService(queue);
 
     await service.listFailed({ queue: "email-reminder", cursor: 0, limit: 50 });
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(queue.getFailed).toHaveBeenCalledWith(0, 49);
 
     await service.listFailed({
@@ -87,6 +88,7 @@ describe("JobsService — 35-06 BullMQ DLQ admin surface", () => {
       cursor: 50,
       limit: 50,
     });
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(queue.getFailed).toHaveBeenLastCalledWith(50, 99);
   });
 

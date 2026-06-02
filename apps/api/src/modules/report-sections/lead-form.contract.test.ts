@@ -129,6 +129,7 @@ describe("LeadFormService — revokeSubmission", () => {
     const result = await service.revokeSubmission(SECTION_ID, OTHER_USER_ID);
 
     expect(result).toEqual({ success: true });
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.revokeSectionSubmission).toHaveBeenCalledWith(
       SECTION_ID,
       OTHER_USER_ID,
@@ -170,6 +171,7 @@ describe("LeadFormService — revokeAllSubmitted", () => {
     const result = await service.revokeAllSubmitted(REPORT_ID, OTHER_USER_ID);
 
     expect(result).toEqual({ success: true, revokedCount: 3 });
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.revokeAllSubmitted).toHaveBeenCalledWith(
       REPORT_ID,
       OTHER_USER_ID,
@@ -218,7 +220,9 @@ describe("LeadFormService — fillFrom", () => {
 
     expect(result).toEqual({ success: true, copiedItems: 7 });
     expect(callOrder).toEqual(["snapshot", "fill"]);
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.createVersionSnapshot).toHaveBeenCalledWith(SECTION_ID);
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.fillFromSection).toHaveBeenCalledWith(
       SECTION_ID,
       SOURCE_SECTION_ID,
@@ -277,6 +281,7 @@ describe("LeadFormService — listVersions", () => {
     expect(expectDefined(versions[0]).version).toBe(3);
     expect(expectDefined(versions[1]).version).toBe(2);
     expect(expectDefined(versions[2]).version).toBe(1);
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.listVersions).toHaveBeenCalledWith(SECTION_ID);
   });
 
@@ -452,6 +457,7 @@ describe("LeadFormService — getByPeriod", () => {
       OTHER_USER_ID,
     );
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getSectionForPeriod).toHaveBeenCalledWith(
       REPORT_ID,
       OTHER_USER_ID,
@@ -482,6 +488,7 @@ describe("LeadFormService — getByPeriod", () => {
       OTHER_USER_ID,
     );
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getSectionForPeriod).toHaveBeenCalledWith(
       REPORT_ID,
       OTHER_USER_ID,
@@ -507,6 +514,7 @@ describe("LeadFormService — getByPeriod", () => {
       OTHER_USER_ID,
     );
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getSectionForPeriod).toHaveBeenCalledWith(REPORT_ID, AUTHOR_ID);
     expect(result.section.authorId).toBe(AUTHOR_ID);
     expect(result.readOnly).toBe(false);
@@ -545,6 +553,7 @@ describe("LeadFormService — requestReopen", () => {
     );
 
     expect(result).toEqual({ success: true });
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.createReopenRequest).toHaveBeenCalledWith(
       SECTION_ID,
       AUTHOR_ID,
@@ -645,6 +654,7 @@ describe("LeadFormService — createSnapshot", () => {
     const result = await service.createSnapshot(SECTION_ID, AUTHOR_ID);
 
     expect(result).toEqual({ version: 1 });
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.createVersionSnapshot).toHaveBeenCalledWith(SECTION_ID);
   });
 
@@ -657,6 +667,7 @@ describe("LeadFormService — createSnapshot", () => {
     await expect(
       service.createSnapshot(SECTION_ID, OTHER_USER_ID),
     ).rejects.toThrow("Can only snapshot your own section.");
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.createVersionSnapshot).not.toHaveBeenCalled();
   });
 
@@ -671,6 +682,7 @@ describe("LeadFormService — createSnapshot", () => {
     await expect(service.createSnapshot(SECTION_ID, AUTHOR_ID)).rejects.toThrow(
       "Cannot snapshot a submitted section.",
     );
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.createVersionSnapshot).not.toHaveBeenCalled();
   });
 
@@ -681,6 +693,7 @@ describe("LeadFormService — createSnapshot", () => {
     await expect(service.createSnapshot(SECTION_ID, AUTHOR_ID)).rejects.toThrow(
       `Section ${SECTION_ID} not found.`,
     );
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.createVersionSnapshot).not.toHaveBeenCalled();
   });
 
@@ -700,6 +713,7 @@ describe("LeadFormService — createSnapshot", () => {
     const result = await service.createSnapshot(SECTION_ID, AUTHOR_ID);
 
     expect(result).toEqual({ version: 5, skipped: true, reason: "throttled" });
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.createVersionSnapshot).not.toHaveBeenCalled();
   });
 
@@ -743,6 +757,7 @@ describe("LeadFormService — createSnapshot", () => {
     const result = await service.createSnapshot(SECTION_ID, AUTHOR_ID);
 
     expect(result).toEqual({ version: 7, skipped: true, reason: "no-change" });
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.createVersionSnapshot).not.toHaveBeenCalled();
   });
 });
