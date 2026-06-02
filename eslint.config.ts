@@ -191,6 +191,26 @@ export default defineConfig([
       // (a Promise used where a void/boolean is expected). Fixed per-site to
       // preserve intended behavior; no eslint-disable escape is permitted here.
       "@typescript-eslint/no-misused-promises": "error",
+      // Phase-3 ratchet — R2b-4 wave-4 (ratchet-lint-to-strict). strictTypeChecked
+      // sets every allow:false (202 firings here), but 184 are a plain `${number}`
+      // and a handful are `${boolean}` — both safe, idiomatic interpolation. Per
+      // the spec's "built-in option is a config choice, not a weakening" scenario
+      // (same precedent as no-extraneous-class allowWithDecorator), allowNumber +
+      // allowBoolean scope the rule to its dominant noise instead of churning ~190
+      // mechanical String() wraps. The rule still fires on the genuinely-risky
+      // shapes (any, nullish, never, RegExp), which were fixed by hand at the
+      // source (e.g. typing DATABASE_URL as string in the destructive guard).
+      "@typescript-eslint/restrict-template-expressions": [
+        "error",
+        {
+          allowAny: false,
+          allowBoolean: true,
+          allowNever: false,
+          allowNullish: false,
+          allowNumber: true,
+          allowRegExp: false,
+        },
+      ],
 
       // React hooks (single-owned by ESLint)
       "react-hooks/rules-of-hooks": "error",
