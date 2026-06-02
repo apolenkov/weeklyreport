@@ -87,6 +87,7 @@ export function JobsTab() {
     const needle = search.trim().toLowerCase();
     if (!needle) return jobs;
     return jobs.filter((job) =>
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- BullMQ Job field is an external-lib boundary value
       [job.id, job.name, job.failedReason ?? "", String(job.attemptsMade)]
         .join(" ")
         .toLowerCase()
@@ -133,7 +134,7 @@ export function JobsTab() {
           data-testid="jobs-error-state"
           className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-red-50 p-4 text-sm text-red-800"
         >
-          Failed to load list: {listQuery.error?.message ?? "unknown"}
+          Failed to load list: {listQuery.error.message}
         </div>
       )}
 

@@ -92,7 +92,7 @@ export function HeadSlidesClient({
   }, [selectedIndex, slides.length]);
 
   const selectedSlide =
-    slides[Math.min(Math.max(selectedIndex, 0), slides.length - 1)] ?? null;
+    slides.at(Math.min(Math.max(selectedIndex, 0), slides.length - 1)) ?? null;
   const activeReportId =
     weeklyQ.data && weeklyQ.data.status === "active"
       ? weeklyQ.data.reportId

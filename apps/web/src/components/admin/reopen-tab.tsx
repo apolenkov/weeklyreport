@@ -104,9 +104,9 @@ export function ReopenTab() {
     if (!q) return requests;
     return requests.filter((r) => {
       const haystack = [
-        r.requestedBy?.name,
-        r.requestedBy?.email,
-        r.report?.weekLabel,
+        r.requestedBy.name,
+        r.requestedBy.email,
+        r.report.weekLabel,
         r.reason,
         r.reviewNote,
       ]
@@ -160,7 +160,7 @@ export function ReopenTab() {
 
       {listQuery.isError && (
         <div className="rounded-[var(--radius)] border border-[var(--color-destructive)] bg-red-50 p-4 text-sm text-red-800">
-          Failed to load requests: {listQuery.error?.message ?? "unknown"}
+          Failed to load requests: {listQuery.error.message}
         </div>
       )}
 

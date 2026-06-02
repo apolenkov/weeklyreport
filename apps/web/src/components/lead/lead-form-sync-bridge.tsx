@@ -345,7 +345,7 @@ function computeUnbackedStages(ctx: ReturnType<typeof useBridgeContext>) {
         (r) =>
           r.productId === product.id &&
           riskCoversStage(r, stage.stageName) &&
-          (r.text ?? "").trim().length > 0 &&
+          r.text.trim().length > 0 &&
           (stage.status === "at-risk" || r.severity === "blocked"),
       );
       if (!hasMatchingRisk) {

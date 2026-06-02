@@ -200,7 +200,7 @@ function mapUser(api: AdminUser): MockUser {
     groupId: api.reportingGroupId ?? "",
     department: api.reportingGroupName ?? "No owning group",
     // A2 (UAT-v7 2026-05-12): default true in case old snapshot rows lack the field.
-    isActive: api.isActive ?? true,
+    isActive: api.isActive,
   };
 }
 

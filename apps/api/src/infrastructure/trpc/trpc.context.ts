@@ -128,7 +128,9 @@ export function createContextFactory(
 
   return async ({ req }: CreateExpressContextOptions): Promise<TrpcContext> => {
     const ip = req.ip ?? "unknown";
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- synthetic/test contexts can omit req.headers despite the Express type
     const correlationId = readRequestId(req.headers?.["x-request-id"]);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- req.cookies is populated by cookie-parser at runtime; the optional chain guards the unmounted-middleware case
     const token = req.cookies?.customreport_session as string | undefined;
 
     if (token) {

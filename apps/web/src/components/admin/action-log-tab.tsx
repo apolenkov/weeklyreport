@@ -50,6 +50,7 @@ function statusLabel(value: string): string {
 
 async function copyToClipboard(text: string): Promise<boolean> {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- navigator.clipboard is undefined in non-secure contexts despite the non-null DOM type
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       await navigator.clipboard.writeText(text);
       return true;

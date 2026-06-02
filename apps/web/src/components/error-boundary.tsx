@@ -17,7 +17,7 @@ export class QueryErrorBoundary extends Component<Props, State> {
   }
 
   override componentDidCatch(error: Error, info: ErrorInfo): void {
-    toast.error(error.message ?? "Something went wrong loading this page.");
+    toast.error(error.message);
     console.error("[QueryErrorBoundary]", error, info.componentStack);
   }
 

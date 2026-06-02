@@ -72,7 +72,9 @@ describe("cache-keys helpers", () => {
 
     invalidateDashboard(qc, trpc);
 
-    const tags = spy.mock.calls.map((c) => (c[0] as { tag?: string })?.tag);
+    const tags = spy.mock.calls.map(
+      (c) => (c.at(0) as { tag?: string } | undefined)?.tag,
+    );
     expect(tags).toContain("review.dashboard");
     expect(tags).toContain("archive.list");
     expect(tags).toContain("weeklyReport.get");
@@ -86,7 +88,9 @@ describe("cache-keys helpers", () => {
       .mockReturnValue(Promise.resolve());
     invalidateLeadForm(qc, makeStubTrpc());
 
-    const tags = spy.mock.calls.map((c) => (c[0] as { tag?: string })?.tag);
+    const tags = spy.mock.calls.map(
+      (c) => (c.at(0) as { tag?: string } | undefined)?.tag,
+    );
     expect(tags).toEqual(
       expect.arrayContaining([
         "reports.getActive",
@@ -113,7 +117,9 @@ describe("cache-keys helpers", () => {
       .mockReturnValue(Promise.resolve());
     invalidateAdmin(qc, makeStubTrpc());
 
-    const tags = spy.mock.calls.map((c) => (c[0] as { tag?: string })?.tag);
+    const tags = spy.mock.calls.map(
+      (c) => (c.at(0) as { tag?: string } | undefined)?.tag,
+    );
     expect(tags).toEqual(
       expect.arrayContaining([
         "admin.snapshot",

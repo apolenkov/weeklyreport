@@ -191,6 +191,7 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
 
     const checkboxes = screen.getAllByRole("checkbox");
     const labels = checkboxes.map((cb) =>
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- parentElement + textContent are nullable in the DOM assertion
       cb.parentElement?.textContent?.trim(),
     );
     expect(labels).toEqual(["Testing", "Support"]);

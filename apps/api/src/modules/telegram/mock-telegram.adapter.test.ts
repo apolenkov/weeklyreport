@@ -31,7 +31,7 @@ describe("MockTelegramAdapter (Phase 55 / UFB-056)", () => {
     const adapter = new MockTelegramAdapter();
     await adapter.send("chat-1", "body");
     expect(writeSpy).toHaveBeenCalledTimes(1);
-    const firstCall = writeSpy.mock.calls[0];
+    const firstCall = writeSpy.mock.calls.at(0);
     expect(firstCall).toBeDefined();
     const payload = JSON.parse((firstCall?.[0] as string).trim()) as Record<
       string,

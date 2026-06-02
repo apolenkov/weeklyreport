@@ -86,6 +86,7 @@ const FALLBACK_REDIRECT = "/head/dashboard";
 
 function defaultRedirectFor(role: Role | null | undefined): string {
   if (!role) return FALLBACK_REDIRECT;
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- role may be a persisted/retired value absent from DEFAULT_FOR_ROLE at runtime
   return DEFAULT_FOR_ROLE[role] ?? FALLBACK_REDIRECT;
 }
 
@@ -181,9 +182,9 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
   const orgShortName = org.shortName;
   const orgFullName = org.fullName;
 
-  const stayOnLanding = searchParams?.get("stay") === "1";
+  const stayOnLanding = searchParams.get("stay") === "1";
   const safeNext = sanitizeNext(
-    searchParams?.get("next") ?? null,
+    searchParams.get("next") ?? null,
     defaultRedirectFor(sessionRole),
   );
 

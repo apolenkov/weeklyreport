@@ -107,10 +107,12 @@ describe("HeadPeriodNavigator", () => {
       "Select reporting period",
     ) as HTMLSelectElement;
 
-    expect(select.selectedOptions[0]?.textContent).toBe(
+    expect(select.selectedOptions.item(0)?.textContent).toBe(
       "Week 17, Apr 21–27, 2026",
     );
-    expect(select.selectedOptions[0]?.textContent).not.toContain("(current)");
+    expect(select.selectedOptions.item(0)?.textContent).not.toContain(
+      "(current)",
+    );
     expect(screen.getByText("Current")).toBeVisible();
   });
 });

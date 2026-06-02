@@ -205,6 +205,7 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
 
     expect(themeControl).not.toBeNull();
     // Icon-only: visible text was removed in favour of aria-label/title (#2 navbar fix).
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- queried node + textContent are nullable in the DOM assertion
     expect(themeControl?.textContent?.trim()).toBe("");
     expect(themeControl).toHaveAttribute(
       "aria-label",
@@ -224,6 +225,7 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
 
     expect(languageControl).not.toBeNull();
     // Icon-only: visible text was removed in favour of aria-label/title (#2 navbar fix).
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- queried node + textContent are nullable in the DOM assertion
     expect(languageControl?.textContent?.trim()).toBe("");
     expect(languageControl).toHaveAttribute(
       "aria-label",

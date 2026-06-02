@@ -204,7 +204,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       },
       select: { data: true },
     });
-    return (snapshot?.data as Record<string, unknown>) ?? null;
+    return (snapshot?.data ?? null) as Record<string, unknown> | null;
   }
 
   async listVersions(sectionId: string): Promise<VersionSnapshot[]> {

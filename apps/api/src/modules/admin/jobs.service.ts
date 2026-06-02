@@ -82,8 +82,10 @@ export class JobsService {
     const jobs: FailedJob[] = rawJobs.map((job) => ({
       id: job.id ?? "",
       name: job.name,
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- BullMQ Job field is an external-lib boundary value
       failedReason: job.failedReason ?? "",
       stacktrace: Array.isArray(job.stacktrace) ? [...job.stacktrace] : [],
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- BullMQ Job field is an external-lib boundary value
       attemptsMade: job.attemptsMade ?? 0,
       timestamp: job.timestamp,
       // Defensive copy — BullMQ Job#data is mutable and can carry non-trivial

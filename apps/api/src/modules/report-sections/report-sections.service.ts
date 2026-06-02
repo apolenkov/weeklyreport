@@ -125,7 +125,7 @@ function mergeSection(
       }))
       .map((project) => {
         const trafficLight =
-          aggregateTrafficLight(project.ownedStages ?? []) ??
+          aggregateTrafficLight(project.ownedStages) ??
           input.projectStatuses.find(
             (status) => status.projectId === project.projectId,
           )?.status ??
@@ -273,7 +273,7 @@ export class ReportSectionsService {
     const errors = validateSubmitInput(section, parsedInput);
 
     if (errors.length > 0) {
-      const [firstError] = errors;
+      const firstError = errors.at(0);
       // `errors.length > 0` guarantees firstError exists, but TS narrows the
       // tuple access to `T | undefined` — explicit guard satisfies strict.
       if (firstError) {

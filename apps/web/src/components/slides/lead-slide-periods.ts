@@ -67,7 +67,7 @@ export function resolveLeadSlideReportId({
 
   return (
     options.find((option) => !option.archived)?.reportId ??
-    options[0]?.reportId ??
+    options.at(0)?.reportId ??
     ""
   );
 }

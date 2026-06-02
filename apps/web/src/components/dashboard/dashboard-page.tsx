@@ -349,7 +349,7 @@ export function DashboardPage() {
 
       {/* D-29: head/admin need the per-lead submission table on the dashboard,
           not only the aggregate cards and alert row. */}
-      <LeadSummaryTable leads={leads} reportId={weeklyQ.data?.reportId} />
+      <LeadSummaryTable leads={leads} reportId={weeklyQ.data.reportId} />
 
       {/* Phase 52 (UFB-054): product-KPI card — leadership-readable
           numbers backed by telemetry.summary. Pulls its own data and

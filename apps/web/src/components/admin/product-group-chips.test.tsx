@@ -64,7 +64,7 @@ describe("ProductGroupChips — UFB-054 (Phase 56-C)", () => {
     const list = screen.getByTestId("product-group-chips");
     const items = list.querySelectorAll("li");
     expect(items).toHaveLength(2);
-    expect(items[0]?.textContent).toBe("Platform");
-    expect(items[1]?.textContent).toBe("Integrations");
+    expect(Array.from(items).at(0)?.textContent).toBe("Platform");
+    expect(Array.from(items).at(1)?.textContent).toBe("Integrations");
   });
 });

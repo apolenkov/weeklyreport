@@ -33,7 +33,7 @@ export function SlideFullscreenButton({
       setIsFullscreen(!!document.fullscreenElement);
     }
     function onKey(e: KeyboardEvent) {
-      const tag = (e.target as HTMLElement)?.tagName;
+      const tag = (e.target as HTMLElement | null)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       if (e.key === "f" || e.key === "F") toggle();
     }

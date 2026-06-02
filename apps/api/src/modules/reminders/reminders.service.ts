@@ -228,14 +228,14 @@ export class RemindersService {
       return { items: all, nextCursor: null };
     }
 
-    const limit = pagination.limit ?? 20;
+    const limit = pagination.limit;
     const startIndex = pagination.cursor
       ? all.findIndex((e) => e.id === pagination.cursor) + 1
       : 0;
     const page = all.slice(startIndex, startIndex + limit);
     // The if-condition guarantees `all[startIndex + limit - 1]` exists, but
     // TS only sees `T | undefined` after subscript access — narrow explicitly.
-    const lastInPage = all[startIndex + limit - 1];
+    const lastInPage = all.at(startIndex + limit - 1);
     const nextCursor =
       startIndex + limit < all.length && lastInPage ? lastInPage.id : null;
 

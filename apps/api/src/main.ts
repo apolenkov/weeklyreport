@@ -243,7 +243,7 @@ async function bootstrap() {
         return;
       }
       const body = req.body as { entries?: unknown };
-      const entries = Array.isArray(body?.entries) ? body.entries : [];
+      const entries = Array.isArray(body.entries) ? body.entries : [];
       for (const raw of entries.slice(0, 100)) {
         if (!raw || typeof raw !== "object") continue;
         const e = raw as Record<string, unknown>;

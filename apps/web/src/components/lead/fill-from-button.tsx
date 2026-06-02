@@ -60,7 +60,7 @@ export function FillFromButton({
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const pastPeriods = periods.filter((p) => !p.isCurrent && p.isSubmitted);
-  const previousPeriod = pastPeriods[0];
+  const previousPeriod = pastPeriods.at(0);
 
   const filteredPeriods = pastPeriods.filter(
     (p) =>

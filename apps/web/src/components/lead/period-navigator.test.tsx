@@ -109,11 +109,11 @@ describe("PeriodNavigator (lead)", () => {
       "Select reporting period",
     ) as HTMLSelectElement;
 
-    expect(select.selectedOptions[0]?.textContent).toBe(
+    expect(select.selectedOptions.item(0)?.textContent).toBe(
       "Apr 21–27, 2026 (Current)",
     );
-    expect(select.selectedOptions[0]?.textContent).not.toContain("Period");
-    expect(select.selectedOptions[0]?.textContent).not.toContain("Week");
+    expect(select.selectedOptions.item(0)?.textContent).not.toContain("Period");
+    expect(select.selectedOptions.item(0)?.textContent).not.toContain("Week");
   });
 
   it("D-17: past-period option text is the bare date range (no suffix)", () => {
@@ -123,7 +123,7 @@ describe("PeriodNavigator (lead)", () => {
       "Select reporting period",
     ) as HTMLSelectElement;
 
-    expect(select.selectedOptions[0]?.textContent).toBe("Apr 7–13, 2026");
+    expect(select.selectedOptions.item(0)?.textContent).toBe("Apr 7–13, 2026");
   });
 
   it("does not render a standalone Current badge element", () => {

@@ -110,7 +110,7 @@ beforeEach(() => {
 
   // Default: unauthenticated landing.
   useQueryMock.mockImplementation((opts: { queryKey?: readonly unknown[] }) => {
-    const key = opts?.queryKey?.[0];
+    const key = opts.queryKey?.at(0);
     if (key === "auth.me") return { data: null, isLoading: false };
     if (key === "org.getPublic") return { data: STUB_ORG, isLoading: false };
     return { data: null, isLoading: false };

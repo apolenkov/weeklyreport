@@ -484,8 +484,8 @@ export function mapLeadDecisions(
       (d.productId ? projectIndex.get(d.productId)?.name : undefined) ??
       "Group",
     text: d.text,
-    owner: d.owner ?? "",
-    impact: d.impact ?? "",
+    owner: d.owner,
+    impact: d.impact,
     deadline: d.deadline
       ? new Date(d.deadline).toISOString().slice(0, 10)
       : null,

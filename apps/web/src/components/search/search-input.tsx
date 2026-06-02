@@ -159,7 +159,7 @@ export function SearchInput({
       e.preventDefault();
       setActiveIndex((idx) => Math.max(idx - 1, 0));
     } else if (e.key === "Enter") {
-      const hit = hits[activeIndex];
+      const hit = hits.at(activeIndex);
       if (hit) {
         e.preventDefault();
         setOpen(false);

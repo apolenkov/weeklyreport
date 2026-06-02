@@ -84,6 +84,7 @@ export function DevRoleSwitcher() {
   >(
     (acc, u) => {
       const r = u.role;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- reduce accumulator is sparse during build (noUncheckedIndexedAccess off lies non-null)
       acc[r] = acc[r] ?? [];
       acc[r].push({ ...u, role: r });
       return acc;
@@ -136,6 +137,7 @@ export function DevRoleSwitcher() {
           )}
           {ROLE_ORDER.flatMap((role) => {
             const list = usersByRole[role];
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- usersByRole is a sparse accumulator; a role may have no key at runtime
             if (!list?.length) return [];
             return [
               <DropdownMenuLabel

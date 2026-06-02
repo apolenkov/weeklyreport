@@ -33,7 +33,7 @@ async function gaugeValue(gauge: {
   }>;
 }): Promise<number | null> {
   const snapshot = await gauge.get();
-  const first = snapshot.values[0];
+  const first = snapshot.values.at(0);
   return first?.value ?? null;
 }
 

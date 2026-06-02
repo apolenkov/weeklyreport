@@ -97,7 +97,7 @@ describe("mapLeadProducts", () => {
       ],
     });
 
-    const [product] = mapLeadProducts(section);
+    const product = mapLeadProducts(section).at(0);
     expect(product?.overallStatus).toBe("empty");
   });
 
@@ -132,7 +132,7 @@ describe("mapLeadProducts", () => {
       ],
     });
 
-    const [product] = mapLeadProducts(section);
+    const product = mapLeadProducts(section).at(0);
     const stages = new Map(product?.stages.map((s) => [s.stageName, s.status]));
 
     expect(stages.get("Dev")).toBe("on-track");
@@ -168,7 +168,7 @@ describe("mapLeadProducts", () => {
       ],
     });
 
-    const [product] = mapLeadProducts(section);
+    const product = mapLeadProducts(section).at(0);
     expect(product?.stages.every((s) => s.ownership === "mine")).toBe(true);
   });
 
@@ -184,7 +184,7 @@ describe("mapLeadProducts", () => {
       ],
     });
 
-    const [product] = mapLeadProducts(section);
+    const product = mapLeadProducts(section).at(0);
     expect(product?.stages.every((s) => s.ownership === "unassigned")).toBe(
       true,
     );
@@ -301,7 +301,7 @@ describe("mapLeadItems", () => {
       ],
     });
 
-    const [mapped] = mapLeadItems(section, "current");
+    const mapped = mapLeadItems(section, "current").at(0);
     expect(mapped?.status).toBe("in-progress");
     expect(mapped?.text).toBe("Wire OAuth2 callback");
     expect(mapped?.productName).toBe("CRM");
@@ -357,7 +357,7 @@ describe("mapLeadItems", () => {
       ],
     });
 
-    const [mapped] = mapLeadItems(section, "current");
+    const mapped = mapLeadItems(section, "current").at(0);
     expect(mapped?.productName).toBe("Unknown");
   });
 });
@@ -380,7 +380,7 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
       ],
     });
 
-    const [mapped] = mapLeadRisks(section);
+    const mapped = mapLeadRisks(section).at(0);
     expect(mapped?.productName).toBe("CRM");
     expect(mapped?.severity).toBe("blocked");
     // Phase 22+: text holds raw `risk` only; impact/mitigation surface as
@@ -402,7 +402,7 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
       ],
     });
 
-    const [mapped] = mapLeadDecisions(section);
+    const mapped = mapLeadDecisions(section).at(0);
     expect(mapped?.text).toBe("Approve Redis cluster");
     expect(mapped?.productName).toBe("Group");
   });

@@ -300,6 +300,20 @@ export default defineConfig([
       // (not line) disables here are position-independent — immune to the
       // pre-commit-prettier comment-shift hazard (R4a finding (a)).
       "@typescript-eslint/no-unnecessary-type-assertion": "error",
+      // Phase-3 ratchet — R2b-6 wave-6c-iii (ratchet-lint-to-strict). The last
+      // and most behaviour-sensitive cluster: 225 firings, no option lever.
+      // Dominant root cause: `noUncheckedIndexedAccess` is OFF, so `arr[i]` is
+      // typed non-null though an out-of-bounds index is `undefined` at runtime —
+      // every `arr[i] ?? x` / `arr[i]?.y` fired as "unnecessary" while being a
+      // REAL guard. Fixed at the ROOT with `arr.at(i)` (honestly `T | undefined`),
+      // NOT by deleting the guard. Honestly-dead guards (Prisma model fields,
+      // Zod-defaulted inputs, narrowed locals, tRPC error.message, role-validated
+      // Record lookups) were removed; genuine type-lies at boundaries that have no
+      // clean type fix carry a per-site disable with a reason (external lib /
+      // queue / DOM / sparse Record / optimistic query contract). The full test
+      // suite caught two optimistic-contract lies (Phase-55 `ci`, synthetic-ctx
+      // `req.headers`) that typecheck could not — both now guarded + disabled.
+      "@typescript-eslint/no-unnecessary-condition": "error",
 
       // React hooks (single-owned by ESLint)
       "react-hooks/rules-of-hooks": "error",

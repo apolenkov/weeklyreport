@@ -1319,7 +1319,8 @@ function makeCreatePeriodRepository(opts: {
             p.periodStart.getTime() <= input.periodEnd.getTime() &&
             p.periodEnd.getTime() >= input.periodStart.getTime(),
         )
-        .sort((a, b) => b.periodStart.getTime() - a.periodStart.getTime())[0];
+        .sort((a, b) => b.periodStart.getTime() - a.periodStart.getTime())
+        .at(0);
       return hit
         ? {
             id: hit.id,
@@ -1546,7 +1547,8 @@ function makeUpdatePeriodRepository(opts: {
             row.periodStart.getTime() <= input.periodEnd.getTime() &&
             row.periodEnd.getTime() >= input.periodStart.getTime(),
         )
-        .sort((a, b) => b.periodStart.getTime() - a.periodStart.getTime())[0];
+        .sort((a, b) => b.periodStart.getTime() - a.periodStart.getTime())
+        .at(0);
       return hit
         ? {
             id: hit.id,

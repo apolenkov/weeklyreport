@@ -114,9 +114,7 @@ export class RemindersPrismaRepository implements RemindersRepository {
     for (const rule of rules) {
       if (!rule.report) continue;
       const recipients = rule.report.sections.flatMap((s) => {
-        // Filter + map in one pass so TS narrows `s.author` to non-null
-        // inside the closure without a separate non-null assertion.
-        if (s.author === null) return [];
+        // (s.author is a required relation, always present.)
         return [
           {
             userId: s.author.id,
@@ -189,7 +187,7 @@ export class RemindersPrismaRepository implements RemindersRepository {
       const head = report.publishedBy;
       if (!head) continue;
       const lateLeads = report.sections.flatMap((s) => {
-        if (s.author === null) return [];
+        // (s.author is a required relation, always present.)
         return [
           {
             leadName: s.author.name,
