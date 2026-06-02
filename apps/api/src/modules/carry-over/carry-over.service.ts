@@ -222,9 +222,11 @@ export class CarryOverService {
       carriedDecisions: allCarriedDecisions.length,
     });
     // `targetSections.length === 0` was rejected above, so targetSections[0]
-    // is always defined; nextTargetSections is mapped from targetSections so
-    // its first element is also defined when its length > 0.
-    const targetSection = nextTargetSections[0] ?? targetSections[0];
+    // is normally defined; nextTargetSections is mapped from targetSections so
+    // its first element is also defined when its length > 0. `.at()` keeps the
+    // type honest (T | undefined) so the guard below stays a real runtime check
+    // (noUncheckedIndexedAccess is off, so `arr[0]` would otherwise lie).
+    const targetSection = nextTargetSections.at(0) ?? targetSections.at(0);
     if (!targetSection) {
       throw new CarryOverDomainError(
         "Carry-over requires both source and target sections.",

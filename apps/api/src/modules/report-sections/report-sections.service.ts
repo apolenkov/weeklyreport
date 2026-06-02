@@ -144,7 +144,12 @@ export class ReportSectionsService {
     service: "ReportSectionsService",
     logDir: process.env.LOG_DIR,
     minLevel:
-      (process.env.LOG_LEVEL as "debug" | "info" | "warn" | "error") ?? "info",
+      (process.env.LOG_LEVEL as
+        | "debug"
+        | "info"
+        | "warn"
+        | "error"
+        | undefined) ?? "info",
   });
 
   constructor(

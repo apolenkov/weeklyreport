@@ -188,6 +188,9 @@ export const loggingMiddleware = t.middleware(
       // 'Unexpected error' wrapper from trpc.error-mapper.ts. This is the
       // single biggest payoff for backend debuggability — a TRPCError with
       // code=INTERNAL_SERVER_ERROR is otherwise opaque.
+      // TRPCError.cause is Error | undefined (tRPC normalizes thrown values via
+      // getCauseFromUnknown), so the meaningful detail is always an Error here;
+      // a non-Error/undefined cause carries nothing to log.
       const cause = result.error.cause;
       const causeInfo =
         cause instanceof Error
@@ -204,9 +207,7 @@ export const loggingMiddleware = t.middleware(
                 ? { causeMeta: (cause as { meta?: unknown }).meta }
                 : {}),
             }
-          : cause !== undefined
-            ? { rawCause: String(cause) }
-            : undefined;
+          : undefined;
 
       ctx.logger.error("trpc request end", {
         phase: "trpc.request",

@@ -152,7 +152,7 @@ function IdentitySubTab() {
         toast.success("Organization identity saved");
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to save organization identity");
+        toast.error(err.message);
       },
     }),
   );
@@ -261,7 +261,7 @@ function IdentitySubTab() {
         >
           {isSaving ? "Saving…" : "Save Identity"}
         </button>
-        {updateOrgMut.isSuccess && !updateOrgMut.isPending && (
+        {updateOrgMut.isSuccess && (
           <span className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]">
             <CheckIcon />
             Identity saved
@@ -291,7 +291,7 @@ function useUpdateSettingsMut(label: string) {
         toast.success(`${label} saved`);
       },
       onError: (err) => {
-        toast.error(err.message ?? `Failed to save ${label.toLowerCase()}`);
+        toast.error(err.message);
       },
     }),
   );
@@ -804,7 +804,7 @@ function PeriodsSubTab({
         >
           {isSaving ? "Saving…" : "Save Period Settings"}
         </button>
-        {updateSettingsMut.isSuccess && !updateSettingsMut.isPending && (
+        {updateSettingsMut.isSuccess && (
           <span className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]">
             <CheckIcon />
             Period settings saved
@@ -910,7 +910,7 @@ function RemindersSubTab({
         >
           {isSaving ? "Saving…" : "Save Reminder Defaults"}
         </button>
-        {updateSettingsMut.isSuccess && !updateSettingsMut.isPending && (
+        {updateSettingsMut.isSuccess && (
           <span className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]">
             <CheckIcon />
             Reminder defaults saved
@@ -993,7 +993,7 @@ function NotificationsSubTab({
         >
           {isSaving ? "Saving…" : "Save Notification Settings"}
         </button>
-        {updateSettingsMut.isSuccess && !updateSettingsMut.isPending && (
+        {updateSettingsMut.isSuccess && (
           <span className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]">
             <CheckIcon />
             Notification settings saved
@@ -1039,6 +1039,10 @@ function IntegrationsSubTab() {
   }
 
   const { telegram, ci } = statusQ.data;
+  // The query type marks `ci` non-null, but the Phase-55 integrations payload
+  // can omit it (the Zod contract only guarantees `telegram`), so the optional
+  // chain is a real runtime guard, not a redundant one.
+
   const isCiConfigured = ci?.configured ?? false;
 
   return (

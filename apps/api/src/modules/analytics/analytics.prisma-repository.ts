@@ -61,7 +61,7 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
         for (const ps of s.projectStatuses) {
           if (input.projectId && ps.projectId !== input.projectId) continue;
           if (!projectMap.has(ps.projectId)) {
-            projectMap.set(ps.projectId, ps.project?.name ?? "Unknown");
+            projectMap.set(ps.projectId, ps.project.name);
           }
         }
       }
@@ -107,7 +107,7 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       periodLabel: isoDateOnly(r.periodEnd),
       leads: r.sections.map((s) => ({
         leadId: s.authorId,
-        leadName: s.author?.name ?? "Unknown",
+        leadName: s.author.name,
         submittedSections: 1,
       })),
     }));
@@ -150,7 +150,7 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
           map.set(ps.projectId, {
             status: ps.status,
             risks: existing?.risks ?? 0,
-            name: ps.project?.name ?? existing?.name ?? "Unknown",
+            name: ps.project.name,
           });
         }
         for (const risk of section.risks) {

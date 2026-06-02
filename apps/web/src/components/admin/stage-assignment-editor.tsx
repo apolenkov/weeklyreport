@@ -84,7 +84,7 @@ export function StageAssignmentEditor({
         toast.success("Stage assignment saved");
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to save stage assignment");
+        toast.error(err.message);
       },
     }),
   );
@@ -96,7 +96,7 @@ export function StageAssignmentEditor({
         toast.success("Stage assignment removed");
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to remove stage assignment");
+        toast.error(err.message);
       },
     }),
   );
@@ -135,8 +135,12 @@ export function StageAssignmentEditor({
     <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
       {stages.map((stage) => {
         const stageName = stage.name as StageName;
+        // stage.name is DB data cast to StageName; an unknown stage yields no
+        // STAGE_COLORS entry at runtime. Partial keeps the lookup honestly
+        // `string | undefined` so the fallback stays a real guard.
         const stageColor =
-          STAGE_COLORS[stageName] ?? "var(--color-muted-foreground)";
+          (STAGE_COLORS as Partial<Record<StageName, string>>)[stageName] ??
+          "var(--color-muted-foreground)";
         const assignment = assignmentByStage.get(stage.id);
         const currentAssignee = assignment?.userId ?? "";
         const selectId = `${projectId}-${stage.id}`;

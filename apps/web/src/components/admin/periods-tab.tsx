@@ -116,7 +116,7 @@ export function PeriodsTab() {
         toast.success("Period published");
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to publish period");
+        toast.error(err.message);
       },
     }),
   );
@@ -132,7 +132,7 @@ export function PeriodsTab() {
         // through `PeriodAccessError → BAD_REQUEST` here; the message
         // already explains *why* the reopen was rejected so we pipe it
         // through verbatim.
-        toast.error(err.message ?? "Failed to reopen period");
+        toast.error(err.message);
       },
     }),
   );
@@ -144,7 +144,7 @@ export function PeriodsTab() {
         toast.success("Period archived");
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to archive period");
+        toast.error(err.message);
       },
     }),
   );
@@ -156,7 +156,7 @@ export function PeriodsTab() {
         toast.success("Period unarchived");
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to unarchive period");
+        toast.error(err.message);
       },
     }),
   );
@@ -172,7 +172,7 @@ export function PeriodsTab() {
         setShowCreate(false);
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to create period");
+        toast.error(err.message);
       },
     }),
   );
@@ -189,7 +189,7 @@ export function PeriodsTab() {
         setEditingRow(null);
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to update period");
+        toast.error(err.message);
       },
     }),
   );
@@ -202,7 +202,7 @@ export function PeriodsTab() {
         toast.success("Period deleted");
       },
       onError: (err) => {
-        toast.error(err.message ?? "Failed to delete period");
+        toast.error(err.message);
       },
     }),
   );
@@ -1054,7 +1054,7 @@ function CreatePeriodDialog({
     isEdit ? dateTimeInputValue(initialValues.deadline) : "",
   );
   const [weekLabel, setWeekLabel] = useState(
-    isEdit ? (initialValues?.weekLabel ?? "") : "",
+    isEdit ? (initialValues.weekLabel ?? "") : "",
   );
 
   // Esc-to-close + click-outside (matches the groups-tab dialog pattern).

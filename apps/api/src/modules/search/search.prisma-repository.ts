@@ -188,9 +188,9 @@ export class SearchPrismaRepository implements SearchRepository {
       (r): SearchHit => ({
         type: r.type,
         id: r.id,
-        title: r.title ?? "",
-        snippet: r.snippet ?? "",
-        rank: typeof r.rank === "number" ? r.rank : Number(r.rank ?? 0),
+        title: r.title,
+        snippet: r.snippet,
+        rank: typeof r.rank === "number" ? r.rank : Number(r.rank),
         ...(r.projectId ? { projectId: r.projectId } : {}),
         ...(r.reportId ? { reportId: r.reportId } : {}),
         ...(r.reportSectionId ? { reportSectionId: r.reportSectionId } : {}),

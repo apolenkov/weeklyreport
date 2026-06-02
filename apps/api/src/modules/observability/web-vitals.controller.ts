@@ -30,7 +30,13 @@ export class WebVitalsController {
 
   @Post("web-vitals")
   record(@Body() dto: WebVitalDto): void {
-    const gauge = GAUGE_MAP[dto.name as VitalName];
+    // dto.name is an arbitrary string from the HTTP body; the `as VitalName`
+    // cast only satisfies the index signature. Annotate the result as possibly
+    // undefined so the `if (gauge)` guard stays real for unknown metric names
+    // (GAUGE_MAP[unknownKey] is undefined at runtime).
+    const gauge = (
+      GAUGE_MAP as Partial<Record<VitalName, (typeof GAUGE_MAP)[VitalName]>>
+    )[dto.name as VitalName];
     if (gauge) {
       gauge.set(
         { navigation_type: dto.navigationType ?? "unknown" },
