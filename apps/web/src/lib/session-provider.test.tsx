@@ -125,7 +125,9 @@ describe("SessionProvider + useSession", () => {
     useQueryMock.mockReturnValue({ data: null, isLoading: false });
 
     // Suppress React's error boundary console noise for this expected throw.
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {
+      /* intentionally empty: suppresses React error-boundary console noise for this expected throw */
+    });
 
     expect(() => renderHook(() => useSession())).toThrow(
       /useSession must be used within <SessionProvider>/,

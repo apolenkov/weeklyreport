@@ -35,7 +35,9 @@ vi.mock("@nestjs/common", () => ({
 
 vi.mock("bullmq", () => ({
   Worker: class {
-    on() {}
+    on() {
+      /* intentionally empty: BullMQ Worker.on stub — event subscriptions are not exercised in this integration test */
+    }
     close() {
       return Promise.resolve();
     }

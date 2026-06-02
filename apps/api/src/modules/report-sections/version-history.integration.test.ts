@@ -86,7 +86,9 @@ function createMockRepository(
     async getSectionForPeriod() {
       return null;
     },
-    async revokeSectionSubmission() {},
+    async revokeSectionSubmission() {
+      /* intentionally empty: stub fulfils LeadFormRepository contract; no awaitable work needed in this test */
+    },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
     async fillFromSection() {
       return 0;
@@ -106,7 +108,9 @@ function createMockRepository(
     async buildSnapshotProjection() {
       return {};
     },
-    async createReopenRequest() {},
+    async createReopenRequest() {
+      /* intentionally empty: stub fulfils LeadFormRepository contract; no awaitable work needed in this test */
+    },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
     async hasSharedProduct() {
       return false;

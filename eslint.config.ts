@@ -170,6 +170,7 @@ export default defineConfig([
       // src violations are fixed in code; test-mock methods that are async purely
       // to satisfy an async interface contract carry a per-site disable.
       "@typescript-eslint/require-await": "error",
+      "@typescript-eslint/no-empty-function": "error",
 
       // React hooks (single-owned by ESLint)
       "react-hooks/rules-of-hooks": "error",

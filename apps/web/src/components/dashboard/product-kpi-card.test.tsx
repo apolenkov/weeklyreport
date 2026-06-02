@@ -25,9 +25,15 @@ vi.mock("../../lib/trpc-context", () => ({
 // the tests below only assert the *presence* of the numbers, not the
 // pixel output of the line.
 class ResizeObserverStub {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  observe() {
+    /* no-op stub: JSDOM has no layout engine */
+  }
+  unobserve() {
+    /* no-op stub: JSDOM has no layout engine */
+  }
+  disconnect() {
+    /* no-op stub: JSDOM has no layout engine */
+  }
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
 (globalThis as any).ResizeObserver = ResizeObserverStub;
