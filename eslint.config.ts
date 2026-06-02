@@ -211,6 +211,31 @@ export default defineConfig([
           allowRegExp: false,
         },
       ],
+      // Phase-3 ratchet — R2b-5 wave-5 (ratchet-lint-to-strict).
+      // prefer-nullish-coalescing: SOFTENED from strictTypeChecked's default via
+      // `ignorePrimitives: { string: true }` (a deliberate relaxation, documented
+      // as such). 20 of 23 firings are string `||` where an empty string is a
+      // meaningful fall-through (id/label/description defaults: `name || "—"`,
+      // `productId || "" `, `week || range || "…"`); for strings `||` and `??`
+      // differ only on "", and here "" SHOULD fall through, so `||` is the
+      // intended idiom, not a bug. Trade-off: this blinds the rule to future
+      // string `||` (incl. genuine ones). The 3 non-string firings were fixed by
+      // hand (`?? 0`, `??=`, ternary→`??`); the rule still guards number/boolean/
+      // object `||`.
+      "@typescript-eslint/prefer-nullish-coalescing": [
+        "error",
+        { ignorePrimitives: { string: true } },
+      ],
+      // unbound-method: every firing is in a test — a vitest spy assertion
+      // (`expect(mock.method)`) or mock-cast where the reference is a vi.fn with
+      // no `this`, so they carry a per-site disable with reason. The one genuine
+      // method-capture (reminders.scheduler.test) was fixed with `.bind`, not a
+      // disable.
+      "@typescript-eslint/unbound-method": "error",
+      // no-base-to-string: 7 real "[object Object]" risks on `unknown` operands
+      // (SAML profile fields, generic data-table cells, a spawn error's stderr),
+      // each fixed by narrowing to a string at the source — no disables.
+      "@typescript-eslint/no-base-to-string": "error",
 
       // React hooks (single-owned by ESLint)
       "react-hooks/rules-of-hooks": "error",

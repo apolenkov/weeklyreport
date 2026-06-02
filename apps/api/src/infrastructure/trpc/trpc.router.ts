@@ -280,10 +280,16 @@ export function createAppRouter(deps: RouterDeps) {
               output: stdout.split("\n").slice(-15).join("\n"),
             };
           } catch (error) {
-            const stderr =
+            const stderrRaw =
               error instanceof Error && "stderr" in error
-                ? String((error as { stderr?: unknown }).stderr ?? "")
-                : "";
+                ? (error as { stderr?: unknown }).stderr
+                : undefined;
+            const stderr =
+              typeof stderrRaw === "string"
+                ? stderrRaw
+                : Buffer.isBuffer(stderrRaw)
+                  ? stderrRaw.toString("utf8")
+                  : "";
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
               message: `Reseed failed: ${error instanceof Error ? error.message : String(error)}\n${stderr.slice(-500)}`,

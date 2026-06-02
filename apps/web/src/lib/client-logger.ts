@@ -42,8 +42,8 @@ function enqueue(entry: Entry) {
   queue.push(entry);
   if (queue.length >= FLUSH_AT_COUNT) {
     void flush();
-  } else if (!flushTimer) {
-    flushTimer = setTimeout(() => void flush(), FLUSH_MS);
+  } else {
+    flushTimer ??= setTimeout(() => void flush(), FLUSH_MS);
   }
 }
 

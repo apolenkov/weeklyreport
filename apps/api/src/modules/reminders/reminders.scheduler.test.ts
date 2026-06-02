@@ -270,7 +270,7 @@ describe("RemindersScheduler — NOTIF-01/03/04 (Phase 28-03)", () => {
 
     const serviceRepo = createServiceRepo();
     // Override the rule lookup so the second-cycle ruleId resolves.
-    const originalGetRule = serviceRepo.getRule;
+    const originalGetRule = serviceRepo.getRule.bind(serviceRepo);
     serviceRepo.getRule = async (rid: string) => {
       if (rid === ruleNplus1.id) {
         return {

@@ -100,13 +100,16 @@ export function verifySamlProfile(
   }
 
   if (options.devMode) {
-    const samlId = String(
-      rawProfile.nameID ?? rawProfile.email ?? "unknown-saml-id",
-    );
-    const email = String(rawProfile.email ?? "unknown@example.com");
-    const displayName = String(
-      rawProfile.displayName ?? rawProfile.cn ?? "Unknown User",
-    );
+    // rawProfile fields are `unknown` (Record<string, unknown>); take the first
+    // string-typed candidate so a non-string attribute can't stringify to
+    // "[object Object]" (no-base-to-string).
+    const firstString = (...values: unknown[]): string | undefined =>
+      values.find((v): v is string => typeof v === "string");
+    const samlId =
+      firstString(rawProfile.nameID, rawProfile.email) ?? "unknown-saml-id";
+    const email = firstString(rawProfile.email) ?? "unknown@example.com";
+    const displayName =
+      firstString(rawProfile.displayName, rawProfile.cn) ?? "Unknown User";
     const rawRole = rawProfile.role;
     const role: Role =
       typeof rawRole === "string" &&

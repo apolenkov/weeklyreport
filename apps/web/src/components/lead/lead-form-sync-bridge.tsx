@@ -95,10 +95,9 @@ const BridgeContext = createContext<BridgeContextValue | null>(null);
 
 function riskStageKeys(products: Product[], risk: RiskEntry): string[] {
   const tags =
-    risk.stageIds !== undefined
-      ? risk.stageIds
-      : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-        splitStageNames(risk.stageName);
+    risk.stageIds ??
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
+    splitStageNames(risk.stageName);
   if (tags.length > 0) {
     return tags.map(
       (stageName) => `${risk.productId}::${canonicalStageName(stageName)}`,
