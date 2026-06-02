@@ -184,7 +184,10 @@ async function bootstrap() {
       res: express.Response,
       nextFn: express.NextFunction,
     ) => {
-      if (req.path.startsWith("/trpc")) return nextFn();
+      if (req.path.startsWith("/trpc")) {
+        nextFn();
+        return;
+      }
       const start = performance.now();
       res.on("finish", () => {
         const duration = Math.round(performance.now() - start);
@@ -382,7 +385,10 @@ async function bootstrap() {
   // Skip /auth/dev-login — gated by AUTH_DEV_MODE flag (dev-only),
   // not a brute-force surface, and 5/min would block E2E suites.
   expressApp.use("/auth", ((req, res, next) => {
-    if (req.path === "/dev-login") return next();
+    if (req.path === "/dev-login") {
+      next();
+      return;
+    }
     return authLimiter(req, res, next);
   }) as RequestHandler);
   mountAuthRoutes(

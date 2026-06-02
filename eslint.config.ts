@@ -236,6 +236,21 @@ export default defineConfig([
       // (SAML profile fields, generic data-table cells, a spawn error's stderr),
       // each fixed by narrowing to a string at the source — no disables.
       "@typescript-eslint/no-base-to-string": "error",
+      // Phase-3 ratchet — R2b-6 wave-6a (ratchet-lint-to-strict).
+      // no-confusing-void-expression: SOFTENED via `ignoreArrowShorthand: true`
+      // (a deliberate relaxation from strictTypeChecked's default, documented as
+      // such). 270 of 274 firings are arrow-shorthand void returns — idiomatic
+      // React event handlers (`onClick={() => setOpen(true)}`) where the void
+      // return is intended, not confusing. This softening opens NO Promise hole:
+      // the only dangerous arrow-shorthand-void case is a Promise-returning call
+      // in a void slot, and `no-misused-promises` (error since wave 2, with the
+      // default checksVoidReturn) already rejects that. The 4 remaining real
+      // firings — explicit `return <void-call>()` from block-bodied functions in
+      // main.ts and sidebar.tsx — were fixed by hand (statement + bare `return`).
+      "@typescript-eslint/no-confusing-void-expression": [
+        "error",
+        { ignoreArrowShorthand: true },
+      ],
 
       // React hooks (single-owned by ESLint)
       "react-hooks/rules-of-hooks": "error",
