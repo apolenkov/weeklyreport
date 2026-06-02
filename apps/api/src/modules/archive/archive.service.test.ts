@@ -98,7 +98,9 @@ describe("archiveRouter", () => {
     await expect(
       archiveRouter.listArchiveReports({ archiveService: service }),
     ).resolves.toMatchObject({
-      items: expect.arrayContaining([expect.objectContaining({ reportId })]),
+      items: expect.arrayContaining([
+        expect.objectContaining({ reportId }),
+      ]) as unknown,
     });
     await expect(
       archiveRouter.getArchiveReport({ archiveService: service, reportId }),

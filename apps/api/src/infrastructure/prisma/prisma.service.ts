@@ -10,6 +10,26 @@ import pg from "pg";
 
 const SLOW_QUERY_MS = 100;
 
+// Prisma 7's PrismaClient type narrows `$on` differently depending on the
+// constructor's `log` shape, and TypeScript cannot always reconcile the two
+// (the source of the former `this as any`). Cast through this minimal
+// structural type instead, so the event callbacks stay fully typed and the
+// no-unsafe-* family has a real type to check against.
+interface PrismaLogEventEmitter {
+  $on?: {
+    (
+      event: "query",
+      callback: (e: {
+        query: string;
+        params: string;
+        duration: number;
+        target?: string;
+      }) => void,
+    ): void;
+    (event: "warn" | "error", callback: (e: { message: string }) => void): void;
+  };
+}
+
 @Injectable()
 export class PrismaService
   extends PrismaClient
@@ -38,13 +58,12 @@ export class PrismaService
   }
 
   async onModuleInit(): Promise<void> {
-    // Wire query/error/warn event listeners. The `as any` is unavoidable in
-    // Prisma 7's typing for $on with structured log levels — the Client type
-    // narrows differently depending on the constructor's `log` shape and
-    // TypeScript can't always reconcile the two.
+    // Wire query/error/warn event listeners. `$on` is reached through the
+    // PrismaLogEventEmitter structural cast (see above) because Prisma 7's
+    // Client type narrows $on differently depending on the constructor's `log`
+    // shape and TypeScript can't always reconcile the two.
     const debugEnabled = (process.env.LOG_LEVEL ?? "info") === "debug";
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-    const self = this as any;
+    const self = this as unknown as PrismaLogEventEmitter;
 
     self.$on?.(
       "query",

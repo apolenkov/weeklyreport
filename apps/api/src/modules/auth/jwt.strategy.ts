@@ -1,4 +1,5 @@
 import { userSessionSchema } from "@customreport/shared";
+import type { Request } from "express";
 import { ExtractJwt, type StrategyOptions } from "passport-jwt";
 
 export type JwtStrategyOptions = StrategyOptions & {
@@ -23,7 +24,10 @@ export function createJwtStrategyOptions(
   return {
     jwtCookieName,
     jwtFromRequest: ExtractJwt.fromExtractors([
-      (request) => request?.cookies?.[jwtCookieName] ?? null,
+      (request: Request) => {
+        const cookies = request.cookies as Record<string, string> | undefined;
+        return cookies?.[jwtCookieName] ?? null;
+      },
     ]),
     ignoreExpiration: false,
     secretOrKey: requireSecret(env),

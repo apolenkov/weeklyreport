@@ -6,9 +6,11 @@ import {
   pdfExportJobSchema,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {
   mapPrismaToReportSection,
+  type PrismaReportSectionWithRelations,
   reportSectionFullInclude,
 } from "../report-sections/report-sections.prisma-repository.js";
 import type {
@@ -132,12 +134,15 @@ function toExportJob(row: {
 }
 
 function computePortfolioOverview(
-  sections: { projectStatuses: { status: string }[] }[],
+  sections: { projectStatuses: { status: string | null }[] }[],
 ): PortfolioOverview {
   const totals = { green: 0, yellow: 0, red: 0 };
 
   for (const section of sections) {
     for (const ps of section.projectStatuses) {
+      if (ps.status === null) {
+        continue;
+      }
       const status = ps.status as keyof typeof totals;
 
       if (status in totals) {
@@ -152,11 +157,15 @@ function computePortfolioOverview(
   return { status: overallStatus, totals };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-function toAssembledReport(report: any): AssembledReport {
+function toAssembledReport(
+  report: Prisma.ReportGetPayload<{ include: typeof reportFullInclude }>,
+): AssembledReport {
   const portfolio = computePortfolioOverview(report.sections);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-  const sections = (report.sections as any[]).map(mapPrismaToReportSection);
+  const sections = report.sections.map((section) =>
+    mapPrismaToReportSection(
+      section as unknown as PrismaReportSectionWithRelations,
+    ),
+  );
 
   return assembledReportSchema.parse({
     reportId: report.id,

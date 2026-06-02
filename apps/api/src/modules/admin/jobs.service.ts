@@ -89,7 +89,7 @@ export class JobsService {
       // Defensive copy — BullMQ Job#data is mutable and can carry non-trivial
       // payloads. We keep it `unknown` at the boundary; the Zod schema on the
       // tRPC side validates the shape callers care about.
-      data: job.data,
+      data: job.data as unknown,
     }));
 
     // If the slice came back full, advance the cursor; otherwise the failed

@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -35,8 +35,8 @@ class ResizeObserverStub {
     /* no-op stub: JSDOM has no layout engine */
   }
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-(globalThis as any).ResizeObserver = ResizeObserverStub;
+(globalThis as unknown as Record<string, unknown>).ResizeObserver =
+  ResizeObserverStub;
 
 const mockUseQuery = vi.mocked(useQuery);
 
@@ -56,8 +56,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: summary,
       isLoading: false,
       isError: false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-    } as any);
+    } as unknown as UseQueryResult<unknown, unknown>);
 
     render(<ProductKpiCard role="head" />);
 
@@ -81,8 +80,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: undefined,
       isLoading: false,
       isError: false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-    } as any);
+    } as unknown as UseQueryResult<unknown, unknown>);
 
     const { container } = render(<ProductKpiCard role="lead" />);
 
@@ -97,8 +95,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: summary,
       isLoading: false,
       isError: false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-    } as any);
+    } as unknown as UseQueryResult<unknown, unknown>);
 
     render(<ProductKpiCard role="viewer" />);
 
@@ -112,8 +109,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: { ...summary, onTimeRatio: null, sparkline: [] },
       isLoading: false,
       isError: false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-    } as any);
+    } as unknown as UseQueryResult<unknown, unknown>);
 
     render(<ProductKpiCard role="admin" />);
 
@@ -125,8 +121,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: undefined,
       isLoading: true,
       isError: false,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-    } as any);
+    } as unknown as UseQueryResult<unknown, unknown>);
 
     render(<ProductKpiCard role="head" />);
 
@@ -138,8 +133,7 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
       data: undefined,
       isLoading: false,
       isError: true,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-    } as any);
+    } as unknown as UseQueryResult<unknown, unknown>);
 
     render(<ProductKpiCard role="head" />);
 

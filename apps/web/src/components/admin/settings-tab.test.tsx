@@ -19,8 +19,8 @@ const toastSuccess = vi.fn();
 const toastError = vi.fn();
 vi.mock("sonner", () => ({
   toast: {
-    success: (...args: unknown[]) => toastSuccess(...args),
-    error: (...args: unknown[]) => toastError(...args),
+    success: (...args: unknown[]) => toastSuccess(...args) as unknown,
+    error: (...args: unknown[]) => toastError(...args) as unknown,
     info: vi.fn(),
   },
 }));
@@ -311,7 +311,8 @@ describe("SettingsTab — UFB-048 Periods sub-tab (Phase 48-B)", () => {
     await waitFor(() => {
       expect(captured.updateSettingsFn).toHaveBeenCalled();
     });
-    const payload = captured.updateSettingsFn.mock.calls[0]?.[0];
+    const payload = captured.updateSettingsFn.mock
+      .calls[0]?.[0] as Partial<MockSettings>;
     expect(payload.periodLengthDays).toBe(14);
     expect(payload.gracePeriodHours).toBe(48);
     // Other fields preserved on the PATCH payload.
@@ -469,7 +470,8 @@ describe("SettingsTab — UFB-051 Periods sub-tab (Phase 51-A)", () => {
     await waitFor(() => {
       expect(captured.updateSettingsFn).toHaveBeenCalled();
     });
-    const payload = captured.updateSettingsFn.mock.calls[0]?.[0];
+    const payload = captured.updateSettingsFn.mock
+      .calls[0]?.[0] as Partial<MockSettings>;
     expect(payload.firstDayOfWeek).toBe(7);
     expect(payload.deadlineDayOfWeek).toBe(4);
     expect(payload.deadlineTime).toBe("09:30");

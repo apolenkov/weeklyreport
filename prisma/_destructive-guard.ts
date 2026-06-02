@@ -20,16 +20,20 @@
  * Underscore-prefixed file name → internal helper, not a Prisma seed file.
  */
 export function assertNonProdDestructive(scriptName: string): void {
-  if (process.env.ALLOW_PROD_DESTRUCTIVE === "yes") return;
+  // ESLint lints this file under the default project (not tsconfig.prisma.json),
+  // where `process` resolves to `any`; cast `process` itself to a concrete shape
+  // so the no-unsafe-* family checks real types instead of `any`.
+  const env = (process as { env: Record<string, string | undefined> }).env;
+  if (env.ALLOW_PROD_DESTRUCTIVE === "yes") return;
 
-  if (process.env.NODE_ENV === "production") {
+  if (env.NODE_ENV === "production") {
     throw new Error(
       `[${scriptName}] Refusing: NODE_ENV=production. ` +
         `Set ALLOW_PROD_DESTRUCTIVE=yes to override.`,
     );
   }
 
-  const url: string = process.env.DATABASE_URL ?? "";
+  const url: string = env.DATABASE_URL ?? "";
   if (!url) {
     throw new Error(
       `[${scriptName}] Refusing: DATABASE_URL not set. ` +

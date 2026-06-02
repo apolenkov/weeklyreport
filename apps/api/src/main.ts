@@ -335,7 +335,7 @@ async function bootstrap() {
   });
 
   // Mount tRPC as Express middleware at /trpc
-  const expressApp = app.getHttpAdapter().getInstance();
+  const expressApp = app.getHttpAdapter().getInstance() as express.Express;
 
   // Phase 23-01: serve generated PDF artefacts.
   // The BullMQ worker writes to `pdfDir/{jobId}.pdf` and stores

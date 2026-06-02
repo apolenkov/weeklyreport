@@ -15,7 +15,7 @@ vi.mock("@tanstack/react-query", async () => {
   );
   return {
     ...actual,
-    useQuery: (...args: unknown[]) => useQueryMock(...args),
+    useQuery: (...args: unknown[]): unknown => useQueryMock(...args),
   };
 });
 

@@ -236,7 +236,10 @@ describe("createNullAuditLogger", () => {
 describe("createAuditLogger — scopeDenied (UFB-040 / 46-05)", () => {
   it("emits the {event, userId, role, ip, attemptedScope, resourceId} envelope on warn", () => {
     const calls: { level: string; meta: Record<string, unknown> }[] = [];
-    const logger = {
+    const logger: AppLogger = {
+      debug: () => {
+        /* not used here */
+      },
       info: () => {
         /* not used here */
       },
@@ -246,8 +249,7 @@ describe("createAuditLogger — scopeDenied (UFB-040 / 46-05)", () => {
         /* not used here */
       },
       child: () => logger,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-    } as any;
+    };
 
     const audit = createAuditLogger(logger);
     audit.scopeDenied({

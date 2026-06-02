@@ -8,6 +8,7 @@ import type {
   MyHistoryEntry,
   Role,
 } from "@customreport/shared";
+import type { SessionState } from "../../../lib/session-provider";
 import { useQuery } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -41,7 +42,7 @@ vi.mock("../../../components/search/search-input", () => ({
 }));
 
 vi.mock("../../../lib/session-provider", () => ({
-  useSession: () => sessionMock(),
+  useSession: (): SessionState => sessionMock() as SessionState,
 }));
 
 vi.mock("../../../lib/trpc-context", () => ({

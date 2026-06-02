@@ -107,7 +107,10 @@ describe("tRPC auth middleware", () => {
 
   it("protectedProcedure rejects null session with UNAUTHORIZED", async () => {
     await expect(nullCaller.protectedRoute()).rejects.toMatchObject(
-      expect.objectContaining({ code: "UNAUTHORIZED" }),
+      expect.objectContaining({ code: "UNAUTHORIZED" }) as Record<
+        string,
+        unknown
+      >,
     );
   });
 
@@ -118,7 +121,7 @@ describe("tRPC auth middleware", () => {
 
   it("headProcedure rejects lead session with FORBIDDEN", async () => {
     await expect(leadCaller.headRoute()).rejects.toMatchObject(
-      expect.objectContaining({ code: "FORBIDDEN" }),
+      expect.objectContaining({ code: "FORBIDDEN" }) as Record<string, unknown>,
     );
   });
 
@@ -129,7 +132,10 @@ describe("tRPC auth middleware", () => {
 
   it("headProcedure rejects null session with UNAUTHORIZED", async () => {
     await expect(nullCaller.headRoute()).rejects.toMatchObject(
-      expect.objectContaining({ code: "UNAUTHORIZED" }),
+      expect.objectContaining({ code: "UNAUTHORIZED" }) as Record<
+        string,
+        unknown
+      >,
     );
   });
 
@@ -148,7 +154,10 @@ describe("tRPC auth middleware", () => {
 
   it("protectedProcedure with null session throws UNAUTHORIZED (AUTH-038 P0)", async () => {
     await expect(nullCaller.protectedRoute()).rejects.toMatchObject(
-      expect.objectContaining({ code: "UNAUTHORIZED" }),
+      expect.objectContaining({ code: "UNAUTHORIZED" }) as Record<
+        string,
+        unknown
+      >,
     );
   });
 
@@ -170,7 +179,7 @@ describe("tRPC auth middleware", () => {
     });
 
     await expect(viewerCaller.headRoute()).rejects.toMatchObject(
-      expect.objectContaining({ code: "FORBIDDEN" }),
+      expect.objectContaining({ code: "FORBIDDEN" }) as Record<string, unknown>,
     );
   });
 
@@ -211,7 +220,10 @@ describe("tRPC logging middleware", () => {
 
     expect(logger.info).toHaveBeenCalledTimes(2);
 
-    const [startMsg, startMeta] = expectDefined(logger.info.mock.calls[0]);
+    const [startMsg, startMeta] = expectDefined(logger.info.mock.calls[0]) as [
+      unknown,
+      Record<string, unknown>,
+    ];
     expect(startMsg).toBe("trpc request start");
     expect(startMeta).toMatchObject({
       phase: "trpc.request",
@@ -221,7 +233,10 @@ describe("tRPC logging middleware", () => {
       userId: null,
     });
 
-    const [endMsg, endMeta] = expectDefined(logger.info.mock.calls[1]);
+    const [endMsg, endMeta] = expectDefined(logger.info.mock.calls[1]) as [
+      unknown,
+      Record<string, unknown>,
+    ];
     expect(endMsg).toBe("trpc request end");
     expect(endMeta).toMatchObject({
       phase: "trpc.request",
@@ -258,7 +273,10 @@ describe("tRPC logging middleware", () => {
     });
 
     expect(logger.error).toHaveBeenCalledTimes(1);
-    const [endMsg, endMeta] = expectDefined(logger.error.mock.calls[0]);
+    const [endMsg, endMeta] = expectDefined(logger.error.mock.calls[0]) as [
+      unknown,
+      Record<string, unknown>,
+    ];
     expect(endMsg).toBe("trpc request end");
     expect(endMeta).toMatchObject({
       phase: "trpc.request",

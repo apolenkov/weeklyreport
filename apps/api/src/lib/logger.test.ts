@@ -44,7 +44,9 @@ describe("createAppLogger", () => {
     logger.info("hello");
 
     expect(spy).toHaveBeenCalledOnce();
-    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
+    const parsed = JSON.parse(
+      expectDefined(spy.mock.calls[0])[0] as string,
+    ) as Record<string, unknown>;
     expect(parsed).toMatchObject({
       level: "info",
       message: "hello",
@@ -61,7 +63,9 @@ describe("createAppLogger", () => {
     logger.error("fail");
 
     expect(spy).toHaveBeenCalledOnce();
-    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
+    const parsed = JSON.parse(
+      expectDefined(spy.mock.calls[0])[0] as string,
+    ) as Record<string, unknown>;
     expect(parsed).toMatchObject({ level: "error", message: "fail" });
   });
 
@@ -83,7 +87,9 @@ describe("createAppLogger", () => {
 
     logger.info("with service");
 
-    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
+    const parsed = JSON.parse(
+      expectDefined(spy.mock.calls[0])[0] as string,
+    ) as Record<string, unknown>;
     expect(parsed.service).toBe("test-svc");
   });
 
@@ -93,7 +99,9 @@ describe("createAppLogger", () => {
 
     logger.info("request", { method: "GET", path: "/api" });
 
-    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
+    const parsed = JSON.parse(
+      expectDefined(spy.mock.calls[0])[0] as string,
+    ) as Record<string, unknown>;
     expect(parsed.method).toBe("GET");
     expect(parsed.path).toBe("/api");
   });
@@ -115,7 +123,10 @@ describe("createAppLogger", () => {
       .split("\n");
     expect(lines).toHaveLength(2);
 
-    const first = JSON.parse(expectDefined(lines[0]));
+    const first = JSON.parse(expectDefined(lines[0])) as Record<
+      string,
+      unknown
+    >;
     expect(first).toMatchObject({
       level: "info",
       message: "first",
@@ -195,7 +206,9 @@ describe("createAppLogger", () => {
     const logger = createAppLogger({ clsService: cls });
     logger.info("with-cls");
 
-    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
+    const parsed = JSON.parse(
+      expectDefined(spy.mock.calls[0])[0] as string,
+    ) as Record<string, unknown>;
     expect(parsed.correlationId).toBe("fixed-uuid");
   });
 
@@ -209,7 +222,9 @@ describe("createAppLogger", () => {
     const logger = createAppLogger({ clsService: cls });
     logger.info("no-cls");
 
-    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
+    const parsed = JSON.parse(
+      expectDefined(spy.mock.calls[0])[0] as string,
+    ) as Record<string, unknown>;
     expect(parsed.correlationId).toBe("no-context");
   });
 
@@ -219,7 +234,9 @@ describe("createAppLogger", () => {
 
     logger.info("plain");
 
-    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
+    const parsed = JSON.parse(
+      expectDefined(spy.mock.calls[0])[0] as string,
+    ) as Record<string, unknown>;
     expect(parsed.correlationId).toBe("no-context");
   });
 
@@ -247,7 +264,9 @@ describe("child logger", () => {
 
     child.info("reminder sent");
 
-    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
+    const parsed = JSON.parse(
+      expectDefined(spy.mock.calls[0])[0] as string,
+    ) as Record<string, unknown>;
     expect(parsed.service).toBe("api");
     expect(parsed.module).toBe("reminders");
     expect(parsed.message).toBe("reminder sent");
@@ -274,7 +293,9 @@ describe("child logger", () => {
     const child = parent.child({ module: "svc" });
     child.info("inherited");
 
-    const parsed = JSON.parse(expectDefined(spy.mock.calls[0])[0] as string);
+    const parsed = JSON.parse(
+      expectDefined(spy.mock.calls[0])[0] as string,
+    ) as Record<string, unknown>;
     expect(parsed.correlationId).toBe("child-uuid");
   });
 });

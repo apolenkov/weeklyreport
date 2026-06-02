@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { type OrganizationUpdate } from "@customreport/shared";
+
 import {
   type OrganizationRepository,
   OrganizationService,
@@ -28,7 +30,7 @@ function makeRepo(): OrganizationRepository {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async OrganizationRepository contract (no awaitable work in the stub)
     getOrganization: vi.fn(async () => baseRow),
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async OrganizationRepository contract (no awaitable work in the stub)
-    updateOrganization: vi.fn(async (input) => ({
+    updateOrganization: vi.fn(async (input: OrganizationUpdate) => ({
       ...baseRow,
       shortName: input.shortName,
       fullName: input.fullName,

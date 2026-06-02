@@ -3,7 +3,13 @@ import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
 import type { INestApplication } from "@nestjs/common";
 import { Queue } from "bullmq";
-import type { NextFunction, Request, Response } from "express";
+import type {
+  Express,
+  NextFunction,
+  Request,
+  RequestHandler,
+  Response,
+} from "express";
 
 import { createAuthController } from "../../modules/auth/auth.controller";
 import { getBullMQOptions } from "./bullmq-options";
@@ -56,6 +62,9 @@ export function mountBullBoard(_app: INestApplication): void {
     }
   };
 
-  const expressApp = _app.getHttpAdapter().getInstance();
-  expressApp.use("/admin/queues", requireHead, serverAdapter.getRouter());
+  const expressApp = _app.getHttpAdapter().getInstance() as Express;
+  // @bull-board/express types getRouter() loosely (any); it is an Express router
+  // at runtime, so narrow it to RequestHandler for the typed `use` overload.
+  const queuesRouter = serverAdapter.getRouter() as RequestHandler;
+  expressApp.use("/admin/queues", requireHead, queuesRouter);
 }

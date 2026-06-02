@@ -3,6 +3,7 @@
  */
 
 import type { Role } from "@customreport/shared";
+import type { SessionState } from "../../lib/session-provider";
 import { render } from "@testing-library/react";
 import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -19,7 +20,7 @@ vi.mock("next/navigation", () => ({
 
 const useSessionMock = vi.fn();
 vi.mock("../../lib/session-provider", () => ({
-  useSession: () => useSessionMock(),
+  useSession: () => useSessionMock() as SessionState,
 }));
 
 // Phase 33-04: NavBar now reads the active period via tRPC for the right-rail

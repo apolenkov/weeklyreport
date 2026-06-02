@@ -43,7 +43,7 @@ export const reportSectionFullInclude = {
   decisions: true,
 } as const;
 
-type PrismaReportSectionWithRelations = NonNullable<
+export type PrismaReportSectionWithRelations = NonNullable<
   Awaited<ReturnType<PrismaService["reportSection"]["findUnique"]>>
 > & {
   authorId: string;

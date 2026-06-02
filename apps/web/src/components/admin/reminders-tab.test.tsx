@@ -9,9 +9,9 @@ import { TRPCProxyContext } from "../../lib/trpc-context";
 import type { MockPeriod, MockReminder, MockReminderPolicy } from "./mock-data";
 import { RemindersTab } from "./reminders-tab";
 
-const toastSuccess = vi.fn();
-const toastError = vi.fn();
-const toastInfo = vi.fn();
+const toastSuccess: (...args: unknown[]) => void = vi.fn();
+const toastError: (...args: unknown[]) => void = vi.fn();
+const toastInfo: (...args: unknown[]) => void = vi.fn();
 
 vi.mock("sonner", () => ({
   toast: {

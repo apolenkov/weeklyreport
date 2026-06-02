@@ -24,13 +24,13 @@ function readResponseHeader(response: unknown, name: string): string | null {
   if (!headers || typeof headers !== "object") return null;
   const get = (headers as { get?: unknown }).get;
   if (typeof get !== "function") return null;
-  const value = get.call(headers, name);
+  const value: unknown = get.call(headers, name);
   return typeof value === "string" && value.trim() ? value : null;
 }
 
 function readErrorData(error: unknown): Record<string, unknown> | null {
   if (!(error instanceof TRPCClientError)) return null;
-  const data = error.data;
+  const data: unknown = error.data;
   return data && typeof data === "object"
     ? (data as Record<string, unknown>)
     : null;

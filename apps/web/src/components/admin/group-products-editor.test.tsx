@@ -12,8 +12,8 @@ const detachMutate = vi.fn();
 const invalidate = vi.fn();
 
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: (opts: unknown) => useQueryMock(opts),
-  useQueries: (opts: unknown) => useQueriesMock(opts),
+  useQuery: (opts: unknown): unknown => useQueryMock(opts),
+  useQueries: (opts: unknown): unknown => useQueriesMock(opts),
   useMutation: (opts: { mutationKey?: readonly string[] }) => {
     // Discriminate attach vs detach by the mutation key that the tRPC
     // mock provides below. The trpc-context mock returns a stable key

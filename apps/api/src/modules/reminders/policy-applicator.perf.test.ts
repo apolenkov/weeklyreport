@@ -14,6 +14,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { PolicyApplicatorService } from "./policy-applicator.service.js";
 
 // ---------------------------------------------------------------------------
@@ -63,8 +64,9 @@ function makePrismaStub(policyCount: number) {
 
 describe("TD-05: PolicyApplicatorService fan-out performance", () => {
   it("completes 10 active policies within 50 ms", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-    const service = new PolicyApplicatorService(makePrismaStub(10) as any);
+    const service = new PolicyApplicatorService(
+      makePrismaStub(10) as unknown as PrismaService,
+    );
 
     const start = performance.now();
     const result = await service.applyToPeriod(PERIOD);
@@ -76,8 +78,9 @@ describe("TD-05: PolicyApplicatorService fan-out performance", () => {
   });
 
   it("completes 50 active policies within 200 ms", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-    const service = new PolicyApplicatorService(makePrismaStub(50) as any);
+    const service = new PolicyApplicatorService(
+      makePrismaStub(50) as unknown as PrismaService,
+    );
 
     const start = performance.now();
     const result = await service.applyToPeriod(PERIOD);
@@ -90,8 +93,9 @@ describe("TD-05: PolicyApplicatorService fan-out performance", () => {
 
   it("each policy triggers exactly one findUnique + one upsert call", async () => {
     const prismaStub = makePrismaStub(5);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-    const service = new PolicyApplicatorService(prismaStub as any);
+    const service = new PolicyApplicatorService(
+      prismaStub as unknown as PrismaService,
+    );
 
     await service.applyToPeriod(PERIOD);
 
@@ -108,8 +112,9 @@ describe("TD-05: PolicyApplicatorService fan-out performance", () => {
     }));
     prismaStub.reminderPolicy.findMany.mockResolvedValue(expiredPolicies);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-    const service = new PolicyApplicatorService(prismaStub as any);
+    const service = new PolicyApplicatorService(
+      prismaStub as unknown as PrismaService,
+    );
     const result = await service.applyToPeriod(PERIOD);
 
     expect(result.skipped).toBe(3);
@@ -125,8 +130,9 @@ describe("TD-05: PolicyApplicatorService fan-out performance", () => {
       .mockResolvedValueOnce({ id: "existing-rule" }) // first policy → updated
       .mockResolvedValueOnce(null); // second policy → created
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-    const service = new PolicyApplicatorService(prismaStub as any);
+    const service = new PolicyApplicatorService(
+      prismaStub as unknown as PrismaService,
+    );
     const result = await service.applyToPeriod(PERIOD);
 
     expect(result.created).toBe(1);

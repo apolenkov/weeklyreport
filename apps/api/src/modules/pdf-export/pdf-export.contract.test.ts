@@ -164,7 +164,7 @@ describe("PdfExportService — contract tests", () => {
           expect.objectContaining({
             reportId,
             jobId: job.jobId,
-            authToken: expect.stringMatching(/^eyJ/),
+            authToken: expect.stringMatching(/^eyJ/) as unknown,
           }),
           { attempts: 3, backoff: { type: "exponential", delay: 5000 } },
         );

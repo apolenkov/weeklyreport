@@ -14,8 +14,8 @@ const useQueryMock = vi.fn();
 const useMutationMock = vi.fn();
 
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: (...args: unknown[]) => useQueryMock(...args),
-  useMutation: (...args: unknown[]) => useMutationMock(...args),
+  useQuery: (...args: unknown[]) => useQueryMock(...args) as unknown,
+  useMutation: (...args: unknown[]) => useMutationMock(...args) as unknown,
 }));
 
 vi.mock("sonner", () => ({

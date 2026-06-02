@@ -15,9 +15,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
 
-const toastSuccess = vi.fn();
-const toastError = vi.fn();
-const toastInfo = vi.fn();
+const toastSuccess = vi.fn<(...args: unknown[]) => void>();
+const toastError = vi.fn<(...args: unknown[]) => void>();
+const toastInfo = vi.fn<(...args: unknown[]) => void>();
 vi.mock("sonner", () => ({
   toast: {
     success: (...args: unknown[]) => toastSuccess(...args),

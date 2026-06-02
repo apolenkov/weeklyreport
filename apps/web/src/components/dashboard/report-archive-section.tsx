@@ -86,11 +86,23 @@ export function ReportArchiveSection({
 
   const archive = useCursorPagination<ArchiveReportSummary>(
     (input) =>
-      // The trpc proxy exposes `infiniteQueryOptions` per
-      // @trpc/tanstack-react-query 11.16+. Cast to satisfy the hook's
-      // useInfiniteQuery typings; runtime shape matches.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-      (trpc.archive.list as any).infiniteQueryOptions(
+      // @trpc/tanstack-react-query 11.16+ exposes `infiniteQueryOptions` on the
+      // proxy, but the proxy's deep type isn't statically reachable here.
+      // Describe the one method we call — it returns `unknown`, which the hook's
+      // `(input) => unknown` factory branch accepts — instead of casting to `any`.
+      (
+        trpc.archive.list as unknown as {
+          infiniteQueryOptions: (
+            input: { limit: number },
+            opts: {
+              getNextPageParam: (last: {
+                nextCursor: string | null;
+              }) => string | undefined;
+              initialCursor: string | undefined;
+            },
+          ) => unknown;
+        }
+      ).infiniteQueryOptions(
         { limit: input.limit ?? PAGE_SIZE },
         {
           getNextPageParam: (last: { nextCursor: string | null }) =>
