@@ -90,11 +90,11 @@ describe("getServerSession", () => {
     expect(result).toEqual(SESSION);
 
     const [url, init] = expectDefined(
-      fetchMock.mock.calls[0] as [string, RequestInit?],
+      fetchMock.mock.calls[0] as [string, RequestInit],
     );
     expect(url).toContain("/trpc/auth.me");
-    expect((init as RequestInit).headers).toBeUndefined();
-    expect((init as RequestInit).cache).toBe("no-store");
+    expect(init.headers).toBeUndefined();
+    expect(init.cache).toBe("no-store");
   });
 
   it("returns the decoded session when auth.me resolves", async () => {
@@ -109,15 +109,15 @@ describe("getServerSession", () => {
     expect(result).toEqual(SESSION);
 
     const [url, init] = expectDefined(
-      fetchMock.mock.calls[0] as [string, RequestInit?],
+      fetchMock.mock.calls[0] as [string, RequestInit],
     );
     expect(url).toContain("/trpc/auth.me");
-    expect((init as RequestInit).headers).toMatchObject({
+    expect(init.headers).toMatchObject({
       cookie: "customreport_session=a-jwt-cookie-value",
     });
     // cache: 'no-store' is mandatory so role downgrades are visible at
     // request time rather than waiting on the data cache.
-    expect((init as RequestInit).cache).toBe("no-store");
+    expect(init.cache).toBe("no-store");
   });
 
   it("returns null when auth.me throws UNAUTHORIZED (failure-closed)", async () => {

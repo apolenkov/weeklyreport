@@ -277,6 +277,16 @@ export default defineConfig([
       "@typescript-eslint/no-unsafe-call": "error",
       "@typescript-eslint/no-unsafe-member-access": "error",
       "@typescript-eslint/no-unsafe-return": "error",
+      // Phase-3 ratchet — R2b-6 wave-6c-i (ratchet-lint-to-strict).
+      // non-nullable-type-assertion-style: 9 firings, all `x as T` where T is the
+      // non-null form of x (i.e. equivalent to `x!`). NOT converted to `!` (that
+      // would seed the declared no-non-null-assertion→error target with new debt);
+      // instead each was removed at the ROOT so no assertion is needed: the 3 src
+      // `d.productId as string` sites turned their upstream `.filter(d => !!d.productId)`
+      // into a type-predicate filter (`d is typeof d & { productId: string }`),
+      // narrowing productId to string honestly; the test sites dropped the
+      // assertion (non-optional tuple element / `map.get(k) ?? null`). 0 disables.
+      "@typescript-eslint/non-nullable-type-assertion-style": "error",
 
       // React hooks (single-owned by ESLint)
       "react-hooks/rules-of-hooks": "error",
