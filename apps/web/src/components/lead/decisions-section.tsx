@@ -142,6 +142,7 @@ export function DecisionsSection({
         {
           ...saved,
           productName: saved.productName || defaultProductName || "Group",
+          // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
           stageName: saved.stageName ?? "—",
         },
       ]);
@@ -175,7 +176,8 @@ export function DecisionsSection({
           const stageTags =
             decision.stageIds && decision.stageIds.length > 0
               ? decision.stageIds
-              : splitStageNames(decision.stageName);
+              : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
+                splitStageNames(decision.stageName);
           return (
             <div
               key={decision.id}

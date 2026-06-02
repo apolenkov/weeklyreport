@@ -235,6 +235,7 @@ export function useStatusRiskSync(
       const product = products.find((p) => p.id === risk.productId);
       if (!product) return;
 
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
       const stageTags = splitStageNames(risk.stageName);
       const stage = product.stages.find((s) =>
         stageTags.length > 0 ? stageTags.includes(s.stageName) : true,

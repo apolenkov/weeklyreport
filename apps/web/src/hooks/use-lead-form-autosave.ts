@@ -206,8 +206,8 @@ export function useLeadFormAutosave(
       e.preventDefault();
       // Legacy browsers (Chrome <119, Firefox <109) require returnValue to be
       // set. Modern browsers honour preventDefault() alone. Keep both to
-      // satisfy the browser matrix; the TS6385 deprecation is a compiler
-      // diagnostic only and does not trigger the ESLint rule.
+      // satisfy the browser matrix.
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-browser compat; returnValue needed for Chrome <119 / Firefox <109; preventDefault() alone is insufficient there
       e.returnValue = "";
     }
     window.addEventListener("beforeunload", handler);

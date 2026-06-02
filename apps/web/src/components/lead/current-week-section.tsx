@@ -50,7 +50,8 @@ function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
     const tags =
       item.stageIds && item.stageIds.length > 0
         ? item.stageIds
-        : splitStageNames(item.stageName);
+        : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
+          splitStageNames(item.stageName);
     const key =
       tags.length > 0
         ? `${item.productName} · ${tags.join(", ")}`

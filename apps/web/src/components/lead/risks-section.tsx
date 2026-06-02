@@ -163,7 +163,8 @@ export function RisksSection({
           const stageTags =
             risk.stageIds && risk.stageIds.length > 0
               ? risk.stageIds.map(canonicalStageName)
-              : splitStageNames(risk.stageName);
+              : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
+                splitStageNames(risk.stageName);
           // Empty means implicit all assigned stages. A non-empty stageIds
           // array is explicit user scope, even when it contains every stage.
           // Keep every selected stage visible; seven SDLC chips fit better
@@ -321,7 +322,8 @@ export function RisksSection({
         preview={pendingDelete?.text || "(no description)"}
         subtitle={
           pendingDelete
-            ? `${pendingDelete.productName}${(pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).length > 0 ? ` · ${(pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).join(", ")}` : " · all stages"}`
+            ? // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
+              `${pendingDelete.productName}${(pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).length > 0 ? ` · ${(pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).join(", ")}` : " · all stages"}`
             : undefined
         }
         onConfirm={confirmDelete}
