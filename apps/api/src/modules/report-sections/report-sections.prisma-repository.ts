@@ -372,7 +372,9 @@ export class ReportSectionsPrismaRepository
           });
         }
 
-        const decisionsToSave = section.decisions.filter((d) => !!d.productId);
+        const decisionsToSave = section.decisions.filter(
+          (d): d is typeof d & { productId: string } => Boolean(d.productId),
+        );
         if (decisionsToSave.length > 0) {
           await tx.decision.createMany({
             data: decisionsToSave.map((d) => ({
@@ -384,7 +386,7 @@ export class ReportSectionsPrismaRepository
               impact: d.impact,
               resolvedAt: d.resolvedAt ?? null,
               stageNames: d.stageIds ?? [],
-              productId: d.productId as string,
+              productId: d.productId,
             })),
           });
         }

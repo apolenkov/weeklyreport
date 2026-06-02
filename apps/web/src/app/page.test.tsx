@@ -78,7 +78,7 @@ function makeMemoryStorage(): Storage {
       return map.size;
     },
     clear: () => map.clear(),
-    getItem: (k: string) => (map.has(k) ? (map.get(k) as string) : null),
+    getItem: (k: string) => map.get(k) ?? null,
     setItem: (k: string, v: string) => {
       map.set(k, v);
     },

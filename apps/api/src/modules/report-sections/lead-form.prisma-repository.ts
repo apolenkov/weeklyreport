@@ -338,7 +338,9 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
           });
         }
 
-        const decisionsToRestore = data.decisions.filter((d) => !!d.productId);
+        const decisionsToRestore = data.decisions.filter(
+          (d): d is typeof d & { productId: string } => Boolean(d.productId),
+        );
         if (decisionsToRestore.length > 0) {
           await tx.decision.createMany({
             data: decisionsToRestore.map((d) => ({
@@ -352,7 +354,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
                 d.stageNames ??
                 d.stageIds ??
                 (d.stageName ? [d.stageName] : []),
-              productId: d.productId as string,
+              productId: d.productId,
             })),
           });
         }
