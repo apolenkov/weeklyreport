@@ -1,12 +1,12 @@
 import { Controller, Get } from "@nestjs/common";
 import {
   HealthCheck,
-  type HealthCheckService,
-  type MemoryHealthIndicator,
+  HealthCheckService,
+  MemoryHealthIndicator,
 } from "@nestjs/terminus";
-import type { BullMQHealthIndicator } from "./bullmq.health.js";
-import type { PrismaHealthIndicator } from "./prisma.health.js";
-import type { RedisHealthIndicator } from "./redis.health.js";
+import { BullMQHealthIndicator } from "./bullmq.health.js";
+import { PrismaHealthIndicator } from "./prisma.health.js";
+import { RedisHealthIndicator } from "./redis.health.js";
 
 @Controller("health")
 export class HealthController {

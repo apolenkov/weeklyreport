@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { NestMiddleware } from "@nestjs/common";
 import { Injectable } from "@nestjs/common";
 import type { NextFunction, Request, Response } from "express";
-import type { ClsService } from "nestjs-cls";
+import { ClsService } from "nestjs-cls";
 
 @Injectable()
 export class CorrelationIdMiddleware implements NestMiddleware {
