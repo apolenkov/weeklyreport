@@ -261,12 +261,16 @@ function CorrelationCell({ value }: { readonly value: string }) {
   return (
     <button
       type="button"
-      onClick={async () => {
-        const ok = await copyToClipboard(value);
-        if (ok) {
-          setCopied(true);
-          window.setTimeout(() => setCopied(false), 1500);
-        }
+      onClick={() => {
+        // Fire-and-forget copy: the click handler is a void slot, so chain
+        // off the promise instead of returning it. Equivalent to the prior
+        // `const ok = await copyToClipboard(value); if (ok) …`.
+        void copyToClipboard(value).then((ok) => {
+          if (ok) {
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1500);
+          }
+        });
       }}
       title={`${value} (click to copy)`}
       className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-1.5 py-0.5 font-mono text-xs text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] focus:bg-[var(--color-surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"

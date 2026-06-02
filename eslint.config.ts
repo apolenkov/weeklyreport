@@ -186,6 +186,11 @@ export default defineConfig([
         "error",
         { allowWithDecorator: true },
       ],
+      // Phase-3 ratchet — R2b-3 wave-2 last cluster (ratchet-lint-to-strict).
+      // Riskiest of the wave: every firing is a real correctness question
+      // (a Promise used where a void/boolean is expected). Fixed per-site to
+      // preserve intended behavior; no eslint-disable escape is permitted here.
+      "@typescript-eslint/no-misused-promises": "error",
 
       // React hooks (single-owned by ESLint)
       "react-hooks/rules-of-hooks": "error",
