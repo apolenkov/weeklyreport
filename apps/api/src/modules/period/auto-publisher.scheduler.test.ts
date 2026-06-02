@@ -30,7 +30,7 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   };
 }
 
-const asAny = <T>(x: unknown): T => x as unknown as T;
+const asAny = <T>(x: unknown): T => x as T;
 
 describe("AutoPublisherScheduler", () => {
   it("skip-when-disabled: autoPublishAfterDeadline=false → no DB scan", async () => {

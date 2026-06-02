@@ -146,10 +146,7 @@ export function verifySamlProfile(
 
 export function createSamlStrategy(options: SamlStrategyOptions): SamlStrategy {
   const verify: VerifyWithoutRequest = (profile, done) => {
-    const result = verifySamlProfile(
-      options,
-      profile as Record<string, unknown> | null | undefined,
-    );
+    const result = verifySamlProfile(options, profile);
     if (!result.ok) {
       done(result.error);
       return;

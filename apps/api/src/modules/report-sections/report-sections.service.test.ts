@@ -374,7 +374,7 @@ describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
       ...section,
       projects: section.projects.map((p) => ({
         ...p,
-        trafficLight: "green" as "green" | "yellow" | "red" | null,
+        trafficLight: "green",
       })),
     };
     let currentSection = fixed;

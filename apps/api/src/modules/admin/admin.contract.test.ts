@@ -38,7 +38,7 @@ function isLeafProcedure(node: unknown): node is LeafProcedure {
     (typeof node === "object" || typeof node === "function") &&
     node !== null &&
     "_def" in node &&
-    typeof (node as { _def: unknown })._def === "object" &&
+    typeof node._def === "object" &&
     Array.isArray(
       (node as { _def: { middlewares?: unknown } })._def.middlewares,
     )
@@ -111,7 +111,7 @@ describe("admin reminder-policy contract (UFB-036, Phase 44-02)", () => {
       ip: "test-ip",
       isPdfExport: false,
       pdfReportId: null,
-    } as unknown as Parameters<typeof realRouter.createCaller>[0]);
+    });
 
     await expect(
       caller.admin.saveReminderRule({

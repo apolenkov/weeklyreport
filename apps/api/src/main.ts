@@ -254,22 +254,15 @@ async function bootstrap() {
             : "info";
         const msg =
           typeof e.message === "string"
-            ? (e.message as string).slice(0, 2000)
+            ? e.message.slice(0, 2000)
             : "<non-string>";
         logger[level](`client: ${msg}`, {
           phase: "web.client",
           source:
-            typeof e.source === "string"
-              ? (e.source as string).slice(0, 64)
-              : undefined,
-          url:
-            typeof e.url === "string"
-              ? (e.url as string).slice(0, 500)
-              : undefined,
+            typeof e.source === "string" ? e.source.slice(0, 64) : undefined,
+          url: typeof e.url === "string" ? e.url.slice(0, 500) : undefined,
           stack:
-            typeof e.stack === "string"
-              ? (e.stack as string).slice(0, 4000)
-              : undefined,
+            typeof e.stack === "string" ? e.stack.slice(0, 4000) : undefined,
           ts: e.ts,
           ua: req.get("user-agent")?.slice(0, 200),
           ip: req.ip,

@@ -1,6 +1,5 @@
 "use client";
 
-import type { CompiledHistoryResult } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 import { FileDown, Presentation } from "lucide-react";
 import { Suspense, useCallback, useMemo, useState } from "react";
@@ -45,7 +44,7 @@ export function HeadReportShell({
   );
 
   const periods: ReportPeriod[] = useMemo(() => {
-    const data = historyQ.data as CompiledHistoryResult | undefined;
+    const data = historyQ.data;
     if (!data?.entries?.length) return [];
     return data.entries.map((entry) => ({
       id: entry.reportId,

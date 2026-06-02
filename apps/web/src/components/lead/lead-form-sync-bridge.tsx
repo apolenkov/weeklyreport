@@ -168,17 +168,11 @@ function Provider({
     products,
     risks,
     onProductsChange: (updater) => {
-      const next =
-        typeof updater === "function"
-          ? (updater as (p: Product[]) => Product[])(products)
-          : updater;
+      const next = typeof updater === "function" ? updater(products) : updater;
       onProductsChange(next);
     },
     onRisksChange: (updater) => {
-      const next =
-        typeof updater === "function"
-          ? (updater as (r: RiskEntry[]) => RiskEntry[])(risks)
-          : updater;
+      const next = typeof updater === "function" ? updater(risks) : updater;
       onRisksChange(next);
     },
     requestStatusUpdateConfirmation,

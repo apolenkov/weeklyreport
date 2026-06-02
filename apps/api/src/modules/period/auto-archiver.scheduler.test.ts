@@ -30,7 +30,7 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
   };
 }
 
-const asAny = <T>(x: unknown): T => x as unknown as T;
+const asAny = <T>(x: unknown): T => x as T;
 
 describe("AutoArchiverScheduler", () => {
   it("skip-when-disabled: autoArchiveWeeksAfterPublish=0 → no DB scan, no audit", async () => {

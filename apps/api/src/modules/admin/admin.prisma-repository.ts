@@ -705,10 +705,10 @@ export class AdminPrismaRepository implements AdminRepository {
 
     for (const rule of snapshot.reminderRules) {
       const ruleData = {
-        kind: rule.kind as "deadline" | "follow_up" | "escalation",
+        kind: rule.kind,
         fireAt: rule.fireAt,
         timezone: rule.timezone,
-        status: rule.status as "active" | "paused",
+        status: rule.status,
         version: rule.version,
         reportId: rule.reportId || null,
       };
@@ -820,8 +820,8 @@ export class AdminPrismaRepository implements AdminRepository {
       periodEnd: r.periodEnd,
       deadline: r.deadline,
       publishedAt: r.publishedAt,
-      periodState: r.periodState as PeriodState,
-      periodStatus: r.periodStatus as PeriodStatus,
+      periodState: r.periodState,
+      periodStatus: r.periodStatus,
       archived: r.archived,
       autoPublished: r.autoPublished,
       autoArchived: r.autoArchived,
@@ -913,7 +913,7 @@ export class AdminPrismaRepository implements AdminRepository {
       periodStart: created.periodStart,
       periodEnd: created.periodEnd,
       deadline: created.deadline,
-      periodState: created.periodState as PeriodState,
+      periodState: created.periodState,
     };
   }
 
@@ -948,7 +948,7 @@ export class AdminPrismaRepository implements AdminRepository {
       periodEnd: row.periodEnd,
       deadline: row.deadline,
       weekLabel: row.weekLabel,
-      periodState: row.periodState as PeriodState,
+      periodState: row.periodState,
     };
   }
 
@@ -997,7 +997,7 @@ export class AdminPrismaRepository implements AdminRepository {
       periodEnd: updated.periodEnd,
       deadline: updated.deadline,
       weekLabel: updated.weekLabel,
-      periodState: updated.periodState as PeriodState,
+      periodState: updated.periodState,
     };
   }
 
@@ -1046,7 +1046,7 @@ export class AdminPrismaRepository implements AdminRepository {
       row.status === "published" || row.periodStatus !== "open"
         ? "published"
         : "open";
-    const nextPeriodStatus = row.periodStatus as PeriodStatus;
+    const nextPeriodStatus = row.periodStatus;
     await this.prisma.report.update({
       where: { id: periodId },
       // refactor-period-transition-writer: the caller-derived next state (read
@@ -1071,7 +1071,7 @@ export class AdminPrismaRepository implements AdminRepository {
     if (!row) return null;
     return {
       status: row.status,
-      periodStatus: row.periodStatus as PeriodStatus,
+      periodStatus: row.periodStatus,
     };
   }
 

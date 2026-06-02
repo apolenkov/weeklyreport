@@ -111,7 +111,7 @@ function isLeafProcedure(node: unknown): node is LeafProcedure {
     (typeof node === "object" || typeof node === "function") &&
     node !== null &&
     "_def" in node &&
-    typeof (node as { _def: unknown })._def === "object" &&
+    typeof node._def === "object" &&
     (node as { _def: { middlewares?: unknown } })._def.middlewares !==
       undefined &&
     Array.isArray((node as { _def: { middlewares: unknown } })._def.middlewares)
@@ -174,9 +174,7 @@ describe("AUTH-03 default-deny coverage gate", () => {
     const stubDeps = {} as Parameters<typeof createAppRouter>[0];
     const appRouter = createAppRouter(stubDeps);
 
-    const offending = findUncoveredProcedures(
-      appRouter as unknown as Parameters<typeof findUncoveredProcedures>[0],
-    );
+    const offending = findUncoveredProcedures(appRouter);
 
     if (offending.length > 0) {
       // Diagnostic surface for CI failures; the assertion below fails the test.
@@ -203,9 +201,7 @@ describe("AUTH-03 default-deny coverage gate", () => {
       naked: t.procedure.query(() => "no role declared"),
     });
 
-    const offending = findUncoveredProcedures(
-      bareRouter as unknown as Parameters<typeof findUncoveredProcedures>[0],
-    );
+    const offending = findUncoveredProcedures(bareRouter);
 
     expect(offending).toContain("naked");
   });
@@ -225,9 +221,7 @@ describe("AUTH-03 default-deny coverage gate", () => {
       lookalike: altPublic.query(() => "masquerading as public"),
     });
 
-    const offending = findUncoveredProcedures(
-      altRouter as unknown as Parameters<typeof findUncoveredProcedures>[0],
-    );
+    const offending = findUncoveredProcedures(altRouter);
 
     expect(offending).toContain("lookalike");
   });

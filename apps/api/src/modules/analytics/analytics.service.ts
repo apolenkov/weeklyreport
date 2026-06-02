@@ -51,7 +51,7 @@ const PREFIX_COMPARISON = "customreport:analytics:period-comparison:";
  */
 function stableHash(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
-  const keys = Object.keys(value as Record<string, unknown>).sort();
+  const keys = Object.keys(value).sort();
   return JSON.stringify(value, keys);
 }
 

@@ -84,7 +84,7 @@ function makePrismaStub(opts: {
 // Cast to never via Nest DI seam — the scheduler types its constructor on
 // PrismaService + AdminService; tests pass a minimal shape with only the
 // methods exercised.
-const asAny = <T>(x: unknown): T => x as unknown as T;
+const asAny = <T>(x: unknown): T => x as T;
 
 // ---------------------------------------------------------------------------
 // Tests — three per processor (skip-when-disabled, fire-when-eligible,

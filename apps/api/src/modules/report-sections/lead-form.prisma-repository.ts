@@ -182,7 +182,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
               impact: d.impact,
               resolvedAt: d.resolvedAt ?? null,
               stageNames: d.stageNames,
-              productId: d.productId as string,
+              productId: d.productId,
             })),
           });
           copiedItems += decisionsToCopy.length;

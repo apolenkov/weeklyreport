@@ -729,7 +729,7 @@ describe("validateSubmitInput", () => {
   it("returns SECTION_ALREADY_SUBMITTED for submitted section", () => {
     const section = makeSection({ status: "submitted" });
     const input = validSubmit();
-    const errors = validateSubmitInput(section, input as SubmitSectionPayload);
+    const errors = validateSubmitInput(section, input);
     expect(errors).toHaveLength(1);
     expect(errors[0].code).toBe("SECTION_ALREADY_SUBMITTED");
   });
@@ -754,7 +754,7 @@ describe("validateSubmitInput", () => {
       projectStatuses: [{ projectId: PROJECT_UUID, status: "green" as const }],
       items: [],
     };
-    const errors = validateSubmitInput(section, input as SubmitSectionPayload);
+    const errors = validateSubmitInput(section, input);
     expect(errors.some((e) => e.code === "MISSING_CURRENT_ITEM")).toBe(true);
   });
 
@@ -767,7 +767,7 @@ describe("validateSubmitInput", () => {
         { ...validItem(), projectId: PROJECT_UUID, type: "current" as const },
       ],
     };
-    const errors = validateSubmitInput(section, input as SubmitSectionPayload);
+    const errors = validateSubmitInput(section, input);
     expect(errors).toHaveLength(0);
   });
 });
