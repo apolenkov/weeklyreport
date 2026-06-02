@@ -181,7 +181,9 @@ export function DevRoleSwitcher() {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            onSelect={logout}
+            onSelect={() => {
+              void logout();
+            }}
             data-testid="dev-role-switcher-logout"
           >
             Logout

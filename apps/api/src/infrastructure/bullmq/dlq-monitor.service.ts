@@ -42,27 +42,33 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
       const events = new QueueEvents(name, bullOptions);
       const queue = new Queue(name, bullOptions);
 
-      events.on("failed", async ({ jobId, failedReason, prev }) => {
-        // BullMQ emits 'failed' for every retry too. Only count terminal
-        // failures (the job has moved into the failed-set, i.e. attemptsMade
-        // has reached the configured `attempts` limit). The cleanest signal:
-        // load the job and check it's actually been moved.
-        try {
-          const job = await queue.getJob(jobId);
-          if (!job) return;
-          const attemptsConfigured = job.opts.attempts ?? 1;
-          if ((job.attemptsMade ?? 0) >= attemptsConfigured) {
-            dlqFailedTotal.inc({ queue: name });
-            this.logger.error(
-              `[dlq] job ${jobId} on ${name} exhausted ${attemptsConfigured} attempts: ${failedReason ?? "unknown"}`,
+      events.on("failed", ({ jobId, failedReason, prev }) => {
+        // The QueueEvents emitter expects a void-returning listener and ignores
+        // any returned promise, so the async work is fire-and-forget inside a
+        // void IIFE. Every await lives in the try/catch below, so the IIFE
+        // never rejects; the arrow preserves `this` for the logger.
+        void (async () => {
+          // BullMQ emits 'failed' for every retry too. Only count terminal
+          // failures (the job has moved into the failed-set, i.e. attemptsMade
+          // has reached the configured `attempts` limit). The cleanest signal:
+          // load the job and check it's actually been moved.
+          try {
+            const job = await queue.getJob(jobId);
+            if (!job) return;
+            const attemptsConfigured = job.opts.attempts ?? 1;
+            if ((job.attemptsMade ?? 0) >= attemptsConfigured) {
+              dlqFailedTotal.inc({ queue: name });
+              this.logger.error(
+                `[dlq] job ${jobId} on ${name} exhausted ${attemptsConfigured} attempts: ${failedReason ?? "unknown"}`,
+              );
+            }
+          } catch (err) {
+            // Don't let metrics-side bookkeeping crash the queue listener.
+            this.logger.warn(
+              `[dlq] failed to inspect terminal failure for ${name}/${jobId}: ${err instanceof Error ? err.message : String(err)} (prev=${prev ?? "n/a"})`,
             );
           }
-        } catch (err) {
-          // Don't let metrics-side bookkeeping crash the queue listener.
-          this.logger.warn(
-            `[dlq] failed to inspect terminal failure for ${name}/${jobId}: ${err instanceof Error ? err.message : String(err)} (prev=${prev ?? "n/a"})`,
-          );
-        }
+        })();
       });
 
       this.queueEvents.set(name, events);

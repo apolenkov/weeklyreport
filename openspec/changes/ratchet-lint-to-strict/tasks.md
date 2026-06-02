@@ -97,52 +97,64 @@ review). Budget per cluster; no global ceiling.
         with `-- mock implements the async … contract` reasons.
         Gate green: require-await 0 repo-wide, lint 0 errors / 13 pre-existing
         warns, typecheck 5/5, test 579 passed. No out-of-scope file edits.
-  - [~] R2b-3 wave-2 cluster (4 rules) via overnight Workflow `ratchet-wave2-overnight`
-    (one cluster/commit, gate-green-or-scoped-revert, NO push; order
-    ascending-risk: empty-function → extraneous-class → deprecated →
-    misused-promises). Result 2 of 4 landed:
-    • [x] `no-empty-function` (17) → error — committed `3c647c38`, gate green.
-    Comment-in-body fix (ESLint treats commented bodies as non-empty), no
-    disables.
-    • [x] `no-deprecated` (27) → error — committed `019afdc7` (gate green
-    AFTER a supervised fix, see below). Internal `stageName` "kept for
-    legacy" reads → per-site disable; Terminus health classes → file-level
-    single-rule disable + `TODO(ratchet-no-deprecated)` (structural
-    migration to HealthIndicatorService deferred to supervised).
-    • [x] `no-extraneous-class` (27) → error — SUPERVISED redo landed (2026-06-02,
-    no Workflow). 21 of 27 sites are decorated NestJS `@Module` classes →
-    resolved cleanly with the rule's built-in `{ allowWithDecorator: true }`
-    option (empty `@Module` is correct by design; this is rung-1 config, not a
-    weakening — see the new spec scenario), ZERO per-site disables on src. The
-    remaining 6 sites are inert `@nestjs/common` lifecycle stubs
-    (`OnModuleInit`/`OnModuleDestroy` as `class {}`) inside `vi.mock` factories
-    in 3 test files (`email-reminder.processor.test.ts`,
-    `pdf-export.processor.test.ts`, `email-dispatch.integration.test.ts`) →
-    per-site `eslint-disable-next-line` with reason (single-line property sites,
-    so finding (a) prettier-hoisting does not apply). The earlier overnight
-    fan-out failure was an agent extracting a named class out of the hoisted
-    `vi.mock` factory (`ReferenceError: … before initialization`); the in-place
-    disable adds no references and is hoisting-safe. Gate green: no-extraneous-class
-    0 repo-wide, lint 0 errors, typecheck 5/5, build pass.
-    • [ ] `no-misused-promises` (4) → NOT landed. Its own fixes were green
-    (typecheck/test/build), but the cluster's repo-wide `pnpm lint` gate
-    tripped on a PRE-EXISTING error left by the no-deprecated commit (see
-    below), so it scoped-reverted. The 4 real-correctness sites remain;
-    riskiest cluster, no disable escape — left for SUPERVISED.
-    TWO METHODOLOGY FINDINGS from this run (RESOLVED 2026-06-02 into the R4a
-    gate-design rules below — the durable home; kept here for the incident record):
-    (a) prettier-vs-disable: `eslint-disable-next-line` / `eslint-disable-line`
-    CANNOT sit on a multi-line `extends X` heritage clause — pre-commit
-    `prettier --write` runs AFTER the gate's lint and hoists the comment above
-    `export class`, so the committed tree fails lint though the gated tree
-    passed. This is exactly how `019afdc7` landed red on `redis.health.ts:11`
-    and needed the supervised fix (→ file-level single-rule disable, which is
-    position-independent). The gate must re-lint AFTER staging/prettier, or
-    fixers must avoid line-positioned disables on heritage clauses.
-    (b) cross-cluster coupling: a cluster's gate runs repo-wide `pnpm lint`, so
-    a latent error from an EARLIER cluster reverts the CURRENT one and blames
-    it (misused-promises died for no-deprecated's sin). Gate should diff
-    firings vs the cluster's own files, not fail on pre-existing repo errors.
+  - [x] R2b-3 wave-2 cluster (4 rules) via overnight Workflow `ratchet-wave2-overnight`
+        (one cluster/commit, gate-green-or-scoped-revert, NO push; order
+        ascending-risk: empty-function → extraneous-class → deprecated →
+        misused-promises). Result: all 4 landed (empty-function + deprecated via the
+        overnight Workflow; extraneous-class + misused-promises via SUPERVISED redo):
+        • [x] `no-empty-function` (17) → error — committed `3c647c38`, gate green.
+        Comment-in-body fix (ESLint treats commented bodies as non-empty), no
+        disables.
+        • [x] `no-deprecated` (27) → error — committed `019afdc7` (gate green
+        AFTER a supervised fix, see below). Internal `stageName` "kept for
+        legacy" reads → per-site disable; Terminus health classes → file-level
+        single-rule disable + `TODO(ratchet-no-deprecated)` (structural
+        migration to HealthIndicatorService deferred to supervised).
+        • [x] `no-extraneous-class` (27) → error — SUPERVISED redo landed (2026-06-02,
+        no Workflow). 21 of 27 sites are decorated NestJS `@Module` classes →
+        resolved cleanly with the rule's built-in `{ allowWithDecorator: true }`
+        option (empty `@Module` is correct by design; this is rung-1 config, not a
+        weakening — see the new spec scenario), ZERO per-site disables on src. The
+        remaining 6 sites are inert `@nestjs/common` lifecycle stubs
+        (`OnModuleInit`/`OnModuleDestroy` as `class {}`) inside `vi.mock` factories
+        in 3 test files (`email-reminder.processor.test.ts`,
+        `pdf-export.processor.test.ts`, `email-dispatch.integration.test.ts`) →
+        per-site `eslint-disable-next-line` with reason (single-line property sites,
+        so finding (a) prettier-hoisting does not apply). The earlier overnight
+        fan-out failure was an agent extracting a named class out of the hoisted
+        `vi.mock` factory (`ReferenceError: … before initialization`); the in-place
+        disable adds no references and is hoisting-safe. Gate green: no-extraneous-class
+        0 repo-wide, lint 0 errors, typecheck 5/5, build pass.
+        • [x] `no-misused-promises` (4) → error — SUPERVISED landed (2026-06-02, no
+        Workflow). All 4 firings are Promise-in-void-slot, fire-and-forget by intent,
+        so each fixed with the void-slot pattern, ZERO disables (the riskiest cluster
+        forbids the disable escape). API DLQ listener (`events.on("failed", …)`):
+        wrapped the async body in `void (async () => { … })()` — its only awaits are
+        already inside try/catch, so the IIFE never rejects, and the arrow preserves
+        `this`. Three web void slots rewritten to the file's own `void fetch(…)`
+        idiom: nav-bar logout → `void fetch("/auth/logout", …).finally(redirect)`
+        (`.finally` keeps the redirect on resolve AND reject, ≡ the prior
+        try/await/finally); action-log copy → `void copyToClipboard(value).then(ok …)`
+        (copyToClipboard never rejects — full internal try/catch); role-switcher
+        logout → `onSelect={() => { void logout(); }}` (matches the sync `reseed`
+        sibling). Two adversarial Sonnet reviewers (async-semantics + cross-file/tests)
+        returned 0 findings; no test depends on the old handler shape. Gate green:
+        no-misused-promises 0 repo-wide, lint 0 errors, typecheck 5/5, test 579,
+        build 5/5. Not pushed (morning human review).
+        TWO METHODOLOGY FINDINGS from this run (RESOLVED 2026-06-02 into the R4a
+        gate-design rules below — the durable home; kept here for the incident record):
+        (a) prettier-vs-disable: `eslint-disable-next-line` / `eslint-disable-line`
+        CANNOT sit on a multi-line `extends X` heritage clause — pre-commit
+        `prettier --write` runs AFTER the gate's lint and hoists the comment above
+        `export class`, so the committed tree fails lint though the gated tree
+        passed. This is exactly how `019afdc7` landed red on `redis.health.ts:11`
+        and needed the supervised fix (→ file-level single-rule disable, which is
+        position-independent). The gate must re-lint AFTER staging/prettier, or
+        fixers must avoid line-positioned disables on heritage clauses.
+        (b) cross-cluster coupling: a cluster's gate runs repo-wide `pnpm lint`, so
+        a latent error from an EARLIER cluster reverts the CURRENT one and blames
+        it (misused-promises died for no-deprecated's sin). Gate should diff
+        firings vs the cluster's own files, not fail on pre-existing repo errors.
 - [ ] R2c Behavior-risky clusters get an Opus-level review before merge.
 
 ## 3. Plugin-surface clusters

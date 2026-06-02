@@ -380,15 +380,17 @@ export function NavBar() {
               {visibleUser && (
                 <button
                   type="button"
-                  onClick={async () => {
-                    try {
-                      await fetch("/auth/logout", {
-                        method: "POST",
-                        credentials: "include",
-                      });
-                    } finally {
+                  onClick={() => {
+                    // Fire-and-forget logout: navigate home once the request
+                    // settles (resolve or reject), exactly as the prior
+                    // try/await/finally did. `.finally` keeps the redirect on
+                    // both paths; `void` marks the void-slot intent.
+                    void fetch("/auth/logout", {
+                      method: "POST",
+                      credentials: "include",
+                    }).finally(() => {
                       window.location.href = "/";
-                    }
+                    });
                   }}
                   data-testid="nav-logout"
                   aria-label="Sign out"
