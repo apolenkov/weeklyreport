@@ -230,7 +230,7 @@ serviceRepo.getRule` then bare `originalGetRule(rid)`) was fixed with
     rules. Sub-waved by JUDGMENT-density (advisor), not by rule.
     • [x] 6a `no-confusing-void-expression` → error (commit `1d14b63c`): 274
     firings, but 270 are arrow-shorthand void returns → `ignoreArrowShorthand:
-      true`. A documented SOFTENING, but it opens NO Promise hole — the only
+  true`. A documented SOFTENING, but it opens NO Promise hole — the only
     dangerous arrow-shorthand-void case is a Promise in a void slot, already
     rejected by `no-misused-promises` (error since wave 2). A STRONGER safety
     argument than wave-5's ignorePrimitives (advisor-confirmed, user-chosen
@@ -244,13 +244,17 @@ serviceRepo.getRule` then bare `originalGetRule(rid)`) was fixed with
     untouched → finished by hand. Adversarial: Opus on src (0 defects) + Sonnet
     on test casts (0 masking). Finding (a) bit again (prettier shifted a
     require-await disable) → fixed by dropping async, amended. Gate green.
-    • [ ] 6c `no-unnecessary-condition` (Opus-heavy, behaviour-sensitive) + the
-    assertion rules. FRESH RE-MEASURE (after 6b): no-unnecessary-condition 225
-    (175 src), no-unnecessary-type-assertion 134 (44 src), non-nullable-type-
-    assertion-style 9 (3 src). DO NOT blindly delete "always true" guards — if
-    a type lies (nullable Prisma cols), widen the type, don't delete. SUPERVISE,
-    not a Workflow. Assertion-rule autofix removes assertions tsc needs → verify
-    empirically, expect per-site disables. (PAUSED here at a clean boundary.)
+    • [x] 6c-i `non-nullable-type-assertion-style` → error (`fb8cef3d`): 9 sites,
+    type-predicate filters + assertion drops, 0 disables.
+    • [x] 6c-ii `no-unnecessary-type-assertion` → error (`bb712201`): 134 (44 src /
+    90 test). Autofix cleared 40 files; 9 ESLint-vs-tsc mismatch files (RTL DOM
+    casts, literal-union) carry a file-level disable.
+    • [x] 6c-iii `no-unnecessary-condition` → error (`61dfa215` part 1 + `459bebe9`
+    part 2): 225 firings. Root cause noUncheckedIndexedAccess OFF → `arr[i]` →
+    `arr.at(i)` for index guards (never deleted a guard); honestly-dead removed;
+    40 per-site disables for boundary type-lies; casts widened to `| undefined`.
+    Full test suite caught 2 optimistic-contract lies typecheck missed (ci,
+    req.headers) → guarded + disabled. Finished by hand after the Workflow wedged.
 - [ ] R2c Behavior-risky clusters get an Opus-level review before merge.
 
 ## 3. Plugin-surface clusters
