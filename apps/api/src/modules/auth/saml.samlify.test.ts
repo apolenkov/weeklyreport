@@ -121,7 +121,7 @@ async function mintSignedResponse(
   // Call as idp.createLoginResponse(...) directly — assigning the method
   // to a variable loses `this`, which samlify needs to access entitySetting
   // and entityMeta from within the IdP wrapper.
-  const result = (await (
+  const result = await (
     idp as unknown as {
       createLoginResponse: (
         sp: SPInstance,
@@ -135,7 +135,7 @@ async function mintSignedResponse(
     null,
     samlify.Constants.wording.binding.post,
     TEST_USER,
-  )) as { id: string; context: string };
+  );
   return result.context;
 }
 
@@ -165,9 +165,7 @@ describe.skip("38-03 SAML hardening — samlify mock IdP integration", () => {
     const result = await sp.parseLoginResponse(
       idp,
       samlify.Constants.wording.binding.post,
-      { body: { SAMLResponse: responseB64 } } as unknown as Parameters<
-        typeof sp.parseLoginResponse
-      >[2],
+      { body: { SAMLResponse: responseB64 } },
     );
 
     const extract = (
@@ -211,7 +209,7 @@ describe.skip("38-03 SAML hardening — samlify mock IdP integration", () => {
     await expect(
       sp.parseLoginResponse(idp, samlify.Constants.wording.binding.post, {
         body: { SAMLResponse: tamperedB64 },
-      } as unknown as Parameters<typeof sp.parseLoginResponse>[2]),
+      }),
     ).rejects.toThrow();
   });
 });

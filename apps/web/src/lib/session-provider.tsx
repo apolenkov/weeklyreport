@@ -8,7 +8,7 @@ import {
   useEffect,
   useMemo,
 } from "react";
-import { type LastRole, writeLastRole } from "./last-role";
+import { writeLastRole } from "./last-role";
 import { useTRPC } from "./trpc-context";
 
 /**
@@ -102,7 +102,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!value.isAuthenticated || !value.user) return;
     writeLastRole({
-      role: value.user.role as LastRole,
+      role: value.user.role,
       email: value.user.email,
       name: value.user.name,
     });

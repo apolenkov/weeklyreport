@@ -153,11 +153,11 @@ describe("apps/web/proxy.ts — config matcher", () => {
   it("exports a config object with a matcher array of four entries", () => {
     expect(config).toBeDefined();
     expect(Array.isArray(config.matcher)).toBe(true);
-    expect((config.matcher as string[]).length).toBe(4);
+    expect(config.matcher.length).toBe(4);
   });
 
   it("matcher is a positive allowlist of /lead, /head, /reports, /admin prefixes", () => {
-    const matcher = config.matcher as string[];
+    const matcher = config.matcher;
     // Each entry is one of the four protected prefixes with a :path*
     // suffix. Order is not significant; assert membership.
     expect(matcher).toEqual(
@@ -175,7 +175,7 @@ describe("apps/web/proxy.ts — config matcher", () => {
   });
 
   it("matcher does not include excluded routes (_next, api, trpc, auth, favicon)", () => {
-    const matcher = config.matcher as string[];
+    const matcher = config.matcher;
     // The allowlist must not mention any route that is intentionally
     // unprotected by the proxy (those handle their own auth or are static).
     for (const entry of matcher) {

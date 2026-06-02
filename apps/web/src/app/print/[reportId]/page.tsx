@@ -487,8 +487,8 @@ export default function PrintReportPage({ params }: Props) {
   }
 
   const view = mapWeeklyReport(weeklyQ.data);
-  const portfolio: PortfolioProduct[] = view.portfolio as PortfolioProduct[];
-  const products: ProductReport[] = view.products as ProductReport[];
+  const portfolio: PortfolioProduct[] = view.portfolio;
+  const products: ProductReport[] = view.products;
   const submitted = view.submissionCount;
   const total = view.totalLeads;
   // Counts derived from re-sliced products.

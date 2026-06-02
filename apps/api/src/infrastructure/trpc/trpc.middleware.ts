@@ -21,7 +21,7 @@ function describeShape(value: unknown): string {
     return `array[${value.length}]<${inner}>`;
   }
   if (typeof value === "object") {
-    const keys = Object.keys(value as Record<string, unknown>).sort();
+    const keys = Object.keys(value).sort();
     return `object{${keys.join(",")}}`;
   }
   return typeof value;

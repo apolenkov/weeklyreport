@@ -42,7 +42,7 @@ export function getClientErrorDetails(error: unknown): ClientErrorDetails {
     error instanceof TRPCClientError &&
     error.meta &&
     typeof error.meta === "object"
-      ? (error.meta as Record<string, unknown>)
+      ? error.meta
       : null;
   const requestIdFromShape =
     typeof data?.requestId === "string" ? data.requestId : null;

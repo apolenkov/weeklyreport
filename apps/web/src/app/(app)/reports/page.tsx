@@ -1,9 +1,6 @@
 "use client";
 
-import type {
-  CompiledHistoryResult,
-  MyHistoryEntry,
-} from "@customreport/shared";
+import type { MyHistoryEntry } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Archive } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -73,7 +70,7 @@ export default function ReportsPage() {
     setIncludeArchive(nextValue);
     const params = new URLSearchParams(searchParams?.toString());
     params.set("tab", nextValue ? "published" : "drafts");
-    router.push("/reports?" + params.toString(), { scroll: false });
+    router.push(`/reports?${params.toString()}`, { scroll: false });
   }
 
   useEffect(() => {
@@ -101,9 +98,7 @@ export default function ReportsPage() {
         : [];
     return mapHistoryEntries(history);
   }, [historyQ.data, isLead]);
-  const compiledData = usesCompiledHistory
-    ? (compiledHistoryQ.data as CompiledHistoryResult | undefined)
-    : undefined;
+  const compiledData = usesCompiledHistory ? compiledHistoryQ.data : undefined;
   const compiledEntries = useMemo(
     () => mapCompiledHistoryEntries(compiledData?.entries ?? []),
     [compiledData?.entries],

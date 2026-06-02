@@ -83,7 +83,7 @@ export function DevRoleSwitcher() {
     Record<Role, { id: string; email: string; name: string; role: Role }[]>
   >(
     (acc, u) => {
-      const r = u.role as Role;
+      const r = u.role;
       acc[r] = acc[r] ?? [];
       acc[r].push({ ...u, role: r });
       return acc;

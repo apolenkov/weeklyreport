@@ -15,7 +15,7 @@ function stableStringify(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value))
     return `[${(value as unknown[]).map(stableStringify).join(",")}]`;
-  const keys = Object.keys(value as Record<string, unknown>).sort();
+  const keys = Object.keys(value).sort();
   const parts = keys.map((k) => {
     const v = (value as Record<string, unknown>)[k];
     return `${JSON.stringify(k)}:${stableStringify(v)}`;

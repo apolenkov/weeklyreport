@@ -206,7 +206,7 @@ function createReportSectionsRepo(opts: {
     async getReportMeta() {
       return opts.meta ?? null;
     },
-  } as ReportSectionsRepository & { saveSection: ReturnType<typeof vi.fn> };
+  };
 }
 
 /* ================================================================== */

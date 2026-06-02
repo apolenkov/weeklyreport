@@ -287,6 +287,19 @@ export default defineConfig([
       // narrowing productId to string honestly; the test sites dropped the
       // assertion (non-optional tuple element / `map.get(k) ?? null`). 0 disables.
       "@typescript-eslint/non-nullable-type-assertion-style": "error",
+      // Phase-3 ratchet — R2b-6 wave-6c-ii (ratchet-lint-to-strict).
+      // no-unnecessary-type-assertion: 134 firings (44 src / 90 test). The
+      // autofix removed the genuinely-redundant assertions across 40 files
+      // cleanly (verified by tsc). The 9 remaining files carry a file-level
+      // single-rule disable, NOT a removal: they hit a documented ESLint-vs-
+      // tsc mismatch where ESLint's type-aware program judges an assertion
+      // redundant but the app tsconfig still needs it — 8 RTL test files cast
+      // `getByLabelText(...)` to a concrete element (HTMLInputElement etc.) to
+      // reach .value/.checked/.options (TS2339 without it), and lead-form.tsx
+      // casts a ternary to a literal union (TS2322 without it). File-level
+      // (not line) disables here are position-independent — immune to the
+      // pre-commit-prettier comment-shift hazard (R4a finding (a)).
+      "@typescript-eslint/no-unnecessary-type-assertion": "error",
 
       // React hooks (single-owned by ESLint)
       "react-hooks/rules-of-hooks": "error",

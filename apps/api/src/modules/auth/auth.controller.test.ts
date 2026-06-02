@@ -80,7 +80,7 @@ describe("createJwtSigner — contract tests", () => {
   });
 
   it("throws when AUTH_JWT_SECRET is missing", () => {
-    expect(() => createJwtSigner({} as unknown as NodeJS.ProcessEnv)).toThrow(
+    expect(() => createJwtSigner({})).toThrow(
       "Missing required environment variable: AUTH_JWT_SECRET",
     );
   });

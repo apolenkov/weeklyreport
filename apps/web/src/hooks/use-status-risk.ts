@@ -85,7 +85,7 @@ export function computeCoupling(
       if (!isCovered) {
         stagesWithoutRiskCoverage.push({
           stageName: stage.stageName,
-          severity: stage.status as "at-risk" | "blocked",
+          severity: stage.status,
         });
       }
     }
@@ -93,7 +93,7 @@ export function computeCoupling(
     result.push({
       productId: product.id,
       productName: product.name,
-      status: product.overallStatus as "at-risk" | "blocked",
+      status: product.overallStatus,
       riskRowsWithoutStages,
       stagesWithoutRiskCoverage,
     });

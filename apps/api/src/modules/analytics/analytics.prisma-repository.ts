@@ -76,7 +76,7 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
             const hit = s.projectStatuses.find(
               (ps) => ps.projectId === projectId,
             );
-            if (hit) return hit.status as TrafficLightCell;
+            if (hit) return hit.status;
           }
           return null;
         });
@@ -148,7 +148,7 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
         for (const ps of section.projectStatuses) {
           const existing = map.get(ps.projectId);
           map.set(ps.projectId, {
-            status: ps.status as TrafficLightCell,
+            status: ps.status,
             risks: existing?.risks ?? 0,
             name: ps.project?.name ?? existing?.name ?? "Unknown",
           });

@@ -74,7 +74,7 @@ function renderBody(
     return <p className="text-sm text-[var(--color-danger)]">{message}</p>;
   }
 
-  if (!data || !data.reportId) {
+  if (!data?.reportId) {
     return (
       <p className="text-sm text-[var(--color-muted-foreground)]">
         No open reporting period.
@@ -132,13 +132,13 @@ function ActivityRow({
     : "not started";
   const rowClassName =
     "flex flex-wrap items-center gap-3 rounded-[var(--radius)] border px-2 py-3 transition-[background-color,border-color,box-shadow]";
-  const interactiveClassName =
-    rowClassName +
-    " cursor-pointer border-transparent hover:border-[rgba(0,117,74,0.14)] hover:bg-[var(--color-success)] hover:shadow-[inset_3px_0_0_var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2";
-  const draftClassName = rowClassName + " cursor-default border-transparent";
-  const emptyClassName =
-    rowClassName +
-    " cursor-default border-transparent bg-[rgba(0,0,0,0.025)] opacity-65";
+  const interactiveClassName = `${
+    rowClassName
+  } cursor-pointer border-transparent hover:border-[rgba(0,117,74,0.14)] hover:bg-[var(--color-success)] hover:shadow-[inset_3px_0_0_var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2`;
+  const draftClassName = `${rowClassName} cursor-default border-transparent`;
+  const emptyClassName = `${
+    rowClassName
+  } cursor-default border-transparent bg-[rgba(0,0,0,0.025)] opacity-65`;
 
   const content = (
     <>

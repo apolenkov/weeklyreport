@@ -175,10 +175,8 @@ export function ReopenTab() {
       <ul className="space-y-3">
         {filteredRequests.map((r) => {
           const isResponding = respondingId === r.id;
-          const palette =
-            STATUS_PALETTE[r.status as keyof typeof STATUS_PALETTE];
-          const statusLabel =
-            STATUS_LABEL[r.status as keyof typeof STATUS_LABEL];
+          const palette = STATUS_PALETTE[r.status];
+          const statusLabel = STATUS_LABEL[r.status];
 
           return (
             <li

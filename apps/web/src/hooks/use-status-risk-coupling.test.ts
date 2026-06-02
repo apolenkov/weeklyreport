@@ -6,7 +6,7 @@ import { computeCoupling, validateCoupling } from "./use-status-risk";
 function makeProduct(
   id: string,
   status: Product["overallStatus"],
-  name = "Product " + id,
+  name = `Product ${id}`,
   stages: Product["stages"] = [],
 ): Product {
   return { id, name, overallStatus: status, stages };

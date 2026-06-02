@@ -61,10 +61,7 @@ function setup(initialProducts: Product[], initialRisks: RiskEntry[]) {
 
   const onProductsChange = vi.fn(
     (next: Product[] | ((p: Product[]) => Product[])) => {
-      const resolved =
-        typeof next === "function"
-          ? (next as (p: Product[]) => Product[])(state.products)
-          : next;
+      const resolved = typeof next === "function" ? next(state.products) : next;
       state.products = resolved;
       state.productsCalls.push(resolved);
     },
@@ -72,10 +69,7 @@ function setup(initialProducts: Product[], initialRisks: RiskEntry[]) {
 
   const onRisksChange = vi.fn(
     (next: RiskEntry[] | ((r: RiskEntry[]) => RiskEntry[])) => {
-      const resolved =
-        typeof next === "function"
-          ? (next as (r: RiskEntry[]) => RiskEntry[])(state.risks)
-          : next;
+      const resolved = typeof next === "function" ? next(state.risks) : next;
       state.risks = resolved;
       state.risksCalls.push(resolved);
     },

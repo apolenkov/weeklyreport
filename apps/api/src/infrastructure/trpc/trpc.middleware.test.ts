@@ -87,12 +87,7 @@ function makeFakeLogger(): AppLogger & {
     debug,
     child: () => fake,
   };
-  return fake as unknown as AppLogger & {
-    info: typeof info;
-    error: typeof error;
-    warn: typeof warn;
-    debug: typeof debug;
-  };
+  return fake;
 }
 
 // ---------------------------------------------------------------------------

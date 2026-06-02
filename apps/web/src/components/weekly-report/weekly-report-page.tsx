@@ -228,8 +228,8 @@ export function WeeklyReportPage({
 
   // The mapper produces structurally compatible shapes; cast to the existing
   // mock-data presentation types so children keep their imports unchanged.
-  const portfolio: PortfolioProduct[] = view.portfolio as PortfolioProduct[];
-  const products: ProductReport[] = view.products as ProductReport[];
+  const portfolio: PortfolioProduct[] = view.portfolio;
+  const products: ProductReport[] = view.products;
   // Head split-view "by lead" grouping (UAT 2026-05-22): resolve author names
   // from the period's lead sections, then bucket products under each lead they
   // authored. Empty leads are dropped so the view never shows blank groups.

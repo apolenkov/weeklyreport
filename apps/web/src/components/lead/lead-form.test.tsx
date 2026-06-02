@@ -436,7 +436,7 @@ describe("LeadForm mutation wiring", () => {
         /On Track|At Risk|Blocked|Clear/i.test(label) &&
         !label.includes("current")
       );
-    }) as HTMLElement | undefined;
+    });
     expect(menuitem).toBeDefined();
     act(() => {
       expectDefined(menuitem).click();
@@ -545,7 +545,7 @@ describe("LeadForm mutation wiring", () => {
         /On Track|At Risk|Blocked|Clear/i.test(label) &&
         !label.includes("current")
       );
-    }) as HTMLElement | undefined;
+    });
     expect(menuitem).toBeDefined();
     act(() => {
       expectDefined(menuitem).click();

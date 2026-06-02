@@ -18,7 +18,7 @@ vi.mock("@tanstack/react-query", () => ({
     // Discriminate attach vs detach by the mutation key that the tRPC
     // mock provides below. The trpc-context mock returns a stable key
     // so we can route the mutate calls to the matching spy.
-    const key = JSON.stringify(opts as unknown);
+    const key = JSON.stringify(opts);
     if (key.includes("attachProductToGroup")) {
       return { mutate: attachMutate, isPending: false };
     }
