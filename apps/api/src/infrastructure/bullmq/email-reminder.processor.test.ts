@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // Mock NestJS common so decorators are no-ops in tests
 vi.mock("@nestjs/common", () => ({
   Injectable: () => (target: unknown) => target,
+  // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- test mock: inert stub for the type-only NestJS lifecycle interface (vi.mock factory is hoisted, so it cannot reference an external class)
   OnModuleInit: class {},
+  // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- test mock: inert stub for the type-only NestJS lifecycle interface (vi.mock factory is hoisted, so it cannot reference an external class)
   OnModuleDestroy: class {},
 }));
 
