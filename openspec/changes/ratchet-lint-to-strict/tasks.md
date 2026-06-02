@@ -109,18 +109,28 @@ review). Budget per cluster; no global ceiling.
     legacy" reads → per-site disable; Terminus health classes → file-level
     single-rule disable + `TODO(ratchet-no-deprecated)` (structural
     migration to HealthIndicatorService deferred to supervised).
-    • [ ] `no-extraneous-class` (27) → NOT landed. Fan-out edit to a TEST file
-    (`email-reminder.processor.test.ts`) introduced a `vi.mock` hoisting
-    `ReferenceError` (mock factory class referenced before init). Test gate
-    caught it; cluster scoped-reverted clean. NestJS `@Module` src sites are
-    ~all disable-with-reason (never convert) — only the test-mock files need
-    a careful redo. SUPERVISED redo pending.
+    • [x] `no-extraneous-class` (27) → error — SUPERVISED redo landed (2026-06-02,
+    no Workflow). 21 of 27 sites are decorated NestJS `@Module` classes →
+    resolved cleanly with the rule's built-in `{ allowWithDecorator: true }`
+    option (empty `@Module` is correct by design; this is rung-1 config, not a
+    weakening — see the new spec scenario), ZERO per-site disables on src. The
+    remaining 6 sites are inert `@nestjs/common` lifecycle stubs
+    (`OnModuleInit`/`OnModuleDestroy` as `class {}`) inside `vi.mock` factories
+    in 3 test files (`email-reminder.processor.test.ts`,
+    `pdf-export.processor.test.ts`, `email-dispatch.integration.test.ts`) →
+    per-site `eslint-disable-next-line` with reason (single-line property sites,
+    so finding (a) prettier-hoisting does not apply). The earlier overnight
+    fan-out failure was an agent extracting a named class out of the hoisted
+    `vi.mock` factory (`ReferenceError: … before initialization`); the in-place
+    disable adds no references and is hoisting-safe. Gate green: no-extraneous-class
+    0 repo-wide, lint 0 errors, typecheck 5/5, build pass.
     • [ ] `no-misused-promises` (4) → NOT landed. Its own fixes were green
     (typecheck/test/build), but the cluster's repo-wide `pnpm lint` gate
     tripped on a PRE-EXISTING error left by the no-deprecated commit (see
     below), so it scoped-reverted. The 4 real-correctness sites remain;
     riskiest cluster, no disable escape — left for SUPERVISED.
-    TWO METHODOLOGY FINDINGS from this run (fix before the next fan-out):
+    TWO METHODOLOGY FINDINGS from this run (RESOLVED 2026-06-02 into the R4a
+    gate-design rules below — the durable home; kept here for the incident record):
     (a) prettier-vs-disable: `eslint-disable-next-line` / `eslint-disable-line`
     CANNOT sit on a multi-line `extends X` heritage clause — pre-commit
     `prettier --write` runs AFTER the gate's lint and hoists the comment above
@@ -149,6 +159,27 @@ review). Budget per cluster; no global ceiling.
 - [ ] R4a Build the Workflow: per-file fan-out, `isolation: "worktree"`,
       per-cluster gate, model split, Opus review on risky rules. Per-cluster
       budget.
+      GATE-DESIGN RULES (from the R2b-3 overnight run's two methodology findings —
+      MUST hold before the next fan-out reuses the gate script):
+      (a) post-prettier re-lint: the per-cluster gate MUST run `pnpm lint` (or an
+      equivalent eslint count) AFTER `git add` + the pre-commit `prettier --write`
+      has reformatted the staged tree, not before — because prettier runs in the
+      husky hook AFTER the gate's own lint and can hoist a line-positioned
+      `eslint-disable` off a multi-line `extends`/`implements` heritage clause,
+      leaving the COMMITTED tree red though the gated tree was green. Equivalently,
+      fixers MUST NOT place line-positioned disables on multi-line heritage
+      clauses — use a file-level single-rule `/* eslint-disable <rule> -- … */`
+      there (position-independent). This bit `019afdc7`/`redis.health.ts` and
+      required a supervised fix.
+      (b) baseline-relative gate: the gate runs repo-wide `pnpm lint`, so a latent
+      error left by an EARLIER cluster reverts the CURRENT innocent one and blames
+      it (misused-promises died for no-deprecated's red commit). The gate MUST
+      capture the repo-wide lint baseline at cluster start; if the baseline is
+      already non-empty (a prior cluster left the repo red), ABORT/flag rather than
+      silently scoped-reverting this cluster. A cluster passes on: its target rule
+      at 0 firings AND no NEW errors beyond the start-of-cluster baseline — it is
+      never failed for a pre-existing error it did not introduce. (With (a) fixed,
+      clusters land genuinely green, so (b) is mainly a safety net.)
 
 ## 5. Close-out
 

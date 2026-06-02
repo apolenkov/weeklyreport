@@ -44,6 +44,21 @@ threshold, to force the gate green is forbidden.
 - **AND** the rule remains `error` everywhere else
 - **AND** no file-wide or project-wide disable is introduced to clear the cluster
 
+#### Scenario: a rule's built-in framework-accommodation option is a config choice, not a weakening
+
+- **WHEN** a ramped rule offers a built-in option that encodes a language or
+  framework design reality (e.g. `no-extraneous-class` `allowWithDecorator` for
+  NestJS decorator-DI, where an empty `@Module` class is correct by design;
+  `restrict-template-expressions` `allowNumber` for the dominant `${number}`
+  case)
+- **THEN** setting that option is a legitimate rule-scoping configuration that
+  sits OUTSIDE the fix→disable→exclude ladder — it is neither a per-site
+  suppression nor the rung-3 threshold-raise/exclude that the spec restricts
+- **AND** the rule still fires on genuine offenders the option does not cover
+  (e.g. non-decorated extraneous classes still error)
+- **AND** the choice is documented inline in `eslint.config.ts` and recorded in
+  the change's `tasks.md`, so it stays auditable
+
 ### Requirement: Ratchet work is gated and reviewed per cluster
 
 Each cluster MUST pass `pnpm lint` + `pnpm typecheck` + `pnpm test` before merge.

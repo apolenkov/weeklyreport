@@ -174,6 +174,18 @@ export default defineConfig([
       // to satisfy an async interface contract carry a per-site disable.
       "@typescript-eslint/require-await": "error",
       "@typescript-eslint/no-empty-function": "error",
+      // Phase-3 ratchet — R2b-3 wave-2 (ratchet-lint-to-strict).
+      // allowWithDecorator exempts decorated classes: in this NestJS codebase
+      // an empty `@Module` class is correct by design (the decorator carries
+      // the provider/import metadata). This is the rule's built-in
+      // framework-accommodation option, NOT a weakening — the rule still fires
+      // on genuinely extraneous (non-decorated) classes. The 6 remaining
+      // test-mock sites (inert `@nestjs/common` lifecycle stubs in vi.mock
+      // factories) carry per-site disables with reasons.
+      "@typescript-eslint/no-extraneous-class": [
+        "error",
+        { allowWithDecorator: true },
+      ],
 
       // React hooks (single-owned by ESLint)
       "react-hooks/rules-of-hooks": "error",
