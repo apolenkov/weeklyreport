@@ -4,7 +4,7 @@ import {
   type PaginatedResult,
 } from "@customreport/shared";
 
-import type { RemindersService } from "./reminders.service";
+import { RemindersService } from "./reminders.service";
 
 export interface RemindersRequestContext {
   remindersService: RemindersService;

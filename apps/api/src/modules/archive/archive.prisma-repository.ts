@@ -8,7 +8,7 @@ import {
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
-import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter } from "../../lib/group-scope.js";
 import {
   buildAssembledReportFromPrismaRow,

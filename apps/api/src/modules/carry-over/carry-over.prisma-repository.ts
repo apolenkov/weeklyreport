@@ -7,7 +7,7 @@ import {
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 
-import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import {
   mapPrismaToReportSection,
   type PrismaReportSectionWithRelations,

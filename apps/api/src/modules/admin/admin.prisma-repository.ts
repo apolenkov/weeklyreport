@@ -30,9 +30,9 @@ import type {
   ReportStatus,
 } from "@prisma/client";
 
-import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { buildTransition } from "../period/period-transition.js";
-import type { PolicyApplicatorService } from "../reminders/policy-applicator.service";
+import { PolicyApplicatorService } from "../reminders/policy-applicator.service";
 import type { AdminRepository, PeriodRowFromRepo } from "./admin.service";
 import { resolveLifecycle } from "./snapshot-lifecycle.js";
 

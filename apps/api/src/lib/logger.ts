@@ -11,7 +11,7 @@ import { createGzip } from "node:zlib";
 
 import { trace } from "@opentelemetry/api";
 import { logs, SeverityNumber } from "@opentelemetry/api-logs";
-import type { ClsService } from "nestjs-cls";
+import { ClsService } from "nestjs-cls";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
