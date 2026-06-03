@@ -260,6 +260,10 @@
 @media (prefers-reduced-motion: reduce) {
   .pulse-strong,
   .pulse-bg-ecg path {
-    animation: none !important;
+    /* Later, equal-specificity override of the animation above; zeroing the
+       animation-name stops both tracks (.track-secondary only sets
+       duration/delay, which are inert without a name), so source order alone
+       wins here. */
+    animation: none;
   }
 }

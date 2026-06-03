@@ -306,7 +306,7 @@ export function LeadForm({
   const sessionRole = sessionState?.user?.role ?? null;
   const isHeadLikeSession = sessionRole === "head" || sessionRole === "admin";
   const shouldRouteHeadLikeAwayFromLeadForm = isHeadLikeSession;
-  const shouldDeferForSession = Boolean(sessionState && sessionState.isLoading);
+  const shouldDeferForSession = Boolean(sessionState?.isLoading);
 
   // Four queries compose the lead-form view. `byPeriod` and `versions` depend
   // on identifiers from `getActive` (or — 35-07 — the pinned `reportId` from
