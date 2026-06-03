@@ -17,6 +17,15 @@
 // it flags a route (no intent / vacuous "then" / structural leak) the generator
 // re-extracts ONLY those routes with the defect noted, up to MAX_REPAIR rounds.
 //
+// Two hardening guards added after the first lead run silently dropped 2 routes
+// and emitted colliding ids (see _lead-coverage.md):
+//   - CENSUS denominator: a mechanical `find page.tsx` lists every page; Discover
+//     must classify each as a role route OR excluded-with-reason, and the script
+//     ASSERTS the union covers the census before extract (no silent drops).
+//   - ID-UNIQUENESS assert: a deterministic in-script check — an id is the
+//     Driver's report key, so a duplicate across routes is a defect the LLM
+//     critic cannot see; it gates the repair loop and the final result.
+//
 // Run it from the repo root:
 //   Workflow({ scriptPath: ".../workflow/generate-catalog.workflow.mjs", args: { role: "lead" } })
 //
@@ -31,9 +40,15 @@ export const meta = {
     "Generate or regenerate e2e/catalog/<role>.yaml for the behavioral UI sweep",
   phases: [
     {
+      title: "Census",
+      detail:
+        "1 agent (Haiku) — mechanical `find page.tsx`: the hard route denominator Discover must account for",
+      model: "haiku",
+    },
+    {
       title: "Discover",
       detail:
-        "1 agent — list the role's reachable routes (from SSR guards) + the files each route renders",
+        "1 agent — classify EVERY census page as a role-reachable route or excluded-with-reason; list the files each route renders",
       model: "sonnet",
     },
     {
@@ -57,7 +72,20 @@ export const meta = {
   ],
 };
 
-const role = (args && args.role) || "lead";
+// `args` may arrive as an object OR a JSON string depending on how the runner
+// threads it — parse defensively so `{ role }` is always honored (a silent
+// fall-through to the "lead" default once regenerated lead instead of viewer).
+const parsedArgs =
+  typeof args === "string"
+    ? (() => {
+        try {
+          return JSON.parse(args);
+        } catch {
+          return {};
+        }
+      })()
+    : args || {};
+const role = parsedArgs.role || "lead";
 const outFile = `e2e/catalog/${role}.yaml`;
 const coverageFile = `e2e/catalog/_${role}-coverage.md`;
 const MAX_REPAIR = 2;
@@ -82,6 +110,16 @@ HARD RULES (the format contract — see e2e/catalog/README.md):
 `;
 
 // ---- schemas ---------------------------------------------------------------
+// Census: the mechanical `find page.tsx` denominator. No judgment — just the list.
+const CENSUS_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    pageFiles: { type: "array", items: { type: "string" } },
+  },
+  required: ["pageFiles"],
+};
+
 const DISCOVER_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -123,9 +161,25 @@ const DISCOVER_SCHEMA = {
         ],
       },
     },
+    // Every census page.tsx NOT reachable by this role, each with a one-line
+    // reason (guarded away / system-export / auth screen). routes[].pageFile +
+    // excludedPages[].pageFile together MUST cover the full census — that union
+    // is what the script asserts, so silent drops abort before extract.
+    excludedPages: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          pageFile: { type: "string" },
+          reason: { type: "string" },
+        },
+        required: ["pageFile", "reason"],
+      },
+    },
     notes: { type: "string" },
   },
-  required: ["role", "routes", "notes"],
+  required: ["role", "routes", "excludedPages", "notes"],
 };
 
 const EXTRACT_SCHEMA = {
@@ -178,6 +232,38 @@ const CRITIC_SCHEMA = {
 };
 
 // ---- helpers ---------------------------------------------------------------
+// Normalize a page-file path to a repo-root-relative "apps/web/src/app/..." key,
+// so the census list and Discover's pageFile strings reconcile regardless of
+// leading "./", an absolute prefix, or surrounding whitespace.
+const normPage = (p) => {
+  const s = String(p == null ? "" : p).trim();
+  const i = s.indexOf("apps/web/src/app");
+  return i >= 0 ? s.slice(i) : s.replace(/^\.\//, "");
+};
+
+// Deterministic id-uniqueness check across the whole catalog: an id is the
+// Driver's report key, so it MUST be globally unique. The LLM critic cannot be
+// trusted for a mechanical set check — this runs in-script. Returns findings as
+// "<id> :: <route>, <route>" for each id used on more than one route.
+const dupIdFindings = (extr) => {
+  const byId = new Map();
+  for (const r of extr)
+    for (const i of r.intents) {
+      const routes = byId.get(i.id) || [];
+      routes.push(r.route);
+      byId.set(i.id, routes);
+    }
+  return [...byId.entries()]
+    .filter(([, routes]) => new Set(routes).size > 1)
+    .map(([id, routes]) => `${id} :: ${[...new Set(routes)].join(", ")}`);
+};
+const routesOfDup = (finding) =>
+  String(finding)
+    .split(" :: ")[1]
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
 // Minimal YAML scalar quoting: always double-quote and escape, so prose with
 // ':' / '#' / quotes stays valid. Keeps the emitter deterministic.
 const yamlStr = (s) =>
@@ -305,7 +391,7 @@ const criticDefects = (c) => [
   ...c.structuralLeaks,
   ...c.vacuousThens,
 ];
-const defectNoteFor = (route, c) => {
+const defectNoteFor = (route, c, dups) => {
   const parts = [];
   if (c.uncoveredRoutes.includes(route))
     parts.push("the route had ZERO intents — extract at least one real intent");
@@ -315,38 +401,80 @@ const defectNoteFor = (route, c) => {
     );
   if (c.vacuousThens.some((f) => routeOf(f) === route))
     parts.push('a "then" was vacuous — make it observable');
+  if ((dups || []).some((d) => routesOfDup(d).includes(route)))
+    parts.push(
+      "an intent id on this route collides with another route — give it a globally unique id, or drop the intent here if that behavior really belongs to the other route",
+    );
   return parts.join("; ");
 };
 
 // ============================================================================
+// ---- Census: the mechanical route denominator ------------------------------
+// Discover used to enumerate routes itself and silently dropped some (its own
+// list was also the critic's completeness denominator, so the miss was
+// invisible). The fix: a mechanical `find` produces the FULL page.tsx list, and
+// Discover must account for EVERY entry (route-or-excluded). The script then
+// asserts the union covers the census before any extract runs.
+phase("Census");
+const census = await agent(
+  `Run EXACTLY this command and nothing else:
+  find apps/web/src/app -name page.tsx
+Return every matching path verbatim, one per array entry, repo-root-relative
+(each starts with "apps/web/src/app/"). Do NOT filter, judge, sort-away, or omit
+any path — this is the mechanical denominator, not a judgment call.`,
+  { label: "census", phase: "Census", model: "haiku", schema: CENSUS_SCHEMA },
+);
+const censusPages = [
+  ...new Set((census?.pageFiles || []).map(normPage).filter(Boolean)),
+];
+if (censusPages.length === 0) {
+  log("Census found no page.tsx files — aborting. Check the app path.");
+  return { error: "empty census", census };
+}
+log(`Census: ${censusPages.length} page.tsx files under apps/web/src/app`);
+
+// ---- Discover: classify every census page for THIS role --------------------
 phase("Discover");
 const disco = await agent(
   `You are the DISCOVER agent for the "${role}" role's Scenario Catalog.
 
-GOAL: list EVERY route this role can reach, and for each, the files an extract
-agent must read to infer the user's intents on that route.
+GOAL: classify EVERY page.tsx below as either a route this "${role}" can reach
+(-> routes) or one it cannot (-> excludedPages, with a one-line reason). The two
+lists TOGETHER must cover every census path — dropping any is a hard error.
+
+CENSUS (the complete page.tsx denominator — account for ALL of these):
+${censusPages.map((p) => `  - ${p}`).join("\n")}
 
 HOW (read CODE — do not run the app):
-  1. Routes live under apps/web/src/app/. Authenticated routes are grouped in
-     apps/web/src/app/(app)/. Each segment's access is set by its SSR layout
-     guard: the "REQUIRED: readonly Role[] = [...]" array in the segment's
-     layout.tsx (e.g. (app)/lead/layout.tsx, (app)/reports/layout.tsx). A route
-     is reachable by "${role}" iff its guard array includes "${role}".
-  2. Enumerate page.tsx files, resolve each to its URL path (keep dynamic
-     segments like [reportId] as-is), and KEEP ONLY routes whose guard includes
-     "${role}". Also include "/" (it redirects to the role home).
-  3. EXCLUDE routes guarded away from this role, and system/export views like
-     /print/[reportId].
-  4. For each kept route, list pageFile (the page.tsx) and readFiles: the page
-     plus the few key components it renders that carry the user's ACTIONS (forms,
-     dialogs, tables, primary buttons, tRPC mutation call sites). Use a
-     code-graph MCP if present to follow imports; otherwise read and follow them.
-  5. STABLE IDs: if ${outFile} already exists, READ it. For each route, fill
+  1. Each segment's access is its SSR layout guard: the
+     "REQUIRED: readonly Role[] = [...]" array in the nearest layout.tsx
+     (e.g. (app)/lead/layout.tsx, (app)/reports/layout.tsx). A page is reachable
+     by "${role}" iff its guard array includes "${role}".
+  2. For each census page, resolve its URL route (keep dynamic segments like
+     [reportId] as-is; "(app)" and other route groups are NOT URL segments).
+     - Reachable by "${role}" (guard includes it, OR it is the public landing
+       app/page.tsx "/"): put it in routes. INCLUDE redirect stubs the role can
+       reach (e.g. "/", "/lead/history") as routes — a redirect is still a
+       reachable behavior worth one intent; do NOT silently fold them into their
+       target. Set pageFile to the census path verbatim so it reconciles.
+     - NOT reachable (guard excludes the role) OR a system/export/auth view
+       (e.g. /print/[reportId], app/auth/error): put it in excludedPages with a
+       short reason (e.g. "guarded to [admin] — not ${role}", "system PDF/export
+       view", "auth error screen"). Here too, set pageFile to the census path
+       verbatim.
+  IMPORTANT: every pageFile (routes AND excludedPages) MUST be one of the census
+  paths above, copied character-for-character — the script reconciles on it, and
+  any census path you neither route nor exclude aborts the whole run.
+  3. For each kept route, list readFiles: the page plus the few key components it
+     renders that carry the user's ACTIONS (forms, dialogs, tables, primary
+     buttons, tRPC mutation call sites). Use a code-graph MCP if present to
+     follow imports; otherwise read and follow them.
+  4. STABLE IDs: if ${outFile} already exists, READ it. For each route, fill
      priorIntents with the existing {id, intent} pairs found under that route
      (so the extractor can reuse stable ids). If the file does not exist or a
      route is new, priorIntents is [].
 
-Return the structured route list. Do NOT write any file.`,
+Return the structured result (routes + excludedPages). Do NOT write any file.`,
   {
     label: "discover",
     phase: "Discover",
@@ -359,7 +487,24 @@ if (!disco || !disco.routes || disco.routes.length === 0) {
   log("Discover found no routes — aborting. Check the role name and guards.");
   return { error: "no routes", disco };
 }
-log(`Discover: "${role}" reaches ${disco.routes.length} routes`);
+
+// ---- Hard denominator assert: every census page accounted for --------------
+const accounted = new Set(
+  [
+    ...disco.routes.map((r) => r.pageFile),
+    ...(disco.excludedPages || []).map((e) => e.pageFile),
+  ].map(normPage),
+);
+const unaccounted = censusPages.filter((p) => !accounted.has(p));
+if (unaccounted.length > 0) {
+  log(
+    `Discover left ${unaccounted.length} census page(s) unaccounted (neither a route nor excluded-with-reason) — aborting before extract: ${unaccounted.join(", ")}`,
+  );
+  return { error: "unaccounted census pages", unaccounted, role };
+}
+log(
+  `Discover: "${role}" reaches ${disco.routes.length} routes; ${(disco.excludedPages || []).length} pages excluded-with-reason; full census accounted.`,
+);
 
 // ---- Extract (one pass) ----------------------------------------------------
 phase("Extract");
@@ -370,49 +515,65 @@ log(
 );
 
 // ---- Critic + bounded repair ----------------------------------------------
+// Two checks gate the loop: the LLM critic (entry-point coverage, structural
+// leaks, vacuous thens) AND a deterministic id-uniqueness assert — a duplicate
+// id breaks the Driver's report keying and the critic schema cannot see it.
 phase("Critic");
 let critic = await runCritic();
+let dups = dupIdFindings(extracted);
 let round = 0;
-while (critic && criticDefects(critic).length > 0 && round < MAX_REPAIR) {
+const pendingDefects = () =>
+  (critic ? criticDefects(critic).length : 0) + dups.length;
+while (pendingDefects() > 0 && round < MAX_REPAIR) {
   round += 1;
-  const flaggedRoutes = [...new Set(criticDefects(critic).map(routeOf))];
+  const criticRoutes = critic ? criticDefects(critic).map(routeOf) : [];
+  const flaggedRoutes = [
+    ...new Set([...criticRoutes, ...dups.flatMap(routesOfDup)]),
+  ];
   const toFix = disco.routes.filter((r) => flaggedRoutes.includes(r.route));
   log(
-    `Repair round ${round}/${MAX_REPAIR}: ${toFix.length} flagged route(s) → ${flaggedRoutes.join(", ")}`,
+    `Repair round ${round}/${MAX_REPAIR}: ${toFix.length} flagged route(s) → ${flaggedRoutes.join(", ")}${dups.length ? ` (incl. ${dups.length} id-collision)` : ""}`,
   );
   if (toFix.length === 0) break; // findings didn't map to a known route — stop
-  const captured = critic;
+  const capturedCritic = critic;
+  const capturedDups = dups;
   // Re-extract each flagged route with ITS OWN defect note, via the framework's
   // concurrency-managed parallel() (not Promise.all + nested parallel).
   const repaired = (
     await parallel(
       toFix.map(
         (r) => () =>
-          agent(extractPrompt(r, defectNoteFor(r.route, captured)), {
-            label: `repair:${r.route}`,
-            phase: "Repair",
-            model: "haiku",
-            schema: EXTRACT_SCHEMA,
-          }),
+          agent(
+            extractPrompt(
+              r,
+              defectNoteFor(r.route, capturedCritic, capturedDups),
+            ),
+            {
+              label: `repair:${r.route}`,
+              phase: "Repair",
+              model: "haiku",
+              schema: EXTRACT_SCHEMA,
+            },
+          ),
       ),
     )
   ).filter(Boolean);
   // Replace the repaired routes' entries; keep the rest untouched.
-  const repairedByRoute = new Map(
-    repaired.filter(Boolean).map((r) => [r.route, r]),
-  );
+  const repairedByRoute = new Map(repaired.map((r) => [r.route, r]));
   extracted = extracted.map((e) => repairedByRoute.get(e.route) || e);
   await persistCatalog(buildCatalog(extracted));
   critic = await runCritic();
+  dups = dupIdFindings(extracted);
 }
 
-const remaining = critic ? criticDefects(critic) : ["critic did not run"];
+const criticRemaining = critic ? criticDefects(critic) : ["critic did not run"];
+const remaining = [...criticRemaining, ...dups.map((d) => `DUPLICATE ID ${d}`)];
 if (remaining.length > 0) {
   log(
-    `Critic still flags ${remaining.length} item(s) after ${round} repair round(s) — left for human review: ${remaining.join("; ")}`,
+    `Unresolved after ${round} repair round(s) — left for human review: ${remaining.join("; ")}`,
   );
 } else {
-  log(`Critic clean after ${round} repair round(s).`);
+  log(`Critic + id-uniqueness clean after ${round} repair round(s).`);
 }
 
 return {
@@ -420,7 +581,9 @@ return {
   outFile,
   coverageFile,
   routes: disco.routes.length,
+  excludedPages: (disco.excludedPages || []).length,
   intents: extracted.reduce((n, r) => n + r.intents.length, 0),
   repairRounds: round,
+  duplicateIds: dups,
   unresolved: remaining,
 };

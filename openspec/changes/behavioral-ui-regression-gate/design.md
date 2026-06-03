@@ -66,6 +66,21 @@ intent` only; the exhaustive "every element, every transition" coverage is
   line-group sub-slicing (which would re-introduce structural coupling). A
   completeness-critic + coverage matrix make "covered everything" justified at
   the entry-point level, not asserted.
+- **The route denominator is mechanical, not the discoverer's judgment.** The
+  first `lead` run proved the failure mode: the Discover agent reasoned a redirect
+  stub was "already covered" and dropped it, and because the critic keys
+  entry-point completeness off Discover's own list, the miss was invisible. So
+  Discover no longer self-enumerates — a mechanical `find page.tsx` CENSUS is the
+  denominator, Discover must classify every census page as a role route or
+  excluded-with-a-reason, and the script asserts the union covers the census
+  before any extract. Completeness rests on a deterministic set check, not on the
+  discoverer remembering every page.
+- **`id` uniqueness is a deterministic assert, not an LLM check.** An `id` is the
+  Driver's report key, so a collision across routes corrupts keying — but it is a
+  mechanical set property the prose critic cannot reliably see. An in-script
+  uniqueness check gates the repair loop and the final result; a surviving
+  collision lands in `unresolved` for human review rather than being silently
+  emitted.
 - **Own the Driver on the Playwright MCP + Workflow.** We already run both, plus
   `dev-auth` and the VA-0a Haiku-fan-out experience. An external agentic-testing
   product adds cost, lock-in, and data egress for no phase-1 benefit.
