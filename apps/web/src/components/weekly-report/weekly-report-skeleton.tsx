@@ -9,8 +9,7 @@
  *   3. Portfolio    — single gradient card + sm:grid-cols-2 product cards
  *   4. Accordions   — gradient cards × N matching ProductAccordion header
  *
- * The AI Insights slot was removed with the AI module (see
- * apps/api/src/modules/ai/HANDOFF.md).
+ * The AI Insights slot was removed with the AI module.
  *
  * Stateless and hook-free — safe to render server-side.
  */

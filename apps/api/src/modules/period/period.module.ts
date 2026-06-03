@@ -54,8 +54,7 @@ import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
               reopenWindowHours: settings.reopenWindowHours,
             };
           },
-          // The AI ingestion module was removed (see
-          // apps/api/src/modules/ai/HANDOFF.md); PeriodService's ingestion
+          // The AI ingestion module was removed; PeriodService's ingestion
           // hook falls back to its no-op default until the AI rebuild.
         ),
       inject: [PeriodPrismaRepository, AnalyticsCache, AdminService],
