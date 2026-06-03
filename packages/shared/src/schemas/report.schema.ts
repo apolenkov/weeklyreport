@@ -69,12 +69,7 @@ export const assembledReportSchema = z.object({
   sections: z.array(reportSectionReadModelSchema),
 });
 
-export const pdfExportStatusSchema = z.enum([
-  "queued",
-  "processing",
-  "completed",
-  "failed",
-]);
+export const pdfExportStatusSchema = z.enum(["queued", "completed", "failed"]);
 
 export const pdfExportRequestSchema = z.object({
   reportId: z.uuid(),
@@ -190,7 +185,7 @@ export const adminReminderExecutionSchema = z.object({
   errorMessage: z.string().nullable(),
 });
 
-export const carryOverStatusSchema = z.enum(["pending", "completed", "failed"]);
+export const carryOverStatusSchema = z.enum(["completed"]);
 
 export const carryOverRecordSchema = z.object({
   id: z.uuid(),

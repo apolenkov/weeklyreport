@@ -1,3 +1,4 @@
+import type { ReminderPolicy } from "@customreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
@@ -303,5 +304,64 @@ describe("AdminPrismaRepository (integration)", () => {
 
     const groups = await repo.listProductGroups(testData.project.id);
     expect(groups.map((g) => g.id)).toEqual([testData.lead.reportingGroupId]);
+  });
+
+  // cleanup-dead-enum-states: `ReminderRuleStatus.paused` is written by
+  // cascading a policy's `active` flag onto its derived rules. The pause
+  // toggle lives on the policy (the only editable surface); the derived
+  // ReminderRule rows are read-only and mirror the policy state.
+  describe("reminder policy active flag cascades to derived rule status", () => {
+    const policyId = "c1111111-1111-4111-8111-111111111111";
+    const ruleId = "c2222222-2222-4222-8222-222222222222";
+
+    const buildPolicy = (active: boolean): ReminderPolicy => ({
+      id: policyId,
+      kind: "deadline",
+      offsetMinutes: -1440,
+      timezone: "Europe/Moscow",
+      audience: "lead-with-draft",
+      active,
+      validFrom: new Date("2026-01-01T00:00:00.000Z"),
+      validUntil: null,
+    });
+
+    const seedActiveRule = async () => {
+      await repo.saveReminderPolicy(buildPolicy(true));
+      await prisma.reminderRule.create({
+        data: {
+          id: ruleId,
+          policyId,
+          kind: "deadline",
+          fireAt: new Date("2026-04-11T09:00:00.000Z"),
+          timezone: "Europe/Moscow",
+          status: "active",
+          version: 1,
+          reportId: testData.report.id,
+        },
+      });
+    };
+
+    const ruleStatus = async () =>
+      (await prisma.reminderRule.findUniqueOrThrow({ where: { id: ruleId } }))
+        .status;
+
+    it("saveReminderPolicy(active:false) parks derived rules as paused, and re-activating resumes them", async () => {
+      await seedActiveRule();
+      expect(await ruleStatus()).toBe("active");
+
+      await repo.saveReminderPolicy(buildPolicy(false));
+      expect(await ruleStatus()).toBe("paused");
+
+      await repo.saveReminderPolicy(buildPolicy(true));
+      expect(await ruleStatus()).toBe("active");
+    });
+
+    it("archiveReminderPolicy soft-delete parks derived rules as paused", async () => {
+      await seedActiveRule();
+
+      await repo.archiveReminderPolicy(policyId);
+
+      expect(await ruleStatus()).toBe("paused");
+    });
   });
 });

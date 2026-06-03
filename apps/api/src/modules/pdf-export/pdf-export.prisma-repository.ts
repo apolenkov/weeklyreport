@@ -20,14 +20,12 @@ import type {
 
 const pdfStatusToDb: Record<string, string> = {
   queued: "pending",
-  processing: "processing",
   completed: "completed",
   failed: "failed",
 };
 
 const dbStatusToDomain: Record<string, PdfExportJob["status"]> = {
   pending: "queued",
-  processing: "processing",
   completed: "completed",
   failed: "failed",
 };
