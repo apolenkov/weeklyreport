@@ -19,8 +19,7 @@ import { type AppLogger, createNullLogger } from "../../lib/logger";
  * are swallowed by the publish path — the publish must succeed even when
  * a downstream consumer is degraded.
  *
- * The original AI/RAG consumer was removed (see
- * apps/api/src/modules/ai/HANDOFF.md); the seam is kept so a rebuilt
+ * The original AI/RAG consumer was removed; the seam is kept so a rebuilt
  * pipeline — or any other async consumer — can re-wire without touching
  * the publish path.
  */

@@ -4,8 +4,7 @@ import { PublicationPrismaRepository } from "./publication.prisma-repository";
 import { PublicationService } from "./publication.service";
 
 @Module({
-  // The AI ingestion module was removed (see
-  // apps/api/src/modules/ai/HANDOFF.md). PublicationService keeps its
+  // The AI ingestion module was removed. PublicationService keeps its
   // optional ingestion hook, which now falls back to its no-op default;
   // the rebuilt AI module re-wires it.
   providers: [

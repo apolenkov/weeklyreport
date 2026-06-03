@@ -81,8 +81,7 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
           </div>
         </div>
 
-        {/* The AI period-summary surface was removed (see
-            apps/api/src/modules/ai/HANDOFF.md); the assembled report renders
+        {/* The AI period-summary surface was removed; the assembled report renders
             directly. The agent-review «coming soon» entry lives in the slide
             decks / report shells. */}
         <Suspense fallback={<WeeklyReportSkeleton />}>
