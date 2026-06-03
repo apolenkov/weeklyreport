@@ -15,13 +15,16 @@ import Link from "next/link";
  *
  * T4 mitigation: only `requiredRoles` is rendered into the DOM. The user's
  * actual role is intentionally NOT displayed, so a hostile viewer cannot
- * enumerate role state by hitting protected routes.
+ * enumerate role state by hitting protected routes. `homeHref` is a
+ * pre-resolved path the caller computes from the session (via `roleHomePath`,
+ * or `/` for anonymous), keeping this component role-agnostic.
  */
 export interface ForbiddenPageProps {
   readonly requiredRoles: readonly Role[];
+  readonly homeHref: string;
 }
 
-export function ForbiddenPage({ requiredRoles }: ForbiddenPageProps) {
+export function ForbiddenPage({ requiredRoles, homeHref }: ForbiddenPageProps) {
   const rolesLabel = requiredRoles.join(" or ");
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-6">
@@ -36,7 +39,7 @@ export function ForbiddenPage({ requiredRoles }: ForbiddenPageProps) {
             back to the dashboard.
           </p>
           <Button asChild>
-            <Link href="/head/dashboard">Go to dashboard</Link>
+            <Link href={homeHref}>Go to dashboard</Link>
           </Button>
         </CardContent>
       </Card>

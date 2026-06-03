@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { ForbiddenPage } from "../../../../../../components/forbidden-page";
 import { LeadSectionPreviewAuth } from "../../../../../../components/lead/lead-section-preview-auth";
 import { WeeklyReportSkeleton } from "../../../../../../components/weekly-report/weekly-report-skeleton";
+import { roleHomePath } from "../../../../../../lib/role-home";
+import { getServerSession } from "../../../../../../lib/server/get-server-session";
 
 interface Props {
   params: Promise<{ reportId: string }>;
@@ -14,11 +17,24 @@ interface Props {
  * assembled weekly report. Uses WeeklyReportPage with the current
  * user's authorId so only their products are shown — read-only, no form.
  *
- * Server shell; auth is resolved client-side in LeadSectionPreviewAuth
- * (avoids an extra server-side session fetch and keeps the RSC boundary clean).
+ * Server shell. The preview is a lead-only self-review surface: the parent
+ * `/lead/*` layout admits lead/head/admin, so this page adds a per-page guard
+ * that walls non-lead roles (head/admin) — the preview is scoped to the
+ * viewer's own authorId and is meaningless for them. Denial uses the same
+ * in-page `ForbiddenPage` wall as every other role gate.
  */
 export default async function LeadReportPreviewPage({ params }: Props) {
   const { reportId } = await params;
+
+  const session = await getServerSession();
+  if (session?.role !== "lead") {
+    return (
+      <ForbiddenPage
+        requiredRoles={["lead"]}
+        homeHref={session ? roleHomePath(session.role) : "/"}
+      />
+    );
+  }
 
   return (
     <main

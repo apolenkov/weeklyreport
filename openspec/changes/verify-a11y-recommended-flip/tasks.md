@@ -55,3 +55,24 @@ Escape + Cancel/close button", confirm the claim at runtime:
       do NOT patch under this acceptance-only change — then archive this one.
 - [ ] VA-6 With all behavior checks passing and 0 console ERRORS per role,
       mark verified and archive.
+
+## 5. Parked from fix-ui-role-access-inconsistencies (runtime-only checks)
+
+These two need a live browser + per-role login, so they were parked here when
+`fix-ui-role-access-inconsistencies` landed its deterministic fixes (preview
+lead-only guard + role-resolved denial home link).
+
+- [ ] VA-7 Preview route lead-only, per role: under `/auth/dev-login?role=<ROLE>`
+      open `/lead/report/:id/preview`. Lead → renders the preview content;
+      head/admin/viewer → in-page `ForbiddenPage` wall at the same URL. The
+      wall's "Go to dashboard" link points to each role's own home
+      (`roleHomePath`). 0 console ERRORS.
+- [ ] VA-8 `WeeklyReportSkeleton` hydration mismatch (finding A6): reproduce the
+      per-load console error on the preview page and fix the real cause.
+      Investigated source-only and the skeleton itself is static (`role="status"`,
+      constant aria) — so the finding mis-located it. Concrete lead to check
+      first: the SSR `<Suspense fallback={<WeeklyReportSkeleton/>}>`
+      (`role="status"`) vs `LeadSectionPreviewAuth`'s `isLoading` pulse branch
+      (a plain `<div>` with no `role="status"`) — the server/client boundary may
+      swap one for the other. Do NOT commit a speculative fix without the live
+      error in hand.
