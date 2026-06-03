@@ -1,85 +1,106 @@
 ## Context
 
-Static gates have shipped a runtime regression before (autofix → `import type`
-→ broken NestJS DI), so a behavioral UI gate is needed. A full AI `Coverage
-Catalog` (596 scenarios bound to `file:line`) was built and removed as premature
-— the links rot on an MVP codebase. The reusable bits survive: the catalog
-generator Workflows (parked) and a working per-role login helper (`dev-auth`,
-currently under `e2e/`). The decision record is `docs/adr/0001`; terms are in
-`CONTEXT.md` (Behavioral Scenario, Coverage Catalog, Role sweep).
+Static gates have shipped a runtime regression before (autofix → `import type` →
+broken NestJS DI), so a behavioral UI check is needed. An earlier attempt built a
+full AI `Coverage Catalog` (scenarios bound to `file:line`) and removed it as
+premature — the links rot on an MVP. The reusable bits survive: the catalog
+generator Workflows (parked in `establish-scenario-catalog`) and a working
+per-role login helper (`dev-auth`, currently under `e2e/`). The decision record
+is `docs/adr/0001`; terms are in `CONTEXT.md` (Behavioral Scenario, Scenario
+Catalog, Driver, Role sweep, Coverage Catalog).
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- A durable, behavior-anchored source of truth (`.feature`) that survives
-  refactors.
-- A deterministic, cheap-to-rerun per-role UI gate (`lead`/`head`/`admin`/
-  `viewer`): 0 console errors, key DOM, dialog keyboard-closability, axe a11y.
-- Use Haiku to do the expensive part once (author specs from `.feature`), not on
-  every run.
+- A durable, behavior-anchored **Scenario Catalog** (`role × route × intent`)
+  that survives refactors.
+- A swappable **Driver** (human checklist or AI agent on the Playwright MCP) that
+  runs the catalog per role and reports anomalies — phase 1, non-blocking.
+- Generate the catalog from code+DOM (Haiku fan-out + completeness critic), not
+  by hand.
 
 **Non-Goals:**
 
 - The `file:line` Coverage Catalog / drift gate (stays deferred in
   `establish-scenario-catalog`).
+- The deterministic **frozen** Playwright gate and formal Model-Based Testing
+  (both phase 2, deferred until the product stabilizes).
 - Re-deriving `dev-auth` from scratch (restore from git).
-- unicorn off-list / ratchet-lint work.
 
 ## Decisions
 
-- **`.feature` (Gherkin) as the canonical artifact, not a table.** Gherkin's
-  `Given/When/Then` forces precision and compiles unambiguously; the
-  `feedback-log` table is great for fast intake but too loose to compile without
-  Haiku guessing steps (which causes drift). The table remains the manual-UAT
-  intake format; rows graduate into `.feature`.
-- **Compile to deterministic specs; do not interpret live (ADR 0001).** A gate
-  must give the same verdict for the same code. Agent-in-the-run-loop is
-  non-deterministic, expensive per run, unbisectable, and "helpfully" masks
-  regressions. Alternative (agent-interpreted) is kept only for discovery and
-  authoring.
-- **No BDD runner dependency.** The repo has no `playwright-bdd`/cucumber; rather
-  than add one, Haiku emits plain `@playwright/test` `*.spec.ts` from each
-  `.feature`. Keeps the run path standard and dependency-light. (Revisit a BDD
-  runner only if hand-maintaining the `.feature`↔spec link becomes painful.)
-- **Seed by hand, not by generator.** The code-derived generator produces the
-  rotting `file:line` catalog. Seed the durable `.feature` from `feedback-log`
-  `ok` rows + the ~40 product-behavior OpenSpec scenarios.
-- **Remove the UI e2e harness now; keep integration + unit.** The current `e2e/`
-  UI harness has zero specs already — only plumbing. Removing it (and restoring
-  `dev-auth` from git when regenerating) gives a clean slate without losing the
-  hard part. `e2e/integration/*` and vitest units are untouched.
-- **Role order: `lead` first.** Largest UI surface; head/admin/viewer follow.
+- **Catalog is durable + high-level, not exhaustive (the load-bearing choice).**
+  Exhaustive enumeration of every element/state/transition is structure-anchored
+  and rots almost as fast as `file:line`. The catalog stores `role × route ×
+intent` only; the exhaustive "every element, every transition" coverage is
+  produced by the **live agent exploring at run time**. Research backs the split:
+  scripted/exhaustive suites are costly to maintain on a churning codebase, while
+  autonomous exploratory AI testing is adaptive, finds unknown-unknowns, and
+  gives ~80–90% coverage out of the box (ADR 0001 sources).
+- **Two levels of completeness, on two layers.** "ВСЕ" splits: Layer-1
+  completeness is **entry-point coverage** — every `role × route` has ≥1 intent
+  scenario — verified by the generation-time critic + coverage matrix.
+  Layer-2 exhaustiveness is **within-route** — every interactive element and
+  reachable transition — produced and measured by the Driver **at run time**, not
+  frozen in the catalog. The critic does NOT chase per-element completeness (that
+  would re-introduce the rotting structural list); it only guards entry points.
+- **Live Driver now; deterministic frozen specs later (phased by stability).** A
+  blocking gate must be deterministic, so a live agent can't be the gate — but
+  phase 1 is a **report**, where the agent's non-determinism is fine. Phase 2
+  freezes only critical, stabilized scenarios into Playwright specs.
+- **YAML skeleton + Given/When/Then prose, no BDD runner.** The catalog skeleton
+  is machine-generated and human-reviewable as structured rows; the expected
+  outcome is plain Given/When/Then text the Driver (human or agent) reads. The
+  repo has no `playwright-bdd`/cucumber and adds none.
+- **Generate via Haiku fan-out, sliced by entry point.** Slicing blindly per file
+  yields junk (files with no UI) and duplicates (many files back one screen);
+  slice by the entry-point surface (as the parked generator already does),
+  sub-slice large files by line-group, and add a completeness-critic + coverage
+  matrix so "covered everything" is justified, not asserted.
+- **Own the Driver on the Playwright MCP + Workflow.** We already run both, plus
+  `dev-auth` and the VA-0a Haiku-fan-out experience. An external agentic-testing
+  product adds cost, lock-in, and data egress for no phase-1 benefit.
+- **Reuse, don't fork, the generator.** Retarget `establish-scenario-catalog`'s
+  generator output to the YAML skeleton and drop its `file:line` binding; that
+  change keeps the deferred `file:line` catalog, this change owns the behavioral
+  path + Driver.
+- **Role order: `lead` first.** Largest UI surface; prove the pipeline on one
+  slice before fanning out to `head` / `admin` / `viewer`.
 
 ## Risks / Trade-offs
 
-- **Compiled specs drift from intent if `.feature` and spec diverge.** →
-  `.feature` is the reviewed source; the compile Workflow regenerates the spec
-  from it, and a spec whose behavior no longer matches its `.feature` is a
-  failing/edited spec, surfaced in review.
-- **Haiku mis-compiles a scenario (wrong selector, vacuous assert).** → same
-  guardrail proven on VA-0a: self-verify each spec runs green, plus a sampled
-  adversarial vacuity review of risky specs; the gate's determinism makes a bad
-  spec reproducible and fixable.
-- **Removing `dev-auth` loses the cookie/role logic.** → it is committed;
-  restore from git history rather than re-derive.
-- **`.feature` becomes stale if manual-UAT findings are not promoted.** →
-  feedback-log intake → `.feature` promotion is an explicit step; unpromoted
-  findings stay visible in the log.
+- **Phase 1 does not stop the origin-class bug.** A non-blocking report means the
+  same `import type` autofix still merges green unless a human reads the report.
+  → Accepted knowingly; the blocking guarantee is phase 2. The sweep must at
+  least surface a boot/load failure loudly (failed load + console errors).
+- **Generated catalog can miss surface or emit junk.** → completeness-critic +
+  coverage matrix + human review of the generated diff; same guardrail proven on
+  VA-0a (self-verify + sampled adversarial vacuity review).
+- **The catalog is regenerated, not permanent.** → that is the point: cheap Haiku
+  regeneration + reviewed diff beats maintaining a rotting exhaustive list. The
+  durable `intent` layer changes rarely; only the run-time exploration tracks the
+  churn.
+- **Removing `dev-auth` loses the cookie/role logic.** → it is committed; restore
+  from git history rather than re-derive.
 
 ## Migration Plan
 
-1. Land the canonical `.feature` (lead first) seeded from feedback-log + specs.
+1. Land the durable `lead` Scenario Catalog (YAML skeleton + GWT prose), generated
+   from the entry-point surface and human-reviewed.
 2. Restore `dev-auth` from git into the regenerated sweep harness; wire
    `pnpm test:uat`.
-3. Haiku Workflow compiles `.feature` → `*.spec.ts`; self-verify + sampled
-   vacuity review; run the per-role sweep green.
+3. Build the Driver: agent mode on the Playwright MCP (per-role, reads the
+   catalog, explores, reports) and a human checklist mode; run the `lead` sweep
+   and produce a report.
 4. Remove the old UI e2e harness + `test:e2e`/`test:e2e:ui` scripts.
    Rollback: `git revert`/restore the removed `e2e/` files.
 
 ## Open Questions
 
-- Final home/naming for `.feature` (`e2e/features/<role>.feature`?) and compiled
-  specs (`e2e/regression/<role>.spec.ts`?) — settle during apply.
+- Final home/naming for the YAML catalog (`e2e/catalog/<role>.yaml`?) and the
+  Driver/sweep entry point — settle during apply.
+- Exact report format/location for the per-role sweep (Markdown summary?
+  per-role file?) — settle during apply.
 - Whether `head`/`admin`/`viewer` land in this change or follow-ups once `lead`
   proves the pipeline.
