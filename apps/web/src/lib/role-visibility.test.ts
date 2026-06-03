@@ -22,8 +22,8 @@ const cases: readonly Case[] = [
   { route: "/lead/report", role: "lead", expected: true },
   { route: "/lead/history", role: "lead", expected: true },
   { route: "/reports/history", role: "lead", expected: true },
-  // head
-  { route: "/admin", role: "head", expected: true },
+  // head — admin segment is admin-only (D-AUTH-03 retired); head has no /admin
+  { route: "/admin", role: "head", expected: false },
   { route: "/head/dashboard", role: "head", expected: true },
   { route: "/head/report", role: "head", expected: true },
   { route: "/lead/report", role: "head", expected: true },

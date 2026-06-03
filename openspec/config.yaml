@@ -35,7 +35,7 @@ context: |
   # Roles
   - lead    — fills own report section (items, risks, decisions, priorities,
               traffic lights); submits
-  - head    — lead capabilities + review + publish + admin CRUD + PDF export
+  - head    — lead capabilities + review + publish + PDF export
   - viewer  — read-only access to published reports + PDF download
   No runtime director role exists; director-facing UAT routes through viewer.
 

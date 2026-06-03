@@ -15,7 +15,7 @@ import type { Role } from "@customreport/shared";
 export type RoutePrefix = "/admin" | "/head" | "/lead" | "/reports";
 
 export const ROUTE_ROLE_MAP: Readonly<Record<RoutePrefix, readonly Role[]>> = {
-  "/admin": ["admin", "head"],
+  "/admin": ["admin"],
   "/head": ["head", "admin"],
   "/lead": ["lead", "head", "admin"],
   "/reports": ["lead", "head", "admin", "viewer"],
