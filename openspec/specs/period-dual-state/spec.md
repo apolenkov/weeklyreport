@@ -2,7 +2,7 @@
 
 The `Report` model in `prisma/schema.prisma` carries two parallel period representations: a `periodState` field (the canonical representation) and a legacy period tuple (year, week, quarter, and related fields). Every code path that writes a `Report` MUST update both representations atomically in a single Prisma transaction. Because no database constraint enforces this invariant, the spec acts as the program-level contract; enforcement relies on code review and dedicated tests.
 
-Consumer surfaces: `prisma/schema.prisma` (`Report` model), `apps/api/src/modules/weekly-report/` (lead save path), `apps/api/src/modules/publication/` (head publish path), `apps/api/src/modules/carry-over/`, `apps/api/src/modules/archive/`.
+Consumer surfaces: `prisma/schema.prisma` (`Report` model), `apps/api/src/modules/publication/` (head publish path), `apps/api/src/modules/archive/`. The `weekly-report` module only reads the `Report`, and `carry-over` writes only child rows into an already-created `Report`; neither is a Report-period writer.
 
 ## Requirements
 
@@ -10,29 +10,46 @@ Consumer surfaces: `prisma/schema.prisma` (`Report` model), `apps/api/src/module
 
 Every writer that mutates a `Report` period MUST update both `periodState` and the legacy period tuple in the same Prisma transaction, never in separate database round-trips.
 
-#### Scenario: Lead section save updates both fields
+#### Scenario: Lead section save does NOT write the Report period
 
-- **WHEN** the lead save path in `apps/api/src/modules/weekly-report/` writes a `Report`
-- **THEN** both `periodState` and the legacy period tuple (year, week, quarter) are updated atomically within a single Prisma `$transaction` call
+- **WHEN** the lead save path saves a section via
+  `apps/api/src/modules/report-sections/` (the `weekly-report` module only reads
+  the `Report`)
+- **THEN** the transaction writes `reportSection` / `item` / `risk` / `decision`
+  / `projectStatus` / `stageStatus` rows only
+- **AND** it writes no `Report` period field, so it is NOT a period writer and is
+  exempt from this invariant
 
 #### Scenario: Head publish updates both fields
 
 - **WHEN** the head publish path in `apps/api/src/modules/publication/` transitions a `Report` to published state
 - **THEN** both `periodState` and the legacy period tuple are written in the same transaction, with no intermediate commit containing only one of the two representations
 
-### Requirement: All Six Writers Must Comply
+### Requirement: All Report-Period Writers Must Comply
 
-The six known writer paths — lead-section save, head publish, carry-over, archive, restoration from snapshot, and manual admin edit — MUST each update both `periodState` and the legacy period tuple. No writer is exempt from this requirement.
+Every code path that writes a `Report` period MUST update both `periodState` and
+the legacy period tuple atomically by calling `period-transition.ts::buildTransition`
+(the canonical field-set source) within its own Prisma transaction. The writers
+are head-publish, archive, manual admin edit, unarchive, snapshot restore, and the
+auto-archiver and period-creator schedulers; snapshot restore is the recognised
+non-transition writer that reinstates persisted values behind its gate opt-out.
+Carry-over and lead-section save are NOT period writers (they write child rows into
+an already-created `Report`) and are exempt.
 
-#### Scenario: Carry-over writer updates both fields
+#### Scenario: A real writer updates both fields via buildTransition
 
-- **WHEN** the carry-over path in `apps/api/src/modules/carry-over/` creates or copies a `Report` into a new period
-- **THEN** the resulting row has a consistent `periodState` value and a matching legacy tuple, both written in the same transaction
+- **WHEN** the archive path in `apps/api/src/modules/archive/` (or any listed
+  writer) transitions a `Report`
+- **THEN** both `periodState` and the legacy tuple are produced by
+  `buildTransition` and written atomically in one transaction
 
-#### Scenario: Archive writer updates both fields
+#### Scenario: Carry-over is not a period writer
 
-- **WHEN** the archive path in `apps/api/src/modules/archive/` archives a `Report`
-- **THEN** both `periodState` and the legacy tuple reflect the archive state, updated atomically
+- **WHEN** the carry-over path in `apps/api/src/modules/carry-over/` runs
+- **THEN** `saveCarryOver` writes only `carryOverExecution` / `carryOverRecord` /
+  `item` / `decision` child rows
+- **AND** it writes no `Report` period field, relying on the target `Report`
+  already carrying both representations from its creation
 
 ### Requirement: New Writers Must Not Omit Either Field
 
