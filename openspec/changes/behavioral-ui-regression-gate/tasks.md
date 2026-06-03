@@ -4,20 +4,28 @@ Gates after every code step: `pnpm typecheck && pnpm lint && pnpm test`.
 
 ## 1. Generate the durable `lead` Scenario Catalog
 
-- [ ] 1.1 Decide the home/naming (`e2e/catalog/<role>.yaml`) and add a short
+- [x] 1.1 Decide the home/naming (`e2e/catalog/<role>.yaml`) and add a short
       `e2e/catalog/README.md`: behavior-anchored, `role · route · intent` +
       Given/When/Then prose, no `file:line`, durable high-level (not exhaustive),
-      generated + human-reviewed.
-- [ ] 1.2 Retarget the parked generator
-      (`openspec/changes/establish-scenario-catalog/workflow/*.mjs`) to emit the
-      YAML skeleton and drop the `file:line` binding; confirm it discovers the
-      entry-point surface itself.
-- [ ] 1.3 Run the Haiku fan-out for the `lead` surface (one agent per entry-point
-      slice; large files sub-sliced) → draft `lead` catalog.
+      generated + human-reviewed. Includes a worked-example format contract and
+      the verified `lead` route denominator (from the SSR layout guards).
+- [x] 1.2 Generator written:
+      `openspec/changes/behavioral-ui-regression-gate/workflow/generate-catalog.workflow.mjs`.
+      Code-reading (not live-DOM — that's the Driver), self-discovers the role's
+      reachable routes from the SSR layout guards, fans out per route (Haiku),
+      emits the YAML `role x route x intent` skeleton with NO `file:line`, and
+      runs an entry-point completeness critic + coverage matrix. The parked
+      backend+`file:line` generator was rejected as the base (rewrite, not
+      retarget); the parked `ux-catalog` live-DOM script seeds the Driver (task 3).
+- [ ] 1.3 Run the Haiku fan-out for the `lead` surface (one agent per route, each
+      navigating large files to their action surface — tRPC mutation call-sites +
+      action components — not reading linearly) → draft `lead` catalog.
 - [ ] 1.4 Run the **entry-point** completeness-critic + coverage matrix (every
-      `role × route` has ≥1 intent scenario — NOT per-element); human-review the
-      generated diff for behavior-only anchoring (no `file:line`, no
-      implementation detail) and any uncovered role/route.
+      `role × route` has ≥1 intent scenario — NOT per-element) with its bounded
+      repair loop; human-review the generated diff for behavior-only anchoring (no
+      `file:line`, no implementation detail) and any uncovered role/route. NOTE:
+      route-set completeness rests on this human review, not the critic — the
+      critic only checks intents-per-route, not that Discover found every route.
 - [ ] 1.5 Fold in the `ok` rows from the archived `feedback-log.md` that the
       generator missed; dedup. The feedback-log stays the quick manual-UAT intake.
 

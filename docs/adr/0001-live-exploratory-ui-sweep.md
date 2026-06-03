@@ -16,7 +16,8 @@ the first draft of this ADR proposed, and which we now reject):
 
 - **Phase 1 (now) — live exploratory sweep, non-blocking report.** A durable,
   high-level **Scenario Catalog** (`roles × routes × intents`, generated from the
-  code+DOM entry-point surface by a Haiku fan-out, then human-reviewed) is
+  **code** entry-point surface — the role's reachable routes + their page/action
+  components + SSR guards — by a Haiku fan-out, then human-reviewed) is
   executed by a swappable **Driver** — a human (manual checklist) or an AI agent
   driving the browser via Playwright MCP through `/auth/dev-login`. Exhaustive
   coverage ("every element, every transition") is the **agent's run-time job**,
