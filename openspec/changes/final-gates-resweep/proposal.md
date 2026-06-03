@@ -1,5 +1,11 @@
 # Final Gates + Role Re-Sweep
 
+> **Coordination (see `docs/openspec-roadmap.md`):** the per-role re-sweep here is
+> the final run of the swappable **Driver** built in
+> `behavioral-ui-regression-gate` (the single sweep engine), not a separate
+> harness. Pin this change's acceptance as "the behavioral Driver sweep is green
+> across all four roles (0 console ERRORS)"; reuse, do not duplicate.
+
 ## Why
 
 This is Wave 5 — the last change to land in the
