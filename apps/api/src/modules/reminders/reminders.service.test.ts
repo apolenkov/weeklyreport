@@ -214,7 +214,7 @@ describe("NOTIF-01 deadline payload — extended dedupe-key shape", () => {
     },
   };
 
-  it("builds dedupeKey of shape ${ruleId}:deadline:${cycleDate}:${email} when payload is provided", async () => {
+  it("builds dedupeKey of shape <ruleId>:deadline:<cycleDate>:<email> when payload is provided", async () => {
     const service = new RemindersService(createRepository(activeRule));
     const exec = await service.requestReminderExecution(
       activeRule.id,

@@ -244,18 +244,22 @@
 
 /* ---- Reduced motion: disable all custom animations ---- */
 @media (prefers-reduced-motion: reduce) {
+  /* Each override targets the same selector as its animation definition above
+     and sits later in the cascade, so it wins at equal specificity by source
+     order. animation: none zeroes the animation-name, which is what stops the
+     motion. */
   .animate-fade-in,
   .animate-scale-in,
   .stagger-children > *,
   .skeleton,
   [data-slot="collapsible-content"][data-state="open"],
   [data-slot="collapsible-content"][data-state="closed"] {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
   .btn-press:active {
-    transform: none !important;
+    transform: none;
   }
 }
 

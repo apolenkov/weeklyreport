@@ -197,8 +197,10 @@ body:has([role="dialog"]) [data-testid="dev-role-switcher-trigger"] {
 
 /* Keep the Agentation devtools panel just below the top navigation (not at
    the bottom of the viewport). Nav bar height ≈ 64px; 4.5rem ≈ 72px gives a
-   small gap. D-27/D-36: box.y must be < 200px. */
-.styles-module__toolbar___wNsdK {
-  top: 4.5rem !important;
-  bottom: auto !important;
+   small gap. D-27/D-36: box.y must be < 200px. The selector is intentionally
+   doubled to outrank the panel's own single-class rule by specificity, so no
+   forced override is needed. */
+.styles-module__toolbar___wNsdK.styles-module__toolbar___wNsdK {
+  top: 4.5rem;
+  bottom: auto;
 }
