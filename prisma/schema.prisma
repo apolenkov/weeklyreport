@@ -428,7 +428,7 @@ model CarryOverExecution {
   sourceReportId String
   targetReportId String
   dedupeKey      String            @unique
-  status         CarryOverStatus   @default(pending)
+  status         CarryOverStatus   @default(completed)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   sourceReport   Report            @relation("CarryOverSource", fields: [sourceReportId], references: [id])
@@ -618,7 +618,6 @@ enum ItemWorkflowStatus {
 
 enum PdfExportStatus {
   pending
-  processing
   completed
   failed
 }
@@ -630,9 +629,7 @@ enum ReminderExecutionStatus {
 }
 
 enum CarryOverStatus {
-  pending
   completed
-  failed
 }
 
 enum PeriodStatus {

@@ -500,12 +500,15 @@ describe("carryOverStatusSchema (BUG-006)", () => {
     expect(carryOverStatusSchema.safeParse("completed").success).toBe(true);
   });
 
-  it('accepts "pending" (newly added)', () => {
-    expect(carryOverStatusSchema.safeParse("pending").success).toBe(true);
+  // cleanup-dead-enum-states: `pending`/`failed` removed — carry-over is
+  // synchronous, the service writes only `completed` (or throws, persisting
+  // nothing). The enum collapses to the single live value.
+  it('rejects "pending" (removed dead state)', () => {
+    expect(carryOverStatusSchema.safeParse("pending").success).toBe(false);
   });
 
-  it('accepts "failed" (newly added)', () => {
-    expect(carryOverStatusSchema.safeParse("failed").success).toBe(true);
+  it('rejects "failed" (removed dead state)', () => {
+    expect(carryOverStatusSchema.safeParse("failed").success).toBe(false);
   });
 
   it('rejects "unknown"', () => {

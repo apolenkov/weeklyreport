@@ -146,6 +146,29 @@ grep -nE '[а-яА-Я]' <changed-file>
 
 Every match must be data, a comment/JSDoc, or a test/fixture string.
 
+### MVP Phase: Database Is Disposable
+
+There is no production deployment yet — the project is pre-prod and
+experimental, with no stable point to preserve. The local/dev/test/UAT
+databases are disposable: resetting, wiping, and rebuilding them from scratch
+is expected and safe, and does not need a fresh round of approval each time.
+
+- **Reshape the schema directly; do not author incremental alter-table
+  migrations.** Edit `prisma/schema.prisma` and rebuild. There is a single
+  init migration — keep it in sync with the schema (hand-edit its SQL when
+  Prisma can't express a construct, e.g. the FTS `GENERATED STORED` columns
+  and CHECK constraints) and `prisma migrate reset` to re-apply it.
+- **`migrate reset` on the non-prod databases is routine, not a last resort.**
+  Use it freely to apply schema changes. The Prisma 7 "invoked by Claude Code"
+  consent guard still fires per run — this rule is the standing authorization
+  to clear it (pass `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`); it is not a
+  license to touch production.
+- The `_uat`/`_dev`/`_test` suffix rules and `prisma/_destructive-guard.ts`
+  still apply — they protect prod, not your freedom in dev. Production stays
+  gated by `ALLOW_PROD_DESTRUCTIVE`; never reset the prod DB.
+
+This freedom ends when the first real production point exists — revisit then.
+
 ### Docker Databases
 
 Non-production `POSTGRES_DB` names and the database name inside

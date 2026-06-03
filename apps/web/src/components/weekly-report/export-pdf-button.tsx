@@ -52,7 +52,7 @@ export function ExportPdfButton({
         enabled: jobId !== null,
         refetchInterval: (q) => {
           const status = q.state.data?.status;
-          return status === "queued" || status === "processing" ? 2000 : false;
+          return status === "queued" ? 2000 : false;
         },
       },
     ),

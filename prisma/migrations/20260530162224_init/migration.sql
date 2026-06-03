@@ -20,13 +20,13 @@ CREATE TYPE "ItemType" AS ENUM ('current', 'next');
 CREATE TYPE "ItemWorkflowStatus" AS ENUM ('done', 'in_progress', 'blocked');
 
 -- CreateEnum
-CREATE TYPE "PdfExportStatus" AS ENUM ('pending', 'processing', 'completed', 'failed');
+CREATE TYPE "PdfExportStatus" AS ENUM ('pending', 'completed', 'failed');
 
 -- CreateEnum
 CREATE TYPE "ReminderExecutionStatus" AS ENUM ('pending', 'sent', 'failed');
 
 -- CreateEnum
-CREATE TYPE "CarryOverStatus" AS ENUM ('pending', 'completed', 'failed');
+CREATE TYPE "CarryOverStatus" AS ENUM ('completed');
 
 -- CreateEnum
 CREATE TYPE "PeriodStatus" AS ENUM ('open', 'published', 'reopened');
@@ -313,7 +313,7 @@ CREATE TABLE "CarryOverExecution" (
     "sourceReportId" TEXT NOT NULL,
     "targetReportId" TEXT NOT NULL,
     "dedupeKey" TEXT NOT NULL,
-    "status" "CarryOverStatus" NOT NULL DEFAULT 'pending',
+    "status" "CarryOverStatus" NOT NULL DEFAULT 'completed',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

@@ -370,6 +370,15 @@ export class AdminPrismaRepository implements AdminRepository {
       create: { id: parsed.id, ...data },
       update: data,
     });
+    // Cascade the policy's active flag onto its derived ReminderRule rows:
+    // an inactive policy parks its rules as `paused` so the @Cron scheduler
+    // skips them; re-activating the policy resumes them. The derived-rules
+    // panel renders this status; the applicator only ever (re)creates rules
+    // for active policies, so it never clobbers a parked `paused` row.
+    await this.prisma.reminderRule.updateMany({
+      where: { policyId: row.id },
+      data: { status: row.active ? "active" : "paused" },
+    });
     return reminderPolicySchema.parse({
       id: row.id,
       kind: row.kind,
@@ -399,6 +408,12 @@ export class AdminPrismaRepository implements AdminRepository {
     await this.prisma.reminderPolicy.update({
       where: { id: policyId },
       data: { active: false },
+    });
+    // Soft-delete parks the policy inactive; park its derived rules `paused`
+    // too so the scheduler stops firing them (same cascade as a manual pause).
+    await this.prisma.reminderRule.updateMany({
+      where: { policyId },
+      data: { status: "paused" },
     });
   }
 
