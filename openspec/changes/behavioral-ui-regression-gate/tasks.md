@@ -17,15 +17,24 @@ Gates after every code step: `pnpm typecheck && pnpm lint && pnpm test`.
       runs an entry-point completeness critic + coverage matrix. The parked
       backend+`file:line` generator was rejected as the base (rewrite, not
       retarget); the parked `ux-catalog` live-DOM script seeds the Driver (task 3).
-- [ ] 1.3 Run the Haiku fan-out for the `lead` surface (one agent per route, each
+- [x] 1.3 Run the Haiku fan-out for the `lead` surface (one agent per route, each
       navigating large files to their action surface — tRPC mutation call-sites +
-      action components — not reading linearly) → draft `lead` catalog.
-- [ ] 1.4 Run the **entry-point** completeness-critic + coverage matrix (every
+      action components — not reading linearly) → draft `lead` catalog. Done
+      2026-06-04: `e2e/catalog/lead.yaml` (10 routes, 41 intents).
+- [x] 1.4 Run the **entry-point** completeness-critic + coverage matrix (every
       `role × route` has ≥1 intent scenario — NOT per-element) with its bounded
       repair loop; human-review the generated diff for behavior-only anchoring (no
       `file:line`, no implementation detail) and any uncovered role/route. NOTE:
       route-set completeness rests on this human review, not the critic — the
       critic only checks intents-per-route, not that Discover found every route.
+      Done 2026-06-04: review caught 3 defects the critic could not (2 dropped
+      routes, a 5-way id collision, 2 out-of-role intents) — all fixed; see
+      `e2e/catalog/_lead-coverage.md`.
+- [x] 1.4b Harden the generator from the 1.4 findings (so the misses do not recur
+      on `head`/`admin`/`viewer`): a mechanical `find page.tsx` CENSUS denominator
+      that Discover must fully account for (route-or-excluded-with-reason, asserted
+      in-script before extract), plus a deterministic id-uniqueness assert gating
+      the repair loop. Done 2026-06-04 in `generate-catalog.workflow.mjs`.
 - [ ] 1.5 Fold in the `ok` rows from the archived `feedback-log.md` that the
       generator missed; dedup. The feedback-log stays the quick manual-UAT intake.
 
