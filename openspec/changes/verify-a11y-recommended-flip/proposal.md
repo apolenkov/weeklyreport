@@ -1,5 +1,11 @@
 # Verify the a11y Behavior Changes from the Biome Recommended Flip
 
+> **Coordination (see `docs/openspec-roadmap.md`):** the per-role runtime sweep
+> here is NOT a separate harness. It is run through the swappable **Driver** built
+> in `behavioral-ui-regression-gate` (the single sweep engine). Convert this
+> change's high-priority a11y catalog entries into Driver scenarios; do not stand
+> up a parallel Playwright sweep.
+
 ## Why
 
 The `enable-biome-recommended-ruleset` flip (merged to `main`, commit
