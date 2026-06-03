@@ -514,8 +514,8 @@ export default function PrintReportPage({ params }: Props) {
           __html: `
             @media print {
               body { margin: 0; padding: 0; }
-              nav, .no-print { display: none !important; }
-              * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+              body nav, body .no-print { display: none; }
+              * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               .page-break-before { page-break-before: always; }
               section { page-break-inside: avoid; }
               table { page-break-inside: avoid; }
