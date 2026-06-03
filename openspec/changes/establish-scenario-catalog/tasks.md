@@ -82,3 +82,26 @@ Gates after every code step: `pnpm typecheck && pnpm lint && pnpm test`.
       explicit backlog (net-new, out of scope).
 - [ ] SC-15: `openspec validate establish-scenario-catalog --strict` green;
       archive this change.
+
+## Parked reconciliation orphans (see findings/RECONCILIATION.md)
+
+Items from past handoffs captured nowhere else — parked here so an OpenSpec-first
+session sees them. Each notes its natural home change.
+
+- [ ] O1: Fix the stale `WorkingDays.{MON_SAT,MON_SUN}` schema comment ("v1 does
+      not change deadline calc") — they DO alter `computeDeadline`. Home:
+      `cleanup-dead-enum-states`.
+- [ ] O2: UI "products" are domain "projects" — admin UI references nonexistent
+      `saveProduct`/`archiveProduct`; real procedures are
+      `saveProject`/`deleteProject`. Reconcile naming. Home:
+      `fix-admin-role-model-drift`.
+- [ ] O3: Record an Opus adversarial review of the DI import-type fix
+      (commit 7952e3c5, 47 sites; gates were green, no review logged). Home:
+      `ratchet-lint-to-strict`.
+- [ ] O4: Audit remaining lazy/conditional `import type` paths for runtime DI
+      type-lies (the biome-importtype-broke-nest-di pattern). Home:
+      `ratchet-lint-to-strict`.
+- [x] O5: Delete the merged local branch `feat/openspec-lint-ratchet-a11y`
+      (branch hygiene) — done this session.
+- [ ] O6: Verify coming-soon UI cards render correctly per role. Home:
+      `verify-a11y-recommended-flip` / SC-9.
