@@ -17,8 +17,9 @@ Catalog, Driver, Role sweep, Coverage Catalog).
   that survives refactors.
 - A swappable **Driver** (human checklist or AI agent on the Playwright MCP) that
   runs the catalog per role and reports anomalies — phase 1, non-blocking.
-- Generate the catalog from code+DOM (Haiku fan-out + completeness critic), not
-  by hand.
+- Generate the catalog from **code** — the role's reachable routes + their
+  page/action components + SSR guards (Haiku fan-out + completeness critic), not
+  by hand. DOM is the Driver's run-time concern, never the generator's.
 
 **Non-Goals:**
 
@@ -27,6 +28,10 @@ Catalog, Driver, Role sweep, Coverage Catalog).
 - The deterministic **frozen** Playwright gate and formal Model-Based Testing
   (both phase 2, deferred until the product stabilizes).
 - Re-deriving `dev-auth` from scratch (restore from git).
+- A negative-authz / denial matrix. The access boundary is a backend concern
+  (tRPC `role-coverage-gate` + SSR guards); a per-role catalog lists only
+  reachable routes. The Driver reports an _unexpected_ denial as an anomaly, but
+  the catalog enumerates no "role X denied route Y" grid.
 
 ## Decisions
 
@@ -53,11 +58,14 @@ intent` only; the exhaustive "every element, every transition" coverage is
   is machine-generated and human-reviewable as structured rows; the expected
   outcome is plain Given/When/Then text the Driver (human or agent) reads. The
   repo has no `playwright-bdd`/cucumber and adds none.
-- **Generate via Haiku fan-out, sliced by entry point.** Slicing blindly per file
-  yields junk (files with no UI) and duplicates (many files back one screen);
-  slice by the entry-point surface (as the parked generator already does),
-  sub-slice large files by line-group, and add a completeness-critic + coverage
-  matrix so "covered everything" is justified, not asserted.
+- **Generate via Haiku fan-out, one agent per route.** Slicing blindly per file
+  yields junk (files with no UI) and duplicates (many files back one screen); the
+  route is the natural slice. A large page (e.g. `LeadForm` is ~1900 lines) is
+  handled by instructing the agent to navigate to the action surface — the tRPC
+  mutation call-sites and action components — rather than reading linearly or
+  line-group sub-slicing (which would re-introduce structural coupling). A
+  completeness-critic + coverage matrix make "covered everything" justified at
+  the entry-point level, not asserted.
 - **Own the Driver on the Playwright MCP + Workflow.** We already run both, plus
   `dev-auth` and the VA-0a Haiku-fan-out experience. An external agentic-testing
   product adds cost, lock-in, and data egress for no phase-1 benefit.

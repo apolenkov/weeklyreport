@@ -21,8 +21,10 @@ and its sources.
   anchored to observable behavior, never to `file:line`. It is deliberately NOT
   an exhaustive enumeration of every element/state/transition — that is
   structure-anchored and rots; exhaustive coverage is the Driver's run-time job.
-- **Generate** the catalog from the code+DOM entry-point surface via a **Haiku
-  fan-out** (one agent per entry-point slice; large files sub-sliced), with a
+- **Generate** the catalog from the **code** entry-point surface (the role's
+  reachable routes + their page/action components + SSR guards) via a **Haiku
+  fan-out** (one agent per route, each navigating large files to their action
+  surface rather than reading linearly), with a
   completeness-critic + coverage matrix to justify "covered everything", then
   human-review the result. Not hand-authored.
 - Store the catalog as a **YAML skeleton** (`role · route · intent`) with the
@@ -47,7 +49,8 @@ and its sources.
 ### New Capabilities
 
 - `behavioral-ui-regression-gate`: the durable Scenario Catalog, its generation
-  from code+DOM, the swappable Driver, and the per-role reporting sweep.
+  from code (DOM is the Driver's run-time job, not the generator's), the swappable
+  Driver, and the per-role reporting sweep.
 
 ### Modified Capabilities
 
