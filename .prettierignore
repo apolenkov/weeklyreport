@@ -10,3 +10,4 @@ prisma/seed-simple.ts
 prisma/seed-constants.ts
 e2e
 pnpm-lock.yaml
+scheduled_tasks.lock
