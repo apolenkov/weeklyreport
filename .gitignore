@@ -29,6 +29,7 @@ apps/web/next-env.d.ts
 
 .scratch/
 .goals
+scheduled_tasks.lock
 
 # CodeGraph local index (machine-specific, not part of repo)
 .codegraph/
