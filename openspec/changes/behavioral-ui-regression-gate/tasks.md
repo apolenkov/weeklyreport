@@ -77,7 +77,7 @@ typecheck`, `pnpm lint`, `pnpm test`). The automated Layer-1 sweep ran live —
       Markdown report; report-only, never fails CI). `[reportId]` resolved
       deterministically from seed-constants (viewer/`/reports/*`→published,
       `/lead/*`→active). `pnpm test:uat` wired. RAN LIVE 2026-06-07: `4 passed
-    (1.6m)` against a docker Postgres+Redis and the seeded dev DB; the config's
+  (1.6m)` against a docker Postgres+Redis and the seeded dev DB; the config's
       own web+API booted; all 4 role reports written to `e2e/sweep/.reports/`.
       Found ~621 anomalies (lead 117, viewer 65, head 198, admin 241): real a11y
       violations (button-name/label critical, color-contrast, nested-interactive) + a real React duplicate-`key` warning + env noise (telemetry
@@ -90,10 +90,20 @@ typecheck`, `pnpm lint`, `pnpm test`). The automated Layer-1 sweep ran live —
 
 ## 3. Build the Driver (human + AI agent)
 
-- [ ] 3.1 Author the AI-agent Driver: a Workflow where one agent per role reads
+- [x] 3.1 Author the AI-agent Driver: a Workflow where one agent per role reads
       the catalog, drives the browser via the **Playwright MCP** through
       `dev-auth`, explores each route's elements/transitions at run time, and
       records anomalies (console errors, broken flow vs expected, layout, axe).
+      Done 2026-06-07, scoped to `lead`. Two-phase, low-overhead (one shared MCP
+      browser → drive is sequential, only verify fans out):
+      `e2e/sweep/driver/README.md` + `drive-prompt.md` (parametric drive
+      protocol) and `workflow/lead-driver-verify.workflow.mjs` (adversarial
+      code-reading verify). Drove all 10 `lead` routes (171 MCP tool-uses);
+      verify confirmed 2 of 4 candidates real, dismissed 2 as seed artifacts.
+      Report (generated, gitignored): `e2e/sweep/.reports/lead-driver.md`. The
+      "one agent per role" fan-out across head/admin/viewer is deferred (reuse
+      the same drive-prompt + verify workflow) — reopen when those roles are
+      scoped.
 - [x] 3.2 Add the human-Driver mode: render the same catalog as a per-role
       checklist for manual UAT, collecting pass/fail + notes in the same report
       shape. Done 2026-06-07: `e2e/sweep/render-checklist.mjs` (pure Node, no
@@ -110,13 +120,19 @@ typecheck`, `pnpm lint`, `pnpm test`). The automated Layer-1 sweep ran live —
       `(dev-auth login)` anomaly) instead of a thrown test — a report is always
       written. Console classification mirrors `final-gates-resweep` (errors
       counted, favicon 404 ignored).
-- [ ] 3.4 Run the `lead` sweep under the agent Driver; confirm a deliberately
+- [x] 3.4 Run the `lead` sweep under the agent Driver; confirm a deliberately
       broken route (failed load / injected console error) shows up in the report.
-      PARTIAL 2026-06-07: the **automated** Layer-1 sweep (2.2) ran live across
-      all 4 roles and demonstrably captured real console errors, a pageerror, and
-      axe violations — so the report path is proven. Still TODO: run it under the
-      **AI agent** Driver (3.1, not yet built) and the explicit injected-canary
-      check.
+      Done 2026-06-07: the AI Driver drove all 10 `lead` routes live via
+      Playwright MCP. The injected-canary check passed — the drive agent injected
+      `console.error('DRIVER_CANARY_42')` via `browser_evaluate` and its
+      console-capture re-read detected it (`canary.detected=true`), proving the
+      capture path is live (an empty finding list is trustworthy, not silent
+      failure). The Driver surfaced 2 real flow/logic bugs the Layer-1 sweep
+      cannot see (see 3.1): (a) `search-input.tsx` routes `project` search hits to
+      role-gated `/admin`, dead-ending a lead; (b) `lead-form.tsx` suppresses the
+      legacy `?period=` read-only banner when the section is submitted. Both
+      adversarially code-verified (high confidence); 2 other candidates were
+      dismissed as seed artifacts.
 - [x] 3.4b (implicit) Automated sweep proven to capture real anomalies live —
       see 2.2 run notes.
 
