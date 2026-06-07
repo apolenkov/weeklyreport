@@ -20,7 +20,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 
 import AxeBuilder from "@axe-core/playwright";
-import { test, type ConsoleMessage } from "@playwright/test";
+import { test, type ConsoleMessage, type Request } from "@playwright/test";
 
 // Import the seed ids directly from the source of truth. NOT via
 // e2e/integration/helpers/seed-ids (its `../../../../../` re-export path is
@@ -43,7 +43,7 @@ type Catalog = {
   routes: CatalogRoute[];
 };
 
-type AnomalyKind = "console" | "pageerror" | "load" | "axe";
+type AnomalyKind = "console" | "pageerror" | "load" | "axe" | "network";
 type Anomaly = { kind: AnomalyKind; detail: string };
 type RouteResult = {
   route: string;
@@ -60,7 +60,25 @@ const REPORT_DIR = path.resolve(__dirname, ".reports");
 
 // Known-benign console noise that must NOT be reported as an anomaly. The
 // favicon 404 is the canonical example pinned by final-gates-resweep.
-const IGNORED_CONSOLE: RegExp[] = [/favicon\.ico/i];
+//
+// The bare "Failed to load resource: net::ERR_CONNECTION_REFUSED" carries no
+// URL, so it is redundant with the requestfailed channel below (which reports
+// the URL); we silence the URL-less duplicate and let requestfailed surface any
+// genuinely refused endpoint. The [Agentation] line is the web app's own catch
+// log for its dev-tools client, which boots only because the sweep runs
+// `next dev` — Next forces NODE_ENV=development, so the NODE_ENV-gated
+// AgentationDevtools renders and fails to reach its backend on :4747 (see
+// IGNORED_REQUEST_URLS). Confirmed source 2026-06-07; not a product defect.
+const IGNORED_CONSOLE: RegExp[] = [
+  /favicon\.ico/i,
+  /Failed to load resource: net::ERR_CONNECTION_REFUSED/i,
+  /\[Agentation\]/i,
+];
+
+// Failed-request URLs that are known sweep-environment noise, not product
+// defects: the Agentation dev-tools backend (:4747) is not running during the
+// sweep, and its client only renders because `next dev` forces development mode.
+const IGNORED_REQUEST_URLS: RegExp[] = [/localhost:4747/i, /127\.0\.0\.1:4747/i];
 
 /**
  * Resolve a `[reportId]`-style placeholder to a deterministic seed id. Viewers
@@ -232,8 +250,23 @@ for (const catalog of catalogs) {
       const onPageError = (err: Error): void => {
         anomalies.push({ kind: "pageerror", detail: err.message });
       };
+      // Resource-load failures, captured WITH their URL (the console channel
+      // logs them without one). Known dev-tools-endpoint noise is skipped; any
+      // other refused URL still surfaces, so this is not a blind filter.
+      const onRequestFailed = (request: Request): void => {
+        const url = request.url();
+        if (IGNORED_REQUEST_URLS.some((re) => re.test(url))) {
+          return;
+        }
+        const failure = request.failure();
+        anomalies.push({
+          kind: "network",
+          detail: `request failed: ${url}${failure ? ` (${failure.errorText})` : ""}`,
+        });
+      };
       page.on("console", onConsole);
       page.on("pageerror", onPageError);
+      page.on("requestfailed", onRequestFailed);
 
       let status: number | null = null;
       try {
@@ -260,9 +293,21 @@ for (const catalog of catalogs) {
       try {
         const axe = await new AxeBuilder({ page }).analyze();
         for (const violation of axe.violations) {
+          // Include the first few node selectors so a11y fixes can be targeted
+          // to the offending elements instead of guessed from the rule alone.
+          const targets = violation.nodes
+            .slice(0, 3)
+            .map((node) =>
+              node.target
+                .map((sel) => (Array.isArray(sel) ? sel.join(" ") : sel))
+                .join(" "),
+            )
+            .join(" | ");
           anomalies.push({
             kind: "axe",
-            detail: `${violation.id} (${violation.impact ?? "n/a"}): ${violation.help}`,
+            detail: `${violation.id} (${violation.impact ?? "n/a"}): ${violation.help}${
+              targets ? ` — ${targets}` : ""
+            }`,
           });
         }
       } catch (error) {
@@ -271,6 +316,7 @@ for (const catalog of catalogs) {
 
       page.off("console", onConsole);
       page.off("pageerror", onPageError);
+      page.off("requestfailed", onRequestFailed);
 
       results.push({
         route: entry.route,
