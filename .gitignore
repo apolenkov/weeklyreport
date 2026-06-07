@@ -33,3 +33,6 @@ scheduled_tasks.lock
 
 # CodeGraph local index (machine-specific, not part of repo)
 .codegraph/
+
+# Behavioral UI sweep phase-1 reports (regenerated each run)
+e2e/sweep/.reports/
