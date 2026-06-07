@@ -428,8 +428,9 @@ function LeadSection({ report }: { report: ProductReport }) {
               lineHeight: "1.6",
             }}
           >
-            {report.priorities.map((p) => (
-              <li key={p.rank} value={p.rank}>
+            {report.priorities.map((p, index) => (
+              // eslint-disable-next-line react/no-array-index-key -- priority ranks can repeat across a merged report; index disambiguates the otherwise-non-unique key in this render-only, never-reordered list
+              <li key={`${p.rank}-${index}`} value={p.rank}>
                 {p.text}
               </li>
             ))}
