@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { useTRPC } from "../../lib/trpc-context";
 import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
+import { WeeklyReportSkeleton } from "../weekly-report/weekly-report-skeleton";
 
 interface Props {
   readonly reportId: string;
@@ -18,13 +19,11 @@ export function LeadSectionPreviewAuth({ reportId }: Props) {
   const meQ = useQuery(trpc.auth.me.queryOptions());
   const authorId = meQ.data?.userId ?? undefined;
 
+  // Render the same skeleton the page's Suspense fallback uses. A bespoke
+  // inline skeleton here diverged from the server-streamed fallback and caused
+  // a hydration mismatch on /lead/report/[reportId]/preview.
   if (meQ.isLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="h-10 w-48 animate-pulse rounded-lg bg-[var(--color-skeleton)]" />
-        <div className="h-64 w-full animate-pulse rounded-xl bg-[var(--color-skeleton)]" />
-      </div>
-    );
+    return <WeeklyReportSkeleton />;
   }
 
   return <WeeklyReportPage reportId={reportId} authorId={authorId} />;

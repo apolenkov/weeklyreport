@@ -351,9 +351,10 @@ export function ProductAccordion({
                     Top Priorities
                   </div>
                   <ol className="space-y-1 text-sm">
-                    {report.priorities.map((p) => (
+                    {report.priorities.map((p, index) => (
                       <li
-                        key={p.rank}
+                        // eslint-disable-next-line react/no-array-index-key -- priority ranks can repeat across a merged report; index disambiguates the otherwise-non-unique key in this render-only, never-reordered list
+                        key={`${p.rank}-${index}`}
                         className="flex items-center gap-2 rounded p-2"
                         style={{
                           background:
