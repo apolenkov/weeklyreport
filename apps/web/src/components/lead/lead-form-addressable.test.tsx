@@ -4,11 +4,11 @@
  *
  * Two paths under test:
  *
- *   1. Bare route (`/lead/report` with no `?period=` and no `reportId`
- *      prop, `redirectToCanonical={true}`) → form fires
+ *   1. Bare route (`/lead/report` with no `reportId` prop,
+ *      `redirectToCanonical={true}`) → form fires
  *      `router.replace('/lead/report/<activeReportId>')` once the active
- *      report is resolved. The `?period=` legacy path suppresses the
- *      redirect.
+ *      report is resolved. A stale legacy `?period=<week>` query is
+ *      ignored (the branch was retired) and does NOT suppress the redirect.
  *
  *   2. Addressed route (`/lead/report/[reportId]`) → form scopes the data
  *      load to the path-segment id, surfaces the "Viewing past period"
@@ -321,13 +321,16 @@ describe("LeadForm — Phase 35-07 addressable URLs", () => {
     expect(replace).toHaveBeenCalledWith(`/lead/report/${ACTIVE_REPORT_ID}`);
   });
 
-  it("bare route with ?period= → no redirect (legacy back-compat)", async () => {
+  it("bare route with legacy ?period= → param ignored, still redirects to canonical", async () => {
+    // 2026-06: the legacy `?period=<week>` branch was retired. A stale
+    // bookmark carrying the param must NOT suppress the canonical redirect;
+    // viewing a past week now goes through the addressed URL + history.
     mockSearchParams = new URLSearchParams("period=2026-W15");
     const trpcMock = buildHarness({});
     render(
       <Wrapper>
         <TRPCProxyContext.Provider value={trpcMock as never}>
-          <LeadForm period="2026-W15" redirectToCanonical />
+          <LeadForm redirectToCanonical />
         </TRPCProxyContext.Provider>
       </Wrapper>,
     );
@@ -335,7 +338,7 @@ describe("LeadForm — Phase 35-07 addressable URLs", () => {
       await flushAll();
     });
 
-    expect(replace).not.toHaveBeenCalled();
+    expect(replace).toHaveBeenCalledWith(`/lead/report/${ACTIVE_REPORT_ID}`);
   });
 
   it("addressed route (reportId prop set) → no redirect, just renders the form", async () => {

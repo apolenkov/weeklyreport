@@ -7,7 +7,7 @@ import type {
 } from "@customreport/shared";
 import { Separator } from "@customreport/ui/components/ui/separator";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -64,7 +64,6 @@ import { RequestReopenDialog } from "./request-reopen-dialog";
 import { VersionHistoryNav } from "./version-history-nav";
 
 interface LeadFormProps {
-  readonly period?: string;
   /**
    * 35-07: explicit report identifier from the dynamic `[reportId]` route
    * segment. When provided, the form scopes data load + actions to that
@@ -73,15 +72,13 @@ interface LeadFormProps {
    * When omitted (bare `/lead/report` path), the form still falls back to
    * `reports.getActive` and — once resolved — performs a `router.replace`
    * to the canonical addressed URL `/lead/report/<reportId>` so bookmarks
-   * and shared links work. The legacy `?period=` query continues to read
-   * the bare route in read-only mode without a redirect (back-compat).
+   * and shared links work.
    */
   readonly reportId?: string;
   readonly mode?: "edit" | "slides";
   /**
    * 35-07: when true, the form auto-redirects (router.replace) to the
    * canonical addressed URL once the active reportId is known. Off when
-   * the bare route is hit with `?period=` (legacy bookmarks) or when
    * already on a `[reportId]` route.
    */
   readonly redirectToCanonical?: boolean;
@@ -290,7 +287,6 @@ function aggregateTrafficLight(
 }
 
 export function LeadForm({
-  period,
   reportId: pinnedReportId,
   redirectToCanonical,
   mode = "edit",
@@ -298,7 +294,6 @@ export function LeadForm({
   const trpc = useTRPC();
   const qc = useQueryClient();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const isSlidesMode = mode === "slides";
   // W9.A: ref shared between lead-form header (SlideFullscreenButton) and LeadSlidesClient (deck root div)
   const deckRef = useRef<HTMLDivElement>(null);
@@ -408,13 +403,11 @@ export function LeadForm({
 
   // 35-07: bare route → replace URL with the canonical addressed form once
   // the active reportId is known. Skipped when:
-  //   • a `?period=` query is present (legacy bookmarks; preserve old UX)
   //   • the page already renders under `[reportId]` (pinnedReportId set)
   //   • there is no active period (server returned null) — the form will
   //     show the existing empty / skeleton state.
   useEffect(() => {
     if (!redirectToCanonical) return;
-    if (period) return;
     if (pinnedReportId) return;
     if (shouldRouteHeadLikeAwayFromLeadForm) return;
     if (!activeReportId) return;
@@ -424,7 +417,6 @@ export function LeadForm({
     router.replace(`/lead/report/${activeReportId}${query ? `?${query}` : ""}`);
   }, [
     redirectToCanonical,
-    period,
     pinnedReportId,
     activeReportId,
     isSlidesMode,
@@ -642,10 +634,7 @@ export function LeadForm({
     historyQ.isLoading;
   const awaitingRoleRedirect = shouldRouteHeadLikeAwayFromLeadForm;
   const awaitingCanonicalRedirect =
-    !!redirectToCanonical &&
-    !period &&
-    !pinnedReportId &&
-    activeReportId !== "";
+    !!redirectToCanonical && !pinnedReportId && activeReportId !== "";
 
   // Toggle All state — must live above the early return below, otherwise
   // the hook count drifts between renders and React throws "Rendered more
@@ -662,9 +651,7 @@ export function LeadForm({
   // Compute readOnly early (before hook; the autosave hook needs it). When
   // data isn't ready, treat as readOnly (autosave disabled).
   const isReadOnlyEarly =
-    !!period ||
-    isSubmitted ||
-    (byPeriodQ.data ? byPeriodQ.data.readOnly : true);
+    isSubmitted || (byPeriodQ.data ? byPeriodQ.data.readOnly : true);
 
   // Compute the baseline key from the *server-side* section so the autosave
   // hook treats freshly-loaded data as already-saved (no dirty flicker).
@@ -717,11 +704,7 @@ export function LeadForm({
   }, [titleHistoryEntry]);
 
   const [showArchivePeriods, setShowArchivePeriods] = useState(false);
-  const selectedPeriodId =
-    pinnedReportId ||
-    searchParams.get("period") ||
-    activeQ.data?.reportId ||
-    "";
+  const selectedPeriodId = pinnedReportId || activeQ.data?.reportId || "";
   const selectedHistoryPeriod = historyQ.data?.find(
     (entry) => entry.reportId === selectedPeriodId && entry.reportId !== "",
   );
@@ -1158,8 +1141,7 @@ export function LeadForm({
 
   // F3.4: viewing a historical snapshot forces read-only mode.
   const isViewingSnapshot = viewedSnapshotVersion !== null;
-  const isReadOnly =
-    data.readOnly || !!period || isSubmitted || isViewingSnapshot;
+  const isReadOnly = data.readOnly || isSubmitted || isViewingSnapshot;
 
   // 35-04: per-project stages-the-lead-owns selector. Forwarded into the
   // Item / Risk dialogs so the SDLC stage dropdown is scoped per project.
@@ -1616,19 +1598,16 @@ export function LeadForm({
           }
         />
 
-        {/* Read-only banner for past periods. Triggered by either the
-            legacy `?period=` query (back-compat) or — 35-07 — when the
+        {/* Read-only banner for past periods. Triggered — 35-07 — when the
             page renders under a `[reportId]` segment that points at a
             past report instead of the lead's active section. */}
-        {(period ||
-          (pinnedReportId &&
-            activeReportId &&
-            pinnedReportId !== activeReportId)) &&
+        {pinnedReportId &&
+          activeReportId &&
+          pinnedReportId !== activeReportId &&
           !isSubmitted && (
             <div className="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-muted)] p-4">
               <span className="text-sm text-[var(--color-muted-foreground)]">
-                Viewing past period
-                {period ? ` · ${period}` : ""}. This form is read-only.
+                Viewing past period. This form is read-only.
               </span>
             </div>
           )}
