@@ -45,13 +45,20 @@ The genuine product a11y findings (after the devtools artifacts are gone):
 - [x] 2.2 `aria-hidden-focus` (1–4, serious) — the dashboard KPI sparkline wraps
       a Recharts chart in `aria-hidden`; Recharts injected a focusable keyboard
       layer. Added `accessibilityLayer={false}`.
-- [ ] 2.3 `page-has-heading-one` (4, moderate) — 4 routes lack an `<h1>`. Needs
-      per-route identification; add a (possibly visually-hidden) h1. REMAINING.
+- [x] 2.3 `page-has-heading-one` (4, moderate) — NOT 4 distinct routes: it is the
+      single `/` landing route seen by 4 roles (one component). The landing brand
+      is the graphical PulseMark wordmark with no semantic heading. Fixed
+      2026-06-07: added an `sr-only` `<h1>` as the first child of `<main>` in
+      `login-page.client.tsx` + a test asserting exactly one level-one heading.
+      Verified live: sweep `page-has-heading-one` 4→0.
 - [ ] 2.4 `color-contrast` (41, serious) — DEFERRED (theme-token work,
       research-only per `CLAUDE.md`; see Non-goals). Not fixed here.
-- [ ] 2.5 Re-run the sweep; confirm scrollable-region + aria-hidden-focus drop to
-      zero. (Blocked intermittently by a flaky `next dev` webServer startup in
-      rapid successive runs — clear `apps/web/.next-sweep` between runs.)
+- [x] 2.5 Re-ran the sweep 2026-06-07: `scrollable-region-focusable`,
+      `aria-hidden-focus`, AND `page-has-heading-one` all 0 across all roles;
+      sweep green (4 passed). The "flaky `next dev` webServer startup" was
+      misdiagnosed — root cause was a corporate-proxy 502 on the loopback health
+      probe (`HTTP_PROXY` set, `NO_PROXY` missing `127.0.0.1`); fixed durably by
+      `e2e/no-proxy-localhost.ts`. See the `sweep-webserver-proxy-502` memo.
 
 ## 3. Sweep harness — noise
 
