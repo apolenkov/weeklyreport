@@ -52,9 +52,10 @@ export class SearchPrismaRepository implements SearchRepository {
     scope: "mine" | "all";
     userId: string;
     groupIds: string[] | null;
+    excludeTypes: SearchHit["type"][];
     limit: number;
   }): Promise<SearchHit[]> {
-    const { q, scope, userId, groupIds, limit } = params;
+    const { q, scope, userId, groupIds, excludeTypes, limit } = params;
 
     // Per-type limit BEFORE the union — keeps the worker query bounded
     // even when one type matches thousands of rows.
@@ -92,6 +93,33 @@ export class SearchPrismaRepository implements SearchRepository {
       groupIds === null
         ? Prisma.empty
         : Prisma.sql`AND p."leadId" IN (SELECT "id" FROM "User" WHERE "reportingGroupId" IN (${Prisma.join(groupIds)}))`;
+
+    // Excluded types are omitted from the query entirely (chunk + its leading
+    // UNION ALL), so they never consume a slot in the outer `LIMIT`. Only the
+    // `project` chunk is currently excludable (the lead-role rule); guard each
+    // optional chunk the same way if more become excludable.
+    const projectChunk = excludeTypes.includes("project")
+      ? Prisma.empty
+      : Prisma.sql`
+        UNION ALL
+        (
+          SELECT
+            'project'::text AS "type",
+            p."id"::text AS "id",
+            p."name" AS "title",
+            ts_headline('russian', p."name", plainto_tsquery('russian', ${q}), ${headlineOpts}) AS "snippet",
+            ts_rank(p."searchTsv", plainto_tsquery('russian', ${q}))::float8 AS "rank",
+            p."id"::text AS "projectId",
+            NULL::text AS "reportId",
+            NULL::text AS "reportSectionId",
+            p."createdAt" AS "createdAt"
+          FROM "Project" p
+          WHERE p."searchTsv" @@ plainto_tsquery('russian', ${q})
+          ${projectMineFilter}
+          ${projectGroupFilter}
+          ORDER BY "rank" DESC, p."createdAt" DESC
+          LIMIT ${perType}
+        )`;
 
     const rows = await this.prisma.$queryRaw<RawHit[]>(Prisma.sql`
       SELECT * FROM (
@@ -159,26 +187,7 @@ export class SearchPrismaRepository implements SearchRepository {
           ${sectionGroupFilter}
           ORDER BY "rank" DESC, d."createdAt" DESC
           LIMIT ${perType}
-        )
-        UNION ALL
-        (
-          SELECT
-            'project'::text AS "type",
-            p."id"::text AS "id",
-            p."name" AS "title",
-            ts_headline('russian', p."name", plainto_tsquery('russian', ${q}), ${headlineOpts}) AS "snippet",
-            ts_rank(p."searchTsv", plainto_tsquery('russian', ${q}))::float8 AS "rank",
-            p."id"::text AS "projectId",
-            NULL::text AS "reportId",
-            NULL::text AS "reportSectionId",
-            p."createdAt" AS "createdAt"
-          FROM "Project" p
-          WHERE p."searchTsv" @@ plainto_tsquery('russian', ${q})
-          ${projectMineFilter}
-          ${projectGroupFilter}
-          ORDER BY "rank" DESC, p."createdAt" DESC
-          LIMIT ${perType}
-        )
+        )${projectChunk}
       ) hits
       ORDER BY "rank" DESC, "createdAt" DESC
       LIMIT ${limit}

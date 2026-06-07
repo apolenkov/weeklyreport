@@ -13,11 +13,21 @@
 const LOOPBACK_HOSTS = ["localhost", "127.0.0.1", "::1"];
 
 const ensureLoopbackBypassesProxy = (): void => {
-  const current = process.env.NO_PROXY ?? process.env.no_proxy ?? "";
-  const entries = current
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean);
+  // Union BOTH casings — some tools write `NO_PROXY`, others `no_proxy`, and a
+  // host may set them to different values. Reading only one would drop entries
+  // present only in the other when we write the merged value back to both.
+  const current = [
+    process.env.NO_PROXY ?? "",
+    process.env.no_proxy ?? "",
+  ].join(",");
+  const entries = [
+    ...new Set(
+      current
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean),
+    ),
+  ];
   const missing = LOOPBACK_HOSTS.filter((host) => !entries.includes(host));
   const merged = [...missing, ...entries].join(",");
   process.env.NO_PROXY = merged;
