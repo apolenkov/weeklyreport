@@ -1,0 +1,309 @@
+/**
+ * Behavioral UI sweep — phase 1, report-only (NON-BLOCKING).
+ *
+ * Reads the durable Scenario Catalog (e2e/catalog/<role>.yaml), logs in per
+ * role via dev-auth, walks every entry-point route, and records anomalies
+ * (console errors, page errors, failed loads, axe violations) into a per-role
+ * Markdown report. It deliberately NEVER fails the run on findings: phase 1 is
+ * a report a human reads, the blocking gate is phase 2 (deferred until the
+ * product stabilizes). Console-error classification mirrors final-gates-resweep
+ * (errors counted; the favicon 404 ignored).
+ *
+ * This is the Layer-1 entry-point sweep ("does every role-reachable route load
+ * cleanly?"). Within-route exhaustive exploration is the AI Driver's run-time
+ * job (task 3.1), not this spec's.
+ *
+ * See openspec/changes/behavioral-ui-regression-gate + docs/adr/0001 +
+ * e2e/catalog/README.md.
+ */
+import * as fs from "node:fs";
+import * as path from "node:path";
+
+import AxeBuilder from "@axe-core/playwright";
+import { test, type ConsoleMessage } from "@playwright/test";
+
+// Import the seed ids directly from the source of truth. NOT via
+// e2e/integration/helpers/seed-ids (its `../../../../../` re-export path is
+// relative to that file's deeper location and does not resolve from here).
+import {
+  ACTIVE_REPORT_ID,
+  PUBLISHED_REPORT_ID,
+} from "../../prisma/seed-constants";
+
+import { loginByCookie } from "./helpers/dev-auth";
+
+type Role = "lead" | "head" | "admin" | "viewer";
+
+type CatalogRoute = {
+  route: string;
+  access?: Role[];
+};
+type Catalog = {
+  role: Role;
+  routes: CatalogRoute[];
+};
+
+type AnomalyKind = "console" | "pageerror" | "load" | "axe";
+type Anomaly = { kind: AnomalyKind; detail: string };
+type RouteResult = {
+  route: string;
+  resolved: string | null;
+  access?: Role[];
+  finalUrl?: string;
+  status?: number | null;
+  anomalies: Anomaly[];
+  skipped?: string;
+};
+
+const CATALOG_DIR = path.resolve(__dirname, "..", "catalog");
+const REPORT_DIR = path.resolve(__dirname, ".reports");
+
+// Known-benign console noise that must NOT be reported as an anomaly. The
+// favicon 404 is the canonical example pinned by final-gates-resweep.
+const IGNORED_CONSOLE: RegExp[] = [/favicon\.ico/i];
+
+/**
+ * Resolve a `[reportId]`-style placeholder to a deterministic seed id. Viewers
+ * only ever see published reports; the `/reports/*` surface is the shared
+ * published view; lead/head/admin land on the active report under `/lead/*`.
+ * An unknown placeholder returns null so the walk records a skip-with-reason
+ * instead of visiting a broken literal URL.
+ */
+function resolveRoute(route: string, role: Role): string | null {
+  if (!route.includes("[")) {
+    return route;
+  }
+  const reportId =
+    role === "viewer" || route.startsWith("/reports/")
+      ? PUBLISHED_REPORT_ID
+      : ACTIVE_REPORT_ID;
+  const resolved = route.replace("[reportId]", reportId);
+  return resolved.includes("[") ? null : resolved;
+}
+
+/**
+ * Minimal structural reader for the generated catalog. The repo runs offline
+ * here (the `yaml` package cannot be installed), and the sweep only needs the
+ * structural subset — role + each route + its access list — never the
+ * Given/When/Then prose. Route and access lines are simple scalars / inline
+ * arrays in the generator's format contract (e2e/catalog/README.md), so a line
+ * scan is robust against the quoted prose fields it deliberately skips.
+ */
+function parseCatalog(text: string): Catalog | null {
+  const roleMatch = /^role:\s*(\S+)\s*$/m.exec(text);
+  if (!roleMatch) {
+    return null;
+  }
+  const role = roleMatch[1] as Role;
+
+  const lines = text.split("\n");
+  const routes: CatalogRoute[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const routeMatch = /^\s*-\s*route:\s*(\S+)\s*$/.exec(lines[i]);
+    if (!routeMatch) {
+      continue;
+    }
+    // The route's access is the first `access:` line in its block, before the
+    // next `- route:` entry.
+    let access: Role[] | undefined;
+    for (let j = i + 1; j < lines.length; j++) {
+      if (/^\s*-\s*route:/.test(lines[j])) {
+        break;
+      }
+      const accessMatch = /^\s*access:\s*\[(.*)\]\s*$/.exec(lines[j]);
+      if (accessMatch) {
+        access = accessMatch[1]
+          .split(",")
+          .map((token) => token.trim())
+          .filter(Boolean) as Role[];
+        break;
+      }
+    }
+    routes.push({ route: routeMatch[1], access });
+  }
+  return routes.length > 0 ? { role, routes } : null;
+}
+
+function loadCatalogs(): Catalog[] {
+  if (!fs.existsSync(CATALOG_DIR)) {
+    return [];
+  }
+  return fs
+    .readdirSync(CATALOG_DIR)
+    .filter((file) => file.endsWith(".yaml"))
+    .map((file) =>
+      parseCatalog(fs.readFileSync(path.join(CATALOG_DIR, file), "utf8")),
+    )
+    .filter((catalog): catalog is Catalog => catalog !== null)
+    .sort((a, b) => a.role.localeCompare(b.role));
+}
+
+function renderReport(role: Role, results: RouteResult[]): string {
+  const totalAnomalies = results.reduce(
+    (sum, result) => sum + result.anomalies.length,
+    0,
+  );
+  const lines: string[] = [
+    `# UI sweep report — ${role}`,
+    "",
+    `Source catalog: \`e2e/catalog/${role}.yaml\` · phase-1 report (non-blocking).`,
+    "",
+    `**${results.length} routes swept, ${totalAnomalies} anomalies.**`,
+    "",
+  ];
+  for (const result of results) {
+    lines.push(`## ${result.route}`);
+    if (result.access) {
+      lines.push(`- access: ${result.access.join(", ")}`);
+    }
+    if (result.skipped) {
+      lines.push(`- skipped: ${result.skipped}`, "");
+      continue;
+    }
+    if (result.resolved) {
+      lines.push(
+        `- visited: \`${result.resolved}\` → \`${result.finalUrl}\` (HTTP ${result.status ?? "?"})`,
+      );
+    }
+    if (result.anomalies.length === 0) {
+      lines.push("- status: OK");
+    } else {
+      lines.push(`- status: ${result.anomalies.length} anomalies`);
+      for (const anomaly of result.anomalies) {
+        lines.push(`  - **${anomaly.kind}**: ${anomaly.detail}`);
+      }
+    }
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
+const catalogs = loadCatalogs();
+
+for (const catalog of catalogs) {
+  test(`sweep: ${catalog.role}`, async ({ page }, testInfo) => {
+    const results: RouteResult[] = [];
+
+    // Report-only contract: a dev-auth login failure must NOT throw the test
+    // (that would write no report for the role). Record it as a role-level
+    // anomaly and still emit the report; the route walk is skipped (you cannot
+    // sweep what you cannot log into).
+    let loggedIn = true;
+    try {
+      await loginByCookie(page, { role: catalog.role });
+    } catch (error) {
+      loggedIn = false;
+      results.push({
+        route: "(dev-auth login)",
+        resolved: null,
+        anomalies: [
+          {
+            kind: "load",
+            detail: `dev-auth login failed for role ${catalog.role}: ${String(error)}`,
+          },
+        ],
+      });
+    }
+
+    for (const entry of loggedIn ? catalog.routes : []) {
+      const resolved = resolveRoute(entry.route, catalog.role);
+      if (resolved === null) {
+        results.push({
+          route: entry.route,
+          resolved,
+          access: entry.access,
+          anomalies: [],
+          skipped: "unresolved route placeholder (no seed id mapping)",
+        });
+        continue;
+      }
+
+      const anomalies: Anomaly[] = [];
+      const onConsole = (msg: ConsoleMessage): void => {
+        if (msg.type() !== "error") {
+          return;
+        }
+        const text = msg.text();
+        if (IGNORED_CONSOLE.some((re) => re.test(text))) {
+          return;
+        }
+        anomalies.push({ kind: "console", detail: text });
+      };
+      const onPageError = (err: Error): void => {
+        anomalies.push({ kind: "pageerror", detail: err.message });
+      };
+      page.on("console", onConsole);
+      page.on("pageerror", onPageError);
+
+      let status: number | null = null;
+      try {
+        const response = await page.goto(resolved, {
+          waitUntil: "domcontentloaded",
+        });
+        status = response?.status() ?? null;
+        if (status !== null && status >= 400) {
+          anomalies.push({
+            kind: "load",
+            detail: `navigation returned HTTP ${status}`,
+          });
+        }
+        // Let client-side render + hydration settle so console/page errors and
+        // late-mounting content surface before axe runs.
+        await page.waitForLoadState("networkidle").catch(() => undefined);
+      } catch (error) {
+        anomalies.push({
+          kind: "load",
+          detail: `navigation failed: ${String(error)}`,
+        });
+      }
+
+      try {
+        const axe = await new AxeBuilder({ page }).analyze();
+        for (const violation of axe.violations) {
+          anomalies.push({
+            kind: "axe",
+            detail: `${violation.id} (${violation.impact ?? "n/a"}): ${violation.help}`,
+          });
+        }
+      } catch (error) {
+        anomalies.push({ kind: "axe", detail: `axe scan failed: ${String(error)}` });
+      }
+
+      page.off("console", onConsole);
+      page.off("pageerror", onPageError);
+
+      results.push({
+        route: entry.route,
+        resolved,
+        access: entry.access,
+        finalUrl: page.url(),
+        status,
+        anomalies,
+      });
+    }
+
+    const report = renderReport(catalog.role, results);
+    fs.mkdirSync(REPORT_DIR, { recursive: true });
+    fs.writeFileSync(path.join(REPORT_DIR, `${catalog.role}.md`), report, "utf8");
+    await testInfo.attach(`sweep-${catalog.role}.md`, {
+      body: report,
+      contentType: "text/markdown",
+    });
+
+    const totalAnomalies = results.reduce(
+      (sum, result) => sum + result.anomalies.length,
+      0,
+    );
+    testInfo.annotations.push({
+      type: "sweep",
+      description: `${catalog.role}: ${totalAnomalies} anomalies across ${results.length} routes`,
+    });
+    // The sweep's product is its report; this is its only intended stdout. It
+    // is report-only by contract (phase 1) — no expect(), the run never fails
+    // on findings.
+    // eslint-disable-next-line no-console -- sweep summary is the deliverable
+    console.log(
+      `[sweep] ${catalog.role}: ${totalAnomalies} anomalies across ${results.length} routes → e2e/sweep/.reports/${catalog.role}.md`,
+    );
+  });
+}

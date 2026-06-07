@@ -59,6 +59,7 @@ export default defineConfig([
     "**/dist/**",
     "**/.next/**",
     "**/.next-e2e/**",
+    "**/.next-sweep/**",
     "**/coverage/**",
     "**/.turbo/**",
     "**/prisma/generated/**",
