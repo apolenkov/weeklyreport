@@ -5,8 +5,8 @@
 role: viewer
 generated: true
 routes:
-  - route: viewer-landing
-    access: []
+  - route: /
+    access: [lead, head, admin, viewer]
     intents:
       - id: viewer-login-and-redirect
         intent: "Viewer authenticates and is directed to the published reports list"

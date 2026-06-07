@@ -465,6 +465,13 @@ HOW (read CODE — do not run the app):
   IMPORTANT: every pageFile (routes AND excludedPages) MUST be one of the census
   paths above, copied character-for-character — the script reconciles on it, and
   any census path you neither route nor exclude aborts the whole run.
+  IMPORTANT (route hygiene — a deterministic post-check aborts on a violation):
+  "route" MUST be a clean URL path and NOTHING else — it starts with "/", keeps
+  dynamic segments like [reportId], and contains NO prose, NO parenthetical, NO
+  "(access: ...)" / "(307 redirect ...)" annotation. Put any redirect target or
+  caveat in the route's "note", never in the "route" string. "access" MUST be the
+  SSR-guard role array for a kept route and is NEVER empty (a route the role can
+  reach has a guard that includes the role; "/" is reachable by all).
   3. For each kept route, list readFiles: the page plus the few key components it
      renders that carry the user's ACTIONS (forms, dialogs, tables, primary
      buttons, tRPC mutation call sites). Use a code-graph MCP if present to
@@ -505,6 +512,32 @@ if (unaccounted.length > 0) {
 log(
   `Discover: "${role}" reaches ${disco.routes.length} routes; ${(disco.excludedPages || []).length} pages excluded-with-reason; full census accounted.`,
 );
+
+// ---- Route-hygiene assert (added after the 2026-06-07 head/admin run) -------
+// Discover sometimes smuggled a prose annotation INTO the route string
+// (e.g. "/lead/report (access: head)", "/admin/settings (307 redirect ...)")
+// and left access: []. A route with a trailing parenthetical fails the sweep's
+// `^\s*-\s*route:\s*(\S+)\s*$` parser, so that route is SILENTLY skipped — the
+// same silent-drop failure the census guard prevents, but at the route-string
+// level the LLM critic does not see. Like the census + id-uniqueness guards,
+// this is a deterministic check: a route MUST be a clean URL ("/...") and a kept
+// route MUST carry its SSR-guard access list. Abort loudly rather than emit a
+// catalog whose routes the sweep will quietly ignore.
+const malformedRoutes = disco.routes
+  .filter((r) => !/^\/\S*$/.test(String(r.route ?? "").trim()))
+  .map((r) => r.route);
+const emptyAccessRoutes = disco.routes
+  .filter((r) => !Array.isArray(r.access) || r.access.length === 0)
+  .map((r) => r.route);
+if (malformedRoutes.length > 0 || emptyAccessRoutes.length > 0) {
+  log(
+    `Route hygiene FAILED — aborting before extract. ` +
+      `Malformed route values (must be a clean "/..." URL, no parentheticals): ${JSON.stringify(malformedRoutes)}. ` +
+      `Routes with empty access (must carry the SSR-guard role list): ${JSON.stringify(emptyAccessRoutes)}. ` +
+      `Re-run Discover; put any redirect/caveat in 'note', never in 'route' or by clearing 'access'.`,
+  );
+  return { error: "route hygiene", malformedRoutes, emptyAccessRoutes, role };
+}
 
 // ---- Extract (one pass) ----------------------------------------------------
 phase("Extract");
