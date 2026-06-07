@@ -51,13 +51,19 @@ function createRepository(
     scope: "mine" | "all";
     userId: string;
     groupIds: string[] | null;
+    excludeTypes: SearchHit["type"][];
     limit: number;
   }) => SearchHit[],
 ): SearchRepository {
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async SearchRepository contract (no awaitable work in the stub)
     async search(params) {
-      return handler(params);
+      // Faithfully model the real repository, which omits excluded-type chunks
+      // from the query entirely, so service tests exercise the true contract.
+      const hits = handler(params);
+      return params.excludeTypes.length > 0
+        ? hits.filter((hit) => !params.excludeTypes.includes(hit.type))
+        : hits;
     },
   };
 }
@@ -149,18 +155,22 @@ describe("SearchService", () => {
     );
   });
 
-  it("drops project hits for a lead (no product destination → would dead-end)", async () => {
-    const repo = createRepository(() => [
-      makeHit({ id: itemId, type: "item", title: "CRM blocker", rank: 0.9 }),
-      makeHit({
-        id: projectId,
-        type: "project",
-        title: "CRM-Sales Hub",
-        rank: 0.8,
-        reportId: undefined,
-        reportSectionId: undefined,
-      }),
-    ]);
+  it("excludes project hits for a lead (no product destination → would dead-end)", async () => {
+    let seenExclude: SearchHit["type"][] | undefined;
+    const repo = createRepository((params) => {
+      seenExclude = params.excludeTypes;
+      return [
+        makeHit({ id: itemId, type: "item", title: "CRM blocker", rank: 0.9 }),
+        makeHit({
+          id: projectId,
+          type: "project",
+          title: "CRM-Sales Hub",
+          rank: 0.8,
+          reportId: undefined,
+          reportSectionId: undefined,
+        }),
+      ];
+    });
     const service = new SearchService(repo);
 
     const result = await service.query(
@@ -168,21 +178,28 @@ describe("SearchService", () => {
       makeSession({ role: "lead" }),
     );
 
+    // Service tells the repository to omit the project chunk for leads, so no
+    // project hit is ever fetched — it never consumes a slot in the limit.
+    expect(seenExclude).toEqual(["project"]);
     expect(result.map((r) => r.type)).toEqual(["item"]);
     expect(result.some((r) => r.type === "project")).toBe(false);
   });
 
   it("keeps project hits for head (has the /admin product surface)", async () => {
-    const repo = createRepository(() => [
-      makeHit({
-        id: projectId,
-        type: "project",
-        title: "CRM-Sales Hub",
-        rank: 0.8,
-        reportId: undefined,
-        reportSectionId: undefined,
-      }),
-    ]);
+    let seenExclude: SearchHit["type"][] | undefined;
+    const repo = createRepository((params) => {
+      seenExclude = params.excludeTypes;
+      return [
+        makeHit({
+          id: projectId,
+          type: "project",
+          title: "CRM-Sales Hub",
+          rank: 0.8,
+          reportId: undefined,
+          reportSectionId: undefined,
+        }),
+      ];
+    });
     const service = new SearchService(repo);
 
     const result = await service.query(
@@ -190,6 +207,7 @@ describe("SearchService", () => {
       makeSession({ role: "head" }),
     );
 
+    expect(seenExclude).toEqual([]);
     expect(result.map((r) => r.type)).toEqual(["project"]);
   });
 
