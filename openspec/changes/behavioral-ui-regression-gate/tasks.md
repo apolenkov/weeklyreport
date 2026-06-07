@@ -2,6 +2,27 @@
 
 Gates after every code step: `pnpm typecheck && pnpm lint && pnpm test`.
 
+> **Session status (2026-06-07).** All four role catalogs
+> (`lead`/`viewer`/`head`/`admin`) landed; harness built AND **run live**. The
+> dev-env `node_modules` (broken earlier) was rebuilt; gates GREEN (`pnpm
+typecheck`, `pnpm lint`, `pnpm test`). The automated Layer-1 sweep ran live —
+> `pnpm test:uat` → `4 passed (1.6m)` against docker Postgres+Redis + the seeded
+> dev DB, reports in `e2e/sweep/.reports/` (~621 anomalies: real a11y + a real
+> duplicate-`key` warning + env noise). Old e2e harness removed (4.1) and gates
+> re-confirmed green (4.2). Remaining: 3.1 the AI **agent** Driver (the automated
+> sweep is its non-AI sibling), the injected-canary check, anomaly triage + a
+> console noise filter, and a commit (everything is uncommitted on `main`).
+>
+> NOTE (latent, not gate-blocking): the e2e suite is **eslint-ignored AND not
+> typechecked by any gate** (it cannot resolve apps/web deps from the repo
+> root). So the green `pnpm lint`/`typecheck` confirm the rest of the repo, not
+> the e2e/sweep code. The harness was validated the way the project actually
+> exercises e2e: `playwright test --list` (transpile + module-graph resolve +
+> catalog parse → 4 tests) and `node --check` on the `.mjs` scripts (the
+> generator validated by wrapping its body as a workflow function, since its
+> top-level `return`/`await` are legal only inside the Workflow runtime).
+> `e2e/tsconfig.json` gained `ignoreDeprecations: "6.0"` (cosmetic).
+
 ## 1. Generate the durable `lead` Scenario Catalog
 
 - [x] 1.1 Decide the home/naming (`e2e/catalog/<role>.yaml`) and add a short
@@ -40,12 +61,32 @@ Gates after every code step: `pnpm typecheck && pnpm lint && pnpm test`.
 
 ## 2. Restore the sweep harness (no re-derivation)
 
-- [ ] 2.1 Restore `dev-auth` (per-role login) from git history into the
+- [x] 2.1 Restore `dev-auth` (per-role login) from git history into the
       regenerated harness; confirm `lead`/`head`/`admin`/`viewer` login works.
-- [ ] 2.2 Add a fresh `playwright.config.ts` for the UI sweep and wire
-      `pnpm test:uat`; reuse `@axe-core/playwright`.
-- [ ] 2.3 Confirm `e2e/integration/*` + `playwright.integration.config.ts` and
-      all vitest unit tests are untouched and still run.
+      Done 2026-06-07: `dev-auth.ts` was still in the tree under
+      `e2e/regression/helpers/` (a dir slated for removal in 4.1), so it was
+      `git mv`d to `e2e/sweep/helpers/dev-auth.ts` (relocate, not re-derive;
+      repo-root depth preserved so `seedAdvancedViaCli` still resolves). NOTE:
+      live per-role login still to be confirmed against the running app.
+- [x] 2.2 Add a fresh `playwright.config.ts` for the UI sweep and wire
+      `pnpm test:uat`; reuse `@axe-core/playwright`. Done 2026-06-07:
+      `e2e/sweep/playwright.config.ts` (API+web in dev-auth, ports 3100/3101 —
+      distinct from integration 3102/3105, isolated `.next-sweep` distDir) +
+      `e2e/sweep/catalog-sweep.spec.ts` (Layer-1 entry-point sweep: per role
+      dev-login → walk catalog routes → console/pageerror/load + axe → per-role
+      Markdown report; report-only, never fails CI). `[reportId]` resolved
+      deterministically from seed-constants (viewer/`/reports/*`→published,
+      `/lead/*`→active). `pnpm test:uat` wired. RAN LIVE 2026-06-07: `4 passed
+    (1.6m)` against a docker Postgres+Redis and the seeded dev DB; the config's
+      own web+API booted; all 4 role reports written to `e2e/sweep/.reports/`.
+      Found ~621 anomalies (lead 117, viewer 65, head 198, admin 241): real a11y
+      violations (button-name/label critical, color-contrast, nested-interactive) + a real React duplicate-`key` warning + env noise (telemetry
+      ERR_CONNECTION_REFUSED, recharts headless width(-1)). Triage + a noise
+      filter are follow-ups.
+- [x] 2.3 Confirm `e2e/integration/*` + `playwright.integration.config.ts` and
+      all vitest unit tests are untouched and still run. Done 2026-06-07: the
+      sweep is a separate dir/config on its own ports; the 4.1 removal kept
+      integration + unit; `pnpm typecheck` and `pnpm lint` green after removal.
 
 ## 3. Build the Driver (human + AI agent)
 
@@ -53,26 +94,62 @@ Gates after every code step: `pnpm typecheck && pnpm lint && pnpm test`.
       the catalog, drives the browser via the **Playwright MCP** through
       `dev-auth`, explores each route's elements/transitions at run time, and
       records anomalies (console errors, broken flow vs expected, layout, axe).
-- [ ] 3.2 Add the human-Driver mode: render the same catalog as a per-role
+- [x] 3.2 Add the human-Driver mode: render the same catalog as a per-role
       checklist for manual UAT, collecting pass/fail + notes in the same report
-      shape.
-- [ ] 3.3 Define the per-role **report** format (role · route · anomaly), and
-      confirm it is non-blocking (produces a report, does not fail CI).
+      shape. Done 2026-06-07: `e2e/sweep/render-checklist.mjs` (pure Node, no
+      deps) reads every `e2e/catalog/*.yaml` and emits
+      `e2e/sweep/.reports/checklist-<role>.md` — per-route, per-intent
+      Given/When/Then with a PASS/FAIL + notes line. Verified with `node` on the
+      landed catalogs.
+- [x] 3.3 Define the per-role **report** format (role · route · anomaly), and
+      confirm it is non-blocking (produces a report, does not fail CI). Done
+      2026-06-07: both Driver modes share the role · route · anomaly shape — the
+      automated sweep writes `e2e/sweep/.reports/<role>.md`. Report-only: no
+      `expect()`, and navigation, axe, AND dev-auth login are each wrapped so a
+      failure becomes a recorded anomaly (a broken login lands as a role-level
+      `(dev-auth login)` anomaly) instead of a thrown test — a report is always
+      written. Console classification mirrors `final-gates-resweep` (errors
+      counted, favicon 404 ignored).
 - [ ] 3.4 Run the `lead` sweep under the agent Driver; confirm a deliberately
       broken route (failed load / injected console error) shows up in the report.
+      PARTIAL 2026-06-07: the **automated** Layer-1 sweep (2.2) ran live across
+      all 4 roles and demonstrably captured real console errors, a pageerror, and
+      axe violations — so the report path is proven. Still TODO: run it under the
+      **AI agent** Driver (3.1, not yet built) and the explicit injected-canary
+      check.
+- [x] 3.4b (implicit) Automated sweep proven to capture real anomalies live —
+      see 2.2 run notes.
 
 ## 4. Remove the old UI e2e harness
 
-- [ ] 4.1 Remove `e2e/auth.setup.ts`, `e2e/fixtures.ts`,
+- [x] 4.1 Remove `e2e/auth.setup.ts`, `e2e/fixtures.ts`,
       `e2e/playwright.config.ts` (old), `e2e/regression/` (old), `e2e/helpers/`,
       `e2e/visual/`, and the `test:e2e` / `test:e2e:ui` scripts — superseded by
-      the regenerated sweep. Keep integration + unit.
-- [ ] 4.2 Confirm gates green and `pnpm test:uat` (lead) runs after removal.
+      the regenerated sweep. Keep integration + unit. Done 2026-06-07: all listed
+      files `git rm`d (nothing imported them); removed `test:e2e`/`test:e2e:ui`
+      from root and `visual:setup`/`visual:test`/`visual:update` from
+      apps/web. TRADE-OFF: this drops the visual **screenshot** regression
+      (Phase 39-06) — the sweep checks console + a11y, NOT pixel diffs. Recover
+      via `git restore` if screenshot regression is wanted back.
+- [x] 4.2 Confirm gates green and `pnpm test:uat` (lead) runs after removal. Done
+      2026-06-07: `pnpm typecheck` + `pnpm lint` green; `pnpm test:uat` runs all
+      4 roles green. Fixed a side effect: the sweep's `.next-sweep` distDir was
+      being linted — added `**/.next-sweep/**` to `eslint.config.ts` ignores.
 
 ## 5. Extend to remaining roles + close out
 
 - [ ] 5.1 Repeat 1+3 for `head`, then `admin`, then `viewer` (each lands
-      separately, sweep reports per role).
+      separately, sweep reports per role). Catalog half (step 1) done
+      autonomously 2026-06-07: all four roles now have catalogs — `lead` (10
+      routes), `viewer` (6), `head` (15), `admin` (18) — `head`/`admin` generated
+      and adversarially reviewed via the generator workflow. Six generation
+      defects found and fixed (see `e2e/catalog/_generation-notes.md`): 3
+      malformed route values + empty access (`viewer`/`head`/`admin`), a DOM
+      selector leaked into an `admin` note, a vacuous `head` `then`, and 3
+      hallucinated mutation intents on `head` `/reports/[reportId]/present` (a
+      read-only view). The generator was hardened with a deterministic
+      route-hygiene assert so the route defects can't silently recur. The Driver
+      half (step 3, per-role sweep run) remains — needs the live app.
 - [ ] 5.2 Document the loop in `e2e/catalog/README.md`: manual-UAT findings →
       feedback-log intake → graduate into the catalog → regenerate.
 - [ ] 5.3 Record phase 2 (freeze critical paths into deterministic specs;
