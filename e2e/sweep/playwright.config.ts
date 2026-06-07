@@ -56,7 +56,7 @@ export default defineConfig({
       cwd: path.join(REPO_ROOT, "apps", "api"),
       url: `${API_URL}/health/live`,
       reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
+      timeout: 240_000,
       env: {
         ...process.env,
         PORT: String(API_PORT),
@@ -70,7 +70,7 @@ export default defineConfig({
       command: `pnpm --filter @customreport/web exec next dev -p ${WEB_PORT}`,
       url: WEB_URL,
       reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
+      timeout: 240_000,
       env: {
         ...process.env,
         NEXT_PUBLIC_API_URL: API_URL,
