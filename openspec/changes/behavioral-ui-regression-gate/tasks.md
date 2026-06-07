@@ -77,7 +77,7 @@ typecheck`, `pnpm lint`, `pnpm test`). The automated Layer-1 sweep ran live —
       Markdown report; report-only, never fails CI). `[reportId]` resolved
       deterministically from seed-constants (viewer/`/reports/*`→published,
       `/lead/*`→active). `pnpm test:uat` wired. RAN LIVE 2026-06-07: `4 passed
-  (1.6m)` against a docker Postgres+Redis and the seeded dev DB; the config's
+(1.6m)` against a docker Postgres+Redis and the seeded dev DB; the config's
       own web+API booted; all 4 role reports written to `e2e/sweep/.reports/`.
       Found ~621 anomalies (lead 117, viewer 65, head 198, admin 241): real a11y
       violations (button-name/label critical, color-contrast, nested-interactive) + a real React duplicate-`key` warning + env noise (telemetry
@@ -135,6 +135,23 @@ typecheck`, `pnpm lint`, `pnpm test`). The automated Layer-1 sweep ran live —
       dismissed as seed artifacts.
 - [x] 3.4b (implicit) Automated sweep proven to capture real anomalies live —
       see 2.2 run notes.
+- [x] 3.5 Disposition of the 2 Driver-confirmed `lead` bugs: - **FIXED** — search `project`-hit dead-end. `SearchService` now drops
+      `project` hits for lead sessions (no product destination → would land on
+      the role-gated `/admin`). Tests added; verified live (lead "CRM" search
+      returns only the actionable Task hit). Commit `fix(api): drop project
+      search hits for leads`. - **DEFERRED (needs a product decision)** — `?period=` read-only banner.
+      The adversarial verifier proposed a banner-only fix (drop the
+      `!isSubmitted` gate on the legacy `?period=` path in
+      `lead-form.tsx:1623`). On reading the data path, this is unsafe as-is:
+      `targetReportId = pinnedReportId ?? activeReportId` (line 321) means
+      `?period=<week>` NEVER resolves to that week's report — it loads the
+      ACTIVE (current-week) report and only forces read-only. So showing
+      "Viewing past period · 2026-W20" over current-week data would be a
+      confident lie. The real question is what the legacy `?period=` bookmark
+      should do (resolve+load the historical report, or just read-only the
+      active report with an accurate banner). Low-traffic legacy path; left for
+      the user to decide rather than baking a misleading symptom-fix. The
+      Driver did its job: the bug is found, root-caused, and recorded.
 
 ## 4. Remove the old UI e2e harness
 
