@@ -112,6 +112,11 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
               <LineChart
                 data={sparklineRows}
                 margin={{ top: 4, right: 4, left: 4, bottom: 0 }}
+                // Recharts injects a focusable keyboard layer by default; this
+                // decorative sparkline lives in an aria-hidden wrapper, so the
+                // layer would be a focusable descendant of aria-hidden content
+                // (axe aria-hidden-focus). Disable it.
+                accessibilityLayer={false}
               >
                 <YAxis hide domain={[0, 100]} />
                 <Tooltip
