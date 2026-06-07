@@ -188,6 +188,17 @@ describe("Landing page — CLS skeleton (CLS-01)", () => {
   });
 });
 
+describe("Landing page — a11y heading (page-has-heading-one)", () => {
+  it("renders exactly one level-one heading naming the product", async () => {
+    const LoginPageClient = await loadLoginPageClient();
+    render(<LoginPageClient initialOrg={STUB_ORG} />);
+
+    const headings = await screen.findAllByRole("heading", { level: 1 });
+    expect(headings).toHaveLength(1);
+    expect(headings[0]).toHaveTextContent("Your PULSE");
+  });
+});
+
 describe("Landing page — last-role hint (UFB-071)", () => {
   it("does not render the hint when no record is stored", async () => {
     const LoginPageClient = await loadLoginPageClient();

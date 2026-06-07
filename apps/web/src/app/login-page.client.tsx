@@ -223,6 +223,11 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
 
   return (
     <main id="main-content" className="flex min-h-svh">
+      {/* a11y (page-has-heading-one): the landing page's visible brand is the
+          graphical PulseMark wordmark, which carries no semantic heading. Give
+          the page a single level-one heading for screen readers and document
+          outline without altering the visual design. */}
+      <h1 className="sr-only">Your PULSE — Status Reporting System</h1>
       {/* Left panel — «Your PULSE?» rebrand (UFB-058 / Phase 58).
           PulseBackground renders dark green base + dot grid + ECG line.
           PulseMark + TaglineCycler are positioned above it. The ECG
