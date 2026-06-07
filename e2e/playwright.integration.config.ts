@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 import * as path from "path";
+// Side-effect import: ensure loopback health probes bypass any corporate proxy
+// (see e2e/no-proxy-localhost.ts) before the webServer probes run.
+import "./no-proxy-localhost";
 
 const API_PORT = Number(process.env.E2E_API_PORT ?? 3102);
 const WEB_PORT = Number(process.env.E2E_WEB_PORT ?? 3105);

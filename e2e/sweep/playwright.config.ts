@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 import * as path from "path";
+// Side-effect import: ensure loopback health probes bypass any corporate proxy
+// (see e2e/no-proxy-localhost.ts) before the webServer probes run.
+import "../no-proxy-localhost";
 
 // Behavioral UI sweep harness (phase 1, report-only). Drives the durable
 // Scenario Catalog (e2e/catalog/<role>.yaml) per role via dev-auth, walks the
