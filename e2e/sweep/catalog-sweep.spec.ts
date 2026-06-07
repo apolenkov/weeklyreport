@@ -59,26 +59,25 @@ const CATALOG_DIR = path.resolve(__dirname, "..", "catalog");
 const REPORT_DIR = path.resolve(__dirname, ".reports");
 
 // Known-benign console noise that must NOT be reported as an anomaly. The
-// favicon 404 is the canonical example pinned by final-gates-resweep.
-//
-// The bare "Failed to load resource: net::ERR_CONNECTION_REFUSED" carries no
-// URL, so it is redundant with the requestfailed channel below (which reports
-// the URL); we silence the URL-less duplicate and let requestfailed surface any
-// genuinely refused endpoint. The [Agentation] line is the web app's own catch
-// log for its dev-tools client, which boots only because the sweep runs
-// `next dev` — Next forces NODE_ENV=development, so the NODE_ENV-gated
-// AgentationDevtools renders and fails to reach its backend on :4747 (see
-// IGNORED_REQUEST_URLS). Confirmed source 2026-06-07; not a product defect.
-const IGNORED_CONSOLE: RegExp[] = [
-  /favicon\.ico/i,
-  /Failed to load resource: net::ERR_CONNECTION_REFUSED/i,
-  /\[Agentation\]/i,
-];
+// favicon 404 is the canonical example pinned by final-gates-resweep. The
+// former Agentation/ERR_CONNECTION_REFUSED entries were removed once the root
+// cause was fixed: the sweep now disables the dev-tools widget at the source
+// (NEXT_PUBLIC_DISABLE_DEVTOOLS in playwright.config.ts), so nothing blindly
+// masks a real refused connection here.
+const IGNORED_CONSOLE: RegExp[] = [/favicon\.ico/i];
 
-// Failed-request URLs that are known sweep-environment noise, not product
-// defects: the Agentation dev-tools backend (:4747) is not running during the
-// sweep, and its client only renders because `next dev` forces development mode.
-const IGNORED_REQUEST_URLS: RegExp[] = [/localhost:4747/i, /127\.0\.0\.1:4747/i];
+// Failed-request URLs that are known sweep-environment noise. Kept defensively:
+// the dev-tools backend (:4747) is now disabled at the source, but if a future
+// change re-enables a dev widget under `next dev` this keeps its noise out while
+// still surfacing every other refused URL.
+const IGNORED_REQUEST_URLS: RegExp[] = [
+  /localhost:4747/i,
+  /127\.0\.0\.1:4747/i,
+  // External font CDN, not reachable in the sweep env; an app-level concern
+  // (runtime dependency on a third-party CDN), not a per-route product defect.
+  /fonts\.googleapis\.com/i,
+  /fonts\.gstatic\.com/i,
+];
 
 /**
  * Resolve a `[reportId]`-style placeholder to a deterministic seed id. Viewers
@@ -282,7 +281,12 @@ for (const catalog of catalogs) {
         }
         // Let client-side render + hydration settle so console/page errors and
         // late-mounting content surface before axe runs.
-        await page.waitForLoadState("networkidle").catch(() => undefined);
+        // Cap the settle wait: an external resource that hangs (e.g. the Google
+        // Fonts CDN, unreachable in the sweep env) must not consume the whole
+        // per-test budget. The page is already domcontentloaded from goto().
+        await page
+          .waitForLoadState("networkidle", { timeout: 3000 })
+          .catch(() => undefined);
       } catch (error) {
         anomalies.push({
           kind: "load",

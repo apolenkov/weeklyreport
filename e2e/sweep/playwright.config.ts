@@ -21,7 +21,7 @@ export default defineConfig({
   outputDir: ".results",
   // A route walk that logs in, navigates, and runs axe is slower than a unit
   // test; give each sweep step room before it is flagged as a hang.
-  timeout: 90_000,
+  timeout: 180_000,
   expect: { timeout: 10_000 },
   // Sequential: dev-login is rate-limited and the sweep shares one seeded DB.
   // The sweep is a report, not a perf-sensitive suite — determinism > speed.
@@ -77,6 +77,10 @@ export default defineConfig({
         AUTH_DEV_MODE: "true",
         NODE_ENV: "test",
         NEXT_PUBLIC_AUTH_STUB: "true",
+        // `next dev` forces NODE_ENV=development, which would mount the
+        // Agentation dev-tools widget (console + a11y + :4747 network noise that
+        // is not part of the product under test). Disable it for the sweep.
+        NEXT_PUBLIC_DISABLE_DEVTOOLS: "true",
         // Isolate the build dir so the sweep web server coexists with a
         // running `pnpm dev` Next instance (N16 fingerprints by repo dir +
         // .next).
