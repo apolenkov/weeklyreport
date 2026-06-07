@@ -139,7 +139,7 @@ typecheck`, `pnpm lint`, `pnpm test`). The automated Layer-1 sweep ran live —
       `project` hits for lead sessions (no product destination → would land on
       the role-gated `/admin`). Tests added; verified live (lead "CRM" search
       returns only the actionable Task hit). Commit `fix(api): drop project
-      search hits for leads`. - **DEFERRED (needs a product decision)** — `?period=` read-only banner.
+    search hits for leads`. - **DEFERRED (needs a product decision)** — `?period=` read-only banner.
       The adversarial verifier proposed a banner-only fix (drop the
       `!isSubmitted` gate on the legacy `?period=` path in
       `lead-form.tsx:1623`). On reading the data path, this is unsafe as-is:
@@ -152,6 +152,19 @@ typecheck`, `pnpm lint`, `pnpm test`). The automated Layer-1 sweep ran live —
       active report with an accurate banner). Low-traffic legacy path; left for
       the user to decide rather than baking a misleading symptom-fix. The
       Driver did its job: the bug is found, root-caused, and recorded.
+      **RESOLVED (2026-06-08) — legacy `?period=` branch retired.** Decision
+      (user): do NOT build a week→reportId resolver to keep a URL format that,
+      pre-prod, no real bookmark uses — viewing a past week is already
+      supported via the addressed URL `/lead/report/[reportId]` + the history
+      dropdown (35-07). The branch was removed: `period` prop dropped from
+      `LeadForm` and the bare-route page; a stale `?period=` no longer
+      suppresses the canonical redirect (it is ignored, the form still
+      redirects to `/lead/report/<activeReportId>`); the `!!period` operands in
+      both read-only gates and the banner's `period` trigger/label deleted. The
+      "Viewing past period" banner now fires only on the addressed-route case
+      (`pinnedReportId !== activeReportId`). Test `lead-form-addressable.test.tsx`
+      updated (old "no redirect" assertion now asserts the redirect fires).
+      Gates green: typecheck, lint, 582 web tests.
 
 ## 4. Remove the old UI e2e harness
 
