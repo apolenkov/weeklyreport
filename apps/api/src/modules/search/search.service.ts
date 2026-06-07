@@ -118,9 +118,21 @@ export class SearchService {
       limit: parsed.limit,
     });
 
+    // A `lead` has no product-detail destination: the only surface that shows a
+    // Project (product) entity is /admin, which leads cannot access. Returning
+    // a `project` hit to a lead therefore dead-ends the search — clicking it
+    // navigates to /admin and renders "Page unavailable for your role". Drop
+    // project hits for leads here; the lead's own items/risks/decisions for that
+    // product still surface (they deep-link into /lead/report). Found by the AI
+    // UI Driver (behavioral-ui-regression-gate task 3.1).
+    const visibleHits =
+      session.role === "lead"
+        ? hits.filter((hit) => hit.type !== "project")
+        : hits;
+
     // Server-side ordering: rank desc, then createdAt desc as a stable tie-
     // breaker so two equal-rank rows don't shuffle between calls.
-    const sorted = [...hits].sort((a, b) => {
+    const sorted = [...visibleHits].sort((a, b) => {
       if (b.rank !== a.rank) return b.rank - a.rank;
       return b.createdAt.localeCompare(a.createdAt);
     });

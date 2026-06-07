@@ -149,6 +149,50 @@ describe("SearchService", () => {
     );
   });
 
+  it("drops project hits for a lead (no product destination → would dead-end)", async () => {
+    const repo = createRepository(() => [
+      makeHit({ id: itemId, type: "item", title: "CRM blocker", rank: 0.9 }),
+      makeHit({
+        id: projectId,
+        type: "project",
+        title: "CRM-Sales Hub",
+        rank: 0.8,
+        reportId: undefined,
+        reportSectionId: undefined,
+      }),
+    ]);
+    const service = new SearchService(repo);
+
+    const result = await service.query(
+      { q: "CRM", scope: "mine", limit: 20 },
+      makeSession({ role: "lead" }),
+    );
+
+    expect(result.map((r) => r.type)).toEqual(["item"]);
+    expect(result.some((r) => r.type === "project")).toBe(false);
+  });
+
+  it("keeps project hits for head (has the /admin product surface)", async () => {
+    const repo = createRepository(() => [
+      makeHit({
+        id: projectId,
+        type: "project",
+        title: "CRM-Sales Hub",
+        rank: 0.8,
+        reportId: undefined,
+        reportSectionId: undefined,
+      }),
+    ]);
+    const service = new SearchService(repo);
+
+    const result = await service.query(
+      { q: "CRM", scope: "all", limit: 20 },
+      makeSession({ role: "head" }),
+    );
+
+    expect(result.map((r) => r.type)).toEqual(["project"]);
+  });
+
   it("returns empty array when repository finds nothing", async () => {
     const service = new SearchService(createRepository(() => []));
 
