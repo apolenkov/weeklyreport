@@ -25,16 +25,33 @@ sweep re-run (`pnpm test:uat`) after any change that touches a swept surface.
 - [x] 1.4 Sweep re-run confirmed: zero duplicate-`key`, zero hydration pageerror
       across all 4 roles.
 
-## 2. Shared-shell a11y (axe)
+## 2. a11y (axe)
 
-- [ ] 2.1 `button-name` (49) + `label` (49) — critical. Fix at the shared
-      nav/shell source; add discernible text / associated labels.
-- [ ] 2.2 `link-name` (49), `nested-interactive` (49), `region` (49) — serious /
-      moderate. Fix at source.
-- [ ] 2.3 `aria-hidden-focus` (4), `page-has-heading-one` (4),
-      `scrollable-region-focusable` (2).
-- [ ] 2.4 Re-run the sweep after each cluster; confirm the targeted rule drops to
-      zero across all roles.
+> **MAJOR REFRAME (2026-06-07).** Axe node-selector capture (§3.1) proved the
+> systemic ×49 rules were NOT the product shell. `button-name`, `label`,
+> `link-name`, `nested-interactive`, and `region`/canvas — 245 of ~290 axe
+> findings — were ALL the Agentation dev-tools widget (`.styles-module__*`
+> classes from `agentation@3.0.2`), which renders only because the sweep ran
+> `next dev`. Fixed at source by disabling devtools in the sweep (§3) →
+> `.styles-module__*` findings 245→0. The original 2.1/2.2 "fix the shared
+> nav/shell" plan was a false trail; do NOT chase it.
+
+The genuine product a11y findings (after the devtools artifacts are gone):
+
+- [x] 2.1 `scrollable-region-focusable` (2, serious) — the lead current/next-week
+      scroll containers (`max-h-[420px] overflow-y-auto`) were not keyboard
+      focusable. Added `tabIndex={0}` + `role="group"` + `aria-label` (with a
+      documented `eslint-disable` for the jsx-a11y vs axe rule conflict).
+- [x] 2.2 `aria-hidden-focus` (1–4, serious) — the dashboard KPI sparkline wraps
+      a Recharts chart in `aria-hidden`; Recharts injected a focusable keyboard
+      layer. Added `accessibilityLayer={false}`.
+- [ ] 2.3 `page-has-heading-one` (4, moderate) — 4 routes lack an `<h1>`. Needs
+      per-route identification; add a (possibly visually-hidden) h1. REMAINING.
+- [ ] 2.4 `color-contrast` (41, serious) — DEFERRED (theme-token work,
+      research-only per `CLAUDE.md`; see Non-goals). Not fixed here.
+- [ ] 2.5 Re-run the sweep; confirm scrollable-region + aria-hidden-focus drop to
+      zero. (Blocked intermittently by a flaky `next dev` webServer startup in
+      rapid successive runs — clear `apps/web/.next-sweep` between runs.)
 
 ## 3. Sweep harness — noise
 
