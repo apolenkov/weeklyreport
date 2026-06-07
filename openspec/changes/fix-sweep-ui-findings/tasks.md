@@ -46,12 +46,13 @@ endpoint="http://localhost:4747" />`. The component correctly gates on
 > render and fail to reach their backend on :4747 (not up in the sweep). Pure
 > sweep-environment artifact, NOT a product bug.
 
-- [ ] 3.1 Add `page.on('requestfailed')` URL capture so resource-load failures
-      are reported WITH their URL (the authoritative channel), and a known-ignored
-      devtools-endpoint list (`localhost:4747`) skips the agentation noise while
-      any other refused URL still surfaces.
-- [ ] 3.2 Filter the bare `net::ERR_CONNECTION_REFUSED` + `[Agentation]` console
-      lines with a comment recording the confirmed `next dev`→:4747 source.
+- [x] 3.1 Added `page.on('requestfailed')` URL capture (kind `network`) with an
+      `IGNORED_REQUEST_URLS` devtools-endpoint list (`:4747`); other refused URLs
+      still surface. Also added axe `violation.nodes[].target` capture so a11y
+      fixes (§2) can be targeted to the offending elements.
+- [x] 3.2 Filtered the bare `net::ERR_CONNECTION_REFUSED` + `[Agentation]`
+      console lines with a comment recording the confirmed `next dev`→:4747
+      source. Sweep re-run confirmed both → 0 across all roles.
 
 ## 4. Close out
 
