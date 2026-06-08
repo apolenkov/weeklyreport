@@ -56,8 +56,17 @@ typecheck`, `pnpm lint`, `pnpm test`). The automated Layer-1 sweep ran live —
       that Discover must fully account for (route-or-excluded-with-reason, asserted
       in-script before extract), plus a deterministic id-uniqueness assert gating
       the repair loop. Done 2026-06-04 in `generate-catalog.workflow.mjs`.
-- [ ] 1.5 Fold in the `ok` rows from the archived `feedback-log.md` that the
+- [x] 1.5 Fold in the `ok` rows from the archived `feedback-log.md` that the
       generator missed; dedup. The feedback-log stays the quick manual-UAT intake.
+      Done 2026-06-08. Dedup outcome: rows #5–#10 are "loads fine / 0 console
+      errors" confirmations — the README forbids that as a `then` ("never 'it
+      works' / 'loads fine'") AND each route they touch already has richer
+      intents (`/lead/report` sections, `?mode=slides`, `/reports?tab=drafts`,
+      `/head/report`, `/admin`, `/reports?tab=published`), so they are NOT
+      folded. The one observable behavior not yet pinned was #3 — the lead risks
+      section badge counts only the current author's own risks, not the
+      read-only cross-author risks shown alongside (confirmed intentional).
+      Folded as a `note` on `lead-report-edit-risks` in `e2e/catalog/lead.yaml`.
 
 ## 2. Restore the sweep harness (no re-derivation)
 
@@ -180,6 +189,17 @@ search hits for leads`. - **DEFERRED (needs a product decision)** — `?period=`
       updated both navigator tests (the "falls back to ?period=" cases now
       assert the param is ignored and the current period is selected). `?period=`
       is now fully gone from the app's runtime reads.
+      CATALOG CLEANUP (2026-06-08): the Scenario Catalog still described the
+      retired `?period=` behavior, so it was corrected to match (the catalog is
+      this change's own artifact — leaving it stale would make a Driver/human-UAT
+      confirm a behavior that no longer exists). `e2e/catalog/lead.yaml`: dropped
+      the now-false `lead-report-bare-period-readonly` intent entirely and
+      reworded `lead-report-bare-redirect`'s note to state the stale `?period=`
+      is ignored (id kept stable). `head.yaml`: fixed `head-report-redirect-canonical`
+      (given + note) to drop the "redirect suppressed when ?period=" claim.
+      `admin.yaml`: fixed the `/admin` → head-report note's "unless ?period="
+      clause. Verified: `grep period= e2e/catalog/*.yaml` shows only
+      retired/ignored wording; `playwright test --list` parses all 4 catalogs.
 
 ## 4. Remove the old UI e2e harness
 

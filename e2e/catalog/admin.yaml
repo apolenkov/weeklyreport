@@ -247,7 +247,7 @@ routes:
         given: "The admin navigates to /head/report or /head/report/[reportId]"
         when: "the page loads with an active reporting period"
         then: "the portfolio overview table and product accordions display all lead submissions grouped by product (or by lead when scope=lead), with submission counts and period metadata visible"
-        note: "If no active period exists, an empty state message appears asking an admin to open a new period. Legacy bare /head/report redirects to /head/report/[reportId] once the active reportId is known (unless ?period= or redirectToCanonical=false)."
+        note: "If no active period exists, an empty state message appears asking an admin to open a new period. Legacy bare /head/report redirects to /head/report/[reportId] once the active reportId is known (unless redirectToCanonical=false; a stale ?period= is ignored — legacy branch retired, see this change's tasks.md §3.5)."
   - route: /head/report/[reportId]
     access: [admin]
     intents:
