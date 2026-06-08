@@ -492,7 +492,6 @@ export default defineConfig([
       // god-files, genuinely multi-concern → split, sequential, one per commit.
       // Each split removes its entry here. Goal state: empty list.
       "apps/api/src/modules/admin/admin.prisma-repository.ts",
-      "apps/web/src/components/admin/settings-tab.tsx",
     ],
     rules: { "max-lines": "off" },
   },
