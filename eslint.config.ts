@@ -494,7 +494,6 @@ export default defineConfig([
       "apps/api/src/modules/admin/admin.prisma-repository.ts",
       "apps/web/src/components/admin/settings-tab.tsx",
       "apps/web/src/components/admin/periods-tab.tsx",
-      "apps/web/src/components/admin/reminders-tab.tsx",
     ],
     rules: { "max-lines": "off" },
   },
