@@ -5,8 +5,8 @@
  * Phase 35-07 (UX-15): nav now emits path-segment URLs
  * (`/lead/report/<reportId>`) via `router.push` so each addressed period
  * has a shareable URL and the browser back button walks the period
- * history one week at a time. The legacy `?period=` query continues to
- * read selection state when the page is rendered under the bare route.
+ * history one week at a time. The legacy `?period=` query has been retired
+ * (it no longer drives selection state on the bare route).
  */
 import "@testing-library/jest-dom/vitest";
 
@@ -93,14 +93,16 @@ describe("PeriodNavigator (lead)", () => {
     expect(select.value).toBe("2026-W15");
   });
 
-  it("falls back to ?period= search param when no path-segment id", () => {
+  it("ignores a stale ?period= query (retired) and defaults to the current period", () => {
     mockPathname = "/lead/report";
     mockSearchParams = new URLSearchParams("period=2026-W15");
     render(<PeriodNavigator periods={PERIODS} />);
     const select = screen.getByLabelText(
       "Select reporting period",
     ) as HTMLSelectElement;
-    expect(select.value).toBe("2026-W15");
+    // The legacy `?period=` fallback was removed; with no path-segment id the
+    // dropdown defaults to PERIODS[0] (2026-W17, the current period).
+    expect(select.value).toBe("2026-W17");
   });
 
   it("D-17: current period option carries (Current) suffix; no week/period numbering", () => {
