@@ -230,7 +230,7 @@ serviceRepo.getRule` then bare `originalGetRule(rid)`) was fixed with
     rules. Sub-waved by JUDGMENT-density (advisor), not by rule.
     • [x] 6a `no-confusing-void-expression` → error (commit `1d14b63c`): 274
     firings, but 270 are arrow-shorthand void returns → `ignoreArrowShorthand:
-  true`. A documented SOFTENING, but it opens NO Promise hole — the only
+true`. A documented SOFTENING, but it opens NO Promise hole — the only
     dangerous arrow-shorthand-void case is a Promise in a void slot, already
     rejected by `no-misused-promises` (error since wave 2). A STRONGER safety
     argument than wave-5's ignorePrimitives (advisor-confirmed, user-chosen
@@ -299,3 +299,22 @@ serviceRepo.getRule` then bare `originalGetRule(rid)`) was fixed with
       exclude-list holds exactly the justified entries (incl. inherited a11y
       carve-outs).
 - [ ] R5b `openspec validate ratchet-lint-to-strict --strict` green.
+
+## 6. Re-homed orphans (from `establish-scenario-catalog` reconciliation)
+
+Parked here on 2026-06-08 because this is their natural home change (import-type
+/ DI type-safety, adjacent to the wave-6 `no-unsafe-*` and the `import type`
+boundary work in R3c). Both are Opus-review tasks, not yet executed.
+
+- [ ] R6a (orphan O3): Record an Opus adversarial review of the DI import-type
+      fix (commit `7952e3c5`, 47 sites). Gates were green at the time but no
+      review was logged. The risk is the `biome-importtype-broke-nest-di`
+      pattern — a runtime DI provider demoted to `import type` becomes a
+      type-only import erased at compile time, so Nest cannot resolve it at
+      runtime. Confirm none of the 47 sites demoted a value-position DI token to
+      type-only.
+- [ ] R6b (orphan O4): Audit the remaining lazy / conditional `import type`
+      paths repo-wide for the same runtime DI type-lie (a token used as a value
+      — `@Inject`, constructor param, `useClass`, factory `inject:` — imported
+      `type`-only). Pairs with R3c's `apps/web`→`apps/api` `allowTypeImports`
+      carve-out.

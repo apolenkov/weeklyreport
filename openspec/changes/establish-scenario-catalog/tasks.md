@@ -8,8 +8,12 @@ Gates after every code step: `pnpm typecheck && pnpm lint && pnpm test`.
       (`git status --short --branch`).
 - [x] SC-P2: Confirm the catalog pilot `e2e/catalog/carry-over.feature` is the
       agreed reference format before any fan-out.
-- [ ] SC-P3: Confirm Playwright MCP (or native `e2e/` harness) is reachable for
-      the UI tier; if MCP is down, the UI tier uses native specs only.
+- [~] SC-P3: Confirm Playwright MCP (or native `e2e/` harness) is reachable for
+  the UI tier; if MCP is down, the UI tier uses native specs only.
+  → SUPERSEDED 2026-06-08: the UI tier was built (SC-UX) and the durable
+  sweep engine now runs via the native `e2e/sweep/` harness
+  (`behavioral-ui-regression-gate`, archived), not MCP. MCP-reachability is no
+  longer a precondition for this change.
 
 ## Build the catalog (Workflow — deferred, run on explicit go)
 
@@ -55,29 +59,48 @@ Gates after every code step: `pnpm typecheck && pnpm lint && pnpm test`.
       exit (executes `final-gates-resweep` gate tasks).
       → 2026-06-03 all green: typecheck ✓, lint 0 errors (2 non-gating warns),
       test 579/579 web + cached API ✓, build ✓ (5/5 tasks).
-- [ ] SC-9: Consolidated per-role runtime sweep (Lead/Head/Admin/Viewer) via
-      `/auth/dev-login?role=<ROLE>`, driven by the diff-scoped catalog + the
-      a11y interaction checks from `verify-a11y-recommended-flip`; assert 0
-      console ERRORS and that each diff-tagged `Then` holds. This single pass
-      covers `final-gates-resweep` sweep + `verify-a11y` + `defer-uat` Wave 1.
-- [ ] SC-10: Targeted manual pass on top-risk flows (the six period writers,
-      publish/revoke, carry-over, periods-tab delete dialog).
+- [~] SC-9: Consolidated per-role runtime sweep (Lead/Head/Admin/Viewer) via
+  `/auth/dev-login?role=<ROLE>`, driven by the diff-scoped catalog + the
+  a11y interaction checks from `verify-a11y-recommended-flip`; assert 0
+  console ERRORS and that each diff-tagged `Then` holds. This single pass
+  covers `final-gates-resweep` sweep + `verify-a11y` + `defer-uat` Wave 1.
+  → SUPERSEDED 2026-06-08: the per-role runtime sweep is now owned by the
+  automated `e2e/sweep/catalog-sweep.spec.ts` (4 roles, 0 console ERRORS —
+  ran green this session; `final-gates-resweep` archived on it). The
+  remaining keyboard/dialog interaction checks live in `verify-a11y`
+  VA-1..VA-9 (live app). Not this change's job.
+- [~] SC-10: Targeted manual pass on top-risk flows (the six period writers,
+  publish/revoke, carry-over, periods-tab delete dialog).
+  → SUPERSEDED 2026-06-08: re-homed to `verify-a11y` VA-2/VA-3 (dialog
+  keyboard checks) + the live-UAT Wave 1 of `defer-uat` (§4 user decision).
 - [ ] SC-11: Any failure → file a dedicated openspec change; do NOT patch under
       this change.
 
 ## Reconcile the live drift finding
 
-- [ ] SC-12: Resolve `period-dual-state` ↔ carry-over: determine whether
+- [x] SC-12: Resolve `period-dual-state` ↔ carry-over: determine whether
       carry-over actually writes `Report.periodState` + legacy tuple. If it
       should and does not → fix code; if the spec is wrong → correct the spec.
       Record which.
+      → RESOLVED: the SPEC was wrong, corrected in archived change
+      `2026-06-03-fix-period-dual-state-writer-count`. `saveCarryOver`
+      ($transaction) writes only child rows (`carryOverExecution`,
+      `carryOverRecord`, `item`, `decision`) and never touches `Report` period
+      fields — the target `Report` already carries both representations from
+      `period-creator`. The spec's writer list was narrowed to the seven genuine
+      `buildTransition` writers + snapshot-restore.
 
 ## Close out (per the agreed decision)
 
-- [ ] SC-13: With gates green, 0 console ERRORS per role, and diff-tagged `Then`s
-      holding → archive `final-gates-resweep`, `verify-a11y-recommended-flip`,
-      and `defer-uat-codequality-vercel-2026-05-26` (whole umbrella if Wave 1 is
-      clean).
+- [~] SC-13: With gates green, 0 console ERRORS per role, and diff-tagged `Then`s
+  holding → archive `final-gates-resweep`, `verify-a11y-recommended-flip`,
+  and `defer-uat-codequality-vercel-2026-05-26` (whole umbrella if Wave 1 is
+  clean).
+  → PARTIALLY ACTIONED 2026-06-08: `final-gates-resweep` archived this
+  session (gates + automated sweep green). `verify-a11y` VA-0a/0b landing now;
+  VA-1..VA-9 + `defer-uat` Wave 1 remain (live app / §4 user decision). Each
+  change now owns its own archive — this umbrella checkbox is superseded by
+  the per-change close-outs.
 - [ ] SC-14: Leave `ratchet-lint-to-strict` R3/R4 and `defer-uat` Waves 3–4 as
       explicit backlog (net-new, out of scope).
 - [ ] SC-15: `openspec validate establish-scenario-catalog --strict` green;
@@ -91,17 +114,26 @@ session sees them. Each notes its natural home change.
 - [ ] O1: Fix the stale `WorkingDays.{MON_SAT,MON_SUN}` schema comment ("v1 does
       not change deadline calc") — they DO alter `computeDeadline`. Home:
       `cleanup-dead-enum-states`.
-- [ ] O2: UI "products" are domain "projects" — admin UI references nonexistent
+- [x] O2: UI "products" are domain "projects" — admin UI references nonexistent
       `saveProduct`/`archiveProduct`; real procedures are
       `saveProject`/`deleteProject`. Reconcile naming. Home:
       `fix-admin-role-model-drift`.
-- [ ] O3: Record an Opus adversarial review of the DI import-type fix
+      → RESOLVED: the admin UI already calls `trpc.admin.saveProject` /
+      `trpc.admin.deleteProject` (`products-tab.tsx:88,101`); the naming was
+      reconciled in archived `2026-06-03-fix-admin-role-model-drift`. No
+      `saveProduct`/`archiveProduct` references remain.
+- [x] O3: Record an Opus adversarial review of the DI import-type fix
       (commit 7952e3c5, 47 sites; gates were green, no review logged). Home:
       `ratchet-lint-to-strict`.
-- [ ] O4: Audit remaining lazy/conditional `import type` paths for runtime DI
+      → RE-HOMED 2026-06-08 to `ratchet-lint-to-strict` R6a (parking duty
+      discharged; the review itself is tracked there, not yet executed).
+- [x] O4: Audit remaining lazy/conditional `import type` paths for runtime DI
       type-lies (the biome-importtype-broke-nest-di pattern). Home:
       `ratchet-lint-to-strict`.
+      → RE-HOMED 2026-06-08 to `ratchet-lint-to-strict` R6b.
 - [x] O5: Delete the merged local branch `feat/openspec-lint-ratchet-a11y`
       (branch hygiene) — done this session.
-- [ ] O6: Verify coming-soon UI cards render correctly per role. Home:
+- [x] O6: Verify coming-soon UI cards render correctly per role. Home:
       `verify-a11y-recommended-flip` / SC-9.
+      → RE-HOMED 2026-06-08 to `verify-a11y-recommended-flip` VA-9 (live-app
+      check, grouped with VA-1..VA-8).

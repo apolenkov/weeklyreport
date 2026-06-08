@@ -76,3 +76,11 @@ lead-only guard + role-resolved denial home link).
       (a plain `<div>` with no `role="status"`) — the server/client boundary may
       swap one for the other. Do NOT commit a speculative fix without the live
       error in hand.
+- [ ] VA-9 (re-homed orphan O6 from `establish-scenario-catalog`): verify the
+      deferred-feature coming-soon UI cards render correctly per role. The
+      reference pattern is `LanguageComingSoonControl` / `ThemeComingSoonControl`
+      in `apps/web/src/components/navigation/nav-bar.tsx` (an inert control with a
+      `ComingSoonBadge` tooltip). Under `/auth/dev-login?role=<ROLE>`, confirm each
+      role sees the acknowledged-but-inert control (not a hidden flag, not a
+      half-working feature) and that the badge/tooltip is keyboard-reachable. Live
+      app + per-role login (groups with VA-1..VA-8).
