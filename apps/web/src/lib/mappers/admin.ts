@@ -7,6 +7,11 @@
  * the presentation types so downstream consumers do not couple to a particular
  * UI module (`apps/web/src/components/admin/mock-data.ts`).
  *
+ * R3a-4 split: the presentation types live in `admin-types.ts` and the
+ * form-state→API helpers in `admin-form-inputs.ts`; this module keeps the
+ * snapshot/settings read-mappers and re-exports both siblings so the mappers
+ * barrel and all importers resolve through `./admin` unchanged.
+ *
  * Synthesis notes (Phase 21 / Plan 21-03):
  * - `adminSnapshotSchema` does NOT carry stages or stageAssignments. We default
  *   each product to 7 empty stage rows (assigneeId: null) so ProductsTab still
@@ -31,139 +36,56 @@ import type {
   AdminSnapshot,
   AdminUser,
   AppSettings,
-  ReminderAudience,
   ReminderPolicy,
-  ReminderPolicyKind,
   ReportingGroup,
   ReportPeriod,
 } from "@customreport/shared";
 import { STAGE_NAMES } from "@customreport/shared";
 
-export type { StageName } from "@customreport/shared";
-
 import { formatPeriodLabel } from "../format-date";
+import type {
+  MappedAdminSnapshot,
+  MockGroup,
+  MockPeriod,
+  MockProduct,
+  MockReminder,
+  MockReminderPolicy,
+  MockSettings,
+  MockUser,
+  PeriodStatus,
+  StageAssignment,
+} from "./admin-types";
 
-// ---- Form-state -> API-input mappers (Phase 22 / Plan 22-04) ----
-//
-// These helpers translate the mock-shaped form state stored in each admin tab
-// into the Zod-validated input expected by the corresponding mutation. They
-// live in the mapper module so they can be unit-tested in isolation and so
-// any contract drift (e.g. schema field renames) collects in one place.
-
-// ---- Self-contained re-declarations of presentation types ----
-
-export type UserRole = "lead" | "head" | "admin" | "viewer";
-
-export interface MockUser {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  groupId: string;
-  department: string;
-  // A2 (UAT-v7 2026-05-12): soft-deactivation flag from the API.
-  isActive: boolean;
-}
-
-export interface MockGroup {
-  id: string;
-  name: string;
-  description: string | null;
-  archived: boolean;
-  headUserId: string | null;
-}
-
-export interface StageAssignment {
-  stage: import("@customreport/shared").StageName;
-  assigneeId: string | null;
-}
-
-export interface MockProduct {
-  id: string;
-  name: string;
-  leadOwnerId: string;
-  stages: StageAssignment[];
-  status: "active" | "archived";
-}
-
-export type PeriodStatus = "open" | "published" | "reopened";
-
-export interface MockPeriod {
-  id: string;
-  weekLabel: string;
-  startDate: string;
-  endDate: string;
-  deadline: string;
-  status: PeriodStatus;
-}
-
-export interface MockReminder {
-  id: string;
-  name: string;
-  description: string;
-  active: boolean;
-  // API round-trip fields preserved from `adminReminderRuleSchema`. Surfaced
-  // on the mock so the Reminders tab can rebuild a valid `saveReminderRule`
-  // input (e.g. when toggling status without re-entering kind/fireAt).
-  kind: "deadline" | "follow_up" | "escalation";
-  fireAt: Date;
-  timezone: string;
-  version: number;
-  reportId: string | null;
-  // UFB-036 (Phase 44-04): policy FK preserved so the Reminders Tab can
-  // group derived rules under their owning policy in the read-only
-  // expander. `null` for legacy rules (created before 44-01).
-  policyId: string | null;
-}
-
-/**
- * UFB-036 (Phase 44-04): presentation shape of {@link reminderPolicySchema}
- * for the Reminders Tab policy editor. Mirrors the wire schema 1:1 except
- * the wire-only `id` is preserved verbatim — there is no name/description
- * synthesis here because the editor surfaces every column directly.
- */
-export interface MockReminderPolicy {
-  id: string;
-  kind: ReminderPolicyKind;
-  offsetMinutes: number;
-  timezone: string;
-  audience: ReminderAudience;
-  active: boolean;
-  validFrom: Date;
-  /** `null` means "forever" (no upper bound). */
-  validUntil: Date | null;
-}
-
-// UFB-048 (Phase 48-B): MockSettings expanded with 9 new admin-tunable fields
-// surfaced on the Periods / Reminders / Notifications sub-tabs. Field order
-// mirrors the tab layout for readability. The mapper below copies through 1:1
-// from the wire schema (`appSettingsSchema`).
-// UFB-047 / Phase 49-01: legacy `departmentName` removed alongside the
-// AppSettings column.
-export interface MockSettings {
-  autoCreatePeriods: boolean;
-  defaultDeadlineDays: number;
-  // Periods tab
-  periodLengthDays: number;
-  workingDays: "mon-fri" | "mon-sat" | "mon-sun";
-  gracePeriodHours: number;
-  allowLateSubmissions: boolean;
-  autoPublishAfterDeadline: boolean;
-  autoArchiveWeeksAfterPublish: number;
-  // UFB-051 (Phase 51-A) — period-cycle knobs surfaced on the Periods tab.
-  firstDayOfWeek: number; // 1=Monday..7=Sunday (ISO)
-  deadlineDayOfWeek: number; // 1=Monday..7=Sunday (ISO)
-  deadlineTime: string; // HH:MM (24h)
-  maxOpenPeriods: number;
-  requireAllSectionsToPublish: boolean;
-  allowReopenAfterPublish: boolean;
-  reopenWindowHours: number;
-  // Reminders tab
-  defaultTimezone: string;
-  defaultReminderAudience: "lead-with-draft" | "head-of-late";
-  // Notifications tab
-  notificationFromEmail: string | null;
-}
+export type {
+  AdminProjectFormInput,
+  AdminReminderPolicyFormInput,
+  AdminReminderRuleFormInput,
+  AdminUserFormInput,
+  ReportingGroupFormInput,
+  ReportPeriodFormInput,
+} from "./admin-form-inputs";
+export {
+  toAdminProjectInput,
+  toAdminReminderRuleInput,
+  toAdminUserInput,
+  toReminderPolicyInput,
+  toReportingGroupInput,
+  toReportPeriodInput,
+} from "./admin-form-inputs";
+export type {
+  MappedAdminSnapshot,
+  MockGroup,
+  MockPeriod,
+  MockProduct,
+  MockReminder,
+  MockReminderPolicy,
+  MockSettings,
+  MockUser,
+  PeriodStatus,
+  StageAssignment,
+  StageName,
+  UserRole,
+} from "./admin-types";
 
 // ---- Helpers ----
 
@@ -303,16 +225,6 @@ function mapReminderPolicy(api: ReminderPolicy): MockReminderPolicy {
 
 // ---- Public mappers ----
 
-export interface MappedAdminSnapshot {
-  groups: MockGroup[];
-  users: MockUser[];
-  products: MockProduct[];
-  periods: MockPeriod[];
-  reminders: MockReminder[];
-  /** UFB-036 (Phase 44-04): policies surfaced for the Reminders Tab editor. */
-  policies: MockReminderPolicy[];
-}
-
 /**
  * Translates `admin.snapshot` API output into the slices each admin tab needs.
  *
@@ -361,241 +273,6 @@ export function mapAdminSettings(api: AppSettings): MockSettings {
     defaultTimezone: api.defaultTimezone,
     defaultReminderAudience: api.defaultReminderAudience,
     notificationFromEmail: api.notificationFromEmail,
-  };
-}
-
-// ---- Form-state -> API-input helpers ----
-
-/**
- * Generates a v4 UUID. The browser's `crypto.randomUUID` is required by every
- * env that runs this code (Next.js 16 + Node 20+). The fallback throws because
- * Zod will reject a non-UUID id at the API boundary.
- */
-function newId(): string {
-  if (
-    typeof crypto !== "undefined" &&
-    typeof crypto.randomUUID === "function"
-  ) {
-    return crypto.randomUUID();
-  }
-  throw new Error(
-    "crypto.randomUUID is required to generate ids for admin mutations",
-  );
-}
-
-export interface AdminUserFormInput {
-  name: string;
-  email: string;
-  role: UserRole;
-  groupId: string;
-}
-
-/**
- * Maps the Users tab form state to the `adminUserSchema` payload. When editing
- * an existing user, pass `existingId`; when adding a new user, omit it and a
- * fresh UUID is generated client-side (the server will accept the inserted id
- * as-is per the schema's `id: uuid()`).
- */
-export function toAdminUserInput(
-  form: AdminUserFormInput,
-  existingId?: string,
-): {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  reportingGroupId: string | null;
-} {
-  return {
-    id: existingId ?? newId(),
-    email: form.email.trim(),
-    name: form.name.trim(),
-    role: form.role,
-    reportingGroupId: form.groupId || null,
-  };
-}
-
-export interface ReportingGroupFormInput {
-  name: string;
-  description?: string | null;
-  archived?: boolean;
-  headUserId?: string | null;
-}
-
-export function toReportingGroupInput(
-  form: ReportingGroupFormInput,
-  existingId?: string,
-): {
-  id: string;
-  name: string;
-  description: string | null;
-  archived: boolean;
-  headUserId: string | null;
-} {
-  return {
-    id: existingId ?? newId(),
-    name: form.name.trim(),
-    description: form.description?.trim() ? form.description.trim() : null,
-    archived: form.archived ?? false,
-    headUserId: form.headUserId ?? null,
-  };
-}
-
-export interface AdminProjectFormInput {
-  name: string;
-  leadOwnerId: string;
-  leadName?: string;
-  archived?: boolean;
-}
-
-/**
- * Maps the Products tab form state to the `adminProjectSchema` payload.
- * `leadName` is required by the schema; if the form does not carry it, callers
- * resolve it from the users list before invoking this helper.
- */
-export function toAdminProjectInput(
-  form: AdminProjectFormInput,
-  existingId?: string,
-): {
-  id: string;
-  name: string;
-  archived: boolean;
-  leadId: string;
-  leadName: string;
-} {
-  return {
-    id: existingId ?? newId(),
-    name: form.name.trim(),
-    archived: form.archived ?? false,
-    leadId: form.leadOwnerId,
-    leadName: (form.leadName ?? "").trim() || "Unknown Lead",
-  };
-}
-
-export interface ReportPeriodFormInput {
-  startDate: string; // YYYY-MM-DD
-  endDate: string;
-  deadline: string;
-  status?: "draft" | "published";
-}
-
-/**
- * Maps the Periods tab form state to the `reportPeriodSchema` payload.
- * Date strings are coerced via `new Date(...)`; the schema then re-validates
- * them with `reportDate()` (year >= 2000).
- */
-export function toReportPeriodInput(
-  form: ReportPeriodFormInput,
-  existingId?: string,
-): {
-  id: string;
-  periodStart: Date;
-  periodEnd: Date;
-  deadline: Date;
-  status: "draft" | "published";
-} {
-  return {
-    id: existingId ?? newId(),
-    periodStart: new Date(form.startDate),
-    periodEnd: new Date(form.endDate),
-    deadline: new Date(form.deadline),
-    status: form.status ?? "draft",
-  };
-}
-
-export interface AdminReminderRuleFormInput {
-  kind: "deadline" | "follow_up" | "escalation";
-  fireAt: Date | string;
-  timezone?: string;
-  status?: "active" | "paused";
-  reportId?: string | null;
-  version?: number;
-}
-
-/**
- * Maps the Reminders tab form state to the `adminReminderRuleSchema` payload.
- */
-export function toAdminReminderRuleInput(
-  form: AdminReminderRuleFormInput,
-  existingId?: string,
-): {
-  id: string;
-  reportId: string | null;
-  kind: "deadline" | "follow_up" | "escalation";
-  fireAt: Date;
-  timezone: string;
-  status: "active" | "paused";
-  version: number;
-} {
-  const fireAt =
-    form.fireAt instanceof Date ? form.fireAt : new Date(form.fireAt);
-  return {
-    id: existingId ?? newId(),
-    reportId: form.reportId ?? null,
-    kind: form.kind,
-    fireAt,
-    timezone: form.timezone ?? "UTC",
-    status: form.status ?? "active",
-    version: form.version ?? 1,
-  };
-}
-
-/**
- * UFB-036 (Phase 44-04): Reminders Tab policy editor form-state.
- *
- * The form binds:
- *   - `kind`, `offsetMinutes`, `timezone`, `audience`, `active`: 1:1 with
- *     `reminderPolicySchema`.
- *   - `validFromIso`: `YYYY-MM-DD` from a `<input type="date">`. Always
- *     present; defaults to today on the "Add" form.
- *   - `validUntilIso`: `YYYY-MM-DD` or `null`. `null` means the user has
- *     ticked the "forever" checkbox so the upper bound is open.
- */
-export interface AdminReminderPolicyFormInput {
-  kind: ReminderPolicyKind;
-  offsetMinutes: number;
-  timezone: string;
-  audience: ReminderAudience;
-  active: boolean;
-  validFromIso: string;
-  validUntilIso: string | null;
-}
-
-/**
- * Maps the policy form state to the `reminderPolicySchema` payload.
- *
- * The "forever" checkbox flips `validUntilIso` to `null` which becomes
- * `validUntil: null` on the wire. Otherwise the YYYY-MM-DD string is
- * coerced into a JS Date at midnight UTC (matching how the prisma column
- * stores `DateTime`); the schema's `z.coerce.date()` accepts either form
- * but emitting a Date here means the network payload after JSON.stringify
- * is a clean ISO timestamp.
- */
-export function toReminderPolicyInput(
-  form: AdminReminderPolicyFormInput,
-  existingId?: string,
-): {
-  id: string;
-  kind: ReminderPolicyKind;
-  offsetMinutes: number;
-  timezone: string;
-  audience: ReminderAudience;
-  active: boolean;
-  validFrom: Date;
-  validUntil: Date | null;
-} {
-  return {
-    id: existingId ?? newId(),
-    kind: form.kind,
-    offsetMinutes: form.offsetMinutes,
-    timezone: form.timezone,
-    audience: form.audience,
-    active: form.active,
-    validFrom: new Date(`${form.validFromIso}T00:00:00.000Z`),
-    validUntil:
-      form.validUntilIso === null
-        ? null
-        : new Date(`${form.validUntilIso}T00:00:00.000Z`),
   };
 }
 

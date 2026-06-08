@@ -495,8 +495,6 @@ export default defineConfig([
       "apps/web/src/components/admin/settings-tab.tsx",
       "apps/web/src/components/admin/periods-tab.tsx",
       "apps/web/src/components/admin/reminders-tab.tsx",
-      // mapper with a clean types-out split (like weekly-report) → split next.
-      "apps/web/src/lib/mappers/admin.ts",
     ],
     rules: { "max-lines": "off" },
   },
