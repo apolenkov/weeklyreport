@@ -1,0 +1,142 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ItemCard — SVG icon aria-hidden (snapshot) > DeleteIcon svg has aria-hidden='true' 1`] = `
+<svg
+  aria-hidden="true"
+  class="h-3 w-3"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  viewBox="0 0 24 24"
+>
+  <path
+    d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"
+  />
+</svg>
+`;
+
+exports[`ItemCard — SVG icon aria-hidden (snapshot) > EditIcon svg has aria-hidden='true' 1`] = `
+<svg
+  aria-hidden="true"
+  class="h-3 w-3"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  viewBox="0 0 24 24"
+>
+  <path
+    d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
+  />
+  <path
+    d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+  />
+</svg>
+`;
+
+exports[`ItemCard — card DOM structure (snapshot) > renders card with aria-hidden icons and accessible button labels 1`] = `
+<div
+  class="group relative flex flex-col rounded-[10px] border bg-[var(--color-background)] p-2.5 transition-[border-color,box-shadow,background-color] hover:border-[rgba(0,0,0,0.25)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.10)]"
+  data-testid="item-card"
+  style="min-height: 110px; border-top: 1px solid var(--color-muted); border-right: 1px solid var(--color-muted); border-bottom: 1px solid var(--color-muted); border-left: 3px solid var(--color-starbucks-accent); background: var(--color-background); opacity: 1;"
+>
+  <div
+    class="mb-2 flex items-start justify-between gap-2"
+  >
+    <div
+      class="flex shrink-0 flex-wrap items-center gap-1.5"
+    >
+      <span
+        class="inline-flex w-fit shrink-0 items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[10px] font-semibold"
+        style="background: var(--color-success); color: var(--color-primary);"
+      >
+        In Progress
+      </span>
+      <span
+        aria-label="Priority 1"
+        class="inline-flex w-fit shrink-0 items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-bold tabular-nums"
+        role="img"
+        style="background: rgb(203, 162, 88); color: rgb(255, 255, 255);"
+        title="Priority rank 1"
+      >
+        P
+        1
+      </span>
+    </div>
+    <div
+      class="flex shrink-0 gap-1"
+    >
+      <button
+        aria-label="Edit"
+        class="flex h-8 w-8 items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="h-3 w-3"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
+          />
+          <path
+            d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+          />
+        </svg>
+      </button>
+      <button
+        aria-label="Delete"
+        class="flex h-8 w-8 items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[#fee2e2] hover:text-[var(--color-destructive)]"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="h-3 w-3"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"
+          />
+        </svg>
+      </button>
+    </div>
+  </div>
+  <div
+    class="line-clamp-3 text-sm text-[var(--color-foreground)]"
+    title="Implement CI pipeline"
+  >
+    Implement CI pipeline
+  </div>
+  <div
+    class="mt-auto flex items-end justify-between gap-2 pt-2"
+  >
+    <div
+      class="min-w-0 flex-1 truncate text-[11px] text-[var(--color-muted-foreground)]"
+    >
+      Alice Lead
+    </div>
+    <div
+      class="flex min-w-0 max-w-[72%] flex-wrap items-center justify-end gap-1"
+    >
+      <span
+        aria-label="Item stages: Dev"
+        class="inline-flex min-w-0 flex-wrap items-center justify-end gap-1"
+        role="img"
+        title="Dev"
+      >
+        <span
+          class="inline-flex max-w-[92px] items-center truncate rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
+          title="Dev"
+        >
+          Dev
+        </span>
+      </span>
+    </div>
+  </div>
+</div>
+`;

@@ -1,0 +1,35 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`VersionHistoryNav — VA-0b snapshots: ChevronLeft and ChevronRight SVG interior > ChevronLeft SVG interior elements — path inherits aria-hidden from parent (snapshot) 1`] = `
+<svg
+  aria-hidden="true"
+  class="h-3.5 w-3.5"
+  fill="none"
+  stroke="currentColor"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  stroke-width="2"
+  viewBox="0 0 24 24"
+>
+  <path
+    d="M15 18l-6-6 6-6"
+  />
+</svg>
+`;
+
+exports[`VersionHistoryNav — VA-0b snapshots: ChevronLeft and ChevronRight SVG interior > ChevronRight SVG interior elements — path inherits aria-hidden from parent (snapshot) 1`] = `
+<svg
+  aria-hidden="true"
+  class="h-3.5 w-3.5"
+  fill="none"
+  stroke="currentColor"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  stroke-width="2"
+  viewBox="0 0 24 24"
+>
+  <path
+    d="M9 18l6-6-6-6"
+  />
+</svg>
+`;

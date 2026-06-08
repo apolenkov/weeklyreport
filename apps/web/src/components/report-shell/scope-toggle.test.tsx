@@ -62,4 +62,53 @@ describe("ScopeToggle", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "By lead" })).toBeInTheDocument();
   });
+
+  it("each scope renders as a button with role='radio'", () => {
+    render(
+      <ScopeToggle
+        value="own"
+        onChange={vi.fn()}
+        allowedScopes={["own", "product", "lead"]}
+      />,
+    );
+    const radios = screen.getAllByRole("radio");
+    expect(radios).toHaveLength(3);
+    for (const radio of radios) {
+      expect(radio.tagName).toBe("BUTTON");
+    }
+  });
+
+  it("each scope button has type='button'", () => {
+    render(
+      <ScopeToggle
+        value="own"
+        onChange={vi.fn()}
+        allowedScopes={["own", "product", "lead"]}
+      />,
+    );
+    const radios = screen.getAllByRole("radio");
+    for (const radio of radios) {
+      expect(radio).toHaveAttribute("type", "button");
+    }
+  });
+
+  it("container has role='radiogroup' and aria-label='Slide scope'", () => {
+    const { container } = render(
+      <ScopeToggle value="own" onChange={vi.fn()} />,
+    );
+    const group = container.firstChild as HTMLElement;
+    expect(group).toHaveAttribute("role", "radiogroup");
+    expect(group).toHaveAttribute("aria-label", "Slide scope");
+  });
+
+  it("active scope button has primary background class; inactive buttons have muted foreground class", () => {
+    const { container } = render(
+      <ScopeToggle
+        value="product"
+        onChange={vi.fn()}
+        allowedScopes={["own", "product", "lead"]}
+      />,
+    );
+    expect(container).toMatchSnapshot();
+  });
 });

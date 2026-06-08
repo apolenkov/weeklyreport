@@ -63,6 +63,84 @@ describe("PeriodNavigator (lead)", () => {
     mockPathname = "/lead/report";
   });
 
+  // VA-0a: a11y regression tests — verify-a11y-recommended-flip catalog
+  describe("a11y — decorative SVG aria-hidden", () => {
+    it("ChevronLeft SVG in Previous button has aria-hidden='true'", () => {
+      render(<PeriodNavigator periods={PERIODS} />);
+      const prevButton = screen.getByRole("button", {
+        name: "Previous period",
+      });
+      const svg = prevButton.querySelector("svg");
+      expect(svg).toHaveAttribute("aria-hidden", "true");
+    });
+
+    it("ChevronRight SVG in Next button has aria-hidden='true'", () => {
+      render(<PeriodNavigator periods={PERIODS} />);
+      const nextButton = screen.getByRole("button", { name: "Next period" });
+      const svg = nextButton.querySelector("svg");
+      expect(svg).toHaveAttribute("aria-hidden", "true");
+    });
+
+    it("ChevronRight SVG in select decorator span has aria-hidden='true'", () => {
+      const { container } = render(<PeriodNavigator periods={PERIODS} />);
+      // The select decorator is a pointer-events-none span wrapping ChevronRight.
+      const decoratorSpan = container.querySelector(".pointer-events-none svg");
+      expect(decoratorSpan).toHaveAttribute("aria-hidden", "true");
+    });
+
+    it("all three SVGs rendered have aria-hidden='true' (no SVG exposes to a11y tree)", () => {
+      const { container } = render(<PeriodNavigator periods={PERIODS} />);
+      const svgs = container.querySelectorAll("svg");
+      expect(svgs).toHaveLength(3);
+      svgs.forEach((svg) => {
+        expect(svg).toHaveAttribute("aria-hidden", "true");
+      });
+    });
+
+    it("ChevronLeft decorative purpose: Previous button accessible name is not derived from SVG content", () => {
+      render(<PeriodNavigator periods={PERIODS} />);
+      // getByRole resolves via aria-label; if SVG were in the a11y tree it
+      // would contribute path content and pollute the name.
+      expect(
+        screen.getByRole("button", { name: "Previous period" }),
+      ).toBeInTheDocument();
+    });
+
+    it("ChevronRight decorative purpose: Next button accessible name is not derived from SVG content", () => {
+      render(<PeriodNavigator periods={PERIODS} />);
+      expect(
+        screen.getByRole("button", { name: "Next period" }),
+      ).toBeInTheDocument();
+    });
+
+    it("Previous button renders visible text 'Previous' alongside aria-hidden chevron", () => {
+      render(<PeriodNavigator periods={PERIODS} />);
+      // The xl:hidden span still renders in jsdom; visible text is present.
+      const prevButton = screen.getByRole("button", {
+        name: "Previous period",
+      });
+      expect(prevButton).toHaveTextContent("Previous");
+    });
+
+    it("Next button renders visible text 'Next' alongside aria-hidden chevron", () => {
+      render(<PeriodNavigator periods={PERIODS} />);
+      const nextButton = screen.getByRole("button", { name: "Next period" });
+      expect(nextButton).toHaveTextContent("Next");
+    });
+  });
+
+  // VA-0b: snapshot — container group role
+  describe("a11y — container group role snapshot", () => {
+    it("container div has role='group' with the period navigation aria-label", () => {
+      render(<PeriodNavigator periods={PERIODS} />);
+      const group = screen.getByRole("group", {
+        name: "Period navigation (swipe left/right or use arrows)",
+      });
+      expect(group).toBeInTheDocument();
+      expect(group).toMatchSnapshot();
+    });
+  });
+
   it("selecting a non-current period pushes the addressed URL", () => {
     render(<PeriodNavigator periods={PERIODS} />);
     const select = screen.getByLabelText(

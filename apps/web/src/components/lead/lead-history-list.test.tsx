@@ -51,4 +51,37 @@ describe("LeadHistoryList", () => {
     expect(screen.queryByText("Products")).not.toBeInTheDocument();
     expect(screen.queryByText("Versions")).not.toBeInTheDocument();
   });
+
+  describe("TrafficDot ARIA — role=img on span wrapper", () => {
+    it("green traffic dot has role=img", () => {
+      render(<LeadHistoryList entries={[entry]} />);
+      expect(
+        screen.getByRole("img", { name: "Green statuses: 2" }),
+      ).toBeInTheDocument();
+    });
+
+    it("yellow traffic dot has role=img", () => {
+      render(<LeadHistoryList entries={[entry]} />);
+      expect(
+        screen.getByRole("img", { name: "Yellow statuses: 0" }),
+      ).toBeInTheDocument();
+    });
+
+    it("red traffic dot has role=img", () => {
+      render(<LeadHistoryList entries={[entry]} />);
+      expect(
+        screen.getByRole("img", { name: "Red statuses: 1" }),
+      ).toBeInTheDocument();
+    });
+
+    it("all three traffic dots are exposed in a11y tree as images with correct labels", () => {
+      render(<LeadHistoryList entries={[entry]} />);
+      const dots = screen.getAllByRole("img");
+      expect(dots).toHaveLength(3);
+      const names = dots.map((el) => el.getAttribute("aria-label"));
+      expect(names).toContain("Green statuses: 2");
+      expect(names).toContain("Yellow statuses: 0");
+      expect(names).toContain("Red statuses: 1");
+    });
+  });
 });

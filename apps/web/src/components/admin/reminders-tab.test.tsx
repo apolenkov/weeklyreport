@@ -149,6 +149,37 @@ function renderTab(args?: {
   return { ...result, captured };
 }
 
+describe("RemindersTab — empty-state bell SVG a11y (VA-0a)", () => {
+  it("bell SVG in empty state has aria-hidden='true'", () => {
+    renderTab({ policies: [], derivedRulesByPolicyId: {} });
+    const emptyState = screen.getByTestId("reminders-empty-state");
+    // The decorative bell icon must carry aria-hidden to exclude it from the
+    // accessibility tree. Catalog row: empty-state bell SVG icon, Pri=high.
+    const svg = emptyState.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("bell SVG in empty state is not exposed to assistive technology", () => {
+    renderTab({ policies: [], derivedRulesByPolicyId: {} });
+    const emptyState = screen.getByTestId("reminders-empty-state");
+    // aria-hidden="true" on the SVG removes it from the ARIA tree — AT cannot
+    // reach it via role query. Catalog row: empty-state bell SVG accessibility
+    // contract, Pri=high.
+    const svgsInEmptyState = emptyState.querySelectorAll("svg");
+    // The bell SVG (aria-hidden) must not be reachable by any accessible role
+    // query. All SVGs in the container that have aria-hidden must carry it.
+    svgsInEmptyState.forEach((svg) => {
+      expect(svg).toHaveAttribute("aria-hidden", "true");
+    });
+    // Additionally confirm getByRole does not surface any img/graphics role
+    // inside the empty state, since aria-hidden removes the subtree from AT.
+    const emptyStateScope = within(emptyState);
+    expect(emptyStateScope.queryAllByRole("img")).toHaveLength(0);
+    expect(emptyStateScope.queryAllByRole("graphics-symbol")).toHaveLength(0);
+  });
+});
+
 describe("RemindersTab (Phase 44-04)", () => {
   beforeEach(() => {
     vi.clearAllMocks();

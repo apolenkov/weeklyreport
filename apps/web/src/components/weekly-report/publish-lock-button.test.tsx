@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
@@ -193,5 +193,138 @@ describe("PublishLockButton (Phase 22 — plan 22-05)", () => {
       screen.queryByRole("dialog", { name: /confirm publish/i }),
     ).not.toBeInTheDocument();
     expect(onPublish).not.toHaveBeenCalled();
+  });
+
+  // VA-0a — verify-a11y-recommended-flip regression tests
+  describe("a11y: Reopen Period button SVG (VA-0a)", () => {
+    it("SVG inside Reopen Period button has aria-hidden='true'", () => {
+      render(
+        <PublishLockButton
+          pendingCount={0}
+          totalLeads={6}
+          periodStatus="published"
+          onPublish={vi.fn()}
+          onReopen={vi.fn()}
+        />,
+      );
+      const reopenBtn = screen.getByRole("button", { name: /reopen period/i });
+      const svg = expectDefined(reopenBtn.querySelector("svg"));
+      expect(svg).toHaveAttribute("aria-hidden", "true");
+    });
+  });
+
+  describe("reopen dialog: backdrop / inside-click polarity", () => {
+    it("clicking the backdrop (overlay) closes the reopen dialog without firing onReopen", async () => {
+      const onReopen = vi.fn();
+      render(
+        <PublishLockButton
+          pendingCount={0}
+          totalLeads={6}
+          periodStatus="published"
+          onPublish={vi.fn()}
+          onReopen={onReopen}
+        />,
+      );
+      await userEvent.click(
+        screen.getByRole("button", { name: /reopen period/i }),
+      );
+      // Dialog is open.
+      expect(screen.getByText(/reopen this period\?/i)).toBeInTheDocument();
+
+      // The backdrop is the role="presentation" div wrapping the dialog (rendered
+      // by ConfirmDeleteDialog into a portal). Click it to trigger onCancel.
+      const backdrop = document.querySelector("[role='presentation']");
+      if (!backdrop) throw new Error("backdrop [role=presentation] not found");
+      await userEvent.click(backdrop);
+
+      // Dialog must be gone and onReopen must NOT have been called.
+      expect(
+        screen.queryByText(/reopen this period\?/i),
+      ).not.toBeInTheDocument();
+      expect(onReopen).not.toHaveBeenCalled();
+    });
+
+    it("clicking inside the reopen dialog does NOT close it", async () => {
+      const onReopen = vi.fn();
+      render(
+        <PublishLockButton
+          pendingCount={0}
+          totalLeads={6}
+          periodStatus="published"
+          onPublish={vi.fn()}
+          onReopen={onReopen}
+        />,
+      );
+      await userEvent.click(
+        screen.getByRole("button", { name: /reopen period/i }),
+      );
+      expect(screen.getByText(/reopen this period\?/i)).toBeInTheDocument();
+
+      // Click the dialog container itself (stopPropagation prevents backdrop close).
+      const dialog = screen.getByRole("dialog");
+      await userEvent.click(dialog);
+
+      // Dialog must still be visible and onReopen must NOT have fired.
+      expect(screen.getByText(/reopen this period\?/i)).toBeInTheDocument();
+      expect(onReopen).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("a11y: publish confirmation dialog keyboard behavior (VA-0a)", () => {
+    it("pressing Escape on the focused dialog container closes the publish dialog", async () => {
+      render(
+        <PublishLockButton
+          pendingCount={0}
+          totalLeads={6}
+          periodStatus="open"
+          onPublish={vi.fn()}
+          onReopen={vi.fn()}
+        />,
+      );
+
+      await userEvent.click(
+        screen.getByRole("button", { name: /publish & lock/i }),
+      );
+      const dialog = screen.getByRole("dialog", { name: /confirm publish/i });
+      expect(dialog).toBeInTheDocument();
+
+      // Escape is handled via onKeyDown on the dialog div itself — fire on
+      // the element, not document (catalog prose says "press Escape"; source
+      // uses a div-local onKeyDown, not document.addEventListener).
+      fireEvent.keyDown(dialog, { key: "Escape" });
+
+      expect(
+        screen.queryByRole("dialog", { name: /confirm publish/i }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("publish dialog container is programmatically focusable via tabIndex=-1 (structural proxy for autoFocus)", async () => {
+      render(
+        <PublishLockButton
+          pendingCount={0}
+          totalLeads={6}
+          periodStatus="open"
+          onPublish={vi.fn()}
+          onReopen={vi.fn()}
+        />,
+      );
+
+      await userEvent.click(
+        screen.getByRole("button", { name: /publish & lock/i }),
+      );
+      const dialog = screen.getByRole("dialog", { name: /confirm publish/i });
+
+      // The dialog div carries tabIndex={-1} and autoFocus. React calls
+      // .focus() on mount (does not set the HTML `autofocus` attribute).
+      // jsdom does not honour autoFocus for conditionally-rendered elements
+      // whose parent button just received userEvent.click focus — asserted as
+      // structural proxy per task step 6 (jsdom environment limitation).
+      expect(dialog).toHaveAttribute("tabindex", "-1");
+
+      // Verify the element can be programmatically focused (the capability
+      // autoFocus relies on): call .focus() and check activeElement.
+      dialog.focus();
+      expect(document.activeElement).toBe(dialog);
+    });
   });
 });

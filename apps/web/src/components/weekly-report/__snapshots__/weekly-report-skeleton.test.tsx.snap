@@ -1,0 +1,10 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`WeeklyReportSkeleton > snapshot: root element exposes role=status with aria-busy and aria-label 1`] = `
+{
+  "ariaBusy": "true",
+  "ariaLabel": "Loading status report",
+  "role": "status",
+  "testId": "weekly-report-skeleton",
+}
+`;

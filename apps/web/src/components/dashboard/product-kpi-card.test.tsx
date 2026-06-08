@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProductKpiCard } from "./product-kpi-card";
 
@@ -138,5 +138,75 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
     render(<ProductKpiCard role="head" />);
 
     expect(screen.getByText("Failed to load telemetry.")).toBeInTheDocument();
+  });
+});
+
+describe("ProductKpiCard — a11y regression (verify-a11y-recommended-flip)", () => {
+  beforeEach(() => {
+    mockUseQuery.mockReturnValue({
+      data: summary,
+      isLoading: false,
+      isError: false,
+    } as unknown as UseQueryResult<unknown, unknown>);
+  });
+
+  it("sparkline container has role='img'", () => {
+    render(<ProductKpiCard role="head" />);
+
+    expect(
+      screen.getByRole("img", {
+        name: "On-time ratio sparkline over the last 4 periods",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("sparkline container has aria-label 'On-time ratio sparkline over the last 4 periods'", () => {
+    render(<ProductKpiCard role="head" />);
+
+    const sparkline = screen.getByRole("img", {
+      name: "On-time ratio sparkline over the last 4 periods",
+    });
+
+    expect(sparkline).toHaveAttribute(
+      "aria-label",
+      "On-time ratio sparkline over the last 4 periods",
+    );
+  });
+
+  it("aria-hidden wrapper (direct child of sparkline container) has aria-hidden='true'", () => {
+    render(<ProductKpiCard role="head" />);
+
+    const sparkline = screen.getByRole("img", {
+      name: "On-time ratio sparkline over the last 4 periods",
+    });
+
+    expect(sparkline.firstElementChild).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("Stat wrapper div does NOT have an aria-label attribute", () => {
+    render(<ProductKpiCard role="head" />);
+
+    // The label <p> is a direct child of the Stat wrapper div —
+    // parentElement is the wrapper to assert against.
+    const labelEl = screen.getByText("Reports this period");
+
+    expect(labelEl.parentElement).not.toHaveAttribute("aria-label");
+  });
+
+  it("Stat label texts are readable in the document", () => {
+    render(<ProductKpiCard role="head" />);
+
+    const labels = [
+      "Reports this period",
+      "On-time ratio",
+      "Active leads",
+      "Late sections",
+      "Pending reopens",
+      "PDF exports (7d)",
+    ];
+
+    for (const label of labels) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
   });
 });

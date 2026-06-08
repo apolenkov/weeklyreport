@@ -212,19 +212,48 @@ describe("SearchInput — 39-05 (PERF-05)", () => {
     );
   });
 
-  it("clears the input on Escape", () => {
+  it("clears the input and closes the dropdown on Escape", () => {
+    // Prime useQuery with results so the dropdown actually opens.
+    useQueryMock.mockReturnValue({
+      data: [
+        {
+          type: "item",
+          id: ITEM_ID,
+          title: "Release blocked",
+          snippet: "Release <<blocked>>",
+          rank: 0.9,
+          projectId: PROJECT_ID,
+          reportId: REPORT_ID,
+          reportSectionId: SECTION_ID,
+          createdAt: "2026-05-06T08:00:00.000Z",
+        },
+      ],
+      isFetching: false,
+    });
+
     render(<SearchInput scope="mine" />);
     const input = screen.getByRole("combobox") as HTMLInputElement;
 
+    // Open the dropdown: focus, type 2+ chars, wait for debounce.
     act(() => {
+      fireEvent.focus(input);
       fireEvent.change(input, { target: { value: "release" } });
     });
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    // Dropdown (listbox) must be visible before Escape.
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
     expect(input.value).toBe("release");
 
+    // Press Escape — clears input AND unmounts the dropdown.
     act(() => {
       fireEvent.keyDown(input, { key: "Escape" });
     });
     expect(input.value).toBe("");
+    // The listbox must be removed from the DOM after Escape.
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 
   it('forwards scope="all" through to queryOptions', () => {
@@ -276,5 +305,139 @@ describe("SearchInput — 39-05 (PERF-05)", () => {
     expect(pushMock).toHaveBeenCalledWith(
       `/admin?tab=products&filter=${PROJECT_ID}`,
     );
+  });
+
+  // VA-0a / VA-0b: badge span — aria-label removed, visible text retained.
+  // Catalog rows: snapshot(high), unit-rtl(high), snapshot(medium).
+
+  it("VA badge span has no aria-label attribute (snapshot — verify-a11y catalog)", () => {
+    useQueryMock.mockReturnValue({
+      data: [
+        {
+          type: "item",
+          id: ITEM_ID,
+          title: "Test item",
+          snippet: "Test <<item>>",
+          rank: 0.9,
+          projectId: PROJECT_ID,
+          reportId: REPORT_ID,
+          reportSectionId: SECTION_ID,
+          createdAt: "2026-05-06T08:00:00.000Z",
+        },
+      ],
+      isFetching: false,
+    });
+
+    render(<SearchInput scope="mine" />);
+    const input = screen.getByRole("combobox");
+    act(() => {
+      fireEvent.change(input, { target: { value: "test" } });
+      fireEvent.focus(input);
+    });
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    // The badge span has the `inline-flex` class; the snippet may also contain
+    // the word "Task" inside a plain <span>, so we narrow by className.
+    const allTaskSpans = screen.getAllByText("Task");
+    const badgeSpan = allTaskSpans.find((el) =>
+      el.className.includes("inline-flex"),
+    );
+    if (!badgeSpan) throw new Error("badge span not found");
+    // Snapshot the badge span in isolation — avoids the locale-dependent date sibling.
+    expect(badgeSpan.outerHTML).toMatchInlineSnapshot(
+      `"<span class="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">Task</span>"`,
+    );
+    // Confirm no aria-label is present on the span.
+    expect(badgeSpan).not.toHaveAttribute("aria-label");
+  });
+
+  it("VA badge span has class inline-flex and renders badge.label text (unit-rtl high)", () => {
+    const hitTypes = [
+      { type: "item", expectedLabel: "Task", id: ITEM_ID },
+      { type: "project", expectedLabel: "Product", id: PROJECT_ID },
+    ] as const;
+
+    for (const { type, expectedLabel, id } of hitTypes) {
+      useQueryMock.mockReturnValue({
+        data: [
+          {
+            type,
+            id,
+            title: `${expectedLabel} title`,
+            snippet: `${expectedLabel} <<snippet>>`,
+            rank: 0.8,
+            projectId: PROJECT_ID,
+            reportId: type !== "project" ? REPORT_ID : undefined,
+            reportSectionId: type !== "project" ? SECTION_ID : undefined,
+            createdAt: "2026-05-06T08:00:00.000Z",
+          },
+        ],
+        isFetching: false,
+      });
+
+      const { unmount } = render(<SearchInput scope="mine" />);
+      const input = screen.getByRole("combobox");
+      act(() => {
+        fireEvent.change(input, { target: { value: "te" } });
+        fireEvent.focus(input);
+      });
+      act(() => {
+        vi.advanceTimersByTime(350);
+      });
+
+      const allSpans = screen.getAllByText(expectedLabel);
+      const badgeSpan = allSpans.find((el) =>
+        el.className.includes("inline-flex"),
+      );
+      if (!badgeSpan)
+        throw new Error(`badge span not found for ${expectedLabel}`);
+      expect(badgeSpan.tagName).toBe("SPAN");
+      expect(badgeSpan.className).toContain("inline-flex");
+      unmount();
+    }
+  });
+
+  it("VA badge span is first child of its flex container (snapshot — verify-a11y catalog)", () => {
+    useQueryMock.mockReturnValue({
+      data: [
+        {
+          type: "risk",
+          id: ITEM_ID,
+          title: "Risk title",
+          snippet: "Risk <<snippet>>",
+          rank: 0.8,
+          projectId: PROJECT_ID,
+          reportId: REPORT_ID,
+          reportSectionId: SECTION_ID,
+          createdAt: "2026-05-06T08:00:00.000Z",
+        },
+      ],
+      isFetching: false,
+    });
+
+    render(<SearchInput scope="mine" />);
+    const input = screen.getByRole("combobox");
+    act(() => {
+      fireEvent.change(input, { target: { value: "ri" } });
+      fireEvent.focus(input);
+    });
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    const allRiskSpans = screen.getAllByText("Risk");
+    const badgeSpan = allRiskSpans.find((el) =>
+      el.className.includes("inline-flex"),
+    );
+    if (!badgeSpan) throw new Error("badge span not found");
+    const flexContainer = badgeSpan.parentElement;
+    // Badge span must be the first child of the flex container (line 263 of source).
+    expect(flexContainer?.firstElementChild).toBe(badgeSpan);
+    // Flex container carries the justify-between layout class.
+    expect(flexContainer?.className).toContain("flex");
+    expect(flexContainer?.className).toContain("items-center");
+    expect(flexContainer?.className).toContain("justify-between");
   });
 });

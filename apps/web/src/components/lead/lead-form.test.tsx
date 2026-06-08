@@ -696,3 +696,100 @@ describe("LeadForm mutation wiring", () => {
     expect(screen.queryByRole("button", { name: /^Revoke$/i })).toBeNull();
   });
 });
+
+// VA-0a: icon SVG aria-hidden regression — verify-a11y-recommended-flip catalog
+describe("LeadForm icon SVGs — aria-hidden", () => {
+  async function renderAndFlush() {
+    const { Wrapper } = buildHarness();
+    const { container } = render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    await act(async () => {
+      await flushAll();
+    });
+    return container;
+  }
+
+  it("GridIcon svg has aria-hidden=true", async () => {
+    const container = await renderAndFlush();
+    const section = container.querySelector(
+      '[data-testid="lead-section-product-status"]',
+    );
+    expect(section).not.toBeNull();
+    const svg = section?.querySelector("svg[aria-hidden='true']");
+    expect(svg).not.toBeNull();
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("CalendarIcon svg has aria-hidden=true", async () => {
+    const container = await renderAndFlush();
+    const section = container.querySelector(
+      '[data-testid="lead-section-current-week"]',
+    );
+    expect(section).not.toBeNull();
+    const svg = section?.querySelector("svg[aria-hidden='true']");
+    expect(svg).not.toBeNull();
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("NextWeekIcon svg has aria-hidden=true", async () => {
+    const container = await renderAndFlush();
+    const section = container.querySelector(
+      '[data-testid="lead-section-next-week"]',
+    );
+    expect(section).not.toBeNull();
+    const svg = section?.querySelector("svg[aria-hidden='true']");
+    expect(svg).not.toBeNull();
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("AlertIcon svg has aria-hidden=true", async () => {
+    const container = await renderAndFlush();
+    const section = container.querySelector(
+      '[data-testid="lead-section-risks"]',
+    );
+    expect(section).not.toBeNull();
+    const svg = section?.querySelector("svg[aria-hidden='true']");
+    expect(svg).not.toBeNull();
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("ChatIcon svg has aria-hidden=true", async () => {
+    const container = await renderAndFlush();
+    const section = container.querySelector(
+      '[data-testid="lead-section-decisions"]',
+    );
+    expect(section).not.toBeNull();
+    const svg = section?.querySelector("svg[aria-hidden='true']");
+    expect(svg).not.toBeNull();
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("CollapseIcon svg has aria-hidden=true", async () => {
+    const container = await renderAndFlush();
+    // CollapseIcon renders inside the "Toggle All" button, which is visible
+    // when there are items or decisions in the section data.
+    const toggleBtn = container.querySelector('button[title="Toggle All"]');
+    expect(toggleBtn).not.toBeNull();
+    const svg = toggleBtn?.querySelector("svg[aria-hidden='true']");
+    expect(svg).not.toBeNull();
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  // VA-0b snapshot: all icon SVGs in the rendered form carry aria-hidden=true
+  it("snapshot: all icon SVGs rendered in LeadForm have aria-hidden=true", async () => {
+    const container = await renderAndFlush();
+    const allSvgs = Array.from(container.querySelectorAll("svg"));
+    // At minimum the 6 icon SVGs (Grid, Calendar, NextWeek, Alert, Chat,
+    // Collapse) must be present; each must carry aria-hidden="true".
+    const iconSvgs = allSvgs.filter(
+      (svg) => svg.getAttribute("aria-hidden") === "true",
+    );
+    expect(iconSvgs.length).toBeGreaterThanOrEqual(6);
+    for (const svg of iconSvgs) {
+      expect(svg).toHaveAttribute("aria-hidden", "true");
+    }
+  });
+});

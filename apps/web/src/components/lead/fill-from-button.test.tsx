@@ -7,6 +7,15 @@ import { describe, expect, it } from "vitest";
 import { FillFromButton } from "./fill-from-button";
 import type { ReportPeriod } from "./mock-data";
 
+const pastPeriod: ReportPeriod = {
+  id: "2026-W16",
+  sourceSectionId: "sec-W16",
+  weekLabel: "Week 16",
+  dateRange: "Apr 14–20, 2026",
+  isCurrent: false,
+  isSubmitted: true,
+};
+
 describe("FillFromButton", () => {
   it("renders period list when past submitted periods exist", () => {
     const periods: ReportPeriod[] = [
@@ -89,5 +98,49 @@ describe("FillFromButton", () => {
     expect(
       screen.getByText("No reports match your search."),
     ).toBeInTheDocument();
+  });
+});
+
+describe("FillFromButton — a11y regression (VA-0a): aria-hidden decorative SVGs", () => {
+  it("CopyIcon svg has aria-hidden='true'", () => {
+    render(<FillFromButton periods={[pastPeriod]} />);
+
+    const fillButton = screen.getByRole("button", { name: /^Fill$/ });
+    const svg = fillButton.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("primary Fill button contains svg with aria-hidden='true' and accessible name is 'Fill'", () => {
+    render(<FillFromButton periods={[pastPeriod]} />);
+
+    const fillButton = screen.getByRole("button", { name: /^Fill$/ });
+    expect(fillButton).toBeInTheDocument();
+    const svg = fillButton.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("ChevronDown svg has aria-hidden='true'", () => {
+    render(<FillFromButton periods={[pastPeriod]} />);
+
+    const triggerButton = screen.getByRole("button", {
+      name: "Choose past report to fill from",
+    });
+    const svg = triggerButton.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("dropdown trigger button contains svg with aria-hidden='true' and accessible name is 'Choose past report to fill from'", () => {
+    render(<FillFromButton periods={[pastPeriod]} />);
+
+    const triggerButton = screen.getByRole("button", {
+      name: "Choose past report to fill from",
+    });
+    expect(triggerButton).toBeInTheDocument();
+    const svg = triggerButton.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg).toHaveAttribute("aria-hidden", "true");
   });
 });

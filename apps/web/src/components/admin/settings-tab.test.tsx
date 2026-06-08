@@ -12,7 +12,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
 
@@ -763,6 +763,322 @@ describe("SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)", () => {
     );
     expect(screen.getByTestId("integration-ai-rag").textContent).toMatch(
       /empty/i,
+    );
+  });
+});
+
+// ─── VA-0a/VA-0b: verify-a11y-recommended-flip regression tests ──────────
+//
+// Covers catalog rows for settings-tab.tsx:
+//   unit-rtl/high: rows 398–399 (HolidaysComingSoonControl span attributes),
+//                  rows 401–402 (aria-hidden on Calendar + CheckIcon SVGs),
+//                  rows 403–406 (CheckIcon aria-hidden in each subtab success msg)
+//   snapshot/medium: row 407 (CheckIcon SVG attributes), row 409 (success msg DOM)
+
+describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () => {
+  // Stub fetch so /api/revalidate-org called in onSuccess doesn't hang or
+  // reject while we await the success message.
+  const originalFetch = globalThis.fetch;
+  beforeEach(() => {
+    toastSuccess.mockReset();
+    toastError.mockReset();
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 200 }));
+  });
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  // Row 398: HolidaysComingSoonControl span — no aria-label
+  it("holidays-coming-soon span has no aria-label attribute", () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn(),
+      updateSettingsFn: vi.fn(),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
+          <SettingsTab settings={baseSettings} />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    const span = screen.getByTestId("holidays-coming-soon");
+    expect(span.hasAttribute("aria-label")).toBe(false);
+  });
+
+  // Row 399: HolidaysComingSoonControl span — aria-disabled="true" preserved
+  it("holidays-coming-soon span retains aria-disabled=true", () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn(),
+      updateSettingsFn: vi.fn(),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
+          <SettingsTab settings={baseSettings} />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    const span = screen.getByTestId("holidays-coming-soon");
+    expect(span.getAttribute("aria-disabled")).toBe("true");
+  });
+
+  // Row 401: Calendar (lucide-react) icon SVG — aria-hidden="true"
+  it("Calendar icon SVG inside holidays tab trigger has aria-hidden=true", () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn(),
+      updateSettingsFn: vi.fn(),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
+          <SettingsTab settings={baseSettings} />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    const span = screen.getByTestId("holidays-coming-soon");
+    const svg = span.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  // Row 402: CheckIcon SVG — aria-hidden="true" static attribute
+  it("CheckIcon SVG has aria-hidden=true in Identity success message", async () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn().mockResolvedValue(undefined),
+      updateSettingsFn: vi.fn(),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
+          <SettingsTab settings={baseSettings} />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    // Wait for the org query to populate the form, then save.
+    const shortNameInput = (await screen.findByLabelText(
+      /short name/i,
+    )) as HTMLInputElement;
+    await waitFor(() => expect(shortNameInput.value).toBe("Demo"));
+
+    fireEvent.change(shortNameInput, { target: { value: "NEW" } });
+
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: /save organization identity/i }),
+    );
+
+    // Wait for the success message to appear.
+    const successSpan = await screen.findByText(/identity saved/i);
+    const svg = successSpan.closest("span")?.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  // Row 403: CheckIcon SVG aria-hidden in Identity success message (interaction)
+  it("CheckIcon SVG aria-hidden=true persists in Identity saved message", async () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn().mockResolvedValue(undefined),
+      updateSettingsFn: vi.fn(),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
+          <SettingsTab settings={baseSettings} />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    const shortNameInput = (await screen.findByLabelText(
+      /short name/i,
+    )) as HTMLInputElement;
+    await waitFor(() => expect(shortNameInput.value).toBe("Demo"));
+
+    const fullNameInput = screen.getByLabelText(
+      /full name/i,
+    ) as HTMLInputElement;
+    fireEvent.change(shortNameInput, { target: { value: "ACME" } });
+    fireEvent.change(fullNameInput, { target: { value: "Acme Corp" } });
+
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: /save organization identity/i }),
+    );
+
+    const successMsg = await screen.findByText(/identity saved/i);
+    const container = successMsg.closest("span");
+    expect(container).not.toBeNull();
+    const svg = container?.querySelector("svg");
+    expect(svg?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  // Row 404: CheckIcon SVG aria-hidden in Periods success message
+  it("CheckIcon SVG aria-hidden=true in Period settings saved message", async () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn(),
+      updateSettingsFn: vi.fn().mockResolvedValue(undefined),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
+          <SettingsTab settings={baseSettings} />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("tab", { name: /periods/i }));
+
+    fireEvent.change(screen.getByLabelText(/period length/i), {
+      target: { value: "14" },
+    });
+
+    await user.click(
+      screen.getByRole("button", { name: /save period settings/i }),
+    );
+
+    const successMsg = await screen.findByText(/period settings saved/i);
+    const container = successMsg.closest("span");
+    const svg = container?.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  // Row 405: CheckIcon SVG aria-hidden in Reminders success message
+  it("CheckIcon SVG aria-hidden=true in Reminder defaults saved message", async () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn(),
+      updateSettingsFn: vi.fn().mockResolvedValue(undefined),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
+          <SettingsTab settings={baseSettings} />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("tab", { name: /reminders/i }));
+
+    fireEvent.change(
+      screen.getByLabelText(/default timezone/i) as HTMLSelectElement,
+      { target: { value: "Asia/Yekaterinburg" } },
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /save reminder defaults/i }),
+    );
+
+    const successMsg = await screen.findByText(/reminder defaults saved/i);
+    const container = successMsg.closest("span");
+    const svg = container?.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  // Row 406: CheckIcon SVG aria-hidden in Notifications success message
+  it("CheckIcon SVG aria-hidden=true in Notification settings saved message", async () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn(),
+      updateSettingsFn: vi.fn().mockResolvedValue(undefined),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
+          <SettingsTab settings={baseSettings} />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("tab", { name: /notifications/i }));
+
+    fireEvent.change(
+      screen.getByLabelText(/notification from-email/i) as HTMLInputElement,
+      { target: { value: "reports@example.com" } },
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: /save notification settings/i }),
+    );
+
+    const successMsg = await screen.findByText(/notification settings saved/i);
+    const container = successMsg.closest("span");
+    const svg = container?.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  // Row 407: CheckIcon SVG attributes snapshot
+  it("CheckIcon SVG attributes snapshot — viewBox, stroke, fill, strokeWidth, strokeLinecap, strokeLinejoin", async () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn().mockResolvedValue(undefined),
+      updateSettingsFn: vi.fn(),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
+          <SettingsTab settings={baseSettings} />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    const shortNameInput = (await screen.findByLabelText(
+      /short name/i,
+    )) as HTMLInputElement;
+    await waitFor(() => expect(shortNameInput.value).toBe("Demo"));
+
+    fireEvent.change(shortNameInput, { target: { value: "SNAP" } });
+
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: /save organization identity/i }),
+    );
+
+    const successMsg = await screen.findByText(/identity saved/i);
+    const svg = successMsg.closest("span")?.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg?.outerHTML).toMatchInlineSnapshot(
+      `"<svg viewBox="0 0 24 24" class="h-4 w-4" stroke="currentColor" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>"`,
+    );
+  });
+
+  // Row 409: Success message DOM structure snapshot (CheckIcon SVG + text coexist)
+  it("success message DOM structure snapshot — CheckIcon SVG and text node coexist in span", async () => {
+    const captured: Captured = {
+      updateOrgFn: vi.fn().mockResolvedValue(undefined),
+      updateSettingsFn: vi.fn(),
+    };
+    render(
+      <Wrapper>
+        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
+          <SettingsTab settings={baseSettings} />
+        </TRPCProxyContext.Provider>
+      </Wrapper>,
+    );
+
+    const shortNameInput = (await screen.findByLabelText(
+      /short name/i,
+    )) as HTMLInputElement;
+    await waitFor(() => expect(shortNameInput.value).toBe("Demo"));
+
+    fireEvent.change(shortNameInput, { target: { value: "SNAP2" } });
+
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: /save organization identity/i }),
+    );
+
+    const successMsg = await screen.findByText(/identity saved/i);
+    const container = successMsg.closest("span");
+    expect(container?.outerHTML).toMatchInlineSnapshot(
+      `"<span class="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]"><svg viewBox="0 0 24 24" class="h-4 w-4" stroke="currentColor" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>Identity saved</span>"`,
     );
   });
 });
