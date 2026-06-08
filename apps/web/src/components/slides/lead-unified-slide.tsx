@@ -1,7 +1,6 @@
 "use client";
 
 import { AlertTriangle, ArrowRight, FileText, Target } from "lucide-react";
-
 import type { ReactNode } from "react";
 
 import type {

@@ -53,10 +53,11 @@
  */
 
 import type {
-  VersionSnapshot as ApiVersionSnapshot,
   MyHistoryEntry,
   ReportSectionReadModel,
+  VersionSnapshot as ApiVersionSnapshot,
 } from "@customreport/shared";
+
 import {
   formatPeriodRangeWithYear,
   isoWeekNumber as sharedIsoWeekNumber,

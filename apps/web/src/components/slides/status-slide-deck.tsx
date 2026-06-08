@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { type ReactNode, useRef } from "react";
+
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { LeadSlideHero } from "./lead-slide-hero";
 import { LeadUnifiedSlide } from "./lead-unified-slide";

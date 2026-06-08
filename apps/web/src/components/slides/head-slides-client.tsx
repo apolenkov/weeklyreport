@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useContext, useEffect, useMemo, useState } from "react";
+
 import { logClientError } from "../../lib/client-error-reporting";
 import { formatWeekRange } from "../../lib/mappers/weekly-report";
 import { SessionContext } from "../../lib/session-provider";

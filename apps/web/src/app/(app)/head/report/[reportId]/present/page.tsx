@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+
 import { HeadPresentClient } from "../../../../../../components/head/head-present-client";
 import { WeeklyReportSkeleton } from "../../../../../../components/weekly-report/weekly-report-skeleton";
 

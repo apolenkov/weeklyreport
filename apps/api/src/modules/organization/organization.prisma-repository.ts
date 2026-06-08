@@ -1,8 +1,8 @@
 import {
   DEFAULT_ORGANIZATION_IDENTITY,
   type Organization,
-  type OrganizationUpdate,
   organizationSchema,
+  type OrganizationUpdate,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 

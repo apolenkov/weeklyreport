@@ -1,4 +1,5 @@
 import type { LoggerService } from "@nestjs/common";
+
 import type { AppLogger } from "./logger.js";
 
 export class NestAppLoggerAdapter implements LoggerService {

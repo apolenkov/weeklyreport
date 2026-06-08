@@ -5,7 +5,6 @@ import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../lib/trpc-context";
-
 import type { MockUser, StageName } from "./mock-data";
 
 const STAGE_COLORS: Record<StageName, string> = {

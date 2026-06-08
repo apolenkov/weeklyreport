@@ -10,8 +10,8 @@
  * No jsdom / RTL — the api package runs in Node; html is obtained via
  * @react-email/render which is already a production dependency.
  */
-import * as React from "react";
 import { render } from "@react-email/render";
+import * as React from "react";
 import { describe, expect, it } from "vitest";
 
 import {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+
 import type { DecisionEntry, Product } from "./mock-data";
 import { StageMultiSelect } from "./stage-multi-select";
 

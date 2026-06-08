@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { useQuery } from "@tanstack/react-query";
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { logClientError } from "../../lib/client-error-reporting";
 import { DASHBOARD_LOAD_STALL_MS, DashboardPage } from "./dashboard-page";
 

@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { UnifiedSlideModel } from "./section-slide-utils";
 import { LeadUnifiedSlide } from "./lead-unified-slide";
+import type { UnifiedSlideModel } from "./section-slide-utils";
 
 function makeModel(
   overrides: Partial<UnifiedSlideModel> = {},

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+
 import { HeadReportShell } from "../../../../../components/head/head-report-shell";
 import { WeeklyReportSkeleton } from "../../../../../components/weekly-report/weekly-report-skeleton";
 

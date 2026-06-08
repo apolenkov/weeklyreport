@@ -4,7 +4,6 @@ import {
   customreportActiveLeadsTotal,
   customreportReportsOnTimeRatio,
 } from "../../infrastructure/metrics/metrics.registry.js";
-
 import {
   TelemetryGauges,
   type TelemetryGaugesPort,

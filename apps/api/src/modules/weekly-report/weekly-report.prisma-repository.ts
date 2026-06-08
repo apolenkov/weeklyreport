@@ -5,10 +5,11 @@ import {
   weeklyReportReadModelSchema,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
+
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {
-  type GroupScopeOptions,
   groupScopeFilter,
+  type GroupScopeOptions,
 } from "../../lib/group-scope.js";
 import {
   buildEscalationsFromSnapshotSections,

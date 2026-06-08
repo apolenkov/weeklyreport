@@ -1,6 +1,7 @@
 import { getQueueToken } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
 import type { Queue } from "bullmq";
+
 import { BullMQModule } from "../../infrastructure/bullmq/bullmq.module";
 import { PdfExportPrismaRepository } from "./pdf-export.prisma-repository";
 import { PdfExportService } from "./pdf-export.service";

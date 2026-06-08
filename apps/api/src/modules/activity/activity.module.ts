@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+
 import { ActivityPrismaRepository } from "./activity.prisma-repository.js";
 import { ActivityService } from "./activity.service.js";
 

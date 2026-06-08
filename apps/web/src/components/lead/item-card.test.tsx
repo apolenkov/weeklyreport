@@ -11,11 +11,12 @@
  *  - Full card DOM structure (snapshot)
  */
 import "@testing-library/jest-dom/vitest";
+
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { KanbanItem } from "./mock-data";
 import { ItemCard } from "./item-card";
+import type { KanbanItem } from "./mock-data";
 
 const BASE_ITEM: KanbanItem = {
   id: "item-1",

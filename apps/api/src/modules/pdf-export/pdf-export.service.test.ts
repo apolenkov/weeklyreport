@@ -1,6 +1,7 @@
 import type { AssembledReport, PdfExportJob } from "@customreport/shared";
 import jwt from "jsonwebtoken";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { customreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import { pdfExportRouter } from "./pdf-export.router";

@@ -1,7 +1,7 @@
 import {
   type AdminProject,
-  type AdminSnapshot,
   adminProjectSchema,
+  type AdminSnapshot,
   adminSnapshotSchema,
   type GroupProduct,
   type GroupProductEdgeInput,

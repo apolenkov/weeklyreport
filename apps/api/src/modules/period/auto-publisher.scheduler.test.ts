@@ -1,5 +1,6 @@
 import type { AppSettings } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
+
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { silenceNestLogger } from "../../test-utils/silence-logs";
 import { AutoPublisherScheduler } from "./auto-publisher.scheduler.js";

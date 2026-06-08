@@ -1,4 +1,5 @@
 import { Gauge } from "prom-client";
+
 import { metricsRegistry } from "./metrics.registry.js";
 
 export const webVitalLcp = new Gauge({

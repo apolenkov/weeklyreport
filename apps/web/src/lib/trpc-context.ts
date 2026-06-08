@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
+
 import type { TRPCProxy } from "./trpc";
 
 export const TRPCProxyContext = createContext<TRPCProxy | null>(null);

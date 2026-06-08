@@ -33,8 +33,8 @@
 
 import {
   type InfiniteData,
-  type UseInfiniteQueryOptions,
   useInfiniteQuery,
+  type UseInfiniteQueryOptions,
 } from "@tanstack/react-query";
 import { useMemo } from "react";
 

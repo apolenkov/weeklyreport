@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 
-import { renderToStaticMarkup } from "react-dom/server";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 // Stub Sentry — server SDK is not available in jsdom.

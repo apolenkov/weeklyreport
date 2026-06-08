@@ -11,6 +11,7 @@ vi.mock("@sentry/nextjs", () => ({
 }));
 
 import * as Sentry from "@sentry/nextjs";
+
 import ErrorBoundary from "./error";
 
 function makeError(message = "Test error"): Error & { digest?: string } {

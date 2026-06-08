@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { invalidateAdmin } from "../../lib/cache-keys";
 import { toReportingGroupInput } from "../../lib/mappers";
 import { useTRPC } from "../../lib/trpc-context";
-
 import { TabFilter, TabHeader, TabSearch } from "./tab-header";
 
 // B4: archive quick-filter — default "active" hides archived groups on load
@@ -19,7 +18,6 @@ const ARCHIVE_OPTIONS = [
 type ArchiveFilterValue = (typeof ARCHIVE_OPTIONS)[number]["value"];
 
 import { GroupProductsEditor } from "./group-products-editor";
-
 import type { MockGroup, MockProduct, MockUser } from "./mock-data";
 
 interface GroupFormData {

@@ -33,6 +33,7 @@ import type {
   SubmissionDashboardRow,
   WeeklyReportReadModel,
 } from "@customreport/shared";
+
 import { formatPeriodRangeWithYear, formatWeekLabel } from "../format-date";
 import { deriveLeadStatus, type LeadStatus } from "./lead-status";
 import { trafficToStageStatus } from "./traffic-light";

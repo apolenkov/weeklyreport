@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+
 import { ForbiddenPage } from "../../../../../../components/forbidden-page";
 import { LeadSectionPreviewAuth } from "../../../../../../components/lead/lead-section-preview-auth";
 import { WeeklyReportSkeleton } from "../../../../../../components/weekly-report/weekly-report-skeleton";

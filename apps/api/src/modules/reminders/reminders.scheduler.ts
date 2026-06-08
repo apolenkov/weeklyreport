@@ -2,13 +2,13 @@ import { Injectable } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
 import { OrganizationService } from "../organization/organization.service";
-import { RemindersPrismaRepository } from "./reminders.prisma-repository";
 import type {
   DueDeadlineRule,
   DueEscalationRule,
 } from "./reminders.prisma-repository";
-import { RemindersService } from "./reminders.service";
+import { RemindersPrismaRepository } from "./reminders.prisma-repository";
 import type { ReminderOrganization } from "./reminders.service";
+import { RemindersService } from "./reminders.service";
 
 /**
  * NOTIF-04 (Phase 28-03), NOTIF-02/05 (Phase 29-05): hourly tick that

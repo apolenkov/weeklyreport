@@ -26,6 +26,7 @@ import type {
   VersionSnapshot,
 } from "@customreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   type LeadFormRepository,

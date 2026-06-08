@@ -4,7 +4,6 @@ import type {
   TrafficLightCell,
   TrafficLightHistoryOutput,
 } from "@customreport/shared";
-
 import {
   ChartContainer,
   ChartTooltip,

@@ -1,5 +1,6 @@
 import type { UserSession } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
+
 import { createAuthController } from "../../../modules/auth/auth.controller.js";
 import {
   type SamlStrategyOptions,

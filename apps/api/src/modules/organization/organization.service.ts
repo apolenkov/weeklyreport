@@ -1,9 +1,9 @@
 import {
   type Organization,
   type OrganizationPublic,
-  type OrganizationUpdate,
   organizationPublicSchema,
   organizationSchema,
+  type OrganizationUpdate,
 } from "@customreport/shared";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";

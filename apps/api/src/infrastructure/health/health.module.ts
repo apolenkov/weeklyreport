@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { TerminusModule } from "@nestjs/terminus";
+
 import { BullMQModule } from "../bullmq/bullmq.module";
 import { BullMQHealthIndicator } from "./bullmq.health.js";
 import { HealthController } from "./health.controller.js";

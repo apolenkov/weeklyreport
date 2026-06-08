@@ -34,8 +34,10 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
 import samlify from "samlify";
 import { beforeAll, describe, expect, it } from "vitest";
+
 import { expectDefined } from "../../test-utils/expect-defined.js";
 
 // `validator` shipped by samlify is required-but-not-bundled to avoid the

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -26,16 +27,16 @@ import {
   portfolioOverviewSchema,
   portfolioProductOverviewSchema,
   projectStatusInputSchema,
-  type ReportSectionReadModel,
   reportPeriodSchema,
+  type ReportSectionReadModel,
   reportSectionStatusSchema,
   reportStatusSchema,
   riskInputSchema,
   riskSeveritySchema,
   safeText,
-  type SubmitSectionPayload,
   stageAssignmentSchema,
   stageSchema,
+  type SubmitSectionPayload,
   submitSectionSchema,
   trafficLightStatusSchema,
   validateSubmitInput,

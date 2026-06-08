@@ -133,8 +133,8 @@ export {
   Tabs,
   TabsContent,
   TabsList,
-  TabsTrigger,
   tabsListVariants,
+  TabsTrigger,
 } from "./components/ui/tabs";
 export { Textarea } from "./components/ui/textarea";
 export {
