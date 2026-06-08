@@ -295,8 +295,18 @@ true`. A documented SOFTENING, but it opens NO Promise hole — the only
   `apps/api/src/main.ts` carries a file-level `simple-import-sort/imports`
   disable (load-bearing bootstrap order). Gate green incl. build.
   REMAINING R3a clusters (each its own commit, gate-green-or-revert):
-  - [ ] R3a-2 unicorn recommended set (pruned per the user directive — turn off
-        the noise rules with a reason; unicorn plugin already installed).
+  - [x] R3a-2 unicorn — DONE 2026-06-08 (commit `c17d03b9`). Measured the full
+        recommended set first: 3266 firings, dominated by prevent-abbreviations
+        (1218) + no-null (1169), and several rules whose AUTOFIX breaks this typed
+        codebase (gate-caught: prefer-https rewrites the SVG XML namespace;
+        prefer-spread loses DOM-collection types; no-useless-undefined strips
+        required explicit `undefined`; prefer-native-coercion-functions drops a
+        type predicate; prefer-math-min-max turns a Date ternary into a number).
+        Per the user directive (community-strict, no overhead, AI-controlled) →
+        enabled a CURATED allowlist of ~23 safe high-value autofix-clean rules
+        (escape-case, numeric-separators, catch-error-name, prefer-node-protocol,
+        prefer-number-properties, prefer-string-\*, prefer-set-has, etc.). 67 files
+        autofixed; gate green incl. build.
   - [ ] R3a-3 sonarjs (incl. `cognitive-complexity`) — needs `eslint-plugin-sonarjs` install.
   - [ ] R3a-4 core `max-lines` 300 (skipBlankLines/skipComments) + complexity,
         with exempt dirs (`*.test.*`, `e2e`, `prisma/generated`, `*.config.ts`).
