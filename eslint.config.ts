@@ -5,6 +5,7 @@ import react from "eslint-plugin-react";
 import reactCompiler from "eslint-plugin-react-compiler";
 import reactHooks from "eslint-plugin-react-hooks";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
+import sonarjs from "eslint-plugin-sonarjs";
 import unicorn from "eslint-plugin-unicorn";
 import unusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
@@ -55,6 +56,13 @@ const jsxA11y = jsxA11yPlugin as ESLint.Plugin & {
 //     react-hooks/exhaustive-deps → stays warn (advisory, false-positive-prone)
 //   • web→api boundary carve-out: import type ALLOWED via
 //     @typescript-eslint/no-restricted-imports { allowTypeImports: true }
+// sonarjs ships its flat `recommended` config typed as a loose union; narrow it
+// to the rules/settings shape we spread so the type-aware lint stays clean.
+const sonarjsRecommended = sonarjs.configs.recommended as unknown as {
+  readonly rules: Linter.RulesRecord;
+  readonly settings?: Linter.Config["settings"];
+};
+
 export default defineConfig([
   globalIgnores([
     "**/node_modules/**",
@@ -410,6 +418,54 @@ export default defineConfig([
         { max: 300, skipBlankLines: true, skipComments: true },
       ],
       complexity: ["error", 20],
+    },
+  },
+  // R3a-3: sonarjs (community recommended preset). Per the §3 user directive
+  // (community-strict, no overhead, default presets win), the full recommended
+  // ruleset is enabled — every rule that currently fires ZERO times is enforced
+  // going forward (regression prevention). The 29 rules that DO fire today are
+  // turned off below in two buckets: PRUNE (permanent — noise/duplicate/
+  // convention-conflict) and DEFER (a ratchet TODO — flip to error per fixup
+  // wave, same model as the max-lines/complexity ratchet). No code was changed
+  // to land this; the deferred fixups are tracked in tasks.md R3a-3.
+  {
+    files: ["**/*.{ts,tsx,js,jsx,mjs}"],
+    plugins: { sonarjs },
+    settings: sonarjsRecommended.settings,
+    rules: {
+      ...sonarjsRecommended.rules,
+      // — PRUNE (permanent off, with reason) —
+      "sonarjs/todo-tag": "off", // fights the repo-mandated TODO(<ref>) deferred-feature convention (CLAUDE.md)
+      "sonarjs/no-unused-vars": "off", // duplicate of unused-imports/no-unused-vars (already error)
+      "sonarjs/deprecation": "off", // duplicate of @typescript-eslint/no-deprecated (already error)
+      "sonarjs/prefer-read-only-props": "off", // aggressive React-prop-immutability churn (49 sites), suggestion-only, not standard practice
+      "sonarjs/no-nested-conditional": "off", // nested ternaries are idiomatic in JSX rendering here (105 sites); cognitive-complexity already bounds nesting
+      // — DEFER (ratchet TODO(R3a-3-fixup): grandfathered repo-wide for now,
+      //   flip to error one fixup wave at a time). Counts measured 2026-06-09. —
+      "sonarjs/cognitive-complexity": "off", // 27 src; pairs with the cyclomatic-complexity ratchet (do together, supervised)
+      "sonarjs/no-nested-functions": "off", // 11 src; refactor-heavy (extract nested render helpers)
+      "sonarjs/no-hardcoded-ip": "off", // 29, ALL test fixtures (10.0.0.x); fixup = scope test-off, keep error in src
+      "sonarjs/hardcoded-secret-signatures": "off", // 10, ALL test fixtures (fake passwords); fixup = scope test-off, keep error in src
+      "sonarjs/no-clear-text-protocols": "off", // 13 (12 test + 1 src); fixup = scope test-off + review email.service:34
+      "sonarjs/no-alphabetical-sort": "off", // 25 (mostly test); add explicit comparators or per-site disable
+      "sonarjs/slow-regex": "off", // 5 src hotspots; review each regex (likely linear) → per-site disable w/ reason
+      "sonarjs/pseudo-random": "off", // 2 src (UI animation + shadcn generated, not crypto) → per-site disable w/ reason
+      "sonarjs/no-os-command-from-path": "off", // 2 (prisma/reset-hard op script) → per-site disable w/ reason
+      "sonarjs/os-command": "off", // 1 (uat-suite script) → per-site disable w/ reason
+      "sonarjs/no-nested-template-literals": "off", // 5; readability fix
+      "sonarjs/use-type-alias": "off", // 4; extract repeated union to a named alias
+      "sonarjs/different-types-comparison": "off", // 2 (carry-over.service) — behavior-sensitive, review supervised
+      "sonarjs/no-misleading-array-reverse": "off", // 5; in-place reverse — fix to copy-then-reverse where intended
+      "sonarjs/no-redundant-optional": "off", // 4; drop redundant `| undefined`
+      "sonarjs/no-undefined-argument": "off", // 2; drop explicit undefined trailing arg
+      "sonarjs/no-unused-collection": "off", // 2; remove the populated-never-read collection
+      "sonarjs/no-identical-functions": "off", // 1; dedupe
+      "sonarjs/public-static-readonly": "off", // 1
+      "sonarjs/no-invariant-returns": "off", // 1
+      "sonarjs/reduce-initial-value": "off", // 1
+      "sonarjs/no-async-constructor": "off", // 1
+      "sonarjs/function-return-type": "off", // 1
+      "sonarjs/void-use": "off", // 1
     },
   },
   // Test-file override: disable jsx-a11y (mirrors Biome's former a11y:off on
