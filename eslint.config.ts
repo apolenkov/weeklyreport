@@ -117,7 +117,14 @@ export default defineConfig([
       // rewrites `() => undefined` into `() => {}` (empty-function). So enable
       // only the safe, high-value, autofix-clean rules:
       "unicorn/escape-case": "error",
-      "unicorn/number-literal-case": "error",
+      // unicorn/number-literal-case is intentionally NOT enabled: it conflicts
+      // with Prettier (the formatter of record). The rule wants UPPERCASE hex
+      // digits (0x1F) while Prettier lowercases them (0x1f); since the pre-commit
+      // hook runs prettier AFTER eslint --fix, every hex literal with a letter
+      // digit lands committed-red. Prettier already lowercases the 0x/0b/0o
+      // prefix and the `e` exponent, so the rule is redundant apart from the
+      // conflicting hex-digit case. (Latent since R3a-2; surfaced by R3a-4's
+      // repo-wide gate on logger.test.ts 0x1f/0x8b.)
       "unicorn/numeric-separators-style": "error",
       "unicorn/catch-error-name": "error",
       "unicorn/prefer-string-raw": "error",
