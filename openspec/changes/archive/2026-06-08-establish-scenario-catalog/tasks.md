@@ -101,8 +101,12 @@ Gates after every code step: `pnpm typecheck && pnpm lint && pnpm test`.
   publish/revoke, carry-over, periods-tab delete dialog).
   → SUPERSEDED 2026-06-08: re-homed to `verify-a11y` VA-2/VA-3 (dialog
   keyboard checks) + the live-UAT Wave 1 of `defer-uat` (§4 user decision).
-- [ ] SC-11: Any failure → file a dedicated openspec change; do NOT patch under
+- [x] SC-11: Any failure → file a dedicated openspec change; do NOT patch under
       this change.
+      → N/A (no failures): the diff-scoped gate (SC-8) and automated per-role
+      sweep (SC-9) ran green with 0 console ERRORS, so there was nothing to file.
+      Residual live-app interaction checks are carried as explicit backlog in
+      `verify-a11y-recommended-flip`, not as a new failure under this change.
 
 ## Reconcile the live drift finding
 
@@ -129,10 +133,14 @@ Gates after every code step: `pnpm typecheck && pnpm lint && pnpm test`.
   VA-1..VA-9 + `defer-uat` Wave 1 remain (live app / §4 user decision). Each
   change now owns its own archive — this umbrella checkbox is superseded by
   the per-change close-outs.
-- [ ] SC-14: Leave `ratchet-lint-to-strict` R3/R4 and `defer-uat` Waves 3–4 as
+- [x] SC-14: Leave `ratchet-lint-to-strict` R3/R4 and `defer-uat` Waves 3–4 as
       explicit backlog (net-new, out of scope).
-- [ ] SC-15: `openspec validate establish-scenario-catalog --strict` green;
+      → DONE: both remain live, explicit, net-new changes in `openspec/changes/`
+      (`ratchet-lint-to-strict` R3a-3/R3b/R3c + `defer-uat-…` Waves) — not folded
+      into this catalog change. `openspec list` shows them as the standing backlog.
+- [x] SC-15: `openspec validate establish-scenario-catalog --strict` green;
       archive this change.
+      → DONE 2026-06-09: validates --strict green; archived via `openspec archive`.
 
 ## Parked reconciliation orphans (see findings/RECONCILIATION.md)
 
