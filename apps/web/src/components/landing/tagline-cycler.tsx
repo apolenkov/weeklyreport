@@ -15,7 +15,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { LANDING_TAGLINES } from "./landing-page.constants";
 
-const VISIBLE_MS = 3_000;
+const VISIBLE_MS = 3000;
 const FADE_MS = 250;
 
 function randomIndex(): number {

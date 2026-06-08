@@ -59,9 +59,9 @@ export async function trpcMetricsMiddleware<R extends TrpcMiddlewareResult>(
     endTimer({ ...labels, status });
     trpcRequestTotal.inc({ ...labels, status });
     return result;
-  } catch (err) {
+  } catch (error) {
     endTimer({ ...labels, status: "error" });
     trpcRequestTotal.inc({ ...labels, status: "error" });
-    throw err;
+    throw error;
   }
 }

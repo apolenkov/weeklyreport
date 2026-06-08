@@ -98,12 +98,12 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     }
 
     const leadUsers = await this.prisma.user.findMany({
-      where: { role: "lead", ...(userScope ?? {}) },
+      where: { role: "lead", ...userScope },
       select: { id: true },
     });
 
     const projects = await this.prisma.project.findMany({
-      where: { archived: false, ...(projectScope ?? {}) },
+      where: { archived: false, ...projectScope },
       include: {
         stageAssignments: true,
       },

@@ -145,7 +145,7 @@ describe("WeeklyReportService — unit tests", () => {
 
     const error = await service
       .getWeeklyReport(reportId)
-      .catch((e: unknown) => e);
+      .catch((error_: unknown) => error_);
 
     expect(error).toBeInstanceOf(WeeklyReportDomainError);
     expect(error).toBeInstanceOf(Error);

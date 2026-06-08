@@ -47,7 +47,9 @@ describe("WeeklyReportSkeleton", () => {
 
   it("renders a 6-card portfolio grid (sm:grid-cols-2)", () => {
     const { container } = render(<WeeklyReportSkeleton />);
-    const grid = container.querySelector<HTMLElement>(".sm\\:grid-cols-2");
+    const grid = container.querySelector<HTMLElement>(
+      String.raw`.sm\:grid-cols-2`,
+    );
     expect(grid).not.toBeNull();
     expect(grid?.children.length).toBe(6);
   });

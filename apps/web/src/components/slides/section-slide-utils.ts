@@ -737,13 +737,12 @@ export function buildProductScopedSlides(
     const submitted = section.status === "submitted";
     acc.anySubmitted = acc.anySubmitted || submitted;
     acc.allSubmitted = acc.allSubmitted && submitted;
-    if (submitted && section.submittedAt) {
-      if (
-        !acc.latestSubmittedAt ||
-        section.submittedAt > acc.latestSubmittedAt
-      ) {
-        acc.latestSubmittedAt = section.submittedAt;
-      }
+    if (
+      submitted &&
+      section.submittedAt &&
+      (!acc.latestSubmittedAt || section.submittedAt > acc.latestSubmittedAt)
+    ) {
+      acc.latestSubmittedAt = section.submittedAt;
     }
   };
 

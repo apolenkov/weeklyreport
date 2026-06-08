@@ -116,9 +116,9 @@ export class PublicationService {
     if (ids.length === 0) return;
     try {
       await this.ingestionHook(ids);
-    } catch (err) {
+    } catch (error) {
       this.logger.warn("ingestion hook failed", {
-        error: err instanceof Error ? err.message : String(err),
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }

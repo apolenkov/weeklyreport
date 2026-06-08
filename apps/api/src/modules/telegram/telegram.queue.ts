@@ -45,7 +45,7 @@ export const TELEGRAM_OUTBOUND_QUEUE_NAME = "telegram-outbound" as const;
  */
 export const TELEGRAM_OUTBOUND_JOB_OPTS = {
   attempts: 3,
-  backoff: { type: "exponential" as const, delay: 5_000 },
+  backoff: { type: "exponential" as const, delay: 5000 },
   removeOnComplete: { count: 100 },
   removeOnFail: { count: 500 },
 };

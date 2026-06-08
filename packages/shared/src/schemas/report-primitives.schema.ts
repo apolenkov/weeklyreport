@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /** Rejects strings that contain only whitespace or zero-width characters */
 const noInvisibleOnly = (val: string) =>
-  val.replace(/\s|\u200B|\u200C|\u200D|\uFEFF/gu, "").length > 0;
+  val.replaceAll(/\s|\u200B|\u200C|\u200D|\uFEFF/gu, "").length > 0;
 
 /** Rejects strings containing null bytes (PostgreSQL incompatible) */
 const noNullBytes = (val: string) => !val.includes("\u0000");

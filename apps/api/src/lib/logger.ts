@@ -126,7 +126,7 @@ async function rotateIfNeeded(
     return;
   }
 
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const stamp = new Date().toISOString().replaceAll(/[:.]/g, "-");
   const archivePath = join(
     logDir,
     `${ARCHIVE_PREFIX}${stamp}${ARCHIVE_SUFFIX}`,
@@ -149,8 +149,8 @@ function enqueueWrite(sink: FileSink, entry: LogEntry): void {
   sink.queue = sink.queue
     .then(() => rotateIfNeeded(activePath, sink.logDir, sink.opts))
     .then(() => fs.appendFile(activePath, `${JSON.stringify(entry)}\n`))
-    .catch((err: unknown) => {
-      process.stderr.write(`[logger] file write failed: ${String(err)}\n`);
+    .catch((error: unknown) => {
+      process.stderr.write(`[logger] file write failed: ${String(error)}\n`);
     });
 }
 

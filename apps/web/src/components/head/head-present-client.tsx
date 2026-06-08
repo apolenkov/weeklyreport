@@ -37,7 +37,7 @@ export function HeadPresentClient({ reportId }: Props) {
   const scrollToSection = useCallback(
     (idx: number) => {
       const sections = getSections();
-      if (!sections.length) return;
+      if (sections.length === 0) return;
       const clamped = Math.max(0, Math.min(idx, sections.length - 1));
       setCurrentIndex(clamped);
       setSectionCount(sections.length);

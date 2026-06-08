@@ -32,7 +32,7 @@ function humanizeProcedure(procedure: string): string {
   if (!ns || !action) return procedure;
   const titleNs = ns.charAt(0).toUpperCase() + ns.slice(1);
   const spaced = action
-    .replace(/([A-Z])/g, " $1")
+    .replaceAll(/([A-Z])/g, " $1")
     .replace(/^./, (c) => c.toUpperCase())
     .trim();
   return `${titleNs}: ${spaced}`;

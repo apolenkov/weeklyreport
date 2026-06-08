@@ -391,7 +391,7 @@ export class ReportSectionsPrismaRepository
           });
         }
       },
-      { timeout: 15000 },
+      { timeout: 15_000 },
     );
 
     const saved = await this.prisma.reportSection.findUnique({

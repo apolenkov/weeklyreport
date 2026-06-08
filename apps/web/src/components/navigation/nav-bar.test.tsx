@@ -83,7 +83,7 @@ function setRole(role: Role | null): void {
 }
 
 function linksInContainer(container: HTMLElement, href: string) {
-  return container.querySelectorAll(`a[href="${href}"]`);
+  return container.querySelectorAll(`a[href="${CSS.escape(href)}"]`);
 }
 
 function expectLinkExists(container: HTMLElement, href: string): void {
@@ -101,13 +101,17 @@ function setRoute(pathname: string, query = ""): void {
 
 function expectActiveLink(container: HTMLElement, href: string): void {
   expect(
-    container.querySelectorAll(`a[href="${href}"][aria-current="page"]`).length,
+    container.querySelectorAll(
+      `a[href="${CSS.escape(href)}"][aria-current="page"]`,
+    ).length,
   ).toBeGreaterThan(0);
 }
 
 function expectInactiveLink(container: HTMLElement, href: string): void {
   expect(
-    container.querySelectorAll(`a[href="${href}"][aria-current="page"]`).length,
+    container.querySelectorAll(
+      `a[href="${CSS.escape(href)}"][aria-current="page"]`,
+    ).length,
   ).toBe(0);
 }
 

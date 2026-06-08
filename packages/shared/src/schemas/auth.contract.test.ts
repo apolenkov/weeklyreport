@@ -227,7 +227,7 @@ describe("userSessionSchema", () => {
   // --- Type coercion ---
 
   it("rejects number as email", () => {
-    const session = { ...validSession(), email: 12345 };
+    const session = { ...validSession(), email: 12_345 };
     const result = userSessionSchema.safeParse(session);
     expect(result.success).toBe(false);
   });

@@ -27,7 +27,7 @@ export class RedisHealthIndicator
     try {
       await this.redis.ping();
       return this.getStatus(key, true);
-    } catch (_error) {
+    } catch {
       // TODO(ratchet-no-deprecated): migrate to HealthIndicatorService (inject it, call .check(), remove HealthCheckError)
       throw new HealthCheckError(
         "Redis check failed",

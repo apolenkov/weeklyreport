@@ -17,7 +17,7 @@ function historyEntry(
   archived = false,
 ): MyHistoryEntry {
   return {
-    sectionId: reportId.replace(/1/g, "4").replace(/2/g, "5"),
+    sectionId: reportId.replaceAll("1", "4").replaceAll("2", "5"),
     reportId,
     periodStart: new Date(periodStart),
     periodEnd: new Date(periodStart),

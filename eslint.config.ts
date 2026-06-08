@@ -104,9 +104,56 @@ export default defineConfig([
     rules: {
       // Phase 3 (ratchet-lint-to-strict) R3a — net-new ordering/naming cluster.
       // simple-import-sort: deterministic import/export order (autofixable).
-      // unicorn/filename-case: enforce the repo's kebab-case file convention.
       "simple-import-sort/imports": "error",
       "simple-import-sort/exports": "error",
+      // R3a-2: unicorn — a CURATED allowlist, not the recommended preset.
+      // Directive: community-strict, no overhead, AI-controlled. The full
+      // `recommended` set (3266 firings) is dominated by two notorious rules
+      // (prevent-abbreviations, no-null) plus several whose AUTOFIX introduces
+      // bugs/regressions here — measured: prefer-https rewrites the SVG XML
+      // namespace `http://www.w3.org/2000/svg` (an identifier, not a URL) to
+      // https and breaks the SVG; prefer-spread turns `Array.from(domCollection)`
+      // into a spread that loses TS typing (no-unsafe-*); no-useless-undefined
+      // rewrites `() => undefined` into `() => {}` (empty-function). So enable
+      // only the safe, high-value, autofix-clean rules:
+      "unicorn/escape-case": "error",
+      "unicorn/number-literal-case": "error",
+      "unicorn/numeric-separators-style": "error",
+      "unicorn/catch-error-name": "error",
+      "unicorn/prefer-string-raw": "error",
+      "unicorn/prefer-string-replace-all": "error",
+      "unicorn/prefer-string-repeat": "error",
+      "unicorn/prefer-node-protocol": "error",
+      "unicorn/prefer-number-properties": "error",
+      "unicorn/consistent-existence-index-check": "error",
+      "unicorn/prefer-includes": "error",
+      "unicorn/prefer-dom-node-append": "error",
+      "unicorn/prefer-dom-node-dataset": "error",
+      "unicorn/prefer-optional-catch-binding": "error",
+      "unicorn/prefer-set-has": "error",
+      "unicorn/explicit-length-check": "error",
+      "unicorn/no-lonely-if": "error",
+      "unicorn/no-unnecessary-nested-ternary": "error",
+      "unicorn/no-useless-fallback-in-spread": "error",
+      "unicorn/consistent-date-clone": "error",
+      "unicorn/no-unnecessary-array-splice-count": "error",
+      "unicorn/prefer-type-error": "error",
+      "unicorn/require-css-escape": "error",
+      // Dropped (left non-autofixable stragglers that fight intentional code):
+      // no-useless-switch-case (explicit `case X: default:` documents known enum
+      // values), prefer-query-selector / better-dom-traversing / text-encoding-
+      // identifier-case / prefer-logical-operator-over-ternary (borderline value,
+      // autofix self-declined on type/nullish nuance).
+      // Several recommended rules are NOT enabled because their autofix breaks
+      // types/behavior in this typed codebase (all caught by the gate):
+      //  • no-useless-undefined — strips required explicit `undefined`
+      //    (`safeParse(undefined)`→`safeParse()`; `calledWith({},undefined)`→`({})`).
+      //  • prefer-native-coercion-functions — `.filter((x): x is string =>
+      //    Boolean(x))`→`.filter(Boolean)` drops the type predicate (string|undefined).
+      //  • prefer-math-min-max — `date > latest ? date : latest`→`Math.max(...)`
+      //    returns number where a Date is required.
+      //  • prefer-https / prefer-spread — break the SVG XML namespace / lose DOM types.
+      // unicorn/filename-case with our ignore patterns:
       "unicorn/filename-case": [
         "error",
         {
@@ -115,7 +162,7 @@ export default defineConfig([
           // them from kebab: Next.js dynamic route segments (`[reportId]`, whose
           // name IS the `params` key and must stay camelCase) and the `__tests__`
           // test-folder convention.
-          ignore: [String.raw`^\[.+\]$`, String.raw`^__tests__$`],
+          ignore: [String.raw`^\[.+\]$`, "^__tests__$"],
         },
       ],
       // Biome repo overrides (preserve severities exactly)

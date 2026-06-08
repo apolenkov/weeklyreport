@@ -977,7 +977,7 @@ function PlusIcon() {
  * with the automatic weekly cadence.
  */
 function nextMonday(from: Date): string {
-  const d = new Date(from.getTime());
+  const d = new Date(from);
   // getUTCDay: 0=Sun, 1=Mon..6=Sat. For Sun add 1 day; for any other
   // weekday add (8 - day) % 7 days. For Monday this evaluates to 0 →
   // returns `from` unchanged.

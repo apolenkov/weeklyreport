@@ -188,7 +188,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
           copiedItems += decisionsToCopy.length;
         }
       },
-      { timeout: 15000 },
+      { timeout: 15_000 },
     );
 
     return copiedItems;
@@ -370,7 +370,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
           });
         }
       },
-      { timeout: 15000 },
+      { timeout: 15_000 },
     );
 
     return version;

@@ -34,7 +34,7 @@ export function TabHeader({
   testId,
 }: TabHeaderProps) {
   const resolvedTestId =
-    testId ?? `${title.toLowerCase().replace(/\s+/g, "-")}-tab-header`;
+    testId ?? `${title.toLowerCase().replaceAll(/\s+/g, "-")}-tab-header`;
   return (
     <header
       data-testid={resolvedTestId}

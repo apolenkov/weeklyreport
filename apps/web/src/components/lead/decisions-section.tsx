@@ -44,7 +44,7 @@ function isMine(owner: string | undefined, me: string | undefined): boolean {
     s
       .trim()
       .toLowerCase()
-      .replace(/[.\s]+$/g, "");
+      .replaceAll(/[.\s]+$/g, "");
   return normalize(owner) === normalize(me);
 }
 

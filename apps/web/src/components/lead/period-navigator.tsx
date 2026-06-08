@@ -80,7 +80,7 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
   const currentIndex = useMemo(() => {
     if (!pathReportId) return 0; // default to first (current) period
     const idx = periods.findIndex((p) => p.id === pathReportId);
-    return idx >= 0 ? idx : 0;
+    return idx !== -1 ? idx : 0;
   }, [pathReportId, periods]);
 
   const selectedPeriod = periods.at(currentIndex);

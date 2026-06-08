@@ -91,15 +91,19 @@ describe("adminTestTelegramSendSchema", () => {
 
   it("rejects empty chatId after trimming", () => {
     expect(
-      adminTestTelegramSendSchema.safeParse({ chatId: "   ", text: "x" })
-        .success,
+      adminTestTelegramSendSchema.safeParse({
+        chatId: " ".repeat(3),
+        text: "x",
+      }).success,
     ).toBe(false);
   });
 
   it("rejects empty text after trimming", () => {
     expect(
-      adminTestTelegramSendSchema.safeParse({ chatId: "1", text: "   " })
-        .success,
+      adminTestTelegramSendSchema.safeParse({
+        chatId: "1",
+        text: " ".repeat(3),
+      }).success,
     ).toBe(false);
   });
 

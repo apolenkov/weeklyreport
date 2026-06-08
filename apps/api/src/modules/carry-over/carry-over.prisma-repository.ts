@@ -185,15 +185,17 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
         const carriedDecisions = targetSection.decisions.filter(
           (d) => !d.resolvedAt,
         );
-        const existingDecisionIds = (
-          await tx.decision.findMany({
-            where: { reportSectionId: targetSection.reportSectionId },
-            select: { id: true },
-          })
-        ).map((d) => d.id);
+        const existingDecisionIds = new Set(
+          (
+            await tx.decision.findMany({
+              where: { reportSectionId: targetSection.reportSectionId },
+              select: { id: true },
+            })
+          ).map((d) => d.id),
+        );
 
         const newDecisions = carriedDecisions.filter(
-          (d) => d.id && !existingDecisionIds.includes(d.id),
+          (d) => d.id && !existingDecisionIds.has(d.id),
         );
 
         const decisionsWithProduct = newDecisions.filter(
@@ -215,7 +217,7 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
           });
         }
       },
-      { timeout: 15000 },
+      { timeout: 15_000 },
     );
 
     return { execution, records, targetSection };

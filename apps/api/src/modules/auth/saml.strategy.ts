@@ -61,7 +61,7 @@ export function createSamlStrategyOptions(
       digestAlgorithm: "sha256",
       wantAssertionsSigned: true,
       wantAuthnResponseSigned: true,
-      acceptedClockSkewMs: 5_000,
+      acceptedClockSkewMs: 5000,
     };
   }
 
@@ -77,7 +77,7 @@ export function createSamlStrategyOptions(
     digestAlgorithm: "sha256",
     wantAssertionsSigned: true,
     wantAuthnResponseSigned: true,
-    acceptedClockSkewMs: 5_000,
+    acceptedClockSkewMs: 5000,
   };
 }
 

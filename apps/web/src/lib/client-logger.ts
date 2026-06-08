@@ -53,7 +53,7 @@ async function flush() {
     flushTimer = null;
   }
   if (queue.length === 0) return;
-  const batch = queue.splice(0, queue.length);
+  const batch = queue.splice(0);
   try {
     await fetch("/api/client-logs", {
       method: "POST",

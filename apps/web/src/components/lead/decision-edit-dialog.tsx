@@ -54,7 +54,7 @@ export function DecisionEditDialog({
   // UFB-073 (R1): pre-select all owned stages on create; restore existing on edit.
   const [stageIds, setStageIds] = useState<string[]>(
     decision?.stageIds ??
-      (isCreate ? (availableStages ? [...availableStages] : []) : []),
+      (isCreate && availableStages ? [...availableStages] : []),
   );
   const [errors, setErrors] = useState<{
     text?: string;
@@ -76,7 +76,7 @@ export function DecisionEditDialog({
       );
       setStageIds(
         decision?.stageIds ??
-          (isCreate ? (availableStages ? [...availableStages] : []) : []),
+          (isCreate && availableStages ? [...availableStages] : []),
       );
       setErrors({});
     }

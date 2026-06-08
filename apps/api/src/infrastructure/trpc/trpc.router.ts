@@ -746,7 +746,7 @@ export function createAppRouter(deps: RouterDeps) {
               { chatId: input.chatId, text: input.text },
               {
                 attempts: 3,
-                backoff: { type: "exponential", delay: 5_000 },
+                backoff: { type: "exponential", delay: 5000 },
                 removeOnComplete: { count: 100 },
                 removeOnFail: { count: 500 },
               },

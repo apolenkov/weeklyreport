@@ -50,7 +50,7 @@ describe("TaglineCycler", () => {
     render(<TaglineCycler />);
     // Advance past visible period + fade-out + swap
     act(() => {
-      vi.advanceTimersByTime(3_000 + 250 + 1);
+      vi.advanceTimersByTime(3000 + 250 + 1);
     });
     const second = screen.getByRole("paragraph").textContent;
     expect(LANDING_TAGLINES).toContain(second);
@@ -62,7 +62,7 @@ describe("TaglineCycler", () => {
     expect(el).toHaveStyle({ opacity: "1" });
     // Advance into fade-out window (visible period elapsed but fade not done)
     act(() => {
-      vi.advanceTimersByTime(3_001);
+      vi.advanceTimersByTime(3001);
     });
     expect(el).toHaveStyle({ opacity: "0" });
   });
