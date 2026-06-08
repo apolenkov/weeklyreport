@@ -45,30 +45,29 @@ defer-uat-codequality-vercel    ← DEFERRED родитель (Wave 1–5; final
 ## Пересмотр scope: `establish-scenario-catalog` (2026-06-08)
 
 Change задумывался как `file:line` .feature-каталог (389 сценариев, SC-1..SC-5)
+плюс UX-tier. Этот подход был признан преждевременным для нестабильного MVP, а
+движок свипа стал `behavioral-ui-regression-gate` (per-role YAML, архив). Поэтому
+бо́льшая часть задач суперсед-нута. Позадачно:
 
-- UX-tier. Этот подход был признан преждевременным для нестабильного MVP, а
-  движок свипа стал `behavioral-ui-regression-gate` (per-role YAML, архив). Поэтому
-  бо́льшая часть задач суперсед-нута. Позадачно:
-
-* **ВЫЖИВАЕТ (единственная реальная работа):** `SC-6` + `SC-7` — CI-гейт дрейфа
+- **ВЫЖИВАЕТ (единственная реальная работа):** `SC-6` + `SC-7` — CI-гейт дрейфа
   каталога (`catalog:check`: ре-деривация entry-point-поверхности, exit≠0 при
   surface вне каталога). Behavioral-change явно оставил drift-gate здесь
   (его NOTE 6.1). **Нужно решение:** против чего теперь чекать — per-role YAML
   каталоги и/или entry-point census, а не мёртвые `.feature`-файлы.
-* **СУПЕРСЕД-НУТО движком свипа:** `SC-P3` (MCP reachable), `SC-9`
+- **СУПЕРСЕД-НУТО движком свипа:** `SC-P3` (MCP reachable), `SC-9`
   (консолидированный per-role runtime sweep — это и есть `catalog-sweep.spec.ts`),
   `SC-10` (manual top-risk pass → Driver scope), `SC-13` (оркестрация архива
   других change-ей — теперь каждый закрывается своим треком).
-* **УЖЕ СДЕЛАНО, осталось проставить галочку:** `SC-12` (period-dual-state ↔
+- **УЖЕ СДЕЛАНО, осталось проставить галочку:** `SC-12` (period-dual-state ↔
   carry-over — разрешено, см. `findings/RECONCILIATION.md` + спин-офф
   `fix-period-dual-state-writers`); `O2` (products→projects naming — UI уже зовёт
   `saveProject`/`deleteProject`, `products-tab.tsx:87-101`); `O5` (ветка удалена).
-* **РЕ-ХОУМ (перенести в живой дом):** `O3`/`O4` (Opus-review DI import-type +
+- **РЕ-ХОУМ (перенести в живой дом):** `O3`/`O4` (Opus-review DI import-type +
   аудит lazy import-type) → `ratchet-lint-to-strict`; `O6` (coming-soon cards
   per role) → `verify-a11y-recommended-flip`; `O1` (устаревший комментарий
   `WorkingDays` в `prisma/schema.prisma:671`) → **нужен дом** (старый
   `cleanup-dead-enum-states` в архиве; однострочный фикс).
-* **ОСТАЁТСЯ ЗАМЕТКОЙ:** `SC-11` (любой провал → отдельный change), `SC-14`
+- **ОСТАЁТСЯ ЗАМЕТКОЙ:** `SC-11` (любой провал → отдельный change), `SC-14`
   (ratchet R3/R4 + defer-uat Waves 3–4 = явный бэклог) — процессные, не работа.
 
 → Итог: change схлопывается до **«drift-gate SC-6/SC-7 (ре-скоуп) + close-out
