@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 
 import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
 
+// VA-0a/VA-0b: a11y regression tests for the role="status" root added in the
+// Biome recommended-flip change. See openspec/changes/verify-a11y-recommended-flip.
+
 /**
  * UFB-072 (2026-05-11): DOM-parity tests for the WeeklyReportSkeleton.
  *
@@ -55,5 +58,38 @@ describe("WeeklyReportSkeleton", () => {
     // The last top-level child is the `space-y-3` list of accordion cards.
     const accordionList = root.lastElementChild as HTMLElement;
     expect(accordionList.children.length).toBe(6);
+  });
+
+  // --- VA-0a: role="status" root element (high-priority unit-rtl rows) ---
+
+  it("root element has role='status'", () => {
+    const { container } = render(<WeeklyReportSkeleton />);
+    const root = getRoot(container);
+    expect(root).toHaveAttribute("role", "status");
+  });
+
+  it("getByRole('status') resolves to the root with accessible name 'Loading status report'", () => {
+    render(<WeeklyReportSkeleton />);
+    const root = screen.getByRole("status", {
+      name: /loading status report/i,
+    });
+    expect(root).toBeInTheDocument();
+  });
+
+  // --- VA-0b: DOM snapshot pins the semantic role accessibility tree ---
+
+  it("snapshot: root element exposes role=status with aria-busy and aria-label", () => {
+    render(<WeeklyReportSkeleton />);
+    const root = screen.getByRole("status", {
+      name: /loading status report/i,
+    });
+    // Pin the attributes that constitute the a11y contract; class/structure
+    // changes that don't affect role/aria attributes will still pass.
+    expect({
+      role: root.getAttribute("role"),
+      ariaBusy: root.getAttribute("aria-busy"),
+      ariaLabel: root.getAttribute("aria-label"),
+      testId: root.getAttribute("data-testid"),
+    }).toMatchSnapshot();
   });
 });

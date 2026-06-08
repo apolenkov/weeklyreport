@@ -456,6 +456,99 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// VA-0a — a11y regression catalog (high-priority unit-rtl rows)
+// Source: openspec/changes/verify-a11y-recommended-flip/design.md
+// Section: apps/web/src/components/lead/risk-edit-dialog.tsx
+// Rows: backdrop onKeyDown Escape, Cancel button, stopPropagation, autoFocus
+// ---------------------------------------------------------------------------
+
+const a11yProps = {
+  open: true,
+  risk: null,
+  products: products,
+  defaultProductId: "p1",
+  stagesForProduct: () => ["Dev"] as const,
+  onSave: vi.fn(),
+} as const;
+
+describe("RiskEditDialog — VA-0a a11y (backdrop onKeyDown + click behavior)", () => {
+  it("Escape on the backdrop div calls onCancel (noStaticElementInteractions justification)", () => {
+    const onCancel = vi.fn();
+    render(<RiskEditDialog {...a11yProps} onCancel={onCancel} />);
+
+    const backdrop = document.querySelector<HTMLElement>(
+      '[role="presentation"]',
+    );
+    expect(backdrop).not.toBeNull();
+    if (!backdrop) throw new Error("backdrop not found");
+    fireEvent.keyDown(backdrop, { key: "Escape" });
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("Escape on the backdrop div calls e.preventDefault() (no browser-native dismiss side-effect)", () => {
+    const onCancel = vi.fn();
+    render(<RiskEditDialog {...a11yProps} onCancel={onCancel} />);
+
+    const backdrop = document.querySelector<HTMLElement>(
+      '[role="presentation"]',
+    );
+    expect(backdrop).not.toBeNull();
+    if (!backdrop) throw new Error("backdrop not found");
+
+    const event = new KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+    });
+    const preventDefaultSpy = vi.spyOn(event, "preventDefault");
+    backdrop.dispatchEvent(event);
+
+    expect(preventDefaultSpy).toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("Cancel button click calls onCancel (keyboard-closable alternative justification)", () => {
+    const onCancel = vi.fn();
+    render(<RiskEditDialog {...a11yProps} onCancel={onCancel} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Cancel/i }));
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("clicking the backdrop div calls onCancel (click-to-close path)", () => {
+    const onCancel = vi.fn();
+    render(<RiskEditDialog {...a11yProps} onCancel={onCancel} />);
+
+    const backdrop = document.querySelector<HTMLElement>(
+      '[role="presentation"]',
+    );
+    expect(backdrop).not.toBeNull();
+    if (!backdrop) throw new Error("backdrop not found");
+    fireEvent.click(backdrop);
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("clicking the inner dialog div does NOT call onCancel (stopPropagation guard, useKeyWithClickEvents justification)", () => {
+    const onCancel = vi.fn();
+    render(<RiskEditDialog {...a11yProps} onCancel={onCancel} />);
+
+    fireEvent.click(screen.getByRole("dialog"));
+
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("textarea#risk-text receives document focus on mount (noAutofocus justification)", () => {
+    render(<RiskEditDialog {...a11yProps} onCancel={vi.fn()} />);
+
+    const textarea = document.getElementById("risk-text");
+    expect(document.activeElement).toBe(textarea);
+  });
+});
+
 /**
  * A13/A15 regression: typed text AND selected severity must survive parent
  * re-renders that pass a new stagesForProduct function reference

@@ -52,6 +52,56 @@ describe("HeadPeriodNavigator", () => {
     mockPathname = "/head/report";
   });
 
+  // --- VA-0a: aria-hidden on decorative chevron SVGs ---
+
+  it("ChevronLeft SVG inside Previous button has aria-hidden=true", () => {
+    render(<HeadPeriodNavigator periods={PERIODS} />);
+    const prevBtn = screen.getByRole("button", { name: "Previous week" });
+    const svg = prevBtn.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("ChevronRight SVG inside Next button has aria-hidden=true", () => {
+    render(<HeadPeriodNavigator periods={PERIODS} />);
+    const nextBtn = screen.getByRole("button", { name: "Next week" });
+    const svg = nextBtn.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("Previous button contains a decorative SVG with aria-hidden=true (not exposed to a11y tree)", () => {
+    render(<HeadPeriodNavigator periods={PERIODS} />);
+    const prevBtn = screen.getByRole("button", { name: "Previous week" });
+    // The button must contain exactly one SVG and it must be aria-hidden so
+    // the accessible name comes from the button's own aria-label.
+    const svgs = prevBtn.querySelectorAll("svg");
+    expect(svgs.length).toBe(1);
+    expect(svgs[0]).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("Next button contains a decorative SVG with aria-hidden=true (not exposed to a11y tree)", () => {
+    render(<HeadPeriodNavigator periods={PERIODS} />);
+    const nextBtn = screen.getByRole("button", { name: "Next week" });
+    const svgs = nextBtn.querySelectorAll("svg");
+    expect(svgs.length).toBe(1);
+    expect(svgs[0]).toHaveAttribute("aria-hidden", "true");
+  });
+
+  // --- VA-0b: snapshots pin chevron icon rendering in each nav button ---
+
+  it("snapshot: Previous button renders ChevronLeft with aria-hidden SVG", () => {
+    render(<HeadPeriodNavigator periods={PERIODS} />);
+    const prevBtn = screen.getByRole("button", { name: "Previous week" });
+    expect(prevBtn.innerHTML).toMatchSnapshot();
+  });
+
+  it("snapshot: Next button renders ChevronRight with aria-hidden SVG", () => {
+    render(<HeadPeriodNavigator periods={PERIODS} />);
+    const nextBtn = screen.getByRole("button", { name: "Next week" });
+    expect(nextBtn.innerHTML).toMatchSnapshot();
+  });
+
   it("selecting a non-current period routes to /head/report/<reportId>", () => {
     render(<HeadPeriodNavigator periods={PERIODS} />);
     const select = screen.getByLabelText(

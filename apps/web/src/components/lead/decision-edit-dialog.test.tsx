@@ -5,6 +5,10 @@
  * Before fix: useEffect has availableStages in deps → fires on new ref →
  *             setText('') wipes user input.
  * After fix:  availableStages removed from deps → state preserved.
+ *
+ * VA-0a: a11y regression tests for biome-ignore suppression justifications
+ * (noStaticElementInteractions on backdrop, useKeyWithClickEvents on inner
+ * dialog div, noAutofocus on textarea).
  */
 
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -149,5 +153,108 @@ describe("DecisionEditDialog — A13 form-race regression", () => {
       screen.getByRole("checkbox", { name: "Planning" }),
     ).not.toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Dev" })).toBeChecked();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// VA-0a — a11y regression catalog (high-priority unit-rtl rows)
+// Source: openspec/changes/verify-a11y-recommended-flip/design.md
+// Section: apps/web/src/components/lead/decision-edit-dialog.tsx
+// ---------------------------------------------------------------------------
+
+const defaultProps = {
+  open: true,
+  decision: null,
+  defaultOwner: "Test Lead",
+  availableStages: ["Planning", "Dev"] as readonly string[],
+  products,
+  defaultProductId: "p1",
+  onSave: vi.fn(),
+} as const;
+
+describe("DecisionEditDialog — VA-0a a11y (backdrop onKeyDown + click behavior)", () => {
+  it("Escape on the backdrop div calls onCancel (noStaticElementInteractions justification)", () => {
+    const onCancel = vi.fn();
+    render(<DecisionEditDialog {...defaultProps} onCancel={onCancel} />);
+
+    const backdrop = document.querySelector<HTMLElement>(
+      '[role="presentation"]',
+    );
+    expect(backdrop).not.toBeNull();
+    if (!backdrop) throw new Error("backdrop not found");
+    fireEvent.keyDown(backdrop, { key: "Escape" });
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("Escape on the backdrop div calls e.preventDefault()", () => {
+    const onCancel = vi.fn();
+    render(<DecisionEditDialog {...defaultProps} onCancel={onCancel} />);
+
+    const backdrop = document.querySelector<HTMLElement>(
+      '[role="presentation"]',
+    );
+    expect(backdrop).not.toBeNull();
+    if (!backdrop) throw new Error("backdrop not found");
+
+    const event = new KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+    });
+    const preventDefaultSpy = vi.spyOn(event, "preventDefault");
+    backdrop.dispatchEvent(event);
+
+    expect(preventDefaultSpy).toHaveBeenCalled();
+  });
+
+  it("Cancel button click calls onCancel (keyboard-closable alternative justification)", () => {
+    const onCancel = vi.fn();
+    render(<DecisionEditDialog {...defaultProps} onCancel={onCancel} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Cancel/i }));
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("Escape fired on the inner dialog div still calls onCancel (event bubbles to backdrop)", () => {
+    const onCancel = vi.fn();
+    render(<DecisionEditDialog {...defaultProps} onCancel={onCancel} />);
+
+    const dialogDiv = screen.getByRole("dialog");
+    fireEvent.keyDown(dialogDiv, { key: "Escape" });
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("clicking the inner dialog div does NOT call onCancel (stopPropagation guard)", () => {
+    const onCancel = vi.fn();
+    render(<DecisionEditDialog {...defaultProps} onCancel={onCancel} />);
+
+    fireEvent.click(screen.getByRole("dialog"));
+
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("clicking the backdrop div calls onCancel", () => {
+    const onCancel = vi.fn();
+    render(<DecisionEditDialog {...defaultProps} onCancel={onCancel} />);
+
+    const backdrop = document.querySelector<HTMLElement>(
+      '[role="presentation"]',
+    );
+    expect(backdrop).not.toBeNull();
+    if (!backdrop) throw new Error("backdrop not found");
+    // Fire click directly on the backdrop element (not on a child).
+    fireEvent.click(backdrop);
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("dec-text textarea receives document focus on mount (initial modal focus)", () => {
+    render(<DecisionEditDialog {...defaultProps} onCancel={vi.fn()} />);
+
+    const textarea = document.getElementById("dec-text");
+    expect(document.activeElement).toBe(textarea);
   });
 });

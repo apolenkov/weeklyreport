@@ -388,3 +388,105 @@ describe("ItemEditDialog — ITEM-T4 type immediately on open", () => {
     expect(textField).toHaveValue("existing text — amended");
   });
 });
+
+// ---------------------------------------------------------------------------
+// VA-0a — a11y regression catalog (high-priority unit-rtl rows)
+// Source: openspec/changes/verify-a11y-recommended-flip/design.md
+// Section: apps/web/src/components/lead/item-edit-dialog.tsx
+// ---------------------------------------------------------------------------
+
+const defaultA11yProps = {
+  open: true,
+  item: null,
+  products,
+  week: "current" as const,
+  defaultProductId: "p1",
+  onSave: vi.fn(),
+} as const;
+
+describe("ItemEditDialog — VA-0a a11y (backdrop onKeyDown + click behavior)", () => {
+  it("Escape on the backdrop div calls onCancel (noStaticElementInteractions justification)", () => {
+    const onCancel = vi.fn();
+    render(<ItemEditDialog {...defaultA11yProps} onCancel={onCancel} />);
+
+    const backdrop = document.querySelector<HTMLElement>(
+      '[role="presentation"]',
+    );
+    expect(backdrop).not.toBeNull();
+    if (!backdrop) throw new Error("backdrop not found");
+    fireEvent.keyDown(backdrop, { key: "Escape" });
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("Escape on the backdrop div calls e.preventDefault()", () => {
+    const onCancel = vi.fn();
+    render(<ItemEditDialog {...defaultA11yProps} onCancel={onCancel} />);
+
+    const backdrop = document.querySelector<HTMLElement>(
+      '[role="presentation"]',
+    );
+    expect(backdrop).not.toBeNull();
+    if (!backdrop) throw new Error("backdrop not found");
+
+    const event = new KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+    });
+    const preventDefaultSpy = vi.spyOn(event, "preventDefault");
+    backdrop.dispatchEvent(event);
+
+    expect(preventDefaultSpy).toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("Cancel button click calls onCancel (keyboard-closable alternative justification)", () => {
+    const onCancel = vi.fn();
+    render(<ItemEditDialog {...defaultA11yProps} onCancel={onCancel} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Cancel/i }));
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("clicking the inner dialog div does NOT call onCancel (stopPropagation guard)", () => {
+    const onCancel = vi.fn();
+    render(<ItemEditDialog {...defaultA11yProps} onCancel={onCancel} />);
+
+    fireEvent.click(screen.getByRole("dialog"));
+
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it("clicking the backdrop div calls onCancel", () => {
+    const onCancel = vi.fn();
+    render(<ItemEditDialog {...defaultA11yProps} onCancel={onCancel} />);
+
+    const backdrop = document.querySelector('[role="presentation"]');
+    if (!backdrop) throw new Error("backdrop [role=presentation] not found");
+    // Fire click directly on the backdrop element (not on a child).
+    fireEvent.click(backdrop);
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("item-text textarea receives document focus on mount (initial modal focus via autoFocus)", () => {
+    render(<ItemEditDialog {...defaultA11yProps} onCancel={vi.fn()} />);
+
+    const textarea = document.getElementById("item-text");
+    expect(document.activeElement).toBe(textarea);
+  });
+
+  it("Escape fired on textarea still calls onCancel (event bubbles to backdrop onKeyDown)", () => {
+    const onCancel = vi.fn();
+    render(<ItemEditDialog {...defaultA11yProps} onCancel={onCancel} />);
+
+    const textarea = document.getElementById("item-text");
+    expect(textarea).not.toBeNull();
+    if (!textarea) throw new Error("textarea not found");
+    fireEvent.keyDown(textarea, { key: "Escape" });
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+});

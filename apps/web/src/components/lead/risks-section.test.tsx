@@ -105,6 +105,125 @@ describe("RisksSection LockBadge (Phase 3.8)", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// VA-0a/VA-0b — a11y regression catalog
+// Source: openspec/changes/verify-a11y-recommended-flip/design.md
+// Section: apps/web/src/components/lead/risks-section.tsx
+// Rows: EditIcon SVG aria-hidden, DeleteIcon SVG aria-hidden,
+//       Edit button + child SVG, Delete button + child SVG,
+//       snapshot: decorative icon accessibility
+// ---------------------------------------------------------------------------
+
+describe("RisksSection — VA-0a/VA-0b a11y (aria-hidden decorative icons)", () => {
+  // baseRisk from above: non-foreign, readOnly=false — both action buttons render.
+
+  it("EditIcon SVG has aria-hidden='true'", () => {
+    render(<RisksSection risks={[baseRisk]} />);
+
+    const editBtn = screen.getByRole("button", { name: /Edit risk for CRM/i });
+    const svg = editBtn.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("DeleteIcon SVG has aria-hidden='true'", () => {
+    render(<RisksSection risks={[baseRisk]} />);
+
+    const deleteBtn = screen.getByRole("button", {
+      name: /Delete risk for CRM/i,
+    });
+    const svg = deleteBtn.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("Edit button has correct aria-label and its child SVG has aria-hidden='true'", () => {
+    render(<RisksSection risks={[baseRisk]} />);
+
+    const editBtn = screen.getByRole("button", {
+      name: `Edit risk for ${baseRisk.productName}`,
+    });
+    expect(editBtn).toHaveAttribute(
+      "aria-label",
+      `Edit risk for ${baseRisk.productName}`,
+    );
+    const svg = editBtn.querySelector("svg");
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("Delete button has correct aria-label and its child SVG has aria-hidden='true'", () => {
+    render(<RisksSection risks={[baseRisk]} />);
+
+    const deleteBtn = screen.getByRole("button", {
+      name: `Delete risk for ${baseRisk.productName}`,
+    });
+    expect(deleteBtn).toHaveAttribute(
+      "aria-label",
+      `Delete risk for ${baseRisk.productName}`,
+    );
+    const svg = deleteBtn.querySelector("svg");
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("snapshot: Edit and Delete buttons with decorative aria-hidden SVGs", () => {
+    render(<RisksSection risks={[baseRisk]} />);
+
+    const editBtn = screen.getByRole("button", {
+      name: /Edit risk for CRM/i,
+    });
+    const deleteBtn = screen.getByRole("button", {
+      name: /Delete risk for CRM/i,
+    });
+    expect(editBtn).toMatchInlineSnapshot(`
+      <button
+        aria-label="Edit risk for CRM"
+        class="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"
+          />
+          <path
+            d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+          />
+        </svg>
+      </button>
+    `);
+    expect(deleteBtn).toMatchInlineSnapshot(`
+      <button
+        aria-label="Delete risk for CRM"
+        class="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
+        type="button"
+      >
+        <svg
+          aria-hidden="true"
+          class="h-4 w-4"
+          fill="none"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+        >
+          <path
+            d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"
+          />
+        </svg>
+      </button>
+    `);
+  });
+});
+
 describe("RisksSection stage scope", () => {
   it("renders explicit all-stage selection as stage chips, not All stages", () => {
     render(

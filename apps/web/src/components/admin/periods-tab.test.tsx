@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- RTL DOM-element casts (as HTMLInputElement / HTMLSelectElement) are flagged redundant by ESLint's type-aware program, but the app tsconfig requires them for .value/.checked/.options access (TS2339); wave-6c-ii */
 import type { PeriodListItem } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -641,5 +641,147 @@ describe("PeriodsTab — «Edit period» dialog (UFB-067)", () => {
     expect(screen.getByTestId("periods-create-submit")).not.toHaveTextContent(
       /create/i,
     );
+  });
+});
+
+// ---------------------------------------------------------------------
+// VA-0a: a11y behavioral regression tests (verify-a11y-recommended-flip)
+// Covers the high-priority unit-rtl rows for periods-tab.tsx:
+//   - delete dialog: Escape key, backdrop click, Cancel button, inner-click
+//     stop-propagation
+//   - create/edit dialog: Escape key, backdrop click, inner-click
+//     stop-propagation
+// ---------------------------------------------------------------------
+
+describe("PeriodsTab — a11y dialog behavioral regressions (VA-0a)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // Open the delete dialog by clicking the delete icon on openRow
+  // (openRow.periodStatus === "open" → delete button is ENABLED).
+  // Published/archived rows have periodStatus === "published" → delete is
+  // disabled there, so the dialog would never appear.
+
+  it("Escape closes the delete-confirmation dialog", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    // Wait for rows, then open the delete dialog via the delete icon.
+    await user.click(await screen.findByTestId(`action-delete-${openRow.id}`));
+    expect(screen.getByTestId("periods-delete-dialog")).toBeInTheDocument();
+
+    // Fire Escape on the document — the useEffect keydown handler should
+    // call setDeleteConfirm(null), unmounting the dialog.
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("periods-delete-dialog"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("clicking the delete-dialog backdrop closes the dialog", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    await user.click(await screen.findByTestId(`action-delete-${openRow.id}`));
+    expect(screen.getByTestId("periods-delete-dialog")).toBeInTheDocument();
+
+    // The backdrop IS the element with data-testid="periods-delete-dialog"
+    // and role="presentation". Clicking it directly calls onClick →
+    // setDeleteConfirm(null).
+    await user.click(screen.getByTestId("periods-delete-dialog"));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("periods-delete-dialog"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("clicking the Cancel button in the delete-confirmation dialog closes it", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    await user.click(await screen.findByTestId(`action-delete-${openRow.id}`));
+    expect(screen.getByTestId("periods-delete-dialog")).toBeInTheDocument();
+
+    // The Cancel button is inside the dialog; its onClick calls
+    // setDeleteConfirm(null) directly.
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("periods-delete-dialog"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("clicking inside the delete-dialog panel (role=dialog) does NOT close it", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    await user.click(await screen.findByTestId(`action-delete-${openRow.id}`));
+    expect(screen.getByTestId("periods-delete-dialog")).toBeInTheDocument();
+
+    // The inner div has role="dialog" and an onClick that calls
+    // e.stopPropagation(), so the backdrop's onClick is NOT triggered.
+    await user.click(screen.getByRole("dialog"));
+
+    // The dialog must STILL be in the DOM.
+    expect(screen.getByTestId("periods-delete-dialog")).toBeInTheDocument();
+  });
+
+  it("Escape closes the create/edit dialog", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    // Open the create dialog.
+    await user.click(await screen.findByTestId("periods-new-button"));
+    expect(screen.getByTestId("periods-create-dialog")).toBeInTheDocument();
+
+    // Escape fires the useEffect keydown handler → onCancel → setShowCreate(false).
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("periods-create-dialog"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("clicking the create-dialog backdrop closes the dialog", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    await user.click(await screen.findByTestId("periods-new-button"));
+    expect(screen.getByTestId("periods-create-dialog")).toBeInTheDocument();
+
+    // The backdrop IS the element with data-testid="periods-create-dialog"
+    // and role="presentation". Its onClick calls onCancel.
+    await user.click(screen.getByTestId("periods-create-dialog"));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("periods-create-dialog"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("clicking inside the create-dialog panel (role=dialog) does NOT close it", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    await user.click(await screen.findByTestId("periods-new-button"));
+    expect(screen.getByTestId("periods-create-dialog")).toBeInTheDocument();
+
+    // The inner div (role="dialog") has an onClick that calls
+    // e.stopPropagation(), preventing the backdrop's onCancel from firing.
+    await user.click(screen.getByRole("dialog"));
+
+    // The dialog must STILL be in the DOM.
+    expect(screen.getByTestId("periods-create-dialog")).toBeInTheDocument();
   });
 });

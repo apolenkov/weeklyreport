@@ -1,0 +1,48 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ProductAccordion — ChevronDown SVG snapshot > ChevronDown svg structure matches snapshot (stroke, path, viewBox) 1`] = `
+<svg
+  aria-hidden="true"
+  class="h-4 w-4 text-[var(--color-muted-foreground)] transition-transform duration-300"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  style="transform: rotate(-90deg);"
+  viewBox="0 0 24 24"
+>
+  <path
+    d="M6 9l6 6 6-6"
+  />
+</svg>
+`;
+
+exports[`ProductAccordion — Priorities ol snapshot > priorities section renders an ol element with correct structure 1`] = `
+<ol
+  class="space-y-1 text-sm"
+>
+  <li
+    class="flex items-center gap-2 rounded p-2"
+    style="background: rgb(250, 246, 238);"
+  >
+    <span
+      class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
+      style="background: var(--color-starbucks-gold); color: rgb(255, 255, 255);"
+    >
+      1
+    </span>
+    Top item
+  </li>
+  <li
+    class="flex items-center gap-2 rounded p-2"
+    style="background: var(--color-background);"
+  >
+    <span
+      class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
+      style="background: var(--color-border); color: var(--color-muted-foreground);"
+    >
+      2
+    </span>
+    Second item
+  </li>
+</ol>
+`;

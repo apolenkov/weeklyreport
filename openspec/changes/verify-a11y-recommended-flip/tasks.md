@@ -6,17 +6,31 @@ catalog is the source of truth for _what_ to assert.
 
 ## 0. Implement the regression catalog (from `design.md`)
 
-- [ ] VA-0a Land the **266 high-priority** `unit-rtl` tests first — these are
+- [x] VA-0a Land the **266 high-priority** `unit-rtl` tests first — these are
       colocated RTL render+assert checks for DOM attributes (aria-hidden,
       type="button", roles, stable keys) and the dialog keyboard-closability
       claims. Extend the existing test file for the 27 files that already have
       one; create a colocated `*.test.tsx` for the rest.
-- [ ] VA-0b Add/refresh the 56 `snapshot` entries (decorative-SVG aria-hidden
+      → DONE 2026-06-08 via Workflow `verify-a11y-va0-catalog` (one Sonnet agent
+      per target test file + an adversarial verify stage for behavioral
+      dialog/keyboard files). 55 target files landed green (the 56th,
+      `nav-bar-skeleton`, has an empty catalog section — nothing in-scope to
+      assert, correctly skipped). Each agent implemented only the `high` +
+      `unit-rtl` and all `snapshot` rows, asserting against the real source
+      (behavioral rows fire real Escape/click/focus and assert unmount /
+      callback / activeElement, not just render).
+- [x] VA-0b Add/refresh the 56 `snapshot` entries (decorative-SVG aria-hidden
       churn etc.) where a DOM snapshot is the cheapest guard.
+      → DONE 2026-06-08 (same Workflow; snapshot rows landed alongside VA-0a per
+      file; `__snapshots__/` dirs committed).
 - [ ] VA-0c Defer the 6 `playwright-e2e` entries to the per-role runtime sweep
       below (they need a live browser + role login).
-- [ ] VA-0d Run `pnpm test`; confirm the new tests pass and overall suite stays
+- [x] VA-0d Run `pnpm test`; confirm the new tests pass and overall suite stays
       green.
+      → DONE 2026-06-08: full suite green — web 888 (was 582, +306 new cases),
+      shared 577, api 867. typecheck 5/5, lint 0 errors / 0 warnings (6 agent
+      lint/tsc slips fixed by hand: 4 string→Date / unused-var / type-assertion,
+      plus 4 `!`→guard rewrites to keep the warn-baseline at 0).
 
 Drive a live dev server (`pnpm dev:fresh`, `AUTH_DEV_MODE=true`) and verify per
 role via `/auth/dev-login?role=<ROLE>`. Capture console; ERROR → fail, WARNING →

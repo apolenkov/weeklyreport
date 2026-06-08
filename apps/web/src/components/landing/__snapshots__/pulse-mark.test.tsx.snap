@@ -1,0 +1,26 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PulseMark > component render tree matches snapshot 1`] = `
+<div
+  aria-label="Your PULSE"
+  class="pulse-mark"
+  role="img"
+>
+  <span
+    aria-hidden="true"
+    class="pulse-word"
+  >
+    YOUR
+  </span>
+  <span
+    class="pulse-line"
+  >
+    <span
+      aria-hidden="true"
+      class="pulse-strong"
+    >
+      PULSE
+    </span>
+  </span>
+</div>
+`;

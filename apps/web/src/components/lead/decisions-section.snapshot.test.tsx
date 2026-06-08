@@ -4,6 +4,10 @@
  * Pre-extract snapshot: MetaRow [author | stage chips] in DecisionsSection.
  * Baseline before Wave 1 A2 extracts this markup to report-shell/meta-row.tsx.
  * After extraction, these tests must pass without changes.
+ *
+ * VA-0a/VA-0b: a11y regression tests for aria-hidden on EditIcon/DeleteIcon SVGs.
+ * Source: openspec/changes/verify-a11y-recommended-flip/design.md
+ * Section: apps/web/src/components/lead/decisions-section.tsx
  */
 import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
@@ -49,5 +53,94 @@ describe("DecisionsSection meta-row — pre-extract snapshot", () => {
     expect(screen.getByText("Dev")).toBeInTheDocument();
     const row = container.querySelector('[aria-label^="Decision stages:"]');
     expect(row).toMatchSnapshot();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// VA-0a — a11y regression catalog (high-priority unit-rtl rows)
+// VA-0b — snapshot rows
+// Source: openspec/changes/verify-a11y-recommended-flip/design.md
+// Section: apps/web/src/components/lead/decisions-section.tsx
+//
+// Buttons render when: !readOnly && isMine(owner, currentUserName) && !foreign.
+// isMine returns true when currentUserName is undefined (permissive fallback),
+// so rendering without readOnly and without currentUserName shows the buttons.
+// ---------------------------------------------------------------------------
+
+describe("DecisionsSection — VA-0a a11y: EditIcon and DeleteIcon aria-hidden", () => {
+  it("EditIcon svg has aria-hidden='true'", () => {
+    render(<DecisionsSection decisions={[BASE_DECISION]} />);
+    const editButton = screen.getByRole("button", { name: "Edit decision" });
+    const svg = editButton.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("DeleteIcon svg has aria-hidden='true'", () => {
+    render(<DecisionsSection decisions={[BASE_DECISION]} />);
+    const deleteButton = screen.getByRole("button", {
+      name: "Delete decision for CRM",
+    });
+    const svg = deleteButton.querySelector("svg");
+    expect(svg).not.toBeNull();
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("Edit button has aria-label='Edit decision' and child svg has aria-hidden='true'", () => {
+    render(<DecisionsSection decisions={[BASE_DECISION]} />);
+    const editButton = screen.getByRole("button", { name: "Edit decision" });
+    expect(editButton).toHaveAttribute("aria-label", "Edit decision");
+    const svg = editButton.querySelector("svg");
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("Delete button has aria-label matching 'Delete decision for' and child svg has aria-hidden='true'", () => {
+    render(<DecisionsSection decisions={[BASE_DECISION]} />);
+    const deleteButton = screen.getByRole("button", {
+      name: "Delete decision for CRM",
+    });
+    expect(deleteButton).toHaveAttribute(
+      "aria-label",
+      "Delete decision for CRM",
+    );
+    const svg = deleteButton.querySelector("svg");
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("Edit button accessible name is 'Edit decision' with no icon content leaking", () => {
+    render(<DecisionsSection decisions={[BASE_DECISION]} />);
+    // getByRole resolves by accessible name — if SVG leaked into the name,
+    // the name would differ from the aria-label and this query would fail.
+    const editButton = screen.getByRole("button", { name: "Edit decision" });
+    expect(editButton).toBeInTheDocument();
+  });
+
+  it("Delete button accessible name is 'Delete decision for CRM' with no icon SVG paths leaking", () => {
+    render(<DecisionsSection decisions={[BASE_DECISION]} />);
+    const deleteButton = screen.getByRole("button", {
+      name: "Delete decision for CRM",
+    });
+    expect(deleteButton).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// VA-0b — snapshot rows (medium priority)
+// Snapshots lock the accessibility tree of the edit/delete buttons.
+// ---------------------------------------------------------------------------
+
+describe("DecisionsSection — VA-0b snapshots: Edit and Delete button DOM accessibility tree", () => {
+  it("Edit button DOM accessibility tree — icon hidden from a11y tree (snapshot)", () => {
+    render(<DecisionsSection decisions={[BASE_DECISION]} />);
+    const editButton = screen.getByRole("button", { name: "Edit decision" });
+    expect(editButton).toMatchSnapshot();
+  });
+
+  it("Delete button DOM accessibility tree — icon hidden from a11y tree (snapshot)", () => {
+    render(<DecisionsSection decisions={[BASE_DECISION]} />);
+    const deleteButton = screen.getByRole("button", {
+      name: "Delete decision for CRM",
+    });
+    expect(deleteButton).toMatchSnapshot();
   });
 });

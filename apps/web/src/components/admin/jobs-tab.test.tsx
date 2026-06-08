@@ -111,6 +111,203 @@ function renderTab(jobs: FailedJob[], captured: Captured) {
   return render(<JobsTab />, { wrapper: Wrapper });
 }
 
+function makePendingMockTRPC(captured: Captured) {
+  return {
+    admin: {
+      jobs: {
+        listFailed: {
+          queryOptions: () => ({
+            queryKey: ["admin", "jobs", "listFailed"],
+            // Never resolves so listQuery.isPending stays true — keeps JobsSkeleton mounted.
+            queryFn: () => new Promise<never>(() => undefined),
+          }),
+          queryKey: () => ["admin", "jobs", "listFailed"],
+        },
+        retryFailed: {
+          mutationOptions: (opts: Captured["retryOptions"]) => {
+            captured.retryOptions = opts;
+            return {
+              mutationFn: captured.retryMutationFn,
+              onSuccess: opts?.onSuccess,
+              onError: opts?.onError,
+            };
+          },
+        },
+      },
+      dlqCount: {
+        queryKey: () => ["admin", "dlqCount"],
+      },
+    },
+  } as never;
+}
+
+function renderPendingTab(captured: Captured) {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  const trpc = makePendingMockTRPC(captured);
+  function Wrapper({ children }: { readonly children: ReactNode }) {
+    return (
+      <QueryClientProvider client={qc}>
+        <TRPCProxyContext.Provider value={trpc}>
+          {children}
+        </TRPCProxyContext.Provider>
+      </QueryClientProvider>
+    );
+  }
+  return render(<JobsTab />, { wrapper: Wrapper });
+}
+
+describe("JobsTab — JobsSkeleton a11y attributes (VA-0a)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("JobsSkeleton container has role='status'", () => {
+    const captured: Captured = { retryMutationFn: vi.fn() };
+    renderPendingTab(captured);
+
+    const skeleton = screen.getByTestId("jobs-loading-state");
+    expect(skeleton).toHaveAttribute("role", "status");
+  });
+
+  it("JobsSkeleton container has aria-label='Loading failed jobs' and aria-live='polite'", () => {
+    const captured: Captured = { retryMutationFn: vi.fn() };
+    renderPendingTab(captured);
+
+    const skeleton = screen.getByTestId("jobs-loading-state");
+    expect(skeleton).toHaveAttribute("aria-label", "Loading failed jobs");
+    expect(skeleton).toHaveAttribute("aria-live", "polite");
+  });
+
+  it("JobsSkeleton status region matches inline snapshot", () => {
+    const captured: Captured = { retryMutationFn: vi.fn() };
+    renderPendingTab(captured);
+
+    const skeleton = screen.getByTestId("jobs-loading-state");
+    expect(skeleton).toMatchInlineSnapshot(`
+      <div
+        aria-label="Loading failed jobs"
+        aria-live="polite"
+        class="rounded-[var(--radius)] border border-[var(--color-border)]"
+        data-testid="jobs-loading-state"
+        role="status"
+      >
+        <div
+          class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3"
+        >
+          <div
+            class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-20 animate-pulse rounded bg-[var(--color-border)]"
+          />
+        </div>
+        <div
+          class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
+        >
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+        </div>
+        <div
+          class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
+        >
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+        </div>
+        <div
+          class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
+        >
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+        </div>
+        <div
+          class="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
+        >
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+          <div
+            class="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"
+          />
+        </div>
+      </div>
+    `);
+  });
+});
+
 describe("JobsTab — Phase 35-06 BullMQ DLQ admin UI", () => {
   beforeEach(() => {
     vi.clearAllMocks();

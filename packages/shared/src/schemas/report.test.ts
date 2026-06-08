@@ -32,6 +32,7 @@ import {
   reportStatusSchema,
   riskInputSchema,
   riskSeveritySchema,
+  safeText,
   type SubmitSectionPayload,
   stageAssignmentSchema,
   stageSchema,
@@ -1830,5 +1831,144 @@ describe("compiledHistoryResultSchema", () => {
     });
 
     expect(parsed.archiveCount).toBe(4);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group 21: safeText — noInvisibleOnly validator (verify-a11y-recommended-flip)
+//
+// Targets the regex refactor in report-primitives.schema.ts that changed
+// /[\s​‌‍﻿]/g to the alternation /\s|​|‌|‍|﻿/gu. Tests guard against
+// single-character escapes slipping through a broken alternation pattern.
+// ---------------------------------------------------------------------------
+
+describe("safeText — noInvisibleOnly", () => {
+  it("rejects a whitespace-only string (spaces)", () => {
+    const result = safeText().safeParse("   ");
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map((i) => i.message);
+      expect(messages).toContain("Text must contain visible characters");
+    }
+  });
+
+  it("accepts a single visible character", () => {
+    const result = safeText().safeParse("A");
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a string containing only \\u200B (zero-width space)", () => {
+    const result = safeText().safeParse("​");
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map((i) => i.message);
+      expect(messages).toContain("Text must contain visible characters");
+    }
+  });
+
+  it("rejects a string containing only \\u200C (zero-width non-joiner)", () => {
+    // Regression guard: alternation /\s|​|‌|‍|﻿/gu must
+    // match ‌ in isolation (broken char-class would miss it).
+    const result = safeText().safeParse("‌");
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map((i) => i.message);
+      expect(messages).toContain("Text must contain visible characters");
+    }
+  });
+
+  it("rejects a string containing only \\u200D (zero-width joiner)", () => {
+    // Regression guard: same alternation must also strip ‍ in isolation.
+    const result = safeText().safeParse("‍");
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map((i) => i.message);
+      expect(messages).toContain("Text must contain visible characters");
+    }
+  });
+
+  it("rejects a string containing only \\uFEFF (zero-width no-break space / BOM)", () => {
+    const result = safeText().safeParse("﻿");
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map((i) => i.message);
+      expect(messages).toContain("Text must contain visible characters");
+    }
+  });
+
+  it("rejects a string with only tabs, newlines, and carriage returns", () => {
+    const result = safeText().safeParse("\t\n\r");
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map((i) => i.message);
+      expect(messages).toContain("Text must contain visible characters");
+    }
+  });
+
+  it("rejects a mixed-invisible string (whitespace + zero-width chars)", () => {
+    const result = safeText().safeParse(" ​‌‍﻿\t");
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map((i) => i.message);
+      expect(messages).toContain("Text must contain visible characters");
+    }
+  });
+
+  it("accepts visible text with embedded whitespace ('hello world')", () => {
+    const result = safeText().safeParse("hello world");
+    expect(result.success).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group 22: schema-level invisible-only rejection gap-fills
+// (rows from verify-a11y-recommended-flip that were not yet covered)
+//
+// Note: catalog names fields "description"/"title"/"rationale" but the actual
+// schema fields are riskInputSchema.risk/impact/mitigation and
+// decisionInputSchema.text/owner/impact — tests use real field names.
+// ---------------------------------------------------------------------------
+
+describe("riskInputSchema — invisible-only gap-fills", () => {
+  it("rejects risk.impact containing only whitespace", () => {
+    const risk = { ...validRisk(), impact: "   " };
+    const result = riskInputSchema.safeParse(risk);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map((i) => i.message);
+      expect(messages).toContain("Text must contain visible characters");
+    }
+  });
+
+  it("rejects risk.mitigation containing only whitespace", () => {
+    const risk = { ...validRisk(), mitigation: "   " };
+    const result = riskInputSchema.safeParse(risk);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map((i) => i.message);
+      expect(messages).toContain("Text must contain visible characters");
+    }
+  });
+});
+
+describe("decisionInputSchema — invisible-only gap-fills", () => {
+  it("rejects decision.text (title field) containing only whitespace", () => {
+    const d = { ...validDecision(), text: "   " };
+    const result = decisionInputSchema.safeParse(d);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map((i) => i.message);
+      expect(messages).toContain("Text must contain visible characters");
+    }
+  });
+
+  it("rejects decision.impact (rationale field) containing only whitespace", () => {
+    const d = { ...validDecision(), impact: "   " };
+    const result = decisionInputSchema.safeParse(d);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map((i) => i.message);
+      expect(messages).toContain("Text must contain visible characters");
+    }
   });
 });

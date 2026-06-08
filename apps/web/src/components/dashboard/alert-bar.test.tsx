@@ -73,6 +73,54 @@ const baseProps = {
   canSendReminder: false,
 };
 
+/**
+ * VA-0a unit-rtl (high-pri) + VA-0b snapshot — verify-a11y catalog rows for
+ * alert-bar.tsx:
+ *
+ *   Row 1 (unit-rtl/high): AlertIcon svg has aria-hidden="true"
+ *   Row 2 (snapshot/high): svg with aria-hidden="true" present in rendered DOM
+ *   Row 3 (snapshot/high): alert bar semantic structure — decorative SVG hidden,
+ *     button type="button", pending-names spans all rendered
+ */
+describe("VA-0a: AlertIcon SVG aria-hidden", () => {
+  it("AlertIcon svg has aria-hidden='true'", () => {
+    mockRole("head");
+    const { container } = render(<AlertBar {...baseProps} />);
+
+    // The SVG is aria-hidden so RTL role queries skip it; locate via DOM.
+    const svgEl = container.querySelector("svg");
+    expect(svgEl).not.toBeNull();
+    expect(svgEl).toHaveAttribute("aria-hidden", "true");
+  });
+});
+
+describe("VA-0b: AlertBar snapshots", () => {
+  it("svg with aria-hidden='true' is present in rendered DOM (snapshot)", () => {
+    mockRole("head");
+    const { container } = render(<AlertBar {...baseProps} />);
+
+    const svgEl = container.querySelector("svg");
+    expect(svgEl).not.toBeNull();
+    expect(svgEl).toMatchSnapshot();
+  });
+
+  it("alert bar semantic structure — decorative SVG hidden, button type='button', pending spans rendered (snapshot)", () => {
+    mockRole("head");
+    const { container } = render(
+      <AlertBar
+        pendingLeads={["Alice", "Bob"]}
+        reportId="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        canSendReminder
+      />,
+    );
+
+    // Snapshot the outermost rendered element so any structural regression
+    // (SVG aria-hidden removed, button type missing, span rendering broken)
+    // is caught immediately.
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});
+
 describe("AlertBar — Phase 48-C role gating", () => {
   it("renders the Configure reminders link for admin when canSendReminder=false", () => {
     mockRole("admin");

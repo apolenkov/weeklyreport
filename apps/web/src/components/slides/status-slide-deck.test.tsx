@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { SectionSlideModel, SlideProduct } from "./section-slide-utils";
 import { StatusSlideDeck } from "./status-slide-deck";
@@ -103,6 +103,30 @@ function renderLeadDeck(slides: readonly SectionSlideModel[]) {
   );
 }
 
+function renderLeadDeckWith(
+  slides: readonly SectionSlideModel[],
+  selectedIndex: number,
+  onSelect: (index: number) => void,
+) {
+  render(
+    <StatusSlideDeck
+      slides={slides}
+      selectedIndex={selectedIndex}
+      onSelect={onSelect}
+      title="My Status Slide"
+      subtitle="Current section grouped by product and SDLC stage."
+      mode="lead"
+    />,
+  );
+}
+
+function slideWithId(
+  id: string,
+  productSlides: readonly SlideProduct[] = [product()],
+): SectionSlideModel {
+  return { ...slide(productSlides), id };
+}
+
 describe("StatusSlideDeck lead layout", () => {
   it("renders the unified by-section layout", () => {
     renderLeadDeck([slide()]);
@@ -194,5 +218,144 @@ describe("StatusSlideDeck lead layout", () => {
     // My item visible; "empty for:" noise band is suppressed
     expect(screen.getByText("My item")).toBeInTheDocument();
     expect(screen.queryByText(/empty for:/)).not.toBeInTheDocument();
+  });
+});
+
+describe("StatusSlideDeck a11y — section ARIA attributes", () => {
+  it("section has aria-label describing keyboard navigation", () => {
+    renderLeadDeck([slide()]);
+
+    const section = screen.getByTestId("lead-slides-deck");
+    expect(section.tagName.toLowerCase()).toBe("section");
+    expect(section).toHaveAttribute(
+      "aria-label",
+      "Status slide deck (use arrow keys to navigate slides)",
+    );
+  });
+
+  it("section has tabIndex=0 making it a keyboard-focusable region", () => {
+    renderLeadDeck([slide()]);
+
+    const section = screen.getByTestId("lead-slides-deck");
+    expect(section).toHaveAttribute("tabIndex", "0");
+  });
+});
+
+describe("StatusSlideDeck a11y — keyboard navigation", () => {
+  it("ArrowRight on section calls onSelect with selectedIndex+1", () => {
+    const onSelect = vi.fn();
+    // Two slides so ArrowRight can advance from index 0 to 1
+    renderLeadDeckWith(
+      [slideWithId("section-1"), slideWithId("section-2")],
+      0,
+      onSelect,
+    );
+
+    const section = screen.getByTestId("lead-slides-deck");
+    fireEvent.keyDown(section, { key: "ArrowRight" });
+
+    expect(onSelect).toHaveBeenCalledWith(1);
+  });
+
+  it("ArrowLeft on section calls onSelect with selectedIndex-1", () => {
+    const onSelect = vi.fn();
+    renderLeadDeckWith(
+      [slideWithId("section-1"), slideWithId("section-2")],
+      1,
+      onSelect,
+    );
+
+    const section = screen.getByTestId("lead-slides-deck");
+    fireEvent.keyDown(section, { key: "ArrowLeft" });
+
+    expect(onSelect).toHaveBeenCalledWith(0);
+  });
+});
+
+describe("StatusSlideDeck a11y — carousel controls group", () => {
+  it("carousel controls div has role='group'", () => {
+    // showLeadControls = mode===lead && slides.length > 1
+    renderLeadDeckWith(
+      [slideWithId("section-1"), slideWithId("section-2")],
+      0,
+      () => undefined,
+    );
+
+    expect(screen.getByRole("group")).toBeInTheDocument();
+  });
+
+  it("carousel controls group has aria-label='Slide carousel controls'", () => {
+    renderLeadDeckWith(
+      [slideWithId("section-1"), slideWithId("section-2")],
+      0,
+      () => undefined,
+    );
+
+    const group = screen.getByRole("group");
+    expect(group).toHaveAttribute("aria-label", "Slide carousel controls");
+  });
+});
+
+describe("StatusSlideDeck a11y — LeadSlideArticle click-to-exit-fullscreen", () => {
+  afterEach(() => {
+    // Restore fullscreenElement and exitFullscreen after each test
+    Object.defineProperty(document, "fullscreenElement", {
+      configurable: true,
+      value: null,
+    });
+    Reflect.deleteProperty(document, "exitFullscreen");
+  });
+
+  it("Escape keydown on article does not have defaultPrevented=true (keyboard close not suppressed)", () => {
+    renderLeadDeck([slide()]);
+
+    const article = screen.getByTestId("lead-unified-slide").closest("article");
+    expect(article).not.toBeNull();
+
+    const event = new KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+    });
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- asserted above
+    article!.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it("clicking article calls exitFullscreen when document.fullscreenElement is set", () => {
+    const exitFullscreen = vi.fn(() => Promise.resolve());
+    document.exitFullscreen = exitFullscreen;
+    Object.defineProperty(document, "fullscreenElement", {
+      configurable: true,
+      value: document.body,
+    });
+
+    renderLeadDeck([slide()]);
+
+    const article = screen.getByTestId("lead-unified-slide").closest("article");
+    expect(article).not.toBeNull();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- asserted above
+    fireEvent.click(article!);
+
+    expect(exitFullscreen).toHaveBeenCalledTimes(1);
+  });
+
+  it("clicking article does NOT call exitFullscreen when document.fullscreenElement is null", () => {
+    const exitFullscreen = vi.fn(() => Promise.resolve());
+    document.exitFullscreen = exitFullscreen;
+    Object.defineProperty(document, "fullscreenElement", {
+      configurable: true,
+      value: null,
+    });
+
+    renderLeadDeck([slide()]);
+
+    const article = screen.getByTestId("lead-unified-slide").closest("article");
+    expect(article).not.toBeNull();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- asserted above
+    fireEvent.click(article!);
+
+    expect(exitFullscreen).not.toHaveBeenCalled();
   });
 });
