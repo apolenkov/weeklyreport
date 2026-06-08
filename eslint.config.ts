@@ -452,6 +452,27 @@ export default defineConfig([
       "prisma/wipe-manual-uat.ts", // one-off operational script (cf. seeds, ignored)
       "packages/shared/src/schemas/report.schema.ts", // dense Zod schema catalogue, no logic
       "apps/api/src/main.ts", // bootstrap; load-order documentation, not splittable
+      // Long-tail (300-500), R3a-4 triage (wf wzrtmlhbc, confirmed by hand):
+      // each is one cohesive concern where a split would shed few lines at a
+      // clarity cost — exempt, not churn.
+      "apps/api/src/infrastructure/trpc/trpc.middleware.ts", // tRPC instance + all procedure builders share the private `t` binding
+      "apps/api/src/modules/admin/period-admin.service.ts", // one Admin period-lifecycle service class
+      "apps/api/src/modules/auth/auth.routes.ts", // one post-auth chain; helpers private to buildUserSession
+      "apps/api/src/modules/report-sections/report-sections.prisma-repository.ts", // one Prisma persistence layer; include/type/mapper/class coupled
+      String.raw`apps/web/src/app/print/\[reportId\]/page.tsx`, // one A4 print layout; helpers compose it, nothing reused
+      "apps/web/src/components/admin/users-tab.tsx", // one CRUD panel; table + dialogs share one state tree
+      "apps/web/src/components/admin/groups-tab.tsx", // one CRUD tab; dialogs share one state machine
+      "apps/web/src/components/admin/products-tab.tsx", // one CRUD screen; private icon helpers only
+      "apps/web/src/components/lead/risk-edit-dialog.tsx", // one dialog: state + validation + render
+      "apps/web/src/components/lead/item-edit-dialog.tsx", // one create/edit dialog; shell + content coupled
+      "apps/web/src/components/lead/decision-edit-dialog.tsx", // one create/edit dialog
+      "apps/web/src/components/lead/lead-form-sync-bridge.tsx", // one context bridge wiring sync to two consumers
+      "apps/web/src/components/slides/status-slide-deck.tsx", // one navigable slide-deck widget
+      "apps/web/src/components/navigation/nav-bar.tsx", // one role-aware nav widget; MobileNav/coming-soon have no external consumers
+      "apps/web/src/components/dashboard/dashboard-page.tsx", // one head-dashboard page; private load-issue helper only
+      "apps/web/src/components/weekly-report/product-accordion.tsx", // one accordion for one ProductReport
+      "apps/web/src/components/weekly-report/weekly-report-page.tsx", // one page: data load + 3 mutations + render
+      "apps/web/src/lib/mappers/lead-form.ts", // one LeadForm mapping pipeline; types-out alone stays >300, further split fragments it
     ],
     rules: { "max-lines": "off" },
   },
@@ -461,33 +482,17 @@ export default defineConfig([
   // with a reason. The goal state is an EMPTY list.
   {
     files: [
+      // god-files (700+), genuinely multi-concern → split, sequential, one per
+      // commit (multi-session). Each split removes its entry here.
       "apps/api/src/infrastructure/trpc/trpc.router.ts",
-      "apps/api/src/infrastructure/trpc/trpc.middleware.ts",
       "apps/api/src/modules/admin/admin.prisma-repository.ts",
-      "apps/api/src/modules/admin/period-admin.service.ts",
-      "apps/api/src/modules/auth/auth.routes.ts",
       "apps/api/src/modules/report-sections/lead-form.prisma-repository.ts",
-      "apps/api/src/modules/report-sections/report-sections.prisma-repository.ts",
-      // Brackets escaped: in a glob, [reportId] is a char-class, not a literal dir.
-      String.raw`apps/web/src/app/print/\[reportId\]/page.tsx`,
       "apps/web/src/components/admin/settings-tab.tsx",
       "apps/web/src/components/admin/periods-tab.tsx",
       "apps/web/src/components/admin/reminders-tab.tsx",
-      "apps/web/src/components/admin/users-tab.tsx",
-      "apps/web/src/components/admin/groups-tab.tsx",
-      "apps/web/src/components/admin/products-tab.tsx",
       "apps/web/src/components/lead/lead-form.tsx",
-      "apps/web/src/components/lead/risk-edit-dialog.tsx",
-      "apps/web/src/components/lead/item-edit-dialog.tsx",
-      "apps/web/src/components/lead/decision-edit-dialog.tsx",
-      "apps/web/src/components/lead/lead-form-sync-bridge.tsx",
       "apps/web/src/components/slides/section-slide-utils.ts",
-      "apps/web/src/components/slides/status-slide-deck.tsx",
-      "apps/web/src/components/navigation/nav-bar.tsx",
-      "apps/web/src/components/dashboard/dashboard-page.tsx",
-      "apps/web/src/components/weekly-report/product-accordion.tsx",
-      "apps/web/src/components/weekly-report/weekly-report-page.tsx",
-      "apps/web/src/lib/mappers/lead-form.ts",
+      // mapper with a clean types-out 2-way split (like weekly-report) → split next.
       "apps/web/src/lib/mappers/admin.ts",
     ],
     rules: { "max-lines": "off" },
