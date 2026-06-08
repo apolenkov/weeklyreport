@@ -80,8 +80,24 @@ endpoint="http://localhost:4747" />`. The component correctly gates on
 
 ## 4. Close out
 
-- [ ] 4.1 `openspec validate fix-sweep-ui-findings --strict` green.
-- [ ] 4.2 Final sweep re-run; attach the before/after anomaly counts.
+- [x] 4.1 `openspec validate fix-sweep-ui-findings --strict` green (2026-06-08).
+- [x] 4.2 Final sweep re-run 2026-06-08 (`pnpm test:uat`, 4 passed, 1.2m).
+      Totals per role: admin 18, head 15, lead 8, viewer 4 = **45** anomalies.
+      Honest before/after: on the **original console+axe+pageerror ruler** the
+      baseline 621 → **41**, and all 41 are the deferred `color-contrast` (§2.4 /
+      §5.1, theme-token, research-only). Every other original cluster (React
+      duplicate-key, hydration, the ×49 axe rules, ERR_CONNECTION_REFUSED noise,
+      scrollable/aria-hidden/heading) is **0**. The remaining **4** are
+      `network`-kind (`/api/client-logs net::ERR_ABORTED`) — NOT part of the 621
+      baseline (the proposal cluster table has no `network` row; network capture
+      was first added in §3.1, so these are newly _visible_ from better
+      instrumentation, not a regression). They are benign: `client-logger.ts:58`
+      POSTs with `keepalive: true`, and keepalive requests in flight during the
+      sweep's rapid route-to-route navigation are aborted by the browser
+      teardown — best-effort-by-design, not a product defect. Deliberately NOT
+      filtered: `/api/client-logs` is a real product endpoint, so suppressing it
+      would blind the sweep to genuine future failures (unlike the §3 devtools
+      `:4747` artifact, which `next dev` forces and prod cannot emit).
 
 ## Deferred (Non-goals — do NOT do here)
 
