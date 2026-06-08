@@ -169,12 +169,17 @@ search hits for leads`. - **DEFERRED (needs a product decision)** — `?period=`
       `/head/report` bare route) was retired too for symmetry — there it was a
       pure no-op dead branch (it suppressed the canonical redirect but, unlike
       lead, drove no read-only gate or banner, so no mislabeling bug). `period`
-      prop + redirect-suppression + error-log field removed. NOT removed (out of
-      scope, left intentionally): the lead/head period-navigators still read
-      `?period=` via `useSearchParams` as a vestigial dropdown-highlight
-      fallback — it is tested behavior and harmless (a week-label never matches
-      a reportId, so it resolves to index 0), so retiring it is a separate call,
-      not a silent cleanup.
+      prop + redirect-suppression + error-log field removed. THEN (user-approved
+      follow-up, same session): the last `?period=` reads — the vestigial
+      dropdown-highlight fallback in both period-navigators (lead + head) —
+      were retired too. They read `?period=<id>` via `useSearchParams` to seed
+      the dropdown selection, but post-35-07 nothing emits such URLs (nav is
+      path-segment, the bare route redirects), so the fallback only ever
+      resolved to index 0 in practice. Removed the read, the now-unused
+      `useSearchParams` (head) and the dead `next.delete("period")` (lead), and
+      updated both navigator tests (the "falls back to ?period=" cases now
+      assert the param is ignored and the current period is selected). `?period=`
+      is now fully gone from the app's runtime reads.
 
 ## 4. Remove the old UI e2e harness
 

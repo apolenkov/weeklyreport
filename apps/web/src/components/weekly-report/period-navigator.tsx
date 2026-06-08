@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   type TouchEvent as ReactTouchEvent,
   useCallback,
@@ -61,11 +61,9 @@ export function HeadPeriodNavigator({
 }: PeriodNavigatorProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const currentPeriodParam = searchParams.get("period");
 
   // 35-07: read the path-segment reportId so the dropdown reflects the
-  // addressed week even before the period dropdown carries query state.
+  // addressed week.
   const pathReportId = useMemo(() => {
     if (!pathname) return null;
     const match = /^\/head\/report\/([^/]+)$/.exec(pathname);
@@ -73,11 +71,10 @@ export function HeadPeriodNavigator({
   }, [pathname]);
 
   const currentIndex = useMemo(() => {
-    const id = pathReportId ?? currentPeriodParam;
-    if (!id) return 0;
-    const idx = periods.findIndex((p) => p.id === id);
+    if (!pathReportId) return 0;
+    const idx = periods.findIndex((p) => p.id === pathReportId);
     return idx >= 0 ? idx : 0;
-  }, [pathReportId, currentPeriodParam, periods]);
+  }, [pathReportId, periods]);
 
   const selectedPeriod = periods.at(currentIndex);
   const hasPrev = currentIndex < periods.length - 1;

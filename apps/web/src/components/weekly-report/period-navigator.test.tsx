@@ -89,7 +89,7 @@ describe("HeadPeriodNavigator", () => {
     expect(select.value).toBe("22222222-2222-2222-2222-222222222222");
   });
 
-  it("falls back to ?period= search param when no path-segment id", () => {
+  it("ignores a stale ?period= query (retired) and defaults to the current period", () => {
     mockPathname = "/head/report";
     mockSearchParams = new URLSearchParams(
       "period=22222222-2222-2222-2222-222222222222",
@@ -98,7 +98,9 @@ describe("HeadPeriodNavigator", () => {
     const select = screen.getByLabelText(
       "Select reporting period",
     ) as HTMLSelectElement;
-    expect(select.value).toBe("22222222-2222-2222-2222-222222222222");
+    // The legacy `?period=` fallback was removed; with no path-segment id the
+    // dropdown defaults to PERIODS[0] (the current period), not the param.
+    expect(select.value).toBe("11111111-1111-1111-1111-111111111111");
   });
 
   it("D-17: renders the period label without embedding current state in the option text", () => {

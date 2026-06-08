@@ -119,9 +119,7 @@ function ActivityRow({
   readonly reportId: string;
 }) {
   // 35-07 (UX-15): switched to addressed URL `/head/report/<reportId>`.
-  // The legacy `?period=` query is still accepted by the bare route for
-  // back-compat, but new links always use the addressed form so they're
-  // shareable / bookmarkable.
+  // Links always use the addressed form so they're shareable / bookmarkable.
   const href = `/head/report/${encodeURIComponent(reportId)}?authorId=${encodeURIComponent(row.leadId)}`;
   const contentCount =
     row.itemCount + row.riskCount + row.decisionCount + row.priorityCount;

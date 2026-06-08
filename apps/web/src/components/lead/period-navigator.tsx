@@ -12,8 +12,7 @@ import type { ReportPeriod } from "./mock-data";
 
 const SWIPE_THRESHOLD_PX = 50;
 // 35-07: lead-form addressable URL base. Period nav now emits path-segment
-// URLs (`/lead/report/<reportId>`) so each week is bookmarkable. Legacy
-// `?period=` links still resolve via the bare route's redirect path.
+// URLs (`/lead/report/<reportId>`) so each week is bookmarkable.
 const LEAD_REPORT_BASE = "/lead/report";
 const PERIOD_SELECT_WIDTH_CH = 24;
 
@@ -22,7 +21,7 @@ interface PeriodNavigatorProps {
   /**
    * Optional URL builder for navigation. When provided, replaces the default
    * lead-specific `/lead/report/<periodId>` path construction so the navigator
-   * can be reused by other roles (e.g. head history with `?period=` query style).
+   * can be reused by other roles via a custom addressed-path scheme.
    * Receives the target periodId; must return the full href to push.
    */
   readonly urlBuilder?: (periodId: string) => string;
@@ -69,11 +68,9 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const currentPeriodParam = searchParams.get("period");
 
-  // 35-07: prefer the path-segment reportId when the page is rendered under
-  // `/lead/report/[reportId]`. Legacy `?period=` query continues to work
-  // for older links (the bare-route redirect handles those URLs at load).
+  // 35-07: the dropdown reflects the path-segment reportId when the page is
+  // rendered under `/lead/report/[reportId]`.
   const pathReportId = useMemo(() => {
     if (!pathname) return null;
     const match = /^\/lead\/report\/([^/]+)$/.exec(pathname);
@@ -81,11 +78,10 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
   }, [pathname]);
 
   const currentIndex = useMemo(() => {
-    const id = pathReportId ?? currentPeriodParam;
-    if (!id) return 0; // default to first (current) period
-    const idx = periods.findIndex((p) => p.id === id);
+    if (!pathReportId) return 0; // default to first (current) period
+    const idx = periods.findIndex((p) => p.id === pathReportId);
     return idx >= 0 ? idx : 0;
-  }, [pathReportId, currentPeriodParam, periods]);
+  }, [pathReportId, periods]);
 
   const selectedPeriod = periods.at(currentIndex);
   const hasPrev = currentIndex < periods.length - 1;
@@ -107,7 +103,6 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
       }
       // Default: lead path-segment URLs — bookmarkable, back-button-friendly.
       const next = new URLSearchParams(searchParams.toString());
-      next.delete("period");
       const query = next.toString();
       router.push(`${LEAD_REPORT_BASE}/${periodId}${query ? `?${query}` : ""}`);
     },
