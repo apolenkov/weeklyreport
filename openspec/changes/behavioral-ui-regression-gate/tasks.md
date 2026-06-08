@@ -139,7 +139,7 @@ typecheck`, `pnpm lint`, `pnpm test`). The automated Layer-1 sweep ran live —
       `project` hits for lead sessions (no product destination → would land on
       the role-gated `/admin`). Tests added; verified live (lead "CRM" search
       returns only the actionable Task hit). Commit `fix(api): drop project
-    search hits for leads`. - **DEFERRED (needs a product decision)** — `?period=` read-only banner.
+search hits for leads`. - **DEFERRED (needs a product decision)** — `?period=` read-only banner.
       The adversarial verifier proposed a banner-only fix (drop the
       `!isSubmitted` gate on the legacy `?period=` path in
       `lead-form.tsx:1623`). On reading the data path, this is unsafe as-is:
@@ -164,7 +164,17 @@ typecheck`, `pnpm lint`, `pnpm test`). The automated Layer-1 sweep ran live —
       "Viewing past period" banner now fires only on the addressed-route case
       (`pinnedReportId !== activeReportId`). Test `lead-form-addressable.test.tsx`
       updated (old "no redirect" assertion now asserts the redirect fires).
-      Gates green: typecheck, lint, 582 web tests.
+      Gates green: typecheck, lint, 582 web tests. FOLLOW-UP (same session):
+      the parallel `?period=` branch on the head path (`WeeklyReportPage` +
+      `/head/report` bare route) was retired too for symmetry — there it was a
+      pure no-op dead branch (it suppressed the canonical redirect but, unlike
+      lead, drove no read-only gate or banner, so no mislabeling bug). `period`
+      prop + redirect-suppression + error-log field removed. NOT removed (out of
+      scope, left intentionally): the lead/head period-navigators still read
+      `?period=` via `useSearchParams` as a vestigial dropdown-highlight
+      fallback — it is tested behavior and harmless (a week-label never matches
+      a reportId, so it resolves to index 0), so retiring it is a separate call,
+      not a silent cleanup.
 
 ## 4. Remove the old UI e2e harness
 

@@ -33,14 +33,6 @@ import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
 
 interface WeeklyReportPageProps {
   /**
-   * Period id (week label string) hint from the URL `?period=...` query param.
-   * `weeklyReport.get` does NOT take a period filter at v5.0 — when no
-   * `reportId` is given the server resolves the active period itself. The
-   * `period` prop is preserved for forward-compat / future period-scoped
-   * routing.
-   */
-  readonly period?: string;
-  /**
    * Concrete report identifier (UUID). When provided, the query targets that
    * specific report; used by /reports/[reportId] route pages.
    */
@@ -48,8 +40,7 @@ interface WeeklyReportPageProps {
   /**
    * 35-07: when true, the page auto-redirects (router.replace) to the
    * canonical addressed URL `/head/report/<reportId>` once the active
-   * reportId is known. Off when the bare route is hit with `?period=`
-   * (legacy bookmarks) or when already on a `[reportId]` route.
+   * reportId is known. Off when already on a `[reportId]` route.
    *
    * Optional `canonicalBasePath` (defaults to `/head/report`) lets callers
    * point the redirect at a different addressed surface.
@@ -67,7 +58,6 @@ interface WeeklyReportPageProps {
 }
 
 export function WeeklyReportPage({
-  period,
   reportId,
   redirectToCanonical,
   canonicalBasePath = "/head/report",
@@ -149,25 +139,22 @@ export function WeeklyReportPage({
         component: "WeeklyReportPage",
         procedure: "weeklyReport.get",
         reportId: reportId ?? null,
-        period: period ?? null,
         authorId: focusedAuthorId,
       });
       toast.error(
         formatClientErrorMessage("Failed to load status report", weeklyQ.error),
       );
     }
-  }, [weeklyQ.isError, weeklyQ.error, reportId, period, focusedAuthorId]);
+  }, [weeklyQ.isError, weeklyQ.error, reportId, focusedAuthorId]);
 
   // 35-07: bare `/head/report` -> redirect to `/head/report/<reportId>`
   // once the active reportId is known. Skipped when:
-  //   • a `?period=` query is present (legacy bookmarks)
   //   • the page already renders under `[reportId]` (reportId prop set)
   //   • there is no resolvable report (weeklyQ data not loaded or no-period)
   const resolvedReportId =
     weeklyQ.data?.status === "active" ? weeklyQ.data.reportId : null;
   useEffect(() => {
     if (!redirectToCanonical) return;
-    if (period) return;
     if (reportId) return;
     if (!resolvedReportId) return;
     const authorQuery = focusedAuthorId
@@ -176,7 +163,6 @@ export function WeeklyReportPage({
     router.replace(`${canonicalBasePath}/${resolvedReportId}${authorQuery}`);
   }, [
     redirectToCanonical,
-    period,
     reportId,
     resolvedReportId,
     focusedAuthorId,
