@@ -86,11 +86,11 @@ endpoint="http://localhost:4747" />`. The component correctly gates on
       Honest before/after: on the **original console+axe+pageerror ruler** the
       baseline 621 → **41**, and all 41 are the deferred `color-contrast` (§2.4 /
       §5.1, theme-token, research-only). Every other original cluster (React
-      duplicate-key, hydration, the ×49 axe rules, ERR_CONNECTION_REFUSED noise,
+      duplicate-key, hydration, the ×49 axe rules, ERR*CONNECTION_REFUSED noise,
       scrollable/aria-hidden/heading) is **0**. The remaining **4** are
       `network`-kind (`/api/client-logs net::ERR_ABORTED`) — NOT part of the 621
       baseline (the proposal cluster table has no `network` row; network capture
-      was first added in §3.1, so these are newly _visible_ from better
+      was first added in §3.1, so these are newly \_visible* from better
       instrumentation, not a regression). They are benign: `client-logger.ts:58`
       POSTs with `keepalive: true`, and keepalive requests in flight during the
       sweep's rapid route-to-route navigation are aborted by the browser
