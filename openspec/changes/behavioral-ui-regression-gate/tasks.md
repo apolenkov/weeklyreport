@@ -231,10 +231,19 @@ search hits for leads`. - **DEFERRED (needs a product decision)** — `?period=`
       read-only view). The generator was hardened with a deterministic
       route-hygiene assert so the route defects can't silently recur. The Driver
       half (step 3, per-role sweep run) remains — needs the live app.
-- [ ] 5.2 Document the loop in `e2e/catalog/README.md`: manual-UAT findings →
-      feedback-log intake → graduate into the catalog → regenerate.
-- [ ] 5.3 Record phase 2 (freeze critical paths into deterministic specs;
-      consider MBT) as deferred-until-stabilization — do NOT build it here.
+- [x] 5.2 Document the loop in `e2e/catalog/README.md`: manual-UAT findings →
+      feedback-log intake → graduate into the catalog → regenerate. Done
+      2026-06-08: rewrote the README "The intake loop" section as the explicit
+      4-step chain (Log to a lightweight `feedback-log.md` → Confirm → Graduate
+      as intent/note → Regenerate), names the archived `uat-feedback-2026-05-26`
+      as the reference instance, and records that a bare "loads fine" row is NOT
+      graduated (the observable-`then` rule). The 1.5 fold is the worked example.
+- [x] 5.3 Record phase 2 (freeze critical paths into deterministic specs;
+      consider MBT) as deferred-until-stabilization — do NOT build it here. Done:
+      already the explicit decision in `docs/adr/0001-live-exploratory-ui-sweep.md`
+      (the frozen deterministic gate AND a formal Model-Based Testing state model
+      are both deferred to phase 2, with rationale); the README intake-loop close
+      now also states it. No phase-2 work built here (6.2 reaffirms this).
 - [ ] 5.4 `openspec validate behavioral-ui-regression-gate --strict` green;
       archive.
 
