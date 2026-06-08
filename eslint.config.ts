@@ -468,7 +468,6 @@ export default defineConfig([
       "apps/api/src/modules/auth/auth.routes.ts",
       "apps/api/src/modules/report-sections/lead-form.prisma-repository.ts",
       "apps/api/src/modules/report-sections/report-sections.prisma-repository.ts",
-      "apps/api/src/lib/audit-logger.ts",
       // Brackets escaped: in a glob, [reportId] is a char-class, not a literal dir.
       String.raw`apps/web/src/app/print/\[reportId\]/page.tsx`,
       "apps/web/src/components/admin/settings-tab.tsx",
