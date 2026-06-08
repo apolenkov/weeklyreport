@@ -339,8 +339,15 @@ literals`, `no-misleading-array-reverse`, …); LAST + with-a-human:
   warnings). REMAINING: a dedicated docs pass to (a) fill the 19 correctness
   gaps and (b) decide whether to flip `require-jsdoc` → error WITH authored
   content on the public API. Left as backlog, not done blind overnight.
-- [ ] R3c Import boundaries, incl. the `apps/web`→`apps/api` `allowTypeImports`
+- [x] R3c Import boundaries, incl. the `apps/web`→`apps/api` `allowTypeImports`
       carve-out.
+      → DONE 2026-06-09. `@typescript-eslint/no-restricted-imports` scoped to
+      `apps/web/**` bans value imports of `@customreport/api` (would pull the
+      Nest/Prisma server graph into the browser bundle) with `allowTypeImports:
+    true` for the one legitimate case — `apps/web/src/lib/trpc.ts`'s
+      `import type { AppRouter }`. Measured 0 violations (the boundary was already
+      clean: web references api exactly once, type-only; packages import no apps).
+      Landed green, no code change.
 
 ## 4. Execution Workflow (authored at execution time, NOT now)
 
