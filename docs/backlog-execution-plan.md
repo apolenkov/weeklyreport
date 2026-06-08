@@ -75,12 +75,11 @@ pnpm build` (FGR-G1..G4,G6) + `pnpm test:uat` (FGR-S1..S5, автоматиче�
 - **R2c (Opus, close-out):** adversarial-review кластера `no-unnecessary-condition`
   (commits 61dfa215+459bebe9) — единственный незаписанный Opus-review. Один агент,
   модель **Opus** (это явно Opus-уровневое ревью риска). Записать вывод в tasks.md.
-- **R3a free-кластер (Sonnet+Haiku):** установить `eslint-plugin-simple-import-sort`
-  - `eslint-plugin-unicorn`, включить `simple-import-sort` (автофикс) и
-    `unicorn/filename-case` (репо уже 100% kebab — 0 нарушений). Применить автофикс,
-    прогнать гейт. Модель: Sonnet (конфиг + проверка), Haiku — массовое применение
-    автофикса. Установка пакетов — `pnpm add -D ... --network-concurrency=1` (см.
-    грабли).
+- **R3a free-кластер (Sonnet+Haiku):** установить плагины `simple-import-sort` и
+  `unicorn`, включить `simple-import-sort` (автофикс) и `unicorn/filename-case`
+  (репо уже 100% kebab — 0 нарушений). Применить автофикс, прогнать гейт. Модель:
+  Sonnet (конфиг + проверка), Haiku — массовое применение автофикса. Установка
+  пакетов — `pnpm add -D ... --network-concurrency=1` (см. грабли).
 - **R3b JSDoc (Sonnet):** JSDoc на public-экспорты `packages/shared` + `packages/ui`
   (только публичные). Fan-out по модулям, Sonnet.
 - НЕ здесь: остальной R3 (sonarjs cognitive-complexity, max-lines/complexity,
