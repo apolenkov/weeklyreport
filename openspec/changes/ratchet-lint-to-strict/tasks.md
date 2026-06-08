@@ -307,7 +307,25 @@ true`. A documented SOFTENING, but it opens NO Promise hole — the only
         (escape-case, numeric-separators, catch-error-name, prefer-node-protocol,
         prefer-number-properties, prefer-string-\*, prefer-set-has, etc.). 67 files
         autofixed; gate green incl. build.
-  - [ ] R3a-3 sonarjs (incl. `cognitive-complexity`) — needs `eslint-plugin-sonarjs` install.
+  - [~] R3a-3 sonarjs — ENABLED 2026-06-09 (`eslint-plugin-sonarjs@4.0.3`
+    installed). Enabled the full `recommended` preset (269 rules) per the §3
+    user directive: every rule that fires ZERO times today is now error
+    (regression prevention). The 29 rules that fire were measured and turned
+    off in two documented buckets in `eslint.config.ts` — **PRUNE** (5
+    permanent: `todo-tag` conflicts with the mandated `TODO(<ref>)`
+    convention; `no-unused-vars` + `deprecation` duplicate already-enabled
+    rules; `prefer-read-only-props` aggressive churn; `no-nested-conditional`
+    idiomatic JSX) and **DEFER** (24 `TODO(R3a-3-fixup)` grandfathered
+    repo-wide; counts measured 2026-06-09). NO code changed to land green.
+    REMAINING (deferred fixup waves, supervised — same risk class as the
+    complexity ratchet): flip the 24 DEFER rules to error one wave at a time.
+    Cheapest first: per-site `eslint-disable` w/ reason for the security
+    HOTSPOTS that fire only in test fixtures (`no-hardcoded-ip` 29,
+    `hardcoded-secret-signatures` 10) → scope test-off + keep error in src;
+    then the small genuine fixes (`use-type-alias`, `no-nested-template-
+    literals`, `no-misleading-array-reverse`, …); LAST + with-a-human:
+    `cognitive-complexity` (pair with the cyclomatic ratchet) +
+    `different-types-comparison` (behavior-sensitive, carry-over.service).
   - [ ] R3a-4 core `max-lines` 300 (skipBlankLines/skipComments) + complexity,
         with exempt dirs (`*.test.*`, `e2e`, `prisma/generated`, `*.config.ts`).
 - [ ] R3b JSDoc on `packages/shared` + `packages/ui` public exports only
