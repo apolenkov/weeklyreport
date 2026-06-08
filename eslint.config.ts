@@ -389,16 +389,133 @@ export default defineConfig([
 
       // React Compiler (React 19, no Biome equivalent)
       "react-compiler/react-compiler": "error",
+
+      // R3a-4 (ratchet): file size + cyclomatic complexity. `max-lines` counts
+      // real code lines only (skipBlankLines + skipComments); `complexity` uses
+      // the ESLint default of 20 (community best-practice — 10 would be ~87
+      // functions of churn per the directive's "no overhead"; cognitive-15 is
+      // sonarjs's job in R3a-3). The rule is ACTIVE repo-wide so any NEW 300+
+      // file / 20+ function fails immediately. Pre-existing violators are
+      // grandfathered in the override blocks at the end of this config and
+      // ratcheted down one batch at a time.
+      "max-lines": [
+        "error",
+        { max: 300, skipBlankLines: true, skipComments: true },
+      ],
+      complexity: ["error", 20],
     },
   },
-  // Test-file override: disable jsx-a11y (mirrors Biome's former a11y:off on tests)
+  // Test-file override: disable jsx-a11y (mirrors Biome's former a11y:off on
+  // tests) and exempt size/complexity budgets (tests routinely exceed them).
   {
-    files: ["**/*.test.ts", "**/*.test.tsx"],
-    rules: Object.fromEntries(
-      Object.keys(jsxA11y.configs.recommended.rules).map((rule) => [
-        rule,
-        "off",
-      ]),
-    ),
+    files: [
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/*.spec.ts",
+      "**/*.spec.tsx",
+      "**/__tests__/**",
+    ],
+    rules: {
+      ...Object.fromEntries(
+        Object.keys(jsxA11y.configs.recommended.rules).map((rule) => [
+          rule,
+          "off",
+        ]),
+      ),
+      "max-lines": "off",
+      complexity: "off",
+    },
+  },
+  // Tooling files are not product source — exempt from size/complexity budgets
+  // (eslint.config.ts itself is 400+ lines; *.config.ts / *.setup.ts likewise).
+  {
+    files: ["**/*.config.ts", "**/*.setup.ts", "tools/**"],
+    rules: { "max-lines": "off", complexity: "off" },
+  },
+  // R3a-4: JUSTIFIED PERMANENT max-lines exemptions — data / generated / one-off
+  // script / bootstrap, where splitting would not improve clarity (per
+  // ~/.claude code-style: "if splitting would hurt clarity, keep the larger
+  // unit and say why"). These are the documented end-state exempts, NOT TODO.
+  {
+    files: [
+      "apps/web/src/components/dashboard/mock-data.ts", // fixture data, no logic
+      "apps/web/src/components/lead/mock-data.ts", // fixture data, no logic
+      "apps/web/src/components/admin/mock-data.ts", // fixture data, no logic
+      "packages/ui/src/components/ui/sidebar.tsx", // shadcn/ui generated primitive bundle
+      "prisma/wipe-manual-uat.ts", // one-off operational script (cf. seeds, ignored)
+      "packages/shared/src/schemas/report.schema.ts", // dense Zod schema catalogue, no logic
+      "apps/api/src/main.ts", // bootstrap; load-order documentation, not splittable
+    ],
+    rules: { "max-lines": "off" },
+  },
+  // R3a-4 GRANDFATHER — pre-existing max-lines violators being ratcheted down one
+  // batch at a time. NOT permanent: each entry is either split below 300 (then
+  // removed here) or, after review, moved to the justified-exempt block above
+  // with a reason. The goal state is an EMPTY list.
+  {
+    files: [
+      "apps/api/src/infrastructure/trpc/trpc.router.ts",
+      "apps/api/src/infrastructure/trpc/trpc.middleware.ts",
+      "apps/api/src/modules/admin/admin.prisma-repository.ts",
+      "apps/api/src/modules/admin/period-admin.service.ts",
+      "apps/api/src/modules/auth/auth.routes.ts",
+      "apps/api/src/modules/report-sections/lead-form.prisma-repository.ts",
+      "apps/api/src/modules/report-sections/report-sections.prisma-repository.ts",
+      "apps/api/src/lib/audit-logger.ts",
+      // Brackets escaped: in a glob, [reportId] is a char-class, not a literal dir.
+      String.raw`apps/web/src/app/print/\[reportId\]/page.tsx`,
+      "apps/web/src/components/admin/settings-tab.tsx",
+      "apps/web/src/components/admin/periods-tab.tsx",
+      "apps/web/src/components/admin/reminders-tab.tsx",
+      "apps/web/src/components/admin/users-tab.tsx",
+      "apps/web/src/components/admin/groups-tab.tsx",
+      "apps/web/src/components/admin/products-tab.tsx",
+      "apps/web/src/components/lead/lead-form.tsx",
+      "apps/web/src/components/lead/risk-edit-dialog.tsx",
+      "apps/web/src/components/lead/item-edit-dialog.tsx",
+      "apps/web/src/components/lead/decision-edit-dialog.tsx",
+      "apps/web/src/components/lead/lead-form-sync-bridge.tsx",
+      "apps/web/src/components/slides/section-slide-utils.ts",
+      "apps/web/src/components/slides/status-slide-deck.tsx",
+      "apps/web/src/components/navigation/nav-bar.tsx",
+      "apps/web/src/components/dashboard/dashboard-page.tsx",
+      "apps/web/src/components/weekly-report/product-accordion.tsx",
+      "apps/web/src/components/weekly-report/weekly-report-page.tsx",
+      "apps/web/src/lib/mappers/lead-form.ts",
+      "apps/web/src/lib/mappers/admin.ts",
+      "apps/web/src/lib/mappers/weekly-report.ts",
+    ],
+    rules: { "max-lines": "off" },
+  },
+  // R3a-4 GRANDFATHER — pre-existing complexity (cyclomatic > 20) violators.
+  // Fixed AFTER the max-lines splits land (splitting reduces per-function
+  // complexity as a side effect), then the residual is refactored or documented.
+  // NOT permanent.
+  {
+    files: [
+      "apps/api/src/modules/admin/admin.prisma-repository.ts",
+      "apps/api/src/modules/auth/auth.routes.ts",
+      "apps/web/src/app/(app)/reports/page.tsx",
+      "apps/web/src/app/login-page.client.tsx",
+      "apps/web/src/components/admin/admin-panel.tsx",
+      "apps/web/src/components/dashboard/dashboard-page.tsx",
+      "apps/web/src/components/lead/current-week-section.tsx",
+      "apps/web/src/components/lead/decision-edit-dialog.tsx",
+      "apps/web/src/components/lead/item-card.tsx",
+      "apps/web/src/components/lead/item-edit-dialog.tsx",
+      "apps/web/src/components/lead/lead-form.tsx",
+      "apps/web/src/components/lead/lead-history-sidebar.tsx",
+      "apps/web/src/components/lead/next-week-section.tsx",
+      "apps/web/src/components/lead/risk-edit-dialog.tsx",
+      "apps/web/src/components/lead/risks-section.tsx",
+      "apps/web/src/components/lead/stage-chip.tsx",
+      "apps/web/src/components/navigation/nav-bar.tsx",
+      "apps/web/src/components/slides/head-slides-client.tsx",
+      "apps/web/src/components/slides/lead-slides-client.tsx",
+      "apps/web/src/components/slides/section-slide-utils.ts",
+      "apps/web/src/components/weekly-report/product-accordion.tsx",
+      "apps/web/src/components/weekly-report/weekly-report-page.tsx",
+    ],
+    rules: { complexity: "off" },
   },
 ]);
