@@ -10,5 +10,8 @@ if [ "$CI" = "true" ] || [ "$SKIP_PREPUSH" = "1" ]; then
   exit 0
 fi
 
+echo "[pre-push] catalog drift gate…"
+pnpm catalog:check
+
 echo "[pre-push] running unit tests…"
 pnpm test

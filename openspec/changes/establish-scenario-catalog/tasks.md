@@ -48,9 +48,37 @@ Gates after every code step: `pnpm typecheck && pnpm lint && pnpm test`.
 
 ## Drift gate (first-class)
 
-- [ ] SC-6: Add a `catalog:check` command that re-derives the entry-point surface + entity enums and exits non-zero when code exposes surface absent from the
+- [x] SC-6: Add a `catalog:check` command that re-derives the entry-point surface + entity enums and exits non-zero when code exposes surface absent from the
       catalog, naming the uncovered surface.
-- [ ] SC-7: Wire `catalog:check` into CI as a gate.
+      → DONE 2026-06-08: `pnpm catalog:check` → `e2e/sweep/catalog-check.mjs`.
+      SCOPE PIVOT recorded honestly: the catalog pivoted from the design's
+      tRPC-procedure/`.feature` framing to a per-role ROUTE catalog
+      (`e2e/catalog/<role>.yaml`; see README "Two levels of completeness"), so
+      the checkable surface is the App Router page-route set, NOT tRPC procedures
+      or Prisma enums (the catalog tracks neither — nothing to diff against).
+      The gate re-derives routes from `apps/web/src/app/**/page.tsx` and runs
+      three route-level checks: forward (every code route minus 2 documented
+      system excludes — `/print/[reportId]`, `/auth/error` — appears in >=1 role
+      catalog), reverse (no stale catalog route absent from code), hygiene
+      (clean-URL route value + non-empty `access`, folding in the
+      `_generation-notes.md` deterministic checks). Pure Node, reuses the shared
+      `catalog-parser.mjs` (extracted from `render-checklist.mjs`). Green at
+      commit: 21 code routes (2 excluded), 19 catalog routes, no drift; negative
+      test confirmed exit 1 on an uncovered route.
+      DEFERRED (out of SC-6 scope, advisor-flagged): per-role exhaustiveness
+      ("every role that can reach a route must list it" — stronger than SC-6 asks
+      and the catalog is intentionally inconsistent about impersonation-only
+      routes, e.g. head/admin omit `/lead/report/[reportId]/preview`); and
+      access-vs-guard consistency (needs to model the unguarded root). Left as a
+      question for the user, not silently resolved inside this gate.
+- [x] SC-7: Wire `catalog:check` into CI as a gate.
+      → DONE 2026-06-08: enforced in two places. (1) `.husky/pre-push` runs
+      `pnpm catalog:check` before the unit suite — this is the ACTIVE gate, since
+      `ci.yml` is `workflow_dispatch`-only with no runners (its own comment:
+      "Local pre-push gates remain the active quality gate"). The gate is NOT
+      part of `pnpm lint`/`test`, so it had to be added to pre-push explicitly.
+      (2) A "Catalog Drift Gate" step in the `quality` job of `ci.yml` (after the
+      mutation-consumer audit; no DB/build needed) so it runs once runners exist.
 
 ## Diff-scoped verification run (consumes existing changes)
 

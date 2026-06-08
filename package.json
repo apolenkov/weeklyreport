@@ -26,6 +26,7 @@
     "test": "turbo run test",
     "test:e2e:integration": "pnpm --filter @customreport/web exec playwright test --config ../../e2e/playwright.integration.config.ts",
     "test:uat": "pnpm --filter @customreport/web exec playwright test --config ../../e2e/sweep/playwright.config.ts",
+    "catalog:check": "node e2e/sweep/catalog-check.mjs",
     "db:fresh:simple": "pnpm db:reset:hard && tsx prisma/seed-simple.ts",
     "db:fresh:advanced": "pnpm db:reset:hard && tsx prisma/seed.ts",
     "db:fresh:manual-uat": "tsx prisma/wipe-manual-uat.ts",
