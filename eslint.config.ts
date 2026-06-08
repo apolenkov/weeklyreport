@@ -483,25 +483,20 @@ export default defineConfig([
     ],
     rules: { "max-lines": "off" },
   },
-  // R3a-4 GRANDFATHER — pre-existing max-lines violators being ratcheted down one
-  // batch at a time. NOT permanent: each entry is either split below 300 (then
-  // removed here) or, after review, moved to the justified-exempt block above
-  // with a reason. The goal state is an EMPTY list.
-  {
-    files: [
-      // god-files, genuinely multi-concern → split, sequential, one per commit.
-      // Each split removes its entry here. Goal state: empty list.
-      "apps/api/src/modules/admin/admin.prisma-repository.ts",
-    ],
-    rules: { "max-lines": "off" },
-  },
+  // R3a-4 GRANDFATHER (max-lines) — EMPTY. The ratchet is complete: every
+  // pre-existing violator was either split below 300 or moved to the
+  // justified-permanent exempt block above with a reason. No file is
+  // size-grandfathered any longer.
+  //
   // R3a-4 GRANDFATHER — pre-existing complexity (cyclomatic > 20) violators.
   // Fixed AFTER the max-lines splits land (splitting reduces per-function
   // complexity as a side effect), then the residual is refactored or documented.
   // NOT permanent.
   {
     files: [
-      "apps/api/src/modules/admin/admin.prisma-repository.ts",
+      // saveSnapshot's pre-existing cyclomatic complexity, relocated here by the
+      // R3a-4 facade split of admin.prisma-repository.ts (same debt, new home).
+      "apps/api/src/modules/admin/admin-snapshot-write.queries.ts",
       "apps/api/src/modules/auth/auth.routes.ts",
       "apps/web/src/app/(app)/reports/page.tsx",
       "apps/web/src/app/login-page.client.tsx",
