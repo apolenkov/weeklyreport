@@ -15,9 +15,10 @@ reports, not code.
       Playwright MCP browser can log in per role. Reuse the sweep's dev-auth
       path; do NOT author a new login.
 - [ ] 1.2 Confirm the artifacts are intact: `e2e/sweep/driver/drive-prompt.md`,
-      `e2e/sweep/driver/README.md`, and
-      `openspec/changes/behavioral-ui-regression-gate/workflow/lead-driver-verify.workflow.mjs`
-      (copy/relocate it if the archive move made it unavailable).
+      `e2e/sweep/driver/README.md`, and the verify workflow — now archived at
+      `openspec/changes/archive/2026-06-08-behavioral-ui-regression-gate/workflow/lead-driver-verify.workflow.mjs`
+      (relocate it into this change's `workflow/` dir before use, since it moved
+      with the parent change's archive).
 
 ## 2. Drive each role (one at a time)
 

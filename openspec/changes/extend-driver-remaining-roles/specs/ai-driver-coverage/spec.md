@@ -1,14 +1,16 @@
 ## ADDED Requirements
 
-### Requirement: AI-Driver exploratory pass covers every role
+### Requirement: AI-Driver exploratory pass covers every role's catalog
 
-The AI-agent Driver SHALL be run as the live within-route exploratory pass
-across every role's catalog (`lead`, `head`, `admin`, `viewer`), reusing the
-shared drive protocol and the adversarial-verify workflow rather than a per-role
-fork. Each role's run SHALL prove its console-capture path is live so that an
-empty finding list is trustworthy, and every confirmed finding SHALL be
-dispositioned. This specifies coverage only; the within-route scenarios stay
-run-time and are NOT frozen into specs (see ADR 0001).
+Every role-reachable catalog (`lead`, `head`, `admin`, `viewer`) SHALL be
+covered by the AI-agent exploratory Driver pass — i.e. no role's catalog is
+left undriven once the role is scoped. The pass reuses the shared drive protocol
+and the adversarial-verify workflow rather than a per-role fork; whenever it
+runs, its console-capture path SHALL be proven live (so an empty finding list is
+trustworthy), and every confirmed finding SHALL be dispositioned. This is a
+durable coverage property the regression process maintains as catalogs change;
+it specifies coverage only — the within-route scenarios stay run-time and are
+NOT frozen into specs (see ADR 0001).
 
 #### Scenario: Each role is driven with a verified capture path
 
