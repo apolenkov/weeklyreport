@@ -4,7 +4,7 @@ import { WeeklyReportPage } from "../../../../components/weekly-report/weekly-re
 import { WeeklyReportSkeleton } from "../../../../components/weekly-report/weekly-report-skeleton";
 
 interface Props {
-  searchParams: Promise<{ authorId?: string; period?: string }>;
+  searchParams: Promise<{ authorId?: string }>;
 }
 
 /**
@@ -12,11 +12,12 @@ interface Props {
  * `/head/report/[reportId]` (UX-15). This page is preserved for back-compat:
  * legacy bookmarks / email links still land here, and the page redirects
  * (client-side `router.replace`) to the canonical URL once the active
- * reportId is known. The redirect is suppressed when `?period=...` is
- * present so old read-only links keep working unchanged.
+ * reportId is known. The legacy `?period=<week>` query is no longer a
+ * special case — viewing a past week goes through the addressed URL plus
+ * the history dropdown — so it is ignored and the redirect still fires.
  */
 export default async function HeadReportPage({ searchParams }: Props) {
-  const { authorId, period } = await searchParams;
+  const { authorId } = await searchParams;
 
   return (
     <main
@@ -25,11 +26,7 @@ export default async function HeadReportPage({ searchParams }: Props) {
     >
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <Suspense fallback={<WeeklyReportSkeleton />}>
-          <WeeklyReportPage
-            period={period}
-            authorId={authorId}
-            redirectToCanonical
-          />
+          <WeeklyReportPage authorId={authorId} redirectToCanonical />
         </Suspense>
       </div>
     </main>
