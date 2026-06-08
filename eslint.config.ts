@@ -1,5 +1,6 @@
 import type { ESLint, Linter } from "eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
+import jsdoc from "eslint-plugin-jsdoc";
 import jsxA11yPlugin from "eslint-plugin-jsx-a11y";
 import react from "eslint-plugin-react";
 import reactCompiler from "eslint-plugin-react-compiler";
@@ -61,6 +62,13 @@ const jsxA11y = jsxA11yPlugin as ESLint.Plugin & {
 const sonarjsRecommended = sonarjs.configs.recommended as unknown as {
   readonly rules: Linter.RulesRecord;
   readonly settings?: Linter.Config["settings"];
+};
+
+// jsdoc: the TypeScript-flavored recommended preset (TS supplies types, so the
+// type-requiring jsdoc rules are off — validates jsdoc CORRECTNESS, not presence;
+// no require-jsdoc, which would be the "overhead" the user flagged).
+const jsdocRecommendedTs = jsdoc.configs["flat/recommended-typescript"] as {
+  readonly rules: Linter.RulesRecord;
 };
 
 export default defineConfig([
@@ -466,6 +474,20 @@ export default defineConfig([
       "sonarjs/no-async-constructor": "off", // 1
       "sonarjs/function-return-type": "off", // 1
       "sonarjs/void-use": "off", // 1
+    },
+  },
+  // R3b: jsdoc — TS-flavored recommended, scoped to the two published packages'
+  // public surface (packages/shared + packages/ui) per the scaffold directive.
+  {
+    files: ["packages/shared/src/**/*.ts", "packages/ui/src/**/*.{ts,tsx}"],
+    plugins: { jsdoc },
+    rules: {
+      ...jsdocRecommendedTs.rules,
+      // PRUNE: require-jsdoc forces a doc block on every export (126 sites) —
+      // the presence-overhead the user flagged. We validate jsdoc CORRECTNESS
+      // (require-param/returns, check-tag-names, …) where blocks exist, not
+      // their presence. Flip to error with content in a dedicated docs pass.
+      "jsdoc/require-jsdoc": "off",
     },
   },
   // Test-file override: disable jsx-a11y (mirrors Biome's former a11y:off on
