@@ -473,6 +473,13 @@ export default defineConfig([
       "apps/web/src/components/weekly-report/product-accordion.tsx", // one accordion for one ProductReport
       "apps/web/src/components/weekly-report/weekly-report-page.tsx", // one page: data load + 3 mutations + render
       "apps/web/src/lib/mappers/lead-form.ts", // one LeadForm mapping pipeline; types-out alone stays >300, further split fragments it
+      // R3a-4 god-files (700+) triaged to permanent-exempt: a namespace split is
+      // mechanically possible but would not improve the file (per code-style: keep
+      // the larger unit and say why). See wf wjqkbxhc3.
+      "apps/api/src/infrastructure/trpc/trpc.router.ts", // single tRPC god-router; all 17 namespace sub-routers close over one RouterDeps; real fix is service-layer extraction, not a shell split
+      "apps/api/src/modules/report-sections/lead-form.prisma-repository.ts", // one DI provider for one LeadFormRepository interface; domain separation already lives at the service layer above it
+      "apps/web/src/components/lead/lead-form.tsx", // monolithic component; 6 queries/5 mutations/~15 state vars share one scope; best-case extraction still leaves ~1440 lines — needs multi-PR architectural work, not a mechanical split
+      "apps/web/src/components/slides/section-slide-utils.ts", // core mapper buildSectionSlideModel (247 lines) + its private helpers are inseparable; extracting all else still leaves ~335 lines
     ],
     rules: { "max-lines": "off" },
   },
@@ -482,17 +489,13 @@ export default defineConfig([
   // with a reason. The goal state is an EMPTY list.
   {
     files: [
-      // god-files (700+), genuinely multi-concern → split, sequential, one per
-      // commit (multi-session). Each split removes its entry here.
-      "apps/api/src/infrastructure/trpc/trpc.router.ts",
+      // god-files, genuinely multi-concern → split, sequential, one per commit.
+      // Each split removes its entry here. Goal state: empty list.
       "apps/api/src/modules/admin/admin.prisma-repository.ts",
-      "apps/api/src/modules/report-sections/lead-form.prisma-repository.ts",
       "apps/web/src/components/admin/settings-tab.tsx",
       "apps/web/src/components/admin/periods-tab.tsx",
       "apps/web/src/components/admin/reminders-tab.tsx",
-      "apps/web/src/components/lead/lead-form.tsx",
-      "apps/web/src/components/slides/section-slide-utils.ts",
-      // mapper with a clean types-out 2-way split (like weekly-report) → split next.
+      // mapper with a clean types-out split (like weekly-report) → split next.
       "apps/web/src/lib/mappers/admin.ts",
     ],
     rules: { "max-lines": "off" },
