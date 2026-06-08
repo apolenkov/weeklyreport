@@ -490,7 +490,6 @@ export default defineConfig([
       "apps/web/src/components/weekly-report/weekly-report-page.tsx",
       "apps/web/src/lib/mappers/lead-form.ts",
       "apps/web/src/lib/mappers/admin.ts",
-      "apps/web/src/lib/mappers/weekly-report.ts",
     ],
     rules: { "max-lines": "off" },
   },
