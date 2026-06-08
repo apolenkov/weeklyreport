@@ -111,9 +111,14 @@ Gates after every code step: `pnpm typecheck && pnpm lint && pnpm test`.
 Items from past handoffs captured nowhere else — parked here so an OpenSpec-first
 session sees them. Each notes its natural home change.
 
-- [ ] O1: Fix the stale `WorkingDays.{MON_SAT,MON_SUN}` schema comment ("v1 does
+- [x] O1: Fix the stale `WorkingDays.{MON_SAT,MON_SUN}` schema comment ("v1 does
       not change deadline calc") — they DO alter `computeDeadline`. Home:
       `cleanup-dead-enum-states`.
+      → FIXED 2026-06-08 directly in `prisma/schema.prisma` (home change was
+      already archived). Verified the claim against code: both `computeDeadline`
+      call sites (`period-creator.scheduler.ts`, `period-admin.service.ts`) pass
+      `settings.workingDays`, and `workingDaySet` returns 5/6/7-day sets per
+      policy — the enum genuinely drives deadline calc. Comment rewritten to say so.
 - [x] O2: UI "products" are domain "projects" — admin UI references nonexistent
       `saveProduct`/`archiveProduct`; real procedures are
       `saveProject`/`deleteProject`. Reconcile naming. Home:
