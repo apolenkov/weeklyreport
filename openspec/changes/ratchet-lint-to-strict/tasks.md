@@ -255,7 +255,29 @@ true`. A documented SOFTENING, but it opens NO Promise hole — the only
     40 per-site disables for boundary type-lies; casts widened to `| undefined`.
     Full test suite caught 2 optimistic-contract lies typecheck missed (ci,
     req.headers) → guarded + disabled. Finished by hand after the Workflow wedged.
-- [ ] R2c Behavior-risky clusters get an Opus-level review before merge.
+- [x] R2c Behavior-risky clusters get an Opus-level review before merge.
+      → DONE 2026-06-08. The one unrecorded review was wave-6c-iii
+      `no-unnecessary-condition` (`61dfa215` part 1 + `459bebe9` flip-to-error).
+      Opus adversarial review: **VERDICT SOUND** — not a sample but a global
+      enumeration of every removed `?.`/`??`/`=== null` guard in both commits,
+      each paired with its `+` replacement. Every removal traces to a
+      provably-dead condition or a retained downstream guard; every
+      `arr[i]`→`arr.at(i)` rewrite feeds a real guard (e.g. item/risk dialogs'
+      `products.at(0)` is now caught by `if (!product)` — strictly SAFER than the
+      old `?? products[0]`). Boundary type-lies confirmed safe: Prisma required
+      relations (NOT NULL), search columns (NOT NULL sources), `jwt.verify`
+      (throws, never null), `ctx.session.*` (middleware throws first),
+      `useSearchParams()` (non-null in next@16.2.6 types), weekly-report Zod
+      non-nullable contract fields, `pagination.limit` Zod-`.default()`. The ~18
+      per-site disables and the ci/`req.headers` "optimistic-contract" sites are
+      guarded-AND-disabled (guard expression retained), not disabled-and-deleted.
+      Two COSMETIC nits, no follow-up fix required: (1) `dlq-monitor.service.ts`
+      removed three BullMQ boundary fallbacks outright (cannot crash — missed
+      metric / literal "undefined" in a log) while `jobs.service.ts:84,88` kept
+      per-site disables for the same `attemptsMade` field — inconsistent style;
+      (2) `mappers/admin.ts:202` `isActive` lost its `?? true` leaving a stale
+      comment (harmless — `User.isActive` is NOT NULL `@default(true)` AND
+      Zod-parsed server-side).
 
 ## 3. Plugin-surface clusters
 
