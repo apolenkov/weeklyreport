@@ -493,7 +493,6 @@ export default defineConfig([
       // Each split removes its entry here. Goal state: empty list.
       "apps/api/src/modules/admin/admin.prisma-repository.ts",
       "apps/web/src/components/admin/settings-tab.tsx",
-      "apps/web/src/components/admin/periods-tab.tsx",
     ],
     rules: { "max-lines": "off" },
   },
