@@ -667,11 +667,14 @@ enum ReminderAudience {
   HEAD_OF_LATE
 }
 
-// UFB-048 (Phase 48-B): metadata-only enum surfaced in AppSettings for the
-// «working days» admin hint. v1 does NOT change deadline calculation —
-// callers continue to use Mon-Fri. Wire format mirrors the screaming-snake
-// convention of ReminderAudience; admin.prisma-repository.ts owns the
-// wire ↔ Prisma mapper (`mon-fri | mon-sat | mon-sun`).
+// UFB-048 (Phase 48-B): the org «working days» policy surfaced in AppSettings.
+// It DOES drive deadline calculation: `computeDeadline` (apps/api/src/lib/
+// business-date.ts) selects the business-day set from this policy — mon-fri = 5
+// days, mon-sat = 6, mon-sun = 7 — and is called with `settings.workingDays`
+// from period-creator.scheduler.ts and period-admin.service.ts. Wire format
+// mirrors the screaming-snake convention of ReminderAudience;
+// admin.prisma-repository.ts owns the wire ↔ Prisma mapper
+// (`mon-fri | mon-sat | mon-sun`).
 enum WorkingDays {
   MON_FRI
   MON_SAT
