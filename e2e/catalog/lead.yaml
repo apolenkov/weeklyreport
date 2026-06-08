@@ -40,13 +40,7 @@ routes:
         given: "Lead visits /lead/report without a reportId path segment"
         when: "the form resolves the active reportId from the session"
         then: "the page performs a client-side redirect (router.replace) to /lead/report/<reportId> so the URL reflects the specific week being edited"
-        note: "Redirect is suppressed when ?period= query parameter is present (legacy read-only bookmarks)"
-      - id: lead-report-bare-period-readonly
-        intent: "Legacy ?period= query parameter opens form in read-only mode without redirect"
-        given: "Lead visits /lead/report?period=<week>"
-        when: "the form loads the report data for that period"
-        then: "the form renders in read-only mode and does NOT redirect to the canonical /lead/report/<reportId> URL, preserving back-compat for old email links and bookmarks"
-        note: "The read-only banner displays 'Viewing past period' text with the period name"
+        note: "A stale ?period= query is ignored and does NOT suppress the redirect — the legacy read-only-bookmark branch was retired (see this change's tasks.md §3.5); the redirect is gated only by the redirectToCanonical prop. Verified by lead-form-addressable.test.tsx."
   - route: /lead/report/[reportId]
     access: [lead, head, admin]
     intents:
@@ -61,7 +55,7 @@ routes:
         given: "The lead is on the report form in edit mode and the report is not submitted"
         when: "the lead clicks '+ Add Risk', opens a risk card to edit, or deletes a risk"
         then: "the risk is added, modified, or removed from the risks list; the form shows the updated risk count in the section badge, and the changes are captured in the autosave draft"
-        note: "Risks include impact, mitigation, and affected stages; they are edited via RiskEditDialog"
+        note: "Risks include impact, mitigation, and affected stages; they are edited via RiskEditDialog. The section badge counts only the current author's own risks, not the read-only cross-author risks shown alongside them (confirmed intentional — uat-feedback-2026-05-26 #3)."
       - id: lead-report-edit-decisions
         intent: "Edit decisions"
         given: "The lead is on the report form in edit mode and the report is not submitted"

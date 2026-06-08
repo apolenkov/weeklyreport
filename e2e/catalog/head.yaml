@@ -76,10 +76,10 @@ routes:
     intents:
       - id: head-report-redirect-canonical
         intent: "Navigate to the addressed report URL"
-        given: "the head lands on the bare /head/report route without ?period= query"
+        given: "the head lands on the bare /head/report route"
         when: "the active reportId is resolved from the server"
         then: "the browser URL changes to /head/report/[reportId] (with optional ?authorId preserved)"
-        note: "Legacy bare route preserved for back-compat; auto-redirects to canonical form via router.replace. Mutation intents (publish, reopen, archive, export-pdf) are redundant with /head/report/[reportId] — when ?period= is present, the redirect is suppressed but weeklyReport.get ignores the param anyway (server resolves active period), so the bare route produces no behavior distinct from the addressed route."
+        note: "Legacy bare route preserved for back-compat; auto-redirects to canonical form via router.replace (gated by redirectToCanonical). Mutation intents (publish, reopen, archive, export-pdf) are redundant with /head/report/[reportId]. A stale ?period= is ignored — the legacy suppression branch was retired (see this change's tasks.md §3.5), so the bare route produces no behavior distinct from the addressed route."
   - route: /head/report/[reportId]
     access: [head]
     intents:
