@@ -355,15 +355,31 @@ Parked here on 2026-06-08 because this is their natural home change (import-type
 / DI type-safety, adjacent to the wave-6 `no-unsafe-*` and the `import type`
 boundary work in R3c). Both are Opus-review tasks, not yet executed.
 
-- [ ] R6a (orphan O3): Record an Opus adversarial review of the DI import-type
+- [x] R6a (orphan O3): Record an Opus adversarial review of the DI import-type
       fix (commit `7952e3c5`, 47 sites). Gates were green at the time but no
       review was logged. The risk is the `biome-importtype-broke-nest-di`
       pattern — a runtime DI provider demoted to `import type` becomes a
       type-only import erased at compile time, so Nest cannot resolve it at
       runtime. Confirm none of the 47 sites demoted a value-position DI token to
       type-only.
-- [ ] R6b (orphan O4): Audit the remaining lazy / conditional `import type`
+      → DONE 2026-06-08 (autonomous army wf wgg61rk2c, Opus + adversarial verify).
+      PASS — zero blockers. All ~47 symbol conversions across 31 files verified
+      at the use site: every by-type-injected constructor param is a value
+      import; every `import type` is an interface or `@Inject(TOKEN)` site. The
+      `trpc.router.ts` asymmetry (5 converted, 9 left as type) is safe — it is a
+      plain factory whose services appear only as `RouterDeps` interface fields,
+      resolved via `app.get()` in `main.ts`. 8 symbols are over-broadly
+      value-imported (runtime-harmless; classes emit). Full review:
+      `findings/autonomous-analysis-2026-06-08.md`.
+- [x] R6b (orphan O4): Audit the remaining lazy / conditional `import type`
       paths repo-wide for the same runtime DI type-lie (a token used as a value
       — `@Inject`, constructor param, `useClass`, factory `inject:` — imported
       `type`-only). Pairs with R3c's `apps/web`→`apps/api` `allowTypeImports`
       carve-out.
+      → DONE 2026-06-08 (same run). PASS (clean). All 230 files in `apps/api/src`
+      (excluding tests) checked. `verbatimModuleSyntax:true` makes value-position
+      DI type-lies (`providers`/`useClass`/`inject:`/`@Inject`) hard compile
+      errors, narrowing the silent risk to constructor-param type annotations —
+      all confirmed value-imported. No real DI type-lie repo-wide. (One agent's
+      `@Inject(APP_LOGGER)` claim was refuted — that token does not exist; the
+      real wiring is an optional ctor param defaulting to `createNullLogger()`.)
