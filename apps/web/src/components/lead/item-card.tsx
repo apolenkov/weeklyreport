@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 
 import { LockBadge } from "../report-shell/lock-badge";
 import type { KanbanItem } from "./mock-data";
@@ -51,6 +51,27 @@ const STATUS_BADGE = {
     label: "Planned",
   },
 } as const satisfies Record<string, StatusBadge>;
+
+function cardContainerStyle(opts: {
+  isPlanned: boolean;
+  isBlocked: boolean;
+  foreign: boolean;
+}): CSSProperties {
+  const { isPlanned, isBlocked, foreign } = opts;
+  const borderStyle = isPlanned ? "dashed" : "solid";
+  const borderColor = isBlocked ? "rgba(200,32,20,0.2)" : "var(--color-muted)";
+  return {
+    minHeight: 110,
+    borderTop: `1px ${borderStyle} ${borderColor}`,
+    borderRight: `1px ${borderStyle} ${borderColor}`,
+    borderBottom: `1px ${borderStyle} ${borderColor}`,
+    borderLeft: isPlanned
+      ? `3px dashed var(--color-starbucks-accent)`
+      : `3px solid ${isBlocked ? "var(--color-destructive)" : "var(--color-starbucks-accent)"}`,
+    background: isBlocked ? "#fee2e2" : "var(--color-background)",
+    opacity: foreign ? 0.7 : 1,
+  };
+}
 
 function EditIcon() {
   return (
@@ -145,27 +166,11 @@ export function ItemCard({
     <div
       data-testid="item-card"
       className="group relative flex flex-col rounded-[10px] border bg-[var(--color-background)] p-2.5 transition-[border-color,box-shadow,background-color] hover:border-[rgba(0,0,0,0.25)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.10)]"
-      style={{
-        // min-height + flex column keeps every card the same baseline height
-        // regardless of whether the description wraps to 1 or 3 lines, so
-        // rows across products feel aligned at a glance.
-        minHeight: 110,
-        // Mockup uses a fully-dashed border on Planned (Next Week) items
-        // and a solid + colour-coded left strip on Current Week. We build
-        // every side explicitly to avoid the shorthand-vs-longhand React
-        // warning that borderLeft+borderStyle was producing.
-        borderTop: `1px ${isPlanned ? "dashed" : "solid"} ${isBlocked ? "rgba(200,32,20,0.2)" : "var(--color-muted)"}`,
-        borderRight: `1px ${isPlanned ? "dashed" : "solid"} ${isBlocked ? "rgba(200,32,20,0.2)" : "var(--color-muted)"}`,
-        borderBottom: `1px ${isPlanned ? "dashed" : "solid"} ${isBlocked ? "rgba(200,32,20,0.2)" : "var(--color-muted)"}`,
-        // KB-1 (Phase 33-04): planned cards keep a 3px dashed tealA left strip
-        // so column alignment with current-week cards reads identically. The
-        // earlier 1px gray dashed left turned planned columns visually narrower.
-        borderLeft: isPlanned
-          ? `3px dashed var(--color-starbucks-accent)`
-          : `3px solid ${isBlocked ? "var(--color-destructive)" : "var(--color-starbucks-accent)"}`,
-        background: isBlocked ? "#fee2e2" : "var(--color-background)",
-        opacity: item.foreign ? 0.7 : 1,
-      }}
+      style={cardContainerStyle({
+        isPlanned,
+        isBlocked,
+        foreign: item.foreign === true,
+      })}
     >
       {/* Card top line: status on the left, item actions on the right. */}
       <div className="mb-2 flex items-start justify-between gap-2">

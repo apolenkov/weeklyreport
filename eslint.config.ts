@@ -489,22 +489,21 @@ export default defineConfig([
   // size-grandfathered any longer.
   //
   // R3a-4 GRANDFATHER — pre-existing complexity (cyclomatic > 20) violators.
-  // Fixed AFTER the max-lines splits land (splitting reduces per-function
-  // complexity as a side effect), then the residual is refactored or documented.
-  // NOT permanent.
+  // Ratcheted down one verified-safe file at a time. The residual entries below
+  // were attempted by the overnight refactor census/army (2026-06-09) but the
+  // proposed extractions were rated "forced" (artificial slicing that lowers the
+  // metric without improving clarity) and/or could not be confirmed
+  // behavior-preserving from the diff, so they stay grandfathered per the
+  // code-style rule "if splitting would hurt clarity, keep the larger unit and
+  // say why". Refactor with a human in the loop, not blind. NOT permanent.
   {
     files: [
-      // saveSnapshot's pre-existing cyclomatic complexity, relocated here by the
-      // R3a-4 facade split of admin.prisma-repository.ts (same debt, new home).
-      "apps/api/src/modules/admin/admin-snapshot-write.queries.ts",
       "apps/api/src/modules/auth/auth.routes.ts",
       "apps/web/src/app/(app)/reports/page.tsx",
       "apps/web/src/app/login-page.client.tsx",
       "apps/web/src/components/admin/admin-panel.tsx",
       "apps/web/src/components/dashboard/dashboard-page.tsx",
-      "apps/web/src/components/lead/current-week-section.tsx",
       "apps/web/src/components/lead/decision-edit-dialog.tsx",
-      "apps/web/src/components/lead/item-card.tsx",
       "apps/web/src/components/lead/item-edit-dialog.tsx",
       "apps/web/src/components/lead/lead-form.tsx",
       "apps/web/src/components/lead/lead-history-sidebar.tsx",
