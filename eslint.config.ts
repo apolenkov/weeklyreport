@@ -490,6 +490,28 @@ export default defineConfig([
       "jsdoc/require-jsdoc": "off",
     },
   },
+  // R3c: import boundary — apps/web must not import apps/api at RUNTIME. The tRPC
+  // client legitimately needs the AppRouter *type* (apps/web/src/lib/trpc.ts), so
+  // type-only imports are allowed via allowTypeImports; a VALUE import would pull
+  // the Nest/Prisma server graph into the browser bundle. Currently 0 violations.
+  {
+    files: ["apps/web/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@customreport/api", "@customreport/api/*"],
+              allowTypeImports: true,
+              message:
+                "apps/web must not import apps/api at runtime; only `import type` is allowed (e.g. AppRouter for the tRPC client).",
+            },
+          ],
+        },
+      ],
+    },
+  },
   // Test-file override: disable jsx-a11y (mirrors Biome's former a11y:off on
   // tests) and exempt size/complexity budgets (tests routinely exceed them).
   {
