@@ -219,7 +219,7 @@ search hits for leads`. - **DEFERRED (needs a product decision)** — `?period=`
 
 ## 5. Extend to remaining roles + close out
 
-- [ ] 5.1 Repeat 1+3 for `head`, then `admin`, then `viewer` (each lands
+- [x] 5.1 Repeat 1+3 for `head`, then `admin`, then `viewer` (each lands
       separately, sweep reports per role). Catalog half (step 1) done
       autonomously 2026-06-07: all four roles now have catalogs — `lead` (10
       routes), `viewer` (6), `head` (15), `admin` (18) — `head`/`admin` generated
@@ -231,6 +231,13 @@ search hits for leads`. - **DEFERRED (needs a product decision)** — `?period=`
       read-only view). The generator was hardened with a deterministic
       route-hygiene assert so the route defects can't silently recur. The Driver
       half (step 3, per-role sweep run) remains — needs the live app.
+      DISPOSITIONED (2026-06-08): the catalog half (step 1) is done for all four
+      roles; the AI-Driver fan-out half (step 3) for `head`/`admin`/`viewer` was
+      SPLIT OUT into its own change `extend-driver-remaining-roles` (it is
+      expensive — the `lead` run was ~171 Playwright-MCP tool-uses — and needs
+      the live app). Nothing is dropped: the new change carries tasks 1-4 +
+      an `ai-driver-coverage` spec delta. This change archives with the harness,
+      all four catalogs, and the proven `lead` Driver.
 - [x] 5.2 Document the loop in `e2e/catalog/README.md`: manual-UAT findings →
       feedback-log intake → graduate into the catalog → regenerate. Done
       2026-06-08: rewrote the README "The intake loop" section as the explicit
@@ -244,8 +251,9 @@ search hits for leads`. - **DEFERRED (needs a product decision)** — `?period=`
       (the frozen deterministic gate AND a formal Model-Based Testing state model
       are both deferred to phase 2, with rationale); the README intake-loop close
       now also states it. No phase-2 work built here (6.2 reaffirms this).
-- [ ] 5.4 `openspec validate behavioral-ui-regression-gate --strict` green;
-      archive.
+- [x] 5.4 `openspec validate behavioral-ui-regression-gate --strict` green
+      (2026-06-08); archived. The deferred AI-Driver fan-out (5.1 step 3) lives
+      on in `extend-driver-remaining-roles`.
 
 ## Out of scope (do NOT do here)
 
