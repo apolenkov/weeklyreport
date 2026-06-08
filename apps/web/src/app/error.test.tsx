@@ -28,7 +28,7 @@ describe("ErrorBoundary — error.tsx (UFB a11y catalog)", () => {
   it("button inner text content is 'Try again'", () => {
     render(<ErrorBoundary error={makeError()} reset={vi.fn()} />);
     const btn = screen.getByRole("button");
-    expect(btn.textContent.replace(/\s+/g, " ").trim()).toBe("Try again");
+    expect(btn.textContent.replaceAll(/\s+/g, " ").trim()).toBe("Try again");
   });
 
   it("clicking the button invokes the reset callback", () => {

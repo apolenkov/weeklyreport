@@ -139,8 +139,8 @@ describe("tRPC auth middleware", () => {
     try {
       await nullCaller.protectedRoute();
       expect.fail("Should have thrown");
-    } catch (err) {
-      expect(err).toBeInstanceOf(TRPCError);
+    } catch (error) {
+      expect(error).toBeInstanceOf(TRPCError);
     }
   });
 

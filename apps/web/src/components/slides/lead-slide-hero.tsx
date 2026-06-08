@@ -14,11 +14,13 @@ function worstProductTone(
   const statuses = products
     .filter((p) => p.id !== "cross-product")
     .map((p) => p.status);
-  if (statuses.some((s) => s === "red")) return "blocked";
-  if (statuses.some((s) => s === "yellow")) return "at-risk";
-  if (statuses.every((s) => s === "green" || s === null)) {
-    if (statuses.some((s) => s === "green")) return "on-track";
-  }
+  if (statuses.includes("red")) return "blocked";
+  if (statuses.includes("yellow")) return "at-risk";
+  if (
+    statuses.every((s) => s === "green" || s === null) &&
+    statuses.includes("green")
+  )
+    return "on-track";
   return "empty";
 }
 

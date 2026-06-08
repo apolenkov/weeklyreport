@@ -159,11 +159,11 @@ function statusLabelFor(
   const leads = leadNames.length > 0 ? leadNames.join(", ") : "unassigned";
   switch (status) {
     case "on-track":
-      return `On Track \u00b7 ${leads}`;
+      return `On Track \u00B7 ${leads}`;
     case "at-risk":
-      return `At Risk \u00b7 ${leads}`;
+      return `At Risk \u00B7 ${leads}`;
     case "blocked":
-      return `Blocked \u00b7 ${leads}`;
+      return `Blocked \u00B7 ${leads}`;
   }
 }
 
@@ -179,7 +179,7 @@ function groupItemsByProject(
     { current: WeeklyReportItem[]; next: WeeklyReportItem[] }
   >();
   for (const section of sections) {
-    const stageLead = `Dev \u00b7 ${initialsFromName(section.authorName)}`;
+    const stageLead = `Dev \u00B7 ${initialsFromName(section.authorName)}`;
     for (const item of section.items) {
       const bucket = map.get(item.projectId) ?? { current: [], next: [] };
       const mapped: WeeklyReportItem = {
@@ -230,7 +230,7 @@ function groupRisksByProject(
       const list = map.get(risk.projectId) ?? [];
       list.push({
         id: risk.id ?? `risk-${section.reportSectionId}-${list.length}`,
-        badge: `${productName} \u00b7 Dev`,
+        badge: `${productName} \u00B7 Dev`,
         severity,
         text,
       });
@@ -386,7 +386,7 @@ export function mapWeeklyReport(
     const priorities = prioritiesByProject.get(overview.productId) ?? [];
     const leadsLabel =
       overview.leadNames.length > 0
-        ? overview.leadNames.join(" \u00b7 ")
+        ? overview.leadNames.join(" \u00B7 ")
         : "unassigned";
     const initials = initialsFromName(overview.productName);
 

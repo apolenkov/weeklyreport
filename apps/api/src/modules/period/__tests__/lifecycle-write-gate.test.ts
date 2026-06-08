@@ -94,9 +94,8 @@ export function findLifecycleViolationsInSource(
       const name = prop.name;
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- ts.PropertyName access is defensively guarded in AST traversal
       if (!name) continue;
-      const key = ts.isIdentifier(name)
-        ? name.text
-        : ts.isStringLiteral(name)
+      const key =
+        ts.isIdentifier(name) || ts.isStringLiteral(name)
           ? name.text
           : undefined;
       if (key && GOVERNED_FIELDS.has(key)) {

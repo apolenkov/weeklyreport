@@ -14,6 +14,7 @@
 import { spawnSync } from "node:child_process";
 import net from "node:net";
 import { resolve } from "node:path";
+
 import { config as loadEnv } from "dotenv";
 
 // Load .env from the repo root regardless of cwd. The script may be invoked
@@ -25,6 +26,7 @@ loadEnv({ path: resolve(REPO_ROOT, ".env") });
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import pg from "pg";
+
 import { assertNonProdDestructive } from "./_destructive-guard.js";
 
 const DATABASE_URL: string = (() => {
@@ -89,7 +91,7 @@ async function flushRedis(): Promise<void> {
     const timer = setTimeout(() => {
       sock.destroy();
       reject(new Error(`Redis FLUSHALL timed out at ${host}:${port}`));
-    }, 5_000);
+    }, 5000);
     let buf = "";
     sock.on("data", (chunk) => {
       buf += chunk.toString("utf8");
@@ -120,9 +122,9 @@ async function truncateAll(): Promise<void> {
   // Discover every table in the public schema except prisma's bookkeeping
   // table — schema drift between repo and DB doesn't break the wipe this way.
   const rows = await prisma.$queryRawUnsafe<{ tablename: string }[]>(
-    `SELECT tablename FROM pg_tables
+    String.raw`SELECT tablename FROM pg_tables
        WHERE schemaname = 'public'
-         AND tablename NOT LIKE '\\_prisma%'
+         AND tablename NOT LIKE '\_prisma%'
          AND tablename NOT LIKE 'pg_%'
        ORDER BY tablename`,
   );
@@ -196,8 +198,8 @@ async function main(): Promise<void> {
 }
 
 main()
-  .catch((err: unknown) => {
-    console.error("[reset-hard] FAILED:", err);
+  .catch((error: unknown) => {
+    console.error("[reset-hard] FAILED:", error);
     process.exitCode = 1;
   })
   .finally(async () => {

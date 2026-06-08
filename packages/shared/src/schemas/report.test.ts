@@ -185,7 +185,7 @@ describe("itemInputSchema — safeText", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects item text containing null byte \\u0000", () => {
+  it(String.raw`rejects item text containing null byte \u0000`, () => {
     const item = { ...validItem(), text: "Hello\u0000World" };
     const result = itemInputSchema.safeParse(item);
     expect(result.success).toBe(false);
@@ -195,15 +195,18 @@ describe("itemInputSchema — safeText", () => {
     }
   });
 
-  it("rejects item text that is only zero-width spaces \\u200B", () => {
-    const item = { ...validItem(), text: "\u200B\u200B\u200B" };
-    const result = itemInputSchema.safeParse(item);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const messages = result.error.issues.map((i) => i.message);
-      expect(messages).toContain("Text must contain visible characters");
-    }
-  });
+  it(
+    String.raw`rejects item text that is only zero-width spaces \u200B`,
+    () => {
+      const item = { ...validItem(), text: "\u200B\u200B\u200B" };
+      const result = itemInputSchema.safeParse(item);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const messages = result.error.issues.map((i) => i.message);
+        expect(messages).toContain("Text must contain visible characters");
+      }
+    },
+  );
 
   it("accepts item text with zero-width space mixed with real text", () => {
     const item = { ...validItem(), text: "\u200BHello" };
@@ -212,12 +215,12 @@ describe("itemInputSchema — safeText", () => {
   });
 
   it("rejects item text that is only whitespace", () => {
-    const item = { ...validItem(), text: "   " };
+    const item = { ...validItem(), text: " ".repeat(3) };
     const result = itemInputSchema.safeParse(item);
     expect(result.success).toBe(false);
   });
 
-  it("rejects item text that is only \\uFEFF (BOM)", () => {
+  it(String.raw`rejects item text that is only \uFEFF (BOM)`, () => {
     const item = { ...validItem(), text: "\uFEFF" };
     const result = itemInputSchema.safeParse(item);
     expect(result.success).toBe(false);
@@ -1845,7 +1848,7 @@ describe("compiledHistoryResultSchema", () => {
 
 describe("safeText — noInvisibleOnly", () => {
   it("rejects a whitespace-only string (spaces)", () => {
-    const result = safeText().safeParse("   ");
+    const result = safeText().safeParse(" ".repeat(3));
     expect(result.success).toBe(false);
     if (!result.success) {
       const messages = result.error.issues.map((i) => i.message);
@@ -1858,44 +1861,56 @@ describe("safeText — noInvisibleOnly", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects a string containing only \\u200B (zero-width space)", () => {
-    const result = safeText().safeParse("​");
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const messages = result.error.issues.map((i) => i.message);
-      expect(messages).toContain("Text must contain visible characters");
-    }
-  });
+  it(
+    String.raw`rejects a string containing only \u200B (zero-width space)`,
+    () => {
+      const result = safeText().safeParse("​");
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const messages = result.error.issues.map((i) => i.message);
+        expect(messages).toContain("Text must contain visible characters");
+      }
+    },
+  );
 
-  it("rejects a string containing only \\u200C (zero-width non-joiner)", () => {
-    // Regression guard: alternation /\s|​|‌|‍|﻿/gu must
-    // match ‌ in isolation (broken char-class would miss it).
-    const result = safeText().safeParse("‌");
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const messages = result.error.issues.map((i) => i.message);
-      expect(messages).toContain("Text must contain visible characters");
-    }
-  });
+  it(
+    String.raw`rejects a string containing only \u200C (zero-width non-joiner)`,
+    () => {
+      // Regression guard: alternation /\s|​|‌|‍|﻿/gu must
+      // match ‌ in isolation (broken char-class would miss it).
+      const result = safeText().safeParse("‌");
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const messages = result.error.issues.map((i) => i.message);
+        expect(messages).toContain("Text must contain visible characters");
+      }
+    },
+  );
 
-  it("rejects a string containing only \\u200D (zero-width joiner)", () => {
-    // Regression guard: same alternation must also strip ‍ in isolation.
-    const result = safeText().safeParse("‍");
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const messages = result.error.issues.map((i) => i.message);
-      expect(messages).toContain("Text must contain visible characters");
-    }
-  });
+  it(
+    String.raw`rejects a string containing only \u200D (zero-width joiner)`,
+    () => {
+      // Regression guard: same alternation must also strip ‍ in isolation.
+      const result = safeText().safeParse("‍");
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const messages = result.error.issues.map((i) => i.message);
+        expect(messages).toContain("Text must contain visible characters");
+      }
+    },
+  );
 
-  it("rejects a string containing only \\uFEFF (zero-width no-break space / BOM)", () => {
-    const result = safeText().safeParse("﻿");
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      const messages = result.error.issues.map((i) => i.message);
-      expect(messages).toContain("Text must contain visible characters");
-    }
-  });
+  it(
+    String.raw`rejects a string containing only \uFEFF (zero-width no-break space / BOM)`,
+    () => {
+      const result = safeText().safeParse("﻿");
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const messages = result.error.issues.map((i) => i.message);
+        expect(messages).toContain("Text must contain visible characters");
+      }
+    },
+  );
 
   it("rejects a string with only tabs, newlines, and carriage returns", () => {
     const result = safeText().safeParse("\t\n\r");
@@ -1932,7 +1947,7 @@ describe("safeText — noInvisibleOnly", () => {
 
 describe("riskInputSchema — invisible-only gap-fills", () => {
   it("rejects risk.impact containing only whitespace", () => {
-    const risk = { ...validRisk(), impact: "   " };
+    const risk = { ...validRisk(), impact: " ".repeat(3) };
     const result = riskInputSchema.safeParse(risk);
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -1942,7 +1957,7 @@ describe("riskInputSchema — invisible-only gap-fills", () => {
   });
 
   it("rejects risk.mitigation containing only whitespace", () => {
-    const risk = { ...validRisk(), mitigation: "   " };
+    const risk = { ...validRisk(), mitigation: " ".repeat(3) };
     const result = riskInputSchema.safeParse(risk);
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -1954,7 +1969,7 @@ describe("riskInputSchema — invisible-only gap-fills", () => {
 
 describe("decisionInputSchema — invisible-only gap-fills", () => {
   it("rejects decision.text (title field) containing only whitespace", () => {
-    const d = { ...validDecision(), text: "   " };
+    const d = { ...validDecision(), text: " ".repeat(3) };
     const result = decisionInputSchema.safeParse(d);
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -1964,7 +1979,7 @@ describe("decisionInputSchema — invisible-only gap-fills", () => {
   });
 
   it("rejects decision.impact (rationale field) containing only whitespace", () => {
-    const d = { ...validDecision(), impact: "   " };
+    const d = { ...validDecision(), impact: " ".repeat(3) };
     const result = decisionInputSchema.safeParse(d);
     expect(result.success).toBe(false);
     if (!result.success) {

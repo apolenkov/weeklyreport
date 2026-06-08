@@ -107,7 +107,7 @@ export function SearchInput({
 }: SearchInputProps) {
   const router = useRouter();
   const trpc = useTRPC();
-  const reactId = useId().replace(/:/g, "");
+  const reactId = useId().replaceAll(":", "");
   const inputId = `${reactId}-search-input`;
   const resultsId = `${reactId}-search-results`;
 

@@ -18,7 +18,7 @@ export class PrismaHealthIndicator extends HealthIndicator {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
       return this.getStatus(key, true);
-    } catch (_error) {
+    } catch {
       // TODO(ratchet-no-deprecated): migrate to HealthIndicatorService
       // eslint-disable-next-line @typescript-eslint/no-deprecated -- pending supervised migration, see TODO above
       throw new HealthCheckError(

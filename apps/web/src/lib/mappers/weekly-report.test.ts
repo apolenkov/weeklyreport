@@ -69,11 +69,11 @@ describe("statusLabelFor", () => {
   const fn = __testing.statusLabelFor;
   it("joins lead names with ', ' and prefixes the status", () => {
     expect(fn("at-risk", ["Тимлид 1", "Maria K."])).toBe(
-      "At Risk \u00b7 Тимлид 1, Maria K.",
+      "At Risk \u00B7 Тимлид 1, Maria K.",
     );
   });
   it('falls back to "unassigned" when no leads', () => {
-    expect(fn("on-track", [])).toBe("On Track \u00b7 unassigned");
+    expect(fn("on-track", [])).toBe("On Track \u00B7 unassigned");
   });
 });
 
@@ -206,7 +206,7 @@ describe("mapWeeklyReport", () => {
     expect(result.portfolio).toHaveLength(2);
     const crm = result.portfolio.find((p) => p.id === PROJECT_A);
     expect(crm?.status).toBe("at-risk");
-    expect(crm?.leads).toBe("Тимлид 1 \u00b7 Maria K.");
+    expect(crm?.leads).toBe("Тимлид 1 \u00B7 Maria K.");
     expect(crm?.currentWeekCount).toBe(1);
     expect(crm?.nextWeekCount).toBe(1);
     expect(crm?.riskCount).toBe(1);
@@ -221,7 +221,7 @@ describe("mapWeeklyReport", () => {
       "OAuth integration",
     );
     expect(expectDefined(crmReport?.currentWeek[0]).stageLead).toBe(
-      "Dev \u00b7 Т1",
+      "Dev \u00B7 Т1",
     );
     expect(expectDefined(crmReport?.nextWeek[0]).stageLead).toBe("Planned");
     expect(crmReport?.risks).toHaveLength(1);

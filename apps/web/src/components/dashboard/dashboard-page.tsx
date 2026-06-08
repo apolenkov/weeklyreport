@@ -41,7 +41,7 @@ import { BlockedAtRiskTable } from "./blocked-at-risk-table";
 import { DashboardSkeleton } from "./dashboard-skeleton";
 import { LeadSummaryTable } from "./lead-summary-table";
 
-export const DASHBOARD_LOAD_STALL_MS = 8_000;
+export const DASHBOARD_LOAD_STALL_MS = 8000;
 
 export function DashboardPage() {
   const trpc = useTRPC();

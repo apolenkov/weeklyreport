@@ -62,10 +62,10 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
                 `[dlq] job ${jobId} on ${name} exhausted ${attemptsConfigured} attempts: ${failedReason}`,
               );
             }
-          } catch (err) {
+          } catch (error) {
             // Don't let metrics-side bookkeeping crash the queue listener.
             this.logger.warn(
-              `[dlq] failed to inspect terminal failure for ${name}/${jobId}: ${err instanceof Error ? err.message : String(err)} (prev=${prev ?? "n/a"})`,
+              `[dlq] failed to inspect terminal failure for ${name}/${jobId}: ${error instanceof Error ? error.message : String(error)} (prev=${prev ?? "n/a"})`,
             );
           }
         })();
@@ -111,9 +111,9 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
             `[dlq-alert] queue=${name} failedCount=${count} threshold=${threshold} — investigate via /admin/queues`,
           );
         }
-      } catch (err) {
+      } catch (error) {
         this.logger.warn(
-          `[dlq] threshold check failed for ${name}: ${err instanceof Error ? err.message : String(err)}`,
+          `[dlq] threshold check failed for ${name}: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }

@@ -45,14 +45,14 @@ describe("assertRole (requireRole core)", () => {
     try {
       assertRole(null, "head");
       expect.fail("Should have thrown");
-    } catch (err) {
-      expect(err).toBeInstanceOf(TRPCError);
+    } catch (error) {
+      expect(error).toBeInstanceOf(TRPCError);
     }
     try {
       assertRole(leadSession, "head");
       expect.fail("Should have thrown");
-    } catch (err) {
-      expect(err).toBeInstanceOf(TRPCError);
+    } catch (error) {
+      expect(error).toBeInstanceOf(TRPCError);
     }
   });
 
@@ -91,10 +91,10 @@ describe("assertRole (requireRole core)", () => {
     try {
       assertRole(leadSession, ["head", "admin"]);
       expect.fail("Should have thrown");
-    } catch (err) {
-      expect(err).toBeInstanceOf(TRPCError);
-      expect((err as TRPCError).message).toContain("head");
-      expect((err as TRPCError).message).toContain("admin");
+    } catch (error) {
+      expect(error).toBeInstanceOf(TRPCError);
+      expect((error as TRPCError).message).toContain("head");
+      expect((error as TRPCError).message).toContain("admin");
     }
   });
 

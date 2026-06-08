@@ -92,9 +92,9 @@ export class AutoArchiverScheduler {
           to: "archived",
         });
         archivedIds.push(candidate.id);
-      } catch (err) {
+      } catch (error) {
         this.logger.error(
-          `auto-archive failed period=${candidate.id}: ${err instanceof Error ? err.message : String(err)}`,
+          `auto-archive failed period=${candidate.id}: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }

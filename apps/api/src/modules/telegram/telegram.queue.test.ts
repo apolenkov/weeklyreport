@@ -69,7 +69,7 @@ describe("telegram.queue constants", () => {
     expect(TELEGRAM_OUTBOUND_JOB_OPTS.attempts).toBe(3);
     expect(TELEGRAM_OUTBOUND_JOB_OPTS.backoff.type).toBe("exponential");
     expect(TELEGRAM_OUTBOUND_JOB_OPTS.backoff.delay).toBeGreaterThanOrEqual(
-      1_000,
+      1000,
     );
   });
 });

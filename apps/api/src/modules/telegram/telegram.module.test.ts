@@ -30,7 +30,7 @@ describe("selectTelegramAdapter (Phase 55 / UFB-056)", () => {
   });
 
   it("returns MockTelegramAdapter when TG_BOT_TOKEN is whitespace-only", () => {
-    process.env.TG_BOT_TOKEN = "   ";
+    process.env.TG_BOT_TOKEN = " ".repeat(3);
     const adapter = selectTelegramAdapter();
     expect(adapter).toBeInstanceOf(MockTelegramAdapter);
   });

@@ -433,8 +433,8 @@ function buildRoleMiddleware(allowed: Role | Role[]) {
     try {
       const session = assertRole(ctx.session, allowed);
       return await next({ ctx: { session } });
-    } catch (err) {
-      if (err instanceof TRPCError && err.code === "FORBIDDEN") {
+    } catch (error) {
+      if (error instanceof TRPCError && error.code === "FORBIDDEN") {
         // T2 mitigation: even when role/userId are missing, emit so the
         // audit trail captures the attempt rather than swallowing it.
         ctx.auditLogger.roleDenied({
@@ -444,7 +444,7 @@ function buildRoleMiddleware(allowed: Role | Role[]) {
           ip: ctx.ip,
         });
       }
-      throw err;
+      throw error;
     }
   });
 }

@@ -49,7 +49,7 @@ export class ArchivePrismaRepository implements ArchiveRepository {
   ): Promise<ArchiveReportSummary[]> {
     const sectionScope = sectionScopeWhere(session);
     const reports = await this.prisma.report.findMany({
-      where: { ...PUBLISHED_FLOOR, ...(filter ?? {}) },
+      where: { ...PUBLISHED_FLOOR, ...filter },
       include: {
         publishedBy: true,
         sections: {
@@ -80,7 +80,7 @@ export class ArchivePrismaRepository implements ArchiveRepository {
     // fields. The id-equality on the unique PK still produces ≤1 row.
     const sectionScope = sectionScopeWhere(session);
     const report = await this.prisma.report.findFirst({
-      where: { id: reportId, ...PUBLISHED_FLOOR, ...(filter ?? {}) },
+      where: { id: reportId, ...PUBLISHED_FLOOR, ...filter },
       include: {
         publishedBy: true,
         sections: {

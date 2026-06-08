@@ -92,10 +92,10 @@ export function startOtel(
 
   try {
     sdk.start();
-  } catch (err) {
+  } catch (error) {
     // Non-fatal: api should still boot if the collector is unreachable.
     process.stderr.write(
-      `[otel] start failed: ${err instanceof Error ? err.message : String(err)}\n`,
+      `[otel] start failed: ${error instanceof Error ? error.message : String(error)}\n`,
     );
   }
 
@@ -113,9 +113,9 @@ export function startOtel(
   // Best-effort shutdown on SIGTERM — flush pending spans + logs within ~5s.
   const shutdown = () => {
     void Promise.all([sdk?.shutdown(), loggerProvider?.shutdown()]).catch(
-      (err: unknown) => {
+      (error: unknown) => {
         process.stderr.write(
-          `[otel] shutdown error: ${err instanceof Error ? err.message : String(err)}\n`,
+          `[otel] shutdown error: ${error instanceof Error ? error.message : String(error)}\n`,
         );
       },
     );

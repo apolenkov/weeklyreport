@@ -187,7 +187,7 @@ describe("PeriodService — integration (publish lifecycle)", () => {
 
     const error = await service
       .publishPeriod(reportId, headSession)
-      .catch((e: unknown) => e);
+      .catch((error_: unknown) => error_);
 
     expect(error).toBeInstanceOf(Error);
     expect(error).not.toBeInstanceOf(PeriodAccessError);
@@ -196,7 +196,9 @@ describe("PeriodService — integration (publish lifecycle)", () => {
   it("reopen with missing report throws generic Error", async () => {
     const service = new PeriodService(createSpyRepository(new Map()));
 
-    const error = await service.reopenPeriod(reportId).catch((e: unknown) => e);
+    const error = await service
+      .reopenPeriod(reportId)
+      .catch((error_: unknown) => error_);
 
     expect(error).toBeInstanceOf(Error);
     expect(error).not.toBeInstanceOf(PeriodAccessError);

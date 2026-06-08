@@ -61,7 +61,7 @@ export function AlertBar({
         if (alreadySent > 0)
           extras.push(`${alreadySent} already sent this cycle`);
         if (skipped > 0) extras.push(`${skipped} opted out`);
-        const tail = extras.length ? ` (${extras.join(", ")})` : "";
+        const tail = extras.length > 0 ? ` (${extras.join(", ")})` : "";
         toast.success(
           `Reminder sent to ${dispatched} lead${dispatched === 1 ? "" : "s"}${tail}.`,
         );

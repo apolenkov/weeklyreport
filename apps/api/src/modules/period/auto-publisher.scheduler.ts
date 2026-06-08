@@ -109,11 +109,11 @@ export class AutoPublisherScheduler {
           to: "published",
         });
         publishedIds.push(candidate.id);
-      } catch (err) {
+      } catch (error) {
         // Single-period failures must not abort the tick — one bad
         // report should not block the rest of the queue. Log and move on.
         this.logger.error(
-          `auto-publish failed period=${candidate.id}: ${err instanceof Error ? err.message : String(err)}`,
+          `auto-publish failed period=${candidate.id}: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }

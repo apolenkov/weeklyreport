@@ -20,6 +20,7 @@
  */
 
 import { resolve } from "node:path";
+
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { config as loadEnv } from "dotenv";
@@ -146,7 +147,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err: unknown) => {
-  console.error("[backfill] failed:", err);
+main().catch((error: unknown) => {
+  console.error("[backfill] failed:", error);
   process.exit(1);
 });

@@ -28,6 +28,7 @@
 import "dotenv/config";
 
 import net from "node:net";
+
 import { PrismaPg } from "@prisma/adapter-pg";
 import {
   PeriodState,
@@ -41,6 +42,7 @@ import {
   Role,
 } from "@prisma/client";
 import pg from "pg";
+
 import { assertNonProdDestructive } from "./_destructive-guard.js";
 import {
   ACTIVE_REPORT_ID,
@@ -119,7 +121,7 @@ async function flushRedisDb(): Promise<
     const timer = setTimeout(() => {
       socket.destroy();
       resolve({ flushed: false, reason: "timeout" });
-    }, 5_000);
+    }, 5000);
 
     let response = "";
     socket.once("connect", () => {

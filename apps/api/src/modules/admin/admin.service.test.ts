@@ -121,7 +121,7 @@ function createRepository(
       const existingIndex = currentSnapshot.groups.findIndex(
         (row) => row.id === group.id,
       );
-      if (existingIndex >= 0) {
+      if (existingIndex !== -1) {
         currentSnapshot.groups[existingIndex] = structuredClone(group);
       } else {
         currentSnapshot.groups.push(structuredClone(group));

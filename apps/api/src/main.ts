@@ -78,7 +78,7 @@ function normalizeHttpRoute(path: string): string {
   if (path.startsWith("/health/")) return path;
   if (path === "/metrics") return "/metrics";
   if (path === "/api/client-logs") return "/api/client-logs";
-  return path.replace(UUID_SEGMENT_RE, ":id");
+  return path.replaceAll(UUID_SEGMENT_RE, ":id");
 }
 
 async function bootstrap() {

@@ -305,7 +305,7 @@ function ItemEditDialogContent({
               value={priorityRank ?? ""}
               onChange={(e) => {
                 const v = e.target.value;
-                setPriorityRank(v === "" ? null : parseInt(v, 10));
+                setPriorityRank(v === "" ? null : Number.parseInt(v, 10));
               }}
             >
               <option value="">— none —</option>

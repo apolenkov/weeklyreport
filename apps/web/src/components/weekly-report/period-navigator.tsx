@@ -73,7 +73,7 @@ export function HeadPeriodNavigator({
   const currentIndex = useMemo(() => {
     if (!pathReportId) return 0;
     const idx = periods.findIndex((p) => p.id === pathReportId);
-    return idx >= 0 ? idx : 0;
+    return idx !== -1 ? idx : 0;
   }, [pathReportId, periods]);
 
   const selectedPeriod = periods.at(currentIndex);

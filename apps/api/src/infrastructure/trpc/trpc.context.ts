@@ -34,7 +34,7 @@ const DEV_SESSION: UserSession = {
  * ~5s without hammering Postgres on every request. Cache miss path is
  * a single primary-key lookup, so cold reads are cheap.
  */
-const ORG_CACHE_TTL_MS = 5_000;
+const ORG_CACHE_TTL_MS = 5000;
 let orgCache: {
   value: { shortName: string; fullName: string };
   expiresAt: number;

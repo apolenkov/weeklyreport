@@ -152,9 +152,7 @@ export const customreportSectionsSubmittedTotal = new Counter({
 export const customreportSectionSubmissionLatencySeconds = new Histogram({
   name: "customreport_section_submission_latency_seconds",
   help: "Signed seconds (deadline − submittedAt) at submit time. Negative = early, positive = late.",
-  buckets: [
-    -86_400, -43_200, -3_600, 0, 3_600, 14_400, 43_200, 86_400, 259_200,
-  ],
+  buckets: [-86_400, -43_200, -3600, 0, 3600, 14_400, 43_200, 86_400, 259_200],
   registers: [metricsRegistry],
 });
 

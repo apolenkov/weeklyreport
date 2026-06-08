@@ -33,7 +33,10 @@ interface ConfirmationDialogProps {
   readonly children?: React.ReactNode;
 }
 
-const DESTRUCTIVE_VARIANTS: ConfirmationDialogVariant[] = ["delete", "revoke"];
+const DESTRUCTIVE_VARIANTS = new Set<ConfirmationDialogVariant>([
+  "delete",
+  "revoke",
+]);
 
 /**
  * Reusable confirmation dialog for all confirmation actions:
@@ -57,7 +60,7 @@ export function ConfirmationDialog({
 }: ConfirmationDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  const isDestructive = DESTRUCTIVE_VARIANTS.includes(variant);
+  const isDestructive = DESTRUCTIVE_VARIANTS.has(variant);
 
   // Focus trap: focus the dialog when opened
   useEffect(() => {
