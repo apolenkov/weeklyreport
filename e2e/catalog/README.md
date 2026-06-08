@@ -127,8 +127,21 @@ at all — not a lead nav intent.
 
 ## The intake loop
 
-Manual-UAT findings feed the catalog over time: a finding is logged (the
-`uat-feedback` change is the historical intake), confirmed, then graduated into
-the relevant role's catalog as a new `intent`, and the catalog is regenerated.
+Manual-UAT findings feed the catalog over time, on this loop:
+
+1. **Log** the finding as one row in a lightweight `feedback-log.md`
+   (`role · route · symptom · severity · next-action`). This is the quick
+   manual-UAT intake; the archived `uat-feedback-2026-05-26` change is the
+   reference instance. Both defects and `ok` confirmations of intended behavior
+   are logged.
+2. **Confirm** the behavior (against the code or a live run).
+3. **Graduate** a confirmed, durable behavior into the relevant role's catalog
+   as a new `intent` (or a `note` on an existing one when it sharpens an intent
+   rather than adding a goal). A bare "loads fine / 0 errors" row is NOT
+   graduated — the catalog's `then` must be observable (see the schema rules).
+4. **Regenerate** the catalog; the generator reuses stable `id`s and only the
+   genuinely new behavior is added.
+
 Phase 2 (freezing critical, stabilized intents into deterministic Playwright
-specs) is deferred until the product stabilizes — see ADR 0001.
+specs; and a formal Model-Based Testing state model) is deferred until the
+product stabilizes — see ADR 0001.
