@@ -112,6 +112,45 @@ describe("AutoArchiverScheduler", () => {
     });
   });
 
+  it("excludes-reopened: candidate query filters out periodState='open' so a reopened period past its cutoff is never auto-archived", async () => {
+    const prisma = {
+      report: {
+        findMany: vi.fn().mockResolvedValue([]),
+        update: vi.fn(),
+      },
+    };
+    const admin = {
+      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+    };
+    const audit = {
+      ...createNullAuditLogger(),
+      periodAutoArchive: vi.fn(),
+    };
+
+    const scheduler = new AutoArchiverScheduler(
+      asAny(prisma),
+      asAny(admin),
+      asAny(audit),
+    );
+
+    await scheduler.runOnce(new Date("2026-06-15T00:15:00Z"));
+
+    // Regression guard (Wave-3 blocker): a reopened period keeps
+    // status='published' + archived=false + an old publishedAt, so the legacy
+    // predicates alone would archive it. The periodState exclusion is the fix.
+    // cutoff = now (2026-06-15T00:15Z) − 4 weeks = 2026-05-18T00:15Z.
+    expect(prisma.report.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.report.findMany).toHaveBeenCalledWith({
+      where: {
+        status: "published",
+        archived: false,
+        publishedAt: { lt: new Date("2026-05-18T00:15:00.000Z"), not: null },
+        periodState: { not: "open" },
+      },
+      select: { id: true },
+    });
+  });
+
   it("idempotent: candidate set empty (all rows already archived) → no update, no audit", async () => {
     const prisma = {
       report: {
