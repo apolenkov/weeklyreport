@@ -281,10 +281,27 @@ true`. A documented SOFTENING, but it opens NO Promise hole — the only
 
 ## 3. Plugin-surface clusters
 
-- [ ] R3a sonarjs (incl. `cognitive-complexity` ≤ 15), unicorn (pruned off-list),
-      `simple-import-sort`, `max-lines` 300 / complexity ≤ 10 — each its own
-      cluster with exempt dirs applied.
-- [ ] R3b JSDoc on `packages/shared` + `packages/ui` public exports only.
+> **User directive (2026-06-08) — resolves the §4 softening questions for all of
+> R3:** strictness per community best-practice presets, WITHOUT overhead — enable
+> what the community/recommended config enforces; do not hand-tune aggressive
+> custom thresholds, and prune only the rules that are pure noise/overhead for
+> this codebase (with a one-line reason each). Default presets win over bespoke.
+
+- [~] R3a `simple-import-sort` + `unicorn/filename-case` — DONE 2026-06-08
+  (commit `c8c718c1`). simple-import-sort/imports + /exports → error, repo-wide
+  autofix (221 files, mechanical). unicorn/filename-case kebabCase → error;
+  `ignore` exempts Next.js dynamic segments (`[reportId]`) + `__tests__` (dir
+  conventions, not source files); 0 source-file renames needed.
+  `apps/api/src/main.ts` carries a file-level `simple-import-sort/imports`
+  disable (load-bearing bootstrap order). Gate green incl. build.
+  REMAINING R3a clusters (each its own commit, gate-green-or-revert):
+  - [ ] R3a-2 unicorn recommended set (pruned per the user directive — turn off
+        the noise rules with a reason; unicorn plugin already installed).
+  - [ ] R3a-3 sonarjs (incl. `cognitive-complexity`) — needs `eslint-plugin-sonarjs` install.
+  - [ ] R3a-4 core `max-lines` 300 (skipBlankLines/skipComments) + complexity,
+        with exempt dirs (`*.test.*`, `e2e`, `prisma/generated`, `*.config.ts`).
+- [ ] R3b JSDoc on `packages/shared` + `packages/ui` public exports only
+      (needs `eslint-plugin-jsdoc` install).
 - [ ] R3c Import boundaries, incl. the `apps/web`→`apps/api` `allowTypeImports`
       carve-out.
 
