@@ -323,13 +323,22 @@ true`. A documented SOFTENING, but it opens NO Promise hole — the only
     HOTSPOTS that fire only in test fixtures (`no-hardcoded-ip` 29,
     `hardcoded-secret-signatures` 10) → scope test-off + keep error in src;
     then the small genuine fixes (`use-type-alias`, `no-nested-template-
-    literals`, `no-misleading-array-reverse`, …); LAST + with-a-human:
+literals`, `no-misleading-array-reverse`, …); LAST + with-a-human:
     `cognitive-complexity` (pair with the cyclomatic ratchet) +
     `different-types-comparison` (behavior-sensitive, carry-over.service).
   - [ ] R3a-4 core `max-lines` 300 (skipBlankLines/skipComments) + complexity,
         with exempt dirs (`*.test.*`, `e2e`, `prisma/generated`, `*.config.ts`).
-- [ ] R3b JSDoc on `packages/shared` + `packages/ui` public exports only
-      (needs `eslint-plugin-jsdoc` install).
+- [~] R3b JSDoc on `packages/shared` + `packages/ui` public exports only —
+  ENABLED 2026-06-09 (`eslint-plugin-jsdoc@63.0.2`). Wired the TS-flavored
+  `flat/recommended-typescript` preset scoped to `packages/{shared,ui}/src`.
+  `jsdoc/require-jsdoc` is PRUNED off (it demanded a doc block on all 126
+  exports — the presence-overhead the user flagged); the preset now validates
+  jsdoc CORRECTNESS where blocks exist, not their presence. 19 residual
+  advisory WARNINGS remain (require-param 10, require-returns 6,
+  multiline-blocks 2, check-tag-names 1) — non-gating (`eslint .` exits 0 on
+  warnings). REMAINING: a dedicated docs pass to (a) fill the 19 correctness
+  gaps and (b) decide whether to flip `require-jsdoc` → error WITH authored
+  content on the public API. Left as backlog, not done blind overnight.
 - [ ] R3c Import boundaries, incl. the `apps/web`→`apps/api` `allowTypeImports`
       carve-out.
 
