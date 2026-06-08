@@ -67,6 +67,14 @@ export class AutoArchiverScheduler {
         status: "published",
         archived: false,
         publishedAt: { lt: cutoff, not: null },
+        // A reopened period keeps the legacy tuple (status='published',
+        // archived=false) and its original publishedAt, but reverts the
+        // canonical `periodState` to 'open' (period-transition.ts `reopen`).
+        // Without this guard a period reopened after its retention cutoff
+        // matches all three legacy predicates and gets silently auto-archived,
+        // destroying the in-progress editing session. periodState is the
+        // canonical column (audit comment below) — exclude any reopened period.
+        periodState: { not: "open" },
       },
       select: { id: true },
     });
