@@ -3,6 +3,7 @@ import type {
   VersionSnapshot,
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
+
 import { customreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {

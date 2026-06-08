@@ -4,6 +4,7 @@ import {
   type OnModuleInit,
 } from "@nestjs/common";
 import { type Job, Worker } from "bullmq";
+
 import { AdminService } from "../../modules/admin/admin.service";
 import { renderEmail } from "../../modules/email/render-template";
 import { RemindersService } from "../../modules/reminders/reminders.service";

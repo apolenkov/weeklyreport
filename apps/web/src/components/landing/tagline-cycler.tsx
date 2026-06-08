@@ -12,6 +12,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+
 import { LANDING_TAGLINES } from "./landing-page.constants";
 
 const VISIBLE_MS = 3_000;

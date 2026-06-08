@@ -6,7 +6,6 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
-
 import type { MockPeriod, MockReminder, MockReminderPolicy } from "./mock-data";
 import { RemindersTab } from "./reminders-tab";
 

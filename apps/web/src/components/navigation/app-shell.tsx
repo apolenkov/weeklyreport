@@ -2,6 +2,7 @@
 
 import type { Role } from "@customreport/shared";
 import type { ReactNode } from "react";
+
 import { ApiReadinessPlaceholder } from "../common/api-readiness-placeholder";
 
 interface AppShellProps {

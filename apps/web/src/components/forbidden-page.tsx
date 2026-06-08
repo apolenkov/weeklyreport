@@ -1,5 +1,4 @@
 import type { Role } from "@customreport/shared";
-
 import { Button } from "@customreport/ui/components/ui/button";
 import {
   Card,

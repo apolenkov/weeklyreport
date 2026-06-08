@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+
 import { LeadVelocityChart } from "./lead-velocity.chart";
 import { PeriodComparisonChart } from "./period-comparison.chart";
 import { TrafficLightHistoryChart } from "./traffic-light-history.chart";

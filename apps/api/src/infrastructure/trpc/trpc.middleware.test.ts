@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { describe, expect, it, vi } from "vitest";
+
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";

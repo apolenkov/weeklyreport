@@ -9,7 +9,6 @@ import {
   customreportPeriodStateTransitionsTotal,
   customreportReportsSubmittedTotal,
 } from "../../infrastructure/metrics/metrics.registry.js";
-
 import { publicationRouter } from "./publication.router";
 import {
   PublicationAccessError,

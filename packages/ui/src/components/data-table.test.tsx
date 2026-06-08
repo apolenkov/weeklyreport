@@ -16,7 +16,7 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DataTable, type Column } from "./data-table";
+import { type Column, DataTable } from "./data-table";
 
 // Tell React's act() that we are in a test environment so it can flush
 // effects synchronously and suppress the "not configured to support act"

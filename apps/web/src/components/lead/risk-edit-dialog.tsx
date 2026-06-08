@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+
 import type { Product, RiskEntry } from "./mock-data";
 import { StageMultiSelect } from "./stage-multi-select";
 import { canonicalStageName } from "./stage-tags";

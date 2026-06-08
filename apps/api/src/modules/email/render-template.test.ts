@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import { renderEmail } from "./render-template";
 

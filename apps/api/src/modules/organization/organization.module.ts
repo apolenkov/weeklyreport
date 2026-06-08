@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+
 import { OrganizationPrismaRepository } from "./organization.prisma-repository.js";
 import { OrganizationService } from "./organization.service.js";
 

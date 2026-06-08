@@ -29,6 +29,7 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import type { Queue } from "bullmq";
 import { z } from "zod";
+
 import { groupScopeFilter } from "../../lib/group-scope.js";
 import type { ActivityService } from "../../modules/activity/activity.service.js";
 import { AdminService } from "../../modules/admin/admin.service.js";

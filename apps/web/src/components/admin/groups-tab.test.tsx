@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
-
 import { GroupsTab } from "./groups-tab";
 import type { MockGroup, MockUser } from "./mock-data";
 

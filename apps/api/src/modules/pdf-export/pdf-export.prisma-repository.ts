@@ -2,11 +2,12 @@ import {
   type AssembledReport,
   assembledReportSchema,
   type PdfExportJob,
-  type PortfolioOverview,
   pdfExportJobSchema,
+  type PortfolioOverview,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
+
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {
   mapPrismaToReportSection,

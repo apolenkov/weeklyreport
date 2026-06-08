@@ -1,7 +1,6 @@
 "use client";
 
 import type { LeadVelocityOutput } from "@customreport/shared";
-
 import {
   ChartContainer,
   ChartTooltip,

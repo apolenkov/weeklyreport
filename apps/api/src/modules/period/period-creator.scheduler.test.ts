@@ -1,5 +1,6 @@
 import type { AppSettings } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
+
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
 

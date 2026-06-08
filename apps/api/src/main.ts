@@ -1,3 +1,4 @@
+/* eslint-disable simple-import-sort/imports -- bootstrap order is load-bearing: `reflect-metadata` MUST be the first executed import for Nest DI metadata, and Sentry.init() MUST run before the OTel bootstrap import (http-module hook order); sorting these imports would break runtime instrumentation. */
 import "reflect-metadata";
 
 // Phase 68: Sentry Node SDK init BEFORE OTel (http module hook order).

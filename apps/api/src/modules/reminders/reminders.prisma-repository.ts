@@ -1,10 +1,11 @@
 import {
   type AdminReminderExecution,
-  type AdminReminderRule,
   adminReminderExecutionSchema,
+  type AdminReminderRule,
   adminReminderRuleSchema,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
+
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { RemindersRepository } from "./reminders.service.js";
 

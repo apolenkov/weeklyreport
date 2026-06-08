@@ -1,15 +1,15 @@
 import {
   type LeadVelocityInput,
-  type LeadVelocityOutput,
   leadVelocityInputSchema,
+  type LeadVelocityOutput,
   leadVelocityOutputSchema,
   type PeriodComparisonInput,
-  type PeriodComparisonOutput,
   periodComparisonInputSchema,
+  type PeriodComparisonOutput,
   periodComparisonOutputSchema,
   type TrafficLightHistoryInput,
-  type TrafficLightHistoryOutput,
   trafficLightHistoryInputSchema,
+  type TrafficLightHistoryOutput,
   trafficLightHistoryOutputSchema,
 } from "@customreport/shared";
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import type { ProductReport } from "../dashboard/mock-data";
 
 interface ProductAccordionProps {

@@ -9,6 +9,7 @@ import {
   it,
   vi,
 } from "vitest";
+
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   cleanDatabase,

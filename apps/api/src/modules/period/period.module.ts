@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { AdminModule } from "../admin/admin.module.js";
 import { AdminService } from "../admin/admin.service.js";

@@ -5,6 +5,7 @@ import { AlertTriangle, RefreshCw, RotateCcw } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
+
 import {
   formatClientErrorMessage,
   logClientError,
@@ -12,7 +13,6 @@ import {
 import { mapDashboardData } from "../../lib/mappers";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
-
 import { KpiCards } from "./kpi-cards";
 
 // Vercel audit win #3: ProductKpiCard pulls the full Recharts bundle (~130kB)

@@ -1,5 +1,6 @@
 import type { AssembledReport, PdfExportJob } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
+
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   PdfExportDomainError,

@@ -4,6 +4,7 @@ import type {
   WeeklyReportGetResponse,
   WeeklyReportReadModel,
 } from "@customreport/shared";
+
 import { createAppLogger } from "../../lib/logger.js";
 
 export class WeeklyReportDomainError extends Error {

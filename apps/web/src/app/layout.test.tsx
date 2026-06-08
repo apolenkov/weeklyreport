@@ -2,10 +2,9 @@
  * @vitest-environment jsdom
  */
 
+import type { OrganizationPublic } from "@customreport/shared";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-
-import type { OrganizationPublic } from "@customreport/shared";
 
 // Mock server-side dependencies before importing the component.
 // getOrgPublic is a server-only helper; the `server-only` guard is already

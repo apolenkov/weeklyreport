@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+
 import type { ItemStatus, KanbanItem, Product } from "./mock-data";
 import { StageMultiSelect } from "./stage-multi-select";
 

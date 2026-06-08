@@ -1,5 +1,6 @@
 import type { Job } from "bullmq";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { silenceStderr } from "../../test-utils/silence-logs";
 
 // ---------------------------------------------------------------------------
@@ -83,8 +84,10 @@ vi.mock("node:crypto", () => ({
 // ---------------------------------------------------------------------------
 
 import { createHash } from "node:crypto";
+
 import { Worker } from "bullmq";
 import { chromium } from "playwright";
+
 import { PdfExportProcessor } from "./pdf-export.processor.js";
 
 // ---------------------------------------------------------------------------

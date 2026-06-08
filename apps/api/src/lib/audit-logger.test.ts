@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { expectDefined } from "../test-utils/expect-defined.js";
 import { createAuditLogger, createNullAuditLogger } from "./audit-logger.js";
 import type { AppLogger } from "./logger.js";

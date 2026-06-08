@@ -3,13 +3,13 @@ import * as React from "react";
 
 import {
   DeadlineEmail,
-  type DeadlineEmailProps,
   deadlineEmailPlaintext,
+  type DeadlineEmailProps,
 } from "./templates/deadline.template.js";
 import {
   EscalationEmail,
-  type EscalationEmailProps,
   escalationEmailPlaintext,
+  type EscalationEmailProps,
 } from "./templates/escalation.template.js";
 
 /**

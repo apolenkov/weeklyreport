@@ -10,7 +10,6 @@ import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../lib/trpc-context";
-
 import type { MockProduct } from "./mock-data";
 
 /**

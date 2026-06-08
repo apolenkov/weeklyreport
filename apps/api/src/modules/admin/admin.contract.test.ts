@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+
 import { adminProcedure } from "../../infrastructure/trpc/trpc.middleware.js";
 import { createAppRouter } from "../../infrastructure/trpc/trpc.router.js";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";

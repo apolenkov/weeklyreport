@@ -10,6 +10,7 @@
  * silently break deduplication and cause two separate fetches.
  */
 import "@testing-library/jest-dom/vitest";
+
 import { render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

@@ -20,10 +20,10 @@
  * durably. Deviation noted in the change catalog notes.
  */
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
 
 import type { ActivityLiveResponse } from "@customreport/shared";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -45,6 +45,7 @@ vi.mock("../../lib/trpc-context", () => ({
 
 // Import after mocks are registered.
 import { useQuery } from "@tanstack/react-query";
+
 import { ActivityLivePanel } from "./activity-live-panel";
 
 // ---------------------------------------------------------------------------

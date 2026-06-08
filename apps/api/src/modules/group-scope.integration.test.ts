@@ -1,5 +1,6 @@
 import type { UserSession } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+
 import { groupScopeFilter } from "../lib/group-scope";
 import {
   cleanDatabase,

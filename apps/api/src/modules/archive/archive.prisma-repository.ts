@@ -1,13 +1,14 @@
 import {
   type ArchiveReportDetail,
-  type ArchiveReportSummary,
-  type AssembledReport,
   archiveReportDetailSchema,
+  type ArchiveReportSummary,
   archiveReportSummarySchema,
+  type AssembledReport,
   type PortfolioOverview,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
+
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter } from "../../lib/group-scope.js";
 import {

@@ -1,11 +1,12 @@
 import {
   type SearchHit,
   type SearchQueryInput,
-  type SearchQueryOutput,
   searchQueryInputSchema,
+  type SearchQueryOutput,
   searchQueryOutputSchema,
   type UserSession,
 } from "@customreport/shared";
+
 import { createAppLogger } from "../../lib/logger.js";
 
 /**

@@ -1,7 +1,7 @@
 import {
   type DraftSavePayload,
-  type DraftSaveValidationError,
   draftSaveSchema,
+  type DraftSaveValidationError,
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
   type SubmitSectionPayload,
@@ -10,8 +10,8 @@ import {
 } from "@customreport/shared";
 
 import {
-  customreportSectionSubmissionLatencySeconds,
   customreportSectionsSubmittedTotal,
+  customreportSectionSubmissionLatencySeconds,
 } from "../../infrastructure/metrics/metrics.registry.js";
 import { createAppLogger } from "../../lib/logger.js";
 

@@ -8,11 +8,11 @@ import type {
   MyHistoryEntry,
   Role,
 } from "@customreport/shared";
-import type { SessionState } from "../../../lib/session-provider";
 import { useQuery } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { SessionState } from "../../../lib/session-provider";
 import ReportsPage from "./page";
 
 const navigationMock = vi.hoisted(() => ({

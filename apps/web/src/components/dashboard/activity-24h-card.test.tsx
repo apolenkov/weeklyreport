@@ -5,8 +5,9 @@
  * Covers the div→section change that makes this component a named region.
  */
 import "@testing-library/jest-dom/vitest";
+
+import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@tanstack/react-query", () => ({

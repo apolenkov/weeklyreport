@@ -2,8 +2,8 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {
-  customreportSectionSubmissionLatencySeconds,
   customreportSectionsSubmittedTotal,
+  customreportSectionSubmissionLatencySeconds,
 } from "../../infrastructure/metrics/metrics.registry.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {

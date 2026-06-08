@@ -1,12 +1,12 @@
 import {
   type AdminProject,
-  type AdminSnapshot,
-  type AppSettings,
   adminProjectSchema,
   adminReminderExecutionSchema,
   adminReminderRuleSchema,
+  type AdminSnapshot,
   adminSnapshotSchema,
   adminUserSchema,
+  type AppSettings,
   appSettingsSchema,
   type GroupProduct,
   type GroupProductEdgeInput,
@@ -15,8 +15,8 @@ import {
   type PeriodStatus,
   type ReminderAudience,
   type ReminderPolicy,
-  type ReportingGroup,
   reminderPolicySchema,
+  type ReportingGroup,
   reportingGroupSchema,
   reportPeriodSchema,
   type StageAssignment,
@@ -26,8 +26,8 @@ import {
 import { Injectable } from "@nestjs/common";
 import type {
   ReminderAudience as PrismaReminderAudience,
-  WorkingDays as PrismaWorkingDays,
   ReportStatus,
+  WorkingDays as PrismaWorkingDays,
 } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";

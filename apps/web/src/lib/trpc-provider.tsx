@@ -3,6 +3,7 @@
 import { Toaster } from "@customreport/ui/components/ui/sonner";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
+
 import { installClientLogger } from "./client-logger";
 import { makeQueryClient } from "./query-client";
 import { makeTRPCProxy, type TRPCProxy } from "./trpc";

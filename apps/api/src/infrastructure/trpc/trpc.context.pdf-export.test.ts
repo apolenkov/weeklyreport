@@ -2,6 +2,7 @@ import type { INestApplication } from "@nestjs/common";
 import type { Request } from "express";
 import jwt from "jsonwebtoken";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { createNullLogger } from "../../lib/logger";
 import { createContextFactory } from "./trpc.context";
 
@@ -203,6 +204,7 @@ describe("createContextFactory — Phase 32-B1 PDF JWT verifier path (H-04)", ()
 
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+
 import { createAuditLogger } from "../../lib/audit-logger";
 import type { TrpcContext } from "./trpc.context";
 import {

@@ -32,6 +32,7 @@ import type {
   ReportSectionReadModel,
   WeeklyReportReadModel,
 } from "@customreport/shared";
+
 import { formatPeriodRangeWithYear, formatWeekLabel } from "../format-date";
 import { deriveItemStatus, type ItemStatus } from "./item-status";
 import { trafficToStageStatus } from "./traffic-light";

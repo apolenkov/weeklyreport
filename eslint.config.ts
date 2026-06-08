@@ -4,6 +4,8 @@ import jsxA11yPlugin from "eslint-plugin-jsx-a11y";
 import react from "eslint-plugin-react";
 import reactCompiler from "eslint-plugin-react-compiler";
 import reactHooks from "eslint-plugin-react-hooks";
+import simpleImportSort from "eslint-plugin-simple-import-sort";
+import unicorn from "eslint-plugin-unicorn";
 import unusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
 
@@ -77,6 +79,8 @@ export default defineConfig([
       "jsx-a11y": jsxA11y,
       "react-hooks": reactHooks,
       "react-compiler": reactCompiler,
+      "simple-import-sort": simpleImportSort,
+      unicorn,
       "unused-imports": unusedImports,
     },
     languageOptions: {
@@ -98,6 +102,22 @@ export default defineConfig([
       },
     },
     rules: {
+      // Phase 3 (ratchet-lint-to-strict) R3a — net-new ordering/naming cluster.
+      // simple-import-sort: deterministic import/export order (autofixable).
+      // unicorn/filename-case: enforce the repo's kebab-case file convention.
+      "simple-import-sort/imports": "error",
+      "simple-import-sort/exports": "error",
+      "unicorn/filename-case": [
+        "error",
+        {
+          case: "kebabCase",
+          // Framework/test directory conventions are not source files — exempt
+          // them from kebab: Next.js dynamic route segments (`[reportId]`, whose
+          // name IS the `params` key and must stay camelCase) and the `__tests__`
+          // test-folder convention.
+          ignore: [String.raw`^\[.+\]$`, String.raw`^__tests__$`],
+        },
+      ],
       // Biome repo overrides (preserve severities exactly)
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-non-null-assertion": "warn",

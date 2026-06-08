@@ -9,6 +9,7 @@
  * hex assertions are avoided — jsdom normalises them to rgb().
  */
 import "@testing-library/jest-dom/vitest";
+
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 

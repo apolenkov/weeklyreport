@@ -13,10 +13,10 @@
  */
 
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
 
 import type { ArchiveReportSummary } from "@customreport/shared";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 // The component uses useTRPC internally (passed to useCursorPagination factory).
 // Mock trpc-context so the hook chain resolves without a real tRPC client.
