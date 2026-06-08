@@ -75,6 +75,12 @@ jobs:
       - name: Mutation Consumer Audit
         run: pnpm uat:audit
 
+      # establish-scenario-catalog SC-6/SC-7: catalog drift gate. Fails when a
+      # new App Router page route has no scenario in any e2e/catalog/<role>.yaml
+      # (or a catalog route went stale). Pure Node, no DB/build needed.
+      - name: Catalog Drift Gate
+        run: pnpm catalog:check
+
       - name: Upload mutation audit report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
