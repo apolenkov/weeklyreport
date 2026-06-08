@@ -6,29 +6,14 @@ import { ensureFallbackReportingGroup } from "./admin-group.queries";
 import { getSnapshot } from "./admin-snapshot.queries";
 import { resolveLifecycle } from "./snapshot-lifecycle.js";
 
-/**
- * AdminSnapshot write path, extracted from `admin-snapshot.queries.ts` (R3a-4
- * split) to keep each module under the size budget. `saveSnapshot` takes the
- * optional PolicyApplicatorService the facade injects so it can materialize
- * derived rules on newly-created periods. Its pre-existing cyclomatic
- * complexity is grandfathered (see eslint.config.ts) pending the dedicated
- * complexity-ratchet phase — this split is behavior-preserving only.
- */
-export async function saveSnapshot(
+async function upsertGroups(
   prisma: PrismaService,
-  policyApplicator: PolicyApplicatorService | undefined,
-  snapshot: AdminSnapshot,
-): Promise<AdminSnapshot> {
-  const currentGroups = await prisma.reportingGroup.findMany();
-  const currentUsers = await prisma.user.findMany();
-  const currentProjects = await prisma.project.findMany();
-  const currentReports = await prisma.report.findMany();
-  const currentRules = await prisma.reminderRule.findMany();
-
-  // Upsert reporting groups before users so required User.reportingGroupId
-  // can be validated by the database.
-  const currentGroupIds = new Set(currentGroups.map((g) => g.id));
-  for (const group of snapshot.groups) {
+  groups: AdminSnapshot["groups"],
+): Promise<void> {
+  const currentGroupIds = new Set(
+    (await prisma.reportingGroup.findMany()).map((g) => g.id),
+  );
+  for (const group of groups) {
     if (currentGroupIds.has(group.id)) {
       await prisma.reportingGroup.update({
         where: { id: group.id },
@@ -49,16 +34,19 @@ export async function saveSnapshot(
       });
     }
   }
+}
 
-  const fallbackReportingGroupId =
-    snapshot.groups.find((group) => !group.archived)?.id ??
-    (await ensureFallbackReportingGroup(prisma));
+async function upsertUsers(
+  prisma: PrismaService,
+  users: AdminSnapshot["users"],
+  fallbackReportingGroupId: string,
+): Promise<void> {
+  const currentUserIds = new Set(
+    (await prisma.user.findMany()).map((u) => u.id),
+  );
+  const snapshotUserIds = new Set(users.map((u) => u.id));
 
-  // Upsert users
-  const currentUserIds = new Set(currentUsers.map((u) => u.id));
-  const snapshotUserIds = new Set(snapshot.users.map((u) => u.id));
-
-  for (const user of snapshot.users) {
+  for (const user of users) {
     const reportingGroupId =
       user.role === "viewer"
         ? null
@@ -114,12 +102,18 @@ export async function saveSnapshot(
       }
     }
   }
+}
 
-  // Upsert projects (archive removed ones instead of deleting)
-  const currentProjectIds = new Set(currentProjects.map((p) => p.id));
-  const snapshotProjectIds = new Set(snapshot.projects.map((p) => p.id));
+async function upsertProjects(
+  prisma: PrismaService,
+  projects: AdminSnapshot["projects"],
+): Promise<void> {
+  const currentProjectIds = new Set(
+    (await prisma.project.findMany()).map((p) => p.id),
+  );
+  const snapshotProjectIds = new Set(projects.map((p) => p.id));
 
-  for (const project of snapshot.projects) {
+  for (const project of projects) {
     if (currentProjectIds.has(project.id)) {
       await prisma.project.update({
         where: { id: project.id },
@@ -151,15 +145,21 @@ export async function saveSnapshot(
       data: { archived: true },
     });
   }
+}
 
-  // Upsert report periods
-  const currentReportIds = new Set(currentReports.map((r) => r.id));
+async function upsertPeriods(
+  prisma: PrismaService,
+  periods: AdminSnapshot["periods"],
+): Promise<{ newlyCreatedPeriods: { id: string; deadline: Date }[] }> {
+  const currentReportIds = new Set(
+    (await prisma.report.findMany()).map((r) => r.id),
+  );
   // UFB-036 (Phase 44-03): track which periods are NEW so we can run
   // PolicyApplicator on them AFTER the upsert loop commits. Updates
   // do not re-trigger the applicator — policies attach once at create.
   const newlyCreatedPeriods: { id: string; deadline: Date }[] = [];
 
-  for (const period of snapshot.periods) {
+  for (const period of periods) {
     if (currentReportIds.has(period.id)) {
       // lifecycle-write-gate-allow: snapshot restore reinstates a Report's
       // independently-persisted lifecycle values, it is NOT a lifecycle
@@ -199,11 +199,18 @@ export async function saveSnapshot(
     }
   }
 
-  // Upsert reminder rules
-  const currentRuleIds = new Set(currentRules.map((r) => r.id));
-  const snapshotRuleIds = new Set(snapshot.reminderRules.map((r) => r.id));
+  return { newlyCreatedPeriods };
+}
 
-  for (const rule of snapshot.reminderRules) {
+async function upsertReminderRules(
+  prisma: PrismaService,
+  reminderRules: AdminSnapshot["reminderRules"],
+  currentRules: Awaited<ReturnType<PrismaService["reminderRule"]["findMany"]>>,
+): Promise<void> {
+  const currentRuleIds = new Set(currentRules.map((r) => r.id));
+  const snapshotRuleIds = new Set(reminderRules.map((r) => r.id));
+
+  for (const rule of reminderRules) {
     const ruleData = {
       kind: rule.kind,
       fireAt: rule.fireAt,
@@ -234,6 +241,35 @@ export async function saveSnapshot(
       where: { id: { in: removedRuleIds } },
     });
   }
+}
+
+/**
+ * AdminSnapshot write path, extracted from `admin-snapshot.queries.ts` (R3a-4
+ * split) to keep each module under the size budget. `saveSnapshot` takes the
+ * optional PolicyApplicatorService the facade injects so it can materialize
+ * derived rules on newly-created periods.
+ */
+export async function saveSnapshot(
+  prisma: PrismaService,
+  policyApplicator: PolicyApplicatorService | undefined,
+  snapshot: AdminSnapshot,
+): Promise<AdminSnapshot> {
+  const currentRules = await prisma.reminderRule.findMany();
+
+  // Upsert reporting groups before users so required User.reportingGroupId
+  // can be validated by the database.
+  await upsertGroups(prisma, snapshot.groups);
+
+  const fallbackReportingGroupId =
+    snapshot.groups.find((group) => !group.archived)?.id ??
+    (await ensureFallbackReportingGroup(prisma));
+
+  await upsertUsers(prisma, snapshot.users, fallbackReportingGroupId);
+  await upsertProjects(prisma, snapshot.projects);
+
+  const { newlyCreatedPeriods } = await upsertPeriods(prisma, snapshot.periods);
+
+  await upsertReminderRules(prisma, snapshot.reminderRules, currentRules);
 
   // UFB-036 (Phase 44-03): materialize one ReminderRule per active
   // policy on each newly-created Period. Run AFTER the per-row

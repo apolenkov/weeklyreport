@@ -44,6 +44,28 @@ interface CurrentWeekSectionProps {
   readonly addSignal?: number;
 }
 
+type DialogState =
+  | { open: false }
+  | { open: true; mode: "create"; seedProductId: string }
+  | { open: true; mode: "edit"; item: KanbanItem };
+
+function deriveDialogProps(
+  dialogState: DialogState,
+  openSeq: number,
+): {
+  dialogKey: string;
+  editItem: KanbanItem | null;
+  createSeedProductId: string | undefined;
+} {
+  const isEdit = dialogState.open && dialogState.mode === "edit";
+  const isCreate = dialogState.open && dialogState.mode === "create";
+  return {
+    dialogKey: `${openSeq}-${isEdit ? dialogState.item.id : "new"}`,
+    editItem: isEdit ? dialogState.item : null,
+    createSeedProductId: isCreate ? dialogState.seedProductId : undefined,
+  };
+}
+
 function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
   const map = new Map<string, KanbanItem[]>();
   for (const item of items) {
@@ -97,11 +119,7 @@ export function CurrentWeekSection({
   }, []);
 
   // null = create mode (Add); KanbanItem = edit mode for that row.
-  const [dialogState, setDialogState] = useState<
-    | { open: false }
-    | { open: true; mode: "create"; seedProductId: string }
-    | { open: true; mode: "edit"; item: KanbanItem }
-  >({ open: false });
+  const [dialogState, setDialogState] = useState<DialogState>({ open: false });
   // D-13: monotonic counter so repeated opens of the same item get a fresh
   // key even when item.id is unchanged (prevents stale stageIds in dialog).
   const [openSeq, setOpenSeq] = useState(0);
@@ -239,6 +257,7 @@ export function CurrentWeekSection({
           ];
         });
   const visibleColumnCount = Math.min(Math.max(columns.length, 1), 3);
+  const dlg = deriveDialogProps(dialogState, openSeq);
 
   return (
     <div className="relative">
@@ -304,21 +323,13 @@ export function CurrentWeekSection({
 
         {/* Edit / Add modal — single instance shared across all columns. */}
         <ItemEditDialog
-          key={`${openSeq}-${dialogState.open && dialogState.mode === "edit" ? dialogState.item.id : "new"}`}
+          key={dlg.dialogKey}
           open={dialogState.open}
-          item={
-            dialogState.open && dialogState.mode === "edit"
-              ? dialogState.item
-              : null
-          }
+          item={dlg.editItem}
           products={products ?? []}
           week="current"
           currentUserName={currentUserName}
-          defaultProductId={
-            dialogState.open && dialogState.mode === "create"
-              ? dialogState.seedProductId
-              : undefined
-          }
+          defaultProductId={dlg.createSeedProductId}
           stagesForProduct={stagesForProduct}
           ownPeriodRanks={ownPeriodRanks}
           onSave={handleDialogSave}
