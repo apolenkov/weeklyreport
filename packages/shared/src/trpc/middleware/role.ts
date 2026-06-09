@@ -16,6 +16,9 @@ import type { Role, UserSession } from "../../schemas/auth";
  *
  * `assertRole` is the runtime contract. `requireRole` is the tRPC adapter
  * that wraps it into a middleware bound to a caller-supplied `t` instance.
+ * @param session - the caller's session, or null when unauthenticated
+ * @param allowed - the role or set of roles permitted to proceed
+ * @returns the narrowed, non-null session on success
  */
 export function assertRole(
   session: UserSession | null,
@@ -52,6 +55,10 @@ export function assertRole(
  *
  * adminProcedure === headProcedure for v6.0 per D-AUTH-03; admin is reserved
  * as an alias until Phase 29 (AUTH-02) splits it.
+ * @param t - the caller's tRPC builder
+ * @param t.middleware - the builder's middleware factory
+ * @param allowed - the role or set of roles permitted to proceed
+ * @returns an object holding the configured tRPC middleware
  */
 export function requireRole<
   TContext extends { session: UserSession | null },

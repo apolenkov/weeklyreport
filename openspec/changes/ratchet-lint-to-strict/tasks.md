@@ -67,7 +67,7 @@ review). Budget per cluster; no global ceiling.
       `no-unsafe-*` (242 total). The deferred R1a assertion rules
       (`no-unnecessary-type-assertion` 131, `non-nullable-type-assertion-style` 5)
       slot into wave 5/6 (they break `tsc` — manual review each).
-- [ ] R2b For each rule: `off` → `error`, fixup wave via the escalation ladder
+- [x] R2b For each rule: `off` → `error`, fixup wave via the escalation ladder
       (fix code → per-site disable w/ reason → threshold/exclude as last resort),
       land green, then next. Bundle 2–4 related rules per PR.
   - [x] R2b-1 SAFE low-risk first cluster (4 rules, NO Workflow — too small to
@@ -225,36 +225,36 @@ serviceRepo.getRule` then bare `originalGetRule(rid)`) was fixed with
         try/catch) + Sonnet on the 22 unbound disables (all confirmed false positives,
         correctly placed). Gate green: all 3 rules 0 repo-wide, lint 0 errors, typecheck
         5/5, test 2559, build 5/5. Not pushed (morning human review).
-  - [~] R2b-6 wave-6 (the LAST + riskiest, Opus-reviewed) — 6a + 6b LANDED, 6c
-    PENDING (2026-06-02, NOT pushed). Fresh wave-6 measure: 852 firings / 9
-    rules. Sub-waved by JUDGMENT-density (advisor), not by rule.
-    • [x] 6a `no-confusing-void-expression` → error (commit `1d14b63c`): 274
-    firings, but 270 are arrow-shorthand void returns → `ignoreArrowShorthand:
+  - [x] R2b-6 wave-6 (the LAST + riskiest, Opus-reviewed) — 6a + 6b + 6c ALL
+        LANDED (2026-06-02 → 6c-iii closed; NOT pushed). Fresh wave-6 measure: 852
+        firings / 9 rules. Sub-waved by JUDGMENT-density (advisor), not by rule.
+        • [x] 6a `no-confusing-void-expression` → error (commit `1d14b63c`): 274
+        firings, but 270 are arrow-shorthand void returns → `ignoreArrowShorthand:
 true`. A documented SOFTENING, but it opens NO Promise hole — the only
-    dangerous arrow-shorthand-void case is a Promise in a void slot, already
-    rejected by `no-misused-promises` (error since wave 2). A STRONGER safety
-    argument than wave-5's ignorePrimitives (advisor-confirmed, user-chosen
-    over hand-fixing 270). 4 real `return <void>()` fixed by hand.
-    • [x] 6b `no-unsafe-*` family (5 rules) → error (commit `c81daf79`, the BIG
-    Workflow fan-out): 218 firings (54 src / 160 test). SRC 54→0 ALL fixed at
-    the ROOT by typing — net REMOVING 22 stale no-explicit-any disables, +2
-    added. NO option softened (full strictTypeChecked). Surfaced a REAL masked
-    null (projectStatuses[].status). TEST 160→0 via a 31-Sonnet-agent Workflow
-    (1/file, disjoint); 5 agents that didn't return a summary left their files
-    untouched → finished by hand. Adversarial: Opus on src (0 defects) + Sonnet
-    on test casts (0 masking). Finding (a) bit again (prettier shifted a
-    require-await disable) → fixed by dropping async, amended. Gate green.
-    • [x] 6c-i `non-nullable-type-assertion-style` → error (`fb8cef3d`): 9 sites,
-    type-predicate filters + assertion drops, 0 disables.
-    • [x] 6c-ii `no-unnecessary-type-assertion` → error (`bb712201`): 134 (44 src /
-    90 test). Autofix cleared 40 files; 9 ESLint-vs-tsc mismatch files (RTL DOM
-    casts, literal-union) carry a file-level disable.
-    • [x] 6c-iii `no-unnecessary-condition` → error (`61dfa215` part 1 + `459bebe9`
-    part 2): 225 firings. Root cause noUncheckedIndexedAccess OFF → `arr[i]` →
-    `arr.at(i)` for index guards (never deleted a guard); honestly-dead removed;
-    40 per-site disables for boundary type-lies; casts widened to `| undefined`.
-    Full test suite caught 2 optimistic-contract lies typecheck missed (ci,
-    req.headers) → guarded + disabled. Finished by hand after the Workflow wedged.
+        dangerous arrow-shorthand-void case is a Promise in a void slot, already
+        rejected by `no-misused-promises` (error since wave 2). A STRONGER safety
+        argument than wave-5's ignorePrimitives (advisor-confirmed, user-chosen
+        over hand-fixing 270). 4 real `return <void>()` fixed by hand.
+        • [x] 6b `no-unsafe-*` family (5 rules) → error (commit `c81daf79`, the BIG
+        Workflow fan-out): 218 firings (54 src / 160 test). SRC 54→0 ALL fixed at
+        the ROOT by typing — net REMOVING 22 stale no-explicit-any disables, +2
+        added. NO option softened (full strictTypeChecked). Surfaced a REAL masked
+        null (projectStatuses[].status). TEST 160→0 via a 31-Sonnet-agent Workflow
+        (1/file, disjoint); 5 agents that didn't return a summary left their files
+        untouched → finished by hand. Adversarial: Opus on src (0 defects) + Sonnet
+        on test casts (0 masking). Finding (a) bit again (prettier shifted a
+        require-await disable) → fixed by dropping async, amended. Gate green.
+        • [x] 6c-i `non-nullable-type-assertion-style` → error (`fb8cef3d`): 9 sites,
+        type-predicate filters + assertion drops, 0 disables.
+        • [x] 6c-ii `no-unnecessary-type-assertion` → error (`bb712201`): 134 (44 src /
+        90 test). Autofix cleared 40 files; 9 ESLint-vs-tsc mismatch files (RTL DOM
+        casts, literal-union) carry a file-level disable.
+        • [x] 6c-iii `no-unnecessary-condition` → error (`61dfa215` part 1 + `459bebe9`
+        part 2): 225 firings. Root cause noUncheckedIndexedAccess OFF → `arr[i]` →
+        `arr.at(i)` for index guards (never deleted a guard); honestly-dead removed;
+        40 per-site disables for boundary type-lies; casts widened to `| undefined`.
+        Full test suite caught 2 optimistic-contract lies typecheck missed (ci,
+        req.headers) → guarded + disabled. Finished by hand after the Workflow wedged.
 - [x] R2c Behavior-risky clusters get an Opus-level review before merge.
       → DONE 2026-06-08. The one unrecorded review was wave-6c-iii
       `no-unnecessary-condition` (`61dfa215` part 1 + `459bebe9` flip-to-error).
@@ -287,14 +287,14 @@ true`. A documented SOFTENING, but it opens NO Promise hole — the only
 > custom thresholds, and prune only the rules that are pure noise/overhead for
 > this codebase (with a one-line reason each). Default presets win over bespoke.
 
-- [~] R3a `simple-import-sort` + `unicorn/filename-case` — DONE 2026-06-08
-  (commit `c8c718c1`). simple-import-sort/imports + /exports → error, repo-wide
-  autofix (221 files, mechanical). unicorn/filename-case kebabCase → error;
-  `ignore` exempts Next.js dynamic segments (`[reportId]`) + `__tests__` (dir
-  conventions, not source files); 0 source-file renames needed.
-  `apps/api/src/main.ts` carries a file-level `simple-import-sort/imports`
-  disable (load-bearing bootstrap order). Gate green incl. build.
-  REMAINING R3a clusters (each its own commit, gate-green-or-revert):
+- [x] R3a `simple-import-sort` + `unicorn/filename-case` — DONE 2026-06-08
+      (commit `c8c718c1`). simple-import-sort/imports + /exports → error, repo-wide
+      autofix (221 files, mechanical). unicorn/filename-case kebabCase → error;
+      `ignore` exempts Next.js dynamic segments (`[reportId]`) + `__tests__` (dir
+      conventions, not source files); 0 source-file renames needed.
+      `apps/api/src/main.ts` carries a file-level `simple-import-sort/imports`
+      disable (load-bearing bootstrap order). Gate green incl. build.
+      REMAINING R3a clusters (each its own commit, gate-green-or-revert):
   - [x] R3a-2 unicorn — DONE 2026-06-08 (commit `c17d03b9`). Measured the full
         recommended set first: 3266 firings, dominated by prevent-abbreviations
         (1218) + no-null (1169), and several rules whose AUTOFIX breaks this typed
@@ -307,67 +307,82 @@ true`. A documented SOFTENING, but it opens NO Promise hole — the only
         (escape-case, numeric-separators, catch-error-name, prefer-node-protocol,
         prefer-number-properties, prefer-string-\*, prefer-set-has, etc.). 67 files
         autofixed; gate green incl. build.
-  - [~] R3a-3 sonarjs — ENABLED 2026-06-09 (`eslint-plugin-sonarjs@4.0.3`
-    installed). Enabled the full `recommended` preset (269 rules) per the §3
-    user directive: every rule that fires ZERO times today is now error
-    (regression prevention). The 29 rules that fire were measured and turned
-    off in two documented buckets in `eslint.config.ts` — **PRUNE** (5
-    permanent: `todo-tag` conflicts with the mandated `TODO(<ref>)`
-    convention; `no-unused-vars` + `deprecation` duplicate already-enabled
-    rules; `prefer-read-only-props` aggressive churn; `no-nested-conditional`
-    idiomatic JSX) and **DEFER** (24 `TODO(R3a-3-fixup)` grandfathered
-    repo-wide; counts measured 2026-06-09). NO code changed to land green.
-    REMAINING (deferred fixup waves, supervised — same risk class as the
-    complexity ratchet): flip the 24 DEFER rules to error one wave at a time.
-    Cheapest first: per-site `eslint-disable` w/ reason for the security
-    HOTSPOTS that fire only in test fixtures (`no-hardcoded-ip` 29,
-    `hardcoded-secret-signatures` 10) → scope test-off + keep error in src;
-    then the small genuine fixes (`use-type-alias`, `no-nested-template-
+  - [x] R3a-3 sonarjs — ENABLED 2026-06-09 (`eslint-plugin-sonarjs@4.0.3`
+        installed). Enabled the full `recommended` preset (269 rules) per the §3
+        user directive: every rule that fires ZERO times today is now error
+        (regression prevention). The 29 rules that fire were measured and turned
+        off in two documented buckets in `eslint.config.ts` — **PRUNE** (5
+        permanent: `todo-tag` conflicts with the mandated `TODO(<ref>)`
+        convention; `no-unused-vars` + `deprecation` duplicate already-enabled
+        rules; `prefer-read-only-props` aggressive churn; `no-nested-conditional`
+        idiomatic JSX) and **DEFER** (24 `TODO(R3a-3-fixup)` grandfathered
+        repo-wide; counts measured 2026-06-09). NO code changed to land green.
+        REMAINING (deferred fixup waves, supervised — same risk class as the
+        complexity ratchet): flip the 24 DEFER rules to error one wave at a time.
+        Cheapest first: per-site `eslint-disable` w/ reason for the security
+        HOTSPOTS that fire only in test fixtures (`no-hardcoded-ip` 29,
+        `hardcoded-secret-signatures` 10) → scope test-off + keep error in src;
+        then the small genuine fixes (`use-type-alias`, `no-nested-template-
 literals`, `no-misleading-array-reverse`, …); LAST + with-a-human:
-    `cognitive-complexity` (pair with the cyclomatic ratchet) +
-    `different-types-comparison` (behavior-sensitive, carry-over.service). - [x] R3a-3-fixup WAVE 1 (2026-06-09): `no-hardcoded-ip` +
-    `hardcoded-secret-signatures` → `error`. Verified all 39 firings are
-    test-only (audit-log 10.0.0.x samples, dummy PDF-export passwords);
-    scoped both `off` in the test-file override, kept `error` in src.
-    Gate green (0 errors). 22 DEFER rules remain. - [x] R3a-3-fixup WAVE 2 (2026-06-09): 19 more rules → `error` via a
-    read-only Workflow census + skeptical verify, then sequential fix/disable
-    with each diff read. The verifier caught one DANGEROUS proposed fix
-    (`no-clear-text-protocols` on email.service.ts would have flipped the default
-    SMTP TLS posture) → per-site-disabled instead. Behavior-sensitive rules
-    (`slow-regex` incl. the prod DB guard, `no-alphabetical-sort` on
-    stable-hash/serialize, `pseudo-random`) were per-site-disabled with reasons,
-    NOT rewritten. Genuine fixes: shared type aliases (`use-type-alias`),
-    const-lifted nested templates, `execSync`→`execFileSync`, copy-then-reverse,
-    explicit reduce seed, dropped redundant `| undefined`/dead collection. 4
-    rules carved out in the test override. Gate green: lint 0, typecheck 5/5,
-    test web 888 / api 868 / shared 590. 3 DEFER rules remain:
-    `cognitive-complexity` + `no-nested-functions` (pair with the cyclomatic
-    ratchet) + `different-types-comparison` (supervised). - [x] R3a-3-fixup WAVE 3 (2026-06-09) — complexity CLOSE-OUT. The last 3
-    DEFER rules → `error`. Per advisor, treated as a close-out not a refactor:
-    a read-only 35-agent Workflow assessed each grandfathered/firing file and
-    confirmed cohesive single concerns → accepted as JUSTIFIED-PERMANENT file
-    exempts (cyclomatic + cognitive-complexity + no-nested-functions blocks,
-    each file with a one-line reason), same end-state as max-lines R3a-4. NO
-    blind refactors (the overnight army proved they pass the gate but break
-    behavior). `different-types-comparison`: verified via TS language server
-    that the 2 carry-over.service sites overlap on `string` (meaningful match,
-    not always-false) → per-site-disabled. One genuine EASY_WIN applied
-    (user-approved): extracted a pure `compareValues` helper in data-table.tsx
-    (behavior-identical). Gate green: lint 0, typecheck 5/5, test
-    888/868/590, build 5/5. **sonarjs DEFER list now EMPTY → R5 unblocked.**
-  - [ ] R3a-4 core `max-lines` 300 (skipBlankLines/skipComments) + complexity,
+        `cognitive-complexity` (pair with the cyclomatic ratchet) +
+        `different-types-comparison` (behavior-sensitive, carry-over.service). - [x] R3a-3-fixup WAVE 1 (2026-06-09): `no-hardcoded-ip` +
+        `hardcoded-secret-signatures` → `error`. Verified all 39 firings are
+        test-only (audit-log 10.0.0.x samples, dummy PDF-export passwords);
+        scoped both `off` in the test-file override, kept `error` in src.
+        Gate green (0 errors). 22 DEFER rules remain. - [x] R3a-3-fixup WAVE 2 (2026-06-09): 19 more rules → `error` via a
+        read-only Workflow census + skeptical verify, then sequential fix/disable
+        with each diff read. The verifier caught one DANGEROUS proposed fix
+        (`no-clear-text-protocols` on email.service.ts would have flipped the default
+        SMTP TLS posture) → per-site-disabled instead. Behavior-sensitive rules
+        (`slow-regex` incl. the prod DB guard, `no-alphabetical-sort` on
+        stable-hash/serialize, `pseudo-random`) were per-site-disabled with reasons,
+        NOT rewritten. Genuine fixes: shared type aliases (`use-type-alias`),
+        const-lifted nested templates, `execSync`→`execFileSync`, copy-then-reverse,
+        explicit reduce seed, dropped redundant `| undefined`/dead collection. 4
+        rules carved out in the test override. Gate green: lint 0, typecheck 5/5,
+        test web 888 / api 868 / shared 590. 3 DEFER rules remain:
+        `cognitive-complexity` + `no-nested-functions` (pair with the cyclomatic
+        ratchet) + `different-types-comparison` (supervised). - [x] R3a-3-fixup WAVE 3 (2026-06-09) — complexity CLOSE-OUT. The last 3
+        DEFER rules → `error`. Per advisor, treated as a close-out not a refactor:
+        a read-only 35-agent Workflow assessed each grandfathered/firing file and
+        confirmed cohesive single concerns → accepted as JUSTIFIED-PERMANENT file
+        exempts (cyclomatic + cognitive-complexity + no-nested-functions blocks,
+        each file with a one-line reason), same end-state as max-lines R3a-4. NO
+        blind refactors (the overnight army proved they pass the gate but break
+        behavior). `different-types-comparison`: verified via TS language server
+        that the 2 carry-over.service sites overlap on `string` (meaningful match,
+        not always-false) → per-site-disabled. One genuine EASY_WIN applied
+        (user-approved): extracted a pure `compareValues` helper in data-table.tsx
+        (behavior-identical). Gate green: lint 0, typecheck 5/5, test
+        888/868/590, build 5/5. **sonarjs DEFER list now EMPTY → R5 unblocked.**
+  - [x] R3a-4 core `max-lines` 300 (skipBlankLines/skipComments) + complexity,
         with exempt dirs (`*.test.*`, `e2e`, `prisma/generated`, `*.config.ts`).
-- [~] R3b JSDoc on `packages/shared` + `packages/ui` public exports only —
-  ENABLED 2026-06-09 (`eslint-plugin-jsdoc@63.0.2`). Wired the TS-flavored
-  `flat/recommended-typescript` preset scoped to `packages/{shared,ui}/src`.
-  `jsdoc/require-jsdoc` is PRUNED off (it demanded a doc block on all 126
-  exports — the presence-overhead the user flagged); the preset now validates
-  jsdoc CORRECTNESS where blocks exist, not their presence. 19 residual
-  advisory WARNINGS remain (require-param 10, require-returns 6,
-  multiline-blocks 2, check-tag-names 1) — non-gating (`eslint .` exits 0 on
-  warnings). REMAINING: a dedicated docs pass to (a) fill the 19 correctness
-  gaps and (b) decide whether to flip `require-jsdoc` → error WITH authored
-  content on the public API. Left as backlog, not done blind overnight.
+        → DONE. `eslint.config.ts` wires `max-lines: ["error", 300]`
+        (skipBlankLines + skipComments) and `complexity: ["error", 20]`; tests,
+        config, and generated dirs are exempt; the justified-permanent file
+        exempt blocks carry a one-line reason each. The max-lines grandfather
+        block is EMPTY (ratchet complete). Gate green.
+- [x] R3b JSDoc on `packages/shared` + `packages/ui` public exports only —
+      ENABLED 2026-06-09 (`eslint-plugin-jsdoc@63.0.2`). Wired the TS-flavored
+      `flat/recommended-typescript` preset scoped to `packages/{shared,ui}/src`.
+      `jsdoc/require-jsdoc` is PRUNED off (it demanded a doc block on all 126
+      exports — the presence-overhead the user flagged); the preset now validates
+      jsdoc CORRECTNESS where blocks exist, not their presence.
+      → CLOSED 2026-06-09. The 19 residual advisory warnings were resolved:
+      • check-tag-names (1): `@vitest-environment` in `data-table.test.tsx` is a
+      Vitest docblock pragma, not invalid jsdoc. Root cause was scope — the
+      jsdoc block matched test files. Fixed by EXCLUDING tests from the jsdoc
+      scope (`ignores` on the R3b override), consistent with "public exports,
+      not test source" intent — not by allowlisting a non-jsdoc tag.
+      • require-param (10) + require-returns (6): filled @param/@returns on the
+      real public API (`safeText`, `reportDate`, `assertRole`, `requireRole`)
+      and the two private predicate helpers in report-primitives.schema.ts.
+      • multiline-blocks (2): reformatted two search.ts blocks so the text starts
+      after the opening `/**`, not on the same line.
+      `require-jsdoc` STAYS pruned (off) per the 2026-06-08 community-preset
+      directive — presence-overhead is excluded by design, and the
+      recommended-typescript preset does not include it; not reopened. Gate green:
+      lint 0 errors / 0 warnings repo-wide, typecheck 5/5, test green, build 5/5.
 - [x] R3c Import boundaries, incl. the `apps/web`→`apps/api` `allowTypeImports`
       carve-out.
       → DONE 2026-06-09. `@typescript-eslint/no-restricted-imports` scoped to
@@ -380,9 +395,19 @@ true` for the one legitimate case — `apps/web/src/lib/trpc.ts`'s
 
 ## 4. Execution Workflow (authored at execution time, NOT now)
 
-- [ ] R4a Build the Workflow: per-file fan-out, `isolation: "worktree"`,
+- [x] R4a Build the Workflow: per-file fan-out, `isolation: "worktree"`,
       per-cluster gate, model split, Opus review on risky rules. Per-cluster
       budget.
+      → CLOSED 2026-06-09 as SUPERSEDED, not built as a standalone reusable
+      artifact. The overnight autonomous worktree-fan-out for the metric
+      refactors proved revert-bait (passes the gate, breaks behavior — see the
+      `parallel-army-refactor-revert-bait` lesson). The execution practice that
+      actually landed every wave green is the SUPERVISED pattern: a READ-ONLY
+      Workflow census/triage (one agent per rule/file) + a skeptical verify
+      stage, then the MAIN session applies edits sequentially, reading every
+      diff and gating per batch — the army never edits. The reusable value of
+      R4a (the gate-design rules below) is captured and was honored across all
+      waves. No standalone Workflow script is carried forward.
       GATE-DESIGN RULES (from the R2b-3 overnight run's two methodology findings —
       MUST hold before the next fan-out reuses the gate script):
       (a) post-prettier re-lint: the per-cluster gate MUST run `pnpm lint` (or an
@@ -407,10 +432,16 @@ true` for the one legitimate case — `apps/web/src/lib/trpc.ts`'s
 
 ## 5. Close-out
 
-- [ ] R5a `pnpm lint` green at full declared strictness; the documented
+- [x] R5a `pnpm lint` green at full declared strictness; the documented
       exclude-list holds exactly the justified entries (incl. inherited a11y
       carve-outs).
-- [ ] R5b `openspec validate ratchet-lint-to-strict --strict` green.
+      → DONE 2026-06-09. `eslint .` reports 0 errors / 0 warnings repo-wide at
+      the full declared surface (type-aware base + sonarjs + unicorn + jsdoc +
+      import boundaries + size/complexity). Every `off` / file-exempt carries a
+      one-line justification in `eslint.config.ts`.
+- [x] R5b `openspec validate ratchet-lint-to-strict --strict` green.
+      → DONE 2026-06-09. `openspec validate ratchet-lint-to-strict --strict`
+      reports the change is valid.
 
 ## 6. Re-homed orphans (from `establish-scenario-catalog` reconciliation)
 

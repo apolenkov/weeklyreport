@@ -1,15 +1,27 @@
 import { z } from "zod";
 
-/** Rejects strings that contain only whitespace or zero-width characters */
+/**
+ * Rejects strings that contain only whitespace or zero-width characters.
+ * @param val - the candidate string to test
+ * @returns true when the string has at least one visible character
+ */
 const noInvisibleOnly = (val: string) =>
   val.replaceAll(/\s|\u200B|\u200C|\u200D|\uFEFF/gu, "").length > 0;
 
-/** Rejects strings containing null bytes (PostgreSQL incompatible) */
+/**
+ * Rejects strings containing null bytes (PostgreSQL incompatible).
+ * @param val - the candidate string to test
+ * @returns true when the string contains no null byte
+ */
 const noNullBytes = (val: string) => !val.includes("\u0000");
 
 /**
  * Safe text schema: rejects null bytes and zero-width-space-only strings.
  * Use in place of z.string().min(N).max(M) for all user-facing text fields.
+ * @param opts - optional length bounds for the schema
+ * @param opts.min - minimum length (default 1)
+ * @param opts.max - maximum length (default 500)
+ * @returns a Zod string schema enforcing the bounds and content rules
  */
 export const safeText = (opts: { min?: number; max?: number } = {}) =>
   z
@@ -21,7 +33,10 @@ export const safeText = (opts: { min?: number; max?: number } = {}) =>
       message: "Text must contain visible characters",
     });
 
-/** Rejects dates before year 2000 (prevents pre-epoch/nonsensical report dates) */
+/**
+ * Rejects dates before year 2000 (prevents pre-epoch/nonsensical report dates).
+ * @returns a Zod date schema that coerces input and rejects pre-2000 dates
+ */
 export const reportDate = () =>
   z.coerce.date().refine((d) => d.getFullYear() >= 2000, {
     message: "Date must be after year 2000",
