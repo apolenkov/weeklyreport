@@ -106,36 +106,43 @@ export function HeadReportShell({
       />
       {/* Action row parity with the lead report header (UAT 2026-05-22,
           done-condition 10): head is read-only, so the lead Submit slot is
-          replaced by export / presentation actions. Same toolbar shape,
-          scope + view-mode toggles share the row. */}
-      <div className="flex flex-wrap items-center justify-end gap-2">
+          replaced by export / presentation actions.
+          polish-ui-density T3: controls share one height
+          (--touch-target-min) and are grouped by intent — scope | view mode
+          (primary) | utilities — with wider gaps between groups. DOM order,
+          and therefore tab order, is unchanged. */}
+      <div className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2">
         <ScopeToggle
           value={scope}
           onChange={setScope}
           allowedScopes={["product", "lead"]}
         />
-        <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
-        <AgentReviewComingSoon />
-        <a
-          href={presentHref}
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-2.5 py-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
-          aria-label="Open presentation"
-          title="Presentation"
-        >
-          <Presentation className="h-4 w-4" aria-hidden="true" />
-          <span className="sr-only">Presentation</span>
-        </a>
-        <a
-          href={printHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-2.5 py-1.5 text-white transition-colors hover:bg-[var(--color-primary)]"
-          aria-label="Export PDF"
-          title="Export PDF"
-        >
-          <FileDown className="h-4 w-4" aria-hidden="true" />
-          <span className="sr-only">Export PDF</span>
-        </a>
+        <div className="flex items-center">
+          <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
+        </div>
+        <div className="flex items-center gap-2">
+          <AgentReviewComingSoon />
+          <a
+            href={presentHref}
+            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-2.5 py-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+            aria-label="Open presentation"
+            title="Presentation"
+          >
+            <Presentation className="h-4 w-4" aria-hidden="true" />
+            <span className="sr-only">Presentation</span>
+          </a>
+          <a
+            href={printHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-2.5 py-1.5 text-white transition-colors hover:bg-[var(--color-primary)]"
+            aria-label="Export PDF"
+            title="Export PDF"
+          >
+            <FileDown className="h-4 w-4" aria-hidden="true" />
+            <span className="sr-only">Export PDF</span>
+          </a>
+        </div>
       </div>
       {mode === "slides" ? (
         <Suspense fallback={<SlideSkeleton />}>

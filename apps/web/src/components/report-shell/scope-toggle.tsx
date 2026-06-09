@@ -29,7 +29,7 @@ export function ScopeToggle({
     <div
       role="radiogroup"
       aria-label="Slide scope"
-      className="inline-flex h-7 items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.15)] bg-[var(--color-surface)] p-0.5"
+      className="inline-flex min-h-[var(--touch-target-min)] items-stretch rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.15)] bg-[var(--color-surface)] p-0.5"
     >
       {allowedScopes.map((s) => {
         return (
@@ -39,7 +39,7 @@ export function ScopeToggle({
             role="radio"
             aria-checked={value === s}
             onClick={() => onChange(s)}
-            className={`rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-colors ${
+            className={`inline-flex items-center rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-colors ${
               value === s
                 ? "bg-[var(--color-primary)] text-white"
                 : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"

@@ -4,12 +4,12 @@ exports[`ScopeToggle > active scope button has primary background class; inactiv
 <div>
   <div
     aria-label="Slide scope"
-    class="inline-flex h-7 items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.15)] bg-[var(--color-surface)] p-0.5"
+    class="inline-flex min-h-[var(--touch-target-min)] items-stretch rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.15)] bg-[var(--color-surface)] p-0.5"
     role="radiogroup"
   >
     <button
       aria-checked="false"
-      class="rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-colors text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+      class="inline-flex items-center rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-colors text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
       role="radio"
       type="button"
     >
@@ -17,7 +17,7 @@ exports[`ScopeToggle > active scope button has primary background class; inactiv
     </button>
     <button
       aria-checked="true"
-      class="rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-colors bg-[var(--color-primary)] text-white"
+      class="inline-flex items-center rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-colors bg-[var(--color-primary)] text-white"
       role="radio"
       type="button"
     >
@@ -25,7 +25,7 @@ exports[`ScopeToggle > active scope button has primary background class; inactiv
     </button>
     <button
       aria-checked="false"
-      class="rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-colors text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+      class="inline-flex items-center rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-colors text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
       role="radio"
       type="button"
     >
