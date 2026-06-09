@@ -141,3 +141,20 @@ the repo i18n rule is production-UI-only).
 - Child actions live as findings, not the parent's recommendation: archive
   `migrate-to-biome`; treat `enable-biome-recommended-ruleset` as the
   diff-scale-review gate item.
+
+## Status note — 2026-06-10
+
+Parent stays **deferred** (start condition unchanged: an explicit user
+go-ahead for this change specifically). Two facts have drifted since the
+2026-05-30 grill findings and need re-scoping before any wave executes:
+
+- The lint stack reversed again: Biome was **removed** in Phase 1 of
+  `migrate-lint-to-eslint-prettier` (mainstream ESLint + Prettier + stylelint;
+  see CLAUDE.md "Commands"). Every Biome-referencing child item above
+  (`migrate-to-biome`, `enable-biome-recommended-ruleset`, the Biome-based
+  Wave 3 framing) is historical context now, not an executable plan.
+- Wave 5's gate list cites `pnpm lint:md`, which no longer exists
+  (markdownlint was removed; Prettier formats Markdown).
+
+Recommended first action when picked up: re-scope Waves 3–5 against the
+current toolchain.
