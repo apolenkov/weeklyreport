@@ -22,6 +22,7 @@ function describeShape(value: unknown): string {
     return `array[${value.length}]<${inner}>`;
   }
   if (typeof value === "object") {
+    // eslint-disable-next-line sonarjs/no-alphabetical-sort -- deterministic key ordering for a debug shape string, not user-facing sort
     const keys = Object.keys(value).sort();
     return `object{${keys.join(",")}}`;
   }

@@ -329,7 +329,20 @@ literals`, `no-misleading-array-reverse`, …); LAST + with-a-human:
     `hardcoded-secret-signatures` → `error`. Verified all 39 firings are
     test-only (audit-log 10.0.0.x samples, dummy PDF-export passwords);
     scoped both `off` in the test-file override, kept `error` in src.
-    Gate green (0 errors). 22 DEFER rules remain.
+    Gate green (0 errors). 22 DEFER rules remain. - [x] R3a-3-fixup WAVE 2 (2026-06-09): 19 more rules → `error` via a
+    read-only Workflow census + skeptical verify, then sequential fix/disable
+    with each diff read. The verifier caught one DANGEROUS proposed fix
+    (`no-clear-text-protocols` on email.service.ts would have flipped the default
+    SMTP TLS posture) → per-site-disabled instead. Behavior-sensitive rules
+    (`slow-regex` incl. the prod DB guard, `no-alphabetical-sort` on
+    stable-hash/serialize, `pseudo-random`) were per-site-disabled with reasons,
+    NOT rewritten. Genuine fixes: shared type aliases (`use-type-alias`),
+    const-lifted nested templates, `execSync`→`execFileSync`, copy-then-reverse,
+    explicit reduce seed, dropped redundant `| undefined`/dead collection. 4
+    rules carved out in the test override. Gate green: lint 0, typecheck 5/5,
+    test web 888 / api 868 / shared 590. 3 DEFER rules remain:
+    `cognitive-complexity` + `no-nested-functions` (pair with the cyclomatic
+    ratchet) + `different-types-comparison` (supervised).
   - [ ] R3a-4 core `max-lines` 300 (skipBlankLines/skipComments) + complexity,
         with exempt dirs (`*.test.*`, `e2e`, `prisma/generated`, `*.config.ts`).
 - [~] R3b JSDoc on `packages/shared` + `packages/ui` public exports only —
@@ -348,7 +361,7 @@ literals`, `no-misleading-array-reverse`, …); LAST + with-a-human:
       → DONE 2026-06-09. `@typescript-eslint/no-restricted-imports` scoped to
       `apps/web/**` bans value imports of `@customreport/api` (would pull the
       Nest/Prisma server graph into the browser bundle) with `allowTypeImports:
-  true` for the one legitimate case — `apps/web/src/lib/trpc.ts`'s
+true` for the one legitimate case — `apps/web/src/lib/trpc.ts`'s
       `import type { AppRouter }`. Measured 0 violations (the boundary was already
       clean: web references api exactly once, type-only; packages import no apps).
       Landed green, no code change.

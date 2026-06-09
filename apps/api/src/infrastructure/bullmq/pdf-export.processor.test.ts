@@ -20,7 +20,7 @@ vi.mock("@nestjs/common", () => ({
 // Mock bullmq Worker so no Redis connection is attempted
 vi.mock("bullmq", () => ({
   Worker: class {
-    static instances: {
+    static readonly instances: {
       handlers: Record<string, (...args: never[]) => void>;
     }[] = [];
 

@@ -378,8 +378,9 @@ export function createAppRouter(deps: RouterDeps) {
               ...s.stageStatuses.map((row) => row.updatedAt),
               ...s.versionSnapshots.map((row) => row.createdAt),
             ];
-            const lastEditAt = editDates.reduce((latest, date) =>
-              date > latest ? date : latest,
+            const lastEditAt = editDates.reduce(
+              (latest, date) => (date > latest ? date : latest),
+              editDates[0],
             );
             const latestVersion = s.versionSnapshots.at(0) ?? null;
 

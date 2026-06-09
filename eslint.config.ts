@@ -457,26 +457,34 @@ export default defineConfig([
       // test files, scoped off in the test-file override below.
       "sonarjs/no-hardcoded-ip": "error",
       "sonarjs/hardcoded-secret-signatures": "error",
-      "sonarjs/no-clear-text-protocols": "off", // 13 (12 test + 1 src); fixup = scope test-off + review email.service:34
-      "sonarjs/no-alphabetical-sort": "off", // 25 (mostly test); add explicit comparators or per-site disable
-      "sonarjs/slow-regex": "off", // 5 src hotspots; review each regex (likely linear) → per-site disable w/ reason
-      "sonarjs/pseudo-random": "off", // 2 src (UI animation + shadcn generated, not crypto) → per-site disable w/ reason
-      "sonarjs/no-os-command-from-path": "off", // 2 (prisma/reset-hard op script) → per-site disable w/ reason
-      "sonarjs/os-command": "off", // 1 (uat-suite script) → per-site disable w/ reason
-      "sonarjs/no-nested-template-literals": "off", // 5; readability fix
-      "sonarjs/use-type-alias": "off", // 4; extract repeated union to a named alias
+      // R3a-3-fixup WAVE 2 (2026-06-09): the following were triaged site-by-site
+      // (read-only Workflow census + skeptical verify), then fixed/disabled
+      // sequentially with each diff read. Behavior-sensitive rules (slow-regex,
+      // no-alphabetical-sort, pseudo-random) are per-site-disabled with reasons,
+      // NOT rewritten. 4 rules also need a test-file carve-out (below) where the
+      // firing is inherent to test code.
+      "sonarjs/no-clear-text-protocols": "error", // src: jsonTransport false-positive disabled; tests carved out
+      "sonarjs/no-alphabetical-sort": "error", // src: 4 stable-hash sorts per-site-disabled (determinism); tests carved out
+      "sonarjs/slow-regex": "error", // 5 src: linear regexes per-site-disabled (incl. prod DB guard — NOT rewritten)
+      "sonarjs/pseudo-random": "error", // 2 src: UI variety, per-site-disabled (not crypto)
+      "sonarjs/no-os-command-from-path": "error", // 2 src: pnpm in dev reset script, per-site-disabled
+      "sonarjs/os-command": "error", // 1 src: execSync → execFileSync (arg-array) in uat script
+      "sonarjs/no-nested-template-literals": "error", // 5 src: const-lifted, output byte-identical
+      "sonarjs/use-type-alias": "error", // src: extracted shared literal-union aliases; 1 Prisma shape disabled
+      "sonarjs/no-misleading-array-reverse": "error", // src+test: copy-then-reverse where source unused
+      "sonarjs/no-redundant-optional": "error", // test: dropped redundant `| undefined`
+      "sonarjs/no-unused-collection": "error", // test: removed dead collection; 1 intentional disabled
+      "sonarjs/public-static-readonly": "error", // test: added readonly modifier
+      "sonarjs/no-invariant-returns": "error", // src: startOtel returns decision by design, per-site-disabled
+      "sonarjs/reduce-initial-value": "error", // src: explicit editDates[0] seed (array always non-empty)
+      "sonarjs/no-async-constructor": "error", // src: logger serial-write queue, per-site-disabled
+      "sonarjs/function-return-type": "error", // src: Component.render override, per-site-disabled
+      "sonarjs/void-use": "error", // src: dropped `void tz` for `_tz` unused-param convention
+      // test-only firings; rule stays error in src, carved out in the test override below:
+      "sonarjs/no-identical-functions": "error", // test: idiomatic render-wrapper duplication
+      "sonarjs/no-undefined-argument": "error", // test: intentional undefined-arg legacy-contract checks
+      // — DEFER (still off; LAST + supervised, paired with the cyclomatic ratchet) —
       "sonarjs/different-types-comparison": "off", // 2 (carry-over.service) — behavior-sensitive, review supervised
-      "sonarjs/no-misleading-array-reverse": "off", // 5; in-place reverse — fix to copy-then-reverse where intended
-      "sonarjs/no-redundant-optional": "off", // 4; drop redundant `| undefined`
-      "sonarjs/no-undefined-argument": "off", // 2; drop explicit undefined trailing arg
-      "sonarjs/no-unused-collection": "off", // 2; remove the populated-never-read collection
-      "sonarjs/no-identical-functions": "off", // 1; dedupe
-      "sonarjs/public-static-readonly": "off", // 1
-      "sonarjs/no-invariant-returns": "off", // 1
-      "sonarjs/reduce-initial-value": "off", // 1
-      "sonarjs/no-async-constructor": "off", // 1
-      "sonarjs/function-return-type": "off", // 1
-      "sonarjs/void-use": "off", // 1
     },
   },
   // R3b: jsdoc — TS-flavored recommended, scoped to the two published packages'
@@ -539,6 +547,14 @@ export default defineConfig([
       // The rules stay `error` in src; tests are exempt by design.
       "sonarjs/no-hardcoded-ip": "off",
       "sonarjs/hardcoded-secret-signatures": "off",
+      // R3a-3-fixup wave 2: firings inherent to test code (the rules stay `error`
+      // in src). http:// fixtures for local collectors/IP URLs; intentional
+      // undefined args for legacy-contract checks; idiomatic duplicate render
+      // wrappers; bare .sort() in test assertions.
+      "sonarjs/no-clear-text-protocols": "off",
+      "sonarjs/no-undefined-argument": "off",
+      "sonarjs/no-identical-functions": "off",
+      "sonarjs/no-alphabetical-sort": "off",
     },
   },
   // Tooling files are not product source — exempt from size/complexity budgets

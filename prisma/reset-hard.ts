@@ -153,6 +153,7 @@ async function main(): Promise<void> {
   // Apply any pending migrations first so schema matches Prisma client.
   // This prevents "not-null constraint" errors from schema drift.
   console.log("[reset-hard] Applying pending migrations…");
+  // eslint-disable-next-line sonarjs/no-os-command-from-path -- pnpm (workspace package manager) invoked intentionally in dev-only DB reset; shell:false set
   const migrate = spawnSync("pnpm", ["exec", "prisma", "migrate", "deploy"], {
     stdio: "inherit",
     shell: false,
@@ -173,6 +174,7 @@ async function main(): Promise<void> {
   // process.env explicitly so dotenv-loaded DATABASE_URL crosses the boundary
   // even though seed-simple.ts itself only reads dotenv from its own cwd.
   const seed = spawnSync(
+    // eslint-disable-next-line sonarjs/no-os-command-from-path -- pnpm (workspace package manager) invoked intentionally in dev-only seeding; shell:false set
     "pnpm",
     [
       "--filter",

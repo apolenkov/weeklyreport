@@ -11,7 +11,7 @@
 //   node apps/web/uat-suite/mutation-audit.mjs
 //   node apps/web/uat-suite/mutation-audit.mjs --update-allowlist
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -69,8 +69,10 @@ const mutations = procedures.filter((p) => p.kind === "mutation");
 
 function gripCount(needle) {
   try {
-    const out = execSync(
-      `rg -c --no-heading -F '${needle}' '${WEB_SRC}' 2>/dev/null || true`,
+    const out = execFileSync(
+      // eslint-disable-next-line sonarjs/no-os-command-from-path -- ripgrep invoked in a dev-only static-analysis uat script; resolved from PATH intentionally
+      "rg",
+      ["-c", "--no-heading", "-F", needle, WEB_SRC],
       {
         encoding: "utf8",
       },

@@ -19,6 +19,7 @@ export function NotificationsSubTab({
   // string that fails a basic email shape blocks Save with a hint.
   const trimmed = draft.notificationFromEmail?.trim() ?? "";
   const looksLikeEmail =
+    // eslint-disable-next-line sonarjs/slow-regex -- linear negated character classes, no catastrophic backtracking; bounded form input
     trimmed === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
 
   function handleSave() {

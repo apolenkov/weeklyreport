@@ -83,6 +83,7 @@ const TYPE_BADGE: Record<SearchHit["type"], { label: string; aria: string }> = {
  */
 function renderSnippet(snippet: string): React.ReactNode {
   if (!snippet) return null;
+  // eslint-disable-next-line sonarjs/slow-regex -- server-generated literal markers, negated class + lazy quantifier, bounded input
   const parts = snippet.split(/(<<[^>]*?>>)/g);
   return parts.map((part, idx) => {
     if (part.startsWith("<<") && part.endsWith(">>")) {

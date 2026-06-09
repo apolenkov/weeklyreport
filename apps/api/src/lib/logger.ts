@@ -188,6 +188,7 @@ class AppLoggerImpl implements AppLogger {
     if (inheritedSink) {
       this.fileSink = inheritedSink;
     } else if (this.logDir) {
+      // eslint-disable-next-line sonarjs/no-async-constructor -- Promise.resolve() seeds a serial-write queue; no async work runs in the constructor
       this.fileSink = {
         logDir: this.logDir,
         opts: { maxBytes: this.maxBytes, maxAgeDays: this.maxAgeDays },

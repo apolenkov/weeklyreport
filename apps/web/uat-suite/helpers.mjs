@@ -20,7 +20,8 @@ export function emit(id, status, msg, detail = "") {
         : status === "WARN"
           ? "⚠"
           : "·";
-  const line = `${icon} ${id} [${status}] ${msg}${detail ? ` — ${detail.slice(0, 200)}` : ""}`;
+  const detailSuffix = detail ? ` — ${detail.slice(0, 200)}` : "";
+  const line = `${icon} ${id} [${status}] ${msg}${detailSuffix}`;
   process.stdout.write(line + "\n");
 }
 

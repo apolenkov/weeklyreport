@@ -641,7 +641,7 @@ describe("ownedStagesForProject", () => {
       ],
     });
     const resultA = ownedStagesForProject(section, PROJECT_A);
-    expect(resultA.sort()).toEqual(["Dev", "Testing"]);
+    expect([...resultA].sort()).toEqual(["Dev", "Testing"]);
 
     const resultB = ownedStagesForProject(section, PROJECT_B);
     expect(resultB).toEqual(["Planning"]);
@@ -674,7 +674,7 @@ describe("ownedStagesForProject", () => {
       ],
     });
     const result = ownedStagesForProject(section, undefined);
-    expect(result.sort()).toEqual(["Dev", "Planning"]);
+    expect([...result].sort()).toEqual(["Dev", "Planning"]);
   });
 
   it("agrees with mapLeadProducts on which stages are 'mine'", () => {
@@ -702,6 +702,6 @@ describe("ownedStagesForProject", () => {
       products[0]?.stages
         .filter((s) => s.ownership === "mine")
         .map((s) => s.stageName) ?? [];
-    expect(ownedNames.sort()).toEqual(mineInGrid.sort());
+    expect([...ownedNames].sort()).toEqual([...mineInGrid].sort());
   });
 });

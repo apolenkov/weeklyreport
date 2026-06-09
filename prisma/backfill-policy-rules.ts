@@ -41,9 +41,8 @@ const DATABASE_URL: string = (() => {
 function computeFireAt(
   deadline: Date,
   offsetMinutes: number,
-  tz: string,
+  _tz: string, // timezone-aware scheduling uses minute offset from UTC deadline
 ): Date {
-  void tz; // timezone-aware scheduling uses minute offset from UTC deadline
   return new Date(deadline.getTime() + offsetMinutes * 60 * 1000);
 }
 

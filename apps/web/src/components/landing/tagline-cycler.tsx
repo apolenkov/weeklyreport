@@ -19,6 +19,7 @@ const VISIBLE_MS = 3000;
 const FADE_MS = 250;
 
 function randomIndex(): number {
+  // eslint-disable-next-line sonarjs/pseudo-random -- tagline rotation start index for UX variety, not cryptography
   return Math.floor(Math.random() * LANDING_TAGLINES.length);
 }
 

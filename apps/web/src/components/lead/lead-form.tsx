@@ -266,9 +266,11 @@ function sectionToDraftPayload(
   };
 }
 
+type StageStatusValue = "green" | "yellow" | "red" | null;
+
 function aggregateTrafficLight(
-  stages: readonly { status?: "green" | "yellow" | "red" | null }[],
-): "green" | "yellow" | "red" | null {
+  stages: readonly { status?: StageStatusValue }[],
+): StageStatusValue {
   let severity = 0;
   for (const stage of stages) {
     if (stage.status === "red") {
@@ -415,7 +417,8 @@ export function LeadForm({
     const next = new URLSearchParams();
     if (isSlidesMode) next.set("mode", "slides");
     const query = next.toString();
-    router.replace(`/lead/report/${activeReportId}${query ? `?${query}` : ""}`);
+    const suffix = query ? `?${query}` : "";
+    router.replace(`/lead/report/${activeReportId}${suffix}`);
   }, [
     redirectToCanonical,
     pinnedReportId,
@@ -1199,10 +1202,7 @@ export function LeadForm({
   function handleProductsChange(next: Product[]) {
     setDraftSection((prev) => {
       if (!prev) return prev;
-      const nextStageStatusByKey = new Map<
-        string,
-        "green" | "yellow" | "red" | null
-      >();
+      const nextStageStatusByKey = new Map<string, StageStatusValue>();
       for (const p of next) {
         for (const s of p.stages) {
           if (s.ownership !== "mine") continue;
@@ -1442,13 +1442,15 @@ export function LeadForm({
   // never shows a stale version number (e.g. "Version 1" when v4 is live).
   const latestVersionNumber =
     versions.length > 0 ? (versions[0]?.version ?? null) : null;
+  const versionPrefix =
+    latestVersionNumber != null ? `Version ${latestVersionNumber} · ` : "";
   const autosaveLabel =
     autosave.state === "saving"
       ? "↻ Saving…"
       : autosave.state === "pending"
         ? "● Pending…"
         : autosave.state === "saved" && autosave.lastSavedAt
-          ? `${latestVersionNumber != null ? `Version ${latestVersionNumber} · ` : ""}${autosave.lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+          ? `${versionPrefix}${autosave.lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
           : autosave.state === "error"
             ? "⚠ Save failed"
             : "Autosaved";

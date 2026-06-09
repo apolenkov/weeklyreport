@@ -31,6 +31,7 @@ export class EmailService {
       });
     } else {
       this.isDev = true;
+      // eslint-disable-next-line sonarjs/no-clear-text-protocols -- jsonTransport is an in-memory dev transport (no network protocol); false positive
       this.transporter = nodemailer.createTransport({ jsonTransport: true });
     }
   }

@@ -249,6 +249,7 @@ describe("PolicyApplicatorService.applyToPeriod", () => {
       offsetMinutes: -120, // T-2h, distinct rule
     };
 
+    // eslint-disable-next-line sonarjs/no-unused-collection -- test verifies result counts (created/skipped), not call history; sibling tests inspect upsertCalls
     const upsertCalls: unknown[] = [];
     let firstCall = true;
     const prisma = {

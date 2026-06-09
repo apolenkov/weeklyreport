@@ -112,6 +112,8 @@ export function computePortfolioOverviewFromReadSections(
   return { status, totals };
 }
 
+type TrafficLightStatus = "green" | "yellow" | "red";
+
 export function buildPortfolioProductsFromSnapshotSections(
   sections: readonly ReportSectionReadModel[],
 ): PortfolioProductOverview[] {
@@ -120,7 +122,7 @@ export function buildPortfolioProductsFromSnapshotSections(
     {
       productId: string;
       productName: string;
-      statuses: ("green" | "yellow" | "red")[];
+      statuses: TrafficLightStatus[];
       stageCount: number;
       leadNames: Set<string>;
     }
@@ -238,18 +240,18 @@ function computePortfolioOverviewFromProjectStatuses(
   return { status, totals };
 }
 
-const statusSeverity: Record<"green" | "yellow" | "red", number> = {
+const statusSeverity: Record<TrafficLightStatus, number> = {
   green: 0,
   yellow: 1,
   red: 2,
 };
 
 function computeWorstStatus(
-  statuses: readonly ("green" | "yellow" | "red")[],
-): "green" | "yellow" | "red" | null {
+  statuses: readonly TrafficLightStatus[],
+): TrafficLightStatus | null {
   if (statuses.length === 0) return null;
 
-  let worst: "green" | "yellow" | "red" = "green";
+  let worst: TrafficLightStatus = "green";
   for (const status of statuses) {
     if (statusSeverity[status] > statusSeverity[worst]) {
       worst = status;

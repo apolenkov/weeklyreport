@@ -4,15 +4,17 @@
  * include timeZone: 'UTC' to prevent off-by-one day shifts in UTC+N timezones.
  */
 
+type DateInput = Date | string | null | undefined;
+
 /** Format a date for display (ru-RU locale, medium style). */
-export function formatDate(date: Date | string | null | undefined): string {
+export function formatDate(date: DateInput): string {
   if (!date) return "\u2014";
   const d = date instanceof Date ? date : new Date(date);
   return d.toLocaleDateString("ru-RU", { dateStyle: "medium" });
 }
 
 /** Format a date with time (ru-RU locale, short date + short time). */
-export function formatDateTime(date: Date | string | null | undefined): string {
+export function formatDateTime(date: DateInput): string {
   if (!date) return "\u2014";
   const d = date instanceof Date ? date : new Date(date);
   return d.toLocaleString("ru-RU", {
@@ -26,9 +28,7 @@ export function formatDateTime(date: Date | string | null | undefined): string {
  * Period dates are stored as midnight UTC -- without timeZone: 'UTC',
  * users in UTC+N timezones see the previous day.
  */
-export function formatPeriodDate(
-  date: Date | string | null | undefined,
-): string {
+export function formatPeriodDate(date: DateInput): string {
   if (!date) return "\u2014";
   const d = date instanceof Date ? date : new Date(date);
   return d.toLocaleDateString("ru-RU", {
@@ -83,10 +83,7 @@ export function formatWeekLabel(date: Date | string): string {
  * "May 11\u2013Jun 3" (cross-month). Uses UTC getUTC* accessors to prevent
  * off-by-one day shifts for users in UTC+N timezones.
  */
-export function formatPeriodRange(
-  start: Date | string | null | undefined,
-  end: Date | string | null | undefined,
-): string {
+export function formatPeriodRange(start: DateInput, end: DateInput): string {
   if (!start || !end) return "\u2014";
   const s = toDate(start);
   const e = toDate(end);
@@ -101,8 +98,8 @@ export function formatPeriodRange(
 }
 
 export function formatPeriodRangeWithYear(
-  start: Date | string | null | undefined,
-  end: Date | string | null | undefined,
+  start: DateInput,
+  end: DateInput,
 ): string {
   if (!start || !end) return "\u2014";
   const s = toDate(start);
@@ -124,10 +121,7 @@ export function formatPeriodRangeWithYear(
   return `${sMonth} ${sDay}, ${s.getUTCFullYear()}–${eMonth} ${eDay}, ${eYear}`;
 }
 
-export function formatPeriodLabel(
-  start: Date | string | null | undefined,
-  end: Date | string | null | undefined,
-): string {
+export function formatPeriodLabel(start: DateInput, end: DateInput): string {
   if (!start || !end) return "Period unavailable";
   return `${formatWeekLabel(start)}, ${formatPeriodRangeWithYear(start, end)}`;
 }
