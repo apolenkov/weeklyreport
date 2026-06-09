@@ -323,7 +323,7 @@ export function RisksSection({
         subtitle={
           pendingDelete
             ? // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-              `${pendingDelete.productName}${(pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).length > 0 ? ` · ${(pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).join(", ")}` : " · all stages"}`
+              `${pendingDelete.productName} · ${(pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).length > 0 ? (pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).join(", ") : "all stages"}`
             : undefined
         }
         onConfirm={confirmDelete}

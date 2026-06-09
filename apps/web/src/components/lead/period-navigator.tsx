@@ -104,7 +104,8 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
       // Default: lead path-segment URLs — bookmarkable, back-button-friendly.
       const next = new URLSearchParams(searchParams.toString());
       const query = next.toString();
-      router.push(`${LEAD_REPORT_BASE}/${periodId}${query ? `?${query}` : ""}`);
+      const suffix = query ? `?${query}` : "";
+      router.push(`${LEAD_REPORT_BASE}/${periodId}${suffix}`);
     },
     [router, searchParams, urlBuilder],
   );

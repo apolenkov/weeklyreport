@@ -65,6 +65,7 @@ export function decideOtelBootstrap(
 let sdk: NodeSDK | null = null;
 let loggerProvider: LoggerProvider | null = null;
 
+// eslint-disable-next-line sonarjs/no-invariant-returns -- returns the bootstrap decision object from every path by design (disabled vs started); one semantic return value, not an accidental invariant
 export function startOtel(
   env: NodeJS.ProcessEnv = process.env,
 ): OtelBootstrapResult {

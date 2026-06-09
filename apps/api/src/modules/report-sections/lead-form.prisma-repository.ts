@@ -281,6 +281,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         projectId: string;
         stageId: string;
         stageName?: string;
+        // eslint-disable-next-line sonarjs/use-type-alias -- inline Prisma restore-version snapshot shape; local definition keeps type narrowing readable
         status: "green" | "yellow" | "red" | null;
       }[];
     };

@@ -58,6 +58,7 @@ export function stableStringify(value: unknown): string {
     return `[${value.map(stableStringify).join(",")}]`;
   }
   const obj = value as Record<string, unknown>;
+  // eslint-disable-next-line sonarjs/no-alphabetical-sort -- stable serialization for dirty-state comparison; localeCompare would break payload hashing
   const keys = Object.keys(obj).sort();
   return `{${keys
     .map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`)

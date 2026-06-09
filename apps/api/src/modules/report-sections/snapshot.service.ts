@@ -15,6 +15,7 @@ function stableStringify(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value))
     return `[${(value as unknown[]).map(stableStringify).join(",")}]`;
+  // eslint-disable-next-line sonarjs/no-alphabetical-sort -- stable serialization for content-based dedup; localeCompare would break dedup
   const keys = Object.keys(value).sort();
   const parts = keys.map((k) => {
     const v = (value as Record<string, unknown>)[k];

@@ -87,7 +87,7 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
     // Sequential queries (not Promise.all) so a degraded DB does not
     // light up `n` parallel slow queries; n is tiny (4) so latency cost
     // is negligible.
-    for (const report of reports.reverse()) {
+    for (const report of [...reports].reverse()) {
       const [total, onTime] = await Promise.all([
         this.prisma.reportSection.count({
           where: { reportId: report.id, status: "submitted" },

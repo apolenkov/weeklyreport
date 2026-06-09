@@ -342,6 +342,7 @@ function toRuleDomain(rule: {
  * shape. Both shapes terminate with the email, so this is robust to either
  * layout. Returns '' for unparseable inputs.
  */
+// eslint-disable-next-line sonarjs/slow-regex -- negated character classes are linear; no catastrophic backtracking, input bounded to ~254 chars
 const EMAIL_RE = /^[^@\s:]+@[^@\s:]+\.[^@\s:]+$/;
 export function extractRecipientEmail(dedupeKey: string): string {
   const last = dedupeKey.split(":").pop();

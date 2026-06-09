@@ -51,6 +51,7 @@ const PREFIX_COMPARISON = "customreport:analytics:period-comparison:";
  */
 function stableHash(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
+  // eslint-disable-next-line sonarjs/no-alphabetical-sort -- stable cache-key hashing; localeCompare would break determinism across locales
   const keys = Object.keys(value).sort();
   return JSON.stringify(value, keys);
 }

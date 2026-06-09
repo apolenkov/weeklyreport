@@ -21,6 +21,7 @@ export class QueryErrorBoundary extends Component<Props, State> {
     console.error("[QueryErrorBoundary]", error, info.componentStack);
   }
 
+  // eslint-disable-next-line sonarjs/function-return-type -- render() already declares an explicit ReactNode return; the rule misreads the Component override signature
   override render(): ReactNode {
     if (this.state.hasError) {
       return (

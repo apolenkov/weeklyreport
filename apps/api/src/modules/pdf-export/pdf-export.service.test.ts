@@ -40,7 +40,7 @@ const draftReport: AssembledReport = {
 
 function createRepository(
   report: AssembledReport,
-  capture?: { lastRequestedBy?: string | undefined },
+  capture?: { lastRequestedBy?: string },
 ): PdfExportRepository {
   const jobs = new Map<string, PdfExportJobRecord>();
 
@@ -117,7 +117,7 @@ describe("PdfExportService", () => {
 
   // Phase 23-01: requestedBy session threading
   it("threads requestedBy from the session userId into createExportJob", async () => {
-    const capture: { lastRequestedBy?: string | undefined } = {};
+    const capture: { lastRequestedBy?: string } = {};
     const service = new PdfExportService(
       createRepository(publishedReport, capture),
     );
@@ -129,7 +129,7 @@ describe("PdfExportService", () => {
   });
 
   it("falls back to undefined requestedBy for non-session callers (repo defaults to system)", async () => {
-    const capture: { lastRequestedBy?: string | undefined } = {};
+    const capture: { lastRequestedBy?: string } = {};
     const service = new PdfExportService(
       createRepository(publishedReport, capture),
     );
@@ -535,7 +535,7 @@ describe("pdfExportRouter", () => {
 
   // Phase 23-01: ensure router fixture forwards session userId to service
   it("threads requestedBy from the router context into the service call", async () => {
-    const capture: { lastRequestedBy?: string | undefined } = {};
+    const capture: { lastRequestedBy?: string } = {};
     const service = new PdfExportService(
       createRepository(publishedReport, capture),
     );

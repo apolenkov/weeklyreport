@@ -42,6 +42,7 @@ export function assertNonProdDestructive(scriptName: string): void {
   }
 
   const lastSegment = (url.split("?")[0]?.split("/").pop() ?? "").toLowerCase();
+  // eslint-disable-next-line sonarjs/slow-regex -- DATABASE_URL host extraction; greedy `.*` to last `@` is linear, standard URL parsing
   const host = url.replace(/.*@/, "").split(/[:/]/)[0]?.toLowerCase() ?? "";
 
   const refuse = (reason: string): never => {

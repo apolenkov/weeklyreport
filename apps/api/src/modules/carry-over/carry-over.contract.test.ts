@@ -177,7 +177,6 @@ function createInMemoryRepository(opts: {
   targetSections: ReportSectionReadModel[];
 }): CarryOverRepository {
   const executions = new Map<string, CarryOverExecution>();
-  const savedRecords: CarryOverRecord[] = [];
 
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
@@ -209,7 +208,6 @@ function createInMemoryRepository(opts: {
       targetSection: ReportSectionReadModel,
     ): Promise<CarryOverResult> {
       executions.set(execution.id, structuredClone(execution));
-      savedRecords.push(...structuredClone(records));
       return {
         execution: structuredClone(execution),
         records: structuredClone(records),
