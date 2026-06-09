@@ -11,14 +11,23 @@ reports, not code.
 
 ## 1. Prerequisites (reuse, do not re-derive)
 
-- [ ] 1.1 Confirm the live app is reachable under dev-auth (web + API) and the
-      Playwright MCP browser can log in per role. Reuse the sweep's dev-auth
-      path; do NOT author a new login.
-- [ ] 1.2 Confirm the artifacts are intact: `e2e/sweep/driver/drive-prompt.md`,
+- [~] 1.1 Confirm the live app is reachable under dev-auth (web + API) and the
+  Playwright MCP browser can log in per role. Reuse the sweep's dev-auth
+  path; do NOT author a new login.
+  → APP SIDE DONE 2026-06-09: sweep target servers run as native processes on
+  web :3100 / API :3101 (start via `.scratch/start-sweep-servers.sh`).
+  Verified: API health 200, web 200, dev-login GET (lead) → 302 (cookie set).
+  REMAINING: confirm the Playwright MCP browser itself logs in per role — the
+  fresh driver session's first step (see `.scratch/handoff-2026-06-09-driver-fanout.md`).
+- [x] 1.2 Confirm the artifacts are intact: `e2e/sweep/driver/drive-prompt.md`,
       `e2e/sweep/driver/README.md`, and the verify workflow — now archived at
       `openspec/changes/archive/2026-06-08-behavioral-ui-regression-gate/workflow/lead-driver-verify.workflow.mjs`
       (relocate it into this change's `workflow/` dir before use, since it moved
       with the parent change's archive).
+      → DONE 2026-06-09: drive-prompt.md + README.md confirmed present; verify
+      workflow copied to
+      `openspec/changes/extend-driver-remaining-roles/workflow/lead-driver-verify.workflow.mjs`
+      (copied, not moved — the parent archive stays intact).
 
 ## 2. Drive each role (one at a time)
 
