@@ -459,8 +459,14 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
 
     renderPage(published, captured, undefined, "viewer");
 
-    await screen.findByRole("button", { name: /export pdf/i });
+    // Anchor on the always-present report heading: the async Export PDF button
+    // is head/admin-only (its `pdfExport.request` job is headProcedure-gated),
+    // so it must not render for a viewer and cannot be the render anchor.
+    await screen.findByRole("heading", { name: /status report/i });
 
+    expect(
+      screen.queryByRole("button", { name: /export pdf/i }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /^archive$/i }),
     ).not.toBeInTheDocument();
@@ -664,4 +670,55 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
       expect(betaAccordion).toHaveAttribute("aria-expanded", "false");
     });
   });
+});
+
+describe("WeeklyReportPage — async Export PDF button role gating (driver sweep 2026-06-09)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
+  function makeCaptured(): Captured {
+    return {
+      publishMutationFn: vi.fn().mockResolvedValue(undefined),
+      reopenMutationFn: vi.fn().mockResolvedValue(undefined),
+      pdfExportRequestMutationFn: vi.fn(),
+    };
+  }
+
+  // The async export starts a `pdfExport.request` job the API gates to
+  // head/admin (headProcedure). Before the fix the button rendered for every
+  // role, so a viewer/lead on the read-only /reports/[reportId] route (which
+  // embeds this page) saw an enabled button that 403'd on click.
+  it.each(["head", "admin"] as const)(
+    "renders the async Export PDF button for %s",
+    async (role) => {
+      renderPage(
+        makeWeeklyReportData("published"),
+        makeCaptured(),
+        undefined,
+        role,
+      );
+      expect(
+        await screen.findByRole("button", { name: /export pdf/i }),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it.each(["viewer", "lead"] as const)(
+    "hides the async Export PDF button for %s",
+    async (role) => {
+      renderPage(
+        makeWeeklyReportData("published"),
+        makeCaptured(),
+        undefined,
+        role,
+      );
+      // Anchor on the report heading so the absence assertion is not a race.
+      await screen.findByRole("heading", { name: /status report/i });
+      expect(
+        screen.queryByRole("button", { name: /export pdf/i }),
+      ).not.toBeInTheDocument();
+    },
+  );
 });
