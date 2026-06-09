@@ -169,10 +169,12 @@ export class CarryOverService {
       }
 
       const sectionCarriedItems = allCarriedItems.filter((entry) =>
+        // eslint-disable-next-line sonarjs/different-types-comparison -- match by string id; the string types overlap, the null/undefined asymmetry is harmless (only a real string id can match)
         sourceSection.items.some((i) => i.id === entry.record.sourceItemId),
       );
       const sectionCarriedDecisions = allCarriedDecisions.filter((entry) =>
         sourceSection.decisions.some(
+          // eslint-disable-next-line sonarjs/different-types-comparison -- match by string id; the string types overlap, the null/undefined asymmetry is harmless (only a real string id can match)
           (d) => d.id === entry.record.sourceDecisionId,
         ),
       );
