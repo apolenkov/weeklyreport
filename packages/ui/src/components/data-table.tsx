@@ -58,6 +58,22 @@ function toDisplayString(value: unknown): string {
   return "";
 }
 
+// Ascending-order comparison; the caller negates once for descending. Null
+// sorts first. Factored out of the comparator so each branch is a single
+// value, dropping the per-branch direction negation.
+function compareValues(aVal: unknown, bVal: unknown): number {
+  if (aVal == null && bVal == null) return 0;
+  if (aVal == null) return -1;
+  if (bVal == null) return 1;
+  if (typeof aVal === "string" && typeof bVal === "string") {
+    return aVal.localeCompare(bVal);
+  }
+  if (typeof aVal === "number" && typeof bVal === "number") {
+    return aVal - bVal;
+  }
+  return toDisplayString(aVal).localeCompare(toDisplayString(bVal));
+}
+
 function sortData<T>(data: readonly T[], sort: SortState): T[] {
   if (!sort) {
     return [...data];
@@ -68,21 +84,7 @@ function sortData<T>(data: readonly T[], sort: SortState): T[] {
   return [...data].sort((a, b) => {
     const aVal = (a as Record<string, unknown>)[key];
     const bVal = (b as Record<string, unknown>)[key];
-
-    if (aVal == null && bVal == null) return 0;
-    if (aVal == null) return direction === "asc" ? -1 : 1;
-    if (bVal == null) return direction === "asc" ? 1 : -1;
-
-    if (typeof aVal === "string" && typeof bVal === "string") {
-      const cmp = aVal.localeCompare(bVal);
-      return direction === "asc" ? cmp : -cmp;
-    }
-
-    if (typeof aVal === "number" && typeof bVal === "number") {
-      return direction === "asc" ? aVal - bVal : bVal - aVal;
-    }
-
-    const cmp = toDisplayString(aVal).localeCompare(toDisplayString(bVal));
+    const cmp = compareValues(aVal, bVal);
     return direction === "asc" ? cmp : -cmp;
   });
 }

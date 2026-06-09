@@ -342,7 +342,19 @@ literals`, `no-misleading-array-reverse`, …); LAST + with-a-human:
     rules carved out in the test override. Gate green: lint 0, typecheck 5/5,
     test web 888 / api 868 / shared 590. 3 DEFER rules remain:
     `cognitive-complexity` + `no-nested-functions` (pair with the cyclomatic
-    ratchet) + `different-types-comparison` (supervised).
+    ratchet) + `different-types-comparison` (supervised). - [x] R3a-3-fixup WAVE 3 (2026-06-09) — complexity CLOSE-OUT. The last 3
+    DEFER rules → `error`. Per advisor, treated as a close-out not a refactor:
+    a read-only 35-agent Workflow assessed each grandfathered/firing file and
+    confirmed cohesive single concerns → accepted as JUSTIFIED-PERMANENT file
+    exempts (cyclomatic + cognitive-complexity + no-nested-functions blocks,
+    each file with a one-line reason), same end-state as max-lines R3a-4. NO
+    blind refactors (the overnight army proved they pass the gate but break
+    behavior). `different-types-comparison`: verified via TS language server
+    that the 2 carry-over.service sites overlap on `string` (meaningful match,
+    not always-false) → per-site-disabled. One genuine EASY_WIN applied
+    (user-approved): extracted a pure `compareValues` helper in data-table.tsx
+    (behavior-identical). Gate green: lint 0, typecheck 5/5, test
+    888/868/590, build 5/5. **sonarjs DEFER list now EMPTY → R5 unblocked.**
   - [ ] R3a-4 core `max-lines` 300 (skipBlankLines/skipComments) + complexity,
         with exempt dirs (`*.test.*`, `e2e`, `prisma/generated`, `*.config.ts`).
 - [~] R3b JSDoc on `packages/shared` + `packages/ui` public exports only —
