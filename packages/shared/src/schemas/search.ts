@@ -23,11 +23,15 @@ export type SearchHitType = z.infer<typeof searchHitTypeSchema>;
 export const searchHitSchema = z.object({
   type: searchHitTypeSchema,
   id: z.uuid(),
-  /** First line / projection of the matched field — used as the result row's
-   * primary label. */
+  /**
+   * First line / projection of the matched field — used as the result row's
+   * primary label.
+   */
   title: z.string(),
-  /** ts_headline output with `<<` / `>>` markers around matched tokens.
-   * UI strips the markers and replaces them with <mark> tags. */
+  /**
+   * ts_headline output with `<<` / `>>` markers around matched tokens.
+   * UI strips the markers and replaces them with <mark> tags.
+   */
   snippet: z.string(),
   /** ts_rank float — strictly informational; ordering is server-side. */
   rank: z.number(),

@@ -499,8 +499,11 @@ export default defineConfig([
   },
   // R3b: jsdoc — TS-flavored recommended, scoped to the two published packages'
   // public surface (packages/shared + packages/ui) per the scaffold directive.
+  // Tests are not public source: excluded so docblock pragmas like
+  // `@vitest-environment` are not mis-flagged as invalid jsdoc tags.
   {
     files: ["packages/shared/src/**/*.ts", "packages/ui/src/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/__tests__/**"],
     plugins: { jsdoc },
     rules: {
       ...jsdocRecommendedTs.rules,
