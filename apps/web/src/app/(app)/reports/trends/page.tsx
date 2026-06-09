@@ -8,6 +8,7 @@ import type {
 import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 
+import { latestPeriodPair } from "../../../../lib/analytics-periods";
 import { useTRPC } from "../../../../lib/trpc-context";
 
 /**
@@ -50,8 +51,6 @@ function ChartSkeleton() {
 
 const PERIOD_FROM = "2026-01-01";
 const PERIOD_TO = "2026-12-31";
-const PERIOD_A = "2026-04-21";
-const PERIOD_B = "2026-04-28";
 
 function isTrafficLightHistoryOutput(
   value: unknown,
@@ -92,12 +91,21 @@ export default function TrendsPage() {
       periodTo: PERIOD_TO,
     }),
   );
-  const comparison = useQuery(
-    trpc.analytics.periodComparison.queryOptions({
-      periodA: PERIOD_A,
-      periodB: PERIOD_B,
+  // Compare the two most recent periods rather than fixed dates: the seed now
+  // generates period-end dates relative to the run date, so any pinned pair
+  // goes stale and the chart renders empty (driver sweep 2026-06-09). `periods`
+  // arrives ascending, so the last two entries are the latest pair.
+  const historyData = isTrafficLightHistoryOutput(history.data)
+    ? history.data
+    : undefined;
+  const periodPair = latestPeriodPair(historyData?.periods ?? []);
+  const comparison = useQuery({
+    ...trpc.analytics.periodComparison.queryOptions({
+      periodA: periodPair?.periodA ?? PERIOD_FROM,
+      periodB: periodPair?.periodB ?? PERIOD_TO,
     }),
-  );
+    enabled: periodPair !== null,
+  });
 
   return (
     <main
@@ -112,8 +120,8 @@ export default function TrendsPage() {
         </h2>
         {history.isLoading ? (
           <ChartSkeleton />
-        ) : isTrafficLightHistoryOutput(history.data) ? (
-          <TrafficLightHistoryChart {...history.data} />
+        ) : historyData ? (
+          <TrafficLightHistoryChart {...historyData} />
         ) : null}
       </section>
 

@@ -299,10 +299,17 @@ export function WeeklyReportPage({
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <ExportPdfButton
-            reportId={view.period.reportId}
-            periodStatus={view.period.periodStatus}
-          />
+          {/* The async export starts a `pdfExport.request` job, which the API
+              gates to head/admin (headProcedure). Match the button's visibility
+              to that authz so viewers/leads are not shown a control that 403s
+              (driver sweep 2026-06-09). The read-only /reports/[reportId] route
+              still offers a plain /print link for every role. */}
+          {canMutatePeriod && (
+            <ExportPdfButton
+              reportId={view.period.reportId}
+              periodStatus={view.period.periodStatus}
+            />
+          )}
           {/* A22: "Archive" button — shown to head once the period is published.
               Moves the report into the archive (sets archived=true) so it
               appears in the Archive tab. The button is hidden after archiving

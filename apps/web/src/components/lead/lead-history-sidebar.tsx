@@ -10,6 +10,21 @@ interface LeadHistorySidebarProps {
   readonly viewerMode?: boolean;
 }
 
+// A history row counts as a completed week for the summary stats when the lead
+// submitted the section ("submitted") OR the compiled report was
+// published/archived. The sidebar is shared between the lead personal-history
+// view and the head/viewer compiled-history view; compiled entries never carry
+// "submitted" (see mapCompiledHistoryEntries), so matching only "submitted"
+// left every compiled stat at 0 (driver sweep 2026-06-09).
+const COMPLETED_WEEK_STATUSES: ReadonlySet<HistoryEntry["status"]> = new Set([
+  "submitted",
+  "published",
+  "archived",
+]);
+function isCompletedWeek(entry: HistoryEntry): boolean {
+  return COMPLETED_WEEK_STATUSES.has(entry.status);
+}
+
 /**
  * HIST-2 (Phase 33-04): right-rail companion for the lead history page.
  * Mockup s9 specs three stacked cards — My History Summary, Submission Status,
@@ -27,7 +42,7 @@ export function LeadHistorySidebar({
   viewerMode = false,
 }: LeadHistorySidebarProps) {
   const total = entries.length;
-  const submitted = entries.filter((e) => e.status === "submitted").length;
+  const submitted = entries.filter(isCompletedWeek).length;
   const onTimeRate = total === 0 ? 0 : Math.round((submitted / total) * 100);
   const totalGreen = entries.reduce((acc, e) => acc + e.trafficLights.green, 0);
   const totalYellow = entries.reduce(
@@ -46,7 +61,7 @@ export function LeadHistorySidebar({
   // streak" — the number that matters at a glance.
   let streak = 0;
   for (const e of entries) {
-    if (e.status === "submitted") streak++;
+    if (isCompletedWeek(e)) streak++;
     else break;
   }
 
