@@ -452,8 +452,11 @@ export default defineConfig([
       //   flip to error one fixup wave at a time). Counts measured 2026-06-09. —
       "sonarjs/cognitive-complexity": "off", // 27 src; pairs with the cyclomatic-complexity ratchet (do together, supervised)
       "sonarjs/no-nested-functions": "off", // 11 src; refactor-heavy (extract nested render helpers)
-      "sonarjs/no-hardcoded-ip": "off", // 29, ALL test fixtures (10.0.0.x); fixup = scope test-off, keep error in src
-      "sonarjs/hardcoded-secret-signatures": "off", // 10, ALL test fixtures (fake passwords); fixup = scope test-off, keep error in src
+      // R3a-3-fixup wave 1: enforced in src (regression prevention); the only
+      // current firings are fake fixtures (10.0.0.x IPs, fake passwords) in
+      // test files, scoped off in the test-file override below.
+      "sonarjs/no-hardcoded-ip": "error",
+      "sonarjs/hardcoded-secret-signatures": "error",
       "sonarjs/no-clear-text-protocols": "off", // 13 (12 test + 1 src); fixup = scope test-off + review email.service:34
       "sonarjs/no-alphabetical-sort": "off", // 25 (mostly test); add explicit comparators or per-site disable
       "sonarjs/slow-regex": "off", // 5 src hotspots; review each regex (likely linear) → per-site disable w/ reason
@@ -531,6 +534,11 @@ export default defineConfig([
       ),
       "max-lines": "off",
       complexity: "off",
+      // R3a-3-fixup wave 1: test fixtures legitimately embed fake IPs and
+      // fake secrets (10.0.0.x audit-log samples, dummy PDF-export passwords).
+      // The rules stay `error` in src; tests are exempt by design.
+      "sonarjs/no-hardcoded-ip": "off",
+      "sonarjs/hardcoded-secret-signatures": "off",
     },
   },
   // Tooling files are not product source — exempt from size/complexity budgets
