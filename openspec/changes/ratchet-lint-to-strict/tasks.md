@@ -325,7 +325,11 @@ true`. A documented SOFTENING, but it opens NO Promise hole — the only
     then the small genuine fixes (`use-type-alias`, `no-nested-template-
 literals`, `no-misleading-array-reverse`, …); LAST + with-a-human:
     `cognitive-complexity` (pair with the cyclomatic ratchet) +
-    `different-types-comparison` (behavior-sensitive, carry-over.service).
+    `different-types-comparison` (behavior-sensitive, carry-over.service). - [x] R3a-3-fixup WAVE 1 (2026-06-09): `no-hardcoded-ip` +
+    `hardcoded-secret-signatures` → `error`. Verified all 39 firings are
+    test-only (audit-log 10.0.0.x samples, dummy PDF-export passwords);
+    scoped both `off` in the test-file override, kept `error` in src.
+    Gate green (0 errors). 22 DEFER rules remain.
   - [ ] R3a-4 core `max-lines` 300 (skipBlankLines/skipComments) + complexity,
         with exempt dirs (`*.test.*`, `e2e`, `prisma/generated`, `*.config.ts`).
 - [~] R3b JSDoc on `packages/shared` + `packages/ui` public exports only —
@@ -344,7 +348,7 @@ literals`, `no-misleading-array-reverse`, …); LAST + with-a-human:
       → DONE 2026-06-09. `@typescript-eslint/no-restricted-imports` scoped to
       `apps/web/**` bans value imports of `@customreport/api` (would pull the
       Nest/Prisma server graph into the browser bundle) with `allowTypeImports:
-    true` for the one legitimate case — `apps/web/src/lib/trpc.ts`'s
+  true` for the one legitimate case — `apps/web/src/lib/trpc.ts`'s
       `import type { AppRouter }`. Measured 0 violations (the boundary was already
       clean: web references api exactly once, type-only; packages import no apps).
       Landed green, no code change.
