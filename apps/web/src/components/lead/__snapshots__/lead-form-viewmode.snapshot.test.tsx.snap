@@ -60,14 +60,14 @@ exports[`LeadForm view-mode toggle — pre-extract snapshot > shows Edit link an
     </span>
   </div>
   <a
-    class="inline-flex h-10 min-w-[96px] items-center justify-center gap-1 rounded-l-[var(--radius-pill)] border border-r-0 border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors bg-[var(--color-starbucks-accent)] text-white"
+    class="inline-flex min-h-[var(--touch-target-min)] min-w-[96px] items-center justify-center gap-1 rounded-l-[var(--radius-pill)] border border-r-0 border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors bg-[var(--color-starbucks-accent)] text-white"
     href="/lead/report/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
   >
     Edit
   </a>
   <a
     aria-label="Open slides mode"
-    class="inline-flex h-10 min-w-[96px] items-center justify-center gap-1 rounded-r-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors bg-[var(--color-surface)] text-[var(--color-starbucks-accent)]"
+    class="inline-flex min-h-[var(--touch-target-min)] min-w-[96px] items-center justify-center gap-1 rounded-r-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors bg-[var(--color-surface)] text-[var(--color-starbucks-accent)]"
     href="/lead/report/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa?mode=slides"
   >
     <svg

@@ -95,7 +95,7 @@ export function TabSearch({
       placeholder={placeholder ?? "Search…"}
       data-testid={testId}
       aria-label={ariaLabel ?? placeholder ?? "Search"}
-      className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] sm:w-64"
+      className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] sm:w-64"
     />
   );
 }
@@ -131,7 +131,7 @@ export function TabFilter({
       onChange={(e) => onChange(e.target.value)}
       data-testid={testId}
       aria-label={ariaLabel ?? "Filter"}
-      className="rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+      className="select-chevron min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white py-1.5 pl-3 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
     >
       {options.map((opt) => (
         <option key={opt.value} value={opt.value}>
