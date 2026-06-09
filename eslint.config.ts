@@ -86,6 +86,11 @@ export default defineConfig([
     "prisma/seed-constants.ts",
     "**/e2e/**",
     "openspec/**",
+    // Workflow-harness scripts (the `Workflow` tool wraps these in an async
+    // function and injects args/log/parallel/agent), so they legitimately use
+    // top-level return/await and are not standalone modules — linting them as
+    // such only produces false "return outside of function" parse errors.
+    "**/*.workflow.mjs",
   ]),
   {
     files: ["**/*.ts", "**/*.tsx"],
