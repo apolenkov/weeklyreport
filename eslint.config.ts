@@ -91,6 +91,7 @@ export default defineConfig([
     // top-level return/await and are not standalone modules — linting them as
     // such only produces false "return outside of function" parse errors.
     "**/*.workflow.mjs",
+    ".claude/workflows/**",
   ]),
   {
     files: ["**/*.ts", "**/*.tsx"],
