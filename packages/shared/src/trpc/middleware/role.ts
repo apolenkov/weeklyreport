@@ -1,7 +1,3 @@
-import type {
-  TRPCMiddlewareBuilder,
-  TRPCMiddlewareFunction,
-} from "@trpc/server";
 import { TRPCError } from "@trpc/server";
 
 import type { Role, UserSession } from "../../schemas/auth";
@@ -14,8 +10,8 @@ import type { Role, UserSession } from "../../schemas/auth";
  *   - FORBIDDEN when the role is not in the allowed set.
  * Returns the narrowed (non-null) session on success.
  *
- * `assertRole` is the runtime contract. `requireRole` is the tRPC adapter
- * that wraps it into a middleware bound to a caller-supplied `t` instance.
+ * `assertRole` is the runtime contract. Use `buildRoleMiddleware` (api) to
+ * compose it into a tRPC middleware bound to a caller-supplied `t` instance.
  * @param session - the caller's session, or null when unauthenticated
  * @param allowed - the role or set of roles permitted to proceed
  * @returns the narrowed, non-null session on success
@@ -40,55 +36,4 @@ export function assertRole(
   }
 
   return session;
-}
-
-/**
- * Builds a tRPC middleware that enforces a role check via `assertRole`.
- *
- * The factory is generic over the caller's tRPC builder `t`. The constraint
- * on `t.middleware` declares the `$ContextOverrides` generic and ties it into
- * the return `TRPCMiddlewareBuilder`, so TypeScript can infer `TContext` /
- * `TMeta` from the call-site `t` and bind `$ContextOverrides` from the
- * explicit `<{ session: UserSession }>` instantiation. That preserves the
- * chain narrowing — call-site `.use(middleware)` sees ctx.session as
- * non-null in downstream procedures.
- *
- * adminProcedure === headProcedure for v6.0 per D-AUTH-03; admin is reserved
- * as an alias until Phase 29 (AUTH-02) splits it.
- * @param t - the caller's tRPC builder
- * @param t.middleware - the builder's middleware factory
- * @param allowed - the role or set of roles permitted to proceed
- * @returns an object holding the configured tRPC middleware
- */
-export function requireRole<
-  TContext extends { session: UserSession | null },
-  TMeta = object,
->(
-  t: {
-    middleware: <$ContextOverrides>(
-      fn: TRPCMiddlewareFunction<
-        TContext,
-        TMeta,
-        object,
-        $ContextOverrides,
-        unknown
-      >,
-    ) => TRPCMiddlewareBuilder<TContext, TMeta, $ContextOverrides, unknown>;
-  },
-  allowed: Role | Role[],
-): {
-  middleware: TRPCMiddlewareBuilder<
-    TContext,
-    TMeta,
-    { session: UserSession },
-    unknown
-  >;
-} {
-  const middleware = t.middleware<{ session: UserSession }>(
-    async ({ ctx, next }) => {
-      const session = assertRole(ctx.session, allowed);
-      return next({ ctx: { session } });
-    },
-  );
-  return { middleware };
 }
