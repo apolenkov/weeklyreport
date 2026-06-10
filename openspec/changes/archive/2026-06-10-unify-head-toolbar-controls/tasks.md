@@ -34,7 +34,7 @@
       to "Print" (`app/(app)/reports/[reportId]/page.tsx`); e2e catalog
       `head.yaml` entries synced (scope toggle labels, Present, Print).
 - [x] 2.3 `head-report-shell.tsx`: render `<AgentReviewComingSoon
-  compact />` and move it after the Present/Print links (trailing
+compact />` and move it after the Present/Print links (trailing
       edge of the utility group); verify the `compact` prop in
       `agent-review-coming-soon.tsx` still preserves aria-disabled +
       ComingSoonBadge.
@@ -60,7 +60,7 @@
       issues found", tests 100 files / 901 passed (1 pre-existing
       obsolete snapshot in `product-accordion.test.tsx`, untouched),
       build 5/5 tasks.
-- [ ] 4.2 Live before/after screenshots (head role, servers on :3100):
+- [x] 4.2 Live before/after screenshots (head role, servers on :3100):
       default viewport + narrow viewport (Row 1 wrap point), Edit and
       Slides modes; check lead/viewer surfaces that reuse ScopeToggle for
       visual regressions. Present to the user for acceptance before
