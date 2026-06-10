@@ -23,6 +23,7 @@ const VERSIONS: VersionSnapshot[] = [
     itemCount: 5,
     riskCount: 2,
     decisionCount: 1,
+    pinned: false,
   },
   {
     version: 2,
@@ -30,6 +31,7 @@ const VERSIONS: VersionSnapshot[] = [
     itemCount: 4,
     riskCount: 1,
     decisionCount: 1,
+    pinned: false,
   },
   {
     version: 1,
@@ -37,6 +39,7 @@ const VERSIONS: VersionSnapshot[] = [
     itemCount: 3,
     riskCount: 1,
     decisionCount: 0,
+    pinned: false,
   },
 ];
 

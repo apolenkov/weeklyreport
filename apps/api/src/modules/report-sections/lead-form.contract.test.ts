@@ -63,6 +63,7 @@ const sampleVersions: VersionSnapshot[] = [
     reportSectionId: SECTION_ID,
     version: 3,
     createdAt: new Date("2026-04-08T10:00:00Z"),
+    kind: "autosave",
     itemCount: 0,
     riskCount: 0,
     decisionCount: 0,
@@ -72,6 +73,7 @@ const sampleVersions: VersionSnapshot[] = [
     reportSectionId: SECTION_ID,
     version: 2,
     createdAt: new Date("2026-04-07T10:00:00Z"),
+    kind: "autosave",
     itemCount: 0,
     riskCount: 0,
     decisionCount: 0,
@@ -81,6 +83,7 @@ const sampleVersions: VersionSnapshot[] = [
     reportSectionId: SECTION_ID,
     version: 1,
     createdAt: new Date("2026-04-06T10:00:00Z"),
+    kind: "autosave",
     itemCount: 0,
     riskCount: 0,
     decisionCount: 0,
@@ -110,6 +113,7 @@ function createMockRepository(
     getCrossAuthors: vi.fn().mockResolvedValue([]),
     getCrossAuthorSections: vi.fn().mockResolvedValue([]),
     revokeAllSubmitted: vi.fn().mockResolvedValue(0),
+    setVersionPinned: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }

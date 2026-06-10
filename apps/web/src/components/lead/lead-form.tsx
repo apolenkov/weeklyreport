@@ -625,6 +625,18 @@ export function LeadForm({
     }),
   );
 
+  const togglePinMut = useMutation(
+    trpc.leadForm.setVersionPinned.mutationOptions({
+      onSuccess: () => {
+        invalidateLeadForm(qc, trpc);
+      },
+      onError: (err: unknown) => {
+        const msg = err instanceof Error ? err.message : "Pin update failed";
+        toast.error(msg);
+      },
+    }),
+  );
+
   // ---- Build draft payload ----
   const draftPayload = useMemo(
     () => (draftSection ? sectionToDraftPayload(draftSection) : null),
@@ -1599,6 +1611,17 @@ export function LeadForm({
                   setViewedSnapshotVersion(v);
                 }}
                 viewedVersion={viewedSnapshotVersion}
+                onTogglePin={
+                  isReadOnly
+                    ? undefined
+                    : (version, pinned) => {
+                        togglePinMut.mutate({
+                          reportSectionId: sectionIdForActions,
+                          version,
+                          pinned,
+                        });
+                      }
+                }
               />
               {!isReadOnly && (
                 <>

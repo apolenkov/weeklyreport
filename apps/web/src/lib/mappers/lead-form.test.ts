@@ -504,6 +504,7 @@ describe("mapLeadVersions", () => {
         reportSectionId: SECTION_ID,
         version: 3,
         createdAt: new Date("2026-04-20T11:58:00Z"),
+        kind: "autosave",
         itemCount: 4,
         riskCount: 2,
         decisionCount: 1,

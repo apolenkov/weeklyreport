@@ -450,12 +450,13 @@ model CarryOverRecord {
 }
 
 model VersionSnapshot {
-  id              String        @id @default(uuid())
+  id              String              @id @default(uuid())
   reportSectionId String
   version         Int
   data            Json
-  createdAt       DateTime      @default(now())
-  reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  kind            VersionSnapshotKind @default(autosave)
+  createdAt       DateTime            @default(now())
+  reportSection   ReportSection       @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
 
   @@unique([reportSectionId, version])
 }
@@ -684,6 +685,11 @@ enum WorkingDays {
 enum ReminderRuleStatus {
   active
   paused
+}
+
+enum VersionSnapshotKind {
+  autosave
+  pinned
 }
 
 // UFB-056 / Phase 55-1: TelegramBinding — opt-in link between a CustomReport

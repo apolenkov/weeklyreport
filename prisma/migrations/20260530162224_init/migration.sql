@@ -335,12 +335,16 @@ CREATE TABLE "CarryOverRecord" (
     CONSTRAINT "CarryOverRecord_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateEnum
+CREATE TYPE "VersionSnapshotKind" AS ENUM ('autosave', 'pinned');
+
 -- CreateTable
 CREATE TABLE "VersionSnapshot" (
     "id" TEXT NOT NULL,
     "reportSectionId" TEXT NOT NULL,
     "version" INTEGER NOT NULL,
     "data" JSONB NOT NULL,
+    "kind" "VersionSnapshotKind" NOT NULL DEFAULT 'autosave',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "VersionSnapshot_pkey" PRIMARY KEY ("id")

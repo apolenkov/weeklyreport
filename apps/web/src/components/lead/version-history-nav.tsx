@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import type { VersionSnapshot } from "./mock-data";
 import { PERIOD_NAV_ARROW_BUTTON_CLASS } from "./period-navigator";
+import { VersionRow } from "./version-row";
 
 interface VersionHistoryNavProps {
   readonly versions: VersionSnapshot[];
@@ -20,17 +21,14 @@ interface VersionHistoryNavProps {
    * Pass the current version number to keep the nav in sync after a restore.
    */
   readonly viewedVersion?: number | null;
-  // TODO(v8.5-B-pin): add `onPin?: (version: number, pinned: boolean) => void`
-  // prop + ★ button in nav row — pin/unpin reverted in a95681f5/6d4726fe,
-  // requires VersionSnapshot.kind enum change (plan section 15.4, cluster B).
+  /**
+   * add-version-pin: Called when the user pins or unpins a version.
+   * Any version can be toggled — not gated on isLatest (D4).
+   */
+  readonly onTogglePin?: (version: number, pinned: boolean) => void;
 }
 
-// Chevron icons — same family used by PeriodNavigator. The two control
-// groups (period vs version) sit on the same toolbar row, so the same
-// chevron + the same button shell makes them feel like one consistent
-// nav system. Disambiguation comes from the labels next to each group
-// (Calendar+Week for period, version pill for version), not from
-// invented icon shapes that confused more than they helped.
+// Chevron icons — same family used by PeriodNavigator.
 function ChevronLeft() {
   return (
     <svg
@@ -65,37 +63,18 @@ function ChevronRight() {
   );
 }
 
-// Default number of versions to show inside the history modal before revealing
-// the rest via a "Show all" button. v5.0 has no server-side cursor for
-// `leadForm.versions` (returns the full array in one call), so we paginate
-// client-side. Tracked as a deferral in the plan SUMMARY.
+// Default number of versions to show before the "Show all" button.
 const VERSIONS_INITIAL_VISIBLE = 5;
 
 /**
- * Compute the count delta of `v` relative to its parent (`prev`).
- * Returns null when both are zero — nothing to show.
- *
- * Versions arrive newest-first, so `prev` is the next item in the
- * array (i.e. the older sibling). For the very oldest version `prev`
- * is undefined; we treat it as a clean baseline (no diff line).
+ * Sort versions into pinned-first order (D4). Within each group the original
+ * version order is preserved (stable — versions arrive newest-first).
  */
-function diffSummary(
-  v: VersionSnapshot,
-  prev: VersionSnapshot | undefined,
-): { items: number; risks: number; decisions: number } | null {
-  if (!prev) return null;
-  const items = v.itemCount - prev.itemCount;
-  const risks = v.riskCount - prev.riskCount;
-  const decisions = v.decisionCount - prev.decisionCount;
-  if (items === 0 && risks === 0 && decisions === 0) return null;
-  return { items, risks, decisions };
-}
-
-function formatDiff(delta: number, label: string): string | null {
-  if (delta === 0) return null;
-  const sign = delta > 0 ? "+" : "−";
-  const verb = delta > 0 ? "added" : "removed";
-  return `${sign}${Math.abs(delta)} ${label} ${verb}`;
+function sortPinnedFirst(versions: VersionSnapshot[]): VersionSnapshot[] {
+  return [
+    ...versions.filter((v) => v.pinned),
+    ...versions.filter((v) => !v.pinned),
+  ];
 }
 
 export function VersionHistoryNav({
@@ -103,16 +82,17 @@ export function VersionHistoryNav({
   onRestore,
   onViewVersion,
   viewedVersion,
+  onTogglePin,
 }: VersionHistoryNavProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // F3.4: when the parent resets viewedVersion to null (e.g. "Back to current"
-  // button), sync the nav pill back to the latest version (index 0).
+  // F3.4: sync nav pill back to latest when parent resets viewedVersion.
   useEffect(() => {
     if (viewedVersion == null && currentIndex !== 0) {
       setCurrentIndex(0);
     }
   }, [viewedVersion, currentIndex]);
+
   const [showModal, setShowModal] = useState(false);
   const [showAllVersions, setShowAllVersions] = useState(false);
 
@@ -125,7 +105,6 @@ export function VersionHistoryNav({
     if (!hasPrev) return;
     const nextIndex = currentIndex + 1;
     setCurrentIndex(nextIndex);
-    // F3.4: notify parent — navigating away from latest → snapshot view mode.
     onViewVersion?.(versions[nextIndex]?.version ?? null);
   }
 
@@ -133,7 +112,6 @@ export function VersionHistoryNav({
     if (!hasNext) return;
     const nextIndex = currentIndex - 1;
     setCurrentIndex(nextIndex);
-    // F3.4: notify parent — nextIndex 0 = latest (exit snapshot mode).
     onViewVersion?.(
       nextIndex === 0 ? null : (versions[nextIndex]?.version ?? null),
     );
@@ -151,6 +129,13 @@ export function VersionHistoryNav({
     setShowModal(false);
     setCurrentIndex(0);
   }
+
+  const sortedForModal = sortPinnedFirst(versions);
+  const visibleInModal = showAllVersions
+    ? sortedForModal
+    : sortedForModal.slice(0, VERSIONS_INITIAL_VISIBLE);
+  const viewedVersionNumber = versions[currentIndex]?.version;
+  const hasPinnedVersions = sortedForModal.some((v) => v.pinned);
 
   return (
     <>
@@ -170,7 +155,6 @@ export function VersionHistoryNav({
           <ChevronLeft />
           <span className="text-xs font-medium xl:hidden">Previous</span>
         </button>
-
         <button
           type="button"
           className="inline-flex min-h-8 items-center gap-1 rounded-md border border-[var(--color-muted)] bg-[var(--color-background)] px-2 font-[family-name:var(--font-sans)] text-[12px] font-medium text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none"
@@ -182,7 +166,6 @@ export function VersionHistoryNav({
             v{currentVersion?.version}
           </span>
         </button>
-
         <button
           type="button"
           className={PERIOD_NAV_ARROW_BUTTON_CLASS}
@@ -196,7 +179,6 @@ export function VersionHistoryNav({
         </button>
       </div>
 
-      {/* Version History Modal */}
       {showModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40">
           <div
@@ -219,84 +201,35 @@ export function VersionHistoryNav({
               </button>
             </div>
 
-            <div className="space-y-2">
-              {(showAllVersions
-                ? versions
-                : versions.slice(0, VERSIONS_INITIAL_VISIBLE)
-              ).map((v, idx, arr) => {
-                // Diff against the preceding (older) sibling. Versions
-                // arrive newest-first so `arr[idx + 1]` is the parent.
-                const diff = diffSummary(v, arr[idx + 1]);
-                const diffParts = diff
-                  ? [
-                      formatDiff(diff.items, "items"),
-                      formatDiff(diff.risks, "risks"),
-                      formatDiff(diff.decisions, "decisions"),
-                    ].filter((s): s is string => s !== null)
-                  : [];
-                return (
-                  <div
-                    key={v.version}
-                    className="flex items-center gap-3 rounded-lg p-3"
-                    style={{
-                      background:
-                        idx === currentIndex
-                          ? "var(--color-success)"
-                          : "var(--color-background)",
-                      border:
-                        idx === currentIndex
-                          ? "1.5px solid var(--color-starbucks-accent)"
-                          : "1.5px solid transparent",
-                    }}
-                  >
-                    <div className="flex-1">
-                      <div className="text-sm font-semibold">
-                        Version {v.version}
-                        {idx === 0 && (
-                          <span className="ml-2 text-[10px] font-medium text-[var(--color-starbucks-accent)]">
-                            Latest
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-0.5 text-[12px] text-[var(--color-muted-foreground)]">
-                        {v.timestamp} &middot; {v.itemCount} items &middot;{" "}
-                        {v.riskCount} risks &middot; {v.decisionCount} decisions
-                      </div>
-                      {diffParts.length > 0 && (
-                        // Diff vs previous version — count-level only (no
-                        // content compare; needs a server-side history
-                        // store to do that). Renders coloured by direction:
-                        // adds in green, removes in red, mixed in muted.
-                        <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px]">
-                          {diffParts.map((part) => {
-                            const isAdd = part.startsWith("+");
-                            return (
-                              <span
-                                key={part}
-                                className="font-medium"
-                                style={{
-                                  color: isAdd
-                                    ? "var(--color-starbucks-accent)"
-                                    : "var(--color-destructive)",
-                                }}
-                              >
-                                {part}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
+            {hasPinnedVersions && (
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-starbucks-accent)]">
+                Pinned
+              </p>
+            )}
 
-                    {onRestore && idx !== 0 && (
-                      <button
-                        type="button"
-                        className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
-                        onClick={() => handleRestore(v.version)}
-                      >
-                        Restore
-                      </button>
+            <div className="space-y-2">
+              {visibleInModal.map((v, idx, arr) => {
+                const prevWasPinned =
+                  idx > 0 && (arr[idx - 1]?.pinned ?? false);
+                const showGroupSeparator = prevWasPinned && !v.pinned;
+                const originalIdx = versions.findIndex(
+                  (ov) => ov.version === v.version,
+                );
+                return (
+                  <div key={v.version}>
+                    {showGroupSeparator && (
+                      <p className="mb-1 mt-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                        History
+                      </p>
                     )}
+                    <VersionRow
+                      v={v}
+                      isViewed={v.version === viewedVersionNumber}
+                      isLatestVersion={v.version === versions[0]?.version}
+                      prevInOrder={versions[originalIdx + 1]}
+                      onRestore={onRestore ? handleRestore : undefined}
+                      onTogglePin={onTogglePin}
+                    />
                   </div>
                 );
               })}

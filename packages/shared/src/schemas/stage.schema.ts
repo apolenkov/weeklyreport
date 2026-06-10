@@ -23,11 +23,20 @@ export const stageAssignmentSchema = z.object({
 // v4.0: Version snapshot (D-67)
 // ---------------------------------------------------------------------------
 
+/** Mirrors the Prisma VersionSnapshotKind enum (add-version-pin). */
+export const versionSnapshotKindSchema = z.enum(["autosave", "pinned"]);
+
 export const versionSnapshotSchema = z.object({
   id: z.uuid(),
   reportSectionId: z.uuid(),
   version: z.number().int().positive(),
   createdAt: z.coerce.date(),
+  /**
+   * Snapshot kind: routine autosave or a lead-pinned checkpoint.
+   * Default 'autosave' keeps legacy rows and pre-existing callers parsing
+   * — same default pattern as the count fields below.
+   */
+  kind: versionSnapshotKindSchema.default("autosave"),
   /**
    * Counts derived from the snapshot's `data` JSON column. Carried in the
    * read model so the version-history UI can render delta summaries
@@ -42,4 +51,5 @@ export const versionSnapshotSchema = z.object({
 
 export type Stage = z.infer<typeof stageSchema>;
 export type StageAssignment = z.infer<typeof stageAssignmentSchema>;
+export type VersionSnapshotKind = z.infer<typeof versionSnapshotKindSchema>;
 export type VersionSnapshot = z.infer<typeof versionSnapshotSchema>;

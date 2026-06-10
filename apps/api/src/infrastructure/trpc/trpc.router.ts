@@ -2028,6 +2028,27 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
+      setVersionPinned: protectedProcedure
+        .input(
+          z.object({
+            reportSectionId: z.uuid(),
+            version: z.number().int().positive(),
+            pinned: z.boolean(),
+          }),
+        )
+        .mutation(async ({ input, ctx }) => {
+          try {
+            await deps.leadFormService.setVersionPinned(
+              input.reportSectionId,
+              input.version,
+              input.pinned,
+              ctx.session.userId,
+            );
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
       revoke: headProcedure
         .input(z.object({ reportSectionId: z.uuid() }))
         .mutation(async ({ input, ctx }) => {
