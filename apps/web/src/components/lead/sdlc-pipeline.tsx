@@ -2,7 +2,12 @@
 
 import type { CSSProperties } from "react";
 
-import type { Product, RiskEntry, StageStatus } from "./mock-data";
+import type {
+  Product,
+  RiskEntry,
+  StageAssignment,
+  StageStatus,
+} from "./mock-data";
 import { StageChip } from "./stage-chip";
 import { canonicalStageName, splitStageNames } from "./stage-tags";
 
@@ -69,6 +74,25 @@ const STRIPE_BY_STATUS: Record<StageStatus, string> = {
   "on-track": "var(--color-chip-on-track-border)",
   empty: "var(--color-border)",
 };
+
+// D1: derive stripe color from the worst status among the lead's own stages.
+// Severity order: blocked > at-risk > on-track > empty (empty = nothing set yet).
+const SEVERITY_RANK: Record<StageStatus, number> = {
+  blocked: 3,
+  "at-risk": 2,
+  "on-track": 1,
+  empty: 0,
+};
+
+function worstOwnStatus(stages: StageAssignment[]): StageStatus {
+  return stages
+    .filter((s) => s.ownership === "mine")
+    .reduce<StageStatus>(
+      (worst, s) =>
+        SEVERITY_RANK[s.status] > SEVERITY_RANK[worst] ? s.status : worst,
+      "empty",
+    );
+}
 
 export function getProductCardStyle(
   status: StageStatus,
@@ -193,7 +217,7 @@ export function SdlcPipeline({
             key={product.id}
             className="rounded-xl p-4"
             style={getProductCardStyle(
-              product.overallStatus,
+              worstOwnStatus(product.stages),
               hasUnfilledOwnStage,
             )}
           >

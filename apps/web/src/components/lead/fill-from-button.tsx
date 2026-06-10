@@ -231,8 +231,12 @@ export function FillFromButton({
                   onClick={() => handleFillFromPeriod(p)}
                 >
                   <div className="flex-1">
-                    <div className="text-sm font-semibold">
-                      {p.archived ? "[Archived] " : ""}
+                    <div className="flex items-baseline gap-1.5 text-sm font-semibold">
+                      {p.archived && (
+                        <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[9px] font-semibold text-[var(--color-muted-foreground)]">
+                          Archived
+                        </span>
+                      )}
                       {p.weekLabel} &middot; {p.dateRange}
                     </div>
                     <div className="text-[11px] text-[var(--color-muted-foreground)]">

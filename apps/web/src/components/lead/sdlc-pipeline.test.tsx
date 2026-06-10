@@ -106,6 +106,53 @@ function getFirstCardStyle(container: HTMLElement): string {
   return (card as HTMLElement | null)?.getAttribute("style") ?? "";
 }
 
+// ---- Component: SdlcPipeline D1 live stripe color from own stages ----
+
+describe("SdlcPipeline — D1 live stripe color from own stages", () => {
+  it("stripe is blocked color when one own stage is blocked (overallStatus ignored)", () => {
+    // PRODUCT_WITH_ALL_FILLED: Dev=blocked/mine — worstOwnStatus = blocked
+    const { container } = render(
+      <SdlcPipeline products={[PRODUCT_WITH_ALL_FILLED]} readOnly={false} />,
+    );
+    expect(getFirstCardStyle(container)).toContain(
+      "var(--color-chip-blocked-border)",
+    );
+  });
+
+  it("stripe is on-track color when worst own stage is on-track (not empty)", () => {
+    // PRODUCT_WITH_UNFILLED_OWN_STAGE: Design=empty/mine, Dev=on-track/mine
+    // worstOwnStatus = on-track
+    const { container } = render(
+      <SdlcPipeline
+        products={[PRODUCT_WITH_UNFILLED_OWN_STAGE]}
+        readOnly={false}
+      />,
+    );
+    expect(getFirstCardStyle(container)).toContain(
+      "var(--color-chip-on-track-border)",
+    );
+  });
+
+  it("stripe is neutral/empty color when lead has no own stages", () => {
+    const noOwnStages: Product = {
+      ...BASE_PRODUCT,
+      overallStatus: "blocked",
+      stages: [
+        {
+          stageName: "Design",
+          status: "blocked",
+          ownership: "locked",
+          assignee: null,
+        },
+      ],
+    };
+    const { container } = render(
+      <SdlcPipeline products={[noOwnStages]} readOnly={false} />,
+    );
+    expect(getFirstCardStyle(container)).toContain("var(--color-border)");
+  });
+});
+
 describe("SdlcPipeline — D5 dashed stripe (component)", () => {
   it("renders dashed stripe when edit view has an unfilled own stage", () => {
     const { container } = render(
