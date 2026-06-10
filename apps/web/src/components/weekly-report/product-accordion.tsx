@@ -70,6 +70,38 @@ const ITEM_STATUS_BADGE = {
   },
 } as const satisfies Record<string, ItemStatusBadge>;
 
+// Prioritized items first (rank 1, 2, …), the rest keep their order.
+function sortByPriority<T extends { priorityRank?: number | null }>(
+  items: readonly T[],
+): T[] {
+  return [...items].sort(
+    (a, b) =>
+      (a.priorityRank ?? Number.MAX_SAFE_INTEGER) -
+      (b.priorityRank ?? Number.MAX_SAFE_INTEGER),
+  );
+}
+
+// Gold rank badge for prioritized items — replaces the former TOP
+// PRIORITIES section, which duplicated current-week items 1:1.
+function PriorityRankBadge({ rank }: { readonly rank: number }) {
+  return (
+    <span
+      className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
+      style={{
+        background:
+          rank === 1 ? "var(--color-starbucks-gold)" : "var(--color-border)",
+        color:
+          rank === 1
+            ? "var(--color-primary-foreground)"
+            : "var(--color-muted-foreground)",
+      }}
+      title={`Priority ${rank}`}
+    >
+      {rank}
+    </span>
+  );
+}
+
 function ChevronDown({ expanded }: { readonly expanded: boolean }) {
   return (
     <svg
@@ -227,14 +259,17 @@ export function ProductAccordion({
                 </div>
               )}
 
-              {/* Current Week */}
+              {/* Current Week. User feedback 2026-06-10: the separate TOP
+                  PRIORITIES section duplicated these items 1:1 — instead,
+                  prioritized items sort first and carry a rank badge
+                  inline. */}
               {report.currentWeek.length > 0 && (
                 <div>
                   <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
                     Current Week &middot; {report.currentWeek.length} items
                   </div>
                   <div className="space-y-1">
-                    {report.currentWeek.map((item) => {
+                    {sortByPriority(report.currentWeek).map((item) => {
                       const badge =
                         (ITEM_STATUS_BADGE as Record<string, ItemStatusBadge>)[
                           item.status
@@ -247,9 +282,14 @@ export function ProductAccordion({
                           style={{
                             background: isBlocked
                               ? "var(--color-status-blocked-bg)"
-                              : "var(--color-background)",
+                              : item.priorityRank === 1
+                                ? "var(--color-priority-row-bg)"
+                                : "var(--color-background)",
                           }}
                         >
+                          {item.priorityRank != null && (
+                            <PriorityRankBadge rank={item.priorityRank} />
+                          )}
                           <span
                             className="inline-flex flex-shrink-0 items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold"
                             style={{ background: badge.bg, color: badge.text }}
@@ -364,46 +404,9 @@ export function ProductAccordion({
                 </div>
               )}
 
-              {/* Priorities */}
-              {report.priorities.length > 0 && (
-                <div>
-                  <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                    Top Priorities
-                  </div>
-                  <ol className="space-y-1 text-sm">
-                    {report.priorities.map((p, index) => (
-                      <li
-                        // eslint-disable-next-line react/no-array-index-key -- priority ranks can repeat across a merged report; index disambiguates the otherwise-non-unique key in this render-only, never-reordered list
-                        key={`${p.rank}-${index}`}
-                        className="flex items-center gap-2 rounded p-2"
-                        style={{
-                          background:
-                            p.rank === 1
-                              ? "var(--color-priority-row-bg)"
-                              : "var(--color-background)",
-                        }}
-                      >
-                        <span
-                          className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
-                          style={{
-                            background:
-                              p.rank === 1
-                                ? "var(--color-starbucks-gold)"
-                                : "var(--color-border)",
-                            color:
-                              p.rank === 1
-                                ? "var(--color-primary-foreground)"
-                                : "var(--color-muted-foreground)",
-                          }}
-                        >
-                          {p.rank}
-                        </span>
-                        {p.text}
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
+              {/* The former TOP PRIORITIES section is gone (user feedback
+                  2026-06-10): it duplicated current-week items verbatim.
+                  Ranks now render inline via PriorityRankBadge above. */}
             </div>
           </div>
         </div>

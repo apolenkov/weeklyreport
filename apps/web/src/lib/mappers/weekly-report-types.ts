@@ -27,6 +27,8 @@ export interface WeeklyReportItem {
   stageLead: string;
   text: string;
   status: ItemStatus;
+  /** Priority rank (1 = top) when the item is a flagged priority; null otherwise. */
+  priorityRank?: number | null;
 }
 
 export interface WeeklyReportRisk {

@@ -82,9 +82,13 @@ export function groupItemsByProject(
     { current: WeeklyReportItem[]; next: WeeklyReportItem[] }
   >();
   for (const section of sections) {
-    const stageLead = `Dev · ${initialsFromName(section.authorName)}`;
+    const initials = initialsFromName(section.authorName);
     for (const item of section.items) {
       const bucket = map.get(item.projectId) ?? { current: [], next: [] };
+      // The badge shows the item's REAL stage tags (stageIds carries stage
+      // names); the previous hardcoded "Dev ·" label mislabelled every item.
+      const stagePart = (item.stageIds ?? []).join("+");
+      const stageLead = stagePart ? `${stagePart} · ${initials}` : initials;
       const mapped: WeeklyReportItem = {
         id:
           item.id ??
@@ -96,6 +100,7 @@ export function groupItemsByProject(
           type: item.type,
           completed: item.completed ?? null,
         }),
+        priorityRank: item.priorityRank ?? null,
       };
       bucket[item.type].push(mapped);
       map.set(item.projectId, bucket);
@@ -130,10 +135,12 @@ export function groupRisksByProject(
         risk.severity ??
         (blockedProjects.has(risk.projectId) ? "blocked" : "at-risk");
       const text = `${risk.risk} — Impact: ${risk.impact} — Mitigation: ${risk.mitigation}`;
+      // Same hardcoded-"Dev" fix as items: show the risk's real stage tags.
+      const riskStages = (risk.stageIds ?? []).join("+");
       const list = map.get(risk.projectId) ?? [];
       list.push({
         id: risk.id ?? `risk-${section.reportSectionId}-${list.length}`,
-        badge: `${productName} · Dev`,
+        badge: riskStages ? `${productName} · ${riskStages}` : productName,
         severity,
         text,
       });

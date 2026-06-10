@@ -82,6 +82,8 @@ export interface ReportItem {
   stageLead: string;
   text: string;
   status: "in-progress" | "completed" | "blocked" | "planned";
+  /** Priority rank (1 = top) when the item is a flagged priority; null otherwise. */
+  priorityRank?: number | null;
 }
 
 export interface ReportRisk {
