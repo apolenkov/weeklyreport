@@ -118,9 +118,7 @@ export function HeadReportShell({
           onChange={setScope}
           allowedScopes={["product", "lead"]}
         />
-        <div className="flex items-center">
-          <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
-        </div>
+        <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
         <div className="flex items-center gap-2">
           <a
             href={presentHref}
