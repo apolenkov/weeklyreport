@@ -221,6 +221,28 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
       ? "/auth/saml/login"
       : `/auth/saml/login?next=${encodeURIComponent(safeNext)}`;
 
+  // Shared by the last-session hint («Change role») and the no-hint
+  // direct picker — one list, two entry points.
+  const roleOptionsList = (
+    <ul
+      id="last-role-switcher"
+      className="mt-2 grid grid-cols-2 gap-1.5"
+      data-testid="last-role-switcher"
+    >
+      {(["lead", "head", "admin", "viewer"] as const).map((role) => (
+        <li key={role}>
+          <a
+            href={devLoginHref(role, DEV_EMAIL_FOR_ROLE[role])}
+            className="block rounded border border-[#ece8e2] bg-white px-2 py-1.5 text-center text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]"
+            data-testid={`last-role-option-${role}`}
+          >
+            {ROLE_LABEL[role]}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+
   return (
     <main id="main-content" className="flex min-h-svh">
       {/* a11y (page-has-heading-one): the landing page's visible brand is the
@@ -313,31 +335,21 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
               {AUTH_STUB
                 ? lastRole
                   ? `Resuming as ${ROLE_LABEL[lastRole.role]} · pick a different role below`
-                  : "Dev mode · default role: admin · switch role from in-app menu"
+                  : "Dev mode · default role: admin · or pick a role below"
                 : "Keycloak · SAML 2.0 · Corporate SSO"}
             </p>
           </div>
 
-          {/* UFB-071: last-session hint with «Change role» picker. Only
-              rendered in AUTH_STUB mode AND when a hint is stored.
-              The container is always present in AUTH_STUB mode so the
-              DOM structure is stable across SSR → hydration → useEffect.
-              CSS max-height + opacity transition makes the hint slide in
-              smoothly instead of causing an instant layout shift.
-              In production (AUTH_STUB=false) this block never renders,
-              so there is zero flicker on staging/cloud. */}
+          {/* UFB-071 (rev 2026-06-10, user feedback): the box no longer
+              collapses when no hint is stored — the collapse read as a
+              layout jump (skeleton appears, then vanishes), and without
+              a hint the login page offered NO way to pick a role. The
+              container is now always 63px+ in AUTH_STUB mode: skeleton
+              while loading, last-session hint when stored, or a direct
+              role picker otherwise. In production (AUTH_STUB=false)
+              this block never renders. */}
           {AUTH_STUB && (
-            <div
-              className="overflow-hidden"
-              style={{
-                maxHeight: lastRoleLoaded && !lastRole ? "0px" : "300px",
-                opacity: lastRoleLoaded && !lastRole ? 0 : 1,
-                marginTop: lastRoleLoaded && !lastRole ? "0px" : "16px",
-                transition:
-                  "max-height 220ms ease-in-out, opacity 220ms ease-in-out, margin-top 220ms ease-in-out",
-              }}
-              aria-hidden={lastRoleLoaded && !lastRole}
-            >
+            <div className="mt-4">
               {!lastRoleLoaded ? (
                 <div
                   className="min-h-[63px] rounded-md border border-[#ece8e2] bg-[#fafaf7] px-3 py-2.5 text-left"
@@ -369,32 +381,19 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
                   >
                     {showRoleSwitcher ? "Hide options" : "Change role"}
                   </button>
-                  {showRoleSwitcher ? (
-                    <ul
-                      id="last-role-switcher"
-                      className="mt-2 grid grid-cols-2 gap-1.5"
-                      data-testid="last-role-switcher"
-                    >
-                      {(["lead", "head", "admin", "viewer"] as const).map(
-                        (role) => (
-                          <li key={role}>
-                            <a
-                              href={devLoginHref(
-                                role,
-                                DEV_EMAIL_FOR_ROLE[role],
-                              )}
-                              className="block rounded border border-[#ece8e2] bg-white px-2 py-1.5 text-center text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]"
-                              data-testid={`last-role-option-${role}`}
-                            >
-                              {ROLE_LABEL[role]}
-                            </a>
-                          </li>
-                        ),
-                      )}
-                    </ul>
-                  ) : null}
+                  {showRoleSwitcher ? roleOptionsList : null}
                 </div>
-              ) : null}
+              ) : (
+                <div
+                  className="min-h-[63px] rounded-md border border-[#ece8e2] bg-[#fafaf7] px-3 py-2.5 text-left"
+                  data-testid="role-picker"
+                >
+                  <p className="text-xs leading-snug text-[var(--color-muted-foreground)]">
+                    Enter as a specific role:
+                  </p>
+                  {roleOptionsList}
+                </div>
+              )}
             </div>
           )}
 
