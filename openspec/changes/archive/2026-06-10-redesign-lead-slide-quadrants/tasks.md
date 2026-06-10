@@ -49,19 +49,24 @@ Design decisions D1–D9 live in `design.md`; the spec contract in
 
 ## 5. Verification and acceptance
 
-- [ ] 5.1 Gates: `pnpm typecheck && pnpm lint && pnpm test && pnpm build`
+- [x] 5.1 Gates: `pnpm typecheck && pnpm lint && pnpm test && pnpm build`
       — record results here.
-- [ ] 5.2 Live screenshots (servers on :3100): lead "Own" slide in
+      Evidence: final run 2026-06-10 after round 4 — typecheck ✓, lint ✓,
+      tests 868 api + 905 web ✓, build ✓ (see Evidence section).
+- [x] 5.2 Live screenshots (servers on :3100): lead "Own" slide in
       normal + fullscreen, multi-product and single-product, an
       empty-quadrant case; before/after pair for user acceptance before
       archiving.
+      Evidence: rounds 1-4 in `.playwright-mcp/unify-toolbar/`; ACCEPTED
+      by the user 2026-06-10 («Мне понравилось, как выглядит слайд.
+      Отлично») + explicit archive approval same day.
 
 ## 6. Feedback round 2 (2026-06-10, live review — see design.md addendum)
 
 - [x] 6.1 Quadrant grid gets a normal-view vertical floor
       (`min-h-[52dvh]`) so cards distribute evenly.
 - [x] 6.2 Decisions accent → blue token `--color-decisions-accent:
-    #4a7494` (recorded user color sign-off 2026-06-10).
+  #4a7494` (recorded user color sign-off 2026-06-10).
 - [x] 6.3 Next focus card → dashed frame, solid left stripe.
 - [x] 6.4 Remove `MAX_ITEMS_PER_SECTION` + "+N more" — all rows always
       render; spec scenario updated.
@@ -91,3 +96,9 @@ Design decisions D1–D9 live in `design.md`; the spec contract in
 - [x] 7.2 Remove `productStatus` from `UnifiedSectionRow` + builder;
       `STATUS_DOT_CLASS` back to module-private; spec attribution
       requirements rewritten; tests updated (905 web tests green).
+
+## 8. Feedback round 4 (2026-06-10 — commit 64e1c6dd)
+
+- [x] 8.1 Fixed-width tone badge, name zone, tabular metric values — hero
+      geometry stable across slides/periods.
+- [x] 8.2 Row product badges fixed width (w-[110px]) so texts align.
