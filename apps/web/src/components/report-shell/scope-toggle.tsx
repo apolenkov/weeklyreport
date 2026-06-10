@@ -16,8 +16,8 @@ const DEFAULT_SCOPES: readonly ScopeValue[] = [
 
 const LABELS: Record<ScopeValue, string> = {
   own: "Own",
-  product: "By product",
-  lead: "By lead",
+  product: "Product",
+  lead: "Leads",
 };
 
 export function ScopeToggle({
@@ -39,10 +39,10 @@ export function ScopeToggle({
             role="radio"
             aria-checked={value === s}
             onClick={() => onChange(s)}
-            className={`inline-flex items-center rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-colors ${
+            className={`inline-flex items-center rounded-[var(--radius-pill)] px-3 py-1 text-sm font-semibold transition-colors ${
               value === s
-                ? "bg-[var(--color-primary)] text-white"
-                : "text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                ? "bg-[var(--color-starbucks-accent)] text-white"
+                : "text-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]"
             }`}
           >
             {LABELS[s]}

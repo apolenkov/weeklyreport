@@ -107,10 +107,11 @@ export function HeadReportShell({
       {/* Action row parity with the lead report header (UAT 2026-05-22,
           done-condition 10): head is read-only, so the lead Submit slot is
           replaced by export / presentation actions.
-          polish-ui-density T3: controls share one height
-          (--touch-target-min) and are grouped by intent — scope | view mode
-          (primary) | utilities — with wider gaps between groups. DOM order,
-          and therefore tab order, is unchanged. */}
+          polish-ui-density T3 + unify-head-toolbar-controls: real controls
+          share one height (--touch-target-min), grouped by intent —
+          scope | view mode (primary) | utilities — with wider gaps between
+          groups. The inert Agent review placeholder is compact and trails
+          the group (documented ui-control-density exception). */}
       <div className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2">
         <ScopeToggle
           value={scope}
@@ -121,27 +122,25 @@ export function HeadReportShell({
           <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
         </div>
         <div className="flex items-center gap-2">
-          <AgentReviewComingSoon />
           <a
             href={presentHref}
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-2.5 py-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
-            aria-label="Open presentation"
-            title="Presentation"
+            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+            title="Open presentation"
           >
             <Presentation className="h-4 w-4" aria-hidden="true" />
-            <span className="sr-only">Presentation</span>
+            <span>Present</span>
           </a>
           <a
             href={printHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-2.5 py-1.5 text-white transition-colors hover:bg-[var(--color-primary)]"
-            aria-label="Export PDF"
-            title="Export PDF"
+            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+            title="Print report (browser print)"
           >
             <FileDown className="h-4 w-4" aria-hidden="true" />
-            <span className="sr-only">Export PDF</span>
+            <span>Print</span>
           </a>
+          <AgentReviewComingSoon compact />
         </div>
       </div>
       {mode === "slides" ? (

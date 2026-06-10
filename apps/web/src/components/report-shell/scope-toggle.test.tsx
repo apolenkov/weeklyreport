@@ -13,11 +13,9 @@ describe("ScopeToggle", () => {
       />,
     );
     expect(screen.getByRole("radio", { name: "Own" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Product" })).toBeInTheDocument();
     expect(
-      screen.getByRole("radio", { name: "By product" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("radio", { name: "By lead" }),
+      screen.queryByRole("radio", { name: "Leads" }),
     ).not.toBeInTheDocument();
   });
 
@@ -30,7 +28,7 @@ describe("ScopeToggle", () => {
         allowedScopes={["own", "product"]}
       />,
     );
-    fireEvent.click(screen.getByRole("radio", { name: "By product" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Product" }));
     expect(onChange).toHaveBeenCalledOnce();
     expect(onChange).toHaveBeenCalledWith("product");
   });
@@ -43,7 +41,7 @@ describe("ScopeToggle", () => {
         allowedScopes={["own", "product"]}
       />,
     );
-    expect(screen.getByRole("radio", { name: "By product" })).toHaveAttribute(
+    expect(screen.getByRole("radio", { name: "Product" })).toHaveAttribute(
       "aria-checked",
       "true",
     );
@@ -57,10 +55,8 @@ describe("ScopeToggle", () => {
     const onChange = vi.fn();
     render(<ScopeToggle value={"own"} onChange={onChange} />);
     expect(screen.getByRole("radio", { name: "Own" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("radio", { name: "By product" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "By lead" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Product" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Leads" })).toBeInTheDocument();
   });
 
   it("each scope renders as a button with role='radio'", () => {
@@ -101,7 +97,7 @@ describe("ScopeToggle", () => {
     expect(group).toHaveAttribute("aria-label", "Slide scope");
   });
 
-  it("active scope button has primary background class; inactive buttons have muted foreground class", () => {
+  it("active scope button has accent background class; inactive buttons have accent foreground class", () => {
     const { container } = render(
       <ScopeToggle
         value="product"

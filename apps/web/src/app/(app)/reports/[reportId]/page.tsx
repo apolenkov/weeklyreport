@@ -58,7 +58,7 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
               rel="noopener noreferrer"
               className="btn-press inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-green-accent,#00754A)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-green,#006241)]"
               style={{ minHeight: "44px" }}
-              aria-label="Export PDF"
+              title="Print report (browser print)"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -76,7 +76,7 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              Export PDF
+              Print
             </a>
           </div>
         </div>

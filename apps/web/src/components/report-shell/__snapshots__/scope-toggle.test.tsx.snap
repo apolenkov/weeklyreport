@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`ScopeToggle > active scope button has primary background class; inactive buttons have muted foreground class 1`] = `
+exports[`ScopeToggle > active scope button has accent background class; inactive buttons have accent foreground class 1`] = `
 <div>
   <div
     aria-label="Slide scope"
@@ -9,7 +9,7 @@ exports[`ScopeToggle > active scope button has primary background class; inactiv
   >
     <button
       aria-checked="false"
-      class="inline-flex items-center rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-colors text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+      class="inline-flex items-center rounded-[var(--radius-pill)] px-3 py-1 text-sm font-semibold transition-colors text-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]"
       role="radio"
       type="button"
     >
@@ -17,19 +17,19 @@ exports[`ScopeToggle > active scope button has primary background class; inactiv
     </button>
     <button
       aria-checked="true"
-      class="inline-flex items-center rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-colors bg-[var(--color-primary)] text-white"
+      class="inline-flex items-center rounded-[var(--radius-pill)] px-3 py-1 text-sm font-semibold transition-colors bg-[var(--color-starbucks-accent)] text-white"
       role="radio"
       type="button"
     >
-      By product
+      Product
     </button>
     <button
       aria-checked="false"
-      class="inline-flex items-center rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-colors text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+      class="inline-flex items-center rounded-[var(--radius-pill)] px-3 py-1 text-sm font-semibold transition-colors text-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]"
       role="radio"
       type="button"
     >
-      By lead
+      Leads
     </button>
   </div>
 </div>
