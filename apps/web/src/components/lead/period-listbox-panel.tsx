@@ -97,8 +97,8 @@ export function PeriodListboxPanel({
               onSelect(opt.id);
             }}
           >
-            {opt.archived && <ArchivedBadge />}
             <span className="flex-1 truncate">{periodLabel(opt)}</span>
+            {opt.archived && <ArchivedBadge />}
             {isSelected && (
               <span aria-hidden="true" className="text-xs">
                 ✓
