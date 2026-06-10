@@ -49,8 +49,8 @@ const DEFAULT_FOR_ROLE: Record<Role, string> = {
 };
 
 /**
- * UFB-071 (2026-05-11): seeded dev-mode emails per role. The
- * «Change role» dropdown uses these as the fallback email when no
+ * UFB-071 (2026-05-11): seeded dev-mode emails per role. The role grid
+ * on the landing card uses these as the fallback email when no
  * persisted hint exists for that role. Must stay in sync with the
  * `emailByRole` table in `apps/api/src/modules/auth/auth.routes.ts`
  * and the seeded users in `prisma/seed-simple.ts`.
@@ -194,7 +194,6 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
   // hint pops in only when hydration has run. AUTH_STUB-only.
   const [lastRole, setLastRole] = useState<LastRoleRecord | null>(null);
   const [lastRoleLoaded, setLastRoleLoaded] = useState(!AUTH_STUB);
-  const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
   useEffect(() => {
     if (!AUTH_STUB) return;
     setLastRole(readLastRole());
@@ -221,11 +220,21 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
       ? "/auth/saml/login"
       : `/auth/saml/login?next=${encodeURIComponent(safeNext)}`;
 
-  // Shared by the last-session hint («Change role») and the no-hint
-  // direct picker — one list, two entry points.
+  // All three AUTH_STUB card states (skeleton / last-session hint /
+  // role picker) share one min-height — just above the natural height
+  // of the tallest state, the role picker (112.5px measured: label +
+  // two button rows + padding + border). Equal heights keep the
+  // divider and footer below from shifting when hydration swaps one
+  // state for another.
+  const stubCardClassName =
+    "min-h-[113px] rounded-md border border-[#ece8e2] bg-[#fafaf7] px-3 py-2.5 text-left";
+
+  // Always visible in both the last-session hint and the no-hint
+  // picker (UFB rev 2026-06-10: the «Change role» toggle expanded the
+  // card past its reserved height — another layout jump — so the grid
+  // is now permanent and every card state has the same structure).
   const roleOptionsList = (
     <ul
-      id="last-role-switcher"
       className="mt-2 grid grid-cols-2 gap-1.5"
       data-testid="last-role-switcher"
     >
@@ -344,26 +353,30 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
               collapses when no hint is stored — the collapse read as a
               layout jump (skeleton appears, then vanishes), and without
               a hint the login page offered NO way to pick a role. The
-              container is now always 63px+ in AUTH_STUB mode: skeleton
-              while loading, last-session hint when stored, or a direct
-              role picker otherwise. In production (AUTH_STUB=false)
-              this block never renders. */}
+              container now always renders at the same height in
+              AUTH_STUB mode (see stubCardClassName): skeleton while
+              loading, last-session hint when stored, or a direct role
+              picker otherwise. In production (AUTH_STUB=false) this
+              block never renders. */}
           {AUTH_STUB && (
             <div className="mt-4">
               {!lastRoleLoaded ? (
                 <div
-                  className="min-h-[63px] rounded-md border border-[#ece8e2] bg-[#fafaf7] px-3 py-2.5 text-left"
+                  className={stubCardClassName}
                   data-testid="last-role-hint-skeleton"
                   aria-hidden="true"
                 >
-                  <Skeleton className="h-3.5 w-56" />
-                  <Skeleton className="mt-2 h-3.5 w-20" />
+                  <Skeleton className="h-3.5 w-40" />
+                  <div className="mt-2 grid grid-cols-2 gap-1.5">
+                    {(["lead", "head", "admin", "viewer"] as const).map(
+                      (role) => (
+                        <Skeleton key={role} className="h-[30px] rounded" />
+                      ),
+                    )}
+                  </div>
                 </div>
               ) : lastRole ? (
-                <div
-                  className="min-h-[63px] rounded-md border border-[#ece8e2] bg-[#fafaf7] px-3 py-2.5 text-left"
-                  data-testid="last-role-hint"
-                >
+                <div className={stubCardClassName} data-testid="last-role-hint">
                   <p className="text-xs leading-snug text-[var(--color-muted-foreground)]">
                     Last session:{" "}
                     <span className="font-semibold text-[var(--color-foreground)]">
@@ -371,23 +384,10 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
                     </span>{" "}
                     · {ROLE_LABEL[lastRole.role]}
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => setShowRoleSwitcher((v) => !v)}
-                    className="mt-1.5 text-xs font-semibold text-[var(--color-starbucks-accent)] underline-offset-2 hover:underline"
-                    aria-expanded={showRoleSwitcher}
-                    aria-controls="last-role-switcher"
-                    data-testid="last-role-change"
-                  >
-                    {showRoleSwitcher ? "Hide options" : "Change role"}
-                  </button>
-                  {showRoleSwitcher ? roleOptionsList : null}
+                  {roleOptionsList}
                 </div>
               ) : (
-                <div
-                  className="min-h-[63px] rounded-md border border-[#ece8e2] bg-[#fafaf7] px-3 py-2.5 text-left"
-                  data-testid="role-picker"
-                >
+                <div className={stubCardClassName} data-testid="role-picker">
                   <p className="text-xs leading-snug text-[var(--color-muted-foreground)]">
                     Enter as a specific role:
                   </p>
