@@ -12,6 +12,8 @@ pinned }` and `kind VersionSnapshotKind @default(autosave)` on the
       (MVP DB rule — no incremental alter-table migration).
 - [x] 1.3 `migrate reset` the `_dev`/`_test` DB (pass
       `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`); confirm it re-applies.
+      Review fix 2026-06-11: `customreport_test` had been missed (only
+      `_dev` was reset); reset re-run, `kind` column confirmed present.
 
 ## 2. Shared schema
 
@@ -58,7 +60,10 @@ version, pinned)` updating the one row by the
 - [x] 5.1 API integration: pinned snapshot >30 d survives the sweep; pinned
       row in the 24 h–7 d window survives hourly thinning (restore the two
       reverted `version-retention.integration.test.ts` cases against the
-      enum).
+      enum). Review fix 2026-06-11: integration tests run for the first
+      time after the `_test` reset — `version-retention` +
+      `version-history` + `lead-form.prisma-repository` integration files
+      all green (22/22).
 - [x] 5.2 API contract: `setVersionPinned` flips `kind` and rejects a
       non-author / submitted section; both enum values have a writer.
 - [x] 5.3 Web unit (`version-history-nav`): star toggles fire `onTogglePin`;
@@ -68,7 +73,13 @@ version, pinned)` updating the one row by the
 
 - [x] 6.1 Gates: `pnpm typecheck && pnpm lint && pnpm test` — all green.
       typecheck: 5/5 passed; lint: no issues; web tests: 935/935;
-      api tests: 868/868.
+      api tests: 868/868. Note: `pnpm test` excludes
+      `*.integration.test.ts`; integration evidence is recorded in 5.1.
+      Full `test:integration` 2026-06-11: all add-version-pin files green;
+      4 pre-existing failures remain in
+      `weekly-report.scope-filter.integration.test.ts` (test predates the
+      2026-05-13 `GroupProduct @@unique([productId])` flip, unrelated to
+      this change).
 - [x] 6.2 `grep -nE '[а-яА-Я]'` the changed `apps/web/src/**/*.tsx` — zero
       matches (no hardcoded Russian UI copy).
 - [x] 6.3 Confirm `enum-state-hygiene`: both `VersionSnapshotKind` values
