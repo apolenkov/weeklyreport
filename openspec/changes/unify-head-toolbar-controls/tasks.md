@@ -34,7 +34,7 @@
       to "Print" (`app/(app)/reports/[reportId]/page.tsx`); e2e catalog
       `head.yaml` entries synced (scope toggle labels, Present, Print).
 - [x] 2.3 `head-report-shell.tsx`: render `<AgentReviewComingSoon
-    compact />` and move it after the Present/Print links (trailing
+  compact />` and move it after the Present/Print links (trailing
       edge of the utility group); verify the `compact` prop in
       `agent-review-coming-soon.tsx` still preserves aria-disabled +
       ComingSoonBadge.
@@ -69,4 +69,5 @@
       `.playwright-mcp/unify-toolbar/` (head edit 1440 + 768, head
       slides, published report, lead slides); "before" = the user's
       complaint screenshot of the same header. Row 1 stays on one line
-      at 768px. AWAITING user acceptance.
+      at 768px. ACCEPTED by the user 2026-06-10 («Да, давай») — same
+      session as the sign-off; ready to archive.
