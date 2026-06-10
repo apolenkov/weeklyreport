@@ -90,9 +90,11 @@ client error policy`.
       `client-logger.ts` / `app.log`), plus unmodified
       dashboard/weekly-report/slides tests.
 - [ ] 5.3 Residue check:
-      `grep -rn "logClientError" apps/web/src --include="*.tsx"` shows
-      only the 2 non-query dashboard watchdog sites; query-error
-      effects exist only inside the hook.
+      `grep -rn "logClientError" apps/web/src --include="*.tsx" | grep -v test`
+      shows only the 2 non-query dashboard watchdog sites; query-error
+      effects exist only inside the hook. (Without the `grep -v test`
+      filter, `dashboard-page.test.tsx` mocks/assertions also match —
+      that file stays unmodified per task 2.1 and is not residue.)
 - [ ] 5.4 Live check: force a lead-form load failure in the browser;
       screenshot the toast showing the "Reference: \<id\>." suffix
       (lead-surface acceptance practice); user acceptance.

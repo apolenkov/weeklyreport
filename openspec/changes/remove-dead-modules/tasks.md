@@ -105,8 +105,15 @@ data"` (~L208-217 — sits INSIDE the `PublicationService`
 - [ ] 4.2 Grep guards (all from repo root, excluding `dist/` and
       `node_modules/`):
   - `rg -n "DataTable|CrudSheet|ConfirmDialog|TrafficLightBadge|traffic-lights" apps packages e2e -g '*.ts' -g '*.tsx' -g '*.css'`
-    → only the app-local `data-testid="crud-sheet"` string sites in
-    admin tabs; zero import/JSX hits.
+    → exactly ONE hit:
+    `apps/api/src/modules/report-sections/report-sections.service.ts:267`
+    (the `// a payload with missing traffic-lights still fails on the
+content` comment — unrelated to the deleted components; it stays).
+    Zero import/JSX hits. Note the pattern is case-sensitive, so the
+    app-local lowercase `data-testid="crud-sheet"` strings in admin
+    tabs do NOT match — their decoupling is proven by 4.3 instead.
+    (`packages/ui/dist/` artifacts are gitignored; rg skips them by
+    default.)
   - `rg -n "requireRole" apps packages` → zero hits.
   - `rg -n "publication.router|archive.router|report-sections.router" apps packages` → zero hits.
 - [ ] 4.3 Decoupling guards:

@@ -45,10 +45,12 @@ faked and the wait deadlocks until test timeout. Such files MUST use
 ### Requirement: Negative wait assertions are anchored on a positive signal
 
 A negative assertion after an async cascade MUST follow a positive
-readiness anchor — `not.toHaveBeenCalled`, `not.toBeInTheDocument`,
-and `toHaveLength(0)` come only after a `findBy*` / `waitFor`
-condition that proves the cascade settled — never a bare drain or a
-`waitFor` wrapped around the negative itself.
+readiness anchor that proves the cascade settled —
+`not.toHaveBeenCalled`, `not.toBeInTheDocument`, and `toHaveLength(0)`
+come only after a `findBy*` / `waitFor` condition under real timers,
+or a deterministic bounded `vi.advanceTimersByTimeAsync` advance under
+fake timers — never a bare drain or a `waitFor` wrapped around the
+negative itself.
 
 #### Scenario: asserting a head session never fires the lead query
 

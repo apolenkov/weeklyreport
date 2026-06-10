@@ -50,15 +50,22 @@ design.md D4).
 ## Sequencing
 
 Wave 2 — LAST of the lead cluster: starts only after
-`require-risk-stage` lands (file contention on `risks-section.tsx`)
-and after `refactor-lead-mappers` lands. Hard gate: single-writer on
+`require-risk-stage` lands (file contention on `risks-section.tsx`),
+after `fix-lead-stripe-and-archived-badges` is archived (no shared
+files, but the same lead surface — live-verification walks need a
+settled surface, not one mid-flight), and after
+`refactor-lead-mappers` lands. Hard gate: single-writer on
 the lead surface.
 
 ## Capabilities
 
 ### New Capabilities
 
-<!-- none: behavior-preserving refactor -->
+- `lead-dialog-lifecycle` — durable contract that editable lead
+  sections source their dialog lifecycle from `useEditableListDialog`
+  and the edit dialogs use the D12 mount/unmount shell pattern
+  (delta: `specs/lead-dialog-lifecycle/spec.md`). Behavior is
+  unchanged; the capability pins the structural invariant.
 
 ### Modified Capabilities
 

@@ -57,9 +57,13 @@ that directory.
 
 ## Capabilities
 
-None added or modified — `role-coverage-gate` is a constraint this
-change preserves (and the gate test gains the missing 8th builder); no
-spec delta required.
+`role-coverage-gate` gains two requirements (delta in
+`specs/role-coverage-gate/spec.md`): the allow-list must enumerate all
+8 canonical builders (adding the missing `leadershipProcedure`), and
+the canonical middleware chain must have a single definition site. The
+delta is required by `openspec/config.yaml` — this change edits the
+gate test and redefines all 8 builders, so the spec must be synced on
+archive.
 
 ## Impact
 

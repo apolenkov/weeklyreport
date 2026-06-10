@@ -84,15 +84,18 @@ starting any group-3 task (a parallel session edits lead files).
       `lead-form-viewmode.snapshot.test.tsx` (:60-166) — same dialect;
       one commit, one file at a time with a web-suite run between.
 - [ ] 3.3 Convert `apps/web/src/hooks/use-lead-form-autosave.test.tsx`
-      — move the `buildHarness` trpcMock (:65-84) to the factory,
-      preserving the `saveDraft` mutation-capture calls-array
-      semantics; verify the
-      `invalidatedKeys.some((k) => k.includes("leadForm"))` assertion
-      (:472-496) still passes with the nested
-      `[["leadForm", "byPeriod"]]` key shape (the stringified mapping
-      at :493 covers it — confirm). This file is also targeted by the
-      fake-timer rework (`refactor-test-timer-helpers` follow-up) —
-      mock conversion FIRST, strictly serialized.
+      — move the `buildHarness` trpcMock to the factory, preserving
+      the `saveDraft` mutation-capture calls-array semantics; verify
+      the `invalidatedKeys.some((k) => k.includes("leadForm"))`
+      assertion still passes with the nested
+      `[["leadForm", "byPeriod"]]` key shape (the stringified key
+      mapping covers it — confirm). NOTE:
+      `refactor-test-timer-helpers` reworks this file's timer handling
+      and lands BEFORE this change (sequencing gate above), so the
+      dossier line refs (trpcMock :65-84, invalidatedKeys :472-496,
+      stringify :493) describe the pre-rework file — re-verify all
+      three anchors against the post-timer-helpers file before
+      converting.
 
 ## 4. Auth-redirect link seam (web; independent of groups 2-3)
 

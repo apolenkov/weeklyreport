@@ -37,7 +37,7 @@ No shared/ui or api work in this change — web tests only.
   - Partial advances in the coalescing test (~lines 160–171): convert
     to `await vi.advanceTimersByTimeAsync(1000)` too, and delete the
     two now-stale `@typescript-eslint/require-await` suppressions
-    (lines 160, 167) — the act bodies now genuinely await. Bounded
+    (lines 161, 168) — the act bodies now genuinely await. Bounded
     advances keep the `expect(calls).toHaveLength(0)` negatives valid.
   - forceSave / held-promise settles (~lines 335–490):
     `void result.current.forceSave(); await vi.advanceTimersByTimeAsync(0);`

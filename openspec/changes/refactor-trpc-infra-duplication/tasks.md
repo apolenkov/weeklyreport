@@ -84,7 +84,7 @@ this change (the `requireRole` deletion in `packages/shared` belongs to
       unmodified. Run `pnpm test --filter @customreport/api`.
 - [ ] 2.3 In `apps/api/src/infrastructure/trpc/trpc.context.ts` add a
       file-local (NOT exported) `async function hydrateSession(session:
-  UserSession, prisma: PrismaService): Promise<UserSession>`
+UserSession, prisma: PrismaService): Promise<UserSession>`
       composing the four existing helpers unchanged, in current order:
       `resolveSectionId` → `hydrateViewerGroupAccess` →
       `hydrateReportingGroupName` → `hydrateOrganization`. Replace the

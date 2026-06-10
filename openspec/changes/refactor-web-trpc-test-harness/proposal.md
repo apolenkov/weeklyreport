@@ -53,14 +53,20 @@ Wave 1 — starts after `refactor-test-timer-helpers`. Admin-tab test
 conversions may start immediately; the lead-area conversions
 (lead-form trio + autosave tests) wait until the active
 `fix-lead-stripe-and-archived-badges` lands.
-`use-lead-form-autosave.test.tsx` is also targeted by the fake-timer
-rework — mock conversion first, strictly serialized.
+`use-lead-form-autosave.test.tsx` is also reworked by
+`refactor-test-timer-helpers`, which lands first — re-verify that
+file's line anchors after the timer rework before converting (task
+3.3).
 
 ## Capabilities
 
 ### New Capabilities
 
-<!-- none: test-only change; the factory contract test is the pin -->
+- `web-trpc-test-harness` — shared tRPC mock-factory contract
+  (`createMockTRPC` descriptors), non-vacuous `pathFilter`
+  `{ queryKey }` shape, and auth-redirect link seam coverage. Delta:
+  `specs/web-trpc-test-harness/spec.md` (3 ADDED requirements); syncs
+  into `openspec/specs/` on archive.
 
 ### Modified Capabilities
 
