@@ -71,6 +71,28 @@ export function statusLabelFor(
 }
 
 /**
+ * Report-wide projectId→productName map (fix-product-name-resolution):
+ * every section's projects, with the portfolio overview (server-aggregated,
+ * names every product) winning on conflict. Badge resolution goes through
+ * this so cross-author/secondary references never render "Unknown".
+ */
+export function buildProjectNameMap(
+  sections: readonly ReportSectionReadModel[],
+  portfolioOverview: readonly PortfolioProductOverview[],
+): Map<string, string> {
+  const names = new Map<string, string>();
+  for (const section of sections) {
+    for (const project of section.projects) {
+      names.set(project.projectId, project.projectName);
+    }
+  }
+  for (const overview of portfolioOverview) {
+    names.set(overview.productId, overview.productName);
+  }
+  return names;
+}
+
+/**
  * Group items across all sections by `projectId`. Returns a map keyed by
  * projectId of `{ current: WeeklyReportItem[], next: WeeklyReportItem[] }`.
  */
@@ -113,16 +135,17 @@ export function groupItemsByProject(
  * Group risks across all sections by `projectId`. Severity is inferred from the
  * lead section's matching item with `workflowStatus === 'blocked'`; otherwise
  * defaults to `'at-risk'`.
+ *
+ * `projectNames` is the REPORT-WIDE id→name map (fix-product-name-resolution):
+ * resolving only against the owning section's projects rendered "Unknown" for
+ * cross-author/secondary project references.
  */
 export function groupRisksByProject(
   sections: readonly ReportSectionReadModel[],
+  projectNames: ReadonlyMap<string, string>,
 ): Map<string, WeeklyReportRisk[]> {
   const map = new Map<string, WeeklyReportRisk[]>();
   for (const section of sections) {
-    const projectNames = new Map<string, string>();
-    for (const project of section.projects) {
-      projectNames.set(project.projectId, project.projectName);
-    }
     // Detect blocked items per project for legacy risk severity inference.
     const blockedProjects = new Set(
       section.items
@@ -154,23 +177,23 @@ export function groupRisksByProject(
  * Group decisions by their explicit productId when present.
  * Legacy entries without productId fall back to the section author's first
  * project. If neither exists, the entry is dropped (no place to render it).
+ *
+ * `projectNames` is the report-wide id→name map — see groupRisksByProject.
  */
 export function groupDecisionsByProject(
   sections: readonly ReportSectionReadModel[],
+  projectNames: ReadonlyMap<string, string>,
 ): Map<string, WeeklyReportDecision[]> {
   const decisions = new Map<string, WeeklyReportDecision[]>();
 
   for (const section of sections) {
     const firstProject = section.projects.at(0);
-    const projectsById = new Map(
-      section.projects.map((project) => [project.projectId, project] as const),
-    );
 
     const resolveProduct = (productId: string | null | undefined) => {
       if (productId) {
         return {
           projectId: productId,
-          projectName: projectsById.get(productId)?.projectName ?? "Unknown",
+          projectName: projectNames.get(productId) ?? "Unknown",
         };
       }
       return firstProject;
