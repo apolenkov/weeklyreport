@@ -22,11 +22,11 @@ exports[`ProductAccordion — Priorities ol snapshot > priorities section render
 >
   <li
     class="flex items-center gap-2 rounded p-2"
-    style="background: rgb(250, 246, 238);"
+    style="background: var(--color-priority-row-bg);"
   >
     <span
       class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
-      style="background: var(--color-starbucks-gold); color: rgb(255, 255, 255);"
+      style="background: var(--color-starbucks-gold); color: var(--color-primary-foreground);"
     >
       1
     </span>

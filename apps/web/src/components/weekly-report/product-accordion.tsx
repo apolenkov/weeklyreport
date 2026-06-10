@@ -23,6 +23,9 @@ interface ItemStatusBadge {
   label: string;
 }
 
+// apply-status-palette (memo T6 opt 2): red is the only alarm hue (blocked);
+// at-risk goes neutral here — the amber signal lives on the row's left
+// stripe, not on a flooded amber fill. No hardcoded status hex.
 const STATUS_CONFIG = {
   "on-track": {
     bg: "var(--color-success)",
@@ -31,15 +34,15 @@ const STATUS_CONFIG = {
     avatarText: "var(--color-primary)",
   },
   "at-risk": {
-    bg: "#fef3c7",
-    text: "#8a6d1b",
-    avatarBg: "#fef3c7",
-    avatarText: "var(--color-starbucks-gold)",
+    bg: "var(--color-muted)",
+    text: "var(--color-foreground)",
+    avatarBg: "var(--color-muted)",
+    avatarText: "var(--color-foreground)",
   },
   blocked: {
-    bg: "#fee2e2",
+    bg: "var(--color-status-blocked-bg)",
     text: "var(--color-destructive)",
-    avatarBg: "#fee2e2",
+    avatarBg: "var(--color-status-blocked-bg)",
     avatarText: "var(--color-destructive)",
   },
 } as const satisfies Record<string, StatusConfig>;
@@ -50,8 +53,16 @@ const ITEM_STATUS_BADGE = {
     text: "var(--color-primary)",
     label: "",
   },
-  completed: { bg: "var(--color-primary)", text: "#fff", label: "" },
-  blocked: { bg: "#fee2e2", text: "var(--color-destructive)", label: "" },
+  completed: {
+    bg: "var(--color-primary)",
+    text: "var(--color-primary-foreground)",
+    label: "",
+  },
+  blocked: {
+    bg: "var(--color-status-blocked-bg)",
+    text: "var(--color-destructive)",
+    label: "",
+  },
   planned: {
     bg: "var(--color-muted)",
     text: "var(--color-muted-foreground)",
@@ -130,7 +141,7 @@ export function ProductAccordion({
             : "rgba(0,0,0,0.10)",
         boxShadow:
           highlighted && hasContent
-            ? "0 0 0 2px rgba(0,117,74,0.16), 0 8px 18px -14px rgba(0,0,0,0.18)"
+            ? "0 0 0 2px var(--color-highlight-shadow), 0 8px 18px -14px rgba(0,0,0,0.18)"
             : undefined,
       }}
     >
@@ -192,7 +203,7 @@ export function ProductAccordion({
               {/* Needs Attention */}
               {report.needsAttention && (
                 <div>
-                  <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-destructive)]">
+                  <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
                     Needs Attention
                   </div>
                   <div
@@ -200,13 +211,14 @@ export function ProductAccordion({
                     style={
                       report.needsAttentionSeverity === "blocked"
                         ? {
-                            background: "#fee2e2",
+                            background: "var(--color-status-blocked-bg)",
                             color: "var(--color-destructive)",
                           }
                         : {
-                            background: "#fffcf5",
-                            border: "1px solid rgba(212,160,23,0.18)",
-                            color: "var(--color-starbucks-gold)",
+                            background: "var(--color-surface-muted)",
+                            borderLeft:
+                              "3px solid var(--color-status-at-risk-border)",
+                            color: "var(--color-foreground)",
                           }
                     }
                   >
@@ -234,7 +246,7 @@ export function ProductAccordion({
                           className="flex items-center gap-2 rounded p-2 text-sm"
                           style={{
                             background: isBlocked
-                              ? "#fee2e2"
+                              ? "var(--color-status-blocked-bg)"
                               : "var(--color-background)",
                           }}
                         >
@@ -284,7 +296,7 @@ export function ProductAccordion({
               {/* Risks & Blockers */}
               {report.risks.length > 0 && (
                 <div>
-                  <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-destructive)]">
+                  <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
                     Risks & Blockers &middot; {report.risks.length}
                   </div>
                   <div className="space-y-1.5">
@@ -294,22 +306,29 @@ export function ProductAccordion({
                         <div
                           key={risk.id}
                           className="rounded p-2.5 text-sm"
-                          style={{
-                            background: isBlocked ? "#fee2e2" : "#fef3c7",
-                            color: isBlocked
-                              ? "var(--color-destructive)"
-                              : "var(--color-starbucks-gold)",
-                          }}
+                          style={
+                            isBlocked
+                              ? {
+                                  background: "var(--color-status-blocked-bg)",
+                                  color: "var(--color-destructive)",
+                                }
+                              : {
+                                  background: "var(--color-surface-muted)",
+                                  borderLeft:
+                                    "3px solid var(--color-status-at-risk-border)",
+                                  color: "var(--color-foreground)",
+                                }
+                          }
                         >
                           <span
                             className="mr-1 inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold"
                             style={{
                               background: isBlocked
-                                ? "rgba(200,32,20,0.15)"
-                                : "rgba(212,160,23,0.15)",
+                                ? "var(--color-status-blocked-bg)"
+                                : "var(--color-muted)",
                               color: isBlocked
                                 ? "var(--color-destructive)"
-                                : "#8a6d1b",
+                                : "var(--color-muted-foreground)",
                             }}
                           >
                             {risk.badge}
@@ -325,7 +344,7 @@ export function ProductAccordion({
               {/* Decisions */}
               {report.decisions.length > 0 && (
                 <div>
-                  <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-starbucks-accent)]">
+                  <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
                     Decisions &middot; {report.decisions.length}
                   </div>
                   <div className="space-y-1.5">
@@ -348,7 +367,7 @@ export function ProductAccordion({
               {/* Priorities */}
               {report.priorities.length > 0 && (
                 <div>
-                  <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-starbucks-gold)]">
+                  <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
                     Top Priorities
                   </div>
                   <ol className="space-y-1 text-sm">
@@ -360,7 +379,7 @@ export function ProductAccordion({
                         style={{
                           background:
                             p.rank === 1
-                              ? "#faf6ee"
+                              ? "var(--color-priority-row-bg)"
                               : "var(--color-background)",
                         }}
                       >
@@ -373,7 +392,7 @@ export function ProductAccordion({
                                 : "var(--color-border)",
                             color:
                               p.rank === 1
-                                ? "#fff"
+                                ? "var(--color-primary-foreground)"
                                 : "var(--color-muted-foreground)",
                           }}
                         >

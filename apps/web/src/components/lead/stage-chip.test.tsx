@@ -5,8 +5,10 @@
  * not a flat gray "empty" regardless of status.
  *
  * We verify status via aria-label (encodes `${stageName}: ${status}`) and
- * the visible icon character (config.icon from STATUS_CONFIG). Inline-style
- * hex assertions are avoided — jsdom normalises them to rgb().
+ * the per-status background token (config.bg from STATUS_CONFIG). Since
+ * apply-status-palette the chip face carries no status glyph — color +
+ * aria-label/tooltip are the carriers — and var() inline styles pass
+ * through jsdom unnormalised, so they are safe to assert.
  */
 import "@testing-library/jest-dom/vitest";
 
@@ -32,11 +34,13 @@ describe("StageChip — locked stage color (F2)", () => {
     expect(
       screen.getByRole("button", { name: "DevOps: empty" }),
     ).toBeInTheDocument();
-    // empty icon
-    expect(screen.getByRole("button").textContent).toContain("○");
+    // empty surface token, not a flat gray override
+    expect(screen.getByRole("button").style.background).toBe(
+      "var(--color-surface-empty)",
+    );
   });
 
-  it("locked + at-risk → chip labelled with at-risk status and ! icon", () => {
+  it("locked + at-risk → chip labelled with at-risk status and token", () => {
     render(
       <StageChip
         stage={{ ...BASE_LOCKED, status: "at-risk" }}
@@ -46,10 +50,12 @@ describe("StageChip — locked stage color (F2)", () => {
     expect(
       screen.getByRole("button", { name: "DevOps: at-risk" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button").textContent).toContain("!");
+    expect(screen.getByRole("button").style.background).toBe(
+      "var(--color-chip-at-risk-bg)",
+    );
   });
 
-  it("locked + blocked → chip labelled with blocked status and ✕ icon", () => {
+  it("locked + blocked → chip labelled with blocked status and token", () => {
     render(
       <StageChip
         stage={{ ...BASE_LOCKED, status: "blocked" }}
@@ -59,10 +65,12 @@ describe("StageChip — locked stage color (F2)", () => {
     expect(
       screen.getByRole("button", { name: "DevOps: blocked" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button").textContent).toContain("✕");
+    expect(screen.getByRole("button").style.background).toBe(
+      "var(--color-chip-blocked-bg)",
+    );
   });
 
-  it("locked + on-track → chip labelled with on-track status and ✓ icon", () => {
+  it("locked + on-track → chip labelled with on-track status and token", () => {
     render(
       <StageChip
         stage={{ ...BASE_LOCKED, status: "on-track" }}
@@ -72,7 +80,9 @@ describe("StageChip — locked stage color (F2)", () => {
     expect(
       screen.getByRole("button", { name: "DevOps: on-track" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button").textContent).toContain("✓");
+    expect(screen.getByRole("button").style.background).toBe(
+      "var(--color-chip-on-track-bg)",
+    );
   });
 
   it("locked chip renders the lock icon (aria-hidden svg)", () => {
