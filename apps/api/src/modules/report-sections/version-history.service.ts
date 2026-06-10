@@ -95,6 +95,34 @@ export class VersionHistoryService {
     return this.repository.getVersion(sectionId, version);
   }
 
+  /** add-version-pin: Pin or unpin an existing version of a lead's own section. */
+  async setVersionPinned(
+    sectionId: string,
+    version: number,
+    pinned: boolean,
+    userId: string,
+  ): Promise<void> {
+    const section = await this.repository.getSectionById(sectionId);
+
+    if (!section) {
+      throw new LeadFormDomainError(`Section ${sectionId} not found.`);
+    }
+
+    if (section.authorId !== userId) {
+      throw new LeadFormAccessError(
+        "Can only pin versions of your own section.",
+      );
+    }
+
+    if (section.status === "submitted") {
+      throw new LeadFormDomainError(
+        "Cannot pin versions on a submitted section.",
+      );
+    }
+
+    await this.repository.setVersionPinned(sectionId, version, pinned);
+  }
+
   /** API-09: Restore a section to a specific version. */
   async restoreVersion(
     sectionId: string,

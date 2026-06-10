@@ -141,6 +141,15 @@ function buildTRPC() {
         }),
         pathFilter: () => ({ queryKey: ["leadForm.requestReopen"] }),
       },
+      // add-version-pin: exposed unconditionally in the component.
+      setVersionPinned: {
+        mutationOptions: (p: object = {}) => ({
+          ...p,
+          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
+          mutationFn: async () => undefined,
+        }),
+        pathFilter: () => ({ queryKey: ["leadForm.setVersionPinned"] }),
+      },
       crossAuthors: {
         queryOptions: () => ({
           queryKey: ["leadForm.crossAuthors"],

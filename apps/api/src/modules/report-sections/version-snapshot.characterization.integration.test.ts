@@ -123,6 +123,7 @@ function createLeadFormRepo(opts: {
         reportSectionId: sectionId,
         version: s.version,
         createdAt: s.createdAt,
+        kind: "autosave" as const,
         itemCount: 0,
         riskCount: 0,
         decisionCount: 0,
@@ -168,6 +169,10 @@ function createLeadFormRepo(opts: {
     // eslint-disable-next-line @typescript-eslint/require-await -- implements async LeadFormRepository contract (stub returns value directly, no await)
     async revokeAllSubmitted() {
       return 0;
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements async LeadFormRepository contract (stub returns value directly, no await)
+    async setVersionPinned() {
+      return undefined;
     },
   } as LeadFormRepository & {
     createVersionSnapshot: ReturnType<typeof vi.fn>;

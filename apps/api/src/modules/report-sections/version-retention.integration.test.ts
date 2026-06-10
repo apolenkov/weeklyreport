@@ -38,11 +38,19 @@ describe("LeadFormPrismaRepository — time-based retention", () => {
     await disconnectTestPrisma();
   });
 
-  /** Insert a snapshot bypassing the @default(now()) so we can control the age. */
+  /** Insert an autosave snapshot bypassing @default(now()) to control the age. */
   async function insertAt(version: number, createdAt: Date) {
     await prisma.$executeRaw`
       INSERT INTO "VersionSnapshot" (id, "reportSectionId", version, data, "createdAt")
       VALUES (gen_random_uuid()::text, ${sectionId}, ${version}, '{"items":[],"risks":[],"decisions":[],"stageStatuses":[]}', ${createdAt})
+    `;
+  }
+
+  /** Insert a pinned snapshot bypassing @default(now()) to control the age. */
+  async function insertPinnedAt(version: number, createdAt: Date) {
+    await prisma.$executeRaw`
+      INSERT INTO "VersionSnapshot" (id, "reportSectionId", version, data, kind, "createdAt")
+      VALUES (gen_random_uuid()::text, ${sectionId}, ${version}, '{"items":[],"risks":[],"decisions":[],"stageStatuses":[]}', 'pinned', ${createdAt})
     `;
   }
 
@@ -129,5 +137,42 @@ describe("LeadFormPrismaRepository — time-based retention", () => {
       where: { reportSectionId: sectionId },
     });
     expect(count).toBe(1); // only the new snapshot
+  });
+
+  // add-version-pin: pinned snapshots are retention-exempt (D3).
+
+  it("never deletes a pinned snapshot older than 30 days", async () => {
+    await insertPinnedAt(1, daysAgo(35));
+
+    // createVersionSnapshot runs the retention sweep after creating a new row.
+    await repo.createVersionSnapshot(sectionId);
+
+    const pinned = await prisma.versionSnapshot.findFirst({
+      where: { reportSectionId: sectionId, version: 1 },
+    });
+    expect(pinned).not.toBeNull();
+    expect(pinned?.kind).toBe("pinned");
+  });
+
+  it("pinned snapshot in the 24h–7d hourly window survives thinning", async () => {
+    const hourStart = new Date(Date.now() - (3 * 24 + 2) * 3_600_000);
+    hourStart.setUTCMinutes(0, 0, 0);
+    const sameHour = (m: number) => new Date(hourStart.getTime() + m * 60_000);
+
+    // Pinned at HH:10 — would normally be pruned in favour of HH:50.
+    await insertPinnedAt(1, sameHour(10));
+    // Autosave at HH:50 — newest of the hour, keeps its slot.
+    await insertAt(2, sameHour(50));
+
+    await repo.createVersionSnapshot(sectionId);
+
+    const snapshots = await prisma.versionSnapshot.findMany({
+      where: { reportSectionId: sectionId },
+      select: { version: true, kind: true },
+    });
+    const versions = snapshots.map((s) => s.version);
+    // Both v1 (pinned) and v2 (newest-per-hour) must survive, plus the new one.
+    expect(versions).toContain(1);
+    expect(versions).toContain(2);
   });
 });

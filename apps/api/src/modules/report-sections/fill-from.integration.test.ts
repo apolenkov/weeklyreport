@@ -105,6 +105,10 @@ function createMockRepository(
     async revokeAllSubmitted() {
       return 0;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
+    async setVersionPinned() {
+      return undefined;
+    },
   };
 }
 

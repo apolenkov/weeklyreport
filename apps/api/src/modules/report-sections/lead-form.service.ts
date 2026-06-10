@@ -103,6 +103,21 @@ export class LeadFormService {
     return this.versionHistory.restoreVersion(sectionId, version, userId);
   }
 
+  /** add-version-pin: Pin or unpin a version of a lead's own section. */
+  setVersionPinned(
+    sectionId: string,
+    version: number,
+    pinned: boolean,
+    userId: string,
+  ): ReturnType<VersionHistoryService["setVersionPinned"]> {
+    return this.versionHistory.setVersionPinned(
+      sectionId,
+      version,
+      pinned,
+      userId,
+    );
+  }
+
   /**
    * Create an explicit version snapshot of the current section state.
    * Delegated to {@link SnapshotService}; throttle + content-dedup

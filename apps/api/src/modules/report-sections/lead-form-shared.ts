@@ -85,6 +85,12 @@ export interface LeadFormRepository {
   ): Promise<CrossAuthorSectionRow[]>;
   /** SC-165: Revoke every submitted section in a report in one transaction. */
   revokeAllSubmitted(reportId: string, revokedBy: string): Promise<number>;
+  /** add-version-pin: flip the kind of an existing snapshot to pinned/autosave. */
+  setVersionPinned(
+    sectionId: string,
+    version: number,
+    pinned: boolean,
+  ): Promise<void>;
 }
 
 export interface CrossAuthorSectionRow {

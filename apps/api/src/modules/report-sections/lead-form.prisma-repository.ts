@@ -224,6 +224,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         reportSectionId: row.reportSectionId,
         version: row.version,
         createdAt: row.createdAt,
+        kind: row.kind,
         itemCount: data?.items?.length ?? 0,
         riskCount: data?.risks?.length ?? 0,
         decisionCount: data?.decisions?.length ?? 0,
@@ -487,9 +488,11 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
 
     // Time-based retention: keep all <24 h, 1/hour for 24 h–7 d,
     // 1/day for 7 d–30 d, delete everything >30 d.
+    // Pinned snapshots are always exempted — they are never a deletion candidate.
     await this.prisma.$executeRaw`
       DELETE FROM "VersionSnapshot"
       WHERE "reportSectionId" = ${sectionId}
+        AND "kind" <> 'pinned'
         AND id NOT IN (
           -- Window 1: keep everything from the last 24 hours
           SELECT id FROM "VersionSnapshot"
@@ -804,5 +807,18 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     }
 
     return result;
+  }
+
+  async setVersionPinned(
+    sectionId: string,
+    version: number,
+    pinned: boolean,
+  ): Promise<void> {
+    await this.prisma.versionSnapshot.update({
+      where: {
+        reportSectionId_version: { reportSectionId: sectionId, version },
+      },
+      data: { kind: pinned ? "pinned" : "autosave" },
+    });
   }
 }

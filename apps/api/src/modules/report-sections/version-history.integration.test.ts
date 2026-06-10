@@ -53,7 +53,7 @@ function makeVersions(count: number): VersionSnapshot[] {
     itemCount: 0,
     riskCount: 0,
     decisionCount: 0,
-    pinned: false,
+    kind: "autosave" as const,
   }));
 }
 
@@ -68,6 +68,7 @@ function createMockRepository(
   createVersionSnapshot: ReturnType<typeof vi.fn>;
   restoreVersion: ReturnType<typeof vi.fn>;
   listVersions: ReturnType<typeof vi.fn>;
+  setVersionPinned: ReturnType<typeof vi.fn>;
 } {
   // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy returns Promise<> matching the repository contract
   const createSnapshotFn = vi.fn(async () => 1);
@@ -77,6 +78,8 @@ function createMockRepository(
   );
   // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy returns Promise<> matching the repository contract
   const listVersionsFn = vi.fn(async () => structuredClone(versions));
+  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy returns Promise<> matching the repository contract
+  const setVersionPinnedFn = vi.fn(async () => undefined);
 
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
@@ -128,6 +131,7 @@ function createMockRepository(
     async revokeAllSubmitted() {
       return 0;
     },
+    setVersionPinned: setVersionPinnedFn,
   };
 }
 
@@ -247,5 +251,61 @@ describe("LeadFormService — restoreVersion (integration)", () => {
     await expect(service.restoreVersion(sectionId, 1, userId)).rejects.toThrow(
       `Section ${sectionId} not found`,
     );
+  });
+});
+
+// add-version-pin (5.2): setVersionPinned contract + enum-writer coverage.
+describe("LeadFormService — setVersionPinned (add-version-pin)", () => {
+  it("calls repository setVersionPinned with the correct args (autosave writer)", async () => {
+    const section = makeSection({ status: "draft" });
+    const sections = new Map([[sectionId, section]]);
+    const repo = createMockRepository(sections);
+    const service = new LeadFormService(repo);
+
+    await service.setVersionPinned(sectionId, 2, false, userId);
+
+    expect(repo.setVersionPinned).toHaveBeenCalledWith(sectionId, 2, false);
+  });
+
+  it("calls repository setVersionPinned with pinned=true (pinned writer)", async () => {
+    const section = makeSection({ status: "draft" });
+    const sections = new Map([[sectionId, section]]);
+    const repo = createMockRepository(sections);
+    const service = new LeadFormService(repo);
+
+    await service.setVersionPinned(sectionId, 3, true, userId);
+
+    expect(repo.setVersionPinned).toHaveBeenCalledWith(sectionId, 3, true);
+  });
+
+  it("rejects when the caller is not the section author", async () => {
+    const section = makeSection({ authorId: otherUserId });
+    const sections = new Map([[sectionId, section]]);
+    const service = new LeadFormService(createMockRepository(sections));
+
+    await expect(
+      service.setVersionPinned(sectionId, 1, true, userId),
+    ).rejects.toThrow("Can only pin versions of your own section.");
+  });
+
+  it("rejects when the section is submitted", async () => {
+    const section = makeSection({
+      status: "submitted",
+      submittedAt: new Date(),
+    });
+    const sections = new Map([[sectionId, section]]);
+    const service = new LeadFormService(createMockRepository(sections));
+
+    await expect(
+      service.setVersionPinned(sectionId, 1, true, userId),
+    ).rejects.toThrow("Cannot pin versions on a submitted section.");
+  });
+
+  it("throws when the section is not found", async () => {
+    const service = new LeadFormService(createMockRepository(new Map()));
+
+    await expect(
+      service.setVersionPinned(sectionId, 1, true, userId),
+    ).rejects.toThrow(`Section ${sectionId} not found.`);
   });
 });

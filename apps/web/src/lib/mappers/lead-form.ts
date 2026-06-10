@@ -177,6 +177,7 @@ export interface LeadVersionSnapshot {
   itemCount: number;
   riskCount: number;
   decisionCount: number;
+  pinned: boolean;
 }
 
 export interface LeadCurrentUser {
@@ -558,6 +559,7 @@ export function mapLeadVersions(
     itemCount: v.itemCount,
     riskCount: v.riskCount,
     decisionCount: v.decisionCount,
+    pinned: v.kind === "pinned",
   }));
 }
 

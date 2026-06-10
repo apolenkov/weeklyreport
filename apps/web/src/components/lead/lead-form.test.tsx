@@ -284,6 +284,28 @@ function buildHarness(
         },
         pathFilter: () => ({ queryKey: ["leadForm.requestReopen"] }),
       },
+      // add-version-pin: pin/unpin toggle. The component calls
+      // `trpc.leadForm.setVersionPinned.mutationOptions` unconditionally on
+      // every render (hook is at the top of the component), so the mock must
+      // expose this factory even when no test exercises it.
+      setVersionPinned: {
+        mutationOptions: (
+          passed: {
+            onSuccess?: () => void;
+            onError?: (e: unknown) => void;
+          } = {},
+        ) => {
+          return {
+            ...passed,
+            // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC mutationFn contract (TanStack expects a Promise-returning fn)
+            mutationFn: async (vars: unknown) => {
+              calls.push({ type: "setVersionPinned", vars });
+              return undefined;
+            },
+          };
+        },
+        pathFilter: () => ({ queryKey: ["leadForm.setVersionPinned"] }),
+      },
       crossAuthors: {
         queryOptions: () => ({
           queryKey: ["leadForm.crossAuthors"],
