@@ -34,7 +34,7 @@ function priorityChip(rank: number): ReactNode {
 function productBadge(row: UnifiedSectionRow): ReactNode {
   return (
     <span
-      className="inline-flex max-w-[110px] shrink-0 items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-muted)] px-1.5 text-[9px] font-semibold uppercase leading-4 tracking-wide text-[var(--color-muted-foreground)]"
+      className="inline-flex w-[110px] shrink-0 items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-muted)] px-1.5 text-[9px] font-semibold uppercase leading-4 tracking-wide text-[var(--color-muted-foreground)]"
       title={row.productName}
       data-testid="row-product-badge"
     >

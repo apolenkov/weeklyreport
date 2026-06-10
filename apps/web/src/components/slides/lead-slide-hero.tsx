@@ -85,7 +85,9 @@ function metricSegment(
       <span aria-hidden="true" className="text-[var(--color-muted-foreground)]">
         {icon}
       </span>
-      <span className="text-sm font-bold leading-none text-[var(--color-foreground)]">
+      {/* Fixed value width + tabular digits: switching slides/periods must
+          not shift the capsule layout (feedback round 4). */}
+      <span className="min-w-[3ch] text-center text-sm font-bold leading-none tabular-nums text-[var(--color-foreground)]">
         {value}
       </span>
       <span className="text-[10px] font-medium uppercase tracking-[0.06em] leading-none text-[var(--color-muted-foreground)]">
@@ -135,16 +137,18 @@ export function LeadSlideHero({
        toggle is the only thing on the right. */
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[rgba(0,0,0,0.08)] pb-4">
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+        {/* Fixed badge and name widths keep the capsule at one X across
+            slides/periods (feedback round 4: no floating layout). */}
         <span
           className={[
-            "inline-flex h-11 items-center gap-1.5 rounded-[var(--radius-pill)] border px-3 text-xs font-semibold",
+            "inline-flex h-11 w-[112px] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border px-3 text-xs font-semibold",
             toneClassName,
           ].join(" ")}
         >
           {toneIcon}
           {toneLabel}
         </span>
-        <p className="text-sm font-medium text-[var(--color-muted-foreground)]">
+        <p className="min-w-[150px] truncate text-sm font-medium text-[var(--color-muted-foreground)]">
           {displayName}
           {displayPeriod ? (
             <>
