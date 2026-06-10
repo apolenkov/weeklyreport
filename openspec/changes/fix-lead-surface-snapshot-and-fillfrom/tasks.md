@@ -67,3 +67,12 @@ Decisions D1-D5: `design.md`. NOT STARTED — captured 2026-06-10.
 - [ ] 6.2 Live screenshots: snapshot exit (no dialog), archive toggle
       with count + marked combo, Fill dropdown open (incl. narrow
       viewport), dashed-stripe card; user acceptance before archive.
+      SCREENSHOTS TAKEN 2026-06-10 (as boris@, live :3100, gitignored
+      `.playwright-mcp/lead-surface-fixes/01-06*.png`): 01 toolbar
+      badge "3 archived" + dashed/solid stripes side by side; 02 back
+      from snapshot v2 — zero dialogs (DOM-verified); 03 Fill From
+      portaled, search icon tokenized, Previous badge accent+white;
+      04 combo with "[Archived]" markers (6 options, toggle on);
+      05 narrow 420px viewport — panel fully visible; 06 history
+      summary: 2/3, avg 2, risks "—", "1 draft not included in
+      aggregates." USER ACCEPTANCE PENDING.
