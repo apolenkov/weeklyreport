@@ -2,6 +2,10 @@ import type { UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  customreportPeriodStateTransitionsTotal,
+  customreportReportsSubmittedTotal,
+} from "../../infrastructure/metrics/metrics.registry.js";
+import {
   PeriodAccessError,
   type PeriodRepository,
   PeriodService,
@@ -455,5 +459,164 @@ describe("PeriodService — reopen policy gate (UFB-052)", () => {
 
     await service.reopenPeriod(reportId);
     expect(repo.reopenPeriod).toHaveBeenCalledOnce();
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  Manual-publish telemetry (remove-dead-modules spec)               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Mirror of the same helper in publication.service.test.ts — introspects
+ * a prom-client Counter without leaking registry internals into assertions.
+ */
+async function getCounterValue(
+  counter: {
+    get(): Promise<{
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- prom-client label record
+      values: { value: number; labels: Record<string, any> }[];
+    }>;
+  },
+  labels: Record<string, string>,
+): Promise<number> {
+  const snapshot = await counter.get();
+  const match = snapshot.values.find((entry) =>
+    Object.entries(labels).every(([k, v]) => String(entry.labels[k]) === v),
+  );
+  return match?.value ?? 0;
+}
+
+describe("PeriodService — manual-publish telemetry", () => {
+  it("increments reportsSubmittedTotal once on successful publish of an open period", async () => {
+    const reports = new Map([
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+        },
+      ],
+    ]);
+    const service = new PeriodService(createSpyRepository(reports));
+    const before = await getCounterValue(customreportReportsSubmittedTotal, {
+      state: "published",
+    });
+
+    await service.publishPeriod(reportId, headSession);
+
+    expect(
+      await getCounterValue(customreportReportsSubmittedTotal, {
+        state: "published",
+      }),
+    ).toBe(before + 1);
+  });
+
+  it("increments periodStateTransitionsTotal with from:open on successful publish", async () => {
+    const reports = new Map([
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+        },
+      ],
+    ]);
+    const service = new PeriodService(createSpyRepository(reports));
+    const before = await getCounterValue(
+      customreportPeriodStateTransitionsTotal,
+      { from: "open", to: "published" },
+    );
+
+    await service.publishPeriod(reportId, headSession);
+
+    expect(
+      await getCounterValue(customreportPeriodStateTransitionsTotal, {
+        from: "open",
+        to: "published",
+      }),
+    ).toBe(before + 1);
+  });
+
+  it("increments periodStateTransitionsTotal with from:reopened when re-publishing a reopened period", async () => {
+    const reports = new Map([
+      [
+        reportId,
+        {
+          id: reportId,
+          status: "draft",
+          periodStatus: "reopened",
+          publishedAt: null,
+        },
+      ],
+    ]);
+    const service = new PeriodService(createSpyRepository(reports));
+    const before = await getCounterValue(
+      customreportPeriodStateTransitionsTotal,
+      { from: "reopened", to: "published" },
+    );
+
+    await service.publishPeriod(reportId, headSession);
+
+    expect(
+      await getCounterValue(customreportPeriodStateTransitionsTotal, {
+        from: "reopened",
+        to: "published",
+      }),
+    ).toBe(before + 1);
+  });
+
+  it("increments NO counters when repository.publishPeriod throws", async () => {
+    const repo: PeriodRepository & {
+      publishPeriod: ReturnType<typeof vi.fn>;
+    } = {
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract
+      async getReportById(id: string) {
+        if (id === reportId) {
+          return {
+            id: reportId,
+            status: "draft",
+            periodStatus: "open",
+            publishedAt: null,
+          };
+        }
+        return null;
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- async stub satisfies the PeriodRepository typed slot; throw is synchronous
+      publishPeriod: vi.fn(async () => {
+        throw new Error("DB write failed");
+      }),
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract
+      reopenPeriod: vi.fn(async () => undefined),
+    };
+    const service = new PeriodService(repo);
+
+    const submittedBefore = await getCounterValue(
+      customreportReportsSubmittedTotal,
+      { state: "published" },
+    );
+    const transitionsBefore = await getCounterValue(
+      customreportPeriodStateTransitionsTotal,
+      { from: "open", to: "published" },
+    );
+
+    await expect(service.publishPeriod(reportId, headSession)).rejects.toThrow(
+      "DB write failed",
+    );
+
+    expect(
+      await getCounterValue(customreportReportsSubmittedTotal, {
+        state: "published",
+      }),
+    ).toBe(submittedBefore);
+    expect(
+      await getCounterValue(customreportPeriodStateTransitionsTotal, {
+        from: "open",
+        to: "published",
+      }),
+    ).toBe(transitionsBefore);
   });
 });
