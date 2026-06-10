@@ -177,8 +177,6 @@ async function main() {
         reminderPolicy: (await tx.reminderPolicy.deleteMany({})).count,
         // F1 dropped the Priority model; priorityRank is now a column on Item,
         // cleared by item.deleteMany below. No separate priority wipe.
-        // TODO(PRISMA-TYPECHECK-01): wire prisma/*.ts into a typecheck gate so a
-        // dropped-model ref (tx.<gone>) fails CI instead of crashing at runtime.
         decision: (await tx.decision.deleteMany({})).count,
         risk: (await tx.risk.deleteMany({})).count,
         item: (await tx.item.deleteMany({})).count,
