@@ -1,18 +1,18 @@
 /**
- * Regression for fix-sweep-ui-findings: the priority list keyed on
- * `key={p.rank}`, so when a merged report carried duplicate ranks React logged
- * "Encountered two children with the same key" (226 occurrences in the
- * 2026-06-07 behavioral UI sweep) and could drop/duplicate items. The key now
- * disambiguates with the render index.
+ * Regression for fix-sweep-ui-findings + apply-status-palette: the separate
+ * TOP PRIORITIES section duplicated current-week items 1:1 and was removed
+ * (user feedback 2026-06-10) — prioritized items now sort first in Current
+ * Week and carry an inline PriorityRankBadge. Duplicate ranks must render
+ * without React key warnings (rows key on item.id).
  *
  * VA-0a/VA-0b: verify-a11y regression catalog — unit-rtl high + snapshot rows
- * for ChevronDown aria-hidden, rotation transform, priorities ol structure,
+ * for ChevronDown aria-hidden, rotation transform, prioritized-row structure,
  * and accordion expand/collapse grid behavior.
  */
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { ProductReport } from "../dashboard/mock-data";
+import type { ProductReport, ReportItem } from "../dashboard/mock-data";
 import { ProductAccordion } from "./product-accordion";
 
 function makeReport(overrides?: Partial<ProductReport>): ProductReport {
@@ -32,17 +32,26 @@ function makeReport(overrides?: Partial<ProductReport>): ProductReport {
   };
 }
 
+function makeItem(overrides: Partial<ReportItem> & { id: string }): ReportItem {
+  return {
+    stageLead: "Dev · AL",
+    text: `Item ${overrides.id}`,
+    status: "in-progress",
+    ...overrides,
+  };
+}
+
 /** Report with at least one content item so hasContent=true and ChevronDown renders. */
 const reportWithContent = makeReport({
-  priorities: [{ rank: 1, text: "Ship it" }],
+  currentWeek: [makeItem({ id: "c1", text: "Ship it", priorityRank: 1 })],
 });
 
-describe("ProductAccordion priority keys", () => {
+describe("ProductAccordion prioritized items", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("renders duplicate-rank priorities without a React key warning", () => {
+  it("renders duplicate-rank prioritized items without a React key warning", () => {
     const errorSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
@@ -51,10 +60,10 @@ describe("ProductAccordion priority keys", () => {
       <ProductAccordion
         defaultOpen
         report={makeReport({
-          priorities: [
-            { rank: 1, text: "First priority" },
-            { rank: 1, text: "Second priority" },
-            { rank: 2, text: "Third priority" },
+          currentWeek: [
+            makeItem({ id: "a", text: "First priority", priorityRank: 1 }),
+            makeItem({ id: "b", text: "Second priority", priorityRank: 1 }),
+            makeItem({ id: "c", text: "Third priority", priorityRank: 2 }),
           ],
         })}
       />,
@@ -68,6 +77,62 @@ describe("ProductAccordion priority keys", () => {
       call.some((arg) => String(arg).includes("same key")),
     );
     expect(sameKeyWarning).toBeUndefined();
+  });
+
+  it("sorts prioritized items first (rank asc), unranked keep their order", () => {
+    const { container } = render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          currentWeek: [
+            makeItem({ id: "u1", text: "Unranked one" }),
+            makeItem({ id: "r2", text: "Rank two", priorityRank: 2 }),
+            makeItem({ id: "r1", text: "Rank one", priorityRank: 1 }),
+            makeItem({ id: "u2", text: "Unranked two" }),
+          ],
+        })}
+      />,
+    );
+
+    const texts = [...container.querySelectorAll("div.space-y-1 > div")].map(
+      (row) => row.textContent,
+    );
+    expect(texts[0]).toContain("Rank one");
+    expect(texts[1]).toContain("Rank two");
+    expect(texts[2]).toContain("Unranked one");
+    expect(texts[3]).toContain("Unranked two");
+  });
+
+  it("prioritized item carries a rank badge; unranked items carry none", () => {
+    render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          currentWeek: [
+            makeItem({ id: "r1", text: "Ranked", priorityRank: 1 }),
+            makeItem({ id: "u1", text: "Unranked" }),
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByTitle("Priority 1")).toHaveTextContent("1");
+    expect(screen.queryByTitle("Priority 2")).not.toBeInTheDocument();
+  });
+
+  it("does not render the removed TOP PRIORITIES section even when priorities data is present", () => {
+    render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          currentWeek: [makeItem({ id: "c1" })],
+          priorities: [{ rank: 1, text: "Legacy priority entry" }],
+        })}
+      />,
+    );
+
+    expect(screen.queryByText("Top Priorities")).not.toBeInTheDocument();
+    expect(screen.queryByText("Legacy priority entry")).not.toBeInTheDocument();
   });
 });
 
@@ -110,37 +175,6 @@ describe("ProductAccordion — ChevronDown rotation transform", () => {
     const svg = button?.querySelector("svg");
     expect(svg).not.toBeNull();
     expect((svg as SVGElement).style.transform).toBe("rotate(0deg)");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// VA-0a unit-rtl high: Priorities list items key stability
-// (composite rank+index key means same-rank items all render without warning)
-// ---------------------------------------------------------------------------
-
-describe("ProductAccordion — Priorities list key stability", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("all priorities render in order even when ranks are unique", () => {
-    render(
-      <ProductAccordion
-        defaultOpen
-        report={makeReport({
-          priorities: [
-            { rank: 1, text: "Alpha" },
-            { rank: 2, text: "Beta" },
-            { rank: 3, text: "Gamma" },
-          ],
-        })}
-      />,
-    );
-
-    const items = screen.getAllByRole("listitem");
-    expect(items[0]).toHaveTextContent("Alpha");
-    expect(items[1]).toHaveTextContent("Beta");
-    expect(items[2]).toHaveTextContent("Gamma");
   });
 });
 
@@ -190,24 +224,24 @@ describe("ProductAccordion — ChevronDown SVG snapshot", () => {
 });
 
 // ---------------------------------------------------------------------------
-// VA-0b snapshot: Priorities ol semantic structure
+// VA-0b snapshot: prioritized current-week row structure (replaces the
+// removed Priorities ol snapshot — the ol no longer exists)
 // ---------------------------------------------------------------------------
 
-describe("ProductAccordion — Priorities ol snapshot", () => {
-  it("priorities section renders an ol element with correct structure", () => {
+describe("ProductAccordion — prioritized row snapshot", () => {
+  it("rank-1 current-week row structure matches snapshot", () => {
     const { container } = render(
       <ProductAccordion
         defaultOpen
         report={makeReport({
-          priorities: [
-            { rank: 1, text: "Top item" },
-            { rank: 2, text: "Second item" },
+          currentWeek: [
+            makeItem({ id: "r1", text: "Top item", priorityRank: 1 }),
           ],
         })}
       />,
     );
-    const ol = container.querySelector("ol");
-    expect(ol).not.toBeNull();
-    expect(ol).toMatchSnapshot();
+    const row = container.querySelector("div.space-y-1 > div");
+    expect(row).not.toBeNull();
+    expect(row).toMatchSnapshot();
   });
 });

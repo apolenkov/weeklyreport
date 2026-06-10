@@ -125,11 +125,11 @@ export function SdlcPipeline({
         <div
           className="rounded-lg p-3"
           style={{
-            // apply-status-palette: card body + amber stripe instead of the
-            // former #fffbeb yellow flood.
-            background: "var(--color-card)",
-            border: "1px solid rgba(212,160,23,0.35)",
-            borderLeft: "3px solid var(--color-status-at-risk-border)",
+            // User feedback 2026-06-10: the advisory must NOT read as
+            // another product card — muted amber band (chip at-risk tint),
+            // no card ring and no left stripe (the stripe idiom belongs to
+            // the product-card status language).
+            background: "var(--color-chip-at-risk-bg)",
           }}
           role="note"
         >
@@ -142,12 +142,12 @@ export function SdlcPipeline({
               ⚠
             </span>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-[var(--color-foreground)]">
+              <p className="text-sm font-semibold text-[var(--color-chip-at-risk-text)]">
                 {unbackedStages.length === 1
                   ? "1 stage has no matching risk written."
                   : `${unbackedStages.length} stages have no matching risk written.`}
               </p>
-              <p className="mt-0.5 text-[12px] text-[var(--color-muted-foreground)]">
+              <p className="mt-0.5 text-[12px] text-[var(--color-chip-at-risk-text)]">
                 Open Risks &amp; Blockers below and use{" "}
                 <strong>+ Add Risk</strong> to describe what's blocking.
               </p>
@@ -157,10 +157,9 @@ export function SdlcPipeline({
                     key={`${s.productId}::${s.stageName}`}
                     className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2 py-0.5"
                     style={{
-                      background:
-                        s.severity === "blocked"
-                          ? "var(--color-chip-blocked-bg)"
-                          : "var(--color-chip-at-risk-bg)",
+                      // Pills sit ON the amber band — white body keeps them
+                      // legible there.
+                      background: "var(--color-card)",
                       color:
                         s.severity === "blocked"
                           ? "var(--color-chip-blocked-text)"

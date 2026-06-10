@@ -148,6 +148,7 @@ describe("mapWeeklyReport", () => {
               tag: "auth",
               workflowStatus: "in_progress",
               carriedOver: false,
+              stageIds: ["Dev", "Testing"],
             },
             {
               id: "i2",
@@ -220,8 +221,10 @@ describe("mapWeeklyReport", () => {
     expect(expectDefined(crmReport?.currentWeek[0]).text).toBe(
       "OAuth integration",
     );
+    // stageLead carries the item's REAL stage tags (was hardcoded "Dev"
+    // for every item before apply-status-palette).
     expect(expectDefined(crmReport?.currentWeek[0]).stageLead).toBe(
-      "Dev \u00B7 Т1",
+      "Dev+Testing \u00B7 Т1",
     );
     expect(expectDefined(crmReport?.nextWeek[0]).stageLead).toBe("Planned");
     expect(crmReport?.risks).toHaveLength(1);

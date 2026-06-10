@@ -102,3 +102,35 @@
   - Status: screenshots delivered 2026-06-10; two rounds of live feedback
     already folded in (no face glyph + corner lock; uniform card bodies).
     Awaiting final «да» on the result as shipped.
+
+## 5. Live feedback round 2 (user, 2026-06-10, during 4.3 review)
+
+- [x] 5.1 Remove the TOP PRIORITIES section from `product-accordion.tsx` —
+      it duplicated current-week items 1:1. Prioritized items now sort first
+      in Current Week (rank asc, unranked keep order) and carry an inline
+      gold `PriorityRankBadge`; rank-1 rows keep the warm
+      `--color-priority-row-bg` tint. `priorityRank` plumbed through
+      `WeeklyReportItem` / `ReportItem` and the grouper. Print page keeps its
+      own priorities list (different surface, untouched).
+- [x] 5.2 Fix the "Dev everywhere" bug: `weekly-report-groupers.ts`
+      hardcoded `Dev ·` into every item badge and `· Dev` into every risk
+      badge. Badges now show the item's/risk's REAL stage tags from
+      `stageIds` (joined with `+`), falling back to initials/product-name
+      when no stages are set. Mapper test updated to assert real stages
+      (`Dev+Testing · Т1`). - Found while verifying: risk/decision badges can resolve the product
+      name as "Unknown" (`projectNames.get(...) ?? "Unknown"` misses when
+      the risk's projectId is not among the author's section projects).
+      PRE-EXISTING (visible in the before-screenshots as "Unknown · Dev");
+      out of this change's scope — flagged for a follow-up.
+- [x] 5.3 Make the unbacked-risk advisory visually distinct from product
+      cards (it had become the same white-card-plus-stripe idiom): muted
+      amber band (`--color-chip-at-risk-bg`), text in
+      `--color-chip-at-risk-text`, pills on a white body, and — follow-up
+      user feedback — NO left stripe (the stripe idiom belongs to the
+      product-card status language). Product cards stay white; the warning
+      reads as a warning.
+- [x] 5.4 Re-verify: gates green (typecheck / lint / test 900 / build);
+      accordion priority tests rewritten to the new inline-rank contract
+      (duplicate ranks keyed by item.id — no React key warning); AFTER
+      screenshots in `/tmp/apply-status-palette-evidence/`
+      (`feedback-after-*.png`).
