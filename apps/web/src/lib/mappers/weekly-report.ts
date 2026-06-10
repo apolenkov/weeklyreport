@@ -23,6 +23,7 @@ import type { WeeklyReportReadModel } from "@customreport/shared";
 
 import {
   buildProductToAuthorMap,
+  buildProjectNameMap,
   findNeedsAttention,
   formatWeekRange,
   groupDecisionsByProject,
@@ -50,9 +51,16 @@ export type * from "./weekly-report-types";
 export function mapWeeklyReport(
   api: WeeklyReportReadModel,
 ): MapWeeklyReportResult {
+  const projectNames = buildProjectNameMap(
+    api.leadSections,
+    api.portfolioOverview,
+  );
   const itemsByProject = groupItemsByProject(api.leadSections);
-  const risksByProject = groupRisksByProject(api.leadSections);
-  const decisionsByProject = groupDecisionsByProject(api.leadSections);
+  const risksByProject = groupRisksByProject(api.leadSections, projectNames);
+  const decisionsByProject = groupDecisionsByProject(
+    api.leadSections,
+    projectNames,
+  );
   const prioritiesByProject = groupPrioritiesByProject(api.leadSections);
   const authorsByProject = buildProductToAuthorMap(api.leadSections);
 

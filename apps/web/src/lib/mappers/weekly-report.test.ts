@@ -499,3 +499,72 @@ describe("mapWeeklyReport", () => {
     expect(result.period.isCurrent).toBe(false); // published periods aren't "current"
   });
 });
+
+// ---------------------------------------------------------------------------
+// fix-product-name-resolution: badges resolve product names report-wide, not
+// only from the owning section's projects list (regression for the
+// "Unknown · <stage>" badges found during apply-status-palette acceptance).
+// ---------------------------------------------------------------------------
+
+describe("product name resolution (fix-product-name-resolution)", () => {
+  it("resolves risk and decision badges for projects outside the author's section", () => {
+    const report = baseReport({
+      submissionCount: 1,
+      totalLeads: 1,
+      portfolioOverview: [
+        {
+          productId: PROJECT_B,
+          productName: "Mobile",
+          worstStatus: "green",
+          stageCount: 7,
+          leadNames: ["Igor V."],
+        },
+      ],
+      leadSections: [
+        {
+          reportSectionId: SECTION_A,
+          reportId: REPORT_ID,
+          authorId: AUTHOR_A,
+          authorName: "Тимлид 1",
+          status: "submitted",
+          submittedAt: new Date("2026-04-19T18:00:00Z"),
+          // The author's own section knows only PROJECT_A…
+          projects: [
+            {
+              projectId: PROJECT_A,
+              projectName: "CRM Platform",
+              trafficLight: "yellow",
+            },
+          ],
+          items: [],
+          // …but files a risk and a decision against PROJECT_B.
+          risks: [
+            {
+              id: "r-cross",
+              projectId: PROJECT_B,
+              risk: "Cross-project risk",
+              impact: "Impact",
+              mitigation: "Mitigation",
+              stageIds: ["Analysis"],
+            },
+          ],
+          decisions: [
+            {
+              id: "d-cross",
+              text: "Cross-project decision",
+              owner: "Owner",
+              impact: "Impact",
+              productId: PROJECT_B,
+            },
+          ],
+        },
+      ],
+    });
+
+    const result = mapWeeklyReport(report);
+    const mobile = result.products.find((p) => p.id === PROJECT_B);
+
+    expect(expectDefined(mobile?.risks[0]).badge).toBe("Mobile · Analysis");
+    expect(expectDefined(mobile?.decisions[0]).badge).toBe("Mobile");
+  });
+});
