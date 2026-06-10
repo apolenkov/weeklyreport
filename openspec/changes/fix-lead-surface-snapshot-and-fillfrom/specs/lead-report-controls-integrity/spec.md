@@ -24,7 +24,7 @@ state MUST NOT render (preferred) or MUST carry an explicit empty-state
 explanation. Specifically, the archive toggle on the lead report page
 renders only when archived periods exist for this lead; when rendered,
 it shows how many ("N archived") and toggling visibly changes the period
-list, with archived entries marked in the period combo.
+list, with archived entries marked in the period combo and in the Fill From list.
 
 #### Scenario: a lead with no archived periods
 
