@@ -29,13 +29,16 @@ labels, and a visually richer slide (icons, stronger layout).
 
 ### New Capabilities
 
-<!-- to be defined together with the chosen concept when this change is
-     picked up; likely a slide-layout invariant (quadrant structure +
-     single-source product attribution) -->
+- `lead-slide-quadrants`: durable layout invariant for the lead "Own"
+  slide — strict 2×2 framed quadrant grid with empty-state floors and
+  single-source product attribution (hero legend + status dots, no
+  per-row product names). Concept B, chosen by the user 2026-06-10.
 
 ### Modified Capabilities
 
-<!-- none yet -->
+<!-- none: status-color-semantics already permits adding a named status
+     token, which covers the --color-status-dot-at-risk naming refactor
+     (design.md D6) -->
 
 ## Impact
 
