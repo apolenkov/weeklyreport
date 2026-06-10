@@ -74,7 +74,7 @@ describe("FillFromButton", () => {
     expect(fillButton).toBeDisabled();
   });
 
-  it("marks archived periods with the [Archived] prefix", () => {
+  it("renders an Archived badge on archived rows and not on non-archived rows", () => {
     const periods: ReportPeriod[] = [
       {
         id: "2026-W16",
@@ -100,8 +100,16 @@ describe("FillFromButton", () => {
       screen.getByRole("button", { name: "Choose past report to fill from" }),
     );
 
-    expect(screen.getByText(/\[Archived\] Week 16/)).toBeInTheDocument();
-    expect(screen.getByText(/Week 15/)).not.toHaveTextContent("[Archived]");
+    // Archived row: badge present and colocated with the week label
+    const archivedBadge = screen.getByText("Archived");
+    expect(archivedBadge).toBeInTheDocument();
+    const week16Label = screen.getByText(/Week 16/);
+    expect(archivedBadge.closest("div")).toContainElement(week16Label);
+
+    // Non-archived row: no Archived badge rendered at all
+    expect(screen.getByText(/Week 15/).closest("div")).not.toContainElement(
+      archivedBadge,
+    );
   });
 
   it("shows no-match message when search yields no results", () => {

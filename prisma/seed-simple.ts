@@ -1490,13 +1490,17 @@ async function main() {
   // Galina (section 409, Design) — same 5-section spread.
   // When Vasily opens /lead/report/<id> he sees all 3 contributors' content
   // merged inline in each of the 5 accordion sections with 🔒 next to author name.
+
   const borisSectionId = `a0000000-0000-4000-8000-000000000407`;
   await prisma.projectStatus.create({
     data: {
       id: "a0000000-0000-4000-8000-000000006791",
       reportSectionId: borisSectionId,
       projectId: PROD_CRM_SALES,
-      status: TrafficLightStatus.yellow,
+      // D4: Boris has no own seeded StageStatus rows on PROD_CRM_SALES, so this
+      // row must not claim a severity — a status hue needs a visible stage
+      // correlate. Green is the calm default the app itself would aggregate to.
+      status: TrafficLightStatus.green,
     },
   });
   await prisma.item.create({
