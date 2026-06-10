@@ -7,6 +7,11 @@ import { createPortal } from "react-dom";
 import { useSdlcTooltip } from "../ui/sdlc-tooltip";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import type { StageAssignment, StageStatus } from "./mock-data";
+import {
+  STAGE_ICONS,
+  STATUS_CONFIG,
+  STATUS_OPTIONS,
+} from "./stage-chip-config";
 
 interface StageChipProps {
   readonly stage: StageAssignment;
@@ -22,42 +27,17 @@ interface StageChipProps {
   readonly crossAuthorInfo?: { itemCount: number; riskCount: number };
 }
 
-const STATUS_CONFIG: Record<
-  StageStatus,
-  { icon: string; bg: string; text: string; border: string }
-> = {
-  "on-track": {
-    icon: "✓",
-    bg: "var(--color-success)",
-    text: "var(--color-primary)",
-    border: "var(--color-starbucks-accent)",
-  },
-  "at-risk": {
-    icon: "!",
-    bg: "#fef3c7",
-    text: "#8a6d1b",
-    border: "#d4a017",
-  },
-  blocked: {
-    icon: "✕",
-    bg: "#fee2e2",
-    text: "var(--color-destructive)",
-    border: "var(--color-destructive)",
-  },
-  empty: {
-    icon: "○",
-    bg: "#f8f6f2",
-    text: "var(--color-muted-foreground)",
-    border: "rgba(0,0,0,0.15)",
-  },
-};
-
-const STATUS_OPTIONS: { value: StageStatus; label: string }[] = [
-  { value: "on-track", label: "✓ On Track" },
-  { value: "at-risk", label: "! At Risk" },
-  { value: "blocked", label: "✕ Blocked" },
-  { value: "empty", label: "○ Clear" },
-];
+// Status/icon config lives in stage-chip-config.ts (apply-status-palette).
+function StageIconGlyph({ stageName }: { readonly stageName: string }) {
+  const StageIcon = STAGE_ICONS[stageName];
+  if (!StageIcon) return null;
+  return (
+    <StageIcon
+      className="mr-1 inline-block h-[12px] w-[12px] align-[-1px]"
+      aria-hidden="true"
+    />
+  );
+}
 
 export function StageChip({
   stage,
@@ -118,7 +98,7 @@ export function StageChip({
   }, [showPopover]);
 
   const chipClasses = [
-    "w-full p-2 rounded-lg text-center text-xs font-semibold transition-[background-color,border-color,box-shadow,opacity,filter] duration-150",
+    "relative w-full p-2 rounded-lg text-center text-xs font-semibold transition-[background-color,border-color,box-shadow,opacity,filter] duration-150",
     isEditable && !isEmpty
       ? "cursor-pointer hover:opacity-80 hover:saturate-50 hover:shadow-[0_0_0_2.5px_rgba(0,0,0,0.12)]"
       : "",
@@ -223,12 +203,20 @@ export function StageChip({
         aria-disabled={!isEditable}
         tabIndex={isEditable || isLocked ? 0 : -1}
       >
-        {config.icon} {stage.stageName}
+        {/* User feedback 2026-06-10: no status glyph on the chip face — the
+            stage icon + label carry the status through color alone (the
+            popover/tooltip/aria-label still name the status textually).
+            The lock sits as a small corner badge instead of a third inline
+            icon. */}
+        <StageIconGlyph stageName={stage.stageName} />
+        {stage.stageName}
         {isLocked && (
-          <Lock
-            className="ml-1 inline-block h-[11px] w-[11px] opacity-50"
+          <span
+            className="absolute -top-1.5 -right-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full border border-[rgba(0,0,0,0.12)] bg-white"
             aria-hidden="true"
-          />
+          >
+            <Lock className="h-[9px] w-[9px] text-[var(--color-muted-foreground)]" />
+          </span>
         )}
       </button>
 

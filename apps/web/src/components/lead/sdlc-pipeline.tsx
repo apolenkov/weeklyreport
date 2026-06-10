@@ -1,5 +1,7 @@
 "use client";
 
+import type { CSSProperties } from "react";
+
 import type { Product, RiskEntry, StageStatus } from "./mock-data";
 import { StageChip } from "./stage-chip";
 import { canonicalStageName, splitStageNames } from "./stage-tags";
@@ -56,16 +58,25 @@ interface SdlcPipelineProps {
   readonly crossAuthors?: readonly CrossAuthorEntry[];
 }
 
-function getProductBackground(status: StageStatus): string {
-  if (status === "blocked") return "#fdf8f8";
-  if (status === "at-risk") return "#fffcf5";
-  return "var(--color-background)";
-}
+// apply-status-palette (memo T5 opt 3 + user feedback 2026-06-10): every
+// product card shares ONE body — neutral card surface, neutral ring — and
+// only the 4px left-stripe color changes with status (same idiom as the
+// unbacked-risk advisory above). paddingLeft compensates the 3px-wider
+// left border so content padding reads equal on all sides.
+const STRIPE_BY_STATUS: Record<StageStatus, string> = {
+  blocked: "var(--color-chip-blocked-border)",
+  "at-risk": "var(--color-status-at-risk-border)",
+  "on-track": "var(--color-chip-on-track-border)",
+  empty: "var(--color-border)",
+};
 
-function getProductBorderColor(status: StageStatus): string {
-  if (status === "blocked") return "rgba(200,32,20,0.15)";
-  if (status === "at-risk") return "rgba(212,160,23,0.15)";
-  return "var(--color-muted)";
+function getProductCardStyle(status: StageStatus): CSSProperties {
+  return {
+    background: "var(--color-card)",
+    border: "1px solid rgba(0,0,0,0.08)",
+    borderLeft: `4px solid ${STRIPE_BY_STATUS[status]}`,
+    paddingLeft: "calc(1rem - 3px)",
+  };
 }
 
 export function SdlcPipeline({
@@ -114,26 +125,29 @@ export function SdlcPipeline({
         <div
           className="rounded-lg p-3"
           style={{
-            background: "#fffbeb",
+            // apply-status-palette: card body + amber stripe instead of the
+            // former #fffbeb yellow flood.
+            background: "var(--color-card)",
             border: "1px solid rgba(212,160,23,0.35)",
+            borderLeft: "3px solid var(--color-status-at-risk-border)",
           }}
           role="note"
         >
           <div className="flex items-start gap-2">
             <span
               className="mt-0.5 inline-flex items-center justify-center text-base"
-              style={{ color: "#d4a017" }}
+              style={{ color: "var(--color-status-at-risk-border)" }}
               aria-hidden="true"
             >
               ⚠
             </span>
             <div className="flex-1">
-              <p className="text-sm font-semibold" style={{ color: "#8a6d1b" }}>
+              <p className="text-sm font-semibold text-[var(--color-foreground)]">
                 {unbackedStages.length === 1
                   ? "1 stage has no matching risk written."
                   : `${unbackedStages.length} stages have no matching risk written.`}
               </p>
-              <p className="mt-0.5 text-[12px]" style={{ color: "#8a6d1b" }}>
+              <p className="mt-0.5 text-[12px] text-[var(--color-muted-foreground)]">
                 Open Risks &amp; Blockers below and use{" "}
                 <strong>+ Add Risk</strong> to describe what's blocking.
               </p>
@@ -144,11 +158,13 @@ export function SdlcPipeline({
                     className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2 py-0.5"
                     style={{
                       background:
-                        s.severity === "blocked" ? "#fee2e2" : "#fef3c7",
+                        s.severity === "blocked"
+                          ? "var(--color-chip-blocked-bg)"
+                          : "var(--color-chip-at-risk-bg)",
                       color:
                         s.severity === "blocked"
-                          ? "var(--color-destructive)"
-                          : "#8a6d1b",
+                          ? "var(--color-chip-blocked-text)"
+                          : "var(--color-chip-at-risk-text)",
                     }}
                   >
                     <span className="font-semibold">
@@ -168,10 +184,7 @@ export function SdlcPipeline({
         <div
           key={product.id}
           className="rounded-xl p-4"
-          style={{
-            background: getProductBackground(product.overallStatus),
-            border: `1px solid ${getProductBorderColor(product.overallStatus)}`,
-          }}
+          style={getProductCardStyle(product.overallStatus)}
         >
           {/* Product header — SDLC-1 (Phase 33-04): replace plain riskSummary
               text with an inline-flex pill featuring a *pulsing* red dot
