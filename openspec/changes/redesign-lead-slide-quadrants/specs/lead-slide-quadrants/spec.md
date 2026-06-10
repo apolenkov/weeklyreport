@@ -23,59 +23,49 @@ behavior of the grid wrapper MUST be preserved.
 
 - **WHEN** one quadrant has many rows and its neighbor has none
 - **THEN** all four quadrants render as visually equal framed zones
-- **AND** rows cap at the section limit with a "+N more" overflow line
+- **AND** every row renders — no count-based truncation (user direction
+  2026-06-10: "+N more" is not acceptable on this slide)
 
-### Requirement: Product attribution is single-sourced via legend and status dots
+### Requirement: Product attribution uses neutral identity badges
 
-Product identity on the lead "Own" slide MUST be established once by the
-hero chip strip (`SlideProductChips`) acting as the legend, plus a compact
-status-colored dot per row — the per-row product-name column MUST NOT
-exist. Dot colors MUST come from the same status→color mapping the legend
-uses (single-sourced, exported from `slide-product-chips.tsx`). With a
-single real product, rows render flat: no dots and no legend. Rows from
-the `cross-product` pseudo-entry carry the muted "empty" dot and never
-appear in the legend.
+Product identity on the lead "Own" slide MUST be carried by a compact
+NEUTRAL badge per row (muted fill, truncated product name, `title` with
+the full name) plus the hero chip strip above — the old fixed-width
+product-name column MUST NOT return. Row badges MUST NOT carry status
+colors: a status hue next to a row reads as that row's own severity
+(user direction 2026-06-10, round 3 — replaced the earlier
+status-colored dots). Status stays exclusively on the chip strip's dots.
+With a single real product, rows render flat: no badges. Rows from the
+`cross-product` pseudo-entry carry the "Shared context" badge and never
+appear in the chip strip.
 
 #### Scenario: a multi-product slide renders rows
 
 - **WHEN** the slide aggregates two or more real products
-- **THEN** each row leads with an 8px dot colored by that product's worst
-  status, identical to the legend chip color
-- **AND** no row repeats the product name as a text column
+- **THEN** each row leads with a neutral badge naming its product
+- **AND** the badge carries no status color
 
 #### Scenario: a single-product slide renders rows
 
 - **WHEN** the slide has exactly one real product
-- **THEN** rows render without dots and the legend is not shown
-
-### Requirement: Row dots carry non-color cues
-
-Because dot hue alone fails color-blind users (WCAG 1.4.1), every row dot
-MUST carry the product name via `title` and a visually-hidden (`sr-only`)
-text node. The gold `P{n}` priority chip remains the rank cue and MUST
-NOT be repurposed for product attribution.
-
-#### Scenario: a screen reader visits a row
-
-- **WHEN** assistive technology reads a multi-product row
-- **THEN** the product name is announced from the visually-hidden text
-- **AND** a sighted user can hover the dot to see the product name
+- **THEN** rows render without badges
 
 ### Requirement: Quadrant colors stay inside the existing status system
 
-Quadrant stripes, headers, and dots MUST use existing named tokens:
-section headers render neutral (muted foreground, hierarchy via
-typography weight); the Risks stripe uses the amber at-risk accent; red
-appears only on dots of blocked products; gold stays reserved for the
-priority chip. Any status color the slide introduces MUST resolve through
-a named `--color-*` token (per `status-color-semantics`), including the
-at-risk dot value, which MUST be referenced via a named token rather than
-an inline hex literal.
+Quadrant stripes and headers MUST use existing named tokens: section
+headers render neutral (muted foreground, hierarchy via typography
+weight); the Risks stripe uses the amber at-risk accent; the Decisions
+stripe uses the blue `--color-decisions-accent` token (user sign-off
+2026-06-10); red appears only on the chip strip's blocked-product dots;
+gold stays reserved for the priority chip. Any status color the slide
+introduces MUST resolve through a named `--color-*` token (per
+`status-color-semantics`), including the at-risk chip dot value, which
+MUST be referenced via a named token rather than an inline hex literal.
 
 #### Scenario: the slide renders all four quadrants with mixed content
 
-- **WHEN** the slide renders quadrants, stripes, dots, and priority chips
-  together
+- **WHEN** the slide renders quadrants, stripes, badges, and priority
+  chips together
 - **THEN** all section headers are neutral-colored
-- **AND** red appears only on blocked-product dots
+- **AND** red appears only on the chip strip's blocked-product dots
 - **AND** every status color resolves through a named token
