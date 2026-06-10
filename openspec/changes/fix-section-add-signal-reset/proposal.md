@@ -40,9 +40,11 @@ About 10 lines of production code, plus regression tests:
    `current-week-section-add-signal.test.tsx`: fail at HEAD, pass after
    the fix.
 
-No spec delta: this change RESTORES compliance with the existing
-`lead-report-controls-integrity` requirement "View-state transitions
-never open dialogs", which is the acceptance contract.
+Spec delta: the existing `lead-report-controls-integrity` requirement
+"View-state transitions never open dialogs" is tightened to name all
+four add-signal counters explicitly and gains a Risk/Decision
+snapshot-return scenario; the regression tests are its acceptance
+contract.
 
 ## Sequencing
 
@@ -72,3 +74,5 @@ trivially.
 - `apps/web/src/components/lead/lead-form.tsx` (counter reset, ~4
   lines).
 - Two new regression test files beside the sections.
+- `specs/lead-report-controls-integrity/spec.md` (delta: MODIFIED
+  requirement, synced to the durable spec at archive time).

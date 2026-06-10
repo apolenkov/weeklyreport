@@ -107,6 +107,43 @@ the new "snapshot payload not yet loaded" scenario (D4). Per the
 driver-verify lesson, sign-off additionally requires a live-browser
 smoke of snapshot navigation and cross-author chips.
 
+**Unit-test contract for the new modules.** Fixtures are transcribed
+from the current inline logic's outputs, not idealized expectations —
+the tests pin today's behavior, byte for byte.
+
+`lead-cross-author.test.ts` pins:
+
+- `mapForeignItems('current')` and `('next')` produce identical shapes
+  differing only by the type filter.
+- Workflow mapping equals `workflowToItemStatus` for
+  `done`/`in_progress`/`blocked` and yields `'planned'` for anything
+  else (the `coerceWorkflowToItemStatus` contract, D3).
+- Item ids are `foreign:<authorId>:<itemId>`.
+- `productName` falls back to `projectId` when `nameById` misses.
+- Risk severity coerces every non-`'blocked'` value to `'at-risk'`.
+- Decision `deadline`: `Date` → `'yyyy-mm-dd'` string; null passes
+  through.
+- `buildCrossAuthorStageMap` joins `crossAuthors` ×
+  `crossAuthorSections` by `authorId`, keys via `normalizeStageName`,
+  and derives status via `deriveEffectiveStageStatus(stageEntry,
+stageRisks, stageItems)`.
+- `applyCrossAuthorStageOverrides` rewrites ONLY
+  `ownership === 'unassigned'` stages to `'locked'` with
+  assignee + status.
+
+`lead-snapshot.test.ts` pins:
+
+- `buildSnapshotStageMap` attaches risks/items only when `stageName`
+  is present and the stage entry exists.
+- `applySnapshotStageOverrides` skips `ownership === 'locked'` stages
+  and derives via `trafficToStageStatus` +
+  `deriveEffectiveStageStatus`.
+- `mapSnapshotItems` filters by type with `snap:cw:`/`snap:nw:` index
+  ids and `priorityRank` null-coalescing.
+- In snap mode with a null payload all four projections return `[]`
+  (never the current draft) — the `lead-report-controls-integrity`
+  acceptance hook (D4).
+
 ## Invariants Touched
 
 - `lead-report-controls-integrity` — preserved, and the snapshot

@@ -40,7 +40,7 @@ these files.
       effect at line 136, add the readOnlyRef pattern copied verbatim
       from `current-week-section.tsx:137-143`
       (`const readOnlyRef = useRef(readOnly); readOnlyRef.current =
-  readOnly;` plus the D1 comment); in the effect body replace
+readOnly;` plus the D1 comment); in the effect body replace
       `if (readOnly) return;` with `if (readOnlyRef.current) return;`;
       change deps `[addSignal, readOnly, firstProductId]` →
       `[addSignal, firstProductId]`. Add `useRef` to the React import.

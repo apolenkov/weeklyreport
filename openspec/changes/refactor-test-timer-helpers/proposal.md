@@ -42,8 +42,12 @@ polling timer is itself faked and the test hangs.
 ## Sequencing
 
 Wave 1 — land BEFORE `refactor-web-trpc-test-harness` (same 4 test
-files; this change first keeps the harness diffs clean) and before any
-lead-form change.
+files; this change first keeps the harness diffs clean) and before the
+Wave-2 lead cluster (`hoist-query-error-policy` →
+`refactor-lead-mappers` → `refactor-lead-dialog-lifecycle`). The
+Wave-0 bug fix `fix-section-add-signal-reset` is independent: its
+small `lead-form.tsx` edit touches no timer helpers and may land in
+either order.
 
 ## Non-goals
 

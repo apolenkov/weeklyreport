@@ -37,28 +37,37 @@ never regenerate snapshots to silence a diff):**
       `applyCrossAuthorStageOverrides(products, map)` (rewrite ONLY
       `ownership === 'unassigned'` stages to `'locked'` with
       assignee+status), `mapForeignItems(sections, nameById, type:
-  'current' | 'next')` deduplicating the byte-identical pair,
+'current' | 'next')` deduplicating the byte-identical pair,
       `mapForeignRisks`, `mapForeignDecisions`. Replace the two inline
-      workflow ternaries with `workflowToItemStatus` + explicit
-      `'planned'` fallback, preserving exact semantics: `stageIds: i.stageNames`
-      field choice, `foreign:<authorId>:<id>` id scheme, productName
-      fallback to projectId, severity coercion (non-`'blocked'` →
-      `'at-risk'`), `deadline.toISOString().slice(0, 10)` and null
-      passthrough. Tests per the contract in `design.md`. Commit is
+      workflow ternaries with the exported
+      `coerceWorkflowToItemStatus(ws: string)` helper (design D3:
+      delegates known enum values to `workflowToItemStatus`, explicit
+      `'planned'` fallback), preserving exact semantics:
+      `stageIds: i.stageNames` field choice, `foreign:<authorId>:<id>`
+      id scheme, productName fallback to projectId, severity coercion
+      (non-`'blocked'` → `'at-risk'`),
+      `deadline.toISOString().slice(0, 10)` and null passthrough.
+      Tests per the "Unit-test contract" in `design.md` D5. Commit is
       additive and green.
 - [ ] 1.2 Add `apps/web/src/lib/mappers/lead-snapshot.ts` +
       `lead-snapshot.test.ts`; export via `mappers/index.ts`.
-      Port `lead-form.tsx:815-865` (snapshot stage map:
+      Port as pure functions: `buildSnapshotStageMap(payload)` from
+      `lead-form.tsx:815-865` (snapshot stage map:
       `normalizeStageName` keying, risks/items attach only when
-      stageName present, missing-stageName skip), `:869-898`
+      stageName present, missing-stageName skip),
+      `applySnapshotStageOverrides(products, map)` from `:869-898`
       (own-stage override skipping `ownership === 'locked'`,
-      `trafficToStageStatus` + `deriveEffectiveStageStatus`),
-      `:904-1019` (`SnapPayload` structural type, `snap:cw:`/`snap:nw:`
-      index ids, priorityRank null-coalescing, `snapWorkflowToStatus`
-      replaced by the shared coercion). Encode the invariant: in snap
+      `trafficToStageStatus` + `deriveEffectiveStageStatus`), and
+      `mapSnapshotItems`/`mapSnapshotRisks`/`mapSnapshotDecisions(payload,
+nameById, authorName)` from `:904-1019` (`SnapPayload` structural
+      type, `snap:cw:`/`snap:nw:` index ids, priorityRank
+      null-coalescing, `snapWorkflowToStatus` replaced by the shared
+      `coerceWorkflowToItemStatus` imported from
+      `lead-cross-author.ts`). Encode the invariant: in snap
       mode with a null payload ALL FOUR projections return `[]` —
       never the current draft (lead-report-controls-integrity
-      acceptance hook). Commit is additive and green.
+      acceptance hook). Tests per the "Unit-test contract" in
+      `design.md` D5. Commit is additive and green.
 
 ## 2. web — swap call sites in lead-form.tsx (sequential)
 

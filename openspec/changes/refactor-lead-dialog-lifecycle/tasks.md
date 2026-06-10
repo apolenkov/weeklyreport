@@ -17,7 +17,9 @@ run full gates and read the whole diff before each commit.
       `lead-form.tsx` `onViewVersion` resets all four add-signal
       counters, and `risks-section-add-signal.test.tsx` +
       `decisions-section-add-signal.test.tsx` exist and are green.
-- [ ] 0.2 `require-risk-stage` and `refactor-lead-mappers` have landed
+- [ ] 0.2 `require-risk-stage`, `fix-lead-stripe-and-archived-badges`
+      (archived — same lead surface; live verification needs a settled
+      surface), and `refactor-lead-mappers` have landed
       (`openspec list` no longer shows them active); rebase onto
       current `main` and re-run the risks-section pinned tests.
 - [ ] 0.3 No second writer: `git status --short` shows no foreign edits

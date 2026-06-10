@@ -95,13 +95,15 @@ tablename <> '_prisma_migrations'`; throw a loud error if zero
       all green. Gate caveat: `pnpm test` excludes
       `*.integration.test.ts`, so green standing gates do NOT exercise
       `cleanDatabase`; 4.2 is the real proof.
-- [ ] 4.2 `pnpm --filter @customreport/api test:integration` — all 16
-      existing suites pass unchanged (activity.prisma-repository,
-      admin, archive, carry-over, group-scope, jobs,
-      lead-form.prisma-repository, pdf-export, period-transition,
-      publication, reminders, reminders.policy, report-sections,
-      review, version-retention, weekly-report.scope-filter) plus the
-      new helper integration suite. Requires the local docker postgres
+- [ ] 4.2 `pnpm --filter @customreport/api test:integration` — the
+      full integration run (25 existing files at HEAD) passes, plus the
+      new helper integration suite. Of those 25, the 16 cleanDatabase
+      consumers are the regression harness for this change:
+      activity.prisma-repository, admin, archive, carry-over,
+      group-scope, jobs, lead-form.prisma-repository, pdf-export,
+      period-transition, publication, reminders, reminders.policy,
+      report-sections, review, version-retention,
+      weekly-report.scope-filter. Requires the local docker postgres
       with `customreport_test` up.
 - [ ] 4.3 Negative manual check: run the integration suite once with
       `DATABASE_URL` pointing at a non-`_test` database name — it MUST

@@ -3,17 +3,18 @@
 ### Requirement: Component tests stub tRPC through the shared factory
 
 Web component and hook tests under `apps/web/src` MUST obtain their
-tRPC proxy stub from the shared factory in `apps/web/src/test-utils`
-(path-descriptor handler map; see the change's `design.md` for the
-API), and MUST NOT hand-roll per-file objects that re-encode the
-`queryOptions` / `mutationOptions` / `queryKey` / `pathFilter` proxy
-shape.
+tRPC proxy stub from `createMockTRPC` in
+`apps/web/src/test-utils/mock-trpc.ts` by passing an array of
+path-descriptor entries (`{ path, query?, mutation? }`; full API in
+the change's `design.md` D1), and MUST NOT hand-roll per-file objects
+that re-encode the `queryOptions` / `mutationOptions` / `queryKey` /
+`pathFilter` proxy shape.
 
 #### Scenario: a new admin-tab test needs tRPC data
 
 - **WHEN** a new component test stubs a query and captures a mutation
-- **THEN** it passes a handler map to the shared factory and asserts
-  through the factory's capture API
+- **THEN** it passes procedure descriptors to `createMockTRPC` and
+  asserts through its captured-mutation registry
 - **AND** it defines no local `queryOptions`/`mutationOptions` shape
 
 #### Scenario: the proxy shape changes upstream

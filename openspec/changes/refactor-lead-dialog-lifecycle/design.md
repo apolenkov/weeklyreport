@@ -128,8 +128,11 @@ already overwrites `defaultOpen` on first render.
   deferred-feature pattern: untouched (no API, schema, or write-path
   changes).
 - `lead-report-controls-integrity`: preserved and made structural —
-  this spec is the acceptance contract (no delta needed; behavior is
-  unchanged).
+  this spec is the unchanged half of the acceptance contract (behavior
+  is unchanged, so it carries no delta). The change additionally ships
+  the new `lead-dialog-lifecycle` delta capability, which captures the
+  structural invariant (sections source the lifecycle from
+  `useEditableListDialog`; dialogs use the D12 shell pattern).
 
 ## Acceptance contract
 
