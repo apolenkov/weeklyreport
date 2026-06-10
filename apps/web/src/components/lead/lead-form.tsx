@@ -1131,6 +1131,7 @@ export function LeadForm({
     (period) => period.id === selectedPeriodId && period.id !== "",
   );
   const hasArchivedPeriods = periods.some((period) => period.archived);
+  const archivedCount = periods.filter((p) => p.archived).length;
   const visibleNonArchivedPeriods = periods.filter(
     (period) => !period.archived,
   );
@@ -1560,21 +1561,24 @@ export function LeadForm({
         <ReportToolbar
           periodNavigator={<PeriodNavigator periods={visiblePeriods} />}
           archiveToggle={
-            <>
-              <Separator
-                orientation="vertical"
-                className="h-5 bg-[var(--color-border)]"
-              />
-              <ArchiveToggle
-                checked={showArchivePeriods}
-                onChange={setShowArchivePeriods}
-              />
-            </>
+            hasArchivedPeriods ? (
+              <>
+                <Separator
+                  orientation="vertical"
+                  className="h-5 bg-[var(--color-border)]"
+                />
+                <ArchiveToggle
+                  checked={showArchivePeriods}
+                  onChange={setShowArchivePeriods}
+                  archivedCount={archivedCount}
+                />
+              </>
+            ) : undefined
           }
           trailingExtras={
             <>
               <FillFromButton
-                periods={periods}
+                periods={visiblePeriods}
                 disabled={isReadOnly || fillFromMut.isPending}
                 onFillFrom={handleFillFrom}
               />
@@ -1585,7 +1589,15 @@ export function LeadForm({
               <VersionHistoryNav
                 versions={versions}
                 onRestore={isReadOnly ? undefined : handleRestoreVersion}
-                onViewVersion={setViewedSnapshotVersion}
+                onViewVersion={(v) => {
+                  // Reset add-signal counters so no stale trigger fires when
+                  // returning from snapshot view (D1 fix companion).
+                  if (v !== null) {
+                    setCurrentWeekAddSignal(0);
+                    setNextWeekAddSignal(0);
+                  }
+                  setViewedSnapshotVersion(v);
+                }}
                 viewedVersion={viewedSnapshotVersion}
               />
               {!isReadOnly && (

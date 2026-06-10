@@ -135,6 +135,13 @@ export function CurrentWeekSection({
   const defaultProduct = products?.[0];
   const defaultProductId = defaultProduct?.id;
 
+  // Keep a ref so the addSignal effect can read the latest readOnly value
+  // without including readOnly in the dep array. If readOnly were in deps,
+  // the effect would re-fire on snapshot enter/exit and re-open the dialog
+  // from a stale non-zero addSignal counter (D1 fix).
+  const readOnlyRef = useRef(readOnly);
+  readOnlyRef.current = readOnly;
+
   const globalAddButton = !readOnly && (
     <div className="flex justify-end">
       <button
@@ -161,14 +168,14 @@ export function CurrentWeekSection({
 
   useEffect(() => {
     if (addSignal === 0) return;
-    if (readOnly || !defaultProductId) return;
+    if (readOnlyRef.current || !defaultProductId) return;
     setOpenSeq((n) => n + 1);
     setDialogState({
       open: true,
       mode: "create",
       seedProductId: defaultProductId,
     });
-  }, [addSignal, defaultProductId, readOnly]);
+  }, [addSignal, defaultProductId]);
 
   function handleDelete(id: string) {
     if (readOnly) return;

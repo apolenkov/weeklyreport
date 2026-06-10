@@ -70,11 +70,14 @@ const STRIPE_BY_STATUS: Record<StageStatus, string> = {
   empty: "var(--color-border)",
 };
 
-function getProductCardStyle(status: StageStatus): CSSProperties {
+export function getProductCardStyle(
+  status: StageStatus,
+  dashed: boolean,
+): CSSProperties {
   return {
     background: "var(--color-card)",
     border: "1px solid rgba(0,0,0,0.08)",
-    borderLeft: `4px solid ${STRIPE_BY_STATUS[status]}`,
+    borderLeft: `4px ${dashed ? "dashed" : "solid"} ${STRIPE_BY_STATUS[status]}`,
     paddingLeft: "calc(1rem - 3px)",
   };
 }
@@ -179,102 +182,115 @@ export function SdlcPipeline({
           </div>
         </div>
       )}
-      {products.map((product) => (
-        <div
-          key={product.id}
-          className="rounded-xl p-4"
-          style={getProductCardStyle(product.overallStatus)}
-        >
-          {/* Product header — SDLC-1 (Phase 33-04): replace plain riskSummary
+      {products.map((product) => {
+        const hasUnfilledOwnStage =
+          !readOnly &&
+          product.stages.some(
+            (s) => s.ownership === "mine" && s.status === "empty",
+          );
+        return (
+          <div
+            key={product.id}
+            className="rounded-xl p-4"
+            style={getProductCardStyle(
+              product.overallStatus,
+              hasUnfilledOwnStage,
+            )}
+          >
+            {/* Product header — SDLC-1 (Phase 33-04): replace plain riskSummary
               text with an inline-flex pill featuring a *pulsing* red dot
               (`@keyframes risk-pulse` defined in globals.css). Mockup s2
               uses this to draw the eye to active blockers without users
               having to read the label. */}
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]">
-                {product.name}
-              </span>
-              {product.riskSummary && (
-                <span
-                  className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[rgba(200,32,20,0.08)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)]"
-                  title={product.riskSummary}
-                >
-                  <span
-                    className="inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[var(--color-destructive)]"
-                    style={{
-                      animation: "risk-pulse 1.6s ease-in-out infinite",
-                    }}
-                    aria-hidden="true"
-                  />
-                  {product.riskSummary}
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]">
+                  {product.name}
                 </span>
-              )}
+                {product.riskSummary && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[rgba(200,32,20,0.08)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)]"
+                    title={product.riskSummary}
+                  >
+                    <span
+                      className="inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[var(--color-destructive)]"
+                      style={{
+                        animation: "risk-pulse 1.6s ease-in-out infinite",
+                      }}
+                      aria-hidden="true"
+                    />
+                    {product.riskSummary}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Stages row */}
+            <div className="flex flex-wrap justify-center items-center gap-2 pb-1">
+              {product.stages.map((stage, idx) => {
+                const crossAuthorForStage = crossAuthors.find((ca) => {
+                  if (ca.projectId !== product.id) return false;
+                  const lower = stage.stageName.toLowerCase();
+                  // Mirror the "Dev" ↔ "Development" alias from lead-form.ts:
+                  // DB stage name is "Development"; chip label is "Dev".
+                  return ca.stageNames.some((n) => {
+                    const nl = n.toLowerCase();
+                    return (
+                      nl === lower ||
+                      (lower === "dev" && nl === "development") ||
+                      (lower === "development" && nl === "dev")
+                    );
+                  });
+                });
+                return (
+                  <div
+                    key={stage.stageName}
+                    className="flex items-center gap-2"
+                  >
+                    {idx > 0 && (
+                      <div
+                        className="flex items-center text-lg font-bold"
+                        style={{
+                          color:
+                            stage.ownership === "mine" ||
+                            product.stages[idx - 1]?.ownership === "mine"
+                              ? "var(--color-starbucks-accent)"
+                              : "var(--color-muted-foreground)",
+                          alignSelf: "center",
+                        }}
+                      >
+                        &rarr;
+                      </div>
+                    )}
+                    <div className="relative">
+                      <StageChip
+                        stage={stage}
+                        readOnly={readOnly}
+                        linkedRiskCount={
+                          riskCountByKey.get(
+                            `${product.id}::${canonicalStageName(stage.stageName)}`,
+                          ) ?? 0
+                        }
+                        onStatusChange={(name, status) =>
+                          handleStatusChange(product.id, name, status)
+                        }
+                        crossAuthorInfo={
+                          crossAuthorForStage
+                            ? {
+                                itemCount: crossAuthorForStage.itemCount,
+                                riskCount: crossAuthorForStage.riskCount,
+                              }
+                            : undefined
+                        }
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-
-          {/* Stages row */}
-          <div className="flex flex-wrap justify-center items-center gap-2 pb-1">
-            {product.stages.map((stage, idx) => {
-              const crossAuthorForStage = crossAuthors.find((ca) => {
-                if (ca.projectId !== product.id) return false;
-                const lower = stage.stageName.toLowerCase();
-                // Mirror the "Dev" ↔ "Development" alias from lead-form.ts:
-                // DB stage name is "Development"; chip label is "Dev".
-                return ca.stageNames.some((n) => {
-                  const nl = n.toLowerCase();
-                  return (
-                    nl === lower ||
-                    (lower === "dev" && nl === "development") ||
-                    (lower === "development" && nl === "dev")
-                  );
-                });
-              });
-              return (
-                <div key={stage.stageName} className="flex items-center gap-2">
-                  {idx > 0 && (
-                    <div
-                      className="flex items-center text-lg font-bold"
-                      style={{
-                        color:
-                          stage.ownership === "mine" ||
-                          product.stages[idx - 1]?.ownership === "mine"
-                            ? "var(--color-starbucks-accent)"
-                            : "var(--color-muted-foreground)",
-                        alignSelf: "center",
-                      }}
-                    >
-                      &rarr;
-                    </div>
-                  )}
-                  <div className="relative">
-                    <StageChip
-                      stage={stage}
-                      readOnly={readOnly}
-                      linkedRiskCount={
-                        riskCountByKey.get(
-                          `${product.id}::${canonicalStageName(stage.stageName)}`,
-                        ) ?? 0
-                      }
-                      onStatusChange={(name, status) =>
-                        handleStatusChange(product.id, name, status)
-                      }
-                      crossAuthorInfo={
-                        crossAuthorForStage
-                          ? {
-                              itemCount: crossAuthorForStage.itemCount,
-                              riskCount: crossAuthorForStage.riskCount,
-                            }
-                          : undefined
-                      }
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

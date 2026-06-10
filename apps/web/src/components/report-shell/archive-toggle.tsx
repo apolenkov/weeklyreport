@@ -5,9 +5,14 @@ import { Archive } from "lucide-react";
 interface ArchiveToggleProps {
   readonly checked: boolean;
   readonly onChange: (checked: boolean) => void;
+  readonly archivedCount?: number;
 }
 
-export function ArchiveToggle({ checked, onChange }: ArchiveToggleProps) {
+export function ArchiveToggle({
+  checked,
+  onChange,
+  archivedCount,
+}: ArchiveToggleProps) {
   return (
     <button
       type="button"
@@ -23,7 +28,11 @@ export function ArchiveToggle({ checked, onChange }: ArchiveToggleProps) {
       }`}
     >
       <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-      <span className="hidden xl:inline">Show archived</span>
+      {archivedCount !== undefined && archivedCount > 0 ? (
+        <span className="tabular-nums">{archivedCount} archived</span>
+      ) : (
+        <span className="hidden xl:inline">Show archived</span>
+      )}
     </button>
   );
 }
