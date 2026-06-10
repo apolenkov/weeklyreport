@@ -12,7 +12,7 @@ in `apps/web`. Stage only the paths listed per task; never
 
 ## 1. shared — delete dead `requireRole`
 
-- [ ] 1.1 `packages/shared/src/trpc/middleware/role.ts`: delete the
+- [x] 1.1 `packages/shared/src/trpc/middleware/role.ts`: delete the
       `requireRole` function (lines 63-94) and the now-orphaned
       `TRPCMiddlewareBuilder` / `TRPCMiddlewareFunction` type imports
       (lines 1-4); repoint the JSDoc mention of `requireRole` at line
@@ -32,7 +32,7 @@ in `apps/web`. Stage only the paths listed per task; never
 
 ## 2. ui — delete dead composition components and orphan tokens
 
-- [ ] 2.1 Delete 7 files:
+- [x] 2.1 Delete 7 files:
       `packages/ui/src/components/data-table.tsx`,
       `packages/ui/src/components/data-table.test.tsx`,
       `packages/ui/src/components/__snapshots__/data-table.test.tsx.snap`,
@@ -58,7 +58,7 @@ in `apps/web`. Stage only the paths listed per task; never
 
 ## 3. api — manual-publish telemetry + dead pass-through routers
 
-- [ ] 3.1 Test-first: in
+- [x] 3.1 Test-first: in
       `apps/api/src/modules/period/period.service.test.ts` add unit
       tests pinning that `publishPeriod` increments
       `customreportReportsSubmittedTotal` (`{ state: "published" }`)
@@ -71,7 +71,7 @@ in `apps/web`. Stage only the paths listed per task; never
       hardcode `from: "open"` — cover both cases. Tests must FAIL
       against the unmodified service. Commit:
       `test(api): pin manual-publish telemetry contract`.
-- [ ] 3.2 In `apps/api/src/modules/period/period.service.ts`
+- [x] 3.2 In `apps/api/src/modules/period/period.service.ts`
       `publishPeriod` (lines 89-121): after
       `await this.repository.publishPeriod(...)` succeeds, increment
       both counters, mirroring the "emit only after the write
@@ -80,7 +80,7 @@ in `apps/web`. Stage only the paths listed per task; never
       Read `report.periodStatus` (already fetched at the top of the
       method) for the `from` label. Tests from 3.1 turn green. Commit:
       `fix(api): emit publish telemetry on the live manual-publish path`.
-- [ ] 3.3 Delete 3 dead router files:
+- [x] 3.3 Delete 3 dead router files:
       `apps/api/src/modules/publication/publication.router.ts`,
       `apps/api/src/modules/archive/archive.router.ts`,
       `apps/api/src/modules/report-sections/report-sections.router.ts`
@@ -100,9 +100,10 @@ data"` (~L208-217 — sits INSIDE the `PublicationService`
 
 ## 4. Verification
 
-- [ ] 4.1 Gates (exact commands, record results here):
+- [x] 4.1 Gates (exact commands, record results here):
       `pnpm typecheck && pnpm lint && pnpm test && pnpm build`.
-- [ ] 4.2 Grep guards (all from repo root, excluding `dist/` and
+      Result: typecheck 5/5, lint clean, test 868 api + 935 web + 590 shared = 2393 total, build 5/5.
+- [x] 4.2 Grep guards (all from repo root, excluding `dist/` and
       `node_modules/`):
   - `rg -n "DataTable|CrudSheet|ConfirmDialog|TrafficLightBadge|traffic-lights" apps packages e2e -g '*.ts' -g '*.tsx' -g '*.css'`
     → exactly ONE hit:
@@ -116,15 +117,15 @@ content` comment — unrelated to the deleted components; it stays).
     default.)
   - `rg -n "requireRole" apps packages` → zero hits.
   - `rg -n "publication.router|archive.router|report-sections.router" apps packages` → zero hits.
-- [ ] 4.3 Decoupling guards:
+- [x] 4.3 Decoupling guards:
       `apps/web/src/components/admin/groups-tab.test.tsx` and
       `apps/web/src/components/admin/users-tab.test.tsx` pass
       BYTE-UNCHANGED; executed test count drops only by the deleted
       router blocks (`data-table.test.tsx` was never executed).
-- [ ] 4.4 Invariant guard: `git diff` shows no edit to
+- [x] 4.4 Invariant guard: `git diff` shows no edit to
       `packages/ui/src/components/coming-soon-badge.tsx` and
       `ComingSoonBadge` still exported from `packages/ui/src/index.ts`
       (its 6 import sites in `apps/web` compile).
-- [ ] 4.5 Telemetry check: new `period.service.test.ts` assertions
+- [x] 4.5 Telemetry check: new `period.service.test.ts` assertions
       green; optional live check — a head manual publish moves
       `customreport_reports_submitted_total` on `/metrics`.
