@@ -212,3 +212,35 @@ Pure frontend, no flags, no data migration, no API consumers.
 None blocking. Exact placeholder strings, stripe widths, watermark
 opacity, and `--slide-quadrant-min` value are tuned during the screenshot
 acceptance loop — the user reviews visually and iterates live.
+
+## Addendum — feedback round 2 (2026-06-10, live screenshot review)
+
+User direction during acceptance, folded into the same change:
+
+1. The quadrant grid keeps a vertical floor in the normal view too
+   (`min-h-[52dvh]`), so the four cards distribute evenly instead of
+   hugging content (fullscreen 60dvh floor unchanged).
+2. **Decisions accent is blue, not green** — new named token
+   `--color-decisions-accent: #4a7494` (steel blue matched to chip-border
+   weight). Recorded color sign-off: user, 2026-06-10 («Decisions давай
+   синеньким») — satisfies the research-gate rule.
+3. The Next focus (plans) card renders a **dashed frame** ("not yet"
+   semantics); its left stripe stays solid.
+4. **No count-based truncation** — `MAX_ITEMS_PER_SECTION` and the
+   "+N more" line are removed; every row always renders (supersedes the
+   cap mentioned in D7).
+5. Hero is a one-line **status strip** (frontend-design pass): tone badge
+   - author + one segmented metric capsule (icon + value + label per
+     segment, hairline dividers) — all static, LEFT, one h-11 height; the
+     interactive scope toggle is alone on the right.
+
+## Addendum — feedback round 3 (2026-06-10, live review)
+
+6. **Row dots → neutral product badges.** Seeing real data, the user read
+   a status-colored dot as the ROW's own severity ("why is this decision
+   red?"). Rows now carry a compact neutral badge with the product name
+   (muted fill, truncate + title); status color stays exclusively on the
+   chip strip. Supersedes D2/D3's per-row dot: `productStatus` was
+   removed from `UnifiedSectionRow`, `STATUS_DOT_CLASS` is module-private
+   again; `mapTrafficLightToStatus` remains the single mapping for the
+   chip strip. The WCAG 1.4.1 concern (D8) dissolves — badges are text.
