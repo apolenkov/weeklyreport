@@ -96,12 +96,13 @@
     `/tmp/apply-status-palette-evidence/`. Checked: red appears only on
     blocked rows/chips; section labels neutral; at-risk carried by amber
     stripes; product cards uniform.
-- [ ] 4.3 USER GATE: present before/after to the user; on «да» — archive the
+- [x] 4.3 USER GATE: present before/after to the user; on «да» — archive the
       change; on rejection — revert the landing commit and record the
       objection.
-  - Status: screenshots delivered 2026-06-10; two rounds of live feedback
-    already folded in (no face glyph + corner lock; uniform card bodies).
-    Awaiting final «да» on the result as shipped.
+  - ACCEPTED: explicit user «Да, да» (2026-06-10) after three rounds of
+    live feedback (no face glyph + corner lock; uniform card bodies;
+    priorities merged + real stage badges + stripe-free advisory). The
+    "Unknown" product-name badge issue goes to a follow-up change.
 
 ## 5. Live feedback round 2 (user, 2026-06-10, during 4.3 review)
 
