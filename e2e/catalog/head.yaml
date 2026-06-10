@@ -110,7 +110,7 @@ routes:
       - id: head-addressed-report-toggle-scope
         intent: "Switch between product and lead grouping in the addressed report view"
         given: "a report in form or slides mode"
-        when: "the head clicks the scope toggle (By product or By lead)"
+        when: "the head clicks the scope toggle (Product or Leads)"
         then: "the report sections are re-grouped: product scope shows products in accordion order; lead scope groups products under each authoring lead, with empty leads dropped"
         note: "Local client state toggle (useState). Scope toggle only allows ['product', 'lead'] for the head role. No URL param, no mutation."
       - id: head-addressed-report-toggle-archive-filter
@@ -128,9 +128,9 @@ routes:
       - id: head-addressed-report-navigate-presentation
         intent: "Open the presentation view of the addressed report"
         given: "a report is loaded on the addressed route"
-        when: "the head clicks the Presentation button"
+        when: "the head clicks the Present button"
         then: "navigation occurs to /head/report/<reportId>/present"
-        note: "Navigation action via link; the actual presentation-mode content lives on a separate route. The button is always visible and enabled."
+        note: "Navigation action via link; the actual presentation-mode content lives on a separate route. The button is always visible and enabled. Relabeled Presentation icon -> Present by unify-head-toolbar-controls."
   - route: /head/report/[reportId]/present
     access: [head]
     intents:
@@ -228,11 +228,11 @@ routes:
         then: "The portfolio overview table and per-product accordions are displayed; the page title shows the week number and date range; no console errors appear"
         note: "This is the primary read-only intent on the viewer route. The head can expand/collapse product accordions and scroll through content. No mutations occur on this route; publish/reopen/archive actions belong to /head/report/[reportId]."
       - id: head-published-report-export-pdf
-        intent: "Export the published report as a PDF document"
+        intent: "Open the browser-print template of the published report"
         given: "The head is viewing a published report page"
-        when: "The head clicks the Export PDF button"
-        then: "A new browser tab opens with the PDF artifact (/print/[reportId]); the PDF includes department label, period metadata, and all product sections"
-        note: "Distinct from the /head/report async export: this is a simple link navigation to /print/[reportId] in target='_blank', not an async job with polling. Always visible."
+        when: "The head clicks the Print button"
+        then: "A new browser tab opens with the print template (/print/[reportId]); it includes department label, period metadata, and all product sections"
+        note: "Distinct from the async Export PDF button: this is a simple link navigation to /print/[reportId] in target='_blank', not an async job with polling. Always visible. Relabeled Export PDF -> Print by unify-head-toolbar-controls."
       - id: head-published-report-presentation
         intent: "Switch to presentation view of the published report"
         given: "The head is viewing a published report page"

@@ -87,11 +87,9 @@ export function ExportPdfButton({
     : isGenerating
       ? "Generating PDF…"
       : "Download a PDF copy of this report";
-  const label = isGenerating
-    ? "Generating…"
-    : isExportable
-      ? "Export PDF"
-      : "Publish to export PDF";
+  // The label never says "Publish" — that word belongs to the publish action
+  // alone; the precondition lives in `title` and the sr-only hint below.
+  const label = isGenerating ? "Generating…" : "Export PDF";
   const disabledReasonId = `${reportId}-export-pdf-disabled-reason`;
 
   function handleExport() {
