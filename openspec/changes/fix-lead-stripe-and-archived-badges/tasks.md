@@ -42,9 +42,21 @@ everywhere.
       worst of the author's own seeded stage statuses (none → omit or
       green); reseed dev DB.
 
-## 5. Verification and acceptance
+## 5. Feedback round (user, 2026-06-10): broken Edit/Slides pill on the lead header
 
-- [x] 5.1 Gates: `pnpm typecheck && pnpm lint && pnpm test && pnpm
+- [x] 5.0 `view-mode-toggle.tsx`: the shared ViewModeToggle returned two
+      sibling links with no wrapper, so the lead header's `gap-3` flex
+      split the segmented pill into two broken halves (the head looked
+      fine only because it wrapped the toggle itself). Made the
+      component self-contained (`inline-flex` wrapper), removed the
+      now-redundant wrapper in `head-report-shell.tsx`, updated the
+      view-mode snapshot (now pins exactly the toggle, not the whole
+      action row). Verified live: lead header matches the head pattern
+      (`12-lead-header-segmented-toggle.png`).
+
+## 6. Verification and acceptance
+
+- [x] 6.1 Gates: `pnpm typecheck && pnpm lint && pnpm test && pnpm
 build` — record results here.
       RESULTS 2026-06-10 (workflow `wf_11b83ac7-c64`, 0 fix rounds):
       typecheck PASS, lint PASS, test PASS, build PASS; `playwright test
@@ -53,7 +65,7 @@ build` — record results here.
       simplification (fallback-to-lightStatus dropped in favor of plain
       green per D4) re-verified via `pnpm lint:prisma:typecheck` +
       prettier, both clean.
-- [x] 5.2 Live screenshots on fresh reseeded data, WHOLE-surface
+- [x] 6.2 Live screenshots on fresh reseeded data, WHOLE-surface
       re-walk (`.playwright-mcp/lead-surface-fixes/08-11*.png`):
       08 all three stripes neutral+dashed with zero own statuses (no
       phantom amber); 09 period listbox open — Current ✓, four

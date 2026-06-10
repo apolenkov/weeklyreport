@@ -36,8 +36,12 @@ export function ViewModeToggle({
   const inactiveClass =
     "bg-[var(--color-surface)] text-[var(--color-starbucks-accent)]";
 
+  // Self-contained wrapper: the two segments must touch to read as ONE
+  // segmented pill. Without it, a parent flex container with `gap-*`
+  // (e.g. the lead header) splits the pill into two broken halves
+  // (user-reported 2026-06-10).
   return (
-    <>
+    <div className="inline-flex items-center">
       <Link
         href={editHref}
         scroll={false}
@@ -54,6 +58,6 @@ export function ViewModeToggle({
         <SlidesViewIcon />
         Slides
       </Link>
-    </>
+    </div>
   );
 }
