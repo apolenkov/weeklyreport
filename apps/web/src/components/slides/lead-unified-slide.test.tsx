@@ -2,7 +2,10 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { LeadUnifiedSlide } from "./lead-unified-slide";
-import type { UnifiedSlideModel } from "./section-slide-utils";
+import type {
+  UnifiedSectionRow,
+  UnifiedSlideModel,
+} from "./section-slide-utils";
 
 function makeModel(
   overrides: Partial<UnifiedSlideModel> = {},
@@ -28,37 +31,72 @@ function makeRow(
   text: string,
   productName: string,
   priorityRank?: number,
-): { text: string; productName: string; priorityRank?: number } {
+): UnifiedSectionRow {
   return priorityRank !== undefined
     ? { text, productName, priorityRank }
     : { text, productName };
 }
 
-describe("LeadUnifiedSlide — inlineProductMarker a11y", () => {
-  it("product marker outer span has title attribute equal to productName", () => {
+describe("LeadUnifiedSlide — quadrant empty states", () => {
+  it("an empty quadrant renders its dashed placeholder, not a bare header", () => {
     const model = makeModel({
-      current: [makeRow("Completed refactor", "Marketing Portal")],
+      current: [makeRow("Ship feature", "Atlas")],
     });
     render(<LeadUnifiedSlide model={model} />);
 
-    const markers = screen.getAllByTitle("Marketing Portal");
-    expect(markers.length).toBeGreaterThan(0);
+    expect(screen.getByText("Nothing queued")).toBeInTheDocument();
+    expect(screen.getByText("No risks raised")).toBeInTheDocument();
+    expect(screen.getByText("No decisions recorded")).toBeInTheDocument();
+    expect(screen.queryByText("Nothing in flight")).not.toBeInTheDocument();
   });
 
-  it("product marker outer span does not have an aria-label attribute", () => {
-    const model = makeModel({
-      current: [makeRow("Completed refactor", "Marketing Portal")],
-    });
-    const { container } = render(<LeadUnifiedSlide model={model} />);
+  it("all four quadrant headers render even when every section is empty", () => {
+    render(<LeadUnifiedSlide model={makeModel()} />);
 
-    // The outer wrapper span has title={productName} but no aria-label
-    const markers = container.querySelectorAll(
-      'span[title="Marketing Portal"]',
-    );
-    expect(markers.length).toBeGreaterThan(0);
-    for (const marker of markers) {
-      expect(marker).not.toHaveAttribute("aria-label");
+    for (const label of ["Current work", "Next focus", "Risks", "Decisions"]) {
+      expect(screen.getByText(label)).toBeInTheDocument();
     }
+    expect(screen.getByText("Nothing in flight")).toBeInTheDocument();
+  });
+});
+
+describe("LeadUnifiedSlide — product attribution (neutral badges)", () => {
+  const multiProduct = makeModel({
+    current: [makeRow("Ship auth flow", "Atlas"), makeRow("QA pass", "Vega")],
+    risks: [makeRow("Vendor SLA slip", "Atlas")],
+  });
+
+  it("multi-product rows lead with a neutral badge naming the product", () => {
+    render(<LeadUnifiedSlide model={multiProduct} />);
+
+    const badges = screen.getAllByTestId("row-product-badge");
+    expect(badges).toHaveLength(3);
+    expect(badges[0]).toHaveAttribute("title", "Atlas");
+    expect(badges[0]?.textContent).toBe("Atlas");
+    // Feedback round 3: identity only — no status color classes on the badge.
+    for (const badge of badges) {
+      expect(badge.className).not.toMatch(/destructive|status-dot|primary/);
+    }
+  });
+
+  it("single-product slides render rows without badges", () => {
+    const model = makeModel({
+      current: [makeRow("Ship feature", "Atlas")],
+      next: [makeRow("Draft RFC", "Atlas")],
+    });
+    render(<LeadUnifiedSlide model={model} />);
+
+    expect(screen.queryByTestId("row-product-badge")).not.toBeInTheDocument();
+  });
+
+  it("cross-product rows do not flip a single-product slide into badge mode", () => {
+    const model = makeModel({
+      current: [makeRow("Ship feature", "Atlas")],
+      decisions: [makeRow("Align analytics API", "Shared context")],
+    });
+    render(<LeadUnifiedSlide model={model} />);
+
+    expect(screen.queryByTestId("row-product-badge")).not.toBeInTheDocument();
   });
 });
 

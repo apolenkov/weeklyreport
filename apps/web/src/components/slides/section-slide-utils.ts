@@ -526,6 +526,9 @@ export function paginateSectionSlides(
 
 // ---- Unified by-section slide model (W12) ----
 
+/** Display label of the cross-product pseudo-entry; never part of the legend. */
+export const CROSS_PRODUCT_LABEL = "Shared context";
+
 export interface UnifiedSectionRow {
   readonly text: string;
   readonly productName: string;
@@ -570,7 +573,7 @@ export function buildUnifiedSlideModel(
 
   for (const product of products) {
     const name =
-      product.id === "cross-product" ? "Shared context" : product.name;
+      product.id === "cross-product" ? CROSS_PRODUCT_LABEL : product.name;
     // itemRanks is sparse (items without a rank have no key), so a present-key
     // lookup is genuinely `number | undefined` at runtime. Annotate honestly —
     // noUncheckedIndexedAccess is off, so the bare Record would lie non-null and
@@ -663,7 +666,7 @@ type OwnedStage = NonNullable<
 >[number];
 
 const SHARED_PRODUCT_ID = "shared-context";
-const SHARED_PRODUCT_NAME = "Shared context";
+const SHARED_PRODUCT_NAME = CROSS_PRODUCT_LABEL;
 
 const TRAFFIC_RANK: Record<"green" | "yellow" | "red", number> = {
   green: 0,

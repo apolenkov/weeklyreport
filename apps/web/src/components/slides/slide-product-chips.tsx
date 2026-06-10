@@ -1,9 +1,11 @@
 "use client";
 
+export type ProductStatus = "blocked" | "at-risk" | "on-track" | "empty";
+
 export interface ProductChipEntry {
   productId: string;
   productName: string;
-  worstStatus: "blocked" | "at-risk" | "on-track" | "empty";
+  worstStatus: ProductStatus;
 }
 
 interface Props {
@@ -12,13 +14,31 @@ interface Props {
   readonly onSelect?: (productId: string) => void;
 }
 
-function statusDot(status: ProductChipEntry["worstStatus"]) {
-  const colorClass = {
-    blocked: "bg-[var(--color-destructive)]",
-    "at-risk": "bg-[#d4a017]",
-    "on-track": "bg-[var(--color-primary)]",
-    empty: "bg-[var(--color-muted-foreground)] opacity-50",
-  }[status];
+/** Maps a raw traffic-light color to a semantic ProductStatus. D3: single source. */
+export function mapTrafficLightToStatus(
+  color: "red" | "yellow" | "green" | null | undefined,
+): ProductStatus {
+  if (color === "red") return "blocked";
+  if (color === "yellow") return "at-risk";
+  if (color === "green") return "on-track";
+  return "empty";
+}
+
+/**
+ * Tailwind class for a status dot of the given status.
+ * at-risk references the named token (D6) instead of a hardcoded hex.
+ * Module-private: rows use neutral product badges (feedback round 3), so
+ * the chip strip is the only status-dot surface.
+ */
+const STATUS_DOT_CLASS: Record<ProductStatus, string> = {
+  blocked: "bg-[var(--color-destructive)]",
+  "at-risk": "bg-[var(--color-status-dot-at-risk)]",
+  "on-track": "bg-[var(--color-primary)]",
+  empty: "bg-[var(--color-muted-foreground)] opacity-50",
+};
+
+function statusDot(status: ProductStatus) {
+  const colorClass = STATUS_DOT_CLASS[status];
 
   return (
     <span
