@@ -45,6 +45,12 @@ Decisions D1-D5: `design.md`. NOT STARTED — captured 2026-06-10.
       `--color-muted-foreground`.
 - [x] 4.6 "Previous" badge → accent fill + white text (sign-off
       recorded).
+- [x] 4.7 Feedback round 2 (user, 2026-06-10, post-acceptance):
+      "[Archived]" prefix on archived rows in the Fill From list —
+      same marker vocabulary as the period combo; unit test added;
+      spec wording extended in delta + main spec. Also reseeded the
+      stale dev DB (duplicate Week 21 was old-seed data, not a code
+      bug) — current seed yields no date collisions.
 
 ## 5. Dashed stripe for incomplete own-stages (D5)
 
@@ -64,7 +70,7 @@ Decisions D1-D5: `design.md`. NOT STARTED — captured 2026-06-10.
       report-shell suites 288/288; 3 new test files), build PASS;
       `prettier --check` clean on all changed files after a trailing
       blank-line fix in `fill-from-button.tsx`.
-- [ ] 6.2 Live screenshots: snapshot exit (no dialog), archive toggle
+- [x] 6.2 Live screenshots: snapshot exit (no dialog), archive toggle
       with count + marked combo, Fill dropdown open (incl. narrow
       viewport), dashed-stripe card; user acceptance before archive.
       SCREENSHOTS TAKEN 2026-06-10 (as boris@, live :3100, gitignored

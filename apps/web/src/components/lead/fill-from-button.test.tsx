@@ -74,6 +74,36 @@ describe("FillFromButton", () => {
     expect(fillButton).toBeDisabled();
   });
 
+  it("marks archived periods with the [Archived] prefix", () => {
+    const periods: ReportPeriod[] = [
+      {
+        id: "2026-W16",
+        sourceSectionId: "sec-W16",
+        weekLabel: "Week 16",
+        dateRange: "Apr 14–20, 2026",
+        isCurrent: false,
+        isSubmitted: true,
+        archived: true,
+      },
+      {
+        id: "2026-W15",
+        sourceSectionId: "sec-W15",
+        weekLabel: "Week 15",
+        dateRange: "Apr 7–13, 2026",
+        isCurrent: false,
+        isSubmitted: true,
+      },
+    ];
+
+    render(<FillFromButton periods={periods} />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Choose past report to fill from" }),
+    );
+
+    expect(screen.getByText(/\[Archived\] Week 16/)).toBeInTheDocument();
+    expect(screen.getByText(/Week 15/)).not.toHaveTextContent("[Archived]");
+  });
+
   it("shows no-match message when search yields no results", () => {
     const periods: ReportPeriod[] = [
       {

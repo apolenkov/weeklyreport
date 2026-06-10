@@ -232,6 +232,7 @@ export function FillFromButton({
                 >
                   <div className="flex-1">
                     <div className="text-sm font-semibold">
+                      {p.archived ? "[Archived] " : ""}
                       {p.weekLabel} &middot; {p.dateRange}
                     </div>
                     <div className="text-[11px] text-[var(--color-muted-foreground)]">
