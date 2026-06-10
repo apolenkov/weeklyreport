@@ -86,9 +86,13 @@
     hierarchy options, recommendation = Option 2 (single red alert + amber
     left-border for at-risk, labels neutral). Adversarial verify pass found
     8 line-number/omission errors — corrected in the memo. No CSS touched.
-- [ ] T7 Review the Tier 2 memos with the user; record the chosen direction (or
+- [x] T7 Review the Tier 2 memos with the user; record the chosen direction (or
       "deferred"). Only AFTER explicit sign-off may a FOLLOW-UP change implement
       the approved palette tokens — not under this change.
-  - Status: blocked on user review (2026-06-10 overnight session ran
-    autonomously; sign-off cannot be self-granted). Memos are ready in
-    `memos/`.
+  - Decision (2026-06-10, explicit user sign-off «го»): T5 = Option 3
+    (muted semantic fills + left-border group stripe, hardcoded hexes
+    tokenized) PLUS the per-stage lucide icon set; T6 = Option 2 (single
+    red alert for blocked, amber left-border stripe for at-risk, all
+    section labels neutral). Implementation goes to the follow-up change
+    `apply-status-palette` — final visual acceptance there is by
+    before/after screenshots, with easy token rollback.
