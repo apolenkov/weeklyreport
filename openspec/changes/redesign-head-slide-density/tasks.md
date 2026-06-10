@@ -8,10 +8,14 @@ Open Questions. Spec contract:
 
 ## 1. Settle direction (blocks all implementation)
 
-- [ ] 1.1 Walk the user through design Open Questions 1–6 (grid shape,
+- [x] 1.1 Walk the user through design Open Questions 1–6 (grid shape,
       watermark, attribution, sidebar treatment, metric tiles, shared
       `QuadrantCard` extraction); record each answer in `design.md` as a
       dated decision before any code.
+      ANSWERED 2026-06-10: 2×2 grid; watermark yes; product badge yes;
+      sidebar restyled to card idiom; metrics as the lead capsule;
+      shared-component call deferred until geometry is final. See
+      design.md "Open Questions — ANSWERED".
 - [ ] 1.2 Confirm no new color token is needed — verify every accent maps
       to an existing token in `packages/ui/src/styles/globals.css`
       (`--slide-quadrant-min`, `--color-decisions-accent`, chip-border

@@ -218,20 +218,21 @@ Pure frontend, no flags, no data migration, no API consumers.
    pairs per `status-color-semantics`.
 5. Rollback: single `git revert` — no persisted state involved.
 
-## Open Questions (taste — for the user, screenshot-driven)
+## Open Questions — ANSWERED (user sign-off 2026-06-10, recorded verbatim)
 
-The user reviews visually and iterated four rounds on the lead slide;
-these are deliberately left for him to settle live, not pre-decided:
+All six settled with the user in-session; screenshot acceptance still
+applies after implementation (expect taste feedback rounds as on the
+lead slide):
 
-1. **Grid shape** (D4): head 2×2 like the lead, or a 4-row vertical stack
-   given the readiness aside steals width? The strongest open call.
-2. **Watermark icons** (SAME #7): carry the lead's low-opacity corner
-   watermark onto head cards, or is it noise at head density?
-3. **Attribution** (D5): do head rows need a product badge, or does
-   per-lead grouping make it redundant?
-4. **Sidebar treatment**: restyle the lead-list sidebar to match the card
-   idiom, or leave it as the current button list?
-5. **Metric tiles vs lead's segmented capsule**: align the head's 4 metric
-   tiles (`:215`) to the lead hero's capsule treatment, or keep tiles?
-6. **Shared `QuadrantCard` extraction** (D3): one component for both
-   slides, or a head-local twin — decided once geometry is final.
+1. **Grid shape** (D4): **2×2 like the lead.** If the readiness aside
+   makes it visibly cramped during implementation, show the 4-row
+   alternative as a screenshot pair before asking again.
+2. **Watermark icons** (SAME #7): **yes, carry the lead watermark.**
+3. **Attribution** (D5): **yes, head rows keep a product badge** —
+   neutral identity badge, never a status hue.
+4. **Sidebar treatment**: **restyle to the card idiom** (frames,
+   neutral headers).
+5. **Metric tiles**: **align to the lead hero's segmented capsule.**
+6. **Shared `QuadrantCard` extraction** (D3): **decide after the
+   geometry is final** (per recommendation); start head-local, extract
+   only if the shells converge.
