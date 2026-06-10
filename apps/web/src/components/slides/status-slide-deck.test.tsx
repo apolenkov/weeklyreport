@@ -136,8 +136,8 @@ describe("StatusSlideDeck lead layout", () => {
     expect(
       screen.getByText("Completed authentication module refactor"),
     ).toBeInTheDocument();
-    // Inline product marker visible (full name in title attribute)
-    expect(screen.getAllByTitle("Marketing Portal").length).toBeGreaterThan(0);
+    // Single product: no per-row attribution dot (lead-slide-quadrants)
+    expect(screen.queryByTestId("row-product-dot")).not.toBeInTheDocument();
   });
 
   it("shows items from all products in the same unified section", () => {
@@ -160,7 +160,7 @@ describe("StatusSlideDeck lead layout", () => {
       screen.getByText("Completed authentication module refactor"),
     ).toBeInTheDocument();
     expect(screen.getByText("Close API parity")).toBeInTheDocument();
-    // Both product names appear as inline markers (full name in title attribute)
+    // Both product names appear as dot title attributes (row-product-dot, multi-product mode)
     expect(screen.getAllByTitle("Marketing Portal").length).toBeGreaterThan(0);
     expect(screen.getAllByTitle("Data Portal").length).toBeGreaterThan(0);
     // Cross-section content also visible

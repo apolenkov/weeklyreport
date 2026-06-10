@@ -5,6 +5,7 @@ import {
   buildActivitySlideModel,
   buildProductScopedSlides,
   buildSectionSlideModel,
+  buildUnifiedSlideModel,
   sortSlidesForReview,
 } from "./section-slide-utils";
 
@@ -472,6 +473,34 @@ describe("section slide utilities", () => {
         id: "scope",
         status: "needs-work",
       }),
+    );
+  });
+});
+
+describe("buildUnifiedSlideModel — cross-product rows (lead-slide-quadrants)", () => {
+  it("labels shared rows with the cross-product display name", () => {
+    const slide = buildSectionSlideModel(
+      makeSection({
+        decisions: [
+          {
+            id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+            text: "Keep one release train",
+            owner: "Head",
+            deadline: null,
+            impact: "Shared delivery decision",
+            resolvedAt: null,
+            productId: null,
+          },
+        ],
+      }),
+    );
+    const model = buildUnifiedSlideModel(slide);
+    const shared = model.decisions.find(
+      (row) => row.text === "Keep one release train",
+    );
+
+    expect(shared).toEqual(
+      expect.objectContaining({ productName: "Shared context" }),
     );
   });
 });

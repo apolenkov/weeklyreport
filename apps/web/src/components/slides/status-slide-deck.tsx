@@ -21,6 +21,7 @@ import type { SectionSlideModel, SlideTone } from "./section-slide-utils";
 import { buildUnifiedSlideModel } from "./section-slide-utils";
 import { SlideFullscreenButton } from "./slide-fullscreen-button";
 import {
+  mapTrafficLightToStatus,
   type ProductChipEntry,
   SlideProductChips,
 } from "./slide-product-chips";
@@ -149,14 +150,7 @@ function LeadSlideArticle({
     .map((p) => ({
       productId: p.id,
       productName: p.name,
-      worstStatus:
-        p.status === "red"
-          ? "blocked"
-          : p.status === "yellow"
-            ? "at-risk"
-            : p.status === "green"
-              ? "on-track"
-              : "empty",
+      worstStatus: mapTrafficLightToStatus(p.status),
     }));
 
   return (

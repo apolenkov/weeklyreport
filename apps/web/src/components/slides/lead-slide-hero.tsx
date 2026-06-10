@@ -1,6 +1,13 @@
 "use client";
 
-import { AlertTriangle, Check, Circle } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  Circle,
+  Gauge,
+  Star,
+  Target,
+} from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { SectionSlideModel } from "./section-slide-utils";
@@ -61,19 +68,30 @@ function toneConfig(tone: ToneVariant): {
   }
 }
 
-function metricTile(value: number, label: string, tooltip?: string) {
+/* Feedback round 2 (2026-06-10, frontend-design pass): the four metrics read
+   as ONE segmented capsule — a single pill at the shared row height, split by
+   hairline dividers, each segment icon + value + label on one line. */
+function metricSegment(
+  value: number,
+  label: string,
+  icon: ReactNode,
+  tooltip?: string,
+) {
   return (
-    <div
-      className="inline-flex flex-col items-center gap-0.5 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.12)] bg-white px-3 py-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+    <span
+      className="inline-flex items-center gap-1.5 px-3"
       title={tooltip ?? label}
     >
-      <span className="text-base font-bold leading-none text-[var(--color-foreground)]">
+      <span aria-hidden="true" className="text-[var(--color-muted-foreground)]">
+        {icon}
+      </span>
+      <span className="text-sm font-bold leading-none text-[var(--color-foreground)]">
         {value}
       </span>
-      <span className="text-[10px] leading-none text-[var(--color-muted-foreground)]">
+      <span className="text-[10px] font-medium uppercase tracking-[0.06em] leading-none text-[var(--color-muted-foreground)]">
         {label}
       </span>
-    </div>
+    </span>
   );
 }
 
@@ -111,21 +129,22 @@ export function LeadSlideHero({
   const displayPeriod = periodLabel ?? slide.ownerRole;
 
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[rgba(0,0,0,0.08)] pb-4">
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <span
-            className={[
-              "inline-flex h-7 items-center gap-1.5 rounded-[var(--radius-pill)] border px-2.5 py-1 text-xs font-semibold",
-              toneClassName,
-            ].join(" ")}
-          >
-            {toneIcon}
-            {toneLabel}
-          </span>
-          {heroControls}
-        </div>
-        <p className="mt-2 text-sm font-medium text-[var(--color-muted-foreground)]">
+    /* Feedback round 2 (2026-06-10, frontend-design pass): one status strip.
+       Everything static sits LEFT on a single line at one height (h-11):
+       tone badge → author → segmented metric capsule. The interactive scope
+       toggle is the only thing on the right. */
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[rgba(0,0,0,0.08)] pb-4">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+        <span
+          className={[
+            "inline-flex h-11 items-center gap-1.5 rounded-[var(--radius-pill)] border px-3 text-xs font-semibold",
+            toneClassName,
+          ].join(" ")}
+        >
+          {toneIcon}
+          {toneLabel}
+        </span>
+        <p className="text-sm font-medium text-[var(--color-muted-foreground)]">
           {displayName}
           {displayPeriod ? (
             <>
@@ -134,21 +153,32 @@ export function LeadSlideHero({
             </>
           ) : null}
         </p>
+        <div className="inline-flex h-11 items-center divide-x divide-[rgba(0,0,0,0.08)] rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.12)] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+          {metricSegment(
+            slide.currentCount,
+            "Current",
+            <Target className="h-4 w-4" />,
+          )}
+          {metricSegment(
+            slide.riskCount,
+            "Risks",
+            <AlertTriangle className="h-4 w-4" />,
+          )}
+          {metricSegment(
+            slide.priorityCount,
+            "Priorities",
+            <Star className="h-4 w-4" />,
+            "Priority items in this section",
+          )}
+          {metricSegment(
+            onTrackPct,
+            "On-track",
+            <Gauge className="h-4 w-4" />,
+            "Percentage of products without blocked or at-risk status",
+          )}
+        </div>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {metricTile(slide.currentCount, "Current")}
-        {metricTile(slide.riskCount, "Risks")}
-        {metricTile(
-          slide.priorityCount,
-          "Priorities",
-          "Priority items in this section",
-        )}
-        {metricTile(
-          onTrackPct,
-          "On-track %",
-          "Percentage of products without blocked or at-risk status",
-        )}
-      </div>
+      {heroControls}
     </div>
   );
 }

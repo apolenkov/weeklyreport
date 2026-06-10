@@ -128,9 +128,17 @@
   /* ---- Slide layout & typography ramp (F-shiny-4) ---- */
   --slide-pad: 24px;
   --slide-row-min: 80px;
+  --slide-quadrant-min: 120px;
   --slide-title-size: 28px;
   --slide-body-size: 13px;
   --slide-line-clamp: 3;
+
+  /* ---- Status dot (D6: names existing #d4a017 literal; zero visual delta) ---- */
+  --color-status-dot-at-risk: #d4a017;
+
+  /* ---- Decisions accent (user sign-off 2026-06-10: decisions read blue,
+     not green; steel-blue tone matched to the chip-border weight) ---- */
+  --color-decisions-accent: #4a7494;
 }
 
 /* ---- Skeleton animation (shimmer) ---- */
