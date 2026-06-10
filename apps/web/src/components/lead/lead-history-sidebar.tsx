@@ -42,19 +42,29 @@ export function LeadHistorySidebar({
   viewerMode = false,
 }: LeadHistorySidebarProps) {
   const total = entries.length;
-  const submitted = entries.filter(isCompletedWeek).length;
+  const submittedEntries = entries.filter(isCompletedWeek);
+  const submitted = submittedEntries.length;
   const onTimeRate = total === 0 ? 0 : Math.round((submitted / total) * 100);
-  const totalGreen = entries.reduce((acc, e) => acc + e.trafficLights.green, 0);
-  const totalYellow = entries.reduce(
+  const draftCount = total - submitted;
+  const totalGreen = submittedEntries.reduce(
+    (acc, e) => acc + e.trafficLights.green,
+    0,
+  );
+  const totalYellow = submittedEntries.reduce(
     (acc, e) => acc + e.trafficLights.yellow,
     0,
   );
-  const totalRed = entries.reduce((acc, e) => acc + e.trafficLights.red, 0);
-  const totalRisks = entries.reduce((acc, e) => acc + e.riskCount, 0);
+  const totalRed = submittedEntries.reduce(
+    (acc, e) => acc + e.trafficLights.red,
+    0,
+  );
+  const totalRisks = submittedEntries.reduce((acc, e) => acc + e.riskCount, 0);
   const avgItems =
-    total === 0
+    submitted === 0
       ? 0
-      : Math.round(entries.reduce((a, e) => a + e.itemCount, 0) / total);
+      : Math.round(
+          submittedEntries.reduce((a, e) => a + e.itemCount, 0) / submitted,
+        );
 
   // Pattern: longest run of consecutive submitted weeks at the top of the list
   // (entries are newest-first per `mapHistoryEntries`). Captures "current
@@ -90,6 +100,12 @@ export function LeadHistorySidebar({
               accent={totalRisks > 0 ? "warn" : "muted"}
             />
           </StatGrid>
+          {draftCount > 0 && (
+            <p className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">
+              {draftCount} {draftCount === 1 ? "draft" : "drafts"} not included
+              in aggregates.
+            </p>
+          )}
           {/* Traffic-light footer — same colors as the row chips so the rail
               reads as an aggregate of the cards beside it. */}
           <div className="mt-3 flex items-center gap-1.5 text-[11px] text-[var(--color-muted-foreground)]">

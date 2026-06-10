@@ -90,7 +90,11 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
     () =>
       periods.map((p) => ({
         id: p.id,
-        label: p.isCurrent ? `${p.dateRange} (Current)` : p.dateRange,
+        label: p.isCurrent
+          ? `${p.dateRange} (Current)`
+          : p.archived
+            ? `[Archived] ${p.dateRange}`
+            : p.dateRange,
       })),
     [periods],
   );

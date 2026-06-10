@@ -46,6 +46,22 @@ function ChevronDown() {
   );
 }
 
+function SearchIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-muted-foreground)]"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="8" />
+      <path d="M21 21l-4.35-4.35" />
+    </svg>
+  );
+}
+
 export function FillFromButton({
   periods,
   onFillFrom,
@@ -58,6 +74,12 @@ export function FillFromButton({
   );
   const [search, setSearch] = useState("");
   const wrapRef = useRef<HTMLDivElement>(null);
+  const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownPanelRef = useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{
+    top: number;
+    right: number;
+  } | null>(null);
 
   const pastPeriods = periods.filter((p) => !p.isCurrent && p.isSubmitted);
   const previousPeriod = pastPeriods.at(0);
@@ -70,13 +92,36 @@ export function FillFromButton({
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const wrapContains = wrapRef.current?.contains(target);
+      const panelContains = dropdownPanelRef.current?.contains(target);
+      if (!wrapContains && !panelContains) {
         setShowDropdown(false);
       }
     }
     if (showDropdown)
       document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showDropdown]);
+
+  // Position the dropdown via portal to escape the toolbar's overflow clip.
+  useEffect(() => {
+    if (!showDropdown) return;
+    const update = () => {
+      const r = dropdownTriggerRef.current?.getBoundingClientRect();
+      if (!r) return;
+      setDropdownPos({
+        top: r.bottom + 4,
+        right: window.innerWidth - r.right,
+      });
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
   }, [showDropdown]);
 
   function handleFillPrevious() {
@@ -106,9 +151,9 @@ export function FillFromButton({
 
   return (
     <>
-      {/* No overflow-hidden here: the dropdown renders inside this wrapper,
-          and clipping it made the chevron look dead (bug 2026-06-10). The
-          pill silhouette comes from rounding the buttons themselves. */}
+      {/* Pill silhouette comes from rounding the buttons themselves; the
+          dropdown portals to document.body with position:fixed, which is what
+          frees it from the toolbar's overflow clip (bug 2026-06-10). */}
       <div
         className="relative inline-flex rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white/70"
         ref={wrapRef}
@@ -127,6 +172,7 @@ export function FillFromButton({
 
         {/* Dropdown trigger */}
         <button
+          ref={dropdownTriggerRef}
           type="button"
           className="btn-press inline-flex min-h-8 min-w-[34px] items-center justify-center rounded-r-[var(--radius-pill)] border-l border-[rgba(0,117,74,0.18)] bg-transparent px-1.5 text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => setShowDropdown(!showDropdown)}
@@ -136,22 +182,32 @@ export function FillFromButton({
         >
           <ChevronDown />
         </button>
+      </div>
 
-        {/* Dropdown list */}
-        {showDropdown && (
-          <div className="absolute right-0 top-full z-50 mt-1 w-[340px] rounded-xl border border-[var(--color-muted)] bg-white p-3 shadow-lg">
-            <input
-              type="text"
-              className="mb-2 w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-1.5 pl-8 text-[13px] text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
-              placeholder="Search reports…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E")`,
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "10px center",
-              }}
-            />
+      {/* Dropdown list — portal to document.body so the toolbar's
+          overflow clip cannot truncate it; position:fixed from the trigger
+          rect, tracked on scroll + resize. */}
+      {showDropdown &&
+        dropdownPos &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={dropdownPanelRef}
+            className="fixed z-50 w-[340px] rounded-xl border border-[var(--color-muted)] bg-white p-3 shadow-lg"
+            style={{ top: dropdownPos.top, right: dropdownPos.right }}
+          >
+            {pastPeriods.length > 0 && (
+              <div className="relative mb-2">
+                <SearchIcon />
+                <input
+                  type="text"
+                  className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-1.5 pl-8 text-[13px] text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+                  placeholder="Search reports…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+            )}
             <div className="max-h-[200px] space-y-1 overflow-y-auto">
               {pastPeriods.length === 0 ? (
                 <p className="px-2 py-3 text-center text-[13px] text-[var(--color-muted-foreground)]">
@@ -166,18 +222,12 @@ export function FillFromButton({
                 <button
                   key={p.id}
                   type="button"
-                  className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors hover:bg-[var(--color-surface-hover)]"
-                  style={
+                  className={[
+                    "flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors",
                     idx === 0
-                      ? {
-                          background: "var(--color-success)",
-                          border: "1.5px solid var(--color-starbucks-accent)",
-                        }
-                      : {
-                          background: "var(--color-background)",
-                          border: "1.5px solid transparent",
-                        }
-                  }
+                      ? "border border-[var(--color-starbucks-accent)] bg-[var(--color-success)] hover:brightness-95"
+                      : "border border-transparent bg-[var(--color-background)] hover:bg-[var(--color-surface-hover)]",
+                  ].join(" ")}
                   onClick={() => handleFillFromPeriod(p)}
                 >
                   <div className="flex-1">
@@ -190,16 +240,16 @@ export function FillFromButton({
                     </div>
                   </div>
                   {idx === 0 && (
-                    <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[9px] font-semibold text-[var(--color-primary)]">
+                    <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-2 py-0.5 text-[9px] font-semibold text-white">
                       Previous
                     </span>
                   )}
                 </button>
               ))}
             </div>
-          </div>
+          </div>,
+          document.body,
         )}
-      </div>
 
       {/* Confirmation dialog — portal to document.body so ancestor
           transform/filter does not break position:fixed containment */}

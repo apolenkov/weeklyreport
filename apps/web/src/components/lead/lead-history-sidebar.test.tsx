@@ -85,4 +85,59 @@ describe("LeadHistorySidebar completed-week stats", () => {
     expect(screen.getByText("0/0")).toBeInTheDocument();
     expect(screen.getByText("No history yet.")).toBeInTheDocument();
   });
+
+  it("excludes draft entries from aggregates but keeps them in the Submissions denominator", () => {
+    const submittedA = makeEntry("submitted", 0);
+    // submitted entry: trafficLights.green=1, itemCount=3, riskCount=0
+
+    const submittedB: HistoryEntry = {
+      ...makeEntry("submitted", 1),
+      trafficLights: { green: 0, yellow: 1, red: 0 },
+      itemCount: 5,
+      riskCount: 2,
+    };
+
+    const draft: HistoryEntry = {
+      ...makeEntry("draft", 2),
+      trafficLights: { green: 0, yellow: 0, red: 3 },
+      itemCount: 100,
+      riskCount: 99,
+    };
+
+    render(<LeadHistorySidebar entries={[submittedA, submittedB, draft]} />);
+
+    // Submissions: 2 completed out of 3 total
+    expect(screen.getByText("2/3")).toBeInTheDocument();
+    expect(screen.getByText("67%")).toBeInTheDocument();
+
+    // avgItems: (3 + 5) / 2 = 4, NOT (3 + 5 + 100) / 3 = 36
+    expect(screen.getByText("4")).toBeInTheDocument();
+
+    // totalRisks: 0 + 2 = 2, NOT 0 + 2 + 99 = 101
+    // The Stat tile structure: outer div > value div + label div.
+    // Navigate from the label up to the tile container, then get the first child (value).
+    const risksLabel = screen.getByText("Total risks");
+    const statTile = risksLabel.parentElement;
+    expect(statTile?.firstElementChild).toHaveTextContent("2");
+
+    // Traffic-light footer: green=1, yellow=1, red=0 (draft's red=3 excluded)
+    const aside = screen.getByRole("complementary");
+    // The footer renders three <span> counts; the muted "blocked" advisory
+    // should NOT appear because red=0 for submitted entries only.
+    expect(aside.textContent).not.toMatch(/blocked traffic-light/i);
+
+    // Draft note is visible
+    expect(screen.getByText(/1 draft not included/i)).toBeInTheDocument();
+  });
+
+  it("shows no draft note when all entries are submitted", () => {
+    const entries: HistoryEntry[] = [
+      makeEntry("submitted", 0),
+      makeEntry("submitted", 1),
+    ];
+
+    render(<LeadHistorySidebar entries={entries} />);
+
+    expect(screen.queryByText(/draft.*not included/i)).not.toBeInTheDocument();
+  });
 });
