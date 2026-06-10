@@ -231,13 +231,21 @@ export function FillFromButton({
                   onClick={() => handleFillFromPeriod(p)}
                 >
                   <div className="flex-1">
-                    <div className="flex items-baseline gap-1.5 text-sm font-semibold">
-                      <span>
+                    {/* Badges share the title line, right-aligned — one
+                        horizontal level for Archived and Previous
+                        (user feedback 2026-06-10). */}
+                    <div className="flex items-center gap-1.5 text-sm font-semibold">
+                      <span className="flex-1 truncate">
                         {p.weekLabel} &middot; {p.dateRange}
                       </span>
                       {p.archived && (
                         <span className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[9px] font-semibold text-[var(--color-muted-foreground)]">
                           Archived
+                        </span>
+                      )}
+                      {idx === 0 && (
+                        <span className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-2 py-0.5 text-[9px] font-semibold text-white">
+                          Previous
                         </span>
                       )}
                     </div>
@@ -246,11 +254,6 @@ export function FillFromButton({
                       items &middot; {p.riskCount ?? 0} risks
                     </div>
                   </div>
-                  {idx === 0 && (
-                    <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-2 py-0.5 text-[9px] font-semibold text-white">
-                      Previous
-                    </span>
-                  )}
                 </button>
               ))}
             </div>
