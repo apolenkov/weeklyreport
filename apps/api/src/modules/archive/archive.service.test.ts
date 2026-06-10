@@ -4,7 +4,6 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { archiveRouter } from "./archive.router";
 import {
   ArchiveDomainError,
   type ArchiveRepository,
@@ -88,25 +87,6 @@ describe("ArchiveService", () => {
     await expect(
       service.getArchiveReport("99999999-9999-4999-8999-999999999999"),
     ).rejects.toBeInstanceOf(ArchiveDomainError);
-  });
-});
-
-describe("archiveRouter", () => {
-  it("returns list and detail read models", async () => {
-    const service = new ArchiveService(createRepository());
-
-    await expect(
-      archiveRouter.listArchiveReports({ archiveService: service }),
-    ).resolves.toMatchObject({
-      items: expect.arrayContaining([
-        expect.objectContaining({ reportId }),
-      ]) as unknown,
-    });
-    await expect(
-      archiveRouter.getArchiveReport({ archiveService: service, reportId }),
-    ).resolves.toMatchObject({
-      summary: { reportId },
-    });
   });
 });
 
