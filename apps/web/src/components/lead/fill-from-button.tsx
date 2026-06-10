@@ -232,12 +232,14 @@ export function FillFromButton({
                 >
                   <div className="flex-1">
                     <div className="flex items-baseline gap-1.5 text-sm font-semibold">
+                      <span>
+                        {p.weekLabel} &middot; {p.dateRange}
+                      </span>
                       {p.archived && (
-                        <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[9px] font-semibold text-[var(--color-muted-foreground)]">
+                        <span className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[9px] font-semibold text-[var(--color-muted-foreground)]">
                           Archived
                         </span>
                       )}
-                      {p.weekLabel} &middot; {p.dateRange}
                     </div>
                     <div className="text-[11px] text-[var(--color-muted-foreground)]">
                       {p.productCount ?? 0} products &middot; {p.itemCount ?? 0}{" "}

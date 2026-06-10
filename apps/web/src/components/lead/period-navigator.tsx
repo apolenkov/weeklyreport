@@ -295,10 +295,10 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
           onClick={() => setOpen((o) => !o)}
           onKeyDown={handleTriggerKeyDown}
         >
-          {selectedPeriod?.archived && <ArchivedBadge />}
           <span className="truncate">
             {selectedPeriod ? periodLabel(selectedPeriod) : ""}
           </span>
+          {selectedPeriod?.archived && <ArchivedBadge />}
         </button>
         <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted-foreground)]">
           <ChevronRight />
