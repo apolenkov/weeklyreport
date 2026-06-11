@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
+import { createMockTRPC } from "../../test-utils/mock-trpc";
 import type { MockProduct, MockUser } from "./mock-data";
 import { ProductsTab } from "./products-tab";
 
@@ -77,53 +78,31 @@ const mockProduct: MockProduct = {
 
 // ----- tRPC test double ----------------------------------------------
 
-function makeMockTRPC() {
-  return {
-    admin: {
-      listStageAssignmentCounts: {
-        queryOptions: () => ({
-          queryKey: ["admin", "listStageAssignmentCounts"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async queryFn contract; no awaitable work in the stub
-          queryFn: async () => [],
-        }),
-      },
-      saveProject: {
-        mutationOptions: (mopts: Record<string, unknown>) => ({
-          mutationFn: vi.fn().mockResolvedValue({}),
-          onSuccess: mopts.onSuccess,
-          onError: mopts.onError,
-        }),
-      },
-      deleteProject: {
-        mutationOptions: (mopts: Record<string, unknown>) => ({
-          mutationFn: vi.fn().mockResolvedValue({}),
-          onSuccess: mopts.onSuccess,
-          onError: mopts.onError,
-        }),
-      },
-      // Minimal stubs for other admin paths that invalidateAdmin may touch.
-      snapshot: { pathFilter: () => ({ queryKey: ["admin", "snapshot"] }) },
-      getSettings: {
-        pathFilter: () => ({ queryKey: ["admin", "getSettings"] }),
-      },
-    },
-  } as never;
-}
-
 function renderTab(opts?: {
   products?: MockProduct[];
   users?: MockUser[];
   productFilter?: string | null;
 }) {
+  const { proxy } = createMockTRPC([
+    {
+      path: ["admin", "listStageAssignmentCounts"],
+      query: [] as unknown[],
+    },
+    { path: ["admin", "saveProject"], mutation: true },
+    { path: ["admin", "deleteProject"], mutation: true },
+    // Minimal stubs for other admin paths that invalidateAdmin may touch.
+    { path: ["admin", "snapshot"] },
+    { path: ["admin", "getSettings"] },
+  ]);
+
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const trpc = makeMockTRPC();
 
   function Wrapper({ children }: { readonly children: ReactNode }) {
     return (
       <QueryClientProvider client={qc}>
-        <TRPCProxyContext.Provider value={trpc}>
+        <TRPCProxyContext.Provider value={proxy}>
           {children}
         </TRPCProxyContext.Provider>
       </QueryClientProvider>

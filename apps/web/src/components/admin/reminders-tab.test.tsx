@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
+import { createMockTRPC } from "../../test-utils/mock-trpc";
 import type { MockPeriod, MockReminder, MockReminderPolicy } from "./mock-data";
 import { RemindersTab } from "./reminders-tab";
 
@@ -20,11 +21,6 @@ vi.mock("sonner", () => ({
     info: (...args: unknown[]) => toastInfo(...args),
   },
 }));
-
-interface Captured {
-  saveMutationFn: ReturnType<typeof vi.fn>;
-  removeMutationFn: ReturnType<typeof vi.fn>;
-}
 
 const period: MockPeriod = {
   id: "a0000000-0000-4000-8000-000000000001",
@@ -70,50 +66,26 @@ const derivedRule: MockReminder = {
   policyId: policyDeadline.id,
 };
 
-function makeMutationOptions(
-  mutationFn: ReturnType<typeof vi.fn>,
-  opts: Record<string, unknown>,
-) {
-  return {
-    mutationFn,
-    onSuccess: opts.onSuccess,
-    onError: opts.onError,
-    onSettled: opts.onSettled,
-  };
-}
-
-function makeMockTRPC(captured: Captured) {
-  return {
-    admin: {
-      snapshot: { pathFilter: () => ({ queryKey: ["admin", "snapshot"] }) },
-      getSettings: { pathFilter: () => ({ queryKey: ["admin", "settings"] }) },
-      savePolicy: {
-        mutationOptions: (opts: Record<string, unknown>) =>
-          makeMutationOptions(captured.saveMutationFn, opts),
-      },
-      removePolicy: {
-        mutationOptions: (opts: Record<string, unknown>) =>
-          makeMutationOptions(captured.removeMutationFn, opts),
-      },
-    },
-    weeklyReport: {
-      get: { pathFilter: () => ({ queryKey: ["weeklyReport", "get"] }) },
-    },
-  } as never;
-}
-
 function renderTab(args?: {
   policies?: MockReminderPolicy[];
   derivedRulesByPolicyId?: Record<string, MockReminder[]>;
-  captured?: Captured;
   // UFB-048 (Phase 48-B): admin-panel pipes these through from AppSettings.
   defaultTimezone?: string;
   defaultAudience?: MockReminderPolicy["audience"];
 }) {
-  const captured: Captured = args?.captured ?? {
-    saveMutationFn: vi.fn().mockResolvedValue(undefined),
-    removeMutationFn: vi.fn().mockResolvedValue({ success: true }),
-  };
+  const { proxy, captured } = createMockTRPC([
+    { path: ["admin", "snapshot"] },
+    { path: ["admin", "getSettings"] },
+    { path: ["admin", "savePolicy"], mutation: true },
+    { path: ["admin", "removePolicy"], mutation: true },
+    { path: ["weeklyReport", "get"] },
+  ]);
+
+  captured["admin.savePolicy"].mutationFn.mockResolvedValue(undefined);
+  captured["admin.removePolicy"].mutationFn.mockResolvedValue({
+    success: true,
+  });
+
   const policies = args?.policies ?? [policyDeadline, policyEscalation];
   const derivedRulesByPolicyId = args?.derivedRulesByPolicyId ?? {
     [policyDeadline.id]: [derivedRule],
@@ -123,12 +95,11 @@ function renderTab(args?: {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const trpc = makeMockTRPC(captured);
 
   function Wrapper({ children }: { readonly children: ReactNode }) {
     return (
       <QueryClientProvider client={qc}>
-        <TRPCProxyContext.Provider value={trpc}>
+        <TRPCProxyContext.Provider value={proxy}>
           {children}
         </TRPCProxyContext.Provider>
       </QueryClientProvider>
@@ -227,12 +198,10 @@ describe("RemindersTab (Phase 44-04)", () => {
     await user.click(screen.getByTestId("policy-save-button"));
 
     await waitFor(() => {
-      expect(captured.saveMutationFn).toHaveBeenCalledTimes(1);
+      expect(captured["admin.savePolicy"].mutationFn).toHaveBeenCalledTimes(1);
     });
-    const arg = captured.saveMutationFn.mock.calls[0]?.[0] as Record<
-      string,
-      unknown
-    >;
+    const arg = captured["admin.savePolicy"].mutationFn.mock
+      .calls[0]?.[0] as Record<string, unknown>;
     expect(arg.kind).toBe("deadline");
     expect(arg.offsetMinutes).toBe(-1440);
     expect(arg.timezone).toBe("Europe/Moscow");
@@ -311,9 +280,13 @@ describe("RemindersTab (Phase 44-04)", () => {
     // confirm
     await user.click(screen.getByRole("button", { name: /confirm|delete/i }));
     await waitFor(() => {
-      expect(captured.removeMutationFn).toHaveBeenCalledTimes(1);
+      expect(captured["admin.removePolicy"].mutationFn).toHaveBeenCalledTimes(
+        1,
+      );
     });
-    expect(captured.removeMutationFn.mock.calls[0]?.[0]).toEqual({
+    expect(
+      captured["admin.removePolicy"].mutationFn.mock.calls[0]?.[0],
+    ).toEqual({
       id: policyDeadline.id,
     });
   });
