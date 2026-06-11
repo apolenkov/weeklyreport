@@ -272,6 +272,35 @@ describe("StatusSlideDeck lead — product chip filter (slides-product-autofit)"
     expect(screen.queryAllByRole("tab", { selected: true })).toHaveLength(0);
   });
 
+  it("keeps fullscreen active when a chip is clicked during a presentation", () => {
+    const exitFullscreen = vi.fn(() => Promise.resolve());
+    Object.defineProperty(document, "fullscreenElement", {
+      configurable: true,
+      get: () => document.body,
+    });
+    document.exitFullscreen = exitFullscreen;
+    try {
+      renderLeadDeck([slide(twoProducts())]);
+
+      fireEvent.click(screen.getByRole("tab", { name: "Data Portal" }));
+
+      // The chip applies the filter without ending the presentation...
+      expect(exitFullscreen).not.toHaveBeenCalled();
+      expect(
+        screen.queryByText("Completed authentication module refactor"),
+      ).not.toBeInTheDocument();
+
+      // ...while a click elsewhere on the slide still exits fullscreen.
+      fireEvent.click(screen.getByRole("article"));
+      expect(exitFullscreen).toHaveBeenCalledTimes(1);
+    } finally {
+      // Both were defined as own properties over jsdom's prototype slots;
+      // deleting them restores the untouched prototype behavior.
+      Reflect.deleteProperty(document, "exitFullscreen");
+      Reflect.deleteProperty(document, "fullscreenElement");
+    }
+  });
+
   it("hides cross-product rows while a product is selected", () => {
     renderLeadDeck([
       slide([

@@ -74,7 +74,12 @@ export function SlideProductChips({
             aria-selected={isActive}
             aria-controls={`product-card-${product.productId}`}
             title={product.productName}
-            onClick={() => onSelect?.(product.productId)}
+            onClick={(event) => {
+              // The lead slide article exits fullscreen on any click; picking
+              // a product must scope the slide without ending presentation.
+              event.stopPropagation();
+              onSelect?.(product.productId);
+            }}
             className={[
               "inline-flex min-w-0 items-center gap-1.5 rounded-[var(--radius-pill)] border px-3 py-1.5 text-sm transition-colors",
               isActive
