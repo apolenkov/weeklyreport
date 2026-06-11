@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { HeadPresentClient } from "../../../../../components/head/head-present-client";
+import { AgentReviewComingSoon } from "../../../../../components/report-shell/agent-review-coming-soon";
 import { WeeklyReportSkeleton } from "../../../../../components/weekly-report/weekly-report-skeleton";
 
 interface Props {
@@ -27,12 +28,15 @@ export default async function PublishedReportPresentPage({ params }: Props) {
               Published report view
             </p>
           </div>
-          <Link
-            href={`/reports/${reportId}`}
-            className="rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
-          >
-            Back to report
-          </Link>
+          <div className="flex items-center gap-3">
+            <AgentReviewComingSoon compact />
+            <Link
+              href={`/reports/${reportId}`}
+              className="rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+            >
+              Back to report
+            </Link>
+          </div>
         </header>
 
         <Suspense fallback={<WeeklyReportSkeleton />}>

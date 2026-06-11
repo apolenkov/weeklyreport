@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { LeadSectionPreviewAuth } from "../../../../../../components/lead/lead-section-preview-auth";
+import { AgentReviewComingSoon } from "../../../../../../components/report-shell/agent-review-coming-soon";
 import { RoleGate } from "../../../../../../components/role-gate";
 import { WeeklyReportSkeleton } from "../../../../../../components/weekly-report/weekly-report-skeleton";
 
@@ -42,12 +43,15 @@ export default async function LeadReportPreviewPage({ params }: Props) {
                 report.
               </p>
             </div>
-            <Link
-              href={`/lead/report/${reportId}`}
-              className="rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
-            >
-              ← Back to form
-            </Link>
+            <div className="flex items-center gap-3">
+              <AgentReviewComingSoon compact />
+              <Link
+                href={`/lead/report/${reportId}`}
+                className="rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+              >
+                ← Back to form
+              </Link>
+            </div>
           </header>
 
           <Suspense fallback={<WeeklyReportSkeleton />}>
