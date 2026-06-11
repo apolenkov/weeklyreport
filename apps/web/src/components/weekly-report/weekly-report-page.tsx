@@ -11,15 +11,12 @@ import {
   invalidateLeadForm,
   invalidateLeadHistory,
 } from "../../lib/cache-keys";
-import {
-  formatClientErrorMessage,
-  logClientError,
-} from "../../lib/client-error-reporting";
 import { joinPeriodLabel } from "../../lib/format-date";
 import { mapWeeklyReport } from "../../lib/mappers";
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
+import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
 import type {
   PortfolioProduct,
   ProductReport,
@@ -134,19 +131,13 @@ export function WeeklyReportPage({
     }),
   );
 
-  useEffect(() => {
-    if (weeklyQ.isError) {
-      logClientError("weeklyReport.get.load_failed", weeklyQ.error, {
-        component: "WeeklyReportPage",
-        procedure: "weeklyReport.get",
-        reportId: reportId ?? null,
-        authorId: focusedAuthorId,
-      });
-      toast.error(
-        formatClientErrorMessage("Failed to load status report", weeklyQ.error),
-      );
-    }
-  }, [weeklyQ.isError, weeklyQ.error, reportId, focusedAuthorId]);
+  useQueryErrorHandler(weeklyQ, {
+    event: "weeklyReport.get.load_failed",
+    component: "WeeklyReportPage",
+    procedure: "weeklyReport.get",
+    context: { reportId: reportId ?? null, authorId: focusedAuthorId },
+    toastPrefix: "Failed to load status report",
+  });
 
   // 35-07: bare `/head/report` -> redirect to `/head/report/<reportId>`
   // once the active reportId is known. Skipped when:
