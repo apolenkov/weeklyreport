@@ -38,11 +38,11 @@ exists. Before starting, re-run `git status --short` and
 - [x] 2.2 Split the static `className` into base classes plus a
       conditional pair: when `isSaving` →
       `border-[var(--color-starbucks-accent)]
-  bg-[var(--color-starbucks-accent)] text-white
-  disabled:opacity-100`; otherwise the existing
+bg-[var(--color-starbucks-accent)] text-white
+disabled:opacity-100`; otherwise the existing
       `border-[var(--color-border)] bg-transparent
-  text-[var(--color-foreground)]
-  hover:bg-[var(--color-surface-hover)] disabled:opacity-40`.
+text-[var(--color-foreground)]
+hover:bg-[var(--color-surface-hover)] disabled:opacity-40`.
       Keep the shared geometry/focus/disabled-cursor classes in the
       base. No magic hex values — tokens only (design D2).
       Do not touch the icon components or the 1500 ms revert timer.
@@ -70,7 +70,7 @@ exists. Before starting, re-run `git status --short` and
       `grep -nE '[а-яА-Я]' apps/web/src/components/report-shell/save-now-button.tsx`
       — matches only in comments/tests, never in rendered strings.
       Result: no matches (exit 1 = nothing found).
-- [ ] 3.3 Live-browser walk (driver-verify lesson: never trust
+- [x] 3.3 Live-browser walk (driver-verify lesson: never trust
       unit-only): on the lead report page edit a field, click the
       save-now button while the mutation runs (throttle network if too
       fast) → button turns accent green with a white spinner, repeat
