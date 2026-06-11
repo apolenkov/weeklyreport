@@ -37,7 +37,7 @@ starting any group-3 task (a parallel session edits lead files).
 
 ## 2. Admin-tab + weekly-report conversions (web; may start immediately)
 
-- [ ] 2.1 Convert
+- [x] 2.1 Convert
       `apps/web/src/components/admin/settings-tab.test.tsx`: replace
       `makeMockTRPC` (:50-105) with factory descriptors; drop all
       `{ tag }` pathFilter stubs (:68, :90-103) and the per-file
@@ -45,10 +45,10 @@ starting any group-3 task (a parallel session edits lead files).
       success the `admin.getOrganization` query is invalidated by its
       specific key; preserve the toast and captured mutation-args
       assertions verbatim. Run the web suite before committing.
-- [ ] 2.2 Convert `users-tab.test.tsx` — same transformation for the
+- [x] 2.2 Convert `users-tab.test.tsx` — same transformation for the
       `{ tag }` stubs at :55-64; ADD the matching invalidateAdmin-path
       invalidation assertion. Run the web suite before committing.
-- [ ] 2.3 Convert `jobs-tab.test.tsx` — collapse `makeMockTRPC`
+- [x] 2.3 Convert `jobs-tab.test.tsx` — collapse `makeMockTRPC`
       (:54-82) and `makePendingMockTRPC` (:114-142) into two factory
       calls differing only in the `listFailed` descriptor (data vs
       `"pending"`); cover the bare `queryKey()` at `admin.dlqCount`

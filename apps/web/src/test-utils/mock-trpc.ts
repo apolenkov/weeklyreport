@@ -103,8 +103,9 @@ export function createMockTRPC(descriptors: ProcedureDescriptor[]): {
 
     const leaf = ensureLeaf(root, path);
 
-    // pathFilter always returns the non-vacuous { queryKey } shape.
+    // pathFilter and bare queryKey() always derive from the same path.
     leaf.pathFilter = () => ({ queryKey: qk });
+    leaf.queryKey = () => qk;
 
     if (query !== undefined) {
       buildQuery(leaf, qk, query);
@@ -142,7 +143,6 @@ function buildQuery(
   }
 
   leaf.queryOptions = () => ({ queryKey: qk, queryFn });
-  leaf.queryKey = () => qk;
 }
 
 function buildMutation(

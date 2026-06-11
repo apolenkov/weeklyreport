@@ -14,11 +14,13 @@
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
+import { createMockTRPC } from "../../test-utils/mock-trpc";
 import type { MockGroup, MockUser } from "./mock-data";
 import { UsersTab } from "./users-tab";
 
@@ -37,33 +39,19 @@ vi.mock("sonner", () => ({
 // UsersTab calls: saveUser, deleteUser, deactivateUser, activateUser
 //   (all mutations). invalidateAdmin also calls pathFilter on several routes.
 // ---------------------------------------------------------------------------
-function makeMockTRPC() {
-  function noopMutationOptions(_opts: Record<string, unknown>): {
-    mutationFn: () => Promise<void>;
-  } {
-    return {
-      mutationFn: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
-    };
-  }
-  return {
-    admin: {
-      saveUser: { mutationOptions: noopMutationOptions },
-      deleteUser: { mutationOptions: noopMutationOptions },
-      deactivateUser: { mutationOptions: noopMutationOptions },
-      activateUser: { mutationOptions: noopMutationOptions },
-      // pathFilter stubs consumed by invalidateAdmin
-      snapshot: { pathFilter: () => ({ tag: "admin.snapshot" }) },
-      getSettings: { pathFilter: () => ({ tag: "admin.getSettings" }) },
-      getOrganization: {
-        pathFilter: () => ({ tag: "admin.getOrganization" }),
-      },
-    },
-    org: { getPublic: { pathFilter: () => ({ tag: "org.getPublic" }) } },
-    auth: { me: { pathFilter: () => ({ tag: "auth.me" }) } },
-    weeklyReport: {
-      get: { pathFilter: () => ({ tag: "weeklyReport.get" }) },
-    },
-  } as never;
+function buildProxy() {
+  return createMockTRPC([
+    { path: ["admin", "saveUser"], mutation: true },
+    { path: ["admin", "deleteUser"], mutation: true },
+    { path: ["admin", "deactivateUser"], mutation: true },
+    { path: ["admin", "activateUser"], mutation: true },
+    { path: ["admin", "snapshot"] },
+    { path: ["admin", "getSettings"] },
+    { path: ["admin", "getOrganization"] },
+    { path: ["org", "getPublic"] },
+    { path: ["auth", "me"] },
+    { path: ["weeklyReport", "get"] },
+  ]);
 }
 
 // ---------------------------------------------------------------------------
@@ -91,24 +79,23 @@ const USER: MockUser = {
 // Render helper
 // ---------------------------------------------------------------------------
 function renderTab(users: MockUser[] = [USER], groups: MockGroup[] = [GROUP]) {
+  const { proxy, captured } = buildProxy();
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const trpc = makeMockTRPC();
 
   function Wrapper({ children }: { readonly children: ReactNode }) {
     return (
       <QueryClientProvider client={qc}>
-        <TRPCProxyContext.Provider value={trpc}>
+        <TRPCProxyContext.Provider value={proxy}>
           {children}
         </TRPCProxyContext.Provider>
       </QueryClientProvider>
     );
   }
 
-  return render(<UsersTab users={users} groups={groups} />, {
-    wrapper: Wrapper,
-  });
+  render(<UsersTab users={users} groups={groups} />, { wrapper: Wrapper });
+  return { qc, captured };
 }
 
 // ---------------------------------------------------------------------------
@@ -175,5 +162,39 @@ describe("UsersTab — dialog keyboard and click behavior (VA-0a)", () => {
     fireEvent.click(screen.getByRole("dialog"));
 
     expect(screen.getByTestId("crud-sheet")).toBeInTheDocument();
+  });
+});
+
+// D4 (design): pin the non-vacuous invalidation fix — after Save success
+// invalidateAdmin must call invalidateQueries with the specific
+// admin.getOrganization queryKey (not the vacuous { tag } filter).
+describe("UsersTab — invalidation contract (D4)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("Save user invalidates admin.getOrganization by its specific queryKey", async () => {
+    const { qc, captured } = renderTab([], [GROUP]);
+    captured["admin.saveUser"].mutationFn.mockResolvedValue(undefined);
+    const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
+
+    openDialog();
+
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText(/name/i), "New Person");
+    await user.type(screen.getByLabelText(/email/i), "new@example.com");
+
+    await user.click(screen.getByRole("button", { name: /^add user$/i }));
+
+    // invalidateAdmin fires synchronously inside onSuccess; wait for it.
+    const orgQueryKey = [["admin", "getOrganization"]];
+    await waitFor(() => {
+      const calledKeys = invalidateSpy.mock.calls.map((c) =>
+        JSON.stringify(c[0]),
+      );
+      expect(
+        calledKeys.some((k) => k.includes(JSON.stringify(orgQueryKey))),
+      ).toBe(true);
+    });
   });
 });

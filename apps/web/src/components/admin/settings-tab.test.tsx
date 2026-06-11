@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
+import { createMockTRPC } from "../../test-utils/mock-trpc";
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
@@ -29,11 +30,6 @@ vi.mock("sonner", () => ({
 import type { MockSettings } from "./mock-data";
 import { SettingsTab } from "./settings-tab";
 
-interface Captured {
-  updateOrgFn: ReturnType<typeof vi.fn>;
-  updateSettingsFn: ReturnType<typeof vi.fn>;
-}
-
 // UFB-056 / Phase 55-5: Telegram integration status shape returned by
 // `admin.integrationsStatus`. Default to «not configured, 0 bindings» so
 // tests that don't care about Integrations don't have to opt out.
@@ -47,68 +43,59 @@ const DEFAULT_INTEGRATIONS: IntegrationStub = {
   telegram: { configured: false, bindings: 0 },
 };
 
-function makeMockTRPC(
-  captured: Captured,
-  integrations: IntegrationStub = DEFAULT_INTEGRATIONS,
-) {
-  return {
-    admin: {
-      getOrganization: {
-        queryOptions: () => ({
-          queryKey: ["admin", "getOrganization"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements React Query queryFn contract which must return Promise (no awaitable work in the stub)
-          queryFn: async () => ({
-            id: "singleton",
-            shortName: "Demo",
-            fullName: "Example Software Department",
-            createdAt: new Date("2026-05-10T00:00:00Z"),
-            updatedAt: new Date("2026-05-10T00:00:00Z"),
-          }),
-        }),
-        pathFilter: () => ({ tag: "admin.getOrganization" }),
-      },
-      updateOrganization: {
-        mutationOptions: (opts: {
-          onSuccess?: () => void;
-          onError?: (err: Error) => void;
-        }) => ({
-          mutationFn: captured.updateOrgFn,
-          onSuccess: opts.onSuccess,
-          onError: opts.onError,
-        }),
-      },
-      updateSettings: {
-        mutationOptions: (opts: {
-          onSuccess?: () => void;
-          onError?: (err: Error) => void;
-        }) => ({
-          mutationFn: captured.updateSettingsFn,
-          onSuccess: opts.onSuccess,
-          onError: opts.onError,
-        }),
-      },
-      snapshot: { pathFilter: () => ({ tag: "admin.snapshot" }) },
-      getSettings: { pathFilter: () => ({ tag: "admin.getSettings" }) },
-      integrationsStatus: {
-        queryOptions: () => ({
-          queryKey: ["admin", "integrationsStatus"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements React Query queryFn contract which must return Promise (no awaitable work in the stub)
-          queryFn: async () => integrations,
-        }),
-        pathFilter: () => ({ tag: "admin.integrationsStatus" }),
-      },
-    },
-    auth: { me: { pathFilter: () => ({ tag: "auth.me" }) } },
-    org: { getPublic: { pathFilter: () => ({ tag: "org.getPublic" }) } },
-    weeklyReport: { get: { pathFilter: () => ({ tag: "weeklyReport.get" }) } },
-  } as never;
+// Org data returned by admin.getOrganization.
+const ORG_DATA = {
+  id: "singleton",
+  shortName: "Demo",
+  fullName: "Example Software Department",
+  createdAt: new Date("2026-05-10T00:00:00Z"),
+  updatedAt: new Date("2026-05-10T00:00:00Z"),
+};
+
+/**
+ * Builds the tRPC proxy for SettingsTab tests using the shared factory.
+ * Returns both the proxy and the captured mutation registry so tests can
+ * assert against specific mutation calls.
+ */
+function buildProxy(integrations: IntegrationStub = DEFAULT_INTEGRATIONS) {
+  return createMockTRPC([
+    { path: ["admin", "getOrganization"], query: ORG_DATA },
+    { path: ["admin", "updateOrganization"], mutation: true },
+    { path: ["admin", "updateSettings"], mutation: true },
+    { path: ["admin", "snapshot"] },
+    { path: ["admin", "getSettings"] },
+    { path: ["admin", "integrationsStatus"], query: integrations },
+    { path: ["auth", "me"] },
+    { path: ["org", "getPublic"] },
+    { path: ["weeklyReport", "get"] },
+  ]);
 }
 
-function Wrapper({ children }: { children: ReactNode }) {
+/**
+ * Renders SettingsTab inside QueryClientProvider + TRPCProxyContext, returning
+ * the QueryClient so tests can spy on invalidations.
+ */
+function renderSettings(
+  proxy: ReturnType<typeof buildProxy>["proxy"],
+  settingsOverride?: Partial<MockSettings>,
+) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
-  return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+
+  function Wrapper({ children }: { readonly children: ReactNode }) {
+    return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+  }
+
+  render(
+    <Wrapper>
+      <TRPCProxyContext.Provider value={proxy}>
+        <SettingsTab settings={{ ...baseSettings, ...settingsOverride }} />
+      </TRPCProxyContext.Provider>
+    </Wrapper>,
+  );
+
+  return { qc };
 }
 
 // UFB-048 (Phase 48-B): MockSettings expanded with 9 new fields. Defaults
@@ -143,17 +130,8 @@ describe("SettingsTab — Identity sub-tab (UFB-047 / Phase 48-A)", () => {
   });
 
   it("renders the five tabs in the documented order", () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy } = buildProxy();
+    renderSettings(proxy);
 
     // Tab triggers all visible — Identity active by default. UFB-056
     // (Phase 55-5) added the fifth «Integrations» tab.
@@ -165,18 +143,8 @@ describe("SettingsTab — Identity sub-tab (UFB-047 / Phase 48-A)", () => {
   });
 
   it("loads the organization row into the Identity form", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy } = buildProxy();
+    renderSettings(proxy);
 
     // Wait for the org query to populate the form.
     const shortNameInput = (await screen.findByLabelText(
@@ -200,18 +168,8 @@ describe("SettingsTab — Identity sub-tab (UFB-047 / Phase 48-A)", () => {
   });
 
   it("edits the Identity form and submits via the mutation hook", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy, captured } = buildProxy();
+    renderSettings(proxy);
 
     const shortNameInput = (await screen.findByLabelText(
       /short name/i,
@@ -232,27 +190,19 @@ describe("SettingsTab — Identity sub-tab (UFB-047 / Phase 48-A)", () => {
       screen.getByRole("button", { name: /save organization identity/i }),
     );
 
+    const updateOrgFn = captured["admin.updateOrganization"].mutationFn;
     await waitFor(() => {
-      expect(captured.updateOrgFn).toHaveBeenCalled();
+      expect(updateOrgFn).toHaveBeenCalled();
     });
-    expect(captured.updateOrgFn.mock.calls[0]?.[0]).toEqual({
+    expect(updateOrgFn.mock.calls[0]?.[0]).toEqual({
       shortName: "PLAT",
       fullName: "Platform Engineering",
     });
   });
 
   it("disables Save when shortName exceeds 16 chars", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy } = buildProxy();
+    renderSettings(proxy);
 
     const shortNameInput = (await screen.findByLabelText(
       /short name/i,
@@ -262,6 +212,52 @@ describe("SettingsTab — Identity sub-tab (UFB-047 / Phase 48-A)", () => {
     // The input itself caps at 16 via maxLength, so we read the counter to
     // assert the bound is communicated to the admin.
     expect(screen.getByText(/3\/16/)).toBeTruthy();
+  });
+
+  // D4 (design): pin the non-vacuous invalidation fix — after Save success
+  // invalidateAdmin must call invalidateQueries with the specific
+  // admin.getOrganization queryKey (not the vacuous { tag } filter that
+  // matched everything). We spy on qc.invalidateQueries so the assertion is
+  // stable regardless of whether the active query refetches and clears the
+  // isInvalidated flag before we can read it.
+  it("Save success invalidates admin.getOrganization by its specific queryKey", async () => {
+    const { proxy, captured } = buildProxy();
+    // Resolve the mutation so onSuccess fires.
+    captured["admin.updateOrganization"].mutationFn.mockResolvedValue(
+      undefined,
+    );
+    // Stub fetch so the /api/revalidate-org call in onSuccess does not hang.
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 200 }));
+    const { qc } = renderSettings(proxy);
+    const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
+
+    const shortNameInput = (await screen.findByLabelText(
+      /short name/i,
+    )) as HTMLInputElement;
+    await waitFor(() => expect(shortNameInput.value).toBe("Demo"));
+    fireEvent.change(shortNameInput, { target: { value: "NEWN" } });
+
+    const user = userEvent.setup();
+    await user.click(
+      screen.getByRole("button", { name: /save organization identity/i }),
+    );
+
+    // Wait for onSuccess to have fired and invalidateAdmin to have called
+    // invalidateQueries with the specific admin.getOrganization key.
+    const orgQueryKey = [["admin", "getOrganization"]];
+    await waitFor(() => {
+      const calledKeys = invalidateSpy.mock.calls.map((c) =>
+        JSON.stringify(c[0]),
+      );
+      expect(
+        calledKeys.some((k) => k.includes(JSON.stringify(orgQueryKey))),
+      ).toBe(true);
+    });
+
+    globalThis.fetch = origFetch;
   });
 });
 
@@ -278,18 +274,8 @@ describe("SettingsTab — UFB-048 Periods sub-tab (Phase 48-B)", () => {
   });
 
   it("renders the new fields and sends them on Save", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy, captured } = buildProxy();
+    renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /periods/i }));
@@ -309,10 +295,11 @@ describe("SettingsTab — UFB-048 Periods sub-tab (Phase 48-B)", () => {
       screen.getByRole("button", { name: /save period settings/i }),
     );
 
+    const updateSettingsFn = captured["admin.updateSettings"].mutationFn;
     await waitFor(() => {
-      expect(captured.updateSettingsFn).toHaveBeenCalled();
+      expect(updateSettingsFn).toHaveBeenCalled();
     });
-    const payload = captured.updateSettingsFn.mock
+    const payload = updateSettingsFn.mock
       .calls[0]?.[0] as Partial<MockSettings>;
     expect(payload.periodLengthDays).toBe(14);
     expect(payload.gracePeriodHours).toBe(48);
@@ -322,17 +309,8 @@ describe("SettingsTab — UFB-048 Periods sub-tab (Phase 48-B)", () => {
   });
 
   it("disables autoPublishAfterDeadline when autoCreatePeriods is off", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy } = buildProxy();
+    renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /periods/i }));
@@ -358,17 +336,8 @@ describe("SettingsTab — UFB-051 Periods sub-tab (Phase 51-A)", () => {
   });
 
   it("renders the 8 new period-cycle inputs with seeded defaults", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy } = buildProxy();
+    renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /periods/i }));
@@ -418,17 +387,8 @@ describe("SettingsTab — UFB-051 Periods sub-tab (Phase 51-A)", () => {
   });
 
   it("edits the 8 new fields and sends them on Save", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy, captured } = buildProxy();
+    renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /periods/i }));
@@ -468,10 +428,11 @@ describe("SettingsTab — UFB-051 Periods sub-tab (Phase 51-A)", () => {
       screen.getByRole("button", { name: /save period settings/i }),
     );
 
+    const updateSettingsFn = captured["admin.updateSettings"].mutationFn;
     await waitFor(() => {
-      expect(captured.updateSettingsFn).toHaveBeenCalled();
+      expect(updateSettingsFn).toHaveBeenCalled();
     });
-    const payload = captured.updateSettingsFn.mock
+    const payload = updateSettingsFn.mock
       .calls[0]?.[0] as Partial<MockSettings>;
     expect(payload.firstDayOfWeek).toBe(7);
     expect(payload.deadlineDayOfWeek).toBe(4);
@@ -484,19 +445,8 @@ describe("SettingsTab — UFB-051 Periods sub-tab (Phase 51-A)", () => {
   });
 
   it("disables reopenWindowHours when allowReopenAfterPublish is off", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab
-            settings={{ ...baseSettings, allowReopenAfterPublish: false }}
-          />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy } = buildProxy();
+    renderSettings(proxy, { allowReopenAfterPublish: false });
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /periods/i }));
@@ -515,18 +465,8 @@ describe("SettingsTab — UFB-048 Reminders sub-tab (Phase 48-B)", () => {
   });
 
   it("renders defaults and sends timezone + audience on Save", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy, captured } = buildProxy();
+    renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /reminders/i }));
@@ -546,10 +486,11 @@ describe("SettingsTab — UFB-048 Reminders sub-tab (Phase 48-B)", () => {
       screen.getByRole("button", { name: /save reminder defaults/i }),
     );
 
+    const updateSettingsFn = captured["admin.updateSettings"].mutationFn;
     await waitFor(() => {
-      expect(captured.updateSettingsFn).toHaveBeenCalled();
+      expect(updateSettingsFn).toHaveBeenCalled();
     });
-    expect(captured.updateSettingsFn.mock.calls[0]?.[0]).toEqual({
+    expect(updateSettingsFn.mock.calls[0]?.[0]).toEqual({
       defaultTimezone: "Asia/Yekaterinburg",
       defaultReminderAudience: "head-of-late",
     });
@@ -563,18 +504,8 @@ describe("SettingsTab — UFB-048 Notifications sub-tab (Phase 48-B)", () => {
   });
 
   it("saves a valid email and sends null when cleared", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy, captured } = buildProxy();
+    renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /notifications/i }));
@@ -588,26 +519,18 @@ describe("SettingsTab — UFB-048 Notifications sub-tab (Phase 48-B)", () => {
       screen.getByRole("button", { name: /save notification settings/i }),
     );
 
+    const updateSettingsFn = captured["admin.updateSettings"].mutationFn;
     await waitFor(() => {
-      expect(captured.updateSettingsFn).toHaveBeenCalled();
+      expect(updateSettingsFn).toHaveBeenCalled();
     });
-    expect(captured.updateSettingsFn.mock.calls[0]?.[0]).toEqual({
+    expect(updateSettingsFn.mock.calls[0]?.[0]).toEqual({
       notificationFromEmail: "reports@example.com",
     });
   });
 
   it("disables Save on a malformed email", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy } = buildProxy();
+    renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /notifications/i }));
@@ -631,21 +554,10 @@ describe("SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)", () => {
   // of configured/bindings state. Technical details still rendered for
   // debugging; Slack card (third provider) also always "Coming Soon".
   it("renders Coming Soon badge for Telegram regardless of configured state", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider
-          value={makeMockTRPC(captured, {
-            telegram: { configured: false, bindings: 0 },
-          })}
-        >
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy } = buildProxy({
+      telegram: { configured: false, bindings: 0 },
+    });
+    renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /integrations/i }));
@@ -663,21 +575,10 @@ describe("SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)", () => {
   });
 
   it("still shows Coming Soon when token is configured and bindings exist", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider
-          value={makeMockTRPC(captured, {
-            telegram: { configured: true, bindings: 4 },
-          })}
-        >
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy } = buildProxy({
+      telegram: { configured: true, bindings: 4 },
+    });
+    renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /integrations/i }));
@@ -691,21 +592,10 @@ describe("SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)", () => {
   });
 
   it("still shows Coming Soon when token is set but no users are bound yet", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider
-          value={makeMockTRPC(captured, {
-            telegram: { configured: true, bindings: 0 },
-          })}
-        >
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy } = buildProxy({
+      telegram: { configured: true, bindings: 0 },
+    });
+    renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /integrations/i }));
@@ -718,17 +608,8 @@ describe("SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)", () => {
   });
 
   it("renders the Slack Coming Soon card (A11 third provider)", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy } = buildProxy();
+    renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /integrations/i }));
@@ -739,17 +620,8 @@ describe("SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)", () => {
   });
 
   it("renders the AI Integration Coming Soon card (B8)", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy } = buildProxy();
+    renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /integrations/i }));
@@ -792,17 +664,8 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
 
   // Row 398: HolidaysComingSoonControl span — no aria-label
   it("holidays-coming-soon span has no aria-label attribute", () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy } = buildProxy();
+    renderSettings(proxy);
 
     const span = screen.getByTestId("holidays-coming-soon");
     expect(span.hasAttribute("aria-label")).toBe(false);
@@ -810,17 +673,8 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
 
   // Row 399: HolidaysComingSoonControl span — aria-disabled="true" preserved
   it("holidays-coming-soon span retains aria-disabled=true", () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy } = buildProxy();
+    renderSettings(proxy);
 
     const span = screen.getByTestId("holidays-coming-soon");
     expect(span.getAttribute("aria-disabled")).toBe("true");
@@ -828,17 +682,8 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
 
   // Row 401: Calendar (lucide-react) icon SVG — aria-hidden="true"
   it("Calendar icon SVG inside holidays tab trigger has aria-hidden=true", () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy } = buildProxy();
+    renderSettings(proxy);
 
     const span = screen.getByTestId("holidays-coming-soon");
     const svg = span.querySelector("svg");
@@ -848,17 +693,11 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
 
   // Row 402: CheckIcon SVG — aria-hidden="true" static attribute
   it("CheckIcon SVG has aria-hidden=true in Identity success message", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn().mockResolvedValue(undefined),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
+    const { proxy, captured } = buildProxy();
+    captured["admin.updateOrganization"].mutationFn.mockResolvedValue(
+      undefined,
     );
+    renderSettings(proxy);
 
     // Wait for the org query to populate the form, then save.
     const shortNameInput = (await screen.findByLabelText(
@@ -882,17 +721,11 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
 
   // Row 403: CheckIcon SVG aria-hidden in Identity success message (interaction)
   it("CheckIcon SVG aria-hidden=true persists in Identity saved message", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn().mockResolvedValue(undefined),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
+    const { proxy, captured } = buildProxy();
+    captured["admin.updateOrganization"].mutationFn.mockResolvedValue(
+      undefined,
     );
+    renderSettings(proxy);
 
     const shortNameInput = (await screen.findByLabelText(
       /short name/i,
@@ -919,17 +752,9 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
 
   // Row 404: CheckIcon SVG aria-hidden in Periods success message
   it("CheckIcon SVG aria-hidden=true in Period settings saved message", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn().mockResolvedValue(undefined),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy, captured } = buildProxy();
+    captured["admin.updateSettings"].mutationFn.mockResolvedValue(undefined);
+    renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /periods/i }));
@@ -951,17 +776,9 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
 
   // Row 405: CheckIcon SVG aria-hidden in Reminders success message
   it("CheckIcon SVG aria-hidden=true in Reminder defaults saved message", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn().mockResolvedValue(undefined),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy, captured } = buildProxy();
+    captured["admin.updateSettings"].mutationFn.mockResolvedValue(undefined);
+    renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /reminders/i }));
@@ -984,17 +801,9 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
 
   // Row 406: CheckIcon SVG aria-hidden in Notifications success message
   it("CheckIcon SVG aria-hidden=true in Notification settings saved message", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn(),
-      updateSettingsFn: vi.fn().mockResolvedValue(undefined),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
-    );
+    const { proxy, captured } = buildProxy();
+    captured["admin.updateSettings"].mutationFn.mockResolvedValue(undefined);
+    renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /notifications/i }));
@@ -1017,17 +826,11 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
 
   // Row 407: CheckIcon SVG attributes snapshot
   it("CheckIcon SVG attributes snapshot — viewBox, stroke, fill, strokeWidth, strokeLinecap, strokeLinejoin", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn().mockResolvedValue(undefined),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
+    const { proxy, captured } = buildProxy();
+    captured["admin.updateOrganization"].mutationFn.mockResolvedValue(
+      undefined,
     );
+    renderSettings(proxy);
 
     const shortNameInput = (await screen.findByLabelText(
       /short name/i,
@@ -1051,17 +854,11 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
 
   // Row 409: Success message DOM structure snapshot (CheckIcon SVG + text coexist)
   it("success message DOM structure snapshot — CheckIcon SVG and text node coexist in span", async () => {
-    const captured: Captured = {
-      updateOrgFn: vi.fn().mockResolvedValue(undefined),
-      updateSettingsFn: vi.fn(),
-    };
-    render(
-      <Wrapper>
-        <TRPCProxyContext.Provider value={makeMockTRPC(captured)}>
-          <SettingsTab settings={baseSettings} />
-        </TRPCProxyContext.Provider>
-      </Wrapper>,
+    const { proxy, captured } = buildProxy();
+    captured["admin.updateOrganization"].mutationFn.mockResolvedValue(
+      undefined,
     );
+    renderSettings(proxy);
 
     const shortNameInput = (await screen.findByLabelText(
       /short name/i,
