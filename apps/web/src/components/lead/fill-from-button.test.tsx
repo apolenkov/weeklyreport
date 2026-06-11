@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { FillFromButton } from "./fill-from-button";
 import type { ReportPeriod } from "./mock-data";
@@ -69,8 +69,10 @@ describe("FillFromButton", () => {
       screen.getByText("No submitted past reports found."),
     ).toBeInTheDocument();
 
-    // Primary "Fill" button is disabled because !previousPeriod
-    const fillButton = screen.getByRole("button", { name: /Fill/ });
+    // Primary fill trigger is disabled because !previousPeriod
+    const fillButton = screen.getByRole("button", {
+      name: "Fill from most recent submitted period",
+    });
     expect(fillButton).toBeDisabled();
   });
 
@@ -140,20 +142,32 @@ describe("FillFromButton", () => {
 });
 
 describe("FillFromButton — a11y regression (VA-0a): aria-hidden decorative SVGs", () => {
+  // head-toolbar-parity D5: both triggers are icon-only ToolbarIconButtons;
+  // the accessible names moved from visible text to aria-labels.
   it("CopyIcon svg has aria-hidden='true'", () => {
     render(<FillFromButton periods={[pastPeriod]} />);
 
-    const fillButton = screen.getByRole("button", { name: /^Fill$/ });
+    const fillButton = screen.getByRole("button", {
+      name: "Fill from most recent submitted period",
+    });
     const svg = fillButton.querySelector("svg");
     expect(svg).not.toBeNull();
     expect(svg).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("primary Fill button contains svg with aria-hidden='true' and accessible name is 'Fill'", () => {
+  it("primary fill trigger is a 32px icon button with aria-label and matching tooltip", () => {
     render(<FillFromButton periods={[pastPeriod]} />);
 
-    const fillButton = screen.getByRole("button", { name: /^Fill$/ });
+    const fillButton = screen.getByRole("button", {
+      name: "Fill from most recent submitted period",
+    });
     expect(fillButton).toBeInTheDocument();
+    expect(fillButton).toHaveAttribute(
+      "title",
+      "Fill from most recent submitted period",
+    );
+    expect(fillButton.className).toContain("h-8");
+    expect(fillButton.className).toContain("w-8");
     const svg = fillButton.querySelector("svg");
     expect(svg).not.toBeNull();
     expect(svg).toHaveAttribute("aria-hidden", "true");
@@ -177,8 +191,34 @@ describe("FillFromButton — a11y regression (VA-0a): aria-hidden decorative SVG
       name: "Choose past report to fill from",
     });
     expect(triggerButton).toBeInTheDocument();
+    expect(triggerButton).toHaveAttribute(
+      "title",
+      "Choose past report to fill from",
+    );
+    expect(triggerButton.className).toContain("h-8");
+    expect(triggerButton.className).toContain("w-8");
     const svg = triggerButton.querySelector("svg");
     expect(svg).not.toBeNull();
     expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+});
+
+describe("FillFromButton — icon triggers keep the fill flow (head-toolbar-parity D5)", () => {
+  it("copy trigger opens the confirm dialog and confirming fires onFillFrom with the section id", () => {
+    const onFillFrom = vi.fn();
+    render(<FillFromButton periods={[pastPeriod]} onFillFrom={onFillFrom} />);
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Fill from most recent submitted period",
+      }),
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: "Confirm fill from previous" }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Replace & Fill/ }));
+    expect(onFillFrom).toHaveBeenCalledWith("sec-W16");
   });
 });

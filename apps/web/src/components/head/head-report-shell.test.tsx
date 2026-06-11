@@ -20,7 +20,14 @@ vi.mock("../slides/head-slides-client", () => ({
 }));
 
 vi.mock("../weekly-report/weekly-report-page", () => ({
-  WeeklyReportPage: () => <div data-testid="weekly-report-page-stub" />,
+  // head-toolbar-parity: surface the contextToolbar prop so tests can pin
+  // that the shell suppresses the inner period-context bar (design D2).
+  WeeklyReportPage: ({ contextToolbar }: { contextToolbar?: boolean }) => (
+    <div
+      data-testid="weekly-report-page-stub"
+      data-context-toolbar={String(contextToolbar)}
+    />
+  ),
 }));
 
 vi.mock("next/link", () => ({
@@ -74,5 +81,29 @@ describe("HeadReportShell — agent-review placeholder per mode", () => {
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
     expect(screen.queryAllByTestId("agent-review-coming-soon")).toHaveLength(0);
     expect(screen.getByTestId("head-slides-client-stub")).toBeInTheDocument();
+  });
+});
+
+// head-toolbar-parity pin: the review page owns exactly ONE period toolbar
+// (the shared ReportToolbar), placed below the header-like action row, and
+// suppresses the WeeklyReportPage context bar (design D2). The companion pin
+// in weekly-report-page.test.tsx verifies contextToolbar={false} actually
+// removes the inner bar.
+describe("HeadReportShell — single shared toolbar (head-toolbar-parity)", () => {
+  it("form mode renders exactly one ReportToolbar and suppresses the inner context bar", () => {
+    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
+    expect(screen.getAllByTestId("report-toolbar")).toHaveLength(1);
+    expect(screen.getByTestId("weekly-report-page-stub")).toHaveAttribute(
+      "data-context-toolbar",
+      "false",
+    );
+  });
+
+  it("the toolbar sits below the header-like action row (lead arrangement)", () => {
+    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
+    const headerAction = screen.getByRole("link", { name: /present/i });
+    const toolbar = screen.getByTestId("report-toolbar");
+    const position = headerAction.compareDocumentPosition(toolbar);
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

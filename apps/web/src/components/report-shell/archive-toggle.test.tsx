@@ -1,40 +1,51 @@
+import "@testing-library/jest-dom/vitest";
+
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ArchiveToggle } from "./archive-toggle";
 
+// head-toolbar-parity D4 contract: 32px icon button via ToolbarIconButton,
+// switch semantics preserved, non-zero archived count visible as a badge.
 describe("ArchiveToggle", () => {
-  it("renders 'Show archived' label when archivedCount is not provided", () => {
+  it("renders no count badge when archivedCount is not provided", () => {
     render(<ArchiveToggle checked={false} onChange={vi.fn()} />);
-    expect(screen.getByText("Show archived")).toBeInTheDocument();
-    // No count badge — the exact strings "0 archived".."N archived" are absent.
-    expect(screen.queryByText("1 archived")).not.toBeInTheDocument();
+    const btn = screen.getByRole("switch");
+    expect(btn).toHaveTextContent("");
   });
 
-  it("renders 'Show archived' label when archivedCount is 0", () => {
+  it("renders no count badge when archivedCount is 0", () => {
     render(
       <ArchiveToggle checked={false} onChange={vi.fn()} archivedCount={0} />,
     );
-    expect(screen.getByText("Show archived")).toBeInTheDocument();
-    expect(screen.queryByText("0 archived")).not.toBeInTheDocument();
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
 
-  it("renders count badge when archivedCount > 0 and hides the text label", () => {
+  it("keeps a non-zero archived count visible on the control", () => {
     render(
       <ArchiveToggle checked={false} onChange={vi.fn()} archivedCount={3} />,
     );
-    expect(screen.getByText("3 archived")).toBeInTheDocument();
-    expect(screen.queryByText("Show archived")).not.toBeInTheDocument();
+    const badge = screen.getByText("3");
+    expect(badge).toBeInTheDocument();
+    expect(screen.getByRole("switch")).toContainElement(badge);
   });
 
-  it("renders correct count in badge for archivedCount = 1", () => {
+  it("is a 32px icon button with aria-label and matching tooltip", () => {
     render(
-      <ArchiveToggle checked={false} onChange={vi.fn()} archivedCount={1} />,
+      <ArchiveToggle checked={false} onChange={vi.fn()} archivedCount={2} />,
     );
-    expect(screen.getByText("1 archived")).toBeInTheDocument();
+    const btn = screen.getByRole("switch", {
+      name: "Show closed (archived) report periods",
+    });
+    expect(btn).toHaveAttribute(
+      "title",
+      "Show closed (archived) report periods",
+    );
+    expect(btn.className).toContain("h-8");
+    expect(btn.className).toContain("w-8");
   });
 
-  it("is a switch button with aria-checked reflecting the checked prop", () => {
+  it("is a switch with aria-checked reflecting the checked prop", () => {
     render(
       <ArchiveToggle checked={true} onChange={vi.fn()} archivedCount={2} />,
     );

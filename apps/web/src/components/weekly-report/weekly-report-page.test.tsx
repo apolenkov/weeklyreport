@@ -174,6 +174,7 @@ function renderPage(
   authorId?: string,
   role: SessionUser["role"] = "head",
   scope?: "product" | "lead",
+  contextToolbar?: boolean,
 ) {
   const { proxy, captured } = createMockTRPC([
     { path: ["weeklyReport", "get"], query: data },
@@ -227,7 +228,11 @@ function renderPage(
   }
 
   const renderResult = render(
-    <WeeklyReportPage authorId={authorId} scope={scope} />,
+    <WeeklyReportPage
+      authorId={authorId}
+      scope={scope}
+      contextToolbar={contextToolbar}
+    />,
     { wrapper: Wrapper },
   );
 
@@ -571,4 +576,36 @@ describe("WeeklyReportPage — async Export PDF button role gating (driver sweep
       ).not.toBeInTheDocument();
     },
   );
+});
+
+// head-toolbar-parity: the bespoke gradient "Context shell" is gone — the
+// period-context bar renders through the shared ReportToolbar container.
+// Standalone consumers (bare /head/report, /reports/[reportId], lead preview,
+// present client) keep the default; HeadReportShell passes
+// contextToolbar={false} because it owns the page's single toolbar.
+describe("WeeklyReportPage — shared period toolbar (head-toolbar-parity)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
+  it("renders the shared ReportToolbar container with the department label by default", async () => {
+    renderPage(makeWeeklyReportData("open"));
+    await screen.findByRole("heading", { name: /status report/i });
+    const toolbar = screen.getByTestId("report-toolbar");
+    expect(toolbar).toBeInTheDocument();
+    expect(toolbar).toHaveTextContent("Live portfolio review");
+  });
+
+  it("suppresses the toolbar when contextToolbar is false (shell owns the single toolbar)", async () => {
+    renderPage(
+      makeWeeklyReportData("open"),
+      undefined,
+      "head",
+      undefined,
+      false,
+    );
+    await screen.findByRole("heading", { name: /status report/i });
+    expect(screen.queryByTestId("report-toolbar")).not.toBeInTheDocument();
+  });
 });
