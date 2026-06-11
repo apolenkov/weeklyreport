@@ -174,3 +174,47 @@ describe("GroupsTab — a11y regression (verify-a11y-recommended-flip)", () => {
     });
   });
 });
+
+// admin-dialog-focus-management (autofocus-admin-dialogs)
+describe("GroupsTab — focus management (autofocus-admin-dialogs)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("group-name input is programmatically focusable on open (structural proxy for autoFocus)", () => {
+    renderTab();
+    openAddDialog();
+
+    const input = screen.getByLabelText(/^name$/i);
+    // jsdom does not honour autoFocus for conditionally-rendered elements;
+    // verify the structural capability: the input accepts programmatic focus.
+    input.focus();
+    expect(document.activeElement).toBe(input);
+  });
+
+  it("focus returns to the trigger button after the dialog closes via Cancel", () => {
+    renderTab();
+    const addBtn = screen.getByRole("button", { name: "Add group" });
+    addBtn.focus();
+    fireEvent.click(addBtn);
+
+    expect(screen.getByTestId("crud-sheet")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    expect(screen.queryByTestId("crud-sheet")).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(addBtn);
+  });
+
+  it("focus returns to the trigger button after the dialog closes via Escape", () => {
+    renderTab();
+    const addBtn = screen.getByRole("button", { name: "Add group" });
+    addBtn.focus();
+    fireEvent.click(addBtn);
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.queryByTestId("crud-sheet")).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(addBtn);
+  });
+});

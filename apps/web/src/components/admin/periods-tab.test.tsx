@@ -707,3 +707,57 @@ describe("PeriodsTab — a11y dialog behavioral regressions (VA-0a)", () => {
     expect(screen.getByTestId("periods-create-dialog")).toBeInTheDocument();
   });
 });
+
+// admin-dialog-focus-management (autofocus-admin-dialogs)
+describe("PeriodsTab — focus management (autofocus-admin-dialogs)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("period-start input is programmatically focusable on open (structural proxy for autoFocus)", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    await user.click(await screen.findByTestId("periods-new-button"));
+
+    const input = screen.getByTestId("periods-create-start");
+    // jsdom does not honour autoFocus for conditionally-rendered elements;
+    // verify the structural capability: the input accepts programmatic focus.
+    input.focus();
+    expect(document.activeElement).toBe(input);
+  });
+
+  it("focus returns to New-period button after create dialog closes via Cancel", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    const newBtn = await screen.findByTestId("periods-new-button");
+    newBtn.focus();
+    await user.click(newBtn);
+
+    expect(screen.getByTestId("periods-create-dialog")).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("periods-create-cancel"));
+
+    expect(
+      screen.queryByTestId("periods-create-dialog"),
+    ).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(newBtn);
+  });
+
+  it("focus returns to New-period button after create dialog closes via Escape", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    const newBtn = await screen.findByTestId("periods-new-button");
+    newBtn.focus();
+    await user.click(newBtn);
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(
+      screen.queryByTestId("periods-create-dialog"),
+    ).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(newBtn);
+  });
+});

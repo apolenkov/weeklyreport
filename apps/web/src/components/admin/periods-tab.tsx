@@ -2,7 +2,7 @@
 
 import type { PeriodListItem } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { formatPeriodLabel, formatPeriodRange } from "../../lib/format-date";
 import { useTRPC } from "../../lib/trpc-context";
@@ -61,6 +61,26 @@ export function PeriodsTab() {
   const [deleteConfirm, setDeleteConfirm] = useState<PeriodListItem | null>(
     null,
   );
+
+  // admin-dialog-focus-management: save the trigger element before opening
+  // either the create or edit dialog, then restore on close.
+  const dialogTriggerRef = useRef<HTMLElement | null>(null);
+
+  // Restore focus when create dialog closes (all close paths set showCreate→false).
+  useEffect(() => {
+    if (!showCreate && dialogTriggerRef.current) {
+      dialogTriggerRef.current.focus();
+      dialogTriggerRef.current = null;
+    }
+  }, [showCreate]);
+
+  // Restore focus when edit dialog closes (all close paths set editingRow→null).
+  useEffect(() => {
+    if (!editingRow && dialogTriggerRef.current) {
+      dialogTriggerRef.current.focus();
+      dialogTriggerRef.current = null;
+    }
+  }, [editingRow]);
 
   // A27: Esc-to-close for the delete confirmation dialog (matches the
   // create/edit dialog pattern below). Backdrop click and Cancel also close.
@@ -142,7 +162,10 @@ export function PeriodsTab() {
         actions={
           <button
             type="button"
-            onClick={() => setShowCreate(true)}
+            onClick={() => {
+              dialogTriggerRef.current = document.activeElement as HTMLElement;
+              setShowCreate(true);
+            }}
             className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
             aria-label="New period"
             data-testid="periods-new-button"
@@ -190,7 +213,10 @@ export function PeriodsTab() {
             onArchive={(row) => archiveMut.mutate({ periodId: row.id })}
             onUnarchive={(row) => unarchiveMut.mutate({ periodId: row.id })}
             onDelete={(row) => setDeleteConfirm(row)}
-            onEdit={(row) => setEditingRow(row)}
+            onEdit={(row) => {
+              dialogTriggerRef.current = document.activeElement as HTMLElement;
+              setEditingRow(row);
+            }}
           />
         )}
       </section>
@@ -239,7 +265,11 @@ export function PeriodsTab() {
                 onArchive={(row) => archiveMut.mutate({ periodId: row.id })}
                 onUnarchive={(row) => unarchiveMut.mutate({ periodId: row.id })}
                 onDelete={(row) => setDeleteConfirm(row)}
-                onEdit={(row) => setEditingRow(row)}
+                onEdit={(row) => {
+                  dialogTriggerRef.current =
+                    document.activeElement as HTMLElement;
+                  setEditingRow(row);
+                }}
               />
             )}
           </div>
