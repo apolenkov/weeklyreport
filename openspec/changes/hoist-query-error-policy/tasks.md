@@ -12,7 +12,7 @@ after EVERY commit; read each diff before committing.
 
 ## 1. web: hook + contract test (test-first, D2)
 
-- [ ] 1.1 NEW `apps/web/src/lib/use-query-error-handler.test.tsx`
+- [x] 1.1 NEW `apps/web/src/lib/use-query-error-handler.test.tsx`
       (renderHook; `vi.mock("sonner")`): (a) on `isError` flip,
       `logClientError` envelope fires exactly once with
       event/component/procedure + caller context; (b) `toastPrefix`
@@ -21,7 +21,7 @@ after EVERY commit; read each diff before committing.
       slides silent policy); (d) rerender with the same error object →
       no second log/toast; (e) context prop change during a persistent
       error → no re-fire (ref semantics).
-- [ ] 1.2 NEW `apps/web/src/lib/use-query-error-handler.ts`
+- [x] 1.2 NEW `apps/web/src/lib/use-query-error-handler.ts`
       (`"use client"`, kebab-case precedent:
       `use-cursor-pagination.ts`): signature and semantics exactly as
       design.md D2 — effect deps `[query.isError, query.error]`, opts
@@ -32,7 +32,7 @@ after EVERY commit; read each diff before committing.
 
 ## 2. web: behavior-identical migrations (D3 rows 5-7)
 
-- [ ] 2.1 `apps/web/src/components/dashboard/dashboard-page.tsx`:
+- [x] 2.1 `apps/web/src/components/dashboard/dashboard-page.tsx`:
       replace the 2 query-error `useEffect` blocks at ~85-108 (reviewQ,
       weeklyQ) with hook calls carrying the same
       event/component/procedure/context and toast prefixes
@@ -48,7 +48,7 @@ errors through useQueryErrorHandler`.
 
 ## 3. web: slides migrations, log-only (D3 rows 8-10)
 
-- [ ] 3.1 `apps/web/src/components/slides/lead-slides-client.tsx`
+- [x] 3.1 `apps/web/src/components/slides/lead-slides-client.tsx`
       (~102-117: activeQ, byPeriodQ) and
       `apps/web/src/components/slides/head-slides-client.tsx`
       (~64-70: weeklyQ): replace the 3 silent `logClientError` effects
@@ -60,7 +60,7 @@ useQueryErrorHandler`.
 
 ## 4. web: lead-form — the only behavior-changing commit (D3 rows 1-4)
 
-- [ ] 4.1 `apps/web/src/components/lead/lead-form.tsx`: replace the 4
+- [x] 4.1 `apps/web/src/components/lead/lead-form.tsx`: replace the 4
       effects at ~440-498 with hook calls — events/contexts unchanged
       (activeQ: `reportId: pinnedReportId ?? null`; byPeriodQ:
       `reportId: targetReportId || null, role: sessionRole`; versionsQ:
@@ -69,7 +69,7 @@ useQueryErrorHandler`.
       form" / "Failed to load versions" / "Failed to load history".
       Visible change: toasts gain "Reference: \<requestId\>." and stop
       echoing raw internal messages.
-- [ ] 4.2 EXTEND `apps/web/src/components/lead/lead-form.test.tsx` (on
+- [x] 4.2 EXTEND `apps/web/src/components/lead/lead-form.test.tsx` (on
       the existing tRPC-proxy-boundary harness; sonner already mocked):
       byPeriod queryFn rejects with a TRPCClientError carrying
       `requestId: "req-X"` + INTERNAL_SERVER_ERROR; assert
@@ -82,14 +82,16 @@ client error policy`.
 
 ## 5. Verification
 
-- [ ] 5.1 Gates (after every commit, recorded here on the final run):
+- [x] 5.1 Gates (after every commit, recorded here on the final run):
       `pnpm typecheck && pnpm lint && pnpm test && pnpm build`.
-- [ ] 5.2 Unchanged-green proof:
+      Result 2026-06-11: typecheck ✓ 5/5, lint ✓ (pre-existing mock-trpc
+      warning not in scope), test ✓ 106 files / 952 tests.
+- [x] 5.2 Unchanged-green proof:
       `apps/web/src/lib/client-error-reporting.test.ts` passes
       unmodified (pins the console envelope consumed by
       `client-logger.ts` / `app.log`), plus unmodified
       dashboard/weekly-report/slides tests.
-- [ ] 5.3 Residue check:
+- [x] 5.3 Residue check:
       `grep -rn "logClientError" apps/web/src --include="*.tsx" | grep -v test`
       shows only the 2 non-query dashboard watchdog sites; query-error
       effects exist only inside the hook. (Without the `grep -v test`
