@@ -20,6 +20,7 @@ import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
 } from "../report-sections/report-sections.prisma-repository.js";
+import { computeCrossGroupSignal } from "./cross-group-signal.js";
 import type {
   WeeklyReportRepository,
   WeeklyReportRepositoryResult,
@@ -135,11 +136,6 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       },
     });
 
-    // D1: compute the cross-group signal for the router to emit
-    // scopeAccessed. Admin sessions produce no scope filter and are never
-    // cross-group callers; non-session paths also skip.
-    const crossGroup = computeCrossGroupSignal(session, projects);
-
     const snapshot = parsePublishedSnapshot(report.publishedSnapshot);
     if (snapshot && report.periodStatus === "published") {
       const scopedSnapshot = filterSnapshotSections(
@@ -152,6 +148,23 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       const snapshotSubmissionCount = leadSections.filter(
         (section) => section.status === "submitted",
       ).length;
+
+      // D1: on a published period the read model is built from the
+      // snapshot, not from the live project rows — so the audit signal
+      // must only name products the caller actually receives. Intersect
+      // the live rows with the snapshot-surfaced product ids before
+      // computing the signal; otherwise a GroupProduct edge added after
+      // publish would emit scopeAccessed for data absent from the
+      // response (false audit-trail entry for every viewer read).
+      const surfacedProductIds = new Set(
+        leadSections.flatMap((section) =>
+          section.projects.map((project) => project.projectId),
+        ),
+      );
+      const crossGroup = computeCrossGroupSignal(
+        session,
+        projects.filter((project) => surfacedProductIds.has(project.id)),
+      );
 
       return {
         readModel: weeklyReportReadModelSchema.parse({
@@ -172,6 +185,13 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
         crossGroup,
       };
     }
+
+    // D1: compute the cross-group signal for the router to emit
+    // scopeAccessed. Admin sessions produce no scope filter and are never
+    // cross-group callers; non-session paths also skip. On the live (non-
+    // published) path every fetched project row surfaces in the read model,
+    // so the signal is computed from the full scoped project list.
+    const crossGroup = computeCrossGroupSignal(session, projects);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
     const leadSections = (report.sections as any[]).map(
@@ -361,56 +381,4 @@ function scopeWhere(
   );
   if (Object.keys(scope).length === 0) return undefined;
   return scope;
-}
-
-/**
- * D1: compute the cross-group audit signal from the fetched projects.
- *
- * A product is cross-group when its lead's `reportingGroupId` (natural
- * owner) is NOT in the caller's allowed group ids, yet it surfaced via
- * the explicit GroupProduct join. Admin sessions and unscoped paths
- * produce no signal (admin has no scope filter; unauthenticated paths
- * are not audited).
- *
- * Per-request dedupe (D3) is achieved by collapsing all cross-group
- * products into one signal object — the router emits a single event.
- */
-function computeCrossGroupSignal(
-  session: WeeklyReportScopeSession | undefined,
-  projects: { id: string; lead: { reportingGroupId: string | null } | null }[],
-): WeeklyReportRepositoryResult["crossGroup"] {
-  if (!session || session.role === "admin") return null;
-
-  const allowedGroupIds = getAllowedGroupIds(session);
-  if (allowedGroupIds.length === 0) return null;
-
-  const allowedSet = new Set(allowedGroupIds);
-  const crossGroupProductIds: string[] = [];
-  const crossGroupGroupIdSet = new Set<string>();
-
-  for (const project of projects) {
-    const ownerGroupId = project.lead?.reportingGroupId ?? null;
-    if (ownerGroupId !== null && !allowedSet.has(ownerGroupId)) {
-      crossGroupProductIds.push(project.id);
-      crossGroupGroupIdSet.add(ownerGroupId);
-    }
-  }
-
-  if (crossGroupProductIds.length === 0) return null;
-
-  return {
-    productIds: crossGroupProductIds,
-    groupIds: [...crossGroupGroupIdSet],
-  };
-}
-
-/** Extract allowed group ids from a scoped (non-admin) session. */
-function getAllowedGroupIds(session: WeeklyReportScopeSession): string[] {
-  if (session.role === "head" || session.role === "lead") {
-    return session.reportingGroupId ? [session.reportingGroupId] : [];
-  }
-  if (session.role === "viewer") {
-    return session.viewerGroupAccess ?? [];
-  }
-  return [];
 }

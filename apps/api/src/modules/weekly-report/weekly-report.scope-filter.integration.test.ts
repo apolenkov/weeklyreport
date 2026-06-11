@@ -198,4 +198,164 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
     expect(ids).toContain(PROJECT_ID);
     expect(ids).toContain(ORPHAN_ID);
   });
+
+  /* ------------------------------------------------------------------ */
+  /*  add-scope-accessed-audit (task 4): cross-group audit signal        */
+  /* ------------------------------------------------------------------ */
+
+  describe("cross-group audit signal (scopeAccessed)", () => {
+    const LEAD_B_ID = "a0000000-0000-4000-a000-0000000000c2";
+    const CROSS_PROJECT_ID = "a0000000-0000-4000-a000-0000000000d4";
+    const SECTION_A_ID = "a0000000-0000-4000-a000-0000000000f1";
+
+    /** Lead in group B owning a product joined to group A — the only way a
+     *  cross-group product can surface to head A via the GroupProduct edge. */
+    async function createCrossGroupProduct() {
+      await prisma.user.create({
+        data: {
+          id: LEAD_B_ID,
+          email: "lead-b@test.local",
+          name: "Lead B",
+          role: "lead",
+          samlId: "lead-b",
+          reportingGroupId: GROUP_B_ID,
+        },
+      });
+      await prisma.project.create({
+        data: {
+          id: CROSS_PROJECT_ID,
+          name: "Cross Group Product",
+          leadId: LEAD_B_ID,
+        },
+      });
+      await prisma.groupProduct.create({
+        data: { groupId: GROUP_A_ID, productId: CROSS_PROJECT_ID },
+      });
+    }
+
+    /** Flip the report to published with a snapshot containing one section
+     *  authored by lead A that reports on the given products. */
+    async function publishWithSnapshot(
+      surfacedProducts: { projectId: string; projectName: string }[],
+    ) {
+      await prisma.reportSection.create({
+        data: {
+          id: SECTION_A_ID,
+          reportId: REPORT_ID,
+          authorId: LEAD_A_ID,
+          status: "submitted",
+        },
+      });
+      await prisma.report.update({
+        where: { id: REPORT_ID },
+        data: {
+          status: "published",
+          periodStatus: "published",
+          publishedSnapshot: {
+            reportId: REPORT_ID,
+            periodStart: "2026-05-04T00:00:00.000Z",
+            periodEnd: "2026-05-10T00:00:00.000Z",
+            deadline: "2026-05-08T15:00:00.000Z",
+            status: "published",
+            publishedAt: null,
+            publishedById: null,
+            publishedByName: null,
+            portfolioOverview: {
+              status: "green",
+              totals: { green: surfacedProducts.length, yellow: 0, red: 0 },
+            },
+            sections: [
+              {
+                reportSectionId: SECTION_A_ID,
+                reportId: REPORT_ID,
+                authorId: LEAD_A_ID,
+                authorName: "Lead A",
+                status: "submitted",
+                submittedAt: null,
+                projects: surfacedProducts.map((project) => ({
+                  ...project,
+                  trafficLight: "green",
+                })),
+                items: [],
+                risks: [],
+                decisions: [],
+              },
+            ],
+          },
+        },
+      });
+    }
+
+    it("own-group-only read yields no signal (crossGroup null)", async () => {
+      const result = expectDefined(
+        await repo.getWeeklyReport(REPORT_ID, session("head", GROUP_A_ID)),
+      );
+
+      expect(result.crossGroup).toBeNull();
+    });
+
+    it("a surfaced product owned by another group's lead yields the signal", async () => {
+      await createCrossGroupProduct();
+
+      const result = expectDefined(
+        await repo.getWeeklyReport(REPORT_ID, session("head", GROUP_A_ID)),
+      );
+
+      expect(result.crossGroup).toEqual({
+        productIds: [CROSS_PROJECT_ID],
+        groupIds: [GROUP_B_ID],
+      });
+    });
+
+    it("admin read yields no signal even when a cross-group edge exists", async () => {
+      await createCrossGroupProduct();
+
+      const adminSession: WeeklyReportScopeSession = { role: "admin" };
+      const result = expectDefined(
+        await repo.getWeeklyReport(REPORT_ID, adminSession),
+      );
+
+      expect(result.crossGroup).toBeNull();
+    });
+
+    it("published period: NO signal when the snapshot does not surface the cross-group product (review blocker regression)", async () => {
+      // A GroupProduct cross-edge exists in the live tables, but the
+      // published snapshot the caller actually receives only shows the
+      // own-group product — no cross-group data is in the response, so
+      // emitting scopeAccessed would be a false audit-trail entry.
+      await createCrossGroupProduct();
+      await publishWithSnapshot([
+        { projectId: PROJECT_ID, projectName: "Group A Platform" },
+      ]);
+
+      const result = expectDefined(
+        await repo.getWeeklyReport(REPORT_ID, session("head", GROUP_A_ID)),
+      );
+
+      expect(
+        result.readModel.portfolioOverview.map((p) => p.productId),
+      ).not.toContain(CROSS_PROJECT_ID);
+      expect(result.crossGroup).toBeNull();
+    });
+
+    it("published period: signal present when the snapshot DOES surface the cross-group product", async () => {
+      await createCrossGroupProduct();
+      await publishWithSnapshot([
+        { projectId: PROJECT_ID, projectName: "Group A Platform" },
+        { projectId: CROSS_PROJECT_ID, projectName: "Cross Group Product" },
+      ]);
+
+      const result = expectDefined(
+        await repo.getWeeklyReport(REPORT_ID, session("head", GROUP_A_ID)),
+      );
+
+      expect(
+        result.readModel.portfolioOverview.map((p) => p.productId),
+      ).toContain(CROSS_PROJECT_ID);
+      expect(result.crossGroup).toEqual({
+        productIds: [CROSS_PROJECT_ID],
+        groupIds: [GROUP_B_ID],
+      });
+    });
+  });
 });
