@@ -63,7 +63,7 @@ starting any group-3 task (a parallel session edits lead files).
       (:85-126) — three small mechanical conversions in one commit;
       still single-writer, each file converted and the web suite run
       green before moving to the next file.
-- [ ] 2.6 Convert
+- [x] 2.6 Convert
       `apps/web/src/components/weekly-report/weekly-report-page.test.tsx`
       — only `makeMockTRPC` (:170-276) moves to the factory; KEEP the
       header decision comment (:1-7, "We DO NOT extend MSW handlers")
