@@ -1,7 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { expectDefined } from "../../test-utils/expect-defined.js";
 import { type LeadFormRepository, LeadFormService } from "./lead-form.service";
 
 /* ------------------------------------------------------------------ */
@@ -45,12 +44,9 @@ function createMockRepository(
   sections: Map<string, ReportSectionReadModel>,
 ): LeadFormRepository & {
   fillFromSection: ReturnType<typeof vi.fn>;
-  createVersionSnapshot: ReturnType<typeof vi.fn>;
 } {
   // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock implements the async fillFromSection repository contract (no awaitable work in the stub)
   const fillFromFn = vi.fn(async (_target: string, _source: string) => 5);
-  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock implements the async createVersionSnapshot repository contract (no awaitable work in the stub)
-  const createSnapshotFn = vi.fn(async () => 1);
 
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
@@ -65,27 +61,6 @@ function createMockRepository(
       /* intentionally empty: mock stub fulfils the LeadFormRepository contract; no awaitable work needed in this test */
     },
     fillFromSection: fillFromFn,
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async listVersions() {
-      return [];
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async getVersion() {
-      return null;
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async restoreVersion() {
-      return 1;
-    },
-    createVersionSnapshot: createSnapshotFn,
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async getLatestSnapshot() {
-      return null;
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async buildSnapshotProjection() {
-      return {};
-    },
     async createReopenRequest() {
       /* intentionally empty: mock stub fulfils the LeadFormRepository contract; no awaitable work needed in this test */
     },
@@ -104,10 +79,6 @@ function createMockRepository(
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
     async revokeAllSubmitted() {
       return 0;
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
-    async setVersionPinned() {
-      return undefined;
     },
   };
 }
@@ -143,25 +114,6 @@ describe("LeadFormService — fillFrom (integration)", () => {
       targetSectionId,
       sourceSectionId,
     );
-  });
-
-  it("creates a version snapshot before overwriting", async () => {
-    const target = makeSection({ status: "draft" });
-    const sections = new Map([[targetSectionId, target]]);
-    const repo = createMockRepository(sections);
-    const service = new LeadFormService(repo);
-
-    await service.fillFrom(targetSectionId, sourceSectionId, userId);
-
-    expect(repo.createVersionSnapshot).toHaveBeenCalledWith(targetSectionId);
-    // Snapshot should be created BEFORE fill
-    const snapshotOrder = expectDefined(
-      repo.createVersionSnapshot.mock.invocationCallOrder[0],
-    );
-    const fillOrder = expectDefined(
-      repo.fillFromSection.mock.invocationCallOrder[0],
-    );
-    expect(snapshotOrder).toBeLessThan(fillOrder);
   });
 
   it("rejects fill on another user section (own sections only)", async () => {

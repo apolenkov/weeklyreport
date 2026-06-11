@@ -28,30 +28,6 @@ describe("LeadFormPrismaRepository (integration)", () => {
     await disconnectTestPrisma();
   });
 
-  it("snapshots and restores decision productId", async () => {
-    await prisma.decision.create({
-      data: {
-        reportSectionId: testData.section.id,
-        productId: testData.project.id,
-        text: "Snapshot decision",
-        owner: "Lead",
-        impact: "High",
-      },
-    });
-
-    await repo.createVersionSnapshot(testData.section.id);
-    await prisma.decision.deleteMany({
-      where: { reportSectionId: testData.section.id },
-    });
-
-    await repo.restoreVersion(testData.section.id, 1);
-
-    const decision = await prisma.decision.findFirstOrThrow({
-      where: { reportSectionId: testData.section.id },
-    });
-    expect(decision.productId).toBe(testData.project.id);
-  });
-
   it("fills from a source section", async () => {
     const sourceReport = await prisma.report.create({
       data: {

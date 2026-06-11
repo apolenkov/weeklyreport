@@ -411,9 +411,6 @@ export const myHistoryEntrySchema = z.object({
   decisionCount: z.number().int().min(0).optional(),
   priorityCount: z.number().int().min(0).optional(),
   productCount: z.number().int().min(0).optional(),
-  versionCount: z.number().int().min(0).optional(),
-  latestVersion: z.number().int().min(1).nullable().optional(),
-  latestVersionAt: z.coerce.date().nullable().optional(),
   trafficLights: z
     .object({
       green: z.number().int().min(0),

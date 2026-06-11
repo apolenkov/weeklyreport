@@ -16,7 +16,6 @@ export function invalidateDashboard(qc: QueryClient, trpc: TRPCProxy): void {
 export function invalidateLeadForm(qc: QueryClient, trpc: TRPCProxy): void {
   void qc.invalidateQueries(trpc.reports.getActive.pathFilter());
   void qc.invalidateQueries(trpc.leadForm.byPeriod.pathFilter());
-  void qc.invalidateQueries(trpc.leadForm.versions.pathFilter());
 }
 
 export function invalidateAdmin(qc: QueryClient, trpc: TRPCProxy): void {

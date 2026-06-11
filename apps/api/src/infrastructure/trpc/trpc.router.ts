@@ -346,10 +346,6 @@ export function createAppRouter(deps: RouterDeps) {
             stageStatuses: {
               select: { projectId: true, updatedAt: true },
             },
-            versionSnapshots: {
-              orderBy: { version: "desc" },
-              select: { version: true, createdAt: true },
-            },
           },
         });
 
@@ -376,13 +372,11 @@ export function createAppRouter(deps: RouterDeps) {
               ...s.decisions.map((row) => row.updatedAt),
               ...s.projectStatuses.map((row) => row.updatedAt),
               ...s.stageStatuses.map((row) => row.updatedAt),
-              ...s.versionSnapshots.map((row) => row.createdAt),
             ];
             const lastEditAt = editDates.reduce(
               (latest, date) => (date > latest ? date : latest),
               editDates[0],
             );
-            const latestVersion = s.versionSnapshots.at(0) ?? null;
 
             return {
               sectionId: s.id,
@@ -403,9 +397,6 @@ export function createAppRouter(deps: RouterDeps) {
               priorityCount: s.items.filter((i) => i.priorityRank != null)
                 .length,
               productCount: productIds.size,
-              versionCount: s.versionSnapshots.length,
-              latestVersion: latestVersion?.version ?? null,
-              latestVersionAt: latestVersion?.createdAt ?? null,
               trafficLights,
             };
           }),
@@ -1978,96 +1969,10 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      versions: protectedProcedure
-        .input(z.object({ reportSectionId: z.uuid() }))
-        .query(async ({ input, ctx }) => {
-          try {
-            return await deps.leadFormService.listVersions(
-              input.reportSectionId,
-              ctx.session.userId,
-              ctx.session.role,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      restoreVersion: protectedProcedure
-        .input(
-          z.object({
-            reportSectionId: z.uuid(),
-            version: z.number().int().positive(),
-          }),
-        )
-        .mutation(async ({ input, ctx }) => {
-          try {
-            return await deps.leadFormService.restoreVersion(
-              input.reportSectionId,
-              input.version,
-              ctx.session.userId,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      getVersion: protectedProcedure
-        .input(
-          z.object({
-            reportSectionId: z.uuid(),
-            version: z.number().int().positive(),
-          }),
-        )
-        .query(async ({ input, ctx }) => {
-          try {
-            return await deps.leadFormService.getVersion(
-              input.reportSectionId,
-              input.version,
-              ctx.session.userId,
-              ctx.session.role,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      createSnapshot: protectedProcedure
-        .input(
-          z.object({
-            reportSectionId: z.uuid(),
-          }),
-        )
-        .mutation(async ({ input, ctx }) => {
-          try {
-            return await deps.leadFormService.createSnapshot(
-              input.reportSectionId,
-              ctx.session.userId,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      setVersionPinned: protectedProcedure
-        .input(
-          z.object({
-            reportSectionId: z.uuid(),
-            version: z.number().int().positive(),
-            pinned: z.boolean(),
-          }),
-        )
-        .mutation(async ({ input, ctx }) => {
-          try {
-            await deps.leadFormService.setVersionPinned(
-              input.reportSectionId,
-              input.version,
-              input.pinned,
-              ctx.session.userId,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
+      // TODO(versions-v2): the version-history procedures (versions,
+      // restoreVersion, getVersion, createSnapshot, setVersionPinned) lived
+      // here until the full removal of version snapshots; re-add them when
+      // versions-v2 is designed.
 
       revoke: headProcedure
         .input(z.object({ reportSectionId: z.uuid() }))

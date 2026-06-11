@@ -78,7 +78,6 @@ function buildHarness(
     },
     leadForm: {
       byPeriod: { pathFilter: () => ({ queryKey: ["leadForm", "byPeriod"] }) },
-      versions: { pathFilter: () => ({ queryKey: ["leadForm", "versions"] }) },
     },
   };
 
@@ -276,6 +275,81 @@ describe("useLeadFormAutosave", () => {
 
     expect(result.current.state).toBe("error");
     expect(toast.error).toHaveBeenCalledWith("Network down");
+  });
+
+  it("after an error the form stays dirty and the next edit retries the save", async () => {
+    // D7 (defer-versions-coming-soon): failure keeps dirty=true so the user's
+    // work is not silently marked saved; the next edit fires saveDraft again.
+    let failNext = true;
+    const { wrapper, calls } = buildHarness({
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async mutationFn contract; throws synchronously but must satisfy Promise<unknown> return type
+      mutationFn: async () => {
+        if (failNext) throw new Error("Network down");
+        return { ok: true };
+      },
+    });
+    const { result, rerender } = renderHook(
+      ({ payload }: { payload: DraftSavePayload }) =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload,
+          enabled: true,
+          debounceMs: 3000,
+        }),
+      { wrapper, initialProps: { payload: makePayload("first-try") } },
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(result.current.state).toBe("error");
+    expect(result.current.dirty).toBe(true);
+    expect(calls).toHaveLength(1);
+
+    // Next edit retries: a new payload restarts the debounce and saves.
+    failNext = false;
+    rerender({ payload: makePayload("second-try") });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+
+    expect(calls).toHaveLength(2);
+    expect(result.current.state).toBe("saved");
+    expect(result.current.dirty).toBe(false);
+  });
+
+  it("blocks beforeunload while dirty and releases the guard after save", async () => {
+    // D7 (defer-versions-coming-soon) / INT-07: unsaved edits must arm the
+    // beforeunload guard; a successful save must disarm it.
+    const { wrapper } = buildHarness();
+    const { result } = renderHook(
+      () =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload: makePayload("guard-me"),
+          enabled: true,
+          debounceMs: 3000,
+        }),
+      { wrapper },
+    );
+
+    expect(result.current.dirty).toBe(true);
+    const dirtyEvent = new Event("beforeunload", { cancelable: true });
+    act(() => {
+      window.dispatchEvent(dirtyEvent);
+    });
+    expect(dirtyEvent.defaultPrevented).toBe(true);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(result.current.dirty).toBe(false);
+
+    const cleanEvent = new Event("beforeunload", { cancelable: true });
+    act(() => {
+      window.dispatchEvent(cleanEvent);
+    });
+    expect(cleanEvent.defaultPrevented).toBe(false);
   });
 
   it("exposes dirty=true while a change is pending and dirty=false after success", async () => {

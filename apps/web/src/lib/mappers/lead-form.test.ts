@@ -1,7 +1,6 @@
 import type {
   MyHistoryEntry,
   ReportSectionReadModel,
-  VersionSnapshot,
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
@@ -14,7 +13,6 @@ import {
   mapLeadPriorities,
   mapLeadProducts,
   mapLeadRisks,
-  mapLeadVersions,
   ownedStagesForProject,
   stageNamesMatch,
 } from "./lead-form";
@@ -627,37 +625,12 @@ describe("mapLeadPeriods", () => {
   });
 });
 
-describe("mapLeadVersions", () => {
-  it("formats createdAt into a relative timestamp and surfaces snapshot counts", () => {
-    const now = new Date("2026-04-20T12:00:00Z");
-    const versions: VersionSnapshot[] = [
-      {
-        id: "v1",
-        reportSectionId: SECTION_ID,
-        version: 3,
-        createdAt: new Date("2026-04-20T11:58:00Z"),
-        kind: "autosave",
-        itemCount: 4,
-        riskCount: 2,
-        decisionCount: 1,
-      },
-    ];
-    const mapped = mapLeadVersions(versions, now);
-    expect(expectDefined(mapped[0]).version).toBe(3);
-    expect(expectDefined(mapped[0]).timestamp).toBe("2 min ago");
-    expect(expectDefined(mapped[0]).itemCount).toBe(4);
-    expect(expectDefined(mapped[0]).riskCount).toBe(2);
-    expect(expectDefined(mapped[0]).decisionCount).toBe(1);
-  });
-});
-
 describe("mapLeadFormData", () => {
   it("returns all empty collections when the section is empty", () => {
     const section = baseSection();
     const result = mapLeadFormData({
       active: section,
       byPeriod: { section, readOnly: false },
-      versions: [],
       history: [],
     });
     expect(result.products).toEqual([]);
@@ -667,7 +640,6 @@ describe("mapLeadFormData", () => {
     expect(result.decisions).toEqual([]);
     expect(result.priorities).toEqual([]);
     expect(result.periods).toEqual([]);
-    expect(result.versions).toEqual([]);
     expect(result.readOnly).toBe(false);
     expect(result.currentUser.name).toBe("Тимлид 1");
     expect(result.currentUser.initials).toBe("Т1");
@@ -681,7 +653,6 @@ describe("mapLeadFormData", () => {
     const result = mapLeadFormData({
       active: section,
       byPeriod: { section, readOnly: false },
-      versions: [],
       history: [],
     });
     expect(result.readOnly).toBe(true);
@@ -692,7 +663,6 @@ describe("mapLeadFormData", () => {
     const result = mapLeadFormData({
       active: section,
       byPeriod: { section, readOnly: true },
-      versions: [],
       history: [],
     });
     expect(result.readOnly).toBe(true);

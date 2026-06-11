@@ -177,14 +177,6 @@ function buildHarness(opts: {
         }),
         pathFilter: () => ({ queryKey: ["leadForm.byPeriod"] }),
       },
-      versions: {
-        queryOptions: () => ({
-          queryKey: ["leadForm.versions"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (stub returns a resolved value)
-          queryFn: async () => [],
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.versions"] }),
-      },
       revoke: {
         mutationOptions: (
           passed: {
@@ -211,32 +203,6 @@ function buildHarness(opts: {
         }),
         pathFilter: () => ({ queryKey: ["leadForm.fillFrom"] }),
       },
-      restoreVersion: {
-        mutationOptions: (
-          passed: {
-            onSuccess?: () => void;
-            onError?: (e: unknown) => void;
-          } = {},
-        ) => ({
-          ...passed,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (stub returns a resolved value)
-          mutationFn: async () => ({ ok: true }),
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.restoreVersion"] }),
-      },
-      createSnapshot: {
-        mutationOptions: (
-          passed: {
-            onSuccess?: () => void;
-            onError?: (e: unknown) => void;
-          } = {},
-        ) => ({
-          ...passed,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (stub returns a resolved value)
-          mutationFn: async () => ({ ok: true }),
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.createSnapshot"] }),
-      },
       requestReopen: {
         mutationOptions: (
           passed: {
@@ -249,20 +215,6 @@ function buildHarness(opts: {
           mutationFn: async () => ({ ok: true }),
         }),
         pathFilter: () => ({ queryKey: ["leadForm.requestReopen"] }),
-      },
-      // add-version-pin: exposed unconditionally in the component.
-      setVersionPinned: {
-        mutationOptions: (
-          passed: {
-            onSuccess?: () => void;
-            onError?: (e: unknown) => void;
-          } = {},
-        ) => ({
-          ...passed,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (stub returns a resolved value)
-          mutationFn: async () => undefined,
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.setVersionPinned"] }),
       },
       crossAuthors: {
         queryOptions: () => ({
@@ -279,14 +231,6 @@ function buildHarness(opts: {
           queryFn: async () => [] as never[],
         }),
         pathFilter: () => ({ queryKey: ["leadForm.crossAuthorSections"] }),
-      },
-      getVersion: {
-        queryOptions: () => ({
-          queryKey: ["leadForm.getVersion"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (stub returns a resolved value)
-          queryFn: async () => null,
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.getVersion"] }),
       },
     },
   };

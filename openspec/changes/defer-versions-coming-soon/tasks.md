@@ -10,38 +10,38 @@ in group 5.
 
 ## 1. Prisma schema + shared read model (D3, D6)
 
-- [ ] 1.1 `prisma/schema.prisma`: drop the `VersionSnapshot` model
+- [x] 1.1 `prisma/schema.prisma`: drop the `VersionSnapshot` model
       (lines ~452-461), the `VersionSnapshotKind` enum (~line 690), and
       the `versionSnapshots` relation on `ReportSection` (~line 247).
-- [ ] 1.2 Hand-sync the single init migration SQL: delete the
+- [x] 1.2 Hand-sync the single init migration SQL: delete the
       `VersionSnapshot` table and `VersionSnapshotKind` enum DDL (MVP
       DB rule — no incremental alter-table migration).
-- [ ] 1.3 `prisma migrate reset` BOTH the `_dev` and `_test` databases
+- [x] 1.3 `prisma migrate reset` BOTH the `_dev` and `_test` databases
       with `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`; confirm both
       re-apply and the table is gone (add-version-pin once missed
       `_test` — verify both). Never prod.
-- [ ] 1.4 `packages/shared/src/schemas/stage.schema.ts`: remove
+- [x] 1.4 `packages/shared/src/schemas/stage.schema.ts`: remove
       `versionSnapshotKindSchema`, `versionSnapshotSchema`, and the
       `VersionSnapshot` / `VersionSnapshotKind` types; strip their
       cases from `packages/shared/src/schemas/report.test.ts`.
-- [ ] 1.5 `packages/shared/src/schemas/report.schema.ts:414-416`:
+- [x] 1.5 `packages/shared/src/schemas/report.schema.ts:414-416`:
       remove `versionCount`, `latestVersion`, `latestVersionAt` from
       `myHistoryEntrySchema`.
 
 ## 2. API removal (D1, D2, D3)
 
-- [ ] 2.1 `trpc.router.ts`: delete the five procedures —
+- [x] 2.1 `trpc.router.ts`: delete the five procedures —
       `leadForm.versions` (~1981), `restoreVersion` (~1995),
       `getVersion` (~2014), `createSnapshot` (~2034),
       `setVersionPinned` (~2051). One `TODO(versions-v2)` comment at
       the former block. No procedures added (role-coverage gate
       untouched).
-- [ ] 2.2 `trpc.router.ts` `myHistory` (~349-406): remove the
+- [x] 2.2 `trpc.router.ts` `myHistory` (~349-406): remove the
       `versionSnapshots` include, the snapshot dates from the
       `lastEditAt` reduction, `latestVersion`, and the
       `versionCount` / `latestVersion` / `latestVersionAt` output
       fields.
-- [ ] 2.3 Delete `snapshot.service.ts`; in
+- [x] 2.3 Delete `snapshot.service.ts`; in
       `version-history.service.ts` delete `listVersions`,
       `getVersion`, `setVersionPinned`, `restoreVersion` and move the
       surviving `fillFrom` into `lead-form.service.ts` (or a sibling
@@ -49,12 +49,12 @@ in group 5.
       `createVersionSnapshot` call with a `TODO(versions-v2)` one-liner
       (D2). Update module/DI wiring and the repository interface in the
       service file; `repository.fillFromSection` stays.
-- [ ] 2.4 `lead-form.prisma-repository.ts`: remove `getVersion` (~197),
+- [x] 2.4 `lead-form.prisma-repository.ts`: remove `getVersion` (~197),
       `listVersions` (~210), the restore write path (~296-303 fidelity-
       bug anchor), `createVersionSnapshot` + the retention sweep
       (~461-528), and `setVersionPinned` (~812); sweep
       `lead-form-shared.ts` for orphaned helpers/types.
-- [ ] 2.5 Tests: delete `version-history.integration.test.ts`,
+- [x] 2.5 Tests: delete `version-history.integration.test.ts`,
       `version-retention.integration.test.ts`,
       `version-snapshot.characterization.integration.test.ts`; strip
       version/snapshot cases from `lead-form.contract.test.ts`,
@@ -65,7 +65,7 @@ in group 5.
 
 ## 3. Web removal + ComingSoon control (D3, D4, D5)
 
-- [ ] 3.1 `lead-form.tsx`: remove `versionsQ` (query, the
+- [x] 3.1 `lead-form.tsx`: remove `versionsQ` (query, the
       `!versionsQ.data` skeleton-gate term, load-error toast),
       `getVersionQ` + `viewedSnapshotVersion` + the snapshot overlay
       and its skeleton branch, `restoreMut` + `handleRestoreVersion`,
@@ -73,11 +73,11 @@ in group 5.
       `onTogglePin`, the `Version N · ` autosave-label prefix
       (~1427-1430), and the `versions` input of `mapLeadFormData`.
       `TODO(versions-v2)` at the former save-success trigger.
-- [ ] 3.2 `use-lead-form-autosave.ts`: remove the orphaned
+- [x] 3.2 `use-lead-form-autosave.ts`: remove the orphaned
       `onSaveSuccessAction` prop + `onSaveSuccessRef`
       (lines 45, 101-104, 125); rewrite the affected hook tests to the
       no-snapshot contract (D4).
-- [ ] 3.3 Delete `version-history-nav.tsx`, `version-row.tsx`,
+- [x] 3.3 Delete `version-history-nav.tsx`, `version-row.tsx`,
       `version-history-nav.test.tsx`, `version-history-nav-pin.test.tsx`,
       and `__snapshots__/version-history-nav.test.tsx.snap`; remove
       `MOCK_VERSIONS` + the `VersionSnapshot` type from `mock-data.ts`,
@@ -85,7 +85,7 @@ in group 5.
       `lib/mappers/lead-form.ts` (+ `lib/mappers/index.ts` export), and
       `versionCount` / `latestVersion` / `latestVersionAt` from
       `lib/mappers/lead-history.ts` (+ their test cases).
-- [ ] 3.4 New `apps/web/src/components/lead/version-coming-soon.tsx`:
+- [x] 3.4 New `apps/web/src/components/lead/version-coming-soon.tsx`:
       inert `VersionComingSoonControl` per
       `nav-bar.tsx:170-184` `LanguageComingSoonControl` — disabled
       button, `aria-disabled`,
@@ -95,7 +95,7 @@ in group 5.
       `TODO(versions-v2)` activation marker; unit test (renders
       disabled control + tooltip). Wire it into the `lead-form.tsx`
       toolbar slot (~1589-1602).
-- [ ] 3.5 Orphan sweep for 3.1-3.4 driven by `pnpm typecheck`, not
+- [x] 3.5 Orphan sweep for 3.1-3.4 driven by `pnpm typecheck`, not
       memory: unused imports, dead mapper fields, stale cache-key
       invalidations; update `lead-form.test.tsx`,
       `lead-form-addressable.test.tsx`,
@@ -104,7 +104,7 @@ in group 5.
 
 ## 4. Save stability — the user's #1 ask (D7)
 
-- [ ] 4.1 Audit `use-lead-form-autosave.test.tsx` +
+- [x] 4.1 Audit `use-lead-form-autosave.test.tsx` +
       `save-now-button.test.tsx` against the D7 contract: debounce
       coalescing; error → `state: "error"` + `dirty: true` + retry on
       next edit; `beforeunload` guard while dirty; `forceSave` cancels
@@ -112,7 +112,7 @@ in group 5.
       effects beyond the draft write. Add missing cases; remove only
       assertions about now-deleted snapshot behavior; do not regress
       `save-now-pending-indicator` tests.
-- [ ] 4.2 Manual live check on :3000 (restart the dev server only after
+- [x] 4.2 Manual live check on :3000 (restart the dev server only after
       group 3 lands): lead page loads with no version queries; edit →
       autosave → "Saved"; Save now → pending indicator → saved;
       devtools-offline → "Save failed" surfaces and the next edit
@@ -121,20 +121,27 @@ in group 5.
 
 ## 5. Specs, cleanup guards, gates (D8)
 
-- [ ] 5.1 `npx openspec validate defer-versions-coming-soon` passes;
+- [x] 5.1 `npx openspec validate defer-versions-coming-soon` passes;
       at archive time confirm `openspec/specs/version-pinning/` is
       removed by the REMOVED delta (delete the directory in the archive
       commit if tooling leaves it).
-- [ ] 5.2 Cleanup guard — all three greps return zero matches outside
+      Result 2026-06-11: "Change 'defer-versions-coming-soon' is valid".
+- [x] 5.2 Cleanup guard — all three greps return zero matches outside
       `openspec/` (changes archive included) and `.git`:
       `grep -rn "VersionSnapshot" --exclude-dir={node_modules,.git,.next,dist,openspec} .`
       `grep -rn "versionSnapshot" --exclude-dir={node_modules,.git,.next,dist,openspec} .`
       `grep -rn "version-history-nav" --exclude-dir={node_modules,.git,.next,dist,openspec} .`
       (rebuild `packages/shared/dist` rather than grepping stale build
       output).
-- [ ] 5.3 UI-strings check on touched tsx: `grep -nE '[а-яА-Я]'` —
+      Result 2026-06-11: zero matches in tracked source; remaining hits
+      are git-ignored artifacts (`.scratch/` logs, `e2e/sweep/.reports/`,
+      `.next-sweep/` caches) plus descriptive prompt text in
+      `.claude/workflows/overnight-everything.js`; rebuilt
+      `packages/shared/dist` is clean.
+- [x] 5.3 UI-strings check on touched tsx: `grep -nE '[а-яА-Я]'` —
       matches only in comments/tests/data.
-- [ ] 5.4 Gates — record results here:
+      Result 2026-06-11: zero Cyrillic matches in touched production tsx.
+- [x] 5.4 Gates — record results here:
       `pnpm typecheck && pnpm lint`;
       `pnpm --filter @customreport/shared test`,
       `pnpm --filter @customreport/api test`,
@@ -144,3 +151,8 @@ in group 5.
       `pnpm test && pnpm build`.
       Do not stage or revert the pre-existing
       `product-accordion.test.tsx.snap` modification.
+      Results 2026-06-11: typecheck green; lint green (ESLint no
+      issues); shared 598 passed; api unit 904 passed; web 1015 passed
+      (incl. 2 new D7 cases); api integration 99 passed / 2 env-skipped
+      (fill-from + repository green); `pnpm test` green; `pnpm build`
+      green.

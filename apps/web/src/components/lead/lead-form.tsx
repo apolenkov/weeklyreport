@@ -34,14 +34,6 @@ import {
   ownedStagesForProject,
 } from "../../lib/mappers/lead-form";
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
-import {
-  applySnapshotStageOverrides,
-  buildSnapshotStageMap,
-  mapSnapshotDecisions,
-  mapSnapshotItems,
-  mapSnapshotRisks,
-  type SnapPayload,
-} from "../../lib/mappers/lead-snapshot";
 import { stageStatusToTraffic } from "../../lib/mappers/traffic-light";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
@@ -67,12 +59,11 @@ import type {
   Product,
   ReportPeriod,
   RiskEntry,
-  VersionSnapshot,
 } from "./mock-data";
 import { NextWeekSection } from "./next-week-section";
 import { PeriodNavigator } from "./period-navigator";
 import { RequestReopenDialog } from "./request-reopen-dialog";
-import { VersionHistoryNav } from "./version-history-nav";
+import { VersionComingSoonControl } from "./version-coming-soon";
 
 interface LeadFormProps {
   /**
@@ -320,9 +311,9 @@ export function LeadForm({
   const shouldRouteHeadLikeAwayFromLeadForm = isHeadLikeSession;
   const shouldDeferForSession = Boolean(sessionState?.isLoading);
 
-  // Four queries compose the lead-form view. `byPeriod` and `versions` depend
-  // on identifiers from `getActive` (or — 35-07 — the pinned `reportId` from
-  // the dynamic route), so they're gated by `enabled`.
+  // Three queries compose the lead-form view. `byPeriod` depends on
+  // identifiers from `getActive` (or — 35-07 — the pinned `reportId` from
+  // the dynamic route), so it's gated by `enabled`.
   const activeQ = useQuery(trpc.reports.getActive.queryOptions());
   const activeReportId = activeQ.data?.reportId ?? "";
   const activeSectionId = activeQ.data?.reportSectionId ?? "";
@@ -352,12 +343,6 @@ export function LeadForm({
   const sectionIdForActions =
     byPeriodQ.data?.section.reportSectionId ?? activeSectionId;
 
-  const versionsQ = useQuery({
-    ...trpc.leadForm.versions.queryOptions({
-      reportSectionId: sectionIdForActions,
-    }),
-    enabled: sectionIdForActions !== "",
-  });
   const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
 
   // F1: load other authors who share a product with the current user.
@@ -375,21 +360,6 @@ export function LeadForm({
       reportId: targetReportId,
     }),
     enabled: targetReportId !== "",
-  });
-
-  // F3.4: non-null when user navigates to a historical snapshot via ← › arrows.
-  const [viewedSnapshotVersion, setViewedSnapshotVersion] = useState<
-    number | null
-  >(null);
-
-  // F3.4: fetch full snapshot data for a historical version when the user
-  // navigates to it via VersionHistoryNav ← › arrows.
-  const getVersionQ = useQuery({
-    ...trpc.leadForm.getVersion.queryOptions({
-      reportSectionId: sectionIdForActions,
-      version: viewedSnapshotVersion ?? 1,
-    }),
-    enabled: viewedSnapshotVersion !== null && sectionIdForActions !== "",
   });
 
   const crossAuthors = crossAuthorsQ.data ?? [];
@@ -465,14 +435,6 @@ export function LeadForm({
     procedure: "leadForm.byPeriod",
     context: { reportId: targetReportId || null, role: sessionRole },
     toastPrefix: "Failed to load form",
-  });
-
-  useQueryErrorHandler(versionsQ, {
-    event: "leadForm.versions.load_failed",
-    component: "LeadForm",
-    procedure: "leadForm.versions",
-    context: { reportSectionId: sectionIdForActions || null },
-    toastPrefix: "Failed to load versions",
   });
 
   useQueryErrorHandler(historyQ, {
@@ -585,43 +547,6 @@ export function LeadForm({
     }),
   );
 
-  const restoreMut = useMutation(
-    trpc.leadForm.restoreVersion.mutationOptions({
-      onSuccess: () => {
-        invalidateLeadForm(qc, trpc);
-        toast.success("Version restored");
-      },
-      onError: (err: unknown) => {
-        const msg = err instanceof Error ? err.message : "Restore failed";
-        toast.error(msg);
-      },
-    }),
-  );
-
-  const createSnapshotMut = useMutation(
-    trpc.leadForm.createSnapshot.mutationOptions({
-      onSuccess: () => {
-        invalidateLeadForm(qc, trpc);
-      },
-      onError: () => {
-        // Autosave-triggered snapshot failures are silent — the user already
-        // sees "✓ Saved"; a toast for the background snapshot would confuse.
-      },
-    }),
-  );
-
-  const togglePinMut = useMutation(
-    trpc.leadForm.setVersionPinned.mutationOptions({
-      onSuccess: () => {
-        invalidateLeadForm(qc, trpc);
-      },
-      onError: (err: unknown) => {
-        const msg = err instanceof Error ? err.message : "Pin update failed";
-        toast.error(msg);
-      },
-    }),
-  );
-
   // ---- Build draft payload ----
   const draftPayload = useMemo(
     () => (draftSection ? sectionToDraftPayload(draftSection) : null),
@@ -629,10 +554,7 @@ export function LeadForm({
   );
 
   const isLoading =
-    activeQ.isLoading ||
-    byPeriodQ.isLoading ||
-    versionsQ.isLoading ||
-    historyQ.isLoading;
+    activeQ.isLoading || byPeriodQ.isLoading || historyQ.isLoading;
   const awaitingRoleRedirect = shouldRouteHeadLikeAwayFromLeadForm;
   const awaitingCanonicalRedirect =
     !!redirectToCanonical && !pinnedReportId && activeReportId !== "";
@@ -669,14 +591,8 @@ export function LeadForm({
     // operands), so !isReadOnlyEarly implies !isSubmitted.
     enabled: !isReadOnlyEarly && draftSection !== null,
     initialSavedKey,
-    onSaveSuccessAction: () => {
-      // Every successful autosave creates a new version snapshot.
-      // Skip when viewing a historical snapshot (read-only overlay) or when
-      // a snapshot mutation is already in flight.
-      if (!sectionIdForActions || viewedSnapshotVersion !== null) return;
-      if (createSnapshotMut.isPending) return;
-      createSnapshotMut.mutate({ reportSectionId: sectionIdForActions });
-    },
+    // TODO(versions-v2): the save-success path used to create a version
+    // snapshot here; re-wire the trigger when versioning returns.
   });
 
   // 35-07: set document.title to surface the addressed week in the browser
@@ -723,7 +639,6 @@ export function LeadForm({
     awaitingCanonicalRedirect ||
     activeQ.data === undefined ||
     !byPeriodQ.data ||
-    !versionsQ.data ||
     !historyQ.data ||
     !draftSection
   ) {
@@ -734,7 +649,6 @@ export function LeadForm({
   const data = mapLeadFormData({
     active: activeQ.data ?? draftSection,
     byPeriod: { section: draftSection, readOnly: byPeriodQ.data.readOnly },
-    versions: versionsQ.data,
     history: historyQ.data,
   });
 
@@ -753,50 +667,14 @@ export function LeadForm({
     data.products,
     crossAuthorStageMap,
   ) as Product[];
-  // F3.4: build a lookup from snapshot stageStatuses + risks + items so own-author
-  // stage chips reflect the status captured at snapshot time, not the current draft.
-  // Plain const — must stay after the early-return guard; not a hook.
-  const snapshotStageMap = buildSnapshotStageMap(
-    getVersionQ.data as SnapPayload | null | undefined,
-  );
-
-  // F3.4: when viewing a historical snapshot, override own-author stage statuses
-  // with snapshot values so chips reflect the captured state, including risks/items.
-  const displayProducts: Product[] = applySnapshotStageOverrides(
-    products,
-    snapshotStageMap,
-  ) as Product[];
 
   // Lookup map for resolving productName from productId in cross-author embeds.
-  const productNameById = new Map(displayProducts.map((p) => [p.id, p.name]));
-  // F3.4: when viewing a historical snapshot, substitute items/risks/decisions
-  // from the snapshot payload instead of the current draft.
-  const snapRaw =
-    viewedSnapshotVersion !== null
-      ? (getVersionQ.data as SnapPayload | null | undefined)
-      : null;
-  const snapshotAuthor = draftSection.authorName;
+  const productNameById = new Map(products.map((p) => [p.id, p.name]));
 
-  // When in snapshot mode but snapRaw is null (still loading or API returned
-  // no data for this version), the mappers yield empty arrays — never fall
-  // back to the current draft, which would misrepresent historical state.
-  const inSnapMode = viewedSnapshotVersion !== null;
-
-  const currentWeekItems: KanbanItem[] = inSnapMode
-    ? mapSnapshotItems(snapRaw, productNameById, snapshotAuthor, "current")
-    : (data.currentWeekItems as KanbanItem[]);
-
-  const nextWeekItems: KanbanItem[] = inSnapMode
-    ? mapSnapshotItems(snapRaw, productNameById, snapshotAuthor, "next")
-    : (data.nextWeekItems as KanbanItem[]);
-
-  const risks: RiskEntry[] = inSnapMode
-    ? mapSnapshotRisks(snapRaw, productNameById)
-    : (data.risks as RiskEntry[]);
-
-  const decisions: DecisionEntry[] = inSnapMode
-    ? mapSnapshotDecisions(snapRaw, productNameById)
-    : (data.decisions as DecisionEntry[]);
+  const currentWeekItems: KanbanItem[] = data.currentWeekItems as KanbanItem[];
+  const nextWeekItems: KanbanItem[] = data.nextWeekItems as KanbanItem[];
+  const risks: RiskEntry[] = data.risks as RiskEntry[];
+  const decisions: DecisionEntry[] = data.decisions as DecisionEntry[];
 
   // W5/W6: build foreign item arrays from crossAuthorSectionsQ (always-on).
   const foreignCurrentItems: KanbanItem[] = mapForeignItems(
@@ -840,7 +718,6 @@ export function LeadForm({
     .filter((r): r is number => r != null);
 
   const periods: ReportPeriod[] = data.periods as ReportPeriod[];
-  const versions: VersionSnapshot[] = data.versions as VersionSnapshot[];
   const currentUser = data.currentUser;
   const selectedPeriod = periods.find(
     (period) => period.id === selectedPeriodId && period.id !== "",
@@ -859,9 +736,7 @@ export function LeadForm({
         ? [...visibleNonArchivedPeriods, selectedPeriod]
         : visibleNonArchivedPeriods;
 
-  // F3.4: viewing a historical snapshot forces read-only mode.
-  const isViewingSnapshot = viewedSnapshotVersion !== null;
-  const isReadOnly = data.readOnly || isSubmitted || isViewingSnapshot;
+  const isReadOnly = data.readOnly || isSubmitted;
 
   // 35-04: per-project stages-the-lead-owns selector. Forwarded into the
   // Item / Risk dialogs so the SDLC stage dropdown is scoped per project.
@@ -1137,36 +1012,22 @@ export function LeadForm({
     });
   }
 
-  function handleRestoreVersion(version: number) {
-    if (!sectionIdForActions) return;
-    if (
-      autosave.dirty &&
-      !window.confirm("You have unsaved changes. Continue and overwrite?")
-    ) {
-      return;
-    }
-    restoreMut.mutate({ reportSectionId: sectionIdForActions, version });
-  }
-
   function handleToggleAll() {
     setGroupExpanded((prev) => !prev);
     setGroupSyncKey((k) => k + 1);
   }
 
   // Autosave indicator label — 4-state badge.
-  // Use the same versions array that feeds VersionHistoryNav so the badge
-  // never shows a stale version number (e.g. "Version 1" when v4 is live).
-  const latestVersionNumber =
-    versions.length > 0 ? (versions[0]?.version ?? null) : null;
-  const versionPrefix =
-    latestVersionNumber != null ? `Version ${latestVersionNumber} · ` : "";
   const autosaveLabel =
     autosave.state === "saving"
       ? "↻ Saving…"
       : autosave.state === "pending"
         ? "● Pending…"
         : autosave.state === "saved" && autosave.lastSavedAt
-          ? `${versionPrefix}${autosave.lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+          ? autosave.lastSavedAt.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
           : autosave.state === "error"
             ? "⚠ Save failed"
             : "Autosaved";
@@ -1301,33 +1162,7 @@ export function LeadForm({
                 orientation="vertical"
                 className="h-5 bg-[var(--color-border)]"
               />
-              <VersionHistoryNav
-                versions={versions}
-                onRestore={isReadOnly ? undefined : handleRestoreVersion}
-                onViewVersion={(v) => {
-                  // Reset add-signal counters so no stale trigger fires when
-                  // returning from snapshot view (D1 fix companion).
-                  if (v !== null) {
-                    setCurrentWeekAddSignal(0);
-                    setNextWeekAddSignal(0);
-                    setRisksAddSignal(0);
-                    setDecisionsAddSignal(0);
-                  }
-                  setViewedSnapshotVersion(v);
-                }}
-                viewedVersion={viewedSnapshotVersion}
-                onTogglePin={
-                  isReadOnly
-                    ? undefined
-                    : (version, pinned) => {
-                        togglePinMut.mutate({
-                          reportSectionId: sectionIdForActions,
-                          version,
-                          pinned,
-                        });
-                      }
-                }
-              />
+              <VersionComingSoonControl />
               {!isReadOnly && (
                 <>
                   <Separator
@@ -1355,31 +1190,7 @@ export function LeadForm({
             </div>
           )}
 
-        {/* F3.4: snapshot preview banner — shown when user navigates to a
-            historical version via VersionHistoryNav ← ›. Stages reflect
-            status captured at snapshot time; content is read-only. */}
-        {isViewingSnapshot && (
-          <div className="flex items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--color-starbucks-accent)]/40 bg-[var(--color-success)] p-3">
-            <span className="text-sm font-medium text-[var(--color-starbucks-accent)]">
-              {getVersionQ.isLoading
-                ? `Loading snapshot v${viewedSnapshotVersion}…`
-                : `Viewing snapshot v${viewedSnapshotVersion} — read-only. Stage statuses reflect this version.`}
-            </span>
-            <button
-              type="button"
-              className="rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)] hover:bg-[var(--color-starbucks-accent)]/10 transition-colors"
-              onClick={() => setViewedSnapshotVersion(null)}
-            >
-              Back to current
-            </button>
-          </div>
-        )}
-
-        {/* F3.4: while snapshot data is in flight, show skeleton to prevent
-            the current draft content from flashing under the snapshot banner. */}
-        {isViewingSnapshot && getVersionQ.isLoading ? (
-          <LeadFormSkeleton />
-        ) : isSlidesMode ? (
+        {isSlidesMode ? (
           <LeadSlidesClient
             initialReportId={targetReportId || pinnedReportId || null}
             chrome="content"
@@ -1392,7 +1203,7 @@ export function LeadForm({
           // the standalone deck.
           <div className="min-w-0 space-y-6">
             <LeadFormSyncBridge.Provider
-              products={displayProducts}
+              products={products}
               risks={risks}
               onProductsChange={handleProductsChange}
               onRisksChange={handleRisksChange}

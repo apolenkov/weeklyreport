@@ -1,7 +1,4 @@
-import type {
-  ReportSectionReadModel,
-  VersionSnapshot,
-} from "@customreport/shared";
+import type { ReportSectionReadModel } from "@customreport/shared";
 
 export class LeadFormDomainError extends Error {
   constructor(message: string) {
@@ -17,18 +14,6 @@ export class LeadFormAccessError extends Error {
   }
 }
 
-/** Minimal shape returned by getLatestSnapshot for throttle/dedup checks. */
-export interface SnapshotLatestRow {
-  data: Record<string, unknown>;
-  createdAt: Date;
-  version: number;
-}
-
-/** Result shape returned by the public createSnapshot API. */
-export type CreateSnapshotResult =
-  | { version: number; skipped?: false }
-  | { version: number; skipped: true; reason: "throttled" | "no-change" };
-
 export interface LeadFormRepository {
   getSectionById(sectionId: string): Promise<ReportSectionReadModel | null>;
   getSectionForPeriod(
@@ -40,17 +25,6 @@ export interface LeadFormRepository {
     targetSectionId: string,
     sourceSectionId: string,
   ): Promise<number>;
-  listVersions(sectionId: string): Promise<VersionSnapshot[]>;
-  getVersion(
-    sectionId: string,
-    version: number,
-  ): Promise<Record<string, unknown> | null>;
-  restoreVersion(sectionId: string, version: number): Promise<number>;
-  createVersionSnapshot(sectionId: string): Promise<number>;
-  /** Returns the most recent snapshot for a section, or null if none exists. */
-  getLatestSnapshot(sectionId: string): Promise<SnapshotLatestRow | null>;
-  /** Returns the snapshot projection for a section (same shape stored in VersionSnapshot.data). */
-  buildSnapshotProjection(sectionId: string): Promise<Record<string, unknown>>;
   createReopenRequest(
     sectionId: string,
     userId: string,
@@ -85,12 +59,6 @@ export interface LeadFormRepository {
   ): Promise<CrossAuthorSectionRow[]>;
   /** SC-165: Revoke every submitted section in a report in one transaction. */
   revokeAllSubmitted(reportId: string, revokedBy: string): Promise<number>;
-  /** add-version-pin: flip the kind of an existing snapshot to pinned/autosave. */
-  setVersionPinned(
-    sectionId: string,
-    version: number,
-    pinned: boolean,
-  ): Promise<void>;
 }
 
 export interface CrossAuthorSectionRow {

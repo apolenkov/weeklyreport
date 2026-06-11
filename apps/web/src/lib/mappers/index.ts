@@ -80,7 +80,6 @@ export {
   type LeadRiskEntry,
   type LeadStageAssignment,
   type LeadStageOwnership,
-  type LeadVersionSnapshot,
   mapLeadDecisions,
   type MapLeadFormArgs,
   mapLeadFormData,
@@ -89,7 +88,6 @@ export {
   mapLeadPriorities,
   mapLeadProducts,
   mapLeadRisks,
-  mapLeadVersions,
   type MappedLeadForm,
 } from "./lead-form";
 export {
@@ -100,16 +98,6 @@ export {
   mapCompiledHistoryEntries,
   mapHistoryEntries,
 } from "./lead-history";
-export {
-  applySnapshotStageOverrides,
-  buildSnapshotStageMap,
-  mapSnapshotDecisions,
-  mapSnapshotItems,
-  mapSnapshotRisks,
-  type SnapPayload,
-  type SnapshotKanbanItem,
-  type SnapshotStageMap,
-} from "./lead-snapshot";
 export {
   deriveLeadStatus,
   type LeadStatus,

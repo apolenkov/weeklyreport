@@ -303,7 +303,6 @@ async function main() {
   await prisma.item.deleteMany({});
   await prisma.stageStatus.deleteMany({});
   await prisma.projectStatus.deleteMany({});
-  await prisma.versionSnapshot.deleteMany({});
   await prisma.reopenRequest.deleteMany({});
   await prisma.reportSection.deleteMany({});
   await prisma.pdfExportJob.deleteMany({});
@@ -1723,37 +1722,6 @@ async function main() {
     },
   });
   console.log(
-    "[seed-simple] Creating version snapshots (primary lead section, 2 versions)...",
-  );
-  const lead1SectionId = `a0000000-0000-4000-8000-000000000401`;
-  await prisma.versionSnapshot.createMany({
-    data: [
-      {
-        id: randomUUID(),
-        reportSectionId: lead1SectionId,
-        version: 1,
-        data: {
-          note: "начальный черновик",
-          items: [],
-          risks: [],
-          decisions: [],
-        },
-      },
-      {
-        id: randomUUID(),
-        reportSectionId: lead1SectionId,
-        version: 2,
-        data: {
-          note: "после первого сохранения",
-          items: [],
-          risks: [],
-          decisions: [],
-        },
-      },
-    ],
-  });
-
-  console.log(
     '[seed-simple] Creating published-week sections (RU "Fill from Previous" content)...',
   );
   for (let i = 0; i < leads.length; i++) {
@@ -2012,7 +1980,6 @@ async function main() {
     risks: await prisma.risk.count(),
     decisions: await prisma.decision.count(),
     priorityItems: await prisma.item.count({ where: { priorityRank: { not: null } } }),
-    versionSnapshots: await prisma.versionSnapshot.count(),
     reminderPolicies: await prisma.reminderPolicy.count(),
     reminders: await prisma.reminderRule.count(),
     reopenRequests: await prisma.reopenRequest.count(),
