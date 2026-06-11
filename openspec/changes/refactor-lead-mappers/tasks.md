@@ -49,7 +49,7 @@ never regenerate snapshots to silence a diff):**
       `deadline.toISOString().slice(0, 10)` and null passthrough.
       Tests per the "Unit-test contract" in `design.md` D5. Commit is
       additive and green.
-- [ ] 1.2 Add `apps/web/src/lib/mappers/lead-snapshot.ts` +
+- [x] 1.2 Add `apps/web/src/lib/mappers/lead-snapshot.ts` +
       `lead-snapshot.test.ts`; export via `mappers/index.ts`.
       Port as pure functions: `buildSnapshotStageMap(payload)` from
       `lead-form.tsx:815-865` (snapshot stage map:
