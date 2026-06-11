@@ -9,6 +9,7 @@ import type {
   StageStatus,
 } from "./mock-data";
 import { StageChip } from "./stage-chip";
+import { STAGE_CHIP_BOX_HEIGHT } from "./stage-chip-config";
 import { canonicalStageName, splitStageNames } from "./stage-tags";
 
 export interface CrossAuthorEntry {
@@ -250,7 +251,7 @@ export function SdlcPipeline({
             </div>
 
             {/* Stages row */}
-            <div className="flex flex-wrap justify-center items-center gap-2 pb-1">
+            <div className="flex flex-wrap justify-center items-start gap-2 pb-1">
               {product.stages.map((stage, idx) => {
                 const crossAuthorForStage = crossAuthors.find((ca) => {
                   if (ca.projectId !== product.id) return false;
@@ -267,20 +268,17 @@ export function SdlcPipeline({
                   });
                 });
                 return (
-                  <div
-                    key={stage.stageName}
-                    className="flex items-center gap-2"
-                  >
+                  <div key={stage.stageName} className="flex items-start gap-2">
                     {idx > 0 && (
                       <div
                         className="flex items-center text-lg font-bold"
                         style={{
+                          height: STAGE_CHIP_BOX_HEIGHT,
                           color:
                             stage.ownership === "mine" ||
                             product.stages[idx - 1]?.ownership === "mine"
                               ? "var(--color-starbucks-accent)"
                               : "var(--color-muted-foreground)",
-                          alignSelf: "center",
                         }}
                       >
                         &rarr;

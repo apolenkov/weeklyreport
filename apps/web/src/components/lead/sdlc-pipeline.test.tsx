@@ -194,3 +194,74 @@ describe("SdlcPipeline — D5 dashed stripe (component)", () => {
     expect(getFirstCardStyle(container)).not.toContain("dashed");
   });
 });
+
+// ---- align-pipeline-arrows: structural contract (D1 + D2) ----
+// jsdom has no layout engine; these tests pin the structural contract only:
+// - stages row is top-aligned (items-start)
+// - each [arrow, chip] cell is top-aligned (items-start)
+// - arrow wrapper carries STAGE_CHIP_BOX_HEIGHT as inline height
+
+import { STAGE_CHIP_BOX_HEIGHT } from "./stage-chip-config";
+
+/**
+ * Locate the stages row: the flex-wrap div that also carries justify-center
+ * (distinct from the product header which uses justify-between).
+ */
+function getStagesRow(container: HTMLElement): HTMLElement | null {
+  const card = container.querySelector(".rounded-xl");
+  if (!card) return null;
+  return (
+    (Array.from(card.querySelectorAll(".flex-wrap")).find((el) =>
+      (el as HTMLElement).className.includes("justify-center"),
+    ) as HTMLElement | undefined) ?? null
+  );
+}
+
+describe("SdlcPipeline — align-pipeline-arrows structural contract", () => {
+  it("stages row carries items-start (D2)", () => {
+    const { container } = render(
+      <SdlcPipeline products={[BASE_PRODUCT]} readOnly={false} />,
+    );
+    const row = getStagesRow(container);
+    expect(row).not.toBeNull();
+    expect(row?.className).toContain("items-start");
+    expect(row?.className).not.toContain("items-center");
+  });
+
+  it("each [arrow, chip] cell carries items-start (D2)", () => {
+    const { container } = render(
+      <SdlcPipeline products={[BASE_PRODUCT]} readOnly={false} />,
+    );
+    const row = getStagesRow(container);
+    expect(row).not.toBeNull();
+    if (!row) return;
+    const cells = Array.from(row.children) as HTMLElement[];
+    expect(cells.length).toBeGreaterThan(0);
+    for (const cell of cells) {
+      expect(cell.className).toContain("items-start");
+      expect(cell.className).not.toContain("items-center");
+    }
+  });
+
+  it("arrow wrapper carries STAGE_CHIP_BOX_HEIGHT as inline height (D1)", () => {
+    // BASE_PRODUCT has 2 stages → 1 arrow (idx > 0)
+    const { container } = render(
+      <SdlcPipeline products={[BASE_PRODUCT]} readOnly={false} />,
+    );
+    const row = getStagesRow(container);
+    expect(row).not.toBeNull();
+    if (!row) return;
+    const cells = Array.from(row.children) as HTMLElement[];
+    // Cell at index 1 (second stage) has the arrow as its first child.
+    // Arrow wrapper: direct child that is NOT the StageChip root (min-w-[90px]).
+    const secondCell = cells[1] as HTMLElement | undefined;
+    expect(secondCell).toBeDefined();
+    if (!secondCell) return;
+    const arrowEl = Array.from(secondCell.children).find(
+      (c) => !(c as HTMLElement).className.includes("min-w-"),
+    ) as HTMLElement | undefined;
+    expect(arrowEl).toBeDefined();
+    if (!arrowEl) return;
+    expect(arrowEl.style.height).toBe(STAGE_CHIP_BOX_HEIGHT);
+  });
+});

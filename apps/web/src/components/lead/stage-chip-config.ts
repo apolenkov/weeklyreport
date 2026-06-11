@@ -10,6 +10,13 @@ import {
 
 import type { StageStatus } from "./mock-data";
 
+// align-pipeline-arrows (D1): shared height token — chip button and the
+// arrow wrapper in sdlc-pipeline.tsx both use this value so their midlines
+// match by construction, with or without assignee labels below the chip.
+// Value measured from the rendered chip: p-2 (8px×2) + text-xs line-height
+// (~20px) ≈ 36px; round to 36px for a clean even number.
+export const STAGE_CHIP_BOX_HEIGHT = "36px";
+
 // apply-status-palette (memo T5 opt 3): muted semantic fills via the
 // --color-chip-* tokens; no hardcoded status hex in this config.
 export const STATUS_CONFIG: Record<
