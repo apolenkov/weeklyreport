@@ -102,7 +102,7 @@ read each existing test suite BEFORE touching its subject.
       production files (the only Cyrillic in touched tests is fixture
       data, allowed).
 - [x] 5.2 Gates: `pnpm typecheck && pnpm lint && pnpm test &&
-  pnpm build` — record results here.
+pnpm build` — record results here.
       Result 2026-06-11: typecheck PASS; lint PASS (eslint + stylelint + prisma typecheck); test PASS (112 files, 1043 tests); build
       PASS.
 - [x] 5.3 Live walk on :3000 (lead role): raise-without-risk →
