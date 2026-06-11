@@ -54,7 +54,7 @@ roleHomePath(session.role) : "/"} />`. Doc comment: UX gate only,
 
 ## 3. web: migrate the lead preview page
 
-- [ ] 3.1 Separate commit (semantics differ from the layouts):
+- [x] 3.1 Separate commit (semantics differ from the layouts):
       `apps/web/src/app/(app)/lead/report/[reportId]/preview/page.tsx` —
       replace the inline `session?.role !== "lead"` guard with
       `<RoleGate allowedRoles={["lead"]}>` wrapping the existing `<main>`
