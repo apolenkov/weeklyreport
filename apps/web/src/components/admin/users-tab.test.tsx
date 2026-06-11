@@ -205,15 +205,14 @@ describe("UsersTab — focus management (autofocus-admin-dialogs)", () => {
     vi.clearAllMocks();
   });
 
-  it("user-name input is programmatically focusable on open (structural proxy for autoFocus)", () => {
+  it("user-name input receives focus when the dialog opens (autoFocus)", () => {
     renderTab();
     openDialog();
 
     const input = screen.getByLabelText(/^name$/i);
-    // jsdom does not honour autoFocus for conditionally-rendered elements;
-    // verify the structural capability: the input accepts programmatic focus.
-    input.focus();
-    expect(document.activeElement).toBe(input);
+    // React honours autoFocus on conditionally-mounted elements in jsdom;
+    // dropping the autoFocus wiring in production code fails this assert.
+    expect(input).toHaveFocus();
   });
 
   it("focus returns to the trigger button after the dialog closes via Cancel", () => {
