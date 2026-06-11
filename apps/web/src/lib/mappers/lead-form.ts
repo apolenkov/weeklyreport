@@ -385,20 +385,21 @@ export function mapLeadProducts(
   return section.projects.map((p) => {
     const ownedStages = p.ownedStages ?? [];
     const overallStatus = trafficToStageStatus(p.trafficLight);
+    // unify-risk-stage-status (D1, supersedes PRJ-2): covering non-empty
+    // risks force a severity floor on the stage chips again. PRJ-2 had
+    // disconnected this because the derivation fought user chip clicks;
+    // now every conflicting transition is intercepted in the live form
+    // (raise → risk creation, lower → confirmed risk removal), so explicit
+    // and derived status can no longer disagree silently. Items stay
+    // disconnected (risk-only contract).
+    const coveringRisks = section.risks.filter(
+      (r) => r.projectId === p.projectId && r.risk.trim().length > 0,
+    );
     return {
       id: p.projectId,
       name: p.projectName,
       overallStatus,
-      stages: buildStageGrid(
-        section.authorName,
-        ownedStages,
-        // Explicit chip status must win in the edit form. Passing risks and
-        // items here caused deriveEffectiveStageStatus to override the
-        // user's chip clicks on every re-render (PRJ-2). The sync hook
-        // (use-status-risk-sync) owns the risk→chip signal path.
-        [],
-        [],
-      ),
+      stages: buildStageGrid(section.authorName, ownedStages, coveringRisks),
     };
   });
 }

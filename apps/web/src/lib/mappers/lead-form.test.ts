@@ -189,14 +189,11 @@ describe("mapLeadProducts", () => {
     );
   });
 
-  it("linked risks do NOT override explicit chip status in the edit form (PRJ-2 chip-click stability)", () => {
-    // Reproduces the seeded-risk override bug: a risk with
-    // stageIds=["Development"] and severity="at-risk" was causing
-    // deriveEffectiveStageStatus to return "at-risk" even when the
-    // ownedStage.status was "green" (on-track). The user's chip click
-    // reverted on every re-render. Fix: pass [] to buildStageGrid so
-    // explicit stage status always wins; use-status-risk-sync owns
-    // the risk→chip signal path.
+  it("a covering risk floors a stale persisted on-track status (unify-risk-stage-status D1, supersedes PRJ-2)", () => {
+    // The PRJ-2 test that lived here pinned the opposite: risks were
+    // disconnected so explicit chip status always won. D1 re-connects the
+    // derivation — a chip can never show on-track while a non-empty
+    // covering risk exists, on any surface fed by this mapper.
     const section = baseSection({
       projects: [
         {
@@ -227,6 +224,121 @@ describe("mapLeadProducts", () => {
 
     const products = mapLeadProducts(section);
     const devStage = products[0]?.stages.find((s) => s.stageName === "Dev");
+    expect(devStage?.status).toBe("at-risk");
+  });
+
+  it("a blocked covering risk beats an at-risk one (severity floor precedence)", () => {
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM Platform",
+          trafficLight: "green",
+          ownedStages: [
+            {
+              stageId: "stage-dev",
+              stageName: "Development",
+              sortOrder: 3,
+              status: "yellow",
+            },
+          ],
+        },
+      ],
+      risks: [
+        {
+          projectId: PROJECT_A,
+          risk: "Minor slip",
+          impact: "Schedule",
+          mitigation: "Replan",
+          severity: "at-risk",
+          stageIds: ["Development"],
+        },
+        {
+          projectId: PROJECT_A,
+          risk: "Vendor outage",
+          impact: "Work stopped",
+          mitigation: "Escalate",
+          severity: "blocked",
+          stageIds: ["Development"],
+        },
+      ],
+    });
+
+    const devStage = mapLeadProducts(section)[0]?.stages.find(
+      (s) => s.stageName === "Dev",
+    );
+    expect(devStage?.status).toBe("blocked");
+  });
+
+  it("an empty-text risk does not floor the chip (only non-empty risks count)", () => {
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM Platform",
+          trafficLight: "green",
+          ownedStages: [
+            {
+              stageId: "stage-dev",
+              stageName: "Development",
+              sortOrder: 3,
+              status: "green",
+            },
+          ],
+        },
+      ],
+      risks: [
+        {
+          projectId: PROJECT_A,
+          risk: " ".repeat(3),
+          impact: "tbd",
+          mitigation: "tbd",
+          severity: "blocked",
+          stageIds: ["Development"],
+        },
+      ],
+    });
+
+    const devStage = mapLeadProducts(section)[0]?.stages.find(
+      (s) => s.stageName === "Dev",
+    );
+    expect(devStage?.status).toBe("on-track");
+  });
+
+  it("items stay disconnected from chip status (risk-only contract)", () => {
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM Platform",
+          trafficLight: "green",
+          ownedStages: [
+            {
+              stageId: "stage-dev",
+              stageName: "Development",
+              sortOrder: 3,
+              status: "green",
+            },
+          ],
+        },
+      ],
+      items: [
+        {
+          id: "99999999-9999-4999-8999-999999999999",
+          projectId: PROJECT_A,
+          type: "current",
+          text: "Blocked item",
+          tag: "tag",
+          workflowStatus: "blocked",
+          carriedOver: false,
+          stageIds: ["Development"],
+        },
+      ],
+    });
+
+    const devStage = mapLeadProducts(section)[0]?.stages.find(
+      (s) => s.stageName === "Dev",
+    );
     expect(devStage?.status).toBe("on-track");
   });
 
