@@ -98,13 +98,41 @@ export function HeadReportShell({
   const presentHref = `/head/report/${encodeURIComponent(reportId)}/present`;
   const printHref = `/print/${encodeURIComponent(reportId)}`;
 
+  // Single period toolbar (UAT 2026-05-22 done-condition 10 +
+  // head-toolbar-parity D2): period navigator + archive toggle so head can
+  // switch between published weeks. The shell composes the page's ONE
+  // ReportToolbar; in form mode WeeklyReportPage renders it through its
+  // `toolbar` slot, below the real page header row (h1 + publish actions) —
+  // the lead arrangement. That slot replaces the page's own context bar, and
+  // the department label renders here in the center slot instead.
+  const reportToolbar = (
+    <ReportToolbar
+      periodNavigator={
+        periods.length > 0 ? (
+          <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
+        ) : undefined
+      }
+      archiveToggle={
+        <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
+      }
+      leadingExtras={
+        <ReportToolbarCenterLabel
+          label={departmentLabel}
+          detail="Live portfolio review"
+        />
+      }
+    />
+  );
+
   return (
     <div className="space-y-4">
       {/* Action row parity with the lead report header (UAT 2026-05-22,
           done-condition 10): head is read-only, so the lead Submit slot is
           replaced by export / presentation actions.
-          head-toolbar-parity D2: this header-like row now comes FIRST, with
-          the single pill toolbar below it — the lead arrangement.
+          head-toolbar-parity D2: this utility row comes first; in form mode
+          the single pill toolbar renders below the real page header row
+          inside WeeklyReportPage (via its toolbar slot) — the lead
+          arrangement.
           polish-ui-density T3 + unify-head-toolbar-controls: real controls
           share one height (--touch-target-min), grouped by intent —
           scope | view mode (primary) | utilities — with wider gaps between
@@ -143,35 +171,15 @@ export function HeadReportShell({
           {mode === "form" ? <AgentReviewComingSoon compact /> : null}
         </div>
       </div>
-      {/* Single period toolbar (UAT 2026-05-22 done-condition 10 +
-          head-toolbar-parity D2): period navigator + archive toggle so head
-          can switch between published weeks. The shell owns the page's ONE
-          ReportToolbar; the WeeklyReportPage context bar below is suppressed
-          via contextToolbar={false}, and its department label renders here
-          in the center slot instead. */}
-      <ReportToolbar
-        periodNavigator={
-          periods.length > 0 ? (
-            <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
-          ) : undefined
-        }
-        archiveToggle={
-          <ArchiveToggle
-            checked={includeArchive}
-            onChange={setIncludeArchive}
-          />
-        }
-        leadingExtras={
-          <ReportToolbarCenterLabel
-            label={departmentLabel}
-            detail="Live portfolio review"
-          />
-        }
-      />
       {mode === "slides" ? (
-        <Suspense fallback={<SlideSkeleton />}>
-          <HeadSlidesClient reportId={reportId} scope={reportScope} />
-        </Suspense>
+        <>
+          {/* Slides mode has no WeeklyReportPage header, so the shell renders
+              the toolbar directly above the deck. */}
+          {reportToolbar}
+          <Suspense fallback={<SlideSkeleton />}>
+            <HeadSlidesClient reportId={reportId} scope={reportScope} />
+          </Suspense>
+        </>
       ) : (
         <div className="min-w-0">
           <Suspense fallback={<WeeklyReportSkeleton />}>
@@ -179,7 +187,7 @@ export function HeadReportShell({
               reportId={reportId}
               authorId={authorId}
               scope={reportScope}
-              contextToolbar={false}
+              toolbar={reportToolbar}
             />
           </Suspense>
         </div>

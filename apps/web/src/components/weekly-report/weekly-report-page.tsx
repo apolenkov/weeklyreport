@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useContext, useEffect, useMemo } from "react";
+import { type ReactNode, useContext, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 
 import {
@@ -59,12 +59,14 @@ interface WeeklyReportPageProps {
   readonly scope?: "product" | "lead";
   /**
    * head-toolbar-parity D2: a page must not stack two period toolbars. When
-   * an outer shell (HeadReportShell) already owns the shared ReportToolbar,
-   * it passes false to suppress this page's period-context toolbar.
-   * Standalone consumers (bare /head/report, /reports/[reportId], lead
-   * preview, present client) keep the default.
+   * an outer shell (HeadReportShell) composes the page's single shared
+   * ReportToolbar, it passes the element here; the page renders it in the
+   * toolbar slot below the page header row — the lead arrangement — instead
+   * of its own period-context toolbar. Standalone consumers (bare
+   * /head/report, /reports/[reportId], lead preview, present client) omit it
+   * and keep the page's own toolbar.
    */
-  readonly contextToolbar?: boolean;
+  readonly toolbar?: ReactNode;
 }
 
 export function WeeklyReportPage({
@@ -73,7 +75,7 @@ export function WeeklyReportPage({
   canonicalBasePath = "/head/report",
   authorId,
   scope = "product",
-  contextToolbar = true,
+  toolbar,
 }: WeeklyReportPageProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
@@ -351,8 +353,11 @@ export function WeeklyReportPage({
       </div>
 
       {/* Period-context toolbar: shared ReportToolbar container
-          (head-toolbar-parity D2 — replaces the bespoke gradient bar). */}
-      {contextToolbar && (
+          (head-toolbar-parity D2 — replaces the bespoke gradient bar). A
+          shell-composed toolbar arrives via the `toolbar` slot and renders
+          here, below the page header row, so the page keeps the lead
+          arrangement and never stacks two period toolbars. */}
+      {toolbar ?? (
         <ReportToolbar
           periodNavigator={<HeadPeriodNavigator periods={periods} />}
           leadingExtras={

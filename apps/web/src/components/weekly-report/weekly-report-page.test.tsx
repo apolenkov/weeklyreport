@@ -174,7 +174,7 @@ function renderPage(
   authorId?: string,
   role: SessionUser["role"] = "head",
   scope?: "product" | "lead",
-  contextToolbar?: boolean,
+  toolbar?: ReactNode,
 ) {
   const { proxy, captured } = createMockTRPC([
     { path: ["weeklyReport", "get"], query: data },
@@ -228,11 +228,7 @@ function renderPage(
   }
 
   const renderResult = render(
-    <WeeklyReportPage
-      authorId={authorId}
-      scope={scope}
-      contextToolbar={contextToolbar}
-    />,
+    <WeeklyReportPage authorId={authorId} scope={scope} toolbar={toolbar} />,
     { wrapper: Wrapper },
   );
 
@@ -581,8 +577,9 @@ describe("WeeklyReportPage — async Export PDF button role gating (driver sweep
 // head-toolbar-parity: the bespoke gradient "Context shell" is gone — the
 // period-context bar renders through the shared ReportToolbar container.
 // Standalone consumers (bare /head/report, /reports/[reportId], lead preview,
-// present client) keep the default; HeadReportShell passes
-// contextToolbar={false} because it owns the page's single toolbar.
+// present client) keep the default; HeadReportShell composes the page's
+// single toolbar and passes it through the `toolbar` slot, which renders
+// below the page header row (the lead arrangement).
 describe("WeeklyReportPage — shared period toolbar (head-toolbar-parity)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -597,15 +594,24 @@ describe("WeeklyReportPage — shared period toolbar (head-toolbar-parity)", () 
     expect(toolbar).toHaveTextContent("Live portfolio review");
   });
 
-  it("suppresses the toolbar when contextToolbar is false (shell owns the single toolbar)", async () => {
+  it("renders a shell-provided toolbar below the page header instead of its own context bar", async () => {
     renderPage(
       makeWeeklyReportData("open"),
       undefined,
       "head",
       undefined,
-      false,
+      <div data-testid="shell-toolbar" />,
     );
-    await screen.findByRole("heading", { name: /status report/i });
+    const heading = await screen.findByRole("heading", {
+      name: /status report/i,
+    });
+    // The slot replaces the page's own period-context toolbar…
     expect(screen.queryByTestId("report-toolbar")).not.toBeInTheDocument();
+    // …and sits BELOW the page header row (spec scenario: lead arrangement).
+    const shellToolbar = screen.getByTestId("shell-toolbar");
+    expect(
+      heading.compareDocumentPosition(shellToolbar) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });
