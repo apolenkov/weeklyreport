@@ -132,7 +132,7 @@ describe("createMockTRPC — pending descriptor", () => {
       () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- proxy access for test
         const proxyAny = proxy as any;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- proxy access for test
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- dynamic proxy access for test
         const opts =
           proxyAny.admin.jobs.listFailed.queryOptions() as Parameters<
             typeof useQuery
