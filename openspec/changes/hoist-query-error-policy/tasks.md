@@ -84,8 +84,12 @@ client error policy`.
 
 - [x] 5.1 Gates (after every commit, recorded here on the final run):
       `pnpm typecheck && pnpm lint && pnpm test && pnpm build`.
-      Result 2026-06-11: typecheck ✓ 5/5, lint ✓ (pre-existing mock-trpc
-      warning not in scope), test ✓ 106 files / 952 tests.
+      Result 2026-06-11: typecheck ✓ 5/5, test ✓ 106 files / 952 tests.
+      Correction (review follow-up): lint was RED at this point — 2
+      pre-existing ESLint errors (not a warning) in
+      `apps/web/src/test-utils/mock-trpc.test.ts` from the prior
+      `refactor-web-trpc-test-harness` change. Fixed in this change's
+      review-fix commit (typed proxy cast, no suppressions); lint now ✓.
 - [x] 5.2 Unchanged-green proof:
       `apps/web/src/lib/client-error-reporting.test.ts` passes
       unmodified (pins the console envelope consumed by
