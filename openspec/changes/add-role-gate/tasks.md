@@ -37,7 +37,7 @@ roleHomePath(session.role) : "/"} />`. Doc comment: UX gate only,
 
 ## 2. web: migrate the 5 role-gated layouts
 
-- [ ] 2.1 One commit, files edited sequentially, each diff reviewed
+- [x] 2.1 One commit, files edited sequentially, each diff reviewed
       individually before commit:
       `apps/web/src/app/(app)/admin/layout.tsx` (REQUIRED `["admin"]`),
       `apps/web/src/app/(app)/head/layout.tsx` (`["head","admin"]`),
