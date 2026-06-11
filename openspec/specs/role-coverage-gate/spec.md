@@ -51,6 +51,52 @@ gate.
 - **WHEN** a module re-exports a canonical builder under an alias (`export { leadProcedure as authedProcedure }`) and a router imports that alias
 - **THEN** the gate resolves the alias to the original canonical reference, confirms identity, and CI passes
 
+### Requirement: Gate Allow-List Enumerates All Eight Canonical Builders
+
+`ALLOWED_CHAINS` in
+`apps/api/src/infrastructure/trpc/__tests__/role-coverage.test.ts` MUST
+enumerate exactly the 8 canonical builders named in this spec's Purpose —
+including `leadershipProcedure`. Documentation that states the builder count
+(e.g. `openspec/config.yaml` conventions) MUST say 8, not 7.
+
+#### Scenario: A router uses leadershipProcedure
+
+- **WHEN** a `*.router.ts` file defines a procedure with `leadershipProcedure`
+- **THEN** the role-coverage gate reports the procedure as compliant and CI passes
+
+#### Scenario: A ninth builder is exported
+
+- **WHEN** `trpc.middleware.ts` exports a new procedure builder
+- **THEN** the same change MUST add its chain to `ALLOWED_CHAINS` and update
+  the documented builder count — a review-time rule, not a gate guarantee:
+  today's gate only prefix-matches the middleware chains of procedures reachable
+  from `appRouter` and cannot detect an unlisted builder export on its own
+  (rewriting the matching semantics is recorded as a follow-up in the
+  `refactor-trpc-infra-duplication` change's `tasks.md` § 3.1)
+
+### Requirement: The Canonical Middleware Chain Has a Single Definition Site
+
+The shared middleware chain MUST have exactly one definition site:
+the chain (metrics → logging → auth/role → pdf-export guard → mutation audit)
+lives in a local `buildProtectedProcedure(authMiddleware)` factory inside
+`apps/api/src/infrastructure/trpc/trpc.middleware.ts`, and the protected
+canonical builders MUST be created through it. The 8 exported builder
+references MUST remain identity-stable across this consolidation so the
+reference-identity gate keeps passing.
+
+#### Scenario: A new middleware joins the canonical chain
+
+- **WHEN** a maintainer adds a middleware to the canonical chain
+- **THEN** exactly one definition site changes
+- **AND** all protected canonical builders pick it up without editing each
+  builder individually
+
+#### Scenario: Builders stay identity-stable through the consolidation
+
+- **WHEN** the consolidation lands
+- **THEN** the role-coverage gate's reference-identity check passes with zero
+  changes to router files
+
 ### Requirement: Gate Runs in CI for Every PR Touching Router Files
 
 The role-coverage gate MUST execute as a required CI job in the GitHub Actions
