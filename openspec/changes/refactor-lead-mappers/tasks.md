@@ -86,24 +86,32 @@ nameById, authorName)` from `:904-1019` (`SnapPayload` structural
 
 ## 3. docs — backlog evidence + follow-up
 
-- [ ] 3.1 The `specs/architecture-refactor-backlog/spec.md` delta in
+- [x] 3.1 The `specs/architecture-refactor-backlog/spec.md` delta in
       this change records the landed slice and refreshes the LOC
       figure — confirm the final number after 2.2 and adjust the delta
       before archive.
-- [ ] 3.2 Recorded follow-up (non-goal here): twin presentation-type
+- [x] 3.2 Recorded follow-up (non-goal here): twin presentation-type
       families in `mock-data.ts` vs `lib/mappers/lead-form.ts` (one
       proven drift instance) — fold into the next decomposition slice.
+      Recorded in `proposal.md` non-goals; the drift instance is the
+      undeclared `priorityRank` on `LeadKanbanItem` (the new mappers
+      bridge it via the `SnapshotKanbanItem` extension type).
 
 ## Verification
 
-- [ ] `pnpm typecheck && pnpm lint && pnpm test && pnpm build` green at
+- [x] `pnpm typecheck && pnpm lint && pnpm test && pnpm build` green at
       EVERY commit (1.1, 1.2, 2.1, 2.2), not only at the end.
-- [ ] Characterization suites listed above pass with zero snapshot
+- [x] Characterization suites listed above pass with zero snapshot
       regeneration.
-- [ ] `grep -nE '[а-яА-Я]' <touched .tsx/.ts>` — matches are
-      data/comments/tests only.
-- [ ] Live smoke in the browser (driver-verify lesson — never trust
+- [x] `grep -nE '[а-яА-Я]' <touched .tsx/.ts>` — matches are
+      data/comments/tests only (zero matches in all touched files).
+- [x] Live smoke in the browser (driver-verify lesson — never trust
       suites alone on this surface): snapshot navigation
       (view snapshot → back to current), cross-author products render
       with stage overrides, foreign items/risks/decisions visible and
-      read-only.
+      read-only. Done 2026-06-11 as lead1 against a production
+      `next start` on :3140 (the :3000 dev server's webpack cache was
+      already corrupted route-wide — pre-existing, see commit body);
+      v2 → v1 snapshot → back to v2 round-trip clean, locked chips
+      show assignee + derived status, foreign rows read-only, zero
+      console errors from the :3140 server.
