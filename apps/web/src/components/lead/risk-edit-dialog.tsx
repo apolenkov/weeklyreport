@@ -182,7 +182,8 @@ export function RiskEditDialog({
   if (!open) return null;
 
   const headerProductName =
-    products.find((p) => p.id === productId)?.name ?? "";
+    products.find((p) => p.id === productId)?.name ??
+    (risk?.productId === productId ? risk.productName : "");
   const headerVerb = isCreate ? "Add Risk" : "Edit Risk";
 
   function handleStageChange(nextStageIds: string[]) {
@@ -222,7 +223,14 @@ export function RiskEditDialog({
       setErrors(next);
       return;
     }
-    const product = products.find((p) => p.id === productId) ?? products.at(0);
+    // Cross-stage rows (fix-lead-surface-name-resolution): an edited risk may
+    // reference a project outside the lead's stage-owned `products`. Keep the
+    // original assignment instead of silently reassigning to the first product.
+    const product =
+      products.find((p) => p.id === productId) ??
+      (risk?.productId === productId
+        ? { id: risk.productId, name: risk.productName }
+        : products.at(0));
     if (!product) {
       setErrors({ text: "No product available" });
       return;
