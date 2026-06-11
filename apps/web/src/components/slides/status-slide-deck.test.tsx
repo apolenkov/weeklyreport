@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -218,6 +218,151 @@ describe("StatusSlideDeck lead layout", () => {
     // My item visible; "empty for:" noise band is suppressed
     expect(screen.getByText("My item")).toBeInTheDocument();
     expect(screen.queryByText(/empty for:/)).not.toBeInTheDocument();
+  });
+});
+
+function renderHeadDeck(
+  slides: readonly SectionSlideModel[],
+  selectedIndex = 0,
+  onSelect: (index: number) => void = () => undefined,
+) {
+  render(
+    <StatusSlideDeck
+      slides={slides}
+      selectedIndex={selectedIndex}
+      onSelect={onSelect}
+      title="Team Status"
+      subtitle="Review each lead's slide."
+      mode="head"
+    />,
+  );
+}
+
+describe("StatusSlideDeck head layout (head-slide-density)", () => {
+  it("renders the four sections as framed, floored cards with token stripes", () => {
+    renderHeadDeck([slide()]);
+
+    const cards = screen.getAllByTestId("head-section-card");
+    expect(cards).toHaveLength(4);
+    // Fixed topology: every card carries the named min-height token.
+    for (const card of cards) {
+      expect(card.className).toContain("min-h-[var(--slide-quadrant-min)]");
+    }
+    // Per-card left stripe from the token map, in render order.
+    expect(cards[0]?.className).toContain(
+      "border-l-[var(--color-chip-on-track-border)]",
+    );
+    expect(cards[1]?.className).toContain("border-l-[var(--color-primary)]");
+    expect(cards[2]?.className).toContain(
+      "border-l-[var(--color-chip-at-risk-border)]",
+    );
+    expect(cards[3]?.className).toContain(
+      "border-l-[var(--color-decisions-accent)]",
+    );
+  });
+
+  it("renders section headers neutral — no red Risks or green Decisions hue", () => {
+    renderHeadDeck([slide()]);
+
+    const cards = screen.getAllByTestId("head-section-card");
+
+    const risksHeader = within(cards[2]).getByText("Risks");
+
+    const decisionsHeader = within(cards[3]).getByText("Decisions");
+    for (const header of [risksHeader, decisionsHeader]) {
+      expect(header.className).toContain(
+        "text-[var(--color-muted-foreground)]",
+      );
+      expect(header.className).not.toContain("destructive");
+      expect(header.className).not.toContain("starbucks-accent");
+    }
+  });
+
+  it("renders an empty section as a framed dashed placeholder, never hidden", () => {
+    renderHeadDeck([slide([product({ decisions: [], risks: [] })])]);
+
+    const cards = screen.getAllByTestId("head-section-card");
+    expect(cards).toHaveLength(4);
+
+    const decisionsCard = cards[3];
+    expect(within(decisionsCard).getByText("Decisions")).toBeInTheDocument();
+    const placeholder = within(decisionsCard).getByText(
+      "No decisions recorded",
+    );
+    expect(placeholder.className).toContain("border-dashed");
+
+    expect(within(cards[2]).getByText("No risks raised").className).toContain(
+      "border-dashed",
+    );
+  });
+
+  it("renders every row of a dense section with no count-based truncation", () => {
+    const decisions = [
+      "Adopt the unified release calendar",
+      "Freeze scope for the Q3 launch",
+      "Move IdP cutover before month end",
+      "Retire the legacy export pipeline",
+      "Consolidate staging environments",
+      "Fund the accessibility audit",
+    ];
+    renderHeadDeck([slide([product({ decisions })])]);
+
+    for (const text of decisions) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(screen.queryByText(/\+\d+ more/)).not.toBeInTheDocument();
+  });
+
+  it("shows a neutral product badge on rows only when the slide spans multiple products", () => {
+    renderHeadDeck([
+      slide([
+        product(),
+        product({
+          id: PRODUCT_TWO_ID,
+          name: "Data Portal",
+          status: "yellow",
+          currentItems: ["Close API parity"],
+        }),
+      ]),
+    ]);
+
+    const badges = screen.getAllByTestId("head-row-product-badge");
+    expect(badges.length).toBeGreaterThan(0);
+    expect(badges.some((badge) => badge.title === "Marketing Portal")).toBe(
+      true,
+    );
+  });
+
+  it("hides the product badge for a single-product slide", () => {
+    renderHeadDeck([slide()]);
+
+    expect(
+      screen.queryByTestId("head-row-product-badge"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps head-specific surfaces distinct and cross-lead navigation working", () => {
+    const onSelect = vi.fn();
+    renderHeadDeck(
+      [slideWithId("section-1"), slideWithId("section-2")],
+      0,
+      onSelect,
+    );
+
+    // Multi-lead sidebar stays a navigable list (framed, neutral header).
+    const sidebar = screen.getByLabelText("Slides");
+    const leadButtons = within(sidebar).getAllByRole("button");
+    expect(leadButtons).toHaveLength(2);
+
+    fireEvent.click(leadButtons[1]);
+    expect(onSelect).toHaveBeenCalledWith(1);
+
+    // Readiness aside stays a distinct review affordance.
+    expect(screen.getByText("Slide completion")).toBeInTheDocument();
+    // Agent-review deferred-feature control keeps its placement.
+    expect(screen.getByTestId("agent-review-coming-soon")).toBeInTheDocument();
+    // Portfolio metrics render as the segmented capsule labels.
+    expect(screen.getByText("Priority")).toBeInTheDocument();
   });
 });
 

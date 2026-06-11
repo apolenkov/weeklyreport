@@ -57,5 +57,6 @@ over to the head deck so the two surfaces read as one product, not two.
 - Purely presentational — `SectionSlideModel` already carries every field
   the head slide needs (`section-slide-utils.ts:47-71`): per-lead items,
   risks, decisions, readiness, score, products.
-- Status: CAPTURED, NOT STARTED — captured 2026-06-10. Awaiting user taste
-  decisions (see design Open Questions) before implementation begins.
+- Status: IMPLEMENTED 2026-06-11 — taste decisions were recorded 2026-06-10
+  (design "Open Questions — ANSWERED"), unblocking implementation. Awaiting
+  screenshot acceptance and user sign-off (tasks 7.2–7.3) before archive.
