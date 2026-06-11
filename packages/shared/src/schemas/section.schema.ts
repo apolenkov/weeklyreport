@@ -5,6 +5,7 @@ import {
   itemTypeSchema,
   itemWorkflowStatusSchema,
   reportSectionStatusSchema,
+  requiredStageIdsField,
   riskSeveritySchema,
   safeText,
   stageIdsField,
@@ -42,6 +43,16 @@ export const riskInputSchema = z.object({
   impact: safeText({ max: 500 }),
   mitigation: safeText({ max: 500 }),
   severity: riskSeveritySchema.optional(),
+  // require-risk-stage (D1): a risk must always carry ≥1 concrete SDLC
+  // stage. BREAKING for API callers that submit risks without stages.
+  stageIds: requiredStageIdsField,
+});
+
+// require-risk-stage (D2): the READ model stays tolerant of stage-less
+// legacy rows — they must still load so the card can render the loud
+// "No stage set" warning instead of crashing the page. Only the write
+// path (draft-save/submit via `riskInputSchema`) rejects them.
+const riskReadModelSchema = riskInputSchema.extend({
   stageIds: stageIdsField,
 });
 
@@ -148,7 +159,7 @@ export const reportSectionReadModelSchema = z.object({
   // "no extra names" and the mappers fall back exactly as before.
   referencedProjects: z.array(referencedProjectSchema).optional(),
   items: z.array(itemInputSchema),
-  risks: z.array(riskInputSchema),
+  risks: z.array(riskReadModelSchema),
   decisions: z.array(decisionInputSchema),
 });
 
