@@ -3,6 +3,8 @@ import type {
   ReportSectionReadModel,
 } from "@customreport/shared";
 
+import { stageNamesMatch } from "../../lib/mappers/lead-form";
+
 export type SlideTone = "ready" | "warning" | "blocked" | "empty";
 
 export interface SlideReadinessItem {
@@ -77,6 +79,29 @@ export interface SectionSlideModel {
 
 function nonEmpty(text: string | null | undefined): boolean {
   return typeof text === "string" && text.trim().length > 0;
+}
+
+/**
+ * unify-risk-stage-status (D1): severity floor on the slides surface.
+ * Mirrors `buildStageGrid` in lib/mappers/lead-form.ts — a non-empty risk
+ * whose stageIds name this stage floors the rendered traffic light
+ * (blocked → red, at-risk → at least yellow), so the slide deck agrees
+ * with the lead form and head review even for sections saved before the
+ * floor existed.
+ */
+function floorSlideStageStatus(
+  status: SlideStageStatus,
+  projectRisks: readonly ReportSectionReadModel["risks"][number][],
+  stageName: string,
+): SlideStageStatus {
+  const covering = projectRisks.filter(
+    (risk) =>
+      nonEmpty(risk.risk) &&
+      risk.stageIds?.some((id) => stageNamesMatch(id, stageName)),
+  );
+  if (covering.some((risk) => risk.severity === "blocked")) return "red";
+  if (covering.length > 0 && status !== "red") return "yellow";
+  return status;
 }
 
 function unique(values: readonly string[]): string[] {
@@ -156,7 +181,13 @@ export function buildSectionSlideModel(
       .map((stage) => ({
         id: stage.stageId,
         name: stage.stageName,
-        status: stage.status ?? null,
+        // unify-risk-stage-status (D1): floor the persisted status by the
+        // project's covering risks — same rule as the lead form / review.
+        status: floorSlideStageStatus(
+          stage.status ?? null,
+          section.risks.filter((risk) => risk.projectId === project.projectId),
+          stage.stageName,
+        ),
       })),
     currentItems: section.items
       .filter(

@@ -535,6 +535,43 @@ describe("LeadFormSyncBridge — severity floor and confirmed lowering", () => {
     ).toBeInTheDocument();
   });
 
+  it("D1 floor guard: picking 'At Risk' on a blocked-floored chip is rejected with a message", async () => {
+    // Review fix (unify-risk-stage-status): blocked→at-risk is a lowering
+    // below the floor. Pre-fix the click silently persisted explicit
+    // "at-risk" while the chip kept rendering "blocked" (dead interaction +
+    // hidden divergence). Now it is blocked with an explanatory toast.
+    const user = userEvent.setup();
+    const onRisksChangeSpy = vi.fn<(next: RiskEntry[]) => void>();
+    const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
+    const product = buildProduct(); // Dev explicit on-track, floored by the risk
+    const risk = coveringRisk({ severity: "blocked" });
+
+    render(
+      <Harness
+        initialProducts={[product]}
+        initialRisks={[risk]}
+        onRisksChangeSpy={onRisksChangeSpy}
+        onProductsChangeSpy={onProductsChangeSpy}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Dev: blocked" }));
+    await user.click(await screen.findByRole("menuitem", { name: /At Risk/i }));
+
+    // No risk dialog, no confirmation, no mutation — explanatory toast only.
+    expect(
+      screen.queryByRole("dialog", { name: /Add Risk dialog/i }),
+    ).not.toBeInTheDocument();
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringMatching(/blocked by a covering risk/i),
+    );
+    expect(onRisksChangeSpy).not.toHaveBeenCalled();
+    expect(onProductsChangeSpy).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "Dev: blocked" }),
+    ).toBeInTheDocument();
+  });
+
   it("D3 cancel: cancelling the lowering confirmation changes nothing", async () => {
     const user = userEvent.setup();
     const onRisksChangeSpy = vi.fn<(next: RiskEntry[]) => void>();

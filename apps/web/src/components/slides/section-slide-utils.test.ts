@@ -103,6 +103,43 @@ describe("section slide utilities", () => {
     ]);
   });
 
+  it("floors stage statuses by covering risk severity (unify-risk-stage-status D1)", () => {
+    // A stale persisted green/yellow stage covered by a risk must render at
+    // the risk's severity on the slides surface too — same floor as the
+    // lead form and head review (spec: status-risk-unification).
+    const slide = buildSectionSlideModel(
+      makeSection({
+        risks: [
+          {
+            id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            projectId: PRODUCT_ID,
+            risk: "Vendor outage",
+            impact: "Build stopped",
+            mitigation: "Escalate",
+            severity: "blocked",
+            stageIds: ["Build"],
+          },
+          {
+            id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+            projectId: PRODUCT_ID,
+            risk: "Scope unclear",
+            impact: "Rework",
+            mitigation: "Clarify",
+            severity: "at-risk",
+            stageIds: ["Discovery"],
+          },
+        ],
+      }),
+    );
+
+    expect(slide.productSlides[0]?.stages).toEqual([
+      // at-risk floor keeps the already-yellow stage yellow.
+      expect.objectContaining({ name: "Discovery", status: "yellow" }),
+      // blocked risk floors the stale green stage to red.
+      expect.objectContaining({ name: "Build", status: "red" }),
+    ]);
+  });
+
   it("groups lead slide content by product and keeps shared decisions visible", () => {
     const slide = buildSectionSlideModel(
       makeSection({

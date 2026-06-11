@@ -123,6 +123,9 @@ export function describeLowerEffects(
 const CROSS_AUTHOR_LOWER_BLOCKED_MESSAGE =
   "This stage is covered by another lead's risk. Resolve it with them before lowering the status.";
 
+const BLOCKED_FLOOR_LOWER_MESSAGE =
+  "This stage is blocked by a covering risk. Downgrade or delete that risk to lower the stage to at-risk.";
+
 function pluralizeRisks(count: number): string {
   return `${count} risk${count === 1 ? "" : "s"}`;
 }
@@ -283,6 +286,18 @@ function Provider({
       if (readOnly) return;
       const coveringOwn = coveringRisksForStage(risks, productId, stageName);
       if (newStatus === "at-risk" || newStatus === "blocked") {
+        // D1/D3 guard: "at-risk" on a chip floored to blocked by a covering
+        // blocked risk is a lowering below the floor, not a raise. Applying
+        // it would persist an explicit status that silently disagrees with
+        // the rendered (derived) status, so block it and point at the risk
+        // list — mirroring the cross-author lowering rule below.
+        if (
+          newStatus === "at-risk" &&
+          coveringOwn.some((r) => r.severity === "blocked")
+        ) {
+          toast.error(BLOCKED_FLOOR_LOWER_MESSAGE);
+          return;
+        }
         // D2: a chip click is never the only record of a risk. Same
         // sufficiency predicate as computeUnbackedStages: blocked needs a
         // blocked risk, at-risk accepts any non-empty covering risk.
