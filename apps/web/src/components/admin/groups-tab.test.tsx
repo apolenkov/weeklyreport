@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
+import { createMockTRPC } from "../../test-utils/mock-trpc";
 import { GroupsTab } from "./groups-tab";
 import type { MockGroup, MockUser } from "./mock-data";
 
@@ -51,46 +52,28 @@ const GROUPS: MockGroup[] = [
 
 // ----- tRPC test double ----------------------------------------------
 
-function makeMockTRPC(opts: {
-  saveMutationFn: ReturnType<typeof vi.fn>;
-  archiveMutationFn: ReturnType<typeof vi.fn>;
-}) {
-  return {
-    admin: {
-      snapshot: { pathFilter: () => ({ queryKey: ["admin", "snapshot"] }) },
-      saveReportingGroup: {
-        pathFilter: () => ({ queryKey: ["admin", "saveReportingGroup"] }),
-        mutationOptions: (mopts: Record<string, unknown>) => ({
-          mutationFn: opts.saveMutationFn,
-          onSuccess: mopts.onSuccess,
-          onError: mopts.onError,
-        }),
-      },
-      archiveReportingGroup: {
-        pathFilter: () => ({ queryKey: ["admin", "archiveReportingGroup"] }),
-        mutationOptions: (mopts: Record<string, unknown>) => ({
-          mutationFn: opts.archiveMutationFn,
-          onSuccess: mopts.onSuccess,
-          onError: mopts.onError,
-        }),
-      },
-    },
-  } as never;
-}
-
 function renderTab(opts?: { groups?: MockGroup[]; users?: MockUser[] }) {
-  const saveMutationFn = vi.fn().mockResolvedValue({ id: "g-new" });
-  const archiveMutationFn = vi.fn().mockResolvedValue({ id: "g-1" });
+  const { proxy, captured } = createMockTRPC([
+    { path: ["admin", "snapshot"] },
+    { path: ["admin", "saveReportingGroup"], mutation: true },
+    { path: ["admin", "archiveReportingGroup"], mutation: true },
+  ]);
+
+  captured["admin.saveReportingGroup"].mutationFn.mockResolvedValue({
+    id: "g-new",
+  });
+  captured["admin.archiveReportingGroup"].mutationFn.mockResolvedValue({
+    id: "g-1",
+  });
 
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const trpc = makeMockTRPC({ saveMutationFn, archiveMutationFn });
 
   function Wrapper({ children }: { readonly children: ReactNode }) {
     return (
       <QueryClientProvider client={qc}>
-        <TRPCProxyContext.Provider value={trpc}>
+        <TRPCProxyContext.Provider value={proxy}>
           {children}
         </TRPCProxyContext.Provider>
       </QueryClientProvider>
@@ -102,7 +85,7 @@ function renderTab(opts?: { groups?: MockGroup[]; users?: MockUser[] }) {
     { wrapper: Wrapper },
   );
 
-  return { ...result, saveMutationFn, archiveMutationFn };
+  return { ...result, captured };
 }
 
 /** Opens the Add Group dialog by clicking the header button. */

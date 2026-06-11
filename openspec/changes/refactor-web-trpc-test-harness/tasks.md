@@ -53,12 +53,12 @@ starting any group-3 task (a parallel session edits lead files).
       calls differing only in the `listFailed` descriptor (data vs
       `"pending"`); cover the bare `queryKey()` at `admin.dlqCount`
       (:77-79, :137-139); keep the skeleton-while-pending test green.
-- [ ] 2.4 Convert `periods-tab.test.tsx` — largest stub surface (14
+- [x] 2.4 Convert `periods-tab.test.tsx` — largest stub surface (14
       pathFilter stubs within :97-195, query/mutation captures
       :97-232); its key-dialect inconsistency vs products-tab
       (`["admin", "settings"]` :109 vs `["admin", "getSettings"]`
       :107) disappears by construction.
-- [ ] 2.5 Convert `groups-tab.test.tsx` (:54-88),
+- [x] 2.5 Convert `groups-tab.test.tsx` (:54-88),
       `products-tab.test.tsx` (:80-121), `reminders-tab.test.tsx`
       (:85-126) — three small mechanical conversions in one commit;
       still single-writer, each file converted and the web suite run

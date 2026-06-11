@@ -18,7 +18,7 @@ import type { TRPCProxy } from "../lib/trpc";
 // Public API types
 // ---------------------------------------------------------------------------
 
-/** Data variant for a query descriptor. */
+/** Data variant for a query descriptor (zero-arg). */
 type QueryData = unknown | (() => unknown);
 
 export interface ProcedureDescriptor {
@@ -29,8 +29,17 @@ export interface ProcedureDescriptor {
    *  - a value — returned from queryFn wrapped in Promise.resolve
    *  - a () => value factory — called each time queryFn runs
    *  - "pending" — queryFn never resolves (keeps isPending true)
+   *
+   * For input-parameterized queries use `queryByInput` instead.
    */
   query?: QueryData | "pending";
+  /**
+   * Input-parameterized query stub. When provided, `queryOptions(input)`
+   * passes the input to this function and includes it in the queryKey so
+   * multiple calls with different inputs get independent cache entries.
+   * Incompatible with `query`.
+   */
+  queryByInput?: (input: unknown) => unknown;
   /** If true, registers a capturing mutation at this path. */
   mutation?: boolean;
 }
@@ -97,7 +106,7 @@ export function createMockTRPC(descriptors: ProcedureDescriptor[]): {
   const root: Record<string, any> = {};
 
   for (const descriptor of descriptors) {
-    const { path, query, mutation } = descriptor;
+    const { path, query, queryByInput, mutation } = descriptor;
     const dotted = toDotted(path);
     const qk = toQueryKey(path);
 
@@ -109,6 +118,8 @@ export function createMockTRPC(descriptors: ProcedureDescriptor[]): {
 
     if (query !== undefined) {
       buildQuery(leaf, qk, query);
+    } else if (queryByInput !== undefined) {
+      buildQueryByInput(leaf, path, queryByInput);
     }
 
     if (mutation) {
@@ -125,6 +136,24 @@ export function createMockTRPC(descriptors: ProcedureDescriptor[]): {
 // ---------------------------------------------------------------------------
 // Internal builders (extracted to keep createMockTRPC under complexity limit)
 // ---------------------------------------------------------------------------
+
+/**
+ * Builds an input-parameterized queryOptions stub.
+ * queryOptions(input) returns { queryKey: [[...path], input], queryFn }.
+ * The input is appended to the TanStack nested key so distinct inputs get
+ * independent cache entries (mirrors tRPC's input-aware key derivation).
+ */
+function buildQueryByInput(
+  leaf: Record<string, unknown>,
+  path: string[],
+  queryFnFactory: (input: unknown) => unknown,
+): void {
+  leaf.queryOptions = (input: unknown) => ({
+    queryKey: [[...path], input],
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async queryFn contract; no awaitable work in the stub
+    queryFn: async () => queryFnFactory(input),
+  });
+}
 
 function buildQuery(
   leaf: Record<string, unknown>,
