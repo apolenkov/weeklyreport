@@ -659,6 +659,28 @@ export function buildUnifiedSlideModel(
   return { current, next, risks, priorities, decisions, emptyProducts };
 }
 
+/**
+ * slides-product-autofit (D2): scopes the slide to one product BEFORE
+ * buildUnifiedSlideModel, so rows, empty-product placeholders, and badge
+ * gating all derive from the same filtered source. `null` returns the slide
+ * unchanged. A product id reduces productSlides to that product and always
+ * drops the cross-product pseudo-entry — its rows belong to no single
+ * product. An unknown id yields empty productSlides, which renders as
+ * all-empty quadrants (dashed placeholders), never a crash.
+ */
+export function scopeSlideToProduct(
+  slide: SectionSlideModel,
+  productId: string | null,
+): SectionSlideModel {
+  if (productId === null) return slide;
+  return {
+    ...slide,
+    productSlides: slide.productSlides.filter(
+      (product) => product.id !== "cross-product" && product.id === productId,
+    ),
+  };
+}
+
 export function sortSlidesForReview(
   slides: readonly SectionSlideModel[],
 ): SectionSlideModel[] {

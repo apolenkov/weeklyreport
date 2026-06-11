@@ -6,6 +6,7 @@ import {
   buildProductScopedSlides,
   buildSectionSlideModel,
   buildUnifiedSlideModel,
+  scopeSlideToProduct,
   sortSlidesForReview,
 } from "./section-slide-utils";
 
@@ -553,6 +554,89 @@ describe("section slide utilities", () => {
         status: "needs-work",
       }),
     );
+  });
+});
+
+describe("scopeSlideToProduct (slides-product-autofit)", () => {
+  // Two real products plus a shared decision (productId: null), which
+  // buildSectionSlideModel routes into the cross-product pseudo-entry.
+  function makeMultiProductSlide() {
+    return buildSectionSlideModel(
+      makeSection({
+        projects: [
+          {
+            projectId: PRODUCT_ID,
+            projectName: "Core Product",
+            trafficLight: "green",
+            ownedStages: [],
+          },
+          {
+            projectId: PRODUCT_TWO_ID,
+            projectName: "Data Portal",
+            trafficLight: "yellow",
+            ownedStages: [],
+          },
+        ],
+        decisions: [
+          {
+            id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+            text: "Keep one release train",
+            owner: "Head",
+            deadline: null,
+            impact: "Shared delivery decision",
+            resolvedAt: null,
+            productId: null,
+          },
+        ],
+      }),
+    );
+  }
+
+  it("returns the slide unchanged (same reference) for a null product id", () => {
+    const slide = makeMultiProductSlide();
+
+    expect(scopeSlideToProduct(slide, null)).toBe(slide);
+  });
+
+  it("reduces productSlides to the picked product", () => {
+    const slide = makeMultiProductSlide();
+
+    const scoped = scopeSlideToProduct(slide, PRODUCT_TWO_ID);
+
+    expect(scoped.productSlides).toHaveLength(1);
+    expect(scoped.productSlides[0]?.id).toBe(PRODUCT_TWO_ID);
+    // KPI counts stay section-global (proposal open question 3 default).
+    expect(scoped.currentCount).toBe(slide.currentCount);
+  });
+
+  it("drops the cross-product pseudo-entry while a product is picked", () => {
+    const slide = makeMultiProductSlide();
+    expect(slide.productSlides.some((p) => p.id === "cross-product")).toBe(
+      true,
+    );
+
+    const scoped = scopeSlideToProduct(slide, PRODUCT_ID);
+
+    expect(scoped.productSlides.some((p) => p.id === "cross-product")).toBe(
+      false,
+    );
+    // Even asking for the pseudo-entry itself never surfaces it.
+    expect(
+      scopeSlideToProduct(slide, "cross-product").productSlides,
+    ).toHaveLength(0);
+  });
+
+  it("yields empty productSlides for an unknown id and still builds a model", () => {
+    const slide = makeMultiProductSlide();
+
+    const scoped = scopeSlideToProduct(slide, "not-a-real-product-id");
+
+    expect(scoped.productSlides).toHaveLength(0);
+    const model = buildUnifiedSlideModel(scoped);
+    expect(model.current).toHaveLength(0);
+    expect(model.next).toHaveLength(0);
+    expect(model.risks).toHaveLength(0);
+    expect(model.decisions).toHaveLength(0);
   });
 });
 

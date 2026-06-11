@@ -135,11 +135,14 @@ function countRealProducts(model: UnifiedSlideModel): number {
 export function LeadUnifiedSlide({ model }: Props) {
   const showBadges = countRealProducts(model) > 1;
   return (
-    /* Feedback round 2: the grid keeps a vertical floor in the normal view
-       too, so the four quadrants distribute evenly instead of hugging
-       content and leaving dead space below. */
+    /* slides-product-autofit D3: inside the fixed-aspect .slide-frame the
+       grid sizes from the frame, not the viewport — flex-1/min-h-0 under the
+       article's column layout replaces the old min-h-[52dvh] floor, so
+       auto-rows-fr redistributes the quadrants over the full frame on every
+       content change (product pick, theme add). Fullscreen keeps its dvh
+       floor. */
     <div
-      className="grid min-h-[52dvh] auto-rows-fr grid-cols-2 gap-3 [:fullscreen_&]:min-h-[60dvh] [:fullscreen_&]:content-between"
+      className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-3 [:fullscreen_&]:min-h-[60dvh] [:fullscreen_&]:content-between"
       data-testid="lead-unified-slide"
     >
       <QuadrantCard

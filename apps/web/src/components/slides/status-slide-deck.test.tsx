@@ -221,6 +221,117 @@ describe("StatusSlideDeck lead layout", () => {
   });
 });
 
+describe("StatusSlideDeck lead — product chip filter (slides-product-autofit)", () => {
+  function twoProducts(): SlideProduct[] {
+    return [
+      product(),
+      product({
+        id: PRODUCT_TWO_ID,
+        name: "Data Portal",
+        status: "yellow",
+        currentItems: ["Close API parity"],
+        nextItems: ["Draft data contract"],
+        risks: ["Schema drift"],
+        decisions: ["Keep one release train"],
+        priorities: ["Protect launch date"],
+      }),
+    ];
+  }
+
+  it("clicking a chip scopes the quadrants to that product and marks it selected", () => {
+    renderLeadDeck([slide(twoProducts())]);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Data Portal" }));
+
+    // Only the picked product's rows remain in the quadrants.
+    expect(screen.getByText("Close API parity")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Completed authentication module refactor"),
+    ).not.toBeInTheDocument();
+    // The strip still lists every product, with a truthful selection state.
+    expect(screen.getByRole("tab", { name: "Data Portal" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(
+      screen.getByRole("tab", { name: "Marketing Portal" }),
+    ).toHaveAttribute("aria-selected", "false");
+  });
+
+  it("clicking the active chip again restores the all-products view", () => {
+    renderLeadDeck([slide(twoProducts())]);
+
+    const chip = screen.getByRole("tab", { name: "Data Portal" });
+    fireEvent.click(chip);
+    fireEvent.click(chip);
+
+    expect(screen.getByText("Close API parity")).toBeInTheDocument();
+    expect(
+      screen.getByText("Completed authentication module refactor"),
+    ).toBeInTheDocument();
+    expect(screen.queryAllByRole("tab", { selected: true })).toHaveLength(0);
+  });
+
+  it("hides cross-product rows while a product is selected", () => {
+    renderLeadDeck([
+      slide([
+        ...twoProducts(),
+        product({
+          id: "cross-product",
+          name: "Cross-product",
+          status: null,
+          stages: [],
+          currentItems: [],
+          nextItems: [],
+          risks: [],
+          decisions: ["Shared platform decision"],
+          priorities: [],
+        }),
+      ]),
+    ]);
+
+    expect(screen.getByText("Shared platform decision")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Data Portal" }));
+
+    expect(
+      screen.queryByText("Shared platform decision"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("clears the filter when the visible slide page changes", () => {
+    const pages: SectionSlideModel[] = [
+      { ...slide(twoProducts()), pageIndex: 0, pageTotal: 2 },
+      { ...slide(twoProducts()), pageIndex: 1, pageTotal: 2 },
+    ];
+    const deck = (selectedIndex: number) => (
+      <StatusSlideDeck
+        slides={pages}
+        selectedIndex={selectedIndex}
+        onSelect={() => undefined}
+        title="My Status Slide"
+        subtitle="Current section grouped by product and SDLC stage."
+        mode="lead"
+      />
+    );
+    const { rerender } = render(deck(0));
+
+    fireEvent.click(screen.getByRole("tab", { name: "Data Portal" }));
+    expect(
+      screen.queryByText("Completed authentication module refactor"),
+    ).not.toBeInTheDocument();
+
+    rerender(deck(1));
+
+    // The new page renders unfiltered, with no chip selected.
+    expect(
+      screen.getByText("Completed authentication module refactor"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Close API parity")).toBeInTheDocument();
+    expect(screen.queryAllByRole("tab", { selected: true })).toHaveLength(0);
+  });
+});
+
 function renderHeadDeck(
   slides: readonly SectionSlideModel[],
   selectedIndex = 0,
