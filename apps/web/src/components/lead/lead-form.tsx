@@ -23,9 +23,15 @@ import {
 } from "../../lib/cache-keys";
 import { mapLeadFormData } from "../../lib/mappers";
 import {
+  applyCrossAuthorStageOverrides,
+  buildCrossAuthorStageMap,
+  mapForeignDecisions,
+  mapForeignItems,
+  mapForeignRisks,
+} from "../../lib/mappers/lead-cross-author";
+import {
   normalizeStageName,
   ownedStagesForProject,
-  stageNamesMatch,
 } from "../../lib/mappers/lead-form";
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
 import {
@@ -728,70 +734,17 @@ export function LeadForm({
   // crossAuthorsQ.data has { projectId, stageNames, authorName, stages } per shared product.
   // Stages not owned by the current user but assigned to another lead become
   // ownership:"locked" with their name and real risk color instead of gray "empty".
-  const _crossAuthorStageMap = new Map<
-    string,
-    Map<
-      string,
-      {
-        assignee: string;
-        status: import("../../lib/mappers/traffic-light").StageStatus;
-      }
-    >
-  >();
-  // Join with crossAuthorSectionsQ to incorporate risk severity and blocked items
-  // into stage chip color. enrichedCrossAuthors drops stageName so we use the
-  // raw crossAuthorSectionsQ data here keyed by authorId.
-  const _caSectionByAuthorId = new Map(
-    (crossAuthorSectionsQ.data ?? []).map((s) => [s.authorId, s] as const),
+  // Joined with crossAuthorSectionsQ to incorporate risk severity and blocked
+  // items into stage chip color (enrichedCrossAuthors drops stageName, so the
+  // mapper joins the raw crossAuthorSectionsQ rows keyed by authorId).
+  const crossAuthorStageMap = buildCrossAuthorStageMap(
+    crossAuthorsQ.data ?? [],
+    crossAuthorSectionsQ.data ?? [],
   );
-  for (const ca of crossAuthorsQ.data ?? []) {
-    let _sm = _crossAuthorStageMap.get(ca.projectId);
-    if (!_sm) {
-      _sm = new Map();
-      _crossAuthorStageMap.set(ca.projectId, _sm);
-    }
-    for (const sn of ca.stageNames) {
-      const norm = normalizeStageName(sn);
-      const stageEntry = ca.stages.find((s) =>
-        stageNamesMatch(s.stageName, sn),
-      );
-      const caSection = _caSectionByAuthorId.get(ca.authorId);
-      const stageRisks = (caSection?.risks ?? []).filter(
-        (r) =>
-          r.projectId === ca.projectId &&
-          r.stageNames.some((n) => normalizeStageName(n) === norm),
-      );
-      const stageItems = (caSection?.items ?? []).filter(
-        (i) =>
-          i.projectId === ca.projectId &&
-          i.stageNames.some((n) => normalizeStageName(n) === norm),
-      );
-      const status = deriveEffectiveStageStatus(
-        trafficToStageStatus(stageEntry?.status ?? null),
-        stageRisks,
-        stageItems,
-      );
-      _sm.set(norm, { assignee: ca.authorName, status });
-    }
-  }
-  const products: Product[] = (data.products as Product[]).map((product) => {
-    const stageMap = _crossAuthorStageMap.get(product.id);
-    if (!stageMap) return product;
-    return {
-      ...product,
-      stages: product.stages.map((stage) => {
-        if (stage.ownership !== "unassigned") return stage;
-        const entry = stageMap.get(normalizeStageName(stage.stageName));
-        if (!entry) return stage;
-        return {
-          ...stage,
-          ownership: "locked" as const,
-          assignee: entry.assignee,
-          status: entry.status,
-        };
-      }),
-    };
-  });
+  const products: Product[] = applyCrossAuthorStageOverrides(
+    data.products,
+    crossAuthorStageMap,
+  ) as Product[];
   // F3.4: build a lookup from snapshot stageStatuses + risks + items so own-author
   // stage chips reflect the status captured at snapshot time, not the current draft.
   // Plain const — must stay after the early-return guard; not a hook.
@@ -1002,92 +955,27 @@ export function LeadForm({
       : (data.decisions as DecisionEntry[]);
 
   // W5/W6: build foreign item arrays from crossAuthorSectionsQ (always-on).
-  const foreignCurrentItems: KanbanItem[] =
-    crossAuthorSectionsQ.data?.flatMap((ca) =>
-      ca.items
-        .filter((i) => i.type === "current")
-        .map(
-          (i): KanbanItem => ({
-            id: `foreign:${ca.authorId}:${i.id}`,
-            productId: i.projectId,
-            productName: productNameById.get(i.projectId) ?? i.projectId,
-            stageIds: i.stageNames,
-            status: (i.workflowStatus === "in_progress"
-              ? "in-progress"
-              : i.workflowStatus === "done"
-                ? "completed"
-                : i.workflowStatus === "blocked"
-                  ? "blocked"
-                  : "planned") as import("./mock-data").ItemStatus,
-            text: i.text,
-            author: ca.authorName,
-            authorId: ca.authorId,
-            foreign: true,
-          }),
-        ),
-    ) ?? [];
+  const foreignCurrentItems: KanbanItem[] = mapForeignItems(
+    crossAuthorSectionsQ.data ?? [],
+    productNameById,
+    "current",
+  );
 
-  const foreignNextItems: KanbanItem[] =
-    crossAuthorSectionsQ.data?.flatMap((ca) =>
-      ca.items
-        .filter((i) => i.type === "next")
-        .map(
-          (i): KanbanItem => ({
-            id: `foreign:${ca.authorId}:${i.id}`,
-            productId: i.projectId,
-            productName: productNameById.get(i.projectId) ?? i.projectId,
-            stageIds: i.stageNames,
-            status: (i.workflowStatus === "in_progress"
-              ? "in-progress"
-              : i.workflowStatus === "done"
-                ? "completed"
-                : i.workflowStatus === "blocked"
-                  ? "blocked"
-                  : "planned") as import("./mock-data").ItemStatus,
-            text: i.text,
-            author: ca.authorName,
-            authorId: ca.authorId,
-            foreign: true,
-          }),
-        ),
-    ) ?? [];
+  const foreignNextItems: KanbanItem[] = mapForeignItems(
+    crossAuthorSectionsQ.data ?? [],
+    productNameById,
+    "next",
+  );
 
-  const foreignRisks: RiskEntry[] =
-    crossAuthorSectionsQ.data?.flatMap((ca) =>
-      ca.risks.map(
-        (r): RiskEntry => ({
-          id: `foreign:${ca.authorId}:${r.id}`,
-          productId: r.projectId,
-          productName: productNameById.get(r.projectId) ?? r.projectId,
-          stageIds: r.stageNames,
-          severity: r.severity === "blocked" ? "blocked" : "at-risk",
-          text: r.risk,
-          impact: r.impact,
-          mitigation: r.mitigation,
-          authorName: ca.authorName,
-          authorId: ca.authorId,
-          foreign: true,
-        }),
-      ),
-    ) ?? [];
+  const foreignRisks: RiskEntry[] = mapForeignRisks(
+    crossAuthorSectionsQ.data ?? [],
+    productNameById,
+  );
 
-  const foreignDecisions: DecisionEntry[] =
-    crossAuthorSectionsQ.data?.flatMap((ca) =>
-      ca.decisions.map(
-        (d): DecisionEntry => ({
-          id: `foreign:${ca.authorId}:${d.id}`,
-          productId: d.productId,
-          productName: productNameById.get(d.productId) ?? d.productId,
-          text: d.text,
-          owner: d.owner,
-          impact: d.impact,
-          deadline: d.deadline ? d.deadline.toISOString().slice(0, 10) : null,
-          stageIds: d.stageNames,
-          authorId: ca.authorId,
-          foreign: true,
-        }),
-      ),
-    ) ?? [];
+  const foreignDecisions: DecisionEntry[] = mapForeignDecisions(
+    crossAuthorSectionsQ.data ?? [],
+    productNameById,
+  );
 
   const mergedCurrentItems = [...currentWeekItems, ...foreignCurrentItems];
   const mergedNextItems = [...nextWeekItems, ...foreignNextItems];

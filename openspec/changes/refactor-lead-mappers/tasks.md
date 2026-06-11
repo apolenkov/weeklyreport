@@ -71,7 +71,7 @@ nameById, authorName)` from `:904-1019` (`SnapPayload` structural
 
 ## 2. web — swap call sites in lead-form.tsx (sequential)
 
-- [ ] 2.1 Swap the cross-author call sites: replace inline blocks
+- [x] 2.1 Swap the cross-author call sites: replace inline blocks
       `:748-811` and `:1022-1107` with mapper calls; delete the inline
       loops and both inline ternaries. Preserve derivation order:
       `data.products` → `applyCrossAuthorStageOverrides` → snapshot
