@@ -134,4 +134,4 @@ No shared/ui or api work in this change — web tests only.
       `pnpm typecheck` — 5/5 tasks, all cached, green.
       `pnpm lint` — ESLint: No issues found, green.
       `pnpm test` — 935 passed / 0 failed across 104 test files, green.
-      `pnpm build` — not yet run (run before archiving).
+      `pnpm build` — 5/5 tasks, 2 cached, green (run 2026-06-11 pre-archive).
