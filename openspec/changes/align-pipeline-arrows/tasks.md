@@ -41,8 +41,24 @@ work.
 - [x] 4.1 Gates: `pnpm typecheck && pnpm lint && pnpm test` — all
       green. typecheck: 5/5 tasks successful; lint: no issues;
       test: 1037/1037 passed.
-- [ ] 4.2 Live visual check on the lead report page (:3000):
+- [x] 4.2 Live visual check on the lead report page (:3000):
       arrow midline == chip midline (a) with assignee names,
       (b) with "— unassigned" labels, (c) on a narrow viewport that
       forces a wrap — chips top-aligned on every row; screenshot for
-      the change record.
+      the change record. — Done 2026-06-11 in a live browser
+      (Playwright) with `getBoundingClientRect` midline measurements:
+      (a) lead1, 4 pipelines, all arrow mids == chip mids (e.g.
+      529.5 == 529.5), chip and arrow boxes both 36px; (b) boris,
+      row mixing named and "— unassigned" labels, mids all 567.5,
+      chip tops identical; (c) 480px viewport, every pipeline wraps
+      to 3 lines, chips share the top edge per line and every arrow
+      mid equals its line's chip mid. Screenshots:
+      `verification/align-pipeline-arrows-desktop-named-unassigned.png`,
+      `verification/align-pipeline-arrows-narrow-wrap.png`.
+      Note: the long-running :3000 dev server had a pre-existing
+      corrupted webpack RSC bundle for `/lead/report/[reportId]`
+      (500 + `__webpack_modules__[moduleId] is not a function`;
+      other routes fine; needs a `dev:fresh` restart). The check ran
+      against the same working tree via the repo's sanctioned
+      parallel dev server (`NEXT_DIST_DIR`, port 3005) on the same
+      API and dev DB.
