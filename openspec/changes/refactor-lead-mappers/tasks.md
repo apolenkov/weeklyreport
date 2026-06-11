@@ -27,7 +27,7 @@ never regenerate snapshots to silence a diff):**
 
 ## 1. web — additive mapper modules (no call-site change)
 
-- [ ] 1.1 Add `apps/web/src/lib/mappers/lead-cross-author.ts` +
+- [x] 1.1 Add `apps/web/src/lib/mappers/lead-cross-author.ts` +
       `lead-cross-author.test.ts`; export via `mappers/index.ts`.
       Port `lead-form.tsx:748-811` (stage-map build + product overlay)
       and `:1022-1107` (4 foreign projections) as pure functions:
