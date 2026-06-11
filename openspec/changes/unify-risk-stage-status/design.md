@@ -65,7 +65,11 @@ derivation can no longer "fight" anything — there is no reachable
 state where explicit and derived status disagree silently. Hence
 re-enabling is safe and the PRJ-2 comment is replaced by a pointer to
 this change. The floor applies in BOTH the read-model mapper and the
-live form so the lead form, head review, and PDF export agree.
+live form so the lead form, head review, and PDF export agree. The
+slides/presentation surface applies the same floor when building
+per-stage statuses (`floorSlideStageStatus` in
+`section-slide-utils.ts`), so read-only viewers of sections saved
+before this change see the floored status too (review fix).
 
 ### D2 — Chip raise without a covering risk opens the prefilled dialog
 
@@ -116,6 +120,14 @@ rule. On cancel, the chip is unchanged. If any covering risk is
 cross-author (read-only), the lowering is blocked with an explanatory
 message instead of the dialog — a lead cannot delete another lead's
 risk.
+
+Review fix: picking "At Risk" on a chip floored to blocked by a
+covering own blocked risk is also a lowering below the floor (not a
+D2 raise). It is blocked with an explanatory toast pointing at the
+risk list — applying it would silently persist an explicit status
+diverging from the rendered derived status, and routing it through
+risk removal would mint a fresh unbacked at-risk stage, which D2
+forbids.
 
 ### D4 — The suggestion flow is replaced by the floor
 
