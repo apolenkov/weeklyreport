@@ -41,7 +41,7 @@ favicon-404 request MUST be ignored as environmental noise.
 #### Scenario: Lead role re-sweep is clean
 
 - **WHEN** a re-sweep runs with the lead role via Playwright over the report
-  form, stage chips, version history, and slides mode
+  form, stage chips, and slides mode
 - **THEN** the captured console shows 0 ERRORS
 - **AND** any WARNINGS are logged but do not fail the sweep
 
