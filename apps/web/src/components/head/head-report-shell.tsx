@@ -111,7 +111,11 @@ export function HeadReportShell({
           share one height (--touch-target-min), grouped by intent —
           scope | view mode (primary) | utilities — with wider gaps between
           groups. The inert Agent review placeholder is compact and trails
-          the group (documented ui-control-density exception). */}
+          the group (documented ui-control-density exception). It mounts in
+          form mode only: slides mode already carries one inside the head
+          slide article (status-slide-deck.tsx), and one placeholder per
+          surface is the deferred-feature-pattern invariant
+          (mount-agent-review-placeholder). */}
       <div className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2">
         <ScopeToggle
           value={scope}
@@ -138,7 +142,7 @@ export function HeadReportShell({
             <FileDown className="h-4 w-4" aria-hidden="true" />
             <span>Print</span>
           </a>
-          <AgentReviewComingSoon compact />
+          {mode === "form" ? <AgentReviewComingSoon compact /> : null}
         </div>
       </div>
       {mode === "slides" ? (
