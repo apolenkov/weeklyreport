@@ -20,7 +20,9 @@ interface SaveNowButtonProps {
  *
  * State → icon mapping:
  *   idle / pending          → disc        (enabled only in `pending`)
- *   saving (isInFlight)     → spinner    (disabled)
+ *   saving (isInFlight)     → spinner    (disabled, accent green fill,
+ *                                         white icon, aria-busy="true",
+ *                                         full opacity overrides washout)
  *   saved (post-success)    → check      (disabled, reverts after 1500ms)
  *   error                   → alert      (enabled — click retries)
  */
@@ -70,14 +72,22 @@ export function SaveNowButton({ autosave }: SaveNowButtonProps) {
     void forceSave();
   }
 
+  const baseClassName =
+    "inline-flex h-8 w-8 items-center justify-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed";
+  const pendingClassName =
+    "border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-white disabled:opacity-100";
+  const idleClassName =
+    "border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-40";
+
   return (
     <button
       type="button"
       disabled={!isEnabled}
       onClick={handleClick}
       aria-label={ariaLabel}
+      aria-busy={isSaving}
       title={ariaLabel}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-40"
+      className={`${baseClassName} ${isSaving ? pendingClassName : idleClassName}`}
     >
       {isSaving ? (
         <SpinnerIcon />
