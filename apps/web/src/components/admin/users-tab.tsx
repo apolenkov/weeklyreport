@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../lib/cache-keys";
@@ -63,6 +63,19 @@ export function UsersTab({ users, groups }: UsersTabProps) {
   const [groupFilter, setGroupFilter] = useState("");
   // B3: status quick-filter (default "active" — hides deactivated on load)
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("active");
+
+  // admin-dialog-focus-management: save the trigger element so focus can be
+  // restored when the dialog closes (Escape, Cancel, backdrop, save success).
+  const dialogTriggerRef = useRef<HTMLElement | null>(null);
+
+  // Restore focus to the trigger whenever the dialog closes (all close paths
+  // set showDialog→false: Escape listener, Cancel, backdrop, save success).
+  useEffect(() => {
+    if (!showDialog && dialogTriggerRef.current) {
+      dialogTriggerRef.current.focus();
+      dialogTriggerRef.current = null;
+    }
+  }, [showDialog]);
 
   const activeGroups = useMemo(
     () => groups.filter((group) => !group.archived),
@@ -157,12 +170,14 @@ export function UsersTab({ users, groups }: UsersTabProps) {
   );
 
   function openAdd() {
+    dialogTriggerRef.current = document.activeElement as HTMLElement;
     setEditingUser(null);
     setForm(emptyForm(groups));
     setShowDialog(true);
   }
 
   function openEdit(user: MockUser) {
+    dialogTriggerRef.current = document.activeElement as HTMLElement;
     setEditingUser(user);
     setForm({
       name: user.name,
@@ -399,6 +414,8 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
+                  autoFocus
                   className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
                 />
               </div>

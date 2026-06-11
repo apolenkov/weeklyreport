@@ -193,6 +193,8 @@ export function CreatePeriodDialog({
               value={periodStart}
               onChange={(e) => setPeriodStart(e.target.value)}
               required
+              // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
+              autoFocus
               data-testid="periods-create-start"
               className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
             />

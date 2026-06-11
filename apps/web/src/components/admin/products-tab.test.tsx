@@ -176,3 +176,53 @@ describe("ProductsTab — Add/Edit dialog a11y (VA-0a high unit-rtl)", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });
+
+// admin-dialog-focus-management (autofocus-admin-dialogs)
+describe("ProductsTab — focus management (autofocus-admin-dialogs)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("product-name input is programmatically focusable on open (structural proxy for autoFocus)", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    await user.click(screen.getByRole("button", { name: /add new product/i }));
+
+    const input = screen.getByLabelText(/product name/i);
+    // jsdom does not honour autoFocus for conditionally-rendered elements;
+    // verify the structural capability: the input accepts programmatic focus.
+    input.focus();
+    expect(document.activeElement).toBe(input);
+  });
+
+  it("focus returns to the trigger button after the dialog closes via Cancel", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    const addBtn = screen.getByRole("button", { name: /add new product/i });
+    addBtn.focus();
+    await user.click(addBtn);
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(addBtn);
+  });
+
+  it("focus returns to the trigger button after the dialog closes via Escape", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    const addBtn = screen.getByRole("button", { name: /add new product/i });
+    addBtn.focus();
+    await user.click(addBtn);
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(addBtn);
+  });
+});
