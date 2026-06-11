@@ -101,6 +101,16 @@ export {
   mapHistoryEntries,
 } from "./lead-history";
 export {
+  applySnapshotStageOverrides,
+  buildSnapshotStageMap,
+  mapSnapshotDecisions,
+  mapSnapshotItems,
+  mapSnapshotRisks,
+  type SnapPayload,
+  type SnapshotKanbanItem,
+  type SnapshotStageMap,
+} from "./lead-snapshot";
+export {
   deriveLeadStatus,
   type LeadStatus,
   type ReportSectionStatus,
