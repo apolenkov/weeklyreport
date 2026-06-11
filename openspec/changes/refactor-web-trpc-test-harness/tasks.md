@@ -15,7 +15,7 @@ starting any group-3 task (a parallel session edits lead files).
 
 ## 1. Factory (web)
 
-- [ ] 1.1 Add `apps/web/src/test-utils/mock-trpc.ts` —
+- [x] 1.1 Add `apps/web/src/test-utils/mock-trpc.ts` —
       `createMockTRPC(descriptors)` per design D1-D3: derive
       `queryOptions()` / bare `queryKey()` /
       `pathFilter() => ({ queryKey: [path] })` / `mutationOptions()`
@@ -25,7 +25,7 @@ starting any group-3 task (a parallel session edits lead files).
       internal `as unknown as TRPCProxy` cast
       (`import type { TRPCProxy } from "../lib/trpc"`); queryFn stubs
       as `() => Promise.resolve(data)`.
-- [ ] 1.2 Add `apps/web/src/test-utils/mock-trpc.test.ts` — contract
+- [x] 1.2 Add `apps/web/src/test-utils/mock-trpc.test.ts` — contract
       pins: (a) `pathFilter()` returns an object whose `queryKey`
       equals `[splitPath]` (this exact assertion fails under the old
       `{ tag }` shape); (b) seed a query via proxy `queryOptions`,
@@ -99,12 +99,12 @@ starting any group-3 task (a parallel session edits lead files).
 
 ## 4. Auth-redirect link seam (web; independent of groups 2-3)
 
-- [ ] 4.1 In `apps/web/src/lib/trpc.ts`: change
+- [x] 4.1 In `apps/web/src/lib/trpc.ts`: change
       `function createAuthRedirectLink` (:66) to `export function`;
       append "@internal — exported for unit tests; production wiring
       stays via makeTRPCClient" to its existing JSDoc. No other
       production edits.
-- [ ] 4.2 In `apps/web/src/lib/trpc.test.ts`: add describe block
+- [x] 4.2 In `apps/web/src/lib/trpc.test.ts`: add describe block
       "createAuthRedirectLink — observable seam" with EXACTLY 3 cases.
       Reuse `makeUnauthorizedError` / `makeServerError` /
       `stubLocation` / `assignSpy` unchanged; build

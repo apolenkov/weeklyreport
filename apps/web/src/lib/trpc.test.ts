@@ -1,7 +1,8 @@
 import { TRPCClientError } from "@trpc/client";
+import { observable } from "@trpc/server/observable";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAuthRedirectHandler } from "./trpc";
+import { createAuthRedirectHandler, createAuthRedirectLink } from "./trpc";
 
 // ---------------------------------------------------------------------------
 // Helpers — build a fake TRPCClientError with the desired httpStatus.
@@ -100,5 +101,99 @@ describe("createAuthRedirectHandler — 401 interceptor logic", () => {
     const handled = createAuthRedirectHandler()(new Error("boom"));
     expect(handled).toBe(false);
     expect(assignSpy).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tests for createAuthRedirectLink — observable seam.
+//
+// Build the link via createAuthRedirectLink()({}) (TRPCClientRuntime is {}
+// in v11). Stub upstream `next` with observable() from @trpc/server/observable.
+// Subscribe with vi.fn() next/error/complete spies.
+// ---------------------------------------------------------------------------
+
+/** Minimal Operation stub — only the fields the link reads (path for stubbing). */
+function makeOperation() {
+  return {
+    id: 1,
+    type: "query" as const,
+    input: undefined,
+    path: "lead.report",
+    context: {},
+    signal: null,
+  };
+}
+
+interface SpySet {
+  next: ReturnType<typeof vi.fn>;
+  error: ReturnType<typeof vi.fn>;
+  complete: ReturnType<typeof vi.fn>;
+}
+
+/**
+ * Drives the auth-redirect link against an upstream observable and subscribes
+ * with the given spy set.  All `any` interactions are contained here.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- TRPCClientRuntime is {} in v11; link() returns any from the generic cast */
+function runLink(upstream: ReturnType<typeof observable>, spies: SpySet): void {
+  const opLink = (createAuthRedirectLink() as any)({});
+  opLink({ next: () => upstream, op: makeOperation() }).subscribe(spies);
+}
+/* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+
+describe("createAuthRedirectLink — observable seam", () => {
+  it("401 from /lead/report → assignSpy called once, errorSpy NOT called, completeSpy NOT called", () => {
+    stubLocation("/lead/report");
+    const spies: SpySet = { next: vi.fn(), error: vi.fn(), complete: vi.fn() };
+    const err401 = makeUnauthorizedError();
+
+    runLink(
+      observable((obs) => {
+        obs.error(err401);
+      }),
+      spies,
+    );
+
+    expect(assignSpy).toHaveBeenCalledTimes(1);
+    expect(assignSpy).toHaveBeenCalledWith("/?next=%2Flead%2Freport");
+    expect(spies.error).not.toHaveBeenCalled();
+    expect(spies.complete).not.toHaveBeenCalled();
+  });
+
+  it("500 error → errorSpy called once with the same error instance, no redirect", () => {
+    stubLocation("/lead/report");
+    const spies: SpySet = { next: vi.fn(), error: vi.fn(), complete: vi.fn() };
+    const err500 = makeServerError();
+
+    runLink(
+      observable((obs) => {
+        obs.error(err500);
+      }),
+      spies,
+    );
+
+    expect(assignSpy).not.toHaveBeenCalled();
+    expect(spies.error).toHaveBeenCalledTimes(1);
+    expect(spies.error).toHaveBeenCalledWith(err500);
+    expect(spies.complete).not.toHaveBeenCalled();
+  });
+
+  it("result envelope then complete → nextSpy receives the envelope, completeSpy fires once, errorSpy never", () => {
+    stubLocation("/lead/report");
+    const spies: SpySet = { next: vi.fn(), error: vi.fn(), complete: vi.fn() };
+    const envelope = { result: { data: { ok: true } } };
+
+    runLink(
+      observable((obs) => {
+        obs.next(envelope);
+        obs.complete();
+      }),
+      spies,
+    );
+
+    expect(spies.next).toHaveBeenCalledTimes(1);
+    expect(spies.next).toHaveBeenCalledWith(envelope);
+    expect(spies.complete).toHaveBeenCalledTimes(1);
+    expect(spies.error).not.toHaveBeenCalled();
   });
 });
