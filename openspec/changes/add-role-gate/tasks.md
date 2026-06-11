@@ -14,7 +14,7 @@ shared/ui → api → web grouping is trivially satisfied.
 
 ## 1. web: RoleGate component (test-first)
 
-- [ ] 1.1 NEW `apps/web/src/components/role-gate.test.tsx`: vi.mock
+- [x] 1.1 NEW `apps/web/src/components/role-gate.test.tsx`: vi.mock
       `../lib/server/get-server-session` (the `server-only` guard is
       already stubbed in `apps/web/vitest.config.ts:51`); render the
       awaited component result
@@ -26,7 +26,7 @@ shared/ui → api → web grouping is trivially satisfied.
       ForbiddenPage with `homeHref === "/"`; (d) `allowedRoles=["lead"]`
       denies head AND admin (pins the preview-page lead-only semantics
       before migration).
-- [ ] 1.2 NEW `apps/web/src/components/role-gate.tsx`: async server
+- [x] 1.2 NEW `apps/web/src/components/role-gate.tsx`: async server
       component with props
       `{ allowedRoles: readonly Role[]; children: ReactNode }`; await
       `getServerSession()`; allowed → return children unwrapped; denied →
