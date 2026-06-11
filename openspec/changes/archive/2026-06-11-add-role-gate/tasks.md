@@ -65,21 +65,39 @@ roleHomePath(session.role) : "/"} />`. Doc comment: UX gate only,
 
 ## 4. Verification
 
-- [ ] 4.1 Gates: `pnpm typecheck && pnpm lint && pnpm test && pnpm build`
+- [x] 4.1 Gates: `pnpm typecheck && pnpm lint && pnpm test && pnpm build`
       — record results here. `pnpm build` is the load-bearing check for
       the `server-only` import chain (unit tests cannot catch a client
       boundary import because vitest stubs `server-only`).
-- [ ] 4.2 Pinned tests pass UNMODIFIED:
+      RESULTS (2026-06-11): typecheck PASS; lint PASS (ESLint no issues);
+      test PASS (web 107 files / 958 tests, all packages green); build
+      PASS (5/5 tasks — `server-only` chain holds).
+- [x] 4.2 Pinned tests pass UNMODIFIED:
       `apps/web/src/lib/server/get-server-session.test.ts` (any needed
       edit signals an accidental interface change — out of contract) and
       `apps/web/src/components/forbidden-page.test.tsx` +
       `apps/web/src/components/__snapshots__/forbidden-page.test.tsx.snap`
       byte-identical.
-- [ ] 4.3 Live behavioral check (dev server + `/auth/dev-login`; no unit
+      RESULT (2026-06-11): `git diff dd306c31..HEAD` over the three pinned
+      files is empty — untouched.
+- [x] 4.3 Live behavioral check (dev server + `/auth/dev-login`; no unit
       test renders layouts — coverage excludes `src/app/**/layout.tsx`
       and `page.tsx`): viewer at `/lead/report` → wall, home
       `/reports?tab=published`; head at `/lead/report/:id/preview` →
       wall, home `/head/dashboard`; anonymous at `/admin` → wall, home
       `/`; allowed roles see their pages unaffected; zero console errors.
-- [ ] 4.4 Archive after merge per lifecycle rules
-      (`openspec archive add-role-gate` on main).
+      RESULTS (2026-06-11, live dev stack): viewer at `/lead/report` →
+      wall, home `/reports?tab=published` PASS; head at preview → wall
+      ("reserved for the lead role"), home `/head/dashboard` PASS;
+      truly-anonymous `/admin` is intercepted by `proxy.ts` (307 to
+      `/?next=/admin`, pre-existing, untouched) so the layout never runs;
+      the layout-level no-session branch was exercised with a JWT-shaped
+      invalid cookie → wall rendered (dev API's DEV_SESSION fallback
+      resolves it to head, so home was `/head/dashboard`; the literal
+      null-session → `/` branch is pinned by unit test (c)); allowed
+      roles unaffected (lead `/lead/report` + preview, head
+      `/head/dashboard`, admin `/admin`, viewer `/reports` — all 200, no
+      wall); browser console: 0 errors, 0 warnings.
+- [x] 4.4 Archive after merge per lifecycle rules
+      (`openspec archive add-role-gate` on main). Done 2026-06-11; commits
+      landed directly on main (no push per overnight rules).
