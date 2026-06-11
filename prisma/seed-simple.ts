@@ -1583,6 +1583,35 @@ async function main() {
       stageNames: ["Planning"],
     },
   });
+  // fix-lead-surface-name-resolution: cross-stage reproducer. Boris owns
+  // NO StageAssignment on PROD_PAYMENTS («Платёжный шлюз»), so this risk
+  // and decision reference a project outside his stage-owned `projects`.
+  // Pre-fix these rendered "Unknown" (risk) / "Group" (decision) on
+  // /lead/report; post-fix they must show the real product name via the
+  // read model's name-only `referencedProjects`.
+  await prisma.risk.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000009003",
+      reportSectionId: borisSectionId,
+      projectId: PROD_PAYMENTS,
+      risk: "Интеграция с платёжным шлюзом не согласована с командой Ольги",
+      impact: "Мобильный чек-аут не сможет принимать платежи в релизе",
+      mitigation: "Борис назначает синк с командой Платёжного шлюза",
+      severity: "at-risk",
+      stageNames: ["Planning"],
+    },
+  });
+  await prisma.decision.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000007005",
+      reportSectionId: borisSectionId,
+      productId: PROD_PAYMENTS,
+      text: "Согласовать SLA платёжного API для мобильного чек-аута",
+      owner: "Борис С.",
+      impact: "Снимает блокер интеграции до начала Dev-фазы",
+      stageNames: ["Planning"],
+    },
+  });
   // Victor (LEAD_CLOUD_PM) owns Analysis on PROD_CRM (section 408).
   // ProjectStatus for PROD_CRM already exists (SECONDARY=[PROD_CRM, PROD_MOBILE] from loop).
   const victorSectionId = `a0000000-0000-4000-8000-000000000408`;

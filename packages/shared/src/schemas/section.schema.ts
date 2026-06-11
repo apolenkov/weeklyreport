@@ -104,6 +104,18 @@ export const projectReadModelSchema = z.object({
   ownedStages: z.array(ownedStageSchema).optional(),
 });
 
+// fix-lead-surface-name-resolution: name-only entry for a project that a
+// section row (item / risk / decision) references but the section author
+// owns no stage on. Carried separately from `projects` on purpose:
+// widening `projects` would leak an editable product card
+// (`mapLeadProducts`), spurious `ProjectStatus` writes (`saveSection`),
+// and submit-validation demands (`validateSubmitInput`). Consumers use it
+// for product-name resolution only.
+export const referencedProjectSchema = z.object({
+  projectId: z.uuid(),
+  projectName: z.string().min(1),
+});
+
 // 35-03: role label of the section author, surfaced end-to-end so the
 // /lead/report chrome can switch between "Request Reopen" (lead-on-own-
 // section) and "Revoke" (head/admin viewing someone else's section).
@@ -130,6 +142,11 @@ export const reportSectionReadModelSchema = z.object({
   // both mean "on time".
   late: z.boolean().optional(),
   projects: z.array(projectReadModelSchema),
+  // fix-lead-surface-name-resolution: name source for rows referencing a
+  // project outside the author's stage-owned `projects`. Optional so
+  // legacy fixtures and pre-existing snapshots still parse; missing means
+  // "no extra names" and the mappers fall back exactly as before.
+  referencedProjects: z.array(referencedProjectSchema).optional(),
   items: z.array(itemInputSchema),
   risks: z.array(riskInputSchema),
   decisions: z.array(decisionInputSchema),
@@ -152,6 +169,7 @@ export type ReportSectionReadModel = z.infer<
   typeof reportSectionReadModelSchema
 >;
 export type ProjectReadModel = z.infer<typeof projectReadModelSchema>;
+export type ReferencedProject = z.infer<typeof referencedProjectSchema>;
 export type OwnedStage = z.infer<typeof ownedStageSchema>;
 export type SubmissionDashboardRow = z.infer<
   typeof submissionDashboardRowSchema
