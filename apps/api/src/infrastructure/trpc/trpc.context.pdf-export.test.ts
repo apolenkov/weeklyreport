@@ -195,6 +195,30 @@ describe("createContextFactory — Phase 32-B1 PDF JWT verifier path (H-04)", ()
     expect(ctx.session?.role).toBe("head");
     expect(ctx.isPdfExport).toBe(false);
     expect(ctx.pdfReportId).toBeNull();
+    // 2.2 pin: regular session path must hydrate organization
+    expect(ctx.session?.organization).toEqual({
+      shortName: "Demo",
+      fullName: "Example Software Department",
+    });
+  });
+
+  it("valid PDF JWT synthetic session does NOT carry organization (Phase 32-B1 no-hydration design)", async () => {
+    // PDF-export synthetic sessions intentionally skip hydration
+    // (Phase 32-B1; guard middleware + groupScopeFilter own that restriction).
+    const token = jwt.sign(
+      { reportId: TEST_REPORT_ID, kind: "pdf-export" },
+      PDF_SECRET,
+      { expiresIn: "5m" },
+    );
+
+    const factory = createContextFactory(
+      makeApp(makePrismaStub()),
+      createNullLogger(),
+    );
+    const ctx = await factory(makeReq(token) as never);
+
+    expect(ctx.isPdfExport).toBe(true);
+    expect(ctx.session?.organization).toBeUndefined();
   });
 });
 

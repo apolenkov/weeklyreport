@@ -19,7 +19,7 @@ this change (the `requireRole` deletion in `packages/shared` belongs to
 
 ## 1. API — middleware builder consolidation (D1, D2)
 
-- [ ] 1.1 Test-first pins, green against the UNREFACTORED code. In
+- [x] 1.1 Test-first pins, green against the UNREFACTORED code. In
       `apps/api/src/infrastructure/trpc/trpc.middleware.test.ts` add a
       chain-composition pin test: each of the 7 protected builders
       (`protectedProcedure`, `headProcedure`, `leadProcedure`,
@@ -38,7 +38,7 @@ this change (the `requireRole` deletion in `packages/shared` belongs to
       the existing 7 entries. Run
       `pnpm test --filter @customreport/api` — both must pass BEFORE
       task 1.2 starts.
-- [ ] 1.2 In `apps/api/src/infrastructure/trpc/trpc.middleware.ts` add
+- [x] 1.2 In `apps/api/src/infrastructure/trpc/trpc.middleware.ts` add
       a local (unexported) factory
       `buildProtectedProcedure(authMiddleware)` returning the explicit
       standalone chain
@@ -60,7 +60,7 @@ this change (the `requireRole` deletion in `packages/shared` belongs to
 
 ## 2. API — session hydration (D3, D4, D5)
 
-- [ ] 2.1 Test hygiene (D5): in
+- [x] 2.1 Test hygiene (D5): in
       `apps/api/src/infrastructure/trpc/trpc.context.test.ts` add
       `clearOrgCache` to the existing `./trpc.context` import (line 6)
       and call `clearOrgCache()` inside the `beforeEach` at line 67.
@@ -68,7 +68,7 @@ this change (the `requireRole` deletion in `packages/shared` belongs to
       a 5s TTL that outlives the file run; without the reset the first
       session-bearing case warms it and the 2.2 assertions become
       order-dependent.)
-- [ ] 2.2 Test-first pins, green against the UNREFACTORED code: in
+- [x] 2.2 Test-first pins, green against the UNREFACTORED code: in
       `trpc.context.test.ts` dev-session flag-matrix cases assert
       `ctx.session?.organization` deep-equals the stub
       `{ shortName: "Demo", fullName: "Example Software Department" }`
@@ -82,7 +82,7 @@ this change (the `requireRole` deletion in `packages/shared` belongs to
       valid-PDF-JWT synthetic-session test (pins the intentional Phase
       32-B1 no-hydration design). All existing cases stay green
       unmodified. Run `pnpm test --filter @customreport/api`.
-- [ ] 2.3 In `apps/api/src/infrastructure/trpc/trpc.context.ts` add a
+- [x] 2.3 In `apps/api/src/infrastructure/trpc/trpc.context.ts` add a
       file-local (NOT exported) `async function hydrateSession(session:
 UserSession, prisma: PrismaService): Promise<UserSession>`
       composing the four existing helpers unchanged, in current order:
@@ -102,7 +102,7 @@ UserSession, prisma: PrismaService): Promise<UserSession>`
 
 ## 3. Docs
 
-- [ ] 3.1 In `openspec/config.yaml` update the context line "must use
+- [x] 3.1 In `openspec/config.yaml` update the context line "must use
       one of 7 canonical middleware-chain builders" to say 8 (aligns
       with `openspec/specs/role-coverage-gate/spec.md` and code).
       Follow-up candidate recorded here, NOT fixed in this change: the
@@ -113,12 +113,15 @@ UserSession, prisma: PrismaService): Promise<UserSession>`
 
 ## 4. Verification
 
-- [ ] 4.1 Suite focus: `pnpm test --filter @customreport/api` green —
+- [x] 4.1 Suite focus: `pnpm test --filter @customreport/api` green —
       `trpc.middleware.test.ts` (incl. new pin),
       `__tests__/role-coverage.test.ts` (8 chains),
       `__tests__/audit-events.test.ts` (unchanged),
       `trpc.context.test.ts`, `trpc.context.pdf-export.test.ts`.
-- [ ] 4.2 Full gates, record exact results here:
+      Result: 77 test files, 893 tests passed (886 pre-change + 7 new).
+- [x] 4.2 Full gates, record exact results here:
       `pnpm typecheck && pnpm lint && pnpm test && pnpm build`.
       Typecheck across the workspace is the proof that the web client's
       inferred tRPC types did not shift (D2).
+      Result (2026-06-11): typecheck ✓ (5 tasks, 0 errors), lint ✓
+      (ESLint no issues), test ✓ (893 passed), build ✓ (5 tasks).

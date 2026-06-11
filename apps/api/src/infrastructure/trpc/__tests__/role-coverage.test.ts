@@ -4,6 +4,7 @@ import {
   adminProcedure,
   anyRoleProcedure,
   headProcedure,
+  leadershipProcedure,
   leadProcedure,
   protectedProcedure,
   publicProcedure,
@@ -72,6 +73,11 @@ const ANY_ROLE_CHAIN = (
     _def: { middlewares: unknown[] };
   }
 )._def.middlewares.slice(0, -1);
+const LEADERSHIP_CHAIN = (
+  leadershipProcedure.query(() => undefined) as unknown as {
+    _def: { middlewares: unknown[] };
+  }
+)._def.middlewares.slice(0, -1);
 
 const ALLOWED_CHAINS: readonly { name: string; chain: readonly unknown[] }[] = [
   { name: "publicProcedure", chain: PUBLIC_CHAIN },
@@ -81,6 +87,7 @@ const ALLOWED_CHAINS: readonly { name: string; chain: readonly unknown[] }[] = [
   { name: "leadProcedure", chain: LEAD_CHAIN },
   { name: "viewerProcedure", chain: VIEWER_CHAIN },
   { name: "anyRoleProcedure", chain: ANY_ROLE_CHAIN },
+  { name: "leadershipProcedure", chain: LEADERSHIP_CHAIN },
 ];
 
 /**

@@ -156,10 +156,7 @@ export function createContextFactory(
           throw new Error("user deactivated");
         }
 
-        const resolved = await resolveSectionId(session, prisma);
-        const hydrated = await hydrateViewerGroupAccess(resolved, prisma);
-        const withGroup = await hydrateReportingGroupName(hydrated, prisma);
-        const withOrg = await hydrateOrganization(withGroup, prisma);
+        const withOrg = await hydrateSession(session, prisma);
         return {
           session: withOrg,
           logger,
@@ -216,10 +213,10 @@ export function createContextFactory(
     const allowTest =
       isNonProd && process.env.AUTH_DEV_MODE_ALLOW_TEST === "true";
     if (devModeEnabled || allowTest) {
-      const devResolved = await resolveSectionId({ ...DEV_SESSION }, prisma);
-      const devHydrated = await hydrateViewerGroupAccess(devResolved, prisma);
-      const devWithGroup = await hydrateReportingGroupName(devHydrated, prisma);
-      const devWithOrg = await hydrateOrganization(devWithGroup, prisma);
+      // { ...DEV_SESSION } spread is AT THE CALL SITE intentionally (D4):
+      // the four helpers mutate the session object in place; passing the
+      // module-level constant directly would pollute it across requests.
+      const devWithOrg = await hydrateSession({ ...DEV_SESSION }, prisma);
       return {
         session: devWithOrg,
         logger,
@@ -327,6 +324,27 @@ async function hydrateOrganization(
   }
   session.organization = orgCache.value;
   return session;
+}
+
+/**
+ * Composes the four hydration helpers in their canonical order:
+ * resolveSectionId → hydrateViewerGroupAccess → hydrateReportingGroupName
+ * → hydrateOrganization.
+ *
+ * File-local and NOT exported (D3): no HydrationStep enum, no mocking seam.
+ * The factory-level tests already cover the contract.
+ *
+ * PDF-export synthetic sessions intentionally skip hydration (Phase 32-B1;
+ * guard middleware + groupScopeFilter own that restriction).
+ */
+async function hydrateSession(
+  session: UserSession,
+  prisma: PrismaService,
+): Promise<UserSession> {
+  const resolved = await resolveSectionId(session, prisma);
+  const hydrated = await hydrateViewerGroupAccess(resolved, prisma);
+  const withGroup = await hydrateReportingGroupName(hydrated, prisma);
+  return hydrateOrganization(withGroup, prisma);
 }
 
 async function resolveSectionId(
