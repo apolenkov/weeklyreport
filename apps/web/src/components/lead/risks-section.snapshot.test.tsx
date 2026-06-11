@@ -30,13 +30,14 @@ describe("RisksSection meta-row — pre-extract snapshot", () => {
     expect(screen.getByText("Vasily Lead")).toBeInTheDocument();
   });
 
-  it("renders All-stages pill when stageIds is absent", () => {
+  it("renders the No-stage-set warning pill when stageIds is absent (require-risk-stage)", () => {
     const { container } = render(
       <RisksSection risks={[BASE_RISK]} sectionAuthorName="Anna" />,
     );
-    expect(screen.getByText("All stages")).toBeInTheDocument();
+    expect(screen.getByText("No stage set")).toBeInTheDocument();
+    expect(screen.queryByText("All stages")).not.toBeInTheDocument();
     const stageDiv = container.querySelector(
-      '[aria-label="Risk stages: All stages"]',
+      '[aria-label="Risk stages: No stage set"]',
     );
     expect(stageDiv).toMatchSnapshot();
   });

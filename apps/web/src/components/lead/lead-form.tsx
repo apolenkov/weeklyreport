@@ -259,7 +259,11 @@ function sectionToDraftPayload(
         impact: r.impact,
         mitigation: r.mitigation,
         severity: r.severity,
-        stageIds: r.stageIds,
+        // require-risk-stage: the write schema now demands ≥1 stage. The
+        // read model stays tolerant of stage-less legacy rows; sending []
+        // for such a row fails server-side validation loudly until the
+        // data is backfilled/reseeded (design D3 trade-off).
+        stageIds: r.stageIds ?? [],
       })),
     decisions: section.decisions
       .filter((d) => hasText(d.text) && hasText(d.owner) && hasText(d.impact))

@@ -172,12 +172,13 @@ export function RisksSection({
               ? risk.stageIds.map(canonicalStageName)
               : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
                 splitStageNames(risk.stageName);
-          // Empty means implicit all assigned stages. A non-empty stageIds
-          // array is explicit user scope, even when it contains every stage.
+          // require-risk-stage (D2): a risk with no stages is an anomaly
+          // (legacy row), never an implicit "all stages" scope — render the
+          // loud "No stage set" warning chip instead of disguising it.
           // Keep every selected stage visible; seven SDLC chips fit better
           // than hiding critical scope behind "+N".
           const stageTagsLabel =
-            stageTags.length === 0 ? "All stages" : stageTags.join(", ");
+            stageTags.length === 0 ? "No stage set" : stageTags.join(", ");
           // F4: warn when the linked product is at-risk/blocked but no
           // explicit stage is selected for this risk row.
           const linkedProductStatus = products?.find(
@@ -288,6 +289,7 @@ export function RisksSection({
                 stageTags={stageTags}
                 ariaLabel={`Risk stages: ${stageTagsLabel}`}
                 foreign={false}
+                emptyStageChip="no-stage-warning"
               />
             </div>
           );
@@ -330,7 +332,7 @@ export function RisksSection({
         subtitle={
           pendingDelete
             ? // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-              `${pendingDelete.productName} · ${(pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).length > 0 ? (pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).join(", ") : "all stages"}`
+              `${pendingDelete.productName} · ${(pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).length > 0 ? (pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).join(", ") : "no stage set"}`
             : undefined
         }
         onConfirm={confirmDelete}
