@@ -23,26 +23,28 @@ Items and decisions are exempt — their empty selection keeps its
 
 ### Requirement: Stage-less legacy rows are loud, never disguised
 
-A risk row that still has no stages after the legacy `stageName`
-fallback MUST render an explicit "No stage set" warning marker using
-existing warning tokens. The silent "All stages" label MUST NOT be
-used for risks.
+A stage-less risk row MUST render an explicit "No stage set" warning
+marker using existing warning tokens. The silent "All stages" label
+MUST NOT be used for risks.
 
 #### Scenario: a legacy risk row with no stage data renders
 
-- **WHEN** a risk card renders for a row with empty `stageIds` and no
-  legacy `stageName`
+- **WHEN** a risk card renders for a row with empty `stageIds`
 - **THEN** the card shows the "No stage set" warning marker
 - **AND** no "All stages" label appears
 
-### Requirement: Legacy stage names are backfilled into stage ids
+### Requirement: Stage-less rows stay representable until repaired
 
-Rows whose stages exist only in the deprecated `stageName` column MUST
-be backfilled to `stageIds` via the canonical `splitStageNames`
-mapping before the tightened schema can reject their resave.
+A stage-less risk row MUST remain loadable and renderable (the read
+model tolerates empty `stageIds`), and its resave MUST be rejected by
+the tightened write schema until the lead assigns a stage in the edit
+dialog. No backfill exists or is needed: the schema has no legacy
+`stageName` column, and verified data holds zero stage-less rows.
 
-#### Scenario: an old draft with a stageName-only risk is resaved
+#### Scenario: a stage-less risk row is resaved without repair
 
-- **WHEN** the lead edits and saves a draft whose risk was seeded with
-  only the legacy `stageName`
-- **THEN** the save succeeds because `stageIds` was backfilled
+- **WHEN** the lead saves a draft containing a risk whose `stageIds`
+  is still empty
+- **THEN** server-side validation rejects the payload loudly
+- **AND** the row stays visible with its warning marker until a stage
+  is selected in the edit dialog
