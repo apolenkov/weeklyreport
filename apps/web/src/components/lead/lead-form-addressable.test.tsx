@@ -20,7 +20,7 @@
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -362,8 +362,9 @@ describe("LeadForm — Phase 35-07 addressable URLs", () => {
       </Wrapper>,
     );
     // Positive anchor: wait for the query cascade to settle by confirming the
-    // form rendered its content (section data resolves before redirect logic runs).
-    await waitFor(() => expect(replace).not.toHaveBeenCalled());
+    // form rendered its section content, THEN assert no redirect fired.
+    await screen.findAllByText("Test Product");
+    expect(replace).not.toHaveBeenCalled();
   });
 
   it("head session on /lead/report/<reportId> without authorId redirects to head report and does not load lead form", async () => {
