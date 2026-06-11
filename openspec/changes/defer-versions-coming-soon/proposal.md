@@ -1,73 +1,85 @@
-# Defer Version History Behind ComingSoon; Make Saving Maximally Stable
+# Remove Version History Entirely; Keep One Plain, Stable Save
 
 ## Why
 
-User decision (2026-06-10, grilled and confirmed): version history is
-deferred — too complex for now, and it has a **fidelity bug** that is
-the recorded reason for the deferral and the starting point for any
-future re-enable change:
+User decision (2026-06-11 morning; SUPERSEDES the 2026-06-10 scope this
+change previously carried — "hide UI behind ComingSoon, disable writes,
+keep schema"): version history / snapshots are too complex for now and
+are removed ENTIRELY — database, backend, and UI. A lead's section keeps
+one plain unified saved state, and saving must come out simpler and
+maximally stable (the user's #1 ask). Versioning returns later as a
+separately designed feature; the `versions-v2-restore-fidelity` research
+draft (captured separately, 2026-06-11) starts that design.
 
-> The user restored v3 of their section; the stage statuses shown on
-> the page did not match what was saved in that version. A version
-> must fully determine page state, and today it does not — snapshots
-> created before `stageStatuses` was added to the projection silently
-> keep the _current_ statuses on restore
-> (`lead-form.prisma-repository.ts:296-303`), so a restored page is a
-> mix of two points in time.
+Recorded reasons for removal:
 
-Until a version snapshot is a complete, faithful capture of page
-state, navigating and restoring versions misleads more than it helps.
-The user's #1 ask instead: **saving must be maximally stable.**
+1. **Complexity** — write throttling, dedup, retention windows, pinning,
+   restore overlays: disproportionate to MVP value.
+2. **Fidelity bug** — restoring v3 showed stage statuses that did not
+   match the saved state; a version must fully determine page state and
+   it did not (`lead-form.prisma-repository.ts:296-303` keeps _current_
+   `stageStatus` rows when a snapshot predates the field).
+
+This also SUPERSEDES `add-version-pin` (archived 2026-06-11): its `kind`
+pin field, `setVersionPinned` mutation, retention pin-exemption, and pin
+star UI are removed by this change, together with its synced durable
+spec `openspec/specs/version-pinning`.
 
 ## What Changes
 
-1. **UI**: `VersionHistoryNav` (Previous / v3 / Next in the lead
-   toolbar) becomes an inert disabled control with a `ComingSoonBadge`
-   tooltip, per the deferred-feature pattern (reference:
-   `nav-bar.tsx` `LanguageComingSoonControl`). All version wiring in
-   `lead-form.tsx` (versions query, snapshot view overlay, restore
-   handler) is removed with `TODO(defer-versions-coming-soon)` markers.
-2. **Writes disabled** (explicit user choice over keep-writing): the
-   autosave/manual-save snapshot trigger (`onSaveSuccessAction` →
-   `leadForm.createSnapshot`) is removed; every former call site keeps
-   a `TODO(defer-versions-coming-soon)` marker.
-3. **Backend loud stubs**: tRPC `leadForm.versions`, `getVersion`,
-   `restoreVersion`, `createSnapshot` throw
-   `Error("Not implemented — see TODO(defer-versions-coming-soon)")`.
-   Services, repository, retention logic, and their integration tests
-   stay intact as the preserved behavioral spec for re-enable.
-4. **Schema kept**: `VersionSnapshot` table and Zod schemas stay — NO
-   destructive migration.
-5. **Save stability**: audit autosave + Save-now end-to-end; verify
-   removing the snapshot trigger breaks neither path; extend tests for
-   debounce coalescing, error surfacing, and manual save (building on
-   `save-now-pending-indicator`, which lands earlier tonight).
+1. **Prisma**: drop the `VersionSnapshot` model, the
+   `VersionSnapshotKind` enum, and the `ReportSection.versionSnapshots`
+   relation; hand-sync the single init migration; `migrate reset` the
+   `_dev`/`_test` DBs (MVP DB rule — never prod).
+2. **Backend**: delete snapshot creation on autosave/manual-save, the
+   retention sweep (and pinned exemption), the pin/unpin mutation, the
+   restore/read endpoints (5 tRPC procedures), and the version read
+   model in `packages/shared` (`versionSnapshotSchema`, the
+   `versionCount`/`latestVersion*` history fields). Removal, not stubs —
+   `TODO(versions-v2)` one-liners mark the natural future activation
+   points.
+3. **Web**: delete `VersionHistoryNav`, the history modal/rows, the pin
+   star, and all version wiring in `lead-form.tsx`; an inert
+   `ComingSoonBadge` control fills the toolbar slot per the
+   deferred-feature pattern. English copy only.
+4. **Save stability**: audit autosave + Save-now end-to-end after the
+   removal; extend reliability tests (debounce coalescing, error
+   surfacing, manual save). Builds on `save-now-pending-indicator`,
+   which lands earlier in the queue.
 
 ## Non-goals
 
-- No fix of the fidelity bug itself — that is the future re-enable
-  change.
+- No versions-v2 design and no fidelity-bug fix here.
 - No removal of `fillFrom`: it stays live; its internal pre-overwrite
-  safety snapshot write is retained (see design D3).
-- No change to `SaveNowButton` visuals beyond what
+  snapshot disappears with the table (design D2).
+- No `SaveNowButton` visual change beyond what
   `save-now-pending-indicator` ships.
-- No destructive migration, no prod-DB work.
+- No prod-DB operations of any kind.
 
 ## Capabilities
 
 ### Modified Capabilities
 
-- `deferred-feature-pattern`: version history joins the pattern — new
-  UI scenario (inert toolbar control) and backend scenario (stubbed
-  version endpoints).
+- `deferred-feature-pattern`: version history joins the UI scenario list
+  as an inert ComingSoon toolbar control.
+- `uat-quality-gates`: the lead re-sweep surface list no longer names
+  version history.
+
+### Removed Capabilities
+
+- `version-pinning`: removed wholesale — there is no snapshot to pin.
 
 ## Impact
 
-- `apps/web/src/components/lead/version-history-nav.tsx` (+ test) —
-  inert ComingSoon control.
-- `apps/web/src/components/lead/lead-form.tsx` — version wiring out.
-- `apps/web/src/hooks/use-lead-form-autosave.ts` (+ test) —
-  `onSaveSuccessAction` orphan removed; stability tests extended.
-- `apps/api/src/infrastructure/trpc/trpc.router.ts:1961-2030` — loud
-  stubs on 4 procedures.
-- `openspec/specs/deferred-feature-pattern` — delta in this change.
+- `prisma/schema.prisma` + the single init migration SQL.
+- `packages/shared/src/schemas/stage.schema.ts`, `report.schema.ts`.
+- `apps/api/.../report-sections/`: `snapshot.service.ts` (deleted),
+  `version-history.service.ts` (only `fillFrom` survives),
+  `lead-form.prisma-repository.ts`, version integration tests (deleted),
+  `trpc.router.ts` (5 procedures + `myHistory` projection).
+- `apps/web/src/components/lead/`: `version-history-nav.tsx`,
+  `version-row.tsx` (+ tests, snapshots) deleted; `lead-form.tsx`,
+  `mock-data.ts`, `lib/mappers/lead-form.ts`, `lib/mappers/lead-history.ts`,
+  `hooks/use-lead-form-autosave.ts`.
+- `openspec/specs/`: deltas in this change for the three capabilities
+  above.

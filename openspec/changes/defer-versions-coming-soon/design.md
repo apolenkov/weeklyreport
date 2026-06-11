@@ -1,149 +1,173 @@
-# Design — Defer Version History, Stabilize Saving
+# Design — Remove Version History Entirely, Stabilize Saving
 
-## Context (verified in code, 2026-06-11)
+Rewritten 2026-06-11 to the user's full-removal decision. The previous
+design (keep schema, stub endpoints, preserve services + tests as the
+behavioral spec) is superseded; it survives in git history of this file.
 
-Version data flow today:
+## Context — version data flow today (verified in code, 2026-06-11)
 
-- **Write path**: `use-lead-form-autosave.ts` fires
-  `onSaveSuccessAction` after every successful `saveDraft`
-  (autosave debounce AND `forceSave` from `SaveNowButton` share the
-  same mutation success path). `lead-form.tsx:676-681` turns that
-  signal into `leadForm.createSnapshot`. Server side,
-  `SnapshotService.createSnapshot` applies a 60 s throttle +
-  content dedup before `repository.createVersionSnapshot`.
-- **Read path**: `lead-form.tsx` `versionsQ`
-  (`leadForm.versions`, line 342) **gates the page skeleton**
-  (`!versionsQ.data` → `<LeadFormSkeleton />`, line 730) and feeds
-  `VersionHistoryNav`, the autosave label prefix
-  (`Version N · HH:MM`, line 1442-1446), and `mapLeadFormData`.
-  `getVersionQ` + `viewedSnapshotVersion` drive the F3.4 snapshot
-  read-only overlay; `restoreMut` drives restore.
-- **Internal writers that bypass throttle**:
-  `VersionHistoryService.fillFrom` (line 40) and
-  `VersionHistoryService.restoreVersion` (line 119) call
-  `repository.createVersionSnapshot` directly as pre-overwrite
-  safety nets.
-- **Passive read elsewhere**: `trpc.router.ts:349/406` counts
-  `versionSnapshots` into `versionCount` for the reports listing —
-  a read, not a write; untouched by this change.
+- **Write path**: `use-lead-form-autosave.ts` fires `onSaveSuccessAction`
+  after every successful `saveDraft` (autosave debounce and `forceSave`
+  from `SaveNowButton` share the mutation success path).
+  `lead-form.tsx:676-681` turns that signal into
+  `leadForm.createSnapshot`. Server side, `SnapshotService` applies a
+  60 s throttle + content dedup before
+  `repository.createVersionSnapshot`, which also runs the time-based
+  retention sweep (`lead-form.prisma-repository.ts:461` and `:489`,
+  with the `add-version-pin` `"kind" <> 'pinned'` exemption).
+- **Read path**: `lead-form.tsx` `versionsQ` (`leadForm.versions`)
+  gates the page skeleton (`!versionsQ.data` → `<LeadFormSkeleton />`)
+  and feeds `VersionHistoryNav`, the `Version N · HH:MM` autosave-label
+  prefix (`lead-form.tsx:1427-1430`), and `mapLeadFormData`.
+  `getVersionQ` + `viewedSnapshotVersion` drive the snapshot read-only
+  overlay; `restoreMut` drives restore; `onTogglePin` drives
+  `leadForm.setVersionPinned`.
+- **History listing**: `trpc.router.ts:349-406` (`myHistory`) includes
+  `versionSnapshots` to compute `lastEditAt`, `versionCount`,
+  `latestVersion`, `latestVersionAt`; carried by
+  `myHistoryEntrySchema` (`report.schema.ts:414-416`) into
+  `lib/mappers/lead-history.ts:42-44`.
+- **Internal writer**: `VersionHistoryService.fillFrom` calls
+  `repository.createVersionSnapshot` directly as a pre-overwrite safety
+  net before copying a previous period into the section.
 
-Fidelity bug anchor:
-`lead-form.prisma-repository.ts:296-303` — restore keeps current
-`stageStatus` rows when the snapshot predates the `stageStatuses`
-field, so a restored page mixes two points in time.
+## After this change
+
+```text
+edit → autosave debounce (or Save now) → saveDraft → one saved state
+```
+
+No snapshot rows, no version queries, no restore. The toolbar slot
+shows an inert ComingSoon control. `myHistory` computes `lastEditAt`
+from section/item/risk/decision/status timestamps only.
 
 ## Decisions
 
-### D1 — Stub at the tRPC procedure level, keep services + tests
+### D1 — Full removal, not stubs (reverses old D1)
 
-The deferred-feature spec allows the loud stub at "any NestJS service
-or tRPC procedure" entry point. We stub the 4 procedures
-(`versions`, `getVersion`, `restoreVersion`, `createSnapshot`) and
-keep `VersionHistoryService`, `SnapshotService`, the repository
-methods, retention, and ALL their integration/characterization tests
-green and intact
-(`version-history.integration.test.ts`,
-`version-retention.integration.test.ts`,
-`version-snapshot.characterization.integration.test.ts`).
+The previous design kept `SnapshotService`, `VersionHistoryService`,
+repository methods, and all version integration/characterization tests
+as the "executable behavioral spec for re-enable". The user's decision
+overrides that: versions-v2 starts from a fresh design
+(`versions-v2-restore-fidelity` draft), not from this implementation —
+the fidelity bug shows the old projection semantics are exactly what
+must NOT be preserved. So services, repository methods, retention,
+endpoints, and their tests are deleted. Their behavior remains
+recoverable via git history and the `add-version-pin` archive.
+Per the deferred-feature rule, `TODO(versions-v2)` one-line markers
+(comments, not throw-stubs — nothing can call a deleted endpoint) sit
+at the natural activation points: the `leadForm` router block, the
+autosave success path, and the toolbar control.
 
-Rationale: those tests are the executable behavioral spec the
-re-enable change will start from; deleting or stubbing them would
-discard exactly the knowledge the deferral wants to preserve. The
-public API surface is still loudly dead — no caller can reach the
-services. The raw `Error` maps through `mapDomainError` to
-`INTERNAL_SERVER_ERROR`, which is acceptable for a
-deliberately-unreachable path (loud beats polished).
+### D2 — `fillFrom` survives; its safety snapshot does not
 
-A new contract test pins the stub: each of the 4 procedures rejects
-with the `Not implemented — see TODO(defer-versions-coming-soon)`
-message (em-dash, matching the repo convention in
-`telegram.module.ts:43`).
+`fillFrom` (copy a previous period into the current section) is a live
+feature and stays. It loses its pre-overwrite
+`createVersionSnapshot` call — with the table gone there is nowhere to
+write. Stated trade-off: a `fillFrom` overwrite becomes unrecoverable
+in-app; acceptable in MVP (the DB is disposable, the action is
+user-initiated and confirmed). `TODO(versions-v2)` marks the spot.
+Mechanically, `fillFrom` moves out of the deleted
+`version-history.service.ts` into `lead-form.service.ts` (or a sibling
+`fill-from.service.ts` if size argues for it — implementer's call);
+`repository.fillFromSection` is untouched.
 
-### D2 — Web stops calling version endpoints entirely
+### D3 — History read model drops the version fields
 
-The skeleton gate means a stubbed `leadForm.versions` would brick the
-lead page; hiding the UI is not enough. So `lead-form.tsx` removes:
+`myHistory` (`trpc.router.ts:349-406`) loses the `versionSnapshots`
+include; `lastEditAt` is computed from the remaining edit dates.
+`versionCount` / `latestVersion` / `latestVersionAt` leave
+`myHistoryEntrySchema` and `lib/mappers/lead-history.ts` (all current
+consumers are tests; no production UI renders them). The
+`Version N · ` autosave-label prefix in `lead-form.tsx` goes; the label
+keeps the plain saved time.
 
-- `versionsQ` (+ its skeleton-gate term and load-error toast block),
-- `getVersionQ`, `viewedSnapshotVersion`, the snapshot overlay
-  banner, the snapshot-mode skeleton branch, and the
-  snapshot-derived stage-status lookup (~line 812),
-- `restoreMut` + `handleRestoreVersion`,
-- `createSnapshotMut` + the `onSaveSuccessAction` wiring,
-- the `Version N · ` prefix in `autosaveLabel` (it would freeze at a
-  stale number forever) — the label keeps the plain saved time,
-- `versions` input of `mapLeadFormData` and downstream `data.versions`.
+### D4 — `onSaveSuccessAction` leaves the autosave hook
 
-Each removal site that marks a future activation point gets
-`TODO(defer-versions-coming-soon)`. Orphans created by the edit
-(unused imports, `VersionSnapshot` type uses, dead mapper params,
-stale cache-key invalidations) are removed in the same commit.
+After the snapshot trigger is deleted the hook prop has zero callers;
+the surgical-change rule removes the orphan
+(`use-lead-form-autosave.ts:45,101-104,125`). Hook tests covering the
+callback are rewritten to the new contract — contract replacement, not
+test weakening: the behavior itself no longer exists.
 
-### D3 — `fillFrom` keeps its internal pre-overwrite snapshot write
+### D5 — Inert ComingSoon control in the toolbar slot
 
-Stated assumption (non-interactive run): the user's "disable writes"
-decision named the autosave/manual-save paths. `fillFrom` is a live,
-destructive overwrite of the section; its direct
-`repository.createVersionSnapshot` call is a data-safety net (an
-operator can still recover via DB even though the restore UI is
-deferred). Removing it would create a new data-loss window with zero
-benefit — the table stays anyway. It is marked
-`TODO(defer-versions-coming-soon)` as the single remaining writer.
-If the user prefers full write silence, deleting that one line is a
-follow-up one-liner.
+`version-history-nav.tsx`, `version-row.tsx`, their tests and snapshot
+are deleted. A new small component (`version-coming-soon.tsx`,
+exporting `VersionComingSoonControl`) fills the toolbar slot
+(`lead-form.tsx` ~1589-1602): disabled button, `aria-disabled`,
+`aria-label="Version history is coming soon"`, `title="Coming Soon"`,
+`data-testid="version-coming-soon"`, wrapped in `ComingSoonBadge`
+exactly like `LanguageComingSoonControl`
+(`apps/web/src/components/navigation/nav-bar.tsx:170-184`; spec:
+`openspec/specs/deferred-feature-pattern`). English copy only.
+`TODO(versions-v2)` activation marker on the component.
 
-### D4 — `onSaveSuccessAction` is removed from the hook
+### D6 — Schema reshape per the MVP DB rule
 
-After D2 the hook prop has zero callers; the surgical-change rule
-says remove the orphan. Hook tests covering the callback are
-rewritten to the new contract (no snapshot signal); this is contract
-replacement, not test weakening — the behavior itself is deferred and
-its server-side spec survives per D1.
+Drop the `VersionSnapshot` model (`schema.prisma:452-461`), the
+`VersionSnapshotKind` enum (~line 690), and the
+`ReportSection.versionSnapshots` relation (line 247). Hand-sync the
+single init migration SQL (delete the table + enum DDL) and
+`prisma migrate reset` BOTH the `_dev` and `_test` databases with
+`PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION` — `add-version-pin`
+task 1.3 recorded that `_test` was missed once; do not repeat that.
+This is the destructive-freedom path the MVP rule explicitly grants;
+production is out of scope and stays gated.
 
-### D5 — Inert control replaces the nav, same file
+### D7 — Save-stability contract (the user's #1 ask)
 
-`version-history-nav.tsx` is rewritten as an inert
-`VersionHistoryNav` (kept export name, prop-less): disabled button
-shell in the toolbar slot, history glyph + "Versions" semantics via
-`aria-label="Version history is coming soon"`, `aria-disabled`,
-`title="Coming Soon"`, `data-testid="version-history-coming-soon"`,
-wrapped with `ComingSoonBadge` exactly like
-`LanguageComingSoonControl` (nav-bar.tsx:170-184). The old
-interactive component lives in git history; the deferred-feature
-spec's activation rule (remove the badge wrapper entirely) applies on
-re-enable. Copy stays English (UI-strings rule).
+After removal, the save path must satisfy and be tested for:
 
-### D6 — Save-stability verification scope
-
-The contract for "saving is maximally stable" after the snapshot
-trigger removal:
-
-- autosave: debounce coalesces rapid edits; success transitions
-  pending→saving→saved with no snapshot side effect; failure surfaces
-  `state: "error"` (toolbar "⚠ Save failed") and keeps `dirty: true`
-  so the next edit retries; `beforeunload` guard while dirty.
+- autosave debounce coalesces rapid edits into one `saveDraft`;
+- success transitions pending → saving → saved with NO side effects
+  beyond the draft write;
+- failure surfaces `state: "error"` (toolbar "Save failed") and keeps
+  `dirty: true` so the next edit retries; `beforeunload` guard while
+  dirty;
 - manual save: `forceSave` cancels the debounce timer, saves
-  immediately, queues when a mutation is in flight;
-  `SaveNowButton` shows the pending treatment from
-  `save-now-pending-indicator` (this change rebases on its state of
-  `save-now-button.tsx` and must not regress its tests).
+  immediately, queues when a mutation is in flight; `SaveNowButton`
+  keeps the pending treatment from `save-now-pending-indicator` (this
+  change builds on its `save-now-button.tsx` state and must not
+  regress its tests).
 
 Existing coverage in `use-lead-form-autosave.test.tsx` and
-`save-now-button.test.tsx` is audited against that list; missing
-cases are added, none removed.
+`save-now-button.test.tsx` is audited against this list; missing cases
+are added; nothing is removed except assertions about snapshot side
+effects that no longer exist.
+
+### D8 — Durable specs stay truthful
+
+- `version-pinning` (synced 2026-06-11 by the `add-version-pin`
+  archive) is removed via a REMOVED delta in this change; the
+  directory must be gone from `openspec/specs/` after archive.
+- `deferred-feature-pattern` gains the version-history UI scenario
+  (MODIFIED delta).
+- `uat-quality-gates` lead re-sweep scenario drops "version history"
+  from its surface list (MODIFIED delta).
+- `code-quality-modernization`'s extraction scenario mentions
+  `VersionHistoryService` as a historical example of the HOT-ZONE
+  characterization rule; the rule is not triggered here (this is
+  behavior removal, not a behavior-preserving refactor) and the
+  example stays as history — no delta.
 
 ## Invariants touched
 
-- **deferred-feature-pattern** — applied (delta in this change);
-  pattern itself unchanged.
-- **destructive-db-guard** — preserved: no migration, no table drop.
-- **period-dual-state / role-coverage-gate** — untouched (no new
-  procedures; stubs keep the existing `protectedProcedure` builders).
+- **destructive-db-guard** — exercised, not weakened: resets hit only
+  `_dev`/`_test` suffixed DBs with the consent variable; the guard and
+  `ALLOW_PROD_DESTRUCTIVE` gating are untouched.
+- **deferred-feature-pattern** — applied (delta); pattern unchanged.
+- **role-coverage-gate** — five procedures removed, none added; the
+  remaining router uses the same canonical builders.
+- **period-dual-state** — untouched (no Report write-path change).
+- **enum-state-hygiene** — satisfied by deletion: the
+  `VersionSnapshotKind` enum disappears with both its writers.
 
 ## Rollout
 
-Single change, no migration, no flag. Order inside the change
-matters: web stops calling the endpoints (D2) before or together with
-the backend stubs (D1) — never stubs first, or the lead page
-skeleton-locks. Both land in one branch, so only task order within
-this change encodes that.
+Single change, one branch, no flag, no prod migration. In-branch task
+order: schema + shared first, then api, then web (config grouping);
+`pnpm typecheck` is expected red between groups and drives the orphan
+sweep — gates are judged at the end. The live dev server on :3000
+should be restarted only after the web group lands, otherwise the lead
+page skeleton-locks on the deleted `versions` query.
