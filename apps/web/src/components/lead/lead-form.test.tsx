@@ -6,7 +6,7 @@
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -92,18 +92,6 @@ interface Capture {
   saveDraftOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
   fillFromOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
   restoreOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
-}
-
-async function flushAll() {
-  // Three rounds of flushing handles the cascade:
-  //   1. getActive resolves -> activeSectionId populates
-  //   2. dependent queries (byPeriod / versions) fire and resolve
-  //   3. useEffect re-seeds draftSection from byPeriod data -> form leaves skeleton
-  for (let i = 0; i < 30; i++) await Promise.resolve();
-  await new Promise((r) => setTimeout(r, 0));
-  for (let i = 0; i < 30; i++) await Promise.resolve();
-  await new Promise((r) => setTimeout(r, 0));
-  for (let i = 0; i < 30; i++) await Promise.resolve();
 }
 
 function buildHarness(
@@ -381,10 +369,9 @@ describe("LeadForm mutation wiring", () => {
       </Wrapper>,
     );
 
-    // Wait for queries to resolve.
-    await act(async () => {
-      await flushAll();
-    });
+    // Wait for the query cascade to settle — mutation options are captured once
+    // the component has mounted and registered its mutations with React Query.
+    await waitFor(() => expect(cap.submitOpts).toBeDefined());
 
     // onSuccess from the submit mutation fires invalidations + toast.
     expect(cap.submitOpts).toBeDefined();
@@ -405,9 +392,7 @@ describe("LeadForm mutation wiring", () => {
         <LeadForm />
       </Wrapper>,
     );
-    await act(async () => {
-      await flushAll();
-    });
+    await waitFor(() => expect(cap.submitOpts).toBeDefined());
 
     expect(cap.submitOpts).toBeDefined();
     // Simulate error path.
@@ -429,10 +414,8 @@ describe("LeadForm mutation wiring", () => {
         <LeadForm />
       </Wrapper>,
     );
-    await act(async () => {
-      await flushAll();
-    });
 
+    // findByText is act-wrapped by RTL — waits for the query cascade to settle.
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
     // Click an editable stage chip to open the popover menu.
@@ -447,9 +430,10 @@ describe("LeadForm mutation wiring", () => {
     act(() => {
       expectDefined(editableChip).click();
     });
-    await act(async () => {
-      await flushAll();
-    });
+    // Wait for the popover menu to appear before querying its items.
+    await waitFor(() =>
+      expect(screen.getAllByRole("menuitem").length).toBeGreaterThan(0),
+    );
 
     // Pick a different status from the menu — fires onStatusChange and
     // dirties the draft.
@@ -466,9 +450,10 @@ describe("LeadForm mutation wiring", () => {
       expectDefined(menuitem).click();
     });
 
-    await act(async () => {
-      await flushAll();
-    });
+    // Wait for the dirty indicator to replace "Autosaved".
+    await waitFor(() =>
+      expect(screen.queryByText(/Pending|Saving/i)).not.toBeNull(),
+    );
 
     expect(screen.queryByText("Autosaved")).toBeNull();
     expect(screen.queryByText(/Pending|Saving/i)).not.toBeNull();
@@ -482,9 +467,7 @@ describe("LeadForm mutation wiring", () => {
         <LeadForm />
       </Wrapper>,
     );
-    await act(async () => {
-      await flushAll();
-    });
+    await waitFor(() => expect(cap.fillFromOpts).toBeDefined());
 
     expect(cap.fillFromOpts).toBeDefined();
     act(() => {
@@ -503,9 +486,7 @@ describe("LeadForm mutation wiring", () => {
         <LeadForm />
       </Wrapper>,
     );
-    await act(async () => {
-      await flushAll();
-    });
+    await waitFor(() => expect(cap.restoreOpts).toBeDefined());
 
     expect(cap.restoreOpts).toBeDefined();
     expectDefined(cap.restoreOpts).onError?.(new Error("Version not found"));
@@ -541,14 +522,13 @@ describe("LeadForm mutation wiring", () => {
         <LeadForm />
       </Wrapper>,
     );
-    await act(async () => {
-      await flushAll();
-    });
 
     // Make the form dirty by clicking a stage chip + picking a different
     // status. This is the path that survives the modal-driven CRUD
     // refactor — inline decision/risk inputs no longer exist on the
     // page so we can't drive them directly.
+    // findByText settles the query cascade before we look for stage chips.
+    await screen.findByText("Autosaved");
     const editableChip = screen.getAllByRole("button").find((b) => {
       const label = b.getAttribute("aria-label") ?? "";
       return (
@@ -560,9 +540,9 @@ describe("LeadForm mutation wiring", () => {
     act(() => {
       expectDefined(editableChip).click();
     });
-    await act(async () => {
-      await flushAll();
-    });
+    await waitFor(() =>
+      expect(screen.getAllByRole("menuitem").length).toBeGreaterThan(0),
+    );
     const menuitem = screen.getAllByRole("menuitem").find((m) => {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- DOM textContent is nullable; defensive default in a test helper
       const label = m.textContent ?? "";
@@ -575,9 +555,10 @@ describe("LeadForm mutation wiring", () => {
     act(() => {
       expectDefined(menuitem).click();
     });
-    await act(async () => {
-      await flushAll();
-    });
+    // Wait for the dirty state to settle before opening the version history.
+    await waitFor(() =>
+      expect(screen.queryByText(/Pending|Saving/i)).not.toBeNull(),
+    );
 
     // Open the version history modal via its trigger button.
     const historyTrigger = screen.getByTitle(
@@ -628,20 +609,22 @@ describe("LeadForm mutation wiring", () => {
         <LeadForm />
       </Wrapper>,
     );
-    await act(async () => {
-      await flushAll();
-    });
 
-    expect(
-      screen.getByTitle(/Snapshots and edits within this report/i),
-    ).toHaveTextContent("v2");
+    // Wait for the version badge to appear with the initial version.
+    await waitFor(() =>
+      expect(
+        screen.getByTitle(/Snapshots and edits within this report/i),
+      ).toHaveTextContent("v2"),
+    );
 
     act(() => {
       screen.getByRole("button", { name: /^Previous version$/i }).click();
     });
-    await act(async () => {
-      await flushAll();
-    });
+    await waitFor(() =>
+      expect(
+        screen.getByTitle(/Snapshots and edits within this report/i),
+      ).toHaveTextContent("v1"),
+    );
 
     expect(
       screen.getByTitle(/Snapshots and edits within this report/i),
@@ -678,12 +661,14 @@ describe("LeadForm mutation wiring", () => {
         <LeadForm />
       </Wrapper>,
     );
-    await act(async () => {
-      await flushAll();
-    });
 
+    // Wait for the query cascade to settle — the history trigger is rendered
+    // only after byPeriod resolves.
+    const historyTrigger = await screen.findByTitle(
+      /Snapshots and edits within this report/i,
+    );
     act(() => {
-      screen.getByTitle(/Snapshots and edits within this report/i).click();
+      historyTrigger.click();
     });
 
     expect(
@@ -707,9 +692,6 @@ describe("LeadForm mutation wiring", () => {
         <LeadForm />
       </Wrapper>,
     );
-    await act(async () => {
-      await flushAll();
-    });
 
     // Request Reopen renders for Leads on submitted sections — Revoke is
     // the Head/Admin-side variant.
@@ -722,21 +704,21 @@ describe("LeadForm mutation wiring", () => {
 
 // VA-0a: icon SVG aria-hidden regression — verify-a11y-recommended-flip catalog
 describe("LeadForm icon SVGs — aria-hidden", () => {
-  async function renderAndFlush() {
+  // Renders LeadForm and waits for the query cascade to settle.
+  // findByText is act-wrapped by RTL — no manual flush needed.
+  async function renderAndSettle() {
     const { Wrapper } = buildHarness();
     const { container } = render(
       <Wrapper>
         <LeadForm />
       </Wrapper>,
     );
-    await act(async () => {
-      await flushAll();
-    });
+    await screen.findByText("Autosaved");
     return container;
   }
 
   it("GridIcon svg has aria-hidden=true", async () => {
-    const container = await renderAndFlush();
+    const container = await renderAndSettle();
     const section = container.querySelector(
       '[data-testid="lead-section-product-status"]',
     );
@@ -747,7 +729,7 @@ describe("LeadForm icon SVGs — aria-hidden", () => {
   });
 
   it("CalendarIcon svg has aria-hidden=true", async () => {
-    const container = await renderAndFlush();
+    const container = await renderAndSettle();
     const section = container.querySelector(
       '[data-testid="lead-section-current-week"]',
     );
@@ -758,7 +740,7 @@ describe("LeadForm icon SVGs — aria-hidden", () => {
   });
 
   it("NextWeekIcon svg has aria-hidden=true", async () => {
-    const container = await renderAndFlush();
+    const container = await renderAndSettle();
     const section = container.querySelector(
       '[data-testid="lead-section-next-week"]',
     );
@@ -769,7 +751,7 @@ describe("LeadForm icon SVGs — aria-hidden", () => {
   });
 
   it("AlertIcon svg has aria-hidden=true", async () => {
-    const container = await renderAndFlush();
+    const container = await renderAndSettle();
     const section = container.querySelector(
       '[data-testid="lead-section-risks"]',
     );
@@ -780,7 +762,7 @@ describe("LeadForm icon SVGs — aria-hidden", () => {
   });
 
   it("ChatIcon svg has aria-hidden=true", async () => {
-    const container = await renderAndFlush();
+    const container = await renderAndSettle();
     const section = container.querySelector(
       '[data-testid="lead-section-decisions"]',
     );
@@ -791,7 +773,7 @@ describe("LeadForm icon SVGs — aria-hidden", () => {
   });
 
   it("CollapseIcon svg has aria-hidden=true", async () => {
-    const container = await renderAndFlush();
+    const container = await renderAndSettle();
     // CollapseIcon renders inside the "Toggle All" button, which is visible
     // when there are items or decisions in the section data.
     const toggleBtn = container.querySelector('button[title="Toggle All"]');
@@ -803,7 +785,7 @@ describe("LeadForm icon SVGs — aria-hidden", () => {
 
   // VA-0b snapshot: all icon SVGs in the rendered form carry aria-hidden=true
   it("snapshot: all icon SVGs rendered in LeadForm have aria-hidden=true", async () => {
-    const container = await renderAndFlush();
+    const container = await renderAndSettle();
     const allSvgs = Array.from(container.querySelectorAll("svg"));
     // At minimum the 6 icon SVGs (Grid, Calendar, NextWeek, Alert, Chat,
     // Collapse) must be present; each must carry aria-hidden="true".
