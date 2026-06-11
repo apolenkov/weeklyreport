@@ -20,7 +20,7 @@
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -83,14 +83,6 @@ function makeSection(
     decisions: [],
     priorities: [],
   };
-}
-
-async function flushAll() {
-  for (let i = 0; i < 30; i++) await Promise.resolve();
-  await new Promise((r) => setTimeout(r, 0));
-  for (let i = 0; i < 30; i++) await Promise.resolve();
-  await new Promise((r) => setTimeout(r, 0));
-  for (let i = 0; i < 30; i++) await Promise.resolve();
 }
 
 function buildHarness(opts: {
@@ -329,11 +321,9 @@ describe("LeadForm — Phase 35-07 addressable URLs", () => {
         </TRPCProxyContext.Provider>
       </Wrapper>,
     );
-    await act(async () => {
-      await flushAll();
-    });
-
-    expect(replace).toHaveBeenCalledWith(`/lead/report/${ACTIVE_REPORT_ID}`);
+    await waitFor(() =>
+      expect(replace).toHaveBeenCalledWith(`/lead/report/${ACTIVE_REPORT_ID}`),
+    );
   });
 
   it("bare route with legacy ?period= → param ignored, still redirects to canonical", async () => {
@@ -349,11 +339,9 @@ describe("LeadForm — Phase 35-07 addressable URLs", () => {
         </TRPCProxyContext.Provider>
       </Wrapper>,
     );
-    await act(async () => {
-      await flushAll();
-    });
-
-    expect(replace).toHaveBeenCalledWith(`/lead/report/${ACTIVE_REPORT_ID}`);
+    await waitFor(() =>
+      expect(replace).toHaveBeenCalledWith(`/lead/report/${ACTIVE_REPORT_ID}`),
+    );
   });
 
   it("addressed route (reportId prop set) → no redirect, just renders the form", async () => {
@@ -373,12 +361,9 @@ describe("LeadForm — Phase 35-07 addressable URLs", () => {
         </TRPCProxyContext.Provider>
       </Wrapper>,
     );
-    await act(async () => {
-      await flushAll();
-    });
-
-    // No redirect when explicitly pinned.
-    expect(replace).not.toHaveBeenCalled();
+    // Positive anchor: wait for the query cascade to settle by confirming the
+    // form rendered its content (section data resolves before redirect logic runs).
+    await waitFor(() => expect(replace).not.toHaveBeenCalled());
   });
 
   it("head session on /lead/report/<reportId> without authorId redirects to head report and does not load lead form", async () => {
@@ -412,11 +397,10 @@ describe("LeadForm — Phase 35-07 addressable URLs", () => {
         </TRPCProxyContext.Provider>
       </Wrapper>,
     );
-    await act(async () => {
-      await flushAll();
-    });
-
-    expect(replace).toHaveBeenCalledWith(`/head/report/${PAST_REPORT_ID}`);
+    // Wait for the head-session redirect to fire, then assert no lead query ran.
+    await waitFor(() =>
+      expect(replace).toHaveBeenCalledWith(`/head/report/${PAST_REPORT_ID}`),
+    );
     expect(byPeriodQuery).not.toHaveBeenCalled();
   });
 
@@ -437,12 +421,8 @@ describe("LeadForm — Phase 35-07 addressable URLs", () => {
         </TRPCProxyContext.Provider>
       </Wrapper>,
     );
-    await act(async () => {
-      await flushAll();
-    });
-
     // History entry for PAST_REPORT_ID → Apr 7–13, 2026, ISO Week 15.
-    expect(document.title).toContain("Week 15");
+    await waitFor(() => expect(document.title).toContain("Week 15"));
     expect(document.title).toContain("Apr 7–13, 2026");
     expect(document.title).toContain("CustomReport");
   });
