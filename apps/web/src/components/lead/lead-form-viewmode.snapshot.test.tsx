@@ -7,7 +7,7 @@
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -178,14 +178,6 @@ function buildTRPC() {
   };
 }
 
-async function flushAll() {
-  for (let i = 0; i < 30; i++) await Promise.resolve();
-  await new Promise((r) => setTimeout(r, 0));
-  for (let i = 0; i < 30; i++) await Promise.resolve();
-  await new Promise((r) => setTimeout(r, 0));
-  for (let i = 0; i < 30; i++) await Promise.resolve();
-}
-
 function Wrapper({ children }: { readonly children: ReactNode }) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -211,9 +203,8 @@ describe("LeadForm view-mode toggle — pre-extract snapshot", () => {
       </Wrapper>,
     );
 
-    await act(flushAll);
-
-    const editLink = screen.queryByRole("link", { name: /^Edit$/i });
+    // findByRole is act-wrapped by RTL — waits for the query cascade to settle.
+    const editLink = await screen.findByRole("link", { name: /^Edit$/i });
     const slidesLink = screen.queryByRole("link", {
       name: /Open slides mode/i,
     });
