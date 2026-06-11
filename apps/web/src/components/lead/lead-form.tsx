@@ -1306,6 +1306,8 @@ export function LeadForm({
                   if (v !== null) {
                     setCurrentWeekAddSignal(0);
                     setNextWeekAddSignal(0);
+                    setRisksAddSignal(0);
+                    setDecisionsAddSignal(0);
                   }
                   setViewedSnapshotVersion(v);
                 }}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { LockBadge } from "../report-shell/lock-badge";
 import { MetaRow } from "../report-shell/meta-row";
@@ -133,15 +133,22 @@ export function RisksSection({
 
   const firstProductId = products?.[0]?.id;
 
+  // Keep a ref so the addSignal effect can read the latest readOnly value
+  // without including readOnly in the dep array. If readOnly were in deps,
+  // the effect would re-fire on snapshot enter/exit and re-open the dialog
+  // from a stale non-zero addSignal counter (D1 fix).
+  const readOnlyRef = useRef(readOnly);
+  readOnlyRef.current = readOnly;
+
   useEffect(() => {
     if (addSignal === 0) return;
-    if (readOnly) return;
+    if (readOnlyRef.current) return;
     setDialogState({
       open: true,
       mode: "create",
       seedProductId: firstProductId,
     });
-  }, [addSignal, readOnly, firstProductId]);
+  }, [addSignal, firstProductId]);
 
   return (
     <div className="space-y-4">
