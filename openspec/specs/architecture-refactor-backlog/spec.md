@@ -9,18 +9,33 @@ TBD - created by archiving change backlog-architecture-refactors. Update Purpose
 ### Requirement: The lead-form god component is a recorded decomposition target
 
 The backlog MUST record that `apps/web/src/components/lead/lead-form.tsx`
-(1938 LOC as of 2026-06-01, and growing) is a decomposition target: it far
-exceeds the declared `max-lines` 300 standard and SHOULD be split by
-responsibility. This is recorded as deferred work, not a Phase-3 lint cluster —
-the split is a designed refactor, not a mechanical fix.
+(1936 LOC as of 2026-06-10; 300-line `max-lines` standard) is a
+decomposition target being reduced in recorded slices, each captured as
+its own grilled refactor change before work starts. The first slice is
+`refactor-lead-mappers`: the pure cross-author and snapshot derivations
+moved to tested adapters in `apps/web/src/lib/mappers/` (landed at
+1658 LOC on 2026-06-11; the file stood at 1930 when the slice started).
+The decomposition target itself stays open;
+the deferred `ReportDataCoordinator` / `FormStateManager` objects MUST
+NOT be built outside a future grilled change of their own.
 
 #### Scenario: the lead-form size target is discoverable
 
 - **WHEN** a maintainer looks for known oversized modules
-- **THEN** the backlog names `lead-form.tsx` with its current LOC and the 300
-  target
-- **AND** it is marked as needing its own grilled refactor change before work
-  starts
+- **THEN** the backlog names `lead-form.tsx` with its current LOC and
+  the 300 target
+- **AND** it lists the landed slices (first: `refactor-lead-mappers`)
+  and marks the remaining decomposition as needing its own grilled
+  refactor change before work starts
+
+#### Scenario: a second slice starts
+
+- **WHEN** an agent or maintainer picks up further lead-form
+  decomposition work
+- **THEN** a grilled OpenSpec change exists for that slice before any
+  code is written
+- **AND** the change cites the updated LOC evidence from the previous
+  slice
 
 ### Requirement: The client permission model is a recorded centralization target
 
