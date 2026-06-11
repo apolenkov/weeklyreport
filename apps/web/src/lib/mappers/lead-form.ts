@@ -1,10 +1,9 @@
 /**
- * Composes the four `LeadForm`-page tRPC queries into the mock-shaped slices
+ * Composes the three `LeadForm`-page tRPC queries into the mock-shaped slices
  * the existing presentational components expect:
  *
  *   - `reports.getActive`     -> `ReportSectionReadModel | null`
  *   - `leadForm.byPeriod`     -> `{ section: ReportSectionReadModel; readOnly: boolean }`
- *   - `leadForm.versions`     -> `VersionSnapshot[]`
  *   - `reports.myHistory`     -> `MyHistoryEntry[]`
  *
  * Reuses Phase 20 mappers (`trafficToStageStatus`, `deriveItemStatus`).
@@ -45,17 +44,11 @@
  *   `sectionStatus === 'submitted'`. Counts flow through from
  *   `reports.myHistory`; the FillFrom UI owns the display fallback when older
  *   fixtures omit them.
- *
- * - `VersionSnapshot.timestamp` — formatted from `createdAt` via the same
- *   relative-time helper used in `lead-history.ts`. `itemCount`/`riskCount`/
- *   `decisionCount` default to 0 (the snapshot row only stores version + ts;
- *   computing aggregates would require a per-version diff query).
  */
 
 import type {
   MyHistoryEntry,
   ReportSectionReadModel,
-  VersionSnapshot as ApiVersionSnapshot,
 } from "@customreport/shared";
 
 import {
@@ -169,15 +162,6 @@ export interface LeadReportPeriod {
   itemCount?: number;
   riskCount?: number;
   productCount?: number;
-}
-
-export interface LeadVersionSnapshot {
-  version: number;
-  timestamp: string;
-  itemCount: number;
-  riskCount: number;
-  decisionCount: number;
-  pinned: boolean;
 }
 
 export interface LeadCurrentUser {
@@ -555,25 +539,6 @@ export function mapLeadPeriods(
     }));
 }
 
-/**
- * Map API VersionSnapshots into the dropdown shape. Counts come from the
- * server (computed from the snapshot's `data` JSON), so the version-history
- * UI can render real delta summaries instead of zeros.
- */
-export function mapLeadVersions(
-  versions: readonly ApiVersionSnapshot[],
-  now: Date,
-): LeadVersionSnapshot[] {
-  return versions.map((v) => ({
-    version: v.version,
-    timestamp: formatRelativeTimestamp(v.createdAt, now),
-    itemCount: v.itemCount,
-    riskCount: v.riskCount,
-    decisionCount: v.decisionCount,
-    pinned: v.kind === "pinned",
-  }));
-}
-
 // ---- Composer ----
 
 export interface MapLeadFormArgs {
@@ -589,10 +554,7 @@ export interface MapLeadFormArgs {
    * `active`.
    */
   byPeriod: { section: ReportSectionReadModel; readOnly: boolean };
-  versions: readonly ApiVersionSnapshot[];
   history: readonly MyHistoryEntry[];
-  /** Override `now` for deterministic version-timestamp tests. */
-  now?: Date;
 }
 
 export interface MappedLeadForm {
@@ -603,19 +565,17 @@ export interface MappedLeadForm {
   decisions: LeadDecisionEntry[];
   priorities: LeadPriorityEntry[];
   periods: LeadReportPeriod[];
-  versions: LeadVersionSnapshot[];
   currentUser: LeadCurrentUser;
   /** Whether the section is locked for the current user (submitted or period published). */
   readOnly: boolean;
 }
 
 /**
- * Compose all four queries into a single LeadForm-shaped payload. Caller is
+ * Compose all three queries into a single LeadForm-shaped payload. Caller is
  * responsible for ensuring all inputs are settled (i.e., not undefined) before
  * invoking — use `isLoading || !data` guards in the page component.
  */
 export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
-  const now = args.now ?? new Date();
   const section = args.byPeriod.section;
   // Lock the form when the period is locked OR the section is already submitted.
   const readOnly = args.byPeriod.readOnly || section.status === "submitted";
@@ -644,7 +604,6 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
     decisions: mapLeadDecisions(section),
     priorities: mapLeadPriorities(section),
     periods: mapLeadPeriods(args.history, args.active.reportId),
-    versions: mapLeadVersions(args.versions, now),
     currentUser: {
       name: args.active.authorName,
       initials: initialsFromName(args.active.authorName),

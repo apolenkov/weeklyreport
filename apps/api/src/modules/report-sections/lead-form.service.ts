@@ -1,8 +1,4 @@
-import type {
-  ReportSectionReadModel,
-  Role,
-  VersionSnapshot,
-} from "@customreport/shared";
+import type { ReportSectionReadModel, Role } from "@customreport/shared";
 
 import { customreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import {
@@ -10,39 +6,24 @@ import {
   LeadFormDomainError,
   type LeadFormRepository,
 } from "./lead-form-shared";
-import { SnapshotService } from "./snapshot.service";
-import { VersionHistoryService } from "./version-history.service";
 
 // Re-export the error classes and shared types from their original module
-// path so every existing importer (`./lead-form.service`) resolves unchanged
-// after the version/snapshot extraction (code-quality-modernization, Wave 3).
+// path so every existing importer (`./lead-form.service`) resolves unchanged.
 // The error classes have a single definition (in `lead-form-shared.ts`) so
 // `instanceof` checks in the tRPC error-mapper stay valid.
 export type {
-  CreateSnapshotResult,
   CrossAuthorSectionRow,
   LeadFormRepository,
-  SnapshotLatestRow,
 } from "./lead-form-shared";
 export { LeadFormAccessError, LeadFormDomainError } from "./lead-form-shared";
 
 /**
- * Lead-form facade. The version-history surface (fill-from, list/get/
- * restore) and the autosave snapshot surface (throttle + dedup) were
- * extracted into `VersionHistoryService` / `SnapshotService`
- * (code-quality-modernization, Wave 3, HOT ZONE). This class keeps the
- * reopen / cross-author / revoke / by-period surface and delegates the
- * version + snapshot methods verbatim, so the public method surface,
- * signatures, and behavior are unchanged.
+ * Lead-form facade: reopen / cross-author / revoke / by-period / fill-from.
+ * The version-history and snapshot surfaces were removed entirely
+ * (defer-versions-coming-soon); TODO(versions-v2) marks the re-entry points.
  */
 export class LeadFormService {
-  private readonly versionHistory: VersionHistoryService;
-  private readonly snapshots: SnapshotService;
-
-  constructor(private readonly repository: LeadFormRepository) {
-    this.versionHistory = new VersionHistoryService(repository);
-    this.snapshots = new SnapshotService(repository);
-  }
+  constructor(private readonly repository: LeadFormRepository) {}
 
   /** API-03: Revoke a lead's submission (head-only). */
   async revokeSubmission(
@@ -64,70 +45,33 @@ export class LeadFormService {
   }
 
   /** API-07: Fill current form from a past period's data. */
-  fillFrom(
+  async fillFrom(
     targetSectionId: string,
     sourceSectionId: string,
     userId: string,
   ): Promise<{ success: true; copiedItems: number }> {
-    return this.versionHistory.fillFrom(
+    const target = await this.repository.getSectionById(targetSectionId);
+
+    if (!target) {
+      throw new Error(`Target section ${targetSectionId} not found.`);
+    }
+
+    if (target.authorId !== userId) {
+      throw new Error("Can only fill your own section.");
+    }
+
+    if (target.status === "submitted") {
+      throw new Error("Cannot fill a submitted section.");
+    }
+
+    // TODO(versions-v2): a pre-overwrite safety snapshot was taken here
+    // until version snapshots were removed (defer-versions-coming-soon).
+    const copiedItems = await this.repository.fillFromSection(
       targetSectionId,
       sourceSectionId,
-      userId,
     );
-  }
 
-  /** API-08: List version snapshots for a section. */
-  listVersions(
-    sectionId: string,
-    userId: string,
-    role?: Role,
-  ): Promise<VersionSnapshot[]> {
-    return this.versionHistory.listVersions(sectionId, userId, role);
-  }
-
-  getVersion(
-    sectionId: string,
-    version: number,
-    userId: string,
-    role?: Role,
-  ): Promise<Record<string, unknown> | null> {
-    return this.versionHistory.getVersion(sectionId, version, userId, role);
-  }
-
-  /** API-09: Restore a section to a specific version. */
-  restoreVersion(
-    sectionId: string,
-    version: number,
-    userId: string,
-  ): Promise<{ success: true; restoredVersion: number }> {
-    return this.versionHistory.restoreVersion(sectionId, version, userId);
-  }
-
-  /** add-version-pin: Pin or unpin a version of a lead's own section. */
-  setVersionPinned(
-    sectionId: string,
-    version: number,
-    pinned: boolean,
-    userId: string,
-  ): ReturnType<VersionHistoryService["setVersionPinned"]> {
-    return this.versionHistory.setVersionPinned(
-      sectionId,
-      version,
-      pinned,
-      userId,
-    );
-  }
-
-  /**
-   * Create an explicit version snapshot of the current section state.
-   * Delegated to {@link SnapshotService}; throttle + content-dedup
-   * semantics are unchanged.
-   */
-  createSnapshot(
-    sectionId: string,
-    userId: string,
-  ): ReturnType<SnapshotService["createSnapshot"]> {
-    return this.snapshots.createSnapshot(sectionId, userId);
+    return { success: true, copiedItems };
   }
 
   /** API-04: Request the head to reopen a submitted section. */

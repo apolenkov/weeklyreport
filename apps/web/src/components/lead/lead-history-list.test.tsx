@@ -25,9 +25,6 @@ const entry: HistoryEntry = {
   decisionCount: 2,
   priorityCount: 3,
   productCount: 3,
-  versionCount: 2,
-  latestVersion: 2,
-  latestVersionAt: "May 15",
 };
 
 describe("LeadHistoryList", () => {

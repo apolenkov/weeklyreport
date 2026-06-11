@@ -93,14 +93,6 @@ function buildTRPC() {
         }),
         pathFilter: () => ({ queryKey: ["leadForm.byPeriod"] }),
       },
-      versions: {
-        queryOptions: () => ({
-          queryKey: ["leadForm.versions"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (no awaitable work in the stub)
-          queryFn: async () => [],
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.versions"] }),
-      },
       revoke: {
         mutationOptions: (p: object = {}) => ({
           ...p,
@@ -117,22 +109,6 @@ function buildTRPC() {
         }),
         pathFilter: () => ({ queryKey: ["leadForm.fillFrom"] }),
       },
-      restoreVersion: {
-        mutationOptions: (p: object = {}) => ({
-          ...p,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
-          mutationFn: async () => ({ ok: true }),
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.restoreVersion"] }),
-      },
-      createSnapshot: {
-        mutationOptions: (p: object = {}) => ({
-          ...p,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
-          mutationFn: async () => ({ ok: true }),
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.createSnapshot"] }),
-      },
       requestReopen: {
         mutationOptions: (p: object = {}) => ({
           ...p,
@@ -140,15 +116,6 @@ function buildTRPC() {
           mutationFn: async () => ({ ok: true }),
         }),
         pathFilter: () => ({ queryKey: ["leadForm.requestReopen"] }),
-      },
-      // add-version-pin: exposed unconditionally in the component.
-      setVersionPinned: {
-        mutationOptions: (p: object = {}) => ({
-          ...p,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
-          mutationFn: async () => undefined,
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.setVersionPinned"] }),
       },
       crossAuthors: {
         queryOptions: () => ({
@@ -165,14 +132,6 @@ function buildTRPC() {
           queryFn: async () => [] as never[],
         }),
         pathFilter: () => ({ queryKey: ["leadForm.crossAuthorSections"] }),
-      },
-      getVersion: {
-        queryOptions: () => ({
-          queryKey: ["leadForm.getVersion"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (no awaitable work in the stub)
-          queryFn: async () => null,
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.getVersion"] }),
       },
     },
   };

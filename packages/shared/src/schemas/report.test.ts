@@ -41,7 +41,6 @@ import {
   submitSectionSchema,
   trafficLightStatusSchema,
   validateSubmitInput,
-  versionSnapshotSchema,
   weeklyReportReadModelSchema,
 } from "./report";
 
@@ -1158,75 +1157,6 @@ describe("stageAssignmentSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 17: versionSnapshotSchema (v4.0 D-67)
-// ---------------------------------------------------------------------------
-
-describe("versionSnapshotSchema", () => {
-  it("accepts valid version snapshot", () => {
-    const result = versionSnapshotSchema.safeParse({
-      id: uuid(),
-      reportSectionId: uuid(),
-      version: 1,
-      createdAt: new Date(),
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("coerces string date to Date", () => {
-    const result = versionSnapshotSchema.safeParse({
-      id: uuid(),
-      reportSectionId: uuid(),
-      version: 3,
-      createdAt: "2026-04-20T10:00:00.000Z",
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.createdAt).toBeInstanceOf(Date);
-    }
-  });
-
-  it("rejects version 0 (must be positive)", () => {
-    const result = versionSnapshotSchema.safeParse({
-      id: uuid(),
-      reportSectionId: uuid(),
-      version: 0,
-      createdAt: new Date(),
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects negative version", () => {
-    const result = versionSnapshotSchema.safeParse({
-      id: uuid(),
-      reportSectionId: uuid(),
-      version: -1,
-      createdAt: new Date(),
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects non-integer version", () => {
-    const result = versionSnapshotSchema.safeParse({
-      id: uuid(),
-      reportSectionId: uuid(),
-      version: 1.5,
-      createdAt: new Date(),
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects non-UUID reportSectionId", () => {
-    const result = versionSnapshotSchema.safeParse({
-      id: uuid(),
-      reportSectionId: "not-uuid",
-      version: 1,
-      createdAt: new Date(),
-    });
-    expect(result.success).toBe(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
 // Group 18: appSettingsSchema (v4.0 D-68)
 // ---------------------------------------------------------------------------
 
@@ -1821,15 +1751,11 @@ describe("myHistoryEntrySchema", () => {
       decisionCount: 2,
       priorityCount: 3,
       productCount: 3,
-      versionCount: 2,
-      latestVersion: 2,
-      latestVersionAt: "2026-05-15T17:33:11.222Z",
       trafficLights: { green: 2, yellow: 0, red: 1 },
     });
 
     expect(parsed.createdAt).toBeInstanceOf(Date);
     expect(parsed.lastEditAt).toBeInstanceOf(Date);
-    expect(parsed.latestVersionAt).toBeInstanceOf(Date);
     expect(parsed.itemCount).toBe(5);
     expect(parsed.riskCount).toBe(1);
     expect(parsed.archived).toBe(false);

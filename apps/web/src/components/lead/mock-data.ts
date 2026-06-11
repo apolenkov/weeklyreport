@@ -113,15 +113,6 @@ export interface ReportPeriod {
   productCount?: number;
 }
 
-export interface VersionSnapshot {
-  version: number;
-  timestamp: string;
-  itemCount: number;
-  riskCount: number;
-  decisionCount: number;
-  pinned: boolean;
-}
-
 export interface HistoryEntry {
   id: string;
   periodId: string;
@@ -721,33 +712,6 @@ export const MOCK_PERIODS: ReportPeriod[] = [
     productCount: 4,
     itemCount: 6,
     riskCount: 2,
-  },
-];
-
-export const MOCK_VERSIONS: VersionSnapshot[] = [
-  {
-    version: 3,
-    timestamp: "2 min ago",
-    itemCount: 11,
-    riskCount: 3,
-    decisionCount: 2,
-    pinned: false,
-  },
-  {
-    version: 2,
-    timestamp: "1h ago",
-    itemCount: 10,
-    riskCount: 2,
-    decisionCount: 2,
-    pinned: true,
-  },
-  {
-    version: 1,
-    timestamp: "3h ago",
-    itemCount: 8,
-    riskCount: 1,
-    decisionCount: 1,
-    pinned: false,
   },
 ];
 

@@ -1,12 +1,12 @@
 /**
  * Tests for the LeadForm container's mutation wiring (submit + revoke +
- * autosave + dirty-state). The four queries (getActive / byPeriod / versions /
+ * autosave + dirty-state). The three queries (getActive / byPeriod /
  * myHistory) are mocked at the tRPC-proxy boundary, mirroring the autosave
  * hook test harness.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
@@ -92,7 +92,6 @@ interface Capture {
   revokeOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
   saveDraftOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
   fillFromOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
-  restoreOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
 }
 
 function buildHarness(
@@ -102,15 +101,6 @@ function buildHarness(
     revokeFn?: () => Promise<unknown>;
     byPeriodReadOnly?: boolean;
     byPeriodQueryFn?: () => Promise<unknown>;
-    versions?: {
-      id: string;
-      reportSectionId: string;
-      version: number;
-      createdAt: Date;
-      itemCount?: number;
-      riskCount?: number;
-      decisionCount?: number;
-    }[];
   } = {},
 ) {
   const cap: Capture = {};
@@ -181,14 +171,6 @@ function buildHarness(
         }),
         pathFilter: () => ({ queryKey: ["leadForm.byPeriod"] }),
       },
-      versions: {
-        queryOptions: () => ({
-          queryKey: ["leadForm.versions"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC queryFn contract (TanStack expects a Promise-returning fn)
-          queryFn: async () => opts.versions ?? [],
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.versions"] }),
-      },
       revoke: {
         mutationOptions: (passed: NonNullable<Capture["revokeOpts"]>) => {
           cap.revokeOpts = passed;
@@ -217,42 +199,6 @@ function buildHarness(
         },
         pathFilter: () => ({ queryKey: ["leadForm.fillFrom"] }),
       },
-      restoreVersion: {
-        mutationOptions: (passed: NonNullable<Capture["restoreOpts"]>) => {
-          cap.restoreOpts = passed;
-          return {
-            ...passed,
-            // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC mutationFn contract (TanStack expects a Promise-returning fn)
-            mutationFn: async (vars: unknown) => {
-              calls.push({ type: "restoreVersion", vars });
-              return { ok: true };
-            },
-          };
-        },
-        pathFilter: () => ({ queryKey: ["leadForm.restoreVersion"] }),
-      },
-      // Save Version (Block 2): manual snapshot button + every-N-autosave
-      // hybrid policy. The component reads this mutation factory
-      // unconditionally, so the mock has to expose it even when no test
-      // exercises the path.
-      createSnapshot: {
-        mutationOptions: (
-          passed: {
-            onSuccess?: () => void;
-            onError?: (e: unknown) => void;
-          } = {},
-        ) => {
-          return {
-            ...passed,
-            // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC mutationFn contract (TanStack expects a Promise-returning fn)
-            mutationFn: async (vars: unknown) => {
-              calls.push({ type: "createSnapshot", vars });
-              return { ok: true };
-            },
-          };
-        },
-        pathFilter: () => ({ queryKey: ["leadForm.createSnapshot"] }),
-      },
       // M6 Lead-side reopen request — added after the original mock
       // shape was set. The component reads
       // `trpc.leadForm.requestReopen.mutationOptions` unconditionally
@@ -276,28 +222,6 @@ function buildHarness(
         },
         pathFilter: () => ({ queryKey: ["leadForm.requestReopen"] }),
       },
-      // add-version-pin: pin/unpin toggle. The component calls
-      // `trpc.leadForm.setVersionPinned.mutationOptions` unconditionally on
-      // every render (hook is at the top of the component), so the mock must
-      // expose this factory even when no test exercises it.
-      setVersionPinned: {
-        mutationOptions: (
-          passed: {
-            onSuccess?: () => void;
-            onError?: (e: unknown) => void;
-          } = {},
-        ) => {
-          return {
-            ...passed,
-            // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC mutationFn contract (TanStack expects a Promise-returning fn)
-            mutationFn: async (vars: unknown) => {
-              calls.push({ type: "setVersionPinned", vars });
-              return undefined;
-            },
-          };
-        },
-        pathFilter: () => ({ queryKey: ["leadForm.setVersionPinned"] }),
-      },
       crossAuthors: {
         queryOptions: () => ({
           queryKey: ["leadForm.crossAuthors"],
@@ -313,15 +237,6 @@ function buildHarness(
           queryFn: async () => [] as never[],
         }),
         pathFilter: () => ({ queryKey: ["leadForm.crossAuthorSections"] }),
-      },
-      // F3.4: snapshot viewer — returns null (no snapshot loaded in unit tests).
-      getVersion: {
-        queryOptions: () => ({
-          queryKey: ["leadForm.getVersion"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC queryFn contract (TanStack expects a Promise-returning fn)
-          queryFn: async () => null,
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.getVersion"] }),
       },
     },
     review: {
@@ -509,274 +424,29 @@ describe("LeadForm mutation wiring", () => {
     expect(toast.success).toHaveBeenCalledWith(
       "Form filled from selected period",
     );
-    expect(invalidateSpy.mock.calls.length).toBeGreaterThanOrEqual(3);
+    // invalidateLeadForm covers reports.getActive + leadForm.byPeriod.
+    expect(invalidateSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("restoreVersion error: fires toast.error with the error message", async () => {
-    const { Wrapper, cap } = buildHarness();
-    render(
-      <Wrapper>
-        <LeadForm />
-      </Wrapper>,
-    );
-    await waitFor(() => expect(cap.restoreOpts).toBeDefined());
-
-    expect(cap.restoreOpts).toBeDefined();
-    expectDefined(cap.restoreOpts).onError?.(new Error("Version not found"));
-    expect(toast.error).toHaveBeenCalledWith("Version not found");
-  });
-
-  it("restoreVersion: window.confirm guards dirty state and cancels mutation", async () => {
-    // Provide a version snapshot so the Version History modal renders a
-    // Restore button that we can click.
-    const confirmSpy = vi
-      .spyOn(window, "confirm")
-      .mockImplementation(() => false);
-    const versionId = "88888888-8888-8888-8888-888888888888";
-
-    const { Wrapper, calls } = buildHarness({
-      versions: [
-        {
-          id: versionId,
-          reportSectionId: SECTION_ID,
-          version: 2,
-          createdAt: new Date("2026-04-20T10:00:00Z"),
-        },
-        {
-          id: "99999999-9999-9999-9999-999999999999",
-          reportSectionId: SECTION_ID,
-          version: 1,
-          createdAt: new Date("2026-04-19T10:00:00Z"),
-        },
-      ],
-    });
+  it("toolbar renders the inert version-history ComingSoon control", async () => {
+    // defer-versions-coming-soon: the version-history UI is removed; the
+    // toolbar slot carries a disabled ComingSoon control instead.
+    const { Wrapper } = buildHarness();
     render(
       <Wrapper>
         <LeadForm />
       </Wrapper>,
     );
 
-    // Make the form dirty by clicking a stage chip + picking a different
-    // status. This is the path that survives the modal-driven CRUD
-    // refactor — inline decision/risk inputs no longer exist on the
-    // page so we can't drive them directly.
-    // findByText settles the query cascade before we look for stage chips.
-    await screen.findByText("Autosaved");
-    const editableChip = screen.getAllByRole("button").find((b) => {
-      const label = b.getAttribute("aria-label") ?? "";
-      return (
-        /^(Planning|Analysis|Design|Dev|Testing|DevOps|Support):/.test(label) &&
-        b.getAttribute("aria-disabled") !== "true"
-      );
-    }) as HTMLButtonElement | undefined;
-    expect(editableChip).toBeDefined();
-    act(() => {
-      expectDefined(editableChip).click();
-    });
-    await waitFor(() =>
-      expect(screen.getAllByRole("menuitem").length).toBeGreaterThan(0),
-    );
-    const menuitem = screen.getAllByRole("menuitem").find((m) => {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- DOM textContent is nullable; defensive default in a test helper
-      const label = m.textContent ?? "";
-      return (
-        /On Track|At Risk|Blocked|Clear/i.test(label) &&
-        !label.includes("current")
-      );
-    });
-    expect(menuitem).toBeDefined();
-    act(() => {
-      expectDefined(menuitem).click();
-    });
-    // Wait for the dirty state to settle before opening the version history.
-    await waitFor(() =>
-      expect(screen.queryByText(/Pending|Saving/i)).not.toBeNull(),
-    );
-
-    // Open the version history modal via its trigger button.
-    const historyTrigger = screen.getByTitle(
-      /Snapshots and edits within this report/i,
-    );
-    act(() => {
-      historyTrigger.click();
-    });
-
-    // Click "Restore" on the older (non-latest) version.
-    const restoreBtn = screen.getByRole("button", { name: /^Restore$/ });
-    act(() => {
-      restoreBtn.click();
-    });
-
-    // The dirty guard fired (confirm returned false) so the mutation never ran.
-    expect(confirmSpy).toHaveBeenCalled();
-    expect(calls.filter((c) => c.type === "restoreVersion")).toHaveLength(0);
-
-    confirmSpy.mockRestore();
-  });
-
-  it("version arrows change only the displayed version and do not restore", async () => {
-    const { Wrapper, calls } = buildHarness({
-      versions: [
-        {
-          id: "88888888-8888-8888-8888-888888888888",
-          reportSectionId: SECTION_ID,
-          version: 2,
-          createdAt: new Date("2026-04-20T10:00:00Z"),
-          itemCount: 2,
-          riskCount: 1,
-          decisionCount: 1,
-        },
-        {
-          id: "99999999-9999-9999-9999-999999999999",
-          reportSectionId: SECTION_ID,
-          version: 1,
-          createdAt: new Date("2026-04-19T10:00:00Z"),
-          itemCount: 1,
-          riskCount: 0,
-          decisionCount: 0,
-        },
-      ],
-    });
-    render(
-      <Wrapper>
-        <LeadForm />
-      </Wrapper>,
-    );
-
-    // Wait for the version badge to appear with the initial version.
-    await waitFor(() =>
-      expect(
-        screen.getByTitle(/Snapshots and edits within this report/i),
-      ).toHaveTextContent("v2"),
-    );
-
-    act(() => {
-      screen.getByRole("button", { name: /^Previous version$/i }).click();
-    });
-    await waitFor(() =>
-      expect(
-        screen.getByTitle(/Snapshots and edits within this report/i),
-      ).toHaveTextContent("v1"),
-    );
-
-    expect(
-      screen.getByTitle(/Snapshots and edits within this report/i),
-    ).toHaveTextContent("v1");
-    expect(calls.filter((c) => c.type === "restoreVersion")).toHaveLength(0);
-  });
-
-  it("returning from a snapshot does not reopen the Risk or Decision dialog", async () => {
-    // fix-section-add-signal-reset (task 2.4): pins the 4-counter
-    // onViewVersion reset at integration level. Stale risks/decisions
-    // add-signal counters must not reopen their create dialogs after a
-    // snapshot round-trip.
-    const { Wrapper } = buildHarness({
-      versions: [
-        {
-          id: "88888888-8888-8888-8888-888888888888",
-          reportSectionId: SECTION_ID,
-          version: 2,
-          createdAt: new Date("2026-04-20T10:00:00Z"),
-        },
-        {
-          id: "99999999-9999-9999-9999-999999999999",
-          reportSectionId: SECTION_ID,
-          version: 1,
-          createdAt: new Date("2026-04-19T10:00:00Z"),
-        },
-      ],
-    });
-    render(
-      <Wrapper>
-        <LeadForm />
-      </Wrapper>,
-    );
-
-    // Settle the query cascade before driving the section buttons.
     await screen.findByText("Autosaved");
 
-    // "+ Add Risk" → create dialog opens; cancel leaves the counter stale.
-    act(() => {
-      screen.getByRole("button", { name: /\+ Add Risk/ }).click();
-    });
-    const riskDialog = await screen.findByRole("dialog");
-    act(() => {
-      within(riskDialog)
-        .getByRole("button", { name: /^Cancel$/ })
-        .click();
-    });
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-
-    // "+ Add Decision" → same: open, cancel, counter stays non-zero.
-    act(() => {
-      screen.getByRole("button", { name: /\+ Add Decision/ }).click();
-    });
-    const decisionDialog = await screen.findByRole("dialog");
-    act(() => {
-      within(decisionDialog)
-        .getByRole("button", { name: /^Cancel$/ })
-        .click();
-    });
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-
-    // View a snapshot version — the surface goes read-only.
-    act(() => {
-      screen.getByRole("button", { name: /^Previous version$/i }).click();
-    });
-    await screen.findByRole("button", { name: /^Back to current$/i });
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-
-    // Return to the editable form — no dialog may open uninvited.
-    act(() => {
-      screen.getByRole("button", { name: /^Back to current$/i }).click();
-    });
-    await screen.findByRole("button", { name: /\+ Add Risk/ });
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
-
-  it("read-only periods hide destructive version restore", async () => {
-    const { Wrapper } = buildHarness({
-      byPeriodReadOnly: true,
-      versions: [
-        {
-          id: "88888888-8888-8888-8888-888888888888",
-          reportSectionId: SECTION_ID,
-          version: 2,
-          createdAt: new Date("2026-04-20T10:00:00Z"),
-          itemCount: 2,
-          riskCount: 1,
-          decisionCount: 1,
-        },
-        {
-          id: "99999999-9999-9999-9999-999999999999",
-          reportSectionId: SECTION_ID,
-          version: 1,
-          createdAt: new Date("2026-04-19T10:00:00Z"),
-          itemCount: 1,
-          riskCount: 0,
-          decisionCount: 0,
-        },
-      ],
-    });
-    render(
-      <Wrapper>
-        <LeadForm />
-      </Wrapper>,
+    const control = screen.getByTestId("version-coming-soon");
+    expect(control).toHaveAttribute(
+      "aria-label",
+      "Version history is coming soon",
     );
-
-    // Wait for the query cascade to settle — the history trigger is rendered
-    // only after byPeriod resolves.
-    const historyTrigger = await screen.findByTitle(
-      /Snapshots and edits within this report/i,
-    );
-    act(() => {
-      historyTrigger.click();
-    });
-
-    expect(
-      screen.getByRole("dialog", { name: "Version history" }),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Restore$/ })).toBeNull();
+    expect(control).toHaveAttribute("aria-disabled", "true");
+    expect(control).toHaveAttribute("title", "Coming Soon");
   });
 
   it("submitted-section action: Lead sees Request Reopen, not Revoke", async () => {

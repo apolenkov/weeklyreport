@@ -182,7 +182,6 @@ async function main() {
         item: (await tx.item.deleteMany({})).count,
         stageStatus: (await tx.stageStatus.deleteMany({})).count,
         projectStatus: (await tx.projectStatus.deleteMany({})).count,
-        versionSnapshot: (await tx.versionSnapshot.deleteMany({})).count,
         reopenRequest: (await tx.reopenRequest.deleteMany({})).count,
         reportSection: (await tx.reportSection.deleteMany({})).count,
         pdfExportJob: (await tx.pdfExportJob.deleteMany({})).count,
