@@ -131,7 +131,9 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
       await repo.getWeeklyReport(REPORT_ID, session("head", GROUP_A_ID)),
     );
 
-    const productIds = result.portfolioOverview.map((p) => p.productId);
+    const productIds = result.readModel.portfolioOverview.map(
+      (p) => p.productId,
+    );
     expect(productIds).toContain(PROJECT_ID);
   });
 
@@ -144,7 +146,9 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
       await repo.getWeeklyReport(REPORT_ID, session("head", GROUP_B_ID)),
     );
 
-    const productIds = result.portfolioOverview.map((p) => p.productId);
+    const productIds = result.readModel.portfolioOverview.map(
+      (p) => p.productId,
+    );
     expect(productIds).not.toContain(PROJECT_ID);
   });
 
@@ -167,12 +171,12 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
       await repo.getWeeklyReport(REPORT_ID, session("head", GROUP_B_ID)),
     );
 
-    expect(resultA.portfolioOverview.map((p) => p.productId)).not.toContain(
-      ORPHAN_ID,
-    );
-    expect(resultB.portfolioOverview.map((p) => p.productId)).not.toContain(
-      ORPHAN_ID,
-    );
+    expect(
+      resultA.readModel.portfolioOverview.map((p) => p.productId),
+    ).not.toContain(ORPHAN_ID);
+    expect(
+      resultB.readModel.portfolioOverview.map((p) => p.productId),
+    ).not.toContain(ORPHAN_ID);
   });
 
   it("admin session is unscoped and sees every project regardless of GroupProduct edges", async () => {
@@ -190,7 +194,7 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
       await repo.getWeeklyReport(REPORT_ID, adminSession),
     );
 
-    const ids = result.portfolioOverview.map((p) => p.productId);
+    const ids = result.readModel.portfolioOverview.map((p) => p.productId);
     expect(ids).toContain(PROJECT_ID);
     expect(ids).toContain(ORPHAN_ID);
   });

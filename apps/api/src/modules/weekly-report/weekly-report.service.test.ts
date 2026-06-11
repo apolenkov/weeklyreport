@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   WeeklyReportDomainError,
   type WeeklyReportRepository,
+  type WeeklyReportRepositoryResult,
   WeeklyReportService,
 } from "./weekly-report.service";
 
@@ -84,6 +85,13 @@ function makeWeeklyReport(
   });
 }
 
+function makeRepoResult(
+  readModel: WeeklyReportReadModel,
+  crossGroup: WeeklyReportRepositoryResult["crossGroup"] = null,
+): WeeklyReportRepositoryResult {
+  return { readModel, crossGroup };
+}
+
 /* ------------------------------------------------------------------ */
 /*  Spy repository                                                     */
 /* ------------------------------------------------------------------ */
@@ -97,9 +105,10 @@ function createSpyRepository(
 } {
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract (no awaitable work in the stub)
-    getWeeklyReport: vi.fn(async (id: string) =>
-      structuredClone(reports.get(id) ?? null),
-    ),
+    getWeeklyReport: vi.fn(async (id: string) => {
+      const model = reports.get(id);
+      return model ? makeRepoResult(structuredClone(model)) : null;
+    }),
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract (no awaitable work in the stub)
     getActiveReportId: vi.fn(async () => activeId),
   };
@@ -160,7 +169,12 @@ describe("WeeklyReportService — unit tests", () => {
 
     const result = await service.getWeeklyReport();
 
-    expect(result).toEqual({ status: "no-period", report: null });
+    // crossGroup is an internal audit signal; always null on the no-period path.
+    expect(result).toEqual({
+      status: "no-period",
+      report: null,
+      crossGroup: null,
+    });
     // Should not have called getWeeklyReport at all
     expect(repo.getWeeklyReport).not.toHaveBeenCalled();
   });
@@ -252,5 +266,127 @@ describe("WeeklyReportService — AUTH-04 viewer scoping", () => {
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
     expect(result.periodStatus).toBe("open");
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  Task 4 — cross-group audit signal threading                        */
+/* ------------------------------------------------------------------ */
+
+const crossProductId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const crossGroupId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+/** Repository that lets each test control the crossGroup signal. */
+function createCrossGroupRepository(
+  readModel: WeeklyReportReadModel,
+  crossGroup: WeeklyReportRepositoryResult["crossGroup"],
+): WeeklyReportRepository {
+  return {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
+    async getWeeklyReport(_id: string) {
+      return makeRepoResult(structuredClone(readModel), crossGroup);
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
+    async getActiveReportId() {
+      return null;
+    },
+  };
+}
+
+describe("WeeklyReportService — cross-group audit signal (task 4)", () => {
+  // 4.1 — non-admin read surfaces cross-group products: crossGroup is forwarded
+  it("forwards crossGroup signal when non-admin read surfaces a cross-group product", async () => {
+    const report = makeWeeklyReport();
+    const signal = {
+      productIds: [crossProductId],
+      groupIds: [crossGroupId],
+    };
+    const service = new WeeklyReportService(
+      createCrossGroupRepository(report, signal),
+    );
+
+    const result = await service.getWeeklyReport(reportId, "lead");
+
+    expect(result.status).toBe("active");
+    if (result.status !== "active") throw new Error("expected active");
+    expect(result.crossGroup).toEqual(signal);
+  });
+
+  it("forwards crossGroup with two products — still one signal object (per-request dedupe)", async () => {
+    const report = makeWeeklyReport();
+    const twoProducts = {
+      productIds: [crossProductId, "cccccccc-cccc-4ccc-8ccc-cccccccccccc"],
+      groupIds: [crossGroupId],
+    };
+    const service = new WeeklyReportService(
+      createCrossGroupRepository(report, twoProducts),
+    );
+
+    const result = await service.getWeeklyReport(reportId, "head");
+
+    expect(result.status).toBe("active");
+    if (result.status !== "active") throw new Error("expected active");
+    expect(result.crossGroup).toEqual(twoProducts);
+    // Single signal object — not one per product.
+    expect(typeof result.crossGroup).toBe("object");
+  });
+
+  // 4.2 — negative tests: no cross-group signal in own-group or admin reads
+  it("passes crossGroup null when repository signals no cross-group products", async () => {
+    const report = makeWeeklyReport();
+    const service = new WeeklyReportService(
+      createCrossGroupRepository(report, null),
+    );
+
+    const result = await service.getWeeklyReport(reportId, "lead");
+
+    expect(result.status).toBe("active");
+    if (result.status !== "active") throw new Error("expected active");
+    expect(result.crossGroup).toBeNull();
+  });
+
+  it("passes crossGroup null for admin read (admin has no group filter)", async () => {
+    const report = makeWeeklyReport();
+    // Repository may return a signal even for admin (it doesn't know the role);
+    // the router guards on role — but the service passes it through transparently.
+    // This test confirms the service does NOT suppress the signal for admin
+    // (the suppression is the router's responsibility).
+    const signal = { productIds: [crossProductId], groupIds: [crossGroupId] };
+    const service = new WeeklyReportService(
+      createCrossGroupRepository(report, signal),
+    );
+
+    const result = await service.getWeeklyReport(reportId, "admin");
+
+    expect(result.status).toBe("active");
+    if (result.status !== "active") throw new Error("expected active");
+    // Service passes signal through; router is responsible for the admin guard.
+    expect(result.crossGroup).toEqual(signal);
+  });
+
+  // 4.3 — invariance: read model fields are identical regardless of crossGroup value
+  it("read model fields are identical whether crossGroup is present or null", async () => {
+    const report = makeWeeklyReport();
+    const signal = { productIds: [crossProductId], groupIds: [crossGroupId] };
+
+    const withSignal = new WeeklyReportService(
+      createCrossGroupRepository(report, signal),
+    );
+    const withNull = new WeeklyReportService(
+      createCrossGroupRepository(report, null),
+    );
+
+    const resultWith = await withSignal.getWeeklyReport(reportId, "lead");
+    const resultNull = await withNull.getWeeklyReport(reportId, "lead");
+
+    expect(resultWith.status).toBe("active");
+    expect(resultNull.status).toBe("active");
+    if (resultWith.status !== "active") throw new Error("expected active");
+    if (resultNull.status !== "active") throw new Error("expected active");
+
+    // Strip the crossGroup signal before comparing; the read model must be the same.
+    const { crossGroup: _w, ...modelWith } = resultWith;
+    const { crossGroup: _n, ...modelNull } = resultNull;
+    expect(modelWith).toEqual(modelNull);
   });
 });

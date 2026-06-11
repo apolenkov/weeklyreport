@@ -1,9 +1,32 @@
 import type {
   Role,
   UserSession,
-  WeeklyReportGetResponse,
   WeeklyReportReadModel,
 } from "@customreport/shared";
+
+/**
+ * Cross-group signal returned by the repository when a non-admin read
+ * surfaces at least one product from another group via the explicit
+ * GroupProduct join. The router emits `scopeAccessed` when this is
+ * non-empty and the caller is not admin.
+ */
+export interface CrossGroupSignal {
+  readonly productIds: readonly string[];
+  readonly groupIds: readonly string[];
+}
+
+/**
+ * Internal result type for `WeeklyReportService.getWeeklyReport`.
+ * Extends the public `WeeklyReportGetResponse` with an optional
+ * cross-group audit signal that the router consumes before forwarding
+ * the public shape to tRPC clients.
+ */
+export type WeeklyReportServiceResult =
+  | { status: "no-period"; report: null; crossGroup: null }
+  | (WeeklyReportReadModel & {
+      status: "active";
+      crossGroup: CrossGroupSignal | null;
+    });
 
 import { createAppLogger } from "../../lib/logger.js";
 
@@ -24,11 +47,22 @@ export type WeeklyReportScopeSession = Pick<
   "role" | "reportingGroupId" | "viewerGroupAccess"
 >;
 
+/**
+ * Result type for `WeeklyReportRepository.getWeeklyReport`.
+ * The `crossGroup` signal is non-null only when the session is non-admin
+ * and at least one returned product is cross-group; the router uses it
+ * to emit the `scopeAccessed` audit event.
+ */
+export interface WeeklyReportRepositoryResult {
+  readonly readModel: WeeklyReportReadModel;
+  readonly crossGroup: CrossGroupSignal | null;
+}
+
 export interface WeeklyReportRepository {
   getWeeklyReport(
     reportId: string,
     session?: WeeklyReportScopeSession,
-  ): Promise<WeeklyReportReadModel | null>;
+  ): Promise<WeeklyReportRepositoryResult | null>;
   getActiveReportId(): Promise<string | null>;
 }
 
@@ -76,26 +110,28 @@ export class WeeklyReportService {
     reportId?: string,
     role?: Role,
     session?: WeeklyReportScopeSession,
-  ): Promise<WeeklyReportGetResponse> {
+  ): Promise<WeeklyReportServiceResult> {
     const resolvedId = reportId ?? (await this.repository.getActiveReportId());
 
     if (!resolvedId) {
       // R3a: no active period — return sentinel instead of throwing NOT_FOUND.
       this.logger.info("weekly report: no active period");
-      return { status: "no-period", report: null };
+      return { status: "no-period", report: null, crossGroup: null };
     }
 
-    const report = await this.repository.getWeeklyReport(resolvedId, session);
+    const result = await this.repository.getWeeklyReport(resolvedId, session);
 
-    if (!report) {
+    if (!result) {
       throw new WeeklyReportDomainError(`Report ${resolvedId} not found.`);
     }
 
-    if (role === "viewer" && report.periodStatus !== "published") {
+    const { readModel, crossGroup } = result;
+
+    if (role === "viewer" && readModel.periodStatus !== "published") {
       throw new WeeklyReportDomainError(`Report ${resolvedId} not found.`);
     }
 
     this.logger.info("weekly report fetched", { reportId: resolvedId, role });
-    return { status: "active", ...report };
+    return { status: "active", ...readModel, crossGroup };
   }
 }

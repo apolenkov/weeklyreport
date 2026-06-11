@@ -1853,7 +1853,27 @@ export function createAppRouter(deps: RouterDeps) {
                 role: ctx.session.role,
                 requestedReportId,
               });
-              return result;
+              // crossGroup is an internal audit signal — strip before sending.
+              const { crossGroup: _crossGroup, ...publicResult } = result;
+              return publicResult;
+            }
+            // D2/D3: emit scopeAccessed once when a non-admin read surfaces
+            // cross-group products. crossGroup is internal — strip before return.
+            const { crossGroup, ...publicResult } = result;
+            if (
+              crossGroup !== null &&
+              ctx.session.role !== "admin" &&
+              crossGroup.productIds.length > 0
+            ) {
+              ctx.auditLogger.scopeAccessed({
+                userId: ctx.session.userId,
+                role: ctx.session.role,
+                ip: ctx.ip,
+                accessedScope: "weeklyReport.project",
+                productIds: crossGroup.productIds,
+                groupIds: crossGroup.groupIds,
+                resourceId: result.reportId,
+              });
             }
             ctx.logger.info("weekly report load succeeded", {
               phase: "weekly-report.load",
@@ -1866,7 +1886,7 @@ export function createAppRouter(deps: RouterDeps) {
               submissionCount: result.submissionCount,
               totalLeads: result.totalLeads,
             });
-            return result;
+            return publicResult;
           } catch (error) {
             const errorInfo =
               error instanceof Error
