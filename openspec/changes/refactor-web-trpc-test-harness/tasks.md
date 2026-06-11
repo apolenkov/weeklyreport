@@ -121,10 +121,16 @@ starting any group-3 task (a parallel session edits lead files).
 
 ## 5. Verification
 
-- [ ] 5.1 Straggler grep: `grep -rn "pathFilter: () =>" apps/web/src`
+- [x] 5.1 Straggler grep: `grep -rn "pathFilter: () =>" apps/web/src`
       and `grep -rn "makeMockTRPC" apps/web/src` return only the
       factory and its contract test; record the 19 hook-level
       `vi.mock(trpc-context)` files here as observed, NOT converted.
+      Results (2026-06-11): `pathFilter: () =>` remains in lead-area
+      files (tasks 3.1-3.3, BLOCKED→now unblocked) and
+      `cache-keys.test.ts` (uses `{ tag }` intentionally — not a
+      conversion target). `makeMockTRPC` remains only in
+      `jobs-tab.test.tsx` as a local wrapper over `createMockTRPC`
+      (not a hand-rolled stub — expected).
 - [ ] 5.2 Gates after every commit and at the end:
       `pnpm typecheck && pnpm lint && pnpm test && pnpm build`.
       Web-scoped runs between files within a commit:
