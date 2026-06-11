@@ -15,6 +15,12 @@ import type { ReportSectionsRepository } from "./report-sections.service";
  * `authorRole`) and the project's stage assignments scoped to the
  * section author (so each project's `ownedStages[]` can be derived
  * without a second round-trip).
+ *
+ * fix-lead-surface-name-resolution: items/risks/decisions also ride their
+ * `project.name` so the read model can emit name-only `referencedProjects`
+ * for rows referencing a project the author owns no stage on — without a
+ * second query and without widening `projects` (which drives product
+ * cards, ProjectStatus writes, and submit validation).
  */
 export const reportSectionFullInclude = {
   author: {
@@ -38,9 +44,9 @@ export const reportSectionFullInclude = {
   stageStatuses: {
     include: { stage: true },
   },
-  items: true,
-  risks: true,
-  decisions: true,
+  items: { include: { project: { select: { name: true } } } },
+  risks: { include: { project: { select: { name: true } } } },
+  decisions: { include: { project: { select: { name: true } } } },
 } as const;
 
 export type PrismaReportSectionWithRelations = NonNullable<
@@ -84,6 +90,10 @@ export type PrismaReportSectionWithRelations = NonNullable<
     completed: boolean | null;
     priorityRank: number | null;
     stageNames: string[];
+    // fix-lead-surface-name-resolution: ridden along by
+    // `reportSectionFullInclude`; optional so legacy fixtures that
+    // pre-date the include widening still map (name then unresolvable).
+    project?: { name: string };
   }[];
   risks: {
     id: string;
@@ -93,6 +103,7 @@ export type PrismaReportSectionWithRelations = NonNullable<
     mitigation: string;
     severity: string;
     stageNames: string[];
+    project?: { name: string };
   }[];
   decisions: {
     id: string;
@@ -103,6 +114,7 @@ export type PrismaReportSectionWithRelations = NonNullable<
     resolvedAt: Date | null;
     stageNames: string[];
     productId: string | null;
+    project?: { name: string };
   }[];
 };
 
@@ -163,6 +175,32 @@ export function mapPrismaToReportSection(
     }
   }
 
+  // fix-lead-surface-name-resolution: name-only entries for projects that
+  // items/risks/decisions reference but the author owns no stage on, so
+  // the lead-surface mappers can resolve the real product name instead of
+  // "Unknown"/"Group". Names ride the row's `project` relation (no extra
+  // query). Stage-owned projects are excluded — they already carry their
+  // name in `projects` and win on conflict (design Decision 3). Archived
+  // referenced projects resolve too (design Open Question 2): the name is
+  // not secret and a placeholder would misread as data loss.
+  const referencedNamesById = new Map<string, string>();
+  const referencedRows = [
+    ...row.items.map((i) => ({ projectId: i.projectId, project: i.project })),
+    ...row.risks.map((r) => ({ projectId: r.projectId, project: r.project })),
+    ...row.decisions.map((d) => ({
+      projectId: d.productId,
+      project: d.project,
+    })),
+  ];
+  for (const { projectId, project } of referencedRows) {
+    if (!projectId || !project?.name) continue;
+    if (assignmentsByProjectId.has(projectId)) continue;
+    referencedNamesById.set(projectId, project.name);
+  }
+  const referencedProjects = [...referencedNamesById.entries()]
+    .map(([projectId, projectName]) => ({ projectId, projectName }))
+    .sort((a, b) => a.projectName.localeCompare(b.projectName, "ru"));
+
   return reportSectionReadModelSchema.parse({
     reportSectionId: row.id,
     reportId: row.reportId,
@@ -202,6 +240,7 @@ export function mapPrismaToReportSection(
         };
       })
       .sort((a, b) => a.projectName.localeCompare(b.projectName, "ru")),
+    referencedProjects,
     items: row.items.map((i) => ({
       id: i.id,
       projectId: i.projectId,

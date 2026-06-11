@@ -143,5 +143,27 @@ the server-aggregated overview won on conflict.
    `mapLeadProducts` (`lead-form.ts:386-407`)? If yes, pass a name-only
    `Map` to the four mappers instead of widening the array. Resolve by
    reading `mapLeadProducts` and the product-card component before coding.
+
+   **RESOLVED (2026-06-11, implementation): yes, it leaks — three ways.**
+   (a) `mapLeadProducts` maps _every_ `section.projects` entry to a product
+   card, so a referenced-only project would render an empty 7-stage grid;
+   (b) `saveSection` (`report-sections.prisma-repository.ts`) round-trips
+   `section.projects` into `projectStatus.createMany`, so widening would
+   write spurious `ProjectStatus` rows on every save; (c)
+   `validateSubmitInput` (`packages/shared/section.schema.ts`) requires a
+   traffic light AND a current-week item per `section.projects` entry, so
+   widening would block submit. Therefore the read model carries a separate
+   name-only `referencedProjects` array (optional, additive); only
+   `buildProjectIndex` — the lookup all four mappers share — consumes it.
+   Stage-owned entries win on conflict (Decision 3). Refinement over the
+   sketched `project.findMany`: items/risks/decisions already have a Prisma
+   `project` relation, so names ride along in `reportSectionFullInclude`
+   with zero extra queries and `mapPrismaToReportSection` stays pure.
+
 2. Should a referenced-only _archived_ project resolve its name or stay a
    placeholder? Lean: resolve; confirm with the user during acceptance.
+
+   **RESOLVED (2026-06-11, implementation): resolve the name** (the lean) —
+   the relation include returns the project regardless of `archived`; pinned
+   by a unit test on `mapPrismaToReportSection`. Flagged for user
+   confirmation at acceptance.

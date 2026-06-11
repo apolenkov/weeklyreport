@@ -454,6 +454,138 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
   });
 });
 
+// fix-lead-surface-name-resolution: cards referencing a project the section
+// author owns no stage on must resolve the real name from the read model's
+// name-only `referencedProjects`, never the placeholder. The placeholder
+// survives only for an id the entire name source cannot resolve.
+describe("report-wide name resolution (referencedProjects)", () => {
+  const FOREIGN_PROJECT = "66666666-6666-4666-8666-666666666666";
+  const TRULY_UNKNOWN = "99999999-9999-4999-8999-999999999999";
+
+  function crossStageSection(
+    overrides: Partial<ReportSectionReadModel> = {},
+  ): ReportSectionReadModel {
+    return baseSection({
+      projects: [
+        { projectId: PROJECT_A, projectName: "CRM", trafficLight: "green" },
+      ],
+      referencedProjects: [
+        { projectId: FOREIGN_PROJECT, projectName: "Payments Gateway" },
+      ],
+      ...overrides,
+    });
+  }
+
+  it("resolves a risk's product name from referencedProjects when the author owns no stage on it", () => {
+    const section = crossStageSection({
+      risks: [
+        {
+          id: "r1",
+          projectId: FOREIGN_PROJECT,
+          risk: "Cross-stage risk",
+          impact: "Impact",
+          mitigation: "Mitigation",
+        },
+      ],
+    });
+
+    expect(mapLeadRisks(section).at(0)?.productName).toBe("Payments Gateway");
+  });
+
+  it("resolves a decision's product name from referencedProjects instead of 'Group'", () => {
+    const section = crossStageSection({
+      decisions: [
+        {
+          id: "d1",
+          text: "Cross-stage decision",
+          owner: "Owner",
+          impact: "Impact",
+          productId: FOREIGN_PROJECT,
+        },
+      ],
+    });
+
+    expect(mapLeadDecisions(section).at(0)?.productName).toBe(
+      "Payments Gateway",
+    );
+  });
+
+  it("resolves item and priority product names from referencedProjects", () => {
+    const section = crossStageSection({
+      items: [
+        {
+          id: "i1",
+          projectId: FOREIGN_PROJECT,
+          type: "current",
+          text: "Cross-stage item",
+          tag: "x",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+          priorityRank: 1,
+        },
+      ],
+    });
+
+    expect(mapLeadItems(section, "current").at(0)?.productName).toBe(
+      "Payments Gateway",
+    );
+    expect(mapLeadPriorities(section).at(0)?.productName).toBe(
+      "Payments Gateway",
+    );
+  });
+
+  it("keeps the placeholder for an id the entire name source cannot resolve", () => {
+    const section = crossStageSection({
+      risks: [
+        {
+          id: "r1",
+          projectId: TRULY_UNKNOWN,
+          risk: "Foreign risk",
+          impact: "Impact",
+          mitigation: "Mitigation",
+        },
+      ],
+      decisions: [
+        {
+          id: "d1",
+          text: "Foreign decision",
+          owner: "Owner",
+          impact: "Impact",
+          productId: TRULY_UNKNOWN,
+        },
+      ],
+    });
+
+    expect(mapLeadRisks(section).at(0)?.productName).toBe("Unknown");
+    expect(mapLeadDecisions(section).at(0)?.productName).toBe("Group");
+  });
+
+  it("prefers the stage-owned entry when the same id is also referenced (Decision 3)", () => {
+    const section = crossStageSection({
+      referencedProjects: [{ projectId: PROJECT_A, projectName: "Stale Copy" }],
+      risks: [
+        {
+          id: "r1",
+          projectId: PROJECT_A,
+          risk: "Owned-project risk",
+          impact: "Impact",
+          mitigation: "Mitigation",
+        },
+      ],
+    });
+
+    expect(mapLeadRisks(section).at(0)?.productName).toBe("CRM");
+  });
+
+  it("does not add a stray product card for a referenced-only project", () => {
+    const section = crossStageSection();
+    const products = mapLeadProducts(section);
+
+    expect(products).toHaveLength(1);
+    expect(products.at(0)?.id).toBe(PROJECT_A);
+  });
+});
+
 describe("mapLeadPeriods", () => {
   it("flags the active report id as isCurrent and submitted sections as isSubmitted", () => {
     const history: MyHistoryEntry[] = [
