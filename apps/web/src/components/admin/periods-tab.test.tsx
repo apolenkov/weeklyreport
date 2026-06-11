@@ -714,17 +714,16 @@ describe("PeriodsTab — focus management (autofocus-admin-dialogs)", () => {
     vi.clearAllMocks();
   });
 
-  it("period-start input is programmatically focusable on open (structural proxy for autoFocus)", async () => {
+  it("period-start input receives focus when the dialog opens (autoFocus)", async () => {
     const user = userEvent.setup();
     renderTab();
 
     await user.click(await screen.findByTestId("periods-new-button"));
 
     const input = screen.getByTestId("periods-create-start");
-    // jsdom does not honour autoFocus for conditionally-rendered elements;
-    // verify the structural capability: the input accepts programmatic focus.
-    input.focus();
-    expect(document.activeElement).toBe(input);
+    // React honours autoFocus on conditionally-mounted elements in jsdom;
+    // dropping the autoFocus wiring in production code fails this assert.
+    expect(input).toHaveFocus();
   });
 
   it("focus returns to New-period button after create dialog closes via Cancel", async () => {

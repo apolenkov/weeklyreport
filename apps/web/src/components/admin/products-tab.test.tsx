@@ -183,17 +183,16 @@ describe("ProductsTab — focus management (autofocus-admin-dialogs)", () => {
     vi.clearAllMocks();
   });
 
-  it("product-name input is programmatically focusable on open (structural proxy for autoFocus)", async () => {
+  it("product-name input receives focus when the dialog opens (autoFocus)", async () => {
     const user = userEvent.setup();
     renderTab();
 
     await user.click(screen.getByRole("button", { name: /add new product/i }));
 
     const input = screen.getByLabelText(/product name/i);
-    // jsdom does not honour autoFocus for conditionally-rendered elements;
-    // verify the structural capability: the input accepts programmatic focus.
-    input.focus();
-    expect(document.activeElement).toBe(input);
+    // React honours autoFocus on conditionally-mounted elements in jsdom;
+    // dropping the autoFocus wiring in production code fails this assert.
+    expect(input).toHaveFocus();
   });
 
   it("focus returns to the trigger button after the dialog closes via Cancel", async () => {
