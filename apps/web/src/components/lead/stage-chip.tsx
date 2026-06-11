@@ -8,6 +8,7 @@ import { useSdlcTooltip } from "../ui/sdlc-tooltip";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import type { StageAssignment, StageStatus } from "./mock-data";
 import {
+  STAGE_CHIP_BOX_HEIGHT,
   STAGE_ICONS,
   STATUS_CONFIG,
   STATUS_OPTIONS,
@@ -98,7 +99,7 @@ export function StageChip({
   }, [showPopover]);
 
   const chipClasses = [
-    "relative w-full p-2 rounded-lg text-center text-xs font-semibold transition-[background-color,border-color,box-shadow,opacity,filter] duration-150",
+    "relative w-full p-2 rounded-lg inline-flex items-center justify-center text-xs font-semibold transition-[background-color,border-color,box-shadow,opacity,filter] duration-150",
     isEditable && !isEmpty
       ? "cursor-pointer hover:opacity-80 hover:saturate-50 hover:shadow-[0_0_0_2.5px_rgba(0,0,0,0.12)]"
       : "",
@@ -190,6 +191,7 @@ export function StageChip({
         type="button"
         className={chipClasses}
         style={{
+          height: STAGE_CHIP_BOX_HEIGHT,
           background: config.bg,
           color: config.text,
           border: borderStyle,
