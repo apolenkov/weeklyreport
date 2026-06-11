@@ -62,8 +62,10 @@ export function createAuthRedirectHandler(): (err: unknown) => boolean {
  * flowing back from the network and triggers a redirect on 401, then
  * swallows the error (so downstream callers don't also fire toast/throw
  * during the in-flight navigation).
+ *
+ * @internal — exported for unit tests; production wiring stays via makeTRPCClient
  */
-function createAuthRedirectLink(): TRPCLink<AppRouter> {
+export function createAuthRedirectLink(): TRPCLink<AppRouter> {
   const handle = createAuthRedirectHandler();
   return () =>
     ({ next, op }) =>
