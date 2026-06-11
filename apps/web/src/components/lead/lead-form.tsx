@@ -35,11 +35,15 @@ import {
 } from "../../lib/mappers/lead-form";
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
 import {
-  stageStatusToTraffic,
-  trafficToStageStatus,
-} from "../../lib/mappers/traffic-light";
+  applySnapshotStageOverrides,
+  buildSnapshotStageMap,
+  mapSnapshotDecisions,
+  mapSnapshotItems,
+  mapSnapshotRisks,
+  type SnapPayload,
+} from "../../lib/mappers/lead-snapshot";
+import { stageStatusToTraffic } from "../../lib/mappers/traffic-light";
 import { SessionContext } from "../../lib/session-provider";
-import { deriveEffectiveStageStatus } from "../../lib/stage-status";
 import { useTRPC } from "../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
 import { AccordionSection } from "../report-shell/accordion-section";
@@ -748,211 +752,47 @@ export function LeadForm({
   // F3.4: build a lookup from snapshot stageStatuses + risks + items so own-author
   // stage chips reflect the status captured at snapshot time, not the current draft.
   // Plain const — must stay after the early-return guard; not a hook.
-  const snapshotStageMap = (() => {
-    if (!getVersionQ.data) return null;
-    const raw = getVersionQ.data as {
-      stageStatuses?: {
-        projectId: string;
-        stageName: string;
-        status: string;
-      }[];
-      risks?: {
-        projectId: string;
-        stageName?: string | null;
-        severity?: string;
-      }[];
-      items?: {
-        projectId: string;
-        stageName?: string | null;
-        workflowStatus: string;
-      }[];
-    };
-    interface SnapEntry {
-      traffic: string;
-      risks: { severity?: string }[];
-      items: { workflowStatus: string }[];
-    }
-    const map = new Map<string, Map<string, SnapEntry>>();
-    for (const ss of raw.stageStatuses ?? []) {
-      let pm = map.get(ss.projectId);
-      if (!pm) {
-        pm = new Map();
-        map.set(ss.projectId, pm);
-      }
-      pm.set(normalizeStageName(ss.stageName), {
-        traffic: ss.status,
-        risks: [],
-        items: [],
-      });
-    }
-    for (const r of raw.risks ?? []) {
-      if (!r.stageName) continue;
-      const entry = map.get(r.projectId)?.get(normalizeStageName(r.stageName));
-      if (entry) entry.risks.push({ severity: r.severity });
-    }
-    for (const item of raw.items ?? []) {
-      if (!item.stageName) continue;
-      const entry = map
-        .get(item.projectId)
-        ?.get(normalizeStageName(item.stageName));
-      if (entry) entry.items.push({ workflowStatus: item.workflowStatus });
-    }
-    return map;
-  })();
+  const snapshotStageMap = buildSnapshotStageMap(
+    getVersionQ.data as SnapPayload | null | undefined,
+  );
 
   // F3.4: when viewing a historical snapshot, override own-author stage statuses
   // with snapshot values so chips reflect the captured state, including risks/items.
-  const displayProducts: Product[] = (() => {
-    if (!snapshotStageMap) return products;
-    return products.map((p) => {
-      const pm = snapshotStageMap.get(p.id);
-      if (!pm) return p;
-      return {
-        ...p,
-        stages: p.stages.map((s) => {
-          if (s.ownership === "locked") return s;
-          const snap = pm.get(normalizeStageName(s.stageName));
-          if (!snap) return s;
-          // snap.traffic is a raw Prisma TrafficLight value; map to StageStatus first,
-          // then derive the effective status incorporating captured risks and items.
-          const explicit = trafficToStageStatus(
-            snap.traffic as
-              | import("../../lib/mappers/traffic-light").TrafficLightStatus
-              | null,
-          );
-          return {
-            ...s,
-            status: deriveEffectiveStageStatus(
-              explicit,
-              snap.risks,
-              snap.items,
-            ),
-          };
-        }),
-      };
-    });
-  })();
+  const displayProducts: Product[] = applySnapshotStageOverrides(
+    products,
+    snapshotStageMap,
+  ) as Product[];
 
   // Lookup map for resolving productName from productId in cross-author embeds.
   const productNameById = new Map(displayProducts.map((p) => [p.id, p.name]));
   // F3.4: when viewing a historical snapshot, substitute items/risks/decisions
   // from the snapshot payload instead of the current draft.
-  interface SnapPayload {
-    items?: {
-      projectId: string;
-      type: string;
-      text: string;
-      workflowStatus: string;
-      stageName?: string | null;
-      priorityRank?: number | null;
-    }[];
-    risks?: {
-      projectId: string;
-      risk: string;
-      impact: string;
-      mitigation: string;
-      severity?: string;
-      stageName?: string | null;
-    }[];
-    decisions?: {
-      productId?: string | null;
-      text: string;
-      owner: string;
-      impact: string;
-      deadline?: string | null;
-      stageName?: string | null;
-    }[];
-  }
-
-  function snapWorkflowToStatus(ws: string): import("./mock-data").ItemStatus {
-    if (ws === "in_progress") return "in-progress";
-    if (ws === "done") return "completed";
-    if (ws === "blocked") return "blocked";
-    return "planned";
-  }
-
   const snapRaw =
     viewedSnapshotVersion !== null
-      ? (getVersionQ.data as SnapPayload | null)
+      ? (getVersionQ.data as SnapPayload | null | undefined)
       : null;
   const snapshotAuthor = draftSection.authorName;
 
   // When in snapshot mode but snapRaw is null (still loading or API returned
-  // no data for this version), use empty arrays — never fall back to the
-  // current draft, which would misrepresent historical state.
+  // no data for this version), the mappers yield empty arrays — never fall
+  // back to the current draft, which would misrepresent historical state.
   const inSnapMode = viewedSnapshotVersion !== null;
 
-  const currentWeekItems: KanbanItem[] = snapRaw?.items
-    ? snapRaw.items
-        .filter((i) => i.type === "current")
-        .map(
-          (i, idx): KanbanItem => ({
-            id: `snap:cw:${idx}`,
-            productId: i.projectId,
-            productName: productNameById.get(i.projectId) ?? i.projectId,
-            stageName: i.stageName ?? undefined,
-            status: snapWorkflowToStatus(i.workflowStatus),
-            text: i.text,
-            author: snapshotAuthor,
-            priorityRank: i.priorityRank ?? null,
-          }),
-        )
-    : inSnapMode
-      ? []
-      : (data.currentWeekItems as KanbanItem[]);
+  const currentWeekItems: KanbanItem[] = inSnapMode
+    ? mapSnapshotItems(snapRaw, productNameById, snapshotAuthor, "current")
+    : (data.currentWeekItems as KanbanItem[]);
 
-  const nextWeekItems: KanbanItem[] = snapRaw?.items
-    ? snapRaw.items
-        .filter((i) => i.type === "next")
-        .map(
-          (i, idx): KanbanItem => ({
-            id: `snap:nw:${idx}`,
-            productId: i.projectId,
-            productName: productNameById.get(i.projectId) ?? i.projectId,
-            stageName: i.stageName ?? undefined,
-            status: snapWorkflowToStatus(i.workflowStatus),
-            text: i.text,
-            author: snapshotAuthor,
-            priorityRank: i.priorityRank ?? null,
-          }),
-        )
-    : inSnapMode
-      ? []
-      : (data.nextWeekItems as KanbanItem[]);
+  const nextWeekItems: KanbanItem[] = inSnapMode
+    ? mapSnapshotItems(snapRaw, productNameById, snapshotAuthor, "next")
+    : (data.nextWeekItems as KanbanItem[]);
 
-  const risks: RiskEntry[] = snapRaw?.risks
-    ? snapRaw.risks.map(
-        (r, idx): RiskEntry => ({
-          id: `snap:risk:${idx}`,
-          productId: r.projectId,
-          productName: productNameById.get(r.projectId) ?? r.projectId,
-          stageName: r.stageName ?? undefined,
-          severity: r.severity === "blocked" ? "blocked" : "at-risk",
-          text: r.risk,
-          impact: r.impact,
-          mitigation: r.mitigation,
-        }),
-      )
-    : inSnapMode
-      ? []
-      : (data.risks as RiskEntry[]);
+  const risks: RiskEntry[] = inSnapMode
+    ? mapSnapshotRisks(snapRaw, productNameById)
+    : (data.risks as RiskEntry[]);
 
-  const decisions: DecisionEntry[] = snapRaw?.decisions
-    ? snapRaw.decisions.map(
-        (d, idx): DecisionEntry => ({
-          id: `snap:dec:${idx}`,
-          productId: d.productId ?? "",
-          productName: productNameById.get(d.productId ?? "") ?? "",
-          text: d.text,
-          owner: d.owner,
-          impact: d.impact,
-          deadline: d.deadline ?? null,
-          stageName: d.stageName ?? undefined,
-        }),
-      )
-    : inSnapMode
-      ? []
-      : (data.decisions as DecisionEntry[]);
+  const decisions: DecisionEntry[] = inSnapMode
+    ? mapSnapshotDecisions(snapRaw, productNameById)
+    : (data.decisions as DecisionEntry[]);
 
   // W5/W6: build foreign item arrays from crossAuthorSectionsQ (always-on).
   const foreignCurrentItems: KanbanItem[] = mapForeignItems(

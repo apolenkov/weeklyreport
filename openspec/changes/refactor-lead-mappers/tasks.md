@@ -78,7 +78,7 @@ nameById, authorName)` from `:904-1019` (`SnapPayload` structural
       overlay → `productNameById` from displayProducts → projections.
       Keep all derivations after the early returns, exactly where the
       inline code sits today. Characterization guards pass unmodified.
-- [ ] 2.2 Swap the snapshot call sites: replace `:815-898` and
+- [x] 2.2 Swap the snapshot call sites: replace `:815-898` and
       `:904-1019` with mapper calls; delete `SnapPayload`,
       `snapWorkflowToStatus`, and both IIFEs from `lead-form.tsx`.
       Verify ~300 LOC net reduction (file lands near 1630). Same
