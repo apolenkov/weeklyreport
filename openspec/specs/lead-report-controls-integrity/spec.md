@@ -41,24 +41,35 @@ Add Item, Add Risk, and Add Decision alike.
 
 ### Requirement: Controls with no effect are not rendered
 
-A control MUST NOT render when its action can have no visible effect
-in the current data state — or it MUST carry an explicit empty-state
-explanation (not rendering is preferred). Specifically, the archive toggle on the lead report page
-renders only when archived periods exist for this lead; when rendered,
-it shows how many ("N archived") and toggling visibly changes the period
-list, with archived entries marked in the period combo and in the Fill From list.
+A control whose action can have no visible effect in the current data
+state MUST NOT render (preferred) or MUST carry an explicit
+empty-state explanation. Specifically, the archive toggle on the lead
+report page renders only when archived periods exist for this lead;
+when rendered, it shows how many ("N archived") and toggling visibly
+changes the period list. Archived entries MUST be marked with a
+neutral "Archived" badge — a muted pill, never a status hue and never
+raw bracketed text — in both the period selector and the Fill From
+list; the period selector is a keyboard-accessible custom listbox so
+the badge can render inside options.
 
 #### Scenario: a lead with no archived periods
 
-- **WHEN** the lead report page renders for a lead whose history has no
-  archived periods
+- **WHEN** the lead report page renders for a lead whose history has
+  no archived periods
 - **THEN** the archive toggle is absent
 
 #### Scenario: a lead with archived periods toggles the archive
 
 - **WHEN** the lead enables the archive toggle
-- **THEN** archived periods appear in the period combo with an archived
-  marker and the prev/next arrows navigate the expanded set
+- **THEN** archived periods appear in the period selector carrying the
+  neutral "Archived" badge and the prev/next arrows navigate the
+  expanded set
+
+#### Scenario: archived rows in the Fill From list
+
+- **WHEN** the Fill From list contains archived periods
+- **THEN** those rows carry the same neutral "Archived" badge instead
+  of any text prefix
 
 ### Requirement: Summary aggregates use a single population
 
@@ -89,20 +100,27 @@ popover MUST NOT be silently clipped by an ancestor.
 - **THEN** the full panel is visible regardless of toolbar overflow
 - **AND** it tracks the trigger position on scroll and resize
 
-### Requirement: Incomplete own-stages show on the product card stripe
+### Requirement: The product card stripe reflects the lead's own stages live
 
-The lead edit-view product card MUST keep the lead-set traffic light as
-the stripe COLOR, and MUST render the stripe DASHED while any stage
-owned by the current lead has no status. Solid stripe = own stages filled; color =
-the lead's health call. The dashed style MUST NOT alter the color and
-MUST clear as soon as all own stages carry a status.
+The lead edit-view product card stripe MUST derive its color live from
+the worst status among the stages owned by the current lead (blocked >
+at-risk > on-track); when every own stage is unset the stripe MUST be
+neutral. The stripe MUST NOT read the persisted traffic-light value,
+so the stripe and the visible chips can never contradict. The stripe
+renders DASHED while any own stage is unset and solid once all own
+stages carry a status; head dashboards and slides keep consuming the
+persisted traffic light unchanged.
 
-#### Scenario: an own stage is unfilled
+#### Scenario: a fresh week with no own statuses set
 
-- **WHEN** the product card renders with a green traffic light and one
-  of the lead's own stages unset
-- **THEN** the stripe is green and dashed
-- **AND** filling the last own stage makes it solid without changing hue
+- **WHEN** the product card renders and the persisted traffic light is
+  amber but every own stage is unset
+- **THEN** the stripe is neutral and dashed, not amber
+
+#### Scenario: an own stage turns blocked
+
+- **WHEN** the lead sets one of their stages to blocked
+- **THEN** the stripe immediately renders the blocked color
 
 ### Requirement: In-flight control actions show a visible busy state
 
