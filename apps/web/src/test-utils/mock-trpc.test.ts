@@ -122,6 +122,16 @@ describe("createMockTRPC — invalidation is non-vacuous", () => {
 // ---------------------------------------------------------------------------
 
 describe("createMockTRPC — pending descriptor", () => {
+  // Typed view of the dynamic proxy for this test's single path — avoids
+  // unsafe-any access on the chained call.
+  interface ListFailedProxy {
+    admin: {
+      jobs: {
+        listFailed: { queryOptions: () => Parameters<typeof useQuery>[0] };
+      };
+    };
+  }
+
   it('a "pending" descriptor keeps useQuery in isPending state', async () => {
     const { proxy } = createMockTRPC([
       { path: ["admin", "jobs", "listFailed"], query: "pending" },
@@ -130,13 +140,9 @@ describe("createMockTRPC — pending descriptor", () => {
 
     const { result } = renderHook(
       () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- proxy access for test
-        const proxyAny = proxy as any;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- dynamic proxy access for test
-        const opts =
-          proxyAny.admin.jobs.listFailed.queryOptions() as Parameters<
-            typeof useQuery
-          >[0];
+        const opts = (
+          proxy as unknown as ListFailedProxy
+        ).admin.jobs.listFailed.queryOptions();
         return useQuery(opts);
       },
       { wrapper: Wrapper },
