@@ -2,15 +2,19 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { FileDown, Presentation } from "lucide-react";
-import { Suspense, useCallback, useMemo, useState } from "react";
+import { Suspense, useCallback, useContext, useMemo, useState } from "react";
 
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
+import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
 import type { ReportPeriod } from "../lead/mock-data";
 import { PeriodNavigator } from "../lead/period-navigator";
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../report-shell/archive-toggle";
-import { ReportToolbar } from "../report-shell/report-toolbar";
+import {
+  ReportToolbar,
+  ReportToolbarCenterLabel,
+} from "../report-shell/report-toolbar";
 import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
 import { ViewModeToggle } from "../report-shell/view-mode-toggle";
 import { HeadSlidesClient } from "../slides/head-slides-client";
@@ -37,6 +41,13 @@ export function HeadReportShell({
   authorId,
 }: HeadReportShellProps) {
   const trpc = useTRPC();
+
+  // head-toolbar-parity D2: the department label moved here from the
+  // WeeklyReportPage context bar the shell now suppresses. Same source:
+  // the Organization singleton's fullName from auth.me (UFB-047).
+  const sessionState = useContext(SessionContext);
+  const departmentLabel =
+    sessionState?.organization?.fullName ?? "CustomReport";
 
   const [includeArchive, setIncludeArchive] = useState(false);
 
@@ -89,24 +100,11 @@ export function HeadReportShell({
 
   return (
     <div className="space-y-4">
-      {/* Period toolbar parity with lead report (UAT 2026-05-22, done-condition 10):
-          period navigator + archive toggle so head can switch between published weeks. */}
-      <ReportToolbar
-        periodNavigator={
-          periods.length > 0 ? (
-            <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
-          ) : undefined
-        }
-        archiveToggle={
-          <ArchiveToggle
-            checked={includeArchive}
-            onChange={setIncludeArchive}
-          />
-        }
-      />
       {/* Action row parity with the lead report header (UAT 2026-05-22,
           done-condition 10): head is read-only, so the lead Submit slot is
           replaced by export / presentation actions.
+          head-toolbar-parity D2: this header-like row now comes FIRST, with
+          the single pill toolbar below it — the lead arrangement.
           polish-ui-density T3 + unify-head-toolbar-controls: real controls
           share one height (--touch-target-min), grouped by intent —
           scope | view mode (primary) | utilities — with wider gaps between
@@ -145,6 +143,31 @@ export function HeadReportShell({
           {mode === "form" ? <AgentReviewComingSoon compact /> : null}
         </div>
       </div>
+      {/* Single period toolbar (UAT 2026-05-22 done-condition 10 +
+          head-toolbar-parity D2): period navigator + archive toggle so head
+          can switch between published weeks. The shell owns the page's ONE
+          ReportToolbar; the WeeklyReportPage context bar below is suppressed
+          via contextToolbar={false}, and its department label renders here
+          in the center slot instead. */}
+      <ReportToolbar
+        periodNavigator={
+          periods.length > 0 ? (
+            <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
+          ) : undefined
+        }
+        archiveToggle={
+          <ArchiveToggle
+            checked={includeArchive}
+            onChange={setIncludeArchive}
+          />
+        }
+        leadingExtras={
+          <ReportToolbarCenterLabel
+            label={departmentLabel}
+            detail="Live portfolio review"
+          />
+        }
+      />
       {mode === "slides" ? (
         <Suspense fallback={<SlideSkeleton />}>
           <HeadSlidesClient reportId={reportId} scope={reportScope} />
@@ -156,6 +179,7 @@ export function HeadReportShell({
               reportId={reportId}
               authorId={authorId}
               scope={reportScope}
+              contextToolbar={false}
             />
           </Suspense>
         </div>

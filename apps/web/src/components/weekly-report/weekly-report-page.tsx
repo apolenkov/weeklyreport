@@ -22,6 +22,10 @@ import type {
   ProductReport,
   ReportPeriod,
 } from "../dashboard/mock-data";
+import {
+  ReportToolbar,
+  ReportToolbarCenterLabel,
+} from "../report-shell/report-toolbar";
 import { ExportPdfButton } from "./export-pdf-button";
 import { HeadPeriodNavigator } from "./period-navigator";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
@@ -53,6 +57,14 @@ interface WeeklyReportPageProps {
    * leads own their own phases, so the duplication is expected.
    */
   readonly scope?: "product" | "lead";
+  /**
+   * head-toolbar-parity D2: a page must not stack two period toolbars. When
+   * an outer shell (HeadReportShell) already owns the shared ReportToolbar,
+   * it passes false to suppress this page's period-context toolbar.
+   * Standalone consumers (bare /head/report, /reports/[reportId], lead
+   * preview, present client) keep the default.
+   */
+  readonly contextToolbar?: boolean;
 }
 
 export function WeeklyReportPage({
@@ -61,6 +73,7 @@ export function WeeklyReportPage({
   canonicalBasePath = "/head/report",
   authorId,
   scope = "product",
+  contextToolbar = true,
 }: WeeklyReportPageProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
@@ -337,20 +350,19 @@ export function WeeklyReportPage({
         </div>
       </div>
 
-      {/* Context shell: Period nav + department */}
-      <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.78)_100%)] px-4 py-3.5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.06),0_10px_24px_-20px_rgba(0,0,0,0.22),0_1px_2px_0_rgba(0,0,0,0.05)]">
-        <HeadPeriodNavigator periods={periods} />
-
-        <div className="flex min-w-[180px] flex-1 items-center justify-center gap-2">
-          <span className="text-sm text-[var(--color-muted-foreground)]">
-            {departmentLabel}
-          </span>
-          <span className="text-[var(--color-muted-foreground)]">&middot;</span>
-          <span className="text-sm text-[var(--color-muted-foreground)]">
-            Live portfolio review
-          </span>
-        </div>
-      </div>
+      {/* Period-context toolbar: shared ReportToolbar container
+          (head-toolbar-parity D2 — replaces the bespoke gradient bar). */}
+      {contextToolbar && (
+        <ReportToolbar
+          periodNavigator={<HeadPeriodNavigator periods={periods} />}
+          leadingExtras={
+            <ReportToolbarCenterLabel
+              label={departmentLabel}
+              detail="Live portfolio review"
+            />
+          }
+        />
+      )}
 
       {/* A32: empty-state — no submissions in current open/reopened period.
           When submissionCount === 0 and the period is not yet published,

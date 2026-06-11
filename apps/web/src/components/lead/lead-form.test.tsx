@@ -449,6 +449,21 @@ describe("LeadForm mutation wiring", () => {
     expect(control).toHaveAttribute("title", "Coming Soon");
   });
 
+  it("renders exactly one shared ReportToolbar container (head-toolbar-parity pin)", async () => {
+    // Parity pin: lead form and head shell both render the shared
+    // ReportToolbar — the head-side pin lives in head-report-shell.test.tsx.
+    const { Wrapper } = buildHarness();
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+
+    await screen.findByText("Autosaved");
+
+    expect(screen.getAllByTestId("report-toolbar")).toHaveLength(1);
+  });
+
   it("submitted-section action: Lead sees Request Reopen, not Revoke", async () => {
     // The mapper hard-codes currentUser.role to 'Dev Lead' for now (the
     // read model doesn't yet carry display role), so every harness-driven
