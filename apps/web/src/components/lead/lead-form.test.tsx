@@ -7,6 +7,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
+import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -100,6 +101,7 @@ function buildHarness(
     submitFn?: () => Promise<unknown>;
     revokeFn?: () => Promise<unknown>;
     byPeriodReadOnly?: boolean;
+    byPeriodQueryFn?: () => Promise<unknown>;
     versions?: {
       id: string;
       reportSectionId: string;
@@ -169,11 +171,13 @@ function buildHarness(
       byPeriod: {
         queryOptions: () => ({
           queryKey: ["leadForm.byPeriod"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC queryFn contract (TanStack expects a Promise-returning fn)
-          queryFn: async () => ({
-            section: makeSection({ status: opts.sectionStatus }),
-            readOnly: opts.byPeriodReadOnly ?? false,
-          }),
+          queryFn:
+            opts.byPeriodQueryFn ??
+            // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC queryFn contract (TanStack expects a Promise-returning fn)
+            (async () => ({
+              section: makeSection({ status: opts.sectionStatus }),
+              readOnly: opts.byPeriodReadOnly ?? false,
+            })),
         }),
         pathFilter: () => ({ queryKey: ["leadForm.byPeriod"] }),
       },
@@ -398,6 +402,35 @@ describe("LeadForm mutation wiring", () => {
     // Simulate error path.
     expectDefined(cap.submitOpts).onError?.(new Error("Submit blew up"));
     expect(toast.error).toHaveBeenCalledWith("Submit blew up");
+  });
+
+  it("byPeriod load failure: toast shows prefix + requestId reference", async () => {
+    // Build a TRPCClientError with data.requestId so formatClientErrorMessage
+    // appends "Reference: req-X." — this is the behavior-changing part of task 4.
+    const err = new TRPCClientError("INTERNAL_SERVER_ERROR");
+    Object.defineProperty(err, "data", {
+      value: {
+        httpStatus: 500,
+        code: "INTERNAL_SERVER_ERROR",
+        requestId: "req-X",
+      },
+      configurable: true,
+    });
+
+    const { Wrapper } = buildHarness({
+      byPeriodQueryFn: () => Promise.reject(err),
+    });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "Failed to load form. Reference: req-X.",
+      ),
+    );
   });
 
   it("changing a stage status marks the form dirty (autosave indicator changes from Autosaved)", async () => {

@@ -21,7 +21,6 @@ import {
   invalidateLeadForm,
   invalidateLeadHistory,
 } from "../../lib/cache-keys";
-import { logClientError } from "../../lib/client-error-reporting";
 import { mapLeadFormData } from "../../lib/mappers";
 import {
   normalizeStageName,
@@ -36,6 +35,7 @@ import {
 import { SessionContext } from "../../lib/session-provider";
 import { deriveEffectiveStageStatus } from "../../lib/stage-status";
 import { useTRPC } from "../../lib/trpc-context";
+import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
 import { AccordionSection } from "../report-shell/accordion-section";
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../report-shell/archive-toggle";
@@ -436,66 +436,37 @@ export function LeadForm({
     router.replace(destination);
   }, [pinnedReportId, router, shouldRouteHeadLikeAwayFromLeadForm]);
 
-  // Toast on per-query errors.
-  useEffect(() => {
-    if (activeQ.isError) {
-      logClientError("leadForm.activeReport.load_failed", activeQ.error, {
-        component: "LeadForm",
-        procedure: "reports.getActive",
-        reportId: pinnedReportId ?? null,
-      });
-      toast.error(
-        activeQ.error instanceof Error
-          ? `Failed to load active report: ${activeQ.error.message}`
-          : "Failed to load active report",
-      );
-    }
-  }, [activeQ.isError, activeQ.error, pinnedReportId]);
+  // Query error policy — log + toast via unified hook (design.md D1/D2).
+  useQueryErrorHandler(activeQ, {
+    event: "leadForm.activeReport.load_failed",
+    component: "LeadForm",
+    procedure: "reports.getActive",
+    context: { reportId: pinnedReportId ?? null },
+    toastPrefix: "Failed to load active report",
+  });
 
-  useEffect(() => {
-    if (byPeriodQ.isError) {
-      logClientError("leadForm.byPeriod.load_failed", byPeriodQ.error, {
-        component: "LeadForm",
-        procedure: "leadForm.byPeriod",
-        reportId: targetReportId || null,
-        role: sessionRole,
-      });
-      toast.error(
-        byPeriodQ.error instanceof Error
-          ? `Failed to load form: ${byPeriodQ.error.message}`
-          : "Failed to load form",
-      );
-    }
-  }, [byPeriodQ.isError, byPeriodQ.error, targetReportId, sessionRole]);
+  useQueryErrorHandler(byPeriodQ, {
+    event: "leadForm.byPeriod.load_failed",
+    component: "LeadForm",
+    procedure: "leadForm.byPeriod",
+    context: { reportId: targetReportId || null, role: sessionRole },
+    toastPrefix: "Failed to load form",
+  });
 
-  useEffect(() => {
-    if (versionsQ.isError) {
-      logClientError("leadForm.versions.load_failed", versionsQ.error, {
-        component: "LeadForm",
-        procedure: "leadForm.versions",
-        reportSectionId: sectionIdForActions || null,
-      });
-      toast.error(
-        versionsQ.error instanceof Error
-          ? `Failed to load versions: ${versionsQ.error.message}`
-          : "Failed to load versions",
-      );
-    }
-  }, [versionsQ.isError, versionsQ.error, sectionIdForActions]);
+  useQueryErrorHandler(versionsQ, {
+    event: "leadForm.versions.load_failed",
+    component: "LeadForm",
+    procedure: "leadForm.versions",
+    context: { reportSectionId: sectionIdForActions || null },
+    toastPrefix: "Failed to load versions",
+  });
 
-  useEffect(() => {
-    if (historyQ.isError) {
-      logClientError("leadForm.history.load_failed", historyQ.error, {
-        component: "LeadForm",
-        procedure: "reports.myHistory",
-      });
-      toast.error(
-        historyQ.error instanceof Error
-          ? `Failed to load history: ${historyQ.error.message}`
-          : "Failed to load history",
-      );
-    }
-  }, [historyQ.isError, historyQ.error]);
+  useQueryErrorHandler(historyQ, {
+    event: "leadForm.history.load_failed",
+    component: "LeadForm",
+    procedure: "reports.myHistory",
+    toastPrefix: "Failed to load history",
+  });
 
   // ---- Local UI + draft state ----
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
