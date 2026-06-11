@@ -326,9 +326,9 @@ describe("WeeklyReportService — cross-group audit signal (task 4)", () => {
 
     expect(result.status).toBe("active");
     if (result.status !== "active") throw new Error("expected active");
+    // Single signal object — not one per product. The router-level
+    // exactly-one-emit rule is covered by scope-accessed-emit.test.ts.
     expect(result.crossGroup).toEqual(twoProducts);
-    // Single signal object — not one per product.
-    expect(typeof result.crossGroup).toBe("object");
   });
 
   // 4.2 — negative tests: no cross-group signal in own-group or admin reads
@@ -345,7 +345,7 @@ describe("WeeklyReportService — cross-group audit signal (task 4)", () => {
     expect(result.crossGroup).toBeNull();
   });
 
-  it("passes crossGroup null for admin read (admin has no group filter)", async () => {
+  it("passes crossGroup through unchanged for admin read (router owns the admin guard)", async () => {
     const report = makeWeeklyReport();
     // Repository may return a signal even for admin (it doesn't know the role);
     // the router guards on role — but the service passes it through transparently.
