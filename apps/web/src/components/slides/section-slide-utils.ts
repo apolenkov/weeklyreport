@@ -224,15 +224,48 @@ export function buildSectionSlideModel(
     )
     .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
     .map((item) => item.text.trim());
-  if (crossProductDecisions.length > 0 || crossProductPriorities.length > 0) {
+  // Items / risks referencing a project outside section.projects (the
+  // schema-anticipated referencedProjects case, section.schema.ts) must not
+  // vanish from the slide while the section-level counts still include them:
+  // route them into the cross-product pseudo-entry like decisions/priorities.
+  const crossProductCurrentItems = section.items
+    .filter(
+      (item) =>
+        item.type === "current" &&
+        (!item.projectId || !projectIds.has(item.projectId)) &&
+        nonEmpty(item.text),
+    )
+    .map((item) => item.text.trim());
+  const crossProductNextItems = section.items
+    .filter(
+      (item) =>
+        item.type === "next" &&
+        (!item.projectId || !projectIds.has(item.projectId)) &&
+        nonEmpty(item.text),
+    )
+    .map((item) => item.text.trim());
+  const crossProductRisks = section.risks
+    .filter(
+      (risk) =>
+        (!risk.projectId || !projectIds.has(risk.projectId)) &&
+        nonEmpty(risk.risk),
+    )
+    .map((risk) => risk.risk.trim());
+  if (
+    crossProductCurrentItems.length > 0 ||
+    crossProductNextItems.length > 0 ||
+    crossProductRisks.length > 0 ||
+    crossProductDecisions.length > 0 ||
+    crossProductPriorities.length > 0
+  ) {
     productSlides.push({
       id: "cross-product",
       name: "Cross-product",
       status: null,
       stages: [],
-      currentItems: [],
-      nextItems: [],
-      risks: [],
+      currentItems: crossProductCurrentItems,
+      nextItems: crossProductNextItems,
+      risks: crossProductRisks,
       decisions: crossProductDecisions,
       priorities: crossProductPriorities,
     });
