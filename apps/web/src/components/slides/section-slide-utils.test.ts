@@ -210,6 +210,85 @@ describe("section slide utilities", () => {
     );
   });
 
+  it("routes items and risks referencing an unowned project into the cross-product entry", () => {
+    // referencedProjects case: rows point at a project the author owns no
+    // stage on, so it is absent from section.projects. They must still render
+    // (regression guard for redesign-head-slide-density review finding).
+    const OUTSIDE_PROJECT_ID = "12121212-1212-4121-8121-121212121212";
+    const slide = buildSectionSlideModel(
+      makeSection({
+        items: [
+          {
+            id: "55555555-5555-4555-8555-555555555555",
+            projectId: OUTSIDE_PROJECT_ID,
+            type: "current",
+            text: "Helped platform migration",
+            tag: "delivery",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            completed: null,
+          },
+          {
+            id: "66666666-6666-4666-8666-666666666666",
+            projectId: OUTSIDE_PROJECT_ID,
+            type: "next",
+            text: "Hand over platform runbook",
+            tag: "delivery",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            completed: null,
+          },
+        ],
+        risks: [
+          {
+            id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            projectId: OUTSIDE_PROJECT_ID,
+            risk: "Platform dependency may slip",
+            impact: "Launch risk",
+            mitigation: "Escalate to platform lead",
+            severity: "at-risk",
+          },
+        ],
+      }),
+    );
+
+    expect(slide.currentCount).toBe(1);
+    expect(slide.nextCount).toBe(1);
+    expect(slide.riskCount).toBe(1);
+    expect(
+      slide.productSlides.find((product) => product.id === "cross-product"),
+    ).toEqual(
+      expect.objectContaining({
+        currentItems: ["Helped platform migration"],
+        nextItems: ["Hand over platform runbook"],
+        risks: ["Platform dependency may slip"],
+      }),
+    );
+
+    // The unified model the head/lead slides render must keep counts and
+    // visible rows in sync.
+    const unified = buildUnifiedSlideModel(slide);
+    expect(unified.current).toContainEqual(
+      expect.objectContaining({
+        text: "Helped platform migration",
+        productName: "Shared context",
+      }),
+    );
+    expect(unified.next).toContainEqual(
+      expect.objectContaining({
+        text: "Hand over platform runbook",
+        productName: "Shared context",
+      }),
+    );
+    expect(unified.risks).toContainEqual(
+      expect.objectContaining({
+        text: "Platform dependency may slip",
+        productName: "Shared context",
+      }),
+    );
+    expect(unified.risks).toHaveLength(slide.riskCount);
+  });
+
   it("deduplicates duplicate project rows before building product sections", () => {
     const slide = buildSectionSlideModel(
       makeSection({
