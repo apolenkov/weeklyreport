@@ -63,6 +63,26 @@ describe("assertTestDatabaseUrl", () => {
       expect(msg).not.toContain("secretpass");
     });
 
+    it("refuses a path-less URL without echoing credentials", () => {
+      let caughtError: unknown;
+      try {
+        assertTestDatabaseUrl(
+          "postgresql://secretuser:secretpass@db.example.com:5432",
+        );
+      } catch (error_) {
+        caughtError = error_;
+      }
+      expect(caughtError).toBeInstanceOf(Error);
+      const msg = (caughtError as Error).message;
+      expect(msg).not.toContain("secretuser");
+      expect(msg).not.toContain("secretpass");
+      expect(msg).not.toContain("db.example.com");
+    });
+
+    it("refuses an unparseable URL without echoing it", () => {
+      expect(() => assertTestDatabaseUrl("not a url")).toThrow(/_test/);
+    });
+
     it("error message contains the _test hint", () => {
       expect(() =>
         assertTestDatabaseUrl(

@@ -32,14 +32,30 @@ let prismaInstance: PrismaClient | null = null;
  *   database name in DATABASE_URL before any destructive operation.
  */
 export function assertTestDatabaseUrl(url: string): void {
-  // Extract the last path segment before any query string.
-  const pathname = url.split("?")[0] ?? "";
-  const dbName = (pathname.split("/").pop() ?? "").toLowerCase();
+  // Parse with WHATWG URL so userinfo/host never leak into the error message:
+  // for a path-less URL `pathname` is "" (naive string splitting would yield
+  // "user:pass@host:port" here). An unparseable URL also yields "" — both
+  // cases fail the `_test` check below without echoing anything sensitive.
+  const dbName = extractDatabaseName(url);
   if (!dbName.endsWith("_test")) {
     throw new Error(
       `cleanDatabase refused: DATABASE_URL points at "${dbName}", which does not end with "_test". ` +
         `Point DATABASE_URL at the dedicated integration-test database (e.g. customreport_test).`,
     );
+  }
+}
+
+/**
+ * Extracts the database name (last path segment, lowercased) from a connection
+ * URL. Returns "" for a path-less or unparseable URL — never a fragment that
+ * could contain credentials.
+ */
+function extractDatabaseName(url: string): string {
+  try {
+    const { pathname } = new URL(url);
+    return (pathname.split("/").pop() ?? "").toLowerCase();
+  } catch {
+    return "";
   }
 }
 
