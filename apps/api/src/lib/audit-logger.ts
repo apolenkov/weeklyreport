@@ -170,6 +170,18 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
         changes: input.changes,
       });
     },
+    scopeAccessed(input) {
+      logger.info(AUDIT_MESSAGE, {
+        event: "scope-accessed",
+        userId: input.userId,
+        role: input.role,
+        ip: input.ip,
+        accessedScope: input.accessedScope,
+        productIds: input.productIds,
+        groupIds: input.groupIds,
+        resourceId: input.resourceId,
+      });
+    },
   };
 }
 
@@ -216,6 +228,9 @@ export function createNullAuditLogger(): AuditLogger {
       /* noop */
     },
     periodManualEdit() {
+      /* noop */
+    },
+    scopeAccessed() {
       /* noop */
     },
   };
