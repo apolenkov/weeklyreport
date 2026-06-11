@@ -3,10 +3,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useContext, useEffect, useMemo, useState } from "react";
 
-import { logClientError } from "../../lib/client-error-reporting";
 import { formatWeekRange } from "../../lib/mappers/weekly-report";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
+import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
 import { ReportSlides } from "./report-slides";
 import {
   buildActivitySlideModel,
@@ -61,13 +61,11 @@ export function HeadSlidesClient({
   );
   const activityQ = useQuery(trpc.activity.live.queryOptions());
 
-  useEffect(() => {
-    if (!weeklyQ.isError) return;
-    logClientError("headSlides.weeklyReport.load_failed", weeklyQ.error, {
-      component: "HeadSlidesClient",
-      procedure: "weeklyReport.get",
-    });
-  }, [weeklyQ.isError, weeklyQ.error]);
+  useQueryErrorHandler(weeklyQ, {
+    event: "headSlides.weeklyReport.load_failed",
+    component: "HeadSlidesClient",
+    procedure: "weeklyReport.get",
+  });
 
   const slides = useMemo(() => {
     if (!weeklyQ.data || weeklyQ.data.status === "no-period") return [];
