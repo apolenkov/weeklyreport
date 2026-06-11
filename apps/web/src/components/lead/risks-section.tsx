@@ -6,6 +6,7 @@ import { LockBadge } from "../report-shell/lock-badge";
 import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import type { Product, RiskEntry } from "./mock-data";
+import { DeleteIcon, EditIcon } from "./risk-card-icons";
 import { RiskEditDialog } from "./risk-edit-dialog";
 import { canonicalStageName, splitStageNames } from "./stage-tags";
 
@@ -14,8 +15,17 @@ interface RisksSectionProps {
   readonly readOnly?: boolean;
   /** Controlled-component callback fired with the next risks array on add/edit/delete. */
   readonly onChange?: (next: RiskEntry[]) => void;
-  /** Fired when the text of a risk transitions empty -> non-empty (used by status<->risk sync). */
-  readonly onRiskFilled?: (riskId: string) => void;
+  /**
+   * unify-risk-stage-status (D2): chip-raise interception payload. Each
+   * `signal` increment opens the create dialog prefilled with the clicked
+   * product, stage, and severity.
+   */
+  readonly addPrefill?: {
+    signal: number;
+    productId: string;
+    stageIds: string[];
+    severity: "at-risk" | "blocked";
+  };
   /**
    * Products list — required so the edit dialog can show a project picker
    * and the empty-state can seed the first product. When absent or empty,
@@ -36,46 +46,11 @@ interface RisksSectionProps {
   readonly addSignal?: number;
 }
 
-function EditIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-      <path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  );
-}
-
-function DeleteIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
-    </svg>
-  );
-}
-
 export function RisksSection({
   risks,
   readOnly = false,
   onChange,
-  onRiskFilled,
+  addPrefill,
   products,
   stagesForProduct,
   sectionAuthorName,
@@ -83,7 +58,13 @@ export function RisksSection({
 }: RisksSectionProps) {
   const [dialogState, setDialogState] = useState<
     | { open: false }
-    | { open: true; mode: "create"; seedProductId?: string }
+    | {
+        open: true;
+        mode: "create";
+        seedProductId?: string;
+        seedStageIds?: string[];
+        seedSeverity?: "at-risk" | "blocked";
+      }
     | { open: true; mode: "edit"; risk: RiskEntry }
   >({ open: false });
   const [pendingDelete, setPendingDelete] = useState<RiskEntry | null>(null);
@@ -110,19 +91,10 @@ export function RisksSection({
     saved: RiskEntry & { impact: string; mitigation: string },
   ) {
     if (readOnly) return;
-    const wasEmpty =
-      dialogState.open && dialogState.mode === "edit"
-        ? dialogState.risk.text.trim().length === 0
-        : true;
-
     if (dialogState.open && dialogState.mode === "create") {
       onChange?.([...risks, saved]);
     } else {
       onChange?.(risks.map((r) => (r.id === saved.id ? saved : r)));
-    }
-
-    if (wasEmpty && saved.text.trim().length > 0) {
-      onRiskFilled?.(saved.id);
     }
     setDialogState({ open: false });
   }
@@ -149,6 +121,21 @@ export function RisksSection({
       seedProductId: firstProductId,
     });
   }, [addSignal, firstProductId]);
+
+  // unify-risk-stage-status (D2): chip-raise interception opens the create
+  // dialog prefilled. Same stale-signal guard pattern as the effect above
+  // (readOnly read through the ref, identity-stable payload in deps).
+  useEffect(() => {
+    if (!addPrefill || addPrefill.signal === 0) return;
+    if (readOnlyRef.current) return;
+    setDialogState({
+      open: true,
+      mode: "create",
+      seedProductId: addPrefill.productId,
+      seedStageIds: addPrefill.stageIds,
+      seedSeverity: addPrefill.severity,
+    });
+  }, [addPrefill]);
 
   return (
     <div className="space-y-4">
@@ -308,6 +295,16 @@ export function RisksSection({
         defaultProductId={
           dialogState.open && dialogState.mode === "create"
             ? dialogState.seedProductId
+            : undefined
+        }
+        initialStageIds={
+          dialogState.open && dialogState.mode === "create"
+            ? dialogState.seedStageIds
+            : undefined
+        }
+        initialSeverity={
+          dialogState.open && dialogState.mode === "create"
+            ? dialogState.seedSeverity
             : undefined
         }
         initialImpact={

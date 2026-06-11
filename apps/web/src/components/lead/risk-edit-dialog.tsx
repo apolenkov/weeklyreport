@@ -27,6 +27,13 @@ interface RiskEditDialogProps {
   readonly initialImpact?: string;
   readonly initialMitigation?: string;
   /**
+   * unify-risk-stage-status (D2): create-mode prefill from a chip-raise
+   * interception — the clicked stage arrives pre-checked and the clicked
+   * severity pre-selected. Ignored in edit mode (the risk's own values win).
+   */
+  readonly initialStageIds?: string[];
+  readonly initialSeverity?: "at-risk" | "blocked";
+  /**
    * 35-04 (FEAT-144): callback returning the SDLC stages the current lead
    * owns on a given project (= options for the "SDLC Stage" select).
    * Returning `[]` disables the Save button and surfaces an inline
@@ -79,8 +86,12 @@ function deriveFromPreChecked(
 }
 
 /** Computes which stage IDs to pre-select on dialog open. */
-function computeInitialStageIds(risk: RiskEntry | null): string[] {
-  return risk?.stageIds ? [...risk.stageIds] : [];
+function computeInitialStageIds(
+  risk: RiskEntry | null,
+  initialStageIds: string[] | undefined,
+): string[] {
+  if (risk?.stageIds) return [...risk.stageIds];
+  return initialStageIds ? [...initialStageIds] : [];
 }
 
 export function RiskEditDialog({
@@ -92,6 +103,8 @@ export function RiskEditDialog({
   defaultProductId,
   initialImpact,
   initialMitigation,
+  initialStageIds,
+  initialSeverity,
   stagesForProduct,
 }: RiskEditDialogProps) {
   "use no memo";
@@ -104,8 +117,10 @@ export function RiskEditDialog({
 
   // Severity derived ONCE from pipeline on create; user choice is sticky thereafter.
   // Severity is NOT re-derived when the user toggles stage checkboxes (Phase 3.5 §5).
+  // A chip-raise prefill (initialSeverity, D2) wins over the derived default.
   const [severity, setSeverity] = useState<"at-risk" | "blocked">(() => {
     if (risk?.severity) return risk.severity;
+    if (initialSeverity) return initialSeverity;
     const ownedStages = stagesForProduct?.(seedProduct?.id ?? "") ?? [];
     return deriveFromPreChecked(seedProduct, ownedStages);
   });
@@ -118,9 +133,10 @@ export function RiskEditDialog({
 
   // Phase 3.8: stage checkboxes start empty on create. The user marks
   // stages explicitly. preCheckedStages still renders an info strip
-  // (context only), but does not influence initial selection.
+  // (context only), but does not influence initial selection. A chip-raise
+  // prefill (initialStageIds, D2) pre-checks the clicked stage.
   const [stageIds, setStageIds] = useState<string[]>(() => {
-    return computeInitialStageIds(risk);
+    return computeInitialStageIds(risk, initialStageIds);
   });
 
   // Per-field error map.
@@ -139,12 +155,14 @@ export function RiskEditDialog({
       const ownedStages = stagesForProduct?.(seedProduct?.id ?? "") ?? [];
       setText(risk?.text ?? "");
       setSeverity(
-        risk?.severity ?? deriveFromPreChecked(seedProduct, ownedStages),
+        risk?.severity ??
+          initialSeverity ??
+          deriveFromPreChecked(seedProduct, ownedStages),
       );
       setProductId(risk?.productId ?? seedProduct?.id ?? "");
       setImpact(initialImpact ?? "");
       setMitigation(initialMitigation ?? "");
-      setStageIds(computeInitialStageIds(risk));
+      setStageIds(computeInitialStageIds(risk, initialStageIds));
       setErrors({});
     }
     // eslint-disable-next-line react-compiler/react-compiler
@@ -159,6 +177,8 @@ export function RiskEditDialog({
     seedProduct?.id,
     initialImpact,
     initialMitigation,
+    initialStageIds,
+    initialSeverity,
     defaultProductId,
     isCreate,
   ]);

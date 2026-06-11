@@ -2,15 +2,9 @@
 
 import type { CSSProperties } from "react";
 
-import type {
-  Product,
-  RiskEntry,
-  StageAssignment,
-  StageStatus,
-} from "./mock-data";
+import type { Product, StageAssignment, StageStatus } from "./mock-data";
 import { StageChip } from "./stage-chip";
 import { STAGE_CHIP_BOX_HEIGHT } from "./stage-chip-config";
-import { canonicalStageName, splitStageNames } from "./stage-tags";
 
 export interface CrossAuthorEntry {
   projectId: string;
@@ -36,13 +30,6 @@ interface SdlcPipelineProps {
     stageName: string,
     newStatus: StageStatus,
   ) => void;
-  /**
-   * Used to count risks linked to each (product, stage) pair so the chip's
-   * Clear-confirmation knows whether to prompt. The pipeline is the right
-   * level to compute this once — passing the count down into every chip
-   * keeps the chip itself dumb.
-   */
-  readonly risks?: readonly RiskEntry[];
   /**
    * Stages the lead has marked at-risk/blocked but hasn't described in
    * the Risks list. Renders a calm advisory banner ABOVE the product
@@ -111,7 +98,6 @@ export function SdlcPipeline({
   products,
   readOnly = false,
   onStatusChange,
-  risks,
   unbackedStages = [],
   crossAuthors = [],
 }: SdlcPipelineProps) {
@@ -122,29 +108,6 @@ export function SdlcPipeline({
   ) {
     if (readOnly) return;
     onStatusChange?.(productId, stageName, newStatus);
-  }
-
-  // Build a (productId::stageName) → count map once per render so each chip
-  // can decide whether to prompt-on-Clear without recomputing.
-  const riskCountByKey = new Map<string, number>();
-  for (const r of risks ?? []) {
-    const product = products.find((item) => item.id === r.productId);
-    const stageTags =
-      r.stageIds && r.stageIds.length > 0
-        ? r.stageIds
-        : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-          splitStageNames(r.stageName);
-    const keys =
-      stageTags.length > 0
-        ? stageTags.map(
-            (stageName) => `${r.productId}::${canonicalStageName(stageName)}`,
-          )
-        : (product?.stages ?? []).map(
-            (stage) => `${r.productId}::${canonicalStageName(stage.stageName)}`,
-          );
-    for (const key of keys) {
-      riskCountByKey.set(key, (riskCountByKey.get(key) ?? 0) + 1);
-    }
   }
 
   return (
@@ -288,11 +251,6 @@ export function SdlcPipeline({
                       <StageChip
                         stage={stage}
                         readOnly={readOnly}
-                        linkedRiskCount={
-                          riskCountByKey.get(
-                            `${product.id}::${canonicalStageName(stage.stageName)}`,
-                          ) ?? 0
-                        }
                         onStatusChange={(name, status) =>
                           handleStatusChange(product.id, name, status)
                         }
