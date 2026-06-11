@@ -6,7 +6,7 @@
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
@@ -663,6 +663,75 @@ describe("LeadForm mutation wiring", () => {
       screen.getByTitle(/Snapshots and edits within this report/i),
     ).toHaveTextContent("v1");
     expect(calls.filter((c) => c.type === "restoreVersion")).toHaveLength(0);
+  });
+
+  it("returning from a snapshot does not reopen the Risk or Decision dialog", async () => {
+    // fix-section-add-signal-reset (task 2.4): pins the 4-counter
+    // onViewVersion reset at integration level. Stale risks/decisions
+    // add-signal counters must not reopen their create dialogs after a
+    // snapshot round-trip.
+    const { Wrapper } = buildHarness({
+      versions: [
+        {
+          id: "88888888-8888-8888-8888-888888888888",
+          reportSectionId: SECTION_ID,
+          version: 2,
+          createdAt: new Date("2026-04-20T10:00:00Z"),
+        },
+        {
+          id: "99999999-9999-9999-9999-999999999999",
+          reportSectionId: SECTION_ID,
+          version: 1,
+          createdAt: new Date("2026-04-19T10:00:00Z"),
+        },
+      ],
+    });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+
+    // Settle the query cascade before driving the section buttons.
+    await screen.findByText("Autosaved");
+
+    // "+ Add Risk" → create dialog opens; cancel leaves the counter stale.
+    act(() => {
+      screen.getByRole("button", { name: /\+ Add Risk/ }).click();
+    });
+    const riskDialog = await screen.findByRole("dialog");
+    act(() => {
+      within(riskDialog)
+        .getByRole("button", { name: /^Cancel$/ })
+        .click();
+    });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    // "+ Add Decision" → same: open, cancel, counter stays non-zero.
+    act(() => {
+      screen.getByRole("button", { name: /\+ Add Decision/ }).click();
+    });
+    const decisionDialog = await screen.findByRole("dialog");
+    act(() => {
+      within(decisionDialog)
+        .getByRole("button", { name: /^Cancel$/ })
+        .click();
+    });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    // View a snapshot version — the surface goes read-only.
+    act(() => {
+      screen.getByRole("button", { name: /^Previous version$/i }).click();
+    });
+    await screen.findByRole("button", { name: /^Back to current$/i });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    // Return to the editable form — no dialog may open uninvited.
+    act(() => {
+      screen.getByRole("button", { name: /^Back to current$/i }).click();
+    });
+    await screen.findByRole("button", { name: /\+ Add Risk/ });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("read-only periods hide destructive version restore", async () => {
