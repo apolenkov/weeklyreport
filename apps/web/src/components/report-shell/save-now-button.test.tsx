@@ -163,4 +163,76 @@ describe("SaveNowButton", () => {
     btn.click();
     expect(forceSave).not.toHaveBeenCalled();
   });
+
+  it("pending render: spinner + aria-busy=true + accent fill + disabled", () => {
+    render(
+      <SaveNowButton
+        autosave={makeSnapshot({ state: "saving", isInFlight: true })}
+      />,
+    );
+
+    expect(screen.getByTestId("save-now-spinner")).toBeDefined();
+
+    const btn = screen.getByRole("button") as HTMLButtonElement;
+    expect(btn.getAttribute("aria-busy")).toBe("true");
+    expect(btn.className).toContain("bg-[var(--color-starbucks-accent)]");
+    expect(btn.className).toContain("text-white");
+    expect(btn.disabled).toBe(true);
+  });
+
+  it.each([
+    { state: "idle" as const, isInFlight: false, dirty: false },
+    { state: "pending" as const, isInFlight: false, dirty: true },
+    { state: "error" as const, isInFlight: false, dirty: true },
+  ])(
+    "settled state $state: aria-busy=false, no accent fill",
+    ({ state, isInFlight, dirty }) => {
+      render(
+        <SaveNowButton autosave={makeSnapshot({ state, isInFlight, dirty })} />,
+      );
+
+      const btn = screen.getByRole("button") as HTMLButtonElement;
+      expect(btn.getAttribute("aria-busy")).toBe("false");
+      expect(btn.className).not.toContain("bg-[var(--color-starbucks-accent)]");
+    },
+  );
+
+  it("settled saved state: aria-busy=false, no accent fill", () => {
+    const { rerender } = render(
+      <SaveNowButton
+        autosave={makeSnapshot({ state: "pending", dirty: true })}
+      />,
+    );
+    rerender(
+      <SaveNowButton
+        autosave={makeSnapshot({
+          state: "saved",
+          dirty: false,
+          isInFlight: false,
+        })}
+      />,
+    );
+
+    const btn = screen.getByRole("button") as HTMLButtonElement;
+    expect(btn.getAttribute("aria-busy")).toBe("false");
+    expect(btn.className).not.toContain("bg-[var(--color-starbucks-accent)]");
+  });
+
+  it("does not call forceSave when disabled in saving state (repeat-click guard)", () => {
+    const forceSave = vi.fn();
+    render(
+      <SaveNowButton
+        autosave={makeSnapshot({
+          state: "saving",
+          isInFlight: true,
+          forceSave,
+        })}
+      />,
+    );
+
+    const btn = screen.getByRole("button") as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    btn.click();
+    expect(forceSave).not.toHaveBeenCalled();
+  });
 });
