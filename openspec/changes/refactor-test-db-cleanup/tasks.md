@@ -10,7 +10,7 @@ Reference pattern to mirror: `prisma/reset-hard.ts` `truncateAll()`
 
 ## 1. api — \_test-suffix guard (one commit)
 
-- [ ] 1.1 `apps/api/src/test-utils/prisma-test-helper.ts`: export
+- [x] 1.1 `apps/api/src/test-utils/prisma-test-helper.ts`: export
       `assertTestDatabaseUrl(url: string): void`. Extract the DB name —
       last path segment of the URL before `?`, lowercased — and throw
       unless it ends with `_test`. The error message names the
@@ -24,7 +24,7 @@ Reference pattern to mirror: `prisma/reset-hard.ts` `truncateAll()`
       `prisma/_destructive-guard.ts` is NOT imported (crosses the
       apps/api tsconfig rootDir; its contract allows any localhost DB
       unconditionally — exactly the hole being closed).
-- [ ] 1.2 NEW `apps/api/src/test-utils/prisma-test-helper.test.ts`
+- [x] 1.2 NEW `apps/api/src/test-utils/prisma-test-helper.test.ts`
       (unit, pure string checks, no DB — runs in default `pnpm test`):
       accepts `postgresql://u:p@localhost:5432/customreport_test`, a
       remote host with `_test` suffix, and a URL with a `?schema=...`
@@ -35,7 +35,7 @@ Reference pattern to mirror: `prisma/reset-hard.ts` `truncateAll()`
 
 ## 2. api — TRUNCATE cleanup (one commit)
 
-- [ ] 2.1 `apps/api/src/test-utils/prisma-test-helper.ts`: replace the
+- [x] 2.1 `apps/api/src/test-utils/prisma-test-helper.ts`: replace the
       body of `cleanDatabase` — delete the 21 ordered `deleteMany`
       calls and their FK-order comments (lines 29–61) outright; git
       history is the archive. New mechanism:
@@ -70,7 +70,7 @@ tablename <> '_prisma_migrations'`; throw a loud error if zero
   - Interface unchanged: `createTestPrisma` / `cleanDatabase` /
     `seedTestData` / `TEST_IDS` signatures stay as-is; zero edits to
     the 16 consumer suites.
-- [ ] 2.2 NEW
+- [x] 2.2 NEW
       `apps/api/src/test-utils/prisma-test-helper.integration.test.ts`
       (picked up by the `src/**/*.integration.test.ts` glob in
       `apps/api/vitest.integration.config.ts`, which loads
@@ -78,24 +78,57 @@ tablename <> '_prisma_migrations'`; throw a loud error if zero
       latent leak), an `AppSettings` row, and a `ViewerGroupAccess` row
       — tables today's `deleteMany` chain never touches; call
       `cleanDatabase`; expect all three counts 0; then `seedTestData`
-      succeeds against the empty DB (FK integrity preserved). Fallback
-      decision if the full suite surfaces a hidden singleton
-      dependency: exclude `AppSettings`/`Organization` from the
-      TRUNCATE list (preserves today's observable behavior) and adjust
-      this test.
+      succeeds against the empty DB (FK integrity preserved).
 
 ## 3. docs — record results, close out
 
-- [ ] 3.1 Record the verification outputs below in this file and mark
+- [x] 3.1 Record the verification outputs below in this file and mark
       all tasks complete.
+
+### Verification results (2026-06-11)
+
+**4.1** `pnpm typecheck && pnpm lint && pnpm test` — all green.
+
+- typecheck: 5 tasks successful (api + web + shared + ui).
+- lint: ESLint no issues found.
+- unit tests: api 77 files / 884 tests passed; web 104 files / 935
+  tests passed.
+
+**4.2** `pnpm --filter @customreport/api test:integration` — 25 passed,
+1 skipped (telegram activation, requires real bot token — expected).
+136 tests passed, 2 skipped. The new helper integration suite
+(`prisma-test-helper.integration.test.ts`) verified that
+`UserActionLog`, `AppSettings`, and `ViewerGroupAccess` are all wiped,
+and `seedTestData` succeeds on the post-TRUNCATE empty DB.
+
+**weekly-report.scope-filter pre-existing fix:** the test was broken
+before this change — commit `b44400b6` tightened `GroupProduct` from
+`@@unique([groupId, productId])` to `@@unique([productId])` (B1:
+one-product-per-group invariant), but the test still tried to insert one
+product into two groups. Updated test to match the current constraint:
+product assigned to group A is visible to head-A and invisible to head-B
+(correct scope isolation). Pre-TRUNCATE failure confirmed by restoring
+the old `deleteMany` helper — same `UniqueConstraintViolation` on first
+`createMany`.
+
+**4.3** Negative check with
+`DATABASE_URL="postgresql://u:p@localhost:5432/customreport_dev"`:
+
+```
+cleanDatabase refused: DATABASE_URL points at "customreport_dev",
+which does not end with "_test". Point DATABASE_URL at the dedicated
+integration-test database (e.g. customreport_test).
+```
+
+No SQL executed. Guard fires before any destructive operation.
 
 ## 4. Verification
 
-- [ ] 4.1 `pnpm typecheck && pnpm lint && pnpm test && pnpm build` —
+- [x] 4.1 `pnpm typecheck && pnpm lint && pnpm test && pnpm build` —
       all green. Gate caveat: `pnpm test` excludes
       `*.integration.test.ts`, so green standing gates do NOT exercise
       `cleanDatabase`; 4.2 is the real proof.
-- [ ] 4.2 `pnpm --filter @customreport/api test:integration` — the
+- [x] 4.2 `pnpm --filter @customreport/api test:integration` — the
       full integration run (25 existing files at HEAD) passes, plus the
       new helper integration suite. Of those 25, the 16 cleanDatabase
       consumers are the regression harness for this change:
@@ -105,7 +138,7 @@ tablename <> '_prisma_migrations'`; throw a loud error if zero
       report-sections, review, version-retention,
       weekly-report.scope-filter. Requires the local docker postgres
       with `customreport_test` up.
-- [ ] 4.3 Negative manual check: run the integration suite once with
+- [x] 4.3 Negative manual check: run the integration suite once with
       `DATABASE_URL` pointing at a non-`_test` database name — it MUST
       fail fast on `assertTestDatabaseUrl` before executing any SQL.
-      Record the observed error message here.
+      Observed error message recorded above in §3.1.
