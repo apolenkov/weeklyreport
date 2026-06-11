@@ -103,10 +103,10 @@ describe("createMockTRPC — invalidation is non-vacuous", () => {
     expect(qc.getQueryState(settingsOpts.queryKey)?.isInvalidated).toBe(false);
 
     // Invalidate only getOrganization via its pathFilter.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- contract assertion on dynamic proxy
-    const filter = (
-      proxy as any
-    ).admin.getOrganization.pathFilter() as Parameters<
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- contract assertion on dynamic proxy
+    const proxyAny = proxy as any;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- contract assertion on dynamic proxy
+    const filter = proxyAny.admin.getOrganization.pathFilter() as Parameters<
       typeof qc.invalidateQueries
     >[0];
     await qc.invalidateQueries(filter);
@@ -130,12 +130,13 @@ describe("createMockTRPC — pending descriptor", () => {
 
     const { result } = renderHook(
       () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- proxy access for test
-        const opts = (
-          proxy as any
-        ).admin.jobs.listFailed.queryOptions() as Parameters<
-          typeof useQuery
-        >[0];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- proxy access for test
+        const proxyAny = proxy as any;
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- proxy access for test
+        const opts =
+          proxyAny.admin.jobs.listFailed.queryOptions() as Parameters<
+            typeof useQuery
+          >[0];
         return useQuery(opts);
       },
       { wrapper: Wrapper },
