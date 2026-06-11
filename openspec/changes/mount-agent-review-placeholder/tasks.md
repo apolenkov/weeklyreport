@@ -47,3 +47,9 @@ Decisions D1-D3: `design.md`. Evidence anchors: `proposal.md`.
       shows the placeholder and print/PDF does not.
 - [ ] 4.4 User acceptance: head confirms the placeholder reads consistently
       across viewer, present, preview, and slides.
+- [x] 4.5 Review fix (2026-06-11): head shell slides mode rendered two
+      placeholders (shell toolbar + head slide article in
+      `apps/web/src/components/slides/status-slide-deck.tsx`). Gated the
+      toolbar mount on `mode === "form"`, added `head-report-shell.test.tsx`
+      covering both modes, and made the spec scenario state the
+      form-mode-only toolbar mount explicitly.
