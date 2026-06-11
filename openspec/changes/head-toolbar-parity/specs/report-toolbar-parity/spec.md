@@ -12,8 +12,9 @@ through per-surface bespoke containers. This covers the lead form
 report page (`apps/web/src/components/weekly-report/weekly-report-page.tsx`)
 consumed by `/head/report`, `/reports/[reportId]`, and the lead
 preview. A page MUST NOT stack two period toolbars; when a shell
-already owns the toolbar, the inner page's context bar is suppressed
-via an explicit prop.
+composes the toolbar, it passes the element through the page's
+explicit `toolbar` slot, which replaces the inner context bar and
+renders below the page header row.
 
 #### Scenario: the head review page renders
 

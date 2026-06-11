@@ -61,6 +61,15 @@ Fallback if the suppression prop proves risky during implementation:
 minimum viable parity is restyling the WRP bar to `ReportToolbar` and
 keeping both bars — record the decision in tasks if taken.
 
+Review fix 2026-06-11: the boolean suppression prop left the toolbar
+shell-level, ABOVE the real page header (h1 "Status Report" + publish
+actions) inside `WeeklyReportPage` — the spec scenario only half-held.
+Replaced by a `toolbar` ReactNode slot: the shell still composes the
+single `ReportToolbar`, but the page renders it below its page header
+row, so the lead arrangement holds for the actual header, not just the
+shell's utility action row. Slides mode (no WRP header) keeps the
+shell-level toolbar.
+
 ### D3 — Shared `ToolbarIconButton` primitive, SaveNow as the spec
 
 New `report-shell/toolbar-icon-button.tsx`: 32×32 (`h-8 w-8`)

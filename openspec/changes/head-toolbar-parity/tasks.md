@@ -38,10 +38,16 @@ version nav is already behind ComingSoon before starting.
 - [x] 3.2 Add the suppression prop (default on) and use it from
       `head-report-shell.tsx` so `/head/report/[id]` shows exactly one
       toolbar; move the department label into the shell toolbar.
+      (Review fix 2026-06-11: boolean suppression replaced by a
+      `toolbar` ReactNode slot — see design.md D2 amendment.)
 - [x] 3.3 `head-report-shell.tsx`: reorder to the lead arrangement —
       page header row first, single pill toolbar below; keep the
       scope/view-mode/Present/Print group's existing labels, family
       styling, and placeholder position (`head-toolbar-semantics`).
+      (Review fix 2026-06-11: the first pass only put the toolbar
+      below the shell's utility action row; the real page header still
+      rendered below it. Now WeeklyReportPage renders the shell's
+      toolbar via the slot, below the actual h1 header row.)
 - [x] 3.4 Verify standalone consumers (`/head/report` bare,
       `/reports/[reportId]`, lead preview, present client) render the
       pill container with default props — adjust tests, no behavior
@@ -67,7 +73,7 @@ version nav is already behind ComingSoon before starting.
       `grep -nE '[а-яА-Я]'` — matches only in data/comments/tests.
       (Zero Cyrillic matches in all 7 touched production files.)
 - [x] 4.4 Gates: `pnpm typecheck && pnpm lint && pnpm test &&
-  pnpm build` — record results here. (2026-06-11: typecheck PASS,
+pnpm build` — record results here. (2026-06-11: typecheck PASS,
       lint PASS — ESLint no issues, test PASS — web 1028 tests,
       build PASS. Prettier re-wrapped 2 touched files before commit.)
 - [x] 4.5 Live check on :3000 (lead + head + viewer report routes):

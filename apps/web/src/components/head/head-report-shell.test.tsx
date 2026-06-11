@@ -10,7 +10,7 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 /* ---- Module mocks (hoisted above all imports of the SUT) ---- */
@@ -20,13 +20,12 @@ vi.mock("../slides/head-slides-client", () => ({
 }));
 
 vi.mock("../weekly-report/weekly-report-page", () => ({
-  // head-toolbar-parity: surface the contextToolbar prop so tests can pin
-  // that the shell suppresses the inner period-context bar (design D2).
-  WeeklyReportPage: ({ contextToolbar }: { contextToolbar?: boolean }) => (
-    <div
-      data-testid="weekly-report-page-stub"
-      data-context-toolbar={String(contextToolbar)}
-    />
+  // head-toolbar-parity: render the `toolbar` slot so tests can pin that the
+  // shell hands its single ReportToolbar to the page (design D2). The real
+  // page places the slot below its page header row; that position is pinned
+  // in weekly-report-page.test.tsx.
+  WeeklyReportPage: ({ toolbar }: { toolbar?: React.ReactNode }) => (
+    <div data-testid="weekly-report-page-stub">{toolbar}</div>
   ),
 }));
 
@@ -85,21 +84,21 @@ describe("HeadReportShell — agent-review placeholder per mode", () => {
 });
 
 // head-toolbar-parity pin: the review page owns exactly ONE period toolbar
-// (the shared ReportToolbar), placed below the header-like action row, and
-// suppresses the WeeklyReportPage context bar (design D2). The companion pin
-// in weekly-report-page.test.tsx verifies contextToolbar={false} actually
-// removes the inner bar.
+// (the shared ReportToolbar). The shell composes it and passes it into
+// WeeklyReportPage's `toolbar` slot (design D2), which renders it below the
+// real page header row — the companion pin in weekly-report-page.test.tsx
+// verifies the slot replaces the inner context bar AND follows the header.
 describe("HeadReportShell — single shared toolbar (head-toolbar-parity)", () => {
-  it("form mode renders exactly one ReportToolbar and suppresses the inner context bar", () => {
+  it("form mode renders exactly one ReportToolbar, passed through the page's toolbar slot", () => {
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
     expect(screen.getAllByTestId("report-toolbar")).toHaveLength(1);
-    expect(screen.getByTestId("weekly-report-page-stub")).toHaveAttribute(
-      "data-context-toolbar",
-      "false",
-    );
+    // The toolbar mounts INSIDE WeeklyReportPage (not shell-level above it),
+    // so the page can place it below its h1 page header row.
+    const pageStub = screen.getByTestId("weekly-report-page-stub");
+    expect(within(pageStub).getByTestId("report-toolbar")).toBeInTheDocument();
   });
 
-  it("the toolbar sits below the header-like action row (lead arrangement)", () => {
+  it("the toolbar sits below the shell's utility action row (lead arrangement)", () => {
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
     const headerAction = screen.getByRole("link", { name: /present/i });
     const toolbar = screen.getByTestId("report-toolbar");
