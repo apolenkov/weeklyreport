@@ -14,7 +14,7 @@ import {
   Target,
 } from "lucide-react";
 import Link from "next/link";
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, useRef, useState } from "react";
 
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { LeadSlideHero, metricSegment } from "./lead-slide-hero";
@@ -24,7 +24,10 @@ import type {
   SlideTone,
   UnifiedSectionRow,
 } from "./section-slide-utils";
-import { buildUnifiedSlideModel } from "./section-slide-utils";
+import {
+  buildUnifiedSlideModel,
+  scopeSlideToProduct,
+} from "./section-slide-utils";
 import { SlideFullscreenButton } from "./slide-fullscreen-button";
 import {
   mapTrafficLightToStatus,
@@ -215,6 +218,14 @@ function LeadSlideArticle({
   readonly slide: SectionSlideModel;
   readonly heroControls?: ReactNode;
 }) {
+  /* slides-product-autofit D1/D4: chip selection is this surface's local UI
+     state; the caller keys this component by slide id + page, so navigating
+     to another slide page remounts the article and clears the filter.
+     Re-clicking the active chip toggles back to the all-products view. */
+  const [activeProductId, setActiveProductId] = useState<string | null>(null);
+  // Chips always list every real product (from the UNFILTERED slide), so the
+  // active chip stays visible for unpicking; only the quadrant model below
+  // is scoped (D2).
   const productChips: ProductChipEntry[] = slide.productSlides
     .filter((p) => p.id !== "cross-product")
     .map((p) => ({
@@ -233,15 +244,27 @@ function LeadSlideArticle({
         }
       }}
     >
-      <div
-        key={String(slide.pageIndex ?? 0)}
-        className="animate-fade-in space-y-3"
-      >
+      {/* slides-product-autofit D3: column layout fills the fixed-aspect
+          frame — hero and chips keep natural height, the quadrant grid takes
+          the leftover (flex-1 inside LeadUnifiedSlide). */}
+      <div className="animate-fade-in flex h-full flex-col gap-3">
         <LeadSlideHero slide={slide} heroControls={heroControls} />
         {productChips.length > 1 ? (
-          <SlideProductChips products={productChips} />
+          <SlideProductChips
+            products={productChips}
+            activeProductId={activeProductId ?? undefined}
+            onSelect={(productId) => {
+              setActiveProductId((prev) =>
+                prev === productId ? null : productId,
+              );
+            }}
+          />
         ) : null}
-        <LeadUnifiedSlide model={buildUnifiedSlideModel(slide)} />
+        <LeadUnifiedSlide
+          model={buildUnifiedSlideModel(
+            scopeSlideToProduct(slide, activeProductId),
+          )}
+        />
       </div>
     </article>
   );
@@ -583,7 +606,14 @@ export function StatusSlideDeck({
             ) : null}
 
             {isLead ? (
-              <LeadSlideArticle slide={slide} heroControls={heroControls} />
+              /* slides-product-autofit D1: keying by slide id + page remounts
+                 the article on navigation — the product filter never leaks to
+                 another page, and the fade-in replays as before. */
+              <LeadSlideArticle
+                key={`${slide.id}:${String(slide.pageIndex ?? 0)}`}
+                slide={slide}
+                heroControls={heroControls}
+              />
             ) : (
               <HeadSlideArticle slide={slide} />
             )}
