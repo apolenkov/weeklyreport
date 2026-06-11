@@ -16,12 +16,15 @@ builder count (`openspec/config.yaml` conventions) MUST say 8, not 7.
 - **THEN** the role-coverage gate reports the procedure as compliant
   and CI passes
 
-#### Scenario: a ninth builder is exported without updating the gate
+#### Scenario: a ninth builder is exported
 
-- **WHEN** `trpc.middleware.ts` exports a new procedure builder that is
-  not added to `ALLOWED_CHAINS`
-- **THEN** the role-coverage gate fails, forcing the allow-list and the
-  documented count to be updated together
+- **WHEN** `trpc.middleware.ts` exports a new procedure builder
+- **THEN** the same change MUST add its chain to `ALLOWED_CHAINS` and
+  update the documented builder count — a review-time rule, not a gate
+  guarantee: today's gate only prefix-matches the middleware chains of
+  procedures reachable from `appRouter` and cannot detect an unlisted
+  builder export on its own (rewriting the matching semantics is the
+  follow-up recorded in this change's `tasks.md` 3.1)
 
 ### Requirement: The canonical middleware chain has a single definition site
 
