@@ -43,15 +43,21 @@ it first so the two changes do not implement the same fix twice.
       reporting period" head empty-state on a malformed id. Cross-role seam —
       needs sign-off that no route relies on the current retry; add tests for
       both the formatter and the retry predicate.
-- [ ] 2.2 Finding 2 (lead preview shows the whole portfolio): BLOCKED on the
-      open question — is the preview the unified report (intended) or the lead's
-      slice (the finding's assumption)? No code change until answered; the fix
-      touches the shared `weekly-report-page.tsx`.
-- [ ] 2.3 Finding 3 (export-PDF catalog vs gated button): decide whether
-      leads/viewers should have Export-PDF. If no → fix the oracle catalogs
-      (`e2e/catalog/viewer.yaml` + lead intents) around the `/print` path, NOT
-      the app. If yes → separate feature change. Catalog edits validate with
-      `npx playwright test --list` (e2e is not tsc-gated).
+- [ ] 2.2 Finding 2 (lead preview shows the whole portfolio): DECISION
+      (2026-06-13, user) — the preview MUST be scoped by access and hierarchy,
+      NOT the full 11-product portfolio. Rule: show a product only if the lead's
+      group owns / has rights to it; showing products the group has no rights to
+      is a BUG. Fix the shared `weekly-report-page.tsx` to filter products by
+      the lead's group ownership/access (reuse the existing group-scope /
+      ownership predicate — do not invent a parallel one). Add a test: a lead
+      whose group owns 2 of 11 products sees exactly those 2 in the preview.
+- [ ] 2.3 Finding 3 (export-PDF): DECISION (2026-06-13, user) — leads SHOULD
+      have Export-PDF. The oracle intents were correct; the code hiding the
+      button from leads is the defect. Un-gate / add `ExportPdfButton` for the
+      lead role (re-check viewer under the same intent), keeping head/admin
+      behavior intact. Real feature work — add the button + wire the export, add
+      a test that a lead sees and can trigger it. Catalog intents then pass
+      as-is (`npx playwright test --list`).
 - [ ] 2.4 Finding 4 (PeriodNavigator wrong period on `/head/report/[id]`):
       re-confirm the combobox shows only the latest published period while the
       body shows the active week. Fix must (1) include the displayed/active
@@ -68,10 +74,19 @@ it first so the two changes do not implement the same fix twice.
       4xx no-retry) MUST be covered by the formatter and retry-predicate tests
       from 2.1 before this change can archive.
 
-## Open questions (block the risky set)
+## Open questions — RESOLVED 2026-06-13
 
-- 2.2: lead preview — unified report or lead's section?
-- 2.3: should leads / viewers have Export-PDF at all?
+- 2.2: lead preview — scope by access/hierarchy (show only the group's products;
+  showing all is a bug). Decided.
+- 2.3: leads should have Export-PDF — add it. Decided.
+
+## Consolidation note (2026-06-13)
+
+The lead-only hand-rescue change `driver-findings-lead-2026-06-12` was merged
+into this one and deleted (it was a strict subset). Findings 5 and 6 (plural,
+dead anchor) are already implemented in commit `4bf90edf`; their durable
+contract lives in the main spec `lead-report-controls-integrity` — this change
+no longer re-asserts it.
 
 ## Notes
 
