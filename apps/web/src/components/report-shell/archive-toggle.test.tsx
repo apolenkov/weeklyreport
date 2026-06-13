@@ -1,39 +1,27 @@
 import "@testing-library/jest-dom/vitest";
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ArchiveToggle } from "./archive-toggle";
 
-// head-toolbar-parity D4 contract: 32px icon button via ToolbarIconButton,
-// switch semantics preserved, non-zero archived count visible as a badge.
+// head-toolbar-parity D4 + polish-lead-toolbar 1.1 contract: 32px icon button
+// via ToolbarIconButton, switch semantics preserved, and NO numeric count badge
+// (the count read as a "press me" CTA, so the toggle is a quiet inert indicator).
 describe("ArchiveToggle", () => {
-  it("renders no count badge when archivedCount is not provided", () => {
+  it("renders as a quiet indicator with no numeric count text", () => {
     render(<ArchiveToggle checked={false} onChange={vi.fn()} />);
     const btn = screen.getByRole("switch");
     expect(btn).toHaveTextContent("");
   });
 
-  it("renders no count badge when archivedCount is 0", () => {
-    render(
-      <ArchiveToggle checked={false} onChange={vi.fn()} archivedCount={0} />,
-    );
-    expect(screen.queryByText("0")).not.toBeInTheDocument();
-  });
-
-  it("keeps a non-zero archived count visible on the control", () => {
-    render(
-      <ArchiveToggle checked={false} onChange={vi.fn()} archivedCount={3} />,
-    );
-    const badge = screen.getByText("3");
-    expect(badge).toBeInTheDocument();
-    expect(screen.getByRole("switch")).toContainElement(badge);
+  it("never renders a count badge regardless of how many archives exist", () => {
+    render(<ArchiveToggle checked={true} onChange={vi.fn()} />);
+    expect(screen.queryByText(/^\d+$/)).not.toBeInTheDocument();
   });
 
   it("is a 32px icon button with aria-label and matching tooltip", () => {
-    render(
-      <ArchiveToggle checked={false} onChange={vi.fn()} archivedCount={2} />,
-    );
+    render(<ArchiveToggle checked={false} onChange={vi.fn()} />);
     const btn = screen.getByRole("switch", {
       name: "Show closed (archived) report periods",
     });
@@ -46,10 +34,15 @@ describe("ArchiveToggle", () => {
   });
 
   it("is a switch with aria-checked reflecting the checked prop", () => {
-    render(
-      <ArchiveToggle checked={true} onChange={vi.fn()} archivedCount={2} />,
-    );
+    render(<ArchiveToggle checked={true} onChange={vi.fn()} />);
     const btn = screen.getByRole("switch");
     expect(btn).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("calls onChange with the toggled value when clicked", () => {
+    const onChange = vi.fn();
+    render(<ArchiveToggle checked={false} onChange={onChange} />);
+    fireEvent.click(screen.getByRole("switch"));
+    expect(onChange).toHaveBeenCalledWith(true);
   });
 });
