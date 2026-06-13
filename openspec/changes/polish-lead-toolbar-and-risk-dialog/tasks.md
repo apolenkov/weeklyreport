@@ -9,10 +9,10 @@ English; Russian only in data/comments/tests.
 
 ## 1. Toolbar — control consistency
 
-- [ ] 1.1 Archive toggle: remove the archived-count signal that reads as a CTA;
+- [x] 1.1 Archive toggle: remove the archived-count signal that reads as a CTA;
       make it a quiet inert indicator (`ArchiveToggle` →
       `report-shell/toolbar-icon-button.tsx`). Keep the switch behavior + aria.
-- [ ] 1.2 Version "Coming soon" control: make it fully rounded and visually
+- [x] 1.2 Version "Coming soon" control: make it fully rounded and visually
       consistent with the 32×32 sibling controls (`lead/version-coming-soon.tsx`).
 - [ ] 1.3 Fill-from / copy: re-consolidate into ONE control — default click
       copies; drop the separate copy control (`lead/fill-from-button.tsx`).

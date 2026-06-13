@@ -24,6 +24,18 @@ describe("VersionComingSoonControl", () => {
     expect(control).toHaveAttribute("aria-disabled", "true");
   });
 
+  it("is a fully rounded 32x32 control matching its toolbar siblings", () => {
+    const { container } = render(<VersionComingSoonControl />);
+
+    const control = container.querySelector(
+      '[data-testid="version-coming-soon"]',
+    );
+
+    expect(control?.className).toContain("h-8");
+    expect(control?.className).toContain("w-8");
+    expect(control?.className).toContain("rounded-full");
+  });
+
   it("renders the ComingSoonBadge tooltip", () => {
     const { container } = render(<VersionComingSoonControl />);
 
