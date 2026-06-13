@@ -17,7 +17,7 @@ English; Russian only in data/comments/tests.
 - [ ] 1.3 Fill-from / copy: re-consolidate into ONE control — default click
       copies; drop the separate copy control (`lead/fill-from-button.tsx`).
       DESIGN: confirm the merged interaction first (see proposal open question).
-- [ ] 1.4 Add a unit/render test per changed control (shape/aria/behavior).
+- [x] 1.4 Add a unit/render test per changed control (shape/aria/behavior).
 
 ## 2. Risk edit dialog — clearer layout (DESIGN first)
 
@@ -29,16 +29,16 @@ English; Russian only in data/comments/tests.
 
 ## 3. Slide hero — height alignment
 
-- [ ] 3.1 Align the status badge ("Blockers", `h-11`) to the same height/baseline
+- [x] 3.1 Align the status badge ("Blockers", `h-11`) to the same height/baseline
       as its sibling row elements in `slides/lead-slide-hero.tsx`. Named const,
       no magic number.
-- [ ] 3.2 Verify across statuses (on-track / at-risk / blocked) and product
+- [x] 3.2 Verify across statuses (on-track / at-risk / blocked) and product
       counts so no row wraps or misaligns.
 
 ## 4. Gates
 
-- [ ] 4.1 `pnpm typecheck && pnpm lint` + vitest for touched web/ui packages.
-- [ ] 4.2 Live re-check each item at `:3000` (form + `?mode=slides`); before/after
+- [x] 4.1 `pnpm typecheck && pnpm lint` + vitest for touched web/ui packages.
+- [x] 4.2 Live re-check each item at `:3000` (form + `?mode=slides`); before/after
       screenshots for the visual items.
 
 ## Notes
