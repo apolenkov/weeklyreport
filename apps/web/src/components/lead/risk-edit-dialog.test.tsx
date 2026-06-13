@@ -706,3 +706,60 @@ describe("RiskEditDialog — cross-stage product preservation", () => {
     expect(screen.getByText(/— Payments Gateway/)).toBeInTheDocument();
   });
 });
+
+/**
+ * D12 mount/unmount shell: the outer component returns null when closed and
+ * remounts fresh content on reopen, so typed-but-cancelled state never leaks
+ * into the next open. This is the structural replacement for the deleted
+ * useEffect form-reset.
+ */
+describe("RiskEditDialog — D12 reopen renders fresh state", () => {
+  it("does not leak typed text from a cancelled create into the next open", () => {
+    const { rerender } = render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
+      target: { value: "draft that should be discarded" },
+    });
+    expect(screen.getByLabelText(/^Risk \*/i)).toHaveValue(
+      "draft that should be discarded",
+    );
+
+    // Cancel = close → the shell unmounts the content.
+    rerender(
+      <RiskEditDialog
+        open={false}
+        risk={null}
+        products={products}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+      />,
+    );
+    expect(screen.queryByLabelText(/^Risk \*/i)).not.toBeInTheDocument();
+
+    // Reopen → fresh mount, empty field.
+    rerender(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+      />,
+    );
+    expect(screen.getByLabelText(/^Risk \*/i)).toHaveValue("");
+  });
+});
