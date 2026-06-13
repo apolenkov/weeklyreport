@@ -106,9 +106,13 @@ run full gates and read the whole diff before each commit.
 
 ## 5. Verification
 
-- [ ] 5.1 Gates after EVERY commit and finally:
+- [x] 5.1 Gates after EVERY commit and finally:
       `pnpm typecheck && pnpm lint && pnpm test && pnpm build` —
-      record results here.
+      record results here. FINAL (HEAD 13fa93c7): typecheck OK,
+      lint OK (eslint + stylelint + prisma typecheck), test OK
+      (api 80 + shared 16 + web 113 test files; web 1054 tests),
+      build OK. Per-task targeted gates (typecheck + lint + web
+      vitest) ran green on every commit.
 - [ ] 5.2 Live browser walk (driver-verify lesson: never trust
       unit-only): "+ Add Risk" → cancel → view snapshot → "Back to
       current" → no dialog reopens; same for Decision; risk-dialog
