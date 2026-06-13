@@ -58,7 +58,7 @@ it first so the two changes do not implement the same fix twice.
       behavior intact. Real feature work — add the button + wire the export, add
       a test that a lead sees and can trigger it. Catalog intents then pass
       as-is (`npx playwright test --list`).
-- [ ] 2.4 Finding 4 (PeriodNavigator wrong period on `/head/report/[id]`):
+- [x] 2.4 Finding 4 (PeriodNavigator wrong period on `/head/report/[id]`):
       re-confirm the combobox shows only the latest published period while the
       body shows the active week. Fix must (1) include the displayed/active
       period in `periods` with `isCurrent=true` on the head route
