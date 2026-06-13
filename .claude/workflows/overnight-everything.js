@@ -244,6 +244,31 @@ ${COMMON_RULES}
 Return StructuredOutput: status done(=archived)/blocked/failed; summary; commit.`;
 }
 
+// A schema-bound agent that hits its turn ceiling before calling
+// StructuredOutput THROWS and kills the whole run (happened 3x on
+// 2026-06-11). Retry with a continuation prompt: edits and tasks.md
+// checkboxes persist on disk, so every attempt advances. The retry prefix
+// also changes the cache key, so attempts never collide on resume.
+const AGENT_ATTEMPTS = 3;
+async function agentWithRetry(promptText, opts) {
+  for (let i = 0; i < AGENT_ATTEMPTS; i++) {
+    const p =
+      i === 0
+        ? promptText
+        : `RETRY ${i} of a previous attempt that hit its turn limit mid-work. Its edits and tasks.md checkboxes are already ON DISK — orient with "git status --short" + "git log --oneline -5", then CONTINUE from where it stopped; do not redo finished work. Budget your turns: leave room to run the gates and return StructuredOutput even if some tasks remain unchecked (then status "blocked" with the remainder listed).\n\nOriginal task:\n${promptText}`;
+    try {
+      const r = await agent(p, opts);
+      if (r) return r;
+      log(`${opts.label}: attempt ${i + 1}/${AGENT_ATTEMPTS} returned null`);
+    } catch (e) {
+      log(
+        `${opts.label}: attempt ${i + 1}/${AGENT_ATTEMPTS} threw (${String(e).slice(0, 140)})`,
+      );
+    }
+  }
+  return null;
+}
+
 // ---- Phase 1: capture feedback as OpenSpec changes ----
 phase("Capture");
 log(
@@ -283,9 +308,14 @@ for (const id of QUEUE) {
     schema: IMPL_SCHEMA,
   };
   if (SONNET.has(id)) implOpts.model = "sonnet";
-  const impl = await agent(implPrompt(id), implOpts);
+  const impl = await agentWithRetry(implPrompt(id), implOpts);
   if (!impl) {
-    results.push({ id, status: "failed", summary: "implementer agent died" });
+    results.push({
+      id,
+      status: "failed",
+      summary: `implementer died after ${AGENT_ATTEMPTS} attempts — change left active, partial work may be on disk`,
+    });
+    log(`${id}: FAILED after ${AGENT_ATTEMPTS} attempts, moving on`);
     continue;
   }
   if (impl.status !== "done") {
@@ -326,7 +356,7 @@ for (const id of QUEUE) {
   let fixFailed = false;
   if (mustFix.length > 0) {
     log(`${id}: ${mustFix.length} must-fix finding(s) → fixer`);
-    const fix = await agent(fixPrompt(id, mustFix), {
+    const fix = await agentWithRetry(fixPrompt(id, mustFix), {
       label: `fix:${id}`,
       phase: "Implement",
       schema: IMPL_SCHEMA,
@@ -338,7 +368,7 @@ for (const id of QUEUE) {
   // Archive only clean work (grill decision: night DOES archive; gaps stay active).
   let archive = null;
   if (!fixFailed) {
-    archive = await agent(archivePrompt(id), {
+    archive = await agentWithRetry(archivePrompt(id), {
       label: `archive:${id}`,
       phase: "Implement",
       schema: IMPL_SCHEMA,
@@ -387,7 +417,7 @@ Return a one-paragraph summary.`,
 
 // ---- Phase 4: stripe acceptance + ai-ui-driver over all roles ----
 phase("Drive");
-const stripe = await agent(
+const stripe = await agentWithRetry(
   `Acceptance pass for the already-Complete OpenSpec change "fix-lead-stripe-and-archived-badges" in ${REPO}.
 1. Verify per ${REPO}/.claude/skills/openspec-verify-change/SKILL.md against its artifacts.
 2. Verify the SUBSTANCE in the live browser at http://localhost:3000 (Playwright MCP via ToolSearch; dev-login as lead): the Previous/Archived pills behavior described in the proposal. Save screenshots to /tmp/overnight-shots/stripe-<n>.png (mkdir -p first).
@@ -404,7 +434,7 @@ Return StructuredOutput: status done(=archived)/blocked/failed; summary incl. sc
 const ROLES = ["lead", "head", "admin", "viewer"];
 const driverRuns = [];
 for (const role of ROLES) {
-  const run = await agent(
+  const run = await agentWithRetry(
     `Execute the ai-ui-driver skill for role "${role}".
 Read ${REPO}/.claude/skills/ai-ui-driver/SKILL.md IN FULL and follow it (including its scripts/ helpers and oracle catalogs) against http://localhost:3000 using Playwright MCP tools (load via ToolSearch; use --noproxy for localhost if shelling out). Dev-login stub is enabled.
 Known lesson (repo memory): the driver's verify skeptic both false-confirms AND false-dismisses — re-verify every finding in the live browser before reporting; never edit the oracle catalog to silence a finding.
@@ -436,7 +466,7 @@ ${CAPTURE_RULES}`,
   if (consolidated) {
     const lowRisk = allFindings.filter((f) => f.fixRisk === "low");
     if (lowRisk.length > 0) {
-      const fix = await agent(
+      const fix = await agentWithRetry(
         `Implement ONLY the tasks under "## Low-risk (fix tonight)" in openspec/changes/driver-findings-2026-06-11/tasks.md in ${REPO}. Check boxes as you go; leave the Risky section untouched. Gates: pnpm typecheck && pnpm lint + targeted vitest. Re-verify each fix in the live browser (:3000, Playwright MCP) before checking its box. Commit (own files only, co-author trailer). Do NOT archive — risky tasks remain for the morning.
 ${COMMON_RULES}
 Return StructuredOutput: status done/blocked/failed; summary; commit.`,
@@ -455,7 +485,7 @@ Return StructuredOutput: status done/blocked/failed; summary; commit.`,
 
 // ---- Phase 5: repo-wide gates + morning report ----
 phase("Finalize");
-const gates = await agent(
+const gates = await agentWithRetry(
   `Run the full repo gates in ${REPO} after tonight's overnight run.
 1. pnpm typecheck && pnpm lint && pnpm test — report exact failures.
 2. Before "pnpm build": stop dev servers ("npx kill-port 3000 3002 || true"), then pnpm build.
