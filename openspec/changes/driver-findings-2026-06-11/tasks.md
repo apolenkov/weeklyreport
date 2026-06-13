@@ -33,7 +33,7 @@ it first so the two changes do not implement the same fix twice.
 
 ## Risky (morning confirmation — do NOT start without a decision)
 
-- [ ] 2.1 Finding 1 (systemic Zod leak + 4xx retry): re-confirm the raw-JSON
+- [x] 2.1 Finding 1 (systemic Zod leak + 4xx retry): re-confirm the raw-JSON
       toast on `/lead/report/not-a-uuid` (`leadForm.byPeriod`) AND
       `/reports/not-a-uuid` (`weeklyReport.get`), plus the 4-attempt 4xx retry
       on the `byPeriod` batch. Proposed fix = map BAD_REQUEST / Zod / NOT_FOUND

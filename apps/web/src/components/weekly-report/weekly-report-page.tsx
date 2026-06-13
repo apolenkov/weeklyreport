@@ -11,6 +11,7 @@ import {
   invalidateLeadForm,
   invalidateLeadHistory,
 } from "../../lib/cache-keys";
+import { getClientErrorDetails } from "../../lib/client-error-reporting";
 import { joinPeriodLabel } from "../../lib/format-date";
 import { mapWeeklyReport } from "../../lib/mappers";
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
@@ -67,6 +68,63 @@ interface WeeklyReportPageProps {
    * and keep the page's own toolbar.
    */
   readonly toolbar?: ReactNode;
+}
+
+/**
+ * Centered title + body card used for the page's terminal states (invalid-link,
+ * no active period). Extracted so the two states share one layout and the page
+ * function stays under the cognitive-complexity budget.
+ */
+function CenteredNotice({
+  title,
+  body,
+}: {
+  readonly title: string;
+  readonly body: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 text-center">
+      <p className="text-lg font-semibold text-[var(--color-foreground)]">
+        {title}
+      </p>
+      <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
+        {body}
+      </p>
+    </div>
+  );
+}
+
+interface TerminalNotice {
+  readonly title: string;
+  readonly body: string;
+}
+
+/**
+ * Resolves the page's terminal display state (after loading settles).
+ *  - invalid-link (driver finding 1): a malformed reportId (400 BAD_REQUEST) or
+ *    a missing report (404 NOT_FOUND). Transient 5xx / network errors fall
+ *    through to no-period (unchanged behavior).
+ *  - no active period (R3a): no data, or a `no-period` status.
+ * Returns null when the report should render normally.
+ */
+function resolveTerminalNotice(query: {
+  readonly isError: boolean;
+  readonly error: unknown;
+  readonly data: { readonly status: string } | undefined;
+}): TerminalNotice | null {
+  if (query.isError && getClientErrorDetails(query.error).isInvalidLink) {
+    return {
+      title: "Report not found",
+      body: "This link is invalid or the report no longer exists.",
+    };
+  }
+  if (!query.data || query.data.status === "no-period") {
+    return {
+      title: "No active reporting period",
+      body: "Ask an admin to open a new period to start collecting status reports.",
+    };
+  }
+  return null;
 }
 
 export function WeeklyReportPage({
@@ -199,21 +257,23 @@ export function WeeklyReportPage({
     return <WeeklyReportSkeleton />;
   }
 
-  // R3a: no active period — show empty state instead of error toast / spinner.
-  if (!weeklyQ.data || weeklyQ.data.status === "no-period") {
+  // Terminal states (driver finding 1 invalid-link + R3a no-period). Resolved
+  // by a pure helper so the page function stays under the complexity budget.
+  const terminalNotice = resolveTerminalNotice(weeklyQ);
+  if (terminalNotice) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
-        <p className="text-lg font-semibold text-[var(--color-foreground)]">
-          No active reporting period
-        </p>
-        <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-          Ask an admin to open a new period to start collecting status reports.
-        </p>
-      </div>
+      <CenteredNotice title={terminalNotice.title} body={terminalNotice.body} />
     );
   }
 
-  const view = mapWeeklyReport(weeklyQ.data);
+  // After the terminal-notice guard the report is loaded and active; this
+  // narrows weeklyQ.data off the `no-period` / undefined variants for TS.
+  const reportData = weeklyQ.data;
+  if (!reportData || reportData.status === "no-period") {
+    return null;
+  }
+
+  const view = mapWeeklyReport(reportData);
   const submitted = view.submissionCount;
   const total = view.totalLeads;
   // pendingCount mirrors mock semantics: total - submitted, clamped >= 0.
@@ -231,7 +291,7 @@ export function WeeklyReportPage({
     scope === "lead"
       ? (() => {
           const nameById = new Map<string, string>();
-          for (const section of weeklyQ.data.leadSections) {
+          for (const section of reportData.leadSections) {
             if (section.authorId) {
               nameById.set(section.authorId, section.authorName);
             }

@@ -9,7 +9,59 @@ export type ClientErrorDetails = Readonly<{
   httpStatus: number | null;
   trpcCode: string | null;
   isInternal: boolean;
+  /**
+   * Any deterministic client-side error (HTTP 4xx). Retrying it cannot succeed,
+   * so the query client skips retries for it. Broader than
+   * {@link ClientErrorDetails.isInvalidLink}: covers 401/403/429 too.
+   */
+  isDeterministicClientError: boolean;
+  /**
+   * A malformed-input (`BAD_REQUEST` / Zod / HTTP 400) or not-found
+   * (`NOT_FOUND` / HTTP 404) error. Its `error.message` (often a serialized Zod
+   * issues array with the UUID `pattern` regex) MUST be replaced by a clean
+   * "invalid link / not found" message and MUST NOT be echoed to the user.
+   * Narrower than {@link ClientErrorDetails.isDeterministicClientError}: a
+   * 401/403/429 keeps its own message.
+   */
+  isInvalidLink: boolean;
 }>;
+
+/** Lowest HTTP status treated as a deterministic client error. */
+const CLIENT_ERROR_STATUS_MIN = 400;
+/** HTTP status for a malformed request (Zod validation failure). */
+const HTTP_BAD_REQUEST = 400;
+/** HTTP status for a missing resource. */
+const HTTP_NOT_FOUND = 404;
+/** Lowest HTTP status treated as a transient/internal server error. */
+const SERVER_ERROR_STATUS_MIN = 500;
+/** tRPC error codes that map to the clean invalid-link / not-found message. */
+const INVALID_LINK_TRPC_CODES = new Set(["BAD_REQUEST", "NOT_FOUND"]);
+/** HTTP statuses that map to the clean invalid-link / not-found message. */
+const INVALID_LINK_HTTP_STATUSES = new Set([HTTP_BAD_REQUEST, HTTP_NOT_FOUND]);
+
+function computeIsDeterministicClientError(
+  httpStatus: number | null,
+  trpcCode: string | null,
+): boolean {
+  const is4xxStatus =
+    httpStatus !== null &&
+    httpStatus >= CLIENT_ERROR_STATUS_MIN &&
+    httpStatus < SERVER_ERROR_STATUS_MIN;
+  const isClientCode =
+    trpcCode !== null && INVALID_LINK_TRPC_CODES.has(trpcCode);
+  return is4xxStatus || isClientCode;
+}
+
+function computeIsInvalidLink(
+  httpStatus: number | null,
+  trpcCode: string | null,
+): boolean {
+  const isInvalidStatus =
+    httpStatus !== null && INVALID_LINK_HTTP_STATUSES.has(httpStatus);
+  const isInvalidCode =
+    trpcCode !== null && INVALID_LINK_TRPC_CODES.has(trpcCode);
+  return isInvalidStatus || isInvalidCode;
+}
 
 export type ClientErrorLogEntry = Readonly<{
   event: string;
@@ -56,16 +108,33 @@ export function getClientErrorDetails(error: unknown): ClientErrorDetails {
   const requestId = requestIdFromShape ?? requestIdFromHeader;
   const message = error instanceof Error ? error.message : "";
 
+  const isInternal =
+    trpcCode === "INTERNAL_SERVER_ERROR" ||
+    (httpStatus !== null && httpStatus >= SERVER_ERROR_STATUS_MIN) ||
+    message === "Unexpected error";
+
+  const isDeterministicClientError =
+    !isInternal && computeIsDeterministicClientError(httpStatus, trpcCode);
+  const isInvalidLink =
+    !isInternal && computeIsInvalidLink(httpStatus, trpcCode);
+
   return {
     requestId,
     httpStatus,
     trpcCode,
-    isInternal:
-      trpcCode === "INTERNAL_SERVER_ERROR" ||
-      (httpStatus !== null && httpStatus >= 500) ||
-      message === "Unexpected error",
+    isInternal,
+    isDeterministicClientError,
+    isInvalidLink,
   };
 }
+
+/**
+ * Clean human message shown for a deterministic client error (4xx / Zod
+ * validation / not-found). Replaces the raw `error.message` (a serialized Zod
+ * issues array) so the user never sees the validation `pattern` regex.
+ */
+const INVALID_LINK_MESSAGE =
+  "This link is invalid or the report no longer exists.";
 
 export function formatClientErrorMessage(
   prefix: string,
@@ -76,6 +145,13 @@ export function formatClientErrorMessage(
 
   if (details.isInternal) {
     return `${prefix}.${ref}`;
+  }
+
+  // Validation / not-found errors carry a raw Zod issues array (with the UUID
+  // `pattern` regex) in `error.message`; never echo it. Show a clean message.
+  // Other 4xx (401/403/429) keep their own message and fall through.
+  if (details.isInvalidLink) {
+    return `${prefix}: ${INVALID_LINK_MESSAGE}${ref}`;
   }
 
   if (error instanceof Error && error.message) {
