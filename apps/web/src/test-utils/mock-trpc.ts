@@ -102,8 +102,7 @@ export function createMockTRPC(descriptors: ProcedureDescriptor[]): {
 } {
   const captured: Record<string, CapturedMutation> = {};
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional: building a deep dynamic object that maps to TRPCProxy; the single cast is at the return site
-  const root: Record<string, any> = {};
+  const root: Record<string, unknown> = {};
 
   for (const descriptor of descriptors) {
     const { path, query, queryByInput, mutation } = descriptor;
