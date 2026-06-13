@@ -140,6 +140,33 @@ describe("section slide utilities", () => {
     ]);
   });
 
+  it("a stage-less (empty stageIds) legacy risk floors every owned stage (unify-risk-stage-status review-fix)", () => {
+    // Empty/undefined stageIds means "covers all stages" in the live form;
+    // the slide export must agree so a legacy stage-less risk does not floor
+    // every chip in the form yet nothing on the deck. Routing through
+    // `riskCoversStage` kills that divergence.
+    const slide = buildSectionSlideModel(
+      makeSection({
+        risks: [
+          {
+            id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+            projectId: PRODUCT_ID,
+            risk: "Legacy stage-less blocker",
+            impact: "Everything stalls",
+            mitigation: "Escalate",
+            severity: "blocked",
+            stageIds: [],
+          },
+        ],
+      }),
+    );
+
+    expect(slide.productSlides[0]?.stages).toEqual([
+      expect.objectContaining({ name: "Discovery", status: "red" }),
+      expect.objectContaining({ name: "Build", status: "red" }),
+    ]);
+  });
+
   it("groups lead slide content by product and keeps shared decisions visible", () => {
     const slide = buildSectionSlideModel(
       makeSection({

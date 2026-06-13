@@ -62,7 +62,7 @@ export function stageNameMatches(
  * stageIds = undefined  → fall back to stageName CSV (legacy)
  */
 export function riskCoversStage(
-  risk: { stageName?: string | null; stageIds?: string[] },
+  risk: { stageName?: string | null; stageIds?: readonly string[] },
   stageName: string,
 ): boolean {
   if (risk.stageIds !== undefined) {
