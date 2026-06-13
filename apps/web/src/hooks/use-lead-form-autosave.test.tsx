@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../lib/trpc-context";
+import { createMockTRPC } from "../test-utils/mock-trpc";
 import { useLeadFormAutosave } from "./use-lead-form-autosave";
 
 vi.mock("sonner", () => ({
@@ -59,27 +60,25 @@ function buildHarness(
       return { ok: true };
     });
 
-  // The TRPCProxy mock: mutationOptions returns whatever the caller passes
-  // PLUS our mutationFn. React Query will use this.mutationFn to execute.
-  const trpcMock = {
-    reports: {
-      saveDraft: {
-        mutationOptions: (passed: object) => ({
-          ...passed,
-          mutationFn: async (vars: unknown) => {
-            calls.push(vars);
-            return userMutationFn(vars);
-          },
-        }),
-        pathFilter: () => ({ queryKey: ["reports", "saveDraft"] }),
-      },
-      getActive: { pathFilter: () => ({ queryKey: ["reports", "getActive"] }) },
-      myHistory: { pathFilter: () => ({ queryKey: ["reports", "myHistory"] }) },
+  const { proxy, captured } = createMockTRPC([
+    {
+      path: ["reports", "saveDraft"],
+      mutation: true,
     },
-    leadForm: {
-      byPeriod: { pathFilter: () => ({ queryKey: ["leadForm", "byPeriod"] }) },
+    { path: ["reports", "getActive"] },
+    { path: ["reports", "myHistory"] },
+    { path: ["leadForm", "byPeriod"] },
+  ]);
+
+  // Wire the captured saveDraft mutationFn to delegate to the harness's
+  // own calls array and user-supplied mutationFn — same contract as before.
+  captured["reports.saveDraft"].mutationFn.mockImplementation(
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises -- async mock implementation; Promise is consumed by React Query, not discarded
+    async (vars: unknown) => {
+      calls.push(vars);
+      return userMutationFn(vars);
     },
-  };
+  );
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -88,7 +87,7 @@ function buildHarness(
   function wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <TRPCProxyContext.Provider value={trpcMock as never}>
+        <TRPCProxyContext.Provider value={proxy}>
           {children}
         </TRPCProxyContext.Provider>
       </QueryClientProvider>
@@ -554,6 +553,7 @@ describe("useLeadFormAutosave", () => {
     });
 
     expect(result.current.state).toBe("saved");
+    // JSON.stringify of the nested key [["leadForm","byPeriod"]] contains "leadForm"
     const invalidatedKeys = invalidateSpy.mock.calls.map((c) =>
       JSON.stringify(c[0]),
     );

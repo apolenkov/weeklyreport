@@ -26,6 +26,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SessionContext } from "../../lib/session-provider";
 import { TRPCProxyContext } from "../../lib/trpc-context";
+import { createMockTRPC } from "../../test-utils/mock-trpc";
 import { LeadForm } from "./lead-form";
 
 vi.mock("sonner", () => ({
@@ -86,156 +87,85 @@ function makeSection(
 }
 
 function buildHarness(opts: {
-  pinnedReportId?: string;
-  // The byPeriod section returned by the mock; defaults to active-report data.
   byPeriodSection?: ReturnType<typeof makeSection>;
   byPeriodReadOnly?: boolean;
   onByPeriodQuery?: () => void;
 }) {
-  const trpcMock = {
-    reports: {
-      getActive: {
-        queryOptions: () => ({
-          queryKey: ["reports.getActive"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (stub returns a resolved value)
-          queryFn: async () => ({
-            reportId: ACTIVE_REPORT_ID,
-            reportSectionId: ACTIVE_SECTION_ID,
-            authorName: "Test Lead",
-          }),
-        }),
-        pathFilter: () => ({ queryKey: ["reports.getActive"] }),
-      },
-      myHistory: {
-        queryOptions: () => ({
-          queryKey: ["reports.myHistory"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (stub returns a resolved value)
-          queryFn: async () => [
-            {
-              sectionId: ACTIVE_SECTION_ID,
-              reportId: ACTIVE_REPORT_ID,
-              periodStart: new Date("2026-04-14T00:00:00Z"),
-              periodEnd: new Date("2026-04-20T00:00:00Z"),
-              reportStatus: "open",
-              sectionStatus: "draft",
-              submittedAt: null,
-              publishedAt: null,
-            },
-            {
-              sectionId: PAST_SECTION_ID,
-              reportId: PAST_REPORT_ID,
-              periodStart: new Date("2026-04-07T00:00:00Z"),
-              periodEnd: new Date("2026-04-13T00:00:00Z"),
-              reportStatus: "published",
-              sectionStatus: "submitted",
-              submittedAt: new Date("2026-04-13T20:00:00Z"),
-              publishedAt: new Date("2026-04-14T08:00:00Z"),
-            },
-          ],
-        }),
-        pathFilter: () => ({ queryKey: ["reports.myHistory"] }),
-      },
-      saveDraft: {
-        mutationOptions: (
-          passed: {
-            onSuccess?: () => void;
-            onError?: (e: unknown) => void;
-          } = {},
-        ) => ({
-          ...passed,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (stub returns a resolved value)
-          mutationFn: async () => ({ ok: true }),
-        }),
-        pathFilter: () => ({ queryKey: ["reports.saveDraft"] }),
-      },
-      submit: {
-        mutationOptions: (
-          passed: {
-            onSuccess?: () => void;
-            onError?: (e: unknown) => void;
-          } = {},
-        ) => ({
-          ...passed,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (stub returns a resolved value)
-          mutationFn: async () => ({ ok: true }),
-        }),
-        pathFilter: () => ({ queryKey: ["reports.submit"] }),
+  const { proxy } = createMockTRPC([
+    {
+      path: ["reports", "getActive"],
+      query: {
+        reportId: ACTIVE_REPORT_ID,
+        reportSectionId: ACTIVE_SECTION_ID,
+        authorName: "Test Lead",
       },
     },
-    leadForm: {
-      byPeriod: {
-        queryOptions: () => ({
-          queryKey: ["leadForm.byPeriod"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (stub returns a resolved value)
-          queryFn: async () => {
-            opts.onByPeriodQuery?.();
-            return {
-              section: opts.byPeriodSection ?? makeSection(),
-              readOnly: opts.byPeriodReadOnly ?? false,
-            };
-          },
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.byPeriod"] }),
-      },
-      revoke: {
-        mutationOptions: (
-          passed: {
-            onSuccess?: () => void;
-            onError?: (e: unknown) => void;
-          } = {},
-        ) => ({
-          ...passed,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (stub returns a resolved value)
-          mutationFn: async () => ({ ok: true }),
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.revoke"] }),
-      },
-      fillFrom: {
-        mutationOptions: (
-          passed: {
-            onSuccess?: () => void;
-            onError?: (e: unknown) => void;
-          } = {},
-        ) => ({
-          ...passed,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (stub returns a resolved value)
-          mutationFn: async () => ({ ok: true }),
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.fillFrom"] }),
-      },
-      requestReopen: {
-        mutationOptions: (
-          passed: {
-            onSuccess?: () => void;
-            onError?: (e: unknown) => void;
-          } = {},
-        ) => ({
-          ...passed,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (stub returns a resolved value)
-          mutationFn: async () => ({ ok: true }),
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.requestReopen"] }),
-      },
-      crossAuthors: {
-        queryOptions: () => ({
-          queryKey: ["leadForm.crossAuthors"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (stub returns a resolved value)
-          queryFn: async () => [] as never[],
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.crossAuthors"] }),
-      },
-      crossAuthorSections: {
-        queryOptions: () => ({
-          queryKey: ["leadForm.crossAuthorSections"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (stub returns a resolved value)
-          queryFn: async () => [] as never[],
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.crossAuthorSections"] }),
+    {
+      path: ["reports", "myHistory"],
+      query: [
+        {
+          sectionId: ACTIVE_SECTION_ID,
+          reportId: ACTIVE_REPORT_ID,
+          periodStart: new Date("2026-04-14T00:00:00Z"),
+          periodEnd: new Date("2026-04-20T00:00:00Z"),
+          reportStatus: "open",
+          sectionStatus: "draft",
+          submittedAt: null,
+          publishedAt: null,
+        },
+        {
+          sectionId: PAST_SECTION_ID,
+          reportId: PAST_REPORT_ID,
+          periodStart: new Date("2026-04-07T00:00:00Z"),
+          periodEnd: new Date("2026-04-13T00:00:00Z"),
+          reportStatus: "published",
+          sectionStatus: "submitted",
+          submittedAt: new Date("2026-04-13T20:00:00Z"),
+          publishedAt: new Date("2026-04-14T08:00:00Z"),
+        },
+      ],
+    },
+    {
+      path: ["reports", "saveDraft"],
+      mutation: true,
+    },
+    {
+      path: ["reports", "submit"],
+      mutation: true,
+    },
+    {
+      path: ["leadForm", "byPeriod"],
+      query: () => {
+        opts.onByPeriodQuery?.();
+        return {
+          section: opts.byPeriodSection ?? makeSection(),
+          readOnly: opts.byPeriodReadOnly ?? false,
+        };
       },
     },
-  };
+    {
+      path: ["leadForm", "revoke"],
+      mutation: true,
+    },
+    {
+      path: ["leadForm", "fillFrom"],
+      mutation: true,
+    },
+    {
+      path: ["leadForm", "requestReopen"],
+      mutation: true,
+    },
+    {
+      path: ["leadForm", "crossAuthors"],
+      query: [],
+    },
+    {
+      path: ["leadForm", "crossAuthorSections"],
+      query: [],
+    },
+  ]);
 
-  return trpcMock;
+  return proxy;
 }
 
 function Wrapper({ children }: { readonly children: ReactNode }) {
@@ -257,10 +187,10 @@ describe("LeadForm — Phase 35-07 addressable URLs", () => {
   });
 
   it("bare route + redirectToCanonical → router.replace(/lead/report/<activeReportId>)", async () => {
-    const trpcMock = buildHarness({});
+    const proxy = buildHarness({});
     render(
       <Wrapper>
-        <TRPCProxyContext.Provider value={trpcMock as never}>
+        <TRPCProxyContext.Provider value={proxy}>
           <LeadForm redirectToCanonical />
         </TRPCProxyContext.Provider>
       </Wrapper>,
@@ -275,10 +205,10 @@ describe("LeadForm — Phase 35-07 addressable URLs", () => {
     // bookmark carrying the param must NOT suppress the canonical redirect;
     // viewing a past week now goes through the addressed URL + history.
     mockSearchParams = new URLSearchParams("period=2026-W15");
-    const trpcMock = buildHarness({});
+    const proxy = buildHarness({});
     render(
       <Wrapper>
-        <TRPCProxyContext.Provider value={trpcMock as never}>
+        <TRPCProxyContext.Provider value={proxy}>
           <LeadForm redirectToCanonical />
         </TRPCProxyContext.Provider>
       </Wrapper>,
@@ -289,8 +219,7 @@ describe("LeadForm — Phase 35-07 addressable URLs", () => {
   });
 
   it("addressed route (reportId prop set) → no redirect, just renders the form", async () => {
-    const trpcMock = buildHarness({
-      pinnedReportId: PAST_REPORT_ID,
+    const proxy = buildHarness({
       byPeriodSection: makeSection({
         reportSectionId: PAST_SECTION_ID,
         reportId: PAST_REPORT_ID,
@@ -300,7 +229,7 @@ describe("LeadForm — Phase 35-07 addressable URLs", () => {
     });
     render(
       <Wrapper>
-        <TRPCProxyContext.Provider value={trpcMock as never}>
+        <TRPCProxyContext.Provider value={proxy}>
           <LeadForm reportId={PAST_REPORT_ID} />
         </TRPCProxyContext.Provider>
       </Wrapper>,
@@ -313,13 +242,12 @@ describe("LeadForm — Phase 35-07 addressable URLs", () => {
 
   it("head session on /lead/report/<reportId> without authorId redirects to head report and does not load lead form", async () => {
     const byPeriodQuery = vi.fn();
-    const trpcMock = buildHarness({
-      pinnedReportId: PAST_REPORT_ID,
+    const proxy = buildHarness({
       onByPeriodQuery: byPeriodQuery,
     });
     render(
       <Wrapper>
-        <TRPCProxyContext.Provider value={trpcMock as never}>
+        <TRPCProxyContext.Provider value={proxy}>
           <SessionContext.Provider
             value={{
               user: {
@@ -350,8 +278,7 @@ describe("LeadForm — Phase 35-07 addressable URLs", () => {
   });
 
   it("addressed route → sets document.title to the addressed week", async () => {
-    const trpcMock = buildHarness({
-      pinnedReportId: PAST_REPORT_ID,
+    const proxy = buildHarness({
       byPeriodSection: makeSection({
         reportSectionId: PAST_SECTION_ID,
         reportId: PAST_REPORT_ID,
@@ -361,7 +288,7 @@ describe("LeadForm — Phase 35-07 addressable URLs", () => {
     });
     render(
       <Wrapper>
-        <TRPCProxyContext.Provider value={trpcMock as never}>
+        <TRPCProxyContext.Provider value={proxy}>
           <LeadForm reportId={PAST_REPORT_ID} />
         </TRPCProxyContext.Provider>
       </Wrapper>,

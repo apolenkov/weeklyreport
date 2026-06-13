@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { createMockTRPC } from "../../test-utils/mock-trpc";
 import { LeadForm } from "./lead-form";
 
 vi.mock("sonner", () => ({
@@ -87,170 +88,74 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
   };
 }
 
-interface Capture {
-  submitOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
-  revokeOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
-  saveDraftOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
-  fillFromOpts?: { onSuccess?: () => void; onError?: (err: unknown) => void };
+interface MutationCallbacks {
+  onSuccess?: () => void;
+  onError?: (err: unknown) => void;
 }
 
 function buildHarness(
   opts: {
     sectionStatus?: "draft" | "submitted";
-    submitFn?: () => Promise<unknown>;
-    revokeFn?: () => Promise<unknown>;
     byPeriodReadOnly?: boolean;
     byPeriodQueryFn?: () => Promise<unknown>;
   } = {},
 ) {
-  const cap: Capture = {};
-  const calls: { type: string; vars: unknown }[] = [];
-
-  const trpcMock = {
-    reports: {
-      getActive: {
-        queryOptions: () => ({
-          queryKey: ["reports.getActive"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC queryFn contract (TanStack expects a Promise-returning fn)
-          queryFn: async () => ({
-            reportId: REPORT_ID,
-            reportSectionId: SECTION_ID,
-            authorName: "Test Lead",
-          }),
-        }),
-        pathFilter: () => ({ queryKey: ["reports.getActive"] }),
-      },
-      myHistory: {
-        queryOptions: () => ({
-          queryKey: ["reports.myHistory"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC queryFn contract (TanStack expects a Promise-returning fn)
-          queryFn: async () => [],
-        }),
-        pathFilter: () => ({ queryKey: ["reports.myHistory"] }),
-      },
-      saveDraft: {
-        mutationOptions: (passed: NonNullable<Capture["saveDraftOpts"]>) => {
-          cap.saveDraftOpts = passed;
-          return {
-            ...passed,
-            // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC mutationFn contract (TanStack expects a Promise-returning fn)
-            mutationFn: async (vars: unknown) => {
-              calls.push({ type: "saveDraft", vars });
-              return { ok: true };
-            },
-          };
-        },
-        pathFilter: () => ({ queryKey: ["reports.saveDraft"] }),
-      },
-      submit: {
-        mutationOptions: (passed: NonNullable<Capture["submitOpts"]>) => {
-          cap.submitOpts = passed;
-          return {
-            ...passed,
-            mutationFn: async (vars: unknown) => {
-              calls.push({ type: "submit", vars });
-              if (opts.submitFn) return opts.submitFn();
-              return { ok: true };
-            },
-          };
-        },
-        pathFilter: () => ({ queryKey: ["reports.submit"] }),
+  const { proxy, captured } = createMockTRPC([
+    {
+      path: ["reports", "getActive"],
+      query: {
+        reportId: REPORT_ID,
+        reportSectionId: SECTION_ID,
+        authorName: "Test Lead",
       },
     },
-    leadForm: {
-      byPeriod: {
-        queryOptions: () => ({
-          queryKey: ["leadForm.byPeriod"],
-          queryFn:
-            opts.byPeriodQueryFn ??
-            // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC queryFn contract (TanStack expects a Promise-returning fn)
-            (async () => ({
-              section: makeSection({ status: opts.sectionStatus }),
-              readOnly: opts.byPeriodReadOnly ?? false,
-            })),
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.byPeriod"] }),
-      },
-      revoke: {
-        mutationOptions: (passed: NonNullable<Capture["revokeOpts"]>) => {
-          cap.revokeOpts = passed;
-          return {
-            ...passed,
-            mutationFn: async (vars: unknown) => {
-              calls.push({ type: "revoke", vars });
-              if (opts.revokeFn) return opts.revokeFn();
-              return { ok: true };
-            },
-          };
-        },
-        pathFilter: () => ({ queryKey: ["leadForm.revoke"] }),
-      },
-      fillFrom: {
-        mutationOptions: (passed: NonNullable<Capture["fillFromOpts"]>) => {
-          cap.fillFromOpts = passed;
-          return {
-            ...passed,
-            // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC mutationFn contract (TanStack expects a Promise-returning fn)
-            mutationFn: async (vars: unknown) => {
-              calls.push({ type: "fillFrom", vars });
-              return { ok: true };
-            },
-          };
-        },
-        pathFilter: () => ({ queryKey: ["leadForm.fillFrom"] }),
-      },
-      // M6 Lead-side reopen request — added after the original mock
-      // shape was set. The component reads
-      // `trpc.leadForm.requestReopen.mutationOptions` unconditionally
-      // even when the dialog is never opened, so the mock has to
-      // expose the mutation factory.
-      requestReopen: {
-        mutationOptions: (
-          passed: {
-            onSuccess?: () => void;
-            onError?: (e: unknown) => void;
-          } = {},
-        ) => {
-          return {
-            ...passed,
-            // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC mutationFn contract (TanStack expects a Promise-returning fn)
-            mutationFn: async (vars: unknown) => {
-              calls.push({ type: "requestReopen", vars });
-              return { ok: true };
-            },
-          };
-        },
-        pathFilter: () => ({ queryKey: ["leadForm.requestReopen"] }),
-      },
-      crossAuthors: {
-        queryOptions: () => ({
-          queryKey: ["leadForm.crossAuthors"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC queryFn contract (TanStack expects a Promise-returning fn)
-          queryFn: async () => [] as never[],
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.crossAuthors"] }),
-      },
-      crossAuthorSections: {
-        queryOptions: () => ({
-          queryKey: ["leadForm.crossAuthorSections"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock satisfies the async tRPC queryFn contract (TanStack expects a Promise-returning fn)
-          queryFn: async () => [] as never[],
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.crossAuthorSections"] }),
-      },
+    {
+      path: ["reports", "myHistory"],
+      query: [],
     },
-    review: {
-      dashboard: { pathFilter: () => ({ queryKey: ["review.dashboard"] }) },
+    {
+      path: ["reports", "saveDraft"],
+      mutation: true,
     },
-    archive: { list: { pathFilter: () => ({ queryKey: ["archive.list"] }) } },
-    weeklyReport: {
-      get: { pathFilter: () => ({ queryKey: ["weeklyReport.get"] }) },
+    {
+      path: ["reports", "submit"],
+      mutation: true,
     },
-    admin: {
-      snapshot: { pathFilter: () => ({ queryKey: ["admin.snapshot"] }) },
-      getSettings: { pathFilter: () => ({ queryKey: ["admin.getSettings"] }) },
+    {
+      path: ["leadForm", "byPeriod"],
+      query:
+        opts.byPeriodQueryFn ??
+        (() => ({
+          section: makeSection({ status: opts.sectionStatus }),
+          readOnly: opts.byPeriodReadOnly ?? false,
+        })),
     },
-  };
+    {
+      path: ["leadForm", "revoke"],
+      mutation: true,
+    },
+    {
+      path: ["leadForm", "fillFrom"],
+      mutation: true,
+    },
+    {
+      path: ["leadForm", "requestReopen"],
+      mutation: true,
+    },
+    {
+      path: ["leadForm", "crossAuthors"],
+      query: [],
+    },
+    {
+      path: ["leadForm", "crossAuthorSections"],
+      query: [],
+    },
+    { path: ["review", "dashboard"] },
+    { path: ["archive", "list"] },
+    { path: ["weeklyReport", "get"] },
+    { path: ["admin", "snapshot"] },
+    { path: ["admin", "getSettings"] },
+  ]);
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -259,14 +164,14 @@ function buildHarness(
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <TRPCProxyContext.Provider value={trpcMock as never}>
+        <TRPCProxyContext.Provider value={proxy}>
           {children}
         </TRPCProxyContext.Provider>
       </QueryClientProvider>
     );
   }
 
-  return { Wrapper, cap, calls, queryClient };
+  return { Wrapper, captured, queryClient };
 }
 
 beforeEach(() => {
@@ -279,7 +184,7 @@ afterEach(() => {
 
 describe("LeadForm mutation wiring", () => {
   it("submit success: invalidates caches, fires toast.success, locks form", async () => {
-    const { Wrapper, cap, queryClient } = buildHarness();
+    const { Wrapper, captured, queryClient } = buildHarness();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
     render(
@@ -288,16 +193,24 @@ describe("LeadForm mutation wiring", () => {
       </Wrapper>,
     );
 
-    // Wait for the query cascade to settle — mutation options are captured once
-    // the component has mounted and registered its mutations with React Query.
-    await waitFor(() => expect(cap.submitOpts).toBeDefined());
+    // Wait for the component to mount its mutation hook — the factory records
+    // the caller-passed options (onSuccess/onError) in lastOptions.
+    await waitFor(() =>
+      expect(
+        Object.keys(captured["reports.submit"].lastOptions).length,
+      ).toBeGreaterThan(0),
+    );
+
+    // Retrieve the onSuccess/onError callbacks captured when the component
+    // mounted its mutation hook.
+    const submitOpts = captured["reports.submit"]
+      .lastOptions as MutationCallbacks;
 
     // onSuccess from the submit mutation fires invalidations + toast.
-    expect(cap.submitOpts).toBeDefined();
     // Trigger onSuccess deterministically — the mutation wiring is the unit
     // under test (the orchestration of invalidation + toast + lock).
     act(() => {
-      expectDefined(cap.submitOpts).onSuccess?.();
+      submitOpts.onSuccess?.();
     });
     expect(toast.success).toHaveBeenCalledWith("Report submitted");
     // invalidateLeadForm + invalidateLeadHistory each call invalidateQueries.
@@ -305,17 +218,20 @@ describe("LeadForm mutation wiring", () => {
   });
 
   it("submit error: fires toast.error with the error message", async () => {
-    const { Wrapper, cap } = buildHarness();
+    const { Wrapper, captured } = buildHarness();
     render(
       <Wrapper>
         <LeadForm />
       </Wrapper>,
     );
-    await waitFor(() => expect(cap.submitOpts).toBeDefined());
+    await waitFor(() =>
+      expect(captured["reports.submit"].lastOptions).toBeDefined(),
+    );
 
-    expect(cap.submitOpts).toBeDefined();
+    const submitOpts = captured["reports.submit"]
+      .lastOptions as MutationCallbacks;
     // Simulate error path.
-    expectDefined(cap.submitOpts).onError?.(new Error("Submit blew up"));
+    submitOpts.onError?.(new Error("Submit blew up"));
     expect(toast.error).toHaveBeenCalledWith("Submit blew up");
   });
 
@@ -408,18 +324,21 @@ describe("LeadForm mutation wiring", () => {
   });
 
   it("fillFrom success: invalidates leadForm, fires toast.success", async () => {
-    const { Wrapper, cap, queryClient } = buildHarness();
+    const { Wrapper, captured, queryClient } = buildHarness();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
     render(
       <Wrapper>
         <LeadForm />
       </Wrapper>,
     );
-    await waitFor(() => expect(cap.fillFromOpts).toBeDefined());
+    await waitFor(() =>
+      expect(captured["leadForm.fillFrom"].lastOptions).toBeDefined(),
+    );
 
-    expect(cap.fillFromOpts).toBeDefined();
+    const fillFromOpts = captured["leadForm.fillFrom"]
+      .lastOptions as MutationCallbacks;
     act(() => {
-      expectDefined(cap.fillFromOpts).onSuccess?.();
+      fillFromOpts.onSuccess?.();
     });
     expect(toast.success).toHaveBeenCalledWith(
       "Form filled from selected period",
