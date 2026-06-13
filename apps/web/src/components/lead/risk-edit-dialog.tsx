@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
 import type { Product, RiskEntry } from "./mock-data";
@@ -26,6 +26,13 @@ interface RiskEditDialogProps {
    */
   readonly initialImpact?: string;
   readonly initialMitigation?: string;
+  /**
+   * unify-risk-stage-status (D2): create-mode prefill from a chip-raise
+   * interception — the clicked stage arrives pre-checked and the clicked
+   * severity pre-selected. Ignored in edit mode (the risk's own values win).
+   */
+  readonly initialStageIds?: string[];
+  readonly initialSeverity?: "at-risk" | "blocked";
   /**
    * 35-04 (FEAT-144): callback returning the SDLC stages the current lead
    * owns on a given project (= options for the "SDLC Stage" select).
@@ -79,12 +86,28 @@ function deriveFromPreChecked(
 }
 
 /** Computes which stage IDs to pre-select on dialog open. */
-function computeInitialStageIds(risk: RiskEntry | null): string[] {
-  return risk?.stageIds ? [...risk.stageIds] : [];
+function computeInitialStageIds(
+  risk: RiskEntry | null,
+  initialStageIds: string[] | undefined,
+): string[] {
+  if (risk?.stageIds) return [...risk.stageIds];
+  return initialStageIds ? [...initialStageIds] : [];
 }
 
-export function RiskEditDialog({
-  open,
+/**
+ * D12 mount/unmount shell (react-compiler-safe): the outer component returns
+ * null when closed and mounts the inner content otherwise. Mount = fresh
+ * useState from props; close = unmount. No useEffect reset is needed — the
+ * remount is the structural reset, and the parent's openSeq dialogKey forces
+ * a fresh mount on every open. This makes the A13/A15 invariant
+ * (stagesForProduct never read in any deps array) structural.
+ */
+export function RiskEditDialog(props: RiskEditDialogProps) {
+  if (!props.open) return null;
+  return <RiskEditDialogContent {...props} />;
+}
+
+function RiskEditDialogContent({
   risk,
   products,
   onSave,
@@ -92,9 +115,10 @@ export function RiskEditDialog({
   defaultProductId,
   initialImpact,
   initialMitigation,
+  initialStageIds,
+  initialSeverity,
   stagesForProduct,
 }: RiskEditDialogProps) {
-  "use no memo";
   const isCreate = risk === null;
   const seedProduct = isCreate
     ? (products.find((p) => p.id === defaultProductId) ?? products[0])
@@ -104,8 +128,10 @@ export function RiskEditDialog({
 
   // Severity derived ONCE from pipeline on create; user choice is sticky thereafter.
   // Severity is NOT re-derived when the user toggles stage checkboxes (Phase 3.5 §5).
+  // A chip-raise prefill (initialSeverity, D2) wins over the derived default.
   const [severity, setSeverity] = useState<"at-risk" | "blocked">(() => {
     if (risk?.severity) return risk.severity;
+    if (initialSeverity) return initialSeverity;
     const ownedStages = stagesForProduct?.(seedProduct?.id ?? "") ?? [];
     return deriveFromPreChecked(seedProduct, ownedStages);
   });
@@ -118,9 +144,10 @@ export function RiskEditDialog({
 
   // Phase 3.8: stage checkboxes start empty on create. The user marks
   // stages explicitly. preCheckedStages still renders an info strip
-  // (context only), but does not influence initial selection.
+  // (context only), but does not influence initial selection. A chip-raise
+  // prefill (initialStageIds, D2) pre-checks the clicked stage.
   const [stageIds, setStageIds] = useState<string[]>(() => {
-    return computeInitialStageIds(risk);
+    return computeInitialStageIds(risk, initialStageIds);
   });
 
   // Per-field error map.
@@ -130,38 +157,6 @@ export function RiskEditDialog({
     mitigation?: string;
     stageIds?: string;
   }>({});
-
-  // A13/A15 fix: stagesForProduct excluded from deps — unstable parent ref (new arrow fn
-  // each render) causes form-race on autosave → React Query invalidate cycle, resetting
-  // both text (A13) and severity (A15). Dialog is key-reset by parent on open-transition.
-  useEffect(() => {
-    if (open) {
-      const ownedStages = stagesForProduct?.(seedProduct?.id ?? "") ?? [];
-      setText(risk?.text ?? "");
-      setSeverity(
-        risk?.severity ?? deriveFromPreChecked(seedProduct, ownedStages),
-      );
-      setProductId(risk?.productId ?? seedProduct?.id ?? "");
-      setImpact(initialImpact ?? "");
-      setMitigation(initialMitigation ?? "");
-      setStageIds(computeInitialStageIds(risk));
-      setErrors({});
-    }
-    // eslint-disable-next-line react-compiler/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    open,
-    risk?.id,
-    risk?.text,
-    risk?.severity,
-    risk?.productId,
-    risk?.stageIds,
-    seedProduct?.id,
-    initialImpact,
-    initialMitigation,
-    defaultProductId,
-    isCreate,
-  ]);
 
   // Context strip: pipeline stages already flagged that are owned by this lead.
   const preCheckedStages = useMemo(() => {
@@ -179,10 +174,9 @@ export function RiskEditDialog({
       }));
   }, [seedProduct, stagesForProduct]);
 
-  if (!open) return null;
-
   const headerProductName =
-    products.find((p) => p.id === productId)?.name ?? "";
+    products.find((p) => p.id === productId)?.name ??
+    (risk?.productId === productId ? risk.productName : "");
   const headerVerb = isCreate ? "Add Risk" : "Edit Risk";
 
   function handleStageChange(nextStageIds: string[]) {
@@ -222,7 +216,14 @@ export function RiskEditDialog({
       setErrors(next);
       return;
     }
-    const product = products.find((p) => p.id === productId) ?? products.at(0);
+    // Cross-stage rows (fix-lead-surface-name-resolution): an edited risk may
+    // reference a project outside the lead's stage-owned `products`. Keep the
+    // original assignment instead of silently reassigning to the first product.
+    const product =
+      products.find((p) => p.id === productId) ??
+      (risk?.productId === productId
+        ? { id: risk.productId, name: risk.productName }
+        : products.at(0));
     if (!product) {
       setErrors({ text: "No product available" });
       return;

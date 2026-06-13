@@ -1,10 +1,9 @@
 /**
- * Composes the four `LeadForm`-page tRPC queries into the mock-shaped slices
+ * Composes the three `LeadForm`-page tRPC queries into the mock-shaped slices
  * the existing presentational components expect:
  *
  *   - `reports.getActive`     -> `ReportSectionReadModel | null`
  *   - `leadForm.byPeriod`     -> `{ section: ReportSectionReadModel; readOnly: boolean }`
- *   - `leadForm.versions`     -> `VersionSnapshot[]`
  *   - `reports.myHistory`     -> `MyHistoryEntry[]`
  *
  * Reuses Phase 20 mappers (`trafficToStageStatus`, `deriveItemStatus`).
@@ -45,19 +44,14 @@
  *   `sectionStatus === 'submitted'`. Counts flow through from
  *   `reports.myHistory`; the FillFrom UI owns the display fallback when older
  *   fixtures omit them.
- *
- * - `VersionSnapshot.timestamp` — formatted from `createdAt` via the same
- *   relative-time helper used in `lead-history.ts`. `itemCount`/`riskCount`/
- *   `decisionCount` default to 0 (the snapshot row only stores version + ts;
- *   computing aggregates would require a per-version diff query).
  */
 
 import type {
   MyHistoryEntry,
   ReportSectionReadModel,
-  VersionSnapshot as ApiVersionSnapshot,
 } from "@customreport/shared";
 
+import { riskCoversStage } from "../../components/lead/stage-tags";
 import {
   formatPeriodRangeWithYear,
   isoWeekNumber as sharedIsoWeekNumber,
@@ -171,14 +165,6 @@ export interface LeadReportPeriod {
   productCount?: number;
 }
 
-export interface LeadVersionSnapshot {
-  version: number;
-  timestamp: string;
-  itemCount: number;
-  riskCount: number;
-  decisionCount: number;
-}
-
 export interface LeadCurrentUser {
   name: string;
   initials: string;
@@ -277,6 +263,17 @@ function buildProjectIndex(section: ReportSectionReadModel): Map<
       trafficLight: ReportSectionReadModel["projects"][number]["trafficLight"];
     }
   >();
+  // fix-lead-surface-name-resolution: name-only entries for projects that
+  // section rows reference but the author owns no stage on. Seeded first so
+  // the stage-owned loop below wins on conflict (design Decision 3); they
+  // feed product-name lookup only — `mapLeadProducts` does not read this
+  // index, so no stray product card or stage grid appears.
+  for (const referenced of section.referencedProjects ?? []) {
+    map.set(referenced.projectId, {
+      name: referenced.projectName,
+      trafficLight: null,
+    });
+  }
   for (const project of section.projects) {
     map.set(project.projectId, {
       name: project.projectName,
@@ -351,9 +348,12 @@ function buildStageGrid(
         stageName,
         status: deriveEffectiveStageStatus(
           trafficToStageStatus(ownedStage.status ?? null),
-          risks.filter((r) =>
-            r.stageIds?.some((s) => normalizeStageName(s) === norm),
-          ),
+          // unify-risk-stage-status: empty/undefined stageIds means the risk
+          // covers every owned stage. Route through the canonical
+          // `riskCoversStage` so the read model agrees with the live form and
+          // slide export on legacy stage-less risks (covers-all), instead of
+          // the old `stageIds?.some(...)` that floored nothing on `[]`.
+          risks.filter((r) => riskCoversStage(r, stageName)),
           items.filter((i) =>
             i.stageIds?.some((s) => normalizeStageName(s) === norm),
           ),
@@ -389,20 +389,21 @@ export function mapLeadProducts(
   return section.projects.map((p) => {
     const ownedStages = p.ownedStages ?? [];
     const overallStatus = trafficToStageStatus(p.trafficLight);
+    // unify-risk-stage-status (D1, supersedes PRJ-2): covering non-empty
+    // risks force a severity floor on the stage chips again. PRJ-2 had
+    // disconnected this because the derivation fought user chip clicks;
+    // now every conflicting transition is intercepted in the live form
+    // (raise → risk creation, lower → confirmed risk removal), so explicit
+    // and derived status can no longer disagree silently. Items stay
+    // disconnected (risk-only contract).
+    const coveringRisks = section.risks.filter(
+      (r) => r.projectId === p.projectId && r.risk.trim().length > 0,
+    );
     return {
       id: p.projectId,
       name: p.projectName,
       overallStatus,
-      stages: buildStageGrid(
-        section.authorName,
-        ownedStages,
-        // Explicit chip status must win in the edit form. Passing risks and
-        // items here caused deriveEffectiveStageStatus to override the
-        // user's chip clicks on every re-render (PRJ-2). The sync hook
-        // (use-status-risk-sync) owns the risk→chip signal path.
-        [],
-        [],
-      ),
+      stages: buildStageGrid(section.authorName, ownedStages, coveringRisks),
     };
   });
 }
@@ -543,24 +544,6 @@ export function mapLeadPeriods(
     }));
 }
 
-/**
- * Map API VersionSnapshots into the dropdown shape. Counts come from the
- * server (computed from the snapshot's `data` JSON), so the version-history
- * UI can render real delta summaries instead of zeros.
- */
-export function mapLeadVersions(
-  versions: readonly ApiVersionSnapshot[],
-  now: Date,
-): LeadVersionSnapshot[] {
-  return versions.map((v) => ({
-    version: v.version,
-    timestamp: formatRelativeTimestamp(v.createdAt, now),
-    itemCount: v.itemCount,
-    riskCount: v.riskCount,
-    decisionCount: v.decisionCount,
-  }));
-}
-
 // ---- Composer ----
 
 export interface MapLeadFormArgs {
@@ -576,10 +559,7 @@ export interface MapLeadFormArgs {
    * `active`.
    */
   byPeriod: { section: ReportSectionReadModel; readOnly: boolean };
-  versions: readonly ApiVersionSnapshot[];
   history: readonly MyHistoryEntry[];
-  /** Override `now` for deterministic version-timestamp tests. */
-  now?: Date;
 }
 
 export interface MappedLeadForm {
@@ -590,19 +570,17 @@ export interface MappedLeadForm {
   decisions: LeadDecisionEntry[];
   priorities: LeadPriorityEntry[];
   periods: LeadReportPeriod[];
-  versions: LeadVersionSnapshot[];
   currentUser: LeadCurrentUser;
   /** Whether the section is locked for the current user (submitted or period published). */
   readOnly: boolean;
 }
 
 /**
- * Compose all four queries into a single LeadForm-shaped payload. Caller is
+ * Compose all three queries into a single LeadForm-shaped payload. Caller is
  * responsible for ensuring all inputs are settled (i.e., not undefined) before
  * invoking — use `isLoading || !data` guards in the page component.
  */
 export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
-  const now = args.now ?? new Date();
   const section = args.byPeriod.section;
   // Lock the form when the period is locked OR the section is already submitted.
   const readOnly = args.byPeriod.readOnly || section.status === "submitted";
@@ -631,7 +609,6 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
     decisions: mapLeadDecisions(section),
     priorities: mapLeadPriorities(section),
     periods: mapLeadPeriods(args.history, args.active.reportId),
-    versions: mapLeadVersions(args.versions, now),
     currentUser: {
       name: args.active.authorName,
       initials: initialsFromName(args.active.authorName),

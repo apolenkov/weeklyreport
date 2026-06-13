@@ -185,6 +185,8 @@ describe("ReportSectionsService — saveDraft happy path", () => {
             risk: "Deadline risk",
             impact: "Revenue",
             mitigation: "Hire contractor",
+            // require-risk-stage: stageIds is required (min 1) on writes.
+            stageIds: ["Development"],
           },
         ],
       }),
@@ -413,6 +415,8 @@ describe("ReportSectionsService — submitSection happy path", () => {
             risk: "Risk",
             impact: "Impact",
             mitigation: "Mitigation",
+            // require-risk-stage: stageIds is required (min 1) on writes.
+            stageIds: ["Development"],
           },
         ],
       }),
@@ -836,6 +840,9 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
               risk: "",
               impact: "Some impact",
               mitigation: "Some mitigation",
+              // require-risk-stage: keep stageIds valid so the rejection
+              // stays attributable to the empty text under test.
+              stageIds: ["Development"],
             },
           ],
         }),
@@ -854,6 +861,28 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
               projectId: PROJECT_ID_1,
               risk: "A valid risk",
               impact: "",
+              mitigation: "Some mitigation",
+              // require-risk-stage: keep stageIds valid so the rejection
+              // stays attributable to the empty impact under test.
+              stageIds: ["Development"],
+            },
+          ],
+        }),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("rejects risk without stageIds (require-risk-stage)", async () => {
+    const service = new ReportSectionsService(createRepository(baseSection));
+
+    await expect(
+      service.saveDraft(
+        validDraft({
+          risks: [
+            {
+              projectId: PROJECT_ID_1,
+              risk: "A valid risk",
+              impact: "Some impact",
               mitigation: "Some mitigation",
             },
           ],

@@ -2,6 +2,7 @@
 
 import { Suspense, use } from "react";
 
+import { AgentReviewComingSoon } from "../../../../components/report-shell/agent-review-coming-soon";
 import { WeeklyReportPage } from "../../../../components/weekly-report/weekly-report-page";
 import { WeeklyReportSkeleton } from "../../../../components/weekly-report/weekly-report-skeleton";
 
@@ -78,6 +79,7 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
               </svg>
               Print
             </a>
+            <AgentReviewComingSoon compact />
           </div>
         </div>
 

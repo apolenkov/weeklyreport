@@ -336,17 +336,6 @@ CREATE TABLE "CarryOverRecord" (
 );
 
 -- CreateTable
-CREATE TABLE "VersionSnapshot" (
-    "id" TEXT NOT NULL,
-    "reportSectionId" TEXT NOT NULL,
-    "version" INTEGER NOT NULL,
-    "data" JSONB NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "VersionSnapshot_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "Stage" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -595,9 +584,6 @@ CREATE INDEX "ReminderExecution_status_idx" ON "ReminderExecution"("status");
 CREATE UNIQUE INDEX "CarryOverExecution_dedupeKey_key" ON "CarryOverExecution"("dedupeKey");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "VersionSnapshot_reportSectionId_version_key" ON "VersionSnapshot"("reportSectionId", "version");
-
--- CreateIndex
 CREATE UNIQUE INDEX "Stage_name_key" ON "Stage"("name");
 
 -- CreateIndex
@@ -713,9 +699,6 @@ ALTER TABLE "CarryOverExecution" ADD CONSTRAINT "CarryOverExecution_targetReport
 
 -- AddForeignKey
 ALTER TABLE "CarryOverRecord" ADD CONSTRAINT "CarryOverRecord_executionId_fkey" FOREIGN KEY ("executionId") REFERENCES "CarryOverExecution"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "VersionSnapshot" ADD CONSTRAINT "VersionSnapshot_reportSectionId_fkey" FOREIGN KEY ("reportSectionId") REFERENCES "ReportSection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "StageAssignment" ADD CONSTRAINT "StageAssignment_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -244,7 +244,6 @@ model ReportSection {
   report           Report              @relation(fields: [reportId], references: [id], onDelete: Cascade)
   risks            Risk[]
   stageStatuses    StageStatus[]
-  versionSnapshots VersionSnapshot[]
 
   @@unique([reportId, authorId])
   @@index([authorId])
@@ -447,17 +446,6 @@ model CarryOverRecord {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   execution        CarryOverExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
-}
-
-model VersionSnapshot {
-  id              String        @id @default(uuid())
-  reportSectionId String
-  version         Int
-  data            Json
-  createdAt       DateTime      @default(now())
-  reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-
-  @@unique([reportSectionId, version])
 }
 
 model Stage {

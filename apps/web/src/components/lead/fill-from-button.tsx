@@ -3,7 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { ToolbarIconButton } from "../report-shell/toolbar-icon-button";
 import type { ReportPeriod } from "./mock-data";
+
+// head-toolbar-parity D5: idle toolbar-icon variant shared by both triggers.
+const TRIGGER_VARIANT_CLASS =
+  "btn-press border-[var(--color-border)] bg-white/70 text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50";
 
 interface FillFromButtonProps {
   readonly periods: ReportPeriod[];
@@ -151,37 +156,30 @@ export function FillFromButton({
 
   return (
     <>
-      {/* Pill silhouette comes from rounding the buttons themselves; the
-          dropdown portals to document.body with position:fixed, which is what
-          frees it from the toolbar's overflow clip (bug 2026-06-10). */}
-      <div
-        className="relative inline-flex rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white/70"
-        ref={wrapRef}
-      >
-        {/* Primary button */}
-        <button
-          type="button"
-          className="btn-press inline-flex min-h-8 items-center gap-1 rounded-l-[var(--radius-pill)] bg-transparent px-2.5 py-1 text-[13px] font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+      {/* head-toolbar-parity D5: the split-button is now two adjacent 32px
+          ToolbarIconButtons (copy = fill from most recent, caret = open the
+          picker). The dropdown still portals to document.body with
+          position:fixed, which is what frees it from the toolbar's overflow
+          clip (bug 2026-06-10). */}
+      <div className="relative inline-flex items-center gap-1" ref={wrapRef}>
+        <ToolbarIconButton
+          aria-label="Fill from most recent submitted period"
           onClick={handleFillPrevious}
           disabled={disabled || !previousPeriod}
-          title="Fill from most recent submitted period"
+          className={TRIGGER_VARIANT_CLASS}
         >
           <CopyIcon />
-          Fill
-        </button>
+        </ToolbarIconButton>
 
-        {/* Dropdown trigger */}
-        <button
+        <ToolbarIconButton
           ref={dropdownTriggerRef}
-          type="button"
-          className="btn-press inline-flex min-h-8 min-w-[34px] items-center justify-center rounded-r-[var(--radius-pill)] border-l border-[rgba(0,117,74,0.18)] bg-transparent px-1.5 text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label="Choose past report to fill from"
           onClick={() => setShowDropdown(!showDropdown)}
           disabled={disabled}
-          title="Fill from a specific past report"
-          aria-label="Choose past report to fill from"
+          className={TRIGGER_VARIANT_CLASS}
         >
           <ChevronDown />
-        </button>
+        </ToolbarIconButton>
       </div>
 
       {/* Dropdown list — portal to document.body so the toolbar's
@@ -231,19 +229,29 @@ export function FillFromButton({
                   onClick={() => handleFillFromPeriod(p)}
                 >
                   <div className="flex-1">
-                    <div className="text-sm font-semibold">
-                      {p.weekLabel} &middot; {p.dateRange}
+                    {/* Badges share the title line, right-aligned — one
+                        horizontal level for Archived and Previous
+                        (user feedback 2026-06-10). */}
+                    <div className="flex items-center gap-1.5 text-sm font-semibold">
+                      <span className="flex-1 truncate">
+                        {p.weekLabel} &middot; {p.dateRange}
+                      </span>
+                      {p.archived && (
+                        <span className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[9px] font-semibold text-[var(--color-muted-foreground)]">
+                          Archived
+                        </span>
+                      )}
+                      {idx === 0 && (
+                        <span className="inline-flex shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-2 py-0.5 text-[9px] font-semibold text-white">
+                          Previous
+                        </span>
+                      )}
                     </div>
                     <div className="text-[11px] text-[var(--color-muted-foreground)]">
                       {p.productCount ?? 0} products &middot; {p.itemCount ?? 0}{" "}
                       items &middot; {p.riskCount ?? 0} risks
                     </div>
                   </div>
-                  {idx === 0 && (
-                    <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-2 py-0.5 text-[9px] font-semibold text-white">
-                      Previous
-                    </span>
-                  )}
                 </button>
               ))}
             </div>

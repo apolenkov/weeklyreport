@@ -1,5 +1,6 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -9,16 +10,24 @@ import {
   FileText,
   Gauge,
   Layers,
+  Star,
   Target,
 } from "lucide-react";
 import Link from "next/link";
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, useRef, useState } from "react";
 
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
-import { LeadSlideHero } from "./lead-slide-hero";
+import { LeadSlideHero, metricSegment } from "./lead-slide-hero";
 import { LeadUnifiedSlide } from "./lead-unified-slide";
-import type { SectionSlideModel, SlideTone } from "./section-slide-utils";
-import { buildUnifiedSlideModel } from "./section-slide-utils";
+import type {
+  SectionSlideModel,
+  SlideTone,
+  UnifiedSectionRow,
+} from "./section-slide-utils";
+import {
+  buildUnifiedSlideModel,
+  scopeSlideToProduct,
+} from "./section-slide-utils";
 import { SlideFullscreenButton } from "./slide-fullscreen-button";
 import {
   mapTrafficLightToStatus,
@@ -88,45 +97,109 @@ function readinessDot(status: "ready" | "needs-work" | "optional") {
   );
 }
 
-function metricLabel(value: number, label: string) {
+/* redesign-head-slide-density (decisions recorded 2026-06-10): the head
+   section content adopts the lead density idiom — framed, floored, neutral
+   cards with a token stripe. The card shell below is deliberately HEAD-LOCAL
+   (decision 1.1 #6 / D3): extraction of a shared QuadrantCard with
+   lead-unified-slide.tsx is deferred until the geometry survives the
+   screenshot-acceptance round. */
+
+function headPriorityChip(rank: number): ReactNode {
   return (
-    <div className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/80 px-3 py-2">
-      <div className="text-lg font-semibold text-[var(--color-primary)]">
-        {value}
-      </div>
-      <div className="text-xs text-[var(--color-muted-foreground)]">
-        {label}
-      </div>
-    </div>
+    <span
+      role="img"
+      aria-label={`Priority ${rank}`}
+      className="inline-flex shrink-0 items-center justify-center rounded-sm bg-[var(--color-starbucks-gold)] px-1 text-[10px] font-bold leading-4 text-white"
+      title={`Priority rank ${rank}`}
+    >
+      P{rank}
+    </span>
   );
 }
 
-function textList(items: readonly string[], empty: string, limit = 3) {
-  if (items.length === 0) {
-    return (
-      <p className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted-foreground)]">
-        {empty}
-      </p>
-    );
-  }
-
+/* Decision 1.1 #3: head rows keep a NEUTRAL product badge — identity only,
+   never a status hue (mirrors the lead feedback-round-3 call). */
+function headProductBadge(productName: string): ReactNode {
   return (
-    <ul className="space-y-2">
-      {items.slice(0, limit).map((item, index) => (
-        <li
-          // eslint-disable-next-line react/no-array-index-key -- index disambiguates duplicate bullet strings in a render-only, never-reordered list
-          key={`${item}-${index}`}
-          className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/80 px-3 py-2 text-sm leading-5 text-[var(--color-foreground)]"
+    <span
+      className="inline-flex w-[110px] shrink-0 items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-muted)] px-1.5 text-[9px] font-semibold uppercase leading-4 tracking-wide text-[var(--color-muted-foreground)]"
+      title={productName}
+      data-testid="head-row-product-badge"
+    >
+      <span className="truncate">{productName}</span>
+    </span>
+  );
+}
+
+function HeadSectionCard({
+  icon: Icon,
+  label,
+  items,
+  emptyText,
+  stripeClass,
+  showBadges,
+  dashedFrame = false,
+  scrollItems = false,
+}: {
+  readonly icon: LucideIcon;
+  readonly label: string;
+  readonly items: readonly UnifiedSectionRow[];
+  readonly emptyText: string;
+  readonly stripeClass: string;
+  readonly showBadges: boolean;
+  /** Lead idiom: plans (Next focus) read as a dashed "not yet" frame. */
+  readonly dashedFrame?: boolean;
+  /** Decisions overflow stays reachable via in-card scroll (task 3.3). */
+  readonly scrollItems?: boolean;
+}) {
+  return (
+    <section
+      data-testid="head-section-card"
+      className={`relative min-h-[var(--slide-quadrant-min)] overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] border-l-4 ${
+        dashedFrame ? "border-dashed [border-left-style:solid]" : ""
+      } ${stripeClass} bg-white/80 p-3`}
+    >
+      {/* Neutral header — the stripe carries the accent (status-color-semantics). */}
+      <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+        <Icon className="h-4 w-4" aria-hidden="true" />
+        {label}
+      </div>
+      {items.length > 0 ? (
+        /* No count-based truncation — every row always renders. */
+        <ul
+          className={`mt-2 space-y-1.5${
+            scrollItems ? " max-h-[300px] overflow-y-auto" : ""
+          }`}
         >
-          {item}
-        </li>
-      ))}
-      {items.length > limit ? (
-        <li className="px-1 text-xs font-medium text-[var(--color-muted-foreground)]">
-          +{items.length - limit} more
-        </li>
-      ) : null}
-    </ul>
+          {items.map((row, idx) => (
+            <li
+              key={`${row.text}-${String(idx)}`}
+              className="flex min-w-0 items-baseline gap-2"
+            >
+              {/* Fixed-width slot so all item texts start at the same X. */}
+              <span className="inline-flex w-[28px] shrink-0 justify-center">
+                {row.priorityRank != null
+                  ? headPriorityChip(row.priorityRank)
+                  : null}
+              </span>
+              {showBadges ? headProductBadge(row.productName) : null}
+              <span className="min-w-0 line-clamp-3 text-[13px] leading-snug text-[var(--color-foreground)]">
+                {row.text}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 rounded-[var(--radius)] border border-dashed border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted-foreground)]">
+          {emptyText}
+        </p>
+      )}
+      {/* Lead D9 watermark, carried per decision 1.1 #2. */}
+      <Icon
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-3 -right-3 h-16 w-16 text-[var(--color-foreground)] opacity-[0.05]"
+      />
+    </section>
   );
 }
 
@@ -145,6 +218,14 @@ function LeadSlideArticle({
   readonly slide: SectionSlideModel;
   readonly heroControls?: ReactNode;
 }) {
+  /* slides-product-autofit D1/D4: chip selection is this surface's local UI
+     state; the caller keys this component by slide id + page, so navigating
+     to another slide page remounts the article and clears the filter.
+     Re-clicking the active chip toggles back to the all-products view. */
+  const [activeProductId, setActiveProductId] = useState<string | null>(null);
+  // Chips always list every real product (from the UNFILTERED slide), so the
+  // active chip stays visible for unpicking; only the quadrant model below
+  // is scoped (D2).
   const productChips: ProductChipEntry[] = slide.productSlides
     .filter((p) => p.id !== "cross-product")
     .map((p) => ({
@@ -163,15 +244,27 @@ function LeadSlideArticle({
         }
       }}
     >
-      <div
-        key={String(slide.pageIndex ?? 0)}
-        className="animate-fade-in space-y-3"
-      >
+      {/* slides-product-autofit D3: column layout fills the fixed-aspect
+          frame — hero and chips keep natural height, the quadrant grid takes
+          the leftover (flex-1 inside LeadUnifiedSlide). */}
+      <div className="animate-fade-in flex h-full flex-col gap-3">
         <LeadSlideHero slide={slide} heroControls={heroControls} />
         {productChips.length > 1 ? (
-          <SlideProductChips products={productChips} />
+          <SlideProductChips
+            products={productChips}
+            activeProductId={activeProductId ?? undefined}
+            onSelect={(productId) => {
+              setActiveProductId((prev) =>
+                prev === productId ? null : productId,
+              );
+            }}
+          />
         ) : null}
-        <LeadUnifiedSlide model={buildUnifiedSlideModel(slide)} />
+        <LeadUnifiedSlide
+          model={buildUnifiedSlideModel(
+            scopeSlideToProduct(slide, activeProductId),
+          )}
+        />
       </div>
     </article>
   );
@@ -179,6 +272,11 @@ function LeadSlideArticle({
 
 function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
   const articleRef = useRef<HTMLElement>(null);
+  const unified = buildUnifiedSlideModel(slide);
+  /* Same gate as the lead idiom / the chip strip: badges only disambiguate
+     when the slide aggregates more than one real product. */
+  const showBadges =
+    slide.productSlides.filter((p) => p.id !== "cross-product").length > 1;
   return (
     <article
       ref={articleRef}
@@ -212,61 +310,75 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
               </p>
             </div>
             <div className="flex flex-col items-end gap-2">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {metricLabel(slide.currentCount, "Current")}
-                {metricLabel(slide.nextCount, "Next")}
-                {metricLabel(slide.riskCount, "Risks")}
-                {metricLabel(slide.priorityCount, "Priority")}
+              {/* Decision 1.1 #5: portfolio metrics align to the lead hero's
+                  segmented capsule treatment. */}
+              <div className="inline-flex h-11 items-center divide-x divide-[rgba(0,0,0,0.08)] rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.12)] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                {metricSegment(
+                  slide.currentCount,
+                  "Current",
+                  <Target className="h-4 w-4" />,
+                )}
+                {metricSegment(
+                  slide.nextCount,
+                  "Next",
+                  <ArrowRight className="h-4 w-4" />,
+                )}
+                {metricSegment(
+                  slide.riskCount,
+                  "Risks",
+                  <AlertTriangle className="h-4 w-4" />,
+                )}
+                {metricSegment(
+                  slide.priorityCount,
+                  "Priority",
+                  <Star className="h-4 w-4" />,
+                )}
               </div>
               <AgentReviewComingSoon />
             </div>
           </div>
 
-          {/* TODO(v8.4.3-slide-redesign): 2-column grid breaks visual rhythm at
-              sparse / medium / heavy content density. Redesign to fixed topology
-              (min-h + line-clamp or 4-row vertical stack) after density audit —
-              see plan section 4b. Phase 3.7 deferred to v8.4.3. */}
-          <div className="grid gap-4 xl:grid-cols-2">
-            <section className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase text-[var(--color-muted-foreground)]">
-                <Target className="h-4 w-4" aria-hidden="true" />
-                Current work
-              </div>
-              {textList(slide.currentItems, "No current work on the slide")}
-            </section>
-
-            <section className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase text-[var(--color-muted-foreground)]">
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                Next focus
-              </div>
-              {textList(slide.nextItems, "No next focus on the slide")}
-            </section>
-
-            <section className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase text-[var(--color-destructive)]">
-                <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-                Risks
-              </div>
-              {textList(slide.risks, "No risks raised")}
-            </section>
+          {/* Decision 1.1 #1: fixed 2×2 topology like the lead slide — framed,
+              floored cards; no rhythm collapse at sparse density. */}
+          <div
+            className="grid auto-rows-fr grid-cols-2 gap-3"
+            data-testid="head-section-grid"
+          >
+            <HeadSectionCard
+              icon={Target}
+              label="Current work"
+              items={unified.current}
+              emptyText="No current work on the slide"
+              stripeClass="border-l-[var(--color-chip-on-track-border)]"
+              showBadges={showBadges}
+            />
+            <HeadSectionCard
+              icon={ArrowRight}
+              label="Next focus"
+              items={unified.next}
+              emptyText="No next focus on the slide"
+              stripeClass="border-l-[var(--color-primary)]"
+              showBadges={showBadges}
+              dashedFrame
+            />
+            <HeadSectionCard
+              icon={AlertTriangle}
+              label="Risks"
+              items={unified.risks}
+              emptyText="No risks raised"
+              stripeClass="border-l-[var(--color-chip-at-risk-border)]"
+              showBadges={showBadges}
+            />
+            <HeadSectionCard
+              icon={FileText}
+              label="Decisions"
+              items={unified.decisions}
+              emptyText="No decisions recorded"
+              stripeClass="border-l-[var(--color-decisions-accent)]"
+              showBadges={showBadges}
+              scrollItems
+            />
           </div>
-
-          {slide.decisions.length > 0 ? (
-            <section className="space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase text-[var(--color-starbucks-accent)]">
-                <FileText className="h-4 w-4" aria-hidden="true" />
-                Decisions
-              </div>
-              <div className="max-h-[300px] overflow-y-auto">
-                {textList(
-                  slide.decisions,
-                  "No decisions",
-                  slide.decisions.length,
-                )}
-              </div>
-            </section>
-          ) : null}
         </div>
 
         <aside className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/80 p-4">
@@ -437,53 +549,71 @@ export function StatusSlideDeck({
             }
           >
             {!isLead ? (
-              <aside className="space-y-2" aria-label="Slides">
-                {slides.map((item, index) => {
-                  const selected = index === selectedIndex;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => onSelect(index)}
-                      className={[
-                        "w-full rounded-[var(--radius)] border px-3 py-3 text-left transition-colors",
-                        selected
-                          ? "border-[var(--color-starbucks-accent)] bg-white shadow-[0_0_0_2px_rgba(0,117,74,0.13)]"
-                          : "border-[rgba(0,0,0,0.08)] bg-white/70 hover:border-[var(--color-border)] hover:bg-white",
-                      ].join(" ")}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="truncate text-sm font-semibold text-[var(--color-foreground)]">
-                          {item.ownerName}
-                        </span>
-                        <span
-                          className={[
-                            "rounded-[var(--radius-pill)] border px-2 py-0.5 text-[11px] font-semibold",
-                            toneClass[item.tone],
-                          ].join(" ")}
-                        >
-                          {toneLabel(item.tone)}
-                        </span>
-                      </div>
-                      <div className="mt-1 truncate text-xs text-[var(--color-muted-foreground)]">
-                        {item.products.length > 0
-                          ? item.products.join(" / ")
-                          : "No product scope"}
-                      </div>
-                      <div className="mt-2 flex items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
-                        <Gauge className="h-3.5 w-3.5" aria-hidden="true" />
-                        <span>{item.score}% ready</span>
-                        <span aria-hidden="true">|</span>
-                        <span>{item.status}</span>
-                      </div>
-                    </button>
-                  );
-                })}
+              /* Decision 1.1 #4: the multi-lead sidebar is restyled to the
+                 card idiom (frame + neutral header) — structure and cross-lead
+                 navigation stay head-specific, not folded into the grid. */
+              <aside
+                className="h-fit rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-white/80 p-3"
+                aria-label="Slides"
+              >
+                <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                  Slides
+                </div>
+                <div className="mt-2 space-y-2">
+                  {slides.map((item, index) => {
+                    const selected = index === selectedIndex;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => onSelect(index)}
+                        className={[
+                          "w-full rounded-[var(--radius)] border px-3 py-3 text-left transition-colors",
+                          selected
+                            ? "border-[var(--color-starbucks-accent)] bg-white shadow-[0_0_0_2px_rgba(0,117,74,0.13)]"
+                            : "border-[rgba(0,0,0,0.10)] bg-white hover:border-[var(--color-border)]",
+                        ].join(" ")}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="truncate text-sm font-semibold text-[var(--color-foreground)]">
+                            {item.ownerName}
+                          </span>
+                          <span
+                            className={[
+                              "rounded-[var(--radius-pill)] border px-2 py-0.5 text-[11px] font-semibold",
+                              toneClass[item.tone],
+                            ].join(" ")}
+                          >
+                            {toneLabel(item.tone)}
+                          </span>
+                        </div>
+                        <div className="mt-1 truncate text-xs text-[var(--color-muted-foreground)]">
+                          {item.products.length > 0
+                            ? item.products.join(" / ")
+                            : "No product scope"}
+                        </div>
+                        <div className="mt-2 flex items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
+                          <Gauge className="h-3.5 w-3.5" aria-hidden="true" />
+                          <span>{item.score}% ready</span>
+                          <span aria-hidden="true">|</span>
+                          <span>{item.status}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </aside>
             ) : null}
 
             {isLead ? (
-              <LeadSlideArticle slide={slide} heroControls={heroControls} />
+              /* slides-product-autofit D1: keying by slide id + page remounts
+                 the article on navigation — the product filter never leaks to
+                 another page, and the fade-in replays as before. */
+              <LeadSlideArticle
+                key={`${slide.id}:${String(slide.pageIndex ?? 0)}`}
+                slide={slide}
+                heroControls={heroControls}
+              />
             ) : (
               <HeadSlideArticle slide={slide} />
             )}

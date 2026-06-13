@@ -70,8 +70,10 @@ function toneConfig(tone: ToneVariant): {
 
 /* Feedback round 2 (2026-06-10, frontend-design pass): the four metrics read
    as ONE segmented capsule — a single pill at the shared row height, split by
-   hairline dividers, each segment icon + value + label on one line. */
-function metricSegment(
+   hairline dividers, each segment icon + value + label on one line.
+   Exported: the head slide header reuses the segment to render its portfolio
+   metrics in the same capsule treatment (redesign-head-slide-density 1.1 #5). */
+export function metricSegment(
   value: number,
   label: string,
   icon: ReactNode,

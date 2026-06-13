@@ -2,9 +2,9 @@
 
 import type { CSSProperties } from "react";
 
-import type { Product, RiskEntry, StageStatus } from "./mock-data";
+import type { Product, StageAssignment, StageStatus } from "./mock-data";
 import { StageChip } from "./stage-chip";
-import { canonicalStageName, splitStageNames } from "./stage-tags";
+import { STAGE_CHIP_BOX_HEIGHT } from "./stage-chip-config";
 
 export interface CrossAuthorEntry {
   projectId: string;
@@ -30,13 +30,6 @@ interface SdlcPipelineProps {
     stageName: string,
     newStatus: StageStatus,
   ) => void;
-  /**
-   * Used to count risks linked to each (product, stage) pair so the chip's
-   * Clear-confirmation knows whether to prompt. The pipeline is the right
-   * level to compute this once — passing the count down into every chip
-   * keeps the chip itself dumb.
-   */
-  readonly risks?: readonly RiskEntry[];
   /**
    * Stages the lead has marked at-risk/blocked but hasn't described in
    * the Risks list. Renders a calm advisory banner ABOVE the product
@@ -70,6 +63,25 @@ const STRIPE_BY_STATUS: Record<StageStatus, string> = {
   empty: "var(--color-border)",
 };
 
+// D1: derive stripe color from the worst status among the lead's own stages.
+// Severity order: blocked > at-risk > on-track > empty (empty = nothing set yet).
+const SEVERITY_RANK: Record<StageStatus, number> = {
+  blocked: 3,
+  "at-risk": 2,
+  "on-track": 1,
+  empty: 0,
+};
+
+function worstOwnStatus(stages: StageAssignment[]): StageStatus {
+  return stages
+    .filter((s) => s.ownership === "mine")
+    .reduce<StageStatus>(
+      (worst, s) =>
+        SEVERITY_RANK[s.status] > SEVERITY_RANK[worst] ? s.status : worst,
+      "empty",
+    );
+}
+
 export function getProductCardStyle(
   status: StageStatus,
   dashed: boolean,
@@ -86,7 +98,6 @@ export function SdlcPipeline({
   products,
   readOnly = false,
   onStatusChange,
-  risks,
   unbackedStages = [],
   crossAuthors = [],
 }: SdlcPipelineProps) {
@@ -97,29 +108,6 @@ export function SdlcPipeline({
   ) {
     if (readOnly) return;
     onStatusChange?.(productId, stageName, newStatus);
-  }
-
-  // Build a (productId::stageName) → count map once per render so each chip
-  // can decide whether to prompt-on-Clear without recomputing.
-  const riskCountByKey = new Map<string, number>();
-  for (const r of risks ?? []) {
-    const product = products.find((item) => item.id === r.productId);
-    const stageTags =
-      r.stageIds && r.stageIds.length > 0
-        ? r.stageIds
-        : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-          splitStageNames(r.stageName);
-    const keys =
-      stageTags.length > 0
-        ? stageTags.map(
-            (stageName) => `${r.productId}::${canonicalStageName(stageName)}`,
-          )
-        : (product?.stages ?? []).map(
-            (stage) => `${r.productId}::${canonicalStageName(stage.stageName)}`,
-          );
-    for (const key of keys) {
-      riskCountByKey.set(key, (riskCountByKey.get(key) ?? 0) + 1);
-    }
   }
 
   return (
@@ -193,7 +181,7 @@ export function SdlcPipeline({
             key={product.id}
             className="rounded-xl p-4"
             style={getProductCardStyle(
-              product.overallStatus,
+              worstOwnStatus(product.stages),
               hasUnfilledOwnStage,
             )}
           >
@@ -226,7 +214,7 @@ export function SdlcPipeline({
             </div>
 
             {/* Stages row */}
-            <div className="flex flex-wrap justify-center items-center gap-2 pb-1">
+            <div className="flex flex-wrap justify-center items-start gap-2 pb-1">
               {product.stages.map((stage, idx) => {
                 const crossAuthorForStage = crossAuthors.find((ca) => {
                   if (ca.projectId !== product.id) return false;
@@ -243,20 +231,17 @@ export function SdlcPipeline({
                   });
                 });
                 return (
-                  <div
-                    key={stage.stageName}
-                    className="flex items-center gap-2"
-                  >
+                  <div key={stage.stageName} className="flex items-start gap-2">
                     {idx > 0 && (
                       <div
                         className="flex items-center text-lg font-bold"
                         style={{
+                          height: STAGE_CHIP_BOX_HEIGHT,
                           color:
                             stage.ownership === "mine" ||
                             product.stages[idx - 1]?.ownership === "mine"
                               ? "var(--color-starbucks-accent)"
                               : "var(--color-muted-foreground)",
-                          alignSelf: "center",
                         }}
                       >
                         &rarr;
@@ -266,11 +251,6 @@ export function SdlcPipeline({
                       <StageChip
                         stage={stage}
                         readOnly={readOnly}
-                        linkedRiskCount={
-                          riskCountByKey.get(
-                            `${product.id}::${canonicalStageName(stage.stageName)}`,
-                          ) ?? 0
-                        }
                         onStatusChange={(name, status) =>
                           handleStatusChange(product.id, name, status)
                         }

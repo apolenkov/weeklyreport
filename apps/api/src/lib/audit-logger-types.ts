@@ -42,7 +42,8 @@ export type AuditEvent =
   | "period.auto-create"
   | "period.auto-publish"
   | "period.auto-archive"
-  | "period.manual-create";
+  | "period.manual-create"
+  | "scope-accessed";
 
 export interface AuditEnvelope {
   readonly event: AuditEvent;
@@ -204,6 +205,27 @@ type PeriodManualCreateInput = Omit<
 };
 
 /**
+ * Emitted when a non-admin weekly-report read legitimately surfaces at
+ * least one product from another group through the explicit `GroupProduct`
+ * join (closes the audit-trail asymmetry with `scope-denied`).
+ *
+ * Payload is whitelisted at the type level — only typed ids flow,
+ * never row contents (same threat-model discipline as `scopeDenied`).
+ * Emitted at `info` (granted access is normal traffic; `scopeDenied` stays
+ * at `warn`). Per-request dedupe: one event per read regardless of how
+ * many cross-group products surface.
+ */
+export type ScopeAccessedInput = Omit<
+  AuditEnvelope,
+  "event" | "attemptedRole"
+> & {
+  readonly accessedScope: string;
+  readonly productIds: readonly string[];
+  readonly groupIds: readonly string[];
+  readonly resourceId: string;
+};
+
+/**
  * UFB-067: emitted when an admin edits an existing period's envelope via
  * `admin.updatePeriodManual`. The `changes` payload carries only the
  * changed fields' before/after as ISO strings (dates) or string|null
@@ -236,4 +258,5 @@ export interface AuditLogger {
   periodAutoArchive(input: PeriodAutoArchiveInput): void;
   periodManualCreate(input: PeriodManualCreateInput): void;
   periodManualEdit(input: PeriodManualEditInput): void;
+  scopeAccessed(input: ScopeAccessedInput): void;
 }

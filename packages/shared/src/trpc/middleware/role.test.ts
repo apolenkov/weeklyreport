@@ -5,8 +5,8 @@ import type { UserSession } from "../../schemas/auth";
 import { assertRole } from "./role";
 
 // ---------------------------------------------------------------------------
-// Unit tests target `assertRole` — the pure role-check contract that
-// `requireRole` wraps into a tRPC middleware. The wrapper is exercised at
+// Unit tests target `assertRole` — the pure role-check contract.
+// The tRPC middleware adapter (buildRoleMiddleware, api) is exercised at
 // integration level via apps/api/src/infrastructure/trpc/trpc.middleware.test.ts
 // (existing headProcedure scenarios) plus the AUTH-03 default-deny coverage
 // test. assertRole is what enforces the actual UNAUTHORIZED / FORBIDDEN
@@ -28,7 +28,7 @@ const headSession: UserSession = { ...baseSession, role: "head" };
 const adminSession: UserSession = { ...baseSession, role: "admin" };
 const viewerSession: UserSession = { ...baseSession, role: "viewer" };
 
-describe("assertRole (requireRole core)", () => {
+describe("assertRole", () => {
   it("throws UNAUTHORIZED when session is null", () => {
     expect(() => assertRole(null, "head")).toThrow(
       expect.objectContaining({ code: "UNAUTHORIZED" }),

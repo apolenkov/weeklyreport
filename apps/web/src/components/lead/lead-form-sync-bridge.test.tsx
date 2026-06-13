@@ -10,6 +10,13 @@ import {
 } from "./lead-form-sync-bridge";
 import type { Product, RiskEntry } from "./mock-data";
 
+// unify-risk-stage-status (D3): the cross-author lowering block surfaces as
+// a toast — mock sonner so the assertion doesn't need a mounted <Toaster>.
+vi.mock("sonner", () => ({
+  toast: { error: vi.fn() },
+}));
+const { toast } = await import("sonner");
+
 function buildProduct(overrides?: Partial<Product>): Product {
   return {
     id: "crm",
@@ -43,6 +50,8 @@ interface HarnessProps {
   initialProducts: Product[];
   initialRisks: RiskEntry[];
   readOnly?: boolean;
+  /** W5: merged own + foreign risks (visual render + D3 foreign-coverage check). */
+  displayRisks?: RiskEntry[];
   onProductsChangeSpy?: (next: Product[]) => void;
   onRisksChangeSpy?: (next: RiskEntry[]) => void;
 }
@@ -51,6 +60,7 @@ function Harness({
   initialProducts,
   initialRisks,
   readOnly,
+  displayRisks,
   onProductsChangeSpy,
   onRisksChangeSpy,
 }: HarnessProps) {
@@ -72,6 +82,7 @@ function Harness({
       products={products}
       risks={risks}
       readOnly={readOnly}
+      {...(displayRisks ? { displayRisks } : {})}
       risksAddSignal={risksAddSignal}
       stagesForProduct={stagesForProduct}
       onProductsChange={(next) => {
@@ -125,7 +136,10 @@ describe("LeadFormSyncBridge", () => {
     expect(screen.getByText("pre-existing")).toBeInTheDocument();
   });
 
-  it("Test 2: clicking stage chip from on-track to at-risk fires onProductsChange (status sync via popover)", async () => {
+  it("Test 2 (D2): raising an uncovered chip does NOT apply — it opens the prefilled risk dialog instead", async () => {
+    // unify-risk-stage-status: a chip click is never the only record of a
+    // risk. Pre-D2 this test pinned the direct apply; now the click routes
+    // through risk creation and the status stays unapplied.
     const user = userEvent.setup();
     const product = buildProduct();
     const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
@@ -150,14 +164,71 @@ describe("LeadFormSyncBridge", () => {
     });
     await user.click(atRiskOption);
 
-    expect(onProductsChangeSpy).toHaveBeenCalled();
-    const lastProductsCall = expectDefined(
+    // The risk edit dialog opens in create mode, prefilled with the clicked
+    // stage (checked) and the clicked severity (pressed).
+    const dialog = await screen.findByRole("dialog", {
+      name: /Add Risk dialog/i,
+    });
+    expect(dialog).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Dev" })).toBeChecked();
+    expect(screen.getByRole("button", { name: /At Risk/i })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    // The status was never applied and no risk row exists yet.
+    expect(onProductsChangeSpy).not.toHaveBeenCalled();
+    expect(onRisksChangeSpy).not.toHaveBeenCalled();
+
+    // Cancel: the chip keeps its previous status — no rollback needed.
+    await user.click(screen.getByRole("button", { name: /^Cancel$/i }));
+    expect(onProductsChangeSpy).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "Dev: on-track" }),
+    ).toBeInTheDocument();
+  });
+
+  it("Test 2b (D2 save): saving the prefilled dialog creates the risk and raises the chip", async () => {
+    const user = userEvent.setup();
+    const product = buildProduct();
+    const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
+    const onRisksChangeSpy = vi.fn<(next: RiskEntry[]) => void>();
+
+    render(
+      <Harness
+        initialProducts={[product]}
+        initialRisks={[]}
+        onProductsChangeSpy={onProductsChangeSpy}
+        onRisksChangeSpy={onRisksChangeSpy}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Dev: on-track" }));
+    await user.click(await screen.findByRole("menuitem", { name: /Blocked/i }));
+
+    await screen.findByRole("dialog", { name: /Add Risk dialog/i });
+    await user.type(screen.getByLabelText(/^Risk \*/i), "Vendor outage");
+    await user.type(screen.getByLabelText(/^Impact \*/i), "Work stopped");
+    await user.type(screen.getByLabelText(/^Mitigation \*/i), "Escalate");
+    await user.click(screen.getByRole("button", { name: /Save Risk/i }));
+
+    // Risk row created with the prefilled stage + severity.
+    expect(onRisksChangeSpy).toHaveBeenCalled();
+    const savedRisks = expectDefined(
+      expectDefined(onRisksChangeSpy.mock.calls.at(-1))[0],
+    );
+    expect(savedRisks).toHaveLength(1);
+    expect(expectDefined(savedRisks[0]).severity).toBe("blocked");
+    expect(expectDefined(savedRisks[0]).stageIds).toEqual(["Dev"]);
+
+    // Chip raised through the up-flow promotion (no extra confirmation).
+    const lastProducts = expectDefined(
       expectDefined(onProductsChangeSpy.mock.calls.at(-1))[0],
     );
-    const dev = expectDefined(lastProductsCall[0]).stages.find(
+    const dev = expectDefined(lastProducts[0]).stages.find(
       (s) => s.stageName === "Dev",
     );
-    expect(dev?.status).toBe("at-risk");
+    expect(dev?.status).toBe("blocked");
   });
 
   it("Test 3: clicking Edit on a risk opens the RiskEditDialog (edit surface for impact/mitigation)", async () => {
@@ -188,8 +259,13 @@ describe("LeadFormSyncBridge", () => {
     expect(textbox).toBeInTheDocument();
   });
 
-  it("Test 5: mixed-case stageIds alias — risk with stageIds ['dev'] counts toward the 'Dev' stage chip", async () => {
+  it("Test 5 (D3): mixed-case stageIds alias — clearing the 'Dev' chip routes through confirmed deletion of the ['dev'] risk", async () => {
+    // Pre-D3 the chip itself confirmed "risks will stay"; now lowering a
+    // covered chip deletes/strips the covering risks after confirmation.
+    // The dev/Dev/Development canonicalization this test always pinned is
+    // still the load-bearing part: the ['dev'] risk must count as covering.
     const user = userEvent.setup();
+    const onRisksChangeSpy = vi.fn<(next: RiskEntry[]) => void>();
     const product = buildProduct({
       stages: [
         {
@@ -224,7 +300,13 @@ describe("LeadFormSyncBridge", () => {
       mitigation: "",
     };
 
-    render(<Harness initialProducts={[product]} initialRisks={[risk]} />);
+    render(
+      <Harness
+        initialProducts={[product]}
+        initialRisks={[risk]}
+        onRisksChangeSpy={onRisksChangeSpy}
+      />,
+    );
 
     const devChip = screen.getByRole("button", { name: "Dev: blocked" });
     await user.click(devChip);
@@ -232,9 +314,17 @@ describe("LeadFormSyncBridge", () => {
     const clearOption = await screen.findByRole("menuitem", { name: /Clear/i });
     await user.click(clearOption);
 
-    // Confirmation dialog appears only when linkedRiskCount > 0.
-    // "1 linked risk" proves canonicalization: stageIds["dev"] → "Development" → matches "Dev".
-    expect(await screen.findByText(/1 linked risk/i)).toBeInTheDocument();
+    // D3 confirmation enumerates the consequence: the single-stage covering
+    // risk will be deleted ("Deletes 1 risk" proves the canonical match).
+    expect(await screen.findByText(/Deletes 1 risk\./i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Lower status/i }));
+
+    // Risk row deleted, chip cleared.
+    expect(onRisksChangeSpy).toHaveBeenCalledWith([]);
+    expect(
+      screen.getByRole("button", { name: "Dev: empty" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("API outage")).not.toBeInTheDocument();
   });
 
   it("Test 4: when readOnly=true, stage chips are disabled and risks render as preview cards without edit/add controls", () => {
@@ -255,7 +345,9 @@ describe("LeadFormSyncBridge", () => {
     );
 
     // Stage chip is non-interactive in readOnly mode (popover cannot open).
-    const devChip = screen.getByRole("button", { name: "Dev: on-track" });
+    // unify-risk-stage-status (D1): the non-empty covering risk floors the
+    // rendered status to at-risk even on the read-only surface.
+    const devChip = screen.getByRole("button", { name: "Dev: at-risk" });
     expect(devChip).toHaveAttribute("aria-disabled", "true");
 
     // Risk text rendered as plain preview, not a form control.
@@ -406,5 +498,220 @@ describe("LeadFormSyncBridge — up-flow stage promotion", () => {
     );
     // Planning is locked-ownership — must remain on-track regardless.
     expect(planning?.status).toBe("on-track");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// unify-risk-stage-status: severity floor (D1) + confirmed lowering (D3)
+// ---------------------------------------------------------------------------
+
+describe("LeadFormSyncBridge — severity floor and confirmed lowering", () => {
+  const coveringRisk = (overrides?: Partial<RiskEntry>): RiskEntry => ({
+    id: "r-dev",
+    productId: "crm",
+    productName: "CRM Platform",
+    stageIds: ["Dev"],
+    severity: "at-risk",
+    text: "OAuth regression",
+    impact: "Delay",
+    mitigation: "Escalate",
+    ...overrides,
+  });
+
+  it("D1: a stale on-track chip renders at the covering risk's severity (floor)", () => {
+    // Persisted explicit status says on-track; a non-empty covering blocked
+    // risk forces the rendered chip to blocked without any state mutation.
+    const product = buildProduct();
+    const risk = coveringRisk({ severity: "blocked" });
+
+    render(<Harness initialProducts={[product]} initialRisks={[risk]} />);
+
+    expect(
+      screen.getByRole("button", { name: "Dev: blocked" }),
+    ).toBeInTheDocument();
+    // Uncovered sibling stage stays at its explicit status.
+    expect(
+      screen.getByRole("button", { name: "Testing: on-track" }),
+    ).toBeInTheDocument();
+  });
+
+  it("D1 floor guard: picking 'At Risk' on a blocked-floored chip is rejected with a message", async () => {
+    // Review fix (unify-risk-stage-status): blocked→at-risk is a lowering
+    // below the floor. Pre-fix the click silently persisted explicit
+    // "at-risk" while the chip kept rendering "blocked" (dead interaction +
+    // hidden divergence). Now it is blocked with an explanatory toast.
+    const user = userEvent.setup();
+    const onRisksChangeSpy = vi.fn<(next: RiskEntry[]) => void>();
+    const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
+    const product = buildProduct(); // Dev explicit on-track, floored by the risk
+    const risk = coveringRisk({ severity: "blocked" });
+
+    render(
+      <Harness
+        initialProducts={[product]}
+        initialRisks={[risk]}
+        onRisksChangeSpy={onRisksChangeSpy}
+        onProductsChangeSpy={onProductsChangeSpy}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Dev: blocked" }));
+    await user.click(await screen.findByRole("menuitem", { name: /At Risk/i }));
+
+    // No risk dialog, no confirmation, no mutation — explanatory toast only.
+    expect(
+      screen.queryByRole("dialog", { name: /Add Risk dialog/i }),
+    ).not.toBeInTheDocument();
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringMatching(/blocked by a covering risk/i),
+    );
+    expect(onRisksChangeSpy).not.toHaveBeenCalled();
+    expect(onProductsChangeSpy).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "Dev: blocked" }),
+    ).toBeInTheDocument();
+  });
+
+  it("D3 cancel: cancelling the lowering confirmation changes nothing", async () => {
+    const user = userEvent.setup();
+    const onRisksChangeSpy = vi.fn<(next: RiskEntry[]) => void>();
+    const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
+    const product = buildProduct({
+      stages: [
+        {
+          stageName: "Dev",
+          status: "at-risk",
+          ownership: "mine",
+          assignee: "Lead",
+        },
+      ],
+    });
+
+    render(
+      <Harness
+        initialProducts={[product]}
+        initialRisks={[coveringRisk()]}
+        onRisksChangeSpy={onRisksChangeSpy}
+        onProductsChangeSpy={onProductsChangeSpy}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Dev: at-risk" }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: /On Track/i }),
+    );
+
+    expect(await screen.findByText(/Deletes 1 risk\./i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /^Cancel$/i }));
+
+    // Chip keeps its status; risk rows untouched.
+    expect(onRisksChangeSpy).not.toHaveBeenCalled();
+    expect(onProductsChangeSpy).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "Dev: at-risk" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("OAuth regression")).toBeInTheDocument();
+  });
+
+  it("D3 strip: a multi-stage risk survives with the clicked stage removed; the sibling chip keeps its floor", async () => {
+    const user = userEvent.setup();
+    const onRisksChangeSpy = vi.fn<(next: RiskEntry[]) => void>();
+    const product = buildProduct({
+      stages: [
+        {
+          stageName: "Dev",
+          status: "at-risk",
+          ownership: "mine",
+          assignee: "Lead",
+        },
+        {
+          stageName: "Testing",
+          status: "at-risk",
+          ownership: "mine",
+          assignee: "Lead",
+        },
+      ],
+    });
+    const risk = coveringRisk({ stageIds: ["Dev", "Testing"] });
+
+    render(
+      <Harness
+        initialProducts={[product]}
+        initialRisks={[risk]}
+        onRisksChangeSpy={onRisksChangeSpy}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Dev: at-risk" }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: /On Track/i }),
+    );
+
+    expect(
+      await screen.findByText(/Removes this stage from 1 risk\./i),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Lower status/i }));
+
+    // The risk row survives with only the sibling stage.
+    const nextRisks = expectDefined(
+      expectDefined(onRisksChangeSpy.mock.calls.at(-1))[0],
+    );
+    expect(nextRisks).toHaveLength(1);
+    expect(expectDefined(nextRisks[0]).stageIds).toEqual(["Testing"]);
+
+    // Clicked chip lowered; sibling chip keeps its severity floor.
+    expect(
+      screen.getByRole("button", { name: "Dev: on-track" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Testing: at-risk" }),
+    ).toBeInTheDocument();
+  });
+
+  it("D3 cross-author block: lowering a chip covered by a foreign risk is rejected with a message", async () => {
+    const user = userEvent.setup();
+    const onRisksChangeSpy = vi.fn<(next: RiskEntry[]) => void>();
+    const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
+    const product = buildProduct({
+      stages: [
+        {
+          stageName: "Dev",
+          status: "at-risk",
+          ownership: "mine",
+          assignee: "Lead",
+        },
+      ],
+    });
+    const foreignRisk = coveringRisk({
+      id: "r-foreign",
+      foreign: true,
+      authorName: "Other Lead",
+    });
+
+    render(
+      <Harness
+        initialProducts={[product]}
+        initialRisks={[]}
+        displayRisks={[foreignRisk]}
+        onRisksChangeSpy={onRisksChangeSpy}
+        onProductsChangeSpy={onProductsChangeSpy}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Dev: at-risk" }));
+    await user.click(
+      await screen.findByRole("menuitem", { name: /On Track/i }),
+    );
+
+    // No confirmation dialog, no mutation — just the explanatory toast.
+    expect(screen.queryByText(/Deletes/i)).not.toBeInTheDocument();
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringMatching(/another lead's risk/i),
+    );
+    expect(onRisksChangeSpy).not.toHaveBeenCalled();
+    expect(onProductsChangeSpy).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "Dev: at-risk" }),
+    ).toBeInTheDocument();
   });
 });

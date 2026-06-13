@@ -54,6 +54,8 @@ function makeAuditSpy(): {
     // UFB-067: emitted only by `admin.updatePeriodManual`. Same rationale
     // as the create event above — mocked for interface compliance.
     periodManualEdit: vi.fn(),
+    // scope-accessed: emitted at weeklyReport.get — not exercised here.
+    scopeAccessed: vi.fn(),
   };
   return { audit, mutation };
 }

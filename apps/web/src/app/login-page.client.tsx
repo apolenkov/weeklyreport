@@ -49,8 +49,8 @@ const DEFAULT_FOR_ROLE: Record<Role, string> = {
 };
 
 /**
- * UFB-071 (2026-05-11): seeded dev-mode emails per role. The
- * «Change role» dropdown uses these as the fallback email when no
+ * UFB-071 (2026-05-11): seeded dev-mode emails per role. The role grid
+ * on the landing card uses these as the fallback email when no
  * persisted hint exists for that role. Must stay in sync with the
  * `emailByRole` table in `apps/api/src/modules/auth/auth.routes.ts`
  * and the seeded users in `prisma/seed-simple.ts`.
@@ -194,7 +194,6 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
   // hint pops in only when hydration has run. AUTH_STUB-only.
   const [lastRole, setLastRole] = useState<LastRoleRecord | null>(null);
   const [lastRoleLoaded, setLastRoleLoaded] = useState(!AUTH_STUB);
-  const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
   useEffect(() => {
     if (!AUTH_STUB) return;
     setLastRole(readLastRole());
@@ -220,6 +219,38 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
     safeNext === FALLBACK_REDIRECT
       ? "/auth/saml/login"
       : `/auth/saml/login?next=${encodeURIComponent(safeNext)}`;
+
+  // All three AUTH_STUB card states (skeleton / last-session hint /
+  // role picker) share one min-height — just above the natural height
+  // of the tallest state, the role picker (112.5px measured: label +
+  // two button rows + padding + border). Equal heights keep the
+  // divider and footer below from shifting when hydration swaps one
+  // state for another.
+  const stubCardClassName =
+    "min-h-[113px] rounded-md border border-[#ece8e2] bg-[#fafaf7] px-3 py-2.5 text-left";
+
+  // Always visible in both the last-session hint and the no-hint
+  // picker (UFB rev 2026-06-10: the «Change role» toggle expanded the
+  // card past its reserved height — another layout jump — so the grid
+  // is now permanent and every card state has the same structure).
+  const roleOptionsList = (
+    <ul
+      className="mt-2 grid grid-cols-2 gap-1.5"
+      data-testid="last-role-switcher"
+    >
+      {(["lead", "head", "admin", "viewer"] as const).map((role) => (
+        <li key={role}>
+          <a
+            href={devLoginHref(role, DEV_EMAIL_FOR_ROLE[role])}
+            className="block rounded border border-[#ece8e2] bg-white px-2 py-1.5 text-center text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]"
+            data-testid={`last-role-option-${role}`}
+          >
+            {ROLE_LABEL[role]}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
 
   return (
     <main id="main-content" className="flex min-h-svh">
@@ -313,45 +344,39 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
               {AUTH_STUB
                 ? lastRole
                   ? `Resuming as ${ROLE_LABEL[lastRole.role]} · pick a different role below`
-                  : "Dev mode · default role: admin · switch role from in-app menu"
+                  : "Dev mode · default role: admin · or pick a role below"
                 : "Keycloak · SAML 2.0 · Corporate SSO"}
             </p>
           </div>
 
-          {/* UFB-071: last-session hint with «Change role» picker. Only
-              rendered in AUTH_STUB mode AND when a hint is stored.
-              The container is always present in AUTH_STUB mode so the
-              DOM structure is stable across SSR → hydration → useEffect.
-              CSS max-height + opacity transition makes the hint slide in
-              smoothly instead of causing an instant layout shift.
-              In production (AUTH_STUB=false) this block never renders,
-              so there is zero flicker on staging/cloud. */}
+          {/* UFB-071 (rev 2026-06-10, user feedback): the box no longer
+              collapses when no hint is stored — the collapse read as a
+              layout jump (skeleton appears, then vanishes), and without
+              a hint the login page offered NO way to pick a role. The
+              container now always renders at the same height in
+              AUTH_STUB mode (see stubCardClassName): skeleton while
+              loading, last-session hint when stored, or a direct role
+              picker otherwise. In production (AUTH_STUB=false) this
+              block never renders. */}
           {AUTH_STUB && (
-            <div
-              className="overflow-hidden"
-              style={{
-                maxHeight: lastRoleLoaded && !lastRole ? "0px" : "300px",
-                opacity: lastRoleLoaded && !lastRole ? 0 : 1,
-                marginTop: lastRoleLoaded && !lastRole ? "0px" : "16px",
-                transition:
-                  "max-height 220ms ease-in-out, opacity 220ms ease-in-out, margin-top 220ms ease-in-out",
-              }}
-              aria-hidden={lastRoleLoaded && !lastRole}
-            >
+            <div className="mt-4">
               {!lastRoleLoaded ? (
                 <div
-                  className="min-h-[63px] rounded-md border border-[#ece8e2] bg-[#fafaf7] px-3 py-2.5 text-left"
+                  className={stubCardClassName}
                   data-testid="last-role-hint-skeleton"
                   aria-hidden="true"
                 >
-                  <Skeleton className="h-3.5 w-56" />
-                  <Skeleton className="mt-2 h-3.5 w-20" />
+                  <Skeleton className="h-3.5 w-40" />
+                  <div className="mt-2 grid grid-cols-2 gap-1.5">
+                    {(["lead", "head", "admin", "viewer"] as const).map(
+                      (role) => (
+                        <Skeleton key={role} className="h-[30px] rounded" />
+                      ),
+                    )}
+                  </div>
                 </div>
               ) : lastRole ? (
-                <div
-                  className="min-h-[63px] rounded-md border border-[#ece8e2] bg-[#fafaf7] px-3 py-2.5 text-left"
-                  data-testid="last-role-hint"
-                >
+                <div className={stubCardClassName} data-testid="last-role-hint">
                   <p className="text-xs leading-snug text-[var(--color-muted-foreground)]">
                     Last session:{" "}
                     <span className="font-semibold text-[var(--color-foreground)]">
@@ -359,42 +384,16 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
                     </span>{" "}
                     · {ROLE_LABEL[lastRole.role]}
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => setShowRoleSwitcher((v) => !v)}
-                    className="mt-1.5 text-xs font-semibold text-[var(--color-starbucks-accent)] underline-offset-2 hover:underline"
-                    aria-expanded={showRoleSwitcher}
-                    aria-controls="last-role-switcher"
-                    data-testid="last-role-change"
-                  >
-                    {showRoleSwitcher ? "Hide options" : "Change role"}
-                  </button>
-                  {showRoleSwitcher ? (
-                    <ul
-                      id="last-role-switcher"
-                      className="mt-2 grid grid-cols-2 gap-1.5"
-                      data-testid="last-role-switcher"
-                    >
-                      {(["lead", "head", "admin", "viewer"] as const).map(
-                        (role) => (
-                          <li key={role}>
-                            <a
-                              href={devLoginHref(
-                                role,
-                                DEV_EMAIL_FOR_ROLE[role],
-                              )}
-                              className="block rounded border border-[#ece8e2] bg-white px-2 py-1.5 text-center text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]"
-                              data-testid={`last-role-option-${role}`}
-                            >
-                              {ROLE_LABEL[role]}
-                            </a>
-                          </li>
-                        ),
-                      )}
-                    </ul>
-                  ) : null}
+                  {roleOptionsList}
                 </div>
-              ) : null}
+              ) : (
+                <div className={stubCardClassName} data-testid="role-picker">
+                  <p className="text-xs leading-snug text-[var(--color-muted-foreground)]">
+                    Enter as a specific role:
+                  </p>
+                  {roleOptionsList}
+                </div>
+              )}
             </div>
           )}
 

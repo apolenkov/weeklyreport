@@ -810,50 +810,6 @@ async function main() {
   const igorSec = sectionId("1", 3);
   const dmitrySec = sectionId("1", 4);
 
-  const versionSnapshots = [
-    {
-      id: "a0000000-0000-4000-8000-00000000e001",
-      reportSectionId: primaryLeadSec,
-      version: 1,
-      data: {
-        status: "draft",
-        summary: "Initial lead draft before head review",
-        currentItems: 3,
-        nextItems: 1,
-        priorities: 2,
-      },
-    },
-    {
-      id: "a0000000-0000-4000-8000-00000000e002",
-      reportSectionId: primaryLeadSec,
-      version: 2,
-      data: {
-        status: "submitted",
-        summary: "Submitted lead section with risks and decisions linked",
-        currentItems: 4,
-        nextItems: 2,
-        risks: 2,
-        decisions: 2,
-      },
-    },
-  ];
-
-  for (const snapshot of versionSnapshots) {
-    await prisma.versionSnapshot.upsert({
-      where: {
-        reportSectionId_version: {
-          reportSectionId: snapshot.reportSectionId,
-          version: snapshot.version,
-        },
-      },
-      update: {
-        id: snapshot.id,
-        data: snapshot.data,
-      },
-      create: snapshot,
-    });
-  }
-
   // ----- Risks (3-4 across active sections) -----
 
   // Russian-language risks mirroring the items above. Each risk ties to a
@@ -1432,7 +1388,7 @@ async function main() {
       `${totalProjectStatuses} project statuses, ${totalStageStatuses} stage statuses, ${risks.length} risks, ` +
       `${decisions.length} decisions, ` +
       `${reminderPolicies.length} reminder policies, ` +
-      `${reminderRules.length} reminder rules, ${versionSnapshots.length} version snapshots, ` +
+      `${reminderRules.length} reminder rules, ` +
       `2 viewer group accesses, 1 reopen request, 1 action log`,
   );
 }

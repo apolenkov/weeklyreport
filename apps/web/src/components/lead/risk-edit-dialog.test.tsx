@@ -14,7 +14,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Product } from "./mock-data";
+import type { Product, RiskEntry } from "./mock-data";
 import { RiskEditDialog } from "./risk-edit-dialog";
 
 const products: Product[] = [
@@ -643,5 +643,123 @@ describe("RiskEditDialog — A13/A15 form-race regression", () => {
       "aria-pressed",
       "true",
     );
+  });
+});
+
+/**
+ * fix-lead-surface-name-resolution: a risk row may reference a project
+ * outside the lead's stage-owned `products` (cross-stage row). Saving the
+ * edit dialog must preserve the original product assignment instead of
+ * silently reassigning to the first stage-owned product, and the dialog
+ * header must show the original product name.
+ */
+describe("RiskEditDialog — cross-stage product preservation", () => {
+  const crossStageRisk: RiskEntry = {
+    id: "r-cross",
+    productId: "p-foreign",
+    productName: "Payments Gateway",
+    stageIds: ["Integration"],
+    severity: "at-risk",
+    text: "Gateway certification slips",
+    impact: "Payments blocked",
+    mitigation: "Escalate to vendor",
+  };
+
+  it("keeps the original product on save when its id is outside the stage-owned list", () => {
+    const onSave = vi.fn();
+    render(
+      <RiskEditDialog
+        open
+        risk={crossStageRisk}
+        products={products}
+        onSave={onSave}
+        onCancel={() => undefined}
+        initialImpact="Payments blocked"
+        initialMitigation="Escalate to vendor"
+        stagesForProduct={(productId) =>
+          productId === "p1" ? ["Dev", "Testing"] : []
+        }
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      productId: "p-foreign",
+      productName: "Payments Gateway",
+    });
+  });
+
+  it("shows the original product name in the dialog header", () => {
+    render(
+      <RiskEditDialog
+        open
+        risk={crossStageRisk}
+        products={products}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+        stagesForProduct={() => []}
+      />,
+    );
+
+    expect(screen.getByText(/— Payments Gateway/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * D12 mount/unmount shell: the outer component returns null when closed and
+ * remounts fresh content on reopen, so typed-but-cancelled state never leaks
+ * into the next open. This is the structural replacement for the deleted
+ * useEffect form-reset.
+ */
+describe("RiskEditDialog — D12 reopen renders fresh state", () => {
+  it("does not leak typed text from a cancelled create into the next open", () => {
+    const { rerender } = render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
+      target: { value: "draft that should be discarded" },
+    });
+    expect(screen.getByLabelText(/^Risk \*/i)).toHaveValue(
+      "draft that should be discarded",
+    );
+
+    // Cancel = close → the shell unmounts the content.
+    rerender(
+      <RiskEditDialog
+        open={false}
+        risk={null}
+        products={products}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+      />,
+    );
+    expect(screen.queryByLabelText(/^Risk \*/i)).not.toBeInTheDocument();
+
+    // Reopen → fresh mount, empty field.
+    rerender(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+      />,
+    );
+    expect(screen.getByLabelText(/^Risk \*/i)).toHaveValue("");
   });
 });

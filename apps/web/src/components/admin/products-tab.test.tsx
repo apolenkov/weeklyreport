@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
+import { createMockTRPC } from "../../test-utils/mock-trpc";
 import type { MockProduct, MockUser } from "./mock-data";
 import { ProductsTab } from "./products-tab";
 
@@ -77,53 +78,31 @@ const mockProduct: MockProduct = {
 
 // ----- tRPC test double ----------------------------------------------
 
-function makeMockTRPC() {
-  return {
-    admin: {
-      listStageAssignmentCounts: {
-        queryOptions: () => ({
-          queryKey: ["admin", "listStageAssignmentCounts"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async queryFn contract; no awaitable work in the stub
-          queryFn: async () => [],
-        }),
-      },
-      saveProject: {
-        mutationOptions: (mopts: Record<string, unknown>) => ({
-          mutationFn: vi.fn().mockResolvedValue({}),
-          onSuccess: mopts.onSuccess,
-          onError: mopts.onError,
-        }),
-      },
-      deleteProject: {
-        mutationOptions: (mopts: Record<string, unknown>) => ({
-          mutationFn: vi.fn().mockResolvedValue({}),
-          onSuccess: mopts.onSuccess,
-          onError: mopts.onError,
-        }),
-      },
-      // Minimal stubs for other admin paths that invalidateAdmin may touch.
-      snapshot: { pathFilter: () => ({ queryKey: ["admin", "snapshot"] }) },
-      getSettings: {
-        pathFilter: () => ({ queryKey: ["admin", "getSettings"] }),
-      },
-    },
-  } as never;
-}
-
 function renderTab(opts?: {
   products?: MockProduct[];
   users?: MockUser[];
   productFilter?: string | null;
 }) {
+  const { proxy } = createMockTRPC([
+    {
+      path: ["admin", "listStageAssignmentCounts"],
+      query: [] as unknown[],
+    },
+    { path: ["admin", "saveProject"], mutation: true },
+    { path: ["admin", "deleteProject"], mutation: true },
+    // Minimal stubs for other admin paths that invalidateAdmin may touch.
+    { path: ["admin", "snapshot"] },
+    { path: ["admin", "getSettings"] },
+  ]);
+
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const trpc = makeMockTRPC();
 
   function Wrapper({ children }: { readonly children: ReactNode }) {
     return (
       <QueryClientProvider client={qc}>
-        <TRPCProxyContext.Provider value={trpc}>
+        <TRPCProxyContext.Provider value={proxy}>
           {children}
         </TRPCProxyContext.Provider>
       </QueryClientProvider>
@@ -195,5 +174,54 @@ describe("ProductsTab — Add/Edit dialog a11y (VA-0a high unit-rtl)", () => {
     // prevent the backdrop onClick from firing.
     await user.click(dialog);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+});
+
+// admin-dialog-focus-management (autofocus-admin-dialogs)
+describe("ProductsTab — focus management (autofocus-admin-dialogs)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("product-name input receives focus when the dialog opens (autoFocus)", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    await user.click(screen.getByRole("button", { name: /add new product/i }));
+
+    const input = screen.getByLabelText(/product name/i);
+    // React honours autoFocus on conditionally-mounted elements in jsdom;
+    // dropping the autoFocus wiring in production code fails this assert.
+    expect(input).toHaveFocus();
+  });
+
+  it("focus returns to the trigger button after the dialog closes via Cancel", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    const addBtn = screen.getByRole("button", { name: /add new product/i });
+    addBtn.focus();
+    await user.click(addBtn);
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(addBtn);
+  });
+
+  it("focus returns to the trigger button after the dialog closes via Escape", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    const addBtn = screen.getByRole("button", { name: /add new product/i });
+    addBtn.focus();
+    await user.click(addBtn);
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(addBtn);
   });
 });

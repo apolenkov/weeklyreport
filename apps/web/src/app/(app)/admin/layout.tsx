@@ -1,9 +1,7 @@
 import type { Role } from "@customreport/shared";
 import type { ReactNode } from "react";
 
-import { ForbiddenPage } from "../../../components/forbidden-page";
-import { roleHomePath } from "../../../lib/role-home";
-import { getServerSession } from "../../../lib/server/get-server-session";
+import { RoleGate } from "../../../components/role-gate";
 
 /**
  * AUTH-07 (Phase 29-03): SSR role gate for /admin/* routes.
@@ -21,15 +19,6 @@ const REQUIRED: readonly Role[] = ["admin"];
 
 type Props = Readonly<{ children: ReactNode }>;
 
-export default async function AdminLayout({ children }: Props) {
-  const session = await getServerSession();
-  if (!session || !REQUIRED.includes(session.role)) {
-    return (
-      <ForbiddenPage
-        requiredRoles={REQUIRED}
-        homeHref={session ? roleHomePath(session.role) : "/"}
-      />
-    );
-  }
-  return children;
+export default function AdminLayout({ children }: Props) {
+  return <RoleGate allowedRoles={REQUIRED}>{children}</RoleGate>;
 }

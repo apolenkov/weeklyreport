@@ -57,6 +57,7 @@ import {
 } from "../../lib/cache-keys";
 import { SessionContext, type SessionUser } from "../../lib/session-provider";
 import { expectDefined } from "../../test-utils/expect-defined.js";
+import { createMockTRPC } from "../../test-utils/mock-trpc";
 import { WeeklyReportPage } from "./weekly-report-page";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
@@ -155,125 +156,53 @@ function makeWeeklyReportData(
   };
 }
 
-interface Captured {
-  publishOptions?: { onSuccess?: () => void; onError?: (err: Error) => void };
-  reopenOptions?: { onSuccess?: () => void; onError?: (err: Error) => void };
-  pdfExportRequestOptions?: {
-    onSuccess?: (job: { jobId: string }) => void;
-    onError?: (err: Error) => void;
-  };
-  publishMutationFn: ReturnType<typeof vi.fn>;
-  reopenMutationFn: ReturnType<typeof vi.fn>;
-  pdfExportRequestMutationFn: ReturnType<typeof vi.fn>;
-}
+// ---------------------------------------------------------------------------
+// tRPC test double
+// ---------------------------------------------------------------------------
 
-function makeMockTRPC(
-  data: ReturnType<typeof makeWeeklyReportData>,
-  captured: Captured,
-) {
-  return {
-    weeklyReport: {
-      get: {
-        queryOptions: () => ({
-          queryKey: ["weeklyReport", "get"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async queryFn contract expected by react-query (no awaitable work in the stub)
-          queryFn: async () => data,
-        }),
-        pathFilter: () => ({ queryKey: ["weeklyReport", "get"] }),
-      },
-    },
-    period: {
-      publish: {
-        mutationOptions: (opts: Captured["publishOptions"]) => {
-          captured.publishOptions = opts;
-          return {
-            mutationFn: captured.publishMutationFn,
-            onSuccess: opts?.onSuccess,
-            onError: opts?.onError,
-          };
-        },
-      },
-      reopen: {
-        mutationOptions: (opts: Captured["reopenOptions"]) => {
-          captured.reopenOptions = opts;
-          return {
-            mutationFn: captured.reopenMutationFn,
-            onSuccess: opts?.onSuccess,
-            onError: opts?.onError,
-          };
-        },
-      },
-    },
-    // Phase 23-01: ExportPdfButton (rendered inside WeeklyReportPage) calls
-    // both `pdfExport.request.mutationOptions` and `pdfExport.status.queryOptions`
-    // unconditionally on every render. Mock the surface here so the parent
-    // page renders without throwing — these tests do not exercise PDF export
-    // behavior, they only need the mock to be structurally valid.
-    pdfExport: {
-      request: {
-        mutationOptions: (opts: Captured["pdfExportRequestOptions"]) => {
-          captured.pdfExportRequestOptions = opts;
-          return {
-            mutationFn: captured.pdfExportRequestMutationFn,
-            onSuccess: opts?.onSuccess,
-            onError: opts?.onError,
-          };
-        },
-      },
-      status: {
-        queryOptions: () => ({
-          queryKey: ["pdfExport", "status"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async queryFn contract expected by react-query (no awaitable work in the stub)
-          queryFn: async () => null,
-          enabled: false,
-        }),
-      },
-    },
-    review: {
-      dashboard: { pathFilter: () => ({ queryKey: ["review", "dashboard"] }) },
-    },
-    archive: {
-      list: { pathFilter: () => ({ queryKey: ["archive", "list"] }) },
-      archiveReport: {
-        mutationOptions: (
-          opts:
-            | { onSuccess?: () => void; onError?: (err: Error) => void }
-            | undefined,
-        ) => ({
-          mutationFn: vi.fn(),
-          onSuccess: opts?.onSuccess,
-          onError: opts?.onError,
-        }),
-      },
-    },
-    reports: {
-      myHistory: { pathFilter: () => ({ queryKey: ["reports", "myHistory"] }) },
-      getActive: { pathFilter: () => ({ queryKey: ["reports", "getActive"] }) },
-    },
-    leadForm: {
-      byPeriod: { pathFilter: () => ({ queryKey: ["leadForm", "byPeriod"] }) },
-      versions: { pathFilter: () => ({ queryKey: ["leadForm", "versions"] }) },
-    },
-    admin: {
-      snapshot: { pathFilter: () => ({ queryKey: ["admin", "snapshot"] }) },
-      getSettings: {
-        pathFilter: () => ({ queryKey: ["admin", "getSettings"] }),
-      },
-    },
-  } as never;
+/**
+ * Typed alias for the options object stored in `lastOptions` for mutation
+ * procedures that carry onSuccess/onError callbacks.
+ */
+interface MutationOpts<TResult = void> {
+  onSuccess?: (result: TResult) => void;
+  onError?: (err: Error) => void;
 }
 
 function renderPage(
   data: ReturnType<typeof makeWeeklyReportData>,
-  captured: Captured,
   authorId?: string,
   role: SessionUser["role"] = "head",
   scope?: "product" | "lead",
+  toolbar?: ReactNode,
 ) {
+  const { proxy, captured } = createMockTRPC([
+    { path: ["weeklyReport", "get"], query: data },
+    { path: ["period", "publish"], mutation: true },
+    { path: ["period", "reopen"], mutation: true },
+    // Phase 23-01: ExportPdfButton calls both pdfExport.request.mutationOptions
+    // and pdfExport.status.queryOptions unconditionally on every render. Mock the
+    // surface here so the parent page renders without throwing — these tests do
+    // not exercise PDF export behavior, they only need the mock to be structurally
+    // valid. pdfExport.status has enabled:false in the component; the factory
+    // stub without enabled is fine because the component manages enabled itself.
+    { path: ["pdfExport", "request"], mutation: true },
+    { path: ["pdfExport", "status"], query: null },
+    { path: ["review", "dashboard"] },
+    { path: ["archive", "list"] },
+    { path: ["archive", "archiveReport"], mutation: true },
+    { path: ["reports", "myHistory"] },
+    { path: ["reports", "getActive"] },
+    { path: ["leadForm", "byPeriod"] },
+    { path: ["leadForm", "versions"] },
+    { path: ["admin", "snapshot"] },
+    { path: ["admin", "getSettings"] },
+  ]);
+
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const trpc = makeMockTRPC(data, captured);
+
   function Wrapper({ children }: { readonly children: ReactNode }) {
     return (
       <QueryClientProvider client={qc}>
@@ -290,16 +219,20 @@ function renderPage(
             isAuthenticated: true,
           }}
         >
-          <TRPCProxyContext.Provider value={trpc}>
+          <TRPCProxyContext.Provider value={proxy}>
             {children}
           </TRPCProxyContext.Provider>
         </SessionContext.Provider>
       </QueryClientProvider>
     );
   }
-  return render(<WeeklyReportPage authorId={authorId} scope={scope} />, {
-    wrapper: Wrapper,
-  });
+
+  const renderResult = render(
+    <WeeklyReportPage authorId={authorId} scope={scope} toolbar={toolbar} />,
+    { wrapper: Wrapper },
+  );
+
+  return { ...renderResult, captured };
 }
 
 describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-05)", () => {
@@ -309,12 +242,8 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
   });
 
   it("clicking Publish & Lock fires period.publish with reportId from view.period", async () => {
-    const captured: Captured = {
-      publishMutationFn: vi.fn().mockResolvedValue(undefined),
-      reopenMutationFn: vi.fn().mockResolvedValue(undefined),
-      pdfExportRequestMutationFn: vi.fn(),
-    };
-    renderPage(makeWeeklyReportData("open"), captured);
+    const { captured } = renderPage(makeWeeklyReportData("open"));
+    captured["period.publish"].mutationFn.mockResolvedValue(undefined);
 
     // Wait for query to resolve and page to render.
     await screen.findByRole("button", { name: /publish & lock/i });
@@ -332,27 +261,16 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     await userEvent.click(expectDefined(buttons[buttons.length - 1]));
 
     await waitFor(() => {
-      expect(captured.publishMutationFn).toHaveBeenCalledTimes(1);
+      expect(captured["period.publish"].mutationFn).toHaveBeenCalledTimes(1);
     });
     // TanStack Query invokes mutationFn(variables, context); assert the first arg only.
-    expect(captured.publishMutationFn.mock.calls[0]?.[0]).toEqual({
+    expect(captured["period.publish"].mutationFn.mock.calls[0]?.[0]).toEqual({
       reportId: REPORT_ID,
     });
   });
 
   it("groups products under each lead when scope is 'lead' (head split-view parity)", async () => {
-    const captured: Captured = {
-      publishMutationFn: vi.fn().mockResolvedValue(undefined),
-      reopenMutationFn: vi.fn().mockResolvedValue(undefined),
-      pdfExportRequestMutationFn: vi.fn(),
-    };
-    renderPage(
-      makeWeeklyReportData("open"),
-      captured,
-      undefined,
-      "head",
-      "lead",
-    );
+    renderPage(makeWeeklyReportData("open"), undefined, "head", "lead");
     // "By lead" renders the author's name as a group heading (h3) instead of a
     // flat product accordion list.
     expect(
@@ -361,20 +279,13 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
   });
 
   it("disables publish and hides Toggle All for an empty weekly report", async () => {
-    const captured: Captured = {
-      publishMutationFn: vi.fn().mockResolvedValue(undefined),
-      reopenMutationFn: vi.fn().mockResolvedValue(undefined),
-      pdfExportRequestMutationFn: vi.fn(),
-    };
-    const emptyData = {
+    const { captured } = renderPage({
       ...makeWeeklyReportData("open", {
         portfolioOverview: [],
         leadSections: [],
       }),
       submissionCount: 0,
-    };
-
-    renderPage(emptyData, captured);
+    });
 
     const publishButton = await screen.findByRole("button", {
       name: /nothing to publish/i,
@@ -387,24 +298,17 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     expect(
       screen.queryByRole("dialog", { name: /confirm publish/i }),
     ).not.toBeInTheDocument();
-    expect(captured.publishMutationFn).not.toHaveBeenCalled();
+    expect(captured["period.publish"].mutationFn).not.toHaveBeenCalled();
   });
 
   it("A32: shows empty-state with archive link when submissionCount === 0 and period is open", async () => {
-    const captured: Captured = {
-      publishMutationFn: vi.fn().mockResolvedValue(undefined),
-      reopenMutationFn: vi.fn().mockResolvedValue(undefined),
-      pdfExportRequestMutationFn: vi.fn(),
-    };
-    const emptyData = {
+    renderPage({
       ...makeWeeklyReportData("open", {
         portfolioOverview: [],
         leadSections: [],
       }),
       submissionCount: 0,
-    };
-
-    renderPage(emptyData, captured);
+    });
 
     // Empty-state card must be present.
     const emptyState = await screen.findByTestId("empty-submissions-state");
@@ -424,22 +328,15 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
   });
 
   it("A32: shows normal report (no empty-state) when submissionCount === 0 but period is published", async () => {
-    const captured: Captured = {
-      publishMutationFn: vi.fn().mockResolvedValue(undefined),
-      reopenMutationFn: vi.fn().mockResolvedValue(undefined),
-      pdfExportRequestMutationFn: vi.fn(),
-    };
     // published + 0 submissions: edge case (head published empty period).
     // Empty-state must NOT appear — show the normal layout instead.
-    const publishedEmpty = {
+    renderPage({
       ...makeWeeklyReportData("published", {
         portfolioOverview: [],
         leadSections: [],
       }),
       submissionCount: 0,
-    };
-
-    renderPage(publishedEmpty, captured);
+    });
 
     // Wait for render to settle.
     await screen.findByRole("button", { name: /reopen period/i });
@@ -450,14 +347,9 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
   });
 
   it("viewer can read a published report without period mutation actions", async () => {
-    const captured: Captured = {
-      publishMutationFn: vi.fn(),
-      reopenMutationFn: vi.fn(),
-      pdfExportRequestMutationFn: vi.fn(),
-    };
     const published = makeWeeklyReportData("published");
 
-    renderPage(published, captured, undefined, "viewer");
+    renderPage(published, undefined, "viewer");
 
     // Anchor on the always-present report heading: the async Export PDF button
     // is head/admin-only (its `pdfExport.request` job is headProcedure-gated),
@@ -476,20 +368,16 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
   });
 
   it("on publish success: invalidateDashboard + invalidateLeadHistory fire and a success toast appears", async () => {
-    const captured: Captured = {
-      publishMutationFn: vi.fn().mockResolvedValue(undefined),
-      reopenMutationFn: vi.fn().mockResolvedValue(undefined),
-      pdfExportRequestMutationFn: vi.fn(),
-    };
-    renderPage(makeWeeklyReportData("open"), captured);
+    const { captured } = renderPage(makeWeeklyReportData("open"));
 
     await screen.findByRole("button", { name: /publish & lock/i });
 
     // Trigger the onSuccess hook directly via the captured options. This decouples
     // the test from internal react-query timing while still exercising the user code.
-    expect(captured.publishOptions?.onSuccess).toBeTypeOf("function");
+    const publishOpts = captured["period.publish"].lastOptions as MutationOpts;
+    expect(publishOpts.onSuccess).toBeTypeOf("function");
     act(() => {
-      expectDefined(expectDefined(captured.publishOptions).onSuccess)();
+      expectDefined(publishOpts.onSuccess)();
     });
 
     expect(invalidateDashboard).toHaveBeenCalled();
@@ -498,32 +386,22 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
   });
 
   it("on publish error: a toast.error is shown", async () => {
-    const captured: Captured = {
-      publishMutationFn: vi.fn(),
-      reopenMutationFn: vi.fn(),
-      pdfExportRequestMutationFn: vi.fn(),
-    };
-    renderPage(makeWeeklyReportData("open"), captured);
+    const { captured } = renderPage(makeWeeklyReportData("open"));
 
     await screen.findByRole("button", { name: /publish & lock/i });
 
-    expect(captured.publishOptions?.onError).toBeTypeOf("function");
+    const publishOpts = captured["period.publish"].lastOptions as MutationOpts;
+    expect(publishOpts.onError).toBeTypeOf("function");
     act(() => {
-      expectDefined(expectDefined(captured.publishOptions).onError)(
-        new Error("Forbidden"),
-      );
+      expectDefined(publishOpts.onError)(new Error("Forbidden"));
     });
 
     expect(toastError).toHaveBeenCalled();
   });
 
   it("clicking Reopen Period (via confirm dialog) fires period.reopen with reportId when periodStatus is published", async () => {
-    const captured: Captured = {
-      publishMutationFn: vi.fn(),
-      reopenMutationFn: vi.fn().mockResolvedValue(undefined),
-      pdfExportRequestMutationFn: vi.fn(),
-    };
-    renderPage(makeWeeklyReportData("published"), captured);
+    const { captured } = renderPage(makeWeeklyReportData("published"));
+    captured["period.reopen"].mutationFn.mockResolvedValue(undefined);
 
     // Reopen is now destructive → goes through ConfirmDeleteDialog.
     const reopenBtn = await screen.findByRole("button", {
@@ -536,26 +414,22 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     await userEvent.click(confirmBtn);
 
     await waitFor(() => {
-      expect(captured.reopenMutationFn).toHaveBeenCalledTimes(1);
+      expect(captured["period.reopen"].mutationFn).toHaveBeenCalledTimes(1);
     });
-    expect(captured.reopenMutationFn.mock.calls[0]?.[0]).toEqual({
+    expect(captured["period.reopen"].mutationFn.mock.calls[0]?.[0]).toEqual({
       reportId: REPORT_ID,
     });
   });
 
   it("on reopen success: invalidateDashboard + invalidateLeadForm + invalidateLeadHistory fire", async () => {
-    const captured: Captured = {
-      publishMutationFn: vi.fn(),
-      reopenMutationFn: vi.fn(),
-      pdfExportRequestMutationFn: vi.fn(),
-    };
-    renderPage(makeWeeklyReportData("published"), captured);
+    const { captured } = renderPage(makeWeeklyReportData("published"));
 
     await screen.findByRole("button", { name: /reopen period/i });
 
-    expect(captured.reopenOptions?.onSuccess).toBeTypeOf("function");
+    const reopenOpts = captured["period.reopen"].lastOptions as MutationOpts;
+    expect(reopenOpts.onSuccess).toBeTypeOf("function");
     act(() => {
-      expectDefined(expectDefined(captured.reopenOptions).onSuccess)();
+      expectDefined(reopenOpts.onSuccess)();
     });
 
     expect(invalidateDashboard).toHaveBeenCalled();
@@ -565,11 +439,6 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
   });
 
   it("highlights only one authored section when authorId maps to multiple products", async () => {
-    const captured: Captured = {
-      publishMutationFn: vi.fn(),
-      reopenMutationFn: vi.fn(),
-      pdfExportRequestMutationFn: vi.fn(),
-    };
     const data = makeWeeklyReportData("published", {
       portfolioOverview: [
         {
@@ -649,7 +518,7 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
       ],
     });
 
-    renderPage(data, captured, AUTHOR_ID_A);
+    renderPage(data, AUTHOR_ID_A);
 
     await waitFor(() => {
       const alphaSection = expectDefined(
@@ -678,14 +547,6 @@ describe("WeeklyReportPage — async Export PDF button role gating (driver sweep
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
-  function makeCaptured(): Captured {
-    return {
-      publishMutationFn: vi.fn().mockResolvedValue(undefined),
-      reopenMutationFn: vi.fn().mockResolvedValue(undefined),
-      pdfExportRequestMutationFn: vi.fn(),
-    };
-  }
-
   // The async export starts a `pdfExport.request` job the API gates to
   // head/admin (headProcedure). Before the fix the button rendered for every
   // role, so a viewer/lead on the read-only /reports/[reportId] route (which
@@ -693,12 +554,7 @@ describe("WeeklyReportPage — async Export PDF button role gating (driver sweep
   it.each(["head", "admin"] as const)(
     "renders the async Export PDF button for %s",
     async (role) => {
-      renderPage(
-        makeWeeklyReportData("published"),
-        makeCaptured(),
-        undefined,
-        role,
-      );
+      renderPage(makeWeeklyReportData("published"), undefined, role);
       expect(
         await screen.findByRole("button", { name: /export pdf/i }),
       ).toBeInTheDocument();
@@ -708,12 +564,7 @@ describe("WeeklyReportPage — async Export PDF button role gating (driver sweep
   it.each(["viewer", "lead"] as const)(
     "hides the async Export PDF button for %s",
     async (role) => {
-      renderPage(
-        makeWeeklyReportData("published"),
-        makeCaptured(),
-        undefined,
-        role,
-      );
+      renderPage(makeWeeklyReportData("published"), undefined, role);
       // Anchor on the report heading so the absence assertion is not a race.
       await screen.findByRole("heading", { name: /status report/i });
       expect(
@@ -721,4 +572,46 @@ describe("WeeklyReportPage — async Export PDF button role gating (driver sweep
       ).not.toBeInTheDocument();
     },
   );
+});
+
+// head-toolbar-parity: the bespoke gradient "Context shell" is gone — the
+// period-context bar renders through the shared ReportToolbar container.
+// Standalone consumers (bare /head/report, /reports/[reportId], lead preview,
+// present client) keep the default; HeadReportShell composes the page's
+// single toolbar and passes it through the `toolbar` slot, which renders
+// below the page header row (the lead arrangement).
+describe("WeeklyReportPage — shared period toolbar (head-toolbar-parity)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
+  it("renders the shared ReportToolbar container with the department label by default", async () => {
+    renderPage(makeWeeklyReportData("open"));
+    await screen.findByRole("heading", { name: /status report/i });
+    const toolbar = screen.getByTestId("report-toolbar");
+    expect(toolbar).toBeInTheDocument();
+    expect(toolbar).toHaveTextContent("Live portfolio review");
+  });
+
+  it("renders a shell-provided toolbar below the page header instead of its own context bar", async () => {
+    renderPage(
+      makeWeeklyReportData("open"),
+      undefined,
+      "head",
+      undefined,
+      <div data-testid="shell-toolbar" />,
+    );
+    const heading = await screen.findByRole("heading", {
+      name: /status report/i,
+    });
+    // The slot replaces the page's own period-context toolbar…
+    expect(screen.queryByTestId("report-toolbar")).not.toBeInTheDocument();
+    // …and sits BELOW the page header row (spec scenario: lead arrangement).
+    const shellToolbar = screen.getByTestId("shell-toolbar");
+    expect(
+      heading.compareDocumentPosition(shellToolbar) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
 });

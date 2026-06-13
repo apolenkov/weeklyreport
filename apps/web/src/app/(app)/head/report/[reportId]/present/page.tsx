@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { HeadPresentClient } from "../../../../../../components/head/head-present-client";
+import { AgentReviewComingSoon } from "../../../../../../components/report-shell/agent-review-coming-soon";
 import { WeeklyReportSkeleton } from "../../../../../../components/weekly-report/weekly-report-skeleton";
 
 interface Props {
@@ -34,12 +35,15 @@ export default async function HeadReportPresentPage({ params }: Props) {
               Use ← → or J/K to navigate sections · F to toggle fullscreen
             </p>
           </div>
-          <Link
-            href={`/head/report/${reportId}`}
-            className="rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
-          >
-            ← Back to report
-          </Link>
+          <div className="flex items-center gap-3">
+            <AgentReviewComingSoon compact />
+            <Link
+              href={`/head/report/${reportId}`}
+              className="rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+            >
+              ← Back to report
+            </Link>
+          </div>
         </header>
 
         <Suspense fallback={<WeeklyReportSkeleton />}>

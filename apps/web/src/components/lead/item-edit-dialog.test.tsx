@@ -490,3 +490,45 @@ describe("ItemEditDialog — VA-0a a11y (backdrop onKeyDown + click behavior)", 
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * fix-lead-surface-name-resolution: an item row may reference a project
+ * outside the lead's stage-owned `products` (cross-stage row). Saving the
+ * edit dialog must preserve the original product assignment instead of
+ * silently reassigning to the first stage-owned product.
+ */
+describe("ItemEditDialog — cross-stage product preservation", () => {
+  it("keeps the original product on save when its id is outside the stage-owned list", () => {
+    const onSave = vi.fn();
+    const crossStageItem: KanbanItem = {
+      id: "item-cross",
+      productId: "p-foreign",
+      productName: "Payments Gateway",
+      text: "Integrate payment provider",
+      status: "in-progress",
+      author: "Test Lead",
+    };
+
+    render(
+      <ItemEditDialog
+        open={true}
+        item={crossStageItem}
+        products={products}
+        week="current"
+        stagesForProduct={(productId) =>
+          productId === "p1" ? ["Dev", "Testing"] : []
+        }
+        onSave={onSave}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      productId: "p-foreign",
+      productName: "Payments Gateway",
+    });
+  });
+});

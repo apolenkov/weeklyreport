@@ -56,6 +56,21 @@ export {
   workflowToItemStatus,
 } from "./item-status";
 export {
+  applyCrossAuthorStageOverrides,
+  buildCrossAuthorStageMap,
+  coerceWorkflowToItemStatus,
+  type CrossAuthorRow,
+  type CrossAuthorSection,
+  type CrossAuthorStageMap,
+  type CrossAuthorStageOverride,
+  type ForeignDecisionEntry,
+  type ForeignKanbanItem,
+  type ForeignRiskEntry,
+  mapForeignDecisions,
+  mapForeignItems,
+  mapForeignRisks,
+} from "./lead-cross-author";
+export {
   type LeadCurrentUser,
   type LeadDecisionEntry,
   type LeadKanbanItem,
@@ -65,7 +80,6 @@ export {
   type LeadRiskEntry,
   type LeadStageAssignment,
   type LeadStageOwnership,
-  type LeadVersionSnapshot,
   mapLeadDecisions,
   type MapLeadFormArgs,
   mapLeadFormData,
@@ -74,7 +88,6 @@ export {
   mapLeadPriorities,
   mapLeadProducts,
   mapLeadRisks,
-  mapLeadVersions,
   type MappedLeadForm,
 } from "./lead-form";
 export {

@@ -1,5 +1,10 @@
 import type { UserSession } from "@customreport/shared";
 
+import {
+  customreportPeriodStateTransitionsTotal,
+  customreportReportsSubmittedTotal,
+} from "../../infrastructure/metrics/metrics.registry.js";
+
 export class PeriodAccessError extends Error {
   constructor(message: string) {
     super(message);
@@ -100,7 +105,20 @@ export class PeriodService {
       throw new PeriodAccessError("Period is already published.");
     }
 
+    // Capture prior status before the write so the from-label reflects
+    // the actual state (open or reopened), not a hardcoded value.
+    const priorStatus = report.periodStatus;
+
     await this.repository.publishPeriod(reportId, session.userId);
+
+    // Emit only after the write succeeds — a failed write must not
+    // inflate the counters (mirrors the discipline in publication.service.ts).
+    customreportReportsSubmittedTotal.inc({ state: "published" });
+    customreportPeriodStateTransitionsTotal.inc({
+      from: priorStatus,
+      to: "published",
+    });
+
     await this.invalidateAnalyticsCache();
 
     // Fire-and-forget post-publish ingestion enqueue. Read the section

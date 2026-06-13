@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import type { EditableListDialogState } from "../../hooks/use-editable-list-dialog";
+import { useEditableListDialog } from "../../hooks/use-editable-list-dialog";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { ItemCard } from "./item-card";
 import { ItemEditDialog } from "./item-edit-dialog";
@@ -44,24 +46,14 @@ interface CurrentWeekSectionProps {
   readonly addSignal?: number;
 }
 
-type DialogState =
-  | { open: false }
-  | { open: true; mode: "create"; seedProductId: string }
-  | { open: true; mode: "edit"; item: KanbanItem };
-
-function deriveDialogProps(
-  dialogState: DialogState,
-  openSeq: number,
-): {
-  dialogKey: string;
+function deriveDialogProps(dialogState: EditableListDialogState<KanbanItem>): {
   editItem: KanbanItem | null;
   createSeedProductId: string | undefined;
 } {
   const isEdit = dialogState.open && dialogState.mode === "edit";
   const isCreate = dialogState.open && dialogState.mode === "create";
   return {
-    dialogKey: `${openSeq}-${isEdit ? dialogState.item.id : "new"}`,
-    editItem: isEdit ? dialogState.item : null,
+    editItem: isEdit ? dialogState.entity : null,
     createSeedProductId: isCreate ? dialogState.seedProductId : undefined,
   };
 }
@@ -118,15 +110,6 @@ export function CurrentWeekSection({
     };
   }, []);
 
-  // null = create mode (Add); KanbanItem = edit mode for that row.
-  const [dialogState, setDialogState] = useState<DialogState>({ open: false });
-  // D-13: monotonic counter so repeated opens of the same item get a fresh
-  // key even when item.id is unchanged (prevents stale stageIds in dialog).
-  const [openSeq, setOpenSeq] = useState(0);
-  // Pending-delete state for the M20 confirmation modal — prevents
-  // accidental data loss on a stray click. The actual filter+emit
-  // happens only after the user confirms.
-  const [pendingDelete, setPendingDelete] = useState<KanbanItem | null>(null);
   // Only fall back to the standalone empty-state when there are neither
   // items nor products to drive a column layout.
   const isEmpty = grouped.size === 0 && (!products || products.length === 0);
@@ -135,12 +118,24 @@ export function CurrentWeekSection({
   const defaultProduct = products?.[0];
   const defaultProductId = defaultProduct?.id;
 
-  // Keep a ref so the addSignal effect can read the latest readOnly value
-  // without including readOnly in the dep array. If readOnly were in deps,
-  // the effect would re-fire on snapshot enter/exit and re-open the dialog
-  // from a stale non-zero addSignal counter (D1 fix).
-  const readOnlyRef = useRef(readOnly);
-  readOnlyRef.current = readOnly;
+  // Shared dialog lifecycle (DialogState union, D1 readOnly-ref add-signal
+  // effect, D13 openSeq remount key, pending-delete). requireSeed: this
+  // section can only open create mode when a product column exists.
+  const {
+    dialogState,
+    dialogKey,
+    openCreate,
+    openEdit,
+    close,
+    pendingDelete,
+    requestDelete,
+    clearPendingDelete,
+  } = useEditableListDialog<KanbanItem>({
+    readOnly,
+    addSignal,
+    seedProductId: defaultProductId,
+    requireSeed: true,
+  });
 
   const globalAddButton = !readOnly && (
     <div className="flex justify-end">
@@ -161,41 +156,25 @@ export function CurrentWeekSection({
   );
 
   function handleAdd(seedProductId: string) {
-    if (readOnly) return;
-    setOpenSeq((n) => n + 1);
-    setDialogState({ open: true, mode: "create", seedProductId });
+    openCreate(seedProductId);
   }
 
-  useEffect(() => {
-    if (addSignal === 0) return;
-    if (readOnlyRef.current || !defaultProductId) return;
-    setOpenSeq((n) => n + 1);
-    setDialogState({
-      open: true,
-      mode: "create",
-      seedProductId: defaultProductId,
-    });
-  }, [addSignal, defaultProductId]);
-
   function handleDelete(id: string) {
-    if (readOnly) return;
     const item = items.find((i) => i.id === id);
     if (!item) return;
-    setPendingDelete(item);
+    requestDelete(item);
   }
 
   function confirmDelete() {
     if (!pendingDelete) return;
     onItemsChange?.(items.filter((i) => i.id !== pendingDelete.id));
-    setPendingDelete(null);
+    clearPendingDelete();
   }
 
   function handleEdit(id: string) {
-    if (readOnly) return;
     const item = items.find((i) => i.id === id);
     if (!item) return;
-    setOpenSeq((n) => n + 1);
-    setDialogState({ open: true, mode: "edit", item });
+    openEdit(item);
   }
 
   function handleDialogSave(next: KanbanItem) {
@@ -205,11 +184,11 @@ export function CurrentWeekSection({
     } else {
       onItemsChange?.(items.map((i) => (i.id === next.id ? next : i)));
     }
-    setDialogState({ open: false });
+    close();
   }
 
   function handleDialogCancel() {
-    setDialogState({ open: false });
+    close();
   }
 
   // Empty-state: when no items exist there are no per-product groups to
@@ -264,7 +243,7 @@ export function CurrentWeekSection({
           ];
         });
   const visibleColumnCount = Math.min(Math.max(columns.length, 1), 3);
-  const dlg = deriveDialogProps(dialogState, openSeq);
+  const dlg = deriveDialogProps(dialogState);
 
   return (
     <div className="relative">
@@ -330,7 +309,7 @@ export function CurrentWeekSection({
 
         {/* Edit / Add modal — single instance shared across all columns. */}
         <ItemEditDialog
-          key={dlg.dialogKey}
+          key={dialogKey}
           open={dialogState.open}
           item={dlg.editItem}
           products={products ?? []}
@@ -351,7 +330,7 @@ export function CurrentWeekSection({
             pendingDelete ? `From ${pendingDelete.productName}` : undefined
           }
           onConfirm={confirmDelete}
-          onCancel={() => setPendingDelete(null)}
+          onCancel={clearPendingDelete}
         />
       </div>
       {canScrollDown && (

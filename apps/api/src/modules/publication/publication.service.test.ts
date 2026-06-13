@@ -9,7 +9,6 @@ import {
   customreportPeriodStateTransitionsTotal,
   customreportReportsSubmittedTotal,
 } from "../../infrastructure/metrics/metrics.registry.js";
-import { publicationRouter } from "./publication.router";
 import {
   PublicationAccessError,
   type PublicationRepository,
@@ -25,15 +24,6 @@ const headSession: UserSession = {
   role: "head",
   activeReportId: reportId,
   activeReportSectionId: null,
-};
-
-const leadSession: UserSession = {
-  userId: "00000000-0000-4000-8000-000000000002",
-  email: "lead1@customreport.local",
-  name: "Lead 1",
-  role: "lead",
-  activeReportId: reportId,
-  activeReportSectionId: "33333333-3333-4333-8333-333333333333",
 };
 
 const assembledReport: AssembledReport = {
@@ -205,17 +195,6 @@ describe("PublicationService", () => {
     ).rejects.toBeInstanceOf(PublicationAccessError);
   });
 
-  it("rejects non-head access before returning assembled report data", async () => {
-    const service = new PublicationService(createRepository(assembledReport));
-
-    await expect(
-      publicationRouter.getAssembledReport({
-        publicationService: service,
-        session: leadSession,
-      }),
-    ).rejects.toBeInstanceOf(PublicationAccessError);
-  });
-
   // UFB-049 / Phase 50-B: scheduler-driven auto-publish bypasses session
   // attribution. publishedById stays null and publishedByName='system' so
   // the head dashboard can show a "auto-published" badge by comparing.
@@ -319,37 +298,3 @@ async function getCounterValue(
   );
   return match?.value ?? 0;
 }
-
-describe("publicationRouter", () => {
-  it("allows a head session to read the assembled report", async () => {
-    const service = new PublicationService(createRepository(assembledReport));
-
-    await expect(
-      publicationRouter.getAssembledReport({
-        publicationService: service,
-        session: headSession,
-      }),
-    ).resolves.toMatchObject({
-      reportId,
-      portfolioOverview: { status: "red" },
-    });
-  });
-
-  it("publishes for a head session and blocks a second publish attempt", async () => {
-    const service = new PublicationService(createRepository(assembledReport));
-
-    const published = await publicationRouter.publishReport({
-      publicationService: service,
-      session: headSession,
-    });
-
-    expect(published.status).toBe("published");
-
-    await expect(
-      publicationRouter.publishReport({
-        publicationService: service,
-        session: headSession,
-      }),
-    ).rejects.toBeInstanceOf(PublicationAccessError);
-  });
-});

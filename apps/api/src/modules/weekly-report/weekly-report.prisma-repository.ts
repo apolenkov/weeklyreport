@@ -1,7 +1,6 @@
 import {
   type Escalation,
   type PortfolioProductOverview,
-  type WeeklyReportReadModel,
   weeklyReportReadModelSchema,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
@@ -21,8 +20,10 @@ import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
 } from "../report-sections/report-sections.prisma-repository.js";
+import { computeCrossGroupSignal } from "./cross-group-signal.js";
 import type {
   WeeklyReportRepository,
+  WeeklyReportRepositoryResult,
   WeeklyReportScopeSession,
 } from "./weekly-report.service.js";
 
@@ -53,7 +54,7 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
   async getWeeklyReport(
     reportId: string,
     session?: WeeklyReportScopeSession,
-  ): Promise<WeeklyReportReadModel | null> {
+  ): Promise<WeeklyReportRepositoryResult | null> {
     const sectionScope = scopeWhere(session, "reportSection");
     const userScope = scopeWhere(session, "user");
     // UFB-054 / Phase 56-D consumer migration: the weekly-report portfolio
@@ -75,10 +76,6 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     // derivation. All three scope axes (section, user, project) are applied via
     // scopeWhere() below. Defensive guardGroupScope() is exported from group-scope.ts
     // for use when callers must assert that session is non-null.
-    //
-    // TODO(scopeAccessed-audit): emitting `auditLog.scopeAccessed` when a
-    // cross-group product is surfaced is deferred — AuditLogger only has
-    // `scopeDenied`; high-cardinality logging design is a separate follow-up.
     const projectScope = scopeWhere(session, "project", {
       useExplicitGroupProducts: true,
     });
@@ -102,10 +99,14 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       select: { id: true },
     });
 
+    // D1: add lead.reportingGroupId to detect cross-group products.
+    // The thin extra select adds one column to an already-fetched row —
+    // no extra round-trip.
     const projects = await this.prisma.project.findMany({
       where: { archived: false, ...projectScope },
       include: {
         stageAssignments: true,
+        lead: { select: { reportingGroupId: true } },
       },
     });
 
@@ -144,26 +145,53 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
           : undefined,
       );
       const leadSections = scopedSnapshot.sections;
-      const submissionCount = leadSections.filter(
+      const snapshotSubmissionCount = leadSections.filter(
         (section) => section.status === "submitted",
       ).length;
 
-      return weeklyReportReadModelSchema.parse({
-        reportId: report.id,
-        periodStart: scopedSnapshot.periodStart,
-        periodEnd: scopedSnapshot.periodEnd,
-        deadline: scopedSnapshot.deadline,
-        periodStatus: report.periodStatus,
-        weekLabel: report.weekLabel,
-        submissionCount,
-        totalLeads,
-        hasActiveReminderRule: activePolicyCount > 0,
-        portfolioOverview:
-          buildPortfolioProductsFromSnapshotSections(leadSections),
-        leadSections,
-        escalations: buildEscalationsFromSnapshotSections(leadSections),
-      });
+      // D1: on a published period the read model is built from the
+      // snapshot, not from the live project rows — so the audit signal
+      // must only name products the caller actually receives. Intersect
+      // the live rows with the snapshot-surfaced product ids before
+      // computing the signal; otherwise a GroupProduct edge added after
+      // publish would emit scopeAccessed for data absent from the
+      // response (false audit-trail entry for every viewer read).
+      const surfacedProductIds = new Set(
+        leadSections.flatMap((section) =>
+          section.projects.map((project) => project.projectId),
+        ),
+      );
+      const crossGroup = computeCrossGroupSignal(
+        session,
+        projects.filter((project) => surfacedProductIds.has(project.id)),
+      );
+
+      return {
+        readModel: weeklyReportReadModelSchema.parse({
+          reportId: report.id,
+          periodStart: scopedSnapshot.periodStart,
+          periodEnd: scopedSnapshot.periodEnd,
+          deadline: scopedSnapshot.deadline,
+          periodStatus: report.periodStatus,
+          weekLabel: report.weekLabel,
+          submissionCount: snapshotSubmissionCount,
+          totalLeads,
+          hasActiveReminderRule: activePolicyCount > 0,
+          portfolioOverview:
+            buildPortfolioProductsFromSnapshotSections(leadSections),
+          leadSections,
+          escalations: buildEscalationsFromSnapshotSections(leadSections),
+        }),
+        crossGroup,
+      };
     }
+
+    // D1: compute the cross-group signal for the router to emit
+    // scopeAccessed. Admin sessions produce no scope filter and are never
+    // cross-group callers; non-session paths also skip. On the live (non-
+    // published) path every fetched project row surfaces in the read model,
+    // so the signal is computed from the full scoped project list.
+    const crossGroup = computeCrossGroupSignal(session, projects);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
     const leadSections = (report.sections as any[]).map(
@@ -174,20 +202,23 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
 
     const escalations = buildEscalations(report.sections, projects);
 
-    return weeklyReportReadModelSchema.parse({
-      reportId: report.id,
-      periodStart: report.periodStart,
-      periodEnd: report.periodEnd,
-      deadline: report.deadline,
-      periodStatus: report.periodStatus,
-      weekLabel: report.weekLabel,
-      submissionCount,
-      totalLeads,
-      hasActiveReminderRule: activePolicyCount > 0,
-      portfolioOverview,
-      leadSections,
-      escalations,
-    });
+    return {
+      readModel: weeklyReportReadModelSchema.parse({
+        reportId: report.id,
+        periodStart: report.periodStart,
+        periodEnd: report.periodEnd,
+        deadline: report.deadline,
+        periodStatus: report.periodStatus,
+        weekLabel: report.weekLabel,
+        submissionCount,
+        totalLeads,
+        hasActiveReminderRule: activePolicyCount > 0,
+        portfolioOverview,
+        leadSections,
+        escalations,
+      }),
+      crossGroup,
+    };
   }
 }
 

@@ -103,3 +103,17 @@ describe("StageChip — locked stage color (F2)", () => {
     expect(screen.queryByText("✕ Blocked")).not.toBeInTheDocument();
   });
 });
+
+// ---- align-pipeline-arrows: chip height token parity (D1) ----
+// Verifies the chip button carries STAGE_CHIP_BOX_HEIGHT as inline height,
+// matching the arrow wrapper in sdlc-pipeline.tsx so both midlines align.
+
+import { STAGE_CHIP_BOX_HEIGHT } from "./stage-chip-config";
+
+describe("StageChip — chip box height token (align-pipeline-arrows D1)", () => {
+  it("chip button inline height equals STAGE_CHIP_BOX_HEIGHT", () => {
+    render(<StageChip stage={{ ...BASE_LOCKED, status: "on-track" }} />);
+    const button = screen.getByRole("button");
+    expect(button.style.height).toBe(STAGE_CHIP_BOX_HEIGHT);
+  });
+});

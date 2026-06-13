@@ -6,6 +6,7 @@ import {
   buildProductScopedSlides,
   buildSectionSlideModel,
   buildUnifiedSlideModel,
+  scopeSlideToProduct,
   sortSlidesForReview,
 } from "./section-slide-utils";
 
@@ -99,6 +100,70 @@ describe("section slide utilities", () => {
           expect.objectContaining({ name: "Build", status: "green" }),
         ],
       }),
+    ]);
+  });
+
+  it("floors stage statuses by covering risk severity (unify-risk-stage-status D1)", () => {
+    // A stale persisted green/yellow stage covered by a risk must render at
+    // the risk's severity on the slides surface too — same floor as the
+    // lead form and head review (spec: status-risk-unification).
+    const slide = buildSectionSlideModel(
+      makeSection({
+        risks: [
+          {
+            id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            projectId: PRODUCT_ID,
+            risk: "Vendor outage",
+            impact: "Build stopped",
+            mitigation: "Escalate",
+            severity: "blocked",
+            stageIds: ["Build"],
+          },
+          {
+            id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+            projectId: PRODUCT_ID,
+            risk: "Scope unclear",
+            impact: "Rework",
+            mitigation: "Clarify",
+            severity: "at-risk",
+            stageIds: ["Discovery"],
+          },
+        ],
+      }),
+    );
+
+    expect(slide.productSlides[0]?.stages).toEqual([
+      // at-risk floor keeps the already-yellow stage yellow.
+      expect.objectContaining({ name: "Discovery", status: "yellow" }),
+      // blocked risk floors the stale green stage to red.
+      expect.objectContaining({ name: "Build", status: "red" }),
+    ]);
+  });
+
+  it("a stage-less (empty stageIds) legacy risk floors every owned stage (unify-risk-stage-status review-fix)", () => {
+    // Empty/undefined stageIds means "covers all stages" in the live form;
+    // the slide export must agree so a legacy stage-less risk does not floor
+    // every chip in the form yet nothing on the deck. Routing through
+    // `riskCoversStage` kills that divergence.
+    const slide = buildSectionSlideModel(
+      makeSection({
+        risks: [
+          {
+            id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+            projectId: PRODUCT_ID,
+            risk: "Legacy stage-less blocker",
+            impact: "Everything stalls",
+            mitigation: "Escalate",
+            severity: "blocked",
+            stageIds: [],
+          },
+        ],
+      }),
+    );
+
+    expect(slide.productSlides[0]?.stages).toEqual([
+      expect.objectContaining({ name: "Discovery", status: "red" }),
+      expect.objectContaining({ name: "Build", status: "red" }),
     ]);
   });
 
@@ -208,6 +273,85 @@ describe("section slide utilities", () => {
         decisions: ["Keep one release train"],
       }),
     );
+  });
+
+  it("routes items and risks referencing an unowned project into the cross-product entry", () => {
+    // referencedProjects case: rows point at a project the author owns no
+    // stage on, so it is absent from section.projects. They must still render
+    // (regression guard for redesign-head-slide-density review finding).
+    const OUTSIDE_PROJECT_ID = "12121212-1212-4121-8121-121212121212";
+    const slide = buildSectionSlideModel(
+      makeSection({
+        items: [
+          {
+            id: "55555555-5555-4555-8555-555555555555",
+            projectId: OUTSIDE_PROJECT_ID,
+            type: "current",
+            text: "Helped platform migration",
+            tag: "delivery",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            completed: null,
+          },
+          {
+            id: "66666666-6666-4666-8666-666666666666",
+            projectId: OUTSIDE_PROJECT_ID,
+            type: "next",
+            text: "Hand over platform runbook",
+            tag: "delivery",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            completed: null,
+          },
+        ],
+        risks: [
+          {
+            id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            projectId: OUTSIDE_PROJECT_ID,
+            risk: "Platform dependency may slip",
+            impact: "Launch risk",
+            mitigation: "Escalate to platform lead",
+            severity: "at-risk",
+          },
+        ],
+      }),
+    );
+
+    expect(slide.currentCount).toBe(1);
+    expect(slide.nextCount).toBe(1);
+    expect(slide.riskCount).toBe(1);
+    expect(
+      slide.productSlides.find((product) => product.id === "cross-product"),
+    ).toEqual(
+      expect.objectContaining({
+        currentItems: ["Helped platform migration"],
+        nextItems: ["Hand over platform runbook"],
+        risks: ["Platform dependency may slip"],
+      }),
+    );
+
+    // The unified model the head/lead slides render must keep counts and
+    // visible rows in sync.
+    const unified = buildUnifiedSlideModel(slide);
+    expect(unified.current).toContainEqual(
+      expect.objectContaining({
+        text: "Helped platform migration",
+        productName: "Shared context",
+      }),
+    );
+    expect(unified.next).toContainEqual(
+      expect.objectContaining({
+        text: "Hand over platform runbook",
+        productName: "Shared context",
+      }),
+    );
+    expect(unified.risks).toContainEqual(
+      expect.objectContaining({
+        text: "Platform dependency may slip",
+        productName: "Shared context",
+      }),
+    );
+    expect(unified.risks).toHaveLength(slide.riskCount);
   });
 
   it("deduplicates duplicate project rows before building product sections", () => {
@@ -474,6 +618,89 @@ describe("section slide utilities", () => {
         status: "needs-work",
       }),
     );
+  });
+});
+
+describe("scopeSlideToProduct (slides-product-autofit)", () => {
+  // Two real products plus a shared decision (productId: null), which
+  // buildSectionSlideModel routes into the cross-product pseudo-entry.
+  function makeMultiProductSlide() {
+    return buildSectionSlideModel(
+      makeSection({
+        projects: [
+          {
+            projectId: PRODUCT_ID,
+            projectName: "Core Product",
+            trafficLight: "green",
+            ownedStages: [],
+          },
+          {
+            projectId: PRODUCT_TWO_ID,
+            projectName: "Data Portal",
+            trafficLight: "yellow",
+            ownedStages: [],
+          },
+        ],
+        decisions: [
+          {
+            id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+            text: "Keep one release train",
+            owner: "Head",
+            deadline: null,
+            impact: "Shared delivery decision",
+            resolvedAt: null,
+            productId: null,
+          },
+        ],
+      }),
+    );
+  }
+
+  it("returns the slide unchanged (same reference) for a null product id", () => {
+    const slide = makeMultiProductSlide();
+
+    expect(scopeSlideToProduct(slide, null)).toBe(slide);
+  });
+
+  it("reduces productSlides to the picked product", () => {
+    const slide = makeMultiProductSlide();
+
+    const scoped = scopeSlideToProduct(slide, PRODUCT_TWO_ID);
+
+    expect(scoped.productSlides).toHaveLength(1);
+    expect(scoped.productSlides[0]?.id).toBe(PRODUCT_TWO_ID);
+    // KPI counts stay section-global (proposal open question 3 default).
+    expect(scoped.currentCount).toBe(slide.currentCount);
+  });
+
+  it("drops the cross-product pseudo-entry while a product is picked", () => {
+    const slide = makeMultiProductSlide();
+    expect(slide.productSlides.some((p) => p.id === "cross-product")).toBe(
+      true,
+    );
+
+    const scoped = scopeSlideToProduct(slide, PRODUCT_ID);
+
+    expect(scoped.productSlides.some((p) => p.id === "cross-product")).toBe(
+      false,
+    );
+    // Even asking for the pseudo-entry itself never surfaces it.
+    expect(
+      scopeSlideToProduct(slide, "cross-product").productSlides,
+    ).toHaveLength(0);
+  });
+
+  it("yields empty productSlides for an unknown id and still builds a model", () => {
+    const slide = makeMultiProductSlide();
+
+    const scoped = scopeSlideToProduct(slide, "not-a-real-product-id");
+
+    expect(scoped.productSlides).toHaveLength(0);
+    const model = buildUnifiedSlideModel(scoped);
+    expect(model.current).toHaveLength(0);
+    expect(model.next).toHaveLength(0);
+    expect(model.risks).toHaveLength(0);
+    expect(model.decisions).toHaveLength(0);
   });
 });
 

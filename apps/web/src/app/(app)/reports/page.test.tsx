@@ -90,9 +90,6 @@ function historyEntry(overrides: Partial<MyHistoryEntry>): MyHistoryEntry {
     decisionCount: 0,
     priorityCount: 0,
     productCount: 1,
-    versionCount: 1,
-    latestVersion: 1,
-    latestVersionAt: new Date("2026-05-15T09:00:00.000Z"),
     trafficLights: { green: 1, yellow: 0, red: 0 },
     ...overrides,
   };

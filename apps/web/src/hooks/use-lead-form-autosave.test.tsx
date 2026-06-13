@@ -1,3 +1,13 @@
+// Timer recipe for this file:
+//   - vi.useFakeTimers() is active for all tests (see beforeEach).
+//   - Use vi.advanceTimersByTimeAsync(n) inside act() to advance the debounce
+//     clock — this drains microtasks AND TanStack Query's setTimeout(0) notifier.
+//   - vi.runAllTimersAsync() is allowed only as a terminal drain when no later
+//     assertion depends on un-elapsed time.
+//   - NEVER use Testing Library waitFor / findBy* here: globals:false in
+//     vitest.config.ts and no jest shim in vitest.setup.ts means TL's polling
+//     timer is itself faked and the call deadlocks until test timeout.
+
 import type { DraftSavePayload } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
@@ -6,6 +16,7 @@ import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../lib/trpc-context";
+import { createMockTRPC } from "../test-utils/mock-trpc";
 import { useLeadFormAutosave } from "./use-lead-form-autosave";
 
 vi.mock("sonner", () => ({
@@ -38,17 +49,6 @@ function makePayload(text = "first"): DraftSavePayload {
   };
 }
 
-/**
- * Flush any pending microtasks under fake timers. React Query's mutation
- * machinery resolves through several Promise.resolve() ticks before
- * onSuccess/onError fire and React commits state.
- */
-async function flushAll() {
-  for (let i = 0; i < 10; i++) {
-    await Promise.resolve();
-  }
-}
-
 function buildHarness(
   opts: { mutationFn?: (vars: unknown) => Promise<unknown> } = {},
 ) {
@@ -60,28 +60,25 @@ function buildHarness(
       return { ok: true };
     });
 
-  // The TRPCProxy mock: mutationOptions returns whatever the caller passes
-  // PLUS our mutationFn. React Query will use this.mutationFn to execute.
-  const trpcMock = {
-    reports: {
-      saveDraft: {
-        mutationOptions: (passed: object) => ({
-          ...passed,
-          mutationFn: async (vars: unknown) => {
-            calls.push(vars);
-            return userMutationFn(vars);
-          },
-        }),
-        pathFilter: () => ({ queryKey: ["reports", "saveDraft"] }),
-      },
-      getActive: { pathFilter: () => ({ queryKey: ["reports", "getActive"] }) },
-      myHistory: { pathFilter: () => ({ queryKey: ["reports", "myHistory"] }) },
+  const { proxy, captured } = createMockTRPC([
+    {
+      path: ["reports", "saveDraft"],
+      mutation: true,
     },
-    leadForm: {
-      byPeriod: { pathFilter: () => ({ queryKey: ["leadForm", "byPeriod"] }) },
-      versions: { pathFilter: () => ({ queryKey: ["leadForm", "versions"] }) },
+    { path: ["reports", "getActive"] },
+    { path: ["reports", "myHistory"] },
+    { path: ["leadForm", "byPeriod"] },
+  ]);
+
+  // Wire the captured saveDraft mutationFn to delegate to the harness's
+  // own calls array and user-supplied mutationFn — same contract as before.
+  captured["reports.saveDraft"].mutationFn.mockImplementation(
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises -- async mock implementation; Promise is consumed by React Query, not discarded
+    async (vars: unknown) => {
+      calls.push(vars);
+      return userMutationFn(vars);
     },
-  };
+  );
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -90,7 +87,7 @@ function buildHarness(
   function wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <TRPCProxyContext.Provider value={trpcMock as never}>
+        <TRPCProxyContext.Provider value={proxy}>
           {children}
         </TRPCProxyContext.Provider>
       </QueryClientProvider>
@@ -106,6 +103,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.runOnlyPendingTimers();
   vi.useRealTimers();
 });
 
@@ -134,12 +132,11 @@ describe("useLeadFormAutosave", () => {
     expect(calls).toHaveLength(0);
 
     await act(async () => {
-      vi.advanceTimersByTime(3000);
-      await flushAll();
+      await vi.advanceTimersByTimeAsync(3000);
     });
 
     expect(calls.length).toBeGreaterThanOrEqual(1);
-    expect(["saving", "saved"]).toContain(result.current.state);
+    expect(result.current.state).toBe("saved");
   });
 
   it("coalesces two rapid changes within the debounce window into a single mutation call", async () => {
@@ -158,23 +155,20 @@ describe("useLeadFormAutosave", () => {
     expect(result.current.state).toBe("pending");
 
     // 1000ms in, change again -> debounce restarts.
-    // eslint-disable-next-line @typescript-eslint/require-await -- async required by act() signature; body has no awaitable work in this step
     await act(async () => {
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
     });
     rerender({ payload: makePayload("b") });
 
     // 1000ms more (2s total since first change, 1s since second).
-    // eslint-disable-next-line @typescript-eslint/require-await -- async required by act() signature; body has no awaitable work in this step
     await act(async () => {
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
     });
     expect(calls).toHaveLength(0);
 
     // 2000ms more — second debounce expires.
     await act(async () => {
-      vi.advanceTimersByTime(2000);
-      await flushAll();
+      await vi.advanceTimersByTimeAsync(2000);
     });
 
     expect(calls.length).toBe(1);
@@ -194,8 +188,7 @@ describe("useLeadFormAutosave", () => {
     );
 
     await act(async () => {
-      vi.advanceTimersByTime(3000);
-      await flushAll();
+      await vi.advanceTimersByTimeAsync(3000);
     });
 
     expect(result.current.state).toBe("saved");
@@ -218,8 +211,7 @@ describe("useLeadFormAutosave", () => {
 
     // First save completes.
     await act(async () => {
-      vi.advanceTimersByTime(3000);
-      await flushAll();
+      await vi.advanceTimersByTimeAsync(3000);
     });
 
     expect(result.current.state).toBe("saved");
@@ -232,8 +224,7 @@ describe("useLeadFormAutosave", () => {
     expect(result.current.dirty).toBe(false);
 
     await act(async () => {
-      vi.advanceTimersByTime(5000);
-      await flushAll();
+      await vi.advanceTimersByTimeAsync(5000);
     });
     expect(calls.length).toBe(1);
   });
@@ -253,8 +244,7 @@ describe("useLeadFormAutosave", () => {
 
     expect(result.current.dirty).toBe(false);
     await act(async () => {
-      vi.advanceTimersByTime(10_000);
-      await flushAll();
+      await vi.advanceTimersByTimeAsync(10_000);
     });
     expect(calls).toHaveLength(0);
     expect(result.current.state).toBe("idle");
@@ -279,12 +269,86 @@ describe("useLeadFormAutosave", () => {
     );
 
     await act(async () => {
-      vi.advanceTimersByTime(3000);
-      await flushAll();
+      await vi.advanceTimersByTimeAsync(3000);
     });
 
     expect(result.current.state).toBe("error");
     expect(toast.error).toHaveBeenCalledWith("Network down");
+  });
+
+  it("after an error the form stays dirty and the next edit retries the save", async () => {
+    // D7 (defer-versions-coming-soon): failure keeps dirty=true so the user's
+    // work is not silently marked saved; the next edit fires saveDraft again.
+    let failNext = true;
+    const { wrapper, calls } = buildHarness({
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async mutationFn contract; throws synchronously but must satisfy Promise<unknown> return type
+      mutationFn: async () => {
+        if (failNext) throw new Error("Network down");
+        return { ok: true };
+      },
+    });
+    const { result, rerender } = renderHook(
+      ({ payload }: { payload: DraftSavePayload }) =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload,
+          enabled: true,
+          debounceMs: 3000,
+        }),
+      { wrapper, initialProps: { payload: makePayload("first-try") } },
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(result.current.state).toBe("error");
+    expect(result.current.dirty).toBe(true);
+    expect(calls).toHaveLength(1);
+
+    // Next edit retries: a new payload restarts the debounce and saves.
+    failNext = false;
+    rerender({ payload: makePayload("second-try") });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+
+    expect(calls).toHaveLength(2);
+    expect(result.current.state).toBe("saved");
+    expect(result.current.dirty).toBe(false);
+  });
+
+  it("blocks beforeunload while dirty and releases the guard after save", async () => {
+    // D7 (defer-versions-coming-soon) / INT-07: unsaved edits must arm the
+    // beforeunload guard; a successful save must disarm it.
+    const { wrapper } = buildHarness();
+    const { result } = renderHook(
+      () =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload: makePayload("guard-me"),
+          enabled: true,
+          debounceMs: 3000,
+        }),
+      { wrapper },
+    );
+
+    expect(result.current.dirty).toBe(true);
+    const dirtyEvent = new Event("beforeunload", { cancelable: true });
+    act(() => {
+      window.dispatchEvent(dirtyEvent);
+    });
+    expect(dirtyEvent.defaultPrevented).toBe(true);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(result.current.dirty).toBe(false);
+
+    const cleanEvent = new Event("beforeunload", { cancelable: true });
+    act(() => {
+      window.dispatchEvent(cleanEvent);
+    });
+    expect(cleanEvent.defaultPrevented).toBe(false);
   });
 
   it("exposes dirty=true while a change is pending and dirty=false after success", async () => {
@@ -306,8 +370,7 @@ describe("useLeadFormAutosave", () => {
     expect(result.current.dirty).toBe(true);
 
     await act(async () => {
-      vi.advanceTimersByTime(3000);
-      await flushAll();
+      await vi.advanceTimersByTimeAsync(3000);
     });
 
     expect(result.current.state).toBe("saved");
@@ -334,12 +397,12 @@ describe("useLeadFormAutosave", () => {
     // Call forceSave — should bypass the 5s debounce immediately.
     await act(async () => {
       void result.current.forceSave();
-      await flushAll();
+      await vi.advanceTimersByTimeAsync(0);
     });
 
     // Mutation must have fired without advancing timers by 5000ms.
     expect(calls.length).toBeGreaterThanOrEqual(1);
-    expect(["saving", "saved"]).toContain(result.current.state);
+    expect(result.current.state).toBe("saved");
   });
 
   it("Save button isInFlight becomes true while save is in flight", async () => {
@@ -366,7 +429,7 @@ describe("useLeadFormAutosave", () => {
     // Trigger via forceSave.
     await act(async () => {
       void result.current.forceSave();
-      await flushAll();
+      await vi.advanceTimersByTimeAsync(0);
     });
 
     // While mutation is pending, isInFlight should be true.
@@ -375,7 +438,7 @@ describe("useLeadFormAutosave", () => {
     // Resolve the mutation.
     await act(async () => {
       resolveMutation();
-      await flushAll();
+      await vi.advanceTimersByTimeAsync(0);
     });
 
     expect(result.current.isInFlight).toBe(false);
@@ -397,7 +460,7 @@ describe("useLeadFormAutosave", () => {
 
     await act(async () => {
       void result.current.forceSave();
-      await flushAll();
+      await vi.advanceTimersByTimeAsync(0);
     });
 
     expect(result.current.state).toBe("saved");
@@ -440,7 +503,7 @@ describe("useLeadFormAutosave", () => {
     // Trigger the first save (P1 in flight).
     await act(async () => {
       void result.current.forceSave();
-      await flushAll();
+      await vi.advanceTimersByTimeAsync(0);
     });
     expect(result.current.isInFlight).toBe(true);
     expect(calls).toHaveLength(1);
@@ -451,7 +514,7 @@ describe("useLeadFormAutosave", () => {
     // Queue a second forceSave while in flight — should stash P2 key+payload.
     await act(async () => {
       void result.current.forceSave();
-      await flushAll();
+      await vi.advanceTimersByTimeAsync(0);
     });
     // Still in flight (mutation not resolved yet), no second mutation fired.
     expect(calls).toHaveLength(1);
@@ -459,7 +522,7 @@ describe("useLeadFormAutosave", () => {
     // Resolve P1 — the queued save (P2) should fire automatically and complete.
     await act(async () => {
       resolveMutation();
-      await flushAll();
+      await vi.runAllTimersAsync();
     });
 
     // Second mutation must have fired with the P2 payload.
@@ -486,10 +549,11 @@ describe("useLeadFormAutosave", () => {
 
     await act(async () => {
       void result.current.forceSave();
-      await flushAll();
+      await vi.advanceTimersByTimeAsync(0);
     });
 
     expect(result.current.state).toBe("saved");
+    // JSON.stringify of the nested key [["leadForm","byPeriod"]] contains "leadForm"
     const invalidatedKeys = invalidateSpy.mock.calls.map((c) =>
       JSON.stringify(c[0]),
     );

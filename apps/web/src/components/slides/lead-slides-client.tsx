@@ -2,18 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useSearchParams } from "next/navigation";
-import {
-  type RefObject,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type RefObject, useContext, useMemo, useRef, useState } from "react";
 
-import { logClientError } from "../../lib/client-error-reporting";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
+import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
 import { LeadProductGrid } from "./lead-product-grid";
@@ -99,22 +92,18 @@ export function LeadSlidesClient({
     enabled: targetReportId !== "",
   });
 
-  useEffect(() => {
-    if (!activeQ.isError) return;
-    logClientError("leadSlides.getActive.load_failed", activeQ.error, {
-      component: "LeadSlidesClient",
-      procedure: "reports.getActive",
-    });
-  }, [activeQ.isError, activeQ.error]);
+  useQueryErrorHandler(activeQ, {
+    event: "leadSlides.getActive.load_failed",
+    component: "LeadSlidesClient",
+    procedure: "reports.getActive",
+  });
 
-  useEffect(() => {
-    if (!byPeriodQ.isError) return;
-    logClientError("leadSlides.byPeriod.load_failed", byPeriodQ.error, {
-      component: "LeadSlidesClient",
-      procedure: "leadForm.byPeriod",
-      reportId: targetReportId || null,
-    });
-  }, [byPeriodQ.isError, byPeriodQ.error, targetReportId]);
+  useQueryErrorHandler(byPeriodQ, {
+    event: "leadSlides.byPeriod.load_failed",
+    component: "LeadSlidesClient",
+    procedure: "leadForm.byPeriod",
+    context: { reportId: targetReportId || null },
+  });
 
   const sectionModel = useMemo(
     () =>

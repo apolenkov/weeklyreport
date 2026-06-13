@@ -524,6 +524,18 @@ describe("createAuditLogger — period.auto-* (UFB-049 / 50-B)", () => {
         changes: { deadline: { from: "a", to: "b" } },
       }),
     ).not.toThrow();
+    // scope-accessed: noop branch.
+    expect(() =>
+      audit.scopeAccessed({
+        userId: "head-1",
+        role: "head",
+        ip: "10.0.0.1",
+        accessedScope: "weeklyReport.project",
+        productIds: ["00000000-0000-4000-8000-000000000001"],
+        groupIds: ["00000000-0000-4000-8000-000000000002"],
+        resourceId: "00000000-0000-4000-8000-000000000003",
+      }),
+    ).not.toThrow();
   });
 
   it("periodManualCreate emits {event, real-user attribution, periodId, dates} on info (UFB-063)", () => {
@@ -596,5 +608,70 @@ describe("createAuditLogger — period.auto-* (UFB-049 / 50-B)", () => {
         weekLabel: { from: "Sprint 11", to: "Sprint 11 (extended)" },
       },
     });
+  });
+});
+
+describe("createAuditLogger — scopeAccessed", () => {
+  it("emits {event, userId, role, ip, accessedScope, productIds, groupIds, resourceId} at info", () => {
+    const { logger, entries } = makeCapturingLogger();
+    const audit = createAuditLogger(logger);
+
+    audit.scopeAccessed({
+      userId: "head-1",
+      role: "head",
+      ip: "10.0.0.10",
+      accessedScope: "weeklyReport.project",
+      productIds: [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222",
+      ],
+      groupIds: ["33333333-3333-4333-8333-333333333333"],
+      resourceId: "44444444-4444-4444-8444-444444444444",
+    });
+
+    expect(entries).toHaveLength(1);
+    const entry = expectDefined(entries[0]);
+    expect(entry.level).toBe("info");
+    expect(entry.message).toBe("audit");
+    expect(entry.context).toEqual({
+      event: "scope-accessed",
+      userId: "head-1",
+      role: "head",
+      ip: "10.0.0.10",
+      accessedScope: "weeklyReport.project",
+      productIds: [
+        "11111111-1111-4111-8111-111111111111",
+        "22222222-2222-4222-8222-222222222222",
+      ],
+      groupIds: ["33333333-3333-4333-8333-333333333333"],
+      resourceId: "44444444-4444-4444-8444-444444444444",
+    });
+    // Whitelist — row contents must never appear on the envelope.
+    const banned = [
+      "samlAssertion",
+      "nameID",
+      "cookie",
+      "token",
+      "password",
+      "authorization",
+    ];
+    for (const key of banned) {
+      expect(Object.keys(entry.context ?? {})).not.toContain(key);
+    }
+  });
+
+  it("no-op logger stays silent and does not throw", () => {
+    const audit = createNullAuditLogger();
+    expect(() =>
+      audit.scopeAccessed({
+        userId: "head-1",
+        role: "head",
+        ip: "10.0.0.10",
+        accessedScope: "weeklyReport.project",
+        productIds: ["11111111-1111-4111-8111-111111111111"],
+        groupIds: ["33333333-3333-4333-8333-333333333333"],
+        resourceId: "44444444-4444-4444-8444-444444444444",
+      }),
+    ).not.toThrow();
   });
 });

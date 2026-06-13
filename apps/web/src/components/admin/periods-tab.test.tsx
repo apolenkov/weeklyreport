@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
+import { createMockTRPC } from "../../test-utils/mock-trpc";
 import { PeriodsTab } from "./periods-tab";
 
 // ----- mocks ---------------------------------------------------------
@@ -80,166 +81,78 @@ const archivedRow = makeRow({
 
 // ----- tRPC test double ----------------------------------------------
 
-interface Captured {
-  publishMutationFn: ReturnType<typeof vi.fn>;
-  reopenMutationFn: ReturnType<typeof vi.fn>;
-  archiveMutationFn: ReturnType<typeof vi.fn>;
-  unarchiveMutationFn: ReturnType<typeof vi.fn>;
-  // UFB-063
-  createMutationFn: ReturnType<typeof vi.fn>;
-  // UFB-067: edit-period mutation surface used by the row-level Edit icon.
-  updateMutationFn: ReturnType<typeof vi.fn>;
-  // A27: delete period mutation.
-  deleteMutationFn: ReturnType<typeof vi.fn>;
-  listInputs: { bucket: string }[];
-}
-
-function makeMockTRPC(opts: {
-  active: PeriodListItem[];
-  archive: PeriodListItem[];
-  captured: Captured;
-}) {
-  // Use unique query keys keyed on the `bucket` arg so the active vs.
-  // archive caches stay independent (the real proxy does this via
-  // queryKey derivation from the trpc path).
-  return {
-    admin: {
-      snapshot: { pathFilter: () => ({ queryKey: ["admin", "snapshot"] }) },
-      getSettings: {
-        pathFilter: () => ({ queryKey: ["admin", "settings"] }),
-      },
-      getOrganization: {
-        pathFilter: () => ({ queryKey: ["admin", "getOrganization"] }),
-      },
-      listPeriodsByState: {
-        pathFilter: () => ({ queryKey: ["admin", "listPeriodsByState"] }),
-        queryOptions: (input: { bucket: string }) => {
-          opts.captured.listInputs.push(input);
-          return {
-            queryKey: ["admin", "listPeriodsByState", input.bucket],
-            // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async queryFn contract expected by react-query (no awaitable work in the stub)
-            queryFn: async () =>
-              input.bucket === "archive" ? opts.archive : opts.active,
-          };
-        },
-      },
-      archivePeriod: {
-        pathFilter: () => ({ queryKey: ["admin", "archivePeriod"] }),
-        mutationOptions: (mopts: Record<string, unknown>) => ({
-          mutationFn: opts.captured.archiveMutationFn,
-          onSuccess: mopts.onSuccess,
-          onError: mopts.onError,
-        }),
-      },
-      unarchivePeriod: {
-        pathFilter: () => ({ queryKey: ["admin", "unarchivePeriod"] }),
-        mutationOptions: (mopts: Record<string, unknown>) => ({
-          mutationFn: opts.captured.unarchiveMutationFn,
-          onSuccess: mopts.onSuccess,
-          onError: mopts.onError,
-        }),
-      },
-      // UFB-063: admin.createPeriodManual mutation surface. Captured
-      // so the «New period» dialog test can assert the payload that
-      // would be sent to the server.
-      createPeriodManual: {
-        pathFilter: () => ({ queryKey: ["admin", "createPeriodManual"] }),
-        mutationOptions: (mopts: Record<string, unknown>) => ({
-          mutationFn: opts.captured.createMutationFn,
-          onSuccess: mopts.onSuccess,
-          onError: mopts.onError,
-        }),
-      },
-      // UFB-067: admin.updatePeriodManual mutation surface used by the
-      // row-level Edit icon. Tests assert the payload reaches the server
-      // with the reportId + the changed fields.
-      updatePeriodManual: {
-        pathFilter: () => ({ queryKey: ["admin", "updatePeriodManual"] }),
-        mutationOptions: (mopts: Record<string, unknown>) => ({
-          mutationFn: opts.captured.updateMutationFn,
-          onSuccess: mopts.onSuccess,
-          onError: mopts.onError,
-        }),
-      },
-      // A27 (UAT-v7 2026-05-12): delete period (draft/scheduled only).
-      deleteReport: {
-        pathFilter: () => ({ queryKey: ["admin", "deleteReport"] }),
-        mutationOptions: (mopts: Record<string, unknown>) => ({
-          mutationFn: opts.captured.deleteMutationFn,
-          onSuccess: mopts.onSuccess,
-          onError: mopts.onError,
-        }),
-      },
-    },
-    period: {
-      publish: {
-        pathFilter: () => ({ queryKey: ["period", "publish"] }),
-        mutationOptions: (mopts: Record<string, unknown>) => ({
-          mutationFn: opts.captured.publishMutationFn,
-          onSuccess: mopts.onSuccess,
-          onError: mopts.onError,
-        }),
-      },
-      reopen: {
-        pathFilter: () => ({ queryKey: ["period", "reopen"] }),
-        mutationOptions: (mopts: Record<string, unknown>) => ({
-          mutationFn: opts.captured.reopenMutationFn,
-          onSuccess: mopts.onSuccess,
-          onError: mopts.onError,
-        }),
-      },
-    },
-    org: { getPublic: { pathFilter: () => ({ queryKey: ["org"] }) } },
-    auth: { me: { pathFilter: () => ({ queryKey: ["auth"] }) } },
-    weeklyReport: {
-      get: { pathFilter: () => ({ queryKey: ["weeklyReport", "get"] }) },
-    },
-  } as never;
-}
-
 function renderTab(args?: {
   active?: PeriodListItem[];
   archive?: PeriodListItem[];
 }) {
-  const captured: Captured = {
-    publishMutationFn: vi.fn().mockResolvedValue({ success: true }),
-    reopenMutationFn: vi.fn().mockResolvedValue({ success: true }),
-    archiveMutationFn: vi.fn().mockResolvedValue({ success: true }),
-    unarchiveMutationFn: vi.fn().mockResolvedValue({ success: true }),
-    deleteMutationFn: vi.fn().mockResolvedValue({ success: true }),
-    // UFB-063: createPeriodManual server returns the new row's shape.
-    createMutationFn: vi.fn().mockResolvedValue({
-      periodId: "11111111-1111-4111-8111-111111111199",
-      periodStart: new Date("2026-05-18T00:00:00Z"),
-      periodEnd: new Date("2026-05-24T23:59:59Z"),
-      deadline: new Date("2026-05-22T15:00:00Z"),
-      periodState: "scheduled",
-    }),
-    // UFB-067: updatePeriodManual server returns the updated row.
-    updateMutationFn: vi.fn().mockResolvedValue({
-      periodId: "11111111-1111-4111-8111-111111111102",
-      periodStart: new Date("2026-05-04T00:00:00Z"),
-      periodEnd: new Date("2026-05-10T23:59:59Z"),
-      deadline: new Date("2026-05-09T18:00:00Z"),
-      periodState: "published",
-      weekLabel: null,
-    }),
-    listInputs: [],
-  };
+  const activeRows = args?.active ?? [openRow, publishedFresh, publishedStale];
+  const archiveRows = args?.archive ?? [archivedRow];
+
+  const { proxy, captured } = createMockTRPC([
+    { path: ["admin", "snapshot"] },
+    { path: ["admin", "getSettings"] },
+    { path: ["admin", "getOrganization"] },
+    {
+      path: ["admin", "listPeriodsByState"],
+      // Input-parameterized: active vs archive caches stay independent.
+      queryByInput: (input: unknown) => {
+        const { bucket } = input as { bucket: string };
+        return bucket === "archive" ? archiveRows : activeRows;
+      },
+    },
+    { path: ["admin", "archivePeriod"], mutation: true },
+    { path: ["admin", "unarchivePeriod"], mutation: true },
+    // UFB-063: admin.createPeriodManual mutation surface.
+    { path: ["admin", "createPeriodManual"], mutation: true },
+    // UFB-067: edit-period mutation surface used by the row-level Edit icon.
+    { path: ["admin", "updatePeriodManual"], mutation: true },
+    // A27 (UAT-v7 2026-05-12): delete period (draft/scheduled only).
+    { path: ["admin", "deleteReport"], mutation: true },
+    { path: ["period", "publish"], mutation: true },
+    { path: ["period", "reopen"], mutation: true },
+    { path: ["org", "getPublic"] },
+    { path: ["auth", "me"] },
+    { path: ["weeklyReport", "get"] },
+  ]);
+
+  // Seed default mock resolved values for mutation fns.
+  captured["admin.archivePeriod"].mutationFn.mockResolvedValue({
+    success: true,
+  });
+  captured["admin.unarchivePeriod"].mutationFn.mockResolvedValue({
+    success: true,
+  });
+  captured["admin.deleteReport"].mutationFn.mockResolvedValue({
+    success: true,
+  });
+  // UFB-063: createPeriodManual server returns the new row's shape.
+  captured["admin.createPeriodManual"].mutationFn.mockResolvedValue({
+    periodId: "11111111-1111-4111-8111-111111111199",
+    periodStart: new Date("2026-05-18T00:00:00Z"),
+    periodEnd: new Date("2026-05-24T23:59:59Z"),
+    deadline: new Date("2026-05-22T15:00:00Z"),
+    periodState: "scheduled",
+  });
+  // UFB-067: updatePeriodManual server returns the updated row.
+  captured["admin.updatePeriodManual"].mutationFn.mockResolvedValue({
+    periodId: "11111111-1111-4111-8111-111111111102",
+    periodStart: new Date("2026-05-04T00:00:00Z"),
+    periodEnd: new Date("2026-05-10T23:59:59Z"),
+    deadline: new Date("2026-05-09T18:00:00Z"),
+    periodState: "published",
+    weekLabel: null,
+  });
+  captured["period.publish"].mutationFn.mockResolvedValue({ success: true });
+  captured["period.reopen"].mutationFn.mockResolvedValue({ success: true });
 
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  const trpc = makeMockTRPC({
-    active: args?.active ?? [openRow, publishedFresh, publishedStale],
-    archive: args?.archive ?? [archivedRow],
-    captured,
   });
 
   function Wrapper({ children }: { readonly children: ReactNode }) {
     return (
       <QueryClientProvider client={qc}>
-        <TRPCProxyContext.Provider value={trpc}>
+        <TRPCProxyContext.Provider value={proxy}>
           {children}
         </TRPCProxyContext.Provider>
       </QueryClientProvider>
@@ -401,9 +314,13 @@ describe("PeriodsTab (UFB-052 / Phase 51-B)", () => {
     await user.click(screen.getByTestId(`action-archive-${publishedFresh.id}`));
 
     await waitFor(() => {
-      expect(captured.archiveMutationFn).toHaveBeenCalledTimes(1);
+      expect(captured["admin.archivePeriod"].mutationFn).toHaveBeenCalledTimes(
+        1,
+      );
     });
-    expect(captured.archiveMutationFn.mock.calls[0]?.[0]).toEqual({
+    expect(
+      captured["admin.archivePeriod"].mutationFn.mock.calls[0]?.[0],
+    ).toEqual({
       periodId: publishedFresh.id,
     });
   });
@@ -421,9 +338,9 @@ describe("PeriodsTab (UFB-052 / Phase 51-B)", () => {
     await user.click(screen.getByTestId(`action-reopen-${publishedFresh.id}`));
 
     await waitFor(() => {
-      expect(captured.reopenMutationFn).toHaveBeenCalledTimes(1);
+      expect(captured["period.reopen"].mutationFn).toHaveBeenCalledTimes(1);
     });
-    expect(captured.reopenMutationFn.mock.calls[0]?.[0]).toEqual({
+    expect(captured["period.reopen"].mutationFn.mock.calls[0]?.[0]).toEqual({
       reportId: publishedFresh.id,
     });
   });
@@ -530,10 +447,13 @@ describe("PeriodsTab — «New period» dialog (UFB-063)", () => {
     await user.click(screen.getByTestId("periods-create-submit"));
 
     await waitFor(() => {
-      expect(captured.createMutationFn).toHaveBeenCalledTimes(1);
+      expect(
+        captured["admin.createPeriodManual"].mutationFn,
+      ).toHaveBeenCalledTimes(1);
     });
 
-    const payload = captured.createMutationFn.mock.calls[0]?.[0] as {
+    const payload = captured["admin.createPeriodManual"].mutationFn.mock
+      .calls[0]?.[0] as {
       periodStart: Date;
       weekLabel?: string;
     };
@@ -616,9 +536,12 @@ describe("PeriodsTab — «Edit period» dialog (UFB-067)", () => {
     await user.click(screen.getByTestId("periods-create-submit"));
 
     await waitFor(() => {
-      expect(captured.updateMutationFn).toHaveBeenCalledTimes(1);
+      expect(
+        captured["admin.updatePeriodManual"].mutationFn,
+      ).toHaveBeenCalledTimes(1);
     });
-    const payload = captured.updateMutationFn.mock.calls[0]?.[0] as {
+    const payload = captured["admin.updatePeriodManual"].mutationFn.mock
+      .calls[0]?.[0] as {
       reportId: string;
       weekLabel?: string | null;
     };
@@ -782,5 +705,58 @@ describe("PeriodsTab — a11y dialog behavioral regressions (VA-0a)", () => {
 
     // The dialog must STILL be in the DOM.
     expect(screen.getByTestId("periods-create-dialog")).toBeInTheDocument();
+  });
+});
+
+// admin-dialog-focus-management (autofocus-admin-dialogs)
+describe("PeriodsTab — focus management (autofocus-admin-dialogs)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("period-start input receives focus when the dialog opens (autoFocus)", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    await user.click(await screen.findByTestId("periods-new-button"));
+
+    const input = screen.getByTestId("periods-create-start");
+    // React honours autoFocus on conditionally-mounted elements in jsdom;
+    // dropping the autoFocus wiring in production code fails this assert.
+    expect(input).toHaveFocus();
+  });
+
+  it("focus returns to New-period button after create dialog closes via Cancel", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    const newBtn = await screen.findByTestId("periods-new-button");
+    newBtn.focus();
+    await user.click(newBtn);
+
+    expect(screen.getByTestId("periods-create-dialog")).toBeInTheDocument();
+
+    await user.click(screen.getByTestId("periods-create-cancel"));
+
+    expect(
+      screen.queryByTestId("periods-create-dialog"),
+    ).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(newBtn);
+  });
+
+  it("focus returns to New-period button after create dialog closes via Escape", async () => {
+    const user = userEvent.setup();
+    renderTab();
+
+    const newBtn = await screen.findByTestId("periods-new-button");
+    newBtn.focus();
+    await user.click(newBtn);
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(
+      screen.queryByTestId("periods-create-dialog"),
+    ).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(newBtn);
   });
 });
