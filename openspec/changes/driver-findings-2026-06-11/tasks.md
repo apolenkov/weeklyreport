@@ -43,7 +43,7 @@ it first so the two changes do not implement the same fix twice.
       reporting period" head empty-state on a malformed id. Cross-role seam —
       needs sign-off that no route relies on the current retry; add tests for
       both the formatter and the retry predicate.
-- [ ] 2.2 Finding 2 (lead preview shows the whole portfolio): DECISION
+- [x] 2.2 Finding 2 (lead preview shows the whole portfolio): DECISION
       (2026-06-13, user) — the preview MUST be scoped by access and hierarchy,
       NOT the full 11-product portfolio. Rule: show a product only if the lead's
       group owns / has rights to it; showing products the group has no rights to
