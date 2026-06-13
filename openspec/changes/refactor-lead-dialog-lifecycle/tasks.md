@@ -84,7 +84,7 @@ run full gates and read the whole diff before each commit.
       state". Then verify the form-race in the live browser (typed
       text/severity survive an autosave→invalidate cycle) — unit tests
       cannot fully reproduce it.
-- [ ] 3.2 refactor(lead): convert `decision-edit-dialog.tsx` — same
+- [x] 3.2 refactor(lead): convert `decision-edit-dialog.tsx` — same
       surgery: delete `"use no memo"` (line 44) and the reset effect
       (68-90); state moves to mount-time initializers. A13 block and
       VA-0a tests green unchanged; extend
