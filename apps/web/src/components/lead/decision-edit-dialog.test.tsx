@@ -258,3 +258,63 @@ describe("DecisionEditDialog — VA-0a a11y (backdrop onKeyDown + click behavior
     expect(document.activeElement).toBe(textarea);
   });
 });
+
+/**
+ * D12 mount/unmount shell: the outer component returns null when closed and
+ * remounts fresh content on reopen, so typed-but-cancelled state never leaks
+ * into the next open. This is the structural replacement for the deleted
+ * useEffect form-reset.
+ */
+describe("DecisionEditDialog — D12 reopen renders fresh state", () => {
+  it("does not leak typed text from a cancelled create into the next open", () => {
+    const { rerender } = render(
+      <DecisionEditDialog
+        open={true}
+        decision={null}
+        defaultOwner="Test Lead"
+        availableStages={["Planning", "Dev"]}
+        products={products}
+        defaultProductId="p1"
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Decision \*/i), {
+      target: { value: "draft that should be discarded" },
+    });
+    expect(screen.getByLabelText(/^Decision \*/i)).toHaveValue(
+      "draft that should be discarded",
+    );
+
+    // Cancel = close → the shell unmounts the content.
+    rerender(
+      <DecisionEditDialog
+        open={false}
+        decision={null}
+        defaultOwner="Test Lead"
+        availableStages={["Planning", "Dev"]}
+        products={products}
+        defaultProductId="p1"
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+      />,
+    );
+    expect(screen.queryByLabelText(/^Decision \*/i)).not.toBeInTheDocument();
+
+    // Reopen → fresh mount, empty field.
+    rerender(
+      <DecisionEditDialog
+        open={true}
+        decision={null}
+        defaultOwner="Test Lead"
+        availableStages={["Planning", "Dev"]}
+        products={products}
+        defaultProductId="p1"
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+      />,
+    );
+    expect(screen.getByLabelText(/^Decision \*/i)).toHaveValue("");
+  });
+});
