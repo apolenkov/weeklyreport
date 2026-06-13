@@ -51,6 +51,7 @@ import type {
   ReportSectionReadModel,
 } from "@customreport/shared";
 
+import { riskCoversStage } from "../../components/lead/stage-tags";
 import {
   formatPeriodRangeWithYear,
   isoWeekNumber as sharedIsoWeekNumber,
@@ -347,9 +348,12 @@ function buildStageGrid(
         stageName,
         status: deriveEffectiveStageStatus(
           trafficToStageStatus(ownedStage.status ?? null),
-          risks.filter((r) =>
-            r.stageIds?.some((s) => normalizeStageName(s) === norm),
-          ),
+          // unify-risk-stage-status: empty/undefined stageIds means the risk
+          // covers every owned stage. Route through the canonical
+          // `riskCoversStage` so the read model agrees with the live form and
+          // slide export on legacy stage-less risks (covers-all), instead of
+          // the old `stageIds?.some(...)` that floored nothing on `[]`.
+          risks.filter((r) => riskCoversStage(r, stageName)),
           items.filter((i) =>
             i.stageIds?.some((s) => normalizeStageName(s) === norm),
           ),

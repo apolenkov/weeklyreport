@@ -270,6 +270,51 @@ describe("mapLeadProducts", () => {
     expect(devStage?.status).toBe("blocked");
   });
 
+  it("a stage-less (empty stageIds) risk floors every owned chip (unify-risk-stage-status review-fix)", () => {
+    // Empty/undefined stageIds means "covers all stages" — the same rule the
+    // live form applies. Before the fix the read model used `stageIds?.some`
+    // and floored nothing on `[]`, diverging silently from the form.
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM Platform",
+          trafficLight: "green",
+          ownedStages: [
+            {
+              stageId: "stage-dev",
+              stageName: "Development",
+              sortOrder: 3,
+              status: "green",
+            },
+            {
+              stageId: "stage-test",
+              stageName: "Testing",
+              sortOrder: 4,
+              status: "green",
+            },
+          ],
+        },
+      ],
+      risks: [
+        {
+          projectId: PROJECT_A,
+          risk: "Legacy stage-less blocker",
+          impact: "Everything stalls",
+          mitigation: "Escalate",
+          severity: "blocked",
+          stageIds: [],
+        },
+      ],
+    });
+
+    const stages = mapLeadProducts(section)[0]?.stages ?? [];
+    expect(stages.find((s) => s.stageName === "Dev")?.status).toBe("blocked");
+    expect(stages.find((s) => s.stageName === "Testing")?.status).toBe(
+      "blocked",
+    );
+  });
+
   it("an empty-text risk does not floor the chip (only non-empty risks count)", () => {
     const section = baseSection({
       projects: [
