@@ -44,7 +44,7 @@ run full gates and read the whole diff before each commit.
 
 ## 2. Web — section adoption (behavior-preserving, one commit each)
 
-- [ ] 2.1 refactor(lead): adopt the hook in
+- [x] 2.1 refactor(lead): adopt the hook in
       `current-week-section.tsx` AND `next-week-section.tsx` (the two
       near-identical donors; lowest divergence risk). Delete the local
       DialogState/openSeq/readOnlyRef/pendingDelete code, keep

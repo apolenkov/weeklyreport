@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
+import { useEditableListDialog } from "../../hooks/use-editable-list-dialog";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { ItemCard } from "./item-card";
 import { ItemEditDialog } from "./item-edit-dialog";
@@ -66,27 +65,30 @@ export function NextWeekSection({
   addSignal = 0,
 }: NextWeekSectionProps) {
   const grouped = groupByProduct(items);
-  const [dialogState, setDialogState] = useState<
-    | { open: false }
-    | { open: true; mode: "create"; seedProductId: string }
-    | { open: true; mode: "edit"; item: KanbanItem }
-  >({ open: false });
-  // D-13: monotonic counter so repeated opens of the same item get a fresh
-  // key even when item.id is unchanged (prevents stale stageIds in dialog).
-  const [openSeq, setOpenSeq] = useState(0);
-  const [pendingDelete, setPendingDelete] = useState<KanbanItem | null>(null);
   const isEmpty = grouped.size === 0 && (!products || products.length === 0);
   const hasProducts = products && products.length > 0;
   const hasMultipleProducts = hasProducts && products.length > 1;
   const defaultProduct = products?.[0];
   const defaultProductId = defaultProduct?.id;
 
-  // Keep a ref so the addSignal effect can read the latest readOnly value
-  // without including readOnly in the dep array. If readOnly were in deps,
-  // the effect would re-fire on snapshot enter/exit and re-open the dialog
-  // from a stale non-zero addSignal counter (D1 fix).
-  const readOnlyRef = useRef(readOnly);
-  readOnlyRef.current = readOnly;
+  // Shared dialog lifecycle (DialogState union, D1 readOnly-ref add-signal
+  // effect, D13 openSeq remount key, pending-delete). requireSeed: this
+  // section can only open create mode when a product column exists.
+  const {
+    dialogState,
+    dialogKey,
+    openCreate,
+    openEdit,
+    close,
+    pendingDelete,
+    requestDelete,
+    clearPendingDelete,
+  } = useEditableListDialog<KanbanItem>({
+    readOnly,
+    addSignal,
+    seedProductId: defaultProductId,
+    requireSeed: true,
+  });
 
   const globalAddButton = !readOnly && (
     <div className="flex justify-end">
@@ -107,41 +109,25 @@ export function NextWeekSection({
   );
 
   function handleAdd(seedProductId: string) {
-    if (readOnly) return;
-    setOpenSeq((n) => n + 1);
-    setDialogState({ open: true, mode: "create", seedProductId });
+    openCreate(seedProductId);
   }
 
-  useEffect(() => {
-    if (addSignal === 0) return;
-    if (readOnlyRef.current || !defaultProductId) return;
-    setOpenSeq((n) => n + 1);
-    setDialogState({
-      open: true,
-      mode: "create",
-      seedProductId: defaultProductId,
-    });
-  }, [addSignal, defaultProductId]);
-
   function handleDelete(id: string) {
-    if (readOnly) return;
     const item = items.find((i) => i.id === id);
     if (!item) return;
-    setPendingDelete(item);
+    requestDelete(item);
   }
 
   function confirmDelete() {
     if (!pendingDelete) return;
     onItemsChange?.(items.filter((i) => i.id !== pendingDelete.id));
-    setPendingDelete(null);
+    clearPendingDelete();
   }
 
   function handleEdit(id: string) {
-    if (readOnly) return;
     const item = items.find((i) => i.id === id);
     if (!item) return;
-    setOpenSeq((n) => n + 1);
-    setDialogState({ open: true, mode: "edit", item });
+    openEdit(item);
   }
 
   function handleDialogSave(next: KanbanItem) {
@@ -151,11 +137,11 @@ export function NextWeekSection({
     } else {
       onItemsChange?.(items.map((i) => (i.id === next.id ? next : i)));
     }
-    setDialogState({ open: false });
+    close();
   }
 
   function handleDialogCancel() {
-    setDialogState({ open: false });
+    close();
   }
 
   // Empty-state mirror of CurrentWeekSection: when no items exist we
@@ -269,11 +255,11 @@ export function NextWeekSection({
       </div>
 
       <ItemEditDialog
-        key={`${openSeq}-${dialogState.open && dialogState.mode === "edit" ? dialogState.item.id : "new"}`}
+        key={dialogKey}
         open={dialogState.open}
         item={
           dialogState.open && dialogState.mode === "edit"
-            ? dialogState.item
+            ? dialogState.entity
             : null
         }
         products={products ?? []}
@@ -298,7 +284,7 @@ export function NextWeekSection({
           pendingDelete ? `From ${pendingDelete.productName}` : undefined
         }
         onConfirm={confirmDelete}
-        onCancel={() => setPendingDelete(null)}
+        onCancel={clearPendingDelete}
       />
     </div>
   );
