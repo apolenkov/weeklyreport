@@ -81,9 +81,23 @@ export const periodStateSchema = z.enum([
   "archived",
 ]);
 
+// Payload guard against pathological stage selections; normal is 1–7 stages.
+const MAX_SELECTED_STAGES = 20;
+
 // UFB-073 (R1): SDLC stage selection stored as array of stage NAMES (split from
 // the comma-joined Risk.stageName / KanbanItem.stageName DB column on read in the
 // prisma repo). Field is misnamed `stageIds` for legacy reasons — see TODO below.
-// max(20) guards against pathological payloads; normal is 1–7 stages.
 // TODO(STAGE-NAMING-01): rename stageIds→stageNames (~125 sites, 28 files — deferred)
-export const stageIdsField = z.array(z.string()).max(20).optional();
+export const stageIdsField = z
+  .array(z.string())
+  .max(MAX_SELECTED_STAGES)
+  .optional();
+
+// require-risk-stage (D1): risk-specific variant — a risk must always carry
+// at least one concrete SDLC stage, so missing/empty selections are rejected
+// on the write path. Items/decisions keep the optional `stageIdsField` above
+// (their empty selection means "all assigned stages" by design).
+export const requiredStageIdsField = z
+  .array(z.string())
+  .min(1)
+  .max(MAX_SELECTED_STAGES);

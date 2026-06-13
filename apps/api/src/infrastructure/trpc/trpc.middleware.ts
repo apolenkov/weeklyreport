@@ -409,12 +409,26 @@ const pdfExportGuard = t.middleware(
   },
 );
 
-export const protectedProcedure = t.procedure
-  .use(metricsMiddleware)
-  .use(loggingMiddleware)
-  .use(isAuthed)
-  .use(pdfExportGuard)
-  .use(mutationAuditMiddleware);
+/**
+ * Factory that defines the canonical 5-middleware chain once:
+ * metrics → logging → authMiddleware → pdfExportGuard → mutationAudit.
+ *
+ * Built from `t.procedure` directly (NOT derived from publicProcedure) so
+ * any future public-only middleware does not silently propagate into every
+ * protected chain (D1). Security-ordering contract: logging runs BEFORE auth
+ * (failed-auth forensics) and metrics before logging (timing excludes logger
+ * overhead; 47-03). Any reordering is a behavior change, not a cleanup.
+ */
+function buildProtectedProcedure(authMiddleware: typeof isAuthed) {
+  return t.procedure
+    .use(metricsMiddleware)
+    .use(loggingMiddleware)
+    .use(authMiddleware)
+    .use(pdfExportGuard)
+    .use(mutationAuditMiddleware);
+}
+
+export const protectedProcedure = buildProtectedProcedure(isAuthed);
 
 // AUTH-03 (Phase 27) + AUTH-08 (Phase 29-01): role-bound procedures whose
 // deny branch emits a structured `role-denied` audit event before throwing
@@ -482,47 +496,19 @@ const leadershipRoleMiddleware = buildRoleMiddleware([
   "viewer",
 ]);
 
-export const headProcedure = t.procedure
-  .use(metricsMiddleware)
-  .use(loggingMiddleware)
-  .use(headRoleMiddleware)
-  .use(pdfExportGuard)
-  .use(mutationAuditMiddleware);
-export const leadProcedure = t.procedure
-  .use(metricsMiddleware)
-  .use(loggingMiddleware)
-  .use(leadRoleMiddleware)
-  .use(pdfExportGuard)
-  .use(mutationAuditMiddleware);
-export const viewerProcedure = t.procedure
-  .use(metricsMiddleware)
-  .use(loggingMiddleware)
-  .use(viewerRoleMiddleware)
-  .use(pdfExportGuard)
-  .use(mutationAuditMiddleware);
-export const anyRoleProcedure = t.procedure
-  .use(metricsMiddleware)
-  .use(loggingMiddleware)
-  .use(anyRoleMiddleware)
-  .use(pdfExportGuard)
-  .use(mutationAuditMiddleware);
+export const headProcedure = buildProtectedProcedure(headRoleMiddleware);
+export const leadProcedure = buildProtectedProcedure(leadRoleMiddleware);
+export const viewerProcedure = buildProtectedProcedure(viewerRoleMiddleware);
+export const anyRoleProcedure = buildProtectedProcedure(anyRoleMiddleware);
 // UFB-038: admin-only gate. /admin/* tRPC endpoints attach this; head
 // users get FORBIDDEN. Use headProcedure for endpoints that should be
 // reachable by both head and admin (dashboards, weekly reports, review).
-export const adminProcedure = t.procedure
-  .use(metricsMiddleware)
-  .use(loggingMiddleware)
-  .use(adminRoleMiddleware)
-  .use(pdfExportGuard)
-  .use(mutationAuditMiddleware);
+export const adminProcedure = buildProtectedProcedure(adminRoleMiddleware);
 // Phase 52 (UFB-054): leadership procedure — head + admin + viewer.
 // Lead is excluded by design (lead is the data subject of product KPIs).
-export const leadershipProcedure = t.procedure
-  .use(metricsMiddleware)
-  .use(loggingMiddleware)
-  .use(leadershipRoleMiddleware)
-  .use(pdfExportGuard)
-  .use(mutationAuditMiddleware);
+export const leadershipProcedure = buildProtectedProcedure(
+  leadershipRoleMiddleware,
+);
 
 export const router = t.router;
 export const mergeRouters = t.mergeRouters;

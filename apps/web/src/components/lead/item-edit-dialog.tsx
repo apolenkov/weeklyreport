@@ -190,7 +190,14 @@ function ItemEditDialogContent({
       setErrors(next);
       return;
     }
-    const product = products.find((p) => p.id === productId) ?? products.at(0);
+    // Cross-stage rows (fix-lead-surface-name-resolution): an edited item may
+    // reference a project outside the lead's stage-owned `products`. Keep the
+    // original assignment instead of silently reassigning to the first product.
+    const product =
+      products.find((p) => p.id === productId) ??
+      (item?.productId === productId
+        ? { id: item.productId, name: item.productName }
+        : products.at(0));
     if (!product) {
       setErrors({ text: "No product available" });
       return;

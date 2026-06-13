@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
+import { createMockTRPC } from "../../test-utils/mock-trpc";
 
 const toastSuccess = vi.fn<(...args: unknown[]) => void>();
 const toastError = vi.fn<(...args: unknown[]) => void>();
@@ -38,47 +39,30 @@ interface FailedJob {
   data: unknown;
 }
 
-interface Captured {
-  retryOptions?: {
-    onSuccess?: (result: {
-      retried: boolean;
-      jobId: string;
-      removed?: boolean;
-      reason?: string;
-    }) => void;
-    onError?: (err: Error) => void;
-  };
-  retryMutationFn: ReturnType<typeof vi.fn>;
+// Base descriptors shared by both the data and pending factory calls.
+// The only difference is admin.jobs.listFailed: data vs "pending".
+const BASE_DESCRIPTORS = [
+  { path: ["admin", "jobs", "retryFailed"], mutation: true as const },
+  { path: ["admin", "dlqCount"] },
+];
+
+function makeMockTRPC(jobs: FailedJob[]) {
+  return createMockTRPC([
+    {
+      path: ["admin", "jobs", "listFailed"],
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async queryFn contract expected by react-query (no awaitable work in the stub)
+      query: async () => ({ jobs, nextCursor: null }),
+    },
+    ...BASE_DESCRIPTORS,
+  ]);
 }
 
-function makeMockTRPC(jobs: FailedJob[], captured: Captured) {
-  return {
-    admin: {
-      jobs: {
-        listFailed: {
-          queryOptions: () => ({
-            queryKey: ["admin", "jobs", "listFailed"],
-            // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async queryFn contract expected by react-query (no awaitable work in the stub)
-            queryFn: async () => ({ jobs, nextCursor: null }),
-          }),
-          queryKey: () => ["admin", "jobs", "listFailed"],
-        },
-        retryFailed: {
-          mutationOptions: (opts: Captured["retryOptions"]) => {
-            captured.retryOptions = opts;
-            return {
-              mutationFn: captured.retryMutationFn,
-              onSuccess: opts?.onSuccess,
-              onError: opts?.onError,
-            };
-          },
-        },
-      },
-      dlqCount: {
-        queryKey: () => ["admin", "dlqCount"],
-      },
-    },
-  } as never;
+function makePendingMockTRPC() {
+  return createMockTRPC([
+    // "pending" — never resolves so listQuery.isPending stays true.
+    { path: ["admin", "jobs", "listFailed"], query: "pending" },
+    ...BASE_DESCRIPTORS,
+  ]);
 }
 
 function makeJob(id: string, overrides: Partial<FailedJob> = {}): FailedJob {
@@ -94,68 +78,39 @@ function makeJob(id: string, overrides: Partial<FailedJob> = {}): FailedJob {
   };
 }
 
-function renderTab(jobs: FailedJob[], captured: Captured) {
+function renderTab(jobs: FailedJob[]) {
+  const { proxy, captured } = makeMockTRPC(jobs);
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const trpc = makeMockTRPC(jobs, captured);
   function Wrapper({ children }: { readonly children: ReactNode }) {
     return (
       <QueryClientProvider client={qc}>
-        <TRPCProxyContext.Provider value={trpc}>
+        <TRPCProxyContext.Provider value={proxy}>
           {children}
         </TRPCProxyContext.Provider>
       </QueryClientProvider>
     );
   }
-  return render(<JobsTab />, { wrapper: Wrapper });
+  render(<JobsTab />, { wrapper: Wrapper });
+  return { captured };
 }
 
-function makePendingMockTRPC(captured: Captured) {
-  return {
-    admin: {
-      jobs: {
-        listFailed: {
-          queryOptions: () => ({
-            queryKey: ["admin", "jobs", "listFailed"],
-            // Never resolves so listQuery.isPending stays true — keeps JobsSkeleton mounted.
-            queryFn: () => new Promise<never>(() => undefined),
-          }),
-          queryKey: () => ["admin", "jobs", "listFailed"],
-        },
-        retryFailed: {
-          mutationOptions: (opts: Captured["retryOptions"]) => {
-            captured.retryOptions = opts;
-            return {
-              mutationFn: captured.retryMutationFn,
-              onSuccess: opts?.onSuccess,
-              onError: opts?.onError,
-            };
-          },
-        },
-      },
-      dlqCount: {
-        queryKey: () => ["admin", "dlqCount"],
-      },
-    },
-  } as never;
-}
-
-function renderPendingTab(captured: Captured) {
+function renderPendingTab() {
+  const { proxy } = makePendingMockTRPC();
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const trpc = makePendingMockTRPC(captured);
   function Wrapper({ children }: { readonly children: ReactNode }) {
     return (
       <QueryClientProvider client={qc}>
-        <TRPCProxyContext.Provider value={trpc}>
+        <TRPCProxyContext.Provider value={proxy}>
           {children}
         </TRPCProxyContext.Provider>
       </QueryClientProvider>
     );
   }
-  return render(<JobsTab />, { wrapper: Wrapper });
+  render(<JobsTab />, { wrapper: Wrapper });
 }
 
 describe("JobsTab — JobsSkeleton a11y attributes (VA-0a)", () => {
@@ -164,16 +119,14 @@ describe("JobsTab — JobsSkeleton a11y attributes (VA-0a)", () => {
   });
 
   it("JobsSkeleton container has role='status'", () => {
-    const captured: Captured = { retryMutationFn: vi.fn() };
-    renderPendingTab(captured);
+    renderPendingTab();
 
     const skeleton = screen.getByTestId("jobs-loading-state");
     expect(skeleton).toHaveAttribute("role", "status");
   });
 
   it("JobsSkeleton container has aria-label='Loading failed jobs' and aria-live='polite'", () => {
-    const captured: Captured = { retryMutationFn: vi.fn() };
-    renderPendingTab(captured);
+    renderPendingTab();
 
     const skeleton = screen.getByTestId("jobs-loading-state");
     expect(skeleton).toHaveAttribute("aria-label", "Loading failed jobs");
@@ -181,8 +134,7 @@ describe("JobsTab — JobsSkeleton a11y attributes (VA-0a)", () => {
   });
 
   it("JobsSkeleton status region matches inline snapshot", () => {
-    const captured: Captured = { retryMutationFn: vi.fn() };
-    renderPendingTab(captured);
+    renderPendingTab();
 
     const skeleton = screen.getByTestId("jobs-loading-state");
     expect(skeleton).toMatchInlineSnapshot(`
@@ -314,8 +266,7 @@ describe("JobsTab — Phase 35-06 BullMQ DLQ admin UI", () => {
   });
 
   it("renders the empty state when there are no failed jobs", async () => {
-    const captured: Captured = { retryMutationFn: vi.fn() };
-    renderTab([], captured);
+    renderTab([]);
 
     expect(
       await screen.findByText(
@@ -325,16 +276,13 @@ describe("JobsTab — Phase 35-06 BullMQ DLQ admin UI", () => {
   });
 
   it("renders 2 mock jobs and clicking Retry on job-1 fires the mutation with that jobId", async () => {
-    const captured: Captured = {
-      retryMutationFn: vi
-        .fn()
-        .mockResolvedValue({ retried: true, jobId: "job-1" }),
-    };
     const jobs = [
       makeJob("job-1", { name: "send-reminder-email", attemptsMade: 3 }),
       makeJob("job-2", { name: "send-escalation-email", attemptsMade: 5 }),
     ];
-    renderTab(jobs, captured);
+    const { captured } = renderTab(jobs);
+    const retryMutationFn = captured["admin.jobs.retryFailed"].mutationFn;
+    retryMutationFn.mockResolvedValue({ retried: true, jobId: "job-1" });
 
     // Wait for both rows to render.
     await screen.findByText("job-1");
@@ -345,23 +293,22 @@ describe("JobsTab — Phase 35-06 BullMQ DLQ admin UI", () => {
     await userEvent.click(retryJob1);
 
     await waitFor(() => {
-      expect(captured.retryMutationFn).toHaveBeenCalledTimes(1);
+      expect(retryMutationFn).toHaveBeenCalledTimes(1);
     });
 
     // TanStack Query forwards (variables, context) → assert the first arg.
-    expect(captured.retryMutationFn.mock.calls[0]?.[0]).toEqual({
+    expect(retryMutationFn.mock.calls[0]?.[0]).toEqual({
       queue: "email-reminder",
       jobId: "job-1",
     });
   });
 
   it("on retry success: success toast fires when retried=true", async () => {
-    const captured: Captured = {
-      retryMutationFn: vi
-        .fn()
-        .mockResolvedValue({ retried: true, jobId: "job-1" }),
-    };
-    renderTab([makeJob("job-1")], captured);
+    const { captured } = renderTab([makeJob("job-1")]);
+    captured["admin.jobs.retryFailed"].mutationFn.mockResolvedValue({
+      retried: true,
+      jobId: "job-1",
+    });
 
     await screen.findByText("job-1");
     await userEvent.click(
@@ -376,12 +323,11 @@ describe("JobsTab — Phase 35-06 BullMQ DLQ admin UI", () => {
   });
 
   it("on retry result {retried: false}: info toast (job no longer exists)", async () => {
-    const captured: Captured = {
-      retryMutationFn: vi
-        .fn()
-        .mockResolvedValue({ retried: false, jobId: "job-9" }),
-    };
-    renderTab([makeJob("job-9")], captured);
+    const { captured } = renderTab([makeJob("job-9")]);
+    captured["admin.jobs.retryFailed"].mutationFn.mockResolvedValue({
+      retried: false,
+      jobId: "job-9",
+    });
 
     await screen.findByText("job-9");
     await userEvent.click(
@@ -394,15 +340,13 @@ describe("JobsTab — Phase 35-06 BullMQ DLQ admin UI", () => {
   });
 
   it("on retry result {removed: true}: info toast explains stale job cleanup", async () => {
-    const captured: Captured = {
-      retryMutationFn: vi.fn().mockResolvedValue({
-        retried: false,
-        removed: true,
-        reason: "Reminder execution missing.",
-        jobId: "job-stale",
-      }),
-    };
-    renderTab([makeJob("job-stale")], captured);
+    const { captured } = renderTab([makeJob("job-stale")]);
+    captured["admin.jobs.retryFailed"].mutationFn.mockResolvedValue({
+      retried: false,
+      removed: true,
+      reason: "Reminder execution missing.",
+      jobId: "job-stale",
+    });
 
     await screen.findByText("job-stale");
     await userEvent.click(
@@ -415,8 +359,7 @@ describe("JobsTab — Phase 35-06 BullMQ DLQ admin UI", () => {
   });
 
   it("renders the queue header so the head knows which queue is shown", async () => {
-    const captured: Captured = { retryMutationFn: vi.fn() };
-    renderTab([], captured);
+    renderTab([]);
     expect(
       await screen.findByRole("heading", { name: /Failed Jobs/i }),
     ).toBeInTheDocument();

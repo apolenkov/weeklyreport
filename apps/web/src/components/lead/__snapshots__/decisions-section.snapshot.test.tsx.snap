@@ -16,7 +16,7 @@ exports[`DecisionsSection meta-row — pre-extract snapshot > renders All-stages
     title="All stages"
   >
     <span
-      class="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-muted-foreground)]"
+      class="inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold bg-[var(--color-muted)] text-[var(--color-muted-foreground)]"
     >
       All stages
     </span>

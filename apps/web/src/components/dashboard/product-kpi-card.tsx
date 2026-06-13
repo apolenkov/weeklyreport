@@ -24,6 +24,14 @@ interface ProductKpiCardProps {
   readonly role?: "lead" | "head" | "admin" | "viewer" | null;
 }
 
+// `ResponsiveContainer` seeds its first render from `initialDimension`
+// (default {-1,-1}); with width/height="100%" the first paint computes a
+// negative size and recharts logs `width(-1)/height(-1)` until the
+// ResizeObserver fires. `min*` props are CSS-only and don't feed that
+// calculation, so seed a positive initial dimension. The height matches the
+// `h-16` sparkline wrapper (4rem = 64px at the 16px root font).
+const SPARKLINE_INITIAL_DIMENSION = { width: 0, height: 64 } as const;
+
 export function ProductKpiCard({ role }: ProductKpiCardProps) {
   const trpc = useTRPC();
   // Skip the query for `lead` role — leadershipProcedure would 403 and
@@ -108,7 +116,11 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
               that Recharts injects by default — the chart has no interactive value
               for keyboard users so we remove it from the focus order entirely (D-35). */}
           <div aria-hidden="true" tabIndex={-1} className="h-full w-full">
-            <ResponsiveContainer width="100%" height="100%" minWidth={1}>
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+              initialDimension={SPARKLINE_INITIAL_DIMENSION}
+            >
               <LineChart
                 data={sparklineRows}
                 margin={{ top: 4, right: 4, left: 4, bottom: 0 }}

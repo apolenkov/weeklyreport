@@ -13,6 +13,7 @@ import {
 import { mapDashboardData } from "../../lib/mappers";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
+import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
 import { KpiCards } from "./kpi-cards";
 
 // Vercel audit win #3: ProductKpiCard pulls the full Recharts bundle (~130kB)
@@ -82,30 +83,20 @@ export function DashboardPage() {
     }),
   );
 
-  useEffect(() => {
-    if (reviewQ.isError) {
-      logClientError("dashboard.review.load_failed", reviewQ.error, {
-        component: "DashboardPage",
-        procedure: "review.dashboard",
-      });
-      toast.error(
-        formatClientErrorMessage("Failed to load dashboard", reviewQ.error),
-      );
-    }
-  }, [reviewQ.isError, reviewQ.error]);
+  useQueryErrorHandler(reviewQ, {
+    event: "dashboard.review.load_failed",
+    component: "DashboardPage",
+    procedure: "review.dashboard",
+    toastPrefix: "Failed to load dashboard",
+  });
 
-  useEffect(() => {
-    if (weeklyQ.isError) {
-      logClientError("dashboard.weeklyReport.load_failed", weeklyQ.error, {
-        component: "DashboardPage",
-        procedure: "weeklyReport.get",
-        reportId: null,
-      });
-      toast.error(
-        formatClientErrorMessage("Failed to load status report", weeklyQ.error),
-      );
-    }
-  }, [weeklyQ.isError, weeklyQ.error]);
+  useQueryErrorHandler(weeklyQ, {
+    event: "dashboard.weeklyReport.load_failed",
+    component: "DashboardPage",
+    procedure: "weeklyReport.get",
+    context: { reportId: null },
+    toastPrefix: "Failed to load status report",
+  });
 
   const isLoading = reviewQ.isLoading || weeklyQ.isLoading;
   const queryError = reviewQ.error ?? weeklyQ.error;

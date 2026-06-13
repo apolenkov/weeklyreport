@@ -100,6 +100,21 @@ describe("LeadUnifiedSlide — product attribution (neutral badges)", () => {
   });
 });
 
+describe("LeadUnifiedSlide — frame fill (slides-product-autofit)", () => {
+  it("the grid sizes from the frame (flex-1/min-h-0), not the viewport", () => {
+    render(<LeadUnifiedSlide model={makeModel()} />);
+
+    const grid = screen.getByTestId("lead-unified-slide");
+    expect(grid.className).toContain("flex-1");
+    expect(grid.className).toContain("min-h-0");
+    // The old viewport-relative floor must not size the framed surface.
+    expect(grid.className).not.toContain("52dvh");
+    // Even distribution and the fullscreen dvh floor stay.
+    expect(grid.className).toContain("auto-rows-fr");
+    expect(grid.className).toContain("[:fullscreen_&]:min-h-[60dvh]");
+  });
+});
+
 describe("LeadUnifiedSlide — priorityChip a11y", () => {
   it("priority chip span has role='img'", () => {
     const model = makeModel({

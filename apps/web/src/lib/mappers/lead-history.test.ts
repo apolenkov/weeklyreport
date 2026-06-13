@@ -171,9 +171,6 @@ describe("mapHistoryEntries", () => {
     expect(result[0]?.riskCount).toBe(0);
     expect(result[0]?.decisionCount).toBe(0);
     expect(result[0]?.priorityCount).toBe(0);
-    expect(result[0]?.versionCount).toBe(0);
-    expect(result[0]?.latestVersion).toBeNull();
-    expect(result[0]?.latestVersionAt).toBeNull();
     expect(result[0]?.archived).toBe(false);
     expect(result[0]?.createdAt).toBeNull();
     expect(result[0]?.lastEditAt).toBeNull();
@@ -192,9 +189,6 @@ describe("mapHistoryEntries", () => {
           decisionCount: 2,
           priorityCount: 3,
           productCount: 3,
-          versionCount: 2,
-          latestVersion: 2,
-          latestVersionAt: new Date("2026-04-20T10:00:00.000Z"),
           archived: true,
           trafficLights: { green: 2, yellow: 0, red: 1 },
         }),
@@ -208,12 +202,9 @@ describe("mapHistoryEntries", () => {
       decisionCount: 2,
       priorityCount: 3,
       productCount: 3,
-      versionCount: 2,
-      latestVersion: 2,
       archived: true,
       createdAt: "Apr 18",
       lastEditAt: "1 hour ago",
-      latestVersionAt: "2 hours ago",
       trafficLights: { green: 2, yellow: 0, red: 1 },
     });
   });

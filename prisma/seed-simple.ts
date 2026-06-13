@@ -303,7 +303,6 @@ async function main() {
   await prisma.item.deleteMany({});
   await prisma.stageStatus.deleteMany({});
   await prisma.projectStatus.deleteMany({});
-  await prisma.versionSnapshot.deleteMany({});
   await prisma.reopenRequest.deleteMany({});
   await prisma.reportSection.deleteMany({});
   await prisma.pdfExportJob.deleteMany({});
@@ -1490,13 +1489,17 @@ async function main() {
   // Galina (section 409, Design) — same 5-section spread.
   // When Vasily opens /lead/report/<id> he sees all 3 contributors' content
   // merged inline in each of the 5 accordion sections with 🔒 next to author name.
+
   const borisSectionId = `a0000000-0000-4000-8000-000000000407`;
   await prisma.projectStatus.create({
     data: {
       id: "a0000000-0000-4000-8000-000000006791",
       reportSectionId: borisSectionId,
       projectId: PROD_CRM_SALES,
-      status: TrafficLightStatus.yellow,
+      // D4: Boris has no own seeded StageStatus rows on PROD_CRM_SALES, so this
+      // row must not claim a severity — a status hue needs a visible stage
+      // correlate. Green is the calm default the app itself would aggregate to.
+      status: TrafficLightStatus.green,
     },
   });
   await prisma.item.create({
@@ -1576,6 +1579,35 @@ async function main() {
       text: "Утвердить структуру аналитического API до начала разработки",
       owner: "Борис С.",
       impact: "Позволяет Design-команде начать прототипирование немедленно",
+      stageNames: ["Planning"],
+    },
+  });
+  // fix-lead-surface-name-resolution: cross-stage reproducer. Boris owns
+  // NO StageAssignment on PROD_PAYMENTS («Платёжный шлюз»), so this risk
+  // and decision reference a project outside his stage-owned `projects`.
+  // Pre-fix these rendered "Unknown" (risk) / "Group" (decision) on
+  // /lead/report; post-fix they must show the real product name via the
+  // read model's name-only `referencedProjects`.
+  await prisma.risk.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000009003",
+      reportSectionId: borisSectionId,
+      projectId: PROD_PAYMENTS,
+      risk: "Интеграция с платёжным шлюзом не согласована с командой Ольги",
+      impact: "Мобильный чек-аут не сможет принимать платежи в релизе",
+      mitigation: "Борис назначает синк с командой Платёжного шлюза",
+      severity: "at-risk",
+      stageNames: ["Planning"],
+    },
+  });
+  await prisma.decision.create({
+    data: {
+      id: "a0000000-0000-4000-8000-000000007005",
+      reportSectionId: borisSectionId,
+      productId: PROD_PAYMENTS,
+      text: "Согласовать SLA платёжного API для мобильного чек-аута",
+      owner: "Борис С.",
+      impact: "Снимает блокер интеграции до начала Dev-фазы",
       stageNames: ["Planning"],
     },
   });
@@ -1689,37 +1721,6 @@ async function main() {
       stageNames: ["Design"],
     },
   });
-  console.log(
-    "[seed-simple] Creating version snapshots (primary lead section, 2 versions)...",
-  );
-  const lead1SectionId = `a0000000-0000-4000-8000-000000000401`;
-  await prisma.versionSnapshot.createMany({
-    data: [
-      {
-        id: randomUUID(),
-        reportSectionId: lead1SectionId,
-        version: 1,
-        data: {
-          note: "начальный черновик",
-          items: [],
-          risks: [],
-          decisions: [],
-        },
-      },
-      {
-        id: randomUUID(),
-        reportSectionId: lead1SectionId,
-        version: 2,
-        data: {
-          note: "после первого сохранения",
-          items: [],
-          risks: [],
-          decisions: [],
-        },
-      },
-    ],
-  });
-
   console.log(
     '[seed-simple] Creating published-week sections (RU "Fill from Previous" content)...',
   );
@@ -1979,7 +1980,6 @@ async function main() {
     risks: await prisma.risk.count(),
     decisions: await prisma.decision.count(),
     priorityItems: await prisma.item.count({ where: { priorityRank: { not: null } } }),
-    versionSnapshots: await prisma.versionSnapshot.count(),
     reminderPolicies: await prisma.reminderPolicy.count(),
     reminders: await prisma.reminderRule.count(),
     reopenRequests: await prisma.reopenRequest.count(),

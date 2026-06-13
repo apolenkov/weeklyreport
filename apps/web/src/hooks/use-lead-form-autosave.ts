@@ -33,16 +33,6 @@ export interface UseLeadFormAutosaveArgs {
    * payload (legacy behavior).
    */
   readonly initialSavedKey?: string | null;
-  /**
-   * Fires after every successful saveDraft. Used by the auto-snapshot path
-   * in lead-form.tsx to checkpoint a version every Nth save without
-   * spawning yet another effect chain. The hook is otherwise unaware of
-   * snapshots — it just emits the signal.
-   *
-   * Named with the "Action" suffix to satisfy Next.js 16 RSC prop
-   * serialization rules for "use client" entry files (TS71007).
-   */
-  readonly onSaveSuccessAction?: () => void;
 }
 
 const DEFAULT_DEBOUNCE_MS = 5000;
@@ -95,13 +85,6 @@ export function useLeadFormAutosave(
   // Queued payload snapshot: stashed at queue time so onSuccess fires the
   // original queued payload, not a potentially-updated payloadRef.current.
   const queuedPayloadRef = useRef<typeof payload>(null);
-  // Hold the latest onSaveSuccess in a ref so changing the callback identity
-  // never re-runs the debounce effect. The mutation closure reads through
-  // the ref at fire time.
-  const onSaveSuccessRef = useRef<(() => void) | undefined>(
-    args.onSaveSuccessAction,
-  );
-  onSaveSuccessRef.current = args.onSaveSuccessAction;
 
   // Mutable ref holding the active debounce timer id so forceSave can cancel it.
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -122,7 +105,6 @@ export function useLeadFormAutosave(
         lastSavedRef.current = inFlightRef.current;
         setState("saved");
         setLastSavedAt(new Date());
-        onSaveSuccessRef.current?.();
         invalidateLeadForm(qc, trpc);
 
         // Fire queued save if one was requested during in-flight.

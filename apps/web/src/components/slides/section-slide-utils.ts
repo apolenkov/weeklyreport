@@ -3,6 +3,8 @@ import type {
   ReportSectionReadModel,
 } from "@customreport/shared";
 
+import { riskCoversStage } from "../lead/stage-tags";
+
 export type SlideTone = "ready" | "warning" | "blocked" | "empty";
 
 export interface SlideReadinessItem {
@@ -77,6 +79,28 @@ export interface SectionSlideModel {
 
 function nonEmpty(text: string | null | undefined): boolean {
   return typeof text === "string" && text.trim().length > 0;
+}
+
+/**
+ * unify-risk-stage-status (D1): severity floor on the slides surface.
+ * Mirrors `buildStageGrid` in lib/mappers/lead-form.ts — a non-empty risk
+ * that covers this stage (per the canonical `riskCoversStage`, where empty
+ * or undefined stageIds cover every stage) floors the rendered traffic
+ * light (blocked → red, at-risk → at least yellow), so the slide deck
+ * agrees with the lead form and head review even for sections saved before
+ * the floor existed and for legacy stage-less risks.
+ */
+function floorSlideStageStatus(
+  status: SlideStageStatus,
+  projectRisks: readonly ReportSectionReadModel["risks"][number][],
+  stageName: string,
+): SlideStageStatus {
+  const covering = projectRisks.filter(
+    (risk) => nonEmpty(risk.risk) && riskCoversStage(risk, stageName),
+  );
+  if (covering.some((risk) => risk.severity === "blocked")) return "red";
+  if (covering.length > 0 && status !== "red") return "yellow";
+  return status;
 }
 
 function unique(values: readonly string[]): string[] {
@@ -156,7 +180,13 @@ export function buildSectionSlideModel(
       .map((stage) => ({
         id: stage.stageId,
         name: stage.stageName,
-        status: stage.status ?? null,
+        // unify-risk-stage-status (D1): floor the persisted status by the
+        // project's covering risks — same rule as the lead form / review.
+        status: floorSlideStageStatus(
+          stage.status ?? null,
+          section.risks.filter((risk) => risk.projectId === project.projectId),
+          stage.stageName,
+        ),
       })),
     currentItems: section.items
       .filter(
@@ -224,15 +254,48 @@ export function buildSectionSlideModel(
     )
     .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
     .map((item) => item.text.trim());
-  if (crossProductDecisions.length > 0 || crossProductPriorities.length > 0) {
+  // Items / risks referencing a project outside section.projects (the
+  // schema-anticipated referencedProjects case, section.schema.ts) must not
+  // vanish from the slide while the section-level counts still include them:
+  // route them into the cross-product pseudo-entry like decisions/priorities.
+  const crossProductCurrentItems = section.items
+    .filter(
+      (item) =>
+        item.type === "current" &&
+        (!item.projectId || !projectIds.has(item.projectId)) &&
+        nonEmpty(item.text),
+    )
+    .map((item) => item.text.trim());
+  const crossProductNextItems = section.items
+    .filter(
+      (item) =>
+        item.type === "next" &&
+        (!item.projectId || !projectIds.has(item.projectId)) &&
+        nonEmpty(item.text),
+    )
+    .map((item) => item.text.trim());
+  const crossProductRisks = section.risks
+    .filter(
+      (risk) =>
+        (!risk.projectId || !projectIds.has(risk.projectId)) &&
+        nonEmpty(risk.risk),
+    )
+    .map((risk) => risk.risk.trim());
+  if (
+    crossProductCurrentItems.length > 0 ||
+    crossProductNextItems.length > 0 ||
+    crossProductRisks.length > 0 ||
+    crossProductDecisions.length > 0 ||
+    crossProductPriorities.length > 0
+  ) {
     productSlides.push({
       id: "cross-product",
       name: "Cross-product",
       status: null,
       stages: [],
-      currentItems: [],
-      nextItems: [],
-      risks: [],
+      currentItems: crossProductCurrentItems,
+      nextItems: crossProductNextItems,
+      risks: crossProductRisks,
       decisions: crossProductDecisions,
       priorities: crossProductPriorities,
     });
@@ -624,6 +687,28 @@ export function buildUnifiedSlideModel(
   }
 
   return { current, next, risks, priorities, decisions, emptyProducts };
+}
+
+/**
+ * slides-product-autofit (D2): scopes the slide to one product BEFORE
+ * buildUnifiedSlideModel, so rows, empty-product placeholders, and badge
+ * gating all derive from the same filtered source. `null` returns the slide
+ * unchanged. A product id reduces productSlides to that product and always
+ * drops the cross-product pseudo-entry — its rows belong to no single
+ * product. An unknown id yields empty productSlides, which renders as
+ * all-empty quadrants (dashed placeholders), never a crash.
+ */
+export function scopeSlideToProduct(
+  slide: SectionSlideModel,
+  productId: string | null,
+): SectionSlideModel {
+  if (productId === null) return slide;
+  return {
+    ...slide,
+    productSlides: slide.productSlides.filter(
+      (product) => product.id !== "cross-product" && product.id === productId,
+    ),
+  };
 }
 
 export function sortSlidesForReview(

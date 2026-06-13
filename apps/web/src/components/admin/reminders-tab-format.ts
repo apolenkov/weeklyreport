@@ -4,6 +4,7 @@
  * import from both the tab and its sub-components.
  */
 
+import { pluralize } from "../../lib/pluralize";
 import type { MockReminderPolicy } from "./mock-data";
 
 export const KIND_OPTIONS: readonly {
@@ -65,10 +66,6 @@ export function getOffsetUnit(minutes: number): OffsetUnit {
 
 export function getOffsetAmount(minutes: number, unit: OffsetUnit): number {
   return Math.abs(minutes) / offsetUnitFactor(unit);
-}
-
-function pluralize(value: number, singular: string, plural: string): string {
-  return value === 1 ? singular : plural;
 }
 
 export function formatPolicyTiming(policy: MockReminderPolicy): string {

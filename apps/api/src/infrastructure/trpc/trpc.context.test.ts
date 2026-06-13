@@ -3,7 +3,7 @@ import type { Request } from "express";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../lib/logger";
-import { createContextFactory } from "./trpc.context";
+import { clearOrgCache, createContextFactory } from "./trpc.context";
 
 /**
  * AUTH-01 / Phase 28-02 contract tests for the four flag combinations.
@@ -68,6 +68,9 @@ describe("createContextFactory — AUTH-01 dev-mode flag matrix (Phase 28-02)", 
     // createAuthController(env) reads AUTH_JWT_SECRET at factory creation.
     // Stub a stable test secret so the factory can construct without throwing.
     vi.stubEnv("AUTH_JWT_SECRET", "integration-test-secret-32-chars-or-more");
+    // D5: reset the module-level orgCache (5s TTL) so assertions in each
+    // case are not order-dependent on cache state from a prior case.
+    clearOrgCache();
   });
 
   afterEach(() => {
@@ -158,5 +161,56 @@ describe("createContextFactory — AUTH-01 dev-mode flag matrix (Phase 28-02)", 
 
     expect(ctx.session).not.toBeNull();
     expect(ctx.session?.role).toBe("head");
+  });
+
+  // -------------------------------------------------------------------------
+  // 2.2 Hydration pins (refactor-trpc-infra-duplication)
+  // -------------------------------------------------------------------------
+
+  it("AUTH_DEV_MODE=true: dev session is hydrated with organization stub", async () => {
+    vi.stubEnv("AUTH_DEV_MODE", "true");
+    vi.stubEnv("AUTH_DEV_MODE_ALLOW_TEST", "false");
+
+    const factory = createContextFactory(
+      makeApp(makePrismaStub()),
+      createNullLogger(),
+    );
+    const ctx = await factory(makeReq() as never);
+
+    expect(ctx.session?.organization).toEqual({
+      shortName: "Demo",
+      fullName: "Example Software Department",
+    });
+  });
+
+  it("AUTH_DEV_MODE_ALLOW_TEST=true: dev session is hydrated with organization stub", async () => {
+    vi.stubEnv("AUTH_DEV_MODE", "false");
+    vi.stubEnv("AUTH_DEV_MODE_ALLOW_TEST", "true");
+
+    const factory = createContextFactory(
+      makeApp(makePrismaStub()),
+      createNullLogger(),
+    );
+    const ctx = await factory(makeReq() as never);
+
+    expect(ctx.session?.organization).toEqual({
+      shortName: "Demo",
+      fullName: "Example Software Department",
+    });
+  });
+
+  it("AUTH_DEV_MODE_ALLOW_TEST=true: dev session resolves activeReportSectionId when reportSection stub returns a row", async () => {
+    vi.stubEnv("AUTH_DEV_MODE", "false");
+    vi.stubEnv("AUTH_DEV_MODE_ALLOW_TEST", "true");
+
+    const prisma = makePrismaStub();
+    prisma.reportSection.findFirst.mockResolvedValueOnce({
+      id: "section-stub-id",
+    } as never);
+
+    const factory = createContextFactory(makeApp(prisma), createNullLogger());
+    const ctx = await factory(makeReq() as never);
+
+    expect(ctx.session?.activeReportSectionId).toBe("section-stub-id");
   });
 });

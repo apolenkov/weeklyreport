@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import {
   afterEach,
   beforeEach,
@@ -22,7 +22,9 @@ import { LAST_ROLE_STORAGE_KEY } from "../lib/last-role";
  *   - hint is hidden when no record is stored
  *   - hint renders name + role label when a record exists (AUTH_STUB)
  *   - primary CTA href points at the persisted role's dev-login URL
- *   - «Change role» toggles the 5-role picker
+ *   - the hint card always shows the 4-role picker (rev 2026-06-10:
+ *     the «Change role» toggle was removed — expanding past the
+ *     card's reserved height read as a layout jump)
  *   - each picker option links to the correct seeded email
  *
  * We test LoginPageClient directly (the client component) — the RSC
@@ -250,7 +252,7 @@ describe("Landing page — last-role hint (UFB-071)", () => {
     expect(href).toContain("redirect=%2Flead%2Freport");
   });
 
-  it("«Change role» toggles a 4-role picker (lead/head/admin/viewer)", async () => {
+  it("hint card always shows the 4-role picker (lead/head/admin/viewer)", async () => {
     storage.setItem(
       LAST_ROLE_STORAGE_KEY,
       JSON.stringify({
@@ -263,13 +265,7 @@ describe("Landing page — last-role hint (UFB-071)", () => {
     const LoginPageClient = await loadLoginPageClient();
     render(<LoginPageClient initialOrg={STUB_ORG} />);
 
-    const toggle = await screen.findByTestId("last-role-change");
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByTestId("last-role-switcher")).toBeNull();
-
-    fireEvent.click(toggle);
-
-    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    await screen.findByTestId("last-role-hint");
     const switcher = screen.getByTestId("last-role-switcher");
     expect(switcher).toBeInTheDocument();
     for (const role of ["lead", "head", "admin", "viewer"]) {
@@ -292,9 +288,7 @@ describe("Landing page — last-role hint (UFB-071)", () => {
     const LoginPageClient = await loadLoginPageClient();
     render(<LoginPageClient initialOrg={STUB_ORG} />);
 
-    fireEvent.click(await screen.findByTestId("last-role-change"));
-
-    const viewerOption = screen.getByTestId("last-role-option-viewer");
+    const viewerOption = await screen.findByTestId("last-role-option-viewer");
     const href = viewerOption.getAttribute("href") ?? "";
     expect(href).toContain("role=viewer");
     expect(href).toContain("email=viewer%40customreport.local");

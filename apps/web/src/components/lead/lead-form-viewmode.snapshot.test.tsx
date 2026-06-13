@@ -7,11 +7,12 @@
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
+import { createMockTRPC } from "../../test-utils/mock-trpc";
 import { LeadForm } from "./lead-form";
 
 vi.mock("sonner", () => ({
@@ -45,136 +46,53 @@ function makeSection() {
 }
 
 function buildTRPC() {
-  return {
-    reports: {
-      getActive: {
-        queryOptions: () => ({
-          queryKey: ["reports.getActive"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (no awaitable work in the stub)
-          queryFn: async () => ({
-            reportId: REPORT_ID,
-            reportSectionId: SECTION_ID,
-            authorName: "Test Lead",
-          }),
-        }),
-        pathFilter: () => ({ queryKey: ["reports.getActive"] }),
-      },
-      myHistory: {
-        queryOptions: () => ({
-          queryKey: ["reports.myHistory"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (no awaitable work in the stub)
-          queryFn: async () => [],
-        }),
-        pathFilter: () => ({ queryKey: ["reports.myHistory"] }),
-      },
-      saveDraft: {
-        mutationOptions: (p: object = {}) => ({
-          ...p,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
-          mutationFn: async () => ({ ok: true }),
-        }),
-        pathFilter: () => ({ queryKey: ["reports.saveDraft"] }),
-      },
-      submit: {
-        mutationOptions: (p: object = {}) => ({
-          ...p,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
-          mutationFn: async () => ({ ok: true }),
-        }),
-        pathFilter: () => ({ queryKey: ["reports.submit"] }),
+  const { proxy } = createMockTRPC([
+    {
+      path: ["reports", "getActive"],
+      query: {
+        reportId: REPORT_ID,
+        reportSectionId: SECTION_ID,
+        authorName: "Test Lead",
       },
     },
-    leadForm: {
-      byPeriod: {
-        queryOptions: () => ({
-          queryKey: ["leadForm.byPeriod"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (no awaitable work in the stub)
-          queryFn: async () => ({ section: makeSection(), readOnly: false }),
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.byPeriod"] }),
-      },
-      versions: {
-        queryOptions: () => ({
-          queryKey: ["leadForm.versions"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (no awaitable work in the stub)
-          queryFn: async () => [],
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.versions"] }),
-      },
-      revoke: {
-        mutationOptions: (p: object = {}) => ({
-          ...p,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
-          mutationFn: async () => ({ ok: true }),
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.revoke"] }),
-      },
-      fillFrom: {
-        mutationOptions: (p: object = {}) => ({
-          ...p,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
-          mutationFn: async () => ({ ok: true }),
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.fillFrom"] }),
-      },
-      restoreVersion: {
-        mutationOptions: (p: object = {}) => ({
-          ...p,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
-          mutationFn: async () => ({ ok: true }),
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.restoreVersion"] }),
-      },
-      createSnapshot: {
-        mutationOptions: (p: object = {}) => ({
-          ...p,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
-          mutationFn: async () => ({ ok: true }),
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.createSnapshot"] }),
-      },
-      requestReopen: {
-        mutationOptions: (p: object = {}) => ({
-          ...p,
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC mutationFn contract (no awaitable work in the stub)
-          mutationFn: async () => ({ ok: true }),
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.requestReopen"] }),
-      },
-      crossAuthors: {
-        queryOptions: () => ({
-          queryKey: ["leadForm.crossAuthors"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (no awaitable work in the stub)
-          queryFn: async () => [] as never[],
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.crossAuthors"] }),
-      },
-      crossAuthorSections: {
-        queryOptions: () => ({
-          queryKey: ["leadForm.crossAuthorSections"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (no awaitable work in the stub)
-          queryFn: async () => [] as never[],
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.crossAuthorSections"] }),
-      },
-      getVersion: {
-        queryOptions: () => ({
-          queryKey: ["leadForm.getVersion"],
-          // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async tRPC queryFn contract (no awaitable work in the stub)
-          queryFn: async () => null,
-        }),
-        pathFilter: () => ({ queryKey: ["leadForm.getVersion"] }),
-      },
+    {
+      path: ["reports", "myHistory"],
+      query: [],
     },
-  };
-}
-
-async function flushAll() {
-  for (let i = 0; i < 30; i++) await Promise.resolve();
-  await new Promise((r) => setTimeout(r, 0));
-  for (let i = 0; i < 30; i++) await Promise.resolve();
-  await new Promise((r) => setTimeout(r, 0));
-  for (let i = 0; i < 30; i++) await Promise.resolve();
+    {
+      path: ["reports", "saveDraft"],
+      mutation: true,
+    },
+    {
+      path: ["reports", "submit"],
+      mutation: true,
+    },
+    {
+      path: ["leadForm", "byPeriod"],
+      query: { section: makeSection(), readOnly: false },
+    },
+    {
+      path: ["leadForm", "revoke"],
+      mutation: true,
+    },
+    {
+      path: ["leadForm", "fillFrom"],
+      mutation: true,
+    },
+    {
+      path: ["leadForm", "requestReopen"],
+      mutation: true,
+    },
+    {
+      path: ["leadForm", "crossAuthors"],
+      query: [],
+    },
+    {
+      path: ["leadForm", "crossAuthorSections"],
+      query: [],
+    },
+  ]);
+  return proxy;
 }
 
 function Wrapper({ children }: { readonly children: ReactNode }) {
@@ -183,7 +101,7 @@ function Wrapper({ children }: { readonly children: ReactNode }) {
   });
   return (
     <QueryClientProvider client={qc}>
-      <TRPCProxyContext.Provider value={buildTRPC() as never}>
+      <TRPCProxyContext.Provider value={buildTRPC()}>
         {children}
       </TRPCProxyContext.Provider>
     </QueryClientProvider>
@@ -202,9 +120,8 @@ describe("LeadForm view-mode toggle — pre-extract snapshot", () => {
       </Wrapper>,
     );
 
-    await act(flushAll);
-
-    const editLink = screen.queryByRole("link", { name: /^Edit$/i });
+    // findByRole is act-wrapped by RTL — waits for the query cascade to settle.
+    const editLink = await screen.findByRole("link", { name: /^Edit$/i });
     const slidesLink = screen.queryByRole("link", {
       name: /Open slides mode/i,
     });

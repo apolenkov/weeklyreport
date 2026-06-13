@@ -5,9 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useSdlcTooltip } from "../ui/sdlc-tooltip";
-import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import type { StageAssignment, StageStatus } from "./mock-data";
 import {
+  STAGE_CHIP_BOX_HEIGHT,
   STAGE_ICONS,
   STATUS_CONFIG,
   STATUS_OPTIONS,
@@ -17,12 +17,6 @@ interface StageChipProps {
   readonly stage: StageAssignment;
   readonly onStatusChange?: (stageName: string, newStatus: StageStatus) => void;
   readonly readOnly?: boolean;
-  /**
-   * Number of risks currently associated with this stage (within the stage's
-   * product). Surfaces as a confirmation prompt when the user picks "Clear"
-   * — clearing a stage implicitly orphans those risks, so we ask first.
-   */
-  readonly linkedRiskCount?: number;
   /** Cross-author stats shown in the tooltip when the stage is locked. */
   readonly crossAuthorInfo?: { itemCount: number; riskCount: number };
 }
@@ -43,14 +37,9 @@ export function StageChip({
   stage,
   onStatusChange,
   readOnly = false,
-  linkedRiskCount = 0,
   crossAuthorInfo,
 }: StageChipProps) {
   const [showPopover, setShowPopover] = useState(false);
-  // Confirm modal for the only case that warrants a second click —
-  // clearing a stage that still has linked risks. The other three
-  // options apply immediately on click.
-  const [pendingClear, setPendingClear] = useState(false);
   const [popoverPos, setPopoverPos] = useState<{
     top: number;
     left: number;
@@ -98,7 +87,7 @@ export function StageChip({
   }, [showPopover]);
 
   const chipClasses = [
-    "relative w-full p-2 rounded-lg text-center text-xs font-semibold transition-[background-color,border-color,box-shadow,opacity,filter] duration-150",
+    "relative w-full p-2 rounded-lg inline-flex items-center justify-center text-xs font-semibold transition-[background-color,border-color,box-shadow,opacity,filter] duration-150",
     isEditable && !isEmpty
       ? "cursor-pointer hover:opacity-80 hover:saturate-50 hover:shadow-[0_0_0_2.5px_rgba(0,0,0,0.12)]"
       : "",
@@ -128,20 +117,11 @@ export function StageChip({
       setShowPopover(false);
       return;
     }
-    // Clearing a stage that still has linked risks needs a confirm —
-    // the risks themselves persist but the chip-level signal is dropped.
-    // Every other transition applies on the first click.
-    if (next === "empty" && linkedRiskCount > 0) {
-      setPendingClear(true);
-      return;
-    }
+    // Every transition applies on the first click here. Conflicting
+    // transitions (raise without a covering risk, lower a covered chip)
+    // are intercepted upstream by lead-form-sync-bridge
+    // (unify-risk-stage-status D2/D3), which owns the dialogs.
     onStatusChange?.(stage.stageName, next);
-    setShowPopover(false);
-  }
-
-  function confirmClear() {
-    onStatusChange?.(stage.stageName, "empty");
-    setPendingClear(false);
     setShowPopover(false);
   }
 
@@ -190,6 +170,7 @@ export function StageChip({
         type="button"
         className={chipClasses}
         style={{
+          height: STAGE_CHIP_BOX_HEIGHT,
           background: config.bg,
           color: config.text,
           border: borderStyle,
@@ -238,9 +219,9 @@ export function StageChip({
           tap; the popover closes immediately. Portaled to body to escape
           accordion overflow:hidden. The Save/Cancel form was an earlier
           iteration the user reverted: for a 4-option enum the form felt
-          heavier than the action it gated. The Clear-with-linked-risks
-          confirm is the one place where a second click is still
-          warranted, and that path uses ConfirmDeleteDialog below. */}
+          heavier than the action it gated. Transitions that need a second
+          step (raise without a risk, lower a covered chip) are intercepted
+          by lead-form-sync-bridge, not here. */}
       {showPopover &&
         popoverPos &&
         typeof document !== "undefined" &&
@@ -291,17 +272,6 @@ export function StageChip({
           </div>,
           document.body,
         )}
-
-      <ConfirmDeleteDialog
-        open={pendingClear}
-        title="Clear this stage?"
-        preview={stage.stageName}
-        subtitle={`${linkedRiskCount} linked risk${linkedRiskCount === 1 ? "" : "s"} will stay — only the chip's status is reset.`}
-        confirmLabel="Clear"
-        reversible
-        onConfirm={confirmClear}
-        onCancel={() => setPendingClear(false)}
-      />
     </div>
   );
 }

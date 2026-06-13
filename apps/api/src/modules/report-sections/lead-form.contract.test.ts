@@ -1,7 +1,4 @@
-import type {
-  ReportSectionReadModel,
-  VersionSnapshot,
-} from "@customreport/shared";
+import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { customreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
@@ -10,7 +7,6 @@ import {
   LeadFormDomainError,
   type LeadFormRepository,
   LeadFormService,
-  type SnapshotLatestRow,
 } from "./lead-form.service";
 
 // ---------------------------------------------------------------------------
@@ -57,36 +53,6 @@ const submittedSection: ReportSectionReadModel = {
   ],
 };
 
-const sampleVersions: VersionSnapshot[] = [
-  {
-    id: "aaaa1111-1111-4111-8111-111111111111",
-    reportSectionId: SECTION_ID,
-    version: 3,
-    createdAt: new Date("2026-04-08T10:00:00Z"),
-    itemCount: 0,
-    riskCount: 0,
-    decisionCount: 0,
-  },
-  {
-    id: "aaaa2222-2222-4222-8222-222222222222",
-    reportSectionId: SECTION_ID,
-    version: 2,
-    createdAt: new Date("2026-04-07T10:00:00Z"),
-    itemCount: 0,
-    riskCount: 0,
-    decisionCount: 0,
-  },
-  {
-    id: "aaaa3333-3333-4333-8333-333333333333",
-    reportSectionId: SECTION_ID,
-    version: 1,
-    createdAt: new Date("2026-04-06T10:00:00Z"),
-    itemCount: 0,
-    riskCount: 0,
-    decisionCount: 0,
-  },
-];
-
 // ---------------------------------------------------------------------------
 // Mock repository factory
 // ---------------------------------------------------------------------------
@@ -99,12 +65,6 @@ function createMockRepository(
     getSectionForPeriod: vi.fn().mockResolvedValue(null),
     revokeSectionSubmission: vi.fn().mockResolvedValue(undefined),
     fillFromSection: vi.fn().mockResolvedValue(5),
-    listVersions: vi.fn().mockResolvedValue([]),
-    getVersion: vi.fn().mockResolvedValue(null),
-    restoreVersion: vi.fn().mockResolvedValue(1),
-    createVersionSnapshot: vi.fn().mockResolvedValue(1),
-    getLatestSnapshot: vi.fn().mockResolvedValue(null),
-    buildSnapshotProjection: vi.fn().mockResolvedValue({}),
     createReopenRequest: vi.fn().mockResolvedValue(undefined),
     hasSharedProduct: vi.fn().mockResolvedValue(false),
     getCrossAuthors: vi.fn().mockResolvedValue([]),
@@ -196,20 +156,10 @@ describe("LeadFormService — revokeAllSubmitted", () => {
 // ---------------------------------------------------------------------------
 
 describe("LeadFormService — fillFrom", () => {
-  it("creates a version snapshot before overwriting", async () => {
-    const callOrder: string[] = [];
-
+  it("copies items from the source section into the target", async () => {
     const repo = createMockRepository({
       getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async LeadFormRepository.createVersionSnapshot (mock returns synchronously, no awaitable work)
-      createVersionSnapshot: vi.fn().mockImplementation(async () => {
-        callOrder.push("snapshot");
-      }),
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async LeadFormRepository.fillFromSection (mock returns synchronously, no awaitable work)
-      fillFromSection: vi.fn().mockImplementation(async () => {
-        callOrder.push("fill");
-        return 7;
-      }),
+      fillFromSection: vi.fn().mockResolvedValue(7),
     });
     const service = new LeadFormService(repo);
 
@@ -220,9 +170,6 @@ describe("LeadFormService — fillFrom", () => {
     );
 
     expect(result).toEqual({ success: true, copiedItems: 7 });
-    expect(callOrder).toEqual(["snapshot", "fill"]);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
-    expect(repo.createVersionSnapshot).toHaveBeenCalledWith(SECTION_ID);
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.fillFromSection).toHaveBeenCalledWith(
       SECTION_ID,
@@ -261,145 +208,6 @@ describe("LeadFormService — fillFrom", () => {
     await expect(
       service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID),
     ).rejects.toThrow(`Target section ${SECTION_ID} not found.`);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// listVersions (API-08)
-// ---------------------------------------------------------------------------
-
-describe("LeadFormService — listVersions", () => {
-  it("returns ordered list from repository", async () => {
-    const repo = createMockRepository({
-      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
-      listVersions: vi.fn().mockResolvedValue(structuredClone(sampleVersions)),
-    });
-    const service = new LeadFormService(repo);
-
-    const versions = await service.listVersions(SECTION_ID, AUTHOR_ID);
-
-    expect(versions).toHaveLength(3);
-    expect(expectDefined(versions[0]).version).toBe(3);
-    expect(expectDefined(versions[1]).version).toBe(2);
-    expect(expectDefined(versions[2]).version).toBe(1);
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
-    expect(repo.listVersions).toHaveBeenCalledWith(SECTION_ID);
-  });
-
-  it("returns empty array when no versions exist", async () => {
-    const repo = createMockRepository({
-      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
-    });
-    const service = new LeadFormService(repo);
-
-    const versions = await service.listVersions(SECTION_ID, AUTHOR_ID);
-
-    expect(versions).toEqual([]);
-  });
-
-  it("fails for another user section", async () => {
-    const repo = createMockRepository({
-      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
-    });
-    const service = new LeadFormService(repo);
-
-    await expect(
-      service.listVersions(SECTION_ID, OTHER_USER_ID),
-    ).rejects.toThrow("Can only list versions for your own section.");
-  });
-
-  it("allows head role to list versions for another user's section", async () => {
-    const repo = createMockRepository({
-      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
-      listVersions: vi.fn().mockResolvedValue(structuredClone(sampleVersions)),
-    });
-    const service = new LeadFormService(repo);
-
-    const versions = await service.listVersions(
-      SECTION_ID,
-      OTHER_USER_ID,
-      "head",
-    );
-
-    expect(versions).toHaveLength(3);
-  });
-
-  it("allows cross-author lead to list versions when sharing a product", async () => {
-    const repo = createMockRepository({
-      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
-      listVersions: vi.fn().mockResolvedValue(structuredClone(sampleVersions)),
-      hasSharedProduct: vi.fn().mockResolvedValue(true),
-    });
-    const service = new LeadFormService(repo);
-
-    const versions = await service.listVersions(
-      SECTION_ID,
-      OTHER_USER_ID,
-      "lead",
-    );
-
-    expect(versions).toHaveLength(3);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// restoreVersion (API-09)
-// ---------------------------------------------------------------------------
-
-describe("LeadFormService — restoreVersion", () => {
-  it("creates snapshot before restoring and returns restored version", async () => {
-    const callOrder: string[] = [];
-    const repo = createMockRepository({
-      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async LeadFormRepository.createVersionSnapshot (mock returns synchronously, no awaitable work)
-      createVersionSnapshot: vi.fn().mockImplementation(async () => {
-        callOrder.push("snapshot");
-      }),
-      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn stub implements async LeadFormRepository.restoreVersion (mock returns synchronously, no awaitable work)
-      restoreVersion: vi.fn().mockImplementation(async () => {
-        callOrder.push("restore");
-        return 2;
-      }),
-    });
-    const service = new LeadFormService(repo);
-
-    const result = await service.restoreVersion(SECTION_ID, 2, AUTHOR_ID);
-
-    expect(result).toEqual({ success: true, restoredVersion: 2 });
-    expect(callOrder).toEqual(["snapshot", "restore"]);
-  });
-
-  it("fails for a submitted section", async () => {
-    const repo = createMockRepository({
-      getSectionById: vi
-        .fn()
-        .mockResolvedValue(structuredClone(submittedSection)),
-    });
-    const service = new LeadFormService(repo);
-
-    await expect(
-      service.restoreVersion(SECTION_ID, 1, AUTHOR_ID),
-    ).rejects.toThrow("Cannot restore a submitted section.");
-  });
-
-  it("fails for another user's section", async () => {
-    const repo = createMockRepository({
-      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
-    });
-    const service = new LeadFormService(repo);
-
-    await expect(
-      service.restoreVersion(SECTION_ID, 1, OTHER_USER_ID),
-    ).rejects.toThrow("Can only restore your own section.");
-  });
-
-  it("fails when section does not exist", async () => {
-    const repo = createMockRepository();
-    const service = new LeadFormService(repo);
-
-    await expect(
-      service.restoreVersion(SECTION_ID, 1, AUTHOR_ID),
-    ).rejects.toThrow(`Section ${SECTION_ID} not found.`);
   });
 });
 
@@ -639,126 +447,3 @@ async function getCounterValue(
   );
   return match?.value ?? 0;
 }
-
-// ---------------------------------------------------------------------------
-// createSnapshot (Save Version)
-// ---------------------------------------------------------------------------
-
-describe("LeadFormService — createSnapshot", () => {
-  it("snapshots a draft section owned by the caller", async () => {
-    const repo = createMockRepository({
-      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
-      // No previous snapshot — getLatestSnapshot returns null (default mock)
-    });
-    const service = new LeadFormService(repo);
-
-    const result = await service.createSnapshot(SECTION_ID, AUTHOR_ID);
-
-    expect(result).toEqual({ version: 1 });
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
-    expect(repo.createVersionSnapshot).toHaveBeenCalledWith(SECTION_ID);
-  });
-
-  it("rejects when caller is not the author", async () => {
-    const repo = createMockRepository({
-      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
-    });
-    const service = new LeadFormService(repo);
-
-    await expect(
-      service.createSnapshot(SECTION_ID, OTHER_USER_ID),
-    ).rejects.toThrow("Can only snapshot your own section.");
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
-    expect(repo.createVersionSnapshot).not.toHaveBeenCalled();
-  });
-
-  it("rejects when section is submitted (locked)", async () => {
-    const repo = createMockRepository({
-      getSectionById: vi
-        .fn()
-        .mockResolvedValue(structuredClone(submittedSection)),
-    });
-    const service = new LeadFormService(repo);
-
-    await expect(service.createSnapshot(SECTION_ID, AUTHOR_ID)).rejects.toThrow(
-      "Cannot snapshot a submitted section.",
-    );
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
-    expect(repo.createVersionSnapshot).not.toHaveBeenCalled();
-  });
-
-  it("rejects when section does not exist", async () => {
-    const repo = createMockRepository();
-    const service = new LeadFormService(repo);
-
-    await expect(service.createSnapshot(SECTION_ID, AUTHOR_ID)).rejects.toThrow(
-      `Section ${SECTION_ID} not found.`,
-    );
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
-    expect(repo.createVersionSnapshot).not.toHaveBeenCalled();
-  });
-
-  it("skips when called within 60s of the previous snapshot (throttled)", async () => {
-    // Last snapshot was taken 30 seconds ago — still inside the 60 s window.
-    const recentSnapshot: SnapshotLatestRow = {
-      data: {},
-      createdAt: new Date(Date.now() - 30_000),
-      version: 5,
-    };
-    const repo = createMockRepository({
-      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
-      getLatestSnapshot: vi.fn().mockResolvedValue(recentSnapshot),
-    });
-    const service = new LeadFormService(repo);
-
-    const result = await service.createSnapshot(SECTION_ID, AUTHOR_ID);
-
-    expect(result).toEqual({ version: 5, skipped: true, reason: "throttled" });
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
-    expect(repo.createVersionSnapshot).not.toHaveBeenCalled();
-  });
-
-  it("skips when data is byte-identical to the latest snapshot (no-change)", async () => {
-    // A snapshot from 2 minutes ago (outside the throttle window),
-    // but whose data matches the current snapshot projection exactly.
-    // buildSnapshotProjection returns the same projection shape that is stored
-    // in VersionSnapshot.data — both sides of the comparison are now the same shape.
-    const snapshotProjection: Record<string, unknown> = {
-      items: [
-        {
-          projectId: "p1",
-          type: "current",
-          text: "Deliver feature X",
-          tag: "feature",
-          workflowStatus: "in_progress",
-          carriedOver: false,
-          completed: null,
-          priorityRank: null,
-          stageNames: [],
-        },
-      ],
-      risks: [],
-      decisions: [],
-      stageStatuses: [],
-    };
-    const oldSnapshot: SnapshotLatestRow = {
-      data: structuredClone(snapshotProjection),
-      createdAt: new Date(Date.now() - 120_000),
-      version: 7,
-    };
-    const repo = createMockRepository({
-      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
-      getLatestSnapshot: vi.fn().mockResolvedValue(oldSnapshot),
-      buildSnapshotProjection: vi
-        .fn()
-        .mockResolvedValue(structuredClone(snapshotProjection)),
-    });
-    const service = new LeadFormService(repo);
-
-    const result = await service.createSnapshot(SECTION_ID, AUTHOR_ID);
-
-    expect(result).toEqual({ version: 7, skipped: true, reason: "no-change" });
-    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
-    expect(repo.createVersionSnapshot).not.toHaveBeenCalled();
-  });
-});

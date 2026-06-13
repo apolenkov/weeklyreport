@@ -9,6 +9,7 @@ import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   WeeklyReportDomainError,
   type WeeklyReportRepository,
+  type WeeklyReportRepositoryResult,
   WeeklyReportService,
 } from "./weekly-report.service";
 
@@ -100,8 +101,12 @@ function createRepository(
 ): WeeklyReportRepository {
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
-    async getWeeklyReport(id: string) {
-      return structuredClone(reports.get(id) ?? null);
+    async getWeeklyReport(
+      id: string,
+    ): Promise<WeeklyReportRepositoryResult | null> {
+      const model = reports.get(id);
+      if (!model) return null;
+      return { readModel: structuredClone(model), crossGroup: null };
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
     async getActiveReportId() {
@@ -139,9 +144,12 @@ describe("WeeklyReportService — contract tests", () => {
     expect(expectDefined(result.leadSections[0]).authorName).toBe("Lead A");
     expect(result.escalations).toEqual([]);
 
-    // Verify output conforms to the Zod response schema
-    const parsed = weeklyReportGetResponseSchema.parse(result);
-    expect(parsed).toEqual(result);
+    // Verify output conforms to the Zod response schema.
+    // crossGroup is an internal audit signal stripped by the router before
+    // the response is sent; exclude it from the schema round-trip check.
+    const { crossGroup: _cg, ...publicResult } = result;
+    const parsed = weeklyReportGetResponseSchema.parse(publicResult);
+    expect(parsed).toEqual(publicResult);
   });
 
   it("throws WeeklyReportDomainError when report is not found", async () => {
@@ -181,7 +189,12 @@ describe("WeeklyReportService — contract tests", () => {
 
     const result = await service.getWeeklyReport();
 
-    expect(result).toEqual({ status: "no-period", report: null });
+    // crossGroup is an internal signal always null on the no-period path.
+    expect(result).toEqual({
+      status: "no-period",
+      report: null,
+      crossGroup: null,
+    });
   });
 
   it("returns report with escalations (blocked items and at-risk projects)", async () => {

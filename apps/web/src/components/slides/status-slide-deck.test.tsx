@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -218,6 +218,291 @@ describe("StatusSlideDeck lead layout", () => {
     // My item visible; "empty for:" noise band is suppressed
     expect(screen.getByText("My item")).toBeInTheDocument();
     expect(screen.queryByText(/empty for:/)).not.toBeInTheDocument();
+  });
+});
+
+describe("StatusSlideDeck lead — product chip filter (slides-product-autofit)", () => {
+  function twoProducts(): SlideProduct[] {
+    return [
+      product(),
+      product({
+        id: PRODUCT_TWO_ID,
+        name: "Data Portal",
+        status: "yellow",
+        currentItems: ["Close API parity"],
+        nextItems: ["Draft data contract"],
+        risks: ["Schema drift"],
+        decisions: ["Keep one release train"],
+        priorities: ["Protect launch date"],
+      }),
+    ];
+  }
+
+  it("clicking a chip scopes the quadrants to that product and marks it selected", () => {
+    renderLeadDeck([slide(twoProducts())]);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Data Portal" }));
+
+    // Only the picked product's rows remain in the quadrants.
+    expect(screen.getByText("Close API parity")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Completed authentication module refactor"),
+    ).not.toBeInTheDocument();
+    // The strip still lists every product, with a truthful selection state.
+    expect(screen.getByRole("tab", { name: "Data Portal" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(
+      screen.getByRole("tab", { name: "Marketing Portal" }),
+    ).toHaveAttribute("aria-selected", "false");
+  });
+
+  it("clicking the active chip again restores the all-products view", () => {
+    renderLeadDeck([slide(twoProducts())]);
+
+    const chip = screen.getByRole("tab", { name: "Data Portal" });
+    fireEvent.click(chip);
+    fireEvent.click(chip);
+
+    expect(screen.getByText("Close API parity")).toBeInTheDocument();
+    expect(
+      screen.getByText("Completed authentication module refactor"),
+    ).toBeInTheDocument();
+    expect(screen.queryAllByRole("tab", { selected: true })).toHaveLength(0);
+  });
+
+  it("keeps fullscreen active when a chip is clicked during a presentation", () => {
+    const exitFullscreen = vi.fn(() => Promise.resolve());
+    Object.defineProperty(document, "fullscreenElement", {
+      configurable: true,
+      get: () => document.body,
+    });
+    document.exitFullscreen = exitFullscreen;
+    try {
+      renderLeadDeck([slide(twoProducts())]);
+
+      fireEvent.click(screen.getByRole("tab", { name: "Data Portal" }));
+
+      // The chip applies the filter without ending the presentation...
+      expect(exitFullscreen).not.toHaveBeenCalled();
+      expect(
+        screen.queryByText("Completed authentication module refactor"),
+      ).not.toBeInTheDocument();
+
+      // ...while a click elsewhere on the slide still exits fullscreen.
+      fireEvent.click(screen.getByRole("article"));
+      expect(exitFullscreen).toHaveBeenCalledTimes(1);
+    } finally {
+      // Both were defined as own properties over jsdom's prototype slots;
+      // deleting them restores the untouched prototype behavior.
+      Reflect.deleteProperty(document, "exitFullscreen");
+      Reflect.deleteProperty(document, "fullscreenElement");
+    }
+  });
+
+  it("hides cross-product rows while a product is selected", () => {
+    renderLeadDeck([
+      slide([
+        ...twoProducts(),
+        product({
+          id: "cross-product",
+          name: "Cross-product",
+          status: null,
+          stages: [],
+          currentItems: [],
+          nextItems: [],
+          risks: [],
+          decisions: ["Shared platform decision"],
+          priorities: [],
+        }),
+      ]),
+    ]);
+
+    expect(screen.getByText("Shared platform decision")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Data Portal" }));
+
+    expect(
+      screen.queryByText("Shared platform decision"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("clears the filter when the visible slide page changes", () => {
+    const pages: SectionSlideModel[] = [
+      { ...slide(twoProducts()), pageIndex: 0, pageTotal: 2 },
+      { ...slide(twoProducts()), pageIndex: 1, pageTotal: 2 },
+    ];
+    const deck = (selectedIndex: number) => (
+      <StatusSlideDeck
+        slides={pages}
+        selectedIndex={selectedIndex}
+        onSelect={() => undefined}
+        title="My Status Slide"
+        subtitle="Current section grouped by product and SDLC stage."
+        mode="lead"
+      />
+    );
+    const { rerender } = render(deck(0));
+
+    fireEvent.click(screen.getByRole("tab", { name: "Data Portal" }));
+    expect(
+      screen.queryByText("Completed authentication module refactor"),
+    ).not.toBeInTheDocument();
+
+    rerender(deck(1));
+
+    // The new page renders unfiltered, with no chip selected.
+    expect(
+      screen.getByText("Completed authentication module refactor"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Close API parity")).toBeInTheDocument();
+    expect(screen.queryAllByRole("tab", { selected: true })).toHaveLength(0);
+  });
+});
+
+function renderHeadDeck(
+  slides: readonly SectionSlideModel[],
+  selectedIndex = 0,
+  onSelect: (index: number) => void = () => undefined,
+) {
+  render(
+    <StatusSlideDeck
+      slides={slides}
+      selectedIndex={selectedIndex}
+      onSelect={onSelect}
+      title="Team Status"
+      subtitle="Review each lead's slide."
+      mode="head"
+    />,
+  );
+}
+
+describe("StatusSlideDeck head layout (head-slide-density)", () => {
+  it("renders the four sections as framed, floored cards with token stripes", () => {
+    renderHeadDeck([slide()]);
+
+    const cards = screen.getAllByTestId("head-section-card");
+    expect(cards).toHaveLength(4);
+    // Fixed topology: every card carries the named min-height token.
+    for (const card of cards) {
+      expect(card.className).toContain("min-h-[var(--slide-quadrant-min)]");
+    }
+    // Per-card left stripe from the token map, in render order.
+    expect(cards[0]?.className).toContain(
+      "border-l-[var(--color-chip-on-track-border)]",
+    );
+    expect(cards[1]?.className).toContain("border-l-[var(--color-primary)]");
+    expect(cards[2]?.className).toContain(
+      "border-l-[var(--color-chip-at-risk-border)]",
+    );
+    expect(cards[3]?.className).toContain(
+      "border-l-[var(--color-decisions-accent)]",
+    );
+  });
+
+  it("renders section headers neutral — no red Risks or green Decisions hue", () => {
+    renderHeadDeck([slide()]);
+
+    const cards = screen.getAllByTestId("head-section-card");
+
+    const risksHeader = within(cards[2]).getByText("Risks");
+
+    const decisionsHeader = within(cards[3]).getByText("Decisions");
+    for (const header of [risksHeader, decisionsHeader]) {
+      expect(header.className).toContain(
+        "text-[var(--color-muted-foreground)]",
+      );
+      expect(header.className).not.toContain("destructive");
+      expect(header.className).not.toContain("starbucks-accent");
+    }
+  });
+
+  it("renders an empty section as a framed dashed placeholder, never hidden", () => {
+    renderHeadDeck([slide([product({ decisions: [], risks: [] })])]);
+
+    const cards = screen.getAllByTestId("head-section-card");
+    expect(cards).toHaveLength(4);
+
+    const decisionsCard = cards[3];
+    expect(within(decisionsCard).getByText("Decisions")).toBeInTheDocument();
+    const placeholder = within(decisionsCard).getByText(
+      "No decisions recorded",
+    );
+    expect(placeholder.className).toContain("border-dashed");
+
+    expect(within(cards[2]).getByText("No risks raised").className).toContain(
+      "border-dashed",
+    );
+  });
+
+  it("renders every row of a dense section with no count-based truncation", () => {
+    const decisions = [
+      "Adopt the unified release calendar",
+      "Freeze scope for the Q3 launch",
+      "Move IdP cutover before month end",
+      "Retire the legacy export pipeline",
+      "Consolidate staging environments",
+      "Fund the accessibility audit",
+    ];
+    renderHeadDeck([slide([product({ decisions })])]);
+
+    for (const text of decisions) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(screen.queryByText(/\+\d+ more/)).not.toBeInTheDocument();
+  });
+
+  it("shows a neutral product badge on rows only when the slide spans multiple products", () => {
+    renderHeadDeck([
+      slide([
+        product(),
+        product({
+          id: PRODUCT_TWO_ID,
+          name: "Data Portal",
+          status: "yellow",
+          currentItems: ["Close API parity"],
+        }),
+      ]),
+    ]);
+
+    const badges = screen.getAllByTestId("head-row-product-badge");
+    expect(badges.length).toBeGreaterThan(0);
+    expect(badges.some((badge) => badge.title === "Marketing Portal")).toBe(
+      true,
+    );
+  });
+
+  it("hides the product badge for a single-product slide", () => {
+    renderHeadDeck([slide()]);
+
+    expect(
+      screen.queryByTestId("head-row-product-badge"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps head-specific surfaces distinct and cross-lead navigation working", () => {
+    const onSelect = vi.fn();
+    renderHeadDeck(
+      [slideWithId("section-1"), slideWithId("section-2")],
+      0,
+      onSelect,
+    );
+
+    // Multi-lead sidebar stays a navigable list (framed, neutral header).
+    const sidebar = screen.getByLabelText("Slides");
+    const leadButtons = within(sidebar).getAllByRole("button");
+    expect(leadButtons).toHaveLength(2);
+
+    fireEvent.click(leadButtons[1]);
+    expect(onSelect).toHaveBeenCalledWith(1);
+
+    // Readiness aside stays a distinct review affordance.
+    expect(screen.getByText("Slide completion")).toBeInTheDocument();
+    // Agent-review deferred-feature control keeps its placement.
+    expect(screen.getByTestId("agent-review-coming-soon")).toBeInTheDocument();
+    // Portfolio metrics render as the segmented capsule labels.
+    expect(screen.getByText("Priority")).toBeInTheDocument();
   });
 });
 

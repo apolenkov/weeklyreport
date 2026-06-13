@@ -1,7 +1,6 @@
 import type {
   MyHistoryEntry,
   ReportSectionReadModel,
-  VersionSnapshot,
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
@@ -14,7 +13,6 @@ import {
   mapLeadPriorities,
   mapLeadProducts,
   mapLeadRisks,
-  mapLeadVersions,
   ownedStagesForProject,
   stageNamesMatch,
 } from "./lead-form";
@@ -191,14 +189,11 @@ describe("mapLeadProducts", () => {
     );
   });
 
-  it("linked risks do NOT override explicit chip status in the edit form (PRJ-2 chip-click stability)", () => {
-    // Reproduces the seeded-risk override bug: a risk with
-    // stageIds=["Development"] and severity="at-risk" was causing
-    // deriveEffectiveStageStatus to return "at-risk" even when the
-    // ownedStage.status was "green" (on-track). The user's chip click
-    // reverted on every re-render. Fix: pass [] to buildStageGrid so
-    // explicit stage status always wins; use-status-risk-sync owns
-    // the risk→chip signal path.
+  it("a covering risk floors a stale persisted on-track status (unify-risk-stage-status D1, supersedes PRJ-2)", () => {
+    // The PRJ-2 test that lived here pinned the opposite: risks were
+    // disconnected so explicit chip status always won. D1 re-connects the
+    // derivation — a chip can never show on-track while a non-empty
+    // covering risk exists, on any surface fed by this mapper.
     const section = baseSection({
       projects: [
         {
@@ -229,6 +224,166 @@ describe("mapLeadProducts", () => {
 
     const products = mapLeadProducts(section);
     const devStage = products[0]?.stages.find((s) => s.stageName === "Dev");
+    expect(devStage?.status).toBe("at-risk");
+  });
+
+  it("a blocked covering risk beats an at-risk one (severity floor precedence)", () => {
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM Platform",
+          trafficLight: "green",
+          ownedStages: [
+            {
+              stageId: "stage-dev",
+              stageName: "Development",
+              sortOrder: 3,
+              status: "yellow",
+            },
+          ],
+        },
+      ],
+      risks: [
+        {
+          projectId: PROJECT_A,
+          risk: "Minor slip",
+          impact: "Schedule",
+          mitigation: "Replan",
+          severity: "at-risk",
+          stageIds: ["Development"],
+        },
+        {
+          projectId: PROJECT_A,
+          risk: "Vendor outage",
+          impact: "Work stopped",
+          mitigation: "Escalate",
+          severity: "blocked",
+          stageIds: ["Development"],
+        },
+      ],
+    });
+
+    const devStage = mapLeadProducts(section)[0]?.stages.find(
+      (s) => s.stageName === "Dev",
+    );
+    expect(devStage?.status).toBe("blocked");
+  });
+
+  it("a stage-less (empty stageIds) risk floors every owned chip (unify-risk-stage-status review-fix)", () => {
+    // Empty/undefined stageIds means "covers all stages" — the same rule the
+    // live form applies. Before the fix the read model used `stageIds?.some`
+    // and floored nothing on `[]`, diverging silently from the form.
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM Platform",
+          trafficLight: "green",
+          ownedStages: [
+            {
+              stageId: "stage-dev",
+              stageName: "Development",
+              sortOrder: 3,
+              status: "green",
+            },
+            {
+              stageId: "stage-test",
+              stageName: "Testing",
+              sortOrder: 4,
+              status: "green",
+            },
+          ],
+        },
+      ],
+      risks: [
+        {
+          projectId: PROJECT_A,
+          risk: "Legacy stage-less blocker",
+          impact: "Everything stalls",
+          mitigation: "Escalate",
+          severity: "blocked",
+          stageIds: [],
+        },
+      ],
+    });
+
+    const stages = mapLeadProducts(section)[0]?.stages ?? [];
+    expect(stages.find((s) => s.stageName === "Dev")?.status).toBe("blocked");
+    expect(stages.find((s) => s.stageName === "Testing")?.status).toBe(
+      "blocked",
+    );
+  });
+
+  it("an empty-text risk does not floor the chip (only non-empty risks count)", () => {
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM Platform",
+          trafficLight: "green",
+          ownedStages: [
+            {
+              stageId: "stage-dev",
+              stageName: "Development",
+              sortOrder: 3,
+              status: "green",
+            },
+          ],
+        },
+      ],
+      risks: [
+        {
+          projectId: PROJECT_A,
+          risk: " ".repeat(3),
+          impact: "tbd",
+          mitigation: "tbd",
+          severity: "blocked",
+          stageIds: ["Development"],
+        },
+      ],
+    });
+
+    const devStage = mapLeadProducts(section)[0]?.stages.find(
+      (s) => s.stageName === "Dev",
+    );
+    expect(devStage?.status).toBe("on-track");
+  });
+
+  it("items stay disconnected from chip status (risk-only contract)", () => {
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM Platform",
+          trafficLight: "green",
+          ownedStages: [
+            {
+              stageId: "stage-dev",
+              stageName: "Development",
+              sortOrder: 3,
+              status: "green",
+            },
+          ],
+        },
+      ],
+      items: [
+        {
+          id: "99999999-9999-4999-8999-999999999999",
+          projectId: PROJECT_A,
+          type: "current",
+          text: "Blocked item",
+          tag: "tag",
+          workflowStatus: "blocked",
+          carriedOver: false,
+          stageIds: ["Development"],
+        },
+      ],
+    });
+
+    const devStage = mapLeadProducts(section)[0]?.stages.find(
+      (s) => s.stageName === "Dev",
+    );
     expect(devStage?.status).toBe("on-track");
   });
 
@@ -454,6 +609,138 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
   });
 });
 
+// fix-lead-surface-name-resolution: cards referencing a project the section
+// author owns no stage on must resolve the real name from the read model's
+// name-only `referencedProjects`, never the placeholder. The placeholder
+// survives only for an id the entire name source cannot resolve.
+describe("report-wide name resolution (referencedProjects)", () => {
+  const FOREIGN_PROJECT = "66666666-6666-4666-8666-666666666666";
+  const TRULY_UNKNOWN = "99999999-9999-4999-8999-999999999999";
+
+  function crossStageSection(
+    overrides: Partial<ReportSectionReadModel> = {},
+  ): ReportSectionReadModel {
+    return baseSection({
+      projects: [
+        { projectId: PROJECT_A, projectName: "CRM", trafficLight: "green" },
+      ],
+      referencedProjects: [
+        { projectId: FOREIGN_PROJECT, projectName: "Payments Gateway" },
+      ],
+      ...overrides,
+    });
+  }
+
+  it("resolves a risk's product name from referencedProjects when the author owns no stage on it", () => {
+    const section = crossStageSection({
+      risks: [
+        {
+          id: "r1",
+          projectId: FOREIGN_PROJECT,
+          risk: "Cross-stage risk",
+          impact: "Impact",
+          mitigation: "Mitigation",
+        },
+      ],
+    });
+
+    expect(mapLeadRisks(section).at(0)?.productName).toBe("Payments Gateway");
+  });
+
+  it("resolves a decision's product name from referencedProjects instead of 'Group'", () => {
+    const section = crossStageSection({
+      decisions: [
+        {
+          id: "d1",
+          text: "Cross-stage decision",
+          owner: "Owner",
+          impact: "Impact",
+          productId: FOREIGN_PROJECT,
+        },
+      ],
+    });
+
+    expect(mapLeadDecisions(section).at(0)?.productName).toBe(
+      "Payments Gateway",
+    );
+  });
+
+  it("resolves item and priority product names from referencedProjects", () => {
+    const section = crossStageSection({
+      items: [
+        {
+          id: "i1",
+          projectId: FOREIGN_PROJECT,
+          type: "current",
+          text: "Cross-stage item",
+          tag: "x",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+          priorityRank: 1,
+        },
+      ],
+    });
+
+    expect(mapLeadItems(section, "current").at(0)?.productName).toBe(
+      "Payments Gateway",
+    );
+    expect(mapLeadPriorities(section).at(0)?.productName).toBe(
+      "Payments Gateway",
+    );
+  });
+
+  it("keeps the placeholder for an id the entire name source cannot resolve", () => {
+    const section = crossStageSection({
+      risks: [
+        {
+          id: "r1",
+          projectId: TRULY_UNKNOWN,
+          risk: "Foreign risk",
+          impact: "Impact",
+          mitigation: "Mitigation",
+        },
+      ],
+      decisions: [
+        {
+          id: "d1",
+          text: "Foreign decision",
+          owner: "Owner",
+          impact: "Impact",
+          productId: TRULY_UNKNOWN,
+        },
+      ],
+    });
+
+    expect(mapLeadRisks(section).at(0)?.productName).toBe("Unknown");
+    expect(mapLeadDecisions(section).at(0)?.productName).toBe("Group");
+  });
+
+  it("prefers the stage-owned entry when the same id is also referenced (Decision 3)", () => {
+    const section = crossStageSection({
+      referencedProjects: [{ projectId: PROJECT_A, projectName: "Stale Copy" }],
+      risks: [
+        {
+          id: "r1",
+          projectId: PROJECT_A,
+          risk: "Owned-project risk",
+          impact: "Impact",
+          mitigation: "Mitigation",
+        },
+      ],
+    });
+
+    expect(mapLeadRisks(section).at(0)?.productName).toBe("CRM");
+  });
+
+  it("does not add a stray product card for a referenced-only project", () => {
+    const section = crossStageSection();
+    const products = mapLeadProducts(section);
+
+    expect(products).toHaveLength(1);
+    expect(products.at(0)?.id).toBe(PROJECT_A);
+  });
+});
+
 describe("mapLeadPeriods", () => {
   it("flags the active report id as isCurrent and submitted sections as isSubmitted", () => {
     const history: MyHistoryEntry[] = [
@@ -495,36 +782,12 @@ describe("mapLeadPeriods", () => {
   });
 });
 
-describe("mapLeadVersions", () => {
-  it("formats createdAt into a relative timestamp and surfaces snapshot counts", () => {
-    const now = new Date("2026-04-20T12:00:00Z");
-    const versions: VersionSnapshot[] = [
-      {
-        id: "v1",
-        reportSectionId: SECTION_ID,
-        version: 3,
-        createdAt: new Date("2026-04-20T11:58:00Z"),
-        itemCount: 4,
-        riskCount: 2,
-        decisionCount: 1,
-      },
-    ];
-    const mapped = mapLeadVersions(versions, now);
-    expect(expectDefined(mapped[0]).version).toBe(3);
-    expect(expectDefined(mapped[0]).timestamp).toBe("2 min ago");
-    expect(expectDefined(mapped[0]).itemCount).toBe(4);
-    expect(expectDefined(mapped[0]).riskCount).toBe(2);
-    expect(expectDefined(mapped[0]).decisionCount).toBe(1);
-  });
-});
-
 describe("mapLeadFormData", () => {
   it("returns all empty collections when the section is empty", () => {
     const section = baseSection();
     const result = mapLeadFormData({
       active: section,
       byPeriod: { section, readOnly: false },
-      versions: [],
       history: [],
     });
     expect(result.products).toEqual([]);
@@ -534,7 +797,6 @@ describe("mapLeadFormData", () => {
     expect(result.decisions).toEqual([]);
     expect(result.priorities).toEqual([]);
     expect(result.periods).toEqual([]);
-    expect(result.versions).toEqual([]);
     expect(result.readOnly).toBe(false);
     expect(result.currentUser.name).toBe("Тимлид 1");
     expect(result.currentUser.initials).toBe("Т1");
@@ -548,7 +810,6 @@ describe("mapLeadFormData", () => {
     const result = mapLeadFormData({
       active: section,
       byPeriod: { section, readOnly: false },
-      versions: [],
       history: [],
     });
     expect(result.readOnly).toBe(true);
@@ -559,7 +820,6 @@ describe("mapLeadFormData", () => {
     const result = mapLeadFormData({
       active: section,
       byPeriod: { section, readOnly: true },
-      versions: [],
       history: [],
     });
     expect(result.readOnly).toBe(true);

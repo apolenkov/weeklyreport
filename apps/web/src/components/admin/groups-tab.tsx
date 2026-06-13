@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../lib/cache-keys";
@@ -67,6 +67,10 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
   const [archiveFilter, setArchiveFilter] =
     useState<ArchiveFilterValue>("active");
 
+  // admin-dialog-focus-management: save the trigger element so focus can be
+  // restored when the dialog closes (Escape, Cancel, backdrop, save success).
+  const dialogTriggerRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
     if (!showDialog) return;
     function handleKey(e: KeyboardEvent) {
@@ -77,6 +81,15 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
     }
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
+  }, [showDialog]);
+
+  // Restore focus to the trigger whenever the dialog closes (all close paths
+  // set showDialog→false: Escape listener, Cancel, backdrop, save success).
+  useEffect(() => {
+    if (!showDialog && dialogTriggerRef.current) {
+      dialogTriggerRef.current.focus();
+      dialogTriggerRef.current = null;
+    }
   }, [showDialog]);
 
   const saveGroupMut = useMutation(
@@ -106,12 +119,14 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
   );
 
   function openAdd() {
+    dialogTriggerRef.current = document.activeElement as HTMLElement;
     setEditingGroup(null);
     setForm(EMPTY_FORM);
     setShowDialog(true);
   }
 
   function openEdit(group: MockGroup) {
+    dialogTriggerRef.current = document.activeElement as HTMLElement;
     setEditingGroup(group);
     setForm({
       name: group.name,
@@ -311,6 +326,8 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
+                  autoFocus
                   className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
                 />
               </div>

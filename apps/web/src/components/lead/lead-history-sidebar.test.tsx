@@ -28,9 +28,6 @@ function makeEntry(
     riskCount: 0,
     decisionCount: 0,
     priorityCount: 0,
-    versionCount: 0,
-    latestVersion: null,
-    latestVersionAt: null,
     productCount: 1,
   };
 }

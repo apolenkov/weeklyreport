@@ -113,6 +113,28 @@ describe("VA-0a: Primary CTA SVG aria-hidden (login-page.client)", () => {
   });
 });
 
+describe("Dev-mode role picker (AUTH_STUB=true, no stored hint)", () => {
+  it("shows the direct role picker instead of collapsing the block", async () => {
+    process.env.NEXT_PUBLIC_AUTH_STUB = "true";
+    const LoginPageClient = await loadLoginPageClient();
+    render(<LoginPageClient initialOrg={STUB_ORG} />);
+
+    // After the localStorage check resolves (no hint stored in jsdom),
+    // the box must offer the role picker — not vanish (the old collapse
+    // read as a layout jump and left no way to pick a role).
+    const picker = await screen.findByTestId("role-picker");
+    expect(picker).toBeInTheDocument();
+    for (const role of ["lead", "head", "admin", "viewer"] as const) {
+      expect(
+        screen.getByTestId(`last-role-option-${role}`),
+      ).toBeInTheDocument();
+    }
+    expect(
+      screen.queryByTestId("last-role-hint-skeleton"),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("VA-0b: Primary CTA link snapshot (login-page.client)", () => {
   it("matches snapshot — SVG aria-hidden + text node coexist in CTA link", async () => {
     const LoginPageClient = await loadLoginPageClient();

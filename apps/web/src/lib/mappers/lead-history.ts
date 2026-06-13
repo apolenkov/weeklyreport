@@ -39,9 +39,6 @@ export interface HistoryEntry {
   riskCount: number;
   decisionCount: number;
   priorityCount: number;
-  versionCount: number;
-  latestVersion: number | null;
-  latestVersionAt: string | null;
   // HIST-4 (Phase 33-04): prefix the metric line with the lead's
   // assigned-product count for that period when available.
   productCount?: number;
@@ -147,9 +144,6 @@ export function mapHistoryEntries(
     decisionCount: e.decisionCount ?? 0,
     priorityCount: e.priorityCount ?? 0,
     productCount: e.productCount,
-    versionCount: e.versionCount ?? 0,
-    latestVersion: e.latestVersion ?? null,
-    latestVersionAt: formatHistoryTimestamp(e.latestVersionAt, now),
   }));
 }
 
@@ -175,8 +169,5 @@ export function mapCompiledHistoryEntries(
     decisionCount: e.decisionCount,
     priorityCount: e.priorityCount,
     productCount: e.productCount,
-    versionCount: 0,
-    latestVersion: null,
-    latestVersionAt: null,
   }));
 }

@@ -5,11 +5,79 @@ import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
+  adminProcedure,
+  anyRoleProcedure,
   headProcedure,
+  leadershipProcedure,
+  leadProcedure,
   protectedProcedure,
   publicProcedure,
   router,
+  viewerProcedure,
 } from "./trpc.middleware.js";
+
+// ---------------------------------------------------------------------------
+// Chain-composition pin test (refactor-trpc-infra-duplication)
+//
+// Each of the 7 protected builders must carry exactly 5 middlewares.
+// Slots 0-1 must be reference-equal to publicProcedure's two middlewares.
+// Slots 3-4 (pdfExportGuard, mutationAuditMiddleware) must be
+// reference-equal across all 7 builders (compared to headProcedure as
+// the reference, since the unexported middlewares have no direct export).
+// ---------------------------------------------------------------------------
+
+describe("protected procedure chain-composition pins", () => {
+  function getChain(proc: {
+    query: (fn: () => undefined) => unknown;
+  }): unknown[] {
+    const built = proc.query(() => undefined) as {
+      _def: { middlewares: unknown[] };
+    };
+    // Drop trailing resolver appended by tRPC
+    return built._def.middlewares.slice(0, -1);
+  }
+
+  const publicChain = getChain(publicProcedure);
+  const protectedChain = getChain(protectedProcedure);
+  const headChain = getChain(headProcedure);
+  const leadChain = getChain(leadProcedure);
+  const viewerChain = getChain(viewerProcedure);
+  const anyRoleChain = getChain(anyRoleProcedure);
+  const adminChain = getChain(adminProcedure);
+  const leadershipChain = getChain(leadershipProcedure);
+
+  const protectedBuilders = [
+    { name: "protectedProcedure", chain: protectedChain },
+    { name: "headProcedure", chain: headChain },
+    { name: "leadProcedure", chain: leadChain },
+    { name: "viewerProcedure", chain: viewerChain },
+    { name: "anyRoleProcedure", chain: anyRoleChain },
+    { name: "adminProcedure", chain: adminChain },
+    { name: "leadershipProcedure", chain: leadershipChain },
+  ];
+
+  it("each protected builder carries exactly 5 middlewares", () => {
+    for (const { name, chain } of protectedBuilders) {
+      expect(chain, `${name} middleware count`).toHaveLength(5);
+    }
+  });
+
+  it("slots 0-1 are reference-equal to publicProcedure's middlewares (metrics + logging)", () => {
+    for (const { name, chain } of protectedBuilders) {
+      expect(chain[0], `${name} slot 0 (metrics)`).toBe(publicChain[0]);
+      expect(chain[1], `${name} slot 1 (logging)`).toBe(publicChain[1]);
+    }
+  });
+
+  it("slots 3-4 (pdfExportGuard, mutationAuditMiddleware) are reference-equal across all protected builders", () => {
+    // Use headProcedure as the reference since the unexported middlewares
+    // are not directly accessible.
+    for (const { name, chain } of protectedBuilders) {
+      expect(chain[3], `${name} slot 3 (pdfExportGuard)`).toBe(headChain[3]);
+      expect(chain[4], `${name} slot 4 (mutationAudit)`).toBe(headChain[4]);
+    }
+  });
+});
 
 const nullAuditLogger = createNullAuditLogger();
 const TEST_IP = "test-ip";

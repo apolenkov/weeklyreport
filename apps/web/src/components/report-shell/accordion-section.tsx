@@ -27,13 +27,12 @@ interface AccordionSectionProps {
   readonly subtitle?: string;
   readonly defaultOpen?: boolean;
   /**
-   * Bumped by the parent's "Toggle All" button to force every section into the
-   * same state. Each bump increments the number; the section mirrors
-   * `groupExpanded` into its local state on every change. Local clicks
-   * afterwards still toggle individual sections — the group sync only fires
-   * when the parent actively changes the signal.
+   * Set by the parent's "Toggle All" button to force every section into the
+   * same state. The section mirrors `groupExpanded` into its local state on
+   * every change; local clicks afterwards still toggle individual sections.
+   * "Toggle All" always flips this value, so the mirror fires on each press
+   * without a separate counter.
    */
-  readonly groupSyncKey?: number;
   readonly groupExpanded?: boolean;
   readonly testId?: string;
   readonly actions?: React.ReactNode;
@@ -48,7 +47,6 @@ export function AccordionSection({
   badgeStyle,
   subtitle,
   defaultOpen = true,
-  groupSyncKey,
   groupExpanded,
   testId,
   actions,
@@ -57,9 +55,9 @@ export function AccordionSection({
   const [expanded, setExpanded] = useState(defaultOpen);
 
   useEffect(() => {
-    if (groupSyncKey === undefined || groupExpanded === undefined) return;
+    if (groupExpanded === undefined) return;
     setExpanded(groupExpanded);
-  }, [groupSyncKey, groupExpanded]);
+  }, [groupExpanded]);
 
   return (
     <div

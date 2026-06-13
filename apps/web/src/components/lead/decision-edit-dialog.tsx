@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 
 import type { DecisionEntry, Product } from "./mock-data";
@@ -31,8 +31,20 @@ interface DecisionEditDialogProps {
   readonly onCancel: () => void;
 }
 
-export function DecisionEditDialog({
-  open,
+/**
+ * D12 mount/unmount shell (react-compiler-safe): the outer component returns
+ * null when closed and mounts the inner content otherwise. Mount = fresh
+ * useState from props; close = unmount. No useEffect reset is needed — the
+ * remount is the structural reset, and the parent's openSeq dialogKey forces
+ * a fresh mount on every open. This makes the A13 invariant (products /
+ * availableStages never read in any deps array) structural.
+ */
+export function DecisionEditDialog(props: DecisionEditDialogProps) {
+  if (!props.open) return null;
+  return <DecisionEditDialogContent {...props} />;
+}
+
+function DecisionEditDialogContent({
   decision,
   defaultOwner,
   availableStages,
@@ -41,11 +53,11 @@ export function DecisionEditDialog({
   onSave,
   onCancel,
 }: DecisionEditDialogProps) {
-  "use no memo";
   const isCreate = decision === null;
 
   const [text, setText] = useState(decision?.text ?? "");
-  const [owner, setOwner] = useState(decision?.owner ?? defaultOwner ?? "");
+  // Read-only field (set once at mount); the value never changes after init.
+  const [owner] = useState(decision?.owner ?? defaultOwner ?? "");
   const [impact, setImpact] = useState(decision?.impact ?? "");
   const [deadline, setDeadline] = useState(decision?.deadline ?? "");
   const [productId, setProductId] = useState(
@@ -61,42 +73,6 @@ export function DecisionEditDialog({
     owner?: string;
     impact?: string;
   }>({});
-
-  // A13 fix: products and availableStages excluded from deps — unstable parent refs
-  // (new array/fn each render) cause form-race on autosave → React Query invalidate cycle.
-  // Dialog is key-reset by parent on open-transition instead.
-  useEffect(() => {
-    if (open) {
-      setText(decision?.text ?? "");
-      setOwner(decision?.owner ?? defaultOwner ?? "");
-      setImpact(decision?.impact ?? "");
-      setDeadline(decision?.deadline ?? "");
-      setProductId(
-        decision?.productId || defaultProductId || products?.[0]?.id || "",
-      );
-      setStageIds(
-        decision?.stageIds ??
-          (isCreate && availableStages ? [...availableStages] : []),
-      );
-      setErrors({});
-    }
-    // eslint-disable-next-line react-compiler/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    open,
-    decision?.id,
-    decision?.text,
-    decision?.owner,
-    decision?.impact,
-    decision?.deadline,
-    decision?.stageIds,
-    decision?.productId,
-    defaultOwner,
-    defaultProductId,
-    isCreate,
-  ]);
-
-  if (!open) return null;
 
   const headerVerb = isCreate ? "Add Decision" : "Edit Decision";
 

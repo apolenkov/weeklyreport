@@ -43,7 +43,6 @@ function makeStubTrpc(): TRPCProxy {
     },
     leadForm: {
       byPeriod: { pathFilter: () => ({ tag: "leadForm.byPeriod" }) },
-      versions: { pathFilter: () => ({ tag: "leadForm.versions" }) },
     },
     admin: {
       snapshot: { pathFilter: () => ({ tag: "admin.snapshot" }) },
@@ -81,7 +80,7 @@ describe("cache-keys helpers", () => {
     expect(spy).toHaveBeenCalledTimes(3);
   });
 
-  it("invalidateLeadForm covers reports.getActive + leadForm.byPeriod + leadForm.versions", () => {
+  it("invalidateLeadForm covers reports.getActive + leadForm.byPeriod", () => {
     const qc = new QueryClient();
     const spy = vi
       .spyOn(qc, "invalidateQueries")
@@ -92,12 +91,9 @@ describe("cache-keys helpers", () => {
       (c) => (c.at(0) as { tag?: string } | undefined)?.tag,
     );
     expect(tags).toEqual(
-      expect.arrayContaining([
-        "reports.getActive",
-        "leadForm.byPeriod",
-        "leadForm.versions",
-      ]),
+      expect.arrayContaining(["reports.getActive", "leadForm.byPeriod"]),
     );
+    expect(spy).toHaveBeenCalledTimes(2);
   });
 
   it("invalidateLeadHistory targets reports.myHistory", () => {

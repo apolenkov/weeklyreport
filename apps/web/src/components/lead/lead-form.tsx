@@ -21,21 +21,23 @@ import {
   invalidateLeadForm,
   invalidateLeadHistory,
 } from "../../lib/cache-keys";
-import { logClientError } from "../../lib/client-error-reporting";
 import { mapLeadFormData } from "../../lib/mappers";
+import {
+  applyCrossAuthorStageOverrides,
+  buildCrossAuthorStageMap,
+  mapForeignDecisions,
+  mapForeignItems,
+  mapForeignRisks,
+} from "../../lib/mappers/lead-cross-author";
 import {
   normalizeStageName,
   ownedStagesForProject,
-  stageNamesMatch,
 } from "../../lib/mappers/lead-form";
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
-import {
-  stageStatusToTraffic,
-  trafficToStageStatus,
-} from "../../lib/mappers/traffic-light";
+import { stageStatusToTraffic } from "../../lib/mappers/traffic-light";
 import { SessionContext } from "../../lib/session-provider";
-import { deriveEffectiveStageStatus } from "../../lib/stage-status";
 import { useTRPC } from "../../lib/trpc-context";
+import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
 import { AccordionSection } from "../report-shell/accordion-section";
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../report-shell/archive-toggle";
@@ -57,12 +59,11 @@ import type {
   Product,
   ReportPeriod,
   RiskEntry,
-  VersionSnapshot,
 } from "./mock-data";
 import { NextWeekSection } from "./next-week-section";
 import { PeriodNavigator } from "./period-navigator";
 import { RequestReopenDialog } from "./request-reopen-dialog";
-import { VersionHistoryNav } from "./version-history-nav";
+import { VersionComingSoonControl } from "./version-coming-soon";
 
 interface LeadFormProps {
   /**
@@ -249,7 +250,11 @@ function sectionToDraftPayload(
         impact: r.impact,
         mitigation: r.mitigation,
         severity: r.severity,
-        stageIds: r.stageIds,
+        // require-risk-stage: the write schema now demands ≥1 stage. The
+        // read model stays tolerant of stage-less legacy rows; sending []
+        // for such a row fails server-side validation loudly until the
+        // data is backfilled/reseeded (design D3 trade-off).
+        stageIds: r.stageIds ?? [],
       })),
     decisions: section.decisions
       .filter((d) => hasText(d.text) && hasText(d.owner) && hasText(d.impact))
@@ -306,9 +311,9 @@ export function LeadForm({
   const shouldRouteHeadLikeAwayFromLeadForm = isHeadLikeSession;
   const shouldDeferForSession = Boolean(sessionState?.isLoading);
 
-  // Four queries compose the lead-form view. `byPeriod` and `versions` depend
-  // on identifiers from `getActive` (or — 35-07 — the pinned `reportId` from
-  // the dynamic route), so they're gated by `enabled`.
+  // Three queries compose the lead-form view. `byPeriod` depends on
+  // identifiers from `getActive` (or — 35-07 — the pinned `reportId` from
+  // the dynamic route), so it's gated by `enabled`.
   const activeQ = useQuery(trpc.reports.getActive.queryOptions());
   const activeReportId = activeQ.data?.reportId ?? "";
   const activeSectionId = activeQ.data?.reportSectionId ?? "";
@@ -338,12 +343,6 @@ export function LeadForm({
   const sectionIdForActions =
     byPeriodQ.data?.section.reportSectionId ?? activeSectionId;
 
-  const versionsQ = useQuery({
-    ...trpc.leadForm.versions.queryOptions({
-      reportSectionId: sectionIdForActions,
-    }),
-    enabled: sectionIdForActions !== "",
-  });
   const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
 
   // F1: load other authors who share a product with the current user.
@@ -361,21 +360,6 @@ export function LeadForm({
       reportId: targetReportId,
     }),
     enabled: targetReportId !== "",
-  });
-
-  // F3.4: non-null when user navigates to a historical snapshot via ← › arrows.
-  const [viewedSnapshotVersion, setViewedSnapshotVersion] = useState<
-    number | null
-  >(null);
-
-  // F3.4: fetch full snapshot data for a historical version when the user
-  // navigates to it via VersionHistoryNav ← › arrows.
-  const getVersionQ = useQuery({
-    ...trpc.leadForm.getVersion.queryOptions({
-      reportSectionId: sectionIdForActions,
-      version: viewedSnapshotVersion ?? 1,
-    }),
-    enabled: viewedSnapshotVersion !== null && sectionIdForActions !== "",
   });
 
   const crossAuthors = crossAuthorsQ.data ?? [];
@@ -436,66 +420,29 @@ export function LeadForm({
     router.replace(destination);
   }, [pinnedReportId, router, shouldRouteHeadLikeAwayFromLeadForm]);
 
-  // Toast on per-query errors.
-  useEffect(() => {
-    if (activeQ.isError) {
-      logClientError("leadForm.activeReport.load_failed", activeQ.error, {
-        component: "LeadForm",
-        procedure: "reports.getActive",
-        reportId: pinnedReportId ?? null,
-      });
-      toast.error(
-        activeQ.error instanceof Error
-          ? `Failed to load active report: ${activeQ.error.message}`
-          : "Failed to load active report",
-      );
-    }
-  }, [activeQ.isError, activeQ.error, pinnedReportId]);
+  // Query error policy — log + toast via unified hook (design.md D1/D2).
+  useQueryErrorHandler(activeQ, {
+    event: "leadForm.activeReport.load_failed",
+    component: "LeadForm",
+    procedure: "reports.getActive",
+    context: { reportId: pinnedReportId ?? null },
+    toastPrefix: "Failed to load active report",
+  });
 
-  useEffect(() => {
-    if (byPeriodQ.isError) {
-      logClientError("leadForm.byPeriod.load_failed", byPeriodQ.error, {
-        component: "LeadForm",
-        procedure: "leadForm.byPeriod",
-        reportId: targetReportId || null,
-        role: sessionRole,
-      });
-      toast.error(
-        byPeriodQ.error instanceof Error
-          ? `Failed to load form: ${byPeriodQ.error.message}`
-          : "Failed to load form",
-      );
-    }
-  }, [byPeriodQ.isError, byPeriodQ.error, targetReportId, sessionRole]);
+  useQueryErrorHandler(byPeriodQ, {
+    event: "leadForm.byPeriod.load_failed",
+    component: "LeadForm",
+    procedure: "leadForm.byPeriod",
+    context: { reportId: targetReportId || null, role: sessionRole },
+    toastPrefix: "Failed to load form",
+  });
 
-  useEffect(() => {
-    if (versionsQ.isError) {
-      logClientError("leadForm.versions.load_failed", versionsQ.error, {
-        component: "LeadForm",
-        procedure: "leadForm.versions",
-        reportSectionId: sectionIdForActions || null,
-      });
-      toast.error(
-        versionsQ.error instanceof Error
-          ? `Failed to load versions: ${versionsQ.error.message}`
-          : "Failed to load versions",
-      );
-    }
-  }, [versionsQ.isError, versionsQ.error, sectionIdForActions]);
-
-  useEffect(() => {
-    if (historyQ.isError) {
-      logClientError("leadForm.history.load_failed", historyQ.error, {
-        component: "LeadForm",
-        procedure: "reports.myHistory",
-      });
-      toast.error(
-        historyQ.error instanceof Error
-          ? `Failed to load history: ${historyQ.error.message}`
-          : "Failed to load history",
-      );
-    }
-  }, [historyQ.isError, historyQ.error]);
+  useQueryErrorHandler(historyQ, {
+    event: "leadForm.history.load_failed",
+    component: "LeadForm",
+    procedure: "reports.myHistory",
+    toastPrefix: "Failed to load history",
+  });
 
   // ---- Local UI + draft state ----
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
@@ -600,31 +547,6 @@ export function LeadForm({
     }),
   );
 
-  const restoreMut = useMutation(
-    trpc.leadForm.restoreVersion.mutationOptions({
-      onSuccess: () => {
-        invalidateLeadForm(qc, trpc);
-        toast.success("Version restored");
-      },
-      onError: (err: unknown) => {
-        const msg = err instanceof Error ? err.message : "Restore failed";
-        toast.error(msg);
-      },
-    }),
-  );
-
-  const createSnapshotMut = useMutation(
-    trpc.leadForm.createSnapshot.mutationOptions({
-      onSuccess: () => {
-        invalidateLeadForm(qc, trpc);
-      },
-      onError: () => {
-        // Autosave-triggered snapshot failures are silent — the user already
-        // sees "✓ Saved"; a toast for the background snapshot would confuse.
-      },
-    }),
-  );
-
   // ---- Build draft payload ----
   const draftPayload = useMemo(
     () => (draftSection ? sectionToDraftPayload(draftSection) : null),
@@ -632,20 +554,16 @@ export function LeadForm({
   );
 
   const isLoading =
-    activeQ.isLoading ||
-    byPeriodQ.isLoading ||
-    versionsQ.isLoading ||
-    historyQ.isLoading;
+    activeQ.isLoading || byPeriodQ.isLoading || historyQ.isLoading;
   const awaitingRoleRedirect = shouldRouteHeadLikeAwayFromLeadForm;
   const awaitingCanonicalRedirect =
     !!redirectToCanonical && !pinnedReportId && activeReportId !== "";
 
   // Toggle All state — must live above the early return below, otherwise
   // the hook count drifts between renders and React throws "Rendered more
-  // hooks than during the previous render". Each Toggle All click bumps
-  // the sync key; AccordionSection mirrors the new groupExpanded into
-  // its local state. Individual sections may then drift again via clicks.
-  const [groupSyncKey, setGroupSyncKey] = useState(0);
+  // hooks than during the previous render". Each Toggle All click flips
+  // groupExpanded; AccordionSection mirrors the new value into its local
+  // state. Individual sections may then drift again via clicks.
   const [groupExpanded, setGroupExpanded] = useState(true);
   const [currentWeekAddSignal, setCurrentWeekAddSignal] = useState(0);
   const [nextWeekAddSignal, setNextWeekAddSignal] = useState(0);
@@ -672,14 +590,8 @@ export function LeadForm({
     // operands), so !isReadOnlyEarly implies !isSubmitted.
     enabled: !isReadOnlyEarly && draftSection !== null,
     initialSavedKey,
-    onSaveSuccessAction: () => {
-      // Every successful autosave creates a new version snapshot.
-      // Skip when viewing a historical snapshot (read-only overlay) or when
-      // a snapshot mutation is already in flight.
-      if (!sectionIdForActions || viewedSnapshotVersion !== null) return;
-      if (createSnapshotMut.isPending) return;
-      createSnapshotMut.mutate({ reportSectionId: sectionIdForActions });
-    },
+    // TODO(versions-v2): the save-success path used to create a version
+    // snapshot here; re-wire the trigger when versioning returns.
   });
 
   // 35-07: set document.title to surface the addressed week in the browser
@@ -726,7 +638,6 @@ export function LeadForm({
     awaitingCanonicalRedirect ||
     activeQ.data === undefined ||
     !byPeriodQ.data ||
-    !versionsQ.data ||
     !historyQ.data ||
     !draftSection
   ) {
@@ -737,7 +648,6 @@ export function LeadForm({
   const data = mapLeadFormData({
     active: activeQ.data ?? draftSection,
     byPeriod: { section: draftSection, readOnly: byPeriodQ.data.readOnly },
-    versions: versionsQ.data,
     history: historyQ.data,
   });
 
@@ -745,366 +655,48 @@ export function LeadForm({
   // crossAuthorsQ.data has { projectId, stageNames, authorName, stages } per shared product.
   // Stages not owned by the current user but assigned to another lead become
   // ownership:"locked" with their name and real risk color instead of gray "empty".
-  const _crossAuthorStageMap = new Map<
-    string,
-    Map<
-      string,
-      {
-        assignee: string;
-        status: import("../../lib/mappers/traffic-light").StageStatus;
-      }
-    >
-  >();
-  // Join with crossAuthorSectionsQ to incorporate risk severity and blocked items
-  // into stage chip color. enrichedCrossAuthors drops stageName so we use the
-  // raw crossAuthorSectionsQ data here keyed by authorId.
-  const _caSectionByAuthorId = new Map(
-    (crossAuthorSectionsQ.data ?? []).map((s) => [s.authorId, s] as const),
+  // Joined with crossAuthorSectionsQ to incorporate risk severity and blocked
+  // items into stage chip color (enrichedCrossAuthors drops stageName, so the
+  // mapper joins the raw crossAuthorSectionsQ rows keyed by authorId).
+  const crossAuthorStageMap = buildCrossAuthorStageMap(
+    crossAuthorsQ.data ?? [],
+    crossAuthorSectionsQ.data ?? [],
   );
-  for (const ca of crossAuthorsQ.data ?? []) {
-    let _sm = _crossAuthorStageMap.get(ca.projectId);
-    if (!_sm) {
-      _sm = new Map();
-      _crossAuthorStageMap.set(ca.projectId, _sm);
-    }
-    for (const sn of ca.stageNames) {
-      const norm = normalizeStageName(sn);
-      const stageEntry = ca.stages.find((s) =>
-        stageNamesMatch(s.stageName, sn),
-      );
-      const caSection = _caSectionByAuthorId.get(ca.authorId);
-      const stageRisks = (caSection?.risks ?? []).filter(
-        (r) =>
-          r.projectId === ca.projectId &&
-          r.stageNames.some((n) => normalizeStageName(n) === norm),
-      );
-      const stageItems = (caSection?.items ?? []).filter(
-        (i) =>
-          i.projectId === ca.projectId &&
-          i.stageNames.some((n) => normalizeStageName(n) === norm),
-      );
-      const status = deriveEffectiveStageStatus(
-        trafficToStageStatus(stageEntry?.status ?? null),
-        stageRisks,
-        stageItems,
-      );
-      _sm.set(norm, { assignee: ca.authorName, status });
-    }
-  }
-  const products: Product[] = (data.products as Product[]).map((product) => {
-    const stageMap = _crossAuthorStageMap.get(product.id);
-    if (!stageMap) return product;
-    return {
-      ...product,
-      stages: product.stages.map((stage) => {
-        if (stage.ownership !== "unassigned") return stage;
-        const entry = stageMap.get(normalizeStageName(stage.stageName));
-        if (!entry) return stage;
-        return {
-          ...stage,
-          ownership: "locked" as const,
-          assignee: entry.assignee,
-          status: entry.status,
-        };
-      }),
-    };
-  });
-  // F3.4: build a lookup from snapshot stageStatuses + risks + items so own-author
-  // stage chips reflect the status captured at snapshot time, not the current draft.
-  // Plain const — must stay after the early-return guard; not a hook.
-  const snapshotStageMap = (() => {
-    if (!getVersionQ.data) return null;
-    const raw = getVersionQ.data as {
-      stageStatuses?: {
-        projectId: string;
-        stageName: string;
-        status: string;
-      }[];
-      risks?: {
-        projectId: string;
-        stageName?: string | null;
-        severity?: string;
-      }[];
-      items?: {
-        projectId: string;
-        stageName?: string | null;
-        workflowStatus: string;
-      }[];
-    };
-    interface SnapEntry {
-      traffic: string;
-      risks: { severity?: string }[];
-      items: { workflowStatus: string }[];
-    }
-    const map = new Map<string, Map<string, SnapEntry>>();
-    for (const ss of raw.stageStatuses ?? []) {
-      let pm = map.get(ss.projectId);
-      if (!pm) {
-        pm = new Map();
-        map.set(ss.projectId, pm);
-      }
-      pm.set(normalizeStageName(ss.stageName), {
-        traffic: ss.status,
-        risks: [],
-        items: [],
-      });
-    }
-    for (const r of raw.risks ?? []) {
-      if (!r.stageName) continue;
-      const entry = map.get(r.projectId)?.get(normalizeStageName(r.stageName));
-      if (entry) entry.risks.push({ severity: r.severity });
-    }
-    for (const item of raw.items ?? []) {
-      if (!item.stageName) continue;
-      const entry = map
-        .get(item.projectId)
-        ?.get(normalizeStageName(item.stageName));
-      if (entry) entry.items.push({ workflowStatus: item.workflowStatus });
-    }
-    return map;
-  })();
-
-  // F3.4: when viewing a historical snapshot, override own-author stage statuses
-  // with snapshot values so chips reflect the captured state, including risks/items.
-  const displayProducts: Product[] = (() => {
-    if (!snapshotStageMap) return products;
-    return products.map((p) => {
-      const pm = snapshotStageMap.get(p.id);
-      if (!pm) return p;
-      return {
-        ...p,
-        stages: p.stages.map((s) => {
-          if (s.ownership === "locked") return s;
-          const snap = pm.get(normalizeStageName(s.stageName));
-          if (!snap) return s;
-          // snap.traffic is a raw Prisma TrafficLight value; map to StageStatus first,
-          // then derive the effective status incorporating captured risks and items.
-          const explicit = trafficToStageStatus(
-            snap.traffic as
-              | import("../../lib/mappers/traffic-light").TrafficLightStatus
-              | null,
-          );
-          return {
-            ...s,
-            status: deriveEffectiveStageStatus(
-              explicit,
-              snap.risks,
-              snap.items,
-            ),
-          };
-        }),
-      };
-    });
-  })();
+  const products: Product[] = applyCrossAuthorStageOverrides(
+    data.products,
+    crossAuthorStageMap,
+  ) as Product[];
 
   // Lookup map for resolving productName from productId in cross-author embeds.
-  const productNameById = new Map(displayProducts.map((p) => [p.id, p.name]));
-  // F3.4: when viewing a historical snapshot, substitute items/risks/decisions
-  // from the snapshot payload instead of the current draft.
-  interface SnapPayload {
-    items?: {
-      projectId: string;
-      type: string;
-      text: string;
-      workflowStatus: string;
-      stageName?: string | null;
-      priorityRank?: number | null;
-    }[];
-    risks?: {
-      projectId: string;
-      risk: string;
-      impact: string;
-      mitigation: string;
-      severity?: string;
-      stageName?: string | null;
-    }[];
-    decisions?: {
-      productId?: string | null;
-      text: string;
-      owner: string;
-      impact: string;
-      deadline?: string | null;
-      stageName?: string | null;
-    }[];
-  }
+  const productNameById = new Map(products.map((p) => [p.id, p.name]));
 
-  function snapWorkflowToStatus(ws: string): import("./mock-data").ItemStatus {
-    if (ws === "in_progress") return "in-progress";
-    if (ws === "done") return "completed";
-    if (ws === "blocked") return "blocked";
-    return "planned";
-  }
-
-  const snapRaw =
-    viewedSnapshotVersion !== null
-      ? (getVersionQ.data as SnapPayload | null)
-      : null;
-  const snapshotAuthor = draftSection.authorName;
-
-  // When in snapshot mode but snapRaw is null (still loading or API returned
-  // no data for this version), use empty arrays — never fall back to the
-  // current draft, which would misrepresent historical state.
-  const inSnapMode = viewedSnapshotVersion !== null;
-
-  const currentWeekItems: KanbanItem[] = snapRaw?.items
-    ? snapRaw.items
-        .filter((i) => i.type === "current")
-        .map(
-          (i, idx): KanbanItem => ({
-            id: `snap:cw:${idx}`,
-            productId: i.projectId,
-            productName: productNameById.get(i.projectId) ?? i.projectId,
-            stageName: i.stageName ?? undefined,
-            status: snapWorkflowToStatus(i.workflowStatus),
-            text: i.text,
-            author: snapshotAuthor,
-            priorityRank: i.priorityRank ?? null,
-          }),
-        )
-    : inSnapMode
-      ? []
-      : (data.currentWeekItems as KanbanItem[]);
-
-  const nextWeekItems: KanbanItem[] = snapRaw?.items
-    ? snapRaw.items
-        .filter((i) => i.type === "next")
-        .map(
-          (i, idx): KanbanItem => ({
-            id: `snap:nw:${idx}`,
-            productId: i.projectId,
-            productName: productNameById.get(i.projectId) ?? i.projectId,
-            stageName: i.stageName ?? undefined,
-            status: snapWorkflowToStatus(i.workflowStatus),
-            text: i.text,
-            author: snapshotAuthor,
-            priorityRank: i.priorityRank ?? null,
-          }),
-        )
-    : inSnapMode
-      ? []
-      : (data.nextWeekItems as KanbanItem[]);
-
-  const risks: RiskEntry[] = snapRaw?.risks
-    ? snapRaw.risks.map(
-        (r, idx): RiskEntry => ({
-          id: `snap:risk:${idx}`,
-          productId: r.projectId,
-          productName: productNameById.get(r.projectId) ?? r.projectId,
-          stageName: r.stageName ?? undefined,
-          severity: r.severity === "blocked" ? "blocked" : "at-risk",
-          text: r.risk,
-          impact: r.impact,
-          mitigation: r.mitigation,
-        }),
-      )
-    : inSnapMode
-      ? []
-      : (data.risks as RiskEntry[]);
-
-  const decisions: DecisionEntry[] = snapRaw?.decisions
-    ? snapRaw.decisions.map(
-        (d, idx): DecisionEntry => ({
-          id: `snap:dec:${idx}`,
-          productId: d.productId ?? "",
-          productName: productNameById.get(d.productId ?? "") ?? "",
-          text: d.text,
-          owner: d.owner,
-          impact: d.impact,
-          deadline: d.deadline ?? null,
-          stageName: d.stageName ?? undefined,
-        }),
-      )
-    : inSnapMode
-      ? []
-      : (data.decisions as DecisionEntry[]);
+  const currentWeekItems: KanbanItem[] = data.currentWeekItems as KanbanItem[];
+  const nextWeekItems: KanbanItem[] = data.nextWeekItems as KanbanItem[];
+  const risks: RiskEntry[] = data.risks as RiskEntry[];
+  const decisions: DecisionEntry[] = data.decisions as DecisionEntry[];
 
   // W5/W6: build foreign item arrays from crossAuthorSectionsQ (always-on).
-  const foreignCurrentItems: KanbanItem[] =
-    crossAuthorSectionsQ.data?.flatMap((ca) =>
-      ca.items
-        .filter((i) => i.type === "current")
-        .map(
-          (i): KanbanItem => ({
-            id: `foreign:${ca.authorId}:${i.id}`,
-            productId: i.projectId,
-            productName: productNameById.get(i.projectId) ?? i.projectId,
-            stageIds: i.stageNames,
-            status: (i.workflowStatus === "in_progress"
-              ? "in-progress"
-              : i.workflowStatus === "done"
-                ? "completed"
-                : i.workflowStatus === "blocked"
-                  ? "blocked"
-                  : "planned") as import("./mock-data").ItemStatus,
-            text: i.text,
-            author: ca.authorName,
-            authorId: ca.authorId,
-            foreign: true,
-          }),
-        ),
-    ) ?? [];
+  const foreignCurrentItems: KanbanItem[] = mapForeignItems(
+    crossAuthorSectionsQ.data ?? [],
+    productNameById,
+    "current",
+  );
 
-  const foreignNextItems: KanbanItem[] =
-    crossAuthorSectionsQ.data?.flatMap((ca) =>
-      ca.items
-        .filter((i) => i.type === "next")
-        .map(
-          (i): KanbanItem => ({
-            id: `foreign:${ca.authorId}:${i.id}`,
-            productId: i.projectId,
-            productName: productNameById.get(i.projectId) ?? i.projectId,
-            stageIds: i.stageNames,
-            status: (i.workflowStatus === "in_progress"
-              ? "in-progress"
-              : i.workflowStatus === "done"
-                ? "completed"
-                : i.workflowStatus === "blocked"
-                  ? "blocked"
-                  : "planned") as import("./mock-data").ItemStatus,
-            text: i.text,
-            author: ca.authorName,
-            authorId: ca.authorId,
-            foreign: true,
-          }),
-        ),
-    ) ?? [];
+  const foreignNextItems: KanbanItem[] = mapForeignItems(
+    crossAuthorSectionsQ.data ?? [],
+    productNameById,
+    "next",
+  );
 
-  const foreignRisks: RiskEntry[] =
-    crossAuthorSectionsQ.data?.flatMap((ca) =>
-      ca.risks.map(
-        (r): RiskEntry => ({
-          id: `foreign:${ca.authorId}:${r.id}`,
-          productId: r.projectId,
-          productName: productNameById.get(r.projectId) ?? r.projectId,
-          stageIds: r.stageNames,
-          severity: r.severity === "blocked" ? "blocked" : "at-risk",
-          text: r.risk,
-          impact: r.impact,
-          mitigation: r.mitigation,
-          authorName: ca.authorName,
-          authorId: ca.authorId,
-          foreign: true,
-        }),
-      ),
-    ) ?? [];
+  const foreignRisks: RiskEntry[] = mapForeignRisks(
+    crossAuthorSectionsQ.data ?? [],
+    productNameById,
+  );
 
-  const foreignDecisions: DecisionEntry[] =
-    crossAuthorSectionsQ.data?.flatMap((ca) =>
-      ca.decisions.map(
-        (d): DecisionEntry => ({
-          id: `foreign:${ca.authorId}:${d.id}`,
-          productId: d.productId,
-          productName: productNameById.get(d.productId) ?? d.productId,
-          text: d.text,
-          owner: d.owner,
-          impact: d.impact,
-          deadline: d.deadline ? d.deadline.toISOString().slice(0, 10) : null,
-          stageIds: d.stageNames,
-          authorId: ca.authorId,
-          foreign: true,
-        }),
-      ),
-    ) ?? [];
+  const foreignDecisions: DecisionEntry[] = mapForeignDecisions(
+    crossAuthorSectionsQ.data ?? [],
+    productNameById,
+  );
 
   const mergedCurrentItems = [...currentWeekItems, ...foreignCurrentItems];
   const mergedNextItems = [...nextWeekItems, ...foreignNextItems];
@@ -1125,7 +717,6 @@ export function LeadForm({
     .filter((r): r is number => r != null);
 
   const periods: ReportPeriod[] = data.periods as ReportPeriod[];
-  const versions: VersionSnapshot[] = data.versions as VersionSnapshot[];
   const currentUser = data.currentUser;
   const selectedPeriod = periods.find(
     (period) => period.id === selectedPeriodId && period.id !== "",
@@ -1144,9 +735,7 @@ export function LeadForm({
         ? [...visibleNonArchivedPeriods, selectedPeriod]
         : visibleNonArchivedPeriods;
 
-  // F3.4: viewing a historical snapshot forces read-only mode.
-  const isViewingSnapshot = viewedSnapshotVersion !== null;
-  const isReadOnly = data.readOnly || isSubmitted || isViewingSnapshot;
+  const isReadOnly = data.readOnly || isSubmitted;
 
   // 35-04: per-project stages-the-lead-owns selector. Forwarded into the
   // Item / Risk dialogs so the SDLC stage dropdown is scoped per project.
@@ -1422,36 +1011,21 @@ export function LeadForm({
     });
   }
 
-  function handleRestoreVersion(version: number) {
-    if (!sectionIdForActions) return;
-    if (
-      autosave.dirty &&
-      !window.confirm("You have unsaved changes. Continue and overwrite?")
-    ) {
-      return;
-    }
-    restoreMut.mutate({ reportSectionId: sectionIdForActions, version });
-  }
-
   function handleToggleAll() {
     setGroupExpanded((prev) => !prev);
-    setGroupSyncKey((k) => k + 1);
   }
 
   // Autosave indicator label — 4-state badge.
-  // Use the same versions array that feeds VersionHistoryNav so the badge
-  // never shows a stale version number (e.g. "Version 1" when v4 is live).
-  const latestVersionNumber =
-    versions.length > 0 ? (versions[0]?.version ?? null) : null;
-  const versionPrefix =
-    latestVersionNumber != null ? `Version ${latestVersionNumber} · ` : "";
   const autosaveLabel =
     autosave.state === "saving"
       ? "↻ Saving…"
       : autosave.state === "pending"
         ? "● Pending…"
         : autosave.state === "saved" && autosave.lastSavedAt
-          ? `${versionPrefix}${autosave.lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+          ? autosave.lastSavedAt.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
           : autosave.state === "error"
             ? "⚠ Save failed"
             : "Autosaved";
@@ -1586,20 +1160,7 @@ export function LeadForm({
                 orientation="vertical"
                 className="h-5 bg-[var(--color-border)]"
               />
-              <VersionHistoryNav
-                versions={versions}
-                onRestore={isReadOnly ? undefined : handleRestoreVersion}
-                onViewVersion={(v) => {
-                  // Reset add-signal counters so no stale trigger fires when
-                  // returning from snapshot view (D1 fix companion).
-                  if (v !== null) {
-                    setCurrentWeekAddSignal(0);
-                    setNextWeekAddSignal(0);
-                  }
-                  setViewedSnapshotVersion(v);
-                }}
-                viewedVersion={viewedSnapshotVersion}
-              />
+              <VersionComingSoonControl />
               {!isReadOnly && (
                 <>
                   <Separator
@@ -1627,31 +1188,7 @@ export function LeadForm({
             </div>
           )}
 
-        {/* F3.4: snapshot preview banner — shown when user navigates to a
-            historical version via VersionHistoryNav ← ›. Stages reflect
-            status captured at snapshot time; content is read-only. */}
-        {isViewingSnapshot && (
-          <div className="flex items-center justify-between gap-3 rounded-[var(--radius)] border border-[var(--color-starbucks-accent)]/40 bg-[var(--color-success)] p-3">
-            <span className="text-sm font-medium text-[var(--color-starbucks-accent)]">
-              {getVersionQ.isLoading
-                ? `Loading snapshot v${viewedSnapshotVersion}…`
-                : `Viewing snapshot v${viewedSnapshotVersion} — read-only. Stage statuses reflect this version.`}
-            </span>
-            <button
-              type="button"
-              className="rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] px-3 py-1 text-xs font-semibold text-[var(--color-starbucks-accent)] hover:bg-[var(--color-starbucks-accent)]/10 transition-colors"
-              onClick={() => setViewedSnapshotVersion(null)}
-            >
-              Back to current
-            </button>
-          </div>
-        )}
-
-        {/* F3.4: while snapshot data is in flight, show skeleton to prevent
-            the current draft content from flashing under the snapshot banner. */}
-        {isViewingSnapshot && getVersionQ.isLoading ? (
-          <LeadFormSkeleton />
-        ) : isSlidesMode ? (
+        {isSlidesMode ? (
           <LeadSlidesClient
             initialReportId={targetReportId || pinnedReportId || null}
             chrome="content"
@@ -1664,7 +1201,7 @@ export function LeadForm({
           // the standalone deck.
           <div className="min-w-0 space-y-6">
             <LeadFormSyncBridge.Provider
-              products={displayProducts}
+              products={products}
               risks={risks}
               onProductsChange={handleProductsChange}
               onRisksChange={handleRisksChange}
@@ -1678,7 +1215,6 @@ export function LeadForm({
               displayRisks={mergedRisks}
             >
               <AccordionSection
-                groupSyncKey={groupSyncKey}
                 groupExpanded={groupExpanded}
                 testId="lead-section-product-status"
                 icon={<GridIcon />}
@@ -1691,7 +1227,6 @@ export function LeadForm({
 
               {/* Current Week */}
               <AccordionSection
-                groupSyncKey={groupSyncKey}
                 groupExpanded={groupExpanded}
                 testId="lead-section-current-week"
                 icon={<CalendarIcon />}
@@ -1732,7 +1267,6 @@ export function LeadForm({
 
               {/* Next Week */}
               <AccordionSection
-                groupSyncKey={groupSyncKey}
                 groupExpanded={groupExpanded}
                 testId="lead-section-next-week"
                 icon={<NextWeekIcon />}
@@ -1771,7 +1305,6 @@ export function LeadForm({
 
               {/* Risks & Blockers */}
               <AccordionSection
-                groupSyncKey={groupSyncKey}
                 groupExpanded={groupExpanded}
                 testId="lead-section-risks"
                 icon={<AlertIcon />}
@@ -1807,7 +1340,6 @@ export function LeadForm({
 
             {/* Decisions */}
             <AccordionSection
-              groupSyncKey={groupSyncKey}
               groupExpanded={groupExpanded}
               testId="lead-section-decisions"
               icon={<ChatIcon />}

@@ -240,10 +240,23 @@ describe("RisksSection stage scope", () => {
     expect(screen.getByText("Testing")).toBeInTheDocument();
   });
 
-  it("keeps All stages only for omitted stage scope", () => {
+  it("renders a No-stage-set warning chip for omitted stage scope (require-risk-stage)", () => {
+    // New contract: a risk with no stages is a legacy anomaly, never an
+    // implicit "all stages" scope — the card must say so loudly.
     render(<RisksSection risks={[baseRisk]} />);
 
-    expect(screen.getByText("All stages")).toBeInTheDocument();
+    expect(screen.getByText("No stage set")).toBeInTheDocument();
+    expect(screen.queryByText("All stages")).not.toBeInTheDocument();
+  });
+
+  it("resolves the legacy stageName fallback before warning", () => {
+    render(
+      <RisksSection risks={[{ ...baseRisk, stageName: "Development" }]} />,
+    );
+
+    expect(screen.getByText("Development")).toBeInTheDocument();
+    expect(screen.queryByText("No stage set")).not.toBeInTheDocument();
+    expect(screen.queryByText("All stages")).not.toBeInTheDocument();
   });
 
   it("renders every explicit stage without compacting", () => {

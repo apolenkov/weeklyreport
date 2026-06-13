@@ -1,0 +1,202 @@
+// fix-lead-surface-name-resolution: pins the name-only `referencedProjects`
+// emission of mapPrismaToReportSection — rows (items / risks / decisions)
+// referencing a project the section author owns no stage on contribute the
+// project's name so the lead-surface mappers never show "Unknown"/"Group"
+// for a product the system can name.
+import { describe, expect, it } from "vitest";
+
+import {
+  mapPrismaToReportSection,
+  type PrismaReportSectionWithRelations,
+} from "./report-sections.prisma-repository";
+
+const SECTION_ID = "11111111-1111-4111-8111-111111111111";
+const REPORT_ID = "22222222-2222-4222-8222-222222222222";
+const AUTHOR_ID = "33333333-3333-4333-8333-333333333333";
+const OWNED_PROJECT = "44444444-4444-4444-8444-444444444444";
+const UNOWNED_PROJECT = "55555555-5555-4555-8555-555555555555";
+const STAGE_ID = "66666666-6666-4666-8666-666666666666";
+
+type FabricatedRow = Pick<
+  PrismaReportSectionWithRelations,
+  | "author"
+  | "projectStatuses"
+  | "stageStatuses"
+  | "items"
+  | "risks"
+  | "decisions"
+> & {
+  id: string;
+  reportId: string;
+  authorId: string;
+  status: string;
+  submittedAt: Date | null;
+  late: boolean;
+};
+
+function baseRow(overrides: Partial<FabricatedRow> = {}): FabricatedRow {
+  return {
+    id: SECTION_ID,
+    reportId: REPORT_ID,
+    authorId: AUTHOR_ID,
+    status: "draft",
+    submittedAt: null,
+    late: false,
+    author: {
+      name: "Lead 1",
+      role: "lead",
+      id: AUTHOR_ID,
+      stageAssignments: [
+        {
+          userId: AUTHOR_ID,
+          stageId: STAGE_ID,
+          projectId: OWNED_PROJECT,
+          project: {
+            id: OWNED_PROJECT,
+            name: "Owned Project",
+            archived: false,
+          },
+          stage: { id: STAGE_ID, name: "Development", sortOrder: 4 },
+        },
+      ],
+    },
+    projectStatuses: [],
+    stageStatuses: [],
+    items: [],
+    risks: [],
+    decisions: [],
+    ...overrides,
+  };
+}
+
+function mapRow(row: FabricatedRow) {
+  return mapPrismaToReportSection(
+    row as unknown as PrismaReportSectionWithRelations,
+  );
+}
+
+function fabricatedRisk(
+  projectId: string,
+  project: { name: string } | undefined,
+) {
+  return {
+    id: "77777777-7777-4777-8777-777777777777",
+    projectId,
+    risk: "Cross-stage risk",
+    impact: "Impact",
+    mitigation: "Mitigation",
+    severity: "at-risk",
+    stageNames: [],
+    project,
+  };
+}
+
+describe("mapPrismaToReportSection — referencedProjects", () => {
+  it("emits a name-only entry for a project a risk references but the author owns no stage on", () => {
+    const section = mapRow(
+      baseRow({
+        risks: [fabricatedRisk(UNOWNED_PROJECT, { name: "Foreign Project" })],
+      }),
+    );
+
+    expect(section.referencedProjects).toEqual([
+      { projectId: UNOWNED_PROJECT, projectName: "Foreign Project" },
+    ]);
+    // Name-only: the stage-owned `projects` array is NOT widened, so no
+    // stray product card / ProjectStatus write / submit demand appears.
+    expect(section.projects.map((p) => p.projectId)).toEqual([OWNED_PROJECT]);
+  });
+
+  it("collects names from items and decisions too", () => {
+    const section = mapRow(
+      baseRow({
+        items: [
+          {
+            id: "88888888-8888-4888-8888-888888888888",
+            projectId: UNOWNED_PROJECT,
+            type: "current",
+            text: "Cross-stage item",
+            tag: "feature",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            completed: null,
+            priorityRank: null,
+            stageNames: [],
+            project: { name: "Foreign Project" },
+          },
+        ],
+        decisions: [
+          {
+            id: "99999999-9999-4999-8999-999999999999",
+            text: "Cross-stage decision",
+            owner: "Owner",
+            deadline: null,
+            impact: "Impact",
+            resolvedAt: null,
+            stageNames: [],
+            productId: UNOWNED_PROJECT,
+            project: { name: "Foreign Project" },
+          },
+        ],
+      }),
+    );
+
+    expect(section.referencedProjects).toEqual([
+      { projectId: UNOWNED_PROJECT, projectName: "Foreign Project" },
+    ]);
+  });
+
+  it("excludes stage-owned projects — they already carry their name in `projects`", () => {
+    const section = mapRow(
+      baseRow({
+        risks: [fabricatedRisk(OWNED_PROJECT, { name: "Owned Project" })],
+      }),
+    );
+
+    expect(section.referencedProjects).toEqual([]);
+  });
+
+  it("resolves a referenced-only archived project's name (design Open Question 2)", () => {
+    // The author's stage assignment on an archived project is skipped from
+    // `projects`, so the project counts as referenced-only — yet its name
+    // still resolves rather than degrading to a placeholder.
+    const section = mapRow(
+      baseRow({
+        author: {
+          name: "Lead 1",
+          role: "lead",
+          id: AUTHOR_ID,
+          stageAssignments: [
+            {
+              userId: AUTHOR_ID,
+              stageId: STAGE_ID,
+              projectId: OWNED_PROJECT,
+              project: {
+                id: OWNED_PROJECT,
+                name: "Archived Project",
+                archived: true,
+              },
+              stage: { id: STAGE_ID, name: "Development", sortOrder: 4 },
+            },
+          ],
+        },
+        risks: [fabricatedRisk(OWNED_PROJECT, { name: "Archived Project" })],
+      }),
+    );
+
+    expect(section.projects).toEqual([]);
+    expect(section.referencedProjects).toEqual([
+      { projectId: OWNED_PROJECT, projectName: "Archived Project" },
+    ]);
+  });
+
+  it("skips rows without a loaded project relation (legacy fixture shape)", () => {
+    const section = mapRow(
+      baseRow({
+        risks: [fabricatedRisk(UNOWNED_PROJECT, undefined)],
+      }),
+    );
+
+    expect(section.referencedProjects).toEqual([]);
+  });
+});

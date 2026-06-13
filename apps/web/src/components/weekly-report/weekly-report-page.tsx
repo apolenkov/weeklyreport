@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useContext, useEffect, useMemo } from "react";
+import { type ReactNode, useContext, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 
 import {
@@ -11,20 +11,21 @@ import {
   invalidateLeadForm,
   invalidateLeadHistory,
 } from "../../lib/cache-keys";
-import {
-  formatClientErrorMessage,
-  logClientError,
-} from "../../lib/client-error-reporting";
 import { joinPeriodLabel } from "../../lib/format-date";
 import { mapWeeklyReport } from "../../lib/mappers";
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
+import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
 import type {
   PortfolioProduct,
   ProductReport,
   ReportPeriod,
 } from "../dashboard/mock-data";
+import {
+  ReportToolbar,
+  ReportToolbarCenterLabel,
+} from "../report-shell/report-toolbar";
 import { ExportPdfButton } from "./export-pdf-button";
 import { HeadPeriodNavigator } from "./period-navigator";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
@@ -56,6 +57,16 @@ interface WeeklyReportPageProps {
    * leads own their own phases, so the duplication is expected.
    */
   readonly scope?: "product" | "lead";
+  /**
+   * head-toolbar-parity D2: a page must not stack two period toolbars. When
+   * an outer shell (HeadReportShell) composes the page's single shared
+   * ReportToolbar, it passes the element here; the page renders it in the
+   * toolbar slot below the page header row — the lead arrangement — instead
+   * of its own period-context toolbar. Standalone consumers (bare
+   * /head/report, /reports/[reportId], lead preview, present client) omit it
+   * and keep the page's own toolbar.
+   */
+  readonly toolbar?: ReactNode;
 }
 
 export function WeeklyReportPage({
@@ -64,6 +75,7 @@ export function WeeklyReportPage({
   canonicalBasePath = "/head/report",
   authorId,
   scope = "product",
+  toolbar,
 }: WeeklyReportPageProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
@@ -134,19 +146,13 @@ export function WeeklyReportPage({
     }),
   );
 
-  useEffect(() => {
-    if (weeklyQ.isError) {
-      logClientError("weeklyReport.get.load_failed", weeklyQ.error, {
-        component: "WeeklyReportPage",
-        procedure: "weeklyReport.get",
-        reportId: reportId ?? null,
-        authorId: focusedAuthorId,
-      });
-      toast.error(
-        formatClientErrorMessage("Failed to load status report", weeklyQ.error),
-      );
-    }
-  }, [weeklyQ.isError, weeklyQ.error, reportId, focusedAuthorId]);
+  useQueryErrorHandler(weeklyQ, {
+    event: "weeklyReport.get.load_failed",
+    component: "WeeklyReportPage",
+    procedure: "weeklyReport.get",
+    context: { reportId: reportId ?? null, authorId: focusedAuthorId },
+    toastPrefix: "Failed to load status report",
+  });
 
   // 35-07: bare `/head/report` -> redirect to `/head/report/<reportId>`
   // once the active reportId is known. Skipped when:
@@ -346,20 +352,22 @@ export function WeeklyReportPage({
         </div>
       </div>
 
-      {/* Context shell: Period nav + department */}
-      <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.78)_100%)] px-4 py-3.5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.06),0_10px_24px_-20px_rgba(0,0,0,0.22),0_1px_2px_0_rgba(0,0,0,0.05)]">
-        <HeadPeriodNavigator periods={periods} />
-
-        <div className="flex min-w-[180px] flex-1 items-center justify-center gap-2">
-          <span className="text-sm text-[var(--color-muted-foreground)]">
-            {departmentLabel}
-          </span>
-          <span className="text-[var(--color-muted-foreground)]">&middot;</span>
-          <span className="text-sm text-[var(--color-muted-foreground)]">
-            Live portfolio review
-          </span>
-        </div>
-      </div>
+      {/* Period-context toolbar: shared ReportToolbar container
+          (head-toolbar-parity D2 — replaces the bespoke gradient bar). A
+          shell-composed toolbar arrives via the `toolbar` slot and renders
+          here, below the page header row, so the page keeps the lead
+          arrangement and never stacks two period toolbars. */}
+      {toolbar ?? (
+        <ReportToolbar
+          periodNavigator={<HeadPeriodNavigator periods={periods} />}
+          leadingExtras={
+            <ReportToolbarCenterLabel
+              label={departmentLabel}
+              detail="Live portfolio review"
+            />
+          }
+        />
+      )}
 
       {/* A32: empty-state — no submissions in current open/reopened period.
           When submissionCount === 0 and the period is not yet published,

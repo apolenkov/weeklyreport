@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 
+import { useEditableListDialog } from "../../hooks/use-editable-list-dialog";
 import { LockBadge } from "../report-shell/lock-badge";
 import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import type { Product, RiskEntry } from "./mock-data";
+import { DeleteIcon, EditIcon } from "./risk-card-icons";
 import { RiskEditDialog } from "./risk-edit-dialog";
 import { canonicalStageName, splitStageNames } from "./stage-tags";
 
@@ -14,8 +16,17 @@ interface RisksSectionProps {
   readonly readOnly?: boolean;
   /** Controlled-component callback fired with the next risks array on add/edit/delete. */
   readonly onChange?: (next: RiskEntry[]) => void;
-  /** Fired when the text of a risk transitions empty -> non-empty (used by status<->risk sync). */
-  readonly onRiskFilled?: (riskId: string) => void;
+  /**
+   * unify-risk-stage-status (D2): chip-raise interception payload. Each
+   * `signal` increment opens the create dialog prefilled with the clicked
+   * product, stage, and severity.
+   */
+  readonly addPrefill?: {
+    signal: number;
+    productId: string;
+    stageIds: string[];
+    severity: "at-risk" | "blocked";
+  };
   /**
    * Products list — required so the edit dialog can show a project picker
    * and the empty-state can seed the first product. When absent or empty,
@@ -36,112 +47,91 @@ interface RisksSectionProps {
   readonly addSignal?: number;
 }
 
-function EditIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-      <path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  );
-}
-
-function DeleteIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
-    </svg>
-  );
-}
-
 export function RisksSection({
   risks,
   readOnly = false,
   onChange,
-  onRiskFilled,
+  addPrefill,
   products,
   stagesForProduct,
   sectionAuthorName,
   addSignal = 0,
 }: RisksSectionProps) {
-  const [dialogState, setDialogState] = useState<
-    | { open: false }
-    | { open: true; mode: "create"; seedProductId?: string }
-    | { open: true; mode: "edit"; risk: RiskEntry }
-  >({ open: false });
-  const [pendingDelete, setPendingDelete] = useState<RiskEntry | null>(null);
+  const firstProductId = products?.[0]?.id;
+
+  // Shared dialog lifecycle (DialogState union, D1 readOnly-ref add-signal
+  // effect, D13 openSeq remount key, pending-delete). requireSeed is false:
+  // a risk can be created even before any product exists.
+  const {
+    dialogState,
+    dialogKey,
+    openCreate,
+    openEdit,
+    close,
+    pendingDelete,
+    requestDelete,
+    clearPendingDelete,
+  } = useEditableListDialog<RiskEntry>({
+    readOnly,
+    addSignal,
+    seedProductId: firstProductId,
+  });
+
+  // unify-risk-stage-status (D2): create-mode prefill (clicked stage +
+  // severity) for the chip-raise interception. The hook owns the single
+  // open source, so this stays caller-side (D3) and is cleared on close so
+  // a later plain "+ Add Risk" mounts clean.
+  const [createPrefill, setCreatePrefill] = useState<{
+    stageIds?: string[];
+    severity?: "at-risk" | "blocked";
+  } | null>(null);
 
   function handleDelete(id: string) {
-    if (readOnly) return;
     const risk = risks.find((r) => r.id === id);
     if (!risk) return;
-    setPendingDelete(risk);
+    requestDelete(risk);
   }
 
   function confirmDelete() {
     if (!pendingDelete) return;
     onChange?.(risks.filter((r) => r.id !== pendingDelete.id));
-    setPendingDelete(null);
+    clearPendingDelete();
   }
 
   function handleEdit(risk: RiskEntry) {
-    if (readOnly) return;
-    setDialogState({ open: true, mode: "edit", risk });
+    openEdit(risk);
   }
 
   function handleDialogSave(
     saved: RiskEntry & { impact: string; mitigation: string },
   ) {
     if (readOnly) return;
-    const wasEmpty =
-      dialogState.open && dialogState.mode === "edit"
-        ? dialogState.risk.text.trim().length === 0
-        : true;
-
     if (dialogState.open && dialogState.mode === "create") {
       onChange?.([...risks, saved]);
     } else {
       onChange?.(risks.map((r) => (r.id === saved.id ? saved : r)));
     }
-
-    if (wasEmpty && saved.text.trim().length > 0) {
-      onRiskFilled?.(saved.id);
-    }
-    setDialogState({ open: false });
+    setCreatePrefill(null);
+    close();
   }
 
   function handleDialogCancel() {
-    setDialogState({ open: false });
+    setCreatePrefill(null);
+    close();
   }
 
-  const firstProductId = products?.[0]?.id;
-
+  // unify-risk-stage-status (D2): chip-raise interception opens the create
+  // dialog prefilled. The readOnly stale-signal guard now lives in the hook;
+  // here we stash the clicked stage/severity, then ask the hook to open
+  // create mode seeded with the clicked product (one open source).
   useEffect(() => {
-    if (addSignal === 0) return;
-    if (readOnly) return;
-    setDialogState({
-      open: true,
-      mode: "create",
-      seedProductId: firstProductId,
+    if (!addPrefill || addPrefill.signal === 0) return;
+    setCreatePrefill({
+      stageIds: addPrefill.stageIds,
+      severity: addPrefill.severity,
     });
-  }, [addSignal, readOnly, firstProductId]);
+    openCreate(addPrefill.productId);
+  }, [addPrefill, openCreate]);
 
   return (
     <div className="space-y-4">
@@ -165,12 +155,13 @@ export function RisksSection({
               ? risk.stageIds.map(canonicalStageName)
               : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
                 splitStageNames(risk.stageName);
-          // Empty means implicit all assigned stages. A non-empty stageIds
-          // array is explicit user scope, even when it contains every stage.
+          // require-risk-stage (D2): a risk with no stages is an anomaly
+          // (legacy row), never an implicit "all stages" scope — render the
+          // loud "No stage set" warning chip instead of disguising it.
           // Keep every selected stage visible; seven SDLC chips fit better
           // than hiding critical scope behind "+N".
           const stageTagsLabel =
-            stageTags.length === 0 ? "All stages" : stageTags.join(", ");
+            stageTags.length === 0 ? "No stage set" : stageTags.join(", ");
           // F4: warn when the linked product is at-risk/blocked but no
           // explicit stage is selected for this risk row.
           const linkedProductStatus = products?.find(
@@ -281,6 +272,7 @@ export function RisksSection({
                 stageTags={stageTags}
                 ariaLabel={`Risk stages: ${stageTagsLabel}`}
                 foreign={false}
+                emptyStageChip="no-stage-warning"
               />
             </div>
           );
@@ -288,11 +280,11 @@ export function RisksSection({
       )}
 
       <RiskEditDialog
-        key={`${dialogState.open}-${dialogState.open && dialogState.mode === "edit" ? dialogState.risk.id : "new"}`}
+        key={dialogKey}
         open={dialogState.open}
         risk={
           dialogState.open && dialogState.mode === "edit"
-            ? dialogState.risk
+            ? dialogState.entity
             : null
         }
         products={products ?? []}
@@ -301,14 +293,24 @@ export function RisksSection({
             ? dialogState.seedProductId
             : undefined
         }
+        initialStageIds={
+          dialogState.open && dialogState.mode === "create"
+            ? createPrefill?.stageIds
+            : undefined
+        }
+        initialSeverity={
+          dialogState.open && dialogState.mode === "create"
+            ? createPrefill?.severity
+            : undefined
+        }
         initialImpact={
           dialogState.open && dialogState.mode === "edit"
-            ? dialogState.risk.impact
+            ? dialogState.entity.impact
             : ""
         }
         initialMitigation={
           dialogState.open && dialogState.mode === "edit"
-            ? dialogState.risk.mitigation
+            ? dialogState.entity.mitigation
             : ""
         }
         stagesForProduct={stagesForProduct}
@@ -323,11 +325,11 @@ export function RisksSection({
         subtitle={
           pendingDelete
             ? // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-              `${pendingDelete.productName} · ${(pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).length > 0 ? (pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).join(", ") : "all stages"}`
+              `${pendingDelete.productName} · ${(pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).length > 0 ? (pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).join(", ") : "no stage set"}`
             : undefined
         }
         onConfirm={confirmDelete}
-        onCancel={() => setPendingDelete(null)}
+        onCancel={clearPendingDelete}
       />
     </div>
   );
