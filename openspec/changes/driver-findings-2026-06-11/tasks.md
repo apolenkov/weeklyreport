@@ -68,7 +68,7 @@ it first so the two changes do not implement the same fix twice.
       trigger shows the displayed period (not `periods[0]`) on
       `/head/report/<activeId>`.
 
-- [ ] 2.5 After landing 2.1, run `npx openspec validate driver-findings-2026-06-11`
+- [x] 2.5 After landing 2.1, run `npx openspec validate driver-findings-2026-06-11`
       then gates `pnpm typecheck && pnpm lint && pnpm test` for the touched
       packages. The `client-error-policy` delta (validation-error suppression +
       4xx no-retry) MUST be covered by the formatter and retry-predicate tests
