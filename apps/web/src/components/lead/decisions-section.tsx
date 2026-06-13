@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-
+import { useEditableListDialog } from "../../hooks/use-editable-list-dialog";
 import { LockBadge } from "../report-shell/lock-badge";
 import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
@@ -108,31 +107,34 @@ export function DecisionsSection({
   defaultProductId,
   addSignal = 0,
 }: DecisionsSectionProps) {
-  const [dialogState, setDialogState] = useState<
-    | { open: false }
-    | { open: true; mode: "create" }
-    | { open: true; mode: "edit"; decision: DecisionEntry }
-  >({ open: false });
-  const [pendingDelete, setPendingDelete] = useState<DecisionEntry | null>(
-    null,
-  );
+  // Shared dialog lifecycle (DialogState union, D1 readOnly-ref add-signal
+  // effect, D13 openSeq remount key, pending-delete). Create mode has no
+  // seed product — the dialog gets defaultProductId directly as a prop — so
+  // requireSeed stays false.
+  const {
+    dialogState,
+    dialogKey,
+    openEdit,
+    close,
+    pendingDelete,
+    requestDelete,
+    clearPendingDelete,
+  } = useEditableListDialog<DecisionEntry>({ readOnly, addSignal });
 
   function handleDelete(id: string) {
-    if (readOnly) return;
     const decision = decisions.find((d) => d.id === id);
     if (!decision) return;
-    setPendingDelete(decision);
+    requestDelete(decision);
   }
 
   function confirmDelete() {
     if (!pendingDelete) return;
     onChange?.(decisions.filter((d) => d.id !== pendingDelete.id));
-    setPendingDelete(null);
+    clearPendingDelete();
   }
 
   function handleEdit(decision: DecisionEntry) {
-    if (readOnly) return;
-    setDialogState({ open: true, mode: "edit", decision });
+    openEdit(decision);
   }
 
   function handleDialogSave(saved: DecisionEntry) {
@@ -150,25 +152,12 @@ export function DecisionsSection({
     } else {
       onChange?.(decisions.map((d) => (d.id === saved.id ? saved : d)));
     }
-    setDialogState({ open: false });
+    close();
   }
 
   function handleDialogCancel() {
-    setDialogState({ open: false });
+    close();
   }
-
-  // Keep a ref so the addSignal effect can read the latest readOnly value
-  // without including readOnly in the dep array. If readOnly were in deps,
-  // the effect would re-fire on snapshot enter/exit and re-open the dialog
-  // from a stale non-zero addSignal counter (D1 fix).
-  const readOnlyRef = useRef(readOnly);
-  readOnlyRef.current = readOnly;
-
-  useEffect(() => {
-    if (addSignal === 0) return;
-    if (readOnlyRef.current) return;
-    setDialogState({ open: true, mode: "create" });
-  }, [addSignal]);
 
   return (
     <div className="space-y-3">
@@ -274,11 +263,11 @@ export function DecisionsSection({
       )}
 
       <DecisionEditDialog
-        key={`${dialogState.open}-${dialogState.open && dialogState.mode === "edit" ? dialogState.decision.id : "new"}`}
+        key={dialogKey}
         open={dialogState.open}
         decision={
           dialogState.open && dialogState.mode === "edit"
-            ? dialogState.decision
+            ? dialogState.entity
             : null
         }
         defaultOwner={currentUserName}
@@ -295,7 +284,7 @@ export function DecisionsSection({
         preview={pendingDelete?.text || "(no description)"}
         subtitle={pendingDelete ? `Owner: ${pendingDelete.owner}` : undefined}
         onConfirm={confirmDelete}
-        onCancel={() => setPendingDelete(null)}
+        onCancel={clearPendingDelete}
       />
     </div>
   );
