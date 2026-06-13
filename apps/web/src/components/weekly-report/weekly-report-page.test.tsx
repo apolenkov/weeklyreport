@@ -14,6 +14,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -613,5 +614,91 @@ describe("WeeklyReportPage — shared period toolbar (head-toolbar-parity)", () 
       heading.compareDocumentPosition(shellToolbar) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+});
+
+// Driver finding 1: a load failure (e.g. a malformed reportId → 400
+// BAD_REQUEST) must render a distinct invalid-link state, NOT the misleading
+// "No active reporting period" empty-state.
+describe("WeeklyReportPage — load-failure state (driver finding 1)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
+  function makeBadRequestError(): TRPCClientError<never> {
+    // Mirrors the live shape: a malformed reportId fails the UUID check and
+    // tRPC serializes the Zod issues array into error.message with a
+    // BAD_REQUEST / httpStatus 400 data envelope.
+    const error = new TRPCClientError<never>("Invalid UUID");
+    Object.defineProperty(error, "data", {
+      value: { code: "BAD_REQUEST", httpStatus: 400 },
+      configurable: true,
+    });
+    return error;
+  }
+
+  function renderFailingPage() {
+    const { proxy } = createMockTRPC([
+      {
+        path: ["weeklyReport", "get"],
+        query: () => {
+          throw makeBadRequestError();
+        },
+      },
+      { path: ["period", "publish"], mutation: true },
+      { path: ["period", "reopen"], mutation: true },
+      { path: ["pdfExport", "request"], mutation: true },
+      { path: ["pdfExport", "status"], query: null },
+      { path: ["archive", "archiveReport"], mutation: true },
+    ]);
+
+    const qc = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    function Wrapper({ children }: { readonly children: ReactNode }) {
+      return (
+        <QueryClientProvider client={qc}>
+          <SessionContext.Provider
+            value={{
+              user: {
+                id: "head-user-id",
+                name: "Test User",
+                email: "test.user@example.com",
+                role: "head",
+              },
+              organization: null,
+              isLoading: false,
+              isAuthenticated: true,
+            }}
+          >
+            <TRPCProxyContext.Provider value={proxy}>
+              {children}
+            </TRPCProxyContext.Provider>
+          </SessionContext.Provider>
+        </QueryClientProvider>
+      );
+    }
+
+    return render(<WeeklyReportPage reportId="not-a-uuid" />, {
+      wrapper: Wrapper,
+    });
+  }
+
+  it("shows an invalid-link state, not the no-period empty-state", async () => {
+    renderFailingPage();
+
+    expect(await screen.findByText(/report not found/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/this link is invalid or the report no longer exists/i),
+    ).toBeInTheDocument();
+    // The misleading no-period copy MUST NOT appear on a load failure.
+    expect(
+      screen.queryByText(/no active reporting period/i),
+    ).not.toBeInTheDocument();
   });
 });
