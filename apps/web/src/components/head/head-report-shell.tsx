@@ -55,10 +55,17 @@ export function HeadReportShell({
     trpc.reports.compiledHistory.queryOptions({ includeArchive }),
   );
 
+  // driver-findings-2026-06-11 finding 4: compiledHistory lists only
+  // published + archived periods, so the active week (the one the body shows
+  // on `/head/report/<activeId>`) is absent and the navigator falls back to
+  // periods[0] (latest published). Fetch the displayed report and prepend it
+  // when it is not already in history. Same query key as WeeklyReportPage's
+  // identical call, so React Query dedupes — no extra network request.
+  const displayedQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
+
   const periods: ReportPeriod[] = useMemo(() => {
-    const data = historyQ.data;
-    if (!data?.entries.length) return [];
-    return data.entries.map((entry) => ({
+    const entries = historyQ.data?.entries ?? [];
+    const historyPeriods: ReportPeriod[] = entries.map((entry) => ({
       id: entry.reportId,
       weekLabel: `Week ${isoWeekNumber(new Date(entry.periodStart))}`,
       dateRange: formatDateRange(
@@ -70,7 +77,33 @@ export function HeadReportShell({
       isCurrent: false,
       isSubmitted: true,
     }));
-  }, [historyQ.data]);
+
+    // Prepend the displayed (active) period when history does not already
+    // carry it. The entry's id MUST be the reportId so the navigator's
+    // `p.id === pathReportId` match resolves the addressed week.
+    const displayed = displayedQ.data;
+    if (
+      !displayed ||
+      displayed.status === "no-period" ||
+      historyPeriods.some((p) => p.id === reportId)
+    ) {
+      return historyPeriods;
+    }
+    const activePeriod: ReportPeriod = {
+      id: reportId,
+      weekLabel: `Week ${isoWeekNumber(new Date(displayed.periodStart))}`,
+      dateRange: formatDateRange(
+        new Date(displayed.periodStart),
+        new Date(displayed.periodEnd),
+      ),
+      archived: false,
+      sourceSectionId: "",
+      // Mirror mapWeeklyReport: a non-published period is the current week.
+      isCurrent: displayed.periodStatus !== "published",
+      isSubmitted: true,
+    };
+    return [activePeriod, ...historyPeriods];
+  }, [historyQ.data, displayedQ.data, reportId]);
 
   const urlBuilder = useCallback(
     (periodId: string) => {
