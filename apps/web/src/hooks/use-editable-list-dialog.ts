@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Shared dialog lifecycle for editable lead report sections (current week,
@@ -86,34 +86,45 @@ export function useEditableListDialog<TEntity extends { id: string }>({
   // the highest handled signal and only open when the counter advances.
   const lastHandledSignal = useRef(NO_SIGNAL_HANDLED);
 
-  function openCreate(nextSeedProductId?: string) {
-    if (readOnly) return;
-    setOpenSeq((n) => n + 1);
-    setDialogState({
-      open: true,
-      mode: "create",
-      seedProductId: nextSeedProductId,
-    });
-  }
+  // Stable identities so consumers can safely list these in effect deps
+  // (e.g. the risks chip-raise effect that calls openCreate).
+  const openCreate = useCallback(
+    (nextSeedProductId?: string) => {
+      if (readOnly) return;
+      setOpenSeq((n) => n + 1);
+      setDialogState({
+        open: true,
+        mode: "create",
+        seedProductId: nextSeedProductId,
+      });
+    },
+    [readOnly],
+  );
 
-  function openEdit(entity: TEntity) {
-    if (readOnly) return;
-    setOpenSeq((n) => n + 1);
-    setDialogState({ open: true, mode: "edit", entity });
-  }
+  const openEdit = useCallback(
+    (entity: TEntity) => {
+      if (readOnly) return;
+      setOpenSeq((n) => n + 1);
+      setDialogState({ open: true, mode: "edit", entity });
+    },
+    [readOnly],
+  );
 
-  function close() {
+  const close = useCallback(() => {
     setDialogState({ open: false });
-  }
+  }, []);
 
-  function requestDelete(entity: TEntity) {
-    if (readOnly) return;
-    setPendingDelete(entity);
-  }
+  const requestDelete = useCallback(
+    (entity: TEntity) => {
+      if (readOnly) return;
+      setPendingDelete(entity);
+    },
+    [readOnly],
+  );
 
-  function clearPendingDelete() {
+  const clearPendingDelete = useCallback(() => {
     setPendingDelete(null);
-  }
+  }, []);
 
   useEffect(() => {
     if (addSignal === NO_SIGNAL_HANDLED) return;

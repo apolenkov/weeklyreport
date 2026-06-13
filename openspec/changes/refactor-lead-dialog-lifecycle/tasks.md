@@ -51,7 +51,7 @@ run full gates and read the whole diff before each commit.
       `deriveDialogProps` consumers fed by the hook's `dialogKey`.
       Acceptance: ALL existing tests green with zero edits, including
       `current-week-section-add-signal.test.tsx`.
-- [ ] 2.2 refactor(lead): adopt the hook in `risks-section.tsx` (own
+- [x] 2.2 refactor(lead): adopt the hook in `risks-section.tsx` (own
       commit — riskiest). `addSignal` arrives via LeadFormSyncBridge
       context (`lead-form-sync-bridge.tsx:277,400-401`) — plumbing and
       prop names stay byte-identical. `firstProductId` seeding stays in

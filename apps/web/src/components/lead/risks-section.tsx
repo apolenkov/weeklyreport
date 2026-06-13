@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
+import { useEditableListDialog } from "../../hooks/use-editable-list-dialog";
 import { LockBadge } from "../report-shell/lock-badge";
 import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
@@ -56,35 +57,49 @@ export function RisksSection({
   sectionAuthorName,
   addSignal = 0,
 }: RisksSectionProps) {
-  const [dialogState, setDialogState] = useState<
-    | { open: false }
-    | {
-        open: true;
-        mode: "create";
-        seedProductId?: string;
-        seedStageIds?: string[];
-        seedSeverity?: "at-risk" | "blocked";
-      }
-    | { open: true; mode: "edit"; risk: RiskEntry }
-  >({ open: false });
-  const [pendingDelete, setPendingDelete] = useState<RiskEntry | null>(null);
+  const firstProductId = products?.[0]?.id;
+
+  // Shared dialog lifecycle (DialogState union, D1 readOnly-ref add-signal
+  // effect, D13 openSeq remount key, pending-delete). requireSeed is false:
+  // a risk can be created even before any product exists.
+  const {
+    dialogState,
+    dialogKey,
+    openCreate,
+    openEdit,
+    close,
+    pendingDelete,
+    requestDelete,
+    clearPendingDelete,
+  } = useEditableListDialog<RiskEntry>({
+    readOnly,
+    addSignal,
+    seedProductId: firstProductId,
+  });
+
+  // unify-risk-stage-status (D2): create-mode prefill (clicked stage +
+  // severity) for the chip-raise interception. The hook owns the single
+  // open source, so this stays caller-side (D3) and is cleared on close so
+  // a later plain "+ Add Risk" mounts clean.
+  const [createPrefill, setCreatePrefill] = useState<{
+    stageIds?: string[];
+    severity?: "at-risk" | "blocked";
+  } | null>(null);
 
   function handleDelete(id: string) {
-    if (readOnly) return;
     const risk = risks.find((r) => r.id === id);
     if (!risk) return;
-    setPendingDelete(risk);
+    requestDelete(risk);
   }
 
   function confirmDelete() {
     if (!pendingDelete) return;
     onChange?.(risks.filter((r) => r.id !== pendingDelete.id));
-    setPendingDelete(null);
+    clearPendingDelete();
   }
 
   function handleEdit(risk: RiskEntry) {
-    if (readOnly) return;
-    setDialogState({ open: true, mode: "edit", risk });
+    openEdit(risk);
   }
 
   function handleDialogSave(
@@ -96,46 +111,27 @@ export function RisksSection({
     } else {
       onChange?.(risks.map((r) => (r.id === saved.id ? saved : r)));
     }
-    setDialogState({ open: false });
+    setCreatePrefill(null);
+    close();
   }
 
   function handleDialogCancel() {
-    setDialogState({ open: false });
+    setCreatePrefill(null);
+    close();
   }
 
-  const firstProductId = products?.[0]?.id;
-
-  // Keep a ref so the addSignal effect can read the latest readOnly value
-  // without including readOnly in the dep array. If readOnly were in deps,
-  // the effect would re-fire on snapshot enter/exit and re-open the dialog
-  // from a stale non-zero addSignal counter (D1 fix).
-  const readOnlyRef = useRef(readOnly);
-  readOnlyRef.current = readOnly;
-
-  useEffect(() => {
-    if (addSignal === 0) return;
-    if (readOnlyRef.current) return;
-    setDialogState({
-      open: true,
-      mode: "create",
-      seedProductId: firstProductId,
-    });
-  }, [addSignal, firstProductId]);
-
   // unify-risk-stage-status (D2): chip-raise interception opens the create
-  // dialog prefilled. Same stale-signal guard pattern as the effect above
-  // (readOnly read through the ref, identity-stable payload in deps).
+  // dialog prefilled. The readOnly stale-signal guard now lives in the hook;
+  // here we stash the clicked stage/severity, then ask the hook to open
+  // create mode seeded with the clicked product (one open source).
   useEffect(() => {
     if (!addPrefill || addPrefill.signal === 0) return;
-    if (readOnlyRef.current) return;
-    setDialogState({
-      open: true,
-      mode: "create",
-      seedProductId: addPrefill.productId,
-      seedStageIds: addPrefill.stageIds,
-      seedSeverity: addPrefill.severity,
+    setCreatePrefill({
+      stageIds: addPrefill.stageIds,
+      severity: addPrefill.severity,
     });
-  }, [addPrefill]);
+    openCreate(addPrefill.productId);
+  }, [addPrefill, openCreate]);
 
   return (
     <div className="space-y-4">
@@ -284,11 +280,11 @@ export function RisksSection({
       )}
 
       <RiskEditDialog
-        key={`${dialogState.open}-${dialogState.open && dialogState.mode === "edit" ? dialogState.risk.id : "new"}`}
+        key={dialogKey}
         open={dialogState.open}
         risk={
           dialogState.open && dialogState.mode === "edit"
-            ? dialogState.risk
+            ? dialogState.entity
             : null
         }
         products={products ?? []}
@@ -299,22 +295,22 @@ export function RisksSection({
         }
         initialStageIds={
           dialogState.open && dialogState.mode === "create"
-            ? dialogState.seedStageIds
+            ? createPrefill?.stageIds
             : undefined
         }
         initialSeverity={
           dialogState.open && dialogState.mode === "create"
-            ? dialogState.seedSeverity
+            ? createPrefill?.severity
             : undefined
         }
         initialImpact={
           dialogState.open && dialogState.mode === "edit"
-            ? dialogState.risk.impact
+            ? dialogState.entity.impact
             : ""
         }
         initialMitigation={
           dialogState.open && dialogState.mode === "edit"
-            ? dialogState.risk.mitigation
+            ? dialogState.entity.mitigation
             : ""
         }
         stagesForProduct={stagesForProduct}
@@ -333,7 +329,7 @@ export function RisksSection({
             : undefined
         }
         onConfirm={confirmDelete}
-        onCancel={() => setPendingDelete(null)}
+        onCancel={clearPendingDelete}
       />
     </div>
   );
