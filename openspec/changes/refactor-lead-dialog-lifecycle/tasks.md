@@ -112,7 +112,12 @@ run full gates and read the whole diff before each commit.
       lint OK (eslint + stylelint + prisma typecheck), test OK
       (api 80 + shared 16 + web 113 test files; web 1054 tests),
       build OK. Per-task targeted gates (typecheck + lint + web
-      vitest) ran green on every commit.
+      vitest) ran green on every commit. Post-review fix (commit
+      8a5b128f): openCreate kept identity-stable across readOnly so
+      the risks chip-raise (addPrefill) effect cannot reopen the
+      dialog on a snapshot round-trip; regression test added (fails
+      on the prior hook, passes on the fix). Final gates re-run green
+      after the fix.
 - [ ] 5.2 Live browser walk (driver-verify lesson: never trust
       unit-only): "+ Add Risk" → cancel → view snapshot → "Back to
       current" → no dialog reopens; same for Decision; risk-dialog
