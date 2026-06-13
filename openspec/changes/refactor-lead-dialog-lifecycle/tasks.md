@@ -63,7 +63,7 @@ run full gates and read the whole diff before each commit.
       (incl. strings rewritten by require-risk-stage — do not touch),
       `risks-section.snapshot.test.tsx`,
       `lead-form-sync-bridge.test.tsx`.
-- [ ] 2.3 refactor(lead): adopt the hook in `decisions-section.tsx`.
+- [x] 2.3 refactor(lead): adopt the hook in `decisions-section.tsx`.
       Create mode has no seed product — the hook's optional seed covers
       it. Switch the `DecisionEditDialog` key
       (decisions-section.tsx:270) to `dialogKey`. Green unchanged:
