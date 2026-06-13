@@ -72,7 +72,7 @@ starting any group-3 task (a parallel session edits lead files).
 
 ## 3. Lead-area conversions (web; BLOCKED — see sequencing gates)
 
-- [ ] 3.1 Convert `apps/web/src/components/lead/lead-form.test.tsx` —
+- [x] 3.1 Convert `apps/web/src/components/lead/lead-form.test.tsx` —
       dotted-string queryKey dialect (:141-322). Preserve verbatim:
       the `invalidateSpy` >= 3 assertions (:352-376 submit success,
       :455-474 fillFrom success) and every
@@ -80,10 +80,10 @@ starting any group-3 task (a parallel session edits lead files).
       opens no dialog; archive-toggle scenarios). A red test after
       conversion is a conversion bug — never adjust an assertion to
       pass.
-- [ ] 3.2 Convert `lead-form-addressable.test.tsx` (:115-283) and
+- [x] 3.2 Convert `lead-form-addressable.test.tsx` (:115-283) and
       `lead-form-viewmode.snapshot.test.tsx` (:60-166) — same dialect;
       one commit, one file at a time with a web-suite run between.
-- [ ] 3.3 Convert `apps/web/src/hooks/use-lead-form-autosave.test.tsx`
+- [x] 3.3 Convert `apps/web/src/hooks/use-lead-form-autosave.test.tsx`
       — move the `buildHarness` trpcMock to the factory, preserving
       the `saveDraft` mutation-capture calls-array semantics; verify
       the `invalidatedKeys.some((k) => k.includes("leadForm"))`
@@ -131,7 +131,9 @@ starting any group-3 task (a parallel session edits lead files).
       conversion target). `makeMockTRPC` remains only in
       `jobs-tab.test.tsx` as a local wrapper over `createMockTRPC`
       (not a hand-rolled stub — expected).
-- [ ] 5.2 Gates after every commit and at the end:
+- [x] 5.2 Gates after every commit and at the end:
       `pnpm typecheck && pnpm lint && pnpm test && pnpm build`.
       Web-scoped runs between files within a commit:
       `pnpm --filter @customreport/web test`. Record results here.
+      Final gate run (2026-06-13): typecheck ✓, lint ✓ (no issues),
+      test ✓ (112 files / 1045 tests passed), build ✓ (5/5 tasks).
