@@ -51,7 +51,7 @@ it first so the two changes do not implement the same fix twice.
       the lead's group ownership/access (reuse the existing group-scope /
       ownership predicate — do not invent a parallel one). Add a test: a lead
       whose group owns 2 of 11 products sees exactly those 2 in the preview.
-- [ ] 2.3 Finding 3 (export-PDF): DECISION (2026-06-13, user) — leads SHOULD
+- [x] 2.3 Finding 3 (export-PDF): DECISION (2026-06-13, user) — leads SHOULD
       have Export-PDF. The oracle intents were correct; the code hiding the
       button from leads is the defect. Un-gate / add `ExportPdfButton` for the
       lead role (re-check viewer under the same intent), keeping head/admin

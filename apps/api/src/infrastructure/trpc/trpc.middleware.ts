@@ -495,6 +495,14 @@ const leadershipRoleMiddleware = buildRoleMiddleware([
   "admin",
   "viewer",
 ]);
+// driver-findings-2026-06-11 finding 3 (decision 2026-06-13): leads SHOULD have
+// Export-PDF. The pdfExport.request / .status procedures widen from head-only to
+// lead + head + admin. Viewer is excluded (read-only role keeps the /print link).
+const leadHeadAdminRoleMiddleware = buildRoleMiddleware([
+  "lead",
+  "head",
+  "admin",
+]);
 
 export const headProcedure = buildProtectedProcedure(headRoleMiddleware);
 export const leadProcedure = buildProtectedProcedure(leadRoleMiddleware);
@@ -508,6 +516,10 @@ export const adminProcedure = buildProtectedProcedure(adminRoleMiddleware);
 // Lead is excluded by design (lead is the data subject of product KPIs).
 export const leadershipProcedure = buildProtectedProcedure(
   leadershipRoleMiddleware,
+);
+// driver-findings-2026-06-11 finding 3: lead + head + admin gate for Export-PDF.
+export const leadHeadAdminProcedure = buildProtectedProcedure(
+  leadHeadAdminRoleMiddleware,
 );
 
 export const router = t.router;

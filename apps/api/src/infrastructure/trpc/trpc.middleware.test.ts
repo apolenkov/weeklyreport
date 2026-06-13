@@ -9,6 +9,7 @@ import {
   anyRoleProcedure,
   headProcedure,
   leadershipProcedure,
+  leadHeadAdminProcedure,
   leadProcedure,
   protectedProcedure,
   publicProcedure,
@@ -19,10 +20,10 @@ import {
 // ---------------------------------------------------------------------------
 // Chain-composition pin test (refactor-trpc-infra-duplication)
 //
-// Each of the 7 protected builders must carry exactly 5 middlewares.
+// Each of the 8 protected builders must carry exactly 5 middlewares.
 // Slots 0-1 must be reference-equal to publicProcedure's two middlewares.
 // Slots 3-4 (pdfExportGuard, mutationAuditMiddleware) must be
-// reference-equal across all 7 builders (compared to headProcedure as
+// reference-equal across all 8 builders (compared to headProcedure as
 // the reference, since the unexported middlewares have no direct export).
 // ---------------------------------------------------------------------------
 
@@ -45,6 +46,7 @@ describe("protected procedure chain-composition pins", () => {
   const anyRoleChain = getChain(anyRoleProcedure);
   const adminChain = getChain(adminProcedure);
   const leadershipChain = getChain(leadershipProcedure);
+  const leadHeadAdminChain = getChain(leadHeadAdminProcedure);
 
   const protectedBuilders = [
     { name: "protectedProcedure", chain: protectedChain },
@@ -54,6 +56,7 @@ describe("protected procedure chain-composition pins", () => {
     { name: "anyRoleProcedure", chain: anyRoleChain },
     { name: "adminProcedure", chain: adminChain },
     { name: "leadershipProcedure", chain: leadershipChain },
+    { name: "leadHeadAdminProcedure", chain: leadHeadAdminChain },
   ];
 
   it("each protected builder carries exactly 5 middlewares", () => {

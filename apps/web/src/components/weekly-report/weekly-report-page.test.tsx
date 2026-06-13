@@ -548,11 +548,12 @@ describe("WeeklyReportPage — async Export PDF button role gating (driver sweep
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
-  // The async export starts a `pdfExport.request` job the API gates to
-  // head/admin (headProcedure). Before the fix the button rendered for every
-  // role, so a viewer/lead on the read-only /reports/[reportId] route (which
-  // embeds this page) saw an enabled button that 403'd on click.
-  it.each(["head", "admin"] as const)(
+  // The async export starts a `pdfExport.request` job. driver-findings-2026-06-11
+  // finding 3 (decision 2026-06-13): leads SHOULD have Export-PDF, so the API
+  // (pdfExport.request / .status) and this button are widened to lead + head +
+  // admin. Viewer stays excluded (read-only role keeps the /print link); the
+  // viewer catalog intent is flagged as an open question, not granted here.
+  it.each(["head", "admin", "lead"] as const)(
     "renders the async Export PDF button for %s",
     async (role) => {
       renderPage(makeWeeklyReportData("published"), undefined, role);
@@ -562,17 +563,27 @@ describe("WeeklyReportPage — async Export PDF button role gating (driver sweep
     },
   );
 
-  it.each(["viewer", "lead"] as const)(
-    "hides the async Export PDF button for %s",
-    async (role) => {
-      renderPage(makeWeeklyReportData("published"), undefined, role);
-      // Anchor on the report heading so the absence assertion is not a race.
-      await screen.findByRole("heading", { name: /status report/i });
-      expect(
-        screen.queryByRole("button", { name: /export pdf/i }),
-      ).not.toBeInTheDocument();
-    },
-  );
+  it("hides the async Export PDF button for viewer", async () => {
+    renderPage(makeWeeklyReportData("published"), undefined, "viewer");
+    // Anchor on the report heading so the absence assertion is not a race.
+    await screen.findByRole("heading", { name: /status report/i });
+    expect(
+      screen.queryByRole("button", { name: /export pdf/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("lets a lead trigger the export (fires pdfExport.request with reportId)", async () => {
+    const { captured } = renderPage(
+      makeWeeklyReportData("published"),
+      undefined,
+      "lead",
+    );
+    const button = await screen.findByRole("button", { name: /export pdf/i });
+    await userEvent.click(button);
+    expect(captured["pdfExport.request"].calls).toContainEqual({
+      reportId: REPORT_ID,
+    });
+  });
 });
 
 // head-toolbar-parity: the bespoke gradient "Context shell" is gone — the
