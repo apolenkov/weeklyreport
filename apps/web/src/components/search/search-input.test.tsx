@@ -206,9 +206,13 @@ describe("SearchInput — 39-05 (PERF-05)", () => {
       fireEvent.keyDown(input, { key: "Enter" });
     });
 
-    // 35-07 (UX-15): search hits land on the addressed URL.
-    expect(pushMock).toHaveBeenCalledWith(
-      `/lead/report/${REPORT_ID}#section-${SECTION_ID}`,
+    // Search hits land on the addressed report URL. The hit carries a
+    // reportSectionId, but `/lead/report/[reportId]` has no
+    // `id="section-<id>"` target, so the dead `#section-` fragment is
+    // stripped rather than emitted (driver finding 6).
+    expect(pushMock).toHaveBeenCalledWith(`/lead/report/${REPORT_ID}`);
+    expect(pushMock).not.toHaveBeenCalledWith(
+      expect.stringContaining("#section-"),
     );
   });
 
