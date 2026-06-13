@@ -11,24 +11,24 @@ run full gates and read the whole diff before each commit.
 
 ## 0. Preconditions (hard gate — do not start otherwise)
 
-- [ ] 0.1 Wave-0 `fix-section-add-signal-reset` is implemented and
+- [x] 0.1 Wave-0 `fix-section-add-signal-reset` is implemented and
       archived: `risks-section.tsx` and `decisions-section.tsx` carry
       the readOnlyRef pattern (deps without `readOnly`),
       `lead-form.tsx` `onViewVersion` resets all four add-signal
       counters, and `risks-section-add-signal.test.tsx` +
       `decisions-section-add-signal.test.tsx` exist and are green.
-- [ ] 0.2 `require-risk-stage`, `fix-lead-stripe-and-archived-badges`
+- [x] 0.2 `require-risk-stage`, `fix-lead-stripe-and-archived-badges`
       (archived — same lead surface; live verification needs a settled
       surface), and `refactor-lead-mappers` have landed
       (`openspec list` no longer shows them active); rebase onto
       current `main` and re-run the risks-section pinned tests.
-- [ ] 0.3 No second writer: `git status --short` shows no foreign edits
+- [x] 0.3 No second writer: `git status --short` shows no foreign edits
       under `apps/web/src/components/lead/`; `openspec list` shows no
       other active change claiming these files.
 
 ## 1. Web — hook
 
-- [ ] 1.1 feat(web): add `apps/web/src/hooks/use-editable-list-dialog.ts` + `use-editable-list-dialog.test.tsx` (no consumers yet).
+- [x] 1.1 feat(web): add `apps/web/src/hooks/use-editable-list-dialog.ts` + `use-editable-list-dialog.test.tsx` (no consumers yet).
       Implement the D1 interface from `design.md`: DialogState union,
       readOnlyRef ref-write-during-render copied verbatim from
       `current-week-section.tsx` ("Keep a ref so the addSignal effect…"
