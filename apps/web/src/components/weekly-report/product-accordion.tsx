@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { pluralize } from "../../lib/pluralize";
 import type { ProductReport } from "../dashboard/mock-data";
 
 interface ProductAccordionProps {
@@ -266,7 +267,8 @@ export function ProductAccordion({
               {report.currentWeek.length > 0 && (
                 <div>
                   <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                    Current Week &middot; {report.currentWeek.length} items
+                    Current Week &middot; {report.currentWeek.length}{" "}
+                    {pluralize(report.currentWeek.length, "item", "items")}
                   </div>
                   <div className="space-y-1">
                     {sortByPriority(report.currentWeek).map((item) => {
@@ -310,8 +312,8 @@ export function ProductAccordion({
               {report.nextWeek.length > 0 && (
                 <div>
                   <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                    Next Week &middot; {report.nextWeek.length} item
-                    {report.nextWeek.length !== 1 ? "s" : ""}
+                    Next Week &middot; {report.nextWeek.length}{" "}
+                    {pluralize(report.nextWeek.length, "item", "items")}
                   </div>
                   <div className="space-y-1">
                     {report.nextWeek.map((item) => (

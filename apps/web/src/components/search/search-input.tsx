@@ -53,18 +53,21 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 /**
  * Resolve the click-through URL for a search hit.
  *
- * Phase 35-07 (UX-15) closed the migration: items/risks/decisions now
- * deep-link into the addressed lead form `/lead/report/<reportId>` with
- * the section anchor. Project hits deep-link to /admin?tab=products with
- * a filter query param.
+ * Items/risks/decisions deep-link into the addressed lead form
+ * `/lead/report/<reportId>`. Project hits deep-link to /admin?tab=products
+ * with a filter query param.
+ *
+ * No `#section-<id>` fragment is emitted: `/lead/report/[reportId]` is a
+ * type-organized form with no `id="section-<reportSectionId>"` target, so
+ * the anchor never resolved and only produced a dead scroll. Strip it
+ * rather than render a per-section-UUID target the form is not shaped for.
  */
 function targetUrlFor(hit: SearchHit): string {
   if (hit.type === "project") {
     return `/admin?tab=products&filter=${hit.id}`;
   }
   if (hit.reportId) {
-    const anchor = hit.reportSectionId ? `#section-${hit.reportSectionId}` : "";
-    return `/lead/report/${hit.reportId}${anchor}`;
+    return `/lead/report/${hit.reportId}`;
   }
   return "#";
 }

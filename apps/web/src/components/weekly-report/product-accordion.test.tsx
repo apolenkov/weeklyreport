@@ -120,6 +120,58 @@ describe("ProductAccordion prioritized items", () => {
     expect(screen.queryByTitle("Priority 2")).not.toBeInTheDocument();
   });
 
+  it("pluralizes the Current Week count: '1 item' at one, 'N items' otherwise", () => {
+    const { rerender } = render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          currentWeek: [makeItem({ id: "c1", text: "Only item" })],
+        })}
+      />,
+    );
+    // Driver finding 5: a single-item Current Week must read "1 item", not
+    // the always-plural "1 items".
+    expect(screen.getByText(/Current Week · 1 item$/)).toBeInTheDocument();
+
+    rerender(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          currentWeek: [
+            makeItem({ id: "c1", text: "First" }),
+            makeItem({ id: "c2", text: "Second" }),
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText(/Current Week · 2 items$/)).toBeInTheDocument();
+  });
+
+  it("pluralizes the Next Week count: '1 item' at one, 'N items' otherwise", () => {
+    const { rerender } = render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          nextWeek: [makeItem({ id: "n1", text: "Only next" })],
+        })}
+      />,
+    );
+    expect(screen.getByText(/Next Week · 1 item$/)).toBeInTheDocument();
+
+    rerender(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          nextWeek: [
+            makeItem({ id: "n1", text: "Next one" }),
+            makeItem({ id: "n2", text: "Next two" }),
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText(/Next Week · 2 items$/)).toBeInTheDocument();
+  });
+
   it("does not render the removed TOP PRIORITIES section even when priorities data is present", () => {
     render(
       <ProductAccordion

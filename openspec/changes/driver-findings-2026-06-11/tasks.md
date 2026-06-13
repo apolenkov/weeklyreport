@@ -10,25 +10,25 @@ it first so the two changes do not implement the same fix twice.
 
 ## Low-risk (fix tonight)
 
-- [ ] 1.1 Finding 5 (plural "1 items"): reproduce at a single-item period —
+- [x] 1.1 Finding 5 (plural "1 items"): reproduce at a single-item period —
       `/reports/<id>`, expand a product whose Current Week has exactly one item;
       header reads "Current Week · 1 items".
-- [ ] 1.2 Lift `pluralize(value, singular, plural)` from
+- [x] 1.2 Lift `pluralize(value, singular, plural)` from
       `components/admin/reminders-tab-format.ts:70` to a shared web util and use
       it at `product-accordion.tsx:269`. Note: line 313 (Next Week) already
       pluralizes correctly — do not regress it. Label-only; shared component
       (head/admin/viewer render it). Add/extend a unit test for the 1 vs N case.
-- [ ] 1.3 Finding 6 (dead search anchor): first reproduce a section-bearing
+- [x] 1.3 Finding 6 (dead search anchor): first reproduce a section-bearing
       search hit (item/risk/decision scope) that emits `#section-<id>`. If leads
       cannot trigger one, prefer stripping the fragment in `targetUrlFor`
       (`search/search-input.tsx:66`); else render `id="section-<id>"` on each
       lead-form section. Add a test asserting the chosen behavior.
-- [ ] 1.4 Finding 7 (Recharts `width(-1)/height(-1)`): reproduce on
+- [x] 1.4 Finding 7 (Recharts `width(-1)/height(-1)`): reproduce on
       `/head/dashboard` and `/reports/trends` with the console open; confirm the
       chart still renders. Give the `ResponsiveContainer` wrapper an explicit
       `minHeight` / defined aspect (named const, no magic number) so it never
       reads -1 on first paint.
-- [ ] 1.5 Gates: `pnpm typecheck && pnpm lint` + `pnpm test` for the touched web
+- [x] 1.5 Gates: `pnpm typecheck && pnpm lint` + `pnpm test` for the touched web
       package. Commit (own files only; conventional message naming this change).
 
 ## Risky (morning confirmation — do NOT start without a decision)
