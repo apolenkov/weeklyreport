@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
 import type { Product, RiskEntry } from "./mock-data";
@@ -94,8 +94,20 @@ function computeInitialStageIds(
   return initialStageIds ? [...initialStageIds] : [];
 }
 
-export function RiskEditDialog({
-  open,
+/**
+ * D12 mount/unmount shell (react-compiler-safe): the outer component returns
+ * null when closed and mounts the inner content otherwise. Mount = fresh
+ * useState from props; close = unmount. No useEffect reset is needed — the
+ * remount is the structural reset, and the parent's openSeq dialogKey forces
+ * a fresh mount on every open. This makes the A13/A15 invariant
+ * (stagesForProduct never read in any deps array) structural.
+ */
+export function RiskEditDialog(props: RiskEditDialogProps) {
+  if (!props.open) return null;
+  return <RiskEditDialogContent {...props} />;
+}
+
+function RiskEditDialogContent({
   risk,
   products,
   onSave,
@@ -107,7 +119,6 @@ export function RiskEditDialog({
   initialSeverity,
   stagesForProduct,
 }: RiskEditDialogProps) {
-  "use no memo";
   const isCreate = risk === null;
   const seedProduct = isCreate
     ? (products.find((p) => p.id === defaultProductId) ?? products[0])
@@ -147,42 +158,6 @@ export function RiskEditDialog({
     stageIds?: string;
   }>({});
 
-  // A13/A15 fix: stagesForProduct excluded from deps — unstable parent ref (new arrow fn
-  // each render) causes form-race on autosave → React Query invalidate cycle, resetting
-  // both text (A13) and severity (A15). Dialog is key-reset by parent on open-transition.
-  useEffect(() => {
-    if (open) {
-      const ownedStages = stagesForProduct?.(seedProduct?.id ?? "") ?? [];
-      setText(risk?.text ?? "");
-      setSeverity(
-        risk?.severity ??
-          initialSeverity ??
-          deriveFromPreChecked(seedProduct, ownedStages),
-      );
-      setProductId(risk?.productId ?? seedProduct?.id ?? "");
-      setImpact(initialImpact ?? "");
-      setMitigation(initialMitigation ?? "");
-      setStageIds(computeInitialStageIds(risk, initialStageIds));
-      setErrors({});
-    }
-    // eslint-disable-next-line react-compiler/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    open,
-    risk?.id,
-    risk?.text,
-    risk?.severity,
-    risk?.productId,
-    risk?.stageIds,
-    seedProduct?.id,
-    initialImpact,
-    initialMitigation,
-    initialStageIds,
-    initialSeverity,
-    defaultProductId,
-    isCreate,
-  ]);
-
   // Context strip: pipeline stages already flagged that are owned by this lead.
   const preCheckedStages = useMemo(() => {
     const ownedStages = stagesForProduct?.(seedProduct?.id ?? "") ?? [];
@@ -198,8 +173,6 @@ export function RiskEditDialog({
         severity: s.status as "at-risk" | "blocked",
       }));
   }, [seedProduct, stagesForProduct]);
-
-  if (!open) return null;
 
   const headerProductName =
     products.find((p) => p.id === productId)?.name ??

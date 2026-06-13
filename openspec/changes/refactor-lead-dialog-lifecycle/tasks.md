@@ -72,7 +72,7 @@ run full gates and read the whole diff before each commit.
 
 ## 3. Web — D12 dialog shells (D2)
 
-- [ ] 3.1 refactor(lead): convert `risk-edit-dialog.tsx` to the D12
+- [x] 3.1 refactor(lead): convert `risk-edit-dialog.tsx` to the D12
       shell. Replicate `item-edit-dialog.tsx:101-113` exactly: outer
       `RiskEditDialog` returns null when `!open` and mounts
       `RiskEditDialogContent`; state seeding moves from the deleted
