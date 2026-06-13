@@ -561,10 +561,9 @@ export function LeadForm({
 
   // Toggle All state — must live above the early return below, otherwise
   // the hook count drifts between renders and React throws "Rendered more
-  // hooks than during the previous render". Each Toggle All click bumps
-  // the sync key; AccordionSection mirrors the new groupExpanded into
-  // its local state. Individual sections may then drift again via clicks.
-  const [groupSyncKey, setGroupSyncKey] = useState(0);
+  // hooks than during the previous render". Each Toggle All click flips
+  // groupExpanded; AccordionSection mirrors the new value into its local
+  // state. Individual sections may then drift again via clicks.
   const [groupExpanded, setGroupExpanded] = useState(true);
   const [currentWeekAddSignal, setCurrentWeekAddSignal] = useState(0);
   const [nextWeekAddSignal, setNextWeekAddSignal] = useState(0);
@@ -1014,7 +1013,6 @@ export function LeadForm({
 
   function handleToggleAll() {
     setGroupExpanded((prev) => !prev);
-    setGroupSyncKey((k) => k + 1);
   }
 
   // Autosave indicator label — 4-state badge.
@@ -1217,7 +1215,6 @@ export function LeadForm({
               displayRisks={mergedRisks}
             >
               <AccordionSection
-                groupSyncKey={groupSyncKey}
                 groupExpanded={groupExpanded}
                 testId="lead-section-product-status"
                 icon={<GridIcon />}
@@ -1230,7 +1227,6 @@ export function LeadForm({
 
               {/* Current Week */}
               <AccordionSection
-                groupSyncKey={groupSyncKey}
                 groupExpanded={groupExpanded}
                 testId="lead-section-current-week"
                 icon={<CalendarIcon />}
@@ -1271,7 +1267,6 @@ export function LeadForm({
 
               {/* Next Week */}
               <AccordionSection
-                groupSyncKey={groupSyncKey}
                 groupExpanded={groupExpanded}
                 testId="lead-section-next-week"
                 icon={<NextWeekIcon />}
@@ -1310,7 +1305,6 @@ export function LeadForm({
 
               {/* Risks & Blockers */}
               <AccordionSection
-                groupSyncKey={groupSyncKey}
                 groupExpanded={groupExpanded}
                 testId="lead-section-risks"
                 icon={<AlertIcon />}
@@ -1346,7 +1340,6 @@ export function LeadForm({
 
             {/* Decisions */}
             <AccordionSection
-              groupSyncKey={groupSyncKey}
               groupExpanded={groupExpanded}
               testId="lead-section-decisions"
               icon={<ChatIcon />}
