@@ -62,4 +62,55 @@ describe("RisksSection — addSignal snapshot regression (D1)", () => {
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
+
+  // refactor-lead-dialog-lifecycle (task 2.2): the chip-raise interception
+  // (addPrefill) is a SEPARATE create-open source from addSignal, with its
+  // own monotonic signal that the form owner does NOT reset on view
+  // transitions. The hook's readOnly-ref guard must keep it from reopening
+  // the dialog when readOnly toggles false→true→false with a stale prefill.
+  it("does not reopen the dialog when readOnly toggles false→true→false with a stale addPrefill", () => {
+    const firstProductId = products[0]?.id ?? "";
+    const prefill = {
+      signal: 1,
+      productId: firstProductId,
+      stageIds: ["Dev"],
+      severity: "blocked" as const,
+    };
+
+    const { rerender } = render(
+      <RisksSection
+        risks={[]}
+        products={products}
+        addPrefill={prefill}
+        readOnly={false}
+      />,
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    // Enter snapshot view — same stale prefill (signal still 1).
+    rerender(
+      <RisksSection
+        risks={[]}
+        products={products}
+        addPrefill={prefill}
+        readOnly={true}
+      />,
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    // Return to live view — the chip-raise effect must NOT re-fire on the
+    // readOnly transition (openCreate is identity-stable across readOnly).
+    rerender(
+      <RisksSection
+        risks={[]}
+        products={products}
+        addPrefill={prefill}
+        readOnly={false}
+      />,
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
 });

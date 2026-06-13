@@ -86,41 +86,35 @@ export function useEditableListDialog<TEntity extends { id: string }>({
   // the highest handled signal and only open when the counter advances.
   const lastHandledSignal = useRef(NO_SIGNAL_HANDLED);
 
-  // Stable identities so consumers can safely list these in effect deps
-  // (e.g. the risks chip-raise effect that calls openCreate).
-  const openCreate = useCallback(
-    (nextSeedProductId?: string) => {
-      if (readOnly) return;
-      setOpenSeq((n) => n + 1);
-      setDialogState({
-        open: true,
-        mode: "create",
-        seedProductId: nextSeedProductId,
-      });
-    },
-    [readOnly],
-  );
+  // Identity-stable across readOnly changes (guards through readOnlyRef, not
+  // the readOnly prop) so the risks chip-raise effect can list it in deps
+  // without re-running on a snapshot enter/exit. Listing a [readOnly]-keyed
+  // callback there would reopen the dialog on a view-state transition — the
+  // exact lead-report-controls-integrity violation this hook prevents.
+  const openCreate = useCallback((nextSeedProductId?: string) => {
+    if (readOnlyRef.current) return;
+    setOpenSeq((n) => n + 1);
+    setDialogState({
+      open: true,
+      mode: "create",
+      seedProductId: nextSeedProductId,
+    });
+  }, []);
 
-  const openEdit = useCallback(
-    (entity: TEntity) => {
-      if (readOnly) return;
-      setOpenSeq((n) => n + 1);
-      setDialogState({ open: true, mode: "edit", entity });
-    },
-    [readOnly],
-  );
+  const openEdit = useCallback((entity: TEntity) => {
+    if (readOnlyRef.current) return;
+    setOpenSeq((n) => n + 1);
+    setDialogState({ open: true, mode: "edit", entity });
+  }, []);
 
   const close = useCallback(() => {
     setDialogState({ open: false });
   }, []);
 
-  const requestDelete = useCallback(
-    (entity: TEntity) => {
-      if (readOnly) return;
-      setPendingDelete(entity);
-    },
-    [readOnly],
-  );
+  const requestDelete = useCallback((entity: TEntity) => {
+    if (readOnlyRef.current) return;
+    setPendingDelete(entity);
+  }, []);
 
   const clearPendingDelete = useCallback(() => {
     setPendingDelete(null);
