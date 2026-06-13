@@ -60,6 +60,7 @@ import {
   anyRoleProcedure,
   headProcedure,
   leadershipProcedure,
+  leadHeadAdminProcedure,
   protectedProcedure,
   publicProcedure,
   router,
@@ -616,12 +617,18 @@ export function createAppRouter(deps: RouterDeps) {
 
     // === PDF Export namespace ===
     pdfExport: router({
-      request: headProcedure
+      // driver-findings-2026-06-11 finding 3 (decision 2026-06-13): leads SHOULD
+      // have Export-PDF, so request + status widen from head-only to
+      // lead/head/admin. Both must widen together — if only request widens, the
+      // lead fires the job but cannot poll status and the button hangs. The PDF
+      // render is requester-independent (the worker signs a {reportId} token and
+      // renders under a synthetic session), so a lead's export matches head's.
+      request: leadHeadAdminProcedure
         .input(z.object({ reportId: z.uuid() }))
         .mutation(async ({ input, ctx }) => {
           try {
             // Phase 23-01: thread session userId so the pdf_export_jobs row
-            // attributes the request to the head, not 'system'.
+            // attributes the request to the requester, not 'system'.
             return await deps.pdfExportService.requestPdfExport(
               input.reportId,
               ctx.session.userId,
@@ -635,7 +642,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      status: headProcedure
+      status: leadHeadAdminProcedure
         .input(z.object({ jobId: z.uuid() }))
         .query(async ({ input, ctx }) => {
           try {

@@ -146,6 +146,11 @@ export function WeeklyReportPage({
   const orgFullName = sessionState?.organization?.fullName ?? null;
   const currentRole = sessionState?.user?.role ?? null;
   const canMutatePeriod = currentRole === "head" || currentRole === "admin";
+  // driver-findings-2026-06-11 finding 3 (decision 2026-06-13): leads SHOULD
+  // have Export-PDF, so the button is shown to lead + head + admin. Viewer is
+  // excluded (read-only role keeps the plain /print link). Matches the widened
+  // pdfExport.request / .status authz (leadHeadAdminProcedure).
+  const canExportPdf = canMutatePeriod || currentRole === "lead";
 
   // weeklyReport.get input: { reportId?: string } | undefined.
   // When reportId is given, scope to that report; otherwise fall back to the
@@ -365,12 +370,12 @@ export function WeeklyReportPage({
           </span>
         </div>
         <div className="flex items-center gap-3">
-          {/* The async export starts a `pdfExport.request` job, which the API
-              gates to head/admin (headProcedure). Match the button's visibility
-              to that authz so viewers/leads are not shown a control that 403s
-              (driver sweep 2026-06-09). The read-only /reports/[reportId] route
-              still offers a plain /print link for every role. */}
-          {canMutatePeriod && (
+          {/* The async export starts a `pdfExport.request` job. Visibility
+              matches the widened authz (leadHeadAdminProcedure): lead + head +
+              admin see the button, viewer does not (the read-only
+              /reports/[reportId] route still offers a plain /print link for
+              every role). driver sweep 2026-06-09 + finding 3 (2026-06-13). */}
+          {canExportPdf && (
             <ExportPdfButton
               reportId={view.period.reportId}
               periodStatus={view.period.periodStatus}
