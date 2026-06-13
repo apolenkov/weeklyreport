@@ -139,14 +139,9 @@ describe("AccordionSection", () => {
     expect(screen.getByText("3")).toBeDefined();
   });
 
-  it("syncs to groupExpanded when groupSyncKey changes", () => {
+  it("mirrors groupExpanded into local state when it changes", () => {
     const { rerender } = render(
-      <AccordionSection
-        icon={null}
-        title="T"
-        groupSyncKey={0}
-        groupExpanded={true}
-      >
+      <AccordionSection icon={null} title="T" groupExpanded={true}>
         Content
       </AccordionSection>,
     );
@@ -154,12 +149,7 @@ describe("AccordionSection", () => {
     expect(btn).toHaveAttribute("aria-expanded", "true");
 
     rerender(
-      <AccordionSection
-        icon={null}
-        title="T"
-        groupSyncKey={1}
-        groupExpanded={false}
-      >
+      <AccordionSection icon={null} title="T" groupExpanded={false}>
         Content
       </AccordionSection>,
     );

@@ -93,7 +93,7 @@ run full gates and read the whole diff before each commit.
 
 ## 4. Web — drop redundant groupSyncKey (D6)
 
-- [ ] 4.1 refactor(web): remove the `groupSyncKey` prop. In
+- [x] 4.1 refactor(web): remove the `groupSyncKey` prop. In
       `accordion-section.tsx`: delete the prop declaration (line 36)
       and destructure (line 51), rewrite the JSDoc (29-35), keep the
       guard only for `groupExpanded === undefined`, effect deps →
