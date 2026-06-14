@@ -19,7 +19,7 @@ lead control styling. Read archived `head-toolbar-parity` +
 
 ## 2. Implement
 
-- [ ] 2.0 BUG — viewer report header is DOUBLED ("viewer полетел", 2026-06-14
+- [x] 2.0 BUG — viewer report header is DOUBLED ("viewer полетел", 2026-06-14
       screenshot). `app/(app)/reports/[reportId]/page.tsx` renders its OWN
       `<h1>Status Report</h1>` + Report-ID + a bare action row (Back to Archive /
       Presentation / Print / Agent review), THEN mounts `WeeklyReportPage`, which
@@ -28,18 +28,18 @@ lead control styling. Read archived `head-toolbar-parity` +
       duplicate `<h1>`/context, route the viewer actions through
       `WeeklyReportPage`'s `toolbar` slot, and put them in the unified pill bar.
       Keep all hrefs/aria/behavior.
-- [ ] 2.1 Apply the unified container + intent grouping to the head report
+- [x] 2.1 Apply the unified container + intent grouping to the head report
       action row (form + slides). Keep all hrefs, behavior, aria intact.
       Use the frontend-design skill for the visual pass; named consts, no magic
       numbers; UI strings stay English.
-- [ ] 2.2 Audit every report-surface top action row (lead form header, head
+- [x] 2.2 Audit every report-surface top action row (lead form header, head
       dashboard/review, viewer); record which match vs diverge; align the
       divergent ones; note any intentionally-distinct surface. Viewer is 2.0.
 
 ## 3. Tests + gates
 
-- [ ] 3.1 Render tests for the regrouped head action row (controls present,
+- [x] 3.1 Render tests for the regrouped head action row (controls present,
       grouped, aria/hrefs preserved). Update snapshots honestly.
-- [ ] 3.2 `pnpm typecheck && pnpm lint` + vitest for touched web packages.
-- [ ] 3.3 Live re-check at `:3000` (head report form + slides): before/after
+- [x] 3.2 `pnpm typecheck && pnpm lint` + vitest for touched web packages.
+- [x] 3.3 Live re-check at `:3000` (head report form + slides): before/after
       screenshots to `/tmp/finish-backlog-shots/`.
