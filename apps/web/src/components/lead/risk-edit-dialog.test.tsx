@@ -438,22 +438,45 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
     expect(cancel.parentElement).toBe(save.parentElement);
   });
 
-  it("uses two-column grid layout on md+ viewports", () => {
+  it("renders all fields in a single-column layout with a Classification sub-panel", () => {
+    // polish-lead-toolbar-and-risk-dialog 2.x: the former md+ two-column grid
+    // is replaced by a single column — prose fields stacked full-width, then a
+    // grouped Classification sub-panel. Assert the new contract: no grid, and
+    // every field is present in the new DOM.
     render(
       <RiskEditDialog
         open
         risk={null}
-        products={products}
+        products={[
+          ...products,
+          { id: "p2", name: "Billing", overallStatus: "on-track", stages: [] },
+        ]}
         onSave={() => undefined}
         onCancel={() => undefined}
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev"]}
+        stagesForProduct={() => ["Dev", "Testing"]}
       />,
     );
 
-    // The form grid wrapping both columns.
-    const grid = document.querySelector('[class*="md:grid-cols-"]');
-    expect(grid).not.toBeNull();
+    // No two-column grid anymore.
+    expect(document.querySelector('[class*="md:grid-cols-"]')).toBeNull();
+
+    // The grouped Classification sub-panel is present.
+    expect(screen.getByText("Classification")).toBeInTheDocument();
+
+    // Every field survived the relayout: the three prose fields, severity
+    // chips, the stage selector, and the product picker (>1 product).
+    expect(screen.getByLabelText(/^Risk \*/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Impact \*/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Mitigation \*/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /At Risk/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Blocked/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Dev" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Product/i)).toBeInTheDocument();
   });
 });
 
