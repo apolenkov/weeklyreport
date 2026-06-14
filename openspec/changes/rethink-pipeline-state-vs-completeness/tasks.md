@@ -39,3 +39,17 @@ product health; read existing sync/status tests before changing semantics.
 - [x] 3.1 `pnpm typecheck && pnpm lint` + vitest for the touched web package.
 - [x] 3.2 Live re-check at `:3000`: a product with a stage-owner risk shows the
       severity on the left AND its own completeness on the right.
+      FINAL VERDICT (2026-06-14 live walk): the completeness counter inflated on
+      reload — a covering risk floored the lead's UNTOUCHED stages, so the read
+      model (`lead-form.ts buildStageGrid`) returned a risk-derived severity for
+      stages the lead never set, and `computeCompleteness` counted them as
+      "filled" (0/3 -> 3/3, surviving reload). Root cause: the read model applied
+      the severity floor to EMPTY owned stages too. Fix: `buildStageGrid` now
+      keeps an untouched (empty) owned stage `empty`; the floor for DISPLAY is
+      re-applied at render by `applyRiskSeverityFloor` (live) /
+      `floorSlideStageStatus` (slides). Touched stages still floor-up /
+      collapse-down via `deriveEffectiveStageStatus`. Live-verified: one
+      at-risk risk over 3 untouched owned stages floors the chips to at-risk for
+      display, the pill stays 0/3, and it stays 0/3 after reload. New regression
+      test in `lead-form.test.ts` ("an UNTOUCHED owned stage covered by a risk
+      stays empty"); web suite 1104/1104, typecheck + lint clean.
