@@ -20,6 +20,18 @@ vi.mock("../slides/head-slides-client", () => ({
   HeadSlidesClient: () => <div data-testid="head-slides-client-stub" />,
 }));
 
+// lead-live-walk-2026-06-14 task 5.3: the shell now mounts the period-mutation
+// cluster (Export-PDF + Archive + Publish) inside the action pill. The real
+// component self-queries weeklyReport.get and runs mapWeeklyReport, which would
+// throw on the thin useQuery mocks below — stub it (like HeadSlidesClient) and
+// expose a sentinel so tests can pin WHERE the cluster mounts. A separate,
+// fully-wired test asserts its real contents live inside the single pill.
+vi.mock("../weekly-report/report-mutation-actions", () => ({
+  ReportMutationActions: () => (
+    <div data-testid="report-mutation-actions-stub" />
+  ),
+}));
+
 vi.mock("../weekly-report/weekly-report-page", () => ({
   // head-toolbar-parity: render the `toolbar` slot so tests can pin that the
   // shell hands its single ReportToolbar to the page (design D2). The real
@@ -186,6 +198,30 @@ describe("HeadReportShell — unified action pill (unify-top-action-toolbars)", 
     expect(
       within(pill).queryByTestId("agent-review-coming-soon"),
     ).not.toBeInTheDocument();
+  });
+
+  // lead-live-walk-2026-06-14 task 5.3: the period-mutation cluster (Export-PDF
+  // + Archive + Publish) now lives INSIDE the single action pill, not in the
+  // WeeklyReportPage header. Pin it for BOTH modes — the pill is shared across
+  // the mode branch, so slides gains the same consolidated bar.
+  it.each(["form", "slides"] as const)(
+    "mounts the period-mutation cluster inside the single pill (%s mode)",
+    (mode) => {
+      render(<HeadReportShell reportId={TEST_REPORT_ID} mode={mode} />);
+      const pill = screen.getByTestId("report-actions-pill");
+      expect(
+        within(pill).getByTestId("report-mutation-actions-stub"),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it("suppresses the WeeklyReportPage header cluster (one consolidated bar)", () => {
+    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
+    // The mutation cluster appears exactly once — in the pill, not duplicated in
+    // the page header. The WeeklyReportPage stub renders no cluster of its own.
+    expect(screen.getAllByTestId("report-mutation-actions-stub")).toHaveLength(
+      1,
+    );
   });
 });
 

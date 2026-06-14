@@ -1,16 +1,10 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useContext, useEffect, useMemo } from "react";
-import { toast } from "sonner";
 
-import {
-  invalidateDashboard,
-  invalidateLeadForm,
-  invalidateLeadHistory,
-} from "../../lib/cache-keys";
 import { getClientErrorDetails } from "../../lib/client-error-reporting";
 import { joinPeriodLabel } from "../../lib/format-date";
 import { mapWeeklyReport } from "../../lib/mappers";
@@ -27,11 +21,10 @@ import {
   ReportToolbar,
   ReportToolbarCenterLabel,
 } from "../report-shell/report-toolbar";
-import { ExportPdfButton } from "./export-pdf-button";
 import { HeadPeriodNavigator } from "./period-navigator";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
 import { ProductAccordion } from "./product-accordion";
-import { PublishLockButton } from "./publish-lock-button";
+import { ReportMutationActions } from "./report-mutation-actions";
 import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
 
 interface WeeklyReportPageProps {
@@ -68,6 +61,14 @@ interface WeeklyReportPageProps {
    * and keep the page's own toolbar.
    */
   readonly toolbar?: ReactNode;
+  /**
+   * lead-live-walk-2026-06-14 task 5.3: suppress the in-header period-mutation
+   * cluster (Export-PDF + Archive + Publish). The head report shell sets this
+   * because it renders the SAME ReportMutationActions inside the shared
+   * ReportActionsPill (one consolidated bar across form + slides). Off by
+   * default so every standalone consumer keeps the cluster in the page header.
+   */
+  readonly suppressHeaderActions?: boolean;
 }
 
 /**
@@ -134,9 +135,9 @@ export function WeeklyReportPage({
   authorId,
   scope = "product",
   toolbar,
+  suppressHeaderActions = false,
 }: WeeklyReportPageProps) {
   const trpc = useTRPC();
-  const qc = useQueryClient();
   const router = useRouter();
   const focusedAuthorId = authorId ?? null;
   // UFB-047 / Phase 49-01: department label is the Organization singleton's
@@ -144,70 +145,12 @@ export function WeeklyReportPage({
   // `weeklyReport.get.departmentName` was removed when the column dropped.
   const sessionState = useContext(SessionContext);
   const orgFullName = sessionState?.organization?.fullName ?? null;
-  const currentRole = sessionState?.user?.role ?? null;
-  const canMutatePeriod = currentRole === "head" || currentRole === "admin";
-  // driver-findings-2026-06-11 finding 3 (decision 2026-06-13): leads SHOULD
-  // have Export-PDF, so the button is shown to lead + head + admin. Viewer is
-  // excluded (read-only role keeps the plain /print link). Matches the widened
-  // pdfExport.request / .status authz (leadHeadAdminProcedure).
-  const canExportPdf = canMutatePeriod || currentRole === "lead";
 
   // weeklyReport.get input: { reportId?: string } | undefined.
   // When reportId is given, scope to that report; otherwise fall back to the
   // session's active period (server-side default).
   const queryInput = reportId ? { reportId } : {};
   const weeklyQ = useQuery(trpc.weeklyReport.get.queryOptions(queryInput));
-
-  // Phase 22 (plan 22-05): wire period.publish + period.reopen to the head's
-  // Publish & Lock / Reopen button. On success, cascade cache invalidation
-  // across dashboard, lead form, and lead history surfaces so all consumers
-  // refetch fresh state without a manual refresh.
-  const publishMut = useMutation(
-    trpc.period.publish.mutationOptions({
-      onSuccess: () => {
-        invalidateDashboard(qc, trpc);
-        invalidateLeadHistory(qc, trpc);
-        toast.success("Period published & locked");
-      },
-      onError: (err: unknown) => {
-        toast.error(
-          err instanceof Error ? err.message : "Failed to publish period",
-        );
-      },
-    }),
-  );
-
-  const reopenMut = useMutation(
-    trpc.period.reopen.mutationOptions({
-      onSuccess: () => {
-        invalidateDashboard(qc, trpc);
-        invalidateLeadForm(qc, trpc);
-        invalidateLeadHistory(qc, trpc);
-        toast.success("Period reopened");
-      },
-      onError: (err: unknown) => {
-        toast.error(
-          err instanceof Error ? err.message : "Failed to reopen period",
-        );
-      },
-    }),
-  );
-
-  // A22: archive mutation — head moves a published report into the archive so
-  // it appears in archive.list. Only visible when periodStatus==='published'.
-  const archiveMut = useMutation(
-    trpc.archive.archiveReport.mutationOptions({
-      onSuccess: () => {
-        invalidateDashboard(qc, trpc);
-        toast.success("Report archived");
-      },
-      onError: (err: unknown) => {
-        toast.error(
-          err instanceof Error ? err.message : "Failed to archive report",
-        );
-      },
-    }),
-  );
 
   useQueryErrorHandler(weeklyQ, {
     event: "weeklyReport.get.load_failed",
@@ -281,8 +224,6 @@ export function WeeklyReportPage({
   const view = mapWeeklyReport(reportData);
   const submitted = view.submissionCount;
   const total = view.totalLeads;
-  // pendingCount mirrors mock semantics: total - submitted, clamped >= 0.
-  const pendingCount = Math.max(0, total - submitted);
 
   // The mapper produces structurally compatible shapes; cast to the existing
   // mock-data presentation types so children keep their imports unchanged.
@@ -338,8 +279,6 @@ export function WeeklyReportPage({
           hasReportContent(report),
       )?.id
     : undefined;
-  const hasExpandableProducts = products.some(hasReportContent);
-  const canPublishReport = submitted > 0 && hasExpandableProducts;
   const scrollTargetProductId =
     authoredProductIds.length > 0 ? authoredProductIds[0] : undefined;
   // HeadPeriodNavigator currently renders one period entry; future plans may
@@ -369,52 +308,17 @@ export function WeeklyReportPage({
             Live &middot; {submitted}/{total} Submitted
           </span>
         </div>
-        <div className="flex items-center gap-3">
-          {/* The async export starts a `pdfExport.request` job. Visibility
-              matches the widened authz (leadHeadAdminProcedure): lead + head +
-              admin see the button, viewer does not (the read-only
-              /reports/[reportId] route still offers a plain /print link for
-              every role). driver sweep 2026-06-09 + finding 3 (2026-06-13). */}
-          {canExportPdf && (
-            <ExportPdfButton
-              reportId={view.period.reportId}
-              periodStatus={view.period.periodStatus}
-            />
-          )}
-          {/* A22: "Archive" button — shown to head once the period is published.
-              Moves the report into the archive (sets archived=true) so it
-              appears in the Archive tab. The button is hidden after archiving
-              because this page only navigates to current/active periods. */}
-          {canMutatePeriod && view.period.periodStatus === "published" && (
-            <button
-              type="button"
-              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={() =>
-                archiveMut.mutate({ reportId: view.period.reportId })
-              }
-              disabled={archiveMut.isPending}
-              aria-label="Move this report to the archive"
-            >
-              {archiveMut.isPending ? "Archiving…" : "Archive"}
-            </button>
-          )}
-          {canMutatePeriod && (
-            <PublishLockButton
-              pendingCount={pendingCount}
-              totalLeads={total}
-              periodStatus={view.period.periodStatus}
-              onPublish={() =>
-                publishMut.mutate({ reportId: view.period.reportId })
-              }
-              onReopen={() =>
-                reopenMut.mutate({ reportId: view.period.reportId })
-              }
-              isPending={publishMut.isPending || reopenMut.isPending}
-              canPublish={canPublishReport}
-              publishDisabledReason="No submitted report content yet."
-            />
-          )}
-        </div>
+        {/* lead-live-walk-2026-06-14 task 5.3: Export-PDF + Archive + Publish
+            live in ReportMutationActions. Standalone consumers (viewer, lead
+            preview, present, bare /head/report) render the cluster here in the
+            page header row. The head report shell suppresses it
+            (suppressHeaderActions) and renders the SAME component inside the
+            shared ReportActionsPill — one consolidated bar, both modes. */}
+        {!suppressHeaderActions && (
+          <div className="flex items-center gap-3">
+            <ReportMutationActions reportId={reportId} />
+          </div>
+        )}
       </div>
 
       {/* Period-context toolbar: shared ReportToolbar container
