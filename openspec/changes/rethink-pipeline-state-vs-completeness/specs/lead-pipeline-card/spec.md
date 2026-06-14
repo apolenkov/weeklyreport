@@ -57,3 +57,22 @@ no separate manual status that can drift from the risks.
 - **WHEN** one stage is covered by an at-risk AND a blocker risk
 - **THEN** the displayed stage status is blocked (highest severity)
 - **AND** both covering risks remain visible in the Risks section
+
+### Requirement: Own-input completeness counts only stages the lead explicitly set
+
+Own-input completeness (D1) MUST count a stage as "filled" only when the lead
+set an explicit status on it. The risk-derived severity floor is a DISPLAY
+concern and MUST NOT make an untouched stage count toward completeness — a stage
+the lead never set stays uncounted even while a covering risk shows it at a
+severity in the pipeline. This MUST hold on reload (a persisted covering risk
+must not inflate the counter), so completeness reads the raw per-stage status,
+not the floored display status.
+
+#### Scenario: a covering risk floors an untouched stage for display only
+
+- **WHEN** the lead owns three stages with no explicit status set, and adds one
+  risk that covers all three
+- **THEN** the three stage chips render at the risk severity (display floor)
+- **AND** the completeness counter still reads 0 of 3 (none explicitly set)
+- **AND** after a page reload the counter still reads 0 of 3 — the persisted
+  covering risk does not inflate it to complete

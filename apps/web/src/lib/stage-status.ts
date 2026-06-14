@@ -29,8 +29,10 @@ const PRECEDENCE: Record<StageStatus, number> = {
  * - `applyRiskSeverityFloor` (lead live form) and `floorSlideStageStatus`
  *   (slide/preview) pass `items: []` — risks are the only live source there.
  * - `buildStageGrid` (lead-form.ts, the read model) passes a real `explicit`
- *   traffic status plus real `risks` AND `items` — the `items` branch is live
- *   here (a blocked workflow item floors a stage even without a risk row).
+ *   traffic status plus real `risks` (and `items: []`). It calls this only for
+ *   a TOUCHED stage (explicit !== empty), to floor up / collapse down; an
+ *   untouched empty stage skips the call and stays empty so own-input
+ *   completeness is not inflated by a covering risk.
  * - `buildCrossAuthorStageMap` (lead-cross-author.ts, the read-only "Other
  *   contributors" chip) passes a real `explicit` traffic status plus real
  *   `risks`/`items`. The collapse-down above intentionally applies there too:

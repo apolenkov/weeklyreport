@@ -356,6 +356,49 @@ describe("mapLeadProducts", () => {
     );
   });
 
+  it("an UNTOUCHED owned stage covered by a risk stays empty (rethink-pipeline completeness fix)", () => {
+    // rethink-pipeline-state-vs-completeness (D1): the read model feeds the live
+    // form's own-input completeness counter via the raw, pre-floor status. A
+    // covering risk (the Add-Risk dialog defaults to all stages checked) must
+    // NOT floor a stage the lead never set — otherwise an empty stage would
+    // count as "filled" and inflate the counter to "your input is complete".
+    // The DISPLAY floor is re-applied at render by applyRiskSeverityFloor; this
+    // mapper output is the completeness source, so the empty stays empty.
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM Platform",
+          trafficLight: "green",
+          ownedStages: [
+            {
+              stageId: "stage-dev",
+              stageName: "Development",
+              sortOrder: 3,
+              // No status: the lead never touched this stage.
+              status: null,
+            },
+          ],
+        },
+      ],
+      risks: [
+        {
+          projectId: PROJECT_A,
+          risk: "Product-wide blocker",
+          impact: "Everything stalls",
+          mitigation: "Escalate",
+          severity: "blocked",
+          stageIds: [],
+        },
+      ],
+    });
+
+    const devStage = mapLeadProducts(section)[0]?.stages.find(
+      (s) => s.stageName === "Dev",
+    );
+    expect(devStage?.status).toBe("empty");
+  });
+
   it("an empty-text risk does not floor the chip (only non-empty risks count)", () => {
     const section = baseSection({
       projects: [
