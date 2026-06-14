@@ -4,10 +4,7 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
-import {
-  LeadFormSyncBridge,
-  promoteStageStatus,
-} from "./lead-form-sync-bridge";
+import { LeadFormSyncBridge } from "./lead-form-sync-bridge";
 import type { Product, RiskEntry } from "./mock-data";
 
 // unify-risk-stage-status (D3): the cross-author lowering block surfaces as
@@ -221,14 +218,13 @@ describe("LeadFormSyncBridge", () => {
     expect(expectDefined(savedRisks[0]).severity).toBe("blocked");
     expect(expectDefined(savedRisks[0]).stageIds).toEqual(["Dev"]);
 
-    // Chip raised through the up-flow promotion (no extra confirmation).
-    const lastProducts = expectDefined(
-      expectDefined(onProductsChangeSpy.mock.calls.at(-1))[0],
-    );
-    const dev = expectDefined(lastProducts[0]).stages.find(
-      (s) => s.stageName === "Dev",
-    );
-    expect(dev?.status).toBe("blocked");
+    // rethink-pipeline-state-vs-completeness: the chip raises through the
+    // render-time floor, NOT a persisted write-through. The Dev chip renders
+    // blocked, and no status is persisted onto the products.
+    expect(
+      await screen.findByRole("button", { name: "Dev: blocked" }),
+    ).toBeInTheDocument();
+    expect(onProductsChangeSpy).not.toHaveBeenCalled();
   });
 
   it("Test 3: clicking Edit on a risk opens the RiskEditDialog (edit surface for impact/mitigation)", async () => {
@@ -366,28 +362,13 @@ describe("LeadFormSyncBridge", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Phase 3.5: promoteStageStatus pure function + up-flow integration
-// ---------------------------------------------------------------------------
-
-describe("promoteStageStatus pure function", () => {
-  it.each([
-    ["on-track", "blocked", "blocked"],
-    ["on-track", "at-risk", "at-risk"],
-    ["at-risk", "blocked", "blocked"],
-    ["at-risk", "at-risk", "at-risk"],
-    ["blocked", "at-risk", "blocked"],
-    ["blocked", "blocked", "blocked"],
-  ] as const)(
-    "current=%s + riskSeverity=%s → %s",
-    (current, riskSeverity, expected) => {
-      expect(promoteStageStatus(current, riskSeverity)).toBe(expected);
-    },
-  );
-});
-
-describe("LeadFormSyncBridge — up-flow stage promotion", () => {
-  it("saving a risk with severity=Blocked promotes the pipeline stage from on-track to Blocked", async () => {
+// rethink-pipeline-state-vs-completeness: saving a risk reflects up to the
+// chip via the render-time floor (applyRiskSeverityFloor) — NOT by persisting a
+// derived status onto the products. The old write-through (promote on add)
+// corrupted completeness; these tests pin the display-only behavior plus the
+// no-persisted-status contract.
+describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-through)", () => {
+  it("saving a Blocked risk renders the covered chip blocked WITHOUT persisting a status", async () => {
     const user = userEvent.setup();
     const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
     const product = buildProduct({
@@ -439,18 +420,21 @@ describe("LeadFormSyncBridge — up-flow stage promotion", () => {
 
     await user.click(screen.getByRole("button", { name: /Save Risk/i }));
 
-    // Dev stage should be promoted to blocked; Planning (locked) unchanged.
-    expect(onProductsChangeSpy).toHaveBeenCalled();
-    const lastCall = onProductsChangeSpy.mock.calls.at(-1)?.[0];
-    const dev = lastCall?.[0]?.stages.find((s) => s.stageName === "Dev");
-    const planning = lastCall?.[0]?.stages.find(
-      (s) => s.stageName === "Planning",
-    );
-    expect(dev?.status).toBe("blocked");
-    expect(planning?.status).toBe("on-track"); // locked → never promoted
+    // The Dev chip renders blocked via the render-time floor; Planning (locked)
+    // and the uncovered Testing chip stay at their explicit on-track.
+    expect(
+      await screen.findByRole("button", { name: "Dev: blocked" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Testing: on-track" }),
+    ).toBeInTheDocument();
+
+    // No status was persisted onto the products — the chip severity is a pure
+    // derivation of the covering risk, not a write-through.
+    expect(onProductsChangeSpy).not.toHaveBeenCalled();
   });
 
-  it("locked-ownership stages are NOT promoted when a risk is saved", async () => {
+  it("locked-ownership stages are never derived from a risk", async () => {
     const user = userEvent.setup();
     const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
     const product = buildProduct({
@@ -491,13 +475,72 @@ describe("LeadFormSyncBridge — up-flow stage promotion", () => {
 
     await user.click(screen.getByRole("button", { name: /Save Risk/i }));
 
-    // Find the most recent products update.
-    const lastCall = onProductsChangeSpy.mock.calls.at(-1)?.[0];
-    const planning = lastCall?.[0]?.stages.find(
-      (s) => s.stageName === "Planning",
+    // Planning is locked-ownership — the floor never touches it, and nothing is
+    // persisted onto the products.
+    expect(
+      await screen.findByRole("button", { name: "Planning: on-track" }),
+    ).toBeInTheDocument();
+    expect(onProductsChangeSpy).not.toHaveBeenCalled();
+  });
+
+  it("BLOCKER regression: adding a product-wide risk does NOT inflate the completeness pill (wiring junction)", async () => {
+    // rethink-pipeline-state-vs-completeness: the live wiring is
+    // `products={flooredProducts}` + `rawProducts={ctx.products}`. The pill must
+    // read RAW status, so a product-wide risk (the Add Risk dialog defaults all
+    // stages checked) cannot flip empty owned stages to "filled". Pre-fix this
+    // exact action drove the pill to "3/3 complete" and persisted across reload.
+    const user = userEvent.setup();
+    const onProductsChangeSpy = vi.fn<(next: Product[]) => void>();
+    const product = buildProduct({
+      stages: [
+        {
+          stageName: "Dev",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "Lead",
+        },
+        {
+          stageName: "Testing",
+          status: "empty",
+          ownership: "mine",
+          assignee: "Lead",
+        },
+        {
+          stageName: "Support",
+          status: "empty",
+          ownership: "mine",
+          assignee: "Lead",
+        },
+      ],
+    });
+
+    const { container } = render(
+      <Harness
+        initialProducts={[product]}
+        initialRisks={[]}
+        onProductsChangeSpy={onProductsChangeSpy}
+      />,
     );
-    // Planning is locked-ownership — must remain on-track regardless.
-    expect(planning?.status).toBe("on-track");
+
+    // Baseline: 1 of 3 owned stages filled, incomplete.
+    const pillBefore = container.querySelector("[data-complete]");
+    expect(pillBefore?.textContent).toContain("1/3 stages");
+    expect(pillBefore?.getAttribute("data-complete")).toBe("false");
+
+    // Add a product-wide risk: every owned stage checked by default.
+    await user.click(screen.getByRole("button", { name: /\+ Add Risk/i }));
+    await user.type(screen.getByLabelText(/^Risk \*/i), "Product-wide risk");
+    await user.type(screen.getByLabelText(/^Impact \*/i), "Broad impact");
+    await user.type(screen.getByLabelText(/^Mitigation \*/i), "Escalate");
+    await user.click(screen.getByRole("button", { name: /Save Risk/i }));
+
+    // The risk floors the empty chips for DISPLAY, but completeness reads raw —
+    // so the pill is unchanged: still 1/3, still incomplete.
+    const pillAfter = container.querySelector("[data-complete]");
+    expect(pillAfter?.textContent).toContain("1/3 stages");
+    expect(pillAfter?.getAttribute("data-complete")).toBe("false");
+    // No derived status was persisted onto the products.
+    expect(onProductsChangeSpy).not.toHaveBeenCalled();
   });
 });
 

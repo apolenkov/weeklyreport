@@ -17,26 +17,7 @@ import type { Product, RiskEntry, StageStatus } from "./mock-data";
 import { RisksSection } from "./risks-section";
 import type { CrossAuthorEntry } from "./sdlc-pipeline";
 import { SdlcPipeline } from "./sdlc-pipeline";
-import {
-  canonicalStageName,
-  riskCoversStage,
-  splitStageNames,
-} from "./stage-tags";
-
-/**
- * Promotes a stage status based on a risk's severity.
- * Never downgrades: if the stage is already blocked, it stays blocked.
- * Exported for unit testing.
- */
-export function promoteStageStatus(
-  current: StageStatus,
-  riskSeverity: "at-risk" | "blocked",
-): StageStatus {
-  if (current === "blocked") return "blocked";
-  if (riskSeverity === "blocked") return "blocked";
-  if (current === "at-risk") return "at-risk";
-  return riskSeverity; // "on-track" + "at-risk" → "at-risk"
-}
+import { canonicalStageName, riskCoversStage } from "./stage-tags";
 
 /**
  * Own non-empty risks of `productId` that cover `stageName`
@@ -204,22 +185,6 @@ interface BridgeContextValue {
 
 const BridgeContext = createContext<BridgeContextValue | null>(null);
 
-function riskStageKeys(products: Product[], risk: RiskEntry): string[] {
-  const tags =
-    risk.stageIds ??
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-    splitStageNames(risk.stageName);
-  if (tags.length > 0) {
-    return tags.map(
-      (stageName) => `${risk.productId}::${canonicalStageName(stageName)}`,
-    );
-  }
-  const product = products.find((item) => item.id === risk.productId);
-  return (product?.stages ?? []).map(
-    (stage) => `${risk.productId}::${canonicalStageName(stage.stageName)}`,
-  );
-}
-
 function useBridgeContext(componentName: string): BridgeContextValue {
   const ctx = useContext(BridgeContext);
   if (!ctx) {
@@ -367,73 +332,21 @@ function Provider({
   const handleRisksChange = useCallback(
     (next: RiskEntry[]) => {
       if (readOnly) return;
-      // Strip foreign entries so they don't bleed into draft mutations or
-      // skew the stage-clear count (foreign risks belong to other authors).
+      // Strip foreign entries so they don't bleed into draft mutations
+      // (foreign risks belong to other authors).
       const ownNext = next.filter((r) => !r.foreign);
 
-      // Count risks per canonical stage key after this change.
-      const nextCounts = new Map<string, number>();
-      for (const r of ownNext) {
-        for (const key of riskStageKeys(products, r)) {
-          nextCounts.set(key, (nextCounts.get(key) ?? 0) + 1);
-        }
-      }
-
-      // Stages to clear: had risks before, now have none → reset to on-track.
-      const stagesToClear = new Set<string>();
-      const seen = new Set<string>();
-      for (const r of risks) {
-        for (const key of riskStageKeys(products, r)) {
-          if (seen.has(key)) continue;
-          seen.add(key);
-          if ((nextCounts.get(key) ?? 0) === 0) {
-            stagesToClear.add(key);
-          }
-        }
-      }
-
-      // Up-flow promotion: surviving risks promote their stages up, never down.
-      // locked-ownership stages are excluded (owned by the product head, not this lead).
-      const stagePromotions = new Map<string, "at-risk" | "blocked">();
-      for (const r of ownNext) {
-        for (const key of riskStageKeys(products, r)) {
-          if (stagesToClear.has(key)) continue;
-          const current = stagePromotions.get(key);
-          if (current === "blocked") continue;
-          stagePromotions.set(
-            key,
-            r.severity === "blocked" ? "blocked" : "at-risk",
-          );
-        }
-      }
-
+      // rethink-pipeline-state-vs-completeness: adding or removing a risk MUST
+      // NOT persist a derived status onto the stages. The displayed severity is
+      // a pure render-time derivation of the covering risks (applyRiskSeverityFloor
+      // on the live form, mapLeadProducts in the read model), so there is no
+      // separate persisted manual status that can drift. The earlier
+      // unify-risk-stage-status write-through (promote on add, clear on remove)
+      // corrupted completeness: an add-then-remove cycle left empty stages
+      // persisted as on-track, falsely satisfying "my input is complete".
       onRisksChange(ownNext);
-
-      const hasProductChanges =
-        stagesToClear.size > 0 || stagePromotions.size > 0;
-      if (!hasProductChanges) return;
-
-      const updatedProducts = products.map((p) => ({
-        ...p,
-        stages: p.stages.map((s) => {
-          if (s.ownership === "locked") return s;
-          const key = `${p.id}::${canonicalStageName(s.stageName)}`;
-          if (stagesToClear.has(key)) {
-            return s.status === "at-risk" || s.status === "blocked"
-              ? { ...s, status: "on-track" as const }
-              : s;
-          }
-          const target = stagePromotions.get(key);
-          if (target) {
-            const promoted = promoteStageStatus(s.status, target);
-            return promoted !== s.status ? { ...s, status: promoted } : s;
-          }
-          return s;
-        }),
-      }));
-      onProductsChange(updatedProducts);
     },
-    [readOnly, onRisksChange, onProductsChange, products, risks],
+    [readOnly, onRisksChange],
   );
 
   const value = useMemo<BridgeContextValue>(
@@ -519,6 +432,7 @@ function Pipeline() {
   return (
     <SdlcPipeline
       products={flooredProducts}
+      rawProducts={ctx.products}
       readOnly={ctx.readOnly}
       onStatusChange={ctx.handleStageStatusChange}
       {...(ctx.crossAuthors !== undefined

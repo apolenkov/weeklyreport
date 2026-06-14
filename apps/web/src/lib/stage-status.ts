@@ -25,9 +25,18 @@ const PRECEDENCE: Record<StageStatus, number> = {
  *
  * Severity precedence: blocked > at-risk > on-track > empty.
  *
- * The `items` branch is preserved for the function's general contract but is
- * dead on the lead-pipeline path: both callers (`buildStageGrid`,
- * `applyRiskSeverityFloor`) pass `[]` — risks are the only live source there.
+ * Four callers:
+ * - `applyRiskSeverityFloor` (lead live form) and `floorSlideStageStatus`
+ *   (slide/preview) pass `items: []` — risks are the only live source there.
+ * - `buildStageGrid` (lead-form.ts, the read model) passes a real `explicit`
+ *   traffic status plus real `risks` AND `items` — the `items` branch is live
+ *   here (a blocked workflow item floors a stage even without a risk row).
+ * - `buildCrossAuthorStageMap` (lead-cross-author.ts, the read-only "Other
+ *   contributors" chip) passes a real `explicit` traffic status plus real
+ *   `risks`/`items`. The collapse-down above intentionally applies there too:
+ *   a foreign author's persisted red/amber status with NO covering risk now
+ *   collapses to on-track, consistent with the one-source model. Only stale
+ *   traffic-only data (no backing risk) is affected.
  */
 export function deriveEffectiveStageStatus(
   explicit: StageStatus,

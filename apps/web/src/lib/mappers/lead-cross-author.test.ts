@@ -258,6 +258,26 @@ describe("buildCrossAuthorStageMap", () => {
       status: "empty",
     });
   });
+
+  it("collapses a foreign stage with a persisted red/yellow traffic but NO covering risk to on-track", () => {
+    // rethink-pipeline-state-vs-completeness: deriveEffectiveStageStatus is the
+    // single source — an orphaned explicit severity with no backing risk can no
+    // longer survive. The cross-author "Other contributors" chip goes through
+    // the same derivation, so a stale traffic-only red here collapses to
+    // on-track. Testing on proj-a has no covering risk (risk-1 is Dev-only).
+    const staleRedTesting: CrossAuthorRow = {
+      ...crossAuthor,
+      stages: [
+        { stageName: "Dev", status: "green" },
+        { stageName: "Testing", status: "red" },
+      ],
+    };
+    const map = buildCrossAuthorStageMap([staleRedTesting], [baseSection]);
+    expect(map.get("proj-a")?.get("testing")).toEqual({
+      assignee: "Boris Leadov",
+      status: "on-track",
+    });
+  });
 });
 
 describe("applyCrossAuthorStageOverrides", () => {
