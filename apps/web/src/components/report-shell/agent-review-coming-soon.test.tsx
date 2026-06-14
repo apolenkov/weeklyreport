@@ -28,11 +28,14 @@ vi.mock("../../components/lead/lead-section-preview-auth", () => ({
 
 vi.mock("../../components/weekly-report/weekly-report-page", () => ({
   // unify-top-action-toolbars D4: the viewer routes its action controls
-  // (incl. the agent-review placeholder) through the `toolbar` slot, mirroring
-  // the head report shell. Render the slot so the viewer's single placeholder
-  // is observable in these tests.
-  WeeklyReportPage: ({ toolbar }: { toolbar?: ReactNode }) => (
-    <div data-testid="weekly-report-page-stub">{toolbar}</div>
+  // (incl. the agent-review placeholder) through the `headerActions` slot,
+  // mirroring the head report shell. Render the slot so the viewer's single
+  // placeholder is observable in these tests.
+  WeeklyReportPage: ({ headerActions }: { headerActions?: ReactNode }) => (
+    <div data-testid="weekly-report-page-stub">
+      <h1>Status Report</h1>
+      <div data-testid="weekly-report-header-actions">{headerActions}</div>
+    </div>
   ),
 }));
 
@@ -167,47 +170,50 @@ describe("PublishedReportPage — agent-review placeholder", () => {
 // unify-top-action-toolbars task 2.0 / D4: the viewer used to render its OWN
 // <h1>Status Report</h1> + Report-ID block ABOVE WeeklyReportPage, which
 // renders the same title — doubling it on screen. The wrapper now owns NO title
-// and routes its actions through the page's `toolbar` slot inside the shared
-// ReportActionsPill, so the title shows exactly once.
-describe("PublishedReportPage — single title + unified action pill (task 2.0)", () => {
-  it("renders no wrapper-level title or Report-ID (WeeklyReportPage owns the title)", () => {
+// and routes its actions through the page's `headerActions` slot, so the title
+// shows exactly once.
+describe("PublishedReportPage — single title + header actions (task 2.0)", () => {
+  it("renders exactly one Status Report title and no wrapper-level Report-ID", () => {
     render(
       <PublishedReportPage
         params={paramsOf(TEST_REPORT_ID)}
         searchParams={searchParamsOf()}
       />,
     );
-    // The wrapper no longer emits a heading; the mocked page is a bare stub, so
-    // zero headings here proves the duplicate <h1> is gone.
-    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+    expect(
+      screen.getAllByRole("heading", { name: "Status Report" }),
+    ).toHaveLength(1);
     expect(screen.queryByText(/report id:/i)).not.toBeInTheDocument();
   });
 
-  it("routes the viewer actions through the toolbar slot in one ReportActionsPill", () => {
+  it("routes the viewer actions through the headerActions slot", () => {
     render(
       <PublishedReportPage
         params={paramsOf(TEST_REPORT_ID)}
         searchParams={searchParamsOf()}
       />,
     );
-    const pill = screen.getByTestId("report-actions-pill");
-    // Left group: Back to Archive (navigate away). Right group: presentation /
-    // print / agent review (act on the current report).
-    const back = within(pill).getByRole("link", { name: /back to archive/i });
+    expect(screen.queryByTestId("report-actions-pill")).not.toBeInTheDocument();
+    const headerActions = screen.getByTestId("weekly-report-header-actions");
+    const back = within(headerActions).getByRole("link", {
+      name: /back to archive/i,
+    });
     expect(back).toHaveAttribute("href", "/reports?tab=published");
     // The React.use() stub returns the params Promise as-is, so reportId is not
     // unwrapped here; assert the href SHAPE (route prefix/suffix) rather than
     // the interpolated id. The live-browser pass confirms the real id.
     expect(
-      within(pill)
+      within(headerActions)
         .getByRole("link", { name: /open presentation/i })
         .getAttribute("href"),
     ).toMatch(/^\/reports\/.*\/present$/);
     expect(
-      within(pill).getByRole("link", { name: /print/i }).getAttribute("href"),
+      within(headerActions)
+        .getByRole("link", { name: /print/i })
+        .getAttribute("href"),
     ).toMatch(/^\/print\//);
     expect(
-      within(pill).getByTestId("agent-review-coming-soon"),
+      within(headerActions).getByTestId("agent-review-coming-soon"),
     ).toBeInTheDocument();
   });
 });

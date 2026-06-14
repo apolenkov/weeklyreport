@@ -176,6 +176,7 @@ function renderPage(
   role: SessionUser["role"] = "head",
   scope?: "product" | "lead",
   toolbar?: ReactNode,
+  headerActions?: ReactNode,
 ) {
   const { proxy, captured } = createMockTRPC([
     { path: ["weeklyReport", "get"], query: data },
@@ -229,7 +230,12 @@ function renderPage(
   }
 
   const renderResult = render(
-    <WeeklyReportPage authorId={authorId} scope={scope} toolbar={toolbar} />,
+    <WeeklyReportPage
+      authorId={authorId}
+      scope={scope}
+      toolbar={toolbar}
+      headerActions={headerActions}
+    />,
     { wrapper: Wrapper },
   );
 
@@ -623,6 +629,25 @@ describe("WeeklyReportPage — shared period toolbar (head-toolbar-parity)", () 
     const shellToolbar = screen.getByTestId("shell-toolbar");
     expect(
       heading.compareDocumentPosition(shellToolbar) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("renders shell header actions before built-in action controls", async () => {
+    renderPage(
+      makeWeeklyReportData("open"),
+      undefined,
+      "head",
+      undefined,
+      undefined,
+      <a href="/custom-action">Custom action</a>,
+    );
+    const customAction = await screen.findByRole("link", {
+      name: /custom action/i,
+    });
+    const exportPdf = screen.getByRole("button", { name: /export pdf/i });
+    expect(
+      customAction.compareDocumentPosition(exportPdf) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
