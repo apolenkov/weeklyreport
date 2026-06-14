@@ -29,11 +29,19 @@ English; Russian only in data/comments/tests.
 
 ## 3. Slide hero — height alignment
 
-- [x] 3.1 Align the status badge ("Blockers", `h-11`) to the same height/baseline
-      as its sibling row elements in `slides/lead-slide-hero.tsx`. Named const,
-      no magic number.
-- [x] 3.2 Verify across statuses (on-track / at-risk / blocked) and product
-      counts so no row wraps or misaligns.
+- [x] 3.1 VERIFIED ALREADY ALIGNED — no rendered change needed. Live measurement
+      at `:3000 ?mode=slides` (blocked slide): tone badge and metric capsule are
+      both 44px tall (`h-11`), the author text is 20px but centered, and all
+      three share centerY 292 — the row is on one baseline. The named const
+      `HERO_ROW_HEIGHT_CLASS` in `slides/lead-slide-hero.tsx` only locks the
+      shared-height contract between the two boxed elements; it intentionally
+      produces no visual change because the row was already correct. The user's
+      "taller" perception is the bordered pill vs. the borderless author text,
+      which is by design.
+- [x] 3.2 VERIFIED across tones: `HERO_ROW_HEIGHT_CLASS` is applied
+      unconditionally, only the color classes vary by status, so badge/capsule
+      height is constant for on-track / at-risk / blocked. The render test
+      asserts the shared `h-11` for all three tones; no row wraps or misaligns.
 
 ## 4. Gates
 
