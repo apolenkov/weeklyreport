@@ -260,7 +260,7 @@ function RiskEditDialogContent({
     >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop click-through; not an interactive action, so no keyboard equivalent applies */}
       <div
-        className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[var(--radius)] bg-white p-5 shadow-2xl"
+        className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[var(--radius)] bg-white p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -293,14 +293,19 @@ function RiskEditDialogContent({
           </div>
         )}
 
-        {/* polish-lead-toolbar-and-risk-dialog 2.x: single-column layout.
-            Text fields stack full-width top-to-bottom, then one compact
-            "Classification" sub-panel groups the stage/severity/product meta.
-            Calmer than the former max-w-4xl two-column shell. */}
-        <div className="space-y-4">
-          {/* Text fields: Risk / Impact / Mitigation, full width */}
-          <div className="space-y-4">
-            <div>
+        {/* lead-live-walk-2026-06-14 1.x: balanced two-column layout.
+            The former single column ran the full 92vh (Product picker clipped
+            off-screen); the older max-w-4xl two-column read as overloaded. This
+            is the middle ground: a moderate max-w-3xl grid that collapses to
+            one column on a narrow modal (md: breakpoint). Left holds the prose
+            fields, right holds the Classification panel. The prose textareas
+            use flex-1 to absorb height up to the taller (bordered) panel, so
+            the two columns finish at a comparable height with no stray space. */}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:items-stretch">
+          {/* Left column: Risk / Impact / Mitigation prose fields. flex-col so
+              the textareas can flex-1 and fill the column to the panel height. */}
+          <div className="flex flex-1 flex-col gap-4">
+            <div className="flex flex-1 flex-col">
               <label
                 className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
                 htmlFor="risk-text"
@@ -313,7 +318,7 @@ function RiskEditDialogContent({
                 autoFocus
                 aria-invalid={errors.text ? "true" : "false"}
                 aria-describedby={errors.text ? "risk-text-error" : undefined}
-                className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                className={`w-full flex-1 resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
                   errors.text
                     ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
                     : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
@@ -336,7 +341,7 @@ function RiskEditDialogContent({
               )}
             </div>
 
-            <div>
+            <div className="flex flex-1 flex-col">
               <label
                 className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
                 htmlFor="risk-impact"
@@ -349,7 +354,7 @@ function RiskEditDialogContent({
                 aria-describedby={
                   errors.impact ? "risk-impact-error" : undefined
                 }
-                className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                className={`w-full flex-1 resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
                   errors.impact
                     ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
                     : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
@@ -372,7 +377,7 @@ function RiskEditDialogContent({
               )}
             </div>
 
-            <div>
+            <div className="flex flex-1 flex-col">
               <label
                 className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
                 htmlFor="risk-mitigation"
@@ -385,7 +390,7 @@ function RiskEditDialogContent({
                 aria-describedby={
                   errors.mitigation ? "risk-mitigation-error" : undefined
                 }
-                className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                className={`w-full flex-1 resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
                   errors.mitigation
                     ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
                     : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
@@ -409,9 +414,9 @@ function RiskEditDialogContent({
             </div>
           </div>
 
-          {/* Classification: one light bordered sub-panel grouping the
-              stage / severity / product meta so it reads as a distinct,
-              compact block below the prose fields. */}
+          {/* Classification: the right column — one light bordered panel
+              grouping the stage / severity / product meta so it reads as a
+              distinct block beside the prose fields. */}
           <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-4">
             <span className="block text-xs font-semibold tracking-wide text-[var(--color-muted-foreground)] uppercase">
               Classification
