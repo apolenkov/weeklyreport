@@ -14,18 +14,31 @@ English; Russian only in data/comments/tests.
       `report-shell/toolbar-icon-button.tsx`). Keep the switch behavior + aria.
 - [x] 1.2 Version "Coming soon" control: make it fully rounded and visually
       consistent with the 32×32 sibling controls (`lead/version-coming-soon.tsx`).
-- [ ] 1.3 Fill-from / copy: re-consolidate into ONE control — default click
-      copies; drop the separate copy control (`lead/fill-from-button.tsx`).
-      DESIGN: confirm the merged interaction first (see proposal open question).
-- [x] 1.4 Add a unit/render test per changed control (shape/aria/behavior).
+- [x] 1.3 Fill-from / copy: re-consolidated into ONE split-button — a wider
+      main segment (copy = fill from the most recent submitted period) joined to
+      a slim chevron segment that opens the past-report picker (search + confirm
+      flow kept). Both segments keep distinct buttons + aria-labels; the chevron
+      keeps `dropdownTriggerRef`. The phase-A two-circle pair is gone; no
+      separate copy control was passed by `report-toolbar`/`lead-form` to remove
+      (`lead/fill-from-button.tsx`). Live-verified at :3000: main click opens the
+      Week 23 confirm dialog, chevron opens the picker.
+- [x] 1.4 Render/unit test per changed control: split-button asserts the joined
+      shared container + the fill-flow (main-click confirm, chevron-open list);
+      risk dialog asserts the single-column layout with every field present.
 
 ## 2. Risk edit dialog — clearer layout (DESIGN first)
 
-- [ ] 2.1 Propose a concrete lighter layout for `lead/risk-edit-dialog.tsx`
-      (field grouping, spacing, reduced competing emphasis). Capture a
-      before screenshot.
-- [ ] 2.2 Implement the agreed layout; keep all fields/behavior intact.
-- [ ] 2.3 After screenshot; update any snapshot tests honestly.
+- [x] 2.1 Layout decided + before screenshot captured: single column,
+      max-w-2xl, p-5. Prose fields (Risk/Impact/Mitigation) stack full-width,
+      then a light bordered "Classification" sub-panel groups SDLC stages +
+      severity chips + product. Before: `/tmp/finish-backlog-shots/before-risk-dialog.png`.
+- [x] 2.2 Implemented in `lead/risk-edit-dialog.tsx`. Presentation only — every
+      field, the "Select at least one stage." validation, the SDLC context strip,
+      severity semantics, and all behavior unchanged. Live-verified at :3000:
+      dialog is 672px wide, no md grid, Classification panel present.
+- [x] 2.3 After screenshot `/tmp/finish-backlog-shots/after-risk-dialog.png`.
+      No snapshot tests exist for this component; the layout unit test was
+      updated honestly to the single-column contract.
 
 ## 3. Slide hero — height alignment
 
@@ -45,9 +58,14 @@ English; Russian only in data/comments/tests.
 
 ## 4. Gates
 
-- [x] 4.1 `pnpm typecheck && pnpm lint` + vitest for touched web/ui packages.
-- [x] 4.2 Live re-check each item at `:3000` (form + `?mode=slides`); before/after
-      screenshots for the visual items.
+- [x] 4.1 Gates green after phase B (1.3 + 2.x): `pnpm typecheck` ✓,
+      `pnpm lint` ✓ (exit 0), full `apps/web` vitest 1083/1083 ✓ (touched files
+      fill-from-button 10/10 + risk-edit-dialog 24/24). No `packages/ui` change.
+- [x] 4.2 Live re-check at `:3000` (form + `?mode=slides`): split-button main
+      click copies (Week 23 confirm), chevron opens picker; risk dialog renders
+      single-column with the Classification panel; slides mode loads clean.
+      Screenshots in `/tmp/finish-backlog-shots/` (before/after toolbar +
+      risk dialog, split-button dropdown, slides).
 
 ## Notes
 
