@@ -260,7 +260,7 @@ function RiskEditDialogContent({
     >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop click-through; not an interactive action, so no keyboard equivalent applies */}
       <div
-        className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[var(--radius)] bg-white p-6 shadow-2xl"
+        className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[var(--radius)] bg-white p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -293,9 +293,12 @@ function RiskEditDialogContent({
           </div>
         )}
 
-        {/* Two-column layout on md+: left = text fields, right = meta */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_280px]">
-          {/* Left: Risk / Impact / Mitigation */}
+        {/* polish-lead-toolbar-and-risk-dialog 2.x: single-column layout.
+            Text fields stack full-width top-to-bottom, then one compact
+            "Classification" sub-panel groups the stage/severity/product meta.
+            Calmer than the former max-w-4xl two-column shell. */}
+        <div className="space-y-4">
+          {/* Text fields: Risk / Impact / Mitigation, full width */}
           <div className="space-y-4">
             <div>
               <label
@@ -406,8 +409,14 @@ function RiskEditDialogContent({
             </div>
           </div>
 
-          {/* Right: Stages / Severity / Product */}
-          <div className="space-y-4">
+          {/* Classification: one light bordered sub-panel grouping the
+              stage / severity / product meta so it reads as a distinct,
+              compact block below the prose fields. */}
+          <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+            <span className="block text-xs font-semibold tracking-wide text-[var(--color-muted-foreground)] uppercase">
+              Classification
+            </span>
+
             <StageMultiSelect
               id="risk-stage"
               value={stageIds}
