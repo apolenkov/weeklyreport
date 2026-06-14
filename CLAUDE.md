@@ -12,8 +12,8 @@ Codex repo overlay.
 Use current files instead of memory:
 
 - `openspec/changes/` - active backlog (run `openspec list`).
-- `openspec/specs/` - 4 durable invariants (destructive-db-guard,
-  deferred-feature-pattern, role-coverage-gate, period-dual-state).
+- `openspec/specs/` - durable specs; inspect the dir or run
+  `openspec list --specs` (`openspec list` alone lists active changes).
 - `openspec/config.yaml` - project context + change-lifecycle rules.
 - `.env.example`, `.env.test.example` - runtime switches and port assumptions.
 
@@ -36,9 +36,7 @@ customreport
 +-- openspec        # active backlog (changes/) + durable contracts (specs/)
 ```
 
-Active branch for ongoing work is `feat/PRJ-2/stage-refactor`
-(rebased on `main`). Run `git status --short --branch` and `openspec list`
-to see current state.
+Run `git status --short --branch` and `openspec list` to see current state.
 
 ## Commands
 
@@ -59,37 +57,22 @@ pnpm test
 pnpm build
 ```
 
-Lint stack. Biome was removed in Phase 1 of `migrate-lint-to-eslint-prettier`
-(behavior-preserving 1:1 port; no new rules) — the toolchain is now the
-mainstream ESLint + Prettier + stylelint trio. `pnpm lint` =
-`eslint . && stylelint "**/*.css" --allow-empty-input && pnpm lint:prisma:typecheck`:
+Lint stack: ESLint + Prettier + stylelint. `pnpm lint` =
+`eslint . && stylelint "**/*.css" --allow-empty-input && pnpm lint:prisma:typecheck`.
 
-- **ESLint** (`eslint.config.ts`) owns the full logic lint surface for
-  `*.{ts,tsx,js,jsx,mjs}`, absorbing Biome's former `recommended` coverage 1:1
-  via `@typescript-eslint` (individual rules, NOT the `recommended`/strict
-  arrays), `eslint-plugin-react`, `eslint-plugin-jsx-a11y`, `react-hooks`,
-  `react-compiler`, and `unused-imports`. Repo overrides preserved at their
-  Biome severities: `no-explicit-any: error`, `no-non-null-assertion: warn`,
-  unused vars `error` (via `unused-imports/no-unused-vars`), type-aware
-  `no-floating-promises: error`. React hook rules are structurally single-owned
-  (no Biome to disable). jsx-a11y firers Biome did not enforce are turned `off`
-  inline to stay 1:1. The 73 `biome-ignore` suppressions were converted to
-  `eslint-disable-next-line` (6 `useSemanticElements` sites dropped — no
-  equivalent). Cognitive-complexity (`noExcessiveCognitiveComplexity`, no ESLint
-  equivalent) was a non-gating `warn`; deferred to Phase 2 sonarjs.
-- **Prettier** (`.prettierrc.json`) is the formatter of record for the whole
-  surface — TS/JS/JSON/CSS **and** YAML/Markdown. Settings mirror the old Biome
-  block (printWidth 80, tabWidth 2, double quotes, semi, trailingComma all).
-  `pnpm format` = `prettier --write .`; `pnpm format:check` = `prettier --check .`.
-  Markdown is formatted, not linted — markdownlint stays removed (no `lint:md`,
-  no CI job).
-- **stylelint** (`.stylelintrc.json`, `stylelint-config-standard` + Tailwind
-  at-rule allowance) owns CSS lint for the 4 CSS files; the two Biome-carried
-  CSS rules run at `warning`. A deliberate third tool (CSS parity over a strict
-  2-tool count).
+- **ESLint** (`eslint.config.ts`) owns the logic lint surface for
+  `*.{ts,tsx,js,jsx,mjs}`. Repo severity overrides: `no-explicit-any: error`,
+  `no-non-null-assertion: warn`, unused vars `error` (via
+  `unused-imports/no-unused-vars`), `no-floating-promises: error`.
+- **Prettier** (`.prettierrc.json`) formats the whole surface — TS/JS/JSON/CSS
+  **and** YAML/Markdown. `pnpm format` / `pnpm format:check`. Markdown is
+  formatted, NOT linted — markdownlint stays removed (no `lint:md`, no CI job).
+- **stylelint** (`.stylelintrc.json`) owns CSS lint; only the two parity rules
+  `no-descending-specificity` and `declaration-no-important` run at `warning`.
 
-Phases 2 (declare max-strictness) and 3 (ratchet to green) are separate
-follow-up OpenSpec changes — see `migrate-lint-to-eslint-prettier/proposal.md`.
+Migration history (Biome → ESLint/Prettier) and toolchain rationale live in
+`openspec/specs/lint-toolchain-ownership/spec.md` and the archived change
+`openspec/changes/archive/2026-05-31-migrate-lint-to-eslint-prettier/`.
 
 Useful local operations:
 
@@ -148,10 +131,9 @@ Every match must be data, a comment/JSDoc, or a test/fixture string.
 
 ### MVP Phase: Database Is Disposable
 
-There is no production deployment yet — the project is pre-prod and
-experimental, with no stable point to preserve. The local/dev/test/UAT
-databases are disposable: resetting, wiping, and rebuilding them from scratch
-is expected and safe, and does not need a fresh round of approval each time.
+No production deployment yet — local/dev/test/UAT databases are disposable.
+Resetting, wiping, and rebuilding from scratch is expected and safe, with no
+fresh approval needed each time.
 
 - **Reshape the schema directly; do not author incremental alter-table
   migrations.** Edit `prisma/schema.prisma` and rebuild. There is a single
@@ -200,10 +182,8 @@ reopened. Director-facing UAT currently goes through the viewer read-only path.
 
 No long-lived `stash-*` / `backup-*` / `preserve-*` / `wip-*` branches. They
 are sticky by name — easy to create, easy to forget, dangerous to merge later.
-Concrete failure mode: `stash-uat-v7-2026-05-14` sat for 12 days, drifted 384
-commits behind `main` with a +13 278 / −499 diff that no one would ever want
-merged — yet the name implied "preserve, maybe merge later" and burned a
-session deciding what to do with it.
+(A `stash-uat-v7` branch once drifted 384 commits behind `main` and burned a
+session before being dropped.)
 
 If WIP needs to survive a session boundary, use one of:
 
@@ -230,7 +210,9 @@ branch in the same session.
 - API domain boundaries are Nest modules plus Prisma repositories.
 - Shared schemas and enums live in `packages/shared`; update them before
   duplicating types in app code.
-- Prisma migrations are append-only; review destructive migrations against
+- During MVP, reshape the schema directly and keep the single init migration
+  in sync (see "Database Is Disposable"); migrations become append-only once a
+  production point exists. Review destructive migrations against
   `prisma/_destructive-guard.ts`.
 - For product/group/report-period behavior, inspect existing tests before
   changing query semantics; this area has had regression-heavy UAT work.
