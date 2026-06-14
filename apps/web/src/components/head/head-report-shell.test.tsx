@@ -1,11 +1,9 @@
 /**
  * @vitest-environment jsdom
  *
- * mount-agent-review-placeholder review fix: the head report shell toolbar
- * mounts AgentReviewComingSoon in form mode only. In slides mode the single
- * placeholder lives inside the head slide article (status-slide-deck.tsx),
- * so a toolbar mount there would put two placeholders on one surface —
- * exactly the duplication design.md Decision 1 rejects.
+ * mount-agent-review-placeholder review fix: the head report shell mounts the
+ * AgentReviewComingSoon control in the same unframed header action cluster as
+ * the other report controls.
  */
 
 import "@testing-library/jest-dom/vitest";
@@ -21,12 +19,23 @@ vi.mock("../slides/head-slides-client", () => ({
 }));
 
 vi.mock("../weekly-report/weekly-report-page", () => ({
-  // head-toolbar-parity: render the `toolbar` slot so tests can pin that the
-  // shell hands its single ReportToolbar to the page (design D2). The real
-  // page places the slot below its page header row; that position is pinned
-  // in weekly-report-page.test.tsx.
-  WeeklyReportPage: ({ toolbar }: { toolbar?: React.ReactNode }) => (
-    <div data-testid="weekly-report-page-stub">{toolbar}</div>
+  // head-toolbar-parity: render the `headerActions` and `toolbar` slots so
+  // tests can pin that the shell hands both to the page. The real page places
+  // actions in the header row and the toolbar below it.
+  WeeklyReportPage: ({
+    headerActions,
+    toolbar,
+  }: {
+    headerActions?: React.ReactNode;
+    toolbar?: React.ReactNode;
+  }) => (
+    <div data-testid="weekly-report-page-stub">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <h1>Status Report</h1>
+        <div data-testid="weekly-report-header-actions">{headerActions}</div>
+      </header>
+      {toolbar}
+    </div>
   ),
 }));
 
@@ -101,14 +110,25 @@ import { HeadReportShell } from "./head-report-shell";
 const TEST_REPORT_ID = "test-report-001";
 
 describe("HeadReportShell — agent-review placeholder per mode", () => {
-  it("form mode renders exactly one placeholder in the toolbar", () => {
+  it("form mode renders exactly one placeholder in the header actions", () => {
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
     expect(screen.getAllByTestId("agent-review-coming-soon")).toHaveLength(1);
+    expect(
+      within(screen.getByTestId("weekly-report-header-actions")).getByTestId(
+        "agent-review-coming-soon",
+      ),
+    ).toBeInTheDocument();
   });
 
-  it("slides mode renders no toolbar placeholder (the slide article owns it)", () => {
+  it("slides mode keeps the placeholder out of the shell header (the deck owns it)", () => {
+    // deferred-feature-pattern: exactly one AgentReviewComingSoon per surface.
+    // On head slides the head slide deck (status-slide-deck) already mounts the
+    // single placeholder, so the shell header must NOT render a second one. The
+    // deck is stubbed here, so the shell itself renders zero.
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
-    expect(screen.queryAllByTestId("agent-review-coming-soon")).toHaveLength(0);
+    expect(
+      screen.queryByTestId("agent-review-coming-soon"),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("head-slides-client-stub")).toBeInTheDocument();
   });
 });
@@ -128,7 +148,7 @@ describe("HeadReportShell — single shared toolbar (head-toolbar-parity)", () =
     expect(within(pageStub).getByTestId("report-toolbar")).toBeInTheDocument();
   });
 
-  it("the toolbar sits below the shell's utility action row (lead arrangement)", () => {
+  it("the toolbar sits below the page header action row (lead arrangement)", () => {
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
     const headerAction = screen.getByRole("link", { name: /present/i });
     const toolbar = screen.getByTestId("report-toolbar");
@@ -137,31 +157,28 @@ describe("HeadReportShell — single shared toolbar (head-toolbar-parity)", () =
   });
 });
 
-// unify-top-action-toolbars D1/D3: the head action controls now sit in the
-// shared ReportActionsPill (one frame, two intent groups) instead of floating
-// in a bare flex row. Pin that the controls are present, grouped left vs right,
-// and that the Present/Print hrefs + aria are preserved.
-describe("HeadReportShell — unified action pill (unify-top-action-toolbars)", () => {
-  it("renders the action controls inside one ReportActionsPill", () => {
+// unify-top-action-toolbars D1/D3: the head action controls sit in the same
+// unframed page-header cluster as lead. Pin that the controls are present in
+// the headerActions slot and that the Present/Print hrefs are preserved.
+describe("HeadReportShell — header action cluster (unify-top-action-toolbars)", () => {
+  it("renders the action controls inside WeeklyReportPage headerActions", () => {
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
-    const pills = screen.getAllByTestId("report-actions-pill");
-    expect(pills).toHaveLength(1);
-    const pill = pills[0];
-    // Left group: scope toggle (radiogroup) + view-mode toggle (Edit/Slides).
+    const headerActions = screen.getByTestId("weekly-report-header-actions");
+    expect(screen.queryByTestId("report-actions-pill")).not.toBeInTheDocument();
+    // Header cluster: scope toggle (radiogroup) + view-mode toggle (Edit/Slides).
     // The next/link mock drops aria-label, so match the segment text instead.
-    expect(within(pill).getByRole("radiogroup")).toBeInTheDocument();
+    expect(within(headerActions).getByRole("radiogroup")).toBeInTheDocument();
     expect(
-      within(pill).getByRole("link", { name: /slides/i }),
-    ).toBeInTheDocument();
-    // Right group: Present + Print + the agent-review placeholder.
-    expect(
-      within(pill).getByRole("link", { name: /present/i }),
+      within(headerActions).getByRole("link", { name: /slides/i }),
     ).toBeInTheDocument();
     expect(
-      within(pill).getByRole("link", { name: /print/i }),
+      within(headerActions).getByRole("link", { name: /present/i }),
     ).toBeInTheDocument();
     expect(
-      within(pill).getByTestId("agent-review-coming-soon"),
+      within(headerActions).getByRole("link", { name: /print/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(headerActions).getByTestId("agent-review-coming-soon"),
     ).toBeInTheDocument();
   });
 
@@ -177,15 +194,19 @@ describe("HeadReportShell — unified action pill (unify-top-action-toolbars)", 
     );
   });
 
-  it("slides mode keeps the action pill but drops the form-only placeholder", () => {
+  it("slides mode renders the lead-style header action cluster", () => {
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
-    const pill = screen.getByTestId("report-actions-pill");
+    expect(screen.queryByTestId("report-actions-pill")).not.toBeInTheDocument();
+    const header = screen.getByRole("heading", { name: "Status Report" })
+      .parentElement!.parentElement!.parentElement!;
     expect(
-      within(pill).getByRole("link", { name: /present/i }),
+      within(header).getByRole("link", { name: /present/i }),
     ).toBeInTheDocument();
     expect(
-      within(pill).queryByTestId("agent-review-coming-soon"),
-    ).not.toBeInTheDocument();
+      within(header).getByRole("link", { name: /print/i }),
+    ).toBeInTheDocument();
+    // Agent-review is intentionally NOT in the slides shell header — the head
+    // slide deck owns the single placeholder (deferred-feature-pattern).
   });
 });
 

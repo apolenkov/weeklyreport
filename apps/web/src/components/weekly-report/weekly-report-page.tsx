@@ -68,6 +68,13 @@ interface WeeklyReportPageProps {
    * and keep the page's own toolbar.
    */
   readonly toolbar?: ReactNode;
+  /**
+   * unify-top-action-toolbars (2026-06-14): shell-composed action controls that
+   * render in the page header row's right cluster, inline with Export-PDF /
+   * Archive / Publish — so head + viewer match the lead header (one unframed
+   * action cluster beside the title). Lead keeps its own header and omits this.
+   */
+  readonly headerActions?: ReactNode;
 }
 
 /**
@@ -134,6 +141,7 @@ export function WeeklyReportPage({
   authorId,
   scope = "product",
   toolbar,
+  headerActions,
 }: WeeklyReportPageProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
@@ -370,6 +378,7 @@ export function WeeklyReportPage({
           </span>
         </div>
         <div className="flex items-center gap-3">
+          {headerActions}
           {/* The async export starts a `pdfExport.request` job. Visibility
               matches the widened authz (leadHeadAdminProcedure): lead + head +
               admin see the button, viewer does not (the read-only
