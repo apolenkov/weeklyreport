@@ -32,8 +32,16 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async getActiveReportId(): Promise<string | null> {
+    // Exclude scheduled-future periods: their periodStatus defaults to "open"
+    // (the PeriodStatus enum has no "scheduled" value), so a future period
+    // would otherwise win the periodStart-desc ordering and be mis-picked as
+    // the current period. Requiring periodStart <= now returns the most recent
+    // open/reopened period that has actually started.
     const editableReport = await this.prisma.report.findFirst({
-      where: { periodStatus: { in: ["open", "reopened"] } },
+      where: {
+        periodStatus: { in: ["open", "reopened"] },
+        periodStart: { lte: new Date() },
+      },
       orderBy: { periodStart: "desc" },
       select: { id: true },
     });

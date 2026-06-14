@@ -99,4 +99,38 @@ describe("ActivityPrismaRepository (integration)", () => {
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0]?.leadId).toBe(leadA);
   });
+
+  it("ignores a scheduled-future open period and resolves the current one", async () => {
+    // A scheduled-future period carries periodStatus="open" (the enum has no
+    // "scheduled" value). Without the periodStart <= now guard it would win the
+    // periodStart-desc ordering and surface its empty section list, making every
+    // lead read "not started". The current period must win instead.
+    const futureReportId = "a0000000-0000-4000-a000-000000000407";
+    const futureStart = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await prisma.report.create({
+      data: {
+        id: futureReportId,
+        periodStart: futureStart,
+        periodEnd: new Date(futureStart.getTime() + 6 * 24 * 60 * 60 * 1000),
+        deadline: new Date(futureStart.getTime() + 5 * 24 * 60 * 60 * 1000),
+        status: "draft",
+        periodStatus: "open",
+        periodState: "scheduled",
+      },
+    });
+
+    const session: UserSession = {
+      userId: headA,
+      email: "head-a@test.local",
+      name: "Head A",
+      role: "head",
+      reportingGroupId: groupA,
+    };
+
+    const result = await repo.getLiveActivity(session);
+
+    expect(result.reportId).toBe(reportId);
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]?.leadId).toBe(leadA);
+  });
 });

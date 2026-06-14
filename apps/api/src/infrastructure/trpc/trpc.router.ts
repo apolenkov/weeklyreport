@@ -556,8 +556,15 @@ export function createAppRouter(deps: RouterDeps) {
           // from DB instead of ctx.session.activeReportId (which is baked into
           // the JWT at login and can be stale). This aligns the dashboard with
           // activity.live, which also queries DB for periodStatus 'open'.
+          // periodStart <= now excludes scheduled-future periods (periodStatus
+          // defaults to "open" — the enum has no "scheduled" value), which
+          // would otherwise win the periodStart-desc ordering and surface an
+          // empty future report. Mirrors getActiveReportId / getLiveActivity.
           const openReport = await ctx.prisma?.report.findFirst({
-            where: { periodStatus: { in: ["open", "reopened"] } },
+            where: {
+              periodStatus: { in: ["open", "reopened"] },
+              periodStart: { lte: new Date() },
+            },
             orderBy: { periodStart: "desc" },
             select: { id: true },
           });

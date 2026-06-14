@@ -26,7 +26,17 @@ export class ActivityPrismaRepository implements ActivityRepository {
    */
   async getLiveActivity(session: UserSession): Promise<ActivityLiveResponse> {
     const report = await this.prisma.report.findFirst({
-      where: { periodStatus: { in: ["open", "reopened"] } },
+      // Exclude scheduled-future periods: their periodStatus defaults to "open"
+      // (the PeriodStatus enum has no "scheduled" value), so a future period
+      // would otherwise win the periodStart-desc ordering and be mis-picked as
+      // the current period — surfacing an empty future report whose leads all
+      // read "not started". Requiring periodStart <= now returns the most
+      // recent open/reopened period that has actually started. Mirrors
+      // WeeklyReportPrismaRepository.getActiveReportId.
+      where: {
+        periodStatus: { in: ["open", "reopened"] },
+        periodStart: { lte: new Date() },
+      },
       orderBy: { periodStart: "desc" },
       select: {
         id: true,
