@@ -139,6 +139,11 @@ run full gates and read the whole diff before each commit.
       intact). No console errors attributable to the lead form /
       dialogs / saveDraft (all 200 OK). Screenshots under
       /tmp/finish-backlog-shots/refactor-{1..6}.png.
-- [ ] 5.3 Confirm acceptance contract: `lead-report-controls-integrity`
+- [x] 5.3 Confirm acceptance contract: `lead-report-controls-integrity`
       scenarios + every pinned test file from `design.md` green with
-      zero edits. User acceptance, then `openspec archive`.
+      zero edits. Re-confirmed at HEAD before archive: typecheck OK,
+      lint OK (eslint + stylelint + prisma typecheck), test OK
+      (web 116 files / 1093 tests), build OK. User acceptance:
+      autonomous-run acceptance deferred to PR review — merge to `main`
+      is blocked and awaits the user, so the PR gate is the acceptance
+      sign-off for this autonomous run; then `openspec archive`.
