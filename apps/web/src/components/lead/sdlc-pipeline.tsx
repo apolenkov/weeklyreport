@@ -24,6 +24,14 @@ export interface CrossAuthorEntry {
 
 interface SdlcPipelineProps {
   readonly products: Product[];
+  /**
+   * rethink-pipeline-state-vs-completeness: the RAW, pre-floor products used to
+   * compute own-input completeness. `products` carries the risk-derived
+   * render-time floor for the chips/left edge; completeness must instead count
+   * only the lead's explicit per-stage choices, so it reads these. Defaults to
+   * `products` when omitted (callers that already pass raw, pre-floor data).
+   */
+  readonly rawProducts?: readonly Product[];
   readonly readOnly?: boolean;
   readonly onStatusChange?: (
     productId: string,
@@ -111,9 +119,12 @@ function productHealthStatus(
 
 /**
  * rethink-pipeline-state-vs-completeness (D1): own-input completeness, over
- * the lead's OWN stages only. A stage counts as filled when its effective
- * status is anything other than "empty" (an explicit on-track or a
- * risk-derived severity both count — the lead made a choice). Foreign
+ * the lead's OWN stages only. A stage counts as filled ONLY when the lead set
+ * an explicit status on it (status !== "empty"). It MUST be fed the RAW,
+ * pre-floor status — never the risk-derived render-time floor. Otherwise an
+ * add-then-remove risk cycle (the Add Risk dialog defaults to all stages
+ * checked) would floor every empty stage to a severity and inflate the counter
+ * to "your input is complete" for stages the lead never touched. Foreign
  * severity never touches this counter.
  */
 export interface CompletenessState {
@@ -143,6 +154,7 @@ export function getProductCardStyle(status: StageStatus): CSSProperties {
 
 export function SdlcPipeline({
   products,
+  rawProducts,
   readOnly = false,
   onStatusChange,
   crossAuthors = [],
@@ -159,7 +171,11 @@ export function SdlcPipeline({
   return (
     <div className="space-y-4">
       {products.map((product) => {
-        const completeness = computeCompleteness(product);
+        // Completeness reads the RAW (pre-floor) product so a risk-derived
+        // severity floor never inflates the lead's own-input counter.
+        const rawProduct =
+          rawProducts?.find((p) => p.id === product.id) ?? product;
+        const completeness = computeCompleteness(rawProduct);
         // rethink-pipeline-state-vs-completeness: the completeness ring shows
         // only in edit mode while the lead's own input is unfinished. In
         // read-only mode there is nothing to finish, so it never renders.

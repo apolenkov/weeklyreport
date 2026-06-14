@@ -216,6 +216,42 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
     expect(pill?.textContent).toContain("1/1 stages");
     expect(pill?.getAttribute("data-complete")).toBe("true");
   });
+
+  it("completeness counts RAW (pre-floor) status, so a risk-derived severity floor never inflates it", () => {
+    // rethink-pipeline-state-vs-completeness regression: `products` carries the
+    // render-time floor (a covering risk pushed the empty Design stage to
+    // at-risk for the chip), while `rawProducts` keeps the lead's untouched
+    // empty. Completeness MUST read raw → 1/2, incomplete. Reading the floored
+    // `products` would falsely report 2/2 complete (the add-then-remove-risk
+    // corruption this change fixes).
+    const flooredProducts: Product = {
+      ...PRODUCT_WITH_UNFILLED_OWN_STAGE,
+      stages: [
+        {
+          stageName: "Design",
+          status: "at-risk",
+          ownership: "mine",
+          assignee: "me",
+        },
+        {
+          stageName: "Dev",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "me",
+        },
+      ],
+    };
+    const { container } = render(
+      <SdlcPipeline
+        products={[flooredProducts]}
+        rawProducts={[PRODUCT_WITH_UNFILLED_OWN_STAGE]}
+        readOnly={false}
+      />,
+    );
+    const pill = getCompletenessPill(container);
+    expect(pill?.textContent).toContain("1/2 stages");
+    expect(pill?.getAttribute("data-complete")).toBe("false");
+  });
 });
 
 // ---- Health vs completeness are INDEPENDENT (all four quadrants) ----

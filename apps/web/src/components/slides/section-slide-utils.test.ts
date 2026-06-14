@@ -96,7 +96,11 @@ describe("section slide utilities", () => {
         nextItems: ["Prepare rollout notes"],
         priorities: ["Closed release blockers"],
         stages: [
-          expect.objectContaining({ name: "Discovery", status: "yellow" }),
+          // rethink-pipeline-state-vs-completeness: Discovery is persisted
+          // yellow but has NO covering risk, so the shared derivation collapses
+          // it to green — the slide now agrees with the card (which collapses an
+          // unbacked severity to on-track). Build stays green.
+          expect.objectContaining({ name: "Discovery", status: "green" }),
           expect.objectContaining({ name: "Build", status: "green" }),
         ],
       }),
@@ -137,6 +141,57 @@ describe("section slide utilities", () => {
       expect.objectContaining({ name: "Discovery", status: "yellow" }),
       // blocked risk floors the stale green stage to red.
       expect.objectContaining({ name: "Build", status: "red" }),
+    ]);
+  });
+
+  it("collapses a persisted red stage with no covering risk to green, and a red stage with an at-risk-only risk to yellow (rethink-pipeline-state-vs-completeness 1.4)", () => {
+    // The slide now derives status from risks via the shared
+    // deriveEffectiveStageStatus, exactly like the card — so it collapses an
+    // unbacked persisted severity DOWN instead of only flooring up. Build is
+    // persisted green here so the at-risk risk floors it to yellow; Discovery is
+    // persisted yellow with no covering risk so it collapses to green.
+    const slide = buildSectionSlideModel(
+      makeSection({
+        projects: [
+          {
+            projectId: PRODUCT_ID,
+            projectName: "Core Product",
+            trafficLight: "green",
+            ownedStages: [
+              {
+                stageId: "99999999-9999-4999-8999-999999999999",
+                stageName: "Build",
+                sortOrder: 2,
+                status: "red",
+              },
+              {
+                stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                stageName: "Discovery",
+                sortOrder: 1,
+                status: "red",
+              },
+            ],
+          },
+        ],
+        risks: [
+          {
+            id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+            projectId: PRODUCT_ID,
+            risk: "Flaky integration",
+            impact: "Rework",
+            mitigation: "Stabilize",
+            severity: "at-risk",
+            stageIds: ["Build"],
+          },
+        ],
+      }),
+    );
+
+    expect(slide.productSlides[0]?.stages).toEqual([
+      // Persisted red, no covering risk → collapses to green.
+      expect.objectContaining({ name: "Discovery", status: "green" }),
+      // Persisted red, but the only covering risk is at-risk → collapses to yellow.
+      expect.objectContaining({ name: "Build", status: "yellow" }),
     ]);
   });
 
