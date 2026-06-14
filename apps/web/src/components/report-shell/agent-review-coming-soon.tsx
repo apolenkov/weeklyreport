@@ -5,7 +5,9 @@ import { BotMessageSquare } from "lucide-react";
  * Inert placeholder for the future agent-review surface.
  * TODO(AGENT-REVIEW-01): mount in lead+head slide and report surfaces
  *
- * compact — strips touch-target min-height for slides header where space is tight.
+ * compact — tighter padding/text for dense rows, but the touch-target
+ * min-height is preserved so the pill aligns 1:1 with its sibling controls
+ * (lead-live-walk-2026-06-14 task 5.2: ONE shared height across the bar).
  */
 export function AgentReviewComingSoon({
   compact = false,
@@ -20,10 +22,8 @@ export function AgentReviewComingSoon({
         aria-label="Agent review is coming soon"
         title="Coming Soon"
         data-testid="agent-review-coming-soon"
-        className={`inline-flex cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] font-semibold text-[var(--color-muted-foreground)] ${
-          compact
-            ? "px-2.5 py-1 text-xs"
-            : "min-h-[var(--touch-target-min)] px-4 py-1.5 text-sm"
+        className={`inline-flex min-h-[var(--touch-target-min)] cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] font-semibold text-[var(--color-muted-foreground)] ${
+          compact ? "px-2.5 py-1 text-xs" : "px-4 py-1.5 text-sm"
         }`}
       >
         <BotMessageSquare size={14} strokeWidth={2} aria-hidden="true" />
