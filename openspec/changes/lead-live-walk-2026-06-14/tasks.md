@@ -43,11 +43,23 @@ Branch `feat/finish-backlog-2026-06-13`; no push; PR #10 updated.
 
 ## 4. Reports history behavior
 
-- [ ] 4.1 `app/(app)/reports/page.tsx`: History defaults to NO archive.
-- [ ] 4.2 Archive toggle must NOT mutate the URL (no query param churn).
-- [ ] 4.3 `navigation/nav-bar.tsx`: the "History" nav active/selected state is
+- [x] 4.1 `app/(app)/reports/page.tsx`: History defaults to NO archive.
+      `includeArchive` is now `useState(false)` unconditionally — the URL
+      `?tab=` no longer forces archive on. Live-verified head (`?tab=published`)
+      and lead (`?tab=drafts`) both land archive-OFF.
+- [x] 4.2 Archive toggle must NOT mutate the URL (no query param churn).
+      `toggleArchive` + its `router.push` removed; `onChange` is now
+      `setIncludeArchive`. Live-verified the address bar stays put on toggle.
+- [x] 4.3 `navigation/nav-bar.tsx`: the "History" nav active/selected state is
       INDEPENDENT of the archive toggle (toggling archive never un-highlights it).
-- [ ] 4.4 Tests for default-state, URL-stability, and nav-active independence.
+      `isActiveLink` reports branch is pathname-only now (`/reports` or a
+      published report path); the `activeReportsTab`/`reportsTabFromHref`/
+      `useSearchParams` coupling was removed. Live-verified History stays
+      highlighted with the toggle on and with no `tab` param at all.
+- [x] 4.4 Tests for default-state, URL-stability, and nav-active independence.
+      page.test.tsx: head default-no-archive on `?tab=published`, lead+head
+      toggle does NOT push the URL. nav-bar.test.tsx: head+lead History active
+      on `/reports` with NO tab param.
 
 ## 5. Head report toolbar — 1:1 with lead
 

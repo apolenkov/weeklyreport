@@ -184,9 +184,8 @@ describe("ReportsPage history archive toggle", () => {
     fireEvent.click(screen.getByLabelText("Show archived reports (1)"));
 
     expect(screen.getByText("Week 15, Apr 6–12, 2026")).toBeInTheDocument();
-    expect(navigationMock.push).toHaveBeenCalledWith("/reports?tab=published", {
-      scroll: false,
-    });
+    // §4.2: toggling archive is local state only — it must not push the URL.
+    expect(navigationMock.push).not.toHaveBeenCalled();
   });
 
   it("uses compiled history for head and expands archived rows", () => {
@@ -204,5 +203,21 @@ describe("ReportsPage history archive toggle", () => {
     fireEvent.click(screen.getByLabelText("Show archived reports (1)"));
 
     expect(screen.getByText("Week 15, Apr 6–12, 2026")).toBeInTheDocument();
+    // §4.2: head toggle is also URL-stable.
+    expect(navigationMock.push).not.toHaveBeenCalled();
+  });
+
+  it("defaults head History to NO archive even when the URL is ?tab=published", () => {
+    // §4.1: the nav link for head/viewer is literally ?tab=published, yet
+    // History must still land on the current (non-archived) view. The URL no
+    // longer forces archive on.
+    setRole("head");
+    navigationMock.searchParams = new URLSearchParams("tab=published");
+    render(<ReportsPage />);
+
+    expect(screen.getByText("Week 19, May 4–10, 2026")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Week 15, Apr 6–12, 2026"),
+    ).not.toBeInTheDocument();
   });
 });
