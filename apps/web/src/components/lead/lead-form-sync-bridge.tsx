@@ -506,50 +506,13 @@ function Provider({
   );
 }
 
-/**
- * Compute the set of stages the lead has marked at-risk/blocked but has
- * not described in the Risks list. The warning banner derived from this
- * set was originally shown above the Risks list, but since it points
- * back at the SDLC chips (where the colour was set) the banner now
- * lives in the Product Status section — same surface, immediate cause
- * → effect link.
- */
-function computeUnbackedStages(ctx: ReturnType<typeof useBridgeContext>) {
-  const out: {
-    productId: string;
-    productName: string;
-    stageName: string;
-    severity: "at-risk" | "blocked";
-  }[] = [];
-  for (const product of ctx.products) {
-    for (const stage of product.stages) {
-      if (stage.ownership !== "mine") continue;
-      if (stage.status !== "at-risk" && stage.status !== "blocked") continue;
-      // A blocked stage requires a blocked risk; an at-risk risk alone
-      // does not justify marking a stage as blocked.
-      const hasMatchingRisk = ctx.risks.some(
-        (r) =>
-          r.productId === product.id &&
-          riskCoversStage(r, stage.stageName) &&
-          r.text.trim().length > 0 &&
-          (stage.status === "at-risk" || r.severity === "blocked"),
-      );
-      if (!hasMatchingRisk) {
-        out.push({
-          productId: product.id,
-          productName: product.name,
-          stageName: stage.stageName,
-          severity: stage.status,
-        });
-      }
-    }
-  }
-  return out;
-}
-
 function Pipeline() {
   const ctx = useBridgeContext("LeadFormSyncBridge.Pipeline");
-  const unbackedStages = computeUnbackedStages(ctx);
+  // rethink-pipeline-state-vs-completeness: the "unbacked stage" warning is
+  // gone — status is derived from risks, so a chip cannot be at-risk/blocked
+  // without a backing risk. The chip-raise interception in
+  // handleStageStatusChange is what enforces that, so the warning has nothing
+  // left to warn about.
   // D1: render-time severity floor — same rule as mapLeadProducts, so the
   // live chips can never show on-track/empty while covering risks exist.
   const flooredProducts = applyRiskSeverityFloor(ctx.products, ctx.risks);
@@ -558,7 +521,6 @@ function Pipeline() {
       products={flooredProducts}
       readOnly={ctx.readOnly}
       onStatusChange={ctx.handleStageStatusChange}
-      unbackedStages={unbackedStages}
       {...(ctx.crossAuthors !== undefined
         ? { crossAuthors: ctx.crossAuthors }
         : {})}
