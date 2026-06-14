@@ -12,11 +12,11 @@ Branch `feat/finish-backlog-2026-06-13`; no push; PR #10 updated.
 
 ## 1. Risk dialog — two columns, justified (frontend-design)
 
-- [ ] 1.1 `lead/risk-edit-dialog.tsx`: revert single-column to a balanced TWO
+- [x] 1.1 `lead/risk-edit-dialog.tsx`: revert single-column to a balanced TWO
       column layout. No stray empty space; aligned/parallel columns of
       comparable height; total height well under 92vh. Keep all
       fields/validation/behavior. Update snapshots honestly.
-- [ ] 1.2 Render test + live before/after screenshots.
+- [x] 1.2 Render test + live before/after screenshots.
 
 ## 2. Slides product card
 

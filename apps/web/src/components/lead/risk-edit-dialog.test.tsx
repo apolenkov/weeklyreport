@@ -438,11 +438,12 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
     expect(cancel.parentElement).toBe(save.parentElement);
   });
 
-  it("renders all fields in a single-column layout with a Classification sub-panel", () => {
-    // polish-lead-toolbar-and-risk-dialog 2.x: the former md+ two-column grid
-    // is replaced by a single column — prose fields stacked full-width, then a
-    // grouped Classification sub-panel. Assert the new contract: no grid, and
-    // every field is present in the new DOM.
+  it("renders all fields in a balanced two-column layout with a Classification panel", () => {
+    // lead-live-walk-2026-06-14 1.x: the single-column layout (PR #10) ran the
+    // full 92vh with the Product picker clipped off-screen. It is replaced by a
+    // balanced md+ two-column grid — prose fields on the left, the Classification
+    // panel on the right. Assert the new contract: a responsive two-column grid
+    // exists, and every field survived the relayout.
     render(
       <RiskEditDialog
         open
@@ -458,10 +459,11 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
       />,
     );
 
-    // No two-column grid anymore.
-    expect(document.querySelector('[class*="md:grid-cols-"]')).toBeNull();
+    // The responsive two-column grid is present (collapses to one column on a
+    // narrow modal via the md: breakpoint).
+    expect(document.querySelector('[class*="md:grid-cols-2"]')).not.toBeNull();
 
-    // The grouped Classification sub-panel is present.
+    // The grouped Classification panel is present.
     expect(screen.getByText("Classification")).toBeInTheDocument();
 
     // Every field survived the relayout: the three prose fields, severity
