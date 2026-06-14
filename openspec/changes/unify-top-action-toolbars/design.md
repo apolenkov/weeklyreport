@@ -75,6 +75,33 @@ green accent). Do NOT collapse primaries to icon-only. Utility/inert controls
 Inventory + align: lead form header, head dashboard/review, viewer. Record a
 match/diverge table in the change. Do NOT touch non-report app top bars.
 
+#### Audit result (2026-06-14, implemented)
+
+| Report surface                                   | Before                                                               | After / outcome                                                                                                                                                            |
+| ------------------------------------------------ | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lead report header (`lead-form.tsx`)             | Reference idiom — actions in page header, `ReportToolbar` pill below | Unchanged — this IS the canonical idiom the others mirror                                                                                                                  |
+| Head report form (`head-report-shell.tsx`)       | Bare floating `flex justify-end` action row                          | Aligned — controls now in the shared `ReportActionsPill`                                                                                                                   |
+| Head report slides (`head-report-shell.tsx`)     | Same bare row above the deck                                         | Aligned — same `ReportActionsPill` (agent-review form-only)                                                                                                                |
+| Published viewer (`reports/[reportId]/page.tsx`) | Bug: own `<h1>` + bare action row → DOUBLED title                    | Fixed — dup `<h1>` dropped, actions in `ReportActionsPill` via the `toolbar` slot. Verified live as the VIEWER role: one title, pill present, empty page-header right side |
+| Head dashboard (`dashboard/dashboard-page.tsx`)  | Analytics page header (`<h1>Dashboard</h1>` + optional "Revoke All") | Intentionally distinct — no report-style action toolbar to unify (no scope/view-mode/present/print/period); left untouched, in scope only to record N/A                    |
+| Head presentation (`head-present-client.tsx`)    | Fullscreen deck, no top action row                                   | Intentionally distinct — presentation mode has no toolbar; out of scope                                                                                                    |
+
+Live-verified side effect (intentional per D4): routing the viewer actions
+through the `toolbar` slot REPLACES `WeeklyReportPage`'s default period
+`ReportToolbar`, so the viewer no longer shows the period navigator or the
+"Live portfolio review" department label. D4 accepts this — the dropped
+context bar was arguably wrong on an archived/published report anyway.
+
+Intentional, design-sanctioned distinction recorded: the lead folds its few
+actions into the page-header row; head/viewer use a DEDICATED actions-pill tier
+above the period toolbar (D3) because they carry more read-only utility
+controls. Both consume the same `REPORT_TOOLBAR_FRAME_CLASS`, so the framing is
+identical even though the placement differs by surface.
+
+Shared frame source: `REPORT_TOOLBAR_FRAME_CLASS` in
+`report-shell/report-toolbar.tsx`, consumed by both `ReportToolbar` and the new
+`ReportActionsPill` — no forked literal class string.
+
 ## Verification
 
 - Render tests: each surface's action controls present, grouped, aria/hrefs
