@@ -17,7 +17,7 @@ export function VersionComingSoonControl() {
         aria-label="Version history is coming soon"
         title="Coming Soon"
         data-testid="version-coming-soon"
-        className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)]"
+        className="inline-flex h-8 w-8 shrink-0 cursor-default items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-empty)] text-[12px] font-semibold text-[var(--color-muted-foreground)]"
       >
         <History size={14} strokeWidth={2} aria-hidden="true" />
       </button>

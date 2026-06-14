@@ -3,6 +3,11 @@ import type {
   ReportSectionReadModel,
 } from "@customreport/shared";
 
+import {
+  stageStatusToTraffic,
+  trafficToStageStatus,
+} from "../../lib/mappers/traffic-light";
+import { deriveEffectiveStageStatus } from "../../lib/stage-status";
 import { riskCoversStage } from "../lead/stage-tags";
 
 export type SlideTone = "ready" | "warning" | "blocked" | "empty";
@@ -82,13 +87,21 @@ function nonEmpty(text: string | null | undefined): boolean {
 }
 
 /**
- * unify-risk-stage-status (D1): severity floor on the slides surface.
- * Mirrors `buildStageGrid` in lib/mappers/lead-form.ts — a non-empty risk
- * that covers this stage (per the canonical `riskCoversStage`, where empty
- * or undefined stageIds cover every stage) floors the rendered traffic
- * light (blocked → red, at-risk → at least yellow), so the slide deck
- * agrees with the lead form and head review even for sections saved before
- * the floor existed and for legacy stage-less risks.
+ * rethink-pipeline-state-vs-completeness (task 1.4): the slide stage status is
+ * now a PURE derivation of the covering risks, via the shared
+ * `deriveEffectiveStageStatus` — the same risk-derived path the live card uses
+ * (`applyRiskSeverityFloor` also passes `items: []`), so the slide matches the
+ * live card exactly. A non-empty risk that covers this stage (per the canonical
+ * `riskCoversStage`, where empty or undefined stageIds cover every stage) sets
+ * the rendered traffic light (blocked → red, at-risk → at least yellow). NOTE:
+ * the read model (`buildStageGrid`) additionally floors on blocked workflow
+ * items; the slide passes no items, so the two can differ only on a
+ * blocked-item-without-risk stage.
+ *
+ * Behavior change vs. the old floor-only `floorSlideStageStatus`: an orphaned
+ * persisted red/yellow with NO covering risk now collapses to on-track (green)
+ * — matching the card's collapse-to-on-track — instead of surviving. on-track
+ * and empty pass through untouched.
  */
 function floorSlideStageStatus(
   status: SlideStageStatus,
@@ -98,9 +111,12 @@ function floorSlideStageStatus(
   const covering = projectRisks.filter(
     (risk) => nonEmpty(risk.risk) && riskCoversStage(risk, stageName),
   );
-  if (covering.some((risk) => risk.severity === "blocked")) return "red";
-  if (covering.length > 0 && status !== "red") return "yellow";
-  return status;
+  const derived = deriveEffectiveStageStatus(
+    trafficToStageStatus(status),
+    covering,
+    [],
+  );
+  return stageStatusToTraffic(derived);
 }
 
 function unique(values: readonly string[]): string[] {
@@ -171,11 +187,11 @@ export function buildSectionSlideModel(
     .map((item) => item.text.trim());
 
   const projectIds = new Set(projectRows.map((project) => project.projectId));
-  const productSlides: SlideProduct[] = projectRows.map((project) => ({
-    id: project.projectId,
-    name: project.projectName,
-    status: project.trafficLight,
-    stages: [...(project.ownedStages ?? [])]
+  const productSlides: SlideProduct[] = projectRows.map((project) => {
+    const projectRisks = section.risks.filter(
+      (risk) => risk.projectId === project.projectId,
+    );
+    const stages: SlideStage[] = [...(project.ownedStages ?? [])]
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((stage) => ({
         id: stage.stageId,
@@ -184,59 +200,78 @@ export function buildSectionSlideModel(
         // project's covering risks — same rule as the lead form / review.
         status: floorSlideStageStatus(
           stage.status ?? null,
-          section.risks.filter((risk) => risk.projectId === project.projectId),
+          projectRisks,
           stage.stageName,
         ),
-      })),
-    currentItems: section.items
-      .filter(
-        (item) =>
-          item.projectId === project.projectId &&
-          item.type === "current" &&
-          nonEmpty(item.text),
-      )
-      .map((item) => item.text.trim()),
-    nextItems: section.items
-      .filter(
-        (item) =>
-          item.projectId === project.projectId &&
-          item.type === "next" &&
-          nonEmpty(item.text),
-      )
-      .map((item) => item.text.trim()),
-    risks: section.risks
-      .filter(
-        (risk) => risk.projectId === project.projectId && nonEmpty(risk.risk),
-      )
-      .map((risk) => risk.risk.trim()),
-    decisions: section.decisions
-      .filter(
-        (decision) =>
-          decision.productId === project.projectId && nonEmpty(decision.text),
-      )
-      .map((decision) => decision.text.trim()),
-    priorities: section.items
-      .filter(
-        (item) =>
+      }));
+    return {
+      id: project.projectId,
+      name: project.projectName,
+      // lead-live-walk-2026-06-14 (3.1, rethink-pipeline scope): the product
+      // badge must reflect the same risk-derived health the live pipeline card
+      // shows (`productHealthStatus` = worst floored stage). The old
+      // `project.trafficLight` was the persisted, pre-floor traffic column that
+      // rethink-pipeline demoted from source-of-truth, so a stale persisted
+      // status with no covering risk (or a covering risk on an empty persisted
+      // stage) drifted the badge away from the stages rendered right below it.
+      // Deriving from the already-floored stages keeps the badge consistent with
+      // the slide's own stages by construction and with the pipeline by shared
+      // derivation.
+      status: stages.reduce<SlideStageStatus>(
+        (worst, stage) => worstTraffic(worst, stage.status),
+        null,
+      ),
+      stages,
+      currentItems: section.items
+        .filter(
+          (item) =>
+            item.projectId === project.projectId &&
+            item.type === "current" &&
+            nonEmpty(item.text),
+        )
+        .map((item) => item.text.trim()),
+      nextItems: section.items
+        .filter(
+          (item) =>
+            item.projectId === project.projectId &&
+            item.type === "next" &&
+            nonEmpty(item.text),
+        )
+        .map((item) => item.text.trim()),
+      risks: section.risks
+        .filter(
+          (risk) => risk.projectId === project.projectId && nonEmpty(risk.risk),
+        )
+        .map((risk) => risk.risk.trim()),
+      decisions: section.decisions
+        .filter(
+          (decision) =>
+            decision.productId === project.projectId && nonEmpty(decision.text),
+        )
+        .map((decision) => decision.text.trim()),
+      priorities: section.items
+        .filter(
+          (item) =>
+            item.projectId === project.projectId &&
+            item.priorityRank != null &&
+            nonEmpty(item.text),
+        )
+        .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
+        .map((item) => item.text.trim()),
+      // T-G3: capture per-text rank so the unified slide can render P{N}
+      // chips on whichever bullet bucket the item lands in.
+      itemRanks: section.items.reduce<Record<string, number>>((acc, item) => {
+        if (
           item.projectId === project.projectId &&
           item.priorityRank != null &&
-          nonEmpty(item.text),
-      )
-      .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
-      .map((item) => item.text.trim()),
-    // T-G3: capture per-text rank so the unified slide can render P{N}
-    // chips on whichever bullet bucket the item lands in.
-    itemRanks: section.items.reduce<Record<string, number>>((acc, item) => {
-      if (
-        item.projectId === project.projectId &&
-        item.priorityRank != null &&
-        nonEmpty(item.text)
-      ) {
-        acc[item.text.trim()] = item.priorityRank;
-      }
-      return acc;
-    }, {}),
-  }));
+          nonEmpty(item.text)
+        ) {
+          acc[item.text.trim()] = item.priorityRank;
+        }
+        return acc;
+      }, {}),
+    };
+  });
 
   const crossProductDecisions = section.decisions
     .filter(

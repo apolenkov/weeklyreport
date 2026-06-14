@@ -14,6 +14,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -175,6 +176,7 @@ function renderPage(
   role: SessionUser["role"] = "head",
   scope?: "product" | "lead",
   toolbar?: ReactNode,
+  headerActions?: ReactNode,
 ) {
   const { proxy, captured } = createMockTRPC([
     { path: ["weeklyReport", "get"], query: data },
@@ -228,7 +230,12 @@ function renderPage(
   }
 
   const renderResult = render(
-    <WeeklyReportPage authorId={authorId} scope={scope} toolbar={toolbar} />,
+    <WeeklyReportPage
+      authorId={authorId}
+      scope={scope}
+      toolbar={toolbar}
+      headerActions={headerActions}
+    />,
     { wrapper: Wrapper },
   );
 
@@ -547,11 +554,12 @@ describe("WeeklyReportPage — async Export PDF button role gating (driver sweep
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
-  // The async export starts a `pdfExport.request` job the API gates to
-  // head/admin (headProcedure). Before the fix the button rendered for every
-  // role, so a viewer/lead on the read-only /reports/[reportId] route (which
-  // embeds this page) saw an enabled button that 403'd on click.
-  it.each(["head", "admin"] as const)(
+  // The async export starts a `pdfExport.request` job. driver-findings-2026-06-11
+  // finding 3 (decision 2026-06-13): leads SHOULD have Export-PDF, so the API
+  // (pdfExport.request / .status) and this button are widened to lead + head +
+  // admin. Viewer stays excluded (read-only role keeps the /print link); the
+  // viewer catalog intent is flagged as an open question, not granted here.
+  it.each(["head", "admin", "lead"] as const)(
     "renders the async Export PDF button for %s",
     async (role) => {
       renderPage(makeWeeklyReportData("published"), undefined, role);
@@ -561,17 +569,27 @@ describe("WeeklyReportPage — async Export PDF button role gating (driver sweep
     },
   );
 
-  it.each(["viewer", "lead"] as const)(
-    "hides the async Export PDF button for %s",
-    async (role) => {
-      renderPage(makeWeeklyReportData("published"), undefined, role);
-      // Anchor on the report heading so the absence assertion is not a race.
-      await screen.findByRole("heading", { name: /status report/i });
-      expect(
-        screen.queryByRole("button", { name: /export pdf/i }),
-      ).not.toBeInTheDocument();
-    },
-  );
+  it("hides the async Export PDF button for viewer", async () => {
+    renderPage(makeWeeklyReportData("published"), undefined, "viewer");
+    // Anchor on the report heading so the absence assertion is not a race.
+    await screen.findByRole("heading", { name: /status report/i });
+    expect(
+      screen.queryByRole("button", { name: /export pdf/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("lets a lead trigger the export (fires pdfExport.request with reportId)", async () => {
+    const { captured } = renderPage(
+      makeWeeklyReportData("published"),
+      undefined,
+      "lead",
+    );
+    const button = await screen.findByRole("button", { name: /export pdf/i });
+    await userEvent.click(button);
+    expect(captured["pdfExport.request"].calls).toContainEqual({
+      reportId: REPORT_ID,
+    });
+  });
 });
 
 // head-toolbar-parity: the bespoke gradient "Context shell" is gone — the
@@ -613,5 +631,110 @@ describe("WeeklyReportPage — shared period toolbar (head-toolbar-parity)", () 
       heading.compareDocumentPosition(shellToolbar) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it("renders shell header actions before built-in action controls", async () => {
+    renderPage(
+      makeWeeklyReportData("open"),
+      undefined,
+      "head",
+      undefined,
+      undefined,
+      <a href="/custom-action">Custom action</a>,
+    );
+    const customAction = await screen.findByRole("link", {
+      name: /custom action/i,
+    });
+    const exportPdf = screen.getByRole("button", { name: /export pdf/i });
+    expect(
+      customAction.compareDocumentPosition(exportPdf) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+});
+
+// Driver finding 1: a load failure (e.g. a malformed reportId → 400
+// BAD_REQUEST) must render a distinct invalid-link state, NOT the misleading
+// "No active reporting period" empty-state.
+describe("WeeklyReportPage — load-failure state (driver finding 1)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
+  function makeBadRequestError(): TRPCClientError<never> {
+    // Mirrors the live shape: a malformed reportId fails the UUID check and
+    // tRPC serializes the Zod issues array into error.message with a
+    // BAD_REQUEST / httpStatus 400 data envelope.
+    const error = new TRPCClientError<never>("Invalid UUID");
+    Object.defineProperty(error, "data", {
+      value: { code: "BAD_REQUEST", httpStatus: 400 },
+      configurable: true,
+    });
+    return error;
+  }
+
+  function renderFailingPage() {
+    const { proxy } = createMockTRPC([
+      {
+        path: ["weeklyReport", "get"],
+        query: () => {
+          throw makeBadRequestError();
+        },
+      },
+      { path: ["period", "publish"], mutation: true },
+      { path: ["period", "reopen"], mutation: true },
+      { path: ["pdfExport", "request"], mutation: true },
+      { path: ["pdfExport", "status"], query: null },
+      { path: ["archive", "archiveReport"], mutation: true },
+    ]);
+
+    const qc = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    function Wrapper({ children }: { readonly children: ReactNode }) {
+      return (
+        <QueryClientProvider client={qc}>
+          <SessionContext.Provider
+            value={{
+              user: {
+                id: "head-user-id",
+                name: "Test User",
+                email: "test.user@example.com",
+                role: "head",
+              },
+              organization: null,
+              isLoading: false,
+              isAuthenticated: true,
+            }}
+          >
+            <TRPCProxyContext.Provider value={proxy}>
+              {children}
+            </TRPCProxyContext.Provider>
+          </SessionContext.Provider>
+        </QueryClientProvider>
+      );
+    }
+
+    return render(<WeeklyReportPage reportId="not-a-uuid" />, {
+      wrapper: Wrapper,
+    });
+  }
+
+  it("shows an invalid-link state, not the no-period empty-state", async () => {
+    renderFailingPage();
+
+    expect(await screen.findByText(/report not found/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/this link is invalid or the report no longer exists/i),
+    ).toBeInTheDocument();
+    // The misleading no-period copy MUST NOT appear on a load failure.
+    expect(
+      screen.queryByText(/no active reporting period/i),
+    ).not.toBeInTheDocument();
   });
 });

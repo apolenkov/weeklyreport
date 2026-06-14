@@ -118,10 +118,32 @@ run full gates and read the whole diff before each commit.
       dialog on a snapshot round-trip; regression test added (fails
       on the prior hook, passes on the fix). Final gates re-run green
       after the fix.
-- [ ] 5.2 Live browser walk (driver-verify lesson: never trust
+- [x] 5.2 Live browser walk (driver-verify lesson: never trust
       unit-only): "+ Add Risk" → cancel → view snapshot → "Back to
       current" → no dialog reopens; same for Decision; risk-dialog
       form-race (3.1); Toggle All still syncs all sections after 4.1.
-- [ ] 5.3 Confirm acceptance contract: `lead-report-controls-integrity`
+      PASS (2026-06-14, dev-login lead boris@customreport.local,
+      report ...0001 with two periods). Gates re-run green at HEAD
+      1f773a5d: typecheck OK, lint OK, web vitest 116 files / 1082
+      tests OK. "View snapshot" was exercised via PeriodNavigator —
+      version history is now the inert VersionComingSoonControl, so the
+      live readOnly round-trip is current → past period (...0002) →
+      back to current. Add Risk → cancel → round-trip → no risk dialog
+      reopened; same for Add Decision → no decision dialog reopened.
+      Form-race: confirmed non-vacuously — a real leadForm.byPeriod
+      refetch (the qc.invalidateQueries(byPeriod) call autosave's
+      onSuccess fires) landed while the Add Risk dialog stayed open and
+      populated; typed text + non-default "Blocked" severity both
+      survived the refetch-driven re-render. Toggle All collapses and
+      re-expands all four sections in sync (groupSyncKey removal, 4.1,
+      intact). No console errors attributable to the lead form /
+      dialogs / saveDraft (all 200 OK). Screenshots under
+      /tmp/finish-backlog-shots/refactor-{1..6}.png.
+- [x] 5.3 Confirm acceptance contract: `lead-report-controls-integrity`
       scenarios + every pinned test file from `design.md` green with
-      zero edits. User acceptance, then `openspec archive`.
+      zero edits. Re-confirmed at HEAD before archive: typecheck OK,
+      lint OK (eslint + stylelint + prisma typecheck), test OK
+      (web 116 files / 1093 tests), build OK. User acceptance:
+      autonomous-run acceptance deferred to PR review — merge to `main`
+      is blocked and awaits the user, so the PR gate is the acceptance
+      sign-off for this autonomous run; then `openspec archive`.

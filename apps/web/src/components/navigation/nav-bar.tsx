@@ -19,7 +19,7 @@ import {
   Presentation,
   Settings,
 } from "lucide-react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 
 import { roleHomePath } from "../../lib/role-home";
@@ -40,7 +40,9 @@ interface NavLink {
 const NAV_LINKS: readonly NavLink[] = [
   { href: "/lead/report", label: "Report", roles: ["lead"] },
   // UX-17 (Phase 35-08): one History page for both active and archived
-  // report periods; archived visibility is toggled inside the page.
+  // report periods; archived visibility is a local toggle inside the page.
+  // The `?tab=` query is back-compat only and no longer forces archive on
+  // (lead-live-walk-2026-06-14 §4) — History defaults to the current view.
   {
     href: "/reports?tab=drafts",
     label: "History",
@@ -93,11 +95,6 @@ function getRoleLabel(role: Role): string {
   }
 }
 
-function reportsTabFromHref(href: string): string | null {
-  const [, query = ""] = href.split("?");
-  return new URLSearchParams(query).get("tab");
-}
-
 function isPublishedReportPath(pathname: string): boolean {
   return (
     pathname === "/reports/history" ||
@@ -107,26 +104,16 @@ function isPublishedReportPath(pathname: string): boolean {
   );
 }
 
-function isActiveLink(
-  pathname: string,
-  activeReportsTab: string | null,
-  href: string,
-): boolean {
+function isActiveLink(pathname: string, href: string): boolean {
   if (href === "/admin") return pathname.startsWith("/admin");
   if (href === "/head/report") return pathname.startsWith("/head/report");
   if (href === "/head/dashboard") return pathname === "/head/dashboard";
   if (href.startsWith("/reports?")) {
-    const hrefTab = reportsTabFromHref(href);
-    if (pathname === "/reports") {
-      return (
-        activeReportsTab === hrefTab ||
-        (hrefTab === "drafts" && activeReportsTab === "published")
-      );
-    }
-    return (
-      isPublishedReportPath(pathname) &&
-      (hrefTab === "published" || hrefTab === "drafts")
-    );
+    // History active state is pathname-based only — independent of the
+    // archive toggle (lead-live-walk-2026-06-14 §4.3). Each role renders a
+    // single History link, so both hrefs activating on /reports never
+    // collides across roles.
+    return pathname === "/reports" || isPublishedReportPath(pathname);
   }
   return pathname.startsWith(href);
 }
@@ -237,10 +224,8 @@ function NavIcon({ href }: { readonly href: string }) {
 
 export function NavBar() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { user, organization, isLoading: sessionLoading } = useSession();
   const hydrated = useHydratedClient();
-  const activeReportsTab = searchParams.get("tab") ?? null;
 
   const visibleUser = hydrated ? user : null;
   const visibleOrganization = hydrated ? organization : null;
@@ -332,7 +317,7 @@ export function NavBar() {
           className="hidden sm:flex sm:items-center sm:gap-0.5"
         >
           {visibleLinks.map((link) => {
-            const active = isActiveLink(pathname, activeReportsTab, link.href);
+            const active = isActiveLink(pathname, link.href);
             return (
               <a
                 key={link.href}
@@ -425,12 +410,7 @@ export function NavBar() {
         <div className="h-[3px] rounded-t bg-[var(--color-starbucks-accent)]" />
       </div>
 
-      <MobileNav
-        links={visibleLinks}
-        pathname={pathname}
-        activeReportsTab={activeReportsTab}
-        role={role}
-      />
+      <MobileNav links={visibleLinks} pathname={pathname} role={role} />
     </header>
   );
 }
@@ -440,12 +420,10 @@ export function NavBar() {
 function MobileNav({
   links,
   pathname,
-  activeReportsTab,
   role,
 }: {
   readonly links: readonly NavLink[];
   readonly pathname: string;
-  readonly activeReportsTab: string | null;
   readonly role: Role | null;
 }) {
   const [open, setOpen] = useState(false);
@@ -481,11 +459,7 @@ function MobileNav({
           </SheetHeader>
           <nav aria-label="Mobile navigation" className="flex flex-col p-2">
             {links.map((link) => {
-              const active = isActiveLink(
-                pathname,
-                activeReportsTab,
-                link.href,
-              );
+              const active = isActiveLink(pathname, link.href);
               return (
                 <a
                   key={link.href}

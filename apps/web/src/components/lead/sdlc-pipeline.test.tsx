@@ -1,9 +1,10 @@
 /**
  * @vitest-environment jsdom
  *
- * D5: dashed left-stripe when the lead has at least one own stage unfilled.
- * Tests cover getProductCardStyle directly and a component-level assertion
- * that the rendered card style attribute reflects the dashed/solid state.
+ * rethink-pipeline-state-vs-completeness: the left edge carries ONLY product
+ * health (always solid). Own-input completeness is a SEPARATE right-side
+ * affordance (dashed ring + "N/M stages" counter) and never shares the health
+ * hue. Tests prove the two signals are independent across all four quadrants.
  */
 
 import { render } from "@testing-library/react";
@@ -12,41 +13,25 @@ import { describe, expect, it } from "vitest";
 import type { Product } from "./mock-data";
 import { getProductCardStyle, SdlcPipeline } from "./sdlc-pipeline";
 
-// ---- Unit: getProductCardStyle ----
+// ---- Unit: getProductCardStyle (health-only, always solid) ----
 
-describe("getProductCardStyle — D5 dashed stripe", () => {
-  it("returns dashed borderLeft when dashed=true", () => {
-    const style = getProductCardStyle("on-track", true);
-    expect(style.borderLeft).toContain("dashed");
+describe("getProductCardStyle — health-only solid left edge", () => {
+  it("left border is always solid, never dashed", () => {
+    expect(getProductCardStyle("on-track").borderLeft).toContain("solid");
+    expect(getProductCardStyle("on-track").borderLeft).not.toContain("dashed");
+    expect(getProductCardStyle("blocked").borderLeft).not.toContain("dashed");
   });
 
-  it("returns solid borderLeft when dashed=false", () => {
-    const style = getProductCardStyle("on-track", false);
-    expect(style.borderLeft).toContain("solid");
-  });
-
-  it("does not change the color token between dashed and solid for on-track", () => {
-    const dashed = getProductCardStyle("on-track", true);
-    const solid = getProductCardStyle("on-track", false);
-    const colorToken = "var(--color-chip-on-track-border)";
-    expect(dashed.borderLeft).toContain(colorToken);
-    expect(solid.borderLeft).toContain(colorToken);
-  });
-
-  it("does not change the color token between dashed and solid for blocked", () => {
-    const dashed = getProductCardStyle("blocked", true);
-    const solid = getProductCardStyle("blocked", false);
-    const colorToken = "var(--color-chip-blocked-border)";
-    expect(dashed.borderLeft).toContain(colorToken);
-    expect(solid.borderLeft).toContain(colorToken);
-  });
-
-  it("does not change the color token between dashed and solid for empty", () => {
-    const dashed = getProductCardStyle("empty", true);
-    const solid = getProductCardStyle("empty", false);
-    const colorToken = "var(--color-border)";
-    expect(dashed.borderLeft).toContain(colorToken);
-    expect(solid.borderLeft).toContain(colorToken);
+  it("color token reflects health status", () => {
+    expect(getProductCardStyle("on-track").borderLeft).toContain(
+      "var(--color-chip-on-track-border)",
+    );
+    expect(getProductCardStyle("blocked").borderLeft).toContain(
+      "var(--color-chip-blocked-border)",
+    );
+    expect(getProductCardStyle("empty").borderLeft).toContain(
+      "var(--color-border)",
+    );
   });
 });
 
@@ -153,45 +138,277 @@ describe("SdlcPipeline — D1 live stripe color from own stages", () => {
   });
 });
 
-describe("SdlcPipeline — D5 dashed stripe (component)", () => {
-  it("renders dashed stripe when edit view has an unfilled own stage", () => {
+// The left edge is now ALWAYS solid — the completeness dash moved to a
+// separate right-side affordance (see the dedicated block below).
+describe("SdlcPipeline — left edge is always solid", () => {
+  it("never dashes the left edge even with an unfilled own stage", () => {
     const { container } = render(
       <SdlcPipeline
         products={[PRODUCT_WITH_UNFILLED_OWN_STAGE]}
         readOnly={false}
       />,
     );
-    expect(getFirstCardStyle(container)).toContain("dashed");
-  });
-
-  it("renders solid stripe when all own stages are filled", () => {
-    const { container } = render(
-      <SdlcPipeline products={[PRODUCT_WITH_ALL_FILLED]} readOnly={false} />,
-    );
     expect(getFirstCardStyle(container)).toContain("solid");
     expect(getFirstCardStyle(container)).not.toContain("dashed");
   });
+});
 
-  it("renders solid stripe in readOnly mode even when own stage is empty", () => {
+// ---- Completeness affordance (right side) ----
+
+function getCompletenessPill(container: HTMLElement): HTMLElement | null {
+  return container.querySelector("[data-complete]");
+}
+
+describe("SdlcPipeline — completeness affordance (right side)", () => {
+  it("shows an N/M counter pill over the lead's own stages", () => {
+    // PRODUCT_WITH_UNFILLED_OWN_STAGE: Design=empty/mine, Dev=on-track/mine → 1/2
+    const { container } = render(
+      <SdlcPipeline
+        products={[PRODUCT_WITH_UNFILLED_OWN_STAGE]}
+        readOnly={false}
+      />,
+    );
+    const pill = getCompletenessPill(container);
+    expect(pill?.textContent).toContain("1/2 stages");
+  });
+
+  it("wraps the pill in a dashed ring while own input is incomplete", () => {
+    const { container } = render(
+      <SdlcPipeline
+        products={[PRODUCT_WITH_UNFILLED_OWN_STAGE]}
+        readOnly={false}
+      />,
+    );
+    const pill = getCompletenessPill(container);
+    expect(pill?.getAttribute("data-complete")).toBe("false");
+    expect(pill?.getAttribute("style")).toContain("dashed");
+  });
+
+  it("removes the dashed ring when own input is complete", () => {
+    const { container } = render(
+      <SdlcPipeline products={[PRODUCT_WITH_ALL_FILLED]} readOnly={false} />,
+    );
+    const pill = getCompletenessPill(container);
+    expect(pill?.getAttribute("data-complete")).toBe("true");
+    expect(pill?.getAttribute("style")).not.toContain("dashed");
+  });
+
+  it("hides the completeness affordance in readOnly mode", () => {
     const { container } = render(
       <SdlcPipeline
         products={[PRODUCT_WITH_UNFILLED_OWN_STAGE]}
         readOnly={true}
       />,
     );
-    expect(getFirstCardStyle(container)).toContain("solid");
-    expect(getFirstCardStyle(container)).not.toContain("dashed");
+    expect(getCompletenessPill(container)).toBeNull();
   });
 
-  it("renders solid stripe when unfilled stage is not owned by this lead", () => {
+  it("counts only the lead's own stages, ignoring unowned ones", () => {
+    // PRODUCT_UNFILLED_BUT_NOT_MINE: Design=empty/unassigned, Dev=on-track/mine
+    // → only Dev counts → 1/1, complete.
     const { container } = render(
       <SdlcPipeline
         products={[PRODUCT_UNFILLED_BUT_NOT_MINE]}
         readOnly={false}
       />,
     );
-    expect(getFirstCardStyle(container)).toContain("solid");
-    expect(getFirstCardStyle(container)).not.toContain("dashed");
+    const pill = getCompletenessPill(container);
+    expect(pill?.textContent).toContain("1/1 stages");
+    expect(pill?.getAttribute("data-complete")).toBe("true");
+  });
+
+  it("completeness counts RAW (pre-floor) status, so a risk-derived severity floor never inflates it", () => {
+    // rethink-pipeline-state-vs-completeness regression: `products` carries the
+    // render-time floor (a covering risk pushed the empty Design stage to
+    // at-risk for the chip), while `rawProducts` keeps the lead's untouched
+    // empty. Completeness MUST read raw → 1/2, incomplete. Reading the floored
+    // `products` would falsely report 2/2 complete (the add-then-remove-risk
+    // corruption this change fixes).
+    const flooredProducts: Product = {
+      ...PRODUCT_WITH_UNFILLED_OWN_STAGE,
+      stages: [
+        {
+          stageName: "Design",
+          status: "at-risk",
+          ownership: "mine",
+          assignee: "me",
+        },
+        {
+          stageName: "Dev",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "me",
+        },
+      ],
+    };
+    const { container } = render(
+      <SdlcPipeline
+        products={[flooredProducts]}
+        rawProducts={[PRODUCT_WITH_UNFILLED_OWN_STAGE]}
+        readOnly={false}
+      />,
+    );
+    const pill = getCompletenessPill(container);
+    expect(pill?.textContent).toContain("1/2 stages");
+    expect(pill?.getAttribute("data-complete")).toBe("false");
+  });
+});
+
+// ---- Health vs completeness are INDEPENDENT (all four quadrants) ----
+
+const RED_HEALTH_COMPLETE: Product = {
+  ...BASE_PRODUCT,
+  stages: [
+    {
+      stageName: "Design",
+      status: "on-track",
+      ownership: "mine",
+      assignee: "me",
+    },
+    { stageName: "Dev", status: "blocked", ownership: "mine", assignee: "me" },
+  ],
+};
+
+const GREEN_HEALTH_INCOMPLETE: Product = {
+  ...BASE_PRODUCT,
+  stages: [
+    { stageName: "Design", status: "empty", ownership: "mine", assignee: "me" },
+    {
+      stageName: "Dev",
+      status: "on-track",
+      ownership: "mine",
+      assignee: "me",
+    },
+  ],
+};
+
+const GREEN_HEALTH_COMPLETE: Product = {
+  ...BASE_PRODUCT,
+  stages: [
+    {
+      stageName: "Design",
+      status: "on-track",
+      ownership: "mine",
+      assignee: "me",
+    },
+    {
+      stageName: "Dev",
+      status: "on-track",
+      ownership: "mine",
+      assignee: "me",
+    },
+  ],
+};
+
+const RED_HEALTH_INCOMPLETE: Product = {
+  ...BASE_PRODUCT,
+  stages: [
+    { stageName: "Design", status: "empty", ownership: "mine", assignee: "me" },
+    { stageName: "Dev", status: "blocked", ownership: "mine", assignee: "me" },
+  ],
+};
+
+describe("SdlcPipeline — health and completeness are independent", () => {
+  it("red health + complete input: blocked edge, no dashed ring", () => {
+    const { container } = render(
+      <SdlcPipeline products={[RED_HEALTH_COMPLETE]} readOnly={false} />,
+    );
+    expect(getFirstCardStyle(container)).toContain(
+      "var(--color-chip-blocked-border)",
+    );
+    expect(getCompletenessPill(container)?.getAttribute("data-complete")).toBe(
+      "true",
+    );
+  });
+
+  it("green health + incomplete input: on-track edge, dashed ring", () => {
+    const { container } = render(
+      <SdlcPipeline products={[GREEN_HEALTH_INCOMPLETE]} readOnly={false} />,
+    );
+    expect(getFirstCardStyle(container)).toContain(
+      "var(--color-chip-on-track-border)",
+    );
+    expect(getCompletenessPill(container)?.getAttribute("data-complete")).toBe(
+      "false",
+    );
+  });
+
+  it("green health + complete input", () => {
+    const { container } = render(
+      <SdlcPipeline products={[GREEN_HEALTH_COMPLETE]} readOnly={false} />,
+    );
+    expect(getFirstCardStyle(container)).toContain(
+      "var(--color-chip-on-track-border)",
+    );
+    expect(getCompletenessPill(container)?.getAttribute("data-complete")).toBe(
+      "true",
+    );
+  });
+
+  it("red health + incomplete input", () => {
+    const { container } = render(
+      <SdlcPipeline products={[RED_HEALTH_INCOMPLETE]} readOnly={false} />,
+    );
+    expect(getFirstCardStyle(container)).toContain(
+      "var(--color-chip-blocked-border)",
+    );
+    expect(getCompletenessPill(container)?.getAttribute("data-complete")).toBe(
+      "false",
+    );
+  });
+});
+
+// ---- 2.1: foreign stage-owner risk lights the left edge ----
+
+describe("SdlcPipeline — left edge reflects any stage owner's risk", () => {
+  it("a cross-author blocker recolors the left edge even when own stages are on-track", () => {
+    const { container } = render(
+      <SdlcPipeline
+        products={[GREEN_HEALTH_COMPLETE]}
+        readOnly={false}
+        crossAuthors={[
+          {
+            projectId: GREEN_HEALTH_COMPLETE.id,
+            projectName: GREEN_HEALTH_COMPLETE.name,
+            authorId: "a2",
+            authorName: "Other Lead",
+            stageNames: ["Testing"],
+            itemCount: 0,
+            riskCount: 1,
+            risks: [{ severity: "blocked", text: "infra down" }],
+            isEmpty: false,
+          },
+        ]}
+      />,
+    );
+    expect(getFirstCardStyle(container)).toContain(
+      "var(--color-chip-blocked-border)",
+    );
+  });
+
+  it("does not recolor while a cross-author entry is still loading (risks=null)", () => {
+    const { container } = render(
+      <SdlcPipeline
+        products={[GREEN_HEALTH_COMPLETE]}
+        readOnly={false}
+        crossAuthors={[
+          {
+            projectId: GREEN_HEALTH_COMPLETE.id,
+            projectName: GREEN_HEALTH_COMPLETE.name,
+            authorId: "a2",
+            authorName: "Other Lead",
+            stageNames: ["Testing"],
+            itemCount: 0,
+            riskCount: 1,
+            risks: null,
+            isEmpty: false,
+          },
+        ]}
+      />,
+    );
+    expect(getFirstCardStyle(container)).toContain(
+      "var(--color-chip-on-track-border)",
+    );
   });
 });
 

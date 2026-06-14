@@ -82,10 +82,14 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
   const searchParams = useSearchParams();
 
   // 35-07: the dropdown reflects the path-segment reportId when the page is
-  // rendered under `/lead/report/[reportId]`.
+  // rendered under `/lead/report/[reportId]`. driver-findings-2026-06-11
+  // finding 4: this navigator is also rendered on `/head/report/[reportId]`
+  // (via HeadReportShell with a urlBuilder), so the regex must match the head
+  // base too — otherwise currentIndex defaults to 0 and the trigger shows the
+  // latest published period instead of the addressed week.
   const pathReportId = useMemo(() => {
     if (!pathname) return null;
-    const match = /^\/lead\/report\/([^/]+)$/.exec(pathname);
+    const match = /^\/(?:lead|head)\/report\/([^/]+)$/.exec(pathname);
     return match ? match[1] : null;
   }, [pathname]);
 

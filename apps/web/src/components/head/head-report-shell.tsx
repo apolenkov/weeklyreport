@@ -55,10 +55,17 @@ export function HeadReportShell({
     trpc.reports.compiledHistory.queryOptions({ includeArchive }),
   );
 
+  // driver-findings-2026-06-11 finding 4: compiledHistory lists only
+  // published + archived periods, so the active week (the one the body shows
+  // on `/head/report/<activeId>`) is absent and the navigator falls back to
+  // periods[0] (latest published). Fetch the displayed report and prepend it
+  // when it is not already in history. Same query key as WeeklyReportPage's
+  // identical call, so React Query dedupes — no extra network request.
+  const displayedQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
+
   const periods: ReportPeriod[] = useMemo(() => {
-    const data = historyQ.data;
-    if (!data?.entries.length) return [];
-    return data.entries.map((entry) => ({
+    const entries = historyQ.data?.entries ?? [];
+    const historyPeriods: ReportPeriod[] = entries.map((entry) => ({
       id: entry.reportId,
       weekLabel: `Week ${isoWeekNumber(new Date(entry.periodStart))}`,
       dateRange: formatDateRange(
@@ -70,7 +77,33 @@ export function HeadReportShell({
       isCurrent: false,
       isSubmitted: true,
     }));
-  }, [historyQ.data]);
+
+    // Prepend the displayed (active) period when history does not already
+    // carry it. The entry's id MUST be the reportId so the navigator's
+    // `p.id === pathReportId` match resolves the addressed week.
+    const displayed = displayedQ.data;
+    if (
+      !displayed ||
+      displayed.status === "no-period" ||
+      historyPeriods.some((p) => p.id === reportId)
+    ) {
+      return historyPeriods;
+    }
+    const activePeriod: ReportPeriod = {
+      id: reportId,
+      weekLabel: `Week ${isoWeekNumber(new Date(displayed.periodStart))}`,
+      dateRange: formatDateRange(
+        new Date(displayed.periodStart),
+        new Date(displayed.periodEnd),
+      ),
+      archived: false,
+      sourceSectionId: "",
+      // Mirror mapWeeklyReport: a non-published period is the current week.
+      isCurrent: displayed.periodStatus !== "published",
+      isSubmitted: true,
+    };
+    return [activePeriod, ...historyPeriods];
+  }, [historyQ.data, displayedQ.data, reportId]);
 
   const urlBuilder = useCallback(
     (periodId: string) => {
@@ -97,6 +130,40 @@ export function HeadReportShell({
 
   const presentHref = `/head/report/${encodeURIComponent(reportId)}/present`;
   const printHref = `/print/${encodeURIComponent(reportId)}`;
+
+  const headerActions = (
+    <>
+      <ScopeToggle
+        value={scope}
+        onChange={setScope}
+        allowedScopes={["product", "lead"]}
+      />
+      <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
+      <a
+        href={presentHref}
+        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+        title="Open presentation"
+      >
+        <Presentation className="h-4 w-4" aria-hidden="true" />
+        <span>Present</span>
+      </a>
+      <a
+        href={printHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+        title="Print report (browser print)"
+      >
+        <FileDown className="h-4 w-4" aria-hidden="true" />
+        <span>Print</span>
+      </a>
+      {/* one-placeholder-per-surface (mount-agent-review-placeholder): slides
+          mode already carries an Agent-review placeholder inside the head slide
+          deck (status-slide-deck.tsx), so the header only mounts one in form
+          mode to avoid double-mounting on the slides surface. */}
+      {mode === "form" ? <AgentReviewComingSoon /> : null}
+    </>
+  );
 
   // Single period toolbar (UAT 2026-05-22 done-condition 10 +
   // head-toolbar-parity D2): period navigator + archive toggle so head can
@@ -126,55 +193,20 @@ export function HeadReportShell({
 
   return (
     <div className="space-y-4">
-      {/* Action row parity with the lead report header (UAT 2026-05-22,
-          done-condition 10): head is read-only, so the lead Submit slot is
-          replaced by export / presentation actions.
-          head-toolbar-parity D2: this utility row comes first; in form mode
-          the single pill toolbar renders below the real page header row
-          inside WeeklyReportPage (via its toolbar slot) — the lead
-          arrangement.
-          polish-ui-density T3 + unify-head-toolbar-controls: real controls
-          share one height (--touch-target-min), grouped by intent —
-          scope | view mode (primary) | utilities — with wider gaps between
-          groups. The inert Agent review placeholder is compact and trails
-          the group (documented ui-control-density exception). It mounts in
-          form mode only: slides mode already carries one inside the head
-          slide article (status-slide-deck.tsx), and one placeholder per
-          surface is the deferred-feature-pattern invariant
-          (mount-agent-review-placeholder). */}
-      <div className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2">
-        <ScopeToggle
-          value={scope}
-          onChange={setScope}
-          allowedScopes={["product", "lead"]}
-        />
-        <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
-        <div className="flex items-center gap-2">
-          <a
-            href={presentHref}
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
-            title="Open presentation"
-          >
-            <Presentation className="h-4 w-4" aria-hidden="true" />
-            <span>Present</span>
-          </a>
-          <a
-            href={printHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
-            title="Print report (browser print)"
-          >
-            <FileDown className="h-4 w-4" aria-hidden="true" />
-            <span>Print</span>
-          </a>
-          {mode === "form" ? <AgentReviewComingSoon compact /> : null}
-        </div>
-      </div>
       {mode === "slides" ? (
         <>
           {/* Slides mode has no WeeklyReportPage header, so the shell renders
-              the toolbar directly above the deck. */}
+              the lead-style page header directly above the toolbar and deck. */}
+          <header className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
+              <div className="min-w-0">
+                <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
+                  Status Report
+                </h1>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">{headerActions}</div>
+          </header>
           {reportToolbar}
           <Suspense fallback={<SlideSkeleton />}>
             <HeadSlidesClient reportId={reportId} scope={reportScope} />
@@ -188,6 +220,7 @@ export function HeadReportShell({
               authorId={authorId}
               scope={reportScope}
               toolbar={reportToolbar}
+              headerActions={headerActions}
             />
           </Suspense>
         </div>

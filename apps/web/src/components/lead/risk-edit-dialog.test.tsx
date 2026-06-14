@@ -438,22 +438,47 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
     expect(cancel.parentElement).toBe(save.parentElement);
   });
 
-  it("uses two-column grid layout on md+ viewports", () => {
+  it("renders all fields in a balanced two-column layout with a Classification panel", () => {
+    // lead-live-walk-2026-06-14 1.x: the single-column layout (PR #10) ran the
+    // full 92vh with the Product picker clipped off-screen. It is replaced by a
+    // balanced md+ two-column grid — prose fields on the left, the Classification
+    // panel on the right. Assert the new contract: a responsive two-column grid
+    // exists, and every field survived the relayout.
     render(
       <RiskEditDialog
         open
         risk={null}
-        products={products}
+        products={[
+          ...products,
+          { id: "p2", name: "Billing", overallStatus: "on-track", stages: [] },
+        ]}
         onSave={() => undefined}
         onCancel={() => undefined}
         defaultProductId="p1"
-        stagesForProduct={() => ["Dev"]}
+        stagesForProduct={() => ["Dev", "Testing"]}
       />,
     );
 
-    // The form grid wrapping both columns.
-    const grid = document.querySelector('[class*="md:grid-cols-"]');
-    expect(grid).not.toBeNull();
+    // The responsive two-column grid is present (collapses to one column on a
+    // narrow modal via the md: breakpoint).
+    expect(document.querySelector('[class*="md:grid-cols-2"]')).not.toBeNull();
+
+    // The grouped Classification panel is present.
+    expect(screen.getByText("Classification")).toBeInTheDocument();
+
+    // Every field survived the relayout: the three prose fields, severity
+    // chips, the stage selector, and the product picker (>1 product).
+    expect(screen.getByLabelText(/^Risk \*/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Impact \*/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Mitigation \*/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /At Risk/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Blocked/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Dev" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Product/i)).toBeInTheDocument();
   });
 });
 

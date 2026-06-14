@@ -101,6 +101,11 @@ describe("mapLeadProducts", () => {
   });
 
   it("uses per-stage statuses instead of copying the product status to every owned stage", () => {
+    // rethink-pipeline-state-vs-completeness: status is now derived from risks.
+    // The Testing severity must come from a covering blocker, not a persisted
+    // red with nothing to back it (that would collapse to on-track). The point
+    // of the test — stages carry DISTINCT statuses, not the product-wide red —
+    // still holds: Dev=on-track, Testing=blocked, DevOps=empty.
     const section = baseSection({
       projects: [
         {
@@ -129,6 +134,16 @@ describe("mapLeadProducts", () => {
           ],
         },
       ],
+      risks: [
+        {
+          projectId: PROJECT_A,
+          risk: "Testing environment is down",
+          impact: "blocks release",
+          mitigation: "restore infra",
+          severity: "blocked",
+          stageIds: ["Testing"],
+        },
+      ],
     });
 
     const product = mapLeadProducts(section).at(0);
@@ -137,6 +152,32 @@ describe("mapLeadProducts", () => {
     expect(stages.get("Dev")).toBe("on-track");
     expect(stages.get("Testing")).toBe("blocked");
     expect(stages.get("DevOps")).toBe("empty");
+  });
+
+  it("collapses a persisted at-risk/blocked stage with no covering risk to on-track", () => {
+    // rethink-pipeline-state-vs-completeness (supersedes PRJ-2 "explicit wins"):
+    // a stale persisted severity that no risk backs can no longer survive.
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM Platform",
+          trafficLight: "red",
+          ownedStages: [
+            {
+              stageId: "22222222-2222-4222-8222-222222222222",
+              stageName: "Testing",
+              sortOrder: 4,
+              status: "red",
+            },
+          ],
+        },
+      ],
+    });
+
+    const product = mapLeadProducts(section).at(0);
+    const stages = new Map(product?.stages.map((s) => [s.stageName, s.status]));
+    expect(stages.get("Testing")).toBe("on-track");
   });
 
   it("returns empty array when the section has no projects", () => {
@@ -313,6 +354,49 @@ describe("mapLeadProducts", () => {
     expect(stages.find((s) => s.stageName === "Testing")?.status).toBe(
       "blocked",
     );
+  });
+
+  it("an UNTOUCHED owned stage covered by a risk stays empty (rethink-pipeline completeness fix)", () => {
+    // rethink-pipeline-state-vs-completeness (D1): the read model feeds the live
+    // form's own-input completeness counter via the raw, pre-floor status. A
+    // covering risk (the Add-Risk dialog defaults to all stages checked) must
+    // NOT floor a stage the lead never set — otherwise an empty stage would
+    // count as "filled" and inflate the counter to "your input is complete".
+    // The DISPLAY floor is re-applied at render by applyRiskSeverityFloor; this
+    // mapper output is the completeness source, so the empty stays empty.
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM Platform",
+          trafficLight: "green",
+          ownedStages: [
+            {
+              stageId: "stage-dev",
+              stageName: "Development",
+              sortOrder: 3,
+              // No status: the lead never touched this stage.
+              status: null,
+            },
+          ],
+        },
+      ],
+      risks: [
+        {
+          projectId: PROJECT_A,
+          risk: "Product-wide blocker",
+          impact: "Everything stalls",
+          mitigation: "Escalate",
+          severity: "blocked",
+          stageIds: [],
+        },
+      ],
+    });
+
+    const devStage = mapLeadProducts(section)[0]?.stages.find(
+      (s) => s.stageName === "Dev",
+    );
+    expect(devStage?.status).toBe("empty");
   });
 
   it("an empty-text risk does not floor the chip (only non-empty risks count)", () => {

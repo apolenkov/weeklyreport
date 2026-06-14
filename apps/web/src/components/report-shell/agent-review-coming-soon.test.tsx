@@ -9,8 +9,8 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { render, screen } from "@testing-library/react";
-import type { ReactElement } from "react";
+import { render, screen, within } from "@testing-library/react";
+import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 /* ---- Module mocks (must be hoisted above all imports of the SUT) ---- */
@@ -27,7 +27,16 @@ vi.mock("../../components/lead/lead-section-preview-auth", () => ({
 }));
 
 vi.mock("../../components/weekly-report/weekly-report-page", () => ({
-  WeeklyReportPage: () => <div data-testid="weekly-report-page-stub" />,
+  // unify-top-action-toolbars D4: the viewer routes its action controls
+  // (incl. the agent-review placeholder) through the `headerActions` slot,
+  // mirroring the head report shell. Render the slot so the viewer's single
+  // placeholder is observable in these tests.
+  WeeklyReportPage: ({ headerActions }: { headerActions?: ReactNode }) => (
+    <div data-testid="weekly-report-page-stub">
+      <h1>Status Report</h1>
+      <div data-testid="weekly-report-header-actions">{headerActions}</div>
+    </div>
+  ),
 }));
 
 vi.mock("../../components/weekly-report/weekly-report-skeleton", () => ({
@@ -155,6 +164,57 @@ describe("PublishedReportPage — agent-review placeholder", () => {
       />,
     );
     expect(screen.getByText("Agent review")).toBeInTheDocument();
+  });
+});
+
+// unify-top-action-toolbars task 2.0 / D4: the viewer used to render its OWN
+// <h1>Status Report</h1> + Report-ID block ABOVE WeeklyReportPage, which
+// renders the same title — doubling it on screen. The wrapper now owns NO title
+// and routes its actions through the page's `headerActions` slot, so the title
+// shows exactly once.
+describe("PublishedReportPage — single title + header actions (task 2.0)", () => {
+  it("renders exactly one Status Report title and no wrapper-level Report-ID", () => {
+    render(
+      <PublishedReportPage
+        params={paramsOf(TEST_REPORT_ID)}
+        searchParams={searchParamsOf()}
+      />,
+    );
+    expect(
+      screen.getAllByRole("heading", { name: "Status Report" }),
+    ).toHaveLength(1);
+    expect(screen.queryByText(/report id:/i)).not.toBeInTheDocument();
+  });
+
+  it("routes the viewer actions through the headerActions slot", () => {
+    render(
+      <PublishedReportPage
+        params={paramsOf(TEST_REPORT_ID)}
+        searchParams={searchParamsOf()}
+      />,
+    );
+    expect(screen.queryByTestId("report-actions-pill")).not.toBeInTheDocument();
+    const headerActions = screen.getByTestId("weekly-report-header-actions");
+    const back = within(headerActions).getByRole("link", {
+      name: /back to archive/i,
+    });
+    expect(back).toHaveAttribute("href", "/reports?tab=published");
+    // The React.use() stub returns the params Promise as-is, so reportId is not
+    // unwrapped here; assert the href SHAPE (route prefix/suffix) rather than
+    // the interpolated id. The live-browser pass confirms the real id.
+    expect(
+      within(headerActions)
+        .getByRole("link", { name: /open presentation/i })
+        .getAttribute("href"),
+    ).toMatch(/^\/reports\/.*\/present$/);
+    expect(
+      within(headerActions)
+        .getByRole("link", { name: /print/i })
+        .getAttribute("href"),
+    ).toMatch(/^\/print\//);
+    expect(
+      within(headerActions).getByTestId("agent-review-coming-soon"),
+    ).toBeInTheDocument();
   });
 });
 
