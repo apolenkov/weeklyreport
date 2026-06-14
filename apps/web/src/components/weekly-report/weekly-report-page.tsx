@@ -368,7 +368,7 @@ export function WeeklyReportPage({
   return (
     <div className="space-y-4">
       {/* Page header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
             Status Report
@@ -424,7 +424,7 @@ export function WeeklyReportPage({
             />
           )}
         </div>
-      </div>
+      </header>
 
       {/* Period-context toolbar: shared ReportToolbar container
           (head-toolbar-parity D2 — replaces the bespoke gradient bar). A
