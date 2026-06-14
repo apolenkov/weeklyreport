@@ -15,7 +15,8 @@ lead control styling. Read archived `head-toolbar-parity` +
       `[scope · view-mode]` / `[present · print · agent]`. See D1/D3.
 - [x] 1.2 Present/Print stay LABELED text+icon pills (primary actions). See D2.
 - [x] 1.3 Same idiom in head slides mode; viewer fixed by the head pattern
-      (drop dup `<h1>`, actions via the `toolbar` slot). See D3/D4.
+      (drop dup `<h1>`, actions pill ABOVE the page, `toolbar` slot left unset so
+      the period bar stays). See D3/D4.
 
 ## 2. Implement
 
@@ -25,9 +26,9 @@ lead control styling. Read archived `head-toolbar-parity` +
       Presentation / Print / Agent review), THEN mounts `WeeklyReportPage`, which
       renders its own "Status Report · Live · N/N" header — two stacked titles.
       Fix by the head pattern (`head-report-shell.tsx`): drop the wrapper's
-      duplicate `<h1>`/context, route the viewer actions through
-      `WeeklyReportPage`'s `toolbar` slot, and put them in the unified pill bar.
-      Keep all hrefs/aria/behavior.
+      duplicate `<h1>`/context, mount the viewer actions in the unified pill bar
+      ABOVE `WeeklyReportPage`, and leave the `toolbar` slot unset so the page
+      keeps its own period bar (week + date range). Keep all hrefs/aria/behavior.
 - [x] 2.1 Apply the unified container + intent grouping to the head report
       action row (form + slides). Keep all hrefs, behavior, aria intact.
       Use the frontend-design skill for the visual pass; named consts, no magic
