@@ -1,8 +1,10 @@
 "use client";
 
+import { ArrowLeft, FileDown, Presentation } from "lucide-react";
 import { Suspense, use } from "react";
 
 import { AgentReviewComingSoon } from "../../../../components/report-shell/agent-review-coming-soon";
+import { ReportActionsPill } from "../../../../components/report-shell/report-toolbar";
 import { WeeklyReportPage } from "../../../../components/weekly-report/weekly-report-page";
 import { WeeklyReportSkeleton } from "../../../../components/weekly-report/weekly-report-skeleton";
 
@@ -10,6 +12,15 @@ import { WeeklyReportSkeleton } from "../../../../components/weekly-report/weekl
 /*  Published Report Viewer — Client Component (Phase 21)             */
 /*  Thin wrapper around WeeklyReportPage that scopes the query to the */
 /*  dynamic [reportId] route param.                                   */
+/*                                                                    */
+/*  unify-top-action-toolbars D4 / task 2.0: the wrapper no longer    */
+/*  renders its own <h1>Status Report</h1> + Report-ID context block. */
+/*  WeeklyReportPage already renders that title ("Status Report ·     */
+/*  Live · N/N"), so the wrapper used to DOUBLE it on screen. The     */
+/*  viewer actions now flow through WeeklyReportPage's `toolbar` slot  */
+/*  inside the shared ReportActionsPill — the same pattern the head    */
+/*  report shell uses — so the title shows exactly once and the        */
+/*  actions sit in the unified pill bar.                               */
 /* ------------------------------------------------------------------ */
 
 interface Props {
@@ -21,73 +32,66 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
   const { reportId } = use(params);
   const { authorId } = use(searchParams);
 
+  const archiveHref = "/reports?tab=published";
+  const presentHref = `/reports/${reportId}/present`;
+  const printHref = `/print/${reportId}`;
+
+  // unify-top-action-toolbars D4: viewer grouping — left = "Back to Archive"
+  // (navigate away), right = presentation / print / agent review (act on the
+  // current report). All hrefs/aria/behavior preserved from the prior bare row.
+  const viewerActions = (
+    <ReportActionsPill
+      leftGroup={
+        <a
+          href={archiveHref}
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+          aria-label="Back to Archive"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          <span>Back to Archive</span>
+        </a>
+      }
+      rightGroup={
+        <>
+          <a
+            href={presentHref}
+            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+            aria-label="Open presentation"
+          >
+            <Presentation className="h-4 w-4" aria-hidden="true" />
+            <span>Presentation</span>
+          </a>
+          <a
+            href={printHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+            title="Print report (browser print)"
+          >
+            <FileDown className="h-4 w-4" aria-hidden="true" />
+            <span>Print</span>
+          </a>
+          <AgentReviewComingSoon compact />
+        </>
+      }
+    />
+  );
+
   return (
     <main
       id="main-content"
       className="min-h-screen bg-[var(--color-background)]"
     >
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-starbucks-green)]">
-              Status Report
-            </h1>
-            <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-              Report ID: {reportId}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <a
-              href="/reports?tab=published"
-              className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
-              style={{ minHeight: "44px" }}
-              aria-label="Back to Archive"
-            >
-              Back to Archive
-            </a>
-            <a
-              href={`/reports/${reportId}/present`}
-              className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
-              style={{ minHeight: "44px" }}
-              aria-label="Open presentation"
-            >
-              Presentation
-            </a>
-            <a
-              href={`/print/${reportId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-press inline-flex items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-green-accent,#00754A)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-green,#006241)]"
-              style={{ minHeight: "44px" }}
-              title="Print report (browser print)"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Print
-            </a>
-            <AgentReviewComingSoon compact />
-          </div>
-        </div>
-
-        {/* The AI period-summary surface was removed; the assembled report renders
-            directly. The agent-review «coming soon» entry lives in the slide
-            decks / report shells. */}
+        {/* The AI period-summary surface was removed; the assembled report
+            renders directly. The agent-review «coming soon» entry lives in the
+            action pill / slide decks / report shells. */}
         <Suspense fallback={<WeeklyReportSkeleton />}>
-          <WeeklyReportPage reportId={reportId} authorId={authorId} />
+          <WeeklyReportPage
+            reportId={reportId}
+            authorId={authorId}
+            toolbar={viewerActions}
+          />
         </Suspense>
       </div>
     </main>
