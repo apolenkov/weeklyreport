@@ -20,16 +20,26 @@ Branch `feat/finish-backlog-2026-06-13`; no push; PR #10 updated.
 
 ## 2. Slides product card
 
-- [ ] 2.1 `slides/lead-product-grid.tsx`: surface risk/decision CONTENT on the
+- [x] 2.1 `slides/lead-product-grid.tsx`: surface risk/decision CONTENT on the
       card (not only counts), consistent with the form. Keep it readable.
-- [ ] 2.2 Equal-height product cards across the grid row.
-- [ ] 2.3 Tests + live screenshots.
+- [x] 2.2 Equal-height product cards across the grid row.
+- [x] 2.3 Tests + live screenshots.
 
 ## 3. Statuses (only if 0.1 says real bug)
 
-- [ ] 3.1 If real: fix status/completeness derivation (in rethink-pipeline scope)
+- [x] 3.1 If real: fix status/completeness derivation (in rethink-pipeline scope)
       so a started lead is not "not started" and slide statuses are correct.
       Live-verify. If dirty-seed: note it, no code change.
+      VERDICT: REAL bug (rethink-pipeline scope), not dirty-seed. The slide
+      product badge read the persisted, pre-floor `project.trafficLight` while
+      every stage was risk-floored, so a stale persisted status drifted the
+      badge from the stages below it. Fixed in `section-slide-utils.ts` —
+      `SlideProduct.status` now derives from the worst floored stage (worst-of),
+      mirroring the live pipeline's own-status path. Live-verified at :3000
+      ?mode=slides: 4/6 products match the pipeline stripe exactly; the 2 that
+      differ (Платёжный шлюз, CRM-Sales Hub) carry only a CROSS-AUTHOR risk
+      (Boris's `PROD_PAYMENTS` at-risk) which the per-lead own-section slide
+      intentionally omits — that aggregate surfaces in the head by-product view.
 
 ## 4. Reports history behavior
 

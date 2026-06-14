@@ -187,11 +187,11 @@ export function buildSectionSlideModel(
     .map((item) => item.text.trim());
 
   const projectIds = new Set(projectRows.map((project) => project.projectId));
-  const productSlides: SlideProduct[] = projectRows.map((project) => ({
-    id: project.projectId,
-    name: project.projectName,
-    status: project.trafficLight,
-    stages: [...(project.ownedStages ?? [])]
+  const productSlides: SlideProduct[] = projectRows.map((project) => {
+    const projectRisks = section.risks.filter(
+      (risk) => risk.projectId === project.projectId,
+    );
+    const stages: SlideStage[] = [...(project.ownedStages ?? [])]
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((stage) => ({
         id: stage.stageId,
@@ -200,59 +200,78 @@ export function buildSectionSlideModel(
         // project's covering risks — same rule as the lead form / review.
         status: floorSlideStageStatus(
           stage.status ?? null,
-          section.risks.filter((risk) => risk.projectId === project.projectId),
+          projectRisks,
           stage.stageName,
         ),
-      })),
-    currentItems: section.items
-      .filter(
-        (item) =>
-          item.projectId === project.projectId &&
-          item.type === "current" &&
-          nonEmpty(item.text),
-      )
-      .map((item) => item.text.trim()),
-    nextItems: section.items
-      .filter(
-        (item) =>
-          item.projectId === project.projectId &&
-          item.type === "next" &&
-          nonEmpty(item.text),
-      )
-      .map((item) => item.text.trim()),
-    risks: section.risks
-      .filter(
-        (risk) => risk.projectId === project.projectId && nonEmpty(risk.risk),
-      )
-      .map((risk) => risk.risk.trim()),
-    decisions: section.decisions
-      .filter(
-        (decision) =>
-          decision.productId === project.projectId && nonEmpty(decision.text),
-      )
-      .map((decision) => decision.text.trim()),
-    priorities: section.items
-      .filter(
-        (item) =>
+      }));
+    return {
+      id: project.projectId,
+      name: project.projectName,
+      // lead-live-walk-2026-06-14 (3.1, rethink-pipeline scope): the product
+      // badge must reflect the same risk-derived health the live pipeline card
+      // shows (`productHealthStatus` = worst floored stage). The old
+      // `project.trafficLight` was the persisted, pre-floor traffic column that
+      // rethink-pipeline demoted from source-of-truth, so a stale persisted
+      // status with no covering risk (or a covering risk on an empty persisted
+      // stage) drifted the badge away from the stages rendered right below it.
+      // Deriving from the already-floored stages keeps the badge consistent with
+      // the slide's own stages by construction and with the pipeline by shared
+      // derivation.
+      status: stages.reduce<SlideStageStatus>(
+        (worst, stage) => worstTraffic(worst, stage.status),
+        null,
+      ),
+      stages,
+      currentItems: section.items
+        .filter(
+          (item) =>
+            item.projectId === project.projectId &&
+            item.type === "current" &&
+            nonEmpty(item.text),
+        )
+        .map((item) => item.text.trim()),
+      nextItems: section.items
+        .filter(
+          (item) =>
+            item.projectId === project.projectId &&
+            item.type === "next" &&
+            nonEmpty(item.text),
+        )
+        .map((item) => item.text.trim()),
+      risks: section.risks
+        .filter(
+          (risk) => risk.projectId === project.projectId && nonEmpty(risk.risk),
+        )
+        .map((risk) => risk.risk.trim()),
+      decisions: section.decisions
+        .filter(
+          (decision) =>
+            decision.productId === project.projectId && nonEmpty(decision.text),
+        )
+        .map((decision) => decision.text.trim()),
+      priorities: section.items
+        .filter(
+          (item) =>
+            item.projectId === project.projectId &&
+            item.priorityRank != null &&
+            nonEmpty(item.text),
+        )
+        .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
+        .map((item) => item.text.trim()),
+      // T-G3: capture per-text rank so the unified slide can render P{N}
+      // chips on whichever bullet bucket the item lands in.
+      itemRanks: section.items.reduce<Record<string, number>>((acc, item) => {
+        if (
           item.projectId === project.projectId &&
           item.priorityRank != null &&
-          nonEmpty(item.text),
-      )
-      .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
-      .map((item) => item.text.trim()),
-    // T-G3: capture per-text rank so the unified slide can render P{N}
-    // chips on whichever bullet bucket the item lands in.
-    itemRanks: section.items.reduce<Record<string, number>>((acc, item) => {
-      if (
-        item.projectId === project.projectId &&
-        item.priorityRank != null &&
-        nonEmpty(item.text)
-      ) {
-        acc[item.text.trim()] = item.priorityRank;
-      }
-      return acc;
-    }, {}),
-  }));
+          nonEmpty(item.text)
+        ) {
+          acc[item.text.trim()] = item.priorityRank;
+        }
+        return acc;
+      }, {}),
+    };
+  });
 
   const crossProductDecisions = section.decisions
     .filter(

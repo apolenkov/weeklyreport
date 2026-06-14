@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, Check, Circle } from "lucide-react";
+import type { ReactNode } from "react";
 
 import type { SlideProduct } from "./section-slide-utils";
 
@@ -37,6 +38,9 @@ function StatusBadge({ status }: { status: SlideProduct["status"] }) {
   );
 }
 
+/** Bullets shown before the list collapses into a "+N more" row. */
+const MAX_VISIBLE_ITEMS = 3;
+
 function ItemList({
   items,
   empty,
@@ -53,7 +57,7 @@ function ItemList({
   }
   return (
     <ul className="space-y-1">
-      {items.slice(0, 3).map((item, i) => (
+      {items.slice(0, MAX_VISIBLE_ITEMS).map((item, i) => (
         <li
           key={item + String(i)}
           className="text-xs leading-4 text-[var(--color-foreground)]"
@@ -61,19 +65,49 @@ function ItemList({
           · {item}
         </li>
       ))}
-      {items.length > 3 ? (
+      {items.length > MAX_VISIBLE_ITEMS ? (
         <li className="text-xs text-[var(--color-muted-foreground)]">
-          +{items.length - 3} more
+          +{items.length - MAX_VISIBLE_ITEMS} more
         </li>
       ) : null}
     </ul>
   );
 }
 
+/**
+ * A labeled card section ("Current", "Next", "Risks (N)"). The count is folded
+ * into the header so the body shows the actual content, not just a tally.
+ */
+function CardSection({
+  label,
+  count,
+  children,
+}: {
+  label: string;
+  count?: number;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-1">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+        {label}
+        {count != null ? (
+          <span className="ml-1 font-bold text-[var(--color-muted-foreground)]">
+            ({count})
+          </span>
+        ) : null}
+      </p>
+      {children}
+    </div>
+  );
+}
+
 function ProductCard({ product }: { product: SlideProduct }) {
   const isCross = product.id === "cross-product";
+  const hasRisks = product.risks.length > 0;
+  const hasDecisions = product.decisions.length > 0;
   return (
-    <div className="flex flex-col gap-3 rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+    <div className="flex h-full flex-col gap-3 rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
       <div className="flex items-start justify-between gap-2">
         <h3 className="break-words text-sm font-semibold text-[var(--color-foreground)]">
           {product.name}
@@ -81,33 +115,43 @@ function ProductCard({ product }: { product: SlideProduct }) {
         {!isCross && <StatusBadge status={product.status} />}
       </div>
 
-      <div className="space-y-1">
-        <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-          Current
-        </p>
+      <CardSection label="Current">
         <ItemList items={product.currentItems} empty="No current work" />
-      </div>
+      </CardSection>
 
-      <div className="space-y-1">
-        <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-          Next
-        </p>
+      <CardSection label="Next">
         <ItemList items={product.nextItems} empty="No next focus" />
-      </div>
+      </CardSection>
 
-      {product.risks.length > 0 || product.decisions.length > 0 ? (
-        <div className="mt-auto flex flex-wrap gap-3 border-t border-[rgba(0,0,0,0.06)] pt-2">
-          {product.risks.length > 0 ? (
-            <span className="inline-flex items-center gap-1 text-xs text-[var(--color-destructive)]">
-              <AlertTriangle className="h-3 w-3" aria-hidden="true" />
-              {product.risks.length} risk{product.risks.length > 1 ? "s" : ""}
-            </span>
+      {hasRisks || hasDecisions ? (
+        <div className="mt-auto space-y-3 border-t border-[rgba(0,0,0,0.06)] pt-2">
+          {hasRisks ? (
+            <CardSection label="Risks" count={product.risks.length}>
+              <ul className="space-y-1">
+                {product.risks.slice(0, MAX_VISIBLE_ITEMS).map((risk, i) => (
+                  <li
+                    key={risk + String(i)}
+                    className="flex items-start gap-1 text-xs leading-4 text-[var(--color-foreground)]"
+                  >
+                    <AlertTriangle
+                      className="mt-0.5 h-3 w-3 shrink-0 text-[var(--color-destructive)]"
+                      aria-hidden="true"
+                    />
+                    <span>{risk}</span>
+                  </li>
+                ))}
+                {product.risks.length > MAX_VISIBLE_ITEMS ? (
+                  <li className="text-xs text-[var(--color-muted-foreground)]">
+                    +{product.risks.length - MAX_VISIBLE_ITEMS} more
+                  </li>
+                ) : null}
+              </ul>
+            </CardSection>
           ) : null}
-          {product.decisions.length > 0 ? (
-            <span className="text-xs text-[var(--color-muted-foreground)]">
-              {product.decisions.length} decision
-              {product.decisions.length > 1 ? "s" : ""}
-            </span>
+          {hasDecisions ? (
+            <CardSection label="Decisions" count={product.decisions.length}>
+              <ItemList items={product.decisions} empty="No decisions" />
+            </CardSection>
           ) : null}
         </div>
       ) : null}

@@ -195,6 +195,79 @@ describe("section slide utilities", () => {
     ]);
   });
 
+  it("derives the product status from the floored stages, not the persisted trafficLight (lead-live-walk-2026-06-14 3.1)", () => {
+    // rethink-pipeline scope: the slide product badge must match the live
+    // pipeline card, whose health = worst risk-derived stage. The old code read
+    // `project.trafficLight` (the persisted, pre-floor column) so a stale
+    // persisted status drifted the badge from the stages rendered below it.
+    //
+    // Case A — persisted red stages with NO covering risk collapse, so the
+    // product status collapses to green (on-track), not red.
+    const collapsed = buildSectionSlideModel(
+      makeSection({
+        projects: [
+          {
+            projectId: PRODUCT_ID,
+            projectName: "Core Product",
+            // Stale persisted red on the project column; no covering risk below.
+            trafficLight: "red",
+            ownedStages: [
+              {
+                stageId: "99999999-9999-4999-8999-999999999999",
+                stageName: "Build",
+                sortOrder: 2,
+                status: "red",
+              },
+              {
+                stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                stageName: "Discovery",
+                sortOrder: 1,
+                status: "yellow",
+              },
+            ],
+          },
+        ],
+        risks: [],
+      }),
+    );
+    expect(collapsed.productSlides[0]?.status).toBe("green");
+
+    // Case B — a covering blocked risk on an empty persisted stage floors the
+    // product status to red even though the persisted trafficLight is null.
+    const floored = buildSectionSlideModel(
+      makeSection({
+        projects: [
+          {
+            projectId: PRODUCT_ID,
+            projectName: "Core Product",
+            // Persisted trafficLight is null (lead never set a traffic column).
+            trafficLight: null,
+            ownedStages: [
+              {
+                stageId: "99999999-9999-4999-8999-999999999999",
+                stageName: "Build",
+                sortOrder: 1,
+                status: null,
+              },
+            ],
+          },
+        ],
+        risks: [
+          {
+            id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            projectId: PRODUCT_ID,
+            risk: "Vendor outage",
+            impact: "Build stopped",
+            mitigation: "Escalate",
+            severity: "blocked",
+            stageIds: ["Build"],
+          },
+        ],
+      }),
+    );
+    expect(floored.productSlides[0]?.status).toBe("red");
+  });
+
   it("a stage-less (empty stageIds) legacy risk floors every owned stage (unify-risk-stage-status review-fix)", () => {
     // Empty/undefined stageIds means "covers all stages" in the live form;
     // the slide export must agree so a legacy stage-less risk does not floor
