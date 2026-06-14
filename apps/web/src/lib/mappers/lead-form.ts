@@ -326,6 +326,21 @@ export function stageNamesMatch(a: string, b: string): boolean {
  *
  * Stages whose name appears in `ownedStages` (matched via `stageNamesMatch`)
  * are flagged `mine`; the rest stay `unassigned`.
+ *
+ * rethink-pipeline-state-vs-completeness (D1): an EMPTY owned stage — one the
+ * lead never set a status on — stays `empty` even when a covering risk exists.
+ * The risk-derived severity floor for DISPLAY is re-applied at render by the
+ * live form's `applyRiskSeverityFloor` (and the slide export's
+ * `floorSlideStageStatus`), so the chip still shows the risk severity. But the
+ * read-model `status` that feeds own-input completeness must NOT be floored for
+ * an untouched stage — otherwise an Add-Risk cycle (the dialog defaults to all
+ * stages checked) would floor every empty stage to a severity and inflate the
+ * counter to "your input is complete" for stages the lead never touched.
+ *
+ * A stage the lead DID touch (explicit on-track/at-risk/blocked) still flows
+ * through `deriveEffectiveStageStatus`: it floors up to a worse covering risk
+ * and collapses a stale, unbacked at-risk/blocked down to on-track. Either way
+ * it stays non-empty, so completeness rightly counts it as filled.
  */
 function buildStageGrid(
   ownerLabel: string,
@@ -334,30 +349,27 @@ function buildStageGrid(
     status?: TrafficLightStatus | null;
   }[],
   risks: readonly { stageIds?: readonly string[]; severity?: string }[] = [],
-  items: readonly {
-    stageIds?: readonly string[];
-    workflowStatus: string;
-  }[] = [],
 ): LeadStageAssignment[] {
   return STAGE_NAMES.map((stageName) => {
-    const norm = normalizeStageName(stageName);
     const ownedStage =
       ownedStages.find((s) => stageNamesMatch(s.stageName, stageName)) ?? null;
     if (ownedStage) {
+      const explicit = trafficToStageStatus(ownedStage.status ?? null);
       return {
         stageName,
-        status: deriveEffectiveStageStatus(
-          trafficToStageStatus(ownedStage.status ?? null),
-          // unify-risk-stage-status: empty/undefined stageIds means the risk
-          // covers every owned stage. Route through the canonical
-          // `riskCoversStage` so the read model agrees with the live form and
-          // slide export on legacy stage-less risks (covers-all), instead of
-          // the old `stageIds?.some(...)` that floored nothing on `[]`.
-          risks.filter((r) => riskCoversStage(r, stageName)),
-          items.filter((i) =>
-            i.stageIds?.some((s) => normalizeStageName(s) === norm),
-          ),
-        ),
+        // An untouched stage stays empty (completeness reads this raw status);
+        // a touched stage derives floor-up / collapse-down from covering risks.
+        // unify-risk-stage-status: empty/undefined stageIds means the risk
+        // covers every owned stage — route through `riskCoversStage` so the
+        // read model agrees with the live form on legacy stage-less risks.
+        status:
+          explicit === "empty"
+            ? "empty"
+            : deriveEffectiveStageStatus(
+                explicit,
+                risks.filter((r) => riskCoversStage(r, stageName)),
+                [],
+              ),
         ownership: "mine" as const,
         assignee: ownerLabel,
       };
@@ -389,13 +401,9 @@ export function mapLeadProducts(
   return section.projects.map((p) => {
     const ownedStages = p.ownedStages ?? [];
     const overallStatus = trafficToStageStatus(p.trafficLight);
-    // unify-risk-stage-status (D1, supersedes PRJ-2): covering non-empty
-    // risks force a severity floor on the stage chips again. PRJ-2 had
-    // disconnected this because the derivation fought user chip clicks;
-    // now every conflicting transition is intercepted in the live form
-    // (raise → risk creation, lower → confirmed risk removal), so explicit
-    // and derived status can no longer disagree silently. Items stay
-    // disconnected (risk-only contract).
+    // rethink-pipeline-state-vs-completeness (D1): pass the covering risks so a
+    // TOUCHED stage floors up / collapses down correctly, while an UNTOUCHED
+    // (empty) stage stays empty for own-input completeness (see buildStageGrid).
     const coveringRisks = section.risks.filter(
       (r) => r.projectId === p.projectId && r.risk.trim().length > 0,
     );

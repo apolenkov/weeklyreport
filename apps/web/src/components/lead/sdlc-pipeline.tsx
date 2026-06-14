@@ -24,26 +24,20 @@ export interface CrossAuthorEntry {
 
 interface SdlcPipelineProps {
   readonly products: Product[];
+  /**
+   * rethink-pipeline-state-vs-completeness: the RAW, pre-floor products used to
+   * compute own-input completeness. `products` carries the risk-derived
+   * render-time floor for the chips/left edge; completeness must instead count
+   * only the lead's explicit per-stage choices, so it reads these. Defaults to
+   * `products` when omitted (callers that already pass raw, pre-floor data).
+   */
+  readonly rawProducts?: readonly Product[];
   readonly readOnly?: boolean;
   readonly onStatusChange?: (
     productId: string,
     stageName: string,
     newStatus: StageStatus,
   ) => void;
-  /**
-   * Stages the lead has marked at-risk/blocked but hasn't described in
-   * the Risks list. Renders a calm advisory banner ABOVE the product
-   * cards so the cause (chip colour) and the call-to-action live in
-   * the same surface. Earlier this banner sat at the top of the Risks
-   * section, but the link "you painted this red — describe it" reads
-   * better when it's right next to the chips themselves.
-   */
-  readonly unbackedStages?: readonly {
-    productId: string;
-    productName: string;
-    stageName: string;
-    severity: "at-risk" | "blocked";
-  }[];
   /**
    * F1: Cross-author entries for shared products. Grouped by projectId;
    * rendered as a subtle "Other contributors" row below each product card.
@@ -53,9 +47,11 @@ interface SdlcPipelineProps {
 
 // apply-status-palette (memo T5 opt 3 + user feedback 2026-06-10): every
 // product card shares ONE body — neutral card surface, neutral ring — and
-// only the 4px left-stripe color changes with status (same idiom as the
-// unbacked-risk advisory above). paddingLeft compensates the 3px-wider
-// left border so content padding reads equal on all sides.
+// only the 4px left-stripe color changes with the HEALTH status.
+// rethink-pipeline-state-vs-completeness: the left edge is ALWAYS solid and
+// only carries health (severity). The completeness signal lives on the right
+// (dashed ring + N/M counter) and never shares this hue. paddingLeft
+// compensates the 3px-wider left border so content padding reads equal.
 const STRIPE_BY_STATUS: Record<StageStatus, string> = {
   blocked: "var(--color-chip-blocked-border)",
   "at-risk": "var(--color-status-at-risk-border)",
@@ -63,8 +59,8 @@ const STRIPE_BY_STATUS: Record<StageStatus, string> = {
   empty: "var(--color-border)",
 };
 
-// D1: derive stripe color from the worst status among the lead's own stages.
-// Severity order: blocked > at-risk > on-track > empty (empty = nothing set yet).
+// Health severity order: blocked > at-risk > on-track > empty
+// (empty = nothing set yet).
 const SEVERITY_RANK: Record<StageStatus, number> = {
   blocked: 3,
   "at-risk": 2,
@@ -72,33 +68,95 @@ const SEVERITY_RANK: Record<StageStatus, number> = {
   empty: 0,
 };
 
-function worstOwnStatus(stages: StageAssignment[]): StageStatus {
-  return stages
-    .filter((s) => s.ownership === "mine")
-    .reduce<StageStatus>(
-      (worst, s) =>
-        SEVERITY_RANK[s.status] > SEVERITY_RANK[worst] ? s.status : worst,
-      "empty",
-    );
+// rethink-pipeline-state-vs-completeness (D2): completeness ring geometry —
+// named so no magic numbers leak into the style object.
+const COMPLETENESS_RING_WIDTH = "1.5px";
+const COMPLETENESS_RING_STYLE = "dashed";
+const COMPLETENESS_RING_RADIUS = "var(--radius-pill)";
+
+function worstStatusOf(values: readonly StageStatus[]): StageStatus {
+  return values.reduce<StageStatus>(
+    (worst, s) => (SEVERITY_RANK[s] > SEVERITY_RANK[worst] ? s : worst),
+    "empty",
+  );
 }
 
-export function getProductCardStyle(
-  status: StageStatus,
-  dashed: boolean,
-): CSSProperties {
+function worstOwnStatus(stages: StageAssignment[]): StageStatus {
+  return worstStatusOf(
+    stages.filter((s) => s.ownership === "mine").map((s) => s.status),
+  );
+}
+
+/**
+ * rethink-pipeline-state-vs-completeness (2.1): a covering risk raised by ANY
+ * stage owner — including another lead on a shared product — must light the
+ * left edge. Foreign severity arrives via `crossAuthors[].risks`, so the
+ * health hue is max(own worst stage, worst foreign risk). `null` risks mean a
+ * cross-author entry is still loading and contributes nothing.
+ */
+function worstForeignSeverity(
+  productId: string,
+  crossAuthors: readonly CrossAuthorEntry[],
+): StageStatus {
+  const severities = crossAuthors
+    .filter((ca) => ca.projectId === productId && ca.risks !== null)
+    .flatMap((ca) => ca.risks ?? [])
+    .map<StageStatus>((r) =>
+      r.severity === "blocked" ? "blocked" : "at-risk",
+    );
+  return worstStatusOf(severities);
+}
+
+function productHealthStatus(
+  product: Product,
+  crossAuthors: readonly CrossAuthorEntry[],
+): StageStatus {
+  return worstStatusOf([
+    worstOwnStatus(product.stages),
+    worstForeignSeverity(product.id, crossAuthors),
+  ]);
+}
+
+/**
+ * rethink-pipeline-state-vs-completeness (D1): own-input completeness, over
+ * the lead's OWN stages only. A stage counts as filled ONLY when the lead set
+ * an explicit status on it (status !== "empty"). It MUST be fed the RAW,
+ * pre-floor status — never the risk-derived render-time floor. Otherwise an
+ * add-then-remove risk cycle (the Add Risk dialog defaults to all stages
+ * checked) would floor every empty stage to a severity and inflate the counter
+ * to "your input is complete" for stages the lead never touched. Foreign
+ * severity never touches this counter.
+ */
+export interface CompletenessState {
+  filled: number;
+  total: number;
+  complete: boolean;
+}
+
+export function computeCompleteness(product: Product): CompletenessState {
+  const mine = product.stages.filter((s) => s.ownership === "mine");
+  const filled = mine.filter((s) => s.status !== "empty").length;
+  return {
+    filled,
+    total: mine.length,
+    complete: mine.length > 0 && filled === mine.length,
+  };
+}
+
+export function getProductCardStyle(status: StageStatus): CSSProperties {
   return {
     background: "var(--color-card)",
     border: "1px solid rgba(0,0,0,0.08)",
-    borderLeft: `4px ${dashed ? "dashed" : "solid"} ${STRIPE_BY_STATUS[status]}`,
+    borderLeft: `4px solid ${STRIPE_BY_STATUS[status]}`,
     paddingLeft: "calc(1rem - 3px)",
   };
 }
 
 export function SdlcPipeline({
   products,
+  rawProducts,
   readOnly = false,
   onStatusChange,
-  unbackedStages = [],
   crossAuthors = [],
 }: SdlcPipelineProps) {
   function handleStatusChange(
@@ -112,77 +170,23 @@ export function SdlcPipeline({
 
   return (
     <div className="space-y-4">
-      {!readOnly && unbackedStages.length > 0 && (
-        <div
-          className="rounded-lg p-3"
-          style={{
-            // User feedback 2026-06-10: the advisory must NOT read as
-            // another product card — muted amber band (chip at-risk tint),
-            // no card ring and no left stripe (the stripe idiom belongs to
-            // the product-card status language).
-            background: "var(--color-chip-at-risk-bg)",
-          }}
-          role="note"
-        >
-          <div className="flex items-start gap-2">
-            <span
-              className="mt-0.5 inline-flex items-center justify-center text-base"
-              style={{ color: "var(--color-status-at-risk-border)" }}
-              aria-hidden="true"
-            >
-              ⚠
-            </span>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-[var(--color-chip-at-risk-text)]">
-                {unbackedStages.length === 1
-                  ? "1 stage has no matching risk written."
-                  : `${unbackedStages.length} stages have no matching risk written.`}
-              </p>
-              <p className="mt-0.5 text-[12px] text-[var(--color-chip-at-risk-text)]">
-                Open Risks &amp; Blockers below and use{" "}
-                <strong>+ Add Risk</strong> to describe what's blocking.
-              </p>
-              <ul className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
-                {unbackedStages.map((s) => (
-                  <li
-                    key={`${s.productId}::${s.stageName}`}
-                    className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2 py-0.5"
-                    style={{
-                      // Pills sit ON the amber band — white body keeps them
-                      // legible there.
-                      background: "var(--color-card)",
-                      color:
-                        s.severity === "blocked"
-                          ? "var(--color-chip-blocked-text)"
-                          : "var(--color-chip-at-risk-text)",
-                    }}
-                  >
-                    <span className="font-semibold">
-                      {s.severity === "blocked" ? "✕" : "!"}
-                    </span>
-                    <span>{s.productName}</span>
-                    <span aria-hidden="true">·</span>
-                    <span>{s.stageName}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
       {products.map((product) => {
-        const hasUnfilledOwnStage =
-          !readOnly &&
-          product.stages.some(
-            (s) => s.ownership === "mine" && s.status === "empty",
-          );
+        // Completeness reads the RAW (pre-floor) product so a risk-derived
+        // severity floor never inflates the lead's own-input counter.
+        const rawProduct =
+          rawProducts?.find((p) => p.id === product.id) ?? product;
+        const completeness = computeCompleteness(rawProduct);
+        // rethink-pipeline-state-vs-completeness: the completeness ring shows
+        // only in edit mode while the lead's own input is unfinished. In
+        // read-only mode there is nothing to finish, so it never renders.
+        const showCompletenessRing =
+          !readOnly && completeness.total > 0 && !completeness.complete;
         return (
           <div
             key={product.id}
             className="rounded-xl p-4"
             style={getProductCardStyle(
-              worstOwnStatus(product.stages),
-              hasUnfilledOwnStage,
+              productHealthStatus(product, crossAuthors),
             )}
           >
             {/* Product header — SDLC-1 (Phase 33-04): replace plain riskSummary
@@ -211,6 +215,31 @@ export function SdlcPipeline({
                   </span>
                 )}
               </div>
+              {/* rethink-pipeline-state-vs-completeness (D2): own-input
+                completeness affordance — RIGHT side, never the health hue.
+                A dashed/dotted outline ring reads "unfinished sketch" while
+                incomplete; an "N/M stages" counter pill gives the exact
+                state. Neutral foreground only — health lives on the left
+                edge. Read-only mode has nothing to finish, so it is hidden. */}
+              {!readOnly && completeness.total > 0 && (
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-[var(--color-muted-foreground)]"
+                  style={{
+                    borderRadius: COMPLETENESS_RING_RADIUS,
+                    border: showCompletenessRing
+                      ? `${COMPLETENESS_RING_WIDTH} ${COMPLETENESS_RING_STYLE} var(--color-muted-foreground)`
+                      : `${COMPLETENESS_RING_WIDTH} solid transparent`,
+                  }}
+                  title={
+                    completeness.complete
+                      ? "Your input is complete"
+                      : "Set a status on every stage you own to finish your input"
+                  }
+                  data-complete={completeness.complete}
+                >
+                  {completeness.filled}/{completeness.total} stages
+                </span>
+              )}
             </div>
 
             {/* Stages row */}

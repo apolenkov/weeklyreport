@@ -41,7 +41,7 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
   const REPORT_ID = "a0000000-0000-4000-a000-0000000000e1";
 
   function session(
-    role: "head",
+    role: "head" | "lead",
     reportingGroupId: string,
   ): WeeklyReportScopeSession {
     return { role, reportingGroupId };
@@ -150,6 +150,40 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
       (p) => p.productId,
     );
     expect(productIds).not.toContain(PROJECT_ID);
+  });
+
+  // driver-findings-2026-06-11 finding 2: the lead "Section Preview" must show
+  // only the lead's group's products, never another group's. The preview route
+  // (/lead/report/[id]/preview) renders the same weeklyReport.get payload, so
+  // the lead session is group-scoped here exactly like a head session. (The
+  // driver's "shows the whole portfolio" was a stale false-confirm: the server
+  // already scopes the product list by GroupProduct; see the live walk where
+  // lead1's preview showed 7 group products while admin saw all 9.)
+  it("a lead sees only their own group's product, not another group's (finding 2)", async () => {
+    // A second product owned by group B (lead A lives in group A).
+    const GROUP_B_PRODUCT_ID = "a0000000-0000-4000-a000-0000000000d5";
+    await prisma.project.create({
+      data: {
+        id: GROUP_B_PRODUCT_ID,
+        name: "Group B Platform",
+        leadId: LEAD_A_ID,
+      },
+    });
+    await prisma.groupProduct.create({
+      data: { groupId: GROUP_B_ID, productId: GROUP_B_PRODUCT_ID },
+    });
+
+    const result = expectDefined(
+      await repo.getWeeklyReport(REPORT_ID, session("lead", GROUP_A_ID)),
+    );
+
+    const productIds = result.readModel.portfolioOverview.map(
+      (p) => p.productId,
+    );
+    // Lead A's group owns exactly the group-A product…
+    expect(productIds).toContain(PROJECT_ID);
+    // …and never the group-B product (the finding-2 leak case).
+    expect(productIds).not.toContain(GROUP_B_PRODUCT_ID);
   });
 
   it("a project with NO GroupProduct row is invisible to scoped sessions (regression guard)", async () => {

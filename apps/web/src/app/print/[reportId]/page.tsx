@@ -8,6 +8,7 @@ import type {
   PortfolioProduct,
   ProductReport,
 } from "../../../components/dashboard/mock-data";
+import { formatClientErrorMessage } from "../../../lib/client-error-reporting";
 import { joinPeriodLabel } from "../../../lib/format-date";
 import { mapWeeklyReport } from "../../../lib/mappers";
 import { useTRPC } from "../../../lib/trpc-context";
@@ -470,10 +471,11 @@ export default function PrintReportPage({ params }: Props) {
 
   useEffect(() => {
     if (weeklyQ.isError) {
+      // driver-findings-2026-06-11 finding 1: route the load-failure toast
+      // through formatClientErrorMessage so a malformed reportId never echoes
+      // the raw Zod issues array (with the UUID pattern regex) to the user.
       toast.error(
-        weeklyQ.error instanceof Error
-          ? `Failed to load report: ${weeklyQ.error.message}`
-          : "Failed to load report",
+        formatClientErrorMessage("Failed to load report", weeklyQ.error),
       );
     }
   }, [weeklyQ.isError, weeklyQ.error]);

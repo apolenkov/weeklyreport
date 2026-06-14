@@ -335,6 +335,29 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkMissing(container, "/reports?tab=published");
   });
 
+  it("keeps head History active on /reports with NO tab param (§4.3)", () => {
+    // The archive toggle no longer writes the URL, so /reports can be visited
+    // with no tab param at all. History must stay highlighted regardless —
+    // proving the active state is decoupled from the tab/archive query.
+    setRole("head");
+    setRoute("/reports", "");
+
+    const { container } = render(<NavBar />);
+
+    expectActiveLink(container, "/reports?tab=published");
+    expectInactiveLink(container, "/head/dashboard");
+  });
+
+  it("keeps lead History active on /reports with NO tab param (§4.3)", () => {
+    setRole("lead");
+    setRoute("/reports", "");
+
+    const { container } = render(<NavBar />);
+
+    expectActiveLink(container, "/reports?tab=drafts");
+    expectLinkMissing(container, "/reports?tab=published");
+  });
+
   it("does not activate History on report analytics routes", () => {
     setRole("viewer");
     setRoute("/reports/trends");

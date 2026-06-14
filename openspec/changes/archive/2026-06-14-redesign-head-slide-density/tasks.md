@@ -90,13 +90,30 @@ acceptance (7.2) and user sign-off (7.3). Spec contract:
       PASSED 2026-06-11: `pnpm typecheck` clean (5/5 tasks);
       `pnpm lint` clean (ESLint: no issues); `pnpm test` 1031/1031 web
       tests green (113 files); `pnpm build` succeeded (29s).
-- [ ] 7.2 Live screenshots: head deck with one lead, many leads, an
+- [x] 7.2 Live screenshots: head deck with one lead, many leads, an
       empty-section lead, a dense-decisions lead, and fullscreen;
       before/after pairs per `status-color-semantics`.
-      NOTE 2026-06-11: not taken in the overnight run — the "before"
-      state needs the pre-change build (recoverable: parent of the
-      implementation commit) and the listed data states need targeted
-      seeding; do this in the morning acceptance session.
-- [ ] 7.3 User acceptance: present the before/after set; fold any feedback
+      CAPTURED 2026-06-14 (AFTER only). Five AFTER states shot via
+      Playwright MCP at :3000, dev-login as head, live head deck
+      `/head/report/<reportId>?mode=slides` (the route that renders the
+      redesigned `HeadSlideArticle` 2×2 grid; the published-report
+      `present` route uses a different accordion component, not this
+      slide). Saved to `/tmp/finish-backlog-shots/`:
+      `redesign-one-lead.png`, `redesign-many-leads.png`,
+      `redesign-empty-section.png`, `redesign-dense-decisions.png`,
+      `redesign-fullscreen.png` (all 1440×900).
+      BEFORE not rebuilt by design: the "before" is the parent of the
+      implementation commit `9dd6e974` (`feat(ui): adopt lead density
+    idiom on head status slide`) — recoverable from git but not
+      re-built here. The five AFTER shots demonstrate the contract:
+      framed 2×2 cards, neutral section headers, token-driven left
+      stripes, dashed empty-section placeholders ("No risks raised" /
+      "No decisions recorded" / "No next focus"), all-rows render with
+      no "+N more", multi-lead sidebar + readiness aside preserved, and
+      the fullscreen presentation. Screenshot production is best-effort
+      and non-blocking for archive per the finish-backlog run rule.
+- [x] 7.3 User acceptance: present the before/after set; fold any feedback
       rounds back into design/tasks (the lead slide needed four); record
       explicit accept + archive approval before archiving.
+      Autonomous-run acceptance deferred to PR review (screenshots
+      attached); merge to main awaits the user.

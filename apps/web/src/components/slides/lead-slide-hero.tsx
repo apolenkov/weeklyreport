@@ -14,6 +14,13 @@ import type { SectionSlideModel } from "./section-slide-utils";
 
 type ToneVariant = "blocked" | "at-risk" | "on-track" | "empty";
 
+/* Shared height for the hero status row's boxed elements (tone badge +
+   segmented metric capsule). Lifting the literal to one const keeps both
+   provably equal — the badge must never read taller than its siblings
+   (polish-lead-toolbar 3.1). Keep the full `h-11` literal intact so
+   Tailwind's JIT scanner still emits the class. */
+const HERO_ROW_HEIGHT_CLASS = "h-11";
+
 function worstProductTone(
   products: SectionSlideModel["productSlides"],
 ): ToneVariant {
@@ -143,7 +150,7 @@ export function LeadSlideHero({
             slides/periods (feedback round 4: no floating layout). */}
         <span
           className={[
-            "inline-flex h-11 w-[112px] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border px-3 text-xs font-semibold",
+            `inline-flex ${HERO_ROW_HEIGHT_CLASS} w-[112px] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border px-3 text-xs font-semibold`,
             toneClassName,
           ].join(" ")}
         >
@@ -159,7 +166,9 @@ export function LeadSlideHero({
             </>
           ) : null}
         </p>
-        <div className="inline-flex h-11 items-center divide-x divide-[rgba(0,0,0,0.08)] rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.12)] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+        <div
+          className={`inline-flex ${HERO_ROW_HEIGHT_CLASS} items-center divide-x divide-[rgba(0,0,0,0.08)] rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.12)] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)]`}
+        >
           {metricSegment(
             slide.currentCount,
             "Current",

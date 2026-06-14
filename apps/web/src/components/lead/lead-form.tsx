@@ -722,7 +722,6 @@ export function LeadForm({
     (period) => period.id === selectedPeriodId && period.id !== "",
   );
   const hasArchivedPeriods = periods.some((period) => period.archived);
-  const archivedCount = periods.filter((p) => p.archived).length;
   const visibleNonArchivedPeriods = periods.filter(
     (period) => !period.archived,
   );
@@ -1144,7 +1143,6 @@ export function LeadForm({
                 <ArchiveToggle
                   checked={showArchivePeriods}
                   onChange={setShowArchivePeriods}
-                  archivedCount={archivedCount}
                 />
               </>
             ) : undefined

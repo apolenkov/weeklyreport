@@ -96,7 +96,11 @@ describe("section slide utilities", () => {
         nextItems: ["Prepare rollout notes"],
         priorities: ["Closed release blockers"],
         stages: [
-          expect.objectContaining({ name: "Discovery", status: "yellow" }),
+          // rethink-pipeline-state-vs-completeness: Discovery is persisted
+          // yellow but has NO covering risk, so the shared derivation collapses
+          // it to green — the slide now agrees with the card (which collapses an
+          // unbacked severity to on-track). Build stays green.
+          expect.objectContaining({ name: "Discovery", status: "green" }),
           expect.objectContaining({ name: "Build", status: "green" }),
         ],
       }),
@@ -138,6 +142,130 @@ describe("section slide utilities", () => {
       // blocked risk floors the stale green stage to red.
       expect.objectContaining({ name: "Build", status: "red" }),
     ]);
+  });
+
+  it("collapses a persisted red stage with no covering risk to green, and a red stage with an at-risk-only risk to yellow (rethink-pipeline-state-vs-completeness 1.4)", () => {
+    // The slide now derives status from risks via the shared
+    // deriveEffectiveStageStatus, exactly like the card — so it collapses an
+    // unbacked persisted severity DOWN instead of only flooring up. Build is
+    // persisted green here so the at-risk risk floors it to yellow; Discovery is
+    // persisted yellow with no covering risk so it collapses to green.
+    const slide = buildSectionSlideModel(
+      makeSection({
+        projects: [
+          {
+            projectId: PRODUCT_ID,
+            projectName: "Core Product",
+            trafficLight: "green",
+            ownedStages: [
+              {
+                stageId: "99999999-9999-4999-8999-999999999999",
+                stageName: "Build",
+                sortOrder: 2,
+                status: "red",
+              },
+              {
+                stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                stageName: "Discovery",
+                sortOrder: 1,
+                status: "red",
+              },
+            ],
+          },
+        ],
+        risks: [
+          {
+            id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+            projectId: PRODUCT_ID,
+            risk: "Flaky integration",
+            impact: "Rework",
+            mitigation: "Stabilize",
+            severity: "at-risk",
+            stageIds: ["Build"],
+          },
+        ],
+      }),
+    );
+
+    expect(slide.productSlides[0]?.stages).toEqual([
+      // Persisted red, no covering risk → collapses to green.
+      expect.objectContaining({ name: "Discovery", status: "green" }),
+      // Persisted red, but the only covering risk is at-risk → collapses to yellow.
+      expect.objectContaining({ name: "Build", status: "yellow" }),
+    ]);
+  });
+
+  it("derives the product status from the floored stages, not the persisted trafficLight (lead-live-walk-2026-06-14 3.1)", () => {
+    // rethink-pipeline scope: the slide product badge must match the live
+    // pipeline card, whose health = worst risk-derived stage. The old code read
+    // `project.trafficLight` (the persisted, pre-floor column) so a stale
+    // persisted status drifted the badge from the stages rendered below it.
+    //
+    // Case A — persisted red stages with NO covering risk collapse, so the
+    // product status collapses to green (on-track), not red.
+    const collapsed = buildSectionSlideModel(
+      makeSection({
+        projects: [
+          {
+            projectId: PRODUCT_ID,
+            projectName: "Core Product",
+            // Stale persisted red on the project column; no covering risk below.
+            trafficLight: "red",
+            ownedStages: [
+              {
+                stageId: "99999999-9999-4999-8999-999999999999",
+                stageName: "Build",
+                sortOrder: 2,
+                status: "red",
+              },
+              {
+                stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                stageName: "Discovery",
+                sortOrder: 1,
+                status: "yellow",
+              },
+            ],
+          },
+        ],
+        risks: [],
+      }),
+    );
+    expect(collapsed.productSlides[0]?.status).toBe("green");
+
+    // Case B — a covering blocked risk on an empty persisted stage floors the
+    // product status to red even though the persisted trafficLight is null.
+    const floored = buildSectionSlideModel(
+      makeSection({
+        projects: [
+          {
+            projectId: PRODUCT_ID,
+            projectName: "Core Product",
+            // Persisted trafficLight is null (lead never set a traffic column).
+            trafficLight: null,
+            ownedStages: [
+              {
+                stageId: "99999999-9999-4999-8999-999999999999",
+                stageName: "Build",
+                sortOrder: 1,
+                status: null,
+              },
+            ],
+          },
+        ],
+        risks: [
+          {
+            id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+            projectId: PRODUCT_ID,
+            risk: "Vendor outage",
+            impact: "Build stopped",
+            mitigation: "Escalate",
+            severity: "blocked",
+            stageIds: ["Build"],
+          },
+        ],
+      }),
+    );
+    expect(floored.productSlides[0]?.status).toBe("red");
   });
 
   it("a stage-less (empty stageIds) legacy risk floors every owned stage (unify-risk-stage-status review-fix)", () => {

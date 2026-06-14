@@ -73,6 +73,8 @@ describe("client-error-reporting", () => {
       httpStatus: 500,
       trpcCode: "INTERNAL_SERVER_ERROR",
       isInternal: true,
+      isDeterministicClientError: false,
+      isInvalidLink: false,
     });
   });
 
@@ -95,6 +97,110 @@ describe("client-error-reporting", () => {
     expect(
       formatClientErrorMessage("Failed to load status report", error),
     ).toBe("Failed to load status report. Reference: req-500.");
+  });
+
+  // Driver finding 1: a malformed reportId fails the UUID check and tRPC
+  // serializes the Zod issues array (with the `pattern` regex) into
+  // error.message. That MUST NOT reach the user toast.
+  const ZOD_ISSUES_MESSAGE = JSON.stringify(
+    [
+      {
+        origin: "string",
+        code: "invalid_format",
+        format: "uuid",
+        pattern:
+          "/^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$/",
+        path: ["reportId"],
+        message: "Invalid UUID",
+      },
+    ],
+    null,
+    2,
+  );
+
+  it("flags a BAD_REQUEST as a deterministic client error", () => {
+    const error = makeTRPCError(ZOD_ISSUES_MESSAGE, {
+      code: "BAD_REQUEST",
+      httpStatus: 400,
+      requestId: "req-400",
+    });
+
+    const details = getClientErrorDetails(error);
+    expect(details.isInternal).toBe(false);
+    expect(details.isDeterministicClientError).toBe(true);
+  });
+
+  it("flags a NOT_FOUND as a deterministic client error", () => {
+    const error = makeTRPCError("Report not found", {
+      code: "NOT_FOUND",
+      httpStatus: 404,
+      requestId: "req-404",
+    });
+
+    expect(getClientErrorDetails(error).isDeterministicClientError).toBe(true);
+  });
+
+  it("does not flag a 5xx as a deterministic client error", () => {
+    const error = makeTRPCError("Unexpected error", {
+      code: "INTERNAL_SERVER_ERROR",
+      httpStatus: 500,
+      requestId: "req-500",
+    });
+
+    expect(getClientErrorDetails(error).isDeterministicClientError).toBe(false);
+  });
+
+  it("suppresses the raw Zod issues array in a validation toast", () => {
+    const error = makeTRPCError(ZOD_ISSUES_MESSAGE, {
+      code: "BAD_REQUEST",
+      httpStatus: 400,
+      requestId: "req-400",
+    });
+
+    const message = formatClientErrorMessage(
+      "Failed to load status report",
+      error,
+    );
+
+    expect(message).toBe(
+      "Failed to load status report: This link is invalid or the report no longer exists. Reference: req-400.",
+    );
+    expect(message).not.toContain("pattern");
+    expect(message).not.toContain("invalid_format");
+    expect(message).not.toContain("[");
+  });
+
+  it("treats a 403 as retry-skippable but NOT an invalid-link message", () => {
+    const error = makeTRPCError("Forbidden: you cannot view this report", {
+      code: "FORBIDDEN",
+      httpStatus: 403,
+      requestId: "req-403",
+    });
+
+    const details = getClientErrorDetails(error);
+    // 403 is a deterministic 4xx (skip retry) but keeps its own message: the
+    // invalid-link copy would be wrong for a forbidden/expired-session error.
+    expect(details.isDeterministicClientError).toBe(true);
+    expect(details.isInvalidLink).toBe(false);
+
+    const message = formatClientErrorMessage("Failed to load report", error);
+    expect(message).toContain("Forbidden: you cannot view this report");
+    expect(message).not.toContain("This link is invalid");
+  });
+
+  it("does not echo a NOT_FOUND raw message into the toast", () => {
+    const error = makeTRPCError("Some internal not-found detail", {
+      code: "NOT_FOUND",
+      httpStatus: 404,
+      requestId: "req-404",
+    });
+
+    const message = formatClientErrorMessage("Failed to load report", error);
+
+    expect(message).not.toContain("Some internal not-found detail");
+    expect(message).toContain(
+      "This link is invalid or the report no longer exists.",
+    );
   });
 
   it("adds request id details to the forwarded client log context", () => {
