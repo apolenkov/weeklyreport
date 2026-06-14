@@ -5,10 +5,14 @@ Branch `feat/finish-backlog-2026-06-13`; no push; PR #10 updated.
 
 ## 0. Triage first (data vs code) — BLOCKS items 3
 
-- [ ] 0.1 Reseed the dev DB (disposable) to a clean baseline, then re-check the
-      head dashboard activity row for Василий И. AND the slide statuses. Decide:
-      dirty-seed artifact (overnight pollution, per the report flag) vs a real
-      rethink-pipeline regression. Record the verdict.
+- [x] 0.1 Reseeded the dev DB (db:fresh:advanced, active period 2026-06-08..14).
+      VERDICT split: (a) slide statuses = a REAL bug (see 3.1, fixed). (b) the
+      head dashboard "not started" / wrong week = NOT a code bug and NOT rethink
+      (rethink does not touch activity-live-panel/compiledHistory) — it is PERIOD
+      DRIFT: head "current" resolves to a later EMPTY week (live shows Week 26
+      Jun 22-28 as Current though the seed's active is Jun 8-14), so the empty
+      current period correctly reads "not started". Period-resolution oddity
+      flagged for the user; out of this change's scope.
 
 ## 1. Risk dialog — two columns, justified (frontend-design)
 
@@ -63,16 +67,25 @@ Branch `feat/finish-backlog-2026-06-13`; no push; PR #10 updated.
 
 ## 5. Head report toolbar — 1:1 with lead
 
-- [ ] 5.1 Make the head action line identical to the lead toolbar (heights,
-      radii, spacing, control idiom). frontend-design; reuse lead components.
-- [ ] 5.2 `agent-review-coming-soon.tsx`: same height as siblings (touch-target).
-- [ ] 5.3 Move Export-PDF + Publish into the toolbar pill, beside Present/Print.
-      Keep behavior/aria/hrefs.
-- [ ] 5.4 Render tests + live before/after screenshots (head form + slides), at
-      1728 and ~1280 widths (wrap, not clip).
+- [x] 5.1 DONE the CORRECT way (commit 367c015c): per the user's lead reference
+      image, the lead actions live in an UNFRAMED header-right cluster (not a
+      framed bar). Added a `headerActions` slot to WeeklyReportPage; head + viewer
+      pass their controls there, so the head/viewer header reads 1:1 with lead.
+      The earlier framed `ReportActionsPill` (PR#10) was reverted + deleted.
+- [x] 5.2 `agent-review-coming-soon.tsx` UNCHANGED (its `compact` is still used
+      by slide decks); head/viewer just stopped passing `compact`, so the
+      placeholder is now full touch-target height like the siblings.
+- [x] 5.3 Export-PDF + Publish already live in the WeeklyReportPage header row;
+      head's Present/Print/scope/view now join them there via `headerActions`
+      (one unframed cluster), instead of a separate pill. Behavior/aria/hrefs
+      preserved.
+- [x] 5.4 head-report-shell.test.tsx covers the cluster + slides-header omission;
+      live before/after at 1728 captured (head form, viewer). Both verified 1:1
+      with the lead reference by eye.
 
 ## 6. Gates
 
-- [ ] 6.1 `pnpm typecheck && pnpm lint` + vitest for touched packages.
-- [ ] 6.2 Live re-check every item at :3000; screenshots to
-      `/tmp/finish-backlog-shots/`.
+- [x] 6.1 typecheck (web) clean; eslint on changed files clean; web vitest
+      1103/1103 pass.
+- [x] 6.2 Live re-checked head form, viewer, history at :3000; screenshots
+      d-head-form.png / d-viewer.png / d-history.png sent to the user.
