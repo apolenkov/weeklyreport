@@ -3,7 +3,6 @@
 import type { MyHistoryEntry } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Archive } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -23,8 +22,9 @@ import { useTRPC } from "../../../lib/trpc-context";
  * UX-17 (Phase 35-08): merged Reports page.
  *
  * Lead users get personal History. Non-lead users get compiled History.
- * The legacy `?tab=published` URL is treated as "include archive" so old
- * links still reveal archived periods without a separate Archive surface.
+ * Archive visibility is a local, non-URL toggle: History always defaults to
+ * the current (non-archived) view and the address bar stays stable when the
+ * Archive switch is flipped (lead-live-walk-2026-06-14 §4).
  */
 
 const HISTORY_INITIAL_VISIBLE = 10;
@@ -32,8 +32,6 @@ const HISTORY_INITIAL_VISIBLE = 10;
 export default function ReportsPage() {
   const { user } = useSession();
   const trpc = useTRPC();
-  const router = useRouter();
-  const searchParams = useSearchParams();
 
   const role = user?.role ?? null;
   const isLead = role === "lead";
@@ -45,16 +43,9 @@ export default function ReportsPage() {
       ? "all"
       : null;
 
-  const tabFromUrl = searchParams.get("tab");
-  const [includeArchive, setIncludeArchive] = useState(
-    tabFromUrl === "published",
-  );
-
-  // Keep state in sync if the URL param changes after mount (e.g. user
-  // navigates from /reports/history -> /reports?tab=published).
-  useEffect(() => {
-    setIncludeArchive(tabFromUrl === "published");
-  }, [tabFromUrl]);
+  // History defaults to the current (non-archived) view for every role; the
+  // archive toggle is local state only, never derived from the URL.
+  const [includeArchive, setIncludeArchive] = useState(false);
 
   const historyQ = useQuery({
     ...trpc.reports.myHistory.queryOptions(),
@@ -65,13 +56,6 @@ export default function ReportsPage() {
     ...trpc.reports.compiledHistory.queryOptions({ includeArchive }),
     enabled: usesCompiledHistory,
   });
-
-  function toggleArchive(nextValue: boolean) {
-    setIncludeArchive(nextValue);
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", nextValue ? "published" : "drafts");
-    router.push(`/reports?${params.toString()}`, { scroll: false });
-  }
 
   useEffect(() => {
     if (isLead && historyQ.isError) {
@@ -157,7 +141,7 @@ export default function ReportsPage() {
               <HistoryArchiveToggle
                 checked={includeArchive}
                 archiveCount={archiveCount}
-                onChange={toggleArchive}
+                onChange={setIncludeArchive}
               />
             </div>
           ) : (
