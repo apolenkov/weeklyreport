@@ -158,3 +158,81 @@ go-ahead for this change specifically). Two facts have drifted since the
 
 Recommended first action when picked up: re-scope Waves 3–5 against the
 current toolchain.
+
+## Decomposition + narrow — 2026-06-14
+
+User decision was "decompose and narrow"; the advisor ratified an
+artifacts-only pass (NO source edits — a code-quality run here would repeat the
+known parallel-army-refactor revert-bait hazard). This section records the true
+state of every wave verified against the live tree and the archive, so this
+umbrella tracker stops carrying stale 0/5 bookkeeping.
+
+This change stays **ACTIVE** as the umbrella tracker. It is NOT archived: it is
+the durable record of how the deferred UAT/code-quality/Vercel track was split
+and disposed.
+
+### Waves 1–2 — COVERED by the AI-UI-driver runs
+
+Wave 1 (fresh-dev UAT sweep of the 4 roles) and Wave 2 (fix the bugs that sweep
+finds) are no longer open work. The 2026-06-11 / 2026-06-13 `ai-ui-driver` runs
+drove lead / head / viewer through the live app, found the in-app flow/logic
+bugs, and packaged them into `driver-findings-2026-06-11`, which is now
+**implemented and archived** (`archive/2026-06-14-driver-findings-2026-06-11`).
+The static catalog sweep half of Wave 1 also runs automatically via `pnpm
+test:uat` (route-load + axe across roles; see `e2e/sweep/`), recorded by the
+archived `final-gates-resweep` change.
+
+### `migrate-to-biome` child — OBSOLETE (reversed direction)
+
+The original plan made `migrate-to-biome` the Wave 3 foundation. That direction
+was reversed: **Biome was removed**, and the repo standardized on the
+mainstream **ESLint + Prettier + stylelint** trio (Phase 1 of
+`migrate-lint-to-eslint-prettier`; see CLAUDE.md "Lint stack"). There is
+`biome.json` no longer in the tree. The `migrate-to-biome` child is therefore
+obsolete as a forward plan; it is already archived as done-in-reality
+(`archive/2026-05-30-migrate-to-biome`, per commit `a17ddd4a`) and needs no
+revival. There is no live `openspec/changes/migrate-to-biome` directory to
+annotate. The companion Biome item `enable-biome-recommended-ruleset` is moot
+for the same reason and is likewise archived.
+
+### Waves 3–4 — ALREADY DONE (archived children), verified in the tree
+
+The genuine code-quality / dependency / UI-audit remainder was NOT re-stubbed
+as future work, because it is already complete and archived. Re-stubbing it
+would manufacture false backlog and undo the deliberate cleanup in commit
+`a17ddd4a`. Each item below was verified against the current source tree on
+2026-06-14:
+
+- `archive/2026-05-30-code-quality-modernization` — DONE. `admin.service.ts` is
+  220 LOC (was 967), split into `period-admin` / `reminder-admin` /
+  `project-admin` / `snapshot-admin` services; `packages/shared` `report.ts` is
+  an 11-LOC barrel over `report.schema.ts` / `section.schema.ts` /
+  `period.schema.ts` / `stage.schema.ts`; the `status-risk` hooks are
+  consolidated into `use-status-risk.ts`; the lone `no-explicit-any` escape
+  hatch in `action-log-tab.tsx` is gone.
+- `archive/2026-05-30-dependency-upgrades-minor` + the `2026-05-30 upgrade-*`
+  major cluster (typescript, types-node, types-cookie, lucide-react, jsdom,
+  bull-board-api, react-email-components, vitejs-plugin-react;
+  bull-board-express cancelled as a duplicate) — DONE. Spot-checked: TypeScript
+  `^6`, lucide-react `^1`.
+- `archive/2026-05-30-ui-ux-vercel-audit-research` — DONE (Wave 4,
+  research-only). The audit memo landed as the durable spec
+  `frontend-audit-memo`; no code was changed.
+
+### Wave 5 — DONE (archived `final-gates-resweep`)
+
+`archive/2026-06-08-final-gates-resweep` ran the final static gate chain
+(typecheck / lint / test green) plus the automated `pnpm test:uat` catalog
+sweep. Its own tasks note that Waves 2–4 landed in substance via the separate
+archived changes above. The Wave-5 gate list in the body of this proposal still
+cites `pnpm lint:md`, which no longer exists (markdownlint removed; Prettier
+formats Markdown) — that line is historical, superseded by the resweep change's
+gate definition.
+
+### Net result
+
+Every wave of this deferred track is either covered (1–2), obsolete (the Biome
+framing of Wave 3), or already done-and-archived (Waves 3–5). No new
+forward-looking child stubs are warranted. This tracker is kept active only as
+the historical map; it can be archived once a maintainer agrees nothing here is
+still actionable.
