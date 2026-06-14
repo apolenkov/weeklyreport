@@ -12,6 +12,7 @@ import { PeriodNavigator } from "../lead/period-navigator";
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../report-shell/archive-toggle";
 import {
+  ReportActionsPill,
   ReportToolbar,
   ReportToolbarCenterLabel,
 } from "../report-shell/report-toolbar";
@@ -167,43 +168,52 @@ export function HeadReportShell({
           inside WeeklyReportPage (via its toolbar slot) — the lead
           arrangement.
           polish-ui-density T3 + unify-head-toolbar-controls: real controls
-          share one height (--touch-target-min), grouped by intent —
-          scope | view mode (primary) | utilities — with wider gaps between
-          groups. The inert Agent review placeholder is compact and trails
-          the group (documented ui-control-density exception). It mounts in
-          form mode only: slides mode already carries one inside the head
-          slide article (status-slide-deck.tsx), and one placeholder per
-          surface is the deferred-feature-pattern invariant
+          share one height (--touch-target-min), grouped by intent.
+          unify-top-action-toolbars D1/D3: the controls now sit in the shared
+          ReportActionsPill (same frame as the period ReportToolbar) instead of
+          floating, with the left group [scope · view-mode] split from the
+          right group [present · print · agent review] by justify-between.
+          The inert Agent review placeholder is compact and trails the right
+          group (documented ui-control-density exception). It mounts in form
+          mode only: slides mode already carries one inside the head slide
+          article (status-slide-deck.tsx), and one placeholder per surface is
+          the deferred-feature-pattern invariant
           (mount-agent-review-placeholder). */}
-      <div className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2">
-        <ScopeToggle
-          value={scope}
-          onChange={setScope}
-          allowedScopes={["product", "lead"]}
-        />
-        <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
-        <div className="flex items-center gap-2">
-          <a
-            href={presentHref}
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
-            title="Open presentation"
-          >
-            <Presentation className="h-4 w-4" aria-hidden="true" />
-            <span>Present</span>
-          </a>
-          <a
-            href={printHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
-            title="Print report (browser print)"
-          >
-            <FileDown className="h-4 w-4" aria-hidden="true" />
-            <span>Print</span>
-          </a>
-          {mode === "form" ? <AgentReviewComingSoon compact /> : null}
-        </div>
-      </div>
+      <ReportActionsPill
+        leftGroup={
+          <>
+            <ScopeToggle
+              value={scope}
+              onChange={setScope}
+              allowedScopes={["product", "lead"]}
+            />
+            <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
+          </>
+        }
+        rightGroup={
+          <>
+            <a
+              href={presentHref}
+              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
+              title="Open presentation"
+            >
+              <Presentation className="h-4 w-4" aria-hidden="true" />
+              <span>Present</span>
+            </a>
+            <a
+              href={printHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+              title="Print report (browser print)"
+            >
+              <FileDown className="h-4 w-4" aria-hidden="true" />
+              <span>Print</span>
+            </a>
+            {mode === "form" ? <AgentReviewComingSoon compact /> : null}
+          </>
+        }
+      />
       {mode === "slides" ? (
         <>
           {/* Slides mode has no WeeklyReportPage header, so the shell renders

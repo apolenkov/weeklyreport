@@ -137,6 +137,58 @@ describe("HeadReportShell — single shared toolbar (head-toolbar-parity)", () =
   });
 });
 
+// unify-top-action-toolbars D1/D3: the head action controls now sit in the
+// shared ReportActionsPill (one frame, two intent groups) instead of floating
+// in a bare flex row. Pin that the controls are present, grouped left vs right,
+// and that the Present/Print hrefs + aria are preserved.
+describe("HeadReportShell — unified action pill (unify-top-action-toolbars)", () => {
+  it("renders the action controls inside one ReportActionsPill", () => {
+    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
+    const pills = screen.getAllByTestId("report-actions-pill");
+    expect(pills).toHaveLength(1);
+    const pill = pills[0];
+    // Left group: scope toggle (radiogroup) + view-mode toggle (Edit/Slides).
+    // The next/link mock drops aria-label, so match the segment text instead.
+    expect(within(pill).getByRole("radiogroup")).toBeInTheDocument();
+    expect(
+      within(pill).getByRole("link", { name: /slides/i }),
+    ).toBeInTheDocument();
+    // Right group: Present + Print + the agent-review placeholder.
+    expect(
+      within(pill).getByRole("link", { name: /present/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(pill).getByRole("link", { name: /print/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(pill).getByTestId("agent-review-coming-soon"),
+    ).toBeInTheDocument();
+  });
+
+  it("preserves the Present and Print hrefs", () => {
+    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
+    expect(screen.getByRole("link", { name: /present/i })).toHaveAttribute(
+      "href",
+      `/head/report/${TEST_REPORT_ID}/present`,
+    );
+    expect(screen.getByRole("link", { name: /print/i })).toHaveAttribute(
+      "href",
+      `/print/${TEST_REPORT_ID}`,
+    );
+  });
+
+  it("slides mode keeps the action pill but drops the form-only placeholder", () => {
+    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
+    const pill = screen.getByTestId("report-actions-pill");
+    expect(
+      within(pill).getByRole("link", { name: /present/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(pill).queryByTestId("agent-review-coming-soon"),
+    ).not.toBeInTheDocument();
+  });
+});
+
 // driver-findings-2026-06-11 finding 4: on /head/report/<activeId> the period
 // navigator showed the latest PUBLISHED week (periods[0]) while the body showed
 // the active week. Two root causes — the active week missing from `periods`
