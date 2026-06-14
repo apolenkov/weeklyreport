@@ -1,17 +1,17 @@
 # Tasks — Pipeline State vs. Completeness (DESIGN draft)
 
-CAPTURE DRAFT (2026-06-13 live walk). Do NOT implement before the design
-questions in proposal.md are answered — this changes how lead read product
-health, easy to get wrong.
+Design questions resolved 2026-06-13/14 — see `design.md` (D1–D3).
+Implementation is now unblocked. Regression-heavy: this changes how leads read
+product health; read existing sync/status tests before changing semantics.
 
 ## 1. Design (resolve first)
 
-- [ ] 1.1 Define "my part complete" precisely (owned stages have status?
-      required fields filled?). Write it down.
-- [ ] 1.2 Pick the right-side affordance (dashed outline / check / progress).
-      Screenshot a mock or describe exactly.
-- [ ] 1.3 Confirm with `unify-risk-stage-status`: left-border severity source
-      stays the risk model; this is presentation-only on top of it.
+- [x] 1.1 "My part complete" = every stage the lead OWNS for the product has an
+      explicit status set (on-track/at-risk/blocked); per product. See D1.
+- [x] 1.2 Affordance = dashed/dotted outline ring while incomplete + a small
+      `N/M stages` counter pill; never the health hue. See D2.
+- [x] 1.3 Confirmed: left-border severity source stays the `unify-risk-stage-status`
+      risk model; this change is presentation + status-derivation on top. See D3.
 
 ## 1b. Single source of truth (status derived from risks)
 
