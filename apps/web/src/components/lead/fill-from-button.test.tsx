@@ -155,7 +155,7 @@ describe("FillFromButton — a11y regression (VA-0a): aria-hidden decorative SVG
     expect(svg).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("primary fill trigger is a 32px icon button with aria-label and matching tooltip", () => {
+  it("main fill segment of the split-button has aria-label and matching tooltip", () => {
     render(<FillFromButton periods={[pastPeriod]} />);
 
     const fillButton = screen.getByRole("button", {
@@ -166,8 +166,12 @@ describe("FillFromButton — a11y regression (VA-0a): aria-hidden decorative SVG
       "title",
       "Fill from most recent submitted period",
     );
-    expect(fillButton.className).toContain("h-8");
-    expect(fillButton.className).toContain("w-8");
+    // polish-lead-toolbar-and-risk-dialog 1.3: the main segment and chevron
+    // share ONE rounded-full container that owns the 32px height; the segments
+    // themselves are full-height (no per-button w-8 circle anymore).
+    const container = fillButton.parentElement;
+    expect(container?.className).toContain("h-8");
+    expect(container?.className).toContain("rounded-full");
     const svg = fillButton.querySelector("svg");
     expect(svg).not.toBeNull();
     expect(svg).toHaveAttribute("aria-hidden", "true");
@@ -184,7 +188,7 @@ describe("FillFromButton — a11y regression (VA-0a): aria-hidden decorative SVG
     expect(svg).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("dropdown trigger button contains svg with aria-hidden='true' and accessible name is 'Choose past report to fill from'", () => {
+  it("chevron segment contains svg with aria-hidden='true' and accessible name is 'Choose past report to fill from'", () => {
     render(<FillFromButton periods={[pastPeriod]} />);
 
     const triggerButton = screen.getByRole("button", {
@@ -195,11 +199,29 @@ describe("FillFromButton — a11y regression (VA-0a): aria-hidden decorative SVG
       "title",
       "Choose past report to fill from",
     );
-    expect(triggerButton.className).toContain("h-8");
-    expect(triggerButton.className).toContain("w-8");
+    // polish-lead-toolbar-and-risk-dialog 1.3: chevron is the attached right
+    // segment of the split-button, divided by a left hairline border.
+    expect(triggerButton.className).toContain("border-l");
+    const container = triggerButton.parentElement;
+    expect(container?.className).toContain("h-8");
+    expect(container?.className).toContain("rounded-full");
     const svg = triggerButton.querySelector("svg");
     expect(svg).not.toBeNull();
     expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("renders the two segments as ONE joined split-button (shared container)", () => {
+    render(<FillFromButton periods={[pastPeriod]} />);
+
+    const main = screen.getByRole("button", {
+      name: "Fill from most recent submitted period",
+    });
+    const chevron = screen.getByRole("button", {
+      name: "Choose past report to fill from",
+    });
+    // Both segments live inside the same rounded-full container element.
+    expect(main.parentElement).toBe(chevron.parentElement);
+    expect(main.parentElement?.className).toContain("overflow-hidden");
   });
 });
 

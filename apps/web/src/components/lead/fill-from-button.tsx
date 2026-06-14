@@ -3,12 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { ToolbarIconButton } from "../report-shell/toolbar-icon-button";
 import type { ReportPeriod } from "./mock-data";
 
-// head-toolbar-parity D5: idle toolbar-icon variant shared by both triggers.
-const TRIGGER_VARIANT_CLASS =
-  "btn-press border-[var(--color-border)] bg-white/70 text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50";
+// polish-lead-toolbar-and-risk-dialog 1.3: the fill-from control is a single
+// split-button — a wider main segment (copy = fill from most recent submitted
+// period) joined to a narrow chevron segment (open the past-report picker).
+// Both segments keep distinct <button> elements + aria-labels so the
+// accessible split-button pattern holds; the chevron keeps dropdownTriggerRef
+// for portal positioning.
+const SPLIT_BUTTON_CONTAINER_CLASS =
+  "inline-flex h-8 shrink-0 items-center overflow-hidden rounded-full border border-[var(--color-border)] bg-white/70 text-[var(--color-foreground)]";
+const SPLIT_BUTTON_SEGMENT_CLASS =
+  "btn-press inline-flex h-full items-center justify-center transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50";
+// Main segment is wider (copy icon); chevron segment is a slim attached caret
+// separated by a hairline divider.
+const SPLIT_BUTTON_MAIN_CLASS = `${SPLIT_BUTTON_SEGMENT_CLASS} px-2.5`;
+const SPLIT_BUTTON_CHEVRON_CLASS = `${SPLIT_BUTTON_SEGMENT_CLASS} border-l border-[var(--color-border)] px-1.5`;
 
 interface FillFromButtonProps {
   readonly periods: ReportPeriod[];
@@ -156,30 +166,36 @@ export function FillFromButton({
 
   return (
     <>
-      {/* head-toolbar-parity D5: the split-button is now two adjacent 32px
-          ToolbarIconButtons (copy = fill from most recent, caret = open the
-          picker). The dropdown still portals to document.body with
-          position:fixed, which is what frees it from the toolbar's overflow
-          clip (bug 2026-06-10). */}
-      <div className="relative inline-flex items-center gap-1" ref={wrapRef}>
-        <ToolbarIconButton
-          aria-label="Fill from most recent submitted period"
-          onClick={handleFillPrevious}
-          disabled={disabled || !previousPeriod}
-          className={TRIGGER_VARIANT_CLASS}
-        >
-          <CopyIcon />
-        </ToolbarIconButton>
+      {/* polish-lead-toolbar-and-risk-dialog 1.3: one split-button — a wider
+          main segment (copy = fill from most recent submitted period) joined
+          to a slim chevron segment (open the past-report picker). The dropdown
+          still portals to document.body with position:fixed, which is what
+          frees it from the toolbar's overflow clip (bug 2026-06-10). */}
+      <div className="relative inline-flex items-center" ref={wrapRef}>
+        <div className={SPLIT_BUTTON_CONTAINER_CLASS}>
+          <button
+            type="button"
+            aria-label="Fill from most recent submitted period"
+            title="Fill from most recent submitted period"
+            onClick={handleFillPrevious}
+            disabled={disabled || !previousPeriod}
+            className={SPLIT_BUTTON_MAIN_CLASS}
+          >
+            <CopyIcon />
+          </button>
 
-        <ToolbarIconButton
-          ref={dropdownTriggerRef}
-          aria-label="Choose past report to fill from"
-          onClick={() => setShowDropdown(!showDropdown)}
-          disabled={disabled}
-          className={TRIGGER_VARIANT_CLASS}
-        >
-          <ChevronDown />
-        </ToolbarIconButton>
+          <button
+            ref={dropdownTriggerRef}
+            type="button"
+            aria-label="Choose past report to fill from"
+            title="Choose past report to fill from"
+            onClick={() => setShowDropdown(!showDropdown)}
+            disabled={disabled}
+            className={SPLIT_BUTTON_CHEVRON_CLASS}
+          >
+            <ChevronDown />
+          </button>
+        </div>
       </div>
 
       {/* Dropdown list — portal to document.body so the toolbar's
