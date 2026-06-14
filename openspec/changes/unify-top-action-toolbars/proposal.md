@@ -30,10 +30,10 @@ bare-flex form.
    viewer (`app/(app)/reports/[reportId]/page.tsx`) renders its OWN
    `<h1>Status Report</h1>` + Report-ID + a bare action row, then mounts
    `WeeklyReportPage` which renders its own "Status Report · Live · N/N" header —
-   so the title appears TWICE. The head shell avoids this by feeding actions into
-   `WeeklyReportPage`'s `toolbar` slot and suppressing the inner context bar; the
-   viewer never got that treatment. This is a bug, not just inconsistency — task
-   2.0, highest priority in this change.
+   so the title appears TWICE. The head shell avoids this by NOT rendering its own
+   `<h1>` — it mounts the actions pill above `WeeklyReportPage` and keeps the
+   page's own header and period bar; the viewer never got that treatment. This is
+   a bug, not just inconsistency — task 2.0, highest priority in this change.
 
 ## What Changes (DESIGN draft — implement AFTER polish icon-button parity lands)
 

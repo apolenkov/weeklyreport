@@ -17,10 +17,13 @@ import { WeeklyReportSkeleton } from "../../../../components/weekly-report/weekl
 /*  renders its own <h1>Status Report</h1> + Report-ID context block. */
 /*  WeeklyReportPage already renders that title ("Status Report ·     */
 /*  Live · N/N"), so the wrapper used to DOUBLE it on screen. The     */
-/*  viewer actions now flow through WeeklyReportPage's `toolbar` slot  */
-/*  inside the shared ReportActionsPill — the same pattern the head    */
-/*  report shell uses — so the title shows exactly once and the        */
-/*  actions sit in the unified pill bar.                               */
+/*  viewer actions sit in the shared ReportActionsPill rendered ABOVE  */
+/*  WeeklyReportPage — exactly like the head report shell, which mounts */
+/*  the pill outside the page and lets the page keep its own period    */
+/*  ReportToolbar (week + date range). The `toolbar` slot is left      */
+/*  unset so the page's default period-context bar still renders; that  */
+/*  bar is the only place the report states WHICH WEEK it covers.      */
+/*  (review-finding fix: the earlier slot-only wiring dropped it.)     */
 /* ------------------------------------------------------------------ */
 
 interface Props {
@@ -82,16 +85,14 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
       id="main-content"
       className="min-h-screen bg-[var(--color-background)]"
     >
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl space-y-4 px-4 py-6 sm:px-6 lg:px-8">
         {/* The AI period-summary surface was removed; the assembled report
             renders directly. The agent-review «coming soon» entry lives in the
-            action pill / slide decks / report shells. */}
+            action pill / slide decks / report shells. The pill mounts ABOVE the
+            page (like the head shell), so the page keeps its own period bar. */}
+        {viewerActions}
         <Suspense fallback={<WeeklyReportSkeleton />}>
-          <WeeklyReportPage
-            reportId={reportId}
-            authorId={authorId}
-            toolbar={viewerActions}
-          />
+          <WeeklyReportPage reportId={reportId} authorId={authorId} />
         </Suspense>
       </div>
     </main>
