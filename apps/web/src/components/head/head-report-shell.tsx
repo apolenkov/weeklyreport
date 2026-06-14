@@ -20,7 +20,6 @@ import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
 import { ViewModeToggle } from "../report-shell/view-mode-toggle";
 import { HeadSlidesClient } from "../slides/head-slides-client";
 import { SlideSkeleton } from "../slides/slide-skeleton";
-import { ReportMutationActions } from "../weekly-report/report-mutation-actions";
 import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
 import { WeeklyReportSkeleton } from "../weekly-report/weekly-report-skeleton";
 
@@ -211,13 +210,6 @@ export function HeadReportShell({
               <FileDown className="h-4 w-4" aria-hidden="true" />
               <span>Print</span>
             </a>
-            {/* lead-live-walk-2026-06-14 task 5.3: Export-PDF + Archive +
-                Publish moved INTO the action pill, beside Present/Print. One
-                consolidated bar; the same component used to render in the
-                WeeklyReportPage header is now mounted here (suppressed in the
-                page). Renders in BOTH form and slides mode — the pill is shared
-                across the mode branch below. */}
-            <ReportMutationActions reportId={reportId} />
             {mode === "form" ? <AgentReviewComingSoon compact /> : null}
           </>
         }
@@ -239,7 +231,6 @@ export function HeadReportShell({
               authorId={authorId}
               scope={reportScope}
               toolbar={reportToolbar}
-              suppressHeaderActions
             />
           </Suspense>
         </div>

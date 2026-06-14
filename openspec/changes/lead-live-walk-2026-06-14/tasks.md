@@ -63,12 +63,12 @@ Branch `feat/finish-backlog-2026-06-13`; no push; PR #10 updated.
 
 ## 5. Head report toolbar — 1:1 with lead
 
-- [x] 5.1 Make the head action line identical to the lead toolbar (heights,
+- [ ] 5.1 Make the head action line identical to the lead toolbar (heights,
       radii, spacing, control idiom). frontend-design; reuse lead components.
-- [x] 5.2 `agent-review-coming-soon.tsx`: same height as siblings (touch-target).
-- [x] 5.3 Move Export-PDF + Publish into the toolbar pill, beside Present/Print.
+- [ ] 5.2 `agent-review-coming-soon.tsx`: same height as siblings (touch-target).
+- [ ] 5.3 Move Export-PDF + Publish into the toolbar pill, beside Present/Print.
       Keep behavior/aria/hrefs.
-- [x] 5.4 Render tests + live before/after screenshots (head form + slides), at
+- [ ] 5.4 Render tests + live before/after screenshots (head form + slides), at
       1728 and ~1280 widths (wrap, not clip).
 
 ## 6. Gates
