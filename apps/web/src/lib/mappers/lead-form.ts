@@ -389,12 +389,14 @@ export function mapLeadProducts(
   return section.projects.map((p) => {
     const ownedStages = p.ownedStages ?? [];
     const overallStatus = trafficToStageStatus(p.trafficLight);
-    // unify-risk-stage-status (D1, supersedes PRJ-2): covering non-empty
-    // risks force a severity floor on the stage chips again. PRJ-2 had
-    // disconnected this because the derivation fought user chip clicks;
-    // now every conflicting transition is intercepted in the live form
-    // (raise → risk creation, lower → confirmed risk removal), so explicit
-    // and derived status can no longer disagree silently. Items stay
+    // rethink-pipeline-state-vs-completeness (supersedes the PRJ-2 "explicit
+    // chip status must win" rule): the displayed stage status is now a PURE
+    // derivation of the covering risks — there is no separate manual status
+    // that can drift. `deriveEffectiveStageStatus` takes the worst covering
+    // risk; a persisted at-risk/blocked with no backing risk collapses to
+    // on-track instead of surviving. Every conflicting transition is still
+    // intercepted in the live form (raise → risk creation, lower → confirmed
+    // risk removal), so what loads matches what the form shows. Items stay
     // disconnected (risk-only contract).
     const coveringRisks = section.risks.filter(
       (r) => r.projectId === p.projectId && r.risk.trim().length > 0,

@@ -101,6 +101,11 @@ describe("mapLeadProducts", () => {
   });
 
   it("uses per-stage statuses instead of copying the product status to every owned stage", () => {
+    // rethink-pipeline-state-vs-completeness: status is now derived from risks.
+    // The Testing severity must come from a covering blocker, not a persisted
+    // red with nothing to back it (that would collapse to on-track). The point
+    // of the test — stages carry DISTINCT statuses, not the product-wide red —
+    // still holds: Dev=on-track, Testing=blocked, DevOps=empty.
     const section = baseSection({
       projects: [
         {
@@ -129,6 +134,16 @@ describe("mapLeadProducts", () => {
           ],
         },
       ],
+      risks: [
+        {
+          projectId: PROJECT_A,
+          risk: "Testing environment is down",
+          impact: "blocks release",
+          mitigation: "restore infra",
+          severity: "blocked",
+          stageIds: ["Testing"],
+        },
+      ],
     });
 
     const product = mapLeadProducts(section).at(0);
@@ -137,6 +152,32 @@ describe("mapLeadProducts", () => {
     expect(stages.get("Dev")).toBe("on-track");
     expect(stages.get("Testing")).toBe("blocked");
     expect(stages.get("DevOps")).toBe("empty");
+  });
+
+  it("collapses a persisted at-risk/blocked stage with no covering risk to on-track", () => {
+    // rethink-pipeline-state-vs-completeness (supersedes PRJ-2 "explicit wins"):
+    // a stale persisted severity that no risk backs can no longer survive.
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM Platform",
+          trafficLight: "red",
+          ownedStages: [
+            {
+              stageId: "22222222-2222-4222-8222-222222222222",
+              stageName: "Testing",
+              sortOrder: 4,
+              status: "red",
+            },
+          ],
+        },
+      ],
+    });
+
+    const product = mapLeadProducts(section).at(0);
+    const stages = new Map(product?.stages.map((s) => [s.stageName, s.status]));
+    expect(stages.get("Testing")).toBe("on-track");
   });
 
   it("returns empty array when the section has no projects", () => {

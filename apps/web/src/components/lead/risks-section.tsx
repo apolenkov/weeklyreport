@@ -135,11 +135,10 @@ export function RisksSection({
 
   return (
     <div className="space-y-4">
-      {/* The unbacked-stage warning banner used to live here. It moved
-          to the Product Status section (above the SDLC chips) since
-          that's where the cause originates — colouring a chip red and
-          getting the "describe it" nudge in the same surface reads
-          better than asking the lead to scroll down. */}
+      {/* rethink-pipeline-state-vs-completeness: the unbacked-stage warning
+          was removed. Status is derived from risks, so a chip can no longer
+          be at-risk/blocked without a backing risk — there is nothing left
+          to warn about. */}
 
       {risks.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">

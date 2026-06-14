@@ -31,8 +31,20 @@ describe("deriveEffectiveStageStatus", () => {
     ).toBe("at-risk");
   });
 
-  it("stays blocked when explicit is blocked and no risks/items", () => {
-    expect(deriveEffectiveStageStatus("blocked", [], [])).toBe("blocked");
+  it("collapses an explicit blocked with no backing risk to on-track", () => {
+    // rethink-pipeline-state-vs-completeness: status is derived from risks;
+    // a manual blocked that no risk backs can no longer survive.
+    expect(deriveEffectiveStageStatus("blocked", [], [])).toBe("on-track");
+  });
+
+  it("multi-risk priority: blocked wins over at-risk on one stage", () => {
+    expect(
+      deriveEffectiveStageStatus(
+        "on-track",
+        [{ severity: "at-risk" }, { severity: "blocked" }],
+        [],
+      ),
+    ).toBe("blocked");
   });
 
   it("section isolation: risks for another stage do not bleed into this chip", () => {
@@ -43,7 +55,10 @@ describe("deriveEffectiveStageStatus", () => {
     expect(deriveEffectiveStageStatus("on-track", [], [])).toBe("on-track");
   });
 
-  it("explicit at-risk chip without risks stays at-risk (user set it manually)", () => {
-    expect(deriveEffectiveStageStatus("at-risk", [], [])).toBe("at-risk");
+  it("collapses an explicit at-risk with no backing risk to on-track", () => {
+    // rethink-pipeline-state-vs-completeness (supersedes the PRJ-2 "explicit
+    // wins" rule): a manual at-risk that no risk backs collapses to on-track,
+    // matching the sync bridge's reset when the last covering risk is removed.
+    expect(deriveEffectiveStageStatus("at-risk", [], [])).toBe("on-track");
   });
 });
