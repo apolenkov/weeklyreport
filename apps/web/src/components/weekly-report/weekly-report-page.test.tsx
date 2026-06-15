@@ -671,9 +671,11 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
     const header = screen
       .getByRole("heading", { name: /status report/i })
       .closest("header");
-    expect(header).not.toBeNull();
+    if (header === null) {
+      throw new Error("expected the report heading to sit inside a <header>");
+    }
     expect(
-      within(header!).queryByRole("button", {
+      within(header).queryByRole("button", {
         name: /export pdf/i,
       }),
     ).not.toBeInTheDocument();
@@ -693,7 +695,10 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
     // NOT sit in the action cluster. Discriminate the two divs explicitly.
     // 1) Same container as the status pill ("Live · X/Y Submitted").
     const statusPill = screen.getByText(/live . 0\/6 submitted/i);
-    const statusRow = statusPill.parentElement!;
+    const statusRow = statusPill.parentElement;
+    if (statusRow === null) {
+      throw new Error("expected the status pill to have a parent row");
+    }
     expect(
       within(statusRow).getByText(/no submitted report content yet/i),
     ).toBeInTheDocument();
@@ -701,7 +706,10 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
     const publishButton = screen.getByRole("button", {
       name: /nothing to publish/i,
     });
-    const actionRow = publishButton.parentElement!;
+    const actionRow = publishButton.parentElement;
+    if (actionRow === null) {
+      throw new Error("expected the publish button to have a parent row");
+    }
     expect(
       within(actionRow).queryByText(/no submitted report content yet/i),
     ).not.toBeInTheDocument();
