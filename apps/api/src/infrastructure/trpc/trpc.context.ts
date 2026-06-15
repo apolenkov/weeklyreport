@@ -56,18 +56,73 @@ export function clearOrgCache(): void {
 const PDF_EXPORT_SYNTHETIC_USER_ID = "a0000000-0000-4000-8000-0000000pdfwk";
 const PDF_EXPORT_SYNTHETIC_EMAIL = "pdf-worker@internal.customreport.local";
 
-function buildPdfExportSession(reportId: string): UserSession {
+/**
+ * Legacy narrow synthetic session for PDF-export tokens that predate the
+ * `requestedBy` claim. role:viewer with NO group access — this is what made
+ * the exported report render EMPTY (filterSnapshotSections scopes to zero
+ * sections). Kept only for back-compat with in-flight 5-min tokens issued
+ * before the empty-PDF fix; new tokens always carry `requestedBy`.
+ */
+function buildLegacyPdfExportSession(reportId: string): UserSession {
   return {
     userId: PDF_EXPORT_SYNTHETIC_USER_ID,
     email: PDF_EXPORT_SYNTHETIC_EMAIL,
     name: "PDF Worker",
-    // viewer is the narrowest role that can read a published report via the
-    // service-layer filters. The pdfExportGuard middleware further restricts
-    // procedure paths to `weeklyReport.get` and `archive.detail`.
     role: "viewer",
     activeReportId: reportId,
     activeReportSectionId: null,
   };
+}
+
+/**
+ * driver-findings-followups (empty-PDF fix): build the PDF worker's render
+ * session AS THE REQUESTER. The worker drives `/print/<reportId>`, whose tRPC
+ * reads are group-scoped by the session; the old viewer-synthetic session had
+ * no group access and rendered an empty report for every role. We instead
+ * rebuild the requester's real session from their userId (carried in the
+ * token) and run the same `hydrateSession` pipeline a logged-in request gets,
+ * so the export is scoped exactly to the requester's in-app view: head → full
+ * report, lead/viewer → their slice. The `pdfExportGuard` middleware still
+ * restricts this session to the read-only allowlist bound to `pdfReportId`,
+ * independent of the resolved role.
+ *
+ * Returns null when the requester no longer exists (fail closed → no session →
+ * the auth middleware rejects). A token without `requestedBy` falls back to the
+ * legacy narrow session.
+ */
+async function buildPdfExportSession(
+  reportId: string,
+  requestedBy: string | undefined,
+  prisma: PrismaService,
+): Promise<UserSession | null> {
+  if (!requestedBy) return buildLegacyPdfExportSession(reportId);
+
+  const user = await prisma.user.findUnique({
+    where: { id: requestedBy },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      reportingGroupId: true,
+    },
+  });
+  if (!user) return null;
+
+  const base: UserSession = {
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    // Bind to the published report being exported; scope is driven by role +
+    // group access (hydrated below), not by this field.
+    activeReportId: reportId,
+    activeReportSectionId: null,
+    ...(user.reportingGroupId
+      ? { reportingGroupId: user.reportingGroupId }
+      : {}),
+  };
+  return hydrateSession(base, prisma);
 }
 
 export interface TrpcContext {
@@ -173,25 +228,34 @@ export function createContextFactory(
         // dev-mode / null.
       }
 
-      // Phase 32-B1 (H-04): PDF worker authentication path. The Playwright
-      // browser injects a 5-min JWT signed by `signPdfExportToken` carrying
-      // `{ reportId, kind: 'pdf-export' }`. We verify against
-      // PDF_EXPORT_JWT_SECRET (different secret than session JWT). On
-      // success we synthesize a viewer-shaped session bound to the reportId
-      // claim; the `pdfExportGuard` middleware enforces the
-      // procedure-allowlist + reportId-match constraint.
+      // Phase 32-B1 (H-04) + empty-PDF fix: PDF worker authentication path.
+      // The Playwright browser injects a 5-min JWT signed by
+      // `signPdfExportToken` carrying `{ reportId, kind: 'pdf-export',
+      // requestedBy }`. We verify against PDF_EXPORT_JWT_SECRET (different
+      // secret than session JWT). On success we rebuild the REQUESTER's session
+      // (so the export is scoped to their in-app view, not an empty viewer);
+      // the `pdfExportGuard` middleware still enforces the procedure-allowlist
+      // + reportId-match constraint regardless of the resolved role.
       try {
         const pdfClaims = verifyPdfExportToken(token);
-        return {
-          session: buildPdfExportSession(pdfClaims.reportId),
-          logger,
-          correlationId,
+        const pdfSession = await buildPdfExportSession(
+          pdfClaims.reportId,
+          pdfClaims.requestedBy,
           prisma,
-          auditLogger,
-          ip,
-          isPdfExport: true,
-          pdfReportId: pdfClaims.reportId,
-        };
+        );
+        if (pdfSession) {
+          return {
+            session: pdfSession,
+            logger,
+            correlationId,
+            prisma,
+            auditLogger,
+            ip,
+            isPdfExport: true,
+            pdfReportId: pdfClaims.reportId,
+          };
+        }
+        // Requester no longer exists → fail closed (fall through to null).
       } catch {
         // Not a PDF token either -- fall through to dev-mode / null.
       }
@@ -334,8 +398,9 @@ async function hydrateOrganization(
  * File-local and NOT exported (D3): no HydrationStep enum, no mocking seam.
  * The factory-level tests already cover the contract.
  *
- * PDF-export synthetic sessions intentionally skip hydration (Phase 32-B1;
- * guard middleware + groupScopeFilter own that restriction).
+ * The PDF-export path (`buildPdfExportSession`) now runs this same pipeline so
+ * the worker renders AS THE REQUESTER (empty-PDF fix); only legacy tokens
+ * without a `requestedBy` claim keep the narrow, unhydrated viewer session.
  */
 async function hydrateSession(
   session: UserSession,

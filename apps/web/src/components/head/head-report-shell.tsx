@@ -63,6 +63,13 @@ export function HeadReportShell({
   // identical call, so React Query dedupes — no extra network request.
   const displayedQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
 
+  // driver-findings-followups item 3: also fetch the CURRENT (active) period
+  // independent of the displayed one. Without a reportId the server returns the
+  // session's active period, so the navigator can always chevron back to the
+  // current week — even from a published week, where the displayed period IS in
+  // history and the old code prepended nothing.
+  const activeQ = useQuery(trpc.weeklyReport.get.queryOptions({}));
+
   const periods: ReportPeriod[] = useMemo(() => {
     const entries = historyQ.data?.entries ?? [];
     const historyPeriods: ReportPeriod[] = entries.map((entry) => ({
@@ -78,32 +85,42 @@ export function HeadReportShell({
       isSubmitted: true,
     }));
 
-    // Prepend the displayed (active) period when history does not already
-    // carry it. The entry's id MUST be the reportId so the navigator's
-    // `p.id === pathReportId` match resolves the addressed week.
-    const displayed = displayedQ.data;
-    if (
-      !displayed ||
-      displayed.status === "no-period" ||
-      historyPeriods.some((p) => p.id === reportId)
-    ) {
-      return historyPeriods;
-    }
-    const activePeriod: ReportPeriod = {
-      id: reportId,
-      weekLabel: `Week ${isoWeekNumber(new Date(displayed.periodStart))}`,
+    // Prepend any period the navigator must reach that compiledHistory (which
+    // lists only published + archived weeks) omits: the CURRENT week (so the
+    // chevron can always return to it — item 3) and the DISPLAYED week (finding
+    // 4: so the trigger resolves on `/head/report/<id>`). Each entry's id MUST
+    // be its reportId so the navigator's `p.id === pathReportId` match works.
+    const seen = new Set(historyPeriods.map((p) => p.id));
+    const toPeriod = (
+      id: string,
+      data: { periodStart: Date; periodEnd: Date; periodStatus: string },
+    ): ReportPeriod => ({
+      id,
+      weekLabel: `Week ${isoWeekNumber(new Date(data.periodStart))}`,
       dateRange: formatDateRange(
-        new Date(displayed.periodStart),
-        new Date(displayed.periodEnd),
+        new Date(data.periodStart),
+        new Date(data.periodEnd),
       ),
       archived: false,
       sourceSectionId: "",
       // Mirror mapWeeklyReport: a non-published period is the current week.
-      isCurrent: displayed.periodStatus !== "published",
+      isCurrent: data.periodStatus !== "published",
       isSubmitted: true,
-    };
-    return [activePeriod, ...historyPeriods];
-  }, [historyQ.data, displayedQ.data, reportId]);
+    });
+
+    const prepended: ReportPeriod[] = [];
+    const active = activeQ.data;
+    if (active && active.status !== "no-period" && !seen.has(active.reportId)) {
+      prepended.push(toPeriod(active.reportId, active));
+      seen.add(active.reportId);
+    }
+    const displayed = displayedQ.data;
+    if (displayed && displayed.status !== "no-period" && !seen.has(reportId)) {
+      prepended.push(toPeriod(reportId, displayed));
+      seen.add(reportId);
+    }
+    return [...prepended, ...historyPeriods];
+  }, [historyQ.data, activeQ.data, displayedQ.data, reportId]);
 
   const urlBuilder = useCallback(
     (periodId: string) => {

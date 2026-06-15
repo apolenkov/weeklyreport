@@ -60,7 +60,6 @@ import {
   anyRoleProcedure,
   headProcedure,
   leadershipProcedure,
-  leadHeadAdminProcedure,
   protectedProcedure,
   publicProcedure,
   router,
@@ -624,13 +623,16 @@ export function createAppRouter(deps: RouterDeps) {
 
     // === PDF Export namespace ===
     pdfExport: router({
-      // driver-findings-2026-06-11 finding 3 (decision 2026-06-13): leads SHOULD
-      // have Export-PDF, so request + status widen from head-only to
-      // lead/head/admin. Both must widen together — if only request widens, the
-      // lead fires the job but cannot poll status and the button hangs. The PDF
-      // render is requester-independent (the worker signs a {reportId} token and
-      // renders under a synthetic session), so a lead's export matches head's.
-      request: leadHeadAdminProcedure
+      // driver-findings finding 3 + followups item 1: Export-PDF is available to
+      // every authenticated role (head/admin/lead/viewer). request + status MUST
+      // widen together — if only request widens, the caller fires the job but
+      // cannot poll status and the button hangs. The PDF render is now
+      // REQUESTER-SCOPED: the worker token carries the requester's userId and
+      // the print page renders under their rebuilt session, so each role's PDF
+      // matches their in-app view (head → full report, lead/viewer → their
+      // slice). Viewer export is safe because the empty-PDF fix gives the viewer
+      // a non-empty, scoped render.
+      request: anyRoleProcedure
         .input(z.object({ reportId: z.uuid() }))
         .mutation(async ({ input, ctx }) => {
           try {
@@ -649,7 +651,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      status: leadHeadAdminProcedure
+      status: anyRoleProcedure
         .input(z.object({ jobId: z.uuid() }))
         .query(async ({ input, ctx }) => {
           try {

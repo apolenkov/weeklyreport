@@ -10,6 +10,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { useQuery } from "@tanstack/react-query";
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 /* ---- Module mocks (hoisted above all imports of the SUT) ---- */
@@ -97,7 +98,11 @@ vi.mock("../../lib/trpc-context", () => ({
     },
     weeklyReport: {
       get: {
-        queryOptions: () => ({ queryKey: ["weeklyReport.get"] }),
+        // Encode the reportId in the key so tests can tell the DISPLAYED query
+        // (`{ reportId }`) apart from the ACTIVE query (`{}` → null) — item 3.
+        queryOptions: (input?: { reportId?: string }) => ({
+          queryKey: ["weeklyReport.get", input?.reportId ?? null],
+        }),
       },
     },
   }),
@@ -301,5 +306,90 @@ describe("HeadReportShell — period navigator addressed-week (finding 4)", () =
     });
     expect(trigger).toHaveTextContent(/may 18.*24/i);
     expect(trigger).not.toHaveTextContent(/may 25/i);
+  });
+});
+
+// driver-findings-followups item 3: from a PUBLISHED week the navigator must
+// still reach the CURRENT week. The displayed published week IS in history, so
+// the old code prepended nothing and the active week was absent from the
+// dropdown. The shell now fetches the active period separately (`{}` query) and
+// prepends it, so it is always an option.
+describe("HeadReportShell — active week reachable from a published week (item 3)", () => {
+  const ACTIVE_ID = "a0000000-0000-4000-8000-000000000001";
+  const PUBLISHED_ID = "a0000000-0000-4000-8000-000000000005";
+
+  // Wire the two weeklyReport.get queries apart by reportId (queryKey[1]):
+  // the DISPLAYED query (reportId=PUBLISHED_ID) returns the published week, the
+  // ACTIVE query (reportId=null, i.e. `{}`) returns the current open week.
+  function wirePublishedView() {
+    const impl = (opts: { queryKey?: unknown[] }) => {
+      const key = opts.queryKey?.[0];
+      if (key === "weeklyReport.get") {
+        const requestedReportId = opts.queryKey?.[1];
+        if (requestedReportId === null) {
+          return {
+            data: {
+              status: "active",
+              reportId: ACTIVE_ID,
+              periodStart: "2026-06-08T00:00:00.000Z",
+              periodEnd: "2026-06-14T00:00:00.000Z",
+              periodStatus: "open",
+            },
+            isLoading: false,
+            isError: false,
+            error: null,
+          };
+        }
+        return {
+          data: {
+            status: "active",
+            reportId: PUBLISHED_ID,
+            periodStart: "2026-05-18T00:00:00.000Z",
+            periodEnd: "2026-05-24T00:00:00.000Z",
+            periodStatus: "published",
+          },
+          isLoading: false,
+          isError: false,
+          error: null,
+        };
+      }
+      return {
+        data: {
+          entries: [
+            {
+              reportId: PUBLISHED_ID,
+              periodStart: "2026-05-18T00:00:00.000Z",
+              periodEnd: "2026-05-24T00:00:00.000Z",
+              archived: false,
+            },
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      };
+    };
+    vi.mocked(useQuery).mockImplementation(impl as unknown as typeof useQuery);
+  }
+
+  it("offers the current week as an option while viewing a published week", async () => {
+    const user = userEvent.setup();
+    wirePublishedView();
+    mockPathname.mockReturnValue(`/head/report/${PUBLISHED_ID}`);
+
+    render(<HeadReportShell reportId={PUBLISHED_ID} mode="form" />);
+
+    // Trigger resolves to the displayed published week (May 18-24).
+    const trigger = screen.getByRole("combobox", {
+      name: /select reporting period/i,
+    });
+    expect(trigger).toHaveTextContent(/may 18.*24/i);
+
+    // Opening the listbox exposes the CURRENT week (Jun 8-14) as a reachable
+    // option — the regression item 3 fixes. Without the active-prepend it would
+    // be absent (history holds only the published week).
+    await user.click(trigger);
+    const options = screen.getAllByRole("option");
+    expect(options.some((o) => /jun 8.*14/i.test(o.textContent))).toBe(true);
   });
 });

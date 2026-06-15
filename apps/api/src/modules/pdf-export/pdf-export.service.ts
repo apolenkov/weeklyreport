@@ -55,6 +55,15 @@ export interface PdfExportRepository {
 export interface PdfExportTokenClaims {
   reportId: string;
   kind: "pdf-export";
+  /**
+   * driver-findings-followups (empty-PDF fix): the session userId of the
+   * requester. The PDF worker renders `/print/<id>` under a session rebuilt
+   * for THIS user, so the exported report is scoped exactly to what the
+   * requester sees in-app (head → full report, lead/viewer → their slice).
+   * Optional for back-compat with legacy tokens that predate the claim — those
+   * fall back to the narrow viewer-synthetic session in `trpc.context.ts`.
+   */
+  requestedBy?: string;
 }
 
 const PDF_EXPORT_JWT_TTL = "5m";
@@ -85,7 +94,13 @@ export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
   if (typeof claims.reportId !== "string" || !claims.reportId) {
     throw new Error("PDF export token missing reportId claim");
   }
-  return { reportId: claims.reportId, kind: PDF_EXPORT_KIND };
+  return {
+    reportId: claims.reportId,
+    kind: PDF_EXPORT_KIND,
+    ...(typeof claims.requestedBy === "string" && claims.requestedBy
+      ? { requestedBy: claims.requestedBy }
+      : {}),
+  };
 }
 
 export class PdfExportService {
@@ -108,14 +123,20 @@ export class PdfExportService {
    * signing secret is missing or shorter than 16 chars — fail loud at request
    * time instead of silently producing a token nobody can verify.
    */
-  signPdfExportToken(reportId: string): string {
+  signPdfExportToken(reportId: string, requestedBy?: string): string {
     const secret = process.env.PDF_EXPORT_JWT_SECRET;
     if (!secret || secret.length < 16) {
       throw new PdfExportDomainError(
         "PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 16 chars).",
       );
     }
-    const claims: PdfExportTokenClaims = { reportId, kind: PDF_EXPORT_KIND };
+    const claims: PdfExportTokenClaims = {
+      reportId,
+      kind: PDF_EXPORT_KIND,
+      // Bind the worker's render session to the requester so the export is
+      // scoped exactly to their in-app view (empty-PDF fix).
+      ...(requestedBy ? { requestedBy } : {}),
+    };
     return jwt.sign(claims, secret, { expiresIn: PDF_EXPORT_JWT_TTL });
   }
 
@@ -164,7 +185,8 @@ export class PdfExportService {
       // callers don't — this keeps the contract a single tRPC mutation away
       // from "head clicks Export PDF". Signed lazily so test scenarios without
       // a queue (and thus without a real worker) don't require the secret.
-      const cookieToken = authToken ?? this.signPdfExportToken(reportId);
+      const cookieToken =
+        authToken ?? this.signPdfExportToken(reportId, requestedBy);
       await this.pdfQueue.add(
         "generate",
         { reportId, jobId: job.jobId, authToken: cookieToken },
