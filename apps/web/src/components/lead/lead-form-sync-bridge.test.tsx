@@ -543,10 +543,19 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     expect(onProductsChangeSpy).not.toHaveBeenCalled();
   });
 
-  it("W11: an OWN risk that explicitly stages an empty owned stage ticks the pill in-session (no reload)", () => {
-    // fix-report-surface-integrity W11: ctx.products is stable across a risk add,
-    // so the bridge re-derives coveredByOwnRisk at render. A risk the lead staged
-    // on the empty Dev stage makes it count → pill goes 1/2 → 2/2 with no reload.
+  it("W11/W6 reload regression: a raw-empty stage covered by an OWN risk renders floored, counts in X/7, and stays distinguishable from an explicit status", () => {
+    // fix-report-surface-integrity W11 + W6 combined reload-stability. The inputs
+    // here mirror the read model after a risk add WITHOUT a refetch: the raw Dev
+    // stage persists `empty` and the risk arrives via state (initialRisks), with
+    // no baked coveredByOwnRisk flag. The bridge re-derives coveredByOwnRisk and
+    // re-applies the severity floor at render. The mapper-bake half of reload
+    // (the flag arriving already set from the DB read) is proven in
+    // lead-form.test.ts; together they cover both reload entry points. Three
+    // guarantees in one place:
+    //   1. render floored — the empty Dev chip shows the risk severity (blocked),
+    //   2. counts in X/7 — coveredByOwnRisk ticks the pill 1/2 → 2/2,
+    //   3. stays distinguishable — Dev reads "by risk" (covered), Testing reads
+    //      "status set" (explicit), so the chip distinction survives the reload.
     const product = buildProduct({
       stages: [
         {
@@ -576,9 +585,20 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     const { container } = render(
       <Harness initialProducts={[product]} initialRisks={[ownStagedRisk]} />,
     );
+
+    // 2. Counts in X/7: the risk-covered empty stage ticks the completeness pill.
     const pill = container.querySelector("[data-complete]");
     expect(pill?.textContent).toContain("2/2 stages");
     expect(pill?.getAttribute("data-complete")).toBe("true");
+
+    // 1 + 3. The Dev chip renders floored (blocked) AND announces "by risk", so
+    // it is visibly distinct from the explicitly-set Testing chip ("status set").
+    expect(
+      screen.getByRole("button", { name: "Dev: blocked by risk" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Testing: on-track — status set" }),
+    ).toBeInTheDocument();
   });
 
   it("W11: a covers-all (stageIds: []) risk does NOT tick the pill (root-cause guard)", () => {
