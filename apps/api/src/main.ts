@@ -6,11 +6,23 @@ import "reflect-metadata";
 // Sentry must run first so its instrumentation wraps the original http, not OTel's wrapper.
 import * as Sentry from "@sentry/nestjs";
 
+import { stampActiveTrace } from "./infrastructure/otel/sentry-trace-correlation";
+
 if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     tracesSampleRate: 0, // traces via OTel/Tempo, not Sentry
+    // Sentry v8+ otherwise installs its OWN global OTel TracerProvider, which
+    // wins over the NodeSDK in otel.bootstrap and starves Tempo of spans.
+    // Skip it so the NodeSDK owns tracing; Sentry stays error-capture only.
+    skipOpenTelemetrySetup: true,
     environment: process.env.NODE_ENV ?? "development",
+    // correlate-errors-to-traces: stamp the active OTel span's id onto the
+    // error so the Bugsink event links to its Tempo trace. Overrides the
+    // random id Sentry pre-fills here (beforeSend runs after that fill).
+    beforeSend: stampActiveTrace,
+    // Bugsink stores errors only — never let a transaction reach it.
+    beforeSendTransaction: () => null,
   });
 }
 

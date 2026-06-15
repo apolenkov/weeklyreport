@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 
+import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const API_URL =
@@ -31,4 +32,12 @@ const nextConfig: NextConfig = {
     ]),
 };
 
-export default nextConfig;
+// correlate-errors-to-traces: wrap with Sentry so the SDK's build-time
+// instrumentation (client config detection, server hooks) is applied. Source-map
+// upload to Bugsink is DISABLED by default — it is gated on a separate
+// sentry-cli/debug-id preflight (see openspec/changes/correlate-errors-to-traces,
+// task 5.2). `silent` outside CI keeps the dev build quiet.
+export default withSentryConfig(nextConfig, {
+  silent: !process.env.CI,
+  sourcemaps: { disable: true },
+});

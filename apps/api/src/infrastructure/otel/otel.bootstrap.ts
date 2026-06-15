@@ -19,6 +19,10 @@
  */
 
 import { logs } from "@opentelemetry/api-logs";
+import {
+  CompositePropagator,
+  W3CTraceContextPropagator,
+} from "@opentelemetry/core";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
@@ -35,6 +39,7 @@ import {
   ATTR_SERVICE_VERSION,
 } from "@opentelemetry/semantic-conventions";
 import { PrismaInstrumentation } from "@prisma/instrumentation";
+import { SentryPropagator } from "@sentry/opentelemetry";
 
 export type OtelBootstrapResult =
   | {
@@ -62,6 +67,21 @@ export function decideOtelBootstrap(
   return { started: true, reason: "enabled", samplingRatio, endpoint };
 }
 
+/**
+ * correlate-errors-to-traces: composite propagator for browser→api trace
+ * adoption. CompositePropagator.extract folds the propagators left-to-right,
+ * so the LAST one that finds its header wins. W3C is placed last so its
+ * `traceparent` wins when both headers are present; `SentryPropagator`
+ * (which also carries baggage) bridges browser requests that send only
+ * `sentry-trace`. Exported so the precedence is unit-tested against the real
+ * CompositePropagator, not asserted by reading the array order.
+ */
+export function createTraceContextPropagator(): CompositePropagator {
+  return new CompositePropagator({
+    propagators: [new SentryPropagator(), new W3CTraceContextPropagator()],
+  });
+}
+
 let sdk: NodeSDK | null = null;
 let loggerProvider: LoggerProvider | null = null;
 
@@ -84,6 +104,11 @@ export function startOtel(
     resource,
     sampler: new TraceIdRatioBasedSampler(decision.samplingRatio),
     traceExporter: new OTLPTraceExporter({ url: `${base}/v1/traces` }),
+    // correlate-errors-to-traces: adopt the browser's trace id on inbound
+    // requests so a browser-originated call shares one id with the api.
+    // Replaces NodeSDK's default W3C trace+baggage propagator; see the
+    // createTraceContextPropagator() doc for the W3C-wins precedence.
+    textMapPropagator: createTraceContextPropagator(),
     instrumentations: [
       new HttpInstrumentation(),
       new ExpressInstrumentation(),
