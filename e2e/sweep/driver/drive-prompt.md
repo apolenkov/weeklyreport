@@ -39,15 +39,23 @@ browser_wait_for). Snapshots shallow; keep evidence compact.
 
 Procedure (sequential — one shared browser):
 
-1. Log in via the dev-login URL; confirm you land in-app.
-2. For each route in the catalog, in order: navigate (resolve `[reportId]`),
-   wait to settle, read console errors, snapshot shallow, and for each intent
-   observe whether `then` holds — interacting where it is safe and bounded.
+1. Record `startedAt` = current ISO 8601 timestamp (use `new Date().toISOString()`
+   via `browser_evaluate` or note the wall-clock time before step 2).
+2. Log in via the dev-login URL; confirm you land in-app.
+3. For each route in the catalog, in order: record `enteredAt`, navigate
+   (resolve `[reportId]`), wait to settle, read console errors, snapshot
+   shallow, and for each intent observe whether `then` holds — interacting
+   where it is safe and bounded. Record `leftAt` after finishing the route.
    Record contradictions / console errors / failed nav / infinite skeleton /
    layout breaks as candidate anomalies.
-3. CANARY (once, on any route after reading its real console state):
+4. CANARY (once, on any route after reading its real console state):
    `browser_evaluate` function `() => { console.error('DRIVER_CANARY_42'); }`,
    then re-read console errors and confirm `DRIVER_CANARY_42` appears.
+5. Record `endedAt` = current ISO 8601 timestamp.
+
+Persist the per-role report to `e2e/sweep/.reports/<ROLE>-driver.md` BEFORE
+returning the JSON below — write it even if the drive is interrupted, so the
+run window is always recoverable for environment-feedback correlation.
 
 Return ONLY this JSON (no prose):
 
@@ -57,6 +65,13 @@ Return ONLY this JSON (no prose):
   "routesVisited": 0,
   "routesPlanned": 0,
   "canary": { "injected": true, "detected": true },
+  "timeline": {
+    "startedAt": "2026-01-01T00:00:00.000Z",
+    "endedAt": "2026-01-01T00:10:00.000Z",
+    "routes": [
+      { "route": "/example/path", "enteredAt": "2026-01-01T00:01:00.000Z", "leftAt": "2026-01-01T00:02:00.000Z" }
+    ]
+  },
   "candidates": [
     { "route": "", "intentId": "", "kind": "console|flow|nav|render|layout|axe",
       "observed": "", "expected": "", "evidence": "", "severity": "high|medium|low" }

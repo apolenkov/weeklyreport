@@ -97,7 +97,23 @@ const verdicts = await parallel(
     const oracleBlock = hasOracle
       ? `## The oracle
 Read \`/home/user/work/customreport/${catalogPath}\` and find the intent \`${c.intentId}\` — its \`given\`/\`when\`/\`then\`/\`note\` are the intended behavior.`
-      : `## No oracle (free-exploration finding)
+      : c.kind === "env"
+        ? `## Environment-channel finding (no oracle)
+This candidate was emitted by the post-drive environment collector (Phase 2.5),
+not by the browser driver. It is a signal recorded from the server side
+(API log, Loki, Bugsink) or the browser console during the drive window.
+Judge it as a REAL server-side or client-side error when:
+- level is "error" and the message points to an unhandled exception, a 5xx
+  response, or an unexpected thrown error in application code.
+- level is "warn" and the message indicates a non-trivial failure path
+  (e.g. a DB constraint hit, an auth rejection on a route that should succeed,
+  a resource not found that should exist for the seeded user).
+Do NOT dismiss it merely because it originates from the environment rather
+than a direct user action — that is the point of this channel.
+Set isReal=false only when the entry is clearly benign: a known framework
+startup warning, a dev-mode stub message, or a line unrelated to the drive
+session (check the timestamp against the drive window).`
+        : `## No oracle (free-exploration finding)
 This candidate was found exploring a path the catalog does not enumerate, so there is NO documented \`then\`. Judge it ONLY as a hard runtime failure: a genuine crash / unhandled error / failed navigation / broken render that no user should hit. If the failure is environmental (dev-stub, headless, seed state) or expected for the action taken, set isReal=false.`;
 
     return agent(
