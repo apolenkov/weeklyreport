@@ -118,6 +118,7 @@ export default defineConfig([
             "apps/*/*.setup.ts",
             "apps/*/*.test.ts",
             "apps/*/instrumentation.ts",
+            "apps/*/instrumentation-client.ts",
           ],
           maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 32,
         },
