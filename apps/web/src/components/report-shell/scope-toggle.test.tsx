@@ -107,4 +107,15 @@ describe("ScopeToggle", () => {
     );
     expect(container).toMatchSnapshot();
   });
+
+  it("renders index-aware segmented rounding for the two-scope case", () => {
+    const { container } = render(
+      <ScopeToggle
+        value="own"
+        onChange={vi.fn()}
+        allowedScopes={["own", "product"]}
+      />,
+    );
+    expect(container).toMatchSnapshot();
+  });
 });
