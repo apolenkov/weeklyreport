@@ -98,7 +98,7 @@ function getRoleLabel(role: Role): string {
 function isPublishedReportPath(pathname: string): boolean {
   return (
     pathname === "/reports/history" ||
-    /^\/reports\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?:\/present)?$/.test(
+    /^\/reports\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
       pathname,
     )
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, FileDown, Presentation } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Suspense, use } from "react";
 
 import { AgentReviewComingSoon } from "../../../../components/report-shell/agent-review-coming-soon";
@@ -32,9 +32,14 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
   const { authorId } = use(searchParams);
 
   const archiveHref = "/reports?tab=published";
-  const presentHref = `/reports/${reportId}/present`;
-  const printHref = `/print/${reportId}`;
 
+  // fix-report-surface-integrity W2 (task 3.3, report-toolbar-parity): the
+  // standalone Present and browser-Print links are gone. Presentation now
+  // lives inline via `?mode=slides`; the single labeled Export-PDF (the real
+  // async pdfExport.request job) is rendered by WeeklyReportPage's trailing
+  // group for every authenticated role, viewer included — so the viewer keeps
+  // its PDF affordance without the now-broken `/print` deep link (the print
+  // route 308-redirects humans away).
   const viewerActions = (
     <>
       <a
@@ -44,24 +49,6 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         <span>Back to Archive</span>
-      </a>
-      <a
-        href={presentHref}
-        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
-        aria-label="Open presentation"
-      >
-        <Presentation className="h-4 w-4" aria-hidden="true" />
-        <span>Presentation</span>
-      </a>
-      <a
-        href={printHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
-        title="Print report (browser print)"
-      >
-        <FileDown className="h-4 w-4" aria-hidden="true" />
-        <span>Print</span>
       </a>
       <AgentReviewComingSoon />
     </>
