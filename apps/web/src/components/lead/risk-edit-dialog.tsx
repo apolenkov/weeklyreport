@@ -190,7 +190,12 @@ function RiskEditDialogContent({
 
   function setProductAndStages(nextProductId: string) {
     setProductId(nextProductId);
-    setStageIds(stagesForProduct ? [...stagesForProduct(nextProductId)] : []);
+    // W11 (fix-report-surface-integrity 3.10): clear the stage selection on a
+    // product switch. NEVER default to all owned stages — that "covers all"
+    // default is the root cause of the inflated-completeness ("6/7") defect.
+    // The lead marks stages explicitly; the single-owned-stage convenience is
+    // still handled at save time (effectiveStageIds in handleSave).
+    setStageIds([]);
   }
 
   function handleSave() {

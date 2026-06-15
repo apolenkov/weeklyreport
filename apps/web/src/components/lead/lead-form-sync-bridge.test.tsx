@@ -542,6 +542,81 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     // No derived status was persisted onto the products.
     expect(onProductsChangeSpy).not.toHaveBeenCalled();
   });
+
+  it("W11: an OWN risk that explicitly stages an empty owned stage ticks the pill in-session (no reload)", () => {
+    // fix-report-surface-integrity W11: ctx.products is stable across a risk add,
+    // so the bridge re-derives coveredByOwnRisk at render. A risk the lead staged
+    // on the empty Dev stage makes it count → pill goes 1/2 → 2/2 with no reload.
+    const product = buildProduct({
+      stages: [
+        {
+          stageName: "Dev",
+          status: "empty",
+          ownership: "mine",
+          assignee: "Lead",
+        },
+        {
+          stageName: "Testing",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "Lead",
+        },
+      ],
+    });
+    const ownStagedRisk: RiskEntry = {
+      id: "r-dev",
+      productId: "crm",
+      productName: "CRM Platform",
+      stageIds: ["Dev"],
+      severity: "blocked",
+      text: "Dev environment down",
+      impact: "Cannot ship",
+      mitigation: "Escalate",
+    };
+    const { container } = render(
+      <Harness initialProducts={[product]} initialRisks={[ownStagedRisk]} />,
+    );
+    const pill = container.querySelector("[data-complete]");
+    expect(pill?.textContent).toContain("2/2 stages");
+    expect(pill?.getAttribute("data-complete")).toBe("true");
+  });
+
+  it("W11: a covers-all (stageIds: []) risk does NOT tick the pill (root-cause guard)", () => {
+    // The legacy "covers all" default is exactly the original defect; an empty
+    // stageIds must never count an untouched stage. Dev stays uncounted → 1/2.
+    const product = buildProduct({
+      stages: [
+        {
+          stageName: "Dev",
+          status: "empty",
+          ownership: "mine",
+          assignee: "Lead",
+        },
+        {
+          stageName: "Testing",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "Lead",
+        },
+      ],
+    });
+    const coversAllRisk: RiskEntry = {
+      id: "r-all",
+      productId: "crm",
+      productName: "CRM Platform",
+      stageIds: [],
+      severity: "blocked",
+      text: "Product-wide blocker",
+      impact: "Broad",
+      mitigation: "Escalate",
+    };
+    const { container } = render(
+      <Harness initialProducts={[product]} initialRisks={[coversAllRisk]} />,
+    );
+    const pill = container.querySelector("[data-complete]");
+    expect(pill?.textContent).toContain("1/2 stages");
+    expect(pill?.getAttribute("data-complete")).toBe("false");
+  });
 });
 
 // ---------------------------------------------------------------------------
