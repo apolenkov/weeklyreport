@@ -336,14 +336,22 @@ export function stageNamesMatch(a: string, b: string): boolean {
  * are flagged `mine`; the rest stay `unassigned`.
  *
  * rethink-pipeline-state-vs-completeness (D1): an EMPTY owned stage — one the
- * lead never set a status on — stays `empty` even when a covering risk exists.
- * The risk-derived severity floor for DISPLAY is re-applied at render by the
- * live form's `applyRiskSeverityFloor` (and the slide export's
- * `floorSlideStageStatus`), so the chip still shows the risk severity. But the
- * read-model `status` that feeds own-input completeness must NOT be floored for
- * an untouched stage — otherwise an Add-Risk cycle (the dialog defaults to all
- * stages checked) would floor every empty stage to a severity and inflate the
- * counter to "your input is complete" for stages the lead never touched.
+ * lead never set a status on — keeps its raw `status: "empty"` even when a
+ * covering risk exists. The risk-derived severity floor for DISPLAY is
+ * re-applied at render by the live form's `applyRiskSeverityFloor` (and the
+ * slide export's `floorSlideStageStatus`), so the chip still shows the risk
+ * severity. The raw `status` must NOT be floored for an untouched stage:
+ * flooring would erase the chip's risk-covered-vs-status-set distinction
+ * (W11 task 3.9) and would count foreign/covers-all-covered stages toward
+ * own-input completeness.
+ *
+ * fix-report-surface-integrity W11: own-input completeness no longer reads the
+ * raw `status` alone — it counts a stage when `status !== "empty"` OR the lead's
+ * OWN risk EXPLICITLY names it (`coveredByOwnRisk`, set below). So an empty stage
+ * the lead deliberately staged a risk on DOES count, while its raw `status`
+ * stays `empty` for the chip distinction. A covers-all (`stageIds: []`) or legacy
+ * stage-less risk is excluded, so it never inflates the counter (the old "all
+ * stages checked" Add-Risk footgun).
  *
  * A stage the lead DID touch (explicit on-track/at-risk/blocked) still flows
  * through `deriveEffectiveStageStatus`: it floors up to a worse covering risk
@@ -365,8 +373,10 @@ function buildStageGrid(
       const explicit = trafficToStageStatus(ownedStage.status ?? null);
       return {
         stageName,
-        // An untouched stage stays empty (completeness reads this raw status);
-        // a touched stage derives floor-up / collapse-down from covering risks.
+        // An untouched stage keeps raw `status: "empty"` (the chip distinction
+        // reads it; completeness counts it via `coveredByOwnRisk` below, not via
+        // this status). A touched stage derives floor-up / collapse-down from
+        // covering risks.
         // unify-risk-stage-status: empty/undefined stageIds means the risk
         // covers every owned stage — route through `riskCoversStage` so the
         // read model agrees with the live form on legacy stage-less risks.
@@ -422,7 +432,9 @@ export function mapLeadProducts(
     const overallStatus = trafficToStageStatus(p.trafficLight);
     // rethink-pipeline-state-vs-completeness (D1): pass the covering risks so a
     // TOUCHED stage floors up / collapses down correctly, while an UNTOUCHED
-    // (empty) stage stays empty for own-input completeness (see buildStageGrid).
+    // (empty) stage keeps raw `status: "empty"` (see buildStageGrid). W11:
+    // buildStageGrid also tags it `coveredByOwnRisk` when an own risk names it,
+    // which is how an empty-but-risk-staged stage counts toward completeness.
     const coveringRisks = section.risks.filter(
       (r) => r.projectId === p.projectId && r.risk.trim().length > 0,
     );
