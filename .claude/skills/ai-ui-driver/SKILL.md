@@ -34,8 +34,8 @@ This skill orchestrates artifacts that already live in the repo. Read them at
 run time rather than copying their contents here — if they change, the skill
 must not drift from them.
 
-- `e2e/sweep/driver/README.md` — the two-phase Driver design, server ports/env,
-  and the loopback-proxy note.
+- `e2e/sweep/driver/README.md` — the Driver design (phases, env-feedback
+  channels, liveness contract), server ports/env, and the loopback-proxy note.
 - `e2e/sweep/driver/drive-prompt.md` — the verbatim parametric drive prompt with
   the per-role table (seeded email + landing route per role).
 - `e2e/catalog/<role>.yaml` — the oracle catalogs. Each `intents[]` has
@@ -57,11 +57,12 @@ below (environment cannot be recovered; a finding needs a product decision).
 Drive is sequential (one shared browser); verify fans out.
 
 ```
-Phase 0  Environment        auto-recover → hard-stop if it can't be made healthy
-Phase 1  Catalog drive      one sonnet sub-agent per role, sequential, canary
-Phase 2  Free exploration   bounded novelty pass, loop-until-dry, crashes only
-Phase 3  Verify             bundled Workflow, then Opus re-verify BOTH ways
-Phase 4  Package            one OpenSpec change via openspec-propose
+Phase 0    Environment        auto-recover → hard-stop if it can't be made healthy
+Phase 1    Catalog drive      one sonnet sub-agent per role, sequential, canary
+Phase 2    Free exploration   bounded novelty pass, loop-until-dry, crashes only
+Phase 2.5  Env feedback       collect-env-feedback.mjs sweeps 4 channels, correl. to timeline
+Phase 3    Verify             bundled Workflow, then Opus re-verify BOTH ways
+Phase 4    Package            one OpenSpec change via openspec-propose
 ```
 
 ### Phase 0 — Environment (auto-recover, idempotent, hard-stop)
@@ -136,6 +137,22 @@ so it judges by hard failures only.
   _proposed new catalog intent_ in Phase 4 (oracle self-improvement), never a
   silent edit to the catalog.
 
+### Phase 2.5 — Environment feedback (post-drive, pre-verify)
+
+After the free-exploration pass for each role, run the bundled collector before
+the verify fan-out. Full channel list, liveness contract, and canary-rule are
+documented in `e2e/sweep/driver/README.md` Phase 2.5 (the canonical home —
+do not duplicate here):
+
+```
+node .claude/skills/ai-ui-driver/scripts/collect-env-feedback.mjs \
+  '{"role":"<role>","timeline":<timeline-from-drive-json>}'
+```
+
+The collector appends an "Environment feedback" section to the per-role report
+(`e2e/sweep/.reports/<role>-driver.md`) and returns hits as Phase-3 candidates
+with `kind: "env"` and no `intentId`.
+
 ### Phase 3 — Verify (Workflow first, then Opus re-verify BOTH ways)
 
 Raw driver output is a false-positive factory. Run the bundled verify Workflow
@@ -190,6 +207,9 @@ bugs" that floods you with false positives. Keep them.
 
 - **Canary or it is blind.** Empty findings without `canary.detected=true` are
   meaningless — the capture path was dead, not the app clean.
+- **Channel-canary rule (Phase 2.5).** A blind channel is never clean. An env
+  channel that could not be reached must be reported as `blind`, not silently
+  omitted. Empty-from-blind ≠ no errors.
 - **Verify, then re-verify both ways.** The skeptic errs in both directions.
   Reproduce in the browser; check shared-component blast-radius. (See memory
   `driver-verify-skeptic-fallible`.)

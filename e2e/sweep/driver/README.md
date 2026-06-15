@@ -7,8 +7,9 @@ route loads + axe + console), the Driver explores *within-route flow and logic*
 documented intent in the Scenario Catalog (`e2e/catalog/<role>.yaml`). It finds
 the flow/logic bugs the sweep cannot, by design.
 
-It runs in **two phases**, deliberately kept low-overhead (one shared browser →
-the drive is sequential; only verification fans out):
+It runs in **four phases** (drive → environment feedback → verify → output),
+deliberately kept low-overhead (one shared browser → the drive is sequential;
+only verification fans out):
 
 ## Phase 1 — Drive (one agent per role, sequential)
 
@@ -26,9 +27,13 @@ cd apps/api && PORT=3101 AUTH_DEV_MODE=true NODE_ENV=test \
   node --env-file=../../.env --import @swc-node/register/esm-register src/main.ts &
 
 # Web (port 3100) — NEXT_PUBLIC_DISABLE_DEVTOOLS keeps the Agentation widget out
+# NEXT_PUBLIC_SENTRY_DSN wires web error boundaries to Bugsink so browser-side
+# errors surface in the environment-feedback channel (Phase 2.5). Copy the DSN
+# from http://localhost:8000 after creating a project there.
 NEXT_PUBLIC_API_URL=http://127.0.0.1:3101 AUTH_DEV_MODE=true NODE_ENV=test \
   NEXT_PUBLIC_AUTH_STUB=true NEXT_PUBLIC_DISABLE_DEVTOOLS=true \
   NEXT_DIST_DIR=.next-sweep \
+  NEXT_PUBLIC_SENTRY_DSN="${NEXT_PUBLIC_SENTRY_DSN}" \
   pnpm --filter @customreport/web exec next dev -p 3100 &
 ```
 
@@ -36,6 +41,13 @@ Loopback proxy note: if the machine sets `HTTP_PROXY` without `127.0.0.1` in
 `NO_PROXY`, plain `fetch`/`curl` to the app may 502 — the Playwright-MCP
 Chromium is unaffected (it does not use the env proxy), but see
 `e2e/no-proxy-localhost.ts` for the sweep's fix.
+
+Native OTLP note: the API start command above loads `.env` via `--env-file`,
+which defaults `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-lgtm:4318` — a Docker
+hostname that only resolves inside Compose. For the native sweep API to ship
+logs to Loki, set `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318` in your
+shell before starting the API (or the collector degrades gracefully when the
+Loki channel has no streams — it marks the channel "blind", not "clean").
 
 Drive protocol (the agent prompt), parametric in `<role>`:
 
@@ -63,7 +75,32 @@ The verbatim, parametric prompt lives in `drive-prompt.md` (this directory) with
 a per-role substitution table — copy it and swap `<ROLE>`, the seeded email, and
 the landing route to drive another role.
 
-## Phase 2 — Verify (adversarial fan-out)
+## Phase 2.5 — Environment feedback (post-drive, pre-verify)
+
+After the drive and before the verify fan-out, the bundled collector
+(`collect-env-feedback.mjs`) sweeps four environment channels for signal
+that occurred during the drive window recorded in the `timeline` block:
+
+1. **Browser console** — `.playwright-mcp/console-*.log`, filtered to the
+   run window. The `DRIVER_CANARY_42` injection proves this channel is live.
+2. **API log** — `apps/api/.logs/driver/app.log`, filtered by JSON `timestamp`
+   and `"level":"error|warn"`. Never bare-grep: SQL column names in debug
+   lines false-positive.
+3. **Bugsink** — HTTP API at `http://localhost:8000`; lists events created
+   in the run window (single-user mode, no auth required).
+4. **Loki** — Grafana datasource proxy at `http://localhost:3003`; the
+   collector uses Node's built-in `fetch` (which ignores `HTTP_PROXY`),
+   so no `--noproxy` flag is needed.
+
+**Channel liveness contract:** each channel reports `reachable` / `hasStreams`
+/ `blind`. An empty result from a blind channel is **not clean** — report it
+as blind. "Silence is not success" (Monitor principle).
+
+Correlated hits flow into Phase 3 as candidates with `kind: "env"` and no
+`intentId` (no oracle, judged as hard failures). See `SKILL.md` for the full
+skill orchestration.
+
+## Phase 3 — Verify (adversarial fan-out)
 
 Raw driver output is a known false-positive factory (the 621→10 sweep lesson),
 so every candidate is judged by an **independent, code-reading skeptic** that
