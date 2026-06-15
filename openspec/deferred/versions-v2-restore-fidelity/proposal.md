@@ -13,10 +13,17 @@ The 2026-06-11 fidelity bug killed versions v1: restoring v3 showed
 stage chip statuses that did not match the saved state. The invariant
 versions v2 must satisfy is:
 
-**A version must fully determine everything visible on the lead report
-page.** Restoring version N and reloading must render exactly what the
-page rendered when N was captured — no field excepted, no silent merge
-with current state.
+**A version fully determines the section's OWNED content as captured.**
+Restoring version N reinstates every author-editable owned field exactly
+as it was at capture — no owned field excepted, no silent merge with
+current state. Master / foreign data (project name/archive, stage
+assignments, author identity, referenced-project names, cross-author
+overlays) renders **LIVE** and is pinned from the CURRENT section at
+restore, never snapshotted. The narrowing is deliberate: v1's actual bug
+was OWNED stage statuses being merged on restore, not master-data drift;
+versioning foreign master data is out of scope for a 6-user internal tool
+and would wrongly freeze the department's org chart. See `design.md` for
+the precise `ownedContentProjection` contract.
 
 ### Root causes in v1 (verified in git history, pre-`7d8ace5d`)
 
@@ -40,24 +47,37 @@ with current state.
    was introduced without extending the snapshot shape. Each new lead
    surface field was a latent fidelity bug.
 
-### What the lead page actually renders (the fidelity surface)
+### The OWNED, restorable surface (what a snapshot carries)
 
-From the current read model (`reportSectionFullInclude` +
-`mapPrismaToReportSection`):
+The contract is over the section's OWNED, author-editable content — the
+`ownedContentProjection` in `design.md`, the slice the lead's own writer
+reinstates. From the read model (`reportSectionFullInclude` +
+`mapPrismaToReportSection`), the SNAPSHOTTED & RESTORED fields are:
 
 - `items` (current/next week, incl. `priorityRank`, `stageNames`,
   `workflowStatus`, `carriedOver`, `completed`, tag, project link);
 - `risks` (severity, impact, mitigation, `stageNames`, project link);
 - `decisions` (owner, deadline, impact, `resolvedAt`, `stageNames`,
   product link);
-- `projectStatuses` (per-product traffic lights) — MISSED by v1;
-- `stageStatuses` (per product×stage chip colors) — partially handled
-  by v1;
-- section meta rendered on the page: `status`, `submittedAt`, `late`.
+- owned `projectStatuses` (per-product traffic lights) — MISSED by v1 —
+  folded into `projects[].trafficLight`;
+- owned `stageStatuses` (per product×stage chip colors) — partially
+  handled by v1 — folded into `projects[].ownedStages[].status`.
 
-Anything in this list that a snapshot does not carry violates the
-invariant. The list itself will grow; the design must make growth fail
+These are the OWNED fields; anything here a snapshot does not carry
+violates the invariant. The drift guard must make owned-field growth fail
 loudly (see Option A, drift guard).
+
+**NOT in the round-trip equality set:**
+
+- Section lifecycle meta `status` / `submittedAt` / `late` is
+  **OVERLAY-METADATA**: captured for display in the version overlay, but
+  **pinned-from-live** on restore (a stale snapshot must never flip a
+  section's status) and never compared in the round-trip.
+- Master / foreign data (project name/archive, stage assignments,
+  `authorName` / `authorRole`, `referencedProjects`, cross-author
+  overlays) renders LIVE and is pinned from the CURRENT section, never
+  snapshotted.
 
 ## Options
 
@@ -66,14 +86,17 @@ loudly (see Option A, drift guard).
 One JSON snapshot per version, as in v1, but with three structural
 fixes:
 
-1. **Capture = the render projection.** The snapshot payload is built
-   from the same read model that renders the page (one shared
-   projection function in the repository/service layer), not from a
-   parallel hand-written serializer. A type-level drift guard in
-   `packages/shared` (snapshot Zod schema declared `satisfies` a
-   key-complete mapping of the section read model's renderable fields)
-   makes `pnpm typecheck` fail when a renderable field is added but
-   not snapshotted.
+1. **Capture = the owned content projection.** The snapshot payload is
+   the `ownedContentProjection` — the OWNED slice of the same read model
+   that renders the page (one shared projection function in the
+   repository/service layer), not a parallel hand-written serializer.
+   A type-level drift guard in `packages/shared` binds the snapshot Zod
+   schema to the owned-projection type by **deep exact-key** equality
+   (`ExactDeep`, recursing into `items[]` / `risks[]` / `decisions[]` /
+   `ownedStages[]` elements — NOT top-level-only), so `pnpm typecheck`
+   fails when an owned renderable field is added at any level but not
+   snapshotted. Lifecycle meta and master/foreign data are deliberately
+   outside this set (pinned-from-live; see the OWNED surface above).
 2. **`schemaVersion` in every snapshot.** A named const
    (`SNAPSHOT_SCHEMA_VERSION`) is stored inside the payload. Restore
    parses the payload with the strict Zod schema for that
@@ -140,12 +163,17 @@ for a feature one page uses. Disproportionate. Rejected.
    "undo the restore" is just another restore. This is the
    Google-Docs-style semantics users already expect.
 2. **Round-trip fidelity is the gating contract.** An integration test
-   asserts deep equality of the mapped read model before snapshot and
-   after restore, for a section exercising EVERY renderable field
-   (items with priorities, risks, decisions, project statuses, stage
-   statuses). A second guard test (or the type-level `satisfies`
-   check) fails when the read model gains a renderable field the
-   snapshot schema lacks.
+   asserts deep equality of the `ownedContentProjection` before snapshot
+   and after restore, for a section exercising EVERY owned renderable
+   field (items with priorities, risks, decisions, owned project +
+   stage statuses, both `trafficLight` fold branches). A page-layer test
+   also covers the owned chips through `mapLeadFormData` +
+   `applyCrossAuthorStageOverrides`, asserting cross-author overlays and
+   foreign rows stay LIVE. A separate lifecycle test asserts
+   `status` / `submittedAt` / `late` are pinned-from-live (never the
+   snapshot's). The deep exact-key (`ExactDeep`) type guard fails when the
+   owned projection gains a renderable field — at any nesting level — that
+   the snapshot schema lacks.
 3. **Lock interactions (publish/period/submit):**
    - Snapshot writes follow the existing save gate: no snapshots on
      submitted sections or non-open periods (v1 already did this —
@@ -188,9 +216,11 @@ for a feature one page uses. Disproportionate. Rejected.
 
 ## Impact (anticipated)
 
-- `prisma/schema.prisma`: re-add a `VersionSnapshot` model
-  (+ `schemaVersion Int` column or in-payload field; decide at design
-  time) and the `ReportSection.versionSnapshots` relation; hand-sync
+- `prisma/schema.prisma`: re-add a `VersionSnapshot` model with a
+  denormalized `schemaVersion Int` column AND the `{schemaVersion, data}`
+  in-payload envelope (design decided BOTH — column aids
+  retention/migration queries, envelope is the discriminated-parse source
+  of truth) and the `ReportSection.versionSnapshots` relation; hand-sync
   the init migration; `migrate reset` `_dev`/`_test`.
 - `packages/shared`: snapshot payload Zod schema with `schemaVersion`,
   drift-guard type, restored history fields if `myHistory` re-adopts

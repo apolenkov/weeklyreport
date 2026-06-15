@@ -5,17 +5,21 @@
 
 ## 1. Design ratification
 
-- [ ] 1.1 Grill the recommendation (Option A + restore-creates-a-version)
-      with the user; record decisions in `design.md`.
-- [ ] 1.2 Decide `schemaVersion` placement: dedicated column vs
-      in-payload field (proposal leans in-payload + Zod discriminated
-      parsing; column helps retention/migration queries).
-- [ ] 1.3 Decide whether pinning (`add-version-pin` semantics) returns
-      in v2 or stays out of scope.
-- [ ] 1.4 Confirm the renderable-field inventory against the LIVE read
-      model at implementation time (it may have grown since this
-      draft): items, risks, decisions, projectStatuses, stageStatuses,
-      section meta.
+- [x] 1.1 Ratified in `design.md`: Option A + restore-creates-a-version
+      (restore = `saveSection(snapshot read model)`, atomic full replace,
+      throttle-exempt pre-restore safety snapshot).
+- [x] 1.2 Decided in `design.md`: BOTH — in-payload envelope
+      `{ schemaVersion, data }` is the discriminated-union parse source
+      of truth; a denormalized `schemaVersion Int` column aids
+      retention/migration queries. Unknown/no-migration version → refuse,
+      never merge.
+- [x] 1.3 Decided in `design.md`: pinning OUT of scope (user has not
+      re-asked); no `pinned` kind, no pin control.
+- [x] 1.4 Inventory captured in `design.md` from the LIVE read model.
+      Load-bearing: the read model has no separate `projectStatuses` /
+      `stageStatuses` arrays — they fold into `projects[].trafficLight`
+      and `projects[].ownedStages[].status`. Grown since draft: `late`,
+      `referencedProjects`, `authorRole`, `priorityRank`.
 
 ## 2. Shared contracts
 
@@ -69,3 +73,37 @@
 - [ ] 5.5 Drift guard proven: temporarily add a renderable field in a
       type test and assert typecheck/test failure mode works.
 - [ ] 5.6 Gates: `pnpm typecheck && pnpm lint && pnpm test && pnpm build`.
+
+## Remaining work (deferred 2026-06-15, NOT done) — supervised finish required
+
+The DESIGN is Codex-approved (3 rounds). The BACKEND CORE is implemented,
+reviewed (2 Opus lenses), and the fidelity safety net is real + proven:
+contract 4/4 + page-fold 2/2; CAS / schema-refusal / lifecycle-pinning / both
+fold branches confirmed sound; the drift guard now trips a compile error on a
+new owned read-model field. The methods are UNREACHABLE (no tRPC, no web).
+
+Before this is a usable, safe feature, a supervised session must:
+
+- [ ] R1 [MAJOR] Server-side lock gate: `restoreVersion` takes no `userId` and
+      enforces no own/draft/open-period check. Add `userId`; enforce in the
+      service (mirror `fillFrom`). BLOCKING before wiring. (race lens RACE-1)
+- [ ] R2 [MAJOR] Version-number race: snapshot create does read-max+1 with no
+      transaction → unhandled P2002 under concurrency. Wrap in a tx with a lock,
+      or catch P2002 + retry. (race lens RACE-2)
+- [ ] R3 [MINOR] Pre-restore safety snapshot orphans on a CAS abort (commits
+      before the guarded write). CAS-check first, or document as harmless.
+- [ ] R4 [MINOR] `restoreVersion` returns a misleading `newVersion`
+      (version+1 of the restored-from, not the true max). Query max(version).
+- [ ] R5 [MINOR] `restoreSectionContent` CAS wrapper is duplicated in two repos.
+      Consolidate to one (writeOwnedChildRows is already shared).
+- [ ] R6 [MINOR/LATENT] writeOwnedChildRows drops decisions with null productId;
+      snapshot schema permits null. Aligns only because DB productId is NOT NULL.
+- [ ] R7 tRPC procedures at the TODO(versions-v2) marker (trpc.router.ts:1986):
+      list / getVersion (read-only overlay) / restoreVersion. Apply R1's gate.
+- [ ] R8 Web: replace VersionComingSoonControl with the real history-nav UI;
+      on restore enter a hard autosave-paused state + quiesce() (await in-flight
+      AND queued saves) before issuing restore; pass the captured updatedAt for
+      the CAS; remove the stale client snapshot trigger (lead-form.tsx:593).
+- [ ] R9 Wire the autosave-snapshot trigger into the server saveDraft flow.
+- [ ] R10 Live-walk the lead report page through capture -> restore in the
+      browser (the fold claim is grounded in source, not yet empirically walked).
