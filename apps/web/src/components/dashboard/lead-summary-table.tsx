@@ -153,7 +153,7 @@ export function LeadSummaryTable({ leads, reportId }: LeadSummaryTableProps) {
                   </th>
                   <td className="px-5 py-3">
                     <span
-                      className={`inline-flex items-center rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-xs font-semibold ${
+                      className={`inline-flex items-center whitespace-nowrap rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-xs font-semibold ${
                         STATUS_CLASSES[lead.status]
                       }`}
                     >
