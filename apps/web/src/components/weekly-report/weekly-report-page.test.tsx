@@ -12,7 +12,7 @@
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
@@ -642,6 +642,87 @@ describe("WeeklyReportPage — shared period toolbar (head-toolbar-parity)", () 
       customAction.compareDocumentPosition(exportPdf) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+});
+
+// report-toolbar-parity + head-toolbar-semantics: the single labeled Export-PDF
+// moved OUT of the header action row INTO the shared ReportToolbar trailing
+// group; the publish precondition hint sits on the report-status row.
+describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
+  it("renders exactly one Export-PDF, inside the toolbar trailing group (not the header)", async () => {
+    renderPage(makeWeeklyReportData("published"));
+    await screen.findByRole("heading", { name: /status report/i });
+
+    const exportButtons = screen.getAllByRole("button", {
+      name: /export pdf/i,
+    });
+    expect(exportButtons).toHaveLength(1);
+
+    // The single Export-PDF lives in the shared ReportToolbar, not the header.
+    const toolbar = screen.getByTestId("report-toolbar");
+    expect(
+      within(toolbar).getByRole("button", { name: /export pdf/i }),
+    ).toBeInTheDocument();
+    const header = screen
+      .getByRole("heading", { name: /status report/i })
+      .closest("header");
+    expect(header).not.toBeNull();
+    expect(
+      within(header!).queryByRole("button", {
+        name: /export pdf/i,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the publish precondition hint on the status row, NOT the action row", async () => {
+    renderPage({
+      ...makeWeeklyReportData("open", {
+        portfolioOverview: [],
+        leadSections: [],
+      }),
+      submissionCount: 0,
+    });
+    await screen.findByRole("heading", { name: /status report/i });
+
+    // The spec pins PLACEMENT: the hint shares the status-pill cluster and must
+    // NOT sit in the action cluster. Discriminate the two divs explicitly.
+    // 1) Same container as the status pill ("Live · X/Y Submitted").
+    const statusPill = screen.getByText(/live . 0\/6 submitted/i);
+    const statusRow = statusPill.parentElement!;
+    expect(
+      within(statusRow).getByText(/no submitted report content yet/i),
+    ).toBeInTheDocument();
+    // 2) NOT inside the publish button's action container.
+    const publishButton = screen.getByRole("button", {
+      name: /nothing to publish/i,
+    });
+    const actionRow = publishButton.parentElement!;
+    expect(
+      within(actionRow).queryByText(/no submitted report content yet/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides the publish hint from the viewer (no publish capability)", async () => {
+    renderPage(
+      {
+        ...makeWeeklyReportData("open", {
+          portfolioOverview: [],
+          leadSections: [],
+        }),
+        submissionCount: 0,
+      },
+      undefined,
+      "viewer",
+    );
+    await screen.findByRole("heading", { name: /status report/i });
+    expect(
+      screen.queryByText(/no submitted report content yet/i),
+    ).not.toBeInTheDocument();
   });
 });
 

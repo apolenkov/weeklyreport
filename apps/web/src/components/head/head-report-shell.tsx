@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { FileDown, Presentation } from "lucide-react";
 import { Suspense, useCallback, useContext, useMemo, useState } from "react";
 
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
@@ -19,6 +18,7 @@ import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
 import { ViewModeToggle } from "../report-shell/view-mode-toggle";
 import { HeadSlidesClient } from "../slides/head-slides-client";
 import { SlideSkeleton } from "../slides/slide-skeleton";
+import { ExportPdfButton } from "../weekly-report/export-pdf-button";
 import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
 import { WeeklyReportSkeleton } from "../weekly-report/weekly-report-skeleton";
 
@@ -145,9 +145,10 @@ export function HeadReportShell({
   const [scope, setScope] = useState<ScopeValue>("product");
   const reportScope = scope === "lead" ? "lead" : "product";
 
-  const presentHref = `/head/report/${encodeURIComponent(reportId)}/present`;
-  const printHref = `/print/${encodeURIComponent(reportId)}`;
-
+  // head-toolbar-semantics + report-toolbar-parity: the standalone Present and
+  // browser-Print header links are removed. Presentation is reached via the
+  // ViewModeToggle Slides mode; the only export is the single labeled
+  // Export-PDF in the ReportToolbar trailing group below.
   const headerActions = (
     <>
       <ScopeToggle
@@ -156,24 +157,6 @@ export function HeadReportShell({
         allowedScopes={["product", "lead"]}
       />
       <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
-      <a
-        href={presentHref}
-        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
-        title="Open presentation"
-      >
-        <Presentation className="h-4 w-4" aria-hidden="true" />
-        <span>Present</span>
-      </a>
-      <a
-        href={printHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
-        title="Print report (browser print)"
-      >
-        <FileDown className="h-4 w-4" aria-hidden="true" />
-        <span>Print</span>
-      </a>
       {/* one-placeholder-per-surface (mount-agent-review-placeholder): slides
           mode already carries an Agent-review placeholder inside the head slide
           deck (status-slide-deck.tsx), so the header only mounts one in form
@@ -181,6 +164,20 @@ export function HeadReportShell({
       {mode === "form" ? <AgentReviewComingSoon /> : null}
     </>
   );
+
+  // report-toolbar-parity: exactly one labeled Export-PDF lives in the shared
+  // toolbar's trailing group. In head form mode the rendered toolbar IS this
+  // one (passed into WeeklyReportPage's `toolbar` slot), so the export action
+  // must be built here. It renders only for a resolvable active period, with
+  // the displayed period's lifecycle status driving its enabled state.
+  const displayed = displayedQ.data;
+  const exportPdf =
+    displayed && displayed.status !== "no-period" ? (
+      <ExportPdfButton
+        reportId={displayed.reportId}
+        periodStatus={displayed.periodStatus}
+      />
+    ) : undefined;
 
   // Single period toolbar (UAT 2026-05-22 done-condition 10 +
   // head-toolbar-parity D2): period navigator + archive toggle so head can
@@ -205,6 +202,7 @@ export function HeadReportShell({
           detail="Live portfolio review"
         />
       }
+      trailingExtras={exportPdf}
     />
   );
 

@@ -12,7 +12,7 @@ mandatory where noted. UI strings stay English.
 
 ## 1. shared / ui
 
-- [ ] 1.1 ui: a 32×32 inert ComingSoon icon export control for the lead toolbar (mirror
+- [x] 1.1 ui: a 32×32 inert ComingSoon icon export control for the lead toolbar (mirror
       `VersionComingSoonControl`); `TODO(lead-pdf-export)` at the activation point. (W2)
 - [ ] 1.2 shared/types: add a `coveredByOwnRisk` annotation to the raw-stage shape consumed by
       `computeCompleteness` (or the mapper output type). (W11)
@@ -33,9 +33,9 @@ mandatory where noted. UI strings stay English.
 
 ## 3. web
 
-- [ ] 3.1 Head report header → lean lead shape: status pill left; toggles + actions right;
+- [x] 3.1 Head report header → lean lead shape: status pill left; toggles + actions right;
       single `ReportToolbar` period row; publish hint on the status row. (W1)
-- [ ] 3.2 Presentation/export: one labeled Export-PDF in the toolbar trailing group; remove the
+- [x] 3.2 Presentation/export: one labeled Export-PDF in the toolbar trailing group; remove the
       Present + browser-Print header links; lead shows the ComingSoon control from 1.1. (W2)
 - [ ] 3.3 Routing: `/present` → 308 `?mode=slides` (head + viewer); `/print/[id]` worker-only
       with the role-specific human-redirect discriminator; update nav active-matching,

@@ -86,6 +86,10 @@ vi.mock("@tanstack/react-query", async () => {
         error: null,
       };
     }),
+    // ExportPdfButton (rendered in the shell toolbar trailing group) calls
+    // useMutation for pdfExport.request. Stub it so the shell mounts without a
+    // QueryClientProvider; these tests do not exercise export behavior.
+    useMutation: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   };
 });
 
@@ -103,6 +107,15 @@ vi.mock("../../lib/trpc-context", () => ({
         queryOptions: (input?: { reportId?: string }) => ({
           queryKey: ["weeklyReport.get", input?.reportId ?? null],
         }),
+      },
+    },
+    // report-toolbar-parity: the shell toolbar now renders ExportPdfButton in
+    // its trailing group, which calls these on every render. Stub the surface
+    // so the shell mounts without throwing.
+    pdfExport: {
+      request: { mutationOptions: () => ({}) },
+      status: {
+        queryOptions: () => ({ queryKey: ["pdfExport.status"] }),
       },
     },
   }),
@@ -155,61 +168,101 @@ describe("HeadReportShell — single shared toolbar (head-toolbar-parity)", () =
 
   it("the toolbar sits below the page header action row (lead arrangement)", () => {
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
-    const headerAction = screen.getByRole("link", { name: /present/i });
+    // Anchor on the view-mode Slides link in the header action cluster: the
+    // shared toolbar must follow it in document order (header row first).
+    const headerAction = screen.getByRole("link", { name: /slides/i });
     const toolbar = screen.getByTestId("report-toolbar");
     const position = headerAction.compareDocumentPosition(toolbar);
     expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 
-// unify-top-action-toolbars D1/D3: the head action controls sit in the same
-// unframed page-header cluster as lead. Pin that the controls are present in
-// the headerActions slot and that the Present/Print hrefs are preserved.
-describe("HeadReportShell — header action cluster (unify-top-action-toolbars)", () => {
-  it("renders the action controls inside WeeklyReportPage headerActions", () => {
+// head-toolbar-semantics + report-toolbar-parity: the header action cluster
+// keeps the segmented toggles and the agent-review placeholder, but the
+// standalone Present and browser-Print links are GONE. Presentation is reached
+// via the ViewModeToggle Slides mode; the only export is the single labeled
+// Export-PDF in the ReportToolbar trailing group.
+describe("HeadReportShell — header action cluster (head-toolbar-semantics)", () => {
+  // Wire an ACTIVE displayed period so the shell's Export-PDF renders (it is
+  // gated on an active, resolvable period). compiledHistory stays empty.
+  function wireActivePeriod() {
+    const impl = (opts: { queryKey?: unknown[] }) => {
+      const key = opts.queryKey?.[0];
+      if (key === "weeklyReport.get") {
+        return {
+          data: {
+            status: "active",
+            reportId: TEST_REPORT_ID,
+            periodStart: "2026-06-08T00:00:00.000Z",
+            periodEnd: "2026-06-14T00:00:00.000Z",
+            periodStatus: "published",
+          },
+          isLoading: false,
+          isError: false,
+          error: null,
+        };
+      }
+      return {
+        data: { entries: [] },
+        isLoading: false,
+        isError: false,
+        error: null,
+      };
+    };
+    vi.mocked(useQuery).mockImplementation(impl as unknown as typeof useQuery);
+  }
+
+  it("renders the toggles and agent-review in headerActions, with NO Present/Print links", () => {
+    wireActivePeriod();
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
     const headerActions = screen.getByTestId("weekly-report-header-actions");
     expect(screen.queryByTestId("report-actions-pill")).not.toBeInTheDocument();
     // Header cluster: scope toggle (radiogroup) + view-mode toggle (Edit/Slides).
-    // The next/link mock drops aria-label, so match the segment text instead.
     expect(within(headerActions).getByRole("radiogroup")).toBeInTheDocument();
     expect(
       within(headerActions).getByRole("link", { name: /slides/i }),
     ).toBeInTheDocument();
     expect(
-      within(headerActions).getByRole("link", { name: /present/i }),
-    ).toBeInTheDocument();
-    expect(
-      within(headerActions).getByRole("link", { name: /print/i }),
-    ).toBeInTheDocument();
-    expect(
       within(headerActions).getByTestId("agent-review-coming-soon"),
     ).toBeInTheDocument();
+    // Present + browser-Print header links are removed entirely.
+    expect(
+      screen.queryByRole("link", { name: /present/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /print/i }),
+    ).not.toBeInTheDocument();
   });
 
-  it("preserves the Present and Print hrefs", () => {
+  it("renders exactly one labeled Export-PDF inside the toolbar trailing group", () => {
+    wireActivePeriod();
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
-    expect(screen.getByRole("link", { name: /present/i })).toHaveAttribute(
-      "href",
-      `/head/report/${TEST_REPORT_ID}/present`,
-    );
-    expect(screen.getByRole("link", { name: /print/i })).toHaveAttribute(
-      "href",
-      `/print/${TEST_REPORT_ID}`,
-    );
+    const exportButtons = screen.getAllByRole("button", {
+      name: /export pdf/i,
+    });
+    expect(exportButtons).toHaveLength(1);
+    // The single Export-PDF lives in the shared ReportToolbar, not the header.
+    const toolbar = screen.getByTestId("report-toolbar");
+    expect(
+      within(toolbar).getByRole("button", { name: /export pdf/i }),
+    ).toBeInTheDocument();
+    const headerActions = screen.getByTestId("weekly-report-header-actions");
+    expect(
+      within(headerActions).queryByRole("button", { name: /export pdf/i }),
+    ).not.toBeInTheDocument();
   });
 
-  it("slides mode renders the lead-style header action cluster", () => {
+  it("slides mode keeps the toggles but renders no Present/Print links", () => {
+    wireActivePeriod();
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
     expect(screen.queryByTestId("report-actions-pill")).not.toBeInTheDocument();
-    const header = screen.getByRole("heading", { name: "Status Report" })
-      .parentElement!.parentElement!.parentElement!;
+    expect(screen.getByRole("link", { name: /slides/i })).toBeInTheDocument();
     expect(
-      within(header).getByRole("link", { name: /present/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole("link", { name: /present/i }),
+    ).not.toBeInTheDocument();
     expect(
-      within(header).getByRole("link", { name: /print/i }),
-    ).toBeInTheDocument();
+      screen.queryByRole("link", { name: /print/i }),
+    ).not.toBeInTheDocument();
     // Agent-review is intentionally NOT in the slides shell header — the head
     // slide deck owns the single placeholder (deferred-feature-pattern).
   });
