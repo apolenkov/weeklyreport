@@ -7,14 +7,16 @@ import { createPortal } from "react-dom";
 // toolbar's overflow clip cannot truncate it. Mirrors the FillFromButton
 // portal — position:fixed from the trigger rect, scroll/resize tracked.
 export const PERIOD_PANEL_MAX_HEIGHT_PX = 280;
-export const PERIOD_LISTBOX_ID = "lead-period-listbox";
-export const PERIOD_OPTION_ID_PREFIX = "lead-period-option-";
 
 export interface PeriodOption {
   id: string;
   dateRange: string;
   isCurrent: boolean;
   archived: boolean;
+  // W3: per-lead submitted marker. Only ever true for the lead surface and
+  // only on the currently-selected period (the navigator has a submittedAt
+  // value for the displayed period alone, never the whole history).
+  submitted?: boolean;
 }
 
 interface PeriodListboxPanelProps {
@@ -23,6 +25,11 @@ interface PeriodListboxPanelProps {
   readonly activeIdx: number;
   readonly pos: { top: number; left: number; width: number };
   readonly panelRef: React.RefObject<HTMLDivElement | null>;
+  // W4: per-instance scoped ids (useId) so two navigators on one page never
+  // collide on the listbox / option DOM ids that aria-controls and
+  // aria-activedescendant point at.
+  readonly listboxId: string;
+  readonly optionIdPrefix: string;
   readonly onHover: (idx: number) => void;
   readonly onSelect: (periodId: string) => void;
   readonly onKeyDown: (e: ReactKeyboardEvent<HTMLDivElement>) => void;
@@ -44,6 +51,19 @@ export const periodLabel = (p: { dateRange: string; isCurrent: boolean }) =>
   p.isCurrent ? `${p.dateRange} (Current)` : p.dateRange;
 
 /**
+ * Per-lead submitted marker (W3) — neutral pill, never a status hue. Sourced
+ * only from the current lead's `ReportSection.submittedAt`; the head/viewer
+ * navigators never render it (they do not pass the markers prop).
+ */
+export function SubmittedBadge() {
+  return (
+    <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--color-primary)]">
+      Submitted
+    </span>
+  );
+}
+
+/**
  * Portaled listbox panel (D3). Lives in document.body so the toolbar's
  * overflow clip cannot truncate it; position:fixed from the trigger rect,
  * tracked on scroll + resize (mirrors FillFromButton).
@@ -54,6 +74,8 @@ export function PeriodListboxPanel({
   activeIdx,
   pos,
   panelRef,
+  listboxId,
+  optionIdPrefix,
   onHover,
   onSelect,
   onKeyDown,
@@ -61,7 +83,7 @@ export function PeriodListboxPanel({
   return createPortal(
     <div
       ref={panelRef}
-      id={PERIOD_LISTBOX_ID}
+      id={listboxId}
       role="listbox"
       aria-label="Reporting period"
       tabIndex={-1}
@@ -79,7 +101,7 @@ export function PeriodListboxPanel({
         return (
           <div
             key={opt.id}
-            id={`${PERIOD_OPTION_ID_PREFIX}${idx}`}
+            id={`${optionIdPrefix}${idx}`}
             role="option"
             tabIndex={-1}
             aria-selected={isSelected}
@@ -98,6 +120,7 @@ export function PeriodListboxPanel({
             }}
           >
             <span className="flex-1 truncate">{periodLabel(opt)}</span>
+            {opt.submitted && <SubmittedBadge />}
             {opt.archived && <ArchivedBadge />}
             {isSelected && (
               <span aria-hidden="true" className="text-xs">
