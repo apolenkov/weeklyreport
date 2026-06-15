@@ -13,11 +13,31 @@ import { render, screen, within } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import type { PrintRouteContext } from "../../lib/server/get-print-route-context";
+
 /* ---- Module mocks (must be hoisted above all imports of the SUT) ---- */
 
-// Heavy client components — stub to avoid hooks / tRPC context requirements.
-vi.mock("../../components/head/head-present-client", () => ({
-  HeadPresentClient: () => <div data-testid="head-present-client-stub" />,
+// fix-report-surface-integrity W2 (task 3.3): the present routes now
+// `permanentRedirect` to `?mode=slides` and the print route is a server gate
+// that `permanentRedirect`s humans / `redirect`s no-session. Mock both so the
+// SUT calls are observable; real Next throws to halt rendering, so the mocks
+// throw a tagged error too (the SUT never renders past the redirect).
+const permanentRedirect = vi.fn((url: string) => {
+  throw new Error(`NEXT_PERMANENT_REDIRECT:${url}`);
+});
+const redirect = vi.fn((url: string) => {
+  throw new Error(`NEXT_REDIRECT:${url}`);
+});
+vi.mock("next/navigation", () => ({
+  permanentRedirect: (url: string) => permanentRedirect(url),
+  redirect: (url: string) => redirect(url),
+}));
+
+// The /print server gate reads the cookie once via this helper; mock it
+// per-test to drive the worker / human / no-session branches.
+const getPrintRouteContext = vi.fn<() => Promise<PrintRouteContext>>();
+vi.mock("../../lib/server/get-print-route-context", () => ({
+  getPrintRouteContext: () => getPrintRouteContext(),
 }));
 
 vi.mock("../../components/lead/lead-section-preview-auth", () => ({
@@ -129,6 +149,19 @@ function searchParamsOf(authorId?: string): Promise<{ authorId?: string }> {
   return Promise.resolve({ authorId });
 }
 
+function sessionOf(
+  role: "lead" | "head" | "admin" | "viewer",
+): PrintRouteContext["session"] {
+  return {
+    userId: "44444444-4444-4444-8444-444444444444",
+    email: `${role}@test.local`,
+    name: `${role} user`,
+    role,
+    activeReportId: null,
+    activeReportSectionId: null,
+  };
+}
+
 const TEST_REPORT_ID = "test-report-001";
 
 /* ---- Published viewer ---- */
@@ -199,86 +232,60 @@ describe("PublishedReportPage — single title + header actions (task 2.0)", () 
       name: /back to archive/i,
     });
     expect(back).toHaveAttribute("href", "/reports?tab=published");
-    // The React.use() stub returns the params Promise as-is, so reportId is not
-    // unwrapped here; assert the href SHAPE (route prefix/suffix) rather than
-    // the interpolated id. The live-browser pass confirms the real id.
-    expect(
-      within(headerActions)
-        .getByRole("link", { name: /open presentation/i })
-        .getAttribute("href"),
-    ).toMatch(/^\/reports\/.*\/present$/);
-    expect(
-      within(headerActions)
-        .getByRole("link", { name: /print/i })
-        .getAttribute("href"),
-    ).toMatch(/^\/print\//);
     expect(
       within(headerActions).getByTestId("agent-review-coming-soon"),
     ).toBeInTheDocument();
   });
-});
 
-/* ---- Head presentation ---- */
-
-describe("HeadReportPresentPage — agent-review placeholder", () => {
-  it("renders exactly one agent-review-coming-soon control", async () => {
-    const ui = (await HeadReportPresentPage({
-      params: paramsOf(TEST_REPORT_ID),
-    })) as ReactElement;
-    render(ui);
-    const controls = screen.getAllByTestId("agent-review-coming-soon");
-    expect(controls).toHaveLength(1);
-  });
-
-  it("control has aria-disabled='true'", async () => {
-    const ui = (await HeadReportPresentPage({
-      params: paramsOf(TEST_REPORT_ID),
-    })) as ReactElement;
-    render(ui);
-    expect(screen.getByTestId("agent-review-coming-soon")).toHaveAttribute(
-      "aria-disabled",
-      "true",
+  // fix-report-surface-integrity W2 (task 3.3, report-toolbar-parity): the
+  // standalone Present and browser-Print links are GONE from the viewer
+  // toolbar. Presentation is reached via `?mode=slides`; the only export is
+  // the single labeled Export-PDF rendered by WeeklyReportPage's trailing
+  // group (the now-broken `/print` deep link is removed — the print route
+  // 308-redirects humans away).
+  it("renders no standalone Present or browser-Print links", () => {
+    render(
+      <PublishedReportPage
+        params={paramsOf(TEST_REPORT_ID)}
+        searchParams={searchParamsOf()}
+      />,
     );
-  });
-
-  it("control carries the English copy 'Agent review'", async () => {
-    const ui = (await HeadReportPresentPage({
-      params: paramsOf(TEST_REPORT_ID),
-    })) as ReactElement;
-    render(ui);
-    expect(screen.getByText("Agent review")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /presentation/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /print/i }),
+    ).not.toBeInTheDocument();
   });
 });
 
-/* ---- Published presentation ---- */
+/* ---- Present routes — now 308-redirect to slides mode (W2 task 3.3) ---- */
 
-describe("PublishedReportPresentPage — agent-review placeholder", () => {
-  it("renders exactly one agent-review-coming-soon control", async () => {
-    const ui = (await PublishedReportPresentPage({
-      params: paramsOf(TEST_REPORT_ID),
-    })) as ReactElement;
-    render(ui);
-    const controls = screen.getAllByTestId("agent-review-coming-soon");
-    expect(controls).toHaveLength(1);
-  });
-
-  it("control has aria-disabled='true'", async () => {
-    const ui = (await PublishedReportPresentPage({
-      params: paramsOf(TEST_REPORT_ID),
-    })) as ReactElement;
-    render(ui);
-    expect(screen.getByTestId("agent-review-coming-soon")).toHaveAttribute(
-      "aria-disabled",
-      "true",
+describe("HeadReportPresentPage — 308 redirect to slides", () => {
+  it("permanentRedirects to /head/report/[id]?mode=slides", async () => {
+    permanentRedirect.mockClear();
+    await expect(
+      HeadReportPresentPage({ params: paramsOf(TEST_REPORT_ID) }),
+    ).rejects.toThrow(
+      `NEXT_PERMANENT_REDIRECT:/head/report/${TEST_REPORT_ID}?mode=slides`,
+    );
+    expect(permanentRedirect).toHaveBeenCalledWith(
+      `/head/report/${TEST_REPORT_ID}?mode=slides`,
     );
   });
+});
 
-  it("control carries the English copy 'Agent review'", async () => {
-    const ui = (await PublishedReportPresentPage({
-      params: paramsOf(TEST_REPORT_ID),
-    })) as ReactElement;
-    render(ui);
-    expect(screen.getByText("Agent review")).toBeInTheDocument();
+describe("PublishedReportPresentPage — 308 redirect to slides", () => {
+  it("permanentRedirects to /reports/[id]?mode=slides", async () => {
+    permanentRedirect.mockClear();
+    await expect(
+      PublishedReportPresentPage({ params: paramsOf(TEST_REPORT_ID) }),
+    ).rejects.toThrow(
+      `NEXT_PERMANENT_REDIRECT:/reports/${TEST_REPORT_ID}?mode=slides`,
+    );
+    expect(permanentRedirect).toHaveBeenCalledWith(
+      `/reports/${TEST_REPORT_ID}?mode=slides`,
+    );
   });
 });
 
@@ -314,11 +321,88 @@ describe("LeadReportPreviewPage — agent-review placeholder", () => {
   });
 });
 
-/* ---- Print page — must have zero controls (Task 3.2) ---- */
+/* ---- Print route — server gate: worker renders, human/no-session redirect ---- */
 
-describe("PrintReportPage — no agent-review placeholder", () => {
-  it("renders zero agent-review-coming-soon controls on the print surface", () => {
-    render(<PrintReportPage params={paramsOf(TEST_REPORT_ID)} />);
+describe("PrintReportPage — PDF-worker-vs-human server gate (W2 task 3.3)", () => {
+  it("renders the print template for the PDF worker bound to this report", async () => {
+    permanentRedirect.mockClear();
+    redirect.mockClear();
+    getPrintRouteContext.mockResolvedValue({
+      session: null,
+      isPdfExport: true,
+      pdfReportId: TEST_REPORT_ID,
+    });
+    const ui = (await PrintReportPage({
+      params: paramsOf(TEST_REPORT_ID),
+    })) as ReactElement;
+    render(ui);
+    // The template renders the report header — and zero agent-review controls.
+    expect(
+      screen.getByText(/core development — status report/i),
+    ).toBeInTheDocument();
     expect(screen.queryAllByTestId("agent-review-coming-soon")).toHaveLength(0);
+    expect(permanentRedirect).not.toHaveBeenCalled();
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("does NOT render the template when the worker token is bound to a different report", async () => {
+    permanentRedirect.mockClear();
+    getPrintRouteContext.mockResolvedValue({
+      session: sessionOf("head"),
+      isPdfExport: true,
+      pdfReportId: "some-other-report",
+    });
+    await expect(
+      PrintReportPage({ params: paramsOf(TEST_REPORT_ID) }),
+    ).rejects.toThrow(/NEXT_PERMANENT_REDIRECT/);
+  });
+
+  it("308-redirects an authenticated head to the consolidated report", async () => {
+    permanentRedirect.mockClear();
+    getPrintRouteContext.mockResolvedValue({
+      session: sessionOf("head"),
+      isPdfExport: false,
+      pdfReportId: null,
+    });
+    await expect(
+      PrintReportPage({ params: paramsOf(TEST_REPORT_ID) }),
+    ).rejects.toThrow(`NEXT_PERMANENT_REDIRECT:/head/report/${TEST_REPORT_ID}`);
+  });
+
+  it("308-redirects an authenticated viewer to the published report", async () => {
+    permanentRedirect.mockClear();
+    getPrintRouteContext.mockResolvedValue({
+      session: sessionOf("viewer"),
+      isPdfExport: false,
+      pdfReportId: null,
+    });
+    await expect(
+      PrintReportPage({ params: paramsOf(TEST_REPORT_ID) }),
+    ).rejects.toThrow(`NEXT_PERMANENT_REDIRECT:/reports/${TEST_REPORT_ID}`);
+  });
+
+  it("308-redirects an authenticated lead to their own report", async () => {
+    permanentRedirect.mockClear();
+    getPrintRouteContext.mockResolvedValue({
+      session: sessionOf("lead"),
+      isPdfExport: false,
+      pdfReportId: null,
+    });
+    await expect(
+      PrintReportPage({ params: paramsOf(TEST_REPORT_ID) }),
+    ).rejects.toThrow("NEXT_PERMANENT_REDIRECT:/lead/report");
+  });
+
+  it("307-redirects a no-session request to login with ?next", async () => {
+    redirect.mockClear();
+    getPrintRouteContext.mockResolvedValue({
+      session: null,
+      isPdfExport: false,
+      pdfReportId: null,
+    });
+    const nextParam = encodeURIComponent(`/print/${TEST_REPORT_ID}`);
+    await expect(
+      PrintReportPage({ params: paramsOf(TEST_REPORT_ID) }),
+    ).rejects.toThrow(`NEXT_REDIRECT:/?next=${nextParam}`);
   });
 });

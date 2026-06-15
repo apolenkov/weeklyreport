@@ -2,8 +2,15 @@
  * @vitest-environment jsdom
  *
  * Regression tests for the static <style dangerouslySetInnerHTML> block in
- * PrintReportPage — verify-a11y-recommended-flip catalog rows for
- * apps/web/src/app/print/[reportId]/page.tsx (3 high unit-rtl + 1 snapshot).
+ * the print template — verify-a11y-recommended-flip catalog rows for
+ * apps/web/src/app/print/[reportId]/print-report-template.tsx
+ * (3 high unit-rtl + 1 snapshot).
+ *
+ * fix-report-surface-integrity W2 (task 3.3): page.tsx is now a thin async
+ * server gate (worker-vs-human discriminator), so the CSS-safety assertions
+ * target the extracted client `PrintReportTemplate` directly. The gate's
+ * redirect/render branches are covered in
+ * components/report-shell/agent-review-coming-soon.test.tsx.
  *
  * All assertions target the hardcoded print CSS string; no row in scope
  * involves keyboard, dialog, or focus behavior.
@@ -13,12 +20,6 @@ import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 /* ---- Module mocks (must be hoisted above imports) ---- */
-
-vi.mock("react", async () => {
-  const actual = await vi.importActual<typeof import("react")>("react");
-  // Stub React.use() so Promise params resolve synchronously in jsdom.
-  return { ...actual, use: <T,>(v: T): T => v };
-});
 
 vi.mock("@tanstack/react-query", async () => {
   const actual = await vi.importActual<typeof import("@tanstack/react-query")>(
@@ -69,20 +70,17 @@ vi.mock("../../../lib/mappers", () => ({
 
 /* ---- Import under test (after mocks are registered) ---- */
 
-import PrintReportPage from "./page";
+import { PrintReportTemplate } from "./print-report-template";
 
 /* ---- Helper ---- */
 
 function renderPage(reportId: string) {
-  // params is typed as Promise<{ reportId }> but use() is stubbed to unwrap
-  // synchronously, so passing the plain object is safe here.
-  const params = { reportId } as unknown as Promise<{ reportId: string }>;
-  return render(<PrintReportPage params={params} />);
+  return render(<PrintReportTemplate reportId={reportId} />);
 }
 
 /* ---- Tests ---- */
 
-describe("PrintReportPage — <style dangerouslySetInnerHTML> static CSS safety", () => {
+describe("PrintReportTemplate — <style dangerouslySetInnerHTML> static CSS safety", () => {
   it("style textContent contains only static CSS keywords — no user-supplied interpolations", () => {
     const { container } = renderPage("report-123");
     const styleEl = container.querySelector("style");
