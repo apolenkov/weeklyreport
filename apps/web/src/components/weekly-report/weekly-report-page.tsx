@@ -104,6 +104,56 @@ interface TerminalNotice {
 }
 
 /**
+ * Accordion body for the report page: a flat per-product list (default) or
+ * products bucketed under each authoring lead ("by lead" head split-view).
+ * Extracted so the page function stays under the cognitive-complexity budget.
+ */
+function ReportAccordionBody({
+  scope,
+  products,
+  leadGroups,
+  focusedProductId,
+  scrollTargetProductId,
+}: {
+  readonly scope: "product" | "lead";
+  readonly products: ProductReport[];
+  readonly leadGroups: {
+    id: string;
+    name: string;
+    products: ProductReport[];
+  }[];
+  readonly focusedProductId: string | undefined;
+  readonly scrollTargetProductId: string | undefined;
+}) {
+  const renderAccordion = (report: ProductReport) => (
+    <ProductAccordion
+      key={report.id}
+      report={report}
+      defaultOpen={focusedProductId === report.id}
+      highlighted={focusedProductId === report.id}
+      scrollIntoViewOnHighlight={scrollTargetProductId === report.id}
+    />
+  );
+
+  if (scope === "lead") {
+    return (
+      <div className="space-y-6">
+        {leadGroups.map((group) => (
+          <section key={group.id} aria-label={group.name} className="space-y-3">
+            <h3 className="font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)]">
+              {group.name}
+            </h3>
+            {group.products.map(renderAccordion)}
+          </section>
+        ))}
+      </div>
+    );
+  }
+
+  return <div className="space-y-3">{products.map(renderAccordion)}</div>;
+}
+
+/**
  * Resolves the page's terminal display state (after loading settles).
  *  - invalid-link (driver finding 1): a malformed reportId (400 BAD_REQUEST) or
  *    a missing report (404 NOT_FOUND). Transient 5xx / network errors fall
@@ -346,6 +396,14 @@ export function WeeklyReportPage({
     : undefined;
   const hasExpandableProducts = products.some(hasReportContent);
   const canPublishReport = submitted > 0 && hasExpandableProducts;
+  // head-toolbar-semantics: the publish precondition hint sits on the status
+  // row, shown only to publish-capable roles while the period is unpublished
+  // and has no submitted content to publish yet.
+  const showPublishHint =
+    canMutatePeriod &&
+    !canPublishReport &&
+    view.period.periodStatus !== "published";
+  const archiveLabel = archiveMut.isPending ? "Archiving…" : "Archive";
   const scrollTargetProductId =
     authoredProductIds.length > 0 ? authoredProductIds[0] : undefined;
   // The standalone fallback navigator (when no shell-composed `toolbar` slot
@@ -371,27 +429,23 @@ export function WeeklyReportPage({
     <div className="space-y-4">
       {/* Page header */}
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
             Status Report
           </h1>
           <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary)]">
             Live &middot; {submitted}/{total} Submitted
           </span>
+          {/* head-toolbar-semantics: the publish precondition hint sits on the
+              report-status row (not the action row). */}
+          {showPublishHint && (
+            <span className="text-xs text-[var(--color-muted-foreground)]">
+              No submitted report content yet.
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           {headerActions}
-          {/* The async export starts a `pdfExport.request` job. Visibility
-              matches the widened authz (leadHeadAdminProcedure): lead + head +
-              admin see the button, viewer does not (the read-only
-              /reports/[reportId] route still offers a plain /print link for
-              every role). driver sweep 2026-06-09 + finding 3 (2026-06-13). */}
-          {canExportPdf && (
-            <ExportPdfButton
-              reportId={view.period.reportId}
-              periodStatus={view.period.periodStatus}
-            />
-          )}
           {/* A22: "Archive" button — shown to head once the period is published.
               Moves the report into the archive (sets archived=true) so it
               appears in the Archive tab. The button is hidden after archiving
@@ -406,7 +460,7 @@ export function WeeklyReportPage({
               disabled={archiveMut.isPending}
               aria-label="Move this report to the archive"
             >
-              {archiveMut.isPending ? "Archiving…" : "Archive"}
+              {archiveLabel}
             </button>
           )}
           {canMutatePeriod && (
@@ -449,6 +503,18 @@ export function WeeklyReportPage({
               detail="Live portfolio review"
             />
           }
+          // report-toolbar-parity: the single labeled Export-PDF lives in the
+          // toolbar trailing group. Offered to every authenticated role (the
+          // export render is requester-scoped, so even the viewer gets their
+          // own non-empty published slice). Matches the widened pdfExport authz.
+          trailingExtras={
+            canExportPdf ? (
+              <ExportPdfButton
+                reportId={view.period.reportId}
+                periodStatus={view.period.periodStatus}
+              />
+            ) : undefined
+          }
         />
       )}
 
@@ -480,46 +546,13 @@ export function WeeklyReportPage({
           <PortfolioOverviewTable products={portfolio} />
 
           {/* Accordion sections — by product (default) or grouped by lead */}
-          {scope === "lead" ? (
-            <div className="space-y-6">
-              {leadGroups.map((group) => (
-                <section
-                  key={group.id}
-                  aria-label={group.name}
-                  className="space-y-3"
-                >
-                  <h3 className="font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)]">
-                    {group.name}
-                  </h3>
-                  {group.products.map((report) => (
-                    <ProductAccordion
-                      key={report.id}
-                      report={report}
-                      defaultOpen={focusedProductId === report.id}
-                      highlighted={focusedProductId === report.id}
-                      scrollIntoViewOnHighlight={
-                        scrollTargetProductId === report.id
-                      }
-                    />
-                  ))}
-                </section>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {products.map((report) => (
-                <ProductAccordion
-                  key={report.id}
-                  report={report}
-                  defaultOpen={focusedProductId === report.id}
-                  highlighted={focusedProductId === report.id}
-                  scrollIntoViewOnHighlight={
-                    scrollTargetProductId === report.id
-                  }
-                />
-              ))}
-            </div>
-          )}
+          <ReportAccordionBody
+            scope={scope}
+            products={products}
+            leadGroups={leadGroups}
+            focusedProductId={focusedProductId}
+            scrollTargetProductId={scrollTargetProductId}
+          />
         </>
       )}
     </div>
