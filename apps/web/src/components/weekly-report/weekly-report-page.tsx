@@ -18,17 +18,14 @@ import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
-import type {
-  PortfolioProduct,
-  ProductReport,
-  ReportPeriod,
-} from "../dashboard/mock-data";
+import type { PortfolioProduct, ProductReport } from "../dashboard/mock-data";
+import type { ReportPeriod } from "../lead/mock-data";
+import { PeriodNavigator } from "../lead/period-navigator";
 import {
   ReportToolbar,
   ReportToolbarCenterLabel,
 } from "../report-shell/report-toolbar";
 import { ExportPdfButton } from "./export-pdf-button";
-import { HeadPeriodNavigator } from "./period-navigator";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
 import { ProductAccordion } from "./product-accordion";
 import { PublishLockButton } from "./publish-lock-button";
@@ -351,14 +348,18 @@ export function WeeklyReportPage({
   const canPublishReport = submitted > 0 && hasExpandableProducts;
   const scrollTargetProductId =
     authoredProductIds.length > 0 ? authoredProductIds[0] : undefined;
-  // HeadPeriodNavigator currently renders one period entry; future plans may
-  // surface a list of recent periods. For now, surface the active period only.
+  // The standalone fallback navigator (when no shell-composed `toolbar` slot
+  // arrives — e.g. the viewer /reports/[reportId] route) surfaces the active
+  // period only; a single inert option. The shell-composed head toolbar
+  // supplies the full multi-period combobox via the `toolbar` slot.
   const periods: ReportPeriod[] = [
     {
       id: view.period.id,
+      sourceSectionId: "",
       weekLabel: view.period.weekLabel,
       dateRange: view.period.dateRange,
       isCurrent: view.period.isCurrent,
+      isSubmitted: true,
     },
   ];
   const periodLabel = joinPeriodLabel(
@@ -434,7 +435,14 @@ export function WeeklyReportPage({
           arrangement and never stacks two period toolbars. */}
       {toolbar ?? (
         <ReportToolbar
-          periodNavigator={<HeadPeriodNavigator periods={periods} />}
+          periodNavigator={
+            <PeriodNavigator
+              periods={periods}
+              urlBuilder={(periodId) =>
+                `/head/report/${encodeURIComponent(periodId)}`
+              }
+            />
+          }
           leadingExtras={
             <ReportToolbarCenterLabel
               label={departmentLabel}

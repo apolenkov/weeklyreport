@@ -5,7 +5,7 @@
  *
  * Section-by-section parity (top to bottom, mirrors the real page):
  *   1. Page header  — title + Live pill | ExportPdf + PublishLock (2 buttons)
- *   2. Period nav   — HeadPeriodNavigator | "{org} · Live portfolio review"
+ *   2. Period nav   — PeriodNavigator | "{org} · Live portfolio review"
  *   3. Portfolio    — single gradient card + sm:grid-cols-2 product cards
  *   4. Accordions   — gradient cards × N matching ProductAccordion header
  *
@@ -106,7 +106,7 @@ export function WeeklyReportSkeleton() {
         </div>
       </div>
 
-      {/* 2. Period nav shell — HeadPeriodNavigator | dept · Live portfolio review.
+      {/* 2. Period nav shell — PeriodNavigator | dept · Live portfolio review.
           Right slot is two short bars separated by a dot to mirror the real
           «{org} · Live portfolio review» line. */}
       <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-[rgba(0,0,0,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.78)_100%)] px-4 py-3.5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.06),0_10px_24px_-20px_rgba(0,0,0,0.22),0_1px_2px_0_rgba(0,0,0,0.05)]">

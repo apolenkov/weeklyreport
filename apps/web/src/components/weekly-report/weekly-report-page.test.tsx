@@ -43,8 +43,8 @@ vi.mock("sonner", () => ({
   },
 }));
 
-// Mock Next.js navigation hooks consumed by HeadPeriodNavigator. We don't drive
-// route changes in these tests — just neutralize the hook calls.
+// Mock Next.js navigation hooks consumed by the fallback PeriodNavigator. We
+// don't drive route changes in these tests — just neutralize the hook calls.
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),

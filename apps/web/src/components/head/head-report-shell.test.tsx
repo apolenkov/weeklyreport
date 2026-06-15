@@ -292,6 +292,26 @@ describe("HeadReportShell — period navigator addressed-week (finding 4)", () =
     expect(trigger).not.toHaveTextContent(/may 25/i);
   });
 
+  it("head navigator shows NO submitted marker (W3: lead-only)", async () => {
+    // The head shell fabricates isSubmitted:true on every history entry, but
+    // the submitted marker is opt-in via showLeadSubmissionMarkers +
+    // leadSubmittedAt — props the head shell never passes. So neither the
+    // trigger nor the opened listbox may render a "Submitted" pill.
+    const user = userEvent.setup();
+    wireQueries();
+    mockPathname.mockReturnValue(`/head/report/${ACTIVE_ID}`);
+
+    render(<HeadReportShell reportId={ACTIVE_ID} mode="form" />);
+
+    const trigger = screen.getByRole("combobox", {
+      name: /select reporting period/i,
+    });
+    expect(screen.queryByText("Submitted")).not.toBeInTheDocument();
+    await user.click(trigger);
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    expect(screen.queryByText("Submitted")).not.toBeInTheDocument();
+  });
+
   it("trigger follows to an OLDER published week (regex fix proof)", () => {
     // OLDER is periods[1]; reaching it requires resolving currentIndex from the
     // head pathname. Without the regex fix, currentIndex defaults to 0 and the
