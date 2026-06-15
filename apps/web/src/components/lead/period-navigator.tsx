@@ -271,8 +271,7 @@ export function PeriodNavigator({
     }
   }
 
-  // Phase 33-04: swipe gesture mirrors HeadPeriodNavigator. Left = next week,
-  // right = previous week.
+  // Phase 33-04: swipe gesture. Left = next week, right = previous week.
   const touchStartXRef = useRef<number | null>(null);
   function handleTouchStart(e: ReactTouchEvent<HTMLDivElement>) {
     const t = Array.from(e.touches).at(0);
