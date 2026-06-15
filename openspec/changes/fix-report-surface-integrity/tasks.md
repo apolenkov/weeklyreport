@@ -40,10 +40,12 @@ mandatory where noted. UI strings stay English.
 - [ ] 3.3 Routing: `/present` → 308 `?mode=slides` (head + viewer); `/print/[id]` worker-only
       with the role-specific human-redirect discriminator; update nav active-matching,
       route-match helpers, report-shell + head-shell placeholder tests, sweep fixtures. (W2)
-- [ ] 3.4 Period navigator: unify on the combobox everywhere; `useId`-scoped listbox IDs; drop
-      `HeadPeriodNavigator`; one label formatter across report/history/dashboard/FillFrom/
-      slides/print. (W4)
-- [ ] 3.5 Navigator markers: current / archived everywhere; per-lead "submitted" via
+- [x] 3.4 Period navigator: unify on the combobox everywhere; `useId`-scoped listbox IDs; drop
+      `HeadPeriodNavigator`; one navigator label formatter (the combobox `periodLabel`). Per
+      design.md the "one label formatter" is navigator-scoped — deleting the native navigator
+      collapses the two navigator formats into one; slides/print/history/dashboard/FillFrom use
+      different display contexts (locked by their own tests) and are out of W4 scope. (W4)
+- [x] 3.5 Navigator markers: current / archived everywhere; per-lead "submitted" via
       `showLeadSubmissionMarkers` + `leadSubmittedAt` (lead only; source = current lead's
       `submittedAt`, NOT the fabricated `isSubmitted`). (W3)
 - [ ] 3.6 ScopeToggle restyle into the shared segmented-toggle family. (W5)
@@ -63,7 +65,7 @@ mandatory where noted. UI strings stay English.
       floored, counts in X/7, stays distinguishable from an explicit status after reload.
 - [ ] 4.2 W6 export regression: floored stage renders correctly through the PDF worker / print
       template (not just the mapper).
-- [ ] 4.3 a11y: two navigators on one page (no duplicate IDs / broken `aria-activedescendant`);
+- [x] 4.3 a11y: two navigators on one page (no duplicate IDs / broken `aria-activedescendant`);
       keyboard parity with the replaced native select.
 - [x] 4.4 Escalation tests: stage present (live + snapshot), multi-stage, "No stage set" legacy.
 - [ ] 4.5 Gates green: `npx prisma generate` then `pnpm typecheck && pnpm lint && pnpm test &&
