@@ -358,14 +358,15 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
 
     renderPage(published, undefined, "viewer");
 
-    // Anchor on the always-present report heading: the async Export PDF button
-    // is head/admin-only (its `pdfExport.request` job is headProcedure-gated),
-    // so it must not render for a viewer and cannot be the render anchor.
+    // Anchor on the always-present report heading.
     await screen.findByRole("heading", { name: /status report/i });
 
+    // followups item 1: Export PDF is now available to the viewer (the export
+    // render is requester-scoped, so the viewer gets a non-empty PDF of their
+    // own published slice). Period-mutation actions stay head/admin-only.
     expect(
-      screen.queryByRole("button", { name: /export pdf/i }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: /export pdf/i }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /^archive$/i }),
     ).not.toBeInTheDocument();
@@ -554,12 +555,12 @@ describe("WeeklyReportPage — async Export PDF button role gating (driver sweep
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
-  // The async export starts a `pdfExport.request` job. driver-findings-2026-06-11
-  // finding 3 (decision 2026-06-13): leads SHOULD have Export-PDF, so the API
-  // (pdfExport.request / .status) and this button are widened to lead + head +
-  // admin. Viewer stays excluded (read-only role keeps the /print link); the
-  // viewer catalog intent is flagged as an open question, not granted here.
-  it.each(["head", "admin", "lead"] as const)(
+  // The async export starts a `pdfExport.request` job. driver-findings finding 3
+  // + followups item 1: Export-PDF is available to EVERY authenticated role.
+  // Viewer was unblocked once the export render became requester-scoped
+  // (empty-PDF fix), so the viewer now gets a non-empty PDF of their own
+  // published slice. API (pdfExport.request / .status) is anyRoleProcedure.
+  it.each(["head", "admin", "lead", "viewer"] as const)(
     "renders the async Export PDF button for %s",
     async (role) => {
       renderPage(makeWeeklyReportData("published"), undefined, role);
@@ -568,15 +569,6 @@ describe("WeeklyReportPage — async Export PDF button role gating (driver sweep
       ).toBeInTheDocument();
     },
   );
-
-  it("hides the async Export PDF button for viewer", async () => {
-    renderPage(makeWeeklyReportData("published"), undefined, "viewer");
-    // Anchor on the report heading so the absence assertion is not a race.
-    await screen.findByRole("heading", { name: /status report/i });
-    expect(
-      screen.queryByRole("button", { name: /export pdf/i }),
-    ).not.toBeInTheDocument();
-  });
 
   it("lets a lead trigger the export (fires pdfExport.request with reportId)", async () => {
     const { captured } = renderPage(

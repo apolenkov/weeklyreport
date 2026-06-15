@@ -154,11 +154,12 @@ export function WeeklyReportPage({
   const orgFullName = sessionState?.organization?.fullName ?? null;
   const currentRole = sessionState?.user?.role ?? null;
   const canMutatePeriod = currentRole === "head" || currentRole === "admin";
-  // driver-findings-2026-06-11 finding 3 (decision 2026-06-13): leads SHOULD
-  // have Export-PDF, so the button is shown to lead + head + admin. Viewer is
-  // excluded (read-only role keeps the plain /print link). Matches the widened
-  // pdfExport.request / .status authz (leadHeadAdminProcedure).
-  const canExportPdf = canMutatePeriod || currentRole === "lead";
+  // driver-findings finding 3 + followups item 1: Export-PDF is offered to every
+  // authenticated role (head/admin/lead/viewer). The viewer was unblocked once
+  // the export render became requester-scoped (empty-PDF fix) — their PDF is now
+  // their own non-empty published slice, not a blank page. Matches the widened
+  // pdfExport.request / .status authz (anyRoleProcedure).
+  const canExportPdf = currentRole !== null;
 
   // weeklyReport.get input: { reportId?: string } | undefined.
   // When reportId is given, scope to that report; otherwise fall back to the

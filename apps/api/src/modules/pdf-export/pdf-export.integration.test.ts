@@ -182,7 +182,11 @@ describe("AUTH-05 cookie seam (CC-1) — service against real Prisma repo", () =
     const decoded = jwt.verify(
       expectDefined(enqueued[0]).data.authToken,
       "integration-test-secret-32-chars-or-more",
-    ) as { reportId: string };
+    ) as { reportId: string; requestedBy?: string };
     expect(decoded.reportId).toBe(testData.report.id);
+    // empty-PDF fix: the token binds the worker's render session to the
+    // requester so the export is scoped to their in-app view (not an empty
+    // viewer session). buildPdfExportSession in trpc.context rebuilds this user.
+    expect(decoded.requestedBy).toBe(testData.head.id);
   });
 });

@@ -85,7 +85,11 @@ describe("createContextFactory — Phase 32-B1 PDF JWT verifier path (H-04)", ()
     vi.unstubAllEnvs();
   });
 
-  it("valid PDF JWT (kind=pdf-export, reportId=X) → synthetic viewer session with isPdfExport=true and pdfReportId=X", async () => {
+  it("LEGACY PDF JWT (no requestedBy) → narrow viewer-synthetic session, isPdfExport=true, pdfReportId=X", async () => {
+    // Back-compat: tokens minted before the empty-PDF fix carry no
+    // `requestedBy` claim. They keep the old narrow viewer-synthetic session
+    // (no DB lookup). New tokens carry requestedBy — see the be-the-requester
+    // suite below.
     const token = jwt.sign(
       { reportId: TEST_REPORT_ID, kind: "pdf-export" },
       PDF_SECRET,
@@ -219,6 +223,158 @@ describe("createContextFactory — Phase 32-B1 PDF JWT verifier path (H-04)", ()
 
     expect(ctx.isPdfExport).toBe(true);
     expect(ctx.session?.organization).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// empty-PDF fix: a PDF token with `requestedBy` rebuilds the requester's real
+// session so the worker renders /print/<id> scoped to their in-app view. The
+// old viewer-synthetic session had no group access → filterSnapshotSections
+// scoped to zero sections → an EMPTY PDF for every role.
+// ---------------------------------------------------------------------------
+
+const HEAD_REQUESTER_ID = "a1111111-2222-4333-8444-555555555555";
+const VIEWER_REQUESTER_ID = "a2222222-3333-4444-8555-666666666666";
+const GRANTED_GROUP_ID = "a3333333-4444-4555-8666-777777777777";
+
+interface RequesterUser {
+  id: string;
+  email: string;
+  name: string;
+  role: "lead" | "head" | "admin" | "viewer";
+  reportingGroupId: string | null;
+}
+
+function makeRequesterPrisma(user: RequesterUser | null) {
+  return {
+    reportSection: {
+      // eslint-disable-next-line @typescript-eslint/require-await -- async Prisma contract; stub has no awaitable work
+      findFirst: vi.fn(async () => null),
+    },
+    user: {
+      // eslint-disable-next-line @typescript-eslint/require-await -- async Prisma contract; stub has no awaitable work
+      findUnique: vi.fn(async () => user),
+    },
+    viewerGroupAccess: {
+      // eslint-disable-next-line @typescript-eslint/require-await -- async Prisma contract; stub has no awaitable work
+      findMany: vi.fn(async () => [{ groupId: GRANTED_GROUP_ID }]),
+    },
+    reportingGroup: {
+      // eslint-disable-next-line @typescript-eslint/require-await -- async Prisma contract; stub has no awaitable work
+      findUnique: vi.fn(async () => ({ name: "Software Development" })),
+    },
+    organization: {
+      // eslint-disable-next-line @typescript-eslint/require-await -- async Prisma contract; stub has no awaitable work
+      upsert: vi.fn(async () => ({
+        shortName: "Demo",
+        fullName: "Example Software Department",
+      })),
+    },
+  };
+}
+
+describe("createContextFactory — PDF JWT be-the-requester scope (empty-PDF fix)", () => {
+  beforeEach(() => {
+    vi.stubEnv("AUTH_JWT_SECRET", SESSION_SECRET);
+    vi.stubEnv("PDF_EXPORT_JWT_SECRET", PDF_SECRET);
+    vi.stubEnv("AUTH_DEV_MODE", "false");
+    vi.stubEnv("AUTH_DEV_MODE_ALLOW_TEST", "false");
+    vi.stubEnv("NODE_ENV", "test");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("head requester → session rebuilt AS head (full-report scope), isPdfExport stays true", async () => {
+    const token = jwt.sign(
+      {
+        reportId: TEST_REPORT_ID,
+        kind: "pdf-export",
+        requestedBy: HEAD_REQUESTER_ID,
+      },
+      PDF_SECRET,
+      { expiresIn: "5m" },
+    );
+    const prisma = makeRequesterPrisma({
+      id: HEAD_REQUESTER_ID,
+      email: "head@customreport.local",
+      name: "Антон К.",
+      role: "head",
+      reportingGroupId: GRANTED_GROUP_ID,
+    });
+
+    const factory = createContextFactory(
+      makeApp(prisma as never),
+      createNullLogger(),
+    );
+    const ctx = await factory(makeReq(token) as never);
+
+    // The render session is the head — group-scoping yields the FULL report,
+    // not the empty viewer slice.
+    expect(ctx.session?.role).toBe("head");
+    expect(ctx.session?.userId).toBe(HEAD_REQUESTER_ID);
+    expect(ctx.session?.activeReportId).toBe(TEST_REPORT_ID);
+    // Guard still binds the read-only allowlist to this reportId.
+    expect(ctx.isPdfExport).toBe(true);
+    expect(ctx.pdfReportId).toBe(TEST_REPORT_ID);
+  });
+
+  it("viewer requester → session rebuilt AS viewer WITH hydrated group access (scoped, NOT empty)", async () => {
+    // The discriminating clause: the viewer's export is scoped to their granted
+    // groups (non-empty), proving be-the-requester (option B), not all-access.
+    const token = jwt.sign(
+      {
+        reportId: TEST_REPORT_ID,
+        kind: "pdf-export",
+        requestedBy: VIEWER_REQUESTER_ID,
+      },
+      PDF_SECRET,
+      { expiresIn: "5m" },
+    );
+    const prisma = makeRequesterPrisma({
+      id: VIEWER_REQUESTER_ID,
+      email: "viewer@customreport.local",
+      name: "Дарья В.",
+      role: "viewer",
+      reportingGroupId: null,
+    });
+
+    const factory = createContextFactory(
+      makeApp(prisma as never),
+      createNullLogger(),
+    );
+    const ctx = await factory(makeReq(token) as never);
+
+    expect(ctx.session?.role).toBe("viewer");
+    expect(ctx.session?.userId).toBe(VIEWER_REQUESTER_ID);
+    // hydrateViewerGroupAccess ran → the snapshot filter sees the viewer's
+    // granted groups, so the export renders their sections (not zero).
+    expect(ctx.session?.viewerGroupAccess).toEqual([GRANTED_GROUP_ID]);
+    expect(ctx.isPdfExport).toBe(true);
+  });
+
+  it("requester no longer exists → fail closed (session null, isPdfExport false)", async () => {
+    const token = jwt.sign(
+      {
+        reportId: TEST_REPORT_ID,
+        kind: "pdf-export",
+        requestedBy: "a9999999-9999-4999-8999-999999999999",
+      },
+      PDF_SECRET,
+      { expiresIn: "5m" },
+    );
+    const prisma = makeRequesterPrisma(null);
+
+    const factory = createContextFactory(
+      makeApp(prisma as never),
+      createNullLogger(),
+    );
+    const ctx = await factory(makeReq(token) as never);
+
+    expect(ctx.session).toBeNull();
+    expect(ctx.isPdfExport).toBe(false);
+    expect(ctx.pdfReportId).toBeNull();
   });
 });
 
