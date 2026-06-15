@@ -1,5 +1,4 @@
 import {
-  type Escalation,
   type PortfolioProductOverview,
   weeklyReportReadModelSchema,
 } from "@customreport/shared";
@@ -11,7 +10,7 @@ import {
   type GroupScopeOptions,
 } from "../../lib/group-scope.js";
 import {
-  buildEscalationsFromSnapshotSections,
+  buildEscalationsFromReadSections,
   buildPortfolioProductsFromSnapshotSections,
   filterSnapshotSections,
   parsePublishedSnapshot,
@@ -188,7 +187,7 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
           portfolioOverview:
             buildPortfolioProductsFromSnapshotSections(leadSections),
           leadSections,
-          escalations: buildEscalationsFromSnapshotSections(leadSections),
+          escalations: buildEscalationsFromReadSections(leadSections),
         }),
         crossGroup,
       };
@@ -208,7 +207,10 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
 
     const portfolioOverview = buildPortfolioOverview(projects, report.sections);
 
-    const escalations = buildEscalations(report.sections, projects);
+    // Map the live Prisma rows to the read model, then run the SAME builder
+    // the published-snapshot path uses, so the Blocked-&-At-Risk panel emits
+    // byte-identical stage/product output on both surfaces (W7/W8 parity).
+    const escalations = buildEscalationsFromReadSections(leadSections);
 
     return {
       readModel: weeklyReportReadModelSchema.parse({
@@ -298,77 +300,6 @@ function computeWorstStatus(
   }
 
   return worst as "green" | "yellow" | "red";
-}
-
-// ---------------------------------------------------------------------------
-//  Escalations: blocked items, at-risk (red) projects, unresolved risks
-// ---------------------------------------------------------------------------
-
-function buildEscalations(
-  sections: {
-    authorId: string;
-    author: { name: string };
-    // Prisma yields `status: TrafficLightStatus | null`; null skips the row.
-    projectStatuses: {
-      projectId: string;
-      status: string | null;
-      project: { id: string; name: string };
-    }[];
-    items: {
-      projectId: string;
-      workflowStatus: string;
-      text: string;
-    }[];
-    risks: {
-      projectId: string;
-      risk: string;
-    }[];
-  }[],
-  projects: { id: string; name: string }[],
-): Escalation[] {
-  const projectNameMap = new Map(projects.map((p) => [p.id, p.name]));
-  const escalations: Escalation[] = [];
-
-  for (const section of sections) {
-    // Blocked items
-    for (const item of section.items) {
-      if (item.workflowStatus === "blocked") {
-        escalations.push({
-          type: "blocked",
-          productName: projectNameMap.get(item.projectId) ?? "Unknown",
-          stageName: null,
-          leadName: section.author.name,
-          description: item.text,
-        });
-      }
-    }
-
-    // At-risk projects (red traffic light)
-    for (const ps of section.projectStatuses) {
-      if (ps.status === "red") {
-        escalations.push({
-          type: "at_risk",
-          productName: ps.project.name,
-          stageName: null,
-          leadName: section.author.name,
-          description: `Project ${ps.project.name} is flagged red.`,
-        });
-      }
-    }
-
-    // Unresolved risks
-    for (const risk of section.risks) {
-      escalations.push({
-        type: "unresolved_risk",
-        productName: projectNameMap.get(risk.projectId) ?? "Unknown",
-        stageName: null,
-        leadName: section.author.name,
-        description: risk.risk,
-      });
-    }
-  }
-
-  return escalations;
 }
 
 /**
