@@ -101,7 +101,12 @@ export function ProductKpiCard({ role }: ProductKpiCardProps) {
       <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <Stat label="Reports this period" value={s.reportsThisPeriod} />
         <Stat label="On-time ratio" value={onTimePct} />
-        <Stat label="Active leads" value={s.activeLeads} />
+        {/* `activeLeads` counts distinct lead authors who *submitted* in the
+            most recently published period (gauge `customreport_active_leads_total`),
+            not leads currently active — so the label describes the submission
+            count it shows. Schema field + metric name keep `activeLeads` for
+            Grafana/tRPC contract parity. */}
+        <Stat label="Submitting leads" value={s.activeLeads} />
         <Stat label="Late sections" value={s.lateSections} />
         <Stat label="Pending reopens" value={s.pendingReopens} />
         <Stat label="PDF exports (7d)" value={s.pdfExportsLast7d} />
