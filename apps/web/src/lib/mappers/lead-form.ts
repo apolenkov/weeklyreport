@@ -77,6 +77,14 @@ export interface LeadStageAssignment {
   ownership: LeadStageOwnership;
   assignee: string | null;
   tooltip?: string;
+  /**
+   * W11 (fix-report-surface-integrity): true when an OWN non-empty risk
+   * EXPLICITLY names this stage (strict — `stageIds` non-empty and matching). A
+   * covers-all (`stageIds: []`) or legacy stage-less risk does NOT set it. Feeds
+   * own-input completeness so a deliberately risk-staged stage counts, while the
+   * raw `status` stays untouched for the chip's risk-covered-vs-status distinction.
+   */
+  coveredByOwnRisk?: boolean;
 }
 
 export interface LeadProduct {
@@ -372,6 +380,17 @@ function buildStageGrid(
               ),
         ownership: "mine" as const,
         assignee: ownerLabel,
+        // W11 (fix-report-surface-integrity): flag a stage the lead's OWN risk
+        // EXPLICITLY names (strict — non-empty stageIds). A covers-all (`[]`) or
+        // legacy stage-less risk is excluded, so it never inflates the counter.
+        // The raw `status` above is left untouched — the chip distinguishes a
+        // risk-covered empty stage from an explicitly-set one.
+        coveredByOwnRisk: risks.some(
+          (r) =>
+            Array.isArray(r.stageIds) &&
+            r.stageIds.length > 0 &&
+            riskCoversStage(r, stageName),
+        ),
       };
     }
     return {

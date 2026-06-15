@@ -397,6 +397,60 @@ describe("mapLeadProducts", () => {
       (s) => s.stageName === "Dev",
     );
     expect(devStage?.status).toBe("empty");
+    // W11: a covers-all (stageIds: []) legacy risk does NOT explicitly name the
+    // stage, so it must NOT mark it covered-by-own-risk (else the counter would
+    // inflate for every empty stage — the original "6/7" defect's root cause).
+    expect(devStage?.coveredByOwnRisk ?? false).toBe(false);
+  });
+
+  it("W11: an empty owned stage covered by an OWN risk that names it stays empty but is coveredByOwnRisk", () => {
+    // fix-report-surface-integrity W11 reload-stability: the mapper derives the
+    // flag from PERSISTED risks + raw status (no transient display state), so a
+    // reload reproduces it. Raw status stays "empty" (chip distinction relies on
+    // it); coveredByOwnRisk=true makes the stage count toward completeness.
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM Platform",
+          trafficLight: "green",
+          ownedStages: [
+            {
+              stageId: "stage-dev",
+              stageName: "Development",
+              sortOrder: 3,
+              status: null,
+            },
+            {
+              stageId: "stage-testing",
+              stageName: "Testing",
+              sortOrder: 5,
+              status: null,
+            },
+          ],
+        },
+      ],
+      risks: [
+        {
+          projectId: PROJECT_A,
+          risk: "Dev environment blocked",
+          impact: "Cannot ship",
+          mitigation: "Escalate to ops",
+          severity: "blocked",
+          stageIds: ["Development"],
+        },
+      ],
+    });
+
+    const stages = mapLeadProducts(section)[0]?.stages ?? [];
+    const dev = stages.find((s) => s.stageName === "Dev");
+    const testing = stages.find((s) => s.stageName === "Testing");
+    // The named stage: raw status preserved empty, but flagged covered.
+    expect(dev?.status).toBe("empty");
+    expect(dev?.coveredByOwnRisk).toBe(true);
+    // A sibling owned stage the risk did NOT name: not covered.
+    expect(testing?.status).toBe("empty");
+    expect(testing?.coveredByOwnRisk ?? false).toBe(false);
   });
 
   it("an empty-text risk does not floor the chip (only non-empty risks count)", () => {
