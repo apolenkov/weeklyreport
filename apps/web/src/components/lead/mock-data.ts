@@ -15,6 +15,15 @@ export interface StageAssignment {
   ownership: StageOwnership;
   assignee: string | null;
   tooltip?: string;
+  /**
+   * W11 (fix-report-surface-integrity): true when this stage is covered by the
+   * lead's OWN non-empty risk that EXPLICITLY names the stage (strict — an
+   * empty/legacy "covers all" stageIds does NOT set this). Additive to the raw
+   * `status`: an empty-but-covered own stage counts toward completeness while
+   * staying distinguishable from an explicitly-set status. Foreign risks never
+   * set it.
+   */
+  coveredByOwnRisk?: boolean;
 }
 
 export interface Product {
