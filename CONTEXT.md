@@ -43,3 +43,36 @@ exercises, to detect uncovered entry-point surface. Brittle on an unstable
 codebase (the `file:line` links rot on the first refactor); deliberately
 deferred until the code stabilizes. Distinct from the Scenario Catalog.
 _Avoid_: scenario catalog (when you mean the durable behavioral set).
+
+## Reporting periods & submission
+
+**Reporting period**:
+The weekly window a report covers — the `Report` row itself. Carries the
+lifecycle state machine (`open` / `published` / `reopened`) plus an `archived`
+flag. A period is never "submitted"; submission is a per-lead act on a section
+within the period (see _Lead submission_).
+_Avoid_: week (the period is the window, not the calendar week label).
+
+**Current period**:
+The single active reporting period a role is working in now — `open` or
+`reopened`, not archived. In a period navigator it is marked as current (e.g. a
+check), distinct from past periods.
+_Avoid_: latest period (a published-then-archived period can be the latest yet
+not current).
+
+**Lead submission** (a period is "submitted" _for a given lead_):
+A period is "submitted" only from one lead's point of view: that lead has
+submitted their own section for that period (`ReportSection.submittedAt` set).
+It is per-lead and per-period — the same period can be submitted for one lead
+and not another. It is NOT a property of the period and NOT the same as the
+period being `published`.
+_Avoid_: submitted period (no such global state — always qualify "for lead X").
+
+**Archived period**:
+A reporting period that has been closed and moved out of the active set
+(`archived` flag). Independent of submission: a period can be archived without
+the lead ever having submitted ("просто закрыли, человек не сделал"). In a
+period navigator it reads quietly (neutral marker / basket), never as a status
+hue.
+_Avoid_: deleted (archived data is retained), locked (that maps to
+`published`).
