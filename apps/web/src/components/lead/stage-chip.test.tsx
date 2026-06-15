@@ -12,9 +12,10 @@
  */
 import "@testing-library/jest-dom/vitest";
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { SdlcTooltipProvider } from "../ui/sdlc-tooltip";
 import { StageChip } from "./stage-chip";
 
 const BASE_LOCKED = {
@@ -115,5 +116,151 @@ describe("StageChip — chip box height token (align-pipeline-arrows D1)", () =>
     render(<StageChip stage={{ ...BASE_LOCKED, status: "on-track" }} />);
     const button = screen.getByRole("button");
     expect(button.style.height).toBe(STAGE_CHIP_BOX_HEIGHT);
+  });
+});
+
+// ---- W11 (fix-report-surface-integrity 3.9): risk-covered vs status-set ----
+// A stage whose displayed severity comes purely from the lead's OWN risk
+// floor on a raw-empty status must read "by risk" and look distinct from a
+// stage the lead explicitly set. A foreign-floored chip (no own coverage)
+// must read neither — it just announces the floored status.
+
+const BASE_MINE = {
+  stageName: "Design",
+  ownership: "mine" as const,
+  assignee: "Me",
+};
+
+describe("StageChip — covered-by-risk vs status-set distinction (W11 3.9)", () => {
+  it("covered-empty blocked chip announces 'by risk' in its aria-label", () => {
+    render(
+      <StageChip
+        stage={{ ...BASE_MINE, status: "blocked", coveredByOwnRisk: true }}
+        rawStatus="empty"
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Design: blocked by risk" }),
+    ).toBeInTheDocument();
+  });
+
+  it("explicitly-set blocked chip announces 'status set' in its aria-label", () => {
+    render(
+      <StageChip
+        stage={{ ...BASE_MINE, status: "blocked" }}
+        rawStatus="blocked"
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Design: blocked — status set" }),
+    ).toBeInTheDocument();
+  });
+
+  it("covered-empty at-risk chip announces 'by risk'", () => {
+    render(
+      <StageChip
+        stage={{ ...BASE_MINE, status: "at-risk", coveredByOwnRisk: true }}
+        rawStatus="empty"
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Design: at-risk by risk" }),
+    ).toBeInTheDocument();
+  });
+
+  it("covered-empty and explicitly-set blocked chips have DIFFERENT aria-labels", () => {
+    const { unmount } = render(
+      <StageChip
+        stage={{ ...BASE_MINE, status: "blocked", coveredByOwnRisk: true }}
+        rawStatus="empty"
+      />,
+    );
+    const coveredLabel = screen.getByRole("button").getAttribute("aria-label");
+    unmount();
+    render(
+      <StageChip
+        stage={{ ...BASE_MINE, status: "blocked" }}
+        rawStatus="blocked"
+      />,
+    );
+    const setLabel = screen.getByRole("button").getAttribute("aria-label");
+    expect(coveredLabel).not.toBe(setLabel);
+    // both still announce the blocked severity
+    expect(coveredLabel).toContain("blocked");
+    expect(setLabel).toContain("blocked");
+  });
+
+  it("covered-empty and explicitly-set chips are visually distinguishable", () => {
+    const { unmount } = render(
+      <StageChip
+        stage={{ ...BASE_MINE, status: "blocked", coveredByOwnRisk: true }}
+        rawStatus="empty"
+      />,
+    );
+    const coveredCoverage = screen
+      .getByRole("button")
+      .getAttribute("data-coverage");
+    unmount();
+    render(
+      <StageChip
+        stage={{ ...BASE_MINE, status: "blocked" }}
+        rawStatus="blocked"
+      />,
+    );
+    const setCoverage = screen
+      .getByRole("button")
+      .getAttribute("data-coverage");
+    expect(coveredCoverage).toBe("risk");
+    expect(setCoverage).not.toBe("risk");
+  });
+
+  it("foreign-floored raw-empty chip reads neither 'by risk' nor 'status set'", () => {
+    // Display floor from a FOREIGN risk: floored to blocked, raw empty, but
+    // NOT covered by the lead's own risk. Must not claim ownership of intent.
+    render(
+      <StageChip
+        stage={{ ...BASE_MINE, status: "blocked", coveredByOwnRisk: false }}
+        rawStatus="empty"
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Design: blocked" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button").getAttribute("data-coverage")).not.toBe(
+      "risk",
+    );
+  });
+
+  it("locked chip keeps a plain status aria-label (no suffix)", () => {
+    render(
+      <StageChip
+        stage={{ ...BASE_LOCKED, status: "blocked" }}
+        rawStatus="blocked"
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "DevOps: blocked" }),
+    ).toBeInTheDocument();
+  });
+
+  it("covered chip with an explicit tooltip still surfaces 'by risk' on focus", () => {
+    // A pre-set tooltip must NOT swallow the coverage cue: a sighted hover
+    // user gets the dashed border AND the "by risk" explanation.
+    render(
+      <SdlcTooltipProvider>
+        <StageChip
+          stage={{
+            ...BASE_MINE,
+            status: "blocked",
+            coveredByOwnRisk: true,
+            tooltip: "Design · custom note",
+          }}
+          rawStatus="empty"
+        />
+      </SdlcTooltipProvider>,
+    );
+    fireEvent.focus(screen.getByRole("button"));
+    const tip = screen.getByTestId("sdlc-tooltip");
+    expect(tip).toHaveTextContent("Design · custom note by risk");
   });
 });

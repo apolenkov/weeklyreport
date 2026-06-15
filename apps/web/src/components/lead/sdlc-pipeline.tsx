@@ -178,7 +178,10 @@ export function SdlcPipeline({
     <div className="space-y-4">
       {products.map((product) => {
         // Completeness reads the RAW (pre-floor) product so a risk-derived
-        // severity floor never inflates the lead's own-input counter.
+        // severity floor never inflates the lead's own-input counter. The same
+        // raw product also feeds each chip its pre-floor status (W11 3.9), so a
+        // chip floored by the lead's own risk reads "by risk" rather than
+        // "status set".
         const rawProduct =
           rawProducts?.find((p) => p.id === product.id) ?? product;
         const completeness = computeCompleteness(rawProduct);
@@ -285,6 +288,11 @@ export function SdlcPipeline({
                     <div className="relative">
                       <StageChip
                         stage={stage}
+                        rawStatus={
+                          rawProduct.stages.find(
+                            (rs) => rs.stageName === stage.stageName,
+                          )?.status ?? stage.status
+                        }
                         readOnly={readOnly}
                         onStatusChange={(name, status) =>
                           handleStatusChange(product.id, name, status)
