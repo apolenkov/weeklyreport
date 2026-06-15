@@ -171,6 +171,12 @@ function trafficLightsForLeadByName(
     });
 }
 
+// Shown when an escalation carries no stage (a project-level red flag, or a
+// legacy stage-less item/risk). The API builder returns stageName=null
+// identically on both the live and snapshot paths, so this label is the
+// single place the empty case is worded.
+const NO_STAGE_LABEL = "No stage set";
+
 function escalationToBlockedItem(
   escalation: Escalation,
   index: number,
@@ -180,7 +186,7 @@ function escalationToBlockedItem(
       id: `esc-${index}`,
       severity: "blocked",
       product: escalation.productName,
-      stage: escalation.stageName ?? "\u2014",
+      stage: escalation.stageName ?? NO_STAGE_LABEL,
       assignee: escalation.leadName,
       description: escalation.description,
     };
@@ -190,7 +196,7 @@ function escalationToBlockedItem(
       id: `esc-${index}`,
       severity: "at-risk",
       product: escalation.productName,
-      stage: escalation.stageName ?? "\u2014",
+      stage: escalation.stageName ?? NO_STAGE_LABEL,
       assignee: escalation.leadName,
       description: escalation.description,
     };
@@ -200,7 +206,7 @@ function escalationToBlockedItem(
     id: `esc-${index}`,
     severity: "at-risk",
     product: escalation.productName,
-    stage: escalation.stageName ?? "\u2014",
+    stage: escalation.stageName ?? NO_STAGE_LABEL,
     assignee: escalation.leadName,
     description: escalation.description,
   };
