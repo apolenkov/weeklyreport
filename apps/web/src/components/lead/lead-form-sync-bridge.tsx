@@ -65,6 +65,39 @@ export function applyRiskSeverityFloor(
 }
 
 /**
+ * W11 (fix-report-surface-integrity): render-time twin of the mapper's
+ * `coveredByOwnRisk` annotation. `ctx.products` is stable across an in-session
+ * risk add (no refetch), so the mapper-baked flag goes stale the moment the lead
+ * stages a risk; re-deriving it here from the live `risks` lets the completeness
+ * counter tick without a reload. Strict, like the mapper: only an OWN non-empty
+ * risk that EXPLICITLY names the stage (non-empty stageIds) sets the flag — a
+ * covers-all (`[]`) or legacy stage-less risk does not, so it never inflates the
+ * counter. Foreign risks (other productId) never set it. Exported for testing.
+ */
+export function annotateOwnRiskCoverage(
+  products: readonly Product[],
+  risks: readonly RiskEntry[],
+): Product[] {
+  return products.map((product) => ({
+    ...product,
+    stages: product.stages.map((stage) => {
+      if (stage.ownership !== "mine") return stage;
+      const covered = risks.some(
+        (r) =>
+          r.productId === product.id &&
+          r.text.trim().length > 0 &&
+          Array.isArray(r.stageIds) &&
+          r.stageIds.length > 0 &&
+          riskCoversStage(r, stage.stageName),
+      );
+      return stage.coveredByOwnRisk === covered
+        ? stage
+        : { ...stage, coveredByOwnRisk: covered };
+    }),
+  }));
+}
+
+/**
  * unify-risk-stage-status (D3): apply a confirmed chip lowering to the risk
  * list. Each covering risk either loses the clicked stage (it covers other
  * stages too — surviving risks keep >=1 stage, so sibling chips keep their
@@ -426,13 +459,17 @@ function Pipeline() {
   // without a backing risk. The chip-raise interception in
   // handleStageStatusChange is what enforces that, so the warning has nothing
   // left to warn about.
+  // W11: re-derive coveredByOwnRisk from the live risks (ctx.products is stable
+  // across an in-session risk add, so its mapper-baked flag is stale). The
+  // counter reads this off rawProducts; the chip reads it off the floored array.
+  const rawWithCoverage = annotateOwnRiskCoverage(ctx.products, ctx.risks);
   // D1: render-time severity floor — same rule as mapLeadProducts, so the
   // live chips can never show on-track/empty while covering risks exist.
-  const flooredProducts = applyRiskSeverityFloor(ctx.products, ctx.risks);
+  const flooredProducts = applyRiskSeverityFloor(rawWithCoverage, ctx.risks);
   return (
     <SdlcPipeline
       products={flooredProducts}
-      rawProducts={ctx.products}
+      rawProducts={rawWithCoverage}
       readOnly={ctx.readOnly}
       onStatusChange={ctx.handleStageStatusChange}
       {...(ctx.crossAuthors !== undefined

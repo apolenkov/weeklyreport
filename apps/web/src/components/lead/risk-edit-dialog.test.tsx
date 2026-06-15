@@ -198,6 +198,40 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
     expect(labels).toEqual(["Testing", "Support"]);
   });
 
+  it("W11 (3.10): switching product clears the stage selection, never selects all owned stages", () => {
+    // fix-report-surface-integrity W11: setProductAndStages must NOT default to
+    // every owned stage on a product switch — that "covers all" default is the
+    // root cause of the inflated-completeness defect. After switching, the lead
+    // marks stages explicitly, so all checkboxes start unchecked.
+    const twoProducts: Product[] = [
+      { id: "p1", name: "CRM", overallStatus: "on-track", stages: [] },
+      { id: "p2", name: "Billing", overallStatus: "on-track", stages: [] },
+    ];
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={twoProducts}
+        onSave={() => undefined}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={(id) =>
+          id === "p2" ? ["Dev", "Testing"] : ["Planning"]
+        }
+      />,
+    );
+
+    fireEvent.change(screen.getByRole("combobox"), {
+      target: { value: "p2" },
+    });
+
+    const checkboxes = screen.getAllByRole("checkbox");
+    expect(checkboxes.map((cb) => (cb as HTMLInputElement).checked)).toEqual([
+      false,
+      false,
+    ]);
+  });
+
   it("does NOT pre-select stages on create when pipeline uses alias (Dev → Development)", () => {
     const productsWithAlias: Product[] = [
       {
