@@ -330,6 +330,103 @@ describe("mapWeeklyReport", () => {
     expect(expectDefined(crmReport?.risks[0]).severity).toBe("blocked");
   });
 
+  it("W6 regression: a blocking risk does NOT floor product status — export status follows the traffic light", () => {
+    // fix-report-surface-integrity W6 deviation guard. The head/PDF export
+    // surface renders the product-level `worstStatus` (computed server-side from
+    // the leads' traffic lights), and has NO stage grid. Risks color stage chips
+    // on the LIVE lead form only; they must NOT floor the exported product status.
+    // A product with a blocking risk in its section but a green traffic light
+    // must still export as on-track — flooring here would be a behavior change
+    // outside W6 (export status stays traffic-light-driven).
+    const report = baseReport({
+      portfolioOverview: [
+        {
+          productId: PROJECT_A,
+          productName: "CRM",
+          // Server aggregates worstStatus from traffic lights only (green here).
+          worstStatus: "green",
+          stageCount: 7,
+          leadNames: ["Тимлид 1"],
+        },
+      ],
+      leadSections: [
+        {
+          reportSectionId: SECTION_A,
+          reportId: REPORT_ID,
+          authorId: AUTHOR_A,
+          authorName: "Тимлид 1",
+          status: "submitted",
+          submittedAt: new Date("2026-04-19T18:00:00Z"),
+          projects: [
+            { projectId: PROJECT_A, projectName: "CRM", trafficLight: "green" },
+          ],
+          items: [],
+          risks: [
+            {
+              id: "r1",
+              projectId: PROJECT_A,
+              risk: "Vendor outage",
+              impact: "Work is stopped",
+              mitigation: "Escalate",
+              severity: "blocked",
+              stageIds: ["Dev"],
+            },
+          ],
+          decisions: [],
+        },
+      ],
+    });
+
+    const result = mapWeeklyReport(report);
+    const crm = result.products.find((p) => p.id === PROJECT_A);
+    const crmPortfolio = result.portfolio.find((p) => p.id === PROJECT_A);
+    // Product status is the floor-free traffic-light passthrough, not floored
+    // by the blocking risk present on the same section.
+    expect(crm?.status).toBe("on-track");
+    expect(crm?.statusLabel).toBe("On Track");
+    expect(crmPortfolio?.status).toBe("on-track");
+    // The risk still surfaces as a blocked-severity row (chip-level data); only
+    // the product STATUS stays unfloored.
+    expect(expectDefined(crm?.risks[0]).severity).toBe("blocked");
+  });
+
+  it("W6 regression: a red traffic light exports blocked product status", () => {
+    // The other direction of the same guard: a broken passthrough that dropped
+    // the worstStatus would turn this red into on-track and flip the assertion.
+    const report = baseReport({
+      portfolioOverview: [
+        {
+          productId: PROJECT_A,
+          productName: "CRM",
+          worstStatus: "red",
+          stageCount: 7,
+          leadNames: ["Тимлид 1"],
+        },
+      ],
+      leadSections: [
+        {
+          reportSectionId: SECTION_A,
+          reportId: REPORT_ID,
+          authorId: AUTHOR_A,
+          authorName: "Тимлид 1",
+          status: "submitted",
+          submittedAt: new Date("2026-04-19T18:00:00Z"),
+          projects: [
+            { projectId: PROJECT_A, projectName: "CRM", trafficLight: "red" },
+          ],
+          items: [],
+          risks: [],
+          decisions: [],
+        },
+      ],
+    });
+
+    const result = mapWeeklyReport(report);
+    const crm = result.products.find((p) => p.id === PROJECT_A);
+    expect(crm?.status).toBe("blocked");
+    expect(crm?.statusLabel).toBe("Blocked");
+  });
+
   it("attaches needsAttention from matching escalation", () => {
     const report = baseReport({
       portfolioOverview: [
