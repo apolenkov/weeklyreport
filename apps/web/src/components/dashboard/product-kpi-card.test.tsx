@@ -67,6 +67,12 @@ describe("ProductKpiCard — Phase 52-C (UFB-054)", () => {
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
     expect(screen.getByText("9")).toBeInTheDocument();
+    // W9: the leads KPI label describes what the number counts —
+    // distinct lead authors who *submitted* in the last published period
+    // (the gauge `customreport_active_leads_total` help text). "Active
+    // leads" mislabelled a submission count as a current-state count.
+    expect(screen.getByText("Submitting leads")).toBeInTheDocument();
+    expect(screen.queryByText("Active leads")).not.toBeInTheDocument();
     // accessible label
     expect(
       screen.getByRole("region", { name: "Product KPIs" }),
@@ -199,7 +205,7 @@ describe("ProductKpiCard — a11y regression (verify-a11y-recommended-flip)", ()
     const labels = [
       "Reports this period",
       "On-time ratio",
-      "Active leads",
+      "Submitting leads",
       "Late sections",
       "Pending reopens",
       "PDF exports (7d)",
