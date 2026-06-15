@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 
+import { createNullAuditLogger } from "../../../lib/audit-logger.js";
+import { createNullLogger } from "../../../lib/logger.js";
+import type { TrpcContext } from "../trpc.context.js";
 import {
   adminProcedure,
   anyRoleProcedure,
@@ -238,5 +241,92 @@ describe("AUTH-03 default-deny coverage gate", () => {
     const offending = findUncoveredProcedures(altRouter);
 
     expect(offending).toContain("lookalike");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// W2 (fix-report-surface-integrity): pdfExport.request / .status are gated by
+// `leadershipProcedure` (head + admin + viewer). Lead is FORBIDDEN — a lead is
+// the data subject of the report, not an exporter; the lead UI shows a
+// ComingSoon control instead of firing the export.
+//
+// Positive test: assert EXACT chain identity (leadership, NOT anyRole). The
+// coverage gate's `isProcedureChainAllowed` is true for anyRole too, so it
+// would be green before the change; an exact-identity assertion has teeth.
+// We never invoke the resolver on the success path — stub deps throw there.
+//
+// Negative test: invoke the resolver with a lead session. The role guard runs
+// before the resolver, so stub deps are never reached and the only rejection
+// path is FORBIDDEN (a bare "rejects" would also pass on the resolver's
+// TypeError from empty stub deps — asserting code === 'FORBIDDEN' has teeth).
+// ---------------------------------------------------------------------------
+
+const VALID_UUID = "00000000-0000-4000-8000-000000000000";
+
+function leadContext(): TrpcContext {
+  return {
+    session: {
+      userId: "lead-1",
+      email: "lead@test.com",
+      name: "Lead User",
+      role: "lead",
+      activeReportId: "r1",
+      activeReportSectionId: "s1",
+    },
+    logger: createNullLogger(),
+    auditLogger: createNullAuditLogger(),
+    ip: "127.0.0.1",
+    isPdfExport: false,
+    pdfReportId: null,
+  };
+}
+
+describe("W2 pdfExport authz: leadership chain, lead excluded", () => {
+  const stubDeps = {} as Parameters<typeof createAppRouter>[0];
+  const appRouter = createAppRouter(stubDeps);
+  const procedures = appRouter._def.procedures as unknown as Record<
+    string,
+    { _def: { middlewares: readonly unknown[] } }
+  >;
+
+  // `.input()` appends an inputValidatorMiddleware after the base chain and the
+  // resolver is appended last, so we compare base-chain PREFIX identity. The
+  // leadership and anyRole bases share slots 0/1/3/4 and differ only at slot 2
+  // (the role middleware), so the full-prefix match discriminates them.
+  function startsWithChain(
+    middlewares: readonly unknown[],
+    base: readonly unknown[],
+  ): boolean {
+    return base.every((mw, i) => middlewares[i] === mw);
+  }
+
+  it("pdfExport.request uses the leadership chain (head+admin+viewer), not anyRole", () => {
+    const chain = procedures["pdfExport.request"]._def.middlewares;
+    expect(startsWithChain(chain, LEADERSHIP_CHAIN)).toBe(true);
+    expect(startsWithChain(chain, ANY_ROLE_CHAIN)).toBe(false);
+  });
+
+  it("pdfExport.status uses the leadership chain (head+admin+viewer), not anyRole", () => {
+    const chain = procedures["pdfExport.status"]._def.middlewares;
+    expect(startsWithChain(chain, LEADERSHIP_CHAIN)).toBe(true);
+    expect(startsWithChain(chain, ANY_ROLE_CHAIN)).toBe(false);
+  });
+
+  it("lead session is FORBIDDEN from pdfExport.request", async () => {
+    const caller = appRouter.createCaller(leadContext());
+    await expect(
+      caller.pdfExport.request({ reportId: VALID_UUID }),
+    ).rejects.toMatchObject(
+      expect.objectContaining({ code: "FORBIDDEN" }) as Record<string, unknown>,
+    );
+  });
+
+  it("lead session is FORBIDDEN from pdfExport.status", async () => {
+    const caller = appRouter.createCaller(leadContext());
+    await expect(
+      caller.pdfExport.status({ jobId: VALID_UUID }),
+    ).rejects.toMatchObject(
+      expect.objectContaining({ code: "FORBIDDEN" }) as Record<string, unknown>,
+    );
   });
 });
