@@ -125,39 +125,15 @@ routes:
         when: "the head clicks a period entry in the period navigator"
         then: "navigation occurs to the new period's addressed URL (/head/report/<reportId>), view mode and authorId params are preserved, the new report content loads"
         note: "Navigation action via PeriodNavigator. urlBuilder preserves ?mode=slides or ?authorId query params across period navigation."
-      - id: head-addressed-report-navigate-presentation
-        intent: "Open the presentation view of the addressed report"
-        given: "a report is loaded on the addressed route"
-        when: "the head clicks the Present button"
-        then: "navigation occurs to /head/report/<reportId>/present"
-        note: "Navigation action via link; the actual presentation-mode content lives on a separate route. The button is always visible and enabled. Relabeled Presentation icon -> Present by unify-head-toolbar-controls."
   - route: /head/report/[reportId]/present
     access: [head]
     intents:
-      - id: head-present-navigate-next
-        intent: "Navigate to the next report section in the slide deck"
-        given: "The head is viewing the presentation and multiple sections exist"
-        when: "The head presses the right arrow key, J key, or clicks the next button"
-        then: "The view scrolls smoothly to the next section's accordion toggle, and the section counter increments"
-        note: "The next button is disabled when already on the last section."
-      - id: head-present-navigate-prev
-        intent: "Navigate to the previous report section in the slide deck"
-        given: "The head is viewing the presentation and multiple sections exist"
-        when: "The head presses the left arrow key, K key, or clicks the previous button"
-        then: "The view scrolls smoothly to the previous section's accordion toggle, and the section counter decrements"
-        note: "The previous button is disabled when already on the first section."
-      - id: head-present-toggle-fullscreen
-        intent: "Toggle fullscreen mode for the presentation slide deck"
-        given: "The head is viewing the presentation"
-        when: "The head presses F or clicks the Fullscreen/Exit fullscreen button"
-        then: "The presentation switches to or from fullscreen and the toggle's visible label changes between 'Fullscreen' and 'Exit fullscreen'"
-        note: "The wrapper gets white background and padding in fullscreen mode. Escape key exits fullscreen natively."
-      - id: head-present-return-to-report
-        intent: "Return to the standard report view from the presentation deck"
-        given: "The head is viewing the presentation"
-        when: "The head clicks the Back to report link at the top"
-        then: "Navigation occurs to /head/report/[reportId], the non-presentation view of the same report"
-        note: "The route supports keyboard navigation (← → / J/K / F) and mouse navigation (buttons, back link) in parallel."
+      - id: head-present-redirects-to-slides
+        intent: "Legacy head presentation deep link resolves to inline slides mode"
+        given: "the head opens a legacy /head/report/[reportId]/present deep link"
+        when: "the route is requested"
+        then: "the response is a 308 permanent redirect to /head/report/[reportId]?mode=slides; the standalone slide-deck surface no longer exists — presentation lives inline on the report page via the Edit/Slides view-mode toggle"
+        note: "fix-report-surface-integrity W2: the standalone slide deck (section next/prev, fullscreen, Back-to-report link) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
   - route: /lead/history
     access: [head]
     intents:
@@ -228,17 +204,11 @@ routes:
         then: "The portfolio overview table and per-product accordions are displayed; the page title shows the week number and date range; no console errors appear"
         note: "This is the primary read-only intent on the viewer route. The head can expand/collapse product accordions and scroll through content. No mutations occur on this route; publish/reopen/archive actions belong to /head/report/[reportId]."
       - id: head-published-report-export-pdf
-        intent: "Open the browser-print template of the published report"
+        intent: "Export the published report to PDF (async job)"
         given: "The head is viewing a published report page"
-        when: "The head clicks the Print button"
-        then: "A new browser tab opens with the print template (/print/[reportId]); it includes department label, period metadata, and all product sections"
-        note: "Distinct from the async Export PDF button: this is a simple link navigation to /print/[reportId] in target='_blank', not an async job with polling. Always visible. Relabeled Export PDF -> Print by unify-head-toolbar-controls."
-      - id: head-published-report-presentation
-        intent: "Switch to presentation view of the published report"
-        given: "The head is viewing a published report page"
-        when: "The head clicks the Presentation button"
-        then: "The browser navigates to /reports/[reportId]/present, showing a presentation-formatted view of the same report"
-        note: "This is a simple link navigation; no mutation or state change occurs on the current page."
+        when: "The head clicks the Export PDF button and waits for generation"
+        then: "A PDF export job starts (via tRPC pdfExport.request), polling occurs, and the completed PDF opens in a new tab with a success toast"
+        note: "fix-report-surface-integrity W2: the standalone browser-Print link to /print/[reportId] is removed (the print route now 308-redirects humans away — it is the PDF worker's render template only). The single labeled Export PDF is the async pdfExport.request job, rendered by WeeklyReportPage's toolbar trailing group."
       - id: head-published-report-back-to-archive
         intent: "Return to the published reports archive list"
         given: "The head is viewing a published report page"
@@ -248,18 +218,12 @@ routes:
   - route: /reports/[reportId]/present
     access: [head]
     intents:
-      - id: head-navigate-presentation-section
-        intent: "Navigate between report sections in the presentation view"
-        given: "The head is viewing a published report in presentation mode and report has multiple product sections"
-        when: "the head presses left arrow, right arrow, K, or J key"
-        then: "the browser scrolls to the target section (previous or next) and updates the visible section counter to show current position (X / Y)"
-        note: "Keyboard shortcuts: ← or K = previous, → or J = next. Buttons are disabled at boundaries (first/last section). Navigation is ignored when focus is in an input, textarea, or select element."
-      - id: head-toggle-presentation-fullscreen
-        intent: "Enter or exit fullscreen presentation mode"
-        given: "The head is viewing a published report in presentation mode"
-        when: "the head presses F key or clicks the Fullscreen button"
-        then: "the presentation wrapper toggles into browser fullscreen, applies white background and padding, and the button label changes to 'Exit fullscreen'"
-        note: "Keyboard shortcut: F key. Escape key exits fullscreen natively. Fullscreen request may be denied by browser; errors are silently ignored."
+      - id: head-published-present-redirects-to-slides
+        intent: "Legacy published presentation deep link resolves to inline slides mode"
+        given: "the head opens a legacy /reports/[reportId]/present deep link"
+        when: "the route is requested"
+        then: "the response is a 308 permanent redirect to /reports/[reportId]?mode=slides; the standalone slide-deck surface no longer exists — presentation lives inline via the Edit/Slides view-mode toggle"
+        note: "fix-report-surface-integrity W2: the standalone slide deck (section nav, fullscreen) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
   - route: /reports/history
     access: [head]
     intents:

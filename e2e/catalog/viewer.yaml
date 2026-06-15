@@ -56,12 +56,6 @@ routes:
         when: "The viewer clicks the 'Export PDF' button and waits for generation"
         then: "A PDF export job is queued; status is polled; once complete, the PDF file opens in a new browser tab and a 'PDF ready' success toast appears"
         note: "Button is disabled if the report is in 'open' status (not yet published). Generation may take a few seconds; a 'Generating…' state is shown during polling."
-      - id: viewer-open-presentation-view
-        intent: "Open the report in presentation mode"
-        given: "The viewer is viewing a report detail page"
-        when: "The viewer clicks the 'Presentation' button"
-        then: "Navigation occurs to /reports/[reportId]/present"
-        note: "This is a simple link navigation; no mutation or state change occurs on the current page."
       - id: viewer-navigate-back-to-archive
         intent: "Return to the published reports archive list"
         given: "The viewer is viewing a report detail page"
@@ -71,24 +65,12 @@ routes:
   - route: /reports/[reportId]/present
     access: [viewer]
     intents:
-      - id: viewer-navigate-sections
-        intent: "Navigate through report sections using keyboard or UI controls"
-        given: "a published report is loaded in presentation mode"
-        when: "the viewer presses arrow keys (←/→ or K/J) or clicks the Previous/Next buttons"
-        then: "the page scrolls to the next or previous section smoothly, and the section counter updates (e.g., '2 / 5')"
-        note: "Keyboard navigation: ← or K for previous, → or J for next. UI buttons disable when at first or last section. Only shown when report has multiple sections."
-      - id: viewer-fullscreen-presentation
-        intent: "Toggle fullscreen mode for focused presentation viewing"
-        given: "a published report is displayed in presentation mode"
-        when: "the viewer presses F or clicks the Fullscreen button"
-        then: "the browser enters/exits fullscreen mode (ESC also exits per browser standard), and the button text toggles between 'Fullscreen' and 'Exit fullscreen'"
-        note: "Fullscreen applies white background and padding. Available only when report has multiple sections (UI buttons visible)."
-      - id: viewer-read-published-report
-        intent: "View the complete published status report in read-only mode"
-        given: "the viewer navigates to /reports/[reportId]/present for a published report"
-        when: "the page loads with a valid reportId for a published period"
-        then: "the page displays the report title ('Status Presentation'), period navigator, portfolio overview table, and product/lead sections; no errors appear in console"
-        note: "Viewer role is restricted to published reports only (enforced at service layer). The page is purely read-only—no mutations are exposed. A 'Back to report' link returns to the standard report view (/reports/[reportId])."
+      - id: viewer-present-redirects-to-slides
+        intent: "Legacy presentation deep link resolves to inline slides mode"
+        given: "the viewer opens a legacy /reports/[reportId]/present deep link"
+        when: "the route is requested"
+        then: "the response is a 308 permanent redirect to /reports/[reportId]?mode=slides; the standalone slide-deck surface no longer exists — presentation lives inline on the report page via the Edit/Slides view-mode toggle"
+        note: "fix-report-surface-integrity W2: the standalone slide deck (section nav, fullscreen, 'Status Presentation' title) is gone. The route is kept so existing deep links keep resolving; the sweep runner follows the redirect to ?mode=slides."
   - route: /reports/history
     access: [viewer]
     intents:
