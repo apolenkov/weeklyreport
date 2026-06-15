@@ -32,10 +32,22 @@ wants captured.
 - Before: `computeCompleteness(product)` counts raw `status !== "empty"`; mapper guards
   `empty→empty`; live form floors empty-covered stages (display only) → counter excludes them.
 - After: the mapper annotates each raw stage with `coveredByOwnRisk` (derived from the lead's own
-  non-empty staged risks; stage-less legacy risk → false). `computeCompleteness` counts
-  `status !== "empty" || coveredByOwnRisk`. The read-model mapper also applies the floor so
-  head/PDF color matches the live form. Foreign/cross-author risks color but never count.
+  non-empty staged risks via `riskCoversStage`; stage-less legacy risk → false). It KEEPS the raw
+  `status` (the `empty→empty` short-circuit stays). `computeCompleteness` counts
+  `status !== "empty" || coveredByOwnRisk`. The flag has two producers — the mapper (reload/load)
+  AND a render-time derivation in `lead-form-sync-bridge` `Pipeline()` (so the in-session counter
+  ticks without reload). Foreign/cross-author risks color but never count.
   Reload reads persisted risks + raw status — no transient display state.
+- **Deviation (verified in source during impl, 2026-06-15):** W6 head/PDF stage-color parity is
+  ALREADY satisfied — no surface renders an empty-covered stage un-floored. The live form re-floors
+  via `applyRiskSeverityFloor`; head slides re-floor via `floorSlideStageStatus`; head-form /
+  preview / PDF render product `worstStatus` and have NO stage grid at all. So the mapper must
+  PRESERVE raw status + add `coveredByOwnRisk` (NOT floor raw — flooring would count foreign-covered
+  stages in X/7 and erase the 3.9 risk-covered-vs-status-set distinction). Task 3.7 reduces to: fix
+  the stale `empty→empty` comments; the floor is left where it already lives. Task 4.2's
+  stage-color-in-PDF assertion is dropped (no stage color in the print template) and replaced by a
+  product-level `worstStatus` regression guard. Phase-3 Codex grill should adversarially re-check
+  this deviation.
 
 ### Export authz (W2)
 

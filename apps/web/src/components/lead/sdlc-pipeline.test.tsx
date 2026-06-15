@@ -217,14 +217,49 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
     expect(pill?.getAttribute("data-complete")).toBe("true");
   });
 
-  it("completeness counts RAW (pre-floor) status, so a risk-derived severity floor never inflates it", () => {
-    // rethink-pipeline-state-vs-completeness regression: `products` carries the
-    // render-time floor (a covering risk pushed the empty Design stage to
-    // at-risk for the chip), while `rawProducts` keeps the lead's untouched
-    // empty. Completeness MUST read raw → 1/2, incomplete. Reading the floored
-    // `products` would falsely report 2/2 complete (the add-then-remove-risk
-    // corruption this change fixes).
-    const flooredProducts: Product = {
+  it("W11: an empty own stage covered by the lead's OWN risk COUNTS toward completeness", () => {
+    // fix-report-surface-integrity W11 (reverses the old lead-pipeline-card
+    // invariant): a stage the lead deliberately staged a risk on is addressed,
+    // so the raw `coveredByOwnRisk` flag counts it even while raw status stays
+    // "empty". Design=empty BUT coveredByOwnRisk → 2/2, complete. The flag lives
+    // on the RAW product (mapper/bridge derive it from persisted own risks), so
+    // it survives reload — no transient display state.
+    const rawWithOwnCover: Product = {
+      ...PRODUCT_WITH_UNFILLED_OWN_STAGE,
+      stages: [
+        {
+          stageName: "Design",
+          status: "empty",
+          ownership: "mine",
+          assignee: "me",
+          coveredByOwnRisk: true,
+        },
+        {
+          stageName: "Dev",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "me",
+        },
+      ],
+    };
+    const { container } = render(
+      <SdlcPipeline
+        products={[rawWithOwnCover]}
+        rawProducts={[rawWithOwnCover]}
+        readOnly={false}
+      />,
+    );
+    const pill = getCompletenessPill(container);
+    expect(pill?.textContent).toContain("2/2 stages");
+    expect(pill?.getAttribute("data-complete")).toBe("true");
+  });
+
+  it("W11: a display-only floored empty stage (no OWN-risk flag) still does NOT count", () => {
+    // The render-time floor on `products` (a foreign risk, or any display floor)
+    // pushes Design to at-risk for the chip, but the RAW product carries no
+    // coveredByOwnRisk flag → completeness reads 1/2, incomplete. This is the
+    // "foreign risks color but never count" guard — flooring alone never inflates.
+    const flooredDisplay: Product = {
       ...PRODUCT_WITH_UNFILLED_OWN_STAGE,
       stages: [
         {
@@ -243,7 +278,7 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
     };
     const { container } = render(
       <SdlcPipeline
-        products={[flooredProducts]}
+        products={[flooredDisplay]}
         rawProducts={[PRODUCT_WITH_UNFILLED_OWN_STAGE]}
         readOnly={false}
       />,

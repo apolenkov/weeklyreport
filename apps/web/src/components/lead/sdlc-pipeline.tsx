@@ -118,14 +118,18 @@ function productHealthStatus(
 }
 
 /**
- * rethink-pipeline-state-vs-completeness (D1): own-input completeness, over
- * the lead's OWN stages only. A stage counts as filled ONLY when the lead set
- * an explicit status on it (status !== "empty"). It MUST be fed the RAW,
- * pre-floor status — never the risk-derived render-time floor. Otherwise an
- * add-then-remove risk cycle (the Add Risk dialog defaults to all stages
- * checked) would floor every empty stage to a severity and inflate the counter
- * to "your input is complete" for stages the lead never touched. Foreign
- * severity never touches this counter.
+ * fix-report-surface-integrity W11 (reverses the earlier
+ * rethink-pipeline-state-vs-completeness D1 invariant): own-input completeness,
+ * over the lead's OWN stages only. A stage counts as filled when EITHER the lead
+ * set an explicit status on it (status !== "empty") OR the lead deliberately
+ * staged their OWN risk on it (the RAW `coveredByOwnRisk` flag — a stage they
+ * addressed via the risk surface). It MUST still be fed the RAW product (the
+ * mapper/bridge derive `coveredByOwnRisk` strictly from persisted own risks that
+ * EXPLICITLY name the stage), NEVER the risk-derived render-time severity floor:
+ * the floor colors empty AND foreign-covered stages, so counting it would inflate
+ * the counter for stages the lead never touched. The old "all stages checked"
+ * footgun is removed at the source — the Add Risk dialog no longer defaults to
+ * every owned stage (W11 task 3.10). Foreign severity never touches this counter.
  */
 export interface CompletenessState {
   filled: number;
@@ -135,7 +139,9 @@ export interface CompletenessState {
 
 export function computeCompleteness(product: Product): CompletenessState {
   const mine = product.stages.filter((s) => s.ownership === "mine");
-  const filled = mine.filter((s) => s.status !== "empty").length;
+  const filled = mine.filter(
+    (s) => s.status !== "empty" || s.coveredByOwnRisk === true,
+  ).length;
   return {
     filled,
     total: mine.length,
