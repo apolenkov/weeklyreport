@@ -185,6 +185,22 @@ describe("PeriodNavigator (lead)", () => {
       expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
     });
 
+    it("re-selecting the already-selected period does not navigate (inert, matches native select)", () => {
+      // A single-option fallback navigator (viewer /reports/[reportId], lead
+      // preview) must be inert: re-picking the current period is a no-op, the
+      // same as a native <select> re-selecting its current option. Otherwise
+      // the head urlBuilder would jump viewer/lead surfaces to /head/report.
+      render(<PeriodNavigator periods={PERIODS.slice(0, 1)} />);
+      const trigger = getTrigger();
+      fireEvent.click(trigger);
+      fireEvent.mouseDown(
+        screen.getByRole("option", { name: /Apr 21–27, 2026/ }),
+      );
+      expect(push).not.toHaveBeenCalled();
+      // The listbox still closes.
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    });
+
     it("Escape closes the listbox without navigating", () => {
       render(<PeriodNavigator periods={PERIODS} />);
       const trigger = getTrigger();

@@ -191,10 +191,13 @@ export function PeriodNavigator({
 
   const selectOption = useCallback(
     (periodId: string) => {
-      navigateTo(periodId);
+      // Re-selecting the current period is a no-op (matches native <select>
+      // semantics). This also keeps a single-option fallback navigator inert
+      // so a head urlBuilder never jumps a viewer/lead surface to /head/report.
+      if (periodId !== selectedPeriod?.id) navigateTo(periodId);
       closeAndRefocus();
     },
-    [navigateTo, closeAndRefocus],
+    [navigateTo, closeAndRefocus, selectedPeriod?.id],
   );
 
   // Position the panel via portal to escape the toolbar's overflow clip.
