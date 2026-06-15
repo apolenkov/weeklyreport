@@ -327,8 +327,13 @@ describe("PrintReportPage — PDF-worker-vs-human server gate (W2 task 3.3)", ()
   it("renders the print template for the PDF worker bound to this report", async () => {
     permanentRedirect.mockClear();
     redirect.mockClear();
+    // A real PDF-worker token rebuilds the requester's NON-null session
+    // (trpc.context.ts:246-256), so the worker case carries session +
+    // isPdfExport. This gives the test teeth: if the gate checked the
+    // session branch before the worker-render check, the head session would
+    // 308-redirect instead of rendering — the assertions below would fail.
     getPrintRouteContext.mockResolvedValue({
-      session: null,
+      session: sessionOf("head"),
       isPdfExport: true,
       pdfReportId: TEST_REPORT_ID,
     });
