@@ -623,16 +623,18 @@ export function createAppRouter(deps: RouterDeps) {
 
     // === PDF Export namespace ===
     pdfExport: router({
-      // driver-findings finding 3 + followups item 1: Export-PDF is available to
-      // every authenticated role (head/admin/lead/viewer). request + status MUST
-      // widen together — if only request widens, the caller fires the job but
-      // cannot poll status and the button hangs. The PDF render is now
+      // W2 (fix-report-surface-integrity): Export-PDF is gated by
+      // `leadershipProcedure` (head + admin + viewer). Lead is EXCLUDED and
+      // gets FORBIDDEN — a lead is the data subject of the report, not an
+      // exporter; the lead UI surfaces a ComingSoon control instead of firing
+      // the export. request + status share the same gate so a permitted caller
+      // can both fire the job and poll its status. The PDF render is
       // REQUESTER-SCOPED: the worker token carries the requester's userId and
       // the print page renders under their rebuilt session, so each role's PDF
-      // matches their in-app view (head → full report, lead/viewer → their
+      // matches their in-app view (head/admin → full report, viewer → their
       // slice). Viewer export is safe because the empty-PDF fix gives the viewer
       // a non-empty, scoped render.
-      request: anyRoleProcedure
+      request: leadershipProcedure
         .input(z.object({ reportId: z.uuid() }))
         .mutation(async ({ input, ctx }) => {
           try {
@@ -651,7 +653,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      status: anyRoleProcedure
+      status: leadershipProcedure
         .input(z.object({ jobId: z.uuid() }))
         .query(async ({ input, ctx }) => {
           try {

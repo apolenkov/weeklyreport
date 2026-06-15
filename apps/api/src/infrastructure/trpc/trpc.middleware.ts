@@ -495,9 +495,10 @@ const leadershipRoleMiddleware = buildRoleMiddleware([
   "admin",
   "viewer",
 ]);
-// driver-findings-2026-06-11 finding 3 (decision 2026-06-13): leads SHOULD have
-// Export-PDF. The pdfExport.request / .status procedures widen from head-only to
-// lead + head + admin. Viewer is excluded (read-only role keeps the /print link).
+// W2 (fix-report-surface-integrity): ORPHANED — no procedure uses this gate.
+// Retained only so role-coverage's ALLOWED_CHAINS keeps a chain to match. The
+// live pdfExport policy is `leadershipProcedure` (head + admin + viewer); lead
+// is FORBIDDEN (data subject, ComingSoon UI). Do not re-wire without a change.
 const leadHeadAdminRoleMiddleware = buildRoleMiddleware([
   "lead",
   "head",
@@ -517,7 +518,8 @@ export const adminProcedure = buildProtectedProcedure(adminRoleMiddleware);
 export const leadershipProcedure = buildProtectedProcedure(
   leadershipRoleMiddleware,
 );
-// driver-findings-2026-06-11 finding 3: lead + head + admin gate for Export-PDF.
+// W2 (fix-report-surface-integrity): orphaned (see leadHeadAdminRoleMiddleware).
+// Exported only so role-coverage can register its chain in ALLOWED_CHAINS.
 export const leadHeadAdminProcedure = buildProtectedProcedure(
   leadHeadAdminRoleMiddleware,
 );
