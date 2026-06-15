@@ -165,6 +165,22 @@ export function createAppRouter(deps: RouterDeps) {
         // chrome can render the brand without a second round-trip.
         return ctx.session;
       }),
+      // fix-report-surface-integrity W2 (task 3.3): the `/print` web route
+      // gate needs the one bit `me` cannot give it — whether the inbound
+      // cookie verified as a PDF-export-scoped JWT (`ctx.isPdfExport`) and the
+      // bound `reportId` (`ctx.pdfReportId`). For a `requestedBy` PDF token the
+      // synthetic session IS the requester's real session, so the session
+      // alone cannot tell the PDF worker apart from that human; only these two
+      // context flags discriminate. `publicProcedure` (not pdfExport-guarded),
+      // so the worker token reaches it; returns the session too so the gate
+      // reads the cookie once and branches worker / human-redirect / login.
+      printGate: publicProcedure.query(({ ctx }) => {
+        return {
+          session: ctx.session,
+          isPdfExport: ctx.isPdfExport,
+          pdfReportId: ctx.pdfReportId,
+        };
+      }),
     }),
 
     // === Organization namespace (UFB-047 / Phase 48-A) ===
