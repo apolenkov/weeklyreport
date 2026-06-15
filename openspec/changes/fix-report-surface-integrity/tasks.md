@@ -37,7 +37,7 @@ mandatory where noted. UI strings stay English.
       single `ReportToolbar` period row; publish hint on the status row. (W1)
 - [x] 3.2 Presentation/export: one labeled Export-PDF in the toolbar trailing group; remove the
       Present + browser-Print header links; lead shows the ComingSoon control from 1.1. (W2)
-- [ ] 3.3 Routing: `/present` → 308 `?mode=slides` (head + viewer); `/print/[id]` worker-only
+- [x] 3.3 Routing: `/present` → 308 `?mode=slides` (head + viewer); `/print/[id]` worker-only
       with the role-specific human-redirect discriminator; update nav active-matching,
       route-match helpers, report-shell + head-shell placeholder tests, sweep fixtures. (W2)
 - [x] 3.4 Period navigator: unify on the combobox everywhere; `useId`-scoped listbox IDs; drop
