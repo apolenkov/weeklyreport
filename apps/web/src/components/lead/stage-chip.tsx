@@ -19,6 +19,16 @@ interface StageChipProps {
   readonly readOnly?: boolean;
   /** Cross-author stats shown in the tooltip when the stage is locked. */
   readonly crossAuthorInfo?: { itemCount: number; riskCount: number };
+  /**
+   * W11 (fix-report-surface-integrity 3.9): the RAW, pre-floor status of this
+   * stage. `stage.status` is the floored display status (risk floor may have
+   * raised an empty stage to at-risk/blocked). Threading the raw status lets
+   * the chip distinguish a severity the lead set explicitly (raw !== "empty")
+   * from one that exists ONLY because the lead's own risk floors an empty
+   * stage (raw === "empty" && `stage.coveredByOwnRisk`). Defaults to the
+   * floored status for read-only / head paths that pass no raw signal.
+   */
+  readonly rawStatus?: StageStatus;
 }
 
 // Status/icon config lives in stage-chip-config.ts (apply-status-palette).
@@ -38,6 +48,7 @@ export function StageChip({
   onStatusChange,
   readOnly = false,
   crossAuthorInfo,
+  rawStatus,
 }: StageChipProps) {
   const [showPopover, setShowPopover] = useState(false);
   const [popoverPos, setPopoverPos] = useState<{
@@ -53,6 +64,15 @@ export function StageChip({
   const isLocked = stage.ownership === "locked";
   const isUnassigned = stage.ownership === "unassigned";
   const isEmpty = stage.status === "empty" && isEditable;
+  // W11 (3.9): the raw status defaults to the floored display status for
+  // callers (read-only / head) that thread no pre-floor signal. The
+  // covered/status-set distinction applies only to the lead's OWN stages —
+  // a locked/unassigned chip never carries the lead's authoring intent.
+  const isMine = stage.ownership === "mine";
+  const effectiveRawStatus = rawStatus ?? stage.status;
+  const coveredByRisk =
+    isMine && effectiveRawStatus === "empty" && stage.coveredByOwnRisk === true;
+  const isExplicitlySet = isMine && effectiveRawStatus !== "empty";
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -104,7 +124,12 @@ export function StageChip({
     ? `1.5px dashed var(--color-starbucks-accent)`
     : isUnassigned
       ? "1.5px dashed rgba(0,0,0,0.15)"
-      : `1.5px solid ${config.border}`;
+      : // W11 (3.9): a stage floored to its severity purely by the lead's own
+        // risk reads as a dashed "sketch" of the same hue — same color, not
+        // pixel-identical to a status the lead explicitly set (solid).
+        coveredByRisk
+        ? `1.5px dashed ${config.border}`
+        : `1.5px solid ${config.border}`;
 
   function handleChipClick() {
     if (!isEditable) return;
@@ -138,6 +163,19 @@ export function StageChip({
           .filter(Boolean)
           .join(" · ")
       : null;
+  // W11 (3.9): three-way coverage suffix carried by BOTH the screen-reader
+  // label and the visible tooltip.
+  //  - covered by the lead's OWN risk on an empty stage → "<status> by risk"
+  //  - a status the lead set explicitly → "<status> — status set"
+  //  - foreign floor / locked / unassigned → no suffix (plain status)
+  const coverageSuffix = coveredByRisk
+    ? " by risk"
+    : isExplicitlySet
+      ? " — status set"
+      : "";
+  const ariaLabel = `${stage.stageName}: ${stage.status}${coverageSuffix}`;
+  const baseTooltip = stage.tooltip ?? `${stage.stageName} · ${stage.status}`;
+
   const title = isLocked
     ? [
         `Locked — owned by ${stage.assignee ?? "another lead"}`,
@@ -148,7 +186,10 @@ export function StageChip({
         .join(" · ")
     : isUnassigned
       ? "Unassigned · Contact admin"
-      : (stage.tooltip ?? `${stage.stageName} · ${stage.status}`);
+      : // Append the coverage suffix OUTSIDE the `??` so a chip that carries an
+        // explicit tooltip still gets the "by risk" / "status set" cue — the
+        // dashed border must never read as unexplained to a sighted hover user.
+        `${baseTooltip}${coverageSuffix}`;
 
   function handleEnter() {
     const el = buttonRef.current;
@@ -175,7 +216,8 @@ export function StageChip({
           color: config.text,
           border: borderStyle,
         }}
-        aria-label={`${stage.stageName}: ${stage.status}`}
+        aria-label={ariaLabel}
+        data-coverage={coveredByRisk ? "risk" : undefined}
         onClick={handleChipClick}
         onMouseEnter={handleEnter}
         onMouseLeave={handleLeave}
