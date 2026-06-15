@@ -353,6 +353,46 @@ describe("mapDashboardData", () => {
     expect(atRisk).toHaveLength(2);
   });
 
+  it('renders "No stage set" for an escalation with a null stage', () => {
+    const result = mapDashboardData({
+      review: makeReview(),
+      archive: makeArchive(),
+      weeklyReport: makeWeeklyReport({
+        escalations: [
+          {
+            type: "unresolved_risk",
+            productName: "CRM Portal",
+            stageName: null,
+            leadName: "Alice Lead",
+            description: "Legacy stage-less risk",
+          },
+        ],
+      }),
+      now: new Date("2026-04-17T10:00:00.000Z"),
+    });
+    expect(result.blockedAtRisk[0]?.stage).toBe("No stage set");
+  });
+
+  it("renders the resolved stage name when present", () => {
+    const result = mapDashboardData({
+      review: makeReview(),
+      archive: makeArchive(),
+      weeklyReport: makeWeeklyReport({
+        escalations: [
+          {
+            type: "blocked",
+            productName: "Analytics",
+            stageName: "Development, Testing",
+            leadName: "Bob Lead",
+            description: "Multi-stage blocker",
+          },
+        ],
+      }),
+      now: new Date("2026-04-17T10:00:00.000Z"),
+    });
+    expect(result.blockedAtRisk[0]?.stage).toBe("Development, Testing");
+  });
+
   it("maps archive items with synthesized weekLabel and dateRange", () => {
     const result = mapDashboardData({
       review: makeReview(),
