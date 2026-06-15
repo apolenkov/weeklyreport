@@ -61,9 +61,18 @@
 
 ## 5. Verification (the gating contract)
 
-- [ ] 5.1 Round-trip integration test: for a section exercising EVERY
-      renderable field, `map(restore(snapshot(S))) === map(S)` deep
-      equality.
+- [ ] 5.1 Round-trip integration test over the OWNED-content projection:
+      `ownedContentProjection(restore(snapshot(S))) === ownedContentProjection(S)`
+      deep equality, for a section exercising every OWNED field (items,
+      risks, decisions, owned project `trafficLight` + owned stage statuses)
+      across BOTH trafficLight fold branches (aggregate-wins and
+      project-status-fallback). NOT `map() === map()` over the whole read
+      model — lifecycle and master/foreign data are excluded from the
+      equality set (narrowed invariant, see design.md / proposal.md).
+- [ ] 5.1b Lifecycle/master-data pinned-from-live test: change lifecycle
+      (`status`/`submittedAt`/`late`) or a referenced project name between
+      capture and restore; assert the restored section keeps its CURRENT
+      live values while the owned content matches the snapshot.
 - [ ] 5.2 Negative test: payload with unknown/older `schemaVersion` and
       no migration path → restore refused, current state untouched.
 - [ ] 5.3 Migration-path test: registered N→N+1 migration restores with
