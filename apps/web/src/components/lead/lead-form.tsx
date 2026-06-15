@@ -61,6 +61,7 @@ import type {
   RiskEntry,
 } from "./mock-data";
 import { NextWeekSection } from "./next-week-section";
+import { PdfExportComingSoonControl } from "./pdf-export-coming-soon";
 import { PeriodNavigator } from "./period-navigator";
 import { RequestReopenDialog } from "./request-reopen-dialog";
 import { VersionComingSoonControl } from "./version-coming-soon";
@@ -1165,6 +1166,10 @@ export function LeadForm({
                 className="h-5 bg-[var(--color-border)]"
               />
               <VersionComingSoonControl />
+              {/* TODO(lead-pdf-export): lead is excluded from pdfExport
+                  (role-coverage-gate); this inert ComingSoon control never
+                  reaches a backend call. */}
+              <PdfExportComingSoonControl />
               {!isReadOnly && (
                 <>
                   <Separator
