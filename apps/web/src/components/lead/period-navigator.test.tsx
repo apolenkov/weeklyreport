@@ -232,4 +232,104 @@ describe("PeriodNavigator (lead)", () => {
     // No path-segment id → defaults to PERIODS[0] (2026-W17, the current week).
     expect(getTrigger()).toHaveTextContent("Apr 21–27, 2026 (Current)");
   });
+
+  // ---- W4: per-instance scoped listbox/option ids ----
+  // Two navigators can coexist on one page (e.g. a future dual-pane layout, or
+  // a stacked toolbar). Module-level constant ids would collide, breaking the
+  // listbox/option DOM-id contract that `aria-controls` and
+  // `aria-activedescendant` depend on. `useId` scopes the ids per instance.
+  describe("scoped instance ids (no duplicate ids across two navigators)", () => {
+    it("two navigators on one page expose distinct listbox + option ids", () => {
+      render(
+        <>
+          <PeriodNavigator periods={PERIODS} />
+          <PeriodNavigator periods={PERIODS} />
+        </>,
+      );
+      const triggers = screen.getAllByRole("combobox", {
+        name: "Select reporting period",
+      });
+      expect(triggers).toHaveLength(2);
+      const firstListboxId = triggers[0]?.getAttribute("aria-controls");
+      const secondListboxId = triggers[1]?.getAttribute("aria-controls");
+      expect(firstListboxId).toBeTruthy();
+      expect(secondListboxId).toBeTruthy();
+      expect(firstListboxId).not.toBe(secondListboxId);
+    });
+
+    it("aria-activedescendant resolves to an option inside the trigger's own listbox", () => {
+      render(<PeriodNavigator periods={PERIODS} />);
+      const trigger = getTrigger();
+      fireEvent.click(trigger);
+      const listbox = screen.getByRole("listbox");
+      const activeId = trigger.getAttribute("aria-activedescendant") ?? "";
+      expect(activeId).not.toBe("");
+      // The active option id must live inside THIS trigger's listbox, and the
+      // listbox id must be the one the trigger controls.
+      expect(listbox.id).toBe(trigger.getAttribute("aria-controls"));
+      const activeOption = within(listbox)
+        .getAllByRole("option")
+        .find((opt) => opt.id === activeId);
+      expect(activeOption).toBeDefined();
+    });
+
+    it("Home and End move the active option to the first and last period", () => {
+      mockPathname = "/lead/report/2026-W16";
+      render(<PeriodNavigator periods={PERIODS} />);
+      const trigger = getTrigger();
+      fireEvent.click(trigger);
+      const initialActiveId =
+        trigger.getAttribute("aria-activedescendant") ?? "";
+      const optionPrefix = initialActiveId.slice(
+        0,
+        initialActiveId.lastIndexOf("-") + 1,
+      );
+      expect(optionPrefix).not.toBe("");
+      fireEvent.keyDown(trigger, { key: "End" });
+      expect(trigger.getAttribute("aria-activedescendant")).toBe(
+        `${optionPrefix}${PERIODS.length - 1}`,
+      );
+      fireEvent.keyDown(trigger, { key: "Home" });
+      expect(trigger.getAttribute("aria-activedescendant")).toBe(
+        `${optionPrefix}0`,
+      );
+    });
+  });
+
+  // ---- W3: per-lead submitted markers ----
+  // The submitted marker is opt-in per instance via `showLeadSubmissionMarkers`
+  // + `leadSubmittedAt`, sourced ONLY from the current lead's section
+  // submittedAt — never the head shell's fabricated `isSubmitted`.
+  describe("lead submission markers (W3)", () => {
+    const SUBMITTED_AT = new Date("2026-04-22T17:42:00.000Z");
+
+    it("shows the submitted marker on the selected period when enabled and submittedAt is set", () => {
+      render(
+        <PeriodNavigator
+          periods={PERIODS}
+          showLeadSubmissionMarkers
+          leadSubmittedAt={SUBMITTED_AT}
+        />,
+      );
+      expect(screen.getByText("Submitted")).toBeInTheDocument();
+    });
+
+    it("does not show the submitted marker when the flag is off (head/viewer)", () => {
+      render(
+        <PeriodNavigator periods={PERIODS} leadSubmittedAt={SUBMITTED_AT} />,
+      );
+      expect(screen.queryByText("Submitted")).not.toBeInTheDocument();
+    });
+
+    it("does not show the submitted marker when submittedAt is null even if enabled", () => {
+      render(
+        <PeriodNavigator
+          periods={PERIODS}
+          showLeadSubmissionMarkers
+          leadSubmittedAt={null}
+        />,
+      );
+      expect(screen.queryByText("Submitted")).not.toBeInTheDocument();
+    });
+  });
 });

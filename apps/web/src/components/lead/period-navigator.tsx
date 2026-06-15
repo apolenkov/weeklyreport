@@ -6,6 +6,7 @@ import {
   type TouchEvent as ReactTouchEvent,
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -14,10 +15,9 @@ import {
 import type { ReportPeriod } from "./mock-data";
 import {
   ArchivedBadge,
-  PERIOD_LISTBOX_ID,
-  PERIOD_OPTION_ID_PREFIX,
   periodLabel,
   PeriodListboxPanel,
+  SubmittedBadge,
 } from "./period-listbox-panel";
 
 const SWIPE_THRESHOLD_PX = 50;
@@ -37,6 +37,18 @@ interface PeriodNavigatorProps {
    * Receives the target periodId; must return the full href to push.
    */
   readonly urlBuilder?: (periodId: string) => string;
+  /**
+   * W3: opt-in per-lead submitted marker. Only the lead surface passes this;
+   * head and viewer navigators omit it and therefore never show the marker.
+   */
+  readonly showLeadSubmissionMarkers?: boolean;
+  /**
+   * W3: the current lead's `ReportSection.submittedAt` for the displayed
+   * period. Sourced ONLY from the lead's own section — never the head shell's
+   * fabricated `isSubmitted` flag. The marker shows on the selected period
+   * when `showLeadSubmissionMarkers` is set and this value is non-null.
+   */
+  readonly leadSubmittedAt?: Date | string | null;
 }
 
 function ChevronLeft() {
@@ -76,10 +88,21 @@ function ChevronRight() {
 export const PERIOD_NAV_ARROW_BUTTON_CLASS =
   "inline-flex min-h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35";
 
-export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
+export function PeriodNavigator({
+  periods,
+  urlBuilder,
+  showLeadSubmissionMarkers = false,
+  leadSubmittedAt = null,
+}: PeriodNavigatorProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  // W4: per-instance scoped listbox/option ids. useId yields a stable unique
+  // prefix per navigator instance so two on one page never collide on the
+  // DOM ids that aria-controls / aria-activedescendant reference.
+  const instanceId = useId();
+  const listboxId = `period-listbox-${instanceId}`;
+  const optionIdPrefix = `period-option-${instanceId}-`;
 
   // 35-07: the dropdown reflects the path-segment reportId when the page is
   // rendered under `/lead/report/[reportId]`. driver-findings-2026-06-11
@@ -102,6 +125,12 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
   const selectedPeriod = periods.at(currentIndex);
   const hasPrev = currentIndex < periods.length - 1;
   const hasNext = currentIndex > 0;
+  // W3: the submitted marker is per-lead and only known for the displayed
+  // period (the navigator carries one submittedAt value, never the whole
+  // history). It shows on the selected period iff the lead surface opted in
+  // and the lead's own section is submitted.
+  const selectedSubmitted =
+    showLeadSubmissionMarkers && leadSubmittedAt != null;
   // D3: options expose structured fields (not a flattened label string) so
   // archived/current markers render as badges inside the custom listbox.
   const periodOptions = useMemo(
@@ -111,8 +140,9 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
         dateRange: p.dateRange,
         isCurrent: p.isCurrent,
         archived: p.archived ?? false,
+        submitted: selectedSubmitted && p.id === selectedPeriod?.id,
       })),
-    [periods],
+    [periods, selectedSubmitted, selectedPeriod?.id],
   );
 
   const navigateTo = useCallback(
@@ -291,9 +321,9 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
           aria-label="Select reporting period"
           aria-haspopup="listbox"
           aria-expanded={open}
-          aria-controls={PERIOD_LISTBOX_ID}
+          aria-controls={listboxId}
           aria-activedescendant={
-            open ? `${PERIOD_OPTION_ID_PREFIX}${activeIdx}` : undefined
+            open ? `${optionIdPrefix}${activeIdx}` : undefined
           }
           className="flex min-h-8 w-full cursor-pointer items-center gap-1.5 truncate rounded-[var(--radius)] border border-[var(--color-border)] bg-white px-2 pr-7 text-left text-[13px] font-semibold text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[rgba(0,117,74,0.16)]"
           onClick={() => setOpen((o) => !o)}
@@ -302,6 +332,7 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
           <span className="truncate">
             {selectedPeriod ? periodLabel(selectedPeriod) : ""}
           </span>
+          {selectedSubmitted && <SubmittedBadge />}
           {selectedPeriod?.archived && <ArchivedBadge />}
         </button>
         <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted-foreground)]">
@@ -328,6 +359,8 @@ export function PeriodNavigator({ periods, urlBuilder }: PeriodNavigatorProps) {
           activeIdx={activeIdx}
           pos={panelPos}
           panelRef={panelRef}
+          listboxId={listboxId}
+          optionIdPrefix={optionIdPrefix}
           onHover={setActiveIdx}
           onSelect={selectOption}
           onKeyDown={handleListKeyDown}

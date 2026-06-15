@@ -1132,7 +1132,13 @@ export function LeadForm({
 
         {/* Context shell: period, archive, fill-from, and edit-version controls. */}
         <ReportToolbar
-          periodNavigator={<PeriodNavigator periods={visiblePeriods} />}
+          periodNavigator={
+            <PeriodNavigator
+              periods={visiblePeriods}
+              showLeadSubmissionMarkers
+              leadSubmittedAt={byPeriodQ.data.section.submittedAt ?? null}
+            />
+          }
           archiveToggle={
             hasArchivedPeriods ? (
               <>
