@@ -21,11 +21,11 @@ mandatory where noted. UI strings stay English.
 
 - [ ] 2.1 `role-coverage-gate`: move `pdfExport.request/status` to a head+admin+viewer chain;
       lead EXCLUDED (FORBIDDEN). Update role-coverage tests. (W2)
-- [ ] 2.2 Escalations: select `item.stageIds` + `risk.stageIds`; resolve stage name(s),
+- [x] 2.2 Escalations: select `item.stageIds` + `risk.stageIds`; resolve stage name(s),
       multi-stage display; "No stage set" for legacy stage-less rows. Fix BOTH
       `buildEscalations` and `buildEscalationsFromSnapshotSections` (or extract one shared
       builder). (W7)
-- [ ] 2.3 Escalation product name resolves report-wide WITHIN the caller's authorized read
+- [x] 2.3 Escalation product name resolves report-wide WITHIN the caller's authorized read
       model + snapshot — never an unscoped project query. (W8)
 - [ ] 2.4 KPI: relabel/re-base "ACTIVE LEADS" so the card matches what it counts. Leave the
       `status` vs `periodStatus` telemetry keying ALONE unless a failing test proves divergence
@@ -65,7 +65,7 @@ mandatory where noted. UI strings stay English.
       template (not just the mapper).
 - [ ] 4.3 a11y: two navigators on one page (no duplicate IDs / broken `aria-activedescendant`);
       keyboard parity with the replaced native select.
-- [ ] 4.4 Escalation tests: stage present (live + snapshot), multi-stage, "No stage set" legacy.
+- [x] 4.4 Escalation tests: stage present (live + snapshot), multi-stage, "No stage set" legacy.
 - [ ] 4.5 Gates green: `npx prisma generate` then `pnpm typecheck && pnpm lint && pnpm test &&
 pnpm build`.
 
