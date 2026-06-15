@@ -169,25 +169,52 @@ export function buildPortfolioProductsFromSnapshotSections(
     .sort((a, b) => a.productName.localeCompare(b.productName, "ru"));
 }
 
-export function buildEscalationsFromSnapshotSections(
+const UNKNOWN_PRODUCT_NAME = "Unknown";
+const STAGE_NAME_SEPARATOR = ", ";
+
+/**
+ * Joins all stage names carried by a row into a multi-stage display label,
+ * or null for legacy stage-less rows. `stageIds` is a misnomer — it holds
+ * stage NAMES, not UUIDs (see TODO(STAGE-NAMING-01) in report-primitives).
+ */
+function resolveStageName(
+  stageIds: readonly string[] | undefined,
+): string | null {
+  if (!stageIds || stageIds.length === 0) return null;
+  return stageIds.join(STAGE_NAME_SEPARATOR);
+}
+
+/**
+ * The single Blocked-&-At-Risk builder for BOTH the live and published-
+ * snapshot paths. Both feed `ReportSectionReadModel[]`: the live path maps
+ * Prisma rows via `mapPrismaToReportSection` first; the snapshot path reads
+ * the persisted read model directly. Sharing one function guarantees
+ * byte-identical stage/product output across the two surfaces (W7/W8 parity).
+ *
+ * Product names resolve report-wide WITHIN the caller's authorized read
+ * model: `section.projects` (stage-owned) plus `section.referencedProjects`
+ * (rows referencing a product the author owns no stage on). No unscoped
+ * `prisma.project` query — that would leak products outside the caller's
+ * scope (W8).
+ */
+export function buildEscalationsFromReadSections(
   sections: readonly ReportSectionReadModel[],
 ): Escalation[] {
   const escalations: Escalation[] = [];
 
   for (const section of sections) {
     const productNames = new Map(
-      section.projects.map((project) => [
-        project.projectId,
-        project.projectName,
-      ]),
+      [...section.projects, ...(section.referencedProjects ?? [])].map(
+        (project) => [project.projectId, project.projectName],
+      ),
     );
 
     for (const item of section.items) {
       if (item.workflowStatus !== "blocked") continue;
       escalations.push({
         type: "blocked",
-        productName: productNames.get(item.projectId) ?? "Unknown",
-        stageName: item.stageIds?.[0] ?? null,
+        productName: productNames.get(item.projectId) ?? UNKNOWN_PRODUCT_NAME,
+        stageName: resolveStageName(item.stageIds),
         leadName: section.authorName,
         description: item.text,
       });
@@ -207,8 +234,8 @@ export function buildEscalationsFromSnapshotSections(
     for (const risk of section.risks) {
       escalations.push({
         type: "unresolved_risk",
-        productName: productNames.get(risk.projectId) ?? "Unknown",
-        stageName: risk.stageIds?.[0] ?? null,
+        productName: productNames.get(risk.projectId) ?? UNKNOWN_PRODUCT_NAME,
+        stageName: resolveStageName(risk.stageIds),
         leadName: section.authorName,
         description: risk.risk,
       });
