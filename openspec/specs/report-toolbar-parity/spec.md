@@ -1,3 +1,9 @@
+## Purpose
+
+The lead and head report surfaces must share one toolbar vocabulary so the
+period-context bar, its compact icon buttons, and the labeled header actions read
+consistently across surfaces and do not regrow into per-surface bespoke styles.
+
 ## Requirements
 
 ### Requirement: Report surfaces share one toolbar container component

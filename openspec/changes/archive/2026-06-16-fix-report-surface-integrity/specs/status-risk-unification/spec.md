@@ -33,8 +33,11 @@ decision that disconnected risk-derived status in `mapLeadProducts`.
 - **WHEN** a draft loads whose persisted explicit stage status is
   on-track while a non-empty covering risk with severity at-risk
   exists
-- **THEN** the chip renders at-risk on the lead form, head review, and
-  export surfaces
+- **THEN** the chip renders at-risk on the lead form and the head-review
+  slides (a non-empty status is floored by the mapper too — only an empty
+  status is preserved)
+- **AND** the head-form and PDF/print surfaces (which carry no per-stage
+  grid) reflect the risk through the product-level `worstStatus`
 
 #### Scenario: the read-model mapper preserves raw status and annotates coverage
 

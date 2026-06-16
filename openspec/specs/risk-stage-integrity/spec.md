@@ -1,3 +1,9 @@
+## Purpose
+
+A risk (and the escalation rows derived from it) must always carry its concrete
+SDLC stage(s) so the report surfaces can resolve and display the stage instead of
+a silent placeholder, and so stage-less legacy rows are handled explicitly.
+
 ## Requirements
 
 ### Requirement: A risk always carries at least one concrete SDLC stage
