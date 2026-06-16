@@ -5,13 +5,21 @@
 A stage chip MUST render at least at the highest covering risk's
 severity when its stage is covered by at least one non-empty own risk
 (precedence: blocked > at-risk). The chip MUST NOT show on-track or
-empty while covering risks exist. The floor MUST be applied by the
-read-model mapper (`mapLeadProducts` in
-`apps/web/src/lib/mappers/lead-form.ts`) identically to the live lead
-form, so the head review surface and the PDF export agree with the lead
-form. The read-model mapper MUST NOT guard an empty-but-covered stage
-back down to empty. This supersedes the PRJ-2 decision that
-disconnected risk-derived status in `mapLeadProducts`.
+empty while covering risks exist. The floor is applied at RENDER time —
+by the live lead form (`applyRiskSeverityFloor` in
+`lead-form-sync-bridge.tsx`) and the slides/head-review surface
+(`floorSlideStageStatus` in `section-slide-utils.ts`), both deriving the
+severity through the shared `deriveEffectiveStageStatus`. The read-model
+mapper (`mapLeadProducts` in `apps/web/src/lib/mappers/lead-form.ts`)
+PRESERVES the raw stage status (it keeps the empty→empty guard) and only
+additionally annotates `coveredByOwnRisk`; it MUST NOT floor the raw
+status, because the raw status drives both the X/7 completeness counter
+(which must not count foreign-covered stages) and the chip's
+risk-covered-vs-status-set distinction. The head-form, preview, and
+PDF/print surfaces carry no per-stage grid — they render the
+product-level `worstStatus`, which already reflects risk severity — so
+all surfaces agree without the mapper flooring. This supersedes the PRJ-2
+decision that disconnected risk-derived status in `mapLeadProducts`.
 
 #### Scenario: saving a risk raises the covered chip
 
