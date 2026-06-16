@@ -234,6 +234,20 @@ describe("HeadReportShell — header action cluster (head-toolbar-semantics)", (
     ).not.toBeInTheDocument();
   });
 
+  it("places the agent-review placeholder before the toggles (leading edge, lead order)", () => {
+    wireActivePeriod();
+    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
+    const headerActions = screen.getByTestId("weekly-report-header-actions");
+    const agentReview = within(headerActions).getByTestId(
+      "agent-review-coming-soon",
+    );
+    const scopeToggle = within(headerActions).getByRole("radiogroup");
+    // head-toolbar-semantics Req3: the placeholder is the FIRST element of the
+    // group, so the scope toggle FOLLOWS it in document order.
+    const position = agentReview.compareDocumentPosition(scopeToggle);
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("renders exactly one labeled Export-PDF inside the toolbar trailing group", () => {
     wireActivePeriod();
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);

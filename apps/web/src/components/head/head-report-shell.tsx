@@ -151,17 +151,20 @@ export function HeadReportShell({
   // Export-PDF in the ReportToolbar trailing group below.
   const headerActions = (
     <>
+      {/* Leading-edge placement (user direction 2026-06-16): the Agent-review
+          placeholder sits first in the action group, matching the lead toolbar
+          order (lead-form.tsx).
+          one-placeholder-per-surface (mount-agent-review-placeholder): slides
+          mode already carries an Agent-review placeholder inside the head slide
+          deck (status-slide-deck.tsx), so the header only mounts one in form
+          mode to avoid double-mounting on the slides surface. */}
+      {mode === "form" ? <AgentReviewComingSoon /> : null}
       <ScopeToggle
         value={scope}
         onChange={setScope}
         allowedScopes={["product", "lead"]}
       />
       <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
-      {/* one-placeholder-per-surface (mount-agent-review-placeholder): slides
-          mode already carries an Agent-review placeholder inside the head slide
-          deck (status-slide-deck.tsx), so the header only mounts one in form
-          mode to avoid double-mounting on the slides surface. */}
-      {mode === "form" ? <AgentReviewComingSoon /> : null}
     </>
   );
 
