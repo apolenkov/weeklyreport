@@ -76,3 +76,44 @@ period navigator it reads quietly (neutral marker / basket), never as a status
 hue.
 _Avoid_: deleted (archived data is retained), locked (that maps to
 `published`).
+
+## Products, stages, items & scope
+
+**Product**:
+The unit a report is organized around (the `Project` row). Belongs to exactly
+one reporting group (`GroupProduct`, one-group-per-product). Multiple leads can
+contribute to one product within a period.
+_Avoid_: project (the DB model name; in product language it is a "product").
+
+**SDLC stage**:
+One of the fixed lifecycle phases (`Planning`, `Analysis`, `Design`,
+`Development`, `Testing`, `DevOps`, `Support`). An `Item` carries one or more
+stage names; by convention an item carries exactly ONE stage (a person reports an
+item against their own stage). Risks may legitimately span several stages.
+_Avoid_: phase, step.
+
+**Stage chip**:
+The small pill on an item row naming its stage (and the contributing lead's
+initials, e.g. "Development · ВИ"). It is an IDENTITY label only — uniform
+treatment, NOT a status hue. Workflow status is conveyed separately (the row
+stripe / a dedicated signal), never by the chip's fill.
+_Avoid_: status badge (the chip is identity, not status).
+
+**Workflow status** (of an item):
+`in-progress` / `completed` / `blocked` / `planned`. Surfaced via the row's left
+stripe or a dedicated marker — deliberately decoupled from the stage chip so one
+control carries one meaning.
+_Avoid_: stage (a stage is the SDLC phase, not the progress state).
+
+**Escalation / Needs Attention**:
+A distinct head-facing call-out for a product (an `Escalation` row surfaced as the
+"Needs Attention" banner). It MUST add information, never a verbatim copy of an
+item already shown in the card.
+_Avoid_: blocker (a blocker is an item/risk severity; the call-out is a summary).
+
+**Scope** (the head report grouping axis):
+`by product` — the full cross-lead portfolio aggregate of a product. `by lead` —
+each product card sliced to ONE lead's own contribution (their items / risks /
+decisions / stages), so a lead with two products shows two cards under them and no
+other author's content mixes in.
+_Avoid_: view (view = edit/slides mode; scope = the grouping axis).
