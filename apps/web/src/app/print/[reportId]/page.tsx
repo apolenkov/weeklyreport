@@ -1,5 +1,5 @@
 import type { Role } from "@customreport/shared";
-import { permanentRedirect, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 
 import { getPrintRouteContext } from "../../../lib/server/get-print-route-context";
 import { PrintReportTemplate } from "./print-report-template";
@@ -18,7 +18,7 @@ import { PrintReportTemplate } from "./print-report-template";
 /*  apart). THEN branch on the human session.                          */
 /*                                                                    */
 /*    worker (isPdfExport && pdfReportId === reportId) → render        */
-/*    authenticated human                              → 308 redirect  */
+/*    authenticated human                              → 307 redirect  */
 /*    no session                                       → 307 login     */
 /*                                                                    */
 /*  The redirect is a UX gate, not the data boundary — the API's       */
@@ -35,11 +35,12 @@ interface Props {
  * without the worker export-auth context. head/admin → the consolidated
  * report; viewer → the published report; lead → their own active report.
  *
- * The spec's "FORBIDDEN if the report is not the lead's" nuance has no cheap
- * web-side ownership signal (a `/print/[reportId]` id maps to a lead's own
- * report only via their server-side `reportingGroupId`). Per design (the API
- * pdfExportGuard is the real boundary), the lead is sent to `/lead/report`
- * rather than building a new ownership-resolution path.
+ * Per design ("lead → own/FORBIDDEN"), the lead takes the "own" path: they are
+ * sent to their own report home (`/lead/report`). The alternative "FORBIDDEN for
+ * a non-owned reportId" is deliberately NOT built: a lead human never renders
+ * the print template (only the worker token does), so there is no data exposure
+ * to forbid — the API pdfExportGuard is the real read boundary. Resolving
+ * per-report ownership here would add an API round-trip with no security gain.
  */
 function humanRedirectPath(role: Role, reportId: string): string {
   switch (role) {
@@ -62,9 +63,12 @@ export default async function PrintReportPage({ params }: Props) {
     return <PrintReportTemplate reportId={reportId} />;
   }
 
-  // 2. Authenticated human without worker context → role-specific 308.
+  // 2. Authenticated human without worker context → role-specific TEMPORARY
+  //    (307) redirect. The destination depends on the caller's session role, so
+  //    it must NOT be a permanent (308) redirect — a shared cache/proxy could
+  //    otherwise serve one role's /print → destination to another role.
   if (ctx.session) {
-    permanentRedirect(humanRedirectPath(ctx.session.role, reportId));
+    redirect(humanRedirectPath(ctx.session.role, reportId));
   }
 
   // 3. No session → 307 to login, preserving the original path (mirrors
