@@ -18,11 +18,6 @@ interface StatusConfig {
   avatarBg: string;
   avatarText: string;
 }
-interface ItemStatusBadge {
-  bg: string;
-  text: string;
-  label: string;
-}
 
 // apply-status-palette (memo T6 opt 2): red is the only alarm hue (blocked);
 // at-risk goes neutral here — the amber signal lives on the row's left
@@ -48,28 +43,22 @@ const STATUS_CONFIG = {
   },
 } as const satisfies Record<string, StatusConfig>;
 
-const ITEM_STATUS_BADGE = {
-  "in-progress": {
-    bg: "var(--color-success)",
-    text: "var(--color-primary)",
-    label: "",
-  },
-  completed: {
-    bg: "var(--color-primary)",
-    text: "var(--color-primary-foreground)",
-    label: "",
-  },
-  blocked: {
-    bg: "var(--color-status-blocked-bg)",
-    text: "var(--color-destructive)",
-    label: "",
-  },
-  planned: {
-    bg: "var(--color-muted)",
-    text: "var(--color-muted-foreground)",
-    label: "Planned",
-  },
-} as const satisfies Record<string, ItemStatusBadge>;
+// report-card-clarity: the stage chip is an IDENTITY label (stage + initials),
+// rendered with one uniform treatment regardless of workflow status. The
+// workflow-status signal moves to the row's left stripe (below), so the chip
+// no longer encodes status in its fill. All colors resolve through named tokens.
+const STAGE_CHIP_CLASS =
+  "inline-flex flex-shrink-0 items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]";
+
+// Workflow-status → row left-stripe color (named tokens only): red marks the
+// single alarm state (blocked); a calm success stripe marks completed work;
+// in-progress carries no stripe. This is the row's status marker that replaces
+// the old status-colored chip fill.
+function itemStripeColor(status: string): string | undefined {
+  if (status === "blocked") return "var(--color-destructive)";
+  if (status === "completed") return "var(--color-success)";
+  return undefined;
+}
 
 // Prioritized items first (rank 1, 2, …), the rest keep their order.
 function sortByPriority<T extends { priorityRank?: number | null }>(
@@ -144,6 +133,18 @@ export function ProductAccordion({
     : ((STATUS_CONFIG as Record<string, StatusConfig>)[report.status] ??
       STATUS_CONFIG["on-track"]);
   const statusLabel = isEmpty ? "No updates" : report.statusLabel;
+
+  // report-card-clarity: suppress the "Needs Attention" banner when its text is
+  // verbatim one of the item rows already rendered in this card — the escalation
+  // is DERIVED from a blocked item, so it would otherwise repeat that row. A
+  // distinct head-facing summary (no exact item match) still renders.
+  const renderedItemTexts = new Set([
+    ...report.currentWeek.map((item) => item.text),
+    ...report.nextWeek.map((item) => item.text),
+  ]);
+  const showNeedsAttention =
+    Boolean(report.needsAttention) &&
+    !renderedItemTexts.has(report.needsAttention ?? "");
 
   useEffect(() => {
     if (highlighted && hasContent) setExpanded(true);
@@ -234,7 +235,7 @@ export function ProductAccordion({
           <div className="min-h-0 overflow-hidden">
             <div className="space-y-3 border-t border-[rgba(0,0,0,0.06)] px-4 pb-4 pt-4">
               {/* Needs Attention */}
-              {report.needsAttention && (
+              {showNeedsAttention && (
                 <div>
                   <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
                     Needs Attention
@@ -272,11 +273,8 @@ export function ProductAccordion({
                   </div>
                   <div className="space-y-1">
                     {sortByPriority(report.currentWeek).map((item) => {
-                      const badge =
-                        (ITEM_STATUS_BADGE as Record<string, ItemStatusBadge>)[
-                          item.status
-                        ] ?? ITEM_STATUS_BADGE["in-progress"];
                       const isBlocked = item.status === "blocked";
+                      const stripe = itemStripeColor(item.status);
                       return (
                         <div
                           key={item.id}
@@ -287,15 +285,13 @@ export function ProductAccordion({
                               : item.priorityRank === 1
                                 ? "var(--color-priority-row-bg)"
                                 : "var(--color-background)",
+                            borderLeft: `3px solid ${stripe ?? "transparent"}`,
                           }}
                         >
                           {item.priorityRank != null && (
                             <PriorityRankBadge rank={item.priorityRank} />
                           )}
-                          <span
-                            className="inline-flex flex-shrink-0 items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold"
-                            style={{ background: badge.bg, color: badge.text }}
-                          >
+                          <span className={STAGE_CHIP_CLASS}>
                             {item.status === "planned"
                               ? "Planned"
                               : item.stageLead}

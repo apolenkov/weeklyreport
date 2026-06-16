@@ -2,7 +2,12 @@ import type { WeeklyReportReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
-import { __testing, formatWeekRange, mapWeeklyReport } from "./weekly-report";
+import {
+  __testing,
+  formatWeekRange,
+  mapWeeklyReport,
+  mapWeeklyReportLeadGroups,
+} from "./weekly-report";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const PROJECT_A = "22222222-2222-4222-8222-222222222222";
@@ -663,5 +668,134 @@ describe("product name resolution (fix-product-name-resolution)", () => {
 
     expect(expectDefined(mobile?.risks[0]).badge).toBe("Mobile · Analysis");
     expect(expectDefined(mobile?.decisions[0]).badge).toBe("Mobile");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// report-card-clarity: "by lead" slices each product to the viewing lead's OWN
+// contribution. A product authored by two leads must NOT repeat the merged card
+// under each — each lead's card shows only their own items.
+// ---------------------------------------------------------------------------
+
+describe("mapWeeklyReportLeadGroups (by-lead slice)", () => {
+  it("a lead with two products gets two scoped cards", () => {
+    const report = baseReport({
+      leadSections: [
+        {
+          reportSectionId: SECTION_A,
+          reportId: REPORT_ID,
+          authorId: AUTHOR_A,
+          authorName: "Тимлид 1",
+          status: "draft",
+          submittedAt: null,
+          projects: [
+            { projectId: PROJECT_A, projectName: "CRM", trafficLight: "green" },
+            {
+              projectId: PROJECT_B,
+              projectName: "Billing",
+              trafficLight: "yellow",
+            },
+          ],
+          items: [
+            {
+              id: "i1",
+              projectId: PROJECT_A,
+              type: "current",
+              text: "CRM work",
+              tag: "feature",
+              workflowStatus: "in_progress",
+              carriedOver: false,
+            },
+            {
+              id: "i2",
+              projectId: PROJECT_B,
+              type: "current",
+              text: "Billing work",
+              tag: "feature",
+              workflowStatus: "in_progress",
+              carriedOver: false,
+            },
+          ],
+          risks: [],
+          decisions: [],
+        },
+      ],
+    });
+
+    const groups = mapWeeklyReportLeadGroups(report);
+    expect(groups).toHaveLength(1);
+    expect(expectDefined(groups[0]).products).toHaveLength(2);
+  });
+
+  it("a product with two contributing leads shows no cross-author mixing", () => {
+    const report = baseReport({
+      leadSections: [
+        {
+          reportSectionId: SECTION_A,
+          reportId: REPORT_ID,
+          authorId: AUTHOR_A,
+          authorName: "Тимлид 1",
+          status: "draft",
+          submittedAt: null,
+          projects: [
+            { projectId: PROJECT_A, projectName: "CRM", trafficLight: "green" },
+          ],
+          items: [
+            {
+              id: "i1",
+              projectId: PROJECT_A,
+              type: "current",
+              text: "OAuth integration",
+              tag: "auth",
+              workflowStatus: "in_progress",
+              carriedOver: false,
+            },
+          ],
+          risks: [],
+          decisions: [],
+        },
+        {
+          reportSectionId: SECTION_B,
+          reportId: REPORT_ID,
+          authorId: AUTHOR_B,
+          authorName: "Igor V.",
+          status: "draft",
+          submittedAt: null,
+          projects: [
+            { projectId: PROJECT_A, projectName: "CRM", trafficLight: "green" },
+          ],
+          items: [
+            {
+              id: "i2",
+              projectId: PROJECT_A,
+              type: "current",
+              text: "Mobile auth screen",
+              tag: "auth",
+              workflowStatus: "in_progress",
+              carriedOver: false,
+            },
+          ],
+          risks: [],
+          decisions: [],
+        },
+      ],
+    });
+
+    const groups = mapWeeklyReportLeadGroups(report);
+    expect(groups).toHaveLength(2);
+
+    const groupA = expectDefined(groups.find((g) => g.id === AUTHOR_A));
+    const cardA = expectDefined(
+      groupA.products.find((p) => p.id === PROJECT_A),
+    );
+    expect(cardA.currentWeek.map((i) => i.text)).toEqual(["OAuth integration"]);
+
+    const groupB = expectDefined(groups.find((g) => g.id === AUTHOR_B));
+    const cardB = expectDefined(
+      groupB.products.find((p) => p.id === PROJECT_A),
+    );
+    expect(cardB.currentWeek.map((i) => i.text)).toEqual([
+      "Mobile auth screen",
+    ]);
   });
 });

@@ -13,7 +13,7 @@ import {
 } from "../../lib/cache-keys";
 import { getClientErrorDetails } from "../../lib/client-error-reporting";
 import { joinPeriodLabel } from "../../lib/format-date";
-import { mapWeeklyReport } from "../../lib/mappers";
+import { mapWeeklyReport, mapWeeklyReportLeadGroups } from "../../lib/mappers";
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
@@ -375,27 +375,17 @@ export function WeeklyReportPage({
   // from the period's lead sections, then bucket products under each lead they
   // authored. Empty leads are dropped so the view never shows blank groups.
   // Computed only in "lead" scope to keep the default product path cheap.
+  // report-card-clarity: "by lead" slices each product to the lead's OWN
+  // contribution (mapWeeklyReportLeadGroups builds per-lead cards from each
+  // single section). The old bucketing reused the cross-lead aggregate cards,
+  // so a multi-author product repeated the whole merged card under each lead.
   const leadGroups =
     scope === "lead"
-      ? (() => {
-          const nameById = new Map<string, string>();
-          for (const section of reportData.leadSections) {
-            if (section.authorId) {
-              nameById.set(section.authorId, section.authorName);
-            }
-          }
-          return [...nameById.entries()]
-            .map(([id, name]) => ({
-              id,
-              name,
-              // authorIds is typed optional on ProductReport but the mapper
-              // always emits an array; guard defensively all the same.
-              products: products.filter((report) =>
-                report.authorIds?.includes(id),
-              ),
-            }))
-            .filter((group) => group.products.length > 0);
-        })()
+      ? (mapWeeklyReportLeadGroups(reportData) as {
+          id: string;
+          name: string;
+          products: ProductReport[];
+        }[])
       : [];
   // UFB-047 / Phase 49-01: department label is exclusively
   // `auth.me.organization.fullName`. PDF-worker / non-session callers

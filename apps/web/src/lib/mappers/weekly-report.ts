@@ -145,6 +145,93 @@ export function mapWeeklyReport(
   };
 }
 
+/**
+ * report-card-clarity: build the head report's "by lead" groups so each product
+ * card under a lead shows ONLY that lead's own contribution (their items, risks,
+ * decisions, stages) — not the cross-lead aggregate. Each `api.leadSections`
+ * entry is already sliced per lead, so we run the per-product groupers over that
+ * single section. The previous page-side bucketing reused the aggregate cards,
+ * so a product authored by two leads repeated the whole merged card under each.
+ *
+ * "By product" scope keeps using {@link mapWeeklyReport}'s aggregate `products`.
+ */
+export function mapWeeklyReportLeadGroups(
+  api: WeeklyReportReadModel,
+): { id: string; name: string; products: WeeklyProductReport[] }[] {
+  const projectNames = buildProjectNameMap(
+    api.leadSections,
+    api.portfolioOverview,
+  );
+
+  return api.leadSections
+    .map((section) => {
+      const single = [section];
+      const itemsByProject = groupItemsByProject(single);
+      const risksByProject = groupRisksByProject(single, projectNames);
+      const decisionsByProject = groupDecisionsByProject(single, projectNames);
+      const prioritiesByProject = groupPrioritiesByProject(single);
+
+      const products: WeeklyProductReport[] = section.projects
+        .map((proj) => {
+          const items = itemsByProject.get(proj.projectId) ?? {
+            current: [],
+            next: [],
+          };
+          const risks = risksByProject.get(proj.projectId) ?? [];
+          const decisions = decisionsByProject.get(proj.projectId) ?? [];
+          const priorities = prioritiesByProject.get(proj.projectId) ?? [];
+          const status = trafficToProductStatus(proj.trafficLight);
+          // This lead's own escalation for this product, if any.
+          const attention = api.escalations.find(
+            (e) =>
+              e.productName === proj.projectName &&
+              e.leadName === section.authorName,
+          );
+
+          return {
+            id: proj.projectId,
+            authorIds: [section.authorId],
+            initials: initialsFromName(proj.projectName),
+            name: proj.projectName,
+            status,
+            statusLabel:
+              status === "on-track"
+                ? "On Track"
+                : status === "at-risk"
+                  ? "At Risk"
+                  : "Blocked",
+            leads: section.authorName,
+            ...(attention
+              ? {
+                  needsAttention: attention.description,
+                  needsAttentionSeverity:
+                    attention.type === "blocked"
+                      ? ("blocked" as const)
+                      : ("at-risk" as const),
+                }
+              : {}),
+            currentWeek: items.current,
+            nextWeek: items.next,
+            risks,
+            decisions,
+            priorities,
+          } satisfies WeeklyProductReport;
+        })
+        .filter(
+          (p) =>
+            Boolean(p.needsAttention) ||
+            p.currentWeek.length > 0 ||
+            p.nextWeek.length > 0 ||
+            p.risks.length > 0 ||
+            p.decisions.length > 0 ||
+            p.priorities.length > 0,
+        );
+
+      return { id: section.authorId, name: section.authorName, products };
+    })
+    .filter((group) => group.products.length > 0);
+}
+
 // Internal exports for tests.
 export const __testing = {
   initialsFromName,

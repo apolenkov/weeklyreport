@@ -297,3 +297,84 @@ describe("ProductAccordion — prioritized row snapshot", () => {
     expect(row).toMatchSnapshot();
   });
 });
+
+// report-card-clarity: the "Needs Attention" banner is DERIVED from a blocked
+// item, so it would otherwise repeat that item's text verbatim. It must be
+// suppressed on an exact-text duplicate and render only when it adds info.
+describe("ProductAccordion — Needs Attention dedup", () => {
+  const DUP_TEXT = "Auth refactor blocked: waiting on IdP access";
+
+  it("suppresses the banner when its text matches a rendered item", () => {
+    render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          needsAttention: DUP_TEXT,
+          needsAttentionSeverity: "blocked",
+          currentWeek: [
+            makeItem({ id: "c1", text: DUP_TEXT, status: "blocked" }),
+          ],
+        })}
+      />,
+    );
+    expect(screen.queryByText("Needs Attention")).not.toBeInTheDocument();
+    // The text appears once (the item row), not twice (no banner copy).
+    expect(screen.getAllByText(DUP_TEXT)).toHaveLength(1);
+  });
+
+  it("renders the banner when its text is a distinct summary", () => {
+    render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          needsAttention: "Blocked · Development · Vasily",
+          needsAttentionSeverity: "blocked",
+          currentWeek: [
+            makeItem({ id: "c1", text: DUP_TEXT, status: "blocked" }),
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByText("Needs Attention")).toBeInTheDocument();
+    expect(
+      screen.getByText("Blocked · Development · Vasily"),
+    ).toBeInTheDocument();
+  });
+});
+
+// report-card-clarity: workflow status reads from the row's left stripe, NOT
+// the stage chip fill. blocked → red (alarm), completed → calm success, and
+// in-progress → no stripe — so completed and in-progress stay distinguishable
+// even though both chips render with one uniform identity treatment.
+describe("ProductAccordion — status via row stripe, identity via chip", () => {
+  it("maps each workflow status to a distinct row stripe and a uniform chip", () => {
+    const { container } = render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          currentWeek: [
+            makeItem({ id: "b", text: "Blocked one", status: "blocked" }),
+            makeItem({ id: "c", text: "Completed one", status: "completed" }),
+            makeItem({ id: "p", text: "Progress one", status: "in-progress" }),
+          ],
+        })}
+      />,
+    );
+    const rows = [...container.querySelectorAll("div.space-y-1 > div")];
+    expect(rows).toHaveLength(3);
+    const styleOf = (text: string) =>
+      rows.find((r) => r.textContent.includes(text))?.getAttribute("style") ??
+      "";
+    expect(styleOf("Blocked one")).toContain("var(--color-destructive)");
+    expect(styleOf("Completed one")).toContain("var(--color-success)");
+    expect(styleOf("Progress one")).toContain("transparent");
+
+    // Every stage chip shares one identity class — no status-driven fill.
+    const chipClasses = new Set(
+      [...container.querySelectorAll("div.space-y-1 > div > span")]
+        .filter((s) => s.textContent.includes("·"))
+        .map((s) => s.className),
+    );
+    expect(chipClasses.size).toBe(1);
+  });
+});
