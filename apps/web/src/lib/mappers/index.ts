@@ -112,6 +112,7 @@ export {
 export {
   formatWeekRange,
   mapWeeklyReport,
+  mapWeeklyReportLeadGroups,
   type MapWeeklyReportResult,
   type WeeklyPortfolioProduct,
   type WeeklyProductReport,

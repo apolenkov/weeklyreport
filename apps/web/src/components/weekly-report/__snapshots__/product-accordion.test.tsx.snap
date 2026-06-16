@@ -16,41 +16,10 @@ exports[`ProductAccordion — ChevronDown SVG snapshot > ChevronDown svg structu
 </svg>
 `;
 
-exports[`ProductAccordion — Priorities ol snapshot > priorities section renders an ol element with correct structure 1`] = `
-<ol
-  class="space-y-1 text-sm"
->
-  <li
-    class="flex items-center gap-2 rounded p-2"
-    style="background: var(--color-priority-row-bg);"
-  >
-    <span
-      class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
-      style="background: var(--color-starbucks-gold); color: var(--color-primary-foreground);"
-    >
-      1
-    </span>
-    Top item
-  </li>
-  <li
-    class="flex items-center gap-2 rounded p-2"
-    style="background: var(--color-background);"
-  >
-    <span
-      class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
-      style="background: var(--color-border); color: var(--color-muted-foreground);"
-    >
-      2
-    </span>
-    Second item
-  </li>
-</ol>
-`;
-
 exports[`ProductAccordion — prioritized row snapshot > rank-1 current-week row structure matches snapshot 1`] = `
 <div
   class="flex items-center gap-2 rounded p-2 text-sm"
-  style="background: var(--color-priority-row-bg);"
+  style="background: var(--color-priority-row-bg); border-left: 3px solid transparent;"
 >
   <span
     class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
@@ -60,8 +29,7 @@ exports[`ProductAccordion — prioritized row snapshot > rank-1 current-week row
     1
   </span>
   <span
-    class="inline-flex flex-shrink-0 items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold"
-    style="background: var(--color-success); color: var(--color-primary);"
+    class="inline-flex flex-shrink-0 items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]"
   >
     Dev · AL
   </span>
