@@ -6,10 +6,10 @@ role-coverage gate verifies this by reference identity — not structural equali
 so that copying a builder's body into a local helper still counts as a violation.
 A PR that adds a non-compliant procedure MUST fail CI before the branch can be merged.
 
-The 8 canonical builders are: `publicProcedure`, `protectedProcedure`,
+The 9 canonical builders are: `publicProcedure`, `protectedProcedure`,
 `headProcedure`, `leadProcedure`, `viewerProcedure`, `anyRoleProcedure`,
-`adminProcedure`, `leadershipProcedure`. All are exported from
-`apps/api/src/infrastructure/trpc/trpc.middleware.ts`.
+`adminProcedure`, `leadershipProcedure`, and `leadHeadAdminProcedure`. All
+are exported from `apps/api/src/infrastructure/trpc/trpc.middleware.ts`.
 
 Consumer surfaces: `apps/api/src/infrastructure/trpc/` (canonical builders),
 all `*.router.ts` files under `apps/api/src/` (targets), and the CI workflow
@@ -37,7 +37,7 @@ builder MUST be rejected by the CI gate.
 ### Requirement: Gate Compares Builders by Reference Identity
 
 The CI gate MUST verify that a procedure's builder is the same object reference
-as one of the 8 canonical builders. A developer who copies a canonical builder's
+as one of the 9 canonical builders. A developer who copies a canonical builder's
 middleware chain into a new local helper and uses that helper MUST still fail the
 gate.
 
@@ -51,7 +51,7 @@ gate.
 - **WHEN** a module re-exports a canonical builder under an alias (`export { leadProcedure as authedProcedure }`) and a router imports that alias
 - **THEN** the gate resolves the alias to the original canonical reference, confirms identity, and CI passes
 
-### Requirement: Gate Allow-List Enumerates All Eight Canonical Builders
+### Requirement: Gate Allow-List Enumerates All Nine Canonical Builders
 
 The gate allow-list MUST enumerate exactly the 9 canonical builders named in
 this spec's Purpose: `publicProcedure`, `protectedProcedure`, `headProcedure`,
@@ -98,7 +98,7 @@ The shared middleware chain MUST have exactly one definition site:
 the chain (metrics → logging → auth/role → pdf-export guard → mutation audit)
 lives in a local `buildProtectedProcedure(authMiddleware)` factory inside
 `apps/api/src/infrastructure/trpc/trpc.middleware.ts`, and the protected
-canonical builders MUST be created through it. The 8 exported builder
+canonical builders MUST be created through it. The 9 exported builder
 references MUST remain identity-stable across this consolidation so the
 reference-identity gate keeps passing.
 
