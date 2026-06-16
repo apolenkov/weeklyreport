@@ -219,7 +219,7 @@ export function seedAdvancedViaCli(): void {
 
 export async function wipeAndReseed(
   page: Page,
-  variant: "minimum" | "advanced" | "manual-uat" = "advanced",
+  variant: "small" | "middle" | "huge" | "manual-uat" = "middle",
 ) {
   const body = JSON.stringify({ "0": { json: { variant } } });
   for (let attempt = 1; attempt <= 4; attempt++) {
