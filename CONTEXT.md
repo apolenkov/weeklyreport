@@ -117,3 +117,18 @@ each product card sliced to ONE lead's own contribution (their items / risks /
 decisions / stages), so a lead with two products shows two cards under them and no
 other author's content mixes in.
 _Avoid_: view (view = edit/slides mode; scope = the grouping axis).
+
+**Own contribution**:
+The records a lead authored in a period — their items, risks, decisions, and the
+stages they own. The lead's own report page shows ONLY this for record content;
+no other author's text, counts, or names appear.
+_Avoid_: my section (a section is the DB row; own contribution is the content a
+lead is accountable for).
+
+**Product context** (on a lead page):
+The honest overall health of a co-owned product, derived from ALL contributing
+leads' stages — shown to a co-owning lead as status colour and dimmed
+identity-only stage chips, never as another author's record content. It exists so
+a lead is not blind to a product they co-own going red on a stage they do not own.
+_Avoid_: cross-author leak (product context is health awareness, not content
+disclosure); by product (that is the head grouping axis, not a lead-page mode).
