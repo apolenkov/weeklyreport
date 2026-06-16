@@ -27,14 +27,18 @@ deleted, so existing deep links keep resolving.
 `apps/web/src/app/print/[reportId]/page.tsx` MUST remain the PDF
 worker's render template. It MUST render the report only when invoked
 WITH the PDF-worker export-job authentication context. A normal
-authenticated human WITHOUT that worker context MUST receive a 308
-redirect to a role-specific destination, and an unauthenticated request
-MUST be redirected to login.
+authenticated human WITHOUT that worker context MUST receive a TEMPORARY
+(307) redirect to a role-specific destination — temporary, not 308,
+because the destination depends on the caller's session role and a
+permanent redirect could be cached/served cross-role. An unauthenticated
+request MUST be redirected to login.
 
 - head or admin → `/head/report/[reportId]`
 - viewer → `/reports/[reportId]`
-- lead → the lead's own report or preview, or FORBIDDEN if the report is
-  not theirs
+- lead → the lead's own report (`/lead/report`, the "own" path). A lead
+  human never renders the print template (only the worker token does), so
+  there is no report data to expose and no FORBIDDEN page is required;
+  per-report ownership resolution is intentionally not added.
 - unauthenticated → login
 
 #### Scenario: the PDF worker renders the print template
@@ -47,21 +51,21 @@ MUST be redirected to login.
 
 - **WHEN** an authenticated head requests `/print/[reportId]` without the
   worker export-job context
-- **THEN** the response is a 308 redirect to `/head/report/[reportId]`
+- **THEN** the response is a 307 temporary redirect to `/head/report/[reportId]`
 
 #### Scenario: a viewer human is redirected away from the print route
 
 - **WHEN** an authenticated viewer requests `/print/[reportId]` without
   the worker export-job context
-- **THEN** the response is a 308 redirect to `/reports/[reportId]`
+- **THEN** the response is a 307 temporary redirect to `/reports/[reportId]`
 
-#### Scenario: a lead is redirected to their own report or forbidden
+#### Scenario: a lead is redirected to their own report
 
 - **WHEN** an authenticated lead requests `/print/[reportId]` without the
   worker export-job context
-- **THEN** the lead is redirected to their own report or preview if the
-  report is theirs
-- **AND** the request is FORBIDDEN if the report is not theirs
+- **THEN** the lead is redirected (307) to their own report (`/lead/report`)
+- **AND** no report data is exposed and no FORBIDDEN page is required,
+  because a lead human never renders the print template
 
 #### Scenario: an unauthenticated request is sent to login
 

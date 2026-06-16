@@ -37,9 +37,10 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
   // standalone Present and browser-Print links are gone. Presentation now
   // lives inline via `?mode=slides`; the single labeled Export-PDF (the real
   // async pdfExport.request job) is rendered by WeeklyReportPage's trailing
-  // group for every authenticated role, viewer included — so the viewer keeps
-  // its PDF affordance without the now-broken `/print` deep link (the print
-  // route 308-redirects humans away).
+  // group for head/admin/viewer — so the viewer keeps its PDF affordance
+  // without the now-broken `/print` deep link (the print route 307-redirects
+  // humans away). A lead instead sees the inert ComingSoon control (lead is
+  // FORBIDDEN from pdfExport).
   const viewerActions = (
     <>
       <a
