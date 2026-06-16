@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: A risk always carries at least one concrete SDLC stage
 
