@@ -31,12 +31,15 @@ the head report surface — the publish action (`PublishLockButton`); no other
 control's visible label MAY carry it. The Export-PDF control
 (`apps/web/src/components/weekly-report/export-pdf-button.tsx`) renders as a
 compact 32px icon button carrying its name via `aria-label`/tooltip, not a visible
-text label; its unpublished precondition is conveyed by the disabled state plus
-the tooltip, NOT by a compound label containing "Publish".
+text label; its unpublished precondition is conveyed by the disabled state plus an
+`aria-describedby`/sr-only hint (the tooltip stays equivalent to the "Export PDF"
+accessible name, per the toolbar icon-button primitive), NOT by a compound label
+containing "Publish".
 
 #### Scenario: unpublished period renders the export button
 
 - **WHEN** the period status is `open` and the export icon button renders disabled
 - **THEN** it exposes its accessible name "Export PDF" via `aria-label`/tooltip
-- **AND** the publish precondition is available via the tooltip
+- **AND** the publish precondition is available via an `aria-describedby`/sr-only
+  hint, not by changing the tooltip text
 - **AND** only the publish action's visible label contains the word "Publish"

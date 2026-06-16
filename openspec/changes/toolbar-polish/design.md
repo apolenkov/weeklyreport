@@ -15,9 +15,10 @@ should be indistinguishable in their control language.
    leading-edge agent placeholder reposition and its position test from commit
    `6a362c2c` — only the toggle colors revert.
 2. **Export PDF → icon button.** Render `export-pdf-button.tsx` through the shared
-   `ToolbarIconButton` (32px, `aria-label` "Export PDF", tooltip). Keep the
-   disabled-when-unpublished behavior; the precondition moves entirely to the
-   tooltip.
+   `ToolbarIconButton` (32px, `aria-label` "Export PDF", tooltip "Export PDF").
+   Keep the disabled-when-unpublished behavior; per the toolbar icon-button
+   primitive the tooltip stays equivalent to the aria-label, so the unpublished
+   precondition moves to an `aria-describedby`/sr-only hint, not the tooltip text.
 3. **Lead toolbar spacing.** Normalize the lead toolbar icon-button row to one
    consistent gap (the uneven gap before Save was the reported issue).
 4. **Toggle→dialog bug.** Reproduce live first. On the head report the toggles are

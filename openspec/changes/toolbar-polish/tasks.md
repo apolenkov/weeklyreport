@@ -12,6 +12,9 @@
 - [ ] 2.1 Render `export-pdf-button.tsx` via `ToolbarIconButton` (32px, icon,
       `aria-label` "Export PDF", tooltip); keep disabled-when-unpublished.
 - [ ] 2.2 Update head-report-shell tests asserting the old visible label.
+- [ ] 2.3 Preserve the `ExportPdfButton` async contract (request → poll →
+      busy/disabled → completion download → failure toast); add a non-regression
+      test that only the presentation primitive changed.
 
 ## 3. Lead toolbar spacing
 
