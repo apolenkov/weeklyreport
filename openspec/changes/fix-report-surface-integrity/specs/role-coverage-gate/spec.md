@@ -1,6 +1,6 @@
 ## MODIFIED Requirements
 
-### Requirement: Gate Allow-List Enumerates All Eight Canonical Builders
+### Requirement: Gate Allow-List Enumerates All Nine Canonical Builders
 
 The gate allow-list MUST enumerate exactly the 9 canonical builders named in
 this spec's Purpose: `publicProcedure`, `protectedProcedure`, `headProcedure`,
