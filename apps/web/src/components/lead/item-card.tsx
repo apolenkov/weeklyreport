@@ -195,7 +195,10 @@ export function ItemCard({
             <span
               role="img"
               className="inline-flex w-fit shrink-0 items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-bold tabular-nums"
-              style={{ background: "#cba258", color: "#fff" }}
+              style={{
+                background: "var(--color-starbucks-gold)",
+                color: "var(--color-primary-foreground)",
+              }}
               aria-label={`Priority ${item.priorityRank}`}
               title={`Priority rank ${item.priorityRank}`}
             >
@@ -216,7 +219,7 @@ export function ItemCard({
             </button>
             <button
               type="button"
-              className="flex h-8 w-8 items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[#fee2e2] hover:text-[var(--color-destructive)]"
+              className="flex h-8 w-8 items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:border-[color-mix(in_srgb,var(--color-destructive)_20%,transparent)] hover:bg-[var(--color-status-blocked-bg)] hover:text-[var(--color-destructive)]"
               onClick={() => onDelete?.(item.id)}
               aria-label="Delete"
             >
