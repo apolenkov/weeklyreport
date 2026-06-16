@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`ScopeToggle > active scope segment fills with the neutral muted token; inactive segments are transparent 1`] = `
+exports[`ScopeToggle > active scope button has accent background class; inactive buttons have accent foreground class 1`] = `
 <div>
   <div
     aria-label="Slide scope"
@@ -9,7 +9,7 @@ exports[`ScopeToggle > active scope segment fills with the neutral muted token; 
   >
     <button
       aria-checked="false"
-      class="inline-flex min-h-[var(--touch-target-min)] items-center justify-center border border-[rgba(0,0,0,0.2)] px-3 text-sm font-semibold transition-colors rounded-l-[var(--radius-pill)] border-r-0 bg-transparent text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+      class="inline-flex min-h-[var(--touch-target-min)] items-center justify-center border border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors rounded-l-[var(--radius-pill)] border-r-0 bg-[var(--color-surface)] text-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]"
       role="radio"
       type="button"
     >
@@ -17,7 +17,7 @@ exports[`ScopeToggle > active scope segment fills with the neutral muted token; 
     </button>
     <button
       aria-checked="true"
-      class="inline-flex min-h-[var(--touch-target-min)] items-center justify-center border border-[rgba(0,0,0,0.2)] px-3 text-sm font-semibold transition-colors border-r-0 bg-[var(--color-muted)] text-[var(--color-foreground)]"
+      class="inline-flex min-h-[var(--touch-target-min)] items-center justify-center border border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors border-r-0 bg-[var(--color-starbucks-accent)] text-white"
       role="radio"
       type="button"
     >
@@ -25,7 +25,7 @@ exports[`ScopeToggle > active scope segment fills with the neutral muted token; 
     </button>
     <button
       aria-checked="false"
-      class="inline-flex min-h-[var(--touch-target-min)] items-center justify-center border border-[rgba(0,0,0,0.2)] px-3 text-sm font-semibold transition-colors rounded-r-[var(--radius-pill)] bg-transparent text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+      class="inline-flex min-h-[var(--touch-target-min)] items-center justify-center border border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors rounded-r-[var(--radius-pill)] bg-[var(--color-surface)] text-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]"
       role="radio"
       type="button"
     >
@@ -44,7 +44,7 @@ exports[`ScopeToggle > renders index-aware segmented rounding for the two-scope 
   >
     <button
       aria-checked="true"
-      class="inline-flex min-h-[var(--touch-target-min)] items-center justify-center border border-[rgba(0,0,0,0.2)] px-3 text-sm font-semibold transition-colors rounded-l-[var(--radius-pill)] border-r-0 bg-[var(--color-muted)] text-[var(--color-foreground)]"
+      class="inline-flex min-h-[var(--touch-target-min)] items-center justify-center border border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors rounded-l-[var(--radius-pill)] border-r-0 bg-[var(--color-starbucks-accent)] text-white"
       role="radio"
       type="button"
     >
@@ -52,7 +52,7 @@ exports[`ScopeToggle > renders index-aware segmented rounding for the two-scope 
     </button>
     <button
       aria-checked="false"
-      class="inline-flex min-h-[var(--touch-target-min)] items-center justify-center border border-[rgba(0,0,0,0.2)] px-3 text-sm font-semibold transition-colors rounded-r-[var(--radius-pill)] bg-transparent text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+      class="inline-flex min-h-[var(--touch-target-min)] items-center justify-center border border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors rounded-r-[var(--radius-pill)] bg-[var(--color-surface)] text-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]"
       role="radio"
       type="button"
     >

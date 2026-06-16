@@ -97,7 +97,7 @@ describe("ScopeToggle", () => {
     expect(group).toHaveAttribute("aria-label", "Slide scope");
   });
 
-  it("active scope segment fills with the neutral muted token; inactive segments are transparent", () => {
+  it("active scope button has accent background class; inactive buttons have accent foreground class", () => {
     const { container } = render(
       <ScopeToggle
         value="product"
@@ -117,5 +117,23 @@ describe("ScopeToggle", () => {
       />,
     );
     expect(container).toMatchSnapshot();
+  });
+
+  // toolbar-polish part 4: selecting a header toggle must change only the
+  // grouping (onChange), never open an item/risk/decision dialog. The reported
+  // "toggle opens a dialog" bug was NOT reproducible (the head report wires no
+  // such dialog into the toggle); this is the standing guard.
+  it("selecting a scope opens no item/risk/decision dialog", () => {
+    const onChange = vi.fn();
+    const { baseElement } = render(
+      <ScopeToggle
+        value="own"
+        onChange={onChange}
+        allowedScopes={["own", "product", "lead"]}
+      />,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "Leads" }));
+    expect(onChange).toHaveBeenCalledWith("lead");
+    expect(baseElement.querySelector('[role="dialog"]')).toBeNull();
   });
 });
