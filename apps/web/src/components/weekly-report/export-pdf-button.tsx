@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../lib/trpc-context";
+import { ToolbarIconButton } from "../report-shell/toolbar-icon-button";
 
 interface ExportPdfButtonProps {
   readonly reportId: string;
@@ -83,14 +84,6 @@ export function ExportPdfButton({
     periodStatus === "published" || periodStatus === "reopened";
   const isGenerating = requestMut.isPending || jobId !== null;
   const disabled = !isExportable || isGenerating;
-  const title = !isExportable
-    ? "Publish the report first"
-    : isGenerating
-      ? "Generating PDF…"
-      : "Download a PDF copy of this report";
-  // The label never says "Publish" — that word belongs to the publish action
-  // alone; the precondition lives in `title` and the sr-only hint below.
-  const label = isGenerating ? "Generating…" : "Export PDF";
   const disabledReasonId = `${reportId}-export-pdf-disabled-reason`;
 
   function handleExport() {
@@ -98,24 +91,84 @@ export function ExportPdfButton({
     requestMut.mutate({ reportId });
   }
 
+  // toolbar-polish: rendered through the shared 32px ToolbarIconButton so the
+  // head/lead toolbars share one icon-action vocabulary. Per the icon-button
+  // primitive the tooltip stays equivalent to the aria-label ("Export PDF"); the
+  // unpublished precondition moves to an aria-describedby/sr-only hint, never the
+  // tooltip. The async contract (request → poll → busy → download → toast) above
+  // is unchanged — only the presentation differs.
+  const buttonClassName = isGenerating
+    ? "border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-white disabled:opacity-100"
+    : "border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-40";
+
   return (
     <>
-      <button
-        type="button"
-        className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
+      <ToolbarIconButton
+        aria-label="Export PDF"
         onClick={handleExport}
         disabled={disabled}
-        title={title}
         aria-busy={isGenerating}
         aria-describedby={!isExportable ? disabledReasonId : undefined}
+        className={buttonClassName}
       >
-        {label}
-      </button>
+        {isGenerating ? <ExportSpinnerIcon /> : <ExportPdfIcon />}
+      </ToolbarIconButton>
       {!isExportable ? (
         <span id={disabledReasonId} className="sr-only">
           Publish the report first to export PDF.
         </span>
       ) : null}
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Internal icons (14×14, centred in the 32px circle — matches SaveNowButton).
+// ---------------------------------------------------------------------------
+
+function ExportPdfIcon() {
+  return (
+    <svg
+      data-testid="export-pdf-icon"
+      aria-hidden="true"
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
+function ExportSpinnerIcon() {
+  return (
+    <svg
+      data-testid="export-pdf-spinner"
+      aria-hidden="true"
+      width="14"
+      height="14"
+      viewBox="0 0 12 12"
+      fill="none"
+      style={{ animation: "exportBtnSpin 1s linear infinite" }}
+    >
+      <style>{`@keyframes exportBtnSpin { to { transform: rotate(360deg); } }`}</style>
+      <circle
+        cx="6"
+        cy="6"
+        r="5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeDasharray="20 11"
+        opacity="0.9"
+      />
+    </svg>
   );
 }

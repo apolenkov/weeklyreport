@@ -1155,30 +1155,21 @@ export function LeadForm({
             ) : undefined
           }
           trailingExtras={
+            // toolbar-polish: one uniform gap across the whole icon-button row
+            // (no Separators that opened a larger gap before Save) — the
+            // trailing group's own `gap` now spaces every control evenly.
             <>
               <FillFromButton
                 periods={visiblePeriods}
                 disabled={isReadOnly || fillFromMut.isPending}
                 onFillFrom={handleFillFrom}
               />
-              <Separator
-                orientation="vertical"
-                className="h-5 bg-[var(--color-border)]"
-              />
               <VersionComingSoonControl />
               {/* TODO(lead-pdf-export): lead is excluded from pdfExport
                   (role-coverage-gate); this inert ComingSoon control never
                   reaches a backend call. */}
               <PdfExportComingSoonControl />
-              {!isReadOnly && (
-                <>
-                  <Separator
-                    orientation="vertical"
-                    className="h-5 bg-[var(--color-border)]"
-                  />
-                  <SaveNowButton autosave={autosave} />
-                </>
-              )}
+              {!isReadOnly && <SaveNowButton autosave={autosave} />}
             </>
           }
         />
