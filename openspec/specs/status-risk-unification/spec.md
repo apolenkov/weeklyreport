@@ -43,11 +43,15 @@ by the live lead form (`applyRiskSeverityFloor` in
 (`floorSlideStageStatus` in `section-slide-utils.ts`), both deriving the
 severity through the shared `deriveEffectiveStageStatus`. The read-model
 mapper (`mapLeadProducts` in `apps/web/src/lib/mappers/lead-form.ts`)
-PRESERVES the raw stage status (it keeps the empty→empty guard) and only
-additionally annotates `coveredByOwnRisk`; it MUST NOT floor the raw
-status, because the raw status drives both the X/7 completeness counter
-(which must not count foreign-covered stages) and the chip's
-risk-covered-vs-status-set distinction. The head-form, preview, and
+applies the same floor to a NON-EMPTY stage (via
+`deriveEffectiveStageStatus`: floor up to a worse covering risk, collapse
+a stale unbacked severity down) but PRESERVES an EMPTY stage as empty —
+the empty→empty guard. It MUST NOT floor an EMPTY stage up to a covering
+severity; it records that coverage separately via the `coveredByOwnRisk`
+annotation. Keeping an empty-but-covered stage's raw status empty is what
+the X/7 completeness counter (which must not count foreign-covered stages)
+and the chip's risk-covered-vs-status-set distinction both rely on. The
+head-form, preview, and
 PDF/print surfaces carry no per-stage grid — they render the
 product-level `worstStatus`, which already reflects risk severity — so
 all surfaces agree without the mapper flooring. This supersedes the PRJ-2
