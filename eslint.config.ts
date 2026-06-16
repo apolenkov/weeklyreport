@@ -83,6 +83,7 @@ export default defineConfig([
     "**/prisma/generated/**",
     "prisma/seed.ts",
     "prisma/seed-simple.ts",
+    "prisma/seed-demo.ts",
     "prisma/seed-constants.ts",
     "**/e2e/**",
     "openspec/**",
