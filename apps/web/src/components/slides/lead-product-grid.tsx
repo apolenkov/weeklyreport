@@ -8,7 +8,7 @@ import type { SlideProduct } from "./section-slide-utils";
 function StatusBadge({ status }: { status: SlideProduct["status"] }) {
   if (status === "red") {
     return (
-      <span className="inline-flex shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(200,32,20,0.24)] bg-[#fee2e2] px-2 py-0.5 text-[11px] font-semibold text-[#7f1d1d]">
+      <span className="inline-flex shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[color-mix(in_srgb,var(--color-destructive)_24%,transparent)] bg-[var(--color-status-blocked-bg)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)]">
         <AlertTriangle className="h-2.5 w-2.5" aria-hidden="true" />
         Blocked
       </span>
@@ -16,7 +16,7 @@ function StatusBadge({ status }: { status: SlideProduct["status"] }) {
   }
   if (status === "yellow") {
     return (
-      <span className="inline-flex shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(212,160,23,0.38)] bg-[#fef3c7] px-2 py-0.5 text-[11px] font-semibold text-[#78350f]">
+      <span className="inline-flex shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[color-mix(in_srgb,var(--color-status-dot-at-risk)_38%,transparent)] bg-[var(--color-status-at-risk-bg)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-status-at-risk-fg)]">
         <AlertTriangle className="h-2.5 w-2.5" aria-hidden="true" />
         At risk
       </span>
@@ -24,7 +24,7 @@ function StatusBadge({ status }: { status: SlideProduct["status"] }) {
   }
   if (status === "green") {
     return (
-      <span className="inline-flex shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.28)] bg-[rgba(229,245,237,0.74)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]">
+      <span className="inline-flex shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[color-mix(in_srgb,var(--color-starbucks-accent)_28%,transparent)] bg-[var(--color-success)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]">
         <Check className="h-2.5 w-2.5" aria-hidden="true" />
         On track
       </span>

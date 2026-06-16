@@ -47,22 +47,25 @@ function toneConfig(tone: ToneVariant): {
     case "blocked":
       return {
         label: "Blockers",
-        // red-100 bg + red-950 text → WCAG AA pass for small text
-        className: "border-[rgba(200,32,20,0.24)] bg-[#fee2e2] text-[#7f1d1d]",
+        // Blocked = the canonical status tokens (matches item-card + the slide
+        // deck): blocked-bg fill, destructive text/icon, faint destructive border.
+        className:
+          "border-[color-mix(in_srgb,var(--color-destructive)_24%,transparent)] bg-[var(--color-status-blocked-bg)] text-[var(--color-destructive)]",
         icon: <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />,
       };
     case "at-risk":
       return {
         label: "At risk",
-        // amber-100 bg + amber-900 text → WCAG AA pass for small text
-        className: "border-[rgba(212,160,23,0.38)] bg-[#fef3c7] text-[#78350f]",
+        // At-risk = amber tokens; amber is the at-risk accent only (one alarm hue).
+        className:
+          "border-[color-mix(in_srgb,var(--color-status-dot-at-risk)_38%,transparent)] bg-[var(--color-status-at-risk-bg)] text-[var(--color-status-at-risk-fg)]",
         icon: <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />,
       };
     case "on-track":
       return {
         label: "On track",
         className:
-          "border-[rgba(0,117,74,0.28)] bg-[rgba(229,245,237,0.74)] text-[var(--color-primary)]",
+          "border-[color-mix(in_srgb,var(--color-starbucks-accent)_28%,transparent)] bg-[var(--color-success)] text-[var(--color-primary)]",
         icon: <Check className="h-3.5 w-3.5" aria-hidden="true" />,
       };
     case "empty":

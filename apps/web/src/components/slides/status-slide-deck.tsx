@@ -54,10 +54,11 @@ interface StatusSlideDeckProps {
 
 const toneClass: Record<SlideTone, string> = {
   ready:
-    "border-[rgba(0,117,74,0.28)] bg-[rgba(229,245,237,0.74)] text-[var(--color-primary)]",
-  warning: "border-[rgba(212,160,23,0.38)] bg-[#fff7df] text-[#725313]",
+    "border-[color-mix(in_srgb,var(--color-starbucks-accent)_28%,transparent)] bg-[var(--color-success)] text-[var(--color-primary)]",
+  warning:
+    "border-[color-mix(in_srgb,var(--color-status-dot-at-risk)_38%,transparent)] bg-[var(--color-status-at-risk-bg)] text-[var(--color-status-at-risk-fg)]",
   blocked:
-    "border-[rgba(200,32,20,0.24)] bg-[#fff1f0] text-[var(--color-destructive)]",
+    "border-[color-mix(in_srgb,var(--color-destructive)_24%,transparent)] bg-[var(--color-status-blocked-bg)] text-[var(--color-destructive)]",
   empty:
     "border-[rgba(0,0,0,0.14)] bg-[var(--color-muted)] text-[var(--color-muted-foreground)]",
 };
@@ -85,7 +86,7 @@ function readinessDot(status: "ready" | "needs-work" | "optional") {
   }
   if (status === "needs-work") {
     return (
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[var(--radius-pill)] bg-[#fff1f0] text-[var(--color-destructive)]">
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-status-blocked-bg)] text-[var(--color-destructive)]">
         <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
       </span>
     );

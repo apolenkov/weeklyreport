@@ -75,6 +75,35 @@ describe("LeadProductGrid", () => {
     expect(screen.getByText("+1 more")).toBeInTheDocument();
   });
 
+  it("draws each status badge color from a named token, not a status hex", () => {
+    render(
+      <LeadProductGrid
+        products={[
+          product({ id: "r", name: "Red", status: "red" }),
+          product({ id: "y", name: "Yellow", status: "yellow" }),
+          product({ id: "g", name: "Green", status: "green" }),
+        ]}
+      />,
+    );
+
+    const blocked = screen.getByText("Blocked");
+    expect(blocked.className).toContain("bg-[var(--color-status-blocked-bg)]");
+    expect(blocked.className).toContain("text-[var(--color-destructive)]");
+
+    const atRisk = screen.getByText("At risk");
+    expect(atRisk.className).toContain("bg-[var(--color-status-at-risk-bg)]");
+    expect(atRisk.className).toContain("text-[var(--color-status-at-risk-fg)]");
+
+    const onTrack = screen.getByText("On track");
+    expect(onTrack.className).toContain("bg-[var(--color-success)]");
+
+    // No raw status hex leaks into any badge — convergence to one token set.
+    const statusHex = /#(?:fee2e2|fff1f0|fff7df|fef3c7|7f1d1d|78350f|725313)/i;
+    for (const badge of [blocked, atRisk, onTrack]) {
+      expect(badge.className).not.toMatch(statusHex);
+    }
+  });
+
   it("keeps the cross-product entry without a status badge", () => {
     render(
       <LeadProductGrid

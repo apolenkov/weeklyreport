@@ -56,6 +56,8 @@
   --color-chip-blocked-text: #6a1e1a;
   --color-chip-blocked-border: #a84040;
   --color-status-blocked-bg: #fee2e2;
+  --color-status-at-risk-bg: #fef3c7;
+  --color-status-at-risk-fg: #78350f;
   --color-status-at-risk-border: #a07c30;
   --color-priority-row-bg: #faf6ee;
   --color-highlight-shadow: rgba(0, 117, 74, 0.16);
