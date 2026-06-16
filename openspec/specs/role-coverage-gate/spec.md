@@ -1,6 +1,6 @@
 ## Purpose
 
-Every tRPC procedure in CustomReport MUST be constructed through one of 8 canonical
+Every tRPC procedure in CustomReport MUST be constructed through one of 9 canonical
 middleware-chain builders that live in `apps/api/src/infrastructure/trpc/`. The CI
 role-coverage gate verifies this by reference identity — not structural equality —
 so that copying a builder's body into a local helper still counts as a violation.
@@ -20,7 +20,7 @@ file under `.github/workflows/` (enforcement point).
 ### Requirement: Procedures Must Use Canonical Builders
 
 Every tRPC procedure defined in `apps/api/src/**/*.router.ts` MUST be constructed
-using one of the 8 canonical middleware-chain builders exported from
+using one of the 9 canonical middleware-chain builders exported from
 `apps/api/src/infrastructure/trpc/`. Procedures that do not reference a canonical
 builder MUST be rejected by the CI gate.
 
@@ -62,13 +62,15 @@ this spec's Purpose: `publicProcedure`, `protectedProcedure`, `headProcedure`,
 Documentation that states the builder count (e.g. `openspec/config.yaml`
 conventions) MUST say 9, not 8.
 
-driver-findings-2026-06-11 finding 3 (decision 2026-06-13) widened the
-`pdfExport.request` / `pdfExport.status` procedures from `headProcedure` to a
-new `leadHeadAdminProcedure` (`["lead","head","admin"]`) so leads can export a
-PDF. Viewer is deliberately excluded (the read-only role keeps the `/print`
-link), so `anyRoleProcedure` — which also admits viewer — could not be reused;
-a distinct builder was required. The new builder is registered in
-`ALLOWED_CHAINS` and pinned by the chain-composition test so the
+fix-report-surface-integrity (2026-06-16) moved the `pdfExport.request` /
+`pdfExport.status` procedures to `leadershipProcedure`
+(`["head","admin","viewer"]`): head, admin, and viewer may export a PDF and the
+lead is EXCLUDED (FORBIDDEN) — the lead surface shows an inert ComingSoon control
+instead of an active Export button. This superseded the earlier
+driver-findings-2026-06-13 decision that briefly routed pdfExport through
+`leadHeadAdminProcedure` (`["lead","head","admin"]`). `leadHeadAdminProcedure` is
+now orphaned (no production caller) but is RETAINED in `ALLOWED_CHAINS` and pinned
+by the chain-composition test, so the builder count stays 9 and the
 reference-identity gate keeps passing.
 
 #### Scenario: A router uses leadershipProcedure
@@ -79,7 +81,7 @@ reference-identity gate keeps passing.
 #### Scenario: A router uses leadHeadAdminProcedure
 
 - **WHEN** a `*.router.ts` file defines a procedure with `leadHeadAdminProcedure`
-  (e.g. `pdfExport.request` / `pdfExport.status`)
+  (currently orphaned — no production caller; retained as a recognized builder)
 - **THEN** the role-coverage gate reports the procedure as compliant and CI passes
 
 #### Scenario: A tenth builder is exported

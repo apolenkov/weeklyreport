@@ -44,8 +44,10 @@ the shared `ToolbarIconButton` primitive
 one compact 32px size, and MUST each carry an `aria-label` and a
 tooltip (`title`). Converting a text control to an icon button MUST
 NOT change its behavior, ARIA role, or state semantics — a switch
-stays `role="switch"` with `aria-checked`, and informational counts
-(such as the archived-period count) remain visible, not tooltip-only.
+stays `role="switch"` with `aria-checked`. The archive toggle is a quiet
+state indicator and deliberately carries NO numeric count badge: a count
+on the control read as a "press me" call-to-action rather than a switch,
+so the archived-period count is not surfaced on the toggle itself.
 
 #### Scenario: the archive toggle renders as an icon button
 
@@ -53,7 +55,8 @@ stays `role="switch"` with `aria-checked`, and informational counts
   or head surface
 - **THEN** it is a 32px icon button with `aria-label` and tooltip
 - **AND** it keeps `role="switch"` and `aria-checked`
-- **AND** a non-zero archived count remains visible on the control
+- **AND** it carries no numeric count badge (a quiet state indicator, not
+  a counted call-to-action)
 
 #### Scenario: a toolbar icon button is inspected for accessibility
 
