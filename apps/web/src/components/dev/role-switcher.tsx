@@ -16,7 +16,7 @@ import { useState } from "react";
 import { useTRPC } from "../../lib/trpc-context";
 
 type Role = "head" | "lead" | "admin" | "viewer";
-type DataResetVariant = "minimum" | "advanced" | "manual-uat";
+type DataResetVariant = "small" | "middle" | "huge" | "manual-uat";
 
 const ROLE_LABEL: Record<Role, string> = {
   head: "Department Head",
@@ -164,16 +164,22 @@ export function DevRoleSwitcher() {
           })}
           <DropdownMenuLabel>Data</DropdownMenuLabel>
           <DropdownMenuItem
-            onSelect={() => reseed("minimum")}
-            data-testid="dev-role-switcher-reseed-min"
+            onSelect={() => reseed("small")}
+            data-testid="dev-role-switcher-reseed-small"
           >
-            Wipe + Reseed (small MVP)
+            Wipe + Reseed (small)
           </DropdownMenuItem>
           <DropdownMenuItem
-            onSelect={() => reseed("advanced")}
-            data-testid="dev-role-switcher-reseed-full"
+            onSelect={() => reseed("middle")}
+            data-testid="dev-role-switcher-reseed-middle"
           >
-            Wipe + Reseed (large demo)
+            Wipe + Reseed (middle)
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => reseed("huge")}
+            data-testid="dev-role-switcher-reseed-huge"
+          >
+            Wipe + Reseed (huge)
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() => reseed("manual-uat")}

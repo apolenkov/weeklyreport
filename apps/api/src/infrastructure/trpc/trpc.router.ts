@@ -231,8 +231,8 @@ export function createAppRouter(deps: RouterDeps) {
         .input(
           z.object({
             variant: z
-              .enum(["minimum", "advanced", "manual-uat"])
-              .default("minimum"),
+              .enum(["small", "middle", "huge", "manual-uat"])
+              .default("small"),
           }),
         )
         .mutation(async ({ input }) => {
@@ -247,17 +247,20 @@ export function createAppRouter(deps: RouterDeps) {
           // applies migrations; then we run the requested seed explicitly.
           const { execSync } = await import("node:child_process");
           const reset = "pnpm exec prisma migrate reset --force";
-          const advancedSeed = "pnpm exec prisma db seed";
-          const simpleSeed =
+          // Tiers mirror the package.json seed scripts: small/huge run the
+          // tiered demo writer; middle delegates to the standalone seed-simple.
+          const seedDemo = (tier: "small" | "huge") =>
+            `pnpm --dir apps/api exec tsx ../../prisma/seed-demo.ts ${tier}`;
+          const middleSeed =
             "pnpm --dir apps/api exec tsx ../../prisma/seed-simple.ts";
           const manualUatWipe =
             "pnpm --dir apps/api exec tsx ../../prisma/wipe-manual-uat.ts";
+          const seedFor = (variant: "small" | "middle" | "huge") =>
+            variant === "middle" ? middleSeed : seedDemo(variant);
           const script =
             input.variant === "manual-uat"
               ? manualUatWipe
-              : input.variant === "advanced"
-                ? `${reset} && ${advancedSeed}`
-                : `${reset} && ${simpleSeed}`;
+              : `${reset} && ${seedFor(input.variant)}`;
           // Resolve repo root in both dev TS execution and built dist images.
           // Built Docker paths include dist/apps/api/src/... so a fixed
           // relative hop from import.meta.url can land under /app/apps. Prefer
@@ -289,7 +292,12 @@ export function createAppRouter(deps: RouterDeps) {
                 ...process.env,
                 PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
               },
-              timeout: input.variant === "manual-uat" ? 60_000 : 120_000,
+              timeout:
+                input.variant === "manual-uat"
+                  ? 60_000
+                  : input.variant === "huge"
+                    ? 300_000
+                    : 120_000,
             });
             return {
               ok: true,
