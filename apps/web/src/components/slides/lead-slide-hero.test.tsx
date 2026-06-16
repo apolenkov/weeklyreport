@@ -99,6 +99,28 @@ describe("LeadSlideHero", () => {
     },
   );
 
+  it.each([
+    ["blocked", "red", "--color-status-blocked-bg", "--color-destructive"],
+    [
+      "at-risk",
+      "yellow",
+      "--color-status-at-risk-bg",
+      "--color-status-at-risk-fg",
+    ],
+    ["on-track", "green", "--color-success", "--color-primary"],
+  ] as const)(
+    "draws the %s tone badge from named tokens, not a status hex",
+    (_name, status, bgToken, fgToken) => {
+      render(<LeadSlideHero slide={slide([product({ status })])} />);
+      const badge = toneBadge();
+      expect(badge.className).toContain(`bg-[var(${bgToken})]`);
+      expect(badge.className).toContain(`text-[var(${fgToken})]`);
+      expect(badge.className).not.toMatch(
+        /#(?:fee2e2|fff1f0|fff7df|fef3c7|7f1d1d|78350f|725313)/i,
+      );
+    },
+  );
+
   it("renders the metric counts from the slide model", () => {
     render(<LeadSlideHero slide={slide()} />);
     expect(screen.getByText("Current")).toBeInTheDocument();

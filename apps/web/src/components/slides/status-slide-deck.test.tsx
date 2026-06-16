@@ -644,3 +644,54 @@ describe("StatusSlideDeck a11y — LeadSlideArticle click-to-exit-fullscreen", (
     expect(exitFullscreen).not.toHaveBeenCalled();
   });
 });
+
+describe("StatusSlideDeck head tone pill — colors come from named tokens", () => {
+  const STATUS_HEX = /#(?:fee2e2|fff1f0|fff7df|fef3c7|7f1d1d|78350f|725313)/i;
+
+  function renderHeadTone(tone: SectionSlideModel["tone"]): HTMLElement {
+    const { container } = render(
+      <StatusSlideDeck
+        slides={[{ ...slide(), tone }]}
+        selectedIndex={0}
+        onSelect={() => undefined}
+        title="My Status Slide"
+        subtitle="Sub"
+        mode="head"
+      />,
+    );
+    return container;
+  }
+
+  function tonePill(container: HTMLElement, bgToken: string): HTMLElement {
+    const pill = [...container.querySelectorAll<HTMLElement>("span")].find(
+      (el) => el.className.includes(`bg-[var(${bgToken})]`),
+    );
+    expect(pill).toBeDefined();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- asserted above
+    return pill!;
+  }
+
+  it("draws the blocked tone pill from the blocked/destructive tokens", () => {
+    const pill = tonePill(
+      renderHeadTone("blocked"),
+      "--color-status-blocked-bg",
+    );
+    expect(pill.className).toContain("text-[var(--color-destructive)]");
+    expect(pill.className).not.toMatch(STATUS_HEX);
+  });
+
+  it("draws the at-risk tone pill from the at-risk tokens", () => {
+    const pill = tonePill(
+      renderHeadTone("warning"),
+      "--color-status-at-risk-bg",
+    );
+    expect(pill.className).toContain("text-[var(--color-status-at-risk-fg)]");
+    expect(pill.className).not.toMatch(STATUS_HEX);
+  });
+
+  it("draws the ready tone pill from the success/primary tokens", () => {
+    const pill = tonePill(renderHeadTone("ready"), "--color-success");
+    expect(pill.className).toContain("text-[var(--color-primary)]");
+    expect(pill.className).not.toMatch(STATUS_HEX);
+  });
+});
