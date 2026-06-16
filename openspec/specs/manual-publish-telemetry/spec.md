@@ -1,6 +1,13 @@
 # Manual Publish Telemetry
 
-## ADDED Requirements
+## Purpose
+
+Pin the durable telemetry contract that the live manual publish path emits
+the submitted and state-transition counters, only after the repository
+write succeeds, carrying the actual prior period status. Governs
+publish-path observability.
+
+## Requirements
 
 ### Requirement: Live manual publish path emits the publish counters
 

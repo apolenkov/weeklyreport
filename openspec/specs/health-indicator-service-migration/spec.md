@@ -1,9 +1,13 @@
-## Capability: health-indicator-service-migration
+# health-indicator-service-migration Specification
+
+## Purpose
 
 The API health indicators report through the non-deprecated
 `HealthIndicatorService` API, leaving no `no-deprecated` escape hatch in
 the health module, while preserving the `/health/ready` and `/health/live`
 response contract.
+
+## Requirements
 
 ### Requirement: Health Indicators MUST Use HealthIndicatorService
 

@@ -1,4 +1,10 @@
-## ADDED Requirements
+## Purpose
+
+Pin the durable property that lead-surface card product names resolve
+report-wide, so a referenced project the report can name never falls back
+to a placeholder. Governs name resolution on the lead-surface mappers.
+
+## Requirements
 
 ### Requirement: Lead-surface card product names resolve report-wide
 

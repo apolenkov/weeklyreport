@@ -3,6 +3,13 @@
 Shared tRPC mock-factory contract for web component and hook tests.
 Pinned by: refactor-web-trpc-test-harness (archived 2026-06-13).
 
+## Purpose
+
+Pin the shared tRPC mock-factory contract for web component and hook tests
+so test files stub the tRPC proxy through one factory instead of
+hand-rolling per-file proxy shapes. Governs the test harness, not product
+behavior.
+
 ## Requirements
 
 ### Requirement: Component tests stub tRPC through the shared factory

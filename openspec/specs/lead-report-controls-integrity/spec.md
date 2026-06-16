@@ -41,8 +41,8 @@ Add Item, Add Risk, and Add Decision alike.
 
 ### Requirement: Controls with no effect are not rendered
 
-A control whose action can have no visible effect in the current data
-state MUST NOT render (preferred) or MUST carry an explicit
+A control MUST NOT render when its action can have no visible effect in
+the current data state (preferred), or it MUST carry an explicit
 empty-state explanation. Specifically, the archive toggle on the lead
 report page renders only when archived periods exist for this lead;
 when rendered, it shows how many ("N archived") and toggling visibly

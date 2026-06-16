@@ -2,6 +2,13 @@
 
 Synced from change `hoist-query-error-policy` (archived 2026-06-11).
 
+## Purpose
+
+Pin the durable contract that every TanStack Query load failure on a page
+surface is reported through one error-policy seam and logged exactly once,
+rather than via hand-rolled per-component effects. Governs the reporting
+seam, not error copy.
+
 ## Requirements
 
 ### Requirement: Query load failures flow through the policy module
