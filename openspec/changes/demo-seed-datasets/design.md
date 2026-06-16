@@ -1,15 +1,26 @@
 # Design: demo-seed-datasets
 
-## Structure
+## Structure (surgical — revised 2026-06-16)
 
-One demo-seed module parametrized by tier, not three parallel files:
+The spec's normative contract is only "three independently-runnable tiers
+(`small`/`middle`/`huge`, `small` default) + the small-tier behaviors + an
+untouched `seed.ts`". It does NOT mandate a single writer. Folding the whole
+2005-line `seed-simple.ts` into a data-driven `middle` was design prose, and on
+inspection it is high-risk revert-bait: `seed-simple.ts` is the byte-stable
+fixture the CI visual-regression job seeds, and `prisma/reset-hard.ts` (the
+manual-UAT baseline + `db:reset:hard:docker`) hard-codes it. There is also no
+`db:seed:simple` script to "retire" — it never existed (only `db:fresh:simple`).
 
-- `prisma/seed-demo.ts` exposes `seedDemo(tier: "small" | "middle" | "huge")`.
-- Tier datasets are plain data definitions (products, leads, stage ownership,
-  items, risks, decisions, escalations) consumed by one shared writer, so the
-  three tiers cannot drift in their write logic.
-- `package.json`: `db:seed:small|middle|huge` invoke the module with the tier;
-  `db:seed:simple` is retired (its content becomes the `middle` definition).
+So the surgical structure, confirmed with the user 2026-06-16:
+
+- `prisma/seed-demo.ts` exposes `seedDemo(tier: "small" | "huge")` over ONE
+  shared writer + per-tier plain-data datasets (products, leads, stage
+  ownership, items, risks, decisions). Tier is read from `process.argv`.
+- `middle` reuses the proven `seed-simple.ts` AS-IS via delegation
+  (`db:seed:middle` → `tsx prisma/seed-simple.ts`). This keeps the visual
+  baseline + reset-hard untouched and avoids a behavior-preserving refactor.
+- `package.json`: add `db:seed:small|middle|huge`. `small` is the demo default.
+- `prisma/reset-hard.ts` is NOT changed (still seeds via `seed-simple.ts`).
 - `seed.ts` (canonical test fixture) and `prisma.config.ts`'s `migrations.seed`
   pointer are untouched.
 
