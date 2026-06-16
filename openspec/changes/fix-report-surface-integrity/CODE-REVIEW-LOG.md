@@ -34,7 +34,40 @@ query, "No stage set" in web mapper); W2 authz (leadershipProcedure = head/admin
    `specs/risk-stage-integrity/spec.md:10` still name the removed `buildEscalationsFromSnapshotSections`;
    rename to `buildEscalationsFromReadSections`.
 
-## Resolution
+## Round 2 — VERDICT: REVISE (all CODE invariants PASS; spec/comment drift only)
 
-Fixes batched with the live-UAT findings, then re-tested + re-reviewed (fresh Codex session per
-the codex-fresh-session-rereview rule). See git log for the fix commits.
+Codex re-verified round 1's fixes resolved and re-checked every invariant: W11, W6, W7/W8, W2
+authz, W2 routing, Export UI — all PASS with file evidence. Findings were doc drift:
+
+1. [BLOCKING] status-risk-unification spec still required the mapper to floor → corrected to
+   render-time floor + mapper preserves raw + `coveredByOwnRisk`.
+2. [BLOCKING] report-routing spec still said /print human = 308 + lead FORBIDDEN → corrected to
+   307 temporary + lead own-path.
+3. [MINOR] stale "308" comment in `reports/[reportId]/page.tsx` → 307.
+
+## Round 3 — VERDICT: REVISE (spec drift only)
+
+1. [BLOCKING] a status-risk-unification _scenario_ still described mapper flooring → rewritten.
+2. [MINOR] two specs named the removed live `buildEscalations` → renamed to the single shared
+   `buildEscalationsFromReadSections`. Followed by an exhaustive spec sweep.
+
+## Round 4 — VERDICT: REVISE (cosmetic only) — code APPROVED in substance
+
+Codex explicitly PASSED all six invariant categories (W11, W6 deviation, W7/W8, W2 authz, W2
+routing, Export UI) with file:line evidence. Two cosmetic findings:
+
+1. [MINOR] `export-pdf-button.tsx` comment said "head-only" → corrected to leadership-scoped
+   (head/admin/viewer; lead FORBIDDEN). FIXED.
+2. [MINOR] `role-coverage-gate` requirement heading says "Eight" while its body says "9". This is
+   a PRE-EXISTING inconsistency in the main spec (`openspec/specs/role-coverage-gate/spec.md:54`
+   vs :56), inherited by the delta — NOT introduced by this change. Renaming the heading in the
+   delta alone would break MODIFIED-requirement name matching against the main spec (needs a
+   RENAMED-requirement, out of scope). Left as-is; flagged for a separate cleanup.
+
+## Resolution — CONVERGED
+
+All four rounds confirmed the CODE is correct; every invariant PASSED from round 2 onward. The
+REVISE verdicts after round 1 were spec-delta + comment drift, all fixed except the one
+pre-existing main-spec heading nit (documented above). Loop stopped at round 4 (diminishing
+returns on cosmetics). Full gate green; `openspec validate --strict` green. Ready for PR.
+Each round was a FRESH Codex session (no resume) per the codex-fresh-session-rereview rule.

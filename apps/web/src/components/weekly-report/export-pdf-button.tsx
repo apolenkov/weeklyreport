@@ -14,7 +14,8 @@ interface ExportPdfButtonProps {
 /**
  * Export PDF button — Phase 23-01.
  *
- * Wires the head-only `pdfExport.request` mutation to start a BullMQ job, then
+ * Wires the leadership-scoped (head/admin/viewer; lead FORBIDDEN)
+ * `pdfExport.request` mutation to start a BullMQ job, then
  * polls `pdfExport.status` every 2 seconds until the worker reports
  * `completed` or `failed`. On completion, opens the static `/pdfs/{jobId}.pdf`
  * artefact in a new tab so the browser triggers the download.
