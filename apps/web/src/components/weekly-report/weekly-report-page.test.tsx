@@ -555,12 +555,11 @@ describe("WeeklyReportPage — async Export PDF button role gating (driver sweep
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
-  // The async export starts a `pdfExport.request` job. driver-findings finding 3
-  // + followups item 1: Export-PDF is available to EVERY authenticated role.
-  // Viewer was unblocked once the export render became requester-scoped
-  // (empty-PDF fix), so the viewer now gets a non-empty PDF of their own
-  // published slice. API (pdfExport.request / .status) is anyRoleProcedure.
-  it.each(["head", "admin", "lead", "viewer"] as const)(
+  // fix-report-surface-integrity W2: the real async export is offered to
+  // head/admin/viewer only (the export render is requester-scoped, so the viewer
+  // gets their own non-empty published slice). The API (pdfExport.request /
+  // .status) is now leadershipProcedure — lead is FORBIDDEN.
+  it.each(["head", "admin", "viewer"] as const)(
     "renders the async Export PDF button for %s",
     async (role) => {
       renderPage(makeWeeklyReportData("published"), undefined, role);
@@ -570,17 +569,16 @@ describe("WeeklyReportPage — async Export PDF button role gating (driver sweep
     },
   );
 
-  it("lets a lead trigger the export (fires pdfExport.request with reportId)", async () => {
-    const { captured } = renderPage(
-      makeWeeklyReportData("published"),
-      undefined,
-      "lead",
-    );
-    const button = await screen.findByRole("button", { name: /export pdf/i });
-    await userEvent.click(button);
-    expect(captured["pdfExport.request"].calls).toContainEqual({
-      reportId: REPORT_ID,
-    });
+  it("shows a lead the inert ComingSoon control, NOT an active Export button", async () => {
+    renderPage(makeWeeklyReportData("published"), undefined, "lead");
+    // The inert control is present (lead export is a deferred ComingSoon).
+    expect(
+      await screen.findByTestId("lead-pdf-export-coming-soon"),
+    ).toBeInTheDocument();
+    // …and the real Export PDF button never renders for a lead.
+    expect(
+      screen.queryByRole("button", { name: /export pdf/i }),
+    ).not.toBeInTheDocument();
   });
 });
 

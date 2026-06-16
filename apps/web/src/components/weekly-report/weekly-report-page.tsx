@@ -20,6 +20,7 @@ import { useTRPC } from "../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
 import type { PortfolioProduct, ProductReport } from "../dashboard/mock-data";
 import type { ReportPeriod } from "../lead/mock-data";
+import { PdfExportComingSoonControl } from "../lead/pdf-export-coming-soon";
 import { PeriodNavigator } from "../lead/period-navigator";
 import {
   ReportToolbar,
@@ -181,6 +182,32 @@ function resolveTerminalNotice(query: {
   return null;
 }
 
+/**
+ * The single labeled Export-PDF control for the toolbar trailing group.
+ * head/admin/viewer get the real button; lead gets the inert ComingSoon control
+ * (lead is FORBIDDEN from pdfExport — W2). Extracted so the branching stays out
+ * of WeeklyReportPage's body.
+ */
+function ToolbarExportControl({
+  canExportPdf,
+  showComingSoon,
+  reportId,
+  periodStatus,
+}: {
+  canExportPdf: boolean;
+  showComingSoon: boolean;
+  reportId: string;
+  periodStatus: "open" | "published" | "reopened";
+}) {
+  if (canExportPdf) {
+    return <ExportPdfButton reportId={reportId} periodStatus={periodStatus} />;
+  }
+  if (showComingSoon) {
+    return <PdfExportComingSoonControl />;
+  }
+  return null;
+}
+
 export function WeeklyReportPage({
   reportId,
   redirectToCanonical,
@@ -201,12 +228,12 @@ export function WeeklyReportPage({
   const orgFullName = sessionState?.organization?.fullName ?? null;
   const currentRole = sessionState?.user?.role ?? null;
   const canMutatePeriod = currentRole === "head" || currentRole === "admin";
-  // driver-findings finding 3 + followups item 1: Export-PDF is offered to every
-  // authenticated role (head/admin/lead/viewer). The viewer was unblocked once
-  // the export render became requester-scoped (empty-PDF fix) — their PDF is now
-  // their own non-empty published slice, not a blank page. Matches the widened
-  // pdfExport.request / .status authz (anyRoleProcedure).
-  const canExportPdf = currentRole !== null;
+  // Export-PDF authz (fix-report-surface-integrity W2): head/admin/viewer get the
+  // real export; lead is FORBIDDEN at the backend (pdfExport on leadershipProcedure)
+  // and sees the inert ComingSoon control instead — never an active button that
+  // would 403. The viewer's export is requester-scoped (their own published slice).
+  const canExportPdf = currentRole !== null && currentRole !== "lead";
+  const showLeadExportComingSoon = currentRole === "lead";
 
   // weeklyReport.get input: { reportId?: string } | undefined.
   // When reportId is given, scope to that report; otherwise fall back to the
@@ -508,12 +535,12 @@ export function WeeklyReportPage({
           // export render is requester-scoped, so even the viewer gets their
           // own non-empty published slice). Matches the widened pdfExport authz.
           trailingExtras={
-            canExportPdf ? (
-              <ExportPdfButton
-                reportId={view.period.reportId}
-                periodStatus={view.period.periodStatus}
-              />
-            ) : undefined
+            <ToolbarExportControl
+              canExportPdf={canExportPdf}
+              showComingSoon={showLeadExportComingSoon}
+              reportId={view.period.reportId}
+              periodStatus={view.period.periodStatus}
+            />
           }
         />
       )}
