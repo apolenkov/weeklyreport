@@ -2,28 +2,31 @@
 
 ### Requirement: Covering risks force a severity floor on stage chips
 
-A stage chip MUST render at least at the highest covering risk's
-severity when its stage is covered by at least one non-empty own risk
-(precedence: blocked > at-risk). The chip MUST NOT show on-track or
-empty while covering risks exist. The floor is applied at RENDER time —
-by the live lead form (`applyRiskSeverityFloor` in
-`lead-form-sync-bridge.tsx`) and the slides/head-review surface
+A stage chip, AS DISPLAYED, MUST render at least at the highest covering
+risk's severity when its stage is covered by at least one non-empty own
+risk (precedence: blocked > at-risk). The DISPLAYED chip MUST NOT show
+on-track or empty while covering risks exist. This DISPLAY floor is
+applied at RENDER time — by the live lead form (`applyRiskSeverityFloor`
+in `lead-form-sync-bridge.tsx`) and the slides/head-review surface
 (`floorSlideStageStatus` in `section-slide-utils.ts`), both deriving the
-severity through the shared `deriveEffectiveStageStatus`. The read-model
+severity through the shared `deriveEffectiveStageStatus`.
+
+The RAW read-model status is a SEPARATE layer from the displayed chip. The
 mapper (`mapLeadProducts` in `apps/web/src/lib/mappers/lead-form.ts`)
-applies the same floor to a NON-EMPTY stage (via
-`deriveEffectiveStageStatus`: floor up to a worse covering risk, collapse
-a stale unbacked severity down) but PRESERVES an EMPTY stage as empty —
-the empty→empty guard. It MUST NOT floor an EMPTY stage up to a covering
+applies the floor to a NON-EMPTY stage (via `deriveEffectiveStageStatus`:
+floor up to a worse covering risk, collapse a stale unbacked severity
+down) but PRESERVES an EMPTY stage's raw status as empty — the empty→empty
+guard. It MUST NOT floor an EMPTY stage's RAW status up to a covering
 severity; it records that coverage separately via the `coveredByOwnRisk`
-annotation. Keeping an empty-but-covered stage's raw status empty is what
+annotation. This raw empty is NOT what the chip displays — the render
+floor above already prevents an empty-looking covered chip — it is what
 the X/7 completeness counter (which must not count foreign-covered stages)
-and the chip's risk-covered-vs-status-set distinction both rely on. The
-head-form, preview, and
-PDF/print surfaces carry no per-stage grid — they render the
-product-level `worstStatus`, which already reflects risk severity — so
-all surfaces agree without the mapper flooring. This supersedes the PRJ-2
-decision that disconnected risk-derived status in `mapLeadProducts`.
+and the chip's risk-covered-vs-status-set distinction rely on.
+
+The head-form, preview, and PDF/print surfaces carry no per-stage grid —
+they render the product-level `worstStatus`, which already reflects risk
+severity. This supersedes the PRJ-2 decision that disconnected
+risk-derived status in `mapLeadProducts`.
 
 #### Scenario: saving a risk raises the covered chip
 
