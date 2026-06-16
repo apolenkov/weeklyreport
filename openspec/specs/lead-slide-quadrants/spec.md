@@ -12,11 +12,12 @@ code module.
 
 ### Requirement: The lead "Own" slide renders a strict 2×2 quadrant grid of framed cards
 
+The lead "Own" slide MUST render its four sections (Current Work | Next
+Focus over Risks | Decisions) as a strict 2×2 grid of framed cards.
 `LeadUnifiedSlide` (`apps/web/src/components/slides/lead-unified-slide.tsx`)
-MUST render its four sections (Current Work | Next Focus over Risks |
-Decisions) as a strict 2×2 grid of framed cards: each quadrant is a real
-bordered card (existing card tokens) with a left status stripe and a
-per-quadrant minimum height drawn from a named dimension token. An empty
+draws each quadrant as a real bordered card (existing card tokens) with a
+left status stripe and a per-quadrant minimum height drawn from a named
+dimension token. An empty
 quadrant MUST render a dashed-border placeholder with quadrant-specific
 copy — it MUST NOT collapse to a bare section header. The fullscreen
 behavior of the grid wrapper MUST be preserved.

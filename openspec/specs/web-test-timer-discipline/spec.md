@@ -1,5 +1,11 @@
 # web-test-timer-discipline
 
+## Purpose
+
+Pin the durable testing discipline that web tests wait on framework timer
+and query primitives instead of hand-rolled tick-flush loops, so the suite
+stays deterministic. Governs test-timing technique, not product behavior.
+
 ## Requirements
 
 ### Requirement: Web tests wait on framework primitives, not hand-rolled tick loops

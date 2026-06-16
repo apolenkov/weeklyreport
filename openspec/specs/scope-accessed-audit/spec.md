@@ -15,7 +15,7 @@ query (`apps/api/src/infrastructure/trpc/trpc.router.ts`); the
 weekly-report read
 (`apps/api/src/modules/weekly-report/weekly-report.prisma-repository.ts`).
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: AuditLogger Exposes a scopeAccessed Event
 

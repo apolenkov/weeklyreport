@@ -12,11 +12,12 @@ governs naming/grouping semantics, not a code module.
 
 ### Requirement: Segmented toggles in the head report header share one visual family
 
-The segmented controls in the head report header (`ScopeToggle` in
-`apps/web/src/components/report-shell/scope-toggle.tsx` and
-`ViewModeToggle` in `apps/web/src/components/report-shell/view-mode-toggle.tsx`,
-composed by `apps/web/src/components/head/head-report-shell.tsx`) MUST
-render as one visual family: the same active-fill token
+The segmented controls in the head report header MUST render as one
+visual family — `ScopeToggle`
+(`apps/web/src/components/report-shell/scope-toggle.tsx`) and
+`ViewModeToggle` (`apps/web/src/components/report-shell/view-mode-toggle.tsx`),
+composed by `apps/web/src/components/head/head-report-shell.tsx`: the same
+active-fill token
 (`--color-starbucks-accent`), the same font size tier (`text-sm`
 semibold), and the same pill shape. Group separation MUST be carried by
 the wrapper border/spacing, not by divergent control styling. A new
@@ -32,11 +33,12 @@ segmented control added to this header MUST adopt the same family.
 
 ### Requirement: Header utility actions carry visible text labels
 
-Utility actions in the head report header that navigate to a distinct
-surface (the `/head/report/[id]/present` link and the `/print/[reportId]`
-link in `head-report-shell.tsx`) MUST render a visible text label next to
+Head-report-header utility links MUST render a visible text label next to
 their icon ("Present", "Print") — icon-only rendering is not allowed for
-these actions. Labels MUST honestly name the surface: the browser-print
+the actions that navigate to a distinct surface (the
+`/head/report/[id]/present` link and the `/print/[reportId]` link in
+`head-report-shell.tsx`). Labels MUST honestly name the surface: the
+browser-print
 template is labeled "Print", not "Export PDF" or "Print PDF".
 
 #### Scenario: utility links render
@@ -49,9 +51,10 @@ template is labeled "Print", not "Export PDF" or "Print PDF".
 
 ### Requirement: The word "Publish" appears on exactly one header control
 
-Across both header rows of the head report surface, exactly one control —
-the publish action (`PublishLockButton`) — MAY carry the word "Publish"
-in its visible label. Precondition states of other controls (such as
+The word "Publish" MUST appear on exactly one control across both header
+rows of the head report surface — the publish action
+(`PublishLockButton`); no other control's visible label MAY carry it.
+Precondition states of other controls (such as
 `ExportPdfButton` in `apps/web/src/components/weekly-report/export-pdf-button.tsx`
 while the period is unpublished) MUST be conveyed via the disabled state
 plus a `title`/sr-only hint, NOT via a compound label containing
@@ -68,13 +71,13 @@ plus a `title`/sr-only hint, NOT via a compound label containing
 
 ### Requirement: Deferred placeholders render visually subordinate
 
-An inert deferred-feature placeholder in the head report header (today:
-`AgentReviewComingSoon` in
-`apps/web/src/components/report-shell/agent-review-coming-soon.tsx`) MUST
+An inert deferred-feature placeholder in the head report header MUST
 render visually subordinate to real actions — compact size — and MUST be
 positioned at the trailing edge of its control group, after real actions.
-The inert ComingSoonBadge pattern (aria-disabled, no click handler,
-tooltip) MUST be preserved.
+Today this placeholder is `AgentReviewComingSoon` in
+`apps/web/src/components/report-shell/agent-review-coming-soon.tsx`. The
+inert ComingSoonBadge pattern (aria-disabled, no click handler, tooltip)
+MUST be preserved.
 
 #### Scenario: the header renders a deferred placeholder
 
