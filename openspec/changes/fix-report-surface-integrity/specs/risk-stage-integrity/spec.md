@@ -4,10 +4,10 @@
 
 An escalation row (Blocked & At Risk) MUST carry the concrete SDLC
 stage(s) of its underlying blocked item or risk; the stage data exists
-and MUST NOT be hardcoded to null. Both escalation builders MUST select
-and resolve the stage arrays (`item.stageIds` and `risk.stageIds`) into
-stage name(s) — the live `buildEscalations` and the snapshot
-`buildEscalationsFromReadSections`. A row backed by a legacy
+and MUST NOT be hardcoded to null. The single shared escalation builder
+`buildEscalationsFromReadSections` — used by BOTH the live and the
+published-snapshot paths — MUST select and resolve the stage arrays
+(`item.stageIds` and `risk.stageIds`) into stage name(s). A row backed by a legacy
 stage-less risk (empty `stageIds`) MUST render the explicit "No stage
 set" warning marker — never a silent "—" — and that legacy stage-less
 risk MUST contribute 0 to the lead's stage completeness counter (see
