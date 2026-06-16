@@ -2,10 +2,10 @@
  * DEMO seed — tiered, presenter-controlled demo data.
  *
  * One shared writer, two plain-data tiers selected from the CLI:
- *   - small (default) — 3 products, 3 leads, clean (lead × product × stage)
- *     ownership. Two single-stage products + one two-stage product (one item
- *     spans Development + Testing). One BLOCKED item so the derived
- *     "Needs Attention" banner has content to demonstrate.
+ *   - small (default) — ONE lead (Vasily) owning 3 products: two single-stage
+ *     (Development) + one two-stage (Development + Testing, one item spans both).
+ *     One BLOCKED item so the derived "Needs Attention" banner has content to
+ *     demonstrate. Models a single lead's realistic multi-product week.
  *   - huge — the dense many-product fixture for stress/scroll demos
  *     (all canonical leads + products, templated content).
  *
@@ -52,8 +52,6 @@ import {
   PUBLISHED_REPORT_ID,
   DEFAULT_REPORTING_GROUP_ID,
   LEAD_1_ID,
-  LEAD_MARIA_ID,
-  LEAD_IGOR_ID,
   SEED_STAGES,
   SEED_USERS,
   SEED_PRODUCTS,
@@ -153,8 +151,8 @@ function stageId(name: StageName): string {
 // ---------------------------------------------------------------------------
 
 const PROD_PORTAL = SEED_PRODUCTS[0]!.id; // Маркетинговый портал → Vasily
-const PROD_INTEGRATIONS = SEED_PRODUCTS[2]!.id; // Платформа интеграций → Maria
-const PROD_BI = SEED_PRODUCTS[4]!.id; // Внутренний BI → Igor
+const PROD_INTEGRATIONS = SEED_PRODUCTS[2]!.id; // Платформа интеграций → Vasily
+const PROD_BI = SEED_PRODUCTS[4]!.id; // Внутренний BI → Vasily
 
 const SMALL_DATASET: TierDataset = {
   leads: [
@@ -164,30 +162,15 @@ const SMALL_DATASET: TierDataset = {
       name: "Василий И.",
       samlId: "lead-1",
     },
-    {
-      id: LEAD_MARIA_ID,
-      email: "maria@customreport.local",
-      name: "Мария К.",
-      samlId: "lead-maria",
-    },
-    {
-      id: LEAD_IGOR_ID,
-      email: "igor@customreport.local",
-      name: "Игорь В.",
-      samlId: "lead-igor",
-    },
   ],
   products: [
     { id: PROD_PORTAL, name: "Маркетинговый портал", leadId: LEAD_1_ID },
-    {
-      id: PROD_INTEGRATIONS,
-      name: "Платформа интеграций",
-      leadId: LEAD_MARIA_ID,
-    },
-    { id: PROD_BI, name: "Внутренний BI", leadId: LEAD_IGOR_ID },
+    { id: PROD_INTEGRATIONS, name: "Платформа интеграций", leadId: LEAD_1_ID },
+    { id: PROD_BI, name: "Внутренний BI", leadId: LEAD_1_ID },
   ],
   sections: [
-    // Product A — Vasily, single stage (Development). Carries the BLOCKED item.
+    // Product A — single stage (Development). Carries the BLOCKED item so the
+    // derived "Needs Attention" escalation banner has content to demonstrate.
     {
       leadId: LEAD_1_ID,
       leadLabel: "Василий И.",
@@ -226,48 +209,48 @@ const SMALL_DATASET: TierDataset = {
         stage: "Development",
       },
     },
-    // Product B — Maria, single stage (Design).
+    // Product B — single stage (Development).
     {
-      leadId: LEAD_MARIA_ID,
-      leadLabel: "Мария К.",
+      leadId: LEAD_1_ID,
+      leadLabel: "Василий И.",
       productId: PROD_INTEGRATIONS,
       productLight: TrafficLightStatus.green,
-      sectionStatus: ReportSectionStatus.submitted,
-      ownedStages: ["Design"],
+      sectionStatus: ReportSectionStatus.draft,
+      ownedStages: ["Development"],
       items: [
         {
           type: ItemType.current,
-          text: "Согласовали дизайн коннектора для платформы интеграций",
+          text: "Реализовали REST-коннектор для платформы интеграций",
           tag: "feature",
           status: ItemWorkflowStatus.in_progress,
-          stages: ["Design"],
+          stages: ["Development"],
           priorityRank: 1,
         },
         {
           type: ItemType.next,
-          text: "Передать макеты коннектора в разработку",
+          text: "Покрыть коннектор контрактными тестами перед интеграцией",
           tag: "feature",
           status: ItemWorkflowStatus.in_progress,
-          stages: ["Design"],
+          stages: ["Development"],
         },
       ],
       risk: {
-        risk: "Требования к коннектору ещё уточняются заказчиком",
-        impact: "Возможна переработка макетов на этапе разработки",
-        mitigation: "Воркшоп с заказчиком до пятницы для фиксации требований",
+        risk: "Внешний API партнёра нестабилен в sandbox-среде",
+        impact: "Возможны повторные доработки коннектора",
+        mitigation: "Завести моки и контрактные тесты до боевой интеграции",
         severity: "at-risk",
-        stage: "Design",
+        stage: "Development",
       },
       decision: {
-        text: "Принять единый стиль коннекторов для всех интеграций",
-        impact: "Ускоряет дизайн будущих коннекторов",
-        stage: "Design",
+        text: "Зафиксировать версию API партнёра для интеграции",
+        impact: "Снижает риск ломающих изменений на их стороне",
+        stage: "Development",
       },
     },
-    // Product C — Igor, two stages (Development + Testing). One item spans both.
+    // Product C — two stages (Development + Testing). One item spans both.
     {
-      leadId: LEAD_IGOR_ID,
-      leadLabel: "Игорь В.",
+      leadId: LEAD_1_ID,
+      leadLabel: "Василий И.",
       productId: PROD_BI,
       productLight: TrafficLightStatus.green,
       sectionStatus: ReportSectionStatus.draft,
