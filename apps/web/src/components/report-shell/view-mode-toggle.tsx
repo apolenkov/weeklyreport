@@ -32,9 +32,12 @@ export function ViewModeToggle({
   slidesHref,
   mode = "edit",
 }: ViewModeToggleProps) {
-  const activeClass = "bg-[var(--color-starbucks-accent)] text-white";
+  // Neutral pill family matching the lead "Toggle All" button so the whole
+  // toolbar reads as one family (user direction 2026-06-16): gray border,
+  // transparent inactive, neutral --color-muted fill on the active segment.
+  const activeClass = "bg-[var(--color-muted)] text-[var(--color-foreground)]";
   const inactiveClass =
-    "bg-[var(--color-surface)] text-[var(--color-starbucks-accent)]";
+    "bg-transparent text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]";
 
   // Self-contained wrapper: the two segments must touch to read as ONE
   // segmented pill. Without it, a parent flex container with `gap-*`
@@ -45,14 +48,14 @@ export function ViewModeToggle({
       <Link
         href={editHref}
         scroll={false}
-        className={`inline-flex min-h-[var(--touch-target-min)] min-w-[96px] items-center justify-center gap-1 rounded-l-[var(--radius-pill)] border border-r-0 border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors ${mode === "edit" ? activeClass : inactiveClass}`}
+        className={`inline-flex min-h-[var(--touch-target-min)] min-w-[96px] items-center justify-center gap-1 rounded-l-[var(--radius-pill)] border border-r-0 border-[rgba(0,0,0,0.2)] px-3 text-sm font-semibold transition-colors ${mode === "edit" ? activeClass : inactiveClass}`}
       >
         Edit
       </Link>
       <Link
         href={slidesHref}
         scroll={false}
-        className={`inline-flex min-h-[var(--touch-target-min)] min-w-[96px] items-center justify-center gap-1 rounded-r-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors ${mode === "slides" ? activeClass : inactiveClass}`}
+        className={`inline-flex min-h-[var(--touch-target-min)] min-w-[96px] items-center justify-center gap-1 rounded-r-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] px-3 text-sm font-semibold transition-colors ${mode === "slides" ? activeClass : inactiveClass}`}
         aria-label="Open slides mode"
       >
         <SlidesViewIcon />

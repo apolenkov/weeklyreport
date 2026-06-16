@@ -13,12 +13,12 @@ governs naming/grouping semantics, not a code module.
 ### Requirement: Segmented toggles in the head report header share one visual family
 
 The segmented controls in the head report header MUST render as one
-visual family — `ScopeToggle`
+neutral visual family matching the lead "Toggle All" button — `ScopeToggle`
 (`apps/web/src/components/report-shell/scope-toggle.tsx`) and
 `ViewModeToggle` (`apps/web/src/components/report-shell/view-mode-toggle.tsx`),
 composed by `apps/web/src/components/head/head-report-shell.tsx`: the same
-active-fill token
-(`--color-starbucks-accent`), the same font size tier (`text-sm`
+gray border (`rgba(0,0,0,0.2)`), transparent inactive fill, the same neutral
+active-fill token (`--color-muted`), the same font size tier (`text-sm`
 semibold), and the same pill shape. Group separation MUST be carried by
 the wrapper border/spacing, not by divergent control styling. A new
 segmented control added to this header MUST adopt the same family.
@@ -73,8 +73,9 @@ plus a `title`/sr-only hint, NOT via a compound label containing
 
 An inert deferred-feature placeholder in the head report header MUST
 render visually subordinate to real actions — compact size — and MUST be
-positioned at the trailing edge of its control group, after real actions.
-Today this placeholder is `AgentReviewComingSoon` in
+positioned at the leading edge of its control group, before the real
+actions, matching the lead toolbar order (`lead-form.tsx`, user direction
+2026-06-16). Today this placeholder is `AgentReviewComingSoon` in
 `apps/web/src/components/report-shell/agent-review-coming-soon.tsx`. The
 inert ComingSoonBadge pattern (aria-disabled, no click handler, tooltip)
 MUST be preserved.
@@ -84,5 +85,5 @@ MUST be preserved.
 - **WHEN** the head report header renders the Agent review placeholder
   alongside real utility actions
 - **THEN** the placeholder is compact (smaller than the real actions) and
-  is the last element of the group
+  is the first element of the group
 - **AND** it remains aria-disabled with the ComingSoonBadge tooltip

@@ -97,7 +97,7 @@ describe("ScopeToggle", () => {
     expect(group).toHaveAttribute("aria-label", "Slide scope");
   });
 
-  it("active scope button has accent background class; inactive buttons have accent foreground class", () => {
+  it("active scope segment fills with the neutral muted token; inactive segments are transparent", () => {
     const { container } = render(
       <ScopeToggle
         value="product"
