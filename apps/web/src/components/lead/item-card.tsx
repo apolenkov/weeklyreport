@@ -39,9 +39,13 @@ const STATUS_BADGE = {
     text: "var(--color-primary)",
     label: "In Progress",
   },
-  completed: { bg: "var(--color-primary)", text: "#fff", label: "Completed" },
+  completed: {
+    bg: "var(--color-primary)",
+    text: "var(--color-primary-foreground)",
+    label: "Completed",
+  },
   blocked: {
-    bg: "#fee2e2",
+    bg: "var(--color-status-blocked-bg)",
     text: "var(--color-destructive)",
     label: "Blocked",
   },
@@ -59,7 +63,11 @@ function cardContainerStyle(opts: {
 }): CSSProperties {
   const { isPlanned, isBlocked, foreign } = opts;
   const borderStyle = isPlanned ? "dashed" : "solid";
-  const borderColor = isBlocked ? "rgba(200,32,20,0.2)" : "var(--color-muted)";
+  // Faint blocked border = the destructive token at 20% (token-derived, no
+  // hardcoded status literal — status-color-semantics).
+  const borderColor = isBlocked
+    ? "color-mix(in srgb, var(--color-destructive) 20%, transparent)"
+    : "var(--color-muted)";
   return {
     minHeight: 110,
     borderTop: `1px ${borderStyle} ${borderColor}`,
@@ -68,7 +76,9 @@ function cardContainerStyle(opts: {
     borderLeft: isPlanned
       ? `3px dashed var(--color-starbucks-accent)`
       : `3px solid ${isBlocked ? "var(--color-destructive)" : "var(--color-starbucks-accent)"}`,
-    background: isBlocked ? "#fee2e2" : "var(--color-background)",
+    background: isBlocked
+      ? "var(--color-status-blocked-bg)"
+      : "var(--color-background)",
     opacity: foreign ? 0.7 : 1,
   };
 }

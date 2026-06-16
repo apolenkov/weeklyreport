@@ -371,14 +371,12 @@ export function WeeklyReportPage({
   // mock-data presentation types so children keep their imports unchanged.
   const portfolio: PortfolioProduct[] = view.portfolio;
   const products: ProductReport[] = view.products;
-  // Head split-view "by lead" grouping (UAT 2026-05-22): resolve author names
-  // from the period's lead sections, then bucket products under each lead they
-  // authored. Empty leads are dropped so the view never shows blank groups.
-  // Computed only in "lead" scope to keep the default product path cheap.
-  // report-card-clarity: "by lead" slices each product to the lead's OWN
-  // contribution (mapWeeklyReportLeadGroups builds per-lead cards from each
-  // single section). The old bucketing reused the cross-lead aggregate cards,
-  // so a multi-author product repeated the whole merged card under each lead.
+  // Head split-view "by lead" grouping (report-card-clarity): slice each product
+  // to the lead's OWN contribution — mapWeeklyReportLeadGroups builds per-lead
+  // cards from each single section, drops empty leads, and is computed only in
+  // "lead" scope (the default product path stays cheap). This replaced the old
+  // bucketing that reused the cross-lead aggregate cards, which repeated the
+  // whole merged card under every author of a multi-author product.
   const leadGroups =
     scope === "lead"
       ? (mapWeeklyReportLeadGroups(reportData) as {

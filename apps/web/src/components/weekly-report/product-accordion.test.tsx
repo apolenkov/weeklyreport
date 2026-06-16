@@ -365,9 +365,14 @@ describe("ProductAccordion — status via row stripe, identity via chip", () => 
     const styleOf = (text: string) =>
       rows.find((r) => r.textContent.includes(text))?.getAttribute("style") ??
       "";
+    // Every status carries a visible, distinct stripe (no status hidden behind
+    // a transparent/near-invisible marker).
     expect(styleOf("Blocked one")).toContain("var(--color-destructive)");
-    expect(styleOf("Completed one")).toContain("var(--color-success)");
-    expect(styleOf("Progress one")).toContain("transparent");
+    expect(styleOf("Completed one")).toContain(
+      "var(--color-success-foreground)",
+    );
+    expect(styleOf("Progress one")).toContain("var(--color-muted-foreground)");
+    // (the three tokens above are distinct → the stripes are mutually distinct)
 
     // Every stage chip shares one identity class — no status-driven fill.
     const chipClasses = new Set(
