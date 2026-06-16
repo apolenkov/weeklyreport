@@ -50,14 +50,17 @@ const STATUS_CONFIG = {
 const STAGE_CHIP_CLASS =
   "inline-flex flex-shrink-0 items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]";
 
-// Workflow-status → row left-stripe color (named tokens only): red marks the
-// single alarm state (blocked); a calm success stripe marks completed work;
-// in-progress carries no stripe. This is the row's status marker that replaces
-// the old status-colored chip fill.
-function itemStripeColor(status: string): string | undefined {
+// Workflow-status → row left-stripe color (named tokens only). EVERY workflow
+// status carries a visible, distinct marker so the chip can stay status-free
+// (status-color-semantics): blocked → red (the only alarm hue), completed →
+// solid success green, in-progress → neutral grey. The light --color-success
+// *tint* is a fill, not a stripe color — too pale to read at 3px, which is why
+// completed uses --color-success-foreground here.
+function itemStripeColor(status: string): string {
   if (status === "blocked") return "var(--color-destructive)";
-  if (status === "completed") return "var(--color-success)";
-  return undefined;
+  if (status === "completed") return "var(--color-success-foreground)";
+  if (status === "in-progress") return "var(--color-muted-foreground)";
+  return "var(--color-border)";
 }
 
 // Prioritized items first (rank 1, 2, …), the rest keep their order.
@@ -285,7 +288,7 @@ export function ProductAccordion({
                               : item.priorityRank === 1
                                 ? "var(--color-priority-row-bg)"
                                 : "var(--color-background)",
-                            borderLeft: `3px solid ${stripe ?? "transparent"}`,
+                            borderLeft: `3px solid ${stripe}`,
                           }}
                         >
                           {item.priorityRank != null && (

@@ -19,7 +19,7 @@ exports[`ProductAccordion — ChevronDown SVG snapshot > ChevronDown svg structu
 exports[`ProductAccordion — prioritized row snapshot > rank-1 current-week row structure matches snapshot 1`] = `
 <div
   class="flex items-center gap-2 rounded p-2 text-sm"
-  style="background: var(--color-priority-row-bg); border-left: 3px solid transparent;"
+  style="background: var(--color-priority-row-bg); border-left: 3px solid var(--color-muted-foreground);"
 >
   <span
     class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"

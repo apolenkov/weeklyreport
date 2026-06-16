@@ -533,7 +533,11 @@ async function seedScaffold(dataset: TierDataset): Promise<void> {
     })),
   });
   await prisma.groupProduct.createMany({
+    // Explicit deterministic id (not the schema's @default(uuid())) so the
+    // header's "fixed constants, no run-time randomness in IDs" holds for this
+    // table too.
     data: dataset.products.map((p) => ({
+      id: makeGroupProductId(),
       groupId: DEFAULT_REPORTING_GROUP_ID,
       productId: p.id,
     })),
@@ -541,6 +545,7 @@ async function seedScaffold(dataset: TierDataset): Promise<void> {
   });
 }
 
+const makeGroupProductId = makeIdFactory();
 const makeViewerAccessId = makeIdFactory();
 const makeStageAssignmentId = makeIdFactory();
 const makeSectionId = makeIdFactory();
