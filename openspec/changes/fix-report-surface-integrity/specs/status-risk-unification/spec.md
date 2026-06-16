@@ -36,14 +36,17 @@ decision that disconnected risk-derived status in `mapLeadProducts`.
 - **THEN** the chip renders at-risk on the lead form, head review, and
   export surfaces
 
-#### Scenario: the read-model mapper floors for head review and export
+#### Scenario: the read-model mapper preserves raw status and annotates coverage
 
-- **WHEN** the read-model mapper builds the head review and PDF export
-  view of a product whose stage has an empty status but a non-empty
-  covering own risk
-- **THEN** the mapper applies the same severity floor as the live form
-- **AND** head review and PDF export render the same floored severity as
-  the lead form, not an un-floored empty
+- **WHEN** the read-model mapper builds the view of a product whose stage
+  has an empty status but a non-empty covering own risk
+- **THEN** the mapper keeps the stage's raw status empty and sets
+  `coveredByOwnRisk` to true (it does NOT floor the raw status)
+- **AND** the live lead form and the slides/head-review surface re-floor
+  the chip to the risk severity at render, while the head-form, preview,
+  and PDF export surfaces (which have no per-stage grid) reflect the risk
+  through the product-level `worstStatus` — so no surface shows an
+  un-floored empty
 
 ## ADDED Requirements
 
