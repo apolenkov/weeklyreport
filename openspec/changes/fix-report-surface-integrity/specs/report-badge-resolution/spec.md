@@ -8,7 +8,7 @@ Blocked & At Risk rows) MUST resolve report-wide, WITHIN the caller's
 authorized read model and the published snapshot — never through an
 unscoped query of all projects. Both escalation builders MUST apply this: the live
 `buildEscalations` and the snapshot
-`buildEscalationsFromSnapshotSections` (`published-report-snapshot.ts`).
+`buildEscalationsFromReadSections` (`published-report-snapshot.ts`).
 A row MUST show the real product name whenever any authorized section or
 the portfolio overview can name its project id. The "Unknown"
 placeholder MUST appear only for ids that the caller's authorized read
@@ -26,7 +26,7 @@ project that the report-wide authorized map can still name.
 
 #### Scenario: a snapshot escalation resolves report-wide
 
-- **WHEN** `buildEscalationsFromSnapshotSections` produces an escalation
+- **WHEN** `buildEscalationsFromReadSections` produces an escalation
   row for the published snapshot
 - **THEN** the product name resolves from the report-wide snapshot read
   model, not an unscoped project query

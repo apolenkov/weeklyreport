@@ -351,7 +351,7 @@ describe("PrintReportPage — PDF-worker-vs-human server gate (W2 task 3.3)", ()
   });
 
   it("does NOT render the template when the worker token is bound to a different report", async () => {
-    permanentRedirect.mockClear();
+    redirect.mockClear();
     getPrintRouteContext.mockResolvedValue({
       session: sessionOf("head"),
       isPdfExport: true,
@@ -359,11 +359,13 @@ describe("PrintReportPage — PDF-worker-vs-human server gate (W2 task 3.3)", ()
     });
     await expect(
       PrintReportPage({ params: paramsOf(TEST_REPORT_ID) }),
-    ).rejects.toThrow(/NEXT_PERMANENT_REDIRECT/);
+    ).rejects.toThrow(/NEXT_REDIRECT/);
   });
 
-  it("308-redirects an authenticated head to the consolidated report", async () => {
-    permanentRedirect.mockClear();
+  // Human redirects are TEMPORARY (307): the destination depends on the caller's
+  // session role, so a permanent (308) redirect could be cached cross-role.
+  it("307-redirects an authenticated head to the consolidated report", async () => {
+    redirect.mockClear();
     getPrintRouteContext.mockResolvedValue({
       session: sessionOf("head"),
       isPdfExport: false,
@@ -371,11 +373,11 @@ describe("PrintReportPage — PDF-worker-vs-human server gate (W2 task 3.3)", ()
     });
     await expect(
       PrintReportPage({ params: paramsOf(TEST_REPORT_ID) }),
-    ).rejects.toThrow(`NEXT_PERMANENT_REDIRECT:/head/report/${TEST_REPORT_ID}`);
+    ).rejects.toThrow(`NEXT_REDIRECT:/head/report/${TEST_REPORT_ID}`);
   });
 
-  it("308-redirects an authenticated viewer to the published report", async () => {
-    permanentRedirect.mockClear();
+  it("307-redirects an authenticated viewer to the published report", async () => {
+    redirect.mockClear();
     getPrintRouteContext.mockResolvedValue({
       session: sessionOf("viewer"),
       isPdfExport: false,
@@ -383,11 +385,11 @@ describe("PrintReportPage — PDF-worker-vs-human server gate (W2 task 3.3)", ()
     });
     await expect(
       PrintReportPage({ params: paramsOf(TEST_REPORT_ID) }),
-    ).rejects.toThrow(`NEXT_PERMANENT_REDIRECT:/reports/${TEST_REPORT_ID}`);
+    ).rejects.toThrow(`NEXT_REDIRECT:/reports/${TEST_REPORT_ID}`);
   });
 
-  it("308-redirects an authenticated lead to their own report", async () => {
-    permanentRedirect.mockClear();
+  it("307-redirects an authenticated lead to their own report", async () => {
+    redirect.mockClear();
     getPrintRouteContext.mockResolvedValue({
       session: sessionOf("lead"),
       isPdfExport: false,
@@ -395,7 +397,7 @@ describe("PrintReportPage — PDF-worker-vs-human server gate (W2 task 3.3)", ()
     });
     await expect(
       PrintReportPage({ params: paramsOf(TEST_REPORT_ID) }),
-    ).rejects.toThrow("NEXT_PERMANENT_REDIRECT:/lead/report");
+    ).rejects.toThrow("NEXT_REDIRECT:/lead/report");
   });
 
   it("307-redirects a no-session request to login with ?next", async () => {
