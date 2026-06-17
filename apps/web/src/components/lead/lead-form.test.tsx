@@ -146,6 +146,10 @@ function buildHarness(
       path: ["leadForm", "crossAuthors"],
       query: [],
     },
+    {
+      path: ["leadForm", "crossAuthorContent"],
+      query: [],
+    },
     { path: ["review", "dashboard"] },
     { path: ["archive", "list"] },
     { path: ["weeklyReport", "get"] },

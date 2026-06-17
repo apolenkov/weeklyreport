@@ -6,17 +6,26 @@
  * Pure functions; behavior is pinned by `lead-cross-author.test.ts` and the
  * lead-form characterization suites.
  *
- * Input types are structural mirrors of the `leadForm.crossAuthors` query
- * rows — `lib/mappers` must not import component types
- * (`components/lead/mock-data.ts`); see design D2.
+ * Input types are structural mirrors of the `leadForm.crossAuthors` /
+ * `leadForm.crossAuthorContent` query rows — `lib/mappers` must not import
+ * component types (`components/lead/mock-data.ts`); see design D2.
  *
- * crossAuthorSections (foreign-content read) has been removed from this
- * module. Stage status is now RISK-DERIVED from ca.stages[].status only;
- * no foreign item/risk/decision text crosses the API boundary.
+ * Two distinct reads feed this module (scope-lead-report-to-own-contribution):
+ *   - `crossAuthors` (status-only, ALWAYS fetched): per shared product, the
+ *     foreign stage names + RISK-DERIVED traffic-light status + initials.
+ *     Drives `buildCrossAuthorStageMap` (foreign chips) and honest health.
+ *     No item/risk/decision text; no full names.
+ *   - `crossAuthorContent` (full content, fetched ONLY in the Everyone state):
+ *     the co-owners' item / risk / decision text + the owning author's full
+ *     name. Drives the `mapForeign*` content mappers below.
  */
 
+import { type ItemStatus, workflowToItemStatus } from "./item-status";
 import {
+  type LeadDecisionEntry,
+  type LeadKanbanItem,
   type LeadProduct,
+  type LeadRiskEntry,
   normalizeStageName,
   stageNamesMatch,
 } from "./lead-form";
@@ -39,6 +48,62 @@ export interface CrossAuthorRow {
     status: TrafficLightStatus | null;
   }[];
 }
+
+/**
+ * Subset of one `leadForm.crossAuthorContent` row consumed by the content
+ * mappers. Structural mirror of the backend `CrossAuthorSectionRow`; carries
+ * the co-owners' full item / risk / decision text + the owning author's full
+ * name (the strictly-more-sensitive Everyone read). The per-product `stages[]`
+ * are not consumed here — foreign chips come from the status-only read.
+ */
+export interface CrossAuthorContentRow {
+  authorId: string;
+  authorName: string;
+  items: {
+    id: string;
+    projectId: string;
+    type: string;
+    text: string;
+    workflowStatus: string;
+    stageNames: string[];
+  }[];
+  risks: {
+    id: string;
+    projectId: string;
+    risk: string;
+    impact: string;
+    mitigation: string;
+    severity: string;
+    stageNames: string[];
+  }[];
+  decisions: {
+    id: string;
+    productId: string;
+    text: string;
+    owner: string;
+    impact: string;
+    deadline: Date | null;
+    stageNames: string[];
+  }[];
+}
+
+// ---- Output types (Lead* presentation extensions) ----
+
+export type ForeignKanbanItem = LeadKanbanItem & {
+  foreign: true;
+  authorId: string;
+};
+
+export type ForeignRiskEntry = LeadRiskEntry & {
+  foreign: true;
+  authorId: string;
+  authorName: string;
+};
+
+export type ForeignDecisionEntry = LeadDecisionEntry & {
+  foreign: true;
+  authorId: string;
+};
 
 export interface CrossAuthorStageOverride {
   assignee: string;
@@ -111,4 +176,107 @@ export function applyCrossAuthorStageOverrides(
       }),
     };
   });
+}
+
+// ---- Foreign content mappers (Everyone state only) ----
+
+/** Length of the `yyyy-mm-dd` prefix of an ISO-8601 timestamp. */
+const ISO_DATE_PREFIX_LENGTH = 10;
+
+/**
+ * Lenient workflow→ItemStatus coercion (design D3). The cross-author content
+ * rows carry `workflowStatus` as a plain string; the known enum values
+ * delegate to the tested `workflowToItemStatus`, anything else falls back to
+ * `'planned'`. The fallback is load-bearing — substituting the strict mapper
+ * would be a silent behavior change.
+ */
+export function coerceWorkflowToItemStatus(ws: string): ItemStatus {
+  if (ws === "done" || ws === "in_progress" || ws === "blocked") {
+    return workflowToItemStatus(ws);
+  }
+  return "planned";
+}
+
+/**
+ * Everyone state: project foreign-author kanban items (read-only) filtered by
+ * week type. Ids follow the `foreign:<authorId>:<itemId>` scheme; product name
+ * falls back to the raw projectId when the lookup misses.
+ */
+export function mapForeignItems(
+  rows: readonly CrossAuthorContentRow[],
+  productNameById: ReadonlyMap<string, string>,
+  itemType: "current" | "next",
+): ForeignKanbanItem[] {
+  return rows.flatMap((ca) =>
+    ca.items
+      .filter((i) => i.type === itemType)
+      .map(
+        (i): ForeignKanbanItem => ({
+          id: `foreign:${ca.authorId}:${i.id}`,
+          productId: i.projectId,
+          productName: productNameById.get(i.projectId) ?? i.projectId,
+          stageIds: i.stageNames,
+          status: coerceWorkflowToItemStatus(i.workflowStatus),
+          text: i.text,
+          author: ca.authorName,
+          authorId: ca.authorId,
+          foreign: true,
+        }),
+      ),
+  );
+}
+
+/**
+ * Everyone state: project foreign-author risks. Severity is coerced to the
+ * binary presentation union: everything non-`'blocked'` renders as `'at-risk'`.
+ */
+export function mapForeignRisks(
+  rows: readonly CrossAuthorContentRow[],
+  productNameById: ReadonlyMap<string, string>,
+): ForeignRiskEntry[] {
+  return rows.flatMap((ca) =>
+    ca.risks.map(
+      (r): ForeignRiskEntry => ({
+        id: `foreign:${ca.authorId}:${r.id}`,
+        productId: r.projectId,
+        productName: productNameById.get(r.projectId) ?? r.projectId,
+        stageIds: r.stageNames,
+        severity: r.severity === "blocked" ? "blocked" : "at-risk",
+        text: r.risk,
+        impact: r.impact,
+        mitigation: r.mitigation,
+        authorName: ca.authorName,
+        authorId: ca.authorId,
+        foreign: true,
+      }),
+    ),
+  );
+}
+
+/**
+ * Everyone state: project foreign-author decisions. `deadline` is formatted to
+ * the `yyyy-mm-dd` ISO date prefix; null passes through.
+ */
+export function mapForeignDecisions(
+  rows: readonly CrossAuthorContentRow[],
+  productNameById: ReadonlyMap<string, string>,
+): ForeignDecisionEntry[] {
+  return rows.flatMap((ca) =>
+    ca.decisions.map(
+      (d): ForeignDecisionEntry => ({
+        id: `foreign:${ca.authorId}:${d.id}`,
+        productId: d.productId,
+        productName: productNameById.get(d.productId) ?? d.productId,
+        text: d.text,
+        owner: d.owner,
+        impact: d.impact,
+        deadline: d.deadline
+          ? d.deadline.toISOString().slice(0, ISO_DATE_PREFIX_LENGTH)
+          : null,
+        stageIds: d.stageNames,
+        authorId: ca.authorId,
+        foreign: true,
+      }),
+    ),
+  );
 }

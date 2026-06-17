@@ -58,9 +58,17 @@ export {
 export {
   applyCrossAuthorStageOverrides,
   buildCrossAuthorStageMap,
+  coerceWorkflowToItemStatus,
+  type CrossAuthorContentRow,
   type CrossAuthorRow,
   type CrossAuthorStageMap,
   type CrossAuthorStageOverride,
+  type ForeignDecisionEntry,
+  type ForeignKanbanItem,
+  type ForeignRiskEntry,
+  mapForeignDecisions,
+  mapForeignItems,
+  mapForeignRisks,
 } from "./lead-cross-author";
 export {
   type LeadCurrentUser,
