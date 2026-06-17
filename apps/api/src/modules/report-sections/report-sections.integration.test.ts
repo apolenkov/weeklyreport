@@ -94,8 +94,13 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     expect(expectDefined(result).authorName).toBe("Test Lead 1");
     expect(expectDefined(result).status).toBe("draft");
     expect(expectDefined(result).projects).toHaveLength(1);
+    // W6 (fix-published-empty-stage-risk-floor): the fixture's risk has the
+    // schema-default `severity: "at-risk"` and empty stageNames (covers-all),
+    // so it now floors the owned stage's product status up to yellow at the
+    // read layer. The dedicated "floors trafficLight by an own covering risk"
+    // test pins this semantics; here we only track the consequence.
     expect(expectDefined(expectDefined(result).projects[0]).trafficLight).toBe(
-      "green",
+      "yellow",
     );
     expect(expectDefined(result).items).toHaveLength(1);
     expect(expectDefined(expectDefined(result).items[0]).text).toBe(
