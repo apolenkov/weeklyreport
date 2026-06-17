@@ -4,7 +4,6 @@ import {
   type ArchiveReportSummary,
   archiveReportSummarySchema,
   type AssembledReport,
-  type PortfolioOverview,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
@@ -54,9 +53,12 @@ export class ArchivePrismaRepository implements ArchiveRepository {
         publishedBy: true,
         sections: {
           ...(sectionScope ? { where: sectionScope } : {}),
-          include: {
-            projectStatuses: true,
-          },
+          // Full include so the non-snapshot fallback can build the same
+          // risk-floored, assignment-scoped read model the detail uses, so an
+          // archive summary's portfolio total never disagrees with its detail
+          // (or the live/published total) for a report published without a
+          // stored snapshot (seed / legacy data).
+          include: reportSectionFullInclude,
         },
       },
       orderBy: { publishedAt: "desc" },
@@ -64,9 +66,8 @@ export class ArchivePrismaRepository implements ArchiveRepository {
 
     return reports.map((report) => {
       const snapshot = readScopedSnapshot(report, sectionScope);
-      return snapshot
-        ? toArchiveSummaryFromSnapshot(snapshot, report)
-        : toArchiveSummary(report);
+      const assembled = snapshot ?? buildAssembledReportFromPrismaRow(report);
+      return toArchiveSummaryFromSnapshot(assembled, report);
     });
   }
 
@@ -96,9 +97,9 @@ export class ArchivePrismaRepository implements ArchiveRepository {
 
     const snapshot = readScopedSnapshot(report, sectionScope);
     const assembled = snapshot ?? buildAssembledReportFromPrismaRow(report);
-    const summary = snapshot
-      ? toArchiveSummaryFromSnapshot(snapshot, report)
-      : toArchiveSummary(report);
+    // Summary and detail derive from the SAME assembled report, so the
+    // portfolio total can never disagree with the detail (both risk-floored).
+    const summary = toArchiveSummaryFromSnapshot(assembled, report);
 
     return archiveReportDetailSchema.parse({ summary, report: assembled });
   }
@@ -119,73 +120,6 @@ function sectionScopeWhere(
   );
   if (Object.keys(scope).length === 0) return undefined;
   return scope;
-}
-
-/**
- * Legacy fallback portfolio total, used by `toArchiveSummary` only when a
- * published report has NO stored `publishedSnapshot`. Real published reports
- * always carry a floored snapshot (publication writes it), so this path is
- * effectively dead for current data and the snapshot summary
- * (`toArchiveSummaryFromSnapshot`) wins.
- *
- * W6 scope note (fix-published-empty-stage-risk-floor): this fallback is
- * intentionally NOT risk-floored. It counts raw `ProjectStatus` rows directly,
- * a DIFFERENT product-counting basis than the assignment-scoped read model
- * (`buildAssembledReportFromPrismaRow`) used for the detail body and the live
- * snapshot summary. Re-routing it onto the floored read model would change
- * which products are counted (assignment-scoped, not every ProjectStatus row),
- * a semantic change beyond W6's scope. Left as-is on the dead path; tracked as
- * a follow-up if the no-snapshot fallback ever becomes reachable for real data.
- */
-function computePortfolioOverview(
-  // Prisma returns `status: TrafficLightStatus | null`; null statuses
-  // contribute nothing to the totals.
-  sections: { projectStatuses: { status: string | null }[] }[],
-): PortfolioOverview {
-  const totals = { green: 0, yellow: 0, red: 0 };
-
-  for (const section of sections) {
-    for (const ps of section.projectStatuses) {
-      const status = ps.status as keyof typeof totals;
-
-      if (status in totals) {
-        totals[status]++;
-      }
-    }
-  }
-
-  const overallStatus: PortfolioOverview["status"] =
-    totals.red > 0 ? "red" : totals.yellow > 0 ? "yellow" : "green";
-
-  return { status: overallStatus, totals };
-}
-
-function toArchiveSummary(report: {
-  id: string;
-  periodStart: Date;
-  periodEnd: Date;
-  publishedAt: Date | null;
-  publishedBy: { name: string } | null;
-  sections: { projectStatuses: { status: string | null }[] }[];
-}): ArchiveReportSummary {
-  const portfolio = computePortfolioOverview(report.sections);
-
-  // PUBLISHED_FLOOR guarantees `status: 'published'`, which in the schema
-  // implies `publishedAt` is set. Narrow defensively rather than assert.
-  if (report.publishedAt === null) {
-    throw new Error(
-      `Archive report ${report.id} has status='published' but publishedAt is null`,
-    );
-  }
-
-  return archiveReportSummarySchema.parse({
-    reportId: report.id,
-    periodStart: report.periodStart,
-    periodEnd: report.periodEnd,
-    publishedAt: report.publishedAt,
-    publishedByName: report.publishedBy?.name ?? "Unknown",
-    portfolioStatus: portfolio.status,
-  });
 }
 
 function toArchiveSummaryFromSnapshot(
