@@ -3,12 +3,12 @@ import {
   assembledReportSchema,
   type PdfExportJob,
   pdfExportJobSchema,
-  type PortfolioOverview,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { computePortfolioOverviewFromReadSections } from "../published-report-snapshot.js";
 import {
   mapPrismaToReportSection,
   type PrismaReportSectionWithRelations,
@@ -132,39 +132,20 @@ function toExportJob(row: {
   };
 }
 
-function computePortfolioOverview(
-  sections: { projectStatuses: { status: string | null }[] }[],
-): PortfolioOverview {
-  const totals = { green: 0, yellow: 0, red: 0 };
-
-  for (const section of sections) {
-    for (const ps of section.projectStatuses) {
-      if (ps.status === null) {
-        continue;
-      }
-      const status = ps.status as keyof typeof totals;
-
-      if (status in totals) {
-        totals[status]++;
-      }
-    }
-  }
-
-  const overallStatus: PortfolioOverview["status"] =
-    totals.red > 0 ? "red" : totals.yellow > 0 ? "yellow" : "green";
-
-  return { status: overallStatus, totals };
-}
-
-function toAssembledReport(
+export function toAssembledReport(
   report: Prisma.ReportGetPayload<{ include: typeof reportFullInclude }>,
 ): AssembledReport {
-  const portfolio = computePortfolioOverview(report.sections);
   const sections = report.sections.map((section) =>
     mapPrismaToReportSection(
       section as unknown as PrismaReportSectionWithRelations,
     ),
   );
+  // fix-published-empty-stage-risk-floor (D3 / blind-spot #7): compute the PDF
+  // top-line totals from the floored `trafficLight` of the mapped sections, NOT
+  // from raw `projectStatuses`, so the per-product cards and the top-line totals
+  // agree inside the same PDF. `computePortfolioOverviewFromReadSections` re-
+  // applies the same own-risk floor the mapper baked into each card.
+  const portfolio = computePortfolioOverviewFromReadSections(sections);
 
   return assembledReportSchema.parse({
     reportId: report.id,
