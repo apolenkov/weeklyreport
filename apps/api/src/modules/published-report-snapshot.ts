@@ -9,6 +9,7 @@ import {
 import type { Prisma } from "@prisma/client";
 
 import {
+  deriveEffectiveProductStatus,
   mapPrismaToReportSection,
   reportSectionFullInclude,
 } from "./report-sections/report-sections.prisma-repository";
@@ -43,9 +44,13 @@ export function buildAssembledReportFromPrismaRow(
       section as unknown as Parameters<typeof mapPrismaToReportSection>[0],
     ),
   );
-  const portfolioOverview = computePortfolioOverviewFromProjectStatuses(
-    row.sections,
-  );
+  // fix-published-empty-stage-risk-floor (D3 / blind-spot #7): compute the
+  // top-line portfolio totals from the floored `trafficLight` of the mapped
+  // sections, NOT from raw `projectStatuses`. The mapper already floors each
+  // product card by the author's own covering risks; counting the same source
+  // keeps the per-product cards and the top-line totals in agreement inside the
+  // same snapshot.
+  const portfolioOverview = computePortfolioOverviewFromReadSections(sections);
 
   return assembledReportSchema.parse({
     reportId: row.id,
@@ -92,6 +97,28 @@ export function filterSnapshotSections(
   });
 }
 
+/**
+ * fix-published-empty-stage-risk-floor: the read-model snapshot readers receive
+ * `ReportSectionReadModel`s directly (the persisted read model, or a
+ * schema-built fixture) and must NOT trust the stored `project.trafficLight` —
+ * it can be a stale green that predates the author's own covering risk. Fold
+ * the section author's own risks (scoped to the product) over the owned stages
+ * the same way the mapper does, so the snapshot readers agree with the PDF and
+ * slide surfaces. Idempotent: re-flooring an already-floored trafficLight is a
+ * no-op.
+ */
+function effectiveProjectStatus(
+  section: ReportSectionReadModel,
+  project: ReportSectionReadModel["projects"][number],
+): TrafficLightStatus | null {
+  return deriveEffectiveProductStatus({
+    projectId: project.projectId,
+    trafficLight: project.trafficLight,
+    ownedStages: project.ownedStages,
+    risks: section.risks,
+  });
+}
+
 export function computePortfolioOverviewFromReadSections(
   sections: readonly ReportSectionReadModel[],
 ): PortfolioOverview {
@@ -99,7 +126,7 @@ export function computePortfolioOverviewFromReadSections(
 
   for (const section of sections) {
     for (const project of section.projects) {
-      const status = project.trafficLight;
+      const status = effectiveProjectStatus(section, project);
       if (status === "green" || status === "yellow" || status === "red") {
         totals[status]++;
       }
@@ -143,12 +170,9 @@ export function buildPortfolioProductsFromSnapshotSections(
         project.ownedStages?.length ?? 0,
       );
 
-      if (
-        project.trafficLight === "green" ||
-        project.trafficLight === "yellow" ||
-        project.trafficLight === "red"
-      ) {
-        current.statuses.push(project.trafficLight);
+      const status = effectiveProjectStatus(section, project);
+      if (status === "green" || status === "yellow" || status === "red") {
+        current.statuses.push(status);
         current.leadNames.add(section.authorName);
       }
 
@@ -221,7 +245,11 @@ export function buildEscalationsFromReadSections(
     }
 
     for (const project of section.projects) {
-      if (project.trafficLight !== "red") continue;
+      // fix-published-empty-stage-risk-floor: fire the "flagged red" escalation
+      // off the risk-aware effective status, not the stale stored trafficLight,
+      // so the bug case (owned empty stage covered by a blocked own risk) emits
+      // the at_risk escalation alongside the existing unresolved_risk one.
+      if (effectiveProjectStatus(section, project) !== "red") continue;
       escalations.push({
         type: "at_risk",
         productName: project.projectName,
@@ -243,28 +271,6 @@ export function buildEscalationsFromReadSections(
   }
 
   return escalations;
-}
-
-function computePortfolioOverviewFromProjectStatuses(
-  sections: readonly {
-    projectStatuses: readonly { status: string | null }[];
-  }[],
-): PortfolioOverview {
-  const totals = { green: 0, yellow: 0, red: 0 };
-
-  for (const section of sections) {
-    for (const projectStatus of section.projectStatuses) {
-      const status = projectStatus.status;
-      if (status === "green" || status === "yellow" || status === "red") {
-        totals[status]++;
-      }
-    }
-  }
-
-  const status: PortfolioOverview["status"] =
-    totals.red > 0 ? "red" : totals.yellow > 0 ? "yellow" : "green";
-
-  return { status, totals };
 }
 
 const statusSeverity: Record<TrafficLightStatus, number> = {

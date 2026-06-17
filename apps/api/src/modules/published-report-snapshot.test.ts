@@ -5,6 +5,7 @@ import {
 import { describe, expect, it } from "vitest";
 
 import {
+  buildAssembledReportFromPrismaRow,
   buildEscalationsFromReadSections,
   buildPortfolioProductsFromSnapshotSections,
 } from "./published-report-snapshot";
@@ -340,5 +341,169 @@ describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => 
     const productB = products.find((p) => p.productId === SECOND_PRODUCT);
     expect(productA?.worstStatus).toBe("red");
     expect(productB?.worstStatus).toBe("green");
+  });
+});
+
+// fix-published-empty-stage-risk-floor (task 3.5): once the floor turns the
+// bug case red, `buildEscalationsFromReadSections` fires a NEW `at_risk`
+// "flagged red" escalation off the effective status, alongside the existing
+// per-risk `unresolved_risk`. Pin both so the behaviour change is deliberate.
+describe("buildEscalationsFromReadSections — own-risk floor side effect", () => {
+  it("emits at_risk + unresolved_risk for a covers-all blocked own risk on an empty stage", () => {
+    const escalations = buildEscalationsFromReadSections([
+      makeSection({
+        projects: [
+          {
+            projectId: OWNED_PRODUCT,
+            projectName: "CRM Portal",
+            trafficLight: "green",
+            ownedStages: [
+              {
+                stageId: OWNED_STAGE_ID,
+                stageName: OWNED_STAGE_NAME,
+                sortOrder: 0,
+                status: null,
+              },
+            ],
+          },
+        ],
+        risks: [
+          {
+            id: "698863f9-98a7-4cd7-857a-a26e714a82b2",
+            projectId: OWNED_PRODUCT,
+            risk: "Vendor outage",
+            impact: "High",
+            mitigation: "Failover",
+            severity: "blocked",
+            stageIds: [],
+          },
+        ],
+      }),
+    ]);
+
+    expect(escalations.filter((e) => e.type === "at_risk")).toMatchObject([
+      { productName: "CRM Portal", stageName: null },
+    ]);
+    expect(
+      escalations.filter((e) => e.type === "unresolved_risk"),
+    ).toMatchObject([{ productName: "CRM Portal" }]);
+  });
+
+  it("does NOT fire at_risk when the product has no owned stages (covers-all has nothing to floor)", () => {
+    const escalations = buildEscalationsFromReadSections([
+      makeSection({
+        risks: [
+          {
+            id: "bf68ca41-95a9-4a50-a2b2-7f1dc07a65dc",
+            projectId: OWNED_PRODUCT,
+            risk: "Schedule slip",
+            impact: "Medium",
+            mitigation: "Re-plan",
+            severity: "blocked",
+            stageIds: [],
+          },
+        ],
+      }),
+    ]);
+
+    expect(escalations.filter((e) => e.type === "at_risk")).toHaveLength(0);
+  });
+});
+
+// fix-published-empty-stage-risk-floor (task 3.4): the published top-line
+// portfolio totals (Shape B) are now computed from the floored `trafficLight`
+// of the mapped sections, NOT raw `projectStatuses`. An owned stage with no
+// submitted status covered by a covers-all own risk floors the portfolio status
+// AND the per-product count, so the top-line totals agree with the per-product
+// cards inside the same snapshot. The PDF top-line re-route lives in a separate
+// `toAssembledReport` and is pinned by its own test in
+// pdf-export.prisma-repository.test.ts.
+describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)", () => {
+  const STAGE_NAME = "Development";
+
+  function reportRow(severity: "blocked" | "at-risk") {
+    return {
+      id: REPORT_ID,
+      periodStart: new Date("2026-06-01T00:00:00Z"),
+      periodEnd: new Date("2026-06-07T00:00:00Z"),
+      deadline: new Date("2026-06-08T00:00:00Z"),
+      status: "published",
+      publishedAt: new Date("2026-06-09T00:00:00Z"),
+      publishedById: AUTHOR_ID,
+      publishedBy: { name: "Head" },
+      sections: [
+        {
+          id: SECTION_ID,
+          reportId: REPORT_ID,
+          authorId: AUTHOR_ID,
+          status: "submitted",
+          submittedAt: null,
+          late: false,
+          author: {
+            name: "Alice Lead",
+            role: "lead",
+            id: AUTHOR_ID,
+            stageAssignments: [
+              {
+                userId: AUTHOR_ID,
+                stageId: OWNED_STAGE_ID,
+                projectId: OWNED_PRODUCT,
+                project: {
+                  id: OWNED_PRODUCT,
+                  name: "CRM Portal",
+                  archived: false,
+                },
+                stage: { id: OWNED_STAGE_ID, name: STAGE_NAME, sortOrder: 4 },
+              },
+            ],
+          },
+          // Stale green ProjectStatus, no StageStatus row (owned stage has no
+          // submitted status), one covers-all own risk.
+          projectStatuses: [
+            {
+              projectId: OWNED_PRODUCT,
+              status: "green",
+              project: {
+                id: OWNED_PRODUCT,
+                name: "CRM Portal",
+                archived: false,
+              },
+            },
+          ],
+          stageStatuses: [],
+          items: [],
+          risks: [
+            {
+              id: "e421b0e4-caac-4218-9f40-d062f523b86b",
+              projectId: OWNED_PRODUCT,
+              risk: "Vendor outage",
+              impact: "High",
+              mitigation: "Failover",
+              severity,
+              stageNames: [],
+              project: { name: "CRM Portal" },
+            },
+          ],
+          decisions: [],
+        },
+      ],
+    };
+  }
+
+  it("counts the product red (not green) for a covers-all blocked own risk", () => {
+    const report = buildAssembledReportFromPrismaRow(reportRow("blocked"));
+
+    expect(report.portfolioOverview.status).toBe("red");
+    expect(report.portfolioOverview.totals).toMatchObject({ red: 1, green: 0 });
+  });
+
+  it("counts the product yellow for a covers-all at-risk own risk", () => {
+    const report = buildAssembledReportFromPrismaRow(reportRow("at-risk"));
+
+    expect(report.portfolioOverview.status).toBe("yellow");
+    expect(report.portfolioOverview.totals).toMatchObject({
+      yellow: 1,
+      green: 0,
+    });
   });
 });
