@@ -180,11 +180,11 @@ pnpm build` — all green; `pnpm --filter @customreport/api test:integration`
       product (denied → `[]`), unrelated report (denied → `[]`), head/admin who
       does NOT co-own the product (denied → `[]`, NO role bypass — see D6).
       Complements the negative tests in 7d.3.
-- [ ] 7d.10 Status-only breadth (documented behavior): the status-only read
-      returns initials + risk-derived status for products the caller does NOT
-      co-own (within a report they have access to), and still carries no text,
-      counts, or full names. Pins the intentional cross-product status disclosure
-      within one reporting group (see D6 status-only bullet).
+- [x] 7d.10 Status-only scoping (least-privilege): the status-only read returns
+      initials + risk-derived status ONLY for products the caller co-owns, and
+      returns nothing for a product the caller does not co-own; it still carries
+      no text, counts, or full names. Pins the co-owned scoping in the repo
+      integration test (see D6 status-only bullet).
 
 ### 7e. Verify + gate
 
@@ -193,7 +193,7 @@ pnpm build` — all green; `pnpm --filter @customreport/api test:integration`
       health; Everyone shows co-owners' full records + names + foreign chips;
       slides unaffected.
 - [ ] 7e.2 `npx prisma generate && pnpm typecheck && pnpm lint && pnpm test &&
-  pnpm build` + `pnpm --filter @customreport/api test:integration` all green.
+pnpm build` + `pnpm --filter @customreport/api test:integration` all green.
 
 ## 8. Follow-up (post-merge)
 
