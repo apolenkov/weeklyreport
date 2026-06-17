@@ -1,7 +1,10 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { customreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
+import {
+  customreportReopenRequestsTotal,
+  metricsRegistry,
+} from "../../infrastructure/metrics/metrics.registry.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   LeadFormDomainError,
@@ -68,6 +71,9 @@ function createMockRepository(
     createReopenRequest: vi.fn().mockResolvedValue(undefined),
     hasSharedProduct: vi.fn().mockResolvedValue(false),
     getCrossAuthors: vi.fn().mockResolvedValue([]),
+    getCrossAuthorContent: vi
+      .fn()
+      .mockResolvedValue({ coOwnsShared: false, rows: [] }),
     revokeAllSubmitted: vi.fn().mockResolvedValue(0),
     ...overrides,
   };
@@ -177,6 +183,130 @@ describe("LeadFormService — getCrossAuthors authorization", () => {
     expect(repo.getSectionForPeriod).not.toHaveBeenCalled();
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getCrossAuthors).toHaveBeenCalledWith(REPORT_ID, AUTHOR_ID);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getCrossAuthorContent — full-content authorization (two-tier) + metric
+// (scope-lead-report-to-own-contribution, tasks 7b.1 / 7b.3 — D6 / D6b)
+// ---------------------------------------------------------------------------
+
+describe("LeadFormService — getCrossAuthorContent authorization", () => {
+  const contentRow = {
+    authorId: OTHER_USER_ID,
+    authorName: "Co Owner",
+    sharedProductIds: [PROJECT_ID],
+    stages: [
+      { projectId: PROJECT_ID, stageName: "Testing", status: "red" as const },
+    ],
+    items: [],
+    risks: [],
+    decisions: [],
+  };
+
+  // Read a labelled `result` counter value from the shared registry so the
+  // assertions are delta-based and order-independent.
+  async function readResultCount(
+    result: "allowed" | "denied" | "empty",
+  ): Promise<number> {
+    const text = await metricsRegistry.metrics();
+    const match = new RegExp(
+      String.raw`customreport_cross_author_content_reads_total\{result="${result}"\} (\d+)`,
+    ).exec(text);
+    return match ? Number(match[1]) : 0;
+  }
+
+  it("denies (returns [], result=denied) when the caller owns no section in the report", async () => {
+    const repo = createMockRepository({
+      getSectionForPeriod: vi.fn().mockResolvedValue(null),
+      getCrossAuthorContent: vi
+        .fn()
+        .mockResolvedValue({ coOwnsShared: true, rows: [contentRow] }),
+    });
+    const service = new LeadFormService(repo);
+    const before = await readResultCount("denied");
+
+    const rows = await service.getCrossAuthorContent(REPORT_ID, AUTHOR_ID);
+
+    expect(rows).toEqual([]);
+    // The report-access gate short-circuits before the content read.
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.getCrossAuthorContent).not.toHaveBeenCalled();
+    expect(await readResultCount("denied")).toBe(before + 1);
+  });
+
+  it("denies (returns [], result=denied) when the caller co-owns no shared product", async () => {
+    const repo = createMockRepository({
+      getSectionForPeriod: vi
+        .fn()
+        .mockResolvedValue(structuredClone(draftSection)),
+      getCrossAuthorContent: vi
+        .fn()
+        .mockResolvedValue({ coOwnsShared: false, rows: [] }),
+    });
+    const service = new LeadFormService(repo);
+    const before = await readResultCount("denied");
+
+    const rows = await service.getCrossAuthorContent(REPORT_ID, AUTHOR_ID);
+
+    expect(rows).toEqual([]);
+    expect(await readResultCount("denied")).toBe(before + 1);
+  });
+
+  it("is empty (returns [], result=empty) when the caller co-owns but no foreign records exist", async () => {
+    const repo = createMockRepository({
+      getSectionForPeriod: vi
+        .fn()
+        .mockResolvedValue(structuredClone(draftSection)),
+      getCrossAuthorContent: vi
+        .fn()
+        .mockResolvedValue({ coOwnsShared: true, rows: [] }),
+    });
+    const service = new LeadFormService(repo);
+    const before = await readResultCount("empty");
+
+    const rows = await service.getCrossAuthorContent(REPORT_ID, AUTHOR_ID);
+
+    expect(rows).toEqual([]);
+    expect(await readResultCount("empty")).toBe(before + 1);
+  });
+
+  it("allows (returns rows, result=allowed) for a co-owner with foreign records", async () => {
+    const repo = createMockRepository({
+      getSectionForPeriod: vi
+        .fn()
+        .mockResolvedValue(structuredClone(draftSection)),
+      getCrossAuthorContent: vi
+        .fn()
+        .mockResolvedValue({ coOwnsShared: true, rows: [contentRow] }),
+    });
+    const service = new LeadFormService(repo);
+    const before = await readResultCount("allowed");
+
+    const rows = await service.getCrossAuthorContent(REPORT_ID, AUTHOR_ID);
+
+    expect(rows).toEqual([contentRow]);
+    expect(await readResultCount("allowed")).toBe(before + 1);
+  });
+
+  it("has NO head/admin bypass — a head who co-owns nothing is denied like any non-co-owner", async () => {
+    // The service signature carries no role: getCrossAuthorContent(reportId,
+    // userId). A head reaches the same gate as a lead — own section AND
+    // co-ownership — with no role exception (D6).
+    const repo = createMockRepository({
+      // Head owns no section in this report → report-access gate denies.
+      getSectionForPeriod: vi.fn().mockResolvedValue(null),
+      getCrossAuthorContent: vi
+        .fn()
+        .mockResolvedValue({ coOwnsShared: true, rows: [contentRow] }),
+    });
+    const service = new LeadFormService(repo);
+
+    const rows = await service.getCrossAuthorContent(REPORT_ID, AUTHOR_ID);
+
+    expect(rows).toEqual([]);
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.getCrossAuthorContent).not.toHaveBeenCalled();
   });
 });
 

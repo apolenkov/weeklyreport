@@ -73,6 +73,10 @@ function createMockRepository(
       return [];
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
+    async getCrossAuthorContent() {
+      return { coOwnsShared: false, rows: [] };
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
     async revokeAllSubmitted() {
       return 0;
     },
