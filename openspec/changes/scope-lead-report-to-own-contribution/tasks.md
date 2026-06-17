@@ -120,62 +120,62 @@ pnpm build` — all green; `pnpm --filter @customreport/api test:integration`
 
 ### 7c. Frontend — toggle + conditional fetch + chip hide
 
-- [ ] 7c.1 Add the Record visibility toggle to `lead-form.tsx`: two states "Mine
+- [x] 7c.1 Add the Record visibility toggle to `lead-form.tsx`: two states "Mine
       only" (default) / "Everyone", English label, lead form only.
-- [ ] 7c.2 Persist the state in `localStorage` under a key namespaced by the
+- [x] 7c.2 Persist the state in `localStorage` under a key namespaced by the
       current user AND `reportId` (e.g. `leadRecordVisibility:{userId}:{reportId}`)
       so "Everyone" cannot bleed across users or reports on a shared browser or
       via the dev role-switcher; first-ever load (no matching key) defaults to
       "Mine only", and a user/report context change re-scopes the lookup. See
       design D4c.
-- [ ] 7c.3 Fetch `crossAuthorContent` ONLY when Everyone (conditional query);
+- [x] 7c.3 Fetch `crossAuthorContent` ONLY when Everyone (conditional query);
       never fetch it in Mine only. The fetch MUST wait until the persisted
       toggle state has loaded and the UI reflects "Everyone" before firing — it
       must not fire on the pre-hydration default and then race the restored
       state (avoids a flash / early-fetch). See design D4c.
-- [ ] 7c.4 Mine only: render own arrays, hide foreign stage chips, keep honest
+- [x] 7c.4 Mine only: render own arrays, hide foreign stage chips, keep honest
       health from the always-fetched status read. Everyone: merge the foreign
       records read-only (restore the `mapForeign*` content mappers, used only
       when the Everyone read is present) and show foreign stage chips.
-- [ ] 7c.5 Keep the toggle view-only: it must not change submit/completeness or
+- [x] 7c.5 Keep the toggle view-only: it must not change submit/completeness or
       published/exported output in either state. Confirm the publish and export
       flows never consume the toggle or the `crossAuthorContent` query.
-- [ ] 7c.6 Purge the fetched foreign full content (query cache + component state +
+- [x] 7c.6 Purge the fetched foreign full content (query cache + component state +
       DOM) not only on Everyone→Mine only but also on logout, role switch, report
       switch, product switch, and any authorization downgrade, so no foreign
       record can carry into a new identity/context. See design D4c.
 
 ### 7d. Tests
 
-- [ ] 7d.1 Mine only fetches NO full content: assert NO network request is issued
+- [x] 7d.1 Mine only fetches NO full content: assert NO network request is issued
       to the full-content endpoint (`crossAuthorContent`) — the guarantee is the
       absent request, not client-side filtering of a fetched response — and no
       foreign text / full name / foreign chip renders.
-- [ ] 7d.2 Everyone renders the co-owners' full records (text + full name +
+- [x] 7d.2 Everyone renders the co-owners' full records (text + full name +
       foreign chips), read-only, alongside the lead's own records.
-- [ ] 7d.3 NEGATIVE authz: `getCrossAuthorContent` returns `[]` for an unrelated
+- [x] 7d.3 NEGATIVE authz: `getCrossAuthorContent` returns `[]` for an unrelated
       `reportId` AND for a product the caller does not co-own (two cases).
-- [ ] 7d.4 Honest health holds in BOTH states and does not depend on the toggle;
+- [x] 7d.4 Honest health holds in BOTH states and does not depend on the toggle;
       Mine only shows red health with foreign chips hidden.
-- [ ] 7d.5 View-only regression: switching to Everyone then submitting yields a
+- [x] 7d.5 View-only regression: switching to Everyone then submitting yields a
       section with own records only; published/exported output unchanged.
-- [ ] 7d.6 Persistence: stored "Everyone" is restored on reload; no stored value
+- [x] 7d.6 Persistence: stored "Everyone" is restored on reload; no stored value
       defaults to "Mine only".
-- [ ] 7d.7 Stale-cache purge: after Everyone renders foreign records, switching
+- [x] 7d.7 Stale-cache purge: after Everyone renders foreign records, switching
       back to Mine only purges the fetched full content from the query cache,
       component state, and DOM — assert no foreign text / name / chip remains
       rendered or cached; a later return to Everyone re-fetches, not serves stale.
       Also assert the purge fires on logout, role switch, report switch, product
       switch, and authorization downgrade (no foreign data carries into the new
       context).
-- [ ] 7d.8 Submit-payload byte-identical: for the same user edits, the submit
+- [x] 7d.8 Submit-payload byte-identical: for the same user edits, the submit
       payload is byte-identical in "Mine only" and in "Everyone" (pins D4b
       view-only — the toggle never folds foreign records into the submission).
-- [ ] 7d.8b Publish/export toggle-independent: published and exported output is
+- [x] 7d.8b Publish/export toggle-independent: published and exported output is
       identical regardless of the lead's toggle state, and the publish/export
       flows issue no `crossAuthorContent` read (completes D4b coverage beyond
       submit).
-- [ ] 7d.9 Positive authz matrix on the full-content read: own author (allowed),
+- [x] 7d.9 Positive authz matrix on the full-content read: own author (allowed),
       same-product co-owner (allowed), report member who does NOT co-own the
       product (denied → `[]`), unrelated report (denied → `[]`), head/admin who
       does NOT co-own the product (denied → `[]`, NO role bypass — see D6).
@@ -188,11 +188,11 @@ pnpm build` — all green; `pnpm --filter @customreport/api test:integration`
 
 ### 7e. Verify + gate
 
-- [ ] 7e.1 Live-verify on the `middle` seed: toggle Mine only ↔ Everyone on a
+- [x] 7e.1 Live-verify on the `middle` seed: toggle Mine only ↔ Everyone on a
       co-owned product; Mine only hides foreign chips + content with honest red
       health; Everyone shows co-owners' full records + names + foreign chips;
       slides unaffected.
-- [ ] 7e.2 `npx prisma generate && pnpm typecheck && pnpm lint && pnpm test &&
+- [x] 7e.2 `npx prisma generate && pnpm typecheck && pnpm lint && pnpm test &&
 pnpm build` + `pnpm --filter @customreport/api test:integration` all green.
 
 ## 8. Follow-up (post-merge)
