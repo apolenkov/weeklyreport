@@ -88,7 +88,7 @@ function buildTRPC() {
       query: [],
     },
     {
-      path: ["leadForm", "crossAuthorSections"],
+      path: ["leadForm", "crossAuthorContent"],
       query: [],
     },
   ]);

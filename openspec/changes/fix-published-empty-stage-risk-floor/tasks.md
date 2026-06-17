@@ -70,7 +70,7 @@ Unowned (unassigned) stages are out of scope here.
       card and the top-line totals agree inside the same snapshot and PDF.
 - [x] 3.4 Add regressions for both covers-all shapes: - `buildAssembledReportFromPrismaRow` with an owned stage with `status: null`
       covered by a covers-all own **blocked** risk: `portfolioOverview.status ===
-    "red"` and the product counted red, not green. - Same setup with a covers-all own **at-risk** risk: product counted yellow.
+  "red"` and the product counted red, not green. - Same setup with a covers-all own **at-risk** risk: product counted yellow.
       Assert the same for the PDF `toAssembledReport` path in both cases.
 - [x] 3.5 Escalations — `buildEscalationsFromReadSections` emits an `at_risk`
       escalation per red `trafficLight`. Pin the expected escalations on the bug
@@ -87,7 +87,7 @@ Unowned (unassigned) stages are out of scope here.
 ## 5. Gate
 
 - [ ] 5.1 `npx prisma generate && pnpm typecheck && pnpm lint && pnpm test &&
-  pnpm build` — all green.
+pnpm build` — all green.
 - [ ] 5.2 `pnpm --filter @customreport/api test:integration` — green (the
       integration suite is excluded from `pnpm test`).
 - [ ] 5.3 Live-verify on a seed where an own covering risk floors an owned stage

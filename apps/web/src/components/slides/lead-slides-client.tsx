@@ -17,6 +17,7 @@ import {
 } from "./lead-slide-periods";
 import { ReportSlides } from "./report-slides";
 import {
+  applyForeignProductHealth,
   buildSectionSlideModel,
   paginateSectionSlides,
 } from "./section-slide-utils";
@@ -92,6 +93,17 @@ export function LeadSlidesClient({
     enabled: targetReportId !== "",
   });
 
+  // scope-lead-report-to-own-contribution: slides carry only own records, but
+  // a co-owned product's health must stay honest. crossAuthors returns the
+  // anonymized, risk-derived per-stage status (no foreign text/counts/names);
+  // we fold its worst stage into each product badge below.
+  const crossAuthorsQ = useQuery({
+    ...trpc.leadForm.crossAuthors.queryOptions({
+      reportId: targetReportId,
+    }),
+    enabled: targetReportId !== "",
+  });
+
   useQueryErrorHandler(activeQ, {
     event: "leadSlides.getActive.load_failed",
     component: "LeadSlidesClient",
@@ -105,13 +117,16 @@ export function LeadSlidesClient({
     context: { reportId: targetReportId || null },
   });
 
-  const sectionModel = useMemo(
-    () =>
-      byPeriodQ.data?.section
-        ? buildSectionSlideModel(byPeriodQ.data.section)
-        : null,
-    [byPeriodQ.data],
-  );
+  const sectionModel = useMemo(() => {
+    if (!byPeriodQ.data?.section) return null;
+    const base = buildSectionSlideModel(byPeriodQ.data.section);
+    const foreign = crossAuthorsQ.data ?? [];
+    if (foreign.length === 0) return base;
+    return {
+      ...base,
+      productSlides: applyForeignProductHealth(base.productSlides, foreign),
+    };
+  }, [byPeriodQ.data, crossAuthorsQ.data]);
 
   const slides = useMemo(
     () => (sectionModel ? paginateSectionSlides(sectionModel) : []),
