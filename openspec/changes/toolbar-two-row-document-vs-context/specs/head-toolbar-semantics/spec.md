@@ -42,6 +42,23 @@ compact and at the leading edge of that group.
   first element of the group
 - **AND** it remains aria-disabled with the ComingSoonBadge tooltip
 
+## REMOVED Requirements
+
+### Requirement: The word "Publish" appears on exactly one header control
+
+**Reason**: The two-row layout moves the publish action out of the page header
+row into the Document-action toolbar row, so the requirement can no longer be
+scoped to "one header control". It is replaced by the location-agnostic
+"appears on exactly one head control" requirement below, which keeps the
+exactly-one-control invariant while allowing the control to render in either
+the header row or the document-action row.
+
+**Migration**: No behavioural change — `PublishLockButton` is still the only
+control whose visible label carries "Publish"; only the requirement's wording
+generalises from "header control" to "head control, wherever it renders".
+
+## ADDED Requirements
+
 ### Requirement: The word "Publish" appears on exactly one head control
 
 The word "Publish" MUST appear on exactly one control across the head report surface — the publish action (`PublishLockButton`) — regardless of whether it renders in the page header row or in the document-action toolbar row; no other control's visible label MAY carry it.
