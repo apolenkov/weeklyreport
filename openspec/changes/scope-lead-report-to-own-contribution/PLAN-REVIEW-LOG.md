@@ -42,3 +42,19 @@ VERDICT: APPROVED
 ### Claude's response
 
 - APPROVED. Applied the one nit: backend derives initials from user.name server-side; full name never crosses the API boundary (design D6 + task 2.1).
+
+## Round 1 — Codex (Act 2, grill-with-docs-codex)
+
+VERDICT: REVISE. Key findings: stale client cache/DOM after Everyone→Mine only; assert no full-content network call in Mine only; submit-payload identical across states; positive authz matrix for co-ownership boundaries; denied-vs-empty observability metric; clarify foreign=not-authored-by-me on co-owned products; consent model for within-group full names (recorded as a deliberate decision, not a defect); persisted vs per-session toggle (kept persisted per user).
+
+### Claude's response (Round 1)
+
+Acting on: stale-cache purge requirement; no-network-call scenario; submit-identical test; positive authz matrix; denied/empty metric; foreign clarification. Recording as decided: within-group full-name/text visibility in Everyone (user chose it, same reporting group, no per-author consent); persisted toggle (user chose remember). Rejecting per-session-only alternative.
+
+## Round 2 — Codex (Act 2)
+
+VERDICT: REVISE. Round-1 fixes confirmed addressed (no full-content fetch in Mine only, cache/DOM purge, persisted-state race, authz matrix, metric, foreign definition, no-consent acceptance). Remaining: (1) localStorage key under-namespaced (user/report/period scope, shared-browser leak); (2) status-only read broader than full-content (report access reveals initials+status for non-co-owned products) — document/test as intentional; (3) head/admin full-content rule unstated; (4) view-only coverage misses publish/export; (5) purge should also fire on logout/role/report/product switch + authz downgrade.
+
+### Claude's response (Round 2)
+
+Acting on all 5: namespace the localStorage key by user+reportId(+period); broaden purge to identity/report/product/role switch + authz downgrade; state full-content gate = report-access AND product co-ownership for ALL callers, NO head/admin bypass (lead-coworker lens); document status-only cross-product breadth as intentional within one reporting group; add publish/export toggle-independence. Convergence: human (user) signed off the plan; implementation deferred to a fresh session. Codex round-2 polish folded into docs; not re-run to APPROVED (user override, refinements non-blocking).

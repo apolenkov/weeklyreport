@@ -1,5 +1,12 @@
 # Tasks: scope-lead-report-to-own-contribution
 
+> Sections 1–5 are the FIRST cut (shipped + open in PR #14): own-records default
+>
+> - status-only Product context, foreign content read deleted. They stay `[x]`.
+>   Section 7 is the REVISION on the SAME branch / SAME PR #14 that adds the Record
+>   visibility toggle and re-introduces a gated full-content read for the Everyone
+>   state. This reverses design D4. Do section 7 next.
+
 ## 1. Shared / API contract (do first)
 
 - [x] 1.1 Decide the status-only Product context shape (per shared product:
@@ -67,12 +74,125 @@
       same — own records only, CRM-Sales Hub badge "At risk" from foreign БС, no
       foreign full names anywhere.
 - [x] 5.2 `npx prisma generate && pnpm typecheck && pnpm lint && pnpm test &&
-  pnpm build` — all green; `pnpm --filter @customreport/api test:integration`
+pnpm build` — all green; `pnpm --filter @customreport/api test:integration`
       green (the integration suite is excluded from `pnpm test`).
 
-## 6. Follow-up (post-merge)
+## 7. Revision — Record visibility toggle (Everyone) on the same PR #14
 
-- [ ] 6.1 After the PR merges to main, archive via `opsx:archive`.
+### 7a. Shared / API contract (do first)
+
+- [ ] 7a.1 Re-introduce the gated full-content read shape in shared types
+      (`CrossAuthorSection` / `ForeignKanbanItem` / `ForeignRiskEntry` /
+      `ForeignDecisionEntry` or equivalents): item / risk / decision text, the
+      owning author's full name, and foreign stage chips. Keep it distinct from
+      the status-only `CrossAuthorEntry` (which stays initials + status only).
+- [ ] 7a.2 Add `getCrossAuthorContent` to `lead-form.prisma-repository.ts`: full
+      foreign content for products the caller co-owns on the given report. Leave
+      `getCrossAuthors` (status-only) unchanged — it is still fetched in both
+      states.
+- [ ] 7a.3 Add a `leadForm.crossAuthorContent` tRPC `protectedProcedure` taking
+      `{ reportId }`, returning the full-content shape. Consumer: the lead form's
+      Everyone state only (NOT slides).
+
+### 7b. Backend — authorization (two-tier)
+
+- [ ] 7b.1 Gate `getCrossAuthorContent` harder than the status read: caller must
+      have access to the report AND co-own the product; an unrelated/arbitrary
+      `reportId`, or a non-co-owned product, returns `[]`. Apply this gate to ALL
+      callers with NO head/admin bypass — a head/admin who does not co-own the
+      product is denied like any other non-co-owner (see D6); the server authz
+      MUST NOT key off the lead-form toggle. Derive foreign stage status from
+      risks (canonical rule), reuse the status read's logic.
+- [ ] 7b.2 Confirm the status-only read's gate is unchanged and both reads keep
+      the archived-product exclusion.
+- [ ] 7b.3 Emit a metric distinguishing the denied path from the empty-result
+      path on the full-content read (a denied read returns empty, so denied is
+      otherwise indistinguishable from legitimately empty). Add the Prometheus
+      counter `customreport_cross_author_content_reads_total` with a `result`
+      label (`allowed` / `denied` / `empty`) to the metrics registry; the
+      response payload stays empty in both denied and empty cases (no leak). See
+      design D6b.
+
+### 7c. Frontend — toggle + conditional fetch + chip hide
+
+- [ ] 7c.1 Add the Record visibility toggle to `lead-form.tsx`: two states "Mine
+      only" (default) / "Everyone", English label, lead form only.
+- [ ] 7c.2 Persist the state in `localStorage` under a key namespaced by the
+      current user AND `reportId` (e.g. `leadRecordVisibility:{userId}:{reportId}`)
+      so "Everyone" cannot bleed across users or reports on a shared browser or
+      via the dev role-switcher; first-ever load (no matching key) defaults to
+      "Mine only", and a user/report context change re-scopes the lookup. See
+      design D4c.
+- [ ] 7c.3 Fetch `crossAuthorContent` ONLY when Everyone (conditional query);
+      never fetch it in Mine only. The fetch MUST wait until the persisted
+      toggle state has loaded and the UI reflects "Everyone" before firing — it
+      must not fire on the pre-hydration default and then race the restored
+      state (avoids a flash / early-fetch). See design D4c.
+- [ ] 7c.4 Mine only: render own arrays, hide foreign stage chips, keep honest
+      health from the always-fetched status read. Everyone: merge the foreign
+      records read-only (restore the `mapForeign*` content mappers, used only
+      when the Everyone read is present) and show foreign stage chips.
+- [ ] 7c.5 Keep the toggle view-only: it must not change submit/completeness or
+      published/exported output in either state. Confirm the publish and export
+      flows never consume the toggle or the `crossAuthorContent` query.
+- [ ] 7c.6 Purge the fetched foreign full content (query cache + component state +
+      DOM) not only on Everyone→Mine only but also on logout, role switch, report
+      switch, product switch, and any authorization downgrade, so no foreign
+      record can carry into a new identity/context. See design D4c.
+
+### 7d. Tests
+
+- [ ] 7d.1 Mine only fetches NO full content: assert NO network request is issued
+      to the full-content endpoint (`crossAuthorContent`) — the guarantee is the
+      absent request, not client-side filtering of a fetched response — and no
+      foreign text / full name / foreign chip renders.
+- [ ] 7d.2 Everyone renders the co-owners' full records (text + full name +
+      foreign chips), read-only, alongside the lead's own records.
+- [ ] 7d.3 NEGATIVE authz: `getCrossAuthorContent` returns `[]` for an unrelated
+      `reportId` AND for a product the caller does not co-own (two cases).
+- [ ] 7d.4 Honest health holds in BOTH states and does not depend on the toggle;
+      Mine only shows red health with foreign chips hidden.
+- [ ] 7d.5 View-only regression: switching to Everyone then submitting yields a
+      section with own records only; published/exported output unchanged.
+- [ ] 7d.6 Persistence: stored "Everyone" is restored on reload; no stored value
+      defaults to "Mine only".
+- [ ] 7d.7 Stale-cache purge: after Everyone renders foreign records, switching
+      back to Mine only purges the fetched full content from the query cache,
+      component state, and DOM — assert no foreign text / name / chip remains
+      rendered or cached; a later return to Everyone re-fetches, not serves stale.
+      Also assert the purge fires on logout, role switch, report switch, product
+      switch, and authorization downgrade (no foreign data carries into the new
+      context).
+- [ ] 7d.8 Submit-payload byte-identical: for the same user edits, the submit
+      payload is byte-identical in "Mine only" and in "Everyone" (pins D4b
+      view-only — the toggle never folds foreign records into the submission).
+- [ ] 7d.8b Publish/export toggle-independent: published and exported output is
+      identical regardless of the lead's toggle state, and the publish/export
+      flows issue no `crossAuthorContent` read (completes D4b coverage beyond
+      submit).
+- [ ] 7d.9 Positive authz matrix on the full-content read: own author (allowed),
+      same-product co-owner (allowed), report member who does NOT co-own the
+      product (denied → `[]`), unrelated report (denied → `[]`), head/admin who
+      does NOT co-own the product (denied → `[]`, NO role bypass — see D6).
+      Complements the negative tests in 7d.3.
+- [ ] 7d.10 Status-only breadth (documented behavior): the status-only read
+      returns initials + risk-derived status for products the caller does NOT
+      co-own (within a report they have access to), and still carries no text,
+      counts, or full names. Pins the intentional cross-product status disclosure
+      within one reporting group (see D6 status-only bullet).
+
+### 7e. Verify + gate
+
+- [ ] 7e.1 Live-verify on the `middle` seed: toggle Mine only ↔ Everyone on a
+      co-owned product; Mine only hides foreign chips + content with honest red
+      health; Everyone shows co-owners' full records + names + foreign chips;
+      slides unaffected.
+- [ ] 7e.2 `npx prisma generate && pnpm typecheck && pnpm lint && pnpm test &&
+    pnpm build` + `pnpm --filter @customreport/api test:integration` all green.
+
+## 8. Follow-up (post-merge)
+
+- [ ] 8.1 After the PR merges to main, archive via `opsx:archive`.
 
 ## Review findings (adversarial multi-lens, all fixed before commit)
 
