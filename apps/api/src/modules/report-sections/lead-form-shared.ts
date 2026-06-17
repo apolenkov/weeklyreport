@@ -41,30 +41,51 @@ export interface LeadFormRepository {
       projectId: string;
       projectName: string;
       authorId: string;
-      authorName: string;
+      authorInitials: string;
       stageNames: string[];
       stages: {
         stageName: string;
         status: "green" | "yellow" | "red" | null;
       }[];
-      itemCount: number;
-      riskCount: number;
     }[]
   >;
-  /** Returns full section content (items/risks/decisions) for cross-author leads
-   *  who share at least one product with the requesting user, filtered to shared products only. */
-  getCrossAuthorSections(
+  /**
+   * Full foreign section content (item / risk / decision text + the owning
+   * author's full name + risk-derived foreign stage chips) for products the
+   * caller CO-OWNS on the given report. This is the strictly-more-sensitive
+   * "Everyone" read; the status-only `getCrossAuthors` is unchanged.
+   *
+   * Returns `coOwnsShared` so the caller can distinguish a denied read (caller
+   * co-owns no shared product on a non-archived project) from a legitimately
+   * empty one (caller co-owns a shared product, but the co-owner authored no
+   * records). The `rows` payload is identical (`[]`) in both cases — only the
+   * separate boolean lets the service label the observability metric. See D6b.
+   */
+  getCrossAuthorContent(
     reportId: string,
     userId: string,
-  ): Promise<CrossAuthorSectionRow[]>;
+  ): Promise<{ coOwnsShared: boolean; rows: CrossAuthorSectionRow[] }>;
   /** SC-165: Revoke every submitted section in a report in one transaction. */
   revokeAllSubmitted(reportId: string, revokedBy: string): Promise<number>;
 }
 
+/**
+ * Foreign section content scoped to products the caller co-owns. Revives the
+ * pre-`scope-lead-report-to-own-contribution` shape and adds a risk-derived
+ * per-stage `stages[]` projection so the "Everyone" lens can render foreign
+ * stage chips with the canonical traffic-light status. Distinct from the
+ * status-only cross-author row (initials + status, no text, no full name).
+ */
 export interface CrossAuthorSectionRow {
   authorId: string;
   authorName: string;
   sharedProductIds: string[];
+  /** Risk-derived foreign stage chips per shared product (covers-all aware). */
+  stages: {
+    projectId: string;
+    stageName: string;
+    status: "green" | "yellow" | "red" | null;
+  }[];
   items: {
     id: string;
     projectId: string;
@@ -96,4 +117,19 @@ export interface CrossAuthorSectionRow {
     resolvedAt: Date | null;
     stageNames: string[];
   }[];
+}
+
+/**
+ * Derives display initials from a user's full name, server-side, so the full
+ * name never crosses the API boundary. First letters of up to two words,
+ * uppercased (e.g. "Anna Karenina" -> "AK").
+ */
+export function initialsFromName(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0)
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join("");
 }

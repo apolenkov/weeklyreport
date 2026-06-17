@@ -15,6 +15,7 @@ import {
   stableStringify,
   useLeadFormAutosave,
 } from "../../hooks/use-lead-form-autosave";
+import { useRecordVisibility } from "../../hooks/use-record-visibility";
 import { computeCoupling, validateCoupling } from "../../hooks/use-status-risk";
 import {
   invalidateDashboard,
@@ -295,6 +296,52 @@ function aggregateTrafficLight(
         : null;
 }
 
+/**
+ * scope-lead-report-to-own-contribution (7c.1): the lead form's Record
+ * visibility toggle. A two-state segmented control — "Mine only" (default) /
+ * "Everyone". Lead-form only; view-only (it changes what the lead sees, never
+ * what is submitted or published — D4b). English label per the repo UI-string
+ * rule.
+ */
+function RecordVisibilityToggle({
+  value,
+  onChange,
+}: {
+  readonly value: "mine" | "everyone";
+  readonly onChange: (next: "mine" | "everyone") => void;
+}) {
+  const options: { key: "mine" | "everyone"; label: string }[] = [
+    { key: "mine", label: "Mine only" },
+    { key: "everyone", label: "Everyone" },
+  ];
+  return (
+    <div
+      role="group"
+      aria-label="Record visibility"
+      className="inline-flex items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] p-0.5"
+    >
+      {options.map((option) => {
+        const active = value === option.key;
+        return (
+          <button
+            key={option.key}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange(option.key)}
+            className={`btn-press min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] px-3 py-1 font-[family-name:var(--font-sans)] text-sm font-semibold transition-colors ${
+              active
+                ? "bg-[var(--color-starbucks-accent)] text-white"
+                : "bg-transparent text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)]"
+            }`}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function LeadForm({
   reportId: pinnedReportId,
   redirectToCanonical,
@@ -355,39 +402,65 @@ export function LeadForm({
     enabled: targetReportId !== "",
   });
 
-  // F-shiny-3: cross-author section data is always loaded (always-on).
-  const crossAuthorSectionsQ = useQuery({
-    ...trpc.leadForm.crossAuthorSections.queryOptions({
+  // Foreign stage health for the lead's shared products. The cross-author
+  // query already carries authorInitials + RISK-DERIVED per-stage status, so
+  // the pipeline entries map straight from it — no foreign item/risk/decision
+  // text crosses the API boundary. This status-only read is ALWAYS fetched and
+  // ALWAYS drives honest product health; the toggle never gates it (D4a).
+  const crossAuthorEntries: import("./sdlc-pipeline").CrossAuthorEntry[] =
+    crossAuthorsQ.data ?? [];
+
+  // scope-lead-report-to-own-contribution (7c): Record visibility toggle. The
+  // key is namespaced by the signed-in user AND the loaded report so an
+  // "everyone" choice cannot bleed across users (shared browser / dev
+  // role-switcher) or across reports (D4c). The toggle is lead-form-only.
+  const currentUserId = sessionState?.user?.id ?? null;
+  const {
+    visibility: recordVisibility,
+    hydrated: visibilityHydrated,
+    setVisibility: setRecordVisibility,
+  } = useRecordVisibility(currentUserId, targetReportId);
+  const isEveryone = recordVisibility === "everyone";
+
+  // 7c.3: the full-content read is fetched ONLY in the Everyone state, and only
+  // AFTER the persisted toggle has hydrated — so it never fires on the
+  // pre-hydration "mine" default and then races a restored "everyone".
+  const crossAuthorContentQ = useQuery({
+    ...trpc.leadForm.crossAuthorContent.queryOptions({
       reportId: targetReportId,
     }),
-    enabled: targetReportId !== "",
+    enabled: targetReportId !== "" && visibilityHydrated && isEveryone,
   });
 
-  const crossAuthors = crossAuthorsQ.data ?? [];
-
-  // F-shiny-1: enrich crossAuthors with per-risk details and isEmpty flag
-  // sourced from crossAuthorSectionsQ (always loaded).
-  const enrichedCrossAuthors: import("./sdlc-pipeline").CrossAuthorEntry[] =
-    crossAuthors.map((ca) => {
-      const caSection = crossAuthorSectionsQ.data?.find(
-        (s) => s.authorId === ca.authorId,
-      );
-      const projectRisks =
-        caSection?.risks
-          .filter((r) => r.projectId === ca.projectId)
-          .slice(0, 3)
-          .map((r) => ({
-            severity: (r.severity === "blocked" ? "blocked" : "at-risk") as
-              | "blocked"
-              | "at-risk",
-            text: r.risk,
-          })) ?? null;
-      return {
-        ...ca,
-        risks: projectRisks,
-        isEmpty: ca.itemCount === 0 && ca.riskCount === 0,
-      };
+  // 7c.6: purge the fetched foreign full content from the query cache whenever
+  // the toggle leaves Everyone OR is not yet hydrated for the current context.
+  // `enabled:false` (above) stops a refetch; removing the cached query drops
+  // the data so the merged display arrays recompute to own-only. A later return
+  // to Everyone re-fetches rather than serving stale. The purge uses the bare
+  // procedure prefix (`queryKey()`, no input) so a report switch also drops the
+  // PRIOR report's cached content, not just the current report's.
+  useEffect(() => {
+    if (isEveryone && visibilityHydrated) return;
+    qc.removeQueries({
+      queryKey: trpc.leadForm.crossAuthorContent.queryKey(),
     });
+  }, [isEveryone, visibilityHydrated, targetReportId, qc, trpc]);
+
+  // 7c.6 (identity guard): the `crossAuthorContent` cache key is scoped by
+  // reportId only, NOT by user — so two identities on the SAME browser + same
+  // QueryClient + same report could otherwise share a cache entry. On ANY
+  // identity change (logout, role switch, authz downgrade) drop ALL cached
+  // foreign content unconditionally, so user B can never read user A's foreign
+  // records even while both sit in Everyone. The dev switcher / logout do a
+  // full reload (fresh QueryClient) today; this guard makes the invariant hold
+  // regardless of the navigation mechanism. The lead form shows all assigned
+  // products at once (no per-product selector), so identity + report purges
+  // cover every real context-switch surface.
+  useEffect(() => {
+    qc.removeQueries({
+      queryKey: trpc.leadForm.crossAuthorContent.queryKey(),
+    });
+  }, [currentUserId, sessionRole, qc, trpc]);
 
   // 35-07: bare route → replace URL with the canonical addressed form once
   // the active reportId is known. Skipped when:
@@ -652,57 +725,57 @@ export function LeadForm({
     history: historyQ.data,
   });
 
-  // F8: enrich unassigned stages with cross-author names and real status.
-  // crossAuthorsQ.data has { projectId, stageNames, authorName, stages } per shared product.
-  // Stages not owned by the current user but assigned to another lead become
-  // ownership:"locked" with their name and real risk color instead of gray "empty".
-  // Joined with crossAuthorSectionsQ to incorporate risk severity and blocked
-  // items into stage chip color (enrichedCrossAuthors drops stageName, so the
-  // mapper joins the raw crossAuthorSectionsQ rows keyed by authorId).
+  // F8: enrich unassigned stages with cross-author initials + risk-derived
+  // status. crossAuthorsQ.data has { projectId, stageNames, authorInitials,
+  // stages } per shared product. Stages not owned by the current user but
+  // assigned to another lead become ownership:"locked" with that lead's
+  // initials and risk-derived color instead of gray "empty". No foreign
+  // item/risk/decision text is read here.
+  //
+  // 7c.4: the foreign stage CHIPS show only in Everyone. In Mine only we skip
+  // the override so co-owners' stages stay hidden (unassigned/gray). Product
+  // HEALTH stays honest in BOTH states — it derives from `crossAuthorEntries`
+  // (the always-fetched status read) inside SdlcPipeline, independent of these
+  // chips (D4d).
   const crossAuthorStageMap = buildCrossAuthorStageMap(
     crossAuthorsQ.data ?? [],
-    crossAuthorSectionsQ.data ?? [],
   );
-  const products: Product[] = applyCrossAuthorStageOverrides(
-    data.products,
-    crossAuthorStageMap,
+  const products: Product[] = (
+    isEveryone
+      ? applyCrossAuthorStageOverrides(data.products, crossAuthorStageMap)
+      : data.products
   ) as Product[];
 
-  // Lookup map for resolving productName from productId in cross-author embeds.
+  const ownCurrentWeekItems: KanbanItem[] =
+    data.currentWeekItems as KanbanItem[];
+  const ownNextWeekItems: KanbanItem[] = data.nextWeekItems as KanbanItem[];
+  const ownRisks: RiskEntry[] = data.risks as RiskEntry[];
+  const ownDecisions: DecisionEntry[] = data.decisions as DecisionEntry[];
+
+  // 7c.4: Everyone merges co-owners' full records READ-ONLY on top of the
+  // lead's own records, from the gated full-content read. Mine only renders
+  // own records only (no full-content fetch). The merge is view-only: the
+  // draft-merge handlers strip every `.foreign` row, so it never reaches the
+  // submission (D4b).
   const productNameById = new Map(products.map((p) => [p.id, p.name]));
-
-  const currentWeekItems: KanbanItem[] = data.currentWeekItems as KanbanItem[];
-  const nextWeekItems: KanbanItem[] = data.nextWeekItems as KanbanItem[];
-  const risks: RiskEntry[] = data.risks as RiskEntry[];
-  const decisions: DecisionEntry[] = data.decisions as DecisionEntry[];
-
-  // W5/W6: build foreign item arrays from crossAuthorSectionsQ (always-on).
-  const foreignCurrentItems: KanbanItem[] = mapForeignItems(
-    crossAuthorSectionsQ.data ?? [],
-    productNameById,
-    "current",
-  );
-
-  const foreignNextItems: KanbanItem[] = mapForeignItems(
-    crossAuthorSectionsQ.data ?? [],
-    productNameById,
-    "next",
-  );
-
-  const foreignRisks: RiskEntry[] = mapForeignRisks(
-    crossAuthorSectionsQ.data ?? [],
-    productNameById,
-  );
-
-  const foreignDecisions: DecisionEntry[] = mapForeignDecisions(
-    crossAuthorSectionsQ.data ?? [],
-    productNameById,
-  );
-
-  const mergedCurrentItems = [...currentWeekItems, ...foreignCurrentItems];
-  const mergedNextItems = [...nextWeekItems, ...foreignNextItems];
-  const mergedRisks = [...risks, ...foreignRisks];
-  const mergedDecisions = [...decisions, ...foreignDecisions];
+  const foreignContentRows =
+    isEveryone && visibilityHydrated ? (crossAuthorContentQ.data ?? []) : [];
+  const currentWeekItems: KanbanItem[] = [
+    ...ownCurrentWeekItems,
+    ...mapForeignItems(foreignContentRows, productNameById, "current"),
+  ];
+  const nextWeekItems: KanbanItem[] = [
+    ...ownNextWeekItems,
+    ...mapForeignItems(foreignContentRows, productNameById, "next"),
+  ];
+  const risks: RiskEntry[] = [
+    ...ownRisks,
+    ...mapForeignRisks(foreignContentRows, productNameById),
+  ];
+  const decisions: DecisionEntry[] = [
+    ...ownDecisions,
+    ...mapForeignDecisions(foreignContentRows, productNameById),
+  ];
 
   /**
    * All priority ranks already assigned to own (non-foreign) items for the
@@ -711,8 +784,8 @@ export function LeadForm({
    * intentionally excluded — they are read-only and cannot be edited.
    */
   const ownPeriodRanks: readonly number[] = [
-    ...currentWeekItems,
-    ...nextWeekItems,
+    ...ownCurrentWeekItems,
+    ...ownNextWeekItems,
   ]
     .map((i) => i.priorityRank)
     .filter((r): r is number => r != null);
@@ -949,7 +1022,9 @@ export function LeadForm({
   function handleSubmit() {
     // F4: only check risks that will actually be submitted (same filter as
     // sectionToDraftPayload). Empty/unsaved rows must not falsely block submit.
-    const committedRisks = risks.filter(
+    // 7c.5: scope to OWN risks — foreign records are a read-only lens and must
+    // never affect the lead's submit gating (view-only, D4b).
+    const committedRisks = ownRisks.filter(
       (r) => r.text.trim().length > 0 && r.mitigation.trim().length > 0,
     );
     const coupling = computeCoupling(products, committedRisks);
@@ -1078,6 +1153,15 @@ export function LeadForm({
               )}
             {isSlidesMode && <AgentReviewComingSoon />}
             {isSlidesMode && <SlideFullscreenButton targetRef={deckRef} />}
+            {/* 7c.1: Record visibility toggle — edit mode only (not slides).
+                Disabled until the persisted state hydrates so a click cannot
+                race the restored value. */}
+            {!isSlidesMode && (
+              <RecordVisibilityToggle
+                value={recordVisibility}
+                onChange={setRecordVisibility}
+              />
+            )}
             <ViewModeToggle
               mode={isSlidesMode ? "slides" : "edit"}
               editHref={
@@ -1202,7 +1286,7 @@ export function LeadForm({
           <div className="min-w-0 space-y-6">
             <LeadFormSyncBridge.Provider
               products={products}
-              risks={risks}
+              risks={ownRisks}
               onProductsChange={handleProductsChange}
               onRisksChange={handleRisksChange}
               readOnly={isReadOnly}
@@ -1211,8 +1295,8 @@ export function LeadForm({
                 ? { sectionAuthorName: draftSection.authorName }
                 : {})}
               risksAddSignal={risksAddSignal}
-              crossAuthors={enrichedCrossAuthors}
-              displayRisks={mergedRisks}
+              crossAuthors={crossAuthorEntries}
+              displayRisks={risks}
             >
               <AccordionSection
                 groupExpanded={groupExpanded}
@@ -1254,7 +1338,7 @@ export function LeadForm({
                 }
               >
                 <CurrentWeekSection
-                  items={mergedCurrentItems}
+                  items={currentWeekItems}
                   readOnly={isReadOnly}
                   onItemsChange={handleCurrentWeekItemsChange}
                   currentUserName={currentUser.name}
@@ -1292,7 +1376,7 @@ export function LeadForm({
                 }
               >
                 <NextWeekSection
-                  items={mergedNextItems}
+                  items={nextWeekItems}
                   readOnly={isReadOnly}
                   onItemsChange={handleNextWeekItemsChange}
                   currentUserName={currentUser.name}
@@ -1364,7 +1448,7 @@ export function LeadForm({
               }
             >
               <DecisionsSection
-                decisions={mergedDecisions}
+                decisions={decisions}
                 readOnly={isReadOnly}
                 onChange={handleDecisionsChange}
                 currentUserName={currentUser.name}
@@ -1394,27 +1478,32 @@ export function LeadForm({
               Your report will be locked and visible to the group head. You will
               not be able to make changes after submission.
             </p>
+            {/* 7c.5: the submit summary counts the lead's OWN records only —
+                it reflects what will actually be submitted, never the foreign
+                read-only records merged in for the Everyone lens. */}
             <div className="mt-3 space-y-1 text-sm">
               <div className="flex items-center gap-2">
-                <span className="font-medium">{currentWeekItems.length}</span>
+                <span className="font-medium">
+                  {ownCurrentWeekItems.length}
+                </span>
                 <span className="text-[var(--color-muted-foreground)]">
                   current week items
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-medium">{nextWeekItems.length}</span>
+                <span className="font-medium">{ownNextWeekItems.length}</span>
                 <span className="text-[var(--color-muted-foreground)]">
                   next week items
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-medium">{risks.length}</span>
+                <span className="font-medium">{ownRisks.length}</span>
                 <span className="text-[var(--color-muted-foreground)]">
                   risks
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-medium">{decisions.length}</span>
+                <span className="font-medium">{ownDecisions.length}</span>
                 <span className="text-[var(--color-muted-foreground)]">
                   decisions
                 </span>

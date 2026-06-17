@@ -218,6 +218,25 @@ export const customreportPeriodStateTransitionsTotal = new Counter({
   registers: [metricsRegistry],
 });
 
+/**
+ * scope-lead-report-to-own-contribution (D6b) — every full-content
+ * cross-author read on the lead form ("Everyone" visibility lens).
+ * `result ∈ {allowed, denied, empty}` audits the authorization boundary:
+ * a denied read returns an empty payload, so without this label a denial
+ * is indistinguishable from a legitimately empty result. `denied` =
+ * caller lacks report access OR co-owns no shared product; `empty` =
+ * caller co-owns a shared product but the co-owner authored no records;
+ * `allowed` = foreign records were returned. The payload stays empty in
+ * both `denied` and `empty` cases (no leak); only this signal distinguishes
+ * them.
+ */
+export const customreportCrossAuthorContentReadsTotal = new Counter({
+  name: "customreport_cross_author_content_reads_total",
+  help: "Full-content cross-author lead-form reads, labelled by authorization result (allowed / denied / empty)",
+  labelNames: ["result"] as const,
+  registers: [metricsRegistry],
+});
+
 // ============================================================
 // Phase 55 (Telegram) — day-1 metrics per TODO discipline rule.
 // Declared here even while MockTelegramAdapter is the only path.

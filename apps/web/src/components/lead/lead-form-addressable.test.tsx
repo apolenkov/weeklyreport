@@ -160,7 +160,7 @@ function buildHarness(opts: {
       query: [],
     },
     {
-      path: ["leadForm", "crossAuthorSections"],
+      path: ["leadForm", "crossAuthorContent"],
       query: [],
     },
   ]);

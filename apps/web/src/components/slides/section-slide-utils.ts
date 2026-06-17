@@ -803,6 +803,36 @@ function worstTraffic(
   return TRAFFIC_RANK[a] >= TRAFFIC_RANK[b] ? a : b;
 }
 
+/**
+ * scope-lead-report-to-own-contribution: raise each lead-slide product's health
+ * by the worst foreign (co-lead) stage status for that product, mirroring the
+ * live card's `productHealthStatus` (= worst of own + foreign). Foreign records
+ * never appear on the slide; only the anonymized, risk-derived per-stage status
+ * colour from `crossAuthors` lifts the product badge, so a co-owned product
+ * reads at-risk/blocked on slides when a co-lead's stage is — never falsely
+ * green. The foreign status is already risk-derived server-side; this only folds
+ * the worst traffic value, carrying no foreign text/counts/names.
+ */
+export function applyForeignProductHealth(
+  productSlides: readonly SlideProduct[],
+  crossAuthors: readonly {
+    projectId: string;
+    stages: readonly { status: SlideStageStatus }[];
+  }[],
+): SlideProduct[] {
+  if (crossAuthors.length === 0) return [...productSlides];
+  return productSlides.map((product) => {
+    const foreignWorst = crossAuthors
+      .filter((ca) => ca.projectId === product.id)
+      .flatMap((ca) => ca.stages)
+      .reduce<SlideStageStatus>(
+        (worst, stage) => worstTraffic(worst, stage.status),
+        null,
+      );
+    return { ...product, status: worstTraffic(product.status, foreignWorst) };
+  });
+}
+
 interface ProductAcc {
   projectId: string;
   projectName: string;

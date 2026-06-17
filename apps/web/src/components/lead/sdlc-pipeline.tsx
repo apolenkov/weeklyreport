@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 
+import { trafficToStageStatus } from "../../lib/mappers/traffic-light";
 import type { Product, StageAssignment, StageStatus } from "./mock-data";
 import { StageChip } from "./stage-chip";
 import { STAGE_CHIP_BOX_HEIGHT } from "./stage-chip-config";
@@ -10,16 +11,10 @@ export interface CrossAuthorEntry {
   projectId: string;
   projectName: string;
   authorId: string;
-  authorName: string;
+  authorInitials: string;
   stageNames: string[];
-  /** Per-stage status from backend StageStatus records; undefined = legacy data without status. */
-  stages?: { stageName: string; status: "green" | "yellow" | "red" | null }[];
-  itemCount: number;
-  riskCount: number;
-  /** Per-risk details when crossAuthorSections data is loaded; null = loading. */
-  risks: { severity: "blocked" | "at-risk"; text: string }[] | null;
-  /** True when the author has no items and no risks for this product. */
-  isEmpty: boolean;
+  /** Per-stage RISK-DERIVED status from the cross-author query. */
+  stages: { stageName: string; status: "green" | "yellow" | "red" | null }[];
 }
 
 interface SdlcPipelineProps {
@@ -88,22 +83,21 @@ function worstOwnStatus(stages: StageAssignment[]): StageStatus {
 }
 
 /**
- * rethink-pipeline-state-vs-completeness (2.1): a covering risk raised by ANY
+ * rethink-pipeline-state-vs-completeness (2.1): a stage status raised by ANY
  * stage owner — including another lead on a shared product — must light the
- * left edge. Foreign severity arrives via `crossAuthors[].risks`, so the
- * health hue is max(own worst stage, worst foreign risk). `null` risks mean a
- * cross-author entry is still loading and contributes nothing.
+ * left edge. Foreign status arrives RISK-DERIVED via `crossAuthors[].stages`
+ * (the server folds covering risks into the per-stage traffic light), so the
+ * health hue is max(own worst stage, worst foreign stage). An `empty`/`null`
+ * foreign stage contributes nothing.
  */
 function worstForeignSeverity(
   productId: string,
   crossAuthors: readonly CrossAuthorEntry[],
 ): StageStatus {
   const severities = crossAuthors
-    .filter((ca) => ca.projectId === productId && ca.risks !== null)
-    .flatMap((ca) => ca.risks ?? [])
-    .map<StageStatus>((r) =>
-      r.severity === "blocked" ? "blocked" : "at-risk",
-    );
+    .filter((ca) => ca.projectId === productId)
+    .flatMap((ca) => ca.stages)
+    .map<StageStatus>((s) => trafficToStageStatus(s.status));
   return worstStatusOf(severities);
 }
 
@@ -254,20 +248,6 @@ export function SdlcPipeline({
             {/* Stages row */}
             <div className="flex flex-wrap justify-center items-start gap-2 pb-1">
               {product.stages.map((stage, idx) => {
-                const crossAuthorForStage = crossAuthors.find((ca) => {
-                  if (ca.projectId !== product.id) return false;
-                  const lower = stage.stageName.toLowerCase();
-                  // Mirror the "Dev" ↔ "Development" alias from lead-form.ts:
-                  // DB stage name is "Development"; chip label is "Dev".
-                  return ca.stageNames.some((n) => {
-                    const nl = n.toLowerCase();
-                    return (
-                      nl === lower ||
-                      (lower === "dev" && nl === "development") ||
-                      (lower === "development" && nl === "dev")
-                    );
-                  });
-                });
                 return (
                   <div key={stage.stageName} className="flex items-start gap-2">
                     {idx > 0 && (
@@ -296,14 +276,6 @@ export function SdlcPipeline({
                         readOnly={readOnly}
                         onStatusChange={(name, status) =>
                           handleStatusChange(product.id, name, status)
-                        }
-                        crossAuthorInfo={
-                          crossAuthorForStage
-                            ? {
-                                itemCount: crossAuthorForStage.itemCount,
-                                riskCount: crossAuthorForStage.riskCount,
-                              }
-                            : undefined
                         }
                       />
                     </div>

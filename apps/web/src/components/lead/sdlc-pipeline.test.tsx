@@ -396,7 +396,7 @@ describe("SdlcPipeline — health and completeness are independent", () => {
 // ---- 2.1: foreign stage-owner risk lights the left edge ----
 
 describe("SdlcPipeline — left edge reflects any stage owner's risk", () => {
-  it("a cross-author blocker recolors the left edge even when own stages are on-track", () => {
+  it("a cross-author blocked stage recolors the left edge even when own stages are on-track", () => {
     const { container } = render(
       <SdlcPipeline
         products={[GREEN_HEALTH_COMPLETE]}
@@ -406,12 +406,9 @@ describe("SdlcPipeline — left edge reflects any stage owner's risk", () => {
             projectId: GREEN_HEALTH_COMPLETE.id,
             projectName: GREEN_HEALTH_COMPLETE.name,
             authorId: "a2",
-            authorName: "Other Lead",
+            authorInitials: "OL",
             stageNames: ["Testing"],
-            itemCount: 0,
-            riskCount: 1,
-            risks: [{ severity: "blocked", text: "infra down" }],
-            isEmpty: false,
+            stages: [{ stageName: "Testing", status: "red" }],
           },
         ]}
       />,
@@ -421,7 +418,7 @@ describe("SdlcPipeline — left edge reflects any stage owner's risk", () => {
     );
   });
 
-  it("does not recolor while a cross-author entry is still loading (risks=null)", () => {
+  it("a cross-author on-track stage does not recolor an on-track own edge", () => {
     const { container } = render(
       <SdlcPipeline
         products={[GREEN_HEALTH_COMPLETE]}
@@ -431,12 +428,9 @@ describe("SdlcPipeline — left edge reflects any stage owner's risk", () => {
             projectId: GREEN_HEALTH_COMPLETE.id,
             projectName: GREEN_HEALTH_COMPLETE.name,
             authorId: "a2",
-            authorName: "Other Lead",
+            authorInitials: "OL",
             stageNames: ["Testing"],
-            itemCount: 0,
-            riskCount: 1,
-            risks: null,
-            isEmpty: false,
+            stages: [{ stageName: "Testing", status: "green" }],
           },
         ]}
       />,
@@ -444,6 +438,107 @@ describe("SdlcPipeline — left edge reflects any stage owner's risk", () => {
     expect(getFirstCardStyle(container)).toContain(
       "var(--color-chip-on-track-border)",
     );
+  });
+});
+
+// ---- Task 4.3: co-lead blocked stage — initials chip, no counts ----
+//
+// A locked stage produced by applyCrossAuthorStageOverrides carries:
+//   ownership: "locked", assignee: "<initials>", status: (risk-derived)
+// It must render with the initials as the visible assignee label and
+// MUST NOT render any item/risk count text (those fields were removed from
+// the CrossAuthorRow shape entirely).
+
+describe("SdlcPipeline — 4.3 co-lead blocked locked chip: initials, no counts", () => {
+  // Product with one own stage and one locked (co-lead) stage that is blocked.
+  const PRODUCT_WITH_LOCKED_BLOCKED: Product = {
+    id: "p-colead",
+    name: "Shared Product",
+    overallStatus: "blocked",
+    stages: [
+      {
+        stageName: "Dev",
+        status: "on-track",
+        ownership: "mine",
+        assignee: "Me",
+      },
+      {
+        stageName: "Testing",
+        status: "blocked",
+        ownership: "locked",
+        assignee: "AK",
+      },
+    ],
+  };
+
+  it("co-lead blocked stage colours the product health blocked", () => {
+    // Foreign health reaches the card via the `crossAuthors` prop (the server
+    // folds covering risks into ca.stages[].status), NOT via the locked entry
+    // in product.stages — worstOwnStatus counts only ownership:"mine" stages.
+    // This mirrors the real wiring: the same crossAuthorsQ source feeds both the
+    // locked-chip override and the crossAuthors prop.
+    const { container } = render(
+      <SdlcPipeline
+        products={[PRODUCT_WITH_LOCKED_BLOCKED]}
+        readOnly={false}
+        crossAuthors={[
+          {
+            projectId: PRODUCT_WITH_LOCKED_BLOCKED.id,
+            projectName: PRODUCT_WITH_LOCKED_BLOCKED.name,
+            authorId: "a2",
+            authorInitials: "AK",
+            stageNames: ["Testing"],
+            stages: [{ stageName: "Testing", status: "red" }],
+          },
+        ]}
+      />,
+    );
+    expect(getFirstCardStyle(container)).toContain(
+      "var(--color-chip-blocked-border)",
+    );
+  });
+
+  it("locked chip label shows initials, not a full name", () => {
+    const { container } = render(
+      <SdlcPipeline
+        products={[PRODUCT_WITH_LOCKED_BLOCKED]}
+        readOnly={false}
+      />,
+    );
+    // The assignee span renders below the chip button; it must contain
+    // the initials string set by applyCrossAuthorStageOverrides.
+    const allSpans = Array.from(container.querySelectorAll("span"));
+    const assigneeSpan = allSpans.find((s) => s.textContent === "AK");
+    expect(assigneeSpan).toBeDefined();
+  });
+
+  it("locked chip does not render any item or risk count text", () => {
+    const { container } = render(
+      <SdlcPipeline
+        products={[PRODUCT_WITH_LOCKED_BLOCKED]}
+        readOnly={false}
+      />,
+    );
+    // Count patterns ("N items", "N risks") must not appear — these fields
+    // were removed from CrossAuthorRow; the chip is identity-only.
+    expect(container.textContent).not.toContain("items");
+    expect(container.textContent).not.toContain("risks");
+  });
+
+  it("locked chip is not editable (no status popover on click)", () => {
+    render(
+      <SdlcPipeline
+        products={[PRODUCT_WITH_LOCKED_BLOCKED]}
+        readOnly={false}
+      />,
+    );
+    // The Testing chip is locked; clicking it must not open a status menu.
+    const lockedBtn = document.querySelector<HTMLButtonElement>(
+      'button[aria-label="Testing: blocked"]',
+    );
+    expect(lockedBtn).toBeDefined();
+    lockedBtn?.click();
+    expect(document.querySelector('[role="menu"]')).toBeNull();
   });
 });
 

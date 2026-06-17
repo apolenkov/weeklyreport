@@ -147,7 +147,7 @@ function buildHarness(
       query: [],
     },
     {
-      path: ["leadForm", "crossAuthorSections"],
+      path: ["leadForm", "crossAuthorContent"],
       query: [],
     },
     { path: ["review", "dashboard"] },

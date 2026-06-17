@@ -34,7 +34,7 @@
 - [ ] 3.1 `stage-chip` render test: an `unassigned` chip renders muted, with no
       "Contact admin" prompt and no error framing, and stays in the pipeline.
       No current test pins the literal `— unassigned` / `Unassigned · Contact
-  admin` strings (grep-confirmed), but re-check before renaming and update any
+admin` strings (grep-confirmed), but re-check before renaming and update any
       that appear; existing `ownership: "unassigned"` data fixtures are unaffected.
 - [ ] 3.2 Regression: the `mine` and `locked` chips are unchanged by the unowned
       copy change.
@@ -59,7 +59,7 @@
       seven owned green chips and no unowned chip; Portal/Integrations show muted
       unowned chips with neutral copy and no error framing.
 - [ ] 5.2 `npx prisma generate && pnpm typecheck && pnpm lint && pnpm test &&
-  pnpm build` — all green.
+pnpm build` — all green.
 
 ## 6. Follow-up (post-merge)
 
