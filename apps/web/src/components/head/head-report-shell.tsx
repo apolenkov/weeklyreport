@@ -165,7 +165,7 @@ export function HeadReportShell({
   // avoid double-mounting on the slides surface.
   const contextControls = (
     <>
-      {mode === "form" ? <AgentReviewComingSoon /> : null}
+      {mode === "form" ? <AgentReviewComingSoon compact /> : null}
       {periods.length > 0 ? (
         <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
       ) : null}

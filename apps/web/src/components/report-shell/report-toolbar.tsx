@@ -46,11 +46,15 @@ export function ReportToolbar({
       data-testid="report-toolbar"
       className={`${REPORT_TOOLBAR_FRAME_CLASS} flex flex-col gap-1.5`}
     >
+      {/* Both rows are start-aligned: `justify-end` would push overflow past
+          the left edge where `overflow-x-auto` cannot scroll it back into
+          reach, clipping the leftmost control at narrow widths
+          (report-toolbar-layout: narrow-width reachability). */}
       {documentActions !== undefined && (
         <div
           role="group"
           aria-label="Document actions"
-          className={`${REPORT_TOOLBAR_ROW_CLASS} justify-end`}
+          className={`${REPORT_TOOLBAR_ROW_CLASS} justify-start`}
         >
           {documentActions}
         </div>

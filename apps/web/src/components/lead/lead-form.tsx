@@ -1203,7 +1203,7 @@ export function LeadForm({
             <>
               {/* Inert Agent-review placeholder leads the context group
                   (head-toolbar-semantics: compact, leading edge). */}
-              <AgentReviewComingSoon />
+              <AgentReviewComingSoon compact />
               <PeriodNavigator
                 periods={visiblePeriods}
                 showLeadSubmissionMarkers
