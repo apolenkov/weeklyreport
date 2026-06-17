@@ -120,15 +120,26 @@ _Avoid_: view (view = edit/slides mode; scope = the grouping axis).
 
 **Own contribution**:
 The records a lead authored in a period — their items, risks, decisions, and the
-stages they own. The lead's own report page shows ONLY this for record content;
-no other author's text, counts, or names appear.
+stages they own. In the default **Mine only** record visibility, the lead's own
+report page shows only this for record content.
 _Avoid_: my section (a section is the DB row; own contribution is the content a
 lead is accountable for).
 
 **Product context** (on a lead page):
 The honest overall health of a co-owned product, derived from ALL contributing
-leads' stages — shown to a co-owning lead as status colour and dimmed
-identity-only stage chips, never as another author's record content. It exists so
-a lead is not blind to a product they co-own going red on a stage they do not own.
-_Avoid_: cross-author leak (product context is health awareness, not content
-disclosure); by product (that is the head grouping axis, not a lead-page mode).
+leads' stages. In **Mine only** visibility it appears as status colour only (the
+product health hue stays honest while foreign stage chips are hidden); in
+**Everyone** visibility the co-owned product's foreign stage chips and records
+become visible. It exists so a lead is not blind to a product they co-own going
+red on a stage they do not own.
+_Avoid_: by product (that is the head grouping axis, not a lead-page mode).
+
+**Record visibility** (lead report page):
+The lead-page toggle between two states. **Mine only** (default) shows only the
+lead's own contribution and own stage chips; foreign records are not fetched and
+foreign chips are hidden, while product health colour stays honest. **Everyone**
+fetches and shows, read-only, the full records of co-owners on products the lead
+co-owns — item / risk / decision text, the owning author's name, and the foreign
+stage chips — bounded by the same access rule that governs Product context.
+_Avoid_: scope (scope = the head's by-product / by-lead grouping axis; record
+visibility is a lead-page own-vs-everyone toggle).
