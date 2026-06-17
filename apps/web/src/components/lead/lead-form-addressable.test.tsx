@@ -159,10 +159,6 @@ function buildHarness(opts: {
       path: ["leadForm", "crossAuthors"],
       query: [],
     },
-    {
-      path: ["leadForm", "crossAuthorSections"],
-      query: [],
-    },
   ]);
 
   return proxy;

@@ -2,11 +2,13 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {
+  applyForeignProductHealth,
   buildActivitySlideModel,
   buildProductScopedSlides,
   buildSectionSlideModel,
   buildUnifiedSlideModel,
   scopeSlideToProduct,
+  type SlideProduct,
   sortSlidesForReview,
 } from "./section-slide-utils";
 
@@ -857,5 +859,53 @@ describe("buildUnifiedSlideModel — cross-product rows (lead-slide-quadrants)",
     expect(shared).toEqual(
       expect.objectContaining({ productName: "Shared context" }),
     );
+  });
+});
+
+// scope-lead-report-to-own-contribution: slides keep honest, status-only
+// product health for co-owned products without rendering any foreign record.
+describe("applyForeignProductHealth", () => {
+  function makeProduct(overrides: Partial<SlideProduct> = {}): SlideProduct {
+    return {
+      id: PRODUCT_ID,
+      name: "Mobile",
+      status: "green",
+      stages: [],
+      currentItems: [],
+      nextItems: [],
+      risks: [],
+      decisions: [],
+      priorities: [],
+      ...overrides,
+    };
+  }
+
+  it("raises a green product to red when a co-lead's foreign stage is red", () => {
+    const result = applyForeignProductHealth(
+      [makeProduct({ status: "green" })],
+      [{ projectId: PRODUCT_ID, stages: [{ status: "red" }] }],
+    );
+    expect(result[0]?.status).toBe("red");
+  });
+
+  it("keeps the worse own status when foreign is milder", () => {
+    const result = applyForeignProductHealth(
+      [makeProduct({ status: "red" })],
+      [{ projectId: PRODUCT_ID, stages: [{ status: "yellow" }] }],
+    );
+    expect(result[0]?.status).toBe("red");
+  });
+
+  it("ignores foreign stages on a different product", () => {
+    const result = applyForeignProductHealth(
+      [makeProduct({ id: PRODUCT_ID, status: "green" })],
+      [{ projectId: PRODUCT_TWO_ID, stages: [{ status: "red" }] }],
+    );
+    expect(result[0]?.status).toBe("green");
+  });
+
+  it("returns products unchanged when there are no cross-authors", () => {
+    const products = [makeProduct({ status: "green" })];
+    expect(applyForeignProductHealth(products, [])).toEqual(products);
   });
 });

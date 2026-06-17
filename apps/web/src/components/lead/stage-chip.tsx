@@ -17,8 +17,6 @@ interface StageChipProps {
   readonly stage: StageAssignment;
   readonly onStatusChange?: (stageName: string, newStatus: StageStatus) => void;
   readonly readOnly?: boolean;
-  /** Cross-author stats shown in the tooltip when the stage is locked. */
-  readonly crossAuthorInfo?: { itemCount: number; riskCount: number };
   /**
    * W11 (fix-report-surface-integrity 3.9): the RAW, pre-floor status of this
    * stage. `stage.status` is the floored display status (risk floor may have
@@ -47,7 +45,6 @@ export function StageChip({
   stage,
   onStatusChange,
   readOnly = false,
-  crossAuthorInfo,
   rawStatus,
 }: StageChipProps) {
   const [showPopover, setShowPopover] = useState(false);
@@ -150,19 +147,6 @@ export function StageChip({
     setShowPopover(false);
   }
 
-  const lockSuffix =
-    isLocked && crossAuthorInfo
-      ? [
-          crossAuthorInfo.itemCount > 0
-            ? `${crossAuthorInfo.itemCount} item${crossAuthorInfo.itemCount !== 1 ? "s" : ""}`
-            : null,
-          crossAuthorInfo.riskCount > 0
-            ? `${crossAuthorInfo.riskCount} risk${crossAuthorInfo.riskCount !== 1 ? "s" : ""}`
-            : null,
-        ]
-          .filter(Boolean)
-          .join(" · ")
-      : null;
   // W11 (3.9): three-way coverage suffix carried by BOTH the screen-reader
   // label and the visible tooltip.
   //  - covered by the lead's OWN risk on an empty stage → "<status> by risk"
@@ -179,7 +163,6 @@ export function StageChip({
   const title = isLocked
     ? [
         `Locked — owned by ${stage.assignee ?? "another lead"}`,
-        lockSuffix,
         "You don't have edit permissions",
       ]
         .filter(Boolean)

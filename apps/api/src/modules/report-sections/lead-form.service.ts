@@ -2,7 +2,6 @@ import type { ReportSectionReadModel, Role } from "@customreport/shared";
 
 import { customreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import {
-  type CrossAuthorSectionRow,
   LeadFormDomainError,
   type LeadFormRepository,
 } from "./lead-form-shared";
@@ -11,10 +10,7 @@ import {
 // path so every existing importer (`./lead-form.service`) resolves unchanged.
 // The error classes have a single definition (in `lead-form-shared.ts`) so
 // `instanceof` checks in the tRPC error-mapper stay valid.
-export type {
-  CrossAuthorSectionRow,
-  LeadFormRepository,
-} from "./lead-form-shared";
+export type { LeadFormRepository } from "./lead-form-shared";
 export { LeadFormAccessError, LeadFormDomainError } from "./lead-form-shared";
 
 /**
@@ -137,29 +133,31 @@ export class LeadFormService {
   async getCrossAuthors(
     reportId: string,
     userId: string,
+    role?: Role,
   ): Promise<
     {
       projectId: string;
       projectName: string;
       authorId: string;
-      authorName: string;
+      authorInitials: string;
       stageNames: string[];
       stages: {
         stageName: string;
         status: "green" | "yellow" | "red" | null;
       }[];
-      itemCount: number;
-      riskCount: number;
     }[]
   > {
+    const isHeadLike = role === "head" || role === "admin";
+    if (!isHeadLike) {
+      const ownSection = await this.repository.getSectionForPeriod(
+        reportId,
+        userId,
+      );
+      if (!ownSection) {
+        return [];
+      }
+    }
     return this.repository.getCrossAuthors(reportId, userId);
-  }
-
-  async getCrossAuthorSections(
-    reportId: string,
-    userId: string,
-  ): Promise<CrossAuthorSectionRow[]> {
-    return this.repository.getCrossAuthorSections(reportId, userId);
   }
 
   /** SC-165: Revoke every submitted section in a report in one transaction. */

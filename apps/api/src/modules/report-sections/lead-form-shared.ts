@@ -41,59 +41,29 @@ export interface LeadFormRepository {
       projectId: string;
       projectName: string;
       authorId: string;
-      authorName: string;
+      authorInitials: string;
       stageNames: string[];
       stages: {
         stageName: string;
         status: "green" | "yellow" | "red" | null;
       }[];
-      itemCount: number;
-      riskCount: number;
     }[]
   >;
-  /** Returns full section content (items/risks/decisions) for cross-author leads
-   *  who share at least one product with the requesting user, filtered to shared products only. */
-  getCrossAuthorSections(
-    reportId: string,
-    userId: string,
-  ): Promise<CrossAuthorSectionRow[]>;
   /** SC-165: Revoke every submitted section in a report in one transaction. */
   revokeAllSubmitted(reportId: string, revokedBy: string): Promise<number>;
 }
 
-export interface CrossAuthorSectionRow {
-  authorId: string;
-  authorName: string;
-  sharedProductIds: string[];
-  items: {
-    id: string;
-    projectId: string;
-    type: string;
-    text: string;
-    tag: string;
-    workflowStatus: string;
-    carriedOver: boolean;
-    completed: boolean | null;
-    priorityRank: number | null;
-    stageNames: string[];
-  }[];
-  risks: {
-    id: string;
-    projectId: string;
-    risk: string;
-    impact: string;
-    mitigation: string;
-    severity: string;
-    stageNames: string[];
-  }[];
-  decisions: {
-    id: string;
-    productId: string;
-    text: string;
-    owner: string;
-    deadline: Date | null;
-    impact: string;
-    resolvedAt: Date | null;
-    stageNames: string[];
-  }[];
+/**
+ * Derives display initials from a user's full name, server-side, so the full
+ * name never crosses the API boundary. First letters of up to two words,
+ * uppercased (e.g. "Anna Karenina" -> "AK").
+ */
+export function initialsFromName(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0)
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join("");
 }
