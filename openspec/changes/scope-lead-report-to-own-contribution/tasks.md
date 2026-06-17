@@ -59,11 +59,15 @@
 
 ## 5. Verify + gate
 
-- [ ] 5.1 Live-verify on the `middle` seed (a shared product, e.g. Mobile with a
-      tech lead + PM): own records only, honest product colour, initials only,
-      no foreign counts/text — on form and slides.
+- [x] 5.1 Live-verify on the `middle` seed (lead-1 Vasily, co-owned products
+      with co-leads БС/ВЛ/ГМ): PASSED. crossAuthors API returns initials only,
+      no authorName/counts/foreign text. Form: foreign stages render as
+      initials-only chips; product health honest — CRM-Sales Hub reads at-risk
+      purely from the co-lead's foreign yellow stage (own stages green). Slides:
+      same — own records only, CRM-Sales Hub badge "At risk" from foreign БС, no
+      foreign full names anywhere.
 - [x] 5.2 `npx prisma generate && pnpm typecheck && pnpm lint && pnpm test &&
-    pnpm build` — all green; `pnpm --filter @customreport/api test:integration`
+  pnpm build` — all green; `pnpm --filter @customreport/api test:integration`
       green (the integration suite is excluded from `pnpm test`).
 
 ## 6. Follow-up (post-merge)
