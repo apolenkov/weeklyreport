@@ -41,8 +41,14 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
   // without the now-broken `/print` deep link (the print route 307-redirects
   // humans away). A lead instead sees the inert ComingSoon control (lead is
   // FORBIDDEN from pdfExport).
-  const viewerActions = (
+  // report-toolbar-layout: the viewer adds these to the bottom Context control
+  // row (not a top document action). The inert Agent-review placeholder leads
+  // the group (head-toolbar-semantics: compact, leading edge); the page renders
+  // its own period navigator after them. The viewer's only document action is
+  // the PDF export, which the page supplies as the default in the top row.
+  const viewerContextControls = (
     <>
+      <AgentReviewComingSoon />
       <a
         href={archiveHref}
         className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
@@ -51,7 +57,6 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         <span>Back to Archive</span>
       </a>
-      <AgentReviewComingSoon />
     </>
   );
 
@@ -65,7 +70,7 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
           <WeeklyReportPage
             reportId={reportId}
             authorId={authorId}
-            headerActions={viewerActions}
+            contextControlsLeading={viewerContextControls}
           />
         </Suspense>
       </div>

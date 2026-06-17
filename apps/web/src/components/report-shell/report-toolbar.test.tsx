@@ -4,39 +4,68 @@ import { describe, expect, it } from "vitest";
 import { ReportToolbar } from "./report-toolbar";
 
 describe("ReportToolbar", () => {
-  it("renders all slots when provided", () => {
+  it("renders document actions and context controls in two labeled rows", () => {
     render(
       <ReportToolbar
-        periodNavigator={<span>PeriodNav</span>}
-        archiveToggle={<span>Archive</span>}
-        leadingExtras={<span>LeadingExtra</span>}
-        trailingExtras={<span>TrailingExtra</span>}
+        documentActions={<button type="button">Submit Section</button>}
+        contextControls={<button type="button">Edit</button>}
       />,
     );
-    expect(screen.getByText("PeriodNav")).toBeDefined();
-    expect(screen.getByText("Archive")).toBeDefined();
-    expect(screen.getByText("LeadingExtra")).toBeDefined();
-    expect(screen.getByText("TrailingExtra")).toBeDefined();
+    const documentRow = screen.getByRole("group", { name: "Document actions" });
+    const contextRow = screen.getByRole("group", { name: "Context controls" });
+    expect(documentRow).toContainElement(
+      screen.getByRole("button", { name: "Submit Section" }),
+    );
+    expect(contextRow).toContainElement(
+      screen.getByRole("button", { name: "Edit" }),
+    );
   });
 
-  it("omits leading and trailing slots when undefined", () => {
-    const { container } = render(
+  it("places the document-action row before the context-control row (focus order)", () => {
+    render(
       <ReportToolbar
-        periodNavigator={<span>PeriodNav</span>}
-        archiveToggle={<span>Archive</span>}
+        documentActions={<span>Doc</span>}
+        contextControls={<span>Ctx</span>}
       />,
     );
-    expect(screen.getByText("PeriodNav")).toBeDefined();
-    expect(screen.getByText("Archive")).toBeDefined();
-    // No extra text nodes besides the provided slots
-    expect(container.querySelectorAll("span")).toHaveLength(2);
+    const documentRow = screen.getByRole("group", { name: "Document actions" });
+    const contextRow = screen.getByRole("group", { name: "Context controls" });
+    // The document-action row must precede the context-control row in the DOM
+    // so keyboard focus traverses it first (no manual tabindex).
+    expect(
+      documentRow.compareDocumentPosition(contextRow) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
-  it("root has flex, justify-between and rounded class signature", () => {
+  it("omits a row when its slot is undefined", () => {
+    render(<ReportToolbar contextControls={<span>Ctx</span>} />);
+    expect(
+      screen.queryByRole("group", { name: "Document actions" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("group", { name: "Context controls" }),
+    ).toBeDefined();
+  });
+
+  it("each row scrolls horizontally so controls stay reachable at narrow widths", () => {
+    render(
+      <ReportToolbar
+        documentActions={<span>Doc</span>}
+        contextControls={<span>Ctx</span>}
+      />,
+    );
+    const documentRow = screen.getByRole("group", { name: "Document actions" });
+    const contextRow = screen.getByRole("group", { name: "Context controls" });
+    expect(documentRow.className).toContain("overflow-x-auto");
+    expect(contextRow.className).toContain("overflow-x-auto");
+  });
+
+  it("root keeps the shared toolbar container signature", () => {
     const { container } = render(<ReportToolbar />);
     const root = container.firstChild as HTMLElement;
-    expect(root.className).toContain("flex");
-    expect(root.className).toContain("justify-between");
+    expect(root.getAttribute("data-testid")).toBe("report-toolbar");
     expect(root.className).toContain("rounded-");
+    expect(root.className).toContain("flex-col");
   });
 });
