@@ -186,14 +186,15 @@ unrelated `reportId` MUST return no foreign context.
   section and no access
 - **THEN** the read returns no foreign stages, counts, names, or status
 
-#### Scenario: status-only read covers products the caller does not co-own
+#### Scenario: status-only read is scoped to the caller's co-owned products
 
-- **WHEN** a lead with access to the report requests Product context for a report
-  that includes a product the lead does not co-own
-- **THEN** the read returns initials and risk-derived status for that product's
-  contributing stages — this cross-product status breadth within one reporting
-  group is intentional, the documented honest-health basis
-- **AND** the read still returns no item/risk/decision text, counts, or full names
+- **WHEN** a lead with access to the report requests Product context, and the
+  report includes a product the lead does NOT co-own
+- **THEN** the read returns foreign stages and risk-derived status ONLY for
+  products the lead co-owns (shares stage assignments on), keeping the lead
+  scoped to their own contribution
+- **AND** it returns nothing for a product the lead does not co-own
+- **AND** it still returns no item/risk/decision text, counts, or full names
 
 ### Requirement: The full-content read is gated by report access and co-ownership
 

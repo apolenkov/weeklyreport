@@ -349,6 +349,39 @@ describe("LeadFormPrismaRepository (integration)", () => {
     });
   });
 
+  describe("getCrossAuthors — task 7d.10: least-privilege co-owned scoping", () => {
+    it("excludes a product the caller does NOT co-own", async () => {
+      const { coLead } = await seedCoLead(testData.report.id);
+      // A second product the co-lead is assigned to but the CALLER is not.
+      const otherProject = await prisma.project.create({
+        data: {
+          id: "a0000000-0000-4000-a000-0000000000c2",
+          name: "Caller-not-co-owned",
+          leadId: coLead.id,
+        },
+      });
+      await prisma.stageAssignment.create({
+        data: {
+          userId: coLead.id,
+          stageId: STAGE_TESTING_ID,
+          projectId: otherProject.id,
+        },
+      });
+
+      const rows = await repo.getCrossAuthors(
+        testData.report.id,
+        testData.lead.id,
+      );
+
+      // Only the shared product is returned; the product the caller does not
+      // co-own is excluded (pins the `projectId IN myProjectIds` scoping — if a
+      // future edit broadened the read, otherProject would leak in here).
+      const projectIds = rows.map((r) => r.projectId);
+      expect(projectIds).toContain(testData.project.id);
+      expect(projectIds).not.toContain(otherProject.id);
+    });
+  });
+
   describe("getCrossAuthors — task 4.5: foreign stage status is risk-derived", () => {
     it("persisted red with no covering risk collapses to green (on-track base)", async () => {
       // Co-lead has a persisted red traffic on Testing but no covering risk.

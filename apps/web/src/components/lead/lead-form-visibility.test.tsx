@@ -21,7 +21,7 @@
  *
  *   7d.3 / 7d.9 (authz matrix)         → lead-form.contract.test.ts (service).
  *   7d.6 (persistence)                 → use-record-visibility.test.ts (hook).
- *   7d.10 (status-only breadth) + the repo-level own-author/co-owner split of
+ *   7d.10 (status-only co-owned scoping) + the repo-level own-author/co-owner split of
  *         7d.9                          → lead-form.prisma-repository.integration
  *         .test.ts + live verify (needs the _test DB — out of the DB-free gate).
  */

@@ -179,10 +179,12 @@ strictly MORE sensitive than the status read and gated harder.
   backend MAY read `user.name` internally to derive initials, but the API
   response and frontend props MUST carry initials only; the full foreign name
   never crosses this boundary. Within a report the caller has access to, the
-  status-only read INTENTIONALLY returns initials + risk-derived status for ALL
-  contributing stages, including products the caller does not co-own — this
-  cross-product status disclosure within one reporting group is the shipped
-  honest-health basis, not a defect (it carries no text, counts, or full names).
+  status-only read is SCOPED to the products the caller co-owns (shares stage
+  assignments on); it returns nothing for a product the caller does not co-own.
+  This keeps the lead scoped to their own contribution — the change's purpose —
+  and is the least-privilege honest-health basis (it carries no text, counts, or
+  full names). It drives honest health on the caller's own co-owned product
+  cards, which is the only place the frontend consumes it.
 - **Full-content read:** returned only to a caller who (a) has access to the
   report AND (b) co-owns the product whose foreign records are requested. An
   unrelated or arbitrary `reportId`, or a product the caller does not co-own,
