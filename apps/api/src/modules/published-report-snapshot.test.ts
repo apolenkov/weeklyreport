@@ -4,13 +4,20 @@ import {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { buildEscalationsFromReadSections } from "./published-report-snapshot";
+import {
+  buildEscalationsFromReadSections,
+  buildPortfolioProductsFromSnapshotSections,
+} from "./published-report-snapshot";
 
 const REPORT_ID = "659b2767-0f86-41e2-b025-49730ca010e4";
 const SECTION_ID = "2a223d8b-c4b2-473c-8a7b-15ecc52195c7";
 const AUTHOR_ID = "6f99661a-cac6-4d06-bf08-2a14cced554d";
 const OWNED_PRODUCT = "4ff69d14-ec8c-4f1c-b62b-73bee530fc7d";
 const REFERENCED_PRODUCT = "eeb16c80-2f85-48a0-b838-d8096981ddba";
+const SECOND_PRODUCT = "65064b76-3bec-428d-b2f6-7bf30476909a";
+const OWNED_STAGE_ID = "6366e7ef-e694-454f-863a-7e112ebbc48f";
+const SECOND_STAGE_ID = "71e9d6a6-7455-4864-8de9-a48b2f25b13f";
+const OWNED_STAGE_NAME = "Development";
 
 function makeSection(
   overrides: Partial<ReportSectionReadModel> = {},
@@ -134,5 +141,204 @@ describe("buildEscalationsFromReadSections", () => {
     const risk = escalations.find((e) => e.type === "unresolved_risk");
     expect(risk?.productName).toBe("Shared Platform");
     expect(risk?.productName).not.toBe("Unknown");
+  });
+});
+
+// fix-published-empty-stage-risk-floor: an OWNED stage with no submitted
+// status (raw `status: null`) covered by the section author's OWN at-risk /
+// blocked risk must floor the product status. Today
+// `buildPortfolioProductsFromSnapshotSections` reads only the raw
+// `trafficLight` (the stale green fallback) and never folds `section.risks`,
+// so these cases fail until the read-layer floor lands.
+describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => {
+  it("1.1 floors red for a covers-all blocked own risk on an empty stage", () => {
+    const products = buildPortfolioProductsFromSnapshotSections([
+      makeSection({
+        projects: [
+          {
+            projectId: OWNED_PRODUCT,
+            projectName: "CRM Portal",
+            trafficLight: "green",
+            ownedStages: [
+              {
+                stageId: OWNED_STAGE_ID,
+                stageName: OWNED_STAGE_NAME,
+                sortOrder: 0,
+                status: null,
+              },
+            ],
+          },
+        ],
+        risks: [
+          {
+            id: "0aa1b1c2-d3e4-45f6-8a90-1b2c3d4e5f60",
+            projectId: OWNED_PRODUCT,
+            risk: "Vendor outage",
+            impact: "High",
+            mitigation: "Failover",
+            severity: "blocked",
+            stageIds: [],
+          },
+        ],
+      }),
+    ]);
+
+    expect(products[0]?.worstStatus).toBe("red");
+  });
+
+  it("1.2 floors yellow for a covers-all at-risk own risk on an empty stage", () => {
+    const products = buildPortfolioProductsFromSnapshotSections([
+      makeSection({
+        projects: [
+          {
+            projectId: OWNED_PRODUCT,
+            projectName: "CRM Portal",
+            trafficLight: "green",
+            ownedStages: [
+              {
+                stageId: OWNED_STAGE_ID,
+                stageName: OWNED_STAGE_NAME,
+                sortOrder: 0,
+                status: null,
+              },
+            ],
+          },
+        ],
+        risks: [
+          {
+            id: "1bb2c2d3-e4f5-46a7-9b01-2c3d4e5f6071",
+            projectId: OWNED_PRODUCT,
+            risk: "Schedule slip",
+            impact: "Medium",
+            mitigation: "Re-plan",
+            severity: "at-risk",
+            stageIds: [],
+          },
+        ],
+      }),
+    ]);
+
+    expect(products[0]?.worstStatus).toBe("yellow");
+  });
+
+  it("1.3 floors yellow for a stage-named at-risk own risk on that empty stage", () => {
+    const products = buildPortfolioProductsFromSnapshotSections([
+      makeSection({
+        projects: [
+          {
+            projectId: OWNED_PRODUCT,
+            projectName: "CRM Portal",
+            trafficLight: "green",
+            ownedStages: [
+              {
+                stageId: OWNED_STAGE_ID,
+                stageName: OWNED_STAGE_NAME,
+                sortOrder: 0,
+                status: null,
+              },
+            ],
+          },
+        ],
+        risks: [
+          {
+            id: "2cc3d3e4-f506-4718-ac12-3d4e5f607182",
+            projectId: OWNED_PRODUCT,
+            risk: "Flaky integration",
+            impact: "Medium",
+            mitigation: "Stabilise",
+            severity: "at-risk",
+            stageIds: [OWNED_STAGE_NAME],
+          },
+        ],
+      }),
+    ]);
+
+    expect(products[0]?.worstStatus).toBe("yellow");
+  });
+
+  it("1.4 keeps red when a stage is already red and the own risk is milder", () => {
+    const products = buildPortfolioProductsFromSnapshotSections([
+      makeSection({
+        projects: [
+          {
+            projectId: OWNED_PRODUCT,
+            projectName: "CRM Portal",
+            trafficLight: "red",
+            ownedStages: [
+              {
+                stageId: OWNED_STAGE_ID,
+                stageName: OWNED_STAGE_NAME,
+                sortOrder: 0,
+                status: "red",
+              },
+            ],
+          },
+        ],
+        risks: [
+          {
+            id: "3dd4e4f5-0617-4829-bd23-4e5f60718293",
+            projectId: OWNED_PRODUCT,
+            risk: "Minor concern",
+            impact: "Low",
+            mitigation: "Monitor",
+            severity: "at-risk",
+            stageIds: [],
+          },
+        ],
+      }),
+    ]);
+
+    expect(products[0]?.worstStatus).toBe("red");
+  });
+
+  it("1.5 scopes a covers-all blocked own risk to its own product only", () => {
+    const products = buildPortfolioProductsFromSnapshotSections([
+      makeSection({
+        projects: [
+          {
+            projectId: OWNED_PRODUCT,
+            projectName: "CRM Portal",
+            trafficLight: "green",
+            ownedStages: [
+              {
+                stageId: OWNED_STAGE_ID,
+                stageName: OWNED_STAGE_NAME,
+                sortOrder: 0,
+                status: null,
+              },
+            ],
+          },
+          {
+            projectId: SECOND_PRODUCT,
+            projectName: "Billing Service",
+            trafficLight: "green",
+            ownedStages: [
+              {
+                stageId: SECOND_STAGE_ID,
+                stageName: OWNED_STAGE_NAME,
+                sortOrder: 0,
+                status: null,
+              },
+            ],
+          },
+        ],
+        risks: [
+          {
+            id: "162a4afd-e02f-4109-bbc0-2515723246bd",
+            projectId: OWNED_PRODUCT,
+            risk: "Critical defect",
+            impact: "High",
+            mitigation: "Hotfix",
+            severity: "blocked",
+            stageIds: [],
+          },
+        ],
+      }),
+    ]);
+
+    const productA = products.find((p) => p.productId === OWNED_PRODUCT);
+    const productB = products.find((p) => p.productId === SECOND_PRODUCT);
+    expect(productA?.worstStatus).toBe("red");
+    expect(productB?.worstStatus).toBe("green");
   });
 });
