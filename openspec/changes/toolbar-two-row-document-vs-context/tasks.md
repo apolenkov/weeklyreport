@@ -69,7 +69,7 @@
 ## 7. Gate
 
 - [x] 7.1 `pnpm typecheck && pnpm lint && pnpm test` green.
-- [ ] 7.2 Live-verify lead (draft/submitted/read-only), head (open/published incl.
+- [x] 7.2 Live-verify lead (draft/submitted/read-only), head (open/published incl.
       move-to-archive), viewer in the browser; confirm row split, colour
       hierarchy, accessible groups, narrow-width reachability, and that status
       indicators sit outside the rows.
