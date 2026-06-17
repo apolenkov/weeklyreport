@@ -457,4 +457,195 @@ describe("LeadFormPrismaRepository (integration)", () => {
       expect(expectDefined(testingStage).status).toBeNull();
     });
   });
+
+  // -----------------------------------------------------------------------
+  // getCrossAuthorContent — task 7d.9 / 7d.10: the FULL-content co-ownership
+  // filter (the most sensitive read: foreign item/risk/decision text + author
+  // full name). The service-layer gates (report access AND co-ownership) are
+  // pinned in lead-form.contract.test.ts against a MOCKED repository; those
+  // cannot catch a regression that drops a WHERE clause from the real query.
+  // These cases exercise the live query so that removing any one of the four
+  // load-bearing clauses turns a test red:
+  //   - `userId: { not: userId }`        → self-exclusion (own content absent)
+  //   - `projectId: { in: myProjectIds }`+ per-row `sharedIds.has(...)`
+  //                                       → co-ownership scope (non-shared out)
+  //   - `project: { archived: false }`   → archived shared product denies
+  //   - caller has no assignments        → coOwnsShared:false, []
+  // DB-coupled, so excluded from the DB-free `pnpm test`; runs under
+  // `pnpm --filter @customreport/api test:integration` when Postgres is up.
+  describe("getCrossAuthorContent — task 7d.9/7d.10: full-content co-ownership filter", () => {
+    /** Second, NON-shared project the caller is never assigned to. */
+    const OTHER_PROJECT_ID = "a0000000-0000-4000-a000-000000000200";
+
+    /** Seed item/risk/decision rows on a section for a given project. */
+    async function seedContent(
+      reportSectionId: string,
+      projectId: string,
+      marker: string,
+    ) {
+      await prisma.item.create({
+        data: {
+          reportSectionId,
+          projectId,
+          type: "current",
+          text: `Item-${marker}`,
+          tag: "feature",
+          workflowStatus: "in_progress",
+          stageNames: ["Testing"],
+        },
+      });
+      await prisma.risk.create({
+        data: {
+          reportSectionId,
+          projectId,
+          risk: `Risk-${marker}`,
+          impact: "Impact",
+          mitigation: "Mitigation",
+          severity: "at-risk",
+          stageNames: ["Testing"],
+        },
+      });
+      await prisma.decision.create({
+        data: {
+          reportSectionId,
+          productId: projectId,
+          text: `Decision-${marker}`,
+          owner: "Owner",
+          impact: "Impact",
+          stageNames: ["Testing"],
+        },
+      });
+    }
+
+    it("allows: co-owner's full records on a shared product return with text + full name", async () => {
+      const { coLead, coSection } = await seedCoLead(testData.report.id);
+      await seedContent(coSection.id, testData.project.id, "shared");
+
+      const { coOwnsShared, rows } = await repo.getCrossAuthorContent(
+        testData.report.id,
+        testData.lead.id,
+      );
+
+      expect(coOwnsShared).toBe(true);
+      expect(rows).toHaveLength(1);
+      const row = expectDefined(rows[0]);
+      // Full name is intentionally exposed on this two-tier authorized read.
+      expect(row.authorId).toBe(coLead.id);
+      expect(row.authorName).toBe("Anna Karenina");
+      expect(row.sharedProductIds).toContain(testData.project.id);
+      // Full foreign text crosses the boundary for an authorized co-owner.
+      expect(row.items.map((i) => i.text)).toContain("Item-shared");
+      expect(row.risks.map((r) => r.risk)).toContain("Risk-shared");
+      expect(row.decisions.map((d) => d.text)).toContain("Decision-shared");
+    });
+
+    it("self-exclusion: the caller's OWN content never appears in any returned row", async () => {
+      // Seed the caller's own content on the shared product, plus a co-lead so
+      // coOwnsShared holds. If `userId: { not: userId }` were dropped, the
+      // caller's own section would join in and leak back to them.
+      const { coSection } = await seedCoLead(testData.report.id);
+      await seedContent(coSection.id, testData.project.id, "shared");
+      await seedContent(testData.section.id, testData.project.id, "self");
+
+      const { rows } = await repo.getCrossAuthorContent(
+        testData.report.id,
+        testData.lead.id,
+      );
+
+      expect(rows.map((r) => r.authorId)).not.toContain(testData.lead.id);
+      const allItemText = rows.flatMap((r) => r.items.map((i) => i.text));
+      const allRiskText = rows.flatMap((r) => r.risks.map((r2) => r2.risk));
+      const allDecisionText = rows.flatMap((r) =>
+        r.decisions.map((d) => d.text),
+      );
+      expect(allItemText).not.toContain("Item-self");
+      expect(allRiskText).not.toContain("Risk-self");
+      expect(allDecisionText).not.toContain("Decision-self");
+    });
+
+    it("co-ownership scope: a co-owner's content on a NON-shared product is filtered out", async () => {
+      // The co-lead authors content on BOTH the shared product and a separate
+      // product the CALLER is not assigned to but the co-lead IS. Only the
+      // shared product's records may cross. The co-lead's assignment on the
+      // unshared product is what makes `projectId: { in: myProjectIds }`
+      // load-bearing here: dropping that clause pulls the unshared product into
+      // the co-lead's `sharedProjectIds`, and the per-row `sharedIds.has(...)`
+      // filter then leaks its records.
+      const OTHER_STAGE_ID = "b0000000-0000-4000-b000-000000000009";
+      const { coLead, coSection } = await seedCoLead(testData.report.id);
+      await prisma.project.create({
+        data: {
+          id: OTHER_PROJECT_ID,
+          name: "Unshared Project",
+          leadId: testData.lead.id,
+        },
+      });
+      // Co-lead is assigned to the unshared product; the caller is NOT. Without
+      // the `projectId: { in: myProjectIds }` clause this assignment would enter
+      // the co-lead's shared set and leak the unshared records.
+      await prisma.stage.create({
+        data: { id: OTHER_STAGE_ID, name: "Design", sortOrder: 1 },
+      });
+      await prisma.stageAssignment.create({
+        data: {
+          userId: coLead.id,
+          stageId: OTHER_STAGE_ID,
+          projectId: OTHER_PROJECT_ID,
+        },
+      });
+      await seedContent(coSection.id, testData.project.id, "shared");
+      await seedContent(coSection.id, OTHER_PROJECT_ID, "unshared");
+
+      const { rows } = await repo.getCrossAuthorContent(
+        testData.report.id,
+        testData.lead.id,
+      );
+
+      const row = expectDefined(rows[0]);
+      expect(row.sharedProductIds).toEqual([testData.project.id]);
+      const allItemText = rows.flatMap((r) => r.items.map((i) => i.text));
+      const allRiskText = rows.flatMap((r) => r.risks.map((r2) => r2.risk));
+      const allDecisionText = rows.flatMap((r) =>
+        r.decisions.map((d) => d.text),
+      );
+      expect(allItemText).toContain("Item-shared");
+      expect(allItemText).not.toContain("Item-unshared");
+      expect(allRiskText).not.toContain("Risk-unshared");
+      expect(allDecisionText).not.toContain("Decision-unshared");
+    });
+
+    it("archived guard: an archived shared product denies the read (coOwnsShared:false, [])", async () => {
+      // The only shared product is archived. The `project: { archived: false }`
+      // clause must drop it from the co-ownership scope, so the caller co-owns
+      // nothing shared and the read is denied. Dropping the clause would expose
+      // the archived product's foreign content.
+      const { coSection } = await seedCoLead(testData.report.id);
+      await seedContent(coSection.id, testData.project.id, "shared");
+      await prisma.project.update({
+        where: { id: testData.project.id },
+        data: { archived: true },
+      });
+
+      const { coOwnsShared, rows } = await repo.getCrossAuthorContent(
+        testData.report.id,
+        testData.lead.id,
+      );
+
+      expect(coOwnsShared).toBe(false);
+      expect(rows).toEqual([]);
+    });
+
+    it("no assignments: a caller with no stage assignments co-owns nothing ([], coOwnsShared:false)", async () => {
+      // testData.lead has no stageAssignment rows (cleanDatabase ran), and no
+      // seedCoLead call added any. The early `myProjectIds.length === 0` guard
+      // returns denied without touching foreign sections.
+      const { coOwnsShared, rows } = await repo.getCrossAuthorContent(
+        testData.report.id,
+        testData.lead.id,
+      );
+
+      expect(coOwnsShared).toBe(false);
+      expect(rows).toEqual([]);
+    });
+  });
 });

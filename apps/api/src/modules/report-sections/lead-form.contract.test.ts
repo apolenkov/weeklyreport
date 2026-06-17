@@ -308,6 +308,42 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.getCrossAuthorContent).not.toHaveBeenCalled();
   });
+
+  // task 7d.9 — positive authz matrix (service layer). The service gate is
+  // (a) report access AND (b) co-ownership, with NO role bypass. The five 7d.9
+  // rows collapse onto these two gates at this layer:
+  //   - own author (allowed)            ─┐ both pass both gates → result=allowed,
+  //   - same-product co-owner (allowed) ─┘ proven by the "allows" test above.
+  //   - report member NOT co-owning     → coOwnsShared:false → denied (above).
+  //   - unrelated report                → no own section     → denied (above).
+  //   - head/admin NOT co-owning        → no role bypass      → denied (above).
+  // The "own author vs same-product co-owner" SPLIT is a repository concern (it
+  // decides which rows `getCrossAuthorContent` returns + sets `coOwnsShared`),
+  // exercised in the integration suite + live verify — the service treats both
+  // as "passed both gates". This test pins that a passing caller threads the
+  // repository rows straight through unfiltered (no role-dependent narrowing).
+  it("threads the repository rows through unchanged once both gates pass (no role narrowing)", async () => {
+    const repo = createMockRepository({
+      getSectionForPeriod: vi
+        .fn()
+        .mockResolvedValue(structuredClone(draftSection)),
+      getCrossAuthorContent: vi
+        .fn()
+        .mockResolvedValue({ coOwnsShared: true, rows: [contentRow] }),
+    });
+    const service = new LeadFormService(repo);
+
+    const rows = await service.getCrossAuthorContent(REPORT_ID, AUTHOR_ID);
+
+    // No role argument exists on the signature, so the result cannot vary by
+    // role — the same rows return for any caller that clears both gates.
+    expect(rows).toEqual([contentRow]);
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.getCrossAuthorContent).toHaveBeenCalledWith(
+      REPORT_ID,
+      AUTHOR_ID,
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
