@@ -70,7 +70,7 @@ Unowned (unassigned) stages are out of scope here.
       card and the top-line totals agree inside the same snapshot and PDF.
 - [x] 3.4 Add regressions for both covers-all shapes: - `buildAssembledReportFromPrismaRow` with an owned stage with `status: null`
       covered by a covers-all own **blocked** risk: `portfolioOverview.status ===
-  "red"` and the product counted red, not green. - Same setup with a covers-all own **at-risk** risk: product counted yellow.
+"red"` and the product counted red, not green. - Same setup with a covers-all own **at-risk** risk: product counted yellow.
       Assert the same for the PDF `toAssembledReport` path in both cases.
 - [x] 3.5 Escalations — `buildEscalationsFromReadSections` emits an `at_risk`
       escalation per red `trafficLight`. Pin the expected escalations on the bug
