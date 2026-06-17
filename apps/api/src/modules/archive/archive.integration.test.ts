@@ -125,6 +125,23 @@ describe("ArchivePrismaRepository (integration)", () => {
       },
     });
 
+    // The archive summary now derives from the assignment-scoped read model
+    // (same as the detail / live total), so the product must be OWNED to be
+    // counted — a bare ProjectStatus with no stage assignment is excluded.
+    const stage = await prisma.stage.create({
+      data: {
+        id: "a0000000-0000-4000-a000-000000000aa4",
+        name: "Development",
+        sortOrder: 3,
+      },
+    });
+    await prisma.stageAssignment.create({
+      data: {
+        userId: testData.lead.id,
+        projectId: testData.project.id,
+        stageId: stage.id,
+      },
+    });
     await prisma.projectStatus.create({
       data: {
         reportSectionId: testData.section.id,
@@ -159,6 +176,64 @@ describe("ArchivePrismaRepository (integration)", () => {
         expectDefined(expectDefined(detail).report.sections[0]).items[0],
       ).text,
     ).toBe("Archive item");
+  });
+
+  it("W6: archive summary floors a no-snapshot report by an own covering risk", async () => {
+    // Published + archived WITHOUT a stored snapshot (seed / legacy shape), so
+    // the summary takes the read-model fallback. The lead owns a stage with NO
+    // submitted status; a stale green ProjectStatus would read green — but the
+    // lead's own covers-all blocked risk must floor the archive total to red,
+    // and the summary must agree with the detail.
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        status: "published",
+        publishedAt: new Date("2026-04-12T10:00:00.000Z"),
+        publishedById: testData.head.id,
+        archived: true,
+      },
+    });
+    const stage = await prisma.stage.create({
+      data: {
+        id: "a0000000-0000-4000-a000-000000000aa5",
+        name: "Development",
+        sortOrder: 3,
+      },
+    });
+    await prisma.stageAssignment.create({
+      data: {
+        userId: testData.lead.id,
+        projectId: testData.project.id,
+        stageId: stage.id,
+      },
+    });
+    // Stale green ProjectStatus, NO StageStatus (owned stage left empty).
+    await prisma.projectStatus.create({
+      data: {
+        reportSectionId: testData.section.id,
+        projectId: testData.project.id,
+        status: "green",
+      },
+    });
+    await prisma.risk.create({
+      data: {
+        reportSectionId: testData.section.id,
+        projectId: testData.project.id,
+        risk: "Own covering risk",
+        impact: "High",
+        mitigation: "Mitigate",
+        severity: "blocked",
+        stageNames: [], // covers-all
+      },
+    });
+
+    const detail = await repo.getArchiveReport(testData.report.id);
+
+    expect(detail).not.toBeNull();
+    // Floored to red by the own covering risk, not the stale green ProjectStatus.
+    expect(expectDefined(detail).summary.portfolioStatus).toBe("red");
+    // Summary and detail agree (same floored, assignment-scoped read model).
+    expect(expectDefined(detail).report.portfolioOverview.status).toBe("red");
   });
 
   it("D-6: archive detail reads the publish-time snapshot after draft edits", async () => {

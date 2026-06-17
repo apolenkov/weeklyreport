@@ -177,3 +177,143 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
     expect(risk?.stageName).toBeNull();
   });
 });
+
+// fix-published-empty-stage-risk-floor: the LIVE (not-yet-published)
+// head/weekly portfolioOverview must floor each product card by the section
+// author's own covering risks, the SAME way leadSections/escalations are
+// floored. Before the fix this card path read raw `projectStatuses`, so the
+// bug case (owned stage status:null + own covers-all blocked risk) shipped a
+// green card alongside a red leadSection — a self-contradicting payload. This
+// drives the actual repository wiring (getWeeklyReport), so a wrong-builder
+// regression surfaces here, not just in a pure-function builder test.
+describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", () => {
+  const REPORT_ID = "a1111111-1111-4111-8111-111111111111";
+  const SECTION_ID = "a2222222-2222-4222-8222-222222222222";
+  const AUTHOR_ID = "a3333333-3333-4333-8333-333333333333";
+  const OWNED_PRODUCT = "a4444444-4444-4444-8444-444444444444";
+  const UNTOUCHED_PRODUCT = "a5555555-5555-4555-8555-555555555555";
+  const STAGE_DEV = "a6666666-6666-4666-8666-666666666666";
+
+  function makeReportRow() {
+    return {
+      id: REPORT_ID,
+      periodStart: new Date("2026-04-14"),
+      periodEnd: new Date("2026-04-18"),
+      deadline: new Date("2026-04-17T15:00:00.000Z"),
+      periodStatus: "open",
+      weekLabel: "W16-2026",
+      publishedSnapshot: null,
+      sections: [
+        {
+          id: SECTION_ID,
+          reportId: REPORT_ID,
+          authorId: AUTHOR_ID,
+          status: "submitted",
+          submittedAt: null,
+          late: false,
+          author: {
+            id: AUTHOR_ID,
+            name: "Alice Lead",
+            role: "lead",
+            stageAssignments: [
+              {
+                userId: AUTHOR_ID,
+                stageId: STAGE_DEV,
+                projectId: OWNED_PRODUCT,
+                project: {
+                  id: OWNED_PRODUCT,
+                  name: "CRM Portal",
+                  archived: false,
+                },
+                stage: { id: STAGE_DEV, name: "Development", sortOrder: 0 },
+              },
+            ],
+          },
+          // Owned stage carries NO submitted stage status, but a STALE green
+          // ProjectStatus persists (the raw trafficLight the old card read).
+          // This is the finding's exact case: the old builder emitted that
+          // stale green while leadSections were floored red.
+          projectStatuses: [
+            {
+              projectId: OWNED_PRODUCT,
+              status: "green",
+              project: {
+                id: OWNED_PRODUCT,
+                name: "CRM Portal",
+                archived: false,
+              },
+            },
+          ],
+          stageStatuses: [],
+          items: [],
+          // ...but the author's own covers-all (empty stageNames) BLOCKED risk
+          // floors the product to red.
+          risks: [
+            {
+              id: "a7777777-7777-4777-8777-777777777777",
+              projectId: OWNED_PRODUCT,
+              risk: "Vendor outage",
+              impact: "High",
+              mitigation: "Escalate",
+              severity: "blocked",
+              stageNames: [],
+              project: { name: "CRM Portal" },
+            },
+          ],
+          decisions: [],
+        },
+      ],
+    };
+  }
+
+  function createRepository() {
+    const prisma = {
+      report: {
+        findUnique: vi.fn().mockResolvedValue(makeReportRow()),
+      },
+      user: { findMany: vi.fn().mockResolvedValue([{ id: AUTHOR_ID }]) },
+      project: {
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: OWNED_PRODUCT,
+            name: "CRM Portal",
+            stageAssignments: [{ id: STAGE_DEV }],
+            lead: { reportingGroupId: null },
+          },
+          // A group-owned product no lead has touched: must still get a card
+          // (null status), pinning the membership the snapshot builder would
+          // otherwise drop.
+          {
+            id: UNTOUCHED_PRODUCT,
+            name: "Legacy Tool",
+            stageAssignments: [],
+            lead: { reportingGroupId: null },
+          },
+        ]),
+      },
+      reminderPolicy: { count: vi.fn().mockResolvedValue(0) },
+    } as unknown as PrismaService;
+
+    return new WeeklyReportPrismaRepository(prisma);
+  }
+
+  it("floors the owned product card red and keeps the untouched product card null", async () => {
+    const repository = createRepository();
+    const result = await repository.getWeeklyReport(REPORT_ID);
+
+    const cards = result?.readModel.portfolioOverview ?? [];
+    const owned = cards.find((c) => c.productId === OWNED_PRODUCT);
+    const untouched = cards.find((c) => c.productId === UNTOUCHED_PRODUCT);
+
+    // The card agrees with the floored leadSection in the SAME payload.
+    expect(owned?.worstStatus).toBe("red");
+    const leadProduct = result?.readModel.leadSections[0]?.projects.find(
+      (p) => p.projectId === OWNED_PRODUCT,
+    );
+    expect(leadProduct?.trafficLight).toBe("red");
+
+    // Membership: a group-owned product no lead touched still gets a card.
+    expect(untouched).toBeDefined();
+    expect(untouched?.worstStatus).toBeNull();
+  });
+});

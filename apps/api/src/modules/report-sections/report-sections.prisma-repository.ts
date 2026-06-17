@@ -139,6 +139,108 @@ function aggregateStageTraffic(
         : null;
 }
 
+type TrafficLight = "green" | "yellow" | "red";
+
+const TRAFFIC_SEVERITY: Record<TrafficLight, number> = {
+  green: 0,
+  yellow: 1,
+  red: 2,
+};
+
+/**
+ * fix-published-empty-stage-risk-floor (D5 option a): the API restatement of
+ * the `riskCoversStage` covers-all rule. The web helper
+ * (`apps/web/src/components/lead/stage-tags.ts`) lives behind the app boundary
+ * and carries a `"use client"` React import, so it cannot be imported here.
+ *
+ * `stageIds` is a misnomer — it holds stage NAMES, not UUIDs. An empty/absent
+ * array means "covers every stage the author owns on this product"; a populated
+ * array covers only the named stages.
+ */
+function riskCoversStageName(
+  risk: { stageIds?: readonly string[] },
+  stageName: string,
+): boolean {
+  if (!risk.stageIds || risk.stageIds.length === 0) return true;
+  return risk.stageIds.includes(stageName);
+}
+
+function severityToTraffic(severity: string | undefined): TrafficLight | null {
+  if (severity === "blocked") return "red";
+  if (severity === "at-risk") return "yellow";
+  return null;
+}
+
+function asTraffic(status: string | null | undefined): TrafficLight | null {
+  return status === "green" || status === "yellow" || status === "red"
+    ? status
+    : null;
+}
+
+function worseTraffic(
+  a: TrafficLight | null,
+  b: TrafficLight | null,
+): TrafficLight | null {
+  if (a === null) return b;
+  if (b === null) return a;
+  return TRAFFIC_SEVERITY[a] >= TRAFFIC_SEVERITY[b] ? a : b;
+}
+
+/**
+ * fix-published-empty-stage-risk-floor: derives the risk-aware effective
+ * product status at the READ layer. For each owned stage, the effective status
+ * is the worse of the raw stage status and the highest-severity own risk that
+ * covers it. The product status is the worst across owned stages, floored
+ * against the raw `trafficLight` so the floor never lowers (a real red
+ * ProjectStatus survives a milder risk) and double-application stays
+ * idempotent.
+ *
+ * CRITICAL: risks MUST be scoped to the product (`risk.projectId === projectId`)
+ * BEFORE the per-stage match. `riskCoversStageName` matches stage NAME only and
+ * the 7 SDLC stage names are shared across every product, so an unscoped fold
+ * would floor the wrong product (and a covers-all risk every product). This
+ * mirrors the `buildStageGrid` call site, which pre-filters by `projectId`.
+ *
+ * Per D4 this is aggregation-only: it never writes back to the raw persisted
+ * `StageStatus.status` nor to the read-model per-stage `status` field. A product
+ * with no owned stages contributes nothing to floor (covers-all means "all
+ * stages the author owns on THIS product"), so the raw `trafficLight` passes
+ * through unchanged.
+ */
+export function deriveEffectiveProductStatus(project: {
+  projectId: string;
+  trafficLight: TrafficLight | null;
+  ownedStages?: readonly {
+    stageName: string;
+    status?: string | null;
+  }[];
+  risks?: readonly {
+    projectId: string;
+    severity?: string;
+    stageIds?: readonly string[];
+  }[];
+}): TrafficLight | null {
+  const scopedRisks = (project.risks ?? []).filter(
+    (risk) => risk.projectId === project.projectId,
+  );
+
+  let effective = project.trafficLight;
+  for (const stage of project.ownedStages ?? []) {
+    const coveringSeverity = scopedRisks
+      .filter((risk) => riskCoversStageName(risk, stage.stageName))
+      .reduce<TrafficLight | null>(
+        (acc, risk) => worseTraffic(acc, severityToTraffic(risk.severity)),
+        null,
+      );
+    const stageEffective = worseTraffic(
+      asTraffic(stage.status),
+      coveringSeverity,
+    );
+    effective = worseTraffic(effective, stageEffective);
+  }
+  return effective;
+}
+
 /**
  * Maps a Prisma ReportSection with all relations to the domain ReportSectionReadModel.
  * Field names are mapped from Prisma conventions to Zod schema conventions (REPO-09).
@@ -229,13 +331,29 @@ export function mapPrismaToReportSection(
           }))
           .sort((a, b) => a.sortOrder - b.sortOrder);
 
+        const rawTrafficLight =
+          aggregateStageTraffic(ownedStages) ??
+          projectStatusByProjectId.get(project.id) ??
+          null;
+
         return {
           projectId: project.id,
           projectName: project.name,
-          trafficLight:
-            aggregateStageTraffic(ownedStages) ??
-            projectStatusByProjectId.get(project.id) ??
-            null,
+          // fix-published-empty-stage-risk-floor: floor the product status by
+          // the author's own covering risks (scoped to this product) so an
+          // owned stage with no submitted status covered by a blocked/at-risk
+          // risk reads red/yellow. Raw `ownedStages[].status` is left untouched
+          // (D4); only this derived product-level status is floored.
+          trafficLight: deriveEffectiveProductStatus({
+            projectId: project.id,
+            trafficLight: asTraffic(rawTrafficLight),
+            ownedStages,
+            risks: row.risks.map((r) => ({
+              projectId: r.projectId,
+              severity: r.severity === "blocked" ? "blocked" : "at-risk",
+              stageIds: r.stageNames.length > 0 ? r.stageNames : undefined,
+            })),
+          }),
           ownedStages,
         };
       })
