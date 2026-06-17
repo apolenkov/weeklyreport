@@ -1,7 +1,11 @@
 import type { ReportSectionReadModel, Role } from "@customreport/shared";
 
-import { customreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import {
+  customreportCrossAuthorContentReadsTotal,
+  customreportReopenRequestsTotal,
+} from "../../infrastructure/metrics/metrics.registry.js";
+import {
+  type CrossAuthorSectionRow,
   LeadFormDomainError,
   type LeadFormRepository,
 } from "./lead-form-shared";
@@ -10,7 +14,10 @@ import {
 // path so every existing importer (`./lead-form.service`) resolves unchanged.
 // The error classes have a single definition (in `lead-form-shared.ts`) so
 // `instanceof` checks in the tRPC error-mapper stay valid.
-export type { LeadFormRepository } from "./lead-form-shared";
+export type {
+  CrossAuthorSectionRow,
+  LeadFormRepository,
+} from "./lead-form-shared";
 export { LeadFormAccessError, LeadFormDomainError } from "./lead-form-shared";
 
 /**
@@ -158,6 +165,53 @@ export class LeadFormService {
       }
     }
     return this.repository.getCrossAuthors(reportId, userId);
+  }
+
+  /**
+   * Full-content cross-author read for the lead form's "Everyone" visibility
+   * lens. Strictly more sensitive than the status-only `getCrossAuthors`, so
+   * gated harder (design D6): the caller must (a) have access to the report —
+   * own a section in it — AND (b) co-own the product whose foreign records are
+   * requested. There is NO head/admin bypass: a head or admin who does not
+   * co-own the product is denied, exactly like any other non-co-owner. The
+   * gate never keys off the lead-form toggle (the toggle only decides whether
+   * the request is issued, never whether it is authorized).
+   *
+   * The response payload is empty in BOTH the denied and the legitimately
+   * empty case (no leak). Only the observability counter distinguishes them
+   * (D6b): `denied` = no report access OR no co-ownership; `empty` = co-owns a
+   * shared product but the co-owner authored no records; `allowed` = foreign
+   * records returned.
+   */
+  async getCrossAuthorContent(
+    reportId: string,
+    userId: string,
+  ): Promise<CrossAuthorSectionRow[]> {
+    // (a) Report access — own a section in this report. No role bypass.
+    const ownSection = await this.repository.getSectionForPeriod(
+      reportId,
+      userId,
+    );
+    if (!ownSection) {
+      customreportCrossAuthorContentReadsTotal.inc({ result: "denied" });
+      return [];
+    }
+
+    // (b) Co-ownership + content. The repository returns `coOwnsShared`
+    // separately from row-emptiness so denied and empty stay distinguishable.
+    const { coOwnsShared, rows } = await this.repository.getCrossAuthorContent(
+      reportId,
+      userId,
+    );
+    if (!coOwnsShared) {
+      customreportCrossAuthorContentReadsTotal.inc({ result: "denied" });
+      return [];
+    }
+
+    customreportCrossAuthorContentReadsTotal.inc({
+      result: rows.length > 0 ? "allowed" : "empty",
+    });
+    return rows;
   }
 
   /** SC-165: Revoke every submitted section in a report in one transaction. */

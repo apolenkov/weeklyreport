@@ -2074,6 +2074,23 @@ export function createAppRouter(deps: RouterDeps) {
             throw mapDomainError(error);
           }
         }),
+
+      // scope-lead-report-to-own-contribution (7a/7b) — the lead form's
+      // "Everyone" visibility lens. Full foreign content, gated by report
+      // access AND product co-ownership for ALL callers (no head/admin
+      // bypass — see design D6); the role is intentionally NOT passed.
+      crossAuthorContent: protectedProcedure
+        .input(z.object({ reportId: z.uuid() }))
+        .query(async ({ input, ctx }) => {
+          try {
+            return await deps.leadFormService.getCrossAuthorContent(
+              input.reportId,
+              ctx.session.userId,
+            );
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
     }),
 
     // === Analytics namespace (Phase 30-01..02) ===

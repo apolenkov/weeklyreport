@@ -81,37 +81,42 @@ pnpm build` — all green; `pnpm --filter @customreport/api test:integration`
 
 ### 7a. Shared / API contract (do first)
 
-- [ ] 7a.1 Re-introduce the gated full-content read shape in shared types
-      (`CrossAuthorSection` / `ForeignKanbanItem` / `ForeignRiskEntry` /
-      `ForeignDecisionEntry` or equivalents): item / risk / decision text, the
-      owning author's full name, and foreign stage chips. Keep it distinct from
-      the status-only `CrossAuthorEntry` (which stays initials + status only).
-- [ ] 7a.2 Add `getCrossAuthorContent` to `lead-form.prisma-repository.ts`: full
+- [x] 7a.1 Re-introduce the gated full-content read shape in shared types
+      (`CrossAuthorSectionRow` in `lead-form-shared.ts`, revived from the
+      pre-cut shape + a risk-derived per-product `stages[]`): item / risk /
+      decision text, the owning author's full name, and foreign stage chips.
+      Distinct from the status-only cross-author row (initials + status only).
+- [x] 7a.2 Add `getCrossAuthorContent` to `lead-form.prisma-repository.ts`: full
       foreign content for products the caller co-owns on the given report. Leave
       `getCrossAuthors` (status-only) unchanged — it is still fetched in both
-      states.
-- [ ] 7a.3 Add a `leadForm.crossAuthorContent` tRPC `protectedProcedure` taking
+      states. Returns `{ coOwnsShared, rows }` so denied (co-owns nothing) and
+      empty (co-owns but no records) stay distinguishable for the metric.
+- [x] 7a.3 Add a `leadForm.crossAuthorContent` tRPC `protectedProcedure` taking
       `{ reportId }`, returning the full-content shape. Consumer: the lead form's
-      Everyone state only (NOT slides).
+      Everyone state only (NOT slides). Role is NOT passed (no head/admin bypass).
 
 ### 7b. Backend — authorization (two-tier)
 
-- [ ] 7b.1 Gate `getCrossAuthorContent` harder than the status read: caller must
-      have access to the report AND co-own the product; an unrelated/arbitrary
-      `reportId`, or a non-co-owned product, returns `[]`. Apply this gate to ALL
-      callers with NO head/admin bypass — a head/admin who does not co-own the
-      product is denied like any other non-co-owner (see D6); the server authz
-      MUST NOT key off the lead-form toggle. Derive foreign stage status from
-      risks (canonical rule), reuse the status read's logic.
-- [ ] 7b.2 Confirm the status-only read's gate is unchanged and both reads keep
-      the archived-product exclusion.
-- [ ] 7b.3 Emit a metric distinguishing the denied path from the empty-result
-      path on the full-content read (a denied read returns empty, so denied is
-      otherwise indistinguishable from legitimately empty). Add the Prometheus
-      counter `customreport_cross_author_content_reads_total` with a `result`
-      label (`allowed` / `denied` / `empty`) to the metrics registry; the
-      response payload stays empty in both denied and empty cases (no leak). See
-      design D6b.
+- [x] 7b.1 Gate `getCrossAuthorContent` harder than the status read: caller must
+      have access to the report (own a section in it) AND co-own the product;
+      an unrelated/arbitrary `reportId`, or a non-co-owned product, returns `[]`.
+      Applied to ALL callers with NO head/admin bypass — the service signature
+      carries no role, so a head/admin who does not co-own the product is denied
+      like any other non-co-owner (see D6); the server authz does NOT key off the
+      lead-form toggle. Foreign stage status is risk-derived via the existing
+      `deriveForeignStageStatus` (canonical rule), reused from the status read.
+- [x] 7b.2 Status-only read's gate (`getCrossAuthors`) unchanged; both reads keep
+      the archived-product exclusion (`project: { archived: false }`).
+- [x] 7b.3 Metric `customreport_cross_author_content_reads_total` with a `result`
+      label (`allowed` / `denied` / `empty`) added to the registry and emitted in
+      `LeadFormService.getCrossAuthorContent`. `denied` = no report access OR no
+      co-ownership; `empty` = co-owns but no foreign records; `allowed` = rows
+      returned. Payload stays `[]` in both denied and empty (no leak). See D6b.
+      NOTE (spec reconcile): D6b's parenthetical lumps "co-owns nothing" into
+      empty, but D6 makes co-ownership authz clause (b) and 7d.9 lists the
+      no-co-ownership case as a separate DENIED row. Failing an authz gate is a
+      denial, so co-ownership failure is labelled `denied`, not `empty`; `empty`
+      is reserved for "passed both gates but the co-owner authored no records".
 
 ### 7c. Frontend — toggle + conditional fetch + chip hide
 
@@ -188,7 +193,7 @@ pnpm build` — all green; `pnpm --filter @customreport/api test:integration`
       health; Everyone shows co-owners' full records + names + foreign chips;
       slides unaffected.
 - [ ] 7e.2 `npx prisma generate && pnpm typecheck && pnpm lint && pnpm test &&
-    pnpm build` + `pnpm --filter @customreport/api test:integration` all green.
+  pnpm build` + `pnpm --filter @customreport/api test:integration` all green.
 
 ## 8. Follow-up (post-merge)
 

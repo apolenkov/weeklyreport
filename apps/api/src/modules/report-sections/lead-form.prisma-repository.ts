@@ -2,7 +2,10 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import type { LeadFormRepository } from "./lead-form.service";
+import type {
+  CrossAuthorSectionRow,
+  LeadFormRepository,
+} from "./lead-form.service";
 import { initialsFromName } from "./lead-form-shared";
 import {
   mapPrismaToReportSection,
@@ -362,6 +365,169 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       stageNames: [...g.stageNames],
       stages: g.stageEntries,
     }));
+  }
+
+  async getCrossAuthorContent(
+    reportId: string,
+    userId: string,
+  ): Promise<{ coOwnsShared: boolean; rows: CrossAuthorSectionRow[] }> {
+    // Step 1: resolve the caller's assigned products (same join as
+    // getCrossAuthors), then co-owners on shared, NON-ARCHIVED products.
+    const myAssignments = await this.prisma.stageAssignment.findMany({
+      where: { userId },
+      select: { projectId: true },
+    });
+    const myProjectIds = [...new Set(myAssignments.map((r) => r.projectId))];
+    if (myProjectIds.length === 0) return { coOwnsShared: false, rows: [] };
+
+    const others = await this.prisma.stageAssignment.findMany({
+      where: {
+        projectId: { in: myProjectIds },
+        userId: { not: userId },
+        project: { archived: false },
+      },
+      select: {
+        projectId: true,
+        stageId: true,
+        stage: { select: { name: true } },
+        user: { select: { id: true, name: true } },
+      },
+    });
+
+    // Per-author set of shared, non-archived projectIds + the author's stage
+    // assignments on those products (the chips come from assignments, not the
+    // section — a co-owner's stage exists even with no persisted status row).
+    const authorProjectMap = new Map<
+      string,
+      {
+        authorId: string;
+        authorName: string;
+        sharedProjectIds: Set<string>;
+        stageAssignments: {
+          projectId: string;
+          stageId: string;
+          stageName: string;
+        }[];
+      }
+    >();
+    for (const row of others) {
+      const assignment = {
+        projectId: row.projectId,
+        stageId: row.stageId,
+        stageName: row.stage.name,
+      };
+      const existing = authorProjectMap.get(row.user.id);
+      if (existing) {
+        existing.sharedProjectIds.add(row.projectId);
+        existing.stageAssignments.push(assignment);
+      } else {
+        authorProjectMap.set(row.user.id, {
+          authorId: row.user.id,
+          authorName: row.user.name,
+          sharedProjectIds: new Set([row.projectId]),
+          stageAssignments: [assignment],
+        });
+      }
+    }
+
+    // `coOwnsShared` is the co-ownership authorization signal (D6b): true iff
+    // the caller co-owns at least one shared, non-archived product. It is kept
+    // separate from row-emptiness so the service can label a denied read
+    // (co-owns nothing) distinctly from a legitimately empty one (co-owns a
+    // product but the co-owner authored no records).
+    const coOwnsShared = authorProjectMap.size > 0;
+    if (!coOwnsShared) return { coOwnsShared: false, rows: [] };
+
+    const otherUserIds = [...authorProjectMap.keys()];
+
+    // Step 2: fetch foreign sections + covering risks (for risk-derived chips).
+    const sections = await this.prisma.reportSection.findMany({
+      where: { reportId, authorId: { in: otherUserIds } },
+      select: {
+        authorId: true,
+        items: {
+          select: {
+            id: true,
+            projectId: true,
+            type: true,
+            text: true,
+            tag: true,
+            workflowStatus: true,
+            carriedOver: true,
+            completed: true,
+            priorityRank: true,
+            stageNames: true,
+          },
+        },
+        risks: {
+          select: {
+            id: true,
+            projectId: true,
+            risk: true,
+            impact: true,
+            mitigation: true,
+            severity: true,
+            stageNames: true,
+          },
+        },
+        decisions: {
+          select: {
+            id: true,
+            productId: true,
+            text: true,
+            owner: true,
+            deadline: true,
+            impact: true,
+            resolvedAt: true,
+            stageNames: true,
+          },
+        },
+        stageStatuses: {
+          select: { projectId: true, stageId: true, status: true },
+        },
+      },
+    });
+
+    // Step 3: build per-author rows filtered to shared products only.
+    const rows: CrossAuthorSectionRow[] = [];
+    for (const section of sections) {
+      const authorEntry = authorProjectMap.get(section.authorId);
+      if (!authorEntry) continue;
+      const sharedIds = authorEntry.sharedProjectIds;
+
+      // Risk-derived foreign stage chips (canonical rule), reusing the same
+      // derivation as the status-only read. The author's stage assignments on
+      // shared products (collected above) define which chips exist; the
+      // section's persisted statuses provide the empty/non-empty base.
+      const persistedStatus = new Map<string, "green" | "yellow" | "red">();
+      for (const ss of section.stageStatuses) {
+        if (ss.status !== null) {
+          persistedStatus.set(`${ss.projectId}::${ss.stageId}`, ss.status);
+        }
+      }
+      const stages = authorEntry.stageAssignments.map((sa) => ({
+        projectId: sa.projectId,
+        stageName: sa.stageName,
+        status: this.deriveForeignStageStatus(
+          sa.stageName,
+          sa.projectId,
+          section.risks,
+          persistedStatus.get(`${sa.projectId}::${sa.stageId}`) ?? null,
+        ),
+      }));
+
+      rows.push({
+        authorId: authorEntry.authorId,
+        authorName: authorEntry.authorName,
+        sharedProductIds: [...sharedIds],
+        stages,
+        items: section.items.filter((i) => sharedIds.has(i.projectId)),
+        risks: section.risks.filter((r) => sharedIds.has(r.projectId)),
+        decisions: section.decisions.filter((d) => sharedIds.has(d.productId)),
+      });
+    }
+
+    return { coOwnsShared, rows };
   }
 
   /**
