@@ -143,3 +143,19 @@ co-owns — item / risk / decision text, the owning author's name, and the forei
 stage chips — bounded by the same access rule that governs Product context.
 _Avoid_: scope (scope = the head's by-product / by-lead grouping axis; record
 visibility is a lead-page own-vs-everyone toggle).
+
+**Document action** (report toolbar vocabulary):
+A toolbar control that operates on the report document itself — it creates,
+persists, commits, or exports report content (Save, Submit Section, Publish &
+Lock, Fill-From, PDF export). Distinguished from a Context control by what it
+acts on, not by whether it writes.
+_Avoid_: action (period nav is also "an action"); write action (PDF/version do
+not write yet are document actions).
+
+**Context control** (report toolbar vocabulary):
+A toolbar control that changes which report is shown or how it is presented,
+without operating on the document — period navigation, archive filter, scope,
+view mode, expand-all, Agent review. A context control may persist a setting;
+persistence does not make it a document action.
+_Avoid_: filter (only some are filters); view control (view = the narrow
+edit/slides mode; Context control is the broader umbrella).
