@@ -200,3 +200,95 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
     expect(section.referencedProjects).toEqual([]);
   });
 });
+
+// fix-published-empty-stage-risk-floor (task 3.2): the PDF export product
+// mapping inherits the floor because it maps via the SAME
+// mapPrismaToReportSection. These pin the mapper-level floor: an OWNED stage
+// with no submitted status (`StageStatus.status = null`, i.e. absent from
+// `stageStatuses`) covered by the author's OWN risk floors the product's
+// derived `trafficLight` — while the raw per-stage `status` stays null (D4).
+describe("mapPrismaToReportSection — own-risk product floor", () => {
+  function coveringRisk(severity: "blocked" | "at-risk", stageNames: string[]) {
+    return {
+      id: "77777777-7777-4777-8777-777777777777",
+      projectId: OWNED_PROJECT,
+      risk: "Own covering risk",
+      impact: "High",
+      mitigation: "Mitigate",
+      severity,
+      stageNames,
+      project: { name: "Owned Project" },
+    };
+  }
+
+  it("floors red for a covers-all blocked own risk on an owned empty stage", () => {
+    const section = mapRow(
+      baseRow({
+        projectStatuses: [
+          {
+            projectId: OWNED_PROJECT,
+            status: "green",
+            project: {
+              id: OWNED_PROJECT,
+              name: "Owned Project",
+              archived: false,
+            },
+          },
+        ],
+        risks: [coveringRisk("blocked", [])],
+      }),
+    );
+
+    const project = section.projects.find((p) => p.projectId === OWNED_PROJECT);
+    expect(project?.trafficLight).toBe("red");
+    // D4: the raw per-stage status stays empty (null) — only the derived
+    // product-level trafficLight is floored.
+    expect(project?.ownedStages?.[0]?.status ?? null).toBeNull();
+  });
+
+  it("floors yellow for a covers-all at-risk own risk on an owned empty stage", () => {
+    const section = mapRow(
+      baseRow({
+        projectStatuses: [
+          {
+            projectId: OWNED_PROJECT,
+            status: "green",
+            project: {
+              id: OWNED_PROJECT,
+              name: "Owned Project",
+              archived: false,
+            },
+          },
+        ],
+        risks: [coveringRisk("at-risk", [])],
+      }),
+    );
+
+    expect(
+      section.projects.find((p) => p.projectId === OWNED_PROJECT)?.trafficLight,
+    ).toBe("yellow");
+  });
+
+  it("never lowers: a real red ProjectStatus survives a milder own risk", () => {
+    const section = mapRow(
+      baseRow({
+        projectStatuses: [
+          {
+            projectId: OWNED_PROJECT,
+            status: "red",
+            project: {
+              id: OWNED_PROJECT,
+              name: "Owned Project",
+              archived: false,
+            },
+          },
+        ],
+        risks: [coveringRisk("at-risk", [])],
+      }),
+    );
+
+    expect(
+      section.projects.find((p) => p.projectId === OWNED_PROJECT)?.trafficLight,
+    ).toBe("red");
+  });
+});

@@ -205,7 +205,16 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       mapPrismaToReportSection,
     );
 
-    const portfolioOverview = buildPortfolioOverview(projects, report.sections);
+    // fix-published-empty-stage-risk-floor: source product-card statuses from
+    // the floored read-model sections (`leadSections`), not the raw
+    // `report.sections[].projectStatuses`. The mapper already folds the
+    // author's own covering risks into each product's `trafficLight`
+    // (report-sections mapper line 347), so an owned stage with status:null
+    // covered by a blocked/at-risk own risk reads red/yellow here too — the
+    // card no longer disagrees with this same payload's floored leadSections
+    // and escalations. Card membership stays driven by the scoped `projects`
+    // list (a group-owned product no lead has touched keeps its null card).
+    const portfolioOverview = buildPortfolioOverview(projects, leadSections);
 
     // Map the live Prisma rows to the read model, then run the SAME builder
     // the published-snapshot path uses, so the Blocked-&-At-Risk panel emits
@@ -242,12 +251,12 @@ function buildPortfolioOverview(
     name: string;
     stageAssignments: { id: string }[];
   }[],
+  // Floored read-model sections (mapped via mapPrismaToReportSection): each
+  // project's `trafficLight` already folds the author's own covering risks,
+  // so the card status agrees with leadSections/escalations in the same payload.
   sections: {
-    // Prisma returns `status: TrafficLightStatus | null`; null statuses
-    // skip the totals.
-    projectStatuses: { projectId: string; status: string | null }[];
-    authorId: string;
-    author: { name: string };
+    authorName: string;
+    projects: { projectId: string; trafficLight: string | null }[];
   }[],
 ): PortfolioProductOverview[] {
   return projects.map((project) => {
@@ -255,13 +264,16 @@ function buildPortfolioOverview(
     const leadNameSet = new Set<string>();
 
     for (const section of sections) {
-      for (const ps of section.projectStatuses) {
-        // null status = lead hasn't filled the traffic light for this
-        // project yet; skip it so the worst-of computation isn't muddied
-        // by missing data.
-        if (ps.projectId === project.id && ps.status !== null) {
-          statuses.push(ps.status);
-          leadNameSet.add(section.author.name);
+      for (const sectionProject of section.projects) {
+        // null trafficLight = lead hasn't filled (nor own-risk-floored) the
+        // traffic light for this project yet; skip it so the worst-of
+        // computation isn't muddied by missing data.
+        if (
+          sectionProject.projectId === project.id &&
+          sectionProject.trafficLight !== null
+        ) {
+          statuses.push(sectionProject.trafficLight);
+          leadNameSet.add(section.authorName);
         }
       }
     }

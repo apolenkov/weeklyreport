@@ -94,8 +94,13 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     expect(expectDefined(result).authorName).toBe("Test Lead 1");
     expect(expectDefined(result).status).toBe("draft");
     expect(expectDefined(result).projects).toHaveLength(1);
+    // W6 (fix-published-empty-stage-risk-floor): the fixture's risk has the
+    // schema-default `severity: "at-risk"` and empty stageNames (covers-all),
+    // so it now floors the owned stage's product status up to yellow at the
+    // read layer. The dedicated "floors trafficLight by an own covering risk"
+    // test pins this semantics; here we only track the consequence.
     expect(expectDefined(expectDefined(result).projects[0]).trafficLight).toBe(
-      "green",
+      "yellow",
     );
     expect(expectDefined(result).items).toHaveLength(1);
     expect(expectDefined(expectDefined(result).items[0]).text).toBe(
@@ -276,6 +281,48 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     expect(expectDefined(saved.risks[0]).stageIds).toEqual(["Testing"]);
     expect(expectDefined(saved.risks[0]).severity).toBe("blocked");
     expect(expectDefined(saved.decisions[0]).stageIds).toEqual(["Design"]);
+  });
+
+  // fix-published-empty-stage-risk-floor (task 4.1): the derived effective
+  // product status reflects the author's OWN covering risk on an owned stage
+  // with no submitted status (raw StageStatus.status = null). The author owns
+  // "Development"; a covers-all blocked own risk (empty stageIds) and a stale
+  // green ProjectStatus must read red through the read-layer floor, while the
+  // raw persisted stage status stays null (D4).
+  it("getSectionById floors trafficLight by an own covering risk on an owned empty stage", async () => {
+    await assignLeadToProject();
+    await prisma.projectStatus.create({
+      data: {
+        reportSectionId: testData.section.id,
+        projectId: testData.project.id,
+        status: "green",
+      },
+    });
+    // No StageStatus row for the owned "Development" stage -> raw status null.
+    await prisma.risk.create({
+      data: {
+        reportSectionId: testData.section.id,
+        projectId: testData.project.id,
+        risk: "Vendor outage",
+        impact: "High",
+        mitigation: "Failover",
+        severity: "blocked",
+        stageNames: [],
+      },
+    });
+
+    const section = expectDefined(
+      await repo.getSectionById(testData.section.id),
+    );
+    const project = expectDefined(
+      section.projects.find((p) => p.projectId === testData.project.id),
+    );
+    expect(project.trafficLight).toBe("red");
+    // D4: the raw per-stage status is untouched (no submitted status).
+    expect(
+      project.ownedStages?.find((s) => s.stageName === "Development")?.status ??
+        null,
+    ).toBeNull();
   });
 
   it("saveSection persists all nested entities and returns updated section", async () => {
