@@ -16,10 +16,11 @@ import { WeeklyReportSkeleton } from "../../../../components/weekly-report/weekl
 /*  renders its own <h1>Status Report</h1> + Report-ID context block. */
 /*  WeeklyReportPage already renders that title ("Status Report ·     */
 /*  Live · N/N"), so the wrapper used to DOUBLE it on screen. The     */
-/*  viewer actions pass through WeeklyReportPage's headerActions slot  */
-/*  so the page owns exactly one header row and keeps its own period   */
-/*  ReportToolbar (week + date range) below it. The `toolbar` slot is  */
-/*  left unset so the page's default period-context bar still renders. */
+/*  viewer actions ride the page's `contextControlsLeading` slot      */
+/*  (report-toolbar-layout), so they sit in the shared toolbar's      */
+/*  bottom Context-control row; the page's default period navigator   */
+/*  renders after them and the single PDF export is the only top-row  */
+/*  document action.                                                  */
 /* ------------------------------------------------------------------ */
 
 interface Props {
@@ -48,7 +49,7 @@ export default function PublishedReportPage({ params, searchParams }: Props) {
   // the PDF export, which the page supplies as the default in the top row.
   const viewerContextControls = (
     <>
-      <AgentReviewComingSoon />
+      <AgentReviewComingSoon compact />
       <a
         href={archiveHref}
         className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"

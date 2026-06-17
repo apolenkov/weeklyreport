@@ -209,8 +209,8 @@ describe("PublishedReportPage — agent-review placeholder", () => {
 // unify-top-action-toolbars task 2.0 / D4: the viewer used to render its OWN
 // <h1>Status Report</h1> + Report-ID block ABOVE WeeklyReportPage, which
 // renders the same title — doubling it on screen. The wrapper now owns NO title
-// and routes its actions through the page's `headerActions` slot, so the title
-// shows exactly once.
+// and routes its actions through the page's `contextControlsLeading` slot, so
+// the title shows exactly once.
 describe("PublishedReportPage — single title + header actions (task 2.0)", () => {
   it("renders exactly one Status Report title and no wrapper-level Report-ID", () => {
     render(
