@@ -185,7 +185,7 @@ export function StageChip({
         .filter(Boolean)
         .join(" · ")
     : isUnassigned
-      ? "Unassigned · Contact admin"
+      ? "Not part of this contribution"
       : // Append the coverage suffix OUTSIDE the `??` so a chip that carries an
         // explicit tooltip still gets the "by risk" / "status set" cue — the
         // dashed border must never read as unexplained to a sighted hover user.
@@ -254,7 +254,7 @@ export function StageChip({
           fontWeight: stage.ownership === "mine" ? 600 : 400,
         }}
       >
-        {isUnassigned ? "— unassigned" : stage.assignee}
+        {isUnassigned ? "—" : stage.assignee}
       </span>
 
       {/* Status popover — click-to-apply menu. Each option is a single

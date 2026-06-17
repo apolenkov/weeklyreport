@@ -3,9 +3,9 @@
  *
  * One shared writer, two plain-data tiers selected from the CLI:
  *   - small (default) — ONE lead (Vasily) owning 3 products: two single-stage
- *     (Development) + one two-stage (Development + Testing, one item spans both).
- *     One BLOCKED item so the derived "Needs Attention" banner has content to
- *     demonstrate. Models a single lead's realistic multi-product week.
+ *     (Development, partial ownership) + one fully-owned 7-stage product (BI,
+ *     all green, no risk). One BLOCKED item so the derived "Needs Attention"
+ *     banner has content to demonstrate.
  *   - huge — the dense many-product fixture for stress/scroll demos
  *     (all canonical leads + products, templated content).
  *
@@ -247,14 +247,23 @@ const SMALL_DATASET: TierDataset = {
         stage: "Development",
       },
     },
-    // Product C — two stages (Development + Testing). One item spans both.
+    // Product C — all seven SDLC stages, fully green (no risk). Showcases a
+    // complete, healthy product at the opposite end of the spectrum from Portal.
     {
       leadId: LEAD_1_ID,
       leadLabel: "Василий И.",
       productId: PROD_BI,
       productLight: TrafficLightStatus.green,
       sectionStatus: ReportSectionStatus.draft,
-      ownedStages: ["Development", "Testing"],
+      ownedStages: [
+        "Planning",
+        "Analysis",
+        "Design",
+        "Development",
+        "Testing",
+        "DevOps",
+        "Support",
+      ],
       items: [
         {
           type: ItemType.current,
@@ -272,13 +281,6 @@ const SMALL_DATASET: TierDataset = {
           stages: ["Testing"],
         },
       ],
-      risk: {
-        risk: "Нагрузочные тесты дашборда ещё не запускались",
-        impact: "Риск деградации при пиковом числе пользователей",
-        mitigation: "Завести нагрузочный прогон в ночной CI",
-        severity: "at-risk",
-        stage: "Testing",
-      },
       decision: {
         text: "Утвердить целевые SLA по времени отклика дашборда BI",
         impact: "Даёт измеримый порог приёмки для тестирования",
