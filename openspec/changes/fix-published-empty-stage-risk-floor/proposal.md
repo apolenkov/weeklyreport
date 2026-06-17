@@ -121,3 +121,12 @@ NOT risk-aware for an empty covered stage. This change closes that gap.
 - The lead live form, the read-model raw stage status, the X/7 completeness
   counter, and the slide deck (`floorSlideStageStatus`) — all already correct; not
   touched.
+- The archive **legacy fallback** total (`computePortfolioOverview` /
+  `toArchiveSummary` in `archive.prisma-repository.ts`) — only reached when a
+  published report has NO stored `publishedSnapshot`. Real published reports
+  always carry a floored snapshot (`toArchiveSummaryFromSnapshot` wins), so this
+  path is effectively dead. It also counts raw `ProjectStatus` rows on a
+  DIFFERENT basis than the assignment-scoped read model, so re-routing it would
+  change which products are counted, not just add the floor — out of scope here.
+  Left raw with a code comment; tracked as a follow-up if it ever becomes
+  reachable for real data.

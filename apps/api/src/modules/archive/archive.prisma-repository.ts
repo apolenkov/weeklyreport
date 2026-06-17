@@ -121,6 +121,22 @@ function sectionScopeWhere(
   return scope;
 }
 
+/**
+ * Legacy fallback portfolio total, used by `toArchiveSummary` only when a
+ * published report has NO stored `publishedSnapshot`. Real published reports
+ * always carry a floored snapshot (publication writes it), so this path is
+ * effectively dead for current data and the snapshot summary
+ * (`toArchiveSummaryFromSnapshot`) wins.
+ *
+ * W6 scope note (fix-published-empty-stage-risk-floor): this fallback is
+ * intentionally NOT risk-floored. It counts raw `ProjectStatus` rows directly,
+ * a DIFFERENT product-counting basis than the assignment-scoped read model
+ * (`buildAssembledReportFromPrismaRow`) used for the detail body and the live
+ * snapshot summary. Re-routing it onto the floored read model would change
+ * which products are counted (assignment-scoped, not every ProjectStatus row),
+ * a semantic change beyond W6's scope. Left as-is on the dead path; tracked as
+ * a follow-up if the no-snapshot fallback ever becomes reachable for real data.
+ */
 function computePortfolioOverview(
   // Prisma returns `status: TrafficLightStatus | null`; null statuses
   // contribute nothing to the totals.
