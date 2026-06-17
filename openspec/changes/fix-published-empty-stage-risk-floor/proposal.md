@@ -97,6 +97,17 @@ NOT risk-aware for an empty covered stage. This change closes that gap.
   product-card fix once `trafficLight` is risk-aware. The PDF's own
   `computePortfolioOverview` (line 135) reads raw `projectStatuses` and needs the
   same totals re-route as the published snapshot above.
+- `apps/api/src/modules/archive/archive.prisma-repository.ts` — the archive list
+  and detail summaries are unified onto the floored read model: both now derive
+  the portfolio total from `buildAssembledReportFromPrismaRow` (snapshot when
+  present, else the risk-floored, assignment-scoped read model), and the raw
+  `computePortfolioOverview` / `toArchiveSummary` over `projectStatuses` are
+  deleted. This both folds the W6 floor into the archive total (reached for
+  seed / legacy reports published without a stored snapshot) and removes the
+  prior split where the archive summary counted every `ProjectStatus` row while
+  the detail counted only assignment-scoped products. Behavior change: a product
+  with a `ProjectStatus` but no stage assignment no longer counts in the archive
+  total, matching the live / detail / published surfaces.
 
 ### Side effect — escalations are a `trafficLight` reader
 
@@ -121,12 +132,3 @@ NOT risk-aware for an empty covered stage. This change closes that gap.
 - The lead live form, the read-model raw stage status, the X/7 completeness
   counter, and the slide deck (`floorSlideStageStatus`) — all already correct; not
   touched.
-- The archive **legacy fallback** total (`computePortfolioOverview` /
-  `toArchiveSummary` in `archive.prisma-repository.ts`) — only reached when a
-  published report has NO stored `publishedSnapshot`. Real published reports
-  always carry a floored snapshot (`toArchiveSummaryFromSnapshot` wins), so this
-  path is effectively dead. It also counts raw `ProjectStatus` rows on a
-  DIFFERENT basis than the assignment-scoped read model, so re-routing it would
-  change which products are counted, not just add the floor — out of scope here.
-  Left raw with a code comment; tracked as a follow-up if it ever becomes
-  reachable for real data.
