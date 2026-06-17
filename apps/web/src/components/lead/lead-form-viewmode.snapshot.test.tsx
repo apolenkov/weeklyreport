@@ -87,10 +87,6 @@ function buildTRPC() {
       path: ["leadForm", "crossAuthors"],
       query: [],
     },
-    {
-      path: ["leadForm", "crossAuthorSections"],
-      query: [],
-    },
   ]);
   return proxy;
 }

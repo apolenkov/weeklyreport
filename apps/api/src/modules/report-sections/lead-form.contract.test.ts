@@ -68,7 +68,6 @@ function createMockRepository(
     createReopenRequest: vi.fn().mockResolvedValue(undefined),
     hasSharedProduct: vi.fn().mockResolvedValue(false),
     getCrossAuthors: vi.fn().mockResolvedValue([]),
-    getCrossAuthorSections: vi.fn().mockResolvedValue([]),
     revokeAllSubmitted: vi.fn().mockResolvedValue(0),
     ...overrides,
   };
@@ -115,6 +114,69 @@ describe("LeadFormService — revokeSubmission", () => {
     await expect(
       service.revokeSubmission(SECTION_ID, OTHER_USER_ID),
     ).rejects.toThrow(`Section ${SECTION_ID} not found.`);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getCrossAuthors — authorization guard
+// (scope-lead-report-to-own-contribution, task 4.2 — D6 privacy bound)
+// ---------------------------------------------------------------------------
+
+describe("LeadFormService — getCrossAuthors authorization", () => {
+  const crossAuthorRow = {
+    projectId: PROJECT_ID,
+    projectName: "Shared",
+    authorId: OTHER_USER_ID,
+    authorInitials: "AK",
+    stageNames: ["Testing"],
+    stages: [{ stageName: "Testing", status: "red" as const }],
+  };
+
+  it("returns [] for a non-privileged caller with no own section in the report", async () => {
+    const repo = createMockRepository({
+      getSectionForPeriod: vi.fn().mockResolvedValue(null),
+      getCrossAuthors: vi.fn().mockResolvedValue([crossAuthorRow]),
+    });
+    const service = new LeadFormService(repo);
+
+    const rows = await service.getCrossAuthors(REPORT_ID, AUTHOR_ID, "lead");
+
+    expect(rows).toEqual([]);
+    // The guard short-circuits BEFORE the repository read — no foreign context fetched.
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.getCrossAuthors).not.toHaveBeenCalled();
+  });
+
+  it("delegates to the repository when the caller owns a section in the report", async () => {
+    const repo = createMockRepository({
+      getSectionForPeriod: vi
+        .fn()
+        .mockResolvedValue(structuredClone(draftSection)),
+      getCrossAuthors: vi.fn().mockResolvedValue([crossAuthorRow]),
+    });
+    const service = new LeadFormService(repo);
+
+    const rows = await service.getCrossAuthors(REPORT_ID, AUTHOR_ID, "lead");
+
+    expect(rows).toEqual([crossAuthorRow]);
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.getCrossAuthors).toHaveBeenCalledWith(REPORT_ID, AUTHOR_ID);
+  });
+
+  it("bypasses the own-section check for a head, even with no own section", async () => {
+    const repo = createMockRepository({
+      getSectionForPeriod: vi.fn().mockResolvedValue(null),
+      getCrossAuthors: vi.fn().mockResolvedValue([crossAuthorRow]),
+    });
+    const service = new LeadFormService(repo);
+
+    const rows = await service.getCrossAuthors(REPORT_ID, AUTHOR_ID, "head");
+
+    expect(rows).toEqual([crossAuthorRow]);
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.getSectionForPeriod).not.toHaveBeenCalled();
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.getCrossAuthors).toHaveBeenCalledWith(REPORT_ID, AUTHOR_ID);
   });
 });
 

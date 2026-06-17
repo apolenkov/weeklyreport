@@ -2,14 +2,25 @@ import type { ReportSectionReadModel } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import type {
-  CrossAuthorSectionRow,
-  LeadFormRepository,
-} from "./lead-form.service";
+import type { LeadFormRepository } from "./lead-form.service";
+import { initialsFromName } from "./lead-form-shared";
 import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
 } from "./report-sections.prisma-repository";
+
+/**
+ * Mirrors `normalizeStageName` in apps/web/src/lib/mappers/lead-form.ts — the
+ * "Development" ↔ "Dev" alias collapses to one canonical pipeline slot. Inlined
+ * here because lib/mappers must not be imported across the api/web boundary.
+ */
+function normalizeStageName(stageName: string): string {
+  const lower = stageName.toLowerCase();
+  return lower === "development" ? "dev" : lower;
+}
+
+/** API traffic-light enum; null = no data / untouched stage. */
+type StageTrafficStatus = "green" | "yellow" | "red" | null;
 
 @Injectable()
 export class LeadFormPrismaRepository implements LeadFormRepository {
@@ -230,14 +241,12 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       projectId: string;
       projectName: string;
       authorId: string;
-      authorName: string;
+      authorInitials: string;
       stageNames: string[];
       stages: {
         stageName: string;
-        status: "green" | "yellow" | "red" | null;
+        status: StageTrafficStatus;
       }[];
-      itemCount: number;
-      riskCount: number;
     }[]
   > {
     const myAssignments = await this.prisma.stageAssignment.findMany({
@@ -259,23 +268,32 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       },
     });
 
-    // Section stats + stage statuses for other authors in this report
+    // Persisted stage traffic + covering risks for each foreign author in this
+    // report. Only `severity` + `stageNames` of the risk are needed: the stage
+    // status is RISK-DERIVED (covering risks that name the stage), never the
+    // foreign item text. The persisted traffic is consulted only as the
+    // empty/non-empty base when no risk covers the stage.
     const otherUserIds = [...new Set(others.map((o) => o.user.id))];
     const sections = await this.prisma.reportSection.findMany({
       where: { reportId, authorId: { in: otherUserIds } },
       select: {
         authorId: true,
-        items: { select: { projectId: true } },
-        risks: { select: { projectId: true } },
+        risks: {
+          select: { projectId: true, severity: true, stageNames: true },
+        },
         stageStatuses: {
           select: { projectId: true, stageId: true, status: true },
         },
       },
     });
-    const sectionByAuthor = new Map(sections.map((s) => [s.authorId, s]));
 
-    // Build status lookup: "(authorId)::projectId::stageId" → status
+    // Persisted-traffic lookup: "authorId::projectId::stageId" → green/yellow/red.
     const statusMap = new Map<string, "green" | "yellow" | "red">();
+    // Per-author covering risks, grouped by projectId for the stage match.
+    const risksByAuthor = new Map<
+      string,
+      { projectId: string; severity: string; stageNames: string[] }[]
+    >();
     for (const s of sections) {
       for (const ss of s.stageStatuses) {
         if (ss.status !== null) {
@@ -285,6 +303,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
           );
         }
       }
+      risksByAuthor.set(s.authorId, s.risks);
     }
 
     // Group by (projectId, authorId)
@@ -294,45 +313,41 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         projectId: string;
         projectName: string;
         authorId: string;
-        authorName: string;
+        authorInitials: string;
         stageNames: Set<string>;
         stageEntries: {
           stageName: string;
-          status: "green" | "yellow" | "red" | null;
+          status: StageTrafficStatus;
         }[];
-        itemCount: number;
-        riskCount: number;
       }
     >();
 
     for (const row of others) {
       if (row.project.archived) continue;
       const key = `${row.projectId}::${row.user.id}`;
-      const stageStatus =
+      const persisted =
         statusMap.get(`${row.user.id}::${row.projectId}::${row.stageId}`) ??
         null;
-      if (!grouped.has(key)) {
-        const section = sectionByAuthor.get(row.user.id);
-        const itemCount = section
-          ? section.items.filter((i) => i.projectId === row.projectId).length
-          : 0;
-        const riskCount = section
-          ? section.risks.filter((r) => r.projectId === row.projectId).length
-          : 0;
+      const stageStatus = this.deriveForeignStageStatus(
+        row.stage.name,
+        row.projectId,
+        risksByAuthor.get(row.user.id) ?? [],
+        persisted,
+      );
+      const existing = grouped.get(key);
+      if (!existing) {
         grouped.set(key, {
           projectId: row.projectId,
           projectName: row.project.name,
           authorId: row.user.id,
-          authorName: row.user.name,
+          // Derive initials server-side; the full name never leaves the method.
+          authorInitials: initialsFromName(row.user.name),
           stageNames: new Set([row.stage.name]),
           stageEntries: [{ stageName: row.stage.name, status: stageStatus }],
-          itemCount,
-          riskCount,
         });
       } else {
-        const entry = grouped.get(key);
-        entry?.stageNames.add(row.stage.name);
-        entry?.stageEntries.push({
+        existing.stageNames.add(row.stage.name);
+        existing.stageEntries.push({
           stageName: row.stage.name,
           status: stageStatus,
         });
@@ -343,124 +358,48 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       projectId: g.projectId,
       projectName: g.projectName,
       authorId: g.authorId,
-      authorName: g.authorName,
+      authorInitials: g.authorInitials,
       stageNames: [...g.stageNames],
       stages: g.stageEntries,
-      itemCount: g.itemCount,
-      riskCount: g.riskCount,
     }));
   }
 
-  async getCrossAuthorSections(
-    reportId: string,
-    userId: string,
-  ): Promise<CrossAuthorSectionRow[]> {
-    // Step 1: Resolve shared project IDs (same join as getCrossAuthors)
-    const myAssignments = await this.prisma.stageAssignment.findMany({
-      where: { userId },
-      select: { projectId: true },
-    });
-    const myProjectIds = [...new Set(myAssignments.map((r) => r.projectId))];
-    if (myProjectIds.length === 0) return [];
-
-    // Other users' assignments on shared projects (excluding self)
-    const others = await this.prisma.stageAssignment.findMany({
-      where: {
-        projectId: { in: myProjectIds },
-        userId: { not: userId },
-        project: { archived: false },
-      },
-      select: {
-        projectId: true,
-        user: { select: { id: true, name: true } },
-      },
-    });
-
-    // Build per-author sets of shared projectIds
-    const authorProjectMap = new Map<
-      string,
-      { authorId: string; authorName: string; sharedProjectIds: Set<string> }
-    >();
-    for (const row of others) {
-      const existing = authorProjectMap.get(row.user.id);
-      if (existing) {
-        existing.sharedProjectIds.add(row.projectId);
-      } else {
-        authorProjectMap.set(row.user.id, {
-          authorId: row.user.id,
-          authorName: row.user.name,
-          sharedProjectIds: new Set([row.projectId]),
-        });
-      }
-    }
-
-    if (authorProjectMap.size === 0) return [];
-
-    const otherUserIds = [...authorProjectMap.keys()];
-
-    // Step 2: Fetch sections for all foreign authors in this report
-    const sections = await this.prisma.reportSection.findMany({
-      where: { reportId, authorId: { in: otherUserIds } },
-      select: {
-        authorId: true,
-        items: {
-          select: {
-            id: true,
-            projectId: true,
-            type: true,
-            text: true,
-            tag: true,
-            workflowStatus: true,
-            carriedOver: true,
-            completed: true,
-            priorityRank: true,
-            stageNames: true,
-          },
-        },
-        risks: {
-          select: {
-            id: true,
-            projectId: true,
-            risk: true,
-            impact: true,
-            mitigation: true,
-            severity: true,
-            stageNames: true,
-          },
-        },
-        decisions: {
-          select: {
-            id: true,
-            productId: true,
-            text: true,
-            owner: true,
-            deadline: true,
-            impact: true,
-            resolvedAt: true,
-            stageNames: true,
-          },
-        },
-      },
-    });
-
-    // Step 3: Build result — filter each collection to shared products only
-    const result: CrossAuthorSectionRow[] = [];
-    for (const section of sections) {
-      const authorEntry = authorProjectMap.get(section.authorId);
-      if (!authorEntry) continue;
-
-      const sharedIds = authorEntry.sharedProjectIds;
-
-      result.push({
-        authorId: authorEntry.authorId,
-        authorName: authorEntry.authorName,
-        sharedProductIds: [...sharedIds],
-        items: section.items.filter((i) => sharedIds.has(i.projectId)),
-        risks: section.risks.filter((r) => sharedIds.has(r.projectId)),
-        decisions: section.decisions.filter((d) => sharedIds.has(d.productId)),
-      });
-    }
-
-    return result;
+  /**
+   * Risk-derived foreign stage status. Mirrors `deriveEffectiveStageStatus`
+   * (apps/web/src/lib/stage-status.ts) with `items: []` — the foreign blocked-
+   * item path is intentionally NOT consulted here.
+   *
+   * Precedence over covering risks (those whose `stageNames` name this stage,
+   * Dev↔Development aliased): blocked → red, any other severity → yellow.
+   * With no covering risk the persisted traffic is used only as the
+   * empty/non-empty base — a persisted yellow/red with no backing risk
+   * collapses to green; a null base stays null.
+   */
+  private deriveForeignStageStatus(
+    stageName: string,
+    projectId: string,
+    risks: readonly {
+      projectId: string;
+      severity: string;
+      stageNames: string[];
+    }[],
+    persisted: StageTrafficStatus,
+  ): StageTrafficStatus {
+    const norm = normalizeStageName(stageName);
+    const covering = risks.filter(
+      (r) =>
+        r.projectId === projectId &&
+        // An empty stageNames is the canonical "covers all assigned stages"
+        // marker (mirrors riskCoversStage in stage-tags.ts and the Add-Risk
+        // dialog default). Without this, a co-lead's covers-all blocked risk
+        // would colour no foreign stage and product health would read green.
+        (r.stageNames.length === 0 ||
+          r.stageNames.some((n) => normalizeStageName(n) === norm)),
+    );
+    if (covering.some((r) => r.severity === "blocked")) return "red";
+    if (covering.length > 0) return "yellow";
+    // No covering risk: the stage is on-track if it was touched at all,
+    // otherwise empty. The persisted traffic value itself never colours.
+    return persisted === null ? null : "green";
   }
 }

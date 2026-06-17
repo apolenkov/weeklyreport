@@ -2068,19 +2068,7 @@ export function createAppRouter(deps: RouterDeps) {
             return await deps.leadFormService.getCrossAuthors(
               input.reportId,
               ctx.session.userId,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      crossAuthorSections: protectedProcedure
-        .input(z.object({ reportId: z.uuid() }))
-        .query(async ({ input, ctx }) => {
-          try {
-            return await deps.leadFormService.getCrossAuthorSections(
-              input.reportId,
-              ctx.session.userId,
+              ctx.session.role,
             );
           } catch (error) {
             throw mapDomainError(error);

@@ -26,12 +26,7 @@ const BASE_LOCKED = {
 
 describe("StageChip — locked stage color (F2)", () => {
   it("locked + empty → chip labelled with empty status", () => {
-    render(
-      <StageChip
-        stage={{ ...BASE_LOCKED, status: "empty" }}
-        crossAuthorInfo={{ itemCount: 0, riskCount: 0 }}
-      />,
-    );
+    render(<StageChip stage={{ ...BASE_LOCKED, status: "empty" }} />);
     expect(
       screen.getByRole("button", { name: "DevOps: empty" }),
     ).toBeInTheDocument();
@@ -42,12 +37,7 @@ describe("StageChip — locked stage color (F2)", () => {
   });
 
   it("locked + at-risk → chip labelled with at-risk status and token", () => {
-    render(
-      <StageChip
-        stage={{ ...BASE_LOCKED, status: "at-risk" }}
-        crossAuthorInfo={{ itemCount: 2, riskCount: 1 }}
-      />,
-    );
+    render(<StageChip stage={{ ...BASE_LOCKED, status: "at-risk" }} />);
     expect(
       screen.getByRole("button", { name: "DevOps: at-risk" }),
     ).toBeInTheDocument();
@@ -57,12 +47,7 @@ describe("StageChip — locked stage color (F2)", () => {
   });
 
   it("locked + blocked → chip labelled with blocked status and token", () => {
-    render(
-      <StageChip
-        stage={{ ...BASE_LOCKED, status: "blocked" }}
-        crossAuthorInfo={{ itemCount: 3, riskCount: 2 }}
-      />,
-    );
+    render(<StageChip stage={{ ...BASE_LOCKED, status: "blocked" }} />);
     expect(
       screen.getByRole("button", { name: "DevOps: blocked" }),
     ).toBeInTheDocument();
@@ -72,12 +57,7 @@ describe("StageChip — locked stage color (F2)", () => {
   });
 
   it("locked + on-track → chip labelled with on-track status and token", () => {
-    render(
-      <StageChip
-        stage={{ ...BASE_LOCKED, status: "on-track" }}
-        crossAuthorInfo={{ itemCount: 1, riskCount: 0 }}
-      />,
-    );
+    render(<StageChip stage={{ ...BASE_LOCKED, status: "on-track" }} />);
     expect(
       screen.getByRole("button", { name: "DevOps: on-track" }),
     ).toBeInTheDocument();
@@ -88,10 +68,7 @@ describe("StageChip — locked stage color (F2)", () => {
 
   it("locked chip renders the lock icon (aria-hidden svg)", () => {
     const { container } = render(
-      <StageChip
-        stage={{ ...BASE_LOCKED, status: "at-risk" }}
-        crossAuthorInfo={{ itemCount: 1, riskCount: 0 }}
-      />,
+      <StageChip stage={{ ...BASE_LOCKED, status: "at-risk" }} />,
     );
     // lucide Lock renders as <svg aria-hidden="true">
     expect(container.querySelector("svg[aria-hidden]")).toBeInTheDocument();

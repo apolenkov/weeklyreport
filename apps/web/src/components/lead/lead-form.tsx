@@ -25,9 +25,6 @@ import { mapLeadFormData } from "../../lib/mappers";
 import {
   applyCrossAuthorStageOverrides,
   buildCrossAuthorStageMap,
-  mapForeignDecisions,
-  mapForeignItems,
-  mapForeignRisks,
 } from "../../lib/mappers/lead-cross-author";
 import {
   normalizeStageName,
@@ -355,39 +352,12 @@ export function LeadForm({
     enabled: targetReportId !== "",
   });
 
-  // F-shiny-3: cross-author section data is always loaded (always-on).
-  const crossAuthorSectionsQ = useQuery({
-    ...trpc.leadForm.crossAuthorSections.queryOptions({
-      reportId: targetReportId,
-    }),
-    enabled: targetReportId !== "",
-  });
-
-  const crossAuthors = crossAuthorsQ.data ?? [];
-
-  // F-shiny-1: enrich crossAuthors with per-risk details and isEmpty flag
-  // sourced from crossAuthorSectionsQ (always loaded).
-  const enrichedCrossAuthors: import("./sdlc-pipeline").CrossAuthorEntry[] =
-    crossAuthors.map((ca) => {
-      const caSection = crossAuthorSectionsQ.data?.find(
-        (s) => s.authorId === ca.authorId,
-      );
-      const projectRisks =
-        caSection?.risks
-          .filter((r) => r.projectId === ca.projectId)
-          .slice(0, 3)
-          .map((r) => ({
-            severity: (r.severity === "blocked" ? "blocked" : "at-risk") as
-              | "blocked"
-              | "at-risk",
-            text: r.risk,
-          })) ?? null;
-      return {
-        ...ca,
-        risks: projectRisks,
-        isEmpty: ca.itemCount === 0 && ca.riskCount === 0,
-      };
-    });
+  // Foreign stage health for the lead's shared products. The cross-author
+  // query already carries authorInitials + RISK-DERIVED per-stage status, so
+  // the pipeline entries map straight from it — no foreign item/risk/decision
+  // text crosses the API boundary.
+  const crossAuthorEntries: import("./sdlc-pipeline").CrossAuthorEntry[] =
+    crossAuthorsQ.data ?? [];
 
   // 35-07: bare route → replace URL with the canonical addressed form once
   // the active reportId is known. Skipped when:
@@ -652,57 +622,24 @@ export function LeadForm({
     history: historyQ.data,
   });
 
-  // F8: enrich unassigned stages with cross-author names and real status.
-  // crossAuthorsQ.data has { projectId, stageNames, authorName, stages } per shared product.
-  // Stages not owned by the current user but assigned to another lead become
-  // ownership:"locked" with their name and real risk color instead of gray "empty".
-  // Joined with crossAuthorSectionsQ to incorporate risk severity and blocked
-  // items into stage chip color (enrichedCrossAuthors drops stageName, so the
-  // mapper joins the raw crossAuthorSectionsQ rows keyed by authorId).
+  // F8: enrich unassigned stages with cross-author initials + risk-derived
+  // status. crossAuthorsQ.data has { projectId, stageNames, authorInitials,
+  // stages } per shared product. Stages not owned by the current user but
+  // assigned to another lead become ownership:"locked" with that lead's
+  // initials and risk-derived color instead of gray "empty". No foreign
+  // item/risk/decision text is read here.
   const crossAuthorStageMap = buildCrossAuthorStageMap(
     crossAuthorsQ.data ?? [],
-    crossAuthorSectionsQ.data ?? [],
   );
   const products: Product[] = applyCrossAuthorStageOverrides(
     data.products,
     crossAuthorStageMap,
   ) as Product[];
 
-  // Lookup map for resolving productName from productId in cross-author embeds.
-  const productNameById = new Map(products.map((p) => [p.id, p.name]));
-
   const currentWeekItems: KanbanItem[] = data.currentWeekItems as KanbanItem[];
   const nextWeekItems: KanbanItem[] = data.nextWeekItems as KanbanItem[];
   const risks: RiskEntry[] = data.risks as RiskEntry[];
   const decisions: DecisionEntry[] = data.decisions as DecisionEntry[];
-
-  // W5/W6: build foreign item arrays from crossAuthorSectionsQ (always-on).
-  const foreignCurrentItems: KanbanItem[] = mapForeignItems(
-    crossAuthorSectionsQ.data ?? [],
-    productNameById,
-    "current",
-  );
-
-  const foreignNextItems: KanbanItem[] = mapForeignItems(
-    crossAuthorSectionsQ.data ?? [],
-    productNameById,
-    "next",
-  );
-
-  const foreignRisks: RiskEntry[] = mapForeignRisks(
-    crossAuthorSectionsQ.data ?? [],
-    productNameById,
-  );
-
-  const foreignDecisions: DecisionEntry[] = mapForeignDecisions(
-    crossAuthorSectionsQ.data ?? [],
-    productNameById,
-  );
-
-  const mergedCurrentItems = [...currentWeekItems, ...foreignCurrentItems];
-  const mergedNextItems = [...nextWeekItems, ...foreignNextItems];
-  const mergedRisks = [...risks, ...foreignRisks];
-  const mergedDecisions = [...decisions, ...foreignDecisions];
 
   /**
    * All priority ranks already assigned to own (non-foreign) items for the
@@ -1211,8 +1148,7 @@ export function LeadForm({
                 ? { sectionAuthorName: draftSection.authorName }
                 : {})}
               risksAddSignal={risksAddSignal}
-              crossAuthors={enrichedCrossAuthors}
-              displayRisks={mergedRisks}
+              crossAuthors={crossAuthorEntries}
             >
               <AccordionSection
                 groupExpanded={groupExpanded}
@@ -1254,7 +1190,7 @@ export function LeadForm({
                 }
               >
                 <CurrentWeekSection
-                  items={mergedCurrentItems}
+                  items={currentWeekItems}
                   readOnly={isReadOnly}
                   onItemsChange={handleCurrentWeekItemsChange}
                   currentUserName={currentUser.name}
@@ -1292,7 +1228,7 @@ export function LeadForm({
                 }
               >
                 <NextWeekSection
-                  items={mergedNextItems}
+                  items={nextWeekItems}
                   readOnly={isReadOnly}
                   onItemsChange={handleNextWeekItemsChange}
                   currentUserName={currentUser.name}
@@ -1364,7 +1300,7 @@ export function LeadForm({
               }
             >
               <DecisionsSection
-                decisions={mergedDecisions}
+                decisions={decisions}
                 readOnly={isReadOnly}
                 onChange={handleDecisionsChange}
                 currentUserName={currentUser.name}
