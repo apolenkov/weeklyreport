@@ -1,9 +1,10 @@
 /**
  * @vitest-environment jsdom
  *
- * mount-agent-review-placeholder review fix: the head report shell mounts the
- * AgentReviewComingSoon control in the same unframed header action cluster as
- * the other report controls.
+ * report-toolbar-layout: the head report shell routes its controls into the
+ * page's two-row ReportToolbar — document actions (Export-PDF) on top, context
+ * controls (Agent review, period nav, scope / view-mode toggles) on the bottom
+ * row — plus a header context label beside the title.
  */
 
 import "@testing-library/jest-dom/vitest";
@@ -20,22 +21,33 @@ vi.mock("../slides/head-slides-client", () => ({
 }));
 
 vi.mock("../weekly-report/weekly-report-page", () => ({
-  // head-toolbar-parity: render the `headerActions` and `toolbar` slots so
-  // tests can pin that the shell hands both to the page. The real page places
-  // actions in the header row and the toolbar below it.
+  // report-toolbar-layout: render the header context label + the two toolbar
+  // slots so tests can pin where the shell routes each. The real page renders
+  // the single two-row ReportToolbar below the header; this stub synthesizes
+  // that arrangement — header row first, then a report-toolbar with a
+  // Document-action group and a Context-control group.
   WeeklyReportPage: ({
-    headerActions,
-    toolbar,
+    documentActionsLeading,
+    contextControls,
+    headerContextLabel,
   }: {
-    headerActions?: React.ReactNode;
-    toolbar?: React.ReactNode;
+    documentActionsLeading?: React.ReactNode;
+    contextControls?: React.ReactNode;
+    headerContextLabel?: React.ReactNode;
   }) => (
     <div data-testid="weekly-report-page-stub">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <h1>Status Report</h1>
-        <div data-testid="weekly-report-header-actions">{headerActions}</div>
+        <div data-testid="weekly-report-header-label">{headerContextLabel}</div>
       </header>
-      {toolbar}
+      <div data-testid="report-toolbar">
+        <div role="group" aria-label="Document actions">
+          {documentActionsLeading}
+        </div>
+        <div role="group" aria-label="Context controls">
+          {contextControls}
+        </div>
+      </div>
     </div>
   ),
 }));
@@ -128,13 +140,13 @@ import { HeadReportShell } from "./head-report-shell";
 const TEST_REPORT_ID = "test-report-001";
 
 describe("HeadReportShell — agent-review placeholder per mode", () => {
-  it("form mode renders exactly one placeholder in the header actions", () => {
+  it("form mode renders exactly one placeholder in the context controls", () => {
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
     expect(screen.getAllByTestId("agent-review-coming-soon")).toHaveLength(1);
     expect(
-      within(screen.getByTestId("weekly-report-header-actions")).getByTestId(
-        "agent-review-coming-soon",
-      ),
+      within(
+        screen.getByRole("group", { name: "Context controls" }),
+      ).getByTestId("agent-review-coming-soon"),
     ).toBeInTheDocument();
   });
 
@@ -166,13 +178,13 @@ describe("HeadReportShell — single shared toolbar (head-toolbar-parity)", () =
     expect(within(pageStub).getByTestId("report-toolbar")).toBeInTheDocument();
   });
 
-  it("the toolbar sits below the page header action row (lead arrangement)", () => {
+  it("the toolbar sits below the page header row (lead arrangement)", () => {
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
-    // Anchor on the view-mode Slides link in the header action cluster: the
-    // shared toolbar must follow it in document order (header row first).
-    const headerAction = screen.getByRole("link", { name: /slides/i });
+    // Anchor on the page heading: the shared toolbar must follow it in document
+    // order (header row first, then the two action rows).
+    const heading = screen.getByRole("heading", { name: /status report/i });
     const toolbar = screen.getByTestId("report-toolbar");
-    const position = headerAction.compareDocumentPosition(toolbar);
+    const position = heading.compareDocumentPosition(toolbar);
     expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
@@ -182,7 +194,7 @@ describe("HeadReportShell — single shared toolbar (head-toolbar-parity)", () =
 // standalone Present and browser-Print links are GONE. Presentation is reached
 // via the ViewModeToggle Slides mode; the only export is the single labeled
 // Export-PDF in the ReportToolbar trailing group.
-describe("HeadReportShell — header action cluster (head-toolbar-semantics)", () => {
+describe("HeadReportShell — context control cluster (head-toolbar-semantics)", () => {
   // Wire an ACTIVE displayed period so the shell's Export-PDF renders (it is
   // gated on an active, resolvable period). compiledHistory stays empty.
   function wireActivePeriod() {
@@ -212,18 +224,20 @@ describe("HeadReportShell — header action cluster (head-toolbar-semantics)", (
     vi.mocked(useQuery).mockImplementation(impl as unknown as typeof useQuery);
   }
 
-  it("renders the toggles and agent-review in headerActions, with NO Present/Print links", () => {
+  it("renders the toggles and agent-review in the context controls, with NO Present/Print links", () => {
     wireActivePeriod();
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
-    const headerActions = screen.getByTestId("weekly-report-header-actions");
+    const contextControls = screen.getByRole("group", {
+      name: "Context controls",
+    });
     expect(screen.queryByTestId("report-actions-pill")).not.toBeInTheDocument();
-    // Header cluster: scope toggle (radiogroup) + view-mode toggle (Edit/Slides).
-    expect(within(headerActions).getByRole("radiogroup")).toBeInTheDocument();
+    // Context row: scope toggle (radiogroup) + view-mode toggle (Edit/Slides).
+    expect(within(contextControls).getByRole("radiogroup")).toBeInTheDocument();
     expect(
-      within(headerActions).getByRole("link", { name: /slides/i }),
+      within(contextControls).getByRole("link", { name: /slides/i }),
     ).toBeInTheDocument();
     expect(
-      within(headerActions).getByTestId("agent-review-coming-soon"),
+      within(contextControls).getByTestId("agent-review-coming-soon"),
     ).toBeInTheDocument();
     // Present + browser-Print header links are removed entirely.
     expect(
@@ -234,35 +248,41 @@ describe("HeadReportShell — header action cluster (head-toolbar-semantics)", (
     ).not.toBeInTheDocument();
   });
 
-  it("places the agent-review placeholder before the toggles (leading edge, lead order)", () => {
+  it("places the agent-review placeholder before the toggles (leading edge)", () => {
     wireActivePeriod();
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
-    const headerActions = screen.getByTestId("weekly-report-header-actions");
-    const agentReview = within(headerActions).getByTestId(
+    const contextControls = screen.getByRole("group", {
+      name: "Context controls",
+    });
+    const agentReview = within(contextControls).getByTestId(
       "agent-review-coming-soon",
     );
-    const scopeToggle = within(headerActions).getByRole("radiogroup");
+    const scopeToggle = within(contextControls).getByRole("radiogroup");
     // head-toolbar-semantics Req3: the placeholder is the FIRST element of the
     // group, so the scope toggle FOLLOWS it in document order.
     const position = agentReview.compareDocumentPosition(scopeToggle);
     expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("renders exactly one labeled Export-PDF inside the toolbar trailing group", () => {
+  it("renders exactly one labeled Export-PDF in the document-action row", () => {
     wireActivePeriod();
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
     const exportButtons = screen.getAllByRole("button", {
       name: /export pdf/i,
     });
     expect(exportButtons).toHaveLength(1);
-    // The single Export-PDF lives in the shared ReportToolbar, not the header.
-    const toolbar = screen.getByTestId("report-toolbar");
+    // The single Export-PDF is a document action, not a context control.
+    const documentActions = screen.getByRole("group", {
+      name: "Document actions",
+    });
     expect(
-      within(toolbar).getByRole("button", { name: /export pdf/i }),
+      within(documentActions).getByRole("button", { name: /export pdf/i }),
     ).toBeInTheDocument();
-    const headerActions = screen.getByTestId("weekly-report-header-actions");
+    const contextControls = screen.getByRole("group", {
+      name: "Context controls",
+    });
     expect(
-      within(headerActions).queryByRole("button", { name: /export pdf/i }),
+      within(contextControls).queryByRole("button", { name: /export pdf/i }),
     ).not.toBeInTheDocument();
   });
 

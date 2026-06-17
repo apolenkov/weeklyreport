@@ -16,15 +16,21 @@ does it only change which report you see and how it is presented?**
 
 Top row = **Document action**; bottom row = **Context control**.
 
-| Role             | Top row (Document action)                                 | Bottom row (Context control)                                                                          |
-| ---------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| lead             | Version⏳ · PDF⏳ · Fill-From · Save · **Submit Section** | ◀ Prev · date · Next ▶ · Show-archived¹ · Mine\|Everyone · Edit\|Slides · Toggle All · Agent review |
-| head (open)      | PDF · **Publish & Lock**                                  | ◀ Prev · date · Next ▶ · Show-archived¹ · Product\|Leads · Edit\|Slides · Agent review              |
-| head (published) | PDF · Move-to-archive · **Reopen** (neutral)              | (same context row)                                                                                    |
-| viewer           | PDF                                                       | ◀ Prev · date · Next ▶ · Agent review · Back to Archive                                             |
+| Role             | Top row (Document action)                                 | Bottom row (Context control)                                                                           |
+| ---------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| lead             | Version⏳ · PDF⏳ · Fill-From · Save · **Submit Section** | Agent review² · ◀ Prev · date · Next ▶ · Show-archived¹ · Mine\|Everyone · Edit\|Slides · Toggle All |
+| head (open)      | PDF · **Publish & Lock**                                  | Agent review² · ◀ Prev · date · Next ▶ · Show-archived¹ · Product\|Leads · Edit\|Slides              |
+| head (published) | PDF · Move-to-archive · **Reopen** (neutral)              | (same context row)                                                                                     |
+| viewer           | PDF                                                       | Agent review² · Back to Archive · ◀ Prev · date · Next ▶                                             |
 
 `⏳` = an existing inert Coming-soon control occupying its slot.
 ¹ Show-archived renders only when archived periods exist (lead-report-controls-integrity).
+² The inert Agent-review placeholder leads the context group: `head-toolbar-semantics`
+requires it at the leading edge of its control group ("first element of the group"),
+which takes precedence over a trailing position. If live verification shows the
+leading-before-period-nav placement reads poorly, relocate it to the leading edge of
+the toggle sub-cluster and adjust the `head-toolbar-semantics` scenario wording to
+match — recorded here, not changed silently.
 
 ### Two archive surfaces (not one "Archive")
 

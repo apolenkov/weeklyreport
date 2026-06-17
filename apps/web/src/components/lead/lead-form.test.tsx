@@ -6,7 +6,7 @@
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
@@ -405,6 +405,85 @@ describe("LeadForm mutation wiring", () => {
       await screen.findByRole("button", { name: /Request Reopen/i }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Revoke$/i })).toBeNull();
+  });
+
+  it("draft: Submit Section is a document action; view mode + agent review are context controls", async () => {
+    // report-toolbar-layout: the forward commit sits in the Document action
+    // row; the framing controls (view mode, agent review) sit in the Context
+    // control row. The commit copy is Submit Section (renamed from Submit
+    // Report to match the glossary).
+    const { Wrapper } = buildHarness();
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    await screen.findByText("Autosaved");
+
+    const documentActions = screen.getByRole("group", {
+      name: "Document actions",
+    });
+    const contextControls = screen.getByRole("group", {
+      name: "Context controls",
+    });
+    expect(
+      within(documentActions).getByRole("button", { name: /submit section/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(documentActions).queryByRole("button", { name: /submit report/i }),
+    ).toBeNull();
+    // The inert document-action stubs reserve their top-row slot.
+    expect(
+      within(documentActions).getByTestId("version-coming-soon"),
+    ).toBeInTheDocument();
+    expect(
+      within(documentActions).getByTestId("lead-pdf-export-coming-soon"),
+    ).toBeInTheDocument();
+    // Framing controls live in the context row.
+    expect(
+      within(contextControls).getByRole("link", { name: /slides/i }),
+    ).toBeInTheDocument();
+    expect(
+      within(contextControls).getByTestId("agent-review-coming-soon"),
+    ).toBeInTheDocument();
+  });
+
+  it("read-only past period: hides Save/Submit/Fill-From but keeps the inert Coming-soon stubs", async () => {
+    // report-toolbar-layout: a read-only past period hides the real mutating
+    // document actions, while the deferred-feature inert stubs stay visible
+    // (deferred-feature-pattern) and the context row remains.
+    const { Wrapper } = buildHarness({ byPeriodReadOnly: true });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    await screen.findByText("Autosaved");
+
+    const documentActions = screen.getByRole("group", {
+      name: "Document actions",
+    });
+    // Real mutating actions are hidden.
+    expect(
+      within(documentActions).queryByRole("button", {
+        name: /submit section/i,
+      }),
+    ).toBeNull();
+    expect(
+      within(documentActions).queryByRole("button", { name: /fill from/i }),
+    ).toBeNull();
+    expect(within(documentActions).queryByTestId("save-now-disc")).toBeNull();
+    // Inert Coming-soon stubs remain visible.
+    expect(
+      within(documentActions).getByTestId("version-coming-soon"),
+    ).toBeInTheDocument();
+    expect(
+      within(documentActions).getByTestId("lead-pdf-export-coming-soon"),
+    ).toBeInTheDocument();
+    // The context control row is still present.
+    expect(
+      screen.getByRole("group", { name: "Context controls" }),
+    ).toBeInTheDocument();
   });
 });
 

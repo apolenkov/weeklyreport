@@ -1134,126 +1134,135 @@ export function LeadForm({
                 </span>
               ))}
           </div>
-          <div className="flex items-center gap-3">
-            {!isSlidesMode && <AgentReviewComingSoon />}
-            {!isSlidesMode &&
-              (currentWeekItems.length > 0 ||
-                nextWeekItems.length > 0 ||
-                risks.length > 0 ||
-                decisions.length > 0) && (
-                <button
-                  type="button"
-                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
-                  onClick={handleToggleAll}
-                  title="Toggle All"
-                >
-                  <CollapseIcon />
-                  Toggle All
-                </button>
-              )}
-            {isSlidesMode && <AgentReviewComingSoon />}
-            {isSlidesMode && <SlideFullscreenButton targetRef={deckRef} />}
-            {/* 7c.1: Record visibility toggle — edit mode only (not slides).
-                Disabled until the persisted state hydrates so a click cannot
-                race the restored value. */}
-            {!isSlidesMode && (
-              <RecordVisibilityToggle
-                value={recordVisibility}
-                onChange={setRecordVisibility}
-              />
-            )}
-            <ViewModeToggle
-              mode={isSlidesMode ? "slides" : "edit"}
-              editHref={
-                targetReportId
-                  ? `/lead/report/${encodeURIComponent(targetReportId)}`
-                  : "/lead/report"
-              }
-              slidesHref={
-                targetReportId
-                  ? `/lead/report/${encodeURIComponent(
-                      targetReportId,
-                    )}?mode=slides`
-                  : "/lead/report"
-              }
-            />
-            {isSubmitted && currentUser.authorRole === "lead" && (
-              <button
-                type="button"
-                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.25)] bg-[rgba(0,117,74,0.08)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={() => {
-                  setReopenError(null);
-                  setShowReopenDialog(true);
-                }}
-                disabled={requestReopenMut.isPending}
-                title="Ask Head to unlock this section"
-              >
-                Request Reopen
-              </button>
-            )}
-            {isSubmitted && currentUser.authorRole !== "lead" && (
-              <button
-                type="button"
-                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={handleRevoke}
-                disabled={revokeMut.isPending}
-                title="Revoke submission and unlock the section"
-              >
-                Revoke
-              </button>
-            )}
-            {!isSubmitted && (
-              <button
-                type="button"
-                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={handleSubmit}
-                disabled={isReadOnly || submitMut.isPending}
-              >
-                Submit Report
-              </button>
-            )}
-          </div>
         </header>
 
-        {/* Context shell: period, archive, fill-from, and edit-version controls. */}
+        {/* report-toolbar-layout: the period toolbar splits by one axis.
+            Top (Document action) row: Version⏳ · PDF⏳ · Fill-From · Save ·
+            Submit Section. Bottom (Context control) row: Agent review · period
+            nav · show-archived · Mine|Everyone · Edit|Slides · Toggle All. A
+            read-only past period hides only the real mutating actions
+            (Save/Submit/Fill-From) but keeps the inert Coming-soon stubs
+            (deferred-feature-pattern). */}
         <ReportToolbar
-          periodNavigator={
-            <PeriodNavigator
-              periods={visiblePeriods}
-              showLeadSubmissionMarkers
-              leadSubmittedAt={byPeriodQ.data.section.submittedAt ?? null}
-            />
-          }
-          archiveToggle={
-            hasArchivedPeriods ? (
-              <>
-                <Separator
-                  orientation="vertical"
-                  className="h-5 bg-[var(--color-border)]"
-                />
-                <ArchiveToggle
-                  checked={showArchivePeriods}
-                  onChange={setShowArchivePeriods}
-                />
-              </>
-            ) : undefined
-          }
-          trailingExtras={
-            // toolbar-polish: one uniform gap across the whole icon-button row
-            // (no Separators that opened a larger gap before Save) — the
-            // trailing group's own `gap` now spaces every control evenly.
+          documentActions={
             <>
-              <FillFromButton
-                periods={visiblePeriods}
-                disabled={isReadOnly || fillFromMut.isPending}
-                onFillFrom={handleFillFrom}
-              />
               <VersionComingSoonControl />
               {/* TODO(lead-pdf-export): lead is excluded from pdfExport
                   (role-coverage-gate); this inert ComingSoon control never
                   reaches a backend call. */}
               <PdfExportComingSoonControl />
+              {!isReadOnly && (
+                <FillFromButton
+                  periods={visiblePeriods}
+                  disabled={fillFromMut.isPending}
+                  onFillFrom={handleFillFrom}
+                />
+              )}
               {!isReadOnly && <SaveNowButton autosave={autosave} />}
+              {/* Reversal lifecycle actions take a neutral/outline treatment so
+                  the brand-accent green stays a single "forward, safe-to-commit"
+                  meaning (report-toolbar-layout accent hierarchy). */}
+              {isSubmitted && currentUser.authorRole === "lead" && (
+                <button
+                  type="button"
+                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => {
+                    setReopenError(null);
+                    setShowReopenDialog(true);
+                  }}
+                  disabled={requestReopenMut.isPending}
+                  title="Ask Head to unlock this section"
+                >
+                  Request Reopen
+                </button>
+              )}
+              {isSubmitted && currentUser.authorRole !== "lead" && (
+                <button
+                  type="button"
+                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={handleRevoke}
+                  disabled={revokeMut.isPending}
+                  title="Revoke submission and unlock the section"
+                >
+                  Revoke
+                </button>
+              )}
+              {!isSubmitted && !isReadOnly && (
+                <button
+                  type="button"
+                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={handleSubmit}
+                  disabled={submitMut.isPending}
+                >
+                  Submit Section
+                </button>
+              )}
+            </>
+          }
+          contextControls={
+            <>
+              {/* Inert Agent-review placeholder leads the context group
+                  (head-toolbar-semantics: compact, leading edge). */}
+              <AgentReviewComingSoon />
+              <PeriodNavigator
+                periods={visiblePeriods}
+                showLeadSubmissionMarkers
+                leadSubmittedAt={byPeriodQ.data.section.submittedAt ?? null}
+              />
+              {/* Show-archived filter renders only when the lead has archived
+                  periods (lead-report-controls-integrity). */}
+              {hasArchivedPeriods && (
+                <>
+                  <Separator
+                    orientation="vertical"
+                    className="h-5 bg-[var(--color-border)]"
+                  />
+                  <ArchiveToggle
+                    checked={showArchivePeriods}
+                    onChange={setShowArchivePeriods}
+                  />
+                </>
+              )}
+              {/* 7c.1: Record visibility toggle — edit mode only (not slides).
+                  Disabled until the persisted state hydrates so a click cannot
+                  race the restored value. */}
+              {!isSlidesMode && (
+                <RecordVisibilityToggle
+                  value={recordVisibility}
+                  onChange={setRecordVisibility}
+                />
+              )}
+              {isSlidesMode && <SlideFullscreenButton targetRef={deckRef} />}
+              <ViewModeToggle
+                mode={isSlidesMode ? "slides" : "edit"}
+                editHref={
+                  targetReportId
+                    ? `/lead/report/${encodeURIComponent(targetReportId)}`
+                    : "/lead/report"
+                }
+                slidesHref={
+                  targetReportId
+                    ? `/lead/report/${encodeURIComponent(
+                        targetReportId,
+                      )}?mode=slides`
+                    : "/lead/report"
+                }
+              />
+              {!isSlidesMode &&
+                (currentWeekItems.length > 0 ||
+                  nextWeekItems.length > 0 ||
+                  risks.length > 0 ||
+                  decisions.length > 0) && (
+                  <button
+                    type="button"
+                    className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+                    onClick={handleToggleAll}
+                    title="Toggle All"
+                  >
+                    <CollapseIcon />
+                    Toggle All
+                  </button>
+                )}
             </>
           }
         />
@@ -1472,7 +1481,7 @@ export function LeadForm({
             aria-label="Confirm submission"
           >
             <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-              Submit Report?
+              Submit Section?
             </h3>
             <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
               Your report will be locked and visible to the group head. You will
@@ -1523,7 +1532,7 @@ export function LeadForm({
                 onClick={handleConfirmSubmit}
                 disabled={submitMut.isPending}
               >
-                Submit Report
+                Submit Section
               </button>
             </div>
           </div>

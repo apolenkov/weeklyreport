@@ -47,14 +47,20 @@ vi.mock("../../components/lead/lead-section-preview-auth", () => ({
 }));
 
 vi.mock("../../components/weekly-report/weekly-report-page", () => ({
-  // unify-top-action-toolbars D4: the viewer routes its action controls
-  // (incl. the agent-review placeholder) through the `headerActions` slot,
-  // mirroring the head report shell. Render the slot so the viewer's single
-  // placeholder is observable in these tests.
-  WeeklyReportPage: ({ headerActions }: { headerActions?: ReactNode }) => (
+  // report-toolbar-layout: the viewer routes its bottom-row controls (the
+  // agent-review placeholder + Back-to-Archive nav) through the
+  // `contextControlsLeading` slot. Render it so the viewer's single placeholder
+  // is observable in these tests.
+  WeeklyReportPage: ({
+    contextControlsLeading,
+  }: {
+    contextControlsLeading?: ReactNode;
+  }) => (
     <div data-testid="weekly-report-page-stub">
       <h1>Status Report</h1>
-      <div data-testid="weekly-report-header-actions">{headerActions}</div>
+      <div data-testid="weekly-report-context-controls">
+        {contextControlsLeading}
+      </div>
     </div>
   ),
 }));
@@ -219,7 +225,7 @@ describe("PublishedReportPage — single title + header actions (task 2.0)", () 
     expect(screen.queryByText(/report id:/i)).not.toBeInTheDocument();
   });
 
-  it("routes the viewer actions through the headerActions slot", () => {
+  it("routes the viewer actions through the context controls slot", () => {
     render(
       <PublishedReportPage
         params={paramsOf(TEST_REPORT_ID)}
@@ -227,13 +233,15 @@ describe("PublishedReportPage — single title + header actions (task 2.0)", () 
       />,
     );
     expect(screen.queryByTestId("report-actions-pill")).not.toBeInTheDocument();
-    const headerActions = screen.getByTestId("weekly-report-header-actions");
-    const back = within(headerActions).getByRole("link", {
+    const contextControls = screen.getByTestId(
+      "weekly-report-context-controls",
+    );
+    const back = within(contextControls).getByRole("link", {
       name: /back to archive/i,
     });
     expect(back).toHaveAttribute("href", "/reports?tab=published");
     expect(
-      within(headerActions).getByTestId("agent-review-coming-soon"),
+      within(contextControls).getByTestId("agent-review-coming-soon"),
     ).toBeInTheDocument();
   });
 
