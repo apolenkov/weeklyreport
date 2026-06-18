@@ -559,9 +559,12 @@ describe("LeadForm icon SVGs — aria-hidden", () => {
 
   it("CollapseIcon svg has aria-hidden=true", async () => {
     const container = await renderAndSettle();
-    // CollapseIcon renders inside the "Toggle All" button, which is visible
-    // when there are items or decisions in the section data.
-    const toggleBtn = container.querySelector('button[title="Toggle All"]');
+    // CollapseIcon renders inside the mode-adaptive collapse-all control
+    // (edit mode), which is icon-only — its accessible name lives on the
+    // button as aria-label + title, reflecting the current collapse state.
+    const toggleBtn = container.querySelector(
+      'button[title="Collapse all sections"]',
+    );
     expect(toggleBtn).not.toBeNull();
     const svg = toggleBtn?.querySelector("svg[aria-hidden='true']");
     expect(svg).not.toBeNull();
@@ -581,5 +584,94 @@ describe("LeadForm icon SVGs — aria-hidden", () => {
     for (const svg of iconSvgs) {
       expect(svg).toHaveAttribute("aria-hidden", "true");
     }
+  });
+});
+
+// slide-mode-collapse-fullscreen-control: the lead context bar's trailing
+// utility is ONE mode-adaptive icon-only slot — collapse-all in edit,
+// fullscreen in slides — always reserved, never an inert "Toggle All".
+describe("LeadForm mode-adaptive trailing control", () => {
+  it("edit mode: shows an enabled icon-only collapse control whose label reflects state", async () => {
+    const { Wrapper } = buildHarness();
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+
+    const collapseBtn = await screen.findByRole("button", {
+      name: "Collapse all sections",
+    });
+    expect(collapseBtn).toBeEnabled();
+    // Icon-only: the former visible "Toggle All" text label is gone.
+    expect(collapseBtn).not.toHaveTextContent("Toggle All");
+
+    // Activating it flips groupExpanded → the accessible name updates.
+    act(() => {
+      collapseBtn.click();
+    });
+    expect(
+      await screen.findByRole("button", { name: "Expand all sections" }),
+    ).toBeInTheDocument();
+  });
+
+  it("edit mode with an empty report: the collapse control is reserved but disabled", async () => {
+    const { Wrapper } = buildHarness({
+      byPeriodQueryFn: () =>
+        Promise.resolve({
+          section: {
+            reportSectionId: SECTION_ID,
+            reportId: REPORT_ID,
+            authorId: AUTHOR_ID,
+            authorName: "Test Lead",
+            authorRole: "lead" as const,
+            status: "draft" as const,
+            submittedAt: null,
+            projects: [],
+            items: [],
+            risks: [],
+            decisions: [],
+            priorities: [],
+          },
+          readOnly: false,
+        }),
+    });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+
+    // The slot is rendered (not removed) even with nothing to collapse...
+    const collapseBtn = await screen.findByRole("button", {
+      name: "Collapse all sections",
+    });
+    // ...and disabled because there is nothing to collapse, so adding a
+    // section in-session enables it in place without shifting the row.
+    expect(collapseBtn).toBeDisabled();
+  });
+
+  it("slides mode: the trailing slot shows the fullscreen toggle, not a collapse/Toggle-All control", async () => {
+    const { Wrapper } = buildHarness();
+    render(
+      <Wrapper>
+        <LeadForm reportId={REPORT_ID} mode="slides" />
+      </Wrapper>,
+    );
+
+    // Exactly one fullscreen control (no duplicate slot-A + trailing mount).
+    const fsButtons = await screen.findAllByRole("button", {
+      name: /Enter fullscreen/i,
+    });
+    expect(fsButtons).toHaveLength(1);
+
+    // No collapse-all / "Toggle All" affordance renders in slides.
+    expect(
+      screen.queryByRole("button", { name: "Collapse all sections" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Expand all sections" }),
+    ).toBeNull();
+    expect(screen.queryByText("Toggle All")).toBeNull();
   });
 });
