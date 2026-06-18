@@ -10,6 +10,12 @@ Codex-reviewed. **Not implemented** — next session implements them. Produced
 autonomously while the user was away; the user asked for full specs, with each
 decision vetted by advisor + Codex.
 
+**Codex Act-2 verdicts:** SPEC B (coming-soon) APPROVED; SPEC C (green seed)
+APPROVED; SPEC A (slides) REVISE → 2 majors folded in: (A-1) Everyone only on the
+lead's own deck — a foreign `authorId` URL forces Mine, no merge; (A-2) the merge
+adds no new health-vs-count divergence (it pre-exists in own mode) and no
+double-count. A re-validated clean after the revisions.
+
 ## The three changes (priority order)
 
 ### 1. `slides-record-visibility` (the big one — has an ADR)
