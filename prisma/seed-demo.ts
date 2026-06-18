@@ -334,8 +334,9 @@ const SMALL_DATASET: TierDataset = {
         stage: "Testing",
       },
     },
-    // Maria also owns Testing on Integrations (consistent role), no extra
-    // content there.
+    // Maria also owns Testing on Integrations. She carries cross-author content
+    // here (an item + a decision) so the lead's "Everyone" visibility lens on
+    // Vasily's Integrations product shows co-owner records, not just own ones.
     {
       leadId: LEAD_MARIA_ID,
       leadLabel: MARIA_LABEL,
@@ -343,7 +344,20 @@ const SMALL_DATASET: TierDataset = {
       productLight: TrafficLightStatus.green,
       sectionStatus: ReportSectionStatus.draft,
       ownedStages: ["Testing"],
-      items: [],
+      items: [
+        {
+          type: ItemType.current,
+          text: "Контрактные тесты REST-коннектора зелёные на стенде интеграций",
+          tag: "feature",
+          status: ItemWorkflowStatus.in_progress,
+          stages: ["Testing"],
+        },
+      ],
+      decision: {
+        text: "Принять контрактные тесты как gate перед боевой интеграцией",
+        impact: "Ломающие изменения партнёрского API ловятся до релиза",
+        stage: "Testing",
+      },
     },
     // --- Igor (co-owner) — owns DevOps; foreign blocker on BI -------------
     {
@@ -367,6 +381,13 @@ const SMALL_DATASET: TierDataset = {
         impact: "Релиз дашборда BI сдвигается до выделения ресурсов",
         mitigation: "Заявка в инфраструктуру, временный деплой на общий стенд",
         severity: "blocked",
+        stage: "DevOps",
+      },
+      // Cross-author decision on Vasily's BI product, surfaced in his
+      // "Everyone" visibility lens alongside Igor's blocker.
+      decision: {
+        text: "Временно деплоить BI на общий стенд до выделения кластера",
+        impact: "Разблокирует приёмку дашборда, прод-деплой ждёт ресурсов",
         stage: "DevOps",
       },
     },
