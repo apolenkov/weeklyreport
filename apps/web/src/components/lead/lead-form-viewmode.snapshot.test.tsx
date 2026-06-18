@@ -123,7 +123,7 @@ describe("LeadForm view-mode toggle — pre-extract snapshot", () => {
     // findByRole is act-wrapped by RTL — waits for the query cascade to settle.
     const editLink = await screen.findByRole("link", { name: /^Edit$/i });
     const slidesLink = screen.queryByRole("link", {
-      name: /Open slides mode/i,
+      name: /^Slides$/i,
     });
 
     expect(editLink).toBeInTheDocument();
