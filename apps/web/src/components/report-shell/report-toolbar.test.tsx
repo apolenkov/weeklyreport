@@ -1,42 +1,50 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { ReportToolbar } from "./report-toolbar";
+import { DocumentActionGroup, ReportToolbar } from "./report-toolbar";
 
 describe("ReportToolbar", () => {
-  it("renders all slots when provided", () => {
+  it("renders the context controls in a single labeled bar", () => {
     render(
-      <ReportToolbar
-        periodNavigator={<span>PeriodNav</span>}
-        archiveToggle={<span>Archive</span>}
-        leadingExtras={<span>LeadingExtra</span>}
-        trailingExtras={<span>TrailingExtra</span>}
-      />,
+      <ReportToolbar contextControls={<button type="button">Edit</button>} />,
     );
-    expect(screen.getByText("PeriodNav")).toBeDefined();
-    expect(screen.getByText("Archive")).toBeDefined();
-    expect(screen.getByText("LeadingExtra")).toBeDefined();
-    expect(screen.getByText("TrailingExtra")).toBeDefined();
+    const contextBar = screen.getByRole("group", { name: "Context controls" });
+    expect(contextBar).toContainElement(
+      screen.getByRole("button", { name: "Edit" }),
+    );
+    // report-toolbar-layout: document actions no longer live in the bordered
+    // toolbar — they render on the page header line via DocumentActionGroup.
+    expect(
+      screen.queryByRole("group", { name: "Document actions" }),
+    ).toBeNull();
   });
 
-  it("omits leading and trailing slots when undefined", () => {
-    const { container } = render(
-      <ReportToolbar
-        periodNavigator={<span>PeriodNav</span>}
-        archiveToggle={<span>Archive</span>}
-      />,
-    );
-    expect(screen.getByText("PeriodNav")).toBeDefined();
-    expect(screen.getByText("Archive")).toBeDefined();
-    // No extra text nodes besides the provided slots
-    expect(container.querySelectorAll("span")).toHaveLength(2);
-  });
-
-  it("root has flex, justify-between and rounded class signature", () => {
+  it("returns nothing when no context controls are passed", () => {
     const { container } = render(<ReportToolbar />);
-    const root = container.firstChild as HTMLElement;
-    expect(root.className).toContain("flex");
-    expect(root.className).toContain("justify-between");
-    expect(root.className).toContain("rounded-");
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("keeps the bordered frame and stays horizontally reachable at narrow widths", () => {
+    render(<ReportToolbar contextControls={<span>Ctx</span>} />);
+    const contextBar = screen.getByRole("group", { name: "Context controls" });
+    expect(contextBar.getAttribute("data-testid")).toBe("report-toolbar");
+    expect(contextBar.className).toContain("rounded-");
+    expect(contextBar.className).toContain("overflow-x-auto");
+  });
+});
+
+describe("DocumentActionGroup", () => {
+  it("wraps document actions in a labeled group that wraps at narrow widths", () => {
+    render(
+      <DocumentActionGroup>
+        <button type="button">Submit Section</button>
+      </DocumentActionGroup>,
+    );
+    const group = screen.getByRole("group", { name: "Document actions" });
+    expect(group).toContainElement(
+      screen.getByRole("button", { name: "Submit Section" }),
+    );
+    // Header line wraps so no document action is clipped (no overflow clip).
+    expect(group.className).toContain("flex-wrap");
   });
 });

@@ -47,24 +47,30 @@ export function SlideFullscreenButton({
 
   if (variant === "floating" && !isFullscreen) return null;
 
-  const floatingClass =
+  // Floating overlay keeps its labeled pill; the in-toolbar default is an
+  // icon-only square at the shared toolbar height so it matches the other
+  // controls (the label survives as aria-label + tooltip).
+  const className =
     variant === "floating"
-      ? " fixed top-4 right-4 z-50 bg-[var(--color-card)] shadow-lg"
-      : "";
+      ? "btn-press fixed top-4 right-4 z-50 inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-[var(--color-card)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] shadow-lg transition-colors hover:bg-[var(--color-surface-hover)]"
+      : "btn-press inline-flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]";
+
+  const label = isFullscreen ? "Exit fullscreen" : "Enter fullscreen";
 
   return (
     <button
       type="button"
       onClick={toggle}
-      aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-      className={`btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]${floatingClass}`}
+      aria-label={label}
+      title={label}
+      className={className}
     >
       {isFullscreen ? (
-        <Minimize2 className="h-3.5 w-3.5" aria-hidden="true" />
+        <Minimize2 className="h-4 w-4" aria-hidden="true" />
       ) : (
-        <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
+        <Maximize2 className="h-4 w-4" aria-hidden="true" />
       )}
-      {isFullscreen ? "Exit" : "Fullscreen"}
+      {variant === "floating" && (isFullscreen ? " Exit" : " Fullscreen")}
     </button>
   );
 }

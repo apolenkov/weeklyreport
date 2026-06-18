@@ -22,7 +22,7 @@ export function AgentReviewComingSoon({
         data-testid="agent-review-coming-soon"
         className={`inline-flex cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] font-semibold text-[var(--color-muted-foreground)] ${
           compact
-            ? "px-2.5 py-1 text-xs"
+            ? "h-[var(--toolbar-control-h)] px-2.5 text-xs"
             : "min-h-[var(--touch-target-min)] px-4 py-1.5 text-sm"
         }`}
       >
