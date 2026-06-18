@@ -319,11 +319,12 @@ describe("LeadForm — Record visibility: Mine only (7d.1)", () => {
     expect(screen.queryByText(FOREIGN_RISK_TEXT)).toBeNull();
     expect(screen.queryByText(FOREIGN_ITEM_TEXT)).toBeNull();
     expect(screen.queryByText(CO_OWNER_NAME)).toBeNull();
-    // The foreign override is skipped in Mine only, so the Testing chip stays
-    // unassigned (aria-label "Testing: empty") rather than the locked red the
-    // co-lead's status would otherwise paint.
-    expect(screen.queryByLabelText(/^Testing: blocked/)).toBeNull();
-    expect(screen.queryByLabelText(/^Testing: empty/)).not.toBeNull();
+    // lead-mine-hide-unowned-stages: Mine renders only the lead's own chips, so
+    // the foreign "Testing" stage is hidden entirely — neither the co-lead's
+    // locked red nor a greyed "unassigned" chip. The lead's own "Dev" chip
+    // (from the "Development" ownedStage) still renders.
+    expect(screen.queryByLabelText(/^Testing:/)).toBeNull();
+    expect(screen.queryByLabelText(/^Dev:/)).not.toBeNull();
   });
 });
 

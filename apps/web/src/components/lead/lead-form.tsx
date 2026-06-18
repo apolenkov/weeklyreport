@@ -1330,6 +1330,7 @@ export function LeadForm({
                 : {})}
               risksAddSignal={risksAddSignal}
               crossAuthors={crossAuthorEntries}
+              visibilityMode={recordVisibility}
               displayRisks={risks}
             >
               <AccordionSection
