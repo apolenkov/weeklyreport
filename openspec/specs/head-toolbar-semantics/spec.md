@@ -12,43 +12,38 @@ governs naming/grouping semantics, not a code module.
 
 ### Requirement: Segmented toggles in the head report header share one visual family
 
-The segmented controls MUST render as one neutral visual family wherever they
-sit — the head report header or the report toolbar's context-control bar — using a
-neutral active-selection fill, not the brand accent.
+The segmented controls MUST render as one neutral, compact visual family wherever they sit — the head report header or the report toolbar's context-control bar — using a soft-slate active-selection fill, not the brand accent.
 
 `ScopeToggle` (`apps/web/src/components/report-shell/scope-toggle.tsx`),
 `ViewModeToggle` (`apps/web/src/components/report-shell/view-mode-toggle.tsx`),
-and `RecordVisibilityToggle` (the lead Mine only/Everyone control in
+and `RecordVisibilityToggle` (the lead Mine/Everyone control in
 `apps/web/src/components/lead/lead-form.tsx`) MUST compose one shared
-presentational primitive so they are visually identical: the same neutral active
-fill (`--color-foreground`, white active text), the same inactive treatment (a
-solid `--color-surface-empty` track with `--color-muted-foreground` text), the
-same neutral border, the same font size tier (`text-sm` semibold), the same pill
-shape, and the same per-segment minimum width. Brand green (`--color-starbucks-accent`)
-MUST NOT be used as the toggle active fill — green is reserved for header-line
-forward actions (Submit Section, Publish & Lock). Group separation MUST be
-carried by wrapper border/spacing, not by divergent control styling. A new
-segmented control MUST adopt the same family. The toggles must compose the shared
-primitive for their chrome while keeping their own mechanics: `ViewModeToggle`
-stays `<Link>` URL navigation, `ScopeToggle` stays a `radiogroup`, and
-`RecordVisibilityToggle` stays `aria-pressed` two-state buttons.
+presentational primitive (`SegmentedToggle`) so they are visually identical: the
+same slate active fill (`--color-toggle-active`, white active text), the same
+inactive treatment (a solid `--color-surface-empty` track with
+`--color-muted-foreground` text), the same neutral border, the same compact
+`text-xs` tier, the same pill shape, and the same shared control height
+(`--toolbar-control-h`). Brand green (`--color-starbucks-accent`) MUST NOT be the
+toggle active fill — green is reserved for header-line forward actions (Submit
+Section, Publish & Lock). A segment whose meaning has an unambiguous icon
+(Edit = pencil, Slides = grid; Mine = one person, Everyone = group) MAY render
+icon-only, but MUST keep an accessible name (sr-only text and/or tooltip); the
+scope toggle (Product/Leads) keeps compact text. Group separation MUST be carried
+by wrapper border/spacing, not by divergent control styling.
 
 #### Scenario: the toggles render as one neutral family
 
 - **WHEN** the report toolbar renders the scope toggle, the view-mode toggle, and
   (on the lead surface) the Mine/Everyone visibility toggle
-- **THEN** all use the neutral foreground active-fill token, the same font size,
-  and the same pill shape
-- **AND** the toggles are visually identical, separated only by wrapper spacing
+- **THEN** all use the slate active-fill token, the same compact height, and the
+  same pill shape
 - **AND** none uses the brand-accent token as its active fill
 
-#### Scenario: the inactive segment shows no cream-frame tint
+#### Scenario: an icon-only segment keeps an accessible name
 
-- **WHEN** a segmented toggle renders an inactive segment inside the bordered
-  context bar
-- **THEN** the inactive segment sits on the defined `--color-surface-empty` track,
-  not an undefined `--color-surface` value that lets the toolbar frame show
-  through
+- **WHEN** the view-mode toggle renders its Edit and Slides segments icon-only
+- **THEN** each segment still exposes an accessible name (e.g. "Edit" / "Slides")
+  via sr-only text and/or tooltip, not an empty icon-only control
 
 ### Requirement: Header utility actions carry visible text labels
 
