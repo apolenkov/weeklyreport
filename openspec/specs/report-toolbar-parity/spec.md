@@ -66,24 +66,31 @@ so the archived-period count is not surfaced on the toggle itself.
 
 ### Requirement: Labeled header actions are not icon-ified by parity work
 
-The icon-button rule MUST apply to controls inside the report toolbar pill.
-Header-row actions that durable specs require labeled (`Present`, `Print`,
-`Publish` — see `head-toolbar-semantics`) and the lead header actions (`Submit
-Report`, `Toggle All`, `Request Reopen`, `Revoke`) MUST keep their visible text
-labels. `Export PDF` lives inside the report toolbar pill's trailing group (not
-the header utility/publish row), so the icon-button rule applies to it: it renders
-as the shared 32px icon button with `aria-label` + tooltip (user sign-off
-2026-06-16), and is removed from the keep-labeled set it was previously listed in.
+Named commit and utility actions MUST keep their visible text labels whether they render on the page header line or inside `ReportToolbar`; only compact icon-only controls use the `ToolbarIconButton` primitive.
+
+The rule is by control kind, not by container: a compact icon-only toolbar
+control (e.g. `Export PDF`) MUST render as the shared 32px `ToolbarIconButton`
+with an `aria-label` + tooltip; a named commit/utility control MUST keep its
+visible text label whether it sits on the page header line's document-action
+group or in the report toolbar's context-control bar. The named actions that
+durable specs require labeled (`Present`, `Print`, `Publish` — see
+`head-toolbar-semantics`) and the lead actions (`Submit Section`, `Toggle All`,
+`Request Reopen`, `Revoke`) MUST keep their visible text labels; promoting the
+document actions onto the page header line does NOT icon-ify them (`Toggle All`
+stays a labeled neutral button in the context bar). `Export PDF` stays out of the
+keep-labeled set (user sign-off 2026-06-16). The lead commit label is `Submit
+Section` (a period is never globally "submitted").
+
+#### Scenario: labeled actions keep their text on the header line
+
+- **WHEN** the report surface renders the labeled commit and utility actions in
+  the page header line's document-action group
+- **THEN** `Publish` / `Submit Section` (and `Present` / `Print` / `Request
+Reopen` / `Revoke` where present) keep their visible text labels, not icon-only
+- **AND** `Toggle All` keeps its visible text label in the context-control bar
 
 #### Scenario: the report toolbar renders its trailing export control
 
-- **WHEN** the report toolbar pill renders its trailing group with an export
-  control
+- **WHEN** the report surface renders an export control
 - **THEN** `Export PDF` renders as a 32px icon button with an `aria-label`/tooltip
   (an accessible name), not icon-only without one
-
-#### Scenario: header-row labeled actions are unchanged
-
-- **WHEN** the head report header row renders its publish and utility actions
-- **THEN** `Publish` (and `Present`/`Print` if present) keep their visible text
-  labels unchanged

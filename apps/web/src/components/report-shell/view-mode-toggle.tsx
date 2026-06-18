@@ -1,25 +1,9 @@
 "use client";
 
+import { LayoutGrid, Pencil } from "lucide-react";
 import Link from "next/link";
 
-function SlidesViewIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4 flex-shrink-0"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 4h18v16H3z" />
-      <path d="M9 4v16M15 4v16" />
-      <path d="M3 10h18" />
-    </svg>
-  );
-}
+import { segmentClassName, SegmentedToggle } from "./segmented-toggle";
 
 interface ViewModeToggleProps {
   readonly editHref: string;
@@ -32,32 +16,30 @@ export function ViewModeToggle({
   slidesHref,
   mode = "edit",
 }: ViewModeToggleProps) {
-  const activeClass = "bg-[var(--color-starbucks-accent)] text-white";
-  const inactiveClass =
-    "bg-[var(--color-surface)] text-[var(--color-starbucks-accent)]";
-
-  // Self-contained wrapper: the two segments must touch to read as ONE
-  // segmented pill. Without it, a parent flex container with `gap-*`
-  // (e.g. the lead header) splits the pill into two broken halves
-  // (user-reported 2026-06-10).
+  // Compact icon-only segments in the neutral family. The two segments stay
+  // `<Link>` URL navigation (slides is a separate route; `scroll={false}`), so
+  // middle-click / open-in-new-tab still work. Each keeps an accessible name via
+  // aria-label + tooltip now that the label is an icon.
   return (
-    <div className="inline-flex items-center">
+    <SegmentedToggle ariaLabel="View mode">
       <Link
         href={editHref}
         scroll={false}
-        className={`inline-flex min-h-[var(--touch-target-min)] min-w-[96px] items-center justify-center gap-1 rounded-l-[var(--radius-pill)] border border-r-0 border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors ${mode === "edit" ? activeClass : inactiveClass}`}
+        title="Edit"
+        className={segmentClassName(mode === "edit", { iconOnly: true })}
       >
-        Edit
+        <Pencil className="h-4 w-4" aria-hidden="true" />
+        <span className="sr-only">Edit</span>
       </Link>
       <Link
         href={slidesHref}
         scroll={false}
-        className={`inline-flex min-h-[var(--touch-target-min)] min-w-[96px] items-center justify-center gap-1 rounded-r-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors ${mode === "slides" ? activeClass : inactiveClass}`}
-        aria-label="Open slides mode"
+        title="Slides"
+        className={segmentClassName(mode === "slides", { iconOnly: true })}
       >
-        <SlidesViewIcon />
-        Slides
+        <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+        <span className="sr-only">Slides</span>
       </Link>
-    </div>
+    </SegmentedToggle>
   );
 }

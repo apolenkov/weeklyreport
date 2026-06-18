@@ -175,8 +175,9 @@ function renderPage(
   authorId?: string,
   role: SessionUser["role"] = "head",
   scope?: "product" | "lead",
-  toolbar?: ReactNode,
-  headerActions?: ReactNode,
+  documentActionsLeading?: ReactNode,
+  contextControls?: ReactNode,
+  contextControlsLeading?: ReactNode,
 ) {
   const { proxy, captured } = createMockTRPC([
     { path: ["weeklyReport", "get"], query: data },
@@ -233,8 +234,9 @@ function renderPage(
     <WeeklyReportPage
       authorId={authorId}
       scope={scope}
-      toolbar={toolbar}
-      headerActions={headerActions}
+      documentActionsLeading={documentActionsLeading}
+      contextControls={contextControls}
+      contextControlsLeading={contextControlsLeading}
     />,
     { wrapper: Wrapper },
   );
@@ -582,77 +584,88 @@ describe("WeeklyReportPage — async Export PDF button role gating (driver sweep
   });
 });
 
-// head-toolbar-parity: the bespoke gradient "Context shell" is gone — the
-// period-context bar renders through the shared ReportToolbar container.
-// Standalone consumers (bare /head/report, /reports/[reportId], lead preview,
-// present client) keep the default; HeadReportShell composes the page's
-// single toolbar and passes it through the `toolbar` slot, which renders
-// below the page header row (the lead arrangement).
-describe("WeeklyReportPage — shared period toolbar (head-toolbar-parity)", () => {
+// report-toolbar-layout: the period-context bar renders through the shared
+// The page splits controls by axis: document actions render on the page header
+// line (DocumentActionGroup), and the bordered ReportToolbar holds only the
+// single Context-control bar below the header. Department context is a header
+// label, not a toolbar control, so the default toolbar carries no center label.
+describe("WeeklyReportPage — shared period toolbar (report-toolbar-layout)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
-  it("renders the shared ReportToolbar container with the department label by default", async () => {
+  it("renders document actions on the header line and the context bar below it", async () => {
     renderPage(makeWeeklyReportData("open"));
-    await screen.findByRole("heading", { name: /status report/i });
-    const toolbar = screen.getByTestId("report-toolbar");
-    expect(toolbar).toBeInTheDocument();
-    expect(toolbar).toHaveTextContent("Live portfolio review");
-  });
-
-  it("renders a shell-provided toolbar below the page header instead of its own context bar", async () => {
-    renderPage(
-      makeWeeklyReportData("open"),
-      undefined,
-      "head",
-      undefined,
-      <div data-testid="shell-toolbar" />,
-    );
     const heading = await screen.findByRole("heading", {
       name: /status report/i,
     });
-    // The slot replaces the page's own period-context toolbar…
-    expect(screen.queryByTestId("report-toolbar")).not.toBeInTheDocument();
-    // …and sits BELOW the page header row (spec scenario: lead arrangement).
-    const shellToolbar = screen.getByTestId("shell-toolbar");
+    // The bordered toolbar IS the Context-control bar (one labeled group).
+    const toolbar = screen.getByTestId("report-toolbar");
+    expect(toolbar).toBeInTheDocument();
+    expect(toolbar).toHaveAttribute("aria-label", "Context controls");
+    // Document actions live on the header line, NOT inside the toolbar.
+    const docGroup = screen.getByRole("group", { name: "Document actions" });
     expect(
-      heading.compareDocumentPosition(shellToolbar) &
+      within(toolbar).queryByRole("group", { name: "Document actions" }),
+    ).toBeNull();
+    // Focus order: the document-action group precedes the context bar in the DOM.
+    expect(
+      docGroup.compareDocumentPosition(toolbar) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // The toolbar sits BELOW the page header row.
+    expect(
+      heading.compareDocumentPosition(toolbar) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 
-  it("renders shell header actions before built-in action controls", async () => {
+  it("renders shell-composed context controls in the bottom row (full override)", async () => {
     renderPage(
       makeWeeklyReportData("open"),
       undefined,
       "head",
       undefined,
+      undefined,
+      <div data-testid="shell-context" />,
+    );
+    await screen.findByRole("heading", { name: /status report/i });
+    const contextRow = screen.getByRole("group", { name: "Context controls" });
+    expect(within(contextRow).getByTestId("shell-context")).toBeInTheDocument();
+  });
+
+  it("renders a shell-supplied leading document action before the built-in lifecycle actions", async () => {
+    // documentActionsLeading replaces the default export and renders before the
+    // page's own Publish & Lock lifecycle action in the Document action row.
+    renderPage(
+      makeWeeklyReportData("open"),
+      undefined,
+      "head",
       undefined,
       <a href="/custom-action">Custom action</a>,
     );
     const customAction = await screen.findByRole("link", {
       name: /custom action/i,
     });
-    const exportPdf = screen.getByRole("button", { name: /export pdf/i });
+    const publish = screen.getByRole("button", { name: /publish . lock/i });
     expect(
-      customAction.compareDocumentPosition(exportPdf) &
+      customAction.compareDocumentPosition(publish) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 });
 
-// report-toolbar-parity + head-toolbar-semantics: the single labeled Export-PDF
-// moved OUT of the header action row INTO the shared ReportToolbar trailing
-// group; the publish precondition hint sits on the report-status row.
+// report-toolbar-parity + head-toolbar-semantics: exactly one labeled Export-PDF
+// renders, on the page header line's document-action group (not inside the
+// bordered toolbar); the publish precondition hint sits on the report-status row.
 describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
-  it("renders exactly one Export-PDF, inside the toolbar trailing group (not the header)", async () => {
+  it("renders exactly one Export-PDF, on the header line (not inside the toolbar)", async () => {
     renderPage(makeWeeklyReportData("published"));
     await screen.findByRole("heading", { name: /status report/i });
 
@@ -661,11 +674,7 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
     });
     expect(exportButtons).toHaveLength(1);
 
-    // The single Export-PDF lives in the shared ReportToolbar, not the header.
-    const toolbar = screen.getByTestId("report-toolbar");
-    expect(
-      within(toolbar).getByRole("button", { name: /export pdf/i }),
-    ).toBeInTheDocument();
+    // The single Export-PDF lives on the header line, not the bordered toolbar.
     const header = screen
       .getByRole("heading", { name: /status report/i })
       .closest("header");
@@ -673,9 +682,11 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
       throw new Error("expected the report heading to sit inside a <header>");
     }
     expect(
-      within(header).queryByRole("button", {
-        name: /export pdf/i,
-      }),
+      within(header).getByRole("button", { name: /export pdf/i }),
+    ).toBeInTheDocument();
+    const toolbar = screen.getByTestId("report-toolbar");
+    expect(
+      within(toolbar).queryByRole("button", { name: /export pdf/i }),
     ).not.toBeInTheDocument();
   });
 

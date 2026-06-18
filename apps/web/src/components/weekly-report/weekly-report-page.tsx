@@ -23,8 +23,8 @@ import type { ReportPeriod } from "../lead/mock-data";
 import { PdfExportComingSoonControl } from "../lead/pdf-export-coming-soon";
 import { PeriodNavigator } from "../lead/period-navigator";
 import {
+  DocumentActionGroup,
   ReportToolbar,
-  ReportToolbarCenterLabel,
 } from "../report-shell/report-toolbar";
 import { ExportPdfButton } from "./export-pdf-button";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
@@ -57,22 +57,36 @@ interface WeeklyReportPageProps {
    */
   readonly scope?: "product" | "lead";
   /**
-   * head-toolbar-parity D2: a page must not stack two period toolbars. When
-   * an outer shell (HeadReportShell) composes the page's single shared
-   * ReportToolbar, it passes the element here; the page renders it in the
-   * toolbar slot below the page header row — the lead arrangement — instead
-   * of its own period-context toolbar. Standalone consumers (bare
-   * /head/report, /reports/[reportId], lead preview, present client) omit it
-   * and keep the page's own toolbar.
+   * report-toolbar-layout: the page owns the single two-row ReportToolbar. An
+   * outer shell (HeadReportShell) supplies leading Document-action-row controls
+   * here — head passes its labeled Export-PDF — rendered before the page's own
+   * Move-to-archive / Publish lifecycle actions. When omitted the page renders
+   * the shared Export control itself (head/admin/viewer get the real export;
+   * lead sees the inert ComingSoon).
    */
-  readonly toolbar?: ReactNode;
+  readonly documentActionsLeading?: ReactNode;
   /**
-   * unify-top-action-toolbars (2026-06-14): shell-composed action controls that
-   * render in the page header row's right cluster, inline with Export-PDF /
-   * Archive / Publish — so head + viewer match the lead header (one unframed
-   * action cluster beside the title). Lead keeps its own header and omits this.
+   * report-toolbar-layout: the FULL Context-control row (bottom row), composed
+   * by an outer shell that owns a richer period navigator (HeadReportShell
+   * prepends the active/displayed periods compiledHistory omits). When provided
+   * it replaces the page's default context row, including period navigation.
+   * Mutually exclusive with `contextControlsLeading`.
    */
-  readonly headerActions?: ReactNode;
+  readonly contextControls?: ReactNode;
+  /**
+   * report-toolbar-layout: Context-control-row controls prepended before the
+   * page's default period navigator. Used by standalone consumers (the viewer)
+   * that reuse the page's own period nav but add the Agent-review placeholder
+   * (leading edge) and Back-to-Archive navigation to the bottom row.
+   */
+  readonly contextControlsLeading?: ReactNode;
+  /**
+   * head-toolbar-parity D2: a context label (department name plus a short page
+   * descriptor) rendered on the header line beside the title. It is a label,
+   * not a control, so it stays out of the two action rows. Head form mode
+   * passes it; standalone consumers omit it.
+   */
+  readonly headerContextLabel?: ReactNode;
 }
 
 /**
@@ -214,18 +228,16 @@ export function WeeklyReportPage({
   canonicalBasePath = "/head/report",
   authorId,
   scope = "product",
-  toolbar,
-  headerActions,
+  documentActionsLeading,
+  contextControls,
+  contextControlsLeading,
+  headerContextLabel,
 }: WeeklyReportPageProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
   const router = useRouter();
   const focusedAuthorId = authorId ?? null;
-  // UFB-047 / Phase 49-01: department label is the Organization singleton's
-  // `fullName`, hydrated per-request on `auth.me`. The legacy fallback to
-  // `weeklyReport.get.departmentName` was removed when the column dropped.
   const sessionState = useContext(SessionContext);
-  const orgFullName = sessionState?.organization?.fullName ?? null;
   const currentRole = sessionState?.user?.role ?? null;
   const canMutatePeriod = currentRole === "head" || currentRole === "admin";
   // Export-PDF authz (fix-report-surface-integrity W2): head/admin/viewer get the
@@ -385,10 +397,6 @@ export function WeeklyReportPage({
           products: ProductReport[];
         }[])
       : [];
-  // UFB-047 / Phase 49-01: department label is exclusively
-  // `auth.me.organization.fullName`. PDF-worker / non-session callers
-  // get a sensible default — the brand never blanks out.
-  const departmentLabel = orgFullName ?? "CustomReport";
 
   const hasReportContent = (report: ProductReport) =>
     Boolean(report.needsAttention) ||
@@ -444,7 +452,7 @@ export function WeeklyReportPage({
     <div className="space-y-4">
       {/* Page header */}
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
           <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
             Status Report
           </h1>
@@ -458,17 +466,32 @@ export function WeeklyReportPage({
               No submitted report content yet.
             </span>
           )}
+          {/* head-toolbar-parity D2: department context label — a label, not a
+              control, so it stays on the header line, out of the action rows. */}
+          {headerContextLabel}
         </div>
-        <div className="flex items-center gap-3">
-          {headerActions}
-          {/* A22: "Archive" button — shown to head once the period is published.
-              Moves the report into the archive (sets archived=true) so it
-              appears in the Archive tab. The button is hidden after archiving
-              because this page only navigates to current/active periods. */}
+        {/* report-toolbar-layout: document actions live on the header line's
+            right slot, not inside the bordered toolbar. The labeled Export-PDF
+            (or a shell-supplied leading action) leads, then the head lifecycle
+            actions (Move-to-archive, Publish & Lock). Viewer and the lead
+            preview have no mutating actions, so only the export control renders. */}
+        <DocumentActionGroup>
+          {documentActionsLeading ?? (
+            <ToolbarExportControl
+              canExportPdf={canExportPdf}
+              showComingSoon={showLeadExportComingSoon}
+              reportId={view.period.reportId}
+              periodStatus={view.period.periodStatus}
+            />
+          )}
+          {/* A22: Move-to-archive — a published-period lifecycle action, so it
+              is a document action (neutral/outline), distinct from the
+              show-archived filter in the context bar. Hidden after archiving
+              because this page only navigates active periods. */}
           {canMutatePeriod && view.period.periodStatus === "published" && (
             <button
               type="button"
-              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() =>
                 archiveMut.mutate({ reportId: view.period.reportId })
               }
@@ -494,44 +517,28 @@ export function WeeklyReportPage({
               publishDisabledReason="No submitted report content yet."
             />
           )}
-        </div>
+        </DocumentActionGroup>
       </header>
 
-      {/* Period-context toolbar: shared ReportToolbar container
-          (head-toolbar-parity D2 — replaces the bespoke gradient bar). A
-          shell-composed toolbar arrives via the `toolbar` slot and renders
-          here, below the page header row, so the page keeps the lead
-          arrangement and never stacks two period toolbars. */}
-      {toolbar ?? (
-        <ReportToolbar
-          periodNavigator={
-            <PeriodNavigator
-              periods={periods}
-              urlBuilder={(periodId) =>
-                `/head/report/${encodeURIComponent(periodId)}`
-              }
-            />
-          }
-          leadingExtras={
-            <ReportToolbarCenterLabel
-              label={departmentLabel}
-              detail="Live portfolio review"
-            />
-          }
-          // report-toolbar-parity: the single labeled Export-PDF lives in the
-          // toolbar trailing group. Offered to every authenticated role (the
-          // export render is requester-scoped, so even the viewer gets their
-          // own non-empty published slice). Matches the widened pdfExport authz.
-          trailingExtras={
-            <ToolbarExportControl
-              canExportPdf={canExportPdf}
-              showComingSoon={showLeadExportComingSoon}
-              reportId={view.period.reportId}
-              periodStatus={view.period.periodStatus}
-            />
-          }
-        />
-      )}
+      {/* report-toolbar-layout: the bordered toolbar holds only the
+          Context-control bar — either a shell-composed row (head) or the page's
+          default period navigator, optionally preceded by leading controls
+          (viewer's Agent review + Back to Archive). */}
+      <ReportToolbar
+        contextControls={
+          contextControls ?? (
+            <>
+              {contextControlsLeading}
+              <PeriodNavigator
+                periods={periods}
+                urlBuilder={(periodId) =>
+                  `/head/report/${encodeURIComponent(periodId)}`
+                }
+              />
+            </>
+          )
+        }
+      />
 
       {/* A32: empty-state — no submissions in current open/reopened period.
           When submissionCount === 0 and the period is not yet published,

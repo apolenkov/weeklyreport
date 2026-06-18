@@ -11,6 +11,7 @@ import { PeriodNavigator } from "../lead/period-navigator";
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../report-shell/archive-toggle";
 import {
+  DocumentActionGroup,
   ReportToolbar,
   ReportToolbarCenterLabel,
 } from "../report-shell/report-toolbar";
@@ -145,20 +146,32 @@ export function HeadReportShell({
   const [scope, setScope] = useState<ScopeValue>("product");
   const reportScope = scope === "lead" ? "lead" : "product";
 
-  // head-toolbar-semantics + report-toolbar-parity: the standalone Present and
-  // browser-Print header links are removed. Presentation is reached via the
-  // ViewModeToggle Slides mode; the only export is the single labeled
-  // Export-PDF in the ReportToolbar trailing group below.
-  const headerActions = (
+  // head-toolbar-parity D2: the department context label moved off the toolbar
+  // (which is now control-only, two rows) onto the page header line beside the
+  // title — it is a label, not a control.
+  const headerContextLabel = (
+    <ReportToolbarCenterLabel
+      label={departmentLabel}
+      detail="Live portfolio review"
+    />
+  );
+
+  // report-toolbar-layout: the head Context-control row (bottom). The inert
+  // Agent-review placeholder leads the group (head-toolbar-semantics: compact,
+  // leading edge); period navigation, the show-archived filter, and the
+  // segmented scope / view-mode toggles follow.
+  // one-placeholder-per-surface (mount-agent-review-placeholder): slides mode
+  // already carries an Agent-review placeholder inside the head slide deck
+  // (status-slide-deck.tsx), so the context row only mounts one in form mode to
+  // avoid double-mounting on the slides surface.
+  const contextControls = (
     <>
-      {/* Leading-edge placement (user direction 2026-06-16): the Agent-review
-          placeholder sits first in the action group, matching the lead toolbar
-          order (lead-form.tsx).
-          one-placeholder-per-surface (mount-agent-review-placeholder): slides
-          mode already carries an Agent-review placeholder inside the head slide
-          deck (status-slide-deck.tsx), so the header only mounts one in form
-          mode to avoid double-mounting on the slides surface. */}
-      {mode === "form" ? <AgentReviewComingSoon /> : null}
+      {periods.length > 0 ? (
+        <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
+      ) : null}
+      <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
+      <div className="grow" aria-hidden="true" />
+      {mode === "form" ? <AgentReviewComingSoon compact /> : null}
       <ScopeToggle
         value={scope}
         onChange={setScope}
@@ -182,32 +195,12 @@ export function HeadReportShell({
       />
     ) : undefined;
 
-  // Single period toolbar (UAT 2026-05-22 done-condition 10 +
-  // head-toolbar-parity D2): period navigator + archive toggle so head can
-  // switch between published weeks. The shell composes the page's ONE
-  // ReportToolbar; in form mode WeeklyReportPage renders it through its
-  // `toolbar` slot, below the real page header row (h1 + publish actions) —
-  // the lead arrangement. That slot replaces the page's own context bar, and
-  // the department label renders here in the center slot instead.
-  const reportToolbar = (
-    <ReportToolbar
-      periodNavigator={
-        periods.length > 0 ? (
-          <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
-        ) : undefined
-      }
-      archiveToggle={
-        <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
-      }
-      leadingExtras={
-        <ReportToolbarCenterLabel
-          label={departmentLabel}
-          detail="Live portfolio review"
-        />
-      }
-      trailingExtras={exportPdf}
-    />
-  );
+  // report-toolbar-layout: in slides mode the shell renders the toolbar itself
+  // (slides has no WeeklyReportPage). The bordered toolbar carries only the
+  // Context-control bar (period nav + scope / view-mode toggles); the labeled
+  // Export-PDF document action lives on the slides header line below. Publish &
+  // Lock is a form-mode page action and is absent here, as before.
+  const slidesToolbar = <ReportToolbar contextControls={contextControls} />;
 
   return (
     <div className="space-y-4">
@@ -222,10 +215,15 @@ export function HeadReportShell({
                   Status Report
                 </h1>
               </div>
+              {headerContextLabel}
             </div>
-            <div className="flex items-center gap-3">{headerActions}</div>
+            {/* report-toolbar-layout: the Export-PDF document action sits on the
+                header line, not inside the bordered toolbar. */}
+            {exportPdf && (
+              <DocumentActionGroup>{exportPdf}</DocumentActionGroup>
+            )}
           </header>
-          {reportToolbar}
+          {slidesToolbar}
           <Suspense fallback={<SlideSkeleton />}>
             <HeadSlidesClient reportId={reportId} scope={reportScope} />
           </Suspense>
@@ -237,8 +235,9 @@ export function HeadReportShell({
               reportId={reportId}
               authorId={authorId}
               scope={reportScope}
-              toolbar={reportToolbar}
-              headerActions={headerActions}
+              documentActionsLeading={exportPdf}
+              contextControls={contextControls}
+              headerContextLabel={headerContextLabel}
             />
           </Suspense>
         </div>
