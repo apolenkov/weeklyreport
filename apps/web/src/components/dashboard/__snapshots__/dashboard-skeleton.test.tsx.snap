@@ -237,7 +237,7 @@ exports[`DashboardSkeleton > matches full DashboardSkeleton render snapshot 1`] 
     />
   </div>
   <div
-    class="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm"
+    class="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm"
   >
     <div
       class="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-4"

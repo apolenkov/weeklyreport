@@ -1113,6 +1113,18 @@ export function LeadForm({
             ? "⚠ Save failed"
             : "Autosaved";
 
+  // Trailing utility control (edit mode): collapse/expand all sections. The
+  // slot is always reserved and disabled when the report has nothing to
+  // collapse, so adding/removing sections in-session never shifts the row.
+  const hasCollapsibleContent =
+    currentWeekItems.length > 0 ||
+    nextWeekItems.length > 0 ||
+    risks.length > 0 ||
+    decisions.length > 0;
+  const collapseAllLabel = groupExpanded
+    ? "Collapse all sections"
+    : "Expand all sections";
+
   return (
     <SdlcTooltipProvider>
       <form className="space-y-6" data-testid="lead-report-form">
@@ -1242,7 +1254,6 @@ export function LeadForm({
                   onChange={setRecordVisibility}
                 />
               )}
-              {isSlidesMode && <SlideFullscreenButton targetRef={deckRef} />}
               <ViewModeToggle
                 mode={isSlidesMode ? "slides" : "edit"}
                 editHref={
@@ -1258,18 +1269,23 @@ export function LeadForm({
                     : "/lead/report"
                 }
               />
-              {(currentWeekItems.length > 0 ||
-                nextWeekItems.length > 0 ||
-                risks.length > 0 ||
-                decisions.length > 0) && (
+              {/* Mode-adaptive trailing utility: one fixed-width icon slot.
+                  Edit → collapse/expand all sections (always reserved, disabled
+                  when empty so the row never shifts); slides → fullscreen toggle.
+                  Both render as a square icon button at the shared toolbar
+                  height in the same trailing position. */}
+              {isSlidesMode ? (
+                <SlideFullscreenButton targetRef={deckRef} />
+              ) : (
                 <button
                   type="button"
-                  className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+                  className="btn-press inline-flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={handleToggleAll}
-                  title="Toggle All"
+                  disabled={!hasCollapsibleContent}
+                  aria-label={collapseAllLabel}
+                  title={collapseAllLabel}
                 >
                   <CollapseIcon />
-                  Toggle All
                 </button>
               )}
             </>
