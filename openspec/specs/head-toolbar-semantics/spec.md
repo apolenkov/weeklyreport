@@ -12,27 +12,43 @@ governs naming/grouping semantics, not a code module.
 
 ### Requirement: Segmented toggles in the head report header share one visual family
 
-The segmented controls MUST render as one visual family wherever they sit — whether in the head report header or in the report toolbar's bottom Context control row introduced by the two-row layout.
+The segmented controls MUST render as one neutral visual family wherever they
+sit — the head report header or the report toolbar's context-control bar — using a
+neutral active-selection fill, not the brand accent.
 
-`ScopeToggle` (`apps/web/src/components/report-shell/scope-toggle.tsx`) and
+`ScopeToggle` (`apps/web/src/components/report-shell/scope-toggle.tsx`),
 `ViewModeToggle` (`apps/web/src/components/report-shell/view-mode-toggle.tsx`),
-composed by `apps/web/src/components/head/head-report-shell.tsx`, MUST share the
-same brand active-fill token (`--color-starbucks-accent`, white active text),
-the same font size tier (`text-sm` semibold), and the same pill shape, and MUST
-be visually identical so the head and lead toolbars read as one control family.
-Group separation MUST be carried by wrapper border/spacing, not by divergent
-control styling. A new segmented control MUST adopt the same family. The
-two-row layout relocates these toggles into the Context control row; the active
-selection fill remains the accent token and is exempt from the "no brand-accent
-in the bottom row" rule because it marks selection, not a commit.
+and `RecordVisibilityToggle` (the lead Mine only/Everyone control in
+`apps/web/src/components/lead/lead-form.tsx`) MUST compose one shared
+presentational primitive so they are visually identical: the same neutral active
+fill (`--color-foreground`, white active text), the same inactive treatment (a
+solid `--color-surface-empty` track with `--color-muted-foreground` text), the
+same neutral border, the same font size tier (`text-sm` semibold), the same pill
+shape, and the same per-segment minimum width. Brand green (`--color-starbucks-accent`)
+MUST NOT be used as the toggle active fill — green is reserved for header-line
+forward actions (Submit Section, Publish & Lock). Group separation MUST be
+carried by wrapper border/spacing, not by divergent control styling. A new
+segmented control MUST adopt the same family. The toggles must compose the shared
+primitive for their chrome while keeping their own mechanics: `ViewModeToggle`
+stays `<Link>` URL navigation, `ScopeToggle` stays a `radiogroup`, and
+`RecordVisibilityToggle` stays `aria-pressed` two-state buttons.
 
-#### Scenario: the toggles render in the context row as one family
+#### Scenario: the toggles render as one neutral family
 
-- **WHEN** the report toolbar renders the scope toggle and the view-mode toggle
-  in the Context control row
-- **THEN** both use the brand green active-fill token, font size, and pill shape
-- **AND** the two toggles are visually identical, separated only by wrapper
-  spacing
+- **WHEN** the report toolbar renders the scope toggle, the view-mode toggle, and
+  (on the lead surface) the Mine/Everyone visibility toggle
+- **THEN** all use the neutral foreground active-fill token, the same font size,
+  and the same pill shape
+- **AND** the toggles are visually identical, separated only by wrapper spacing
+- **AND** none uses the brand-accent token as its active fill
+
+#### Scenario: the inactive segment shows no cream-frame tint
+
+- **WHEN** a segmented toggle renders an inactive segment inside the bordered
+  context bar
+- **THEN** the inactive segment sits on the defined `--color-surface-empty` track,
+  not an undefined `--color-surface` value that lets the toolbar frame show
+  through
 
 ### Requirement: Header utility actions carry visible text labels
 
@@ -54,17 +70,17 @@ template is labeled "Print", not "Export PDF" or "Print PDF".
 
 ### Requirement: Deferred placeholders render visually subordinate
 
-An inert deferred-feature placeholder MUST render visually subordinate to real actions — compact — and MUST be positioned at the leading edge of its control group, whether that group is the head report header or the report toolbar's Context control row.
+An inert deferred-feature placeholder MUST render visually subordinate to real actions — compact — and MUST be positioned at the leading edge of its control group, whether that group is the head report header or the report toolbar's context-control bar.
 
 Today this placeholder is `AgentReviewComingSoon`
 (`apps/web/src/components/report-shell/agent-review-coming-soon.tsx`). The inert
 ComingSoonBadge pattern (aria-disabled, no click handler, tooltip) MUST be
-preserved. Under the two-row layout it renders in the Context control row,
-compact and at the leading edge of that group.
+preserved. It renders in the report toolbar's context-control bar, compact and at
+the leading edge of that group.
 
-#### Scenario: the context row renders a deferred placeholder
+#### Scenario: the context bar renders a deferred placeholder
 
-- **WHEN** the report toolbar's Context control row renders the Agent review
+- **WHEN** the report toolbar's context-control bar renders the Agent review
   placeholder alongside real context controls
 - **THEN** the placeholder is compact (smaller than the real actions) and is the
   first element of the group
@@ -72,7 +88,7 @@ compact and at the leading edge of that group.
 
 ### Requirement: The word "Publish" appears on exactly one head control
 
-The word "Publish" MUST appear on exactly one control across the head report surface — the publish action (`PublishLockButton`) — regardless of whether it renders in the page header row or in the document-action toolbar row; no other control's visible label MAY carry it.
+The word "Publish" MUST appear on exactly one control across the head report surface — the publish action (`PublishLockButton`) — which renders in the page header line's document-action group; no other control's visible label MAY carry it.
 
 The Export-PDF control
 (`apps/web/src/components/weekly-report/export-pdf-button.tsx`) renders as a
@@ -88,4 +104,4 @@ containing "Publish".
 - **AND** the publish precondition is available via an `aria-describedby`/sr-only
   hint, not by changing the tooltip text
 - **AND** only the publish action's visible label contains the word "Publish",
-  wherever that action renders
+  wherever that action renders on the header line

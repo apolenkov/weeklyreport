@@ -6,65 +6,26 @@ TBD - created by archiving change toolbar-two-row-document-vs-context. Update Pu
 
 ## Requirements
 
-### Requirement: Toolbar groups controls into a document-action row and a context-control row
-
-The report toolbar MUST present its controls in two rows split by one axis: the top row holds controls that operate on the report document, the bottom row holds controls that only change which report is shown or how it is presented.
-
-1. A control that creates, persists, commits, or exports report content (Save,
-   Submit Section, Publish & Lock, Fill-From, PDF export, Move to archive) MUST
-   appear in the top (Document action) row.
-2. A control that changes which report is shown or how it is presented (period
-   navigation, show-archived-periods filter, scope, view mode, expand-all,
-   Agent review) MUST appear in the bottom (Context control) row, even when it
-   persists a setting.
-3. The head archive surfaces split by this axis: the show-archived-periods
-   filter is a context control (bottom row), while the published-period "Move
-   to archive" lifecycle button is a document action (top row).
-
-#### Scenario: the lead toolbar renders both rows
-
-- **WHEN** a lead opens their report for an editable period that has archived
-  periods in its history
-- **THEN** the top row shows Fill-From, Save, and the Submit Section commit
-- **AND** the bottom row shows period navigation, the show-archived-periods
-  filter, the Mine/Everyone scope, the Edit/Slides view mode, expand-all, and
-  Agent review
-
-#### Scenario: the lead has no archived periods
-
-- **WHEN** a lead opens their report and their history has no archived periods
-- **THEN** the bottom row omits the show-archived-periods filter (per
-  `lead-report-controls-integrity`), and the remaining context controls keep
-  their order
-
-#### Scenario: the head toolbar renders both rows
-
-- **WHEN** a head opens the review page for an open period
-- **THEN** the top row shows the PDF export and the Publish & Lock commit
-- **AND** the bottom row shows period navigation, the show-archived-periods
-  filter, the Product/Leads scope, the Edit/Slides view mode, and Agent review
-
-#### Scenario: a published head period offers move-to-archive as a document action
-
-- **WHEN** a head views a published period that can be moved to the archive
-- **THEN** the Move to archive control renders in the top Document action row,
-  separate from the bottom-row show-archived-periods filter
-
 ### Requirement: The document-action row uses an accent hierarchy with a single forward primary
 
-The top row MUST give at most one control the resting solid brand-accent fill — the forward commit when one is available — and MUST render the other document actions with a lesser accent (outline/ghost) so they do not compete with that primary.
+The header line's document-action group MUST give at most one control the
+resting solid brand-accent fill — the forward commit when one is available — and
+MUST render the other document actions with a lesser accent (outline/ghost) so
+they do not compete with that primary. The bordered context-control bar MUST NOT
+give any control a solid brand-accent fill; its segmented toggles use a neutral
+active-selection fill, not the brand accent (see `head-toolbar-semantics`).
 
 1. When a forward commit is available (Submit Section for lead, Publish & Lock
    for head) it MUST be the only control with the resting solid brand-accent
    fill; in states with no forward commit (submitted lead, published head) the
-   top row has no resting solid primary.
+   header action group has no resting solid primary.
 2. Reversal lifecycle actions (Request Reopen, Revoke, Reopen) MUST NOT use the
    resting solid brand-accent fill; they MUST take a neutral/outline treatment
    so the accent colour signals only a forward, safe-to-commit action.
-3. The bottom (Context control) row MUST NOT give any control a brand-accent
-   fill as a primary-action affordance; the segmented-control active-state
-   selection indicator (scope and view-mode toggles, per
-   `head-toolbar-semantics`) is exempt — it marks selection, not a commit.
+3. The bordered context-control bar MUST NOT give any control a brand-accent
+   fill, including the segmented-toggle active state: the toggle active segment
+   uses the neutral foreground fill, so brand green is reserved for header-line
+   actions only.
 4. A transient in-flight busy treatment is exempt from the single-primary rule:
    the Save control MAY show its accent busy state while saving (per
    `lead-report-controls-integrity`) without becoming a second resting primary.
@@ -82,20 +43,22 @@ The top row MUST give at most one control the resting solid brand-accent fill �
 - **THEN** the Request Reopen control is rendered with a neutral/outline
   treatment, not the resting solid brand-accent fill
 
-#### Scenario: an open head period with no submitted content
+#### Scenario: the context bar uses no brand-accent fill
 
-- **WHEN** a head opens an open period that has zero submitted content
-- **THEN** the top row still shows Publish & Lock in its slot, disabled, with
-  its visible label, and the "No submitted content yet" hint renders outside
-  both action rows
+- **WHEN** the bordered context-control bar renders its segmented toggles
+- **THEN** the active segment uses the neutral foreground fill, not the brand
+  accent
+- **AND** no control in the bar carries a solid brand-accent fill
 
 ### Requirement: Inert coming-soon document actions reserve their top-row slot
 
-A deferred document action that already exists as an inert Coming-soon control MUST occupy its top-row slot, so the row layout does not shift when the feature later activates.
+An inert Coming-soon document action MUST occupy its slot in the header line's
+document-action group, so the layout does not shift when the deferred feature
+later activates.
 
 1. The lead Version Coming-soon control and the lead PDF Coming-soon control
-   MUST render in the top row as inert controls consistent in shape with their
-   sibling document actions, wrapped in `ComingSoonBadge` per the
+   MUST render in the header action group as inert controls consistent in shape
+   with their sibling document actions, wrapped in `ComingSoonBadge` per the
    deferred-feature pattern.
 2. No new control MUST be introduced by this layout change; the Fill-From copy
    icon MUST NOT be surfaced as a separate "Copy" control.
@@ -103,73 +66,136 @@ A deferred document action that already exists as an inert Coming-soon control M
 #### Scenario: a lead draft reserves the inert document-action slots
 
 - **WHEN** a lead opens their report for an editable period
-- **THEN** the top row shows the inert Version Coming-soon and PDF Coming-soon
-  controls in their slots, ordered before the real document actions, inert and
-  not working exports
+- **THEN** the header action group shows the inert Version Coming-soon and PDF
+  Coming-soon controls in their slots, ordered before the real document actions,
+  inert and not working exports
 
 ### Requirement: Toolbar row composition adapts to role and period state without losing positional stability
 
-The toolbar MUST adjust which controls render by role and period state while keeping the surviving controls in stable positions.
+The report surface MUST adjust which controls render by role and period state
+while keeping the surviving controls in stable positions across the header action
+group and the context bar.
 
-1. For a lead read-only past period, the top row MUST hide the real mutating
-   document actions (Save, Submit Section, Fill-From) while the inert
+1. For a lead read-only past period, the header action group MUST hide the real
+   mutating document actions (Save, Submit Section, Fill-From) while the inert
    Coming-soon controls remain visible per the deferred-feature pattern; the
-   bottom (Context control) row MUST remain.
+   context-control bar MUST remain.
 2. When a lead submits, Save MUST be hidden and the forward commit slot MUST
    switch to the reversal action without reordering the remaining controls.
 3. Viewer and the lead preview render through the shared report page; neither
-   top row MUST contain any commit control (Save/Submit/Publish). For the
-   viewer specifically, the navigation it adds (e.g. Back to Archive) and the
-   `AgentReviewComingSoon` placeholder MUST sit in the bottom Context control
-   row, not the top row. The lead preview keeps its own outer header; its
-   outer-header navigation and placeholder are outside the shared toolbar
-   contract and are not relocated by this change.
-4. Status indicators (submitted count, autosave time, publish precondition
-   hint) MUST NOT render inside either action row.
+   header action group MUST contain any commit control (Save/Submit/Publish). For
+   the viewer specifically, the navigation it adds (e.g. Back to Archive) and the
+   `AgentReviewComingSoon` placeholder MUST sit in the context-control bar, not
+   the header action group. The lead preview keeps its own outer header; its
+   outer-header navigation and placeholder are outside the shared toolbar contract
+   and are not relocated by this change.
+4. Status indicators (submitted count, autosave time, publish precondition hint,
+   department label) MUST render on the header line as labels, NOT inside the
+   document-action group or the context bar.
 
 #### Scenario: a lead views a locked past period
 
 - **WHEN** a lead opens a read-only past period
-- **THEN** the top row hides Save, Submit Section, and Fill-From
-- **AND** the inert Coming-soon controls remain visible and the bottom row
-  still allows navigating periods
+- **THEN** the header action group hides Save, Submit Section, and Fill-From
+- **AND** the inert Coming-soon controls remain visible and the context bar still
+  allows navigating periods
 
 #### Scenario: a viewer opens a published report
 
 - **WHEN** a viewer opens a published report through the shared report page
-- **THEN** the top row shows only the PDF export with no Save/Submit/Publish
+- **THEN** the header action group shows only the PDF export with no
+  Save/Submit/Publish
 - **AND** the submitted-count badge and the Agent review placeholder render
-  outside the top action row
-
-### Requirement: The two action rows are accessible as labeled groups with a stable focus order
-
-The toolbar MUST expose the two rows as distinct accessible groups and MUST keep keyboard focus moving through the top row before the bottom row.
-
-1. The Document action row and the Context control row MUST each carry an
-   accessible group name (e.g. `aria-label="Document actions"` /
-   `aria-label="Context controls"`) so the split is not conveyed by placement
-   or colour alone.
-2. Every icon-only control MUST keep its existing `aria-label`/tooltip contract
-   after the move (no regression against `report-toolbar-parity`).
-3. Keyboard focus order MUST traverse the top row, then the bottom row.
-
-#### Scenario: a keyboard user tabs through the toolbar
-
-- **WHEN** a keyboard user tabs into the report toolbar
-- **THEN** focus visits the Document action controls before the Context control
-  controls
-- **AND** each row exposes an accessible group name
+  outside the header action group
 
 ### Requirement: All toolbar controls stay reachable at narrow viewport widths
 
-Each row MUST keep every control reachable at narrow widths; controls MUST NOT be clipped out of reach.
+The header action group and the context-control bar MUST each keep every control
+reachable at narrow widths; controls MUST NOT be clipped out of reach.
 
-1. When a row's controls exceed the available width, the row MUST allow
-   horizontal scrolling or wrapping so no control becomes unreachable; it MUST
-   NOT clip controls with no way to reach them.
+1. When the header action group's controls exceed the available width, the header
+   line MUST wrap so no document action becomes unreachable.
+2. When the context bar's controls exceed the available width, the bar MUST allow
+   horizontal scrolling or wrapping so no context control becomes unreachable; it
+   MUST NOT clip controls with no way to reach them.
 
-#### Scenario: the bottom row overflows on a narrow screen
+#### Scenario: the context bar overflows on a narrow screen
 
-- **WHEN** the Context control row has more controls than fit the viewport width
+- **WHEN** the context-control bar has more controls than fit the viewport width
 - **THEN** every control remains reachable via horizontal scroll or wrapping,
   none is clipped out of reach
+
+#### Scenario: the header action group overflows on a narrow screen
+
+- **WHEN** the header line's action group has more controls than fit beside the
+  title block
+- **THEN** the header line wraps so every document action remains reachable
+
+### Requirement: Document actions render on the page header line; the toolbar holds the context-control bar
+
+The report surface MUST split its controls by one axis — operates on the report
+document vs changes which / how it is shown — placing the document actions on
+the page header line and the context controls in the single bordered toolbar bar
+below it.
+
+1. A control that creates, persists, commits, or exports report content (Save,
+   Submit Section, Publish & Lock, Fill-From, PDF export, Move to archive) MUST
+   render on the page header line, in a right-aligned action group beside the
+   title/status block — NOT inside the bordered toolbar.
+2. A control that changes which report is shown or how it is presented (period
+   navigation, show-archived-periods filter, scope, view mode, expand-all,
+   Agent review) MUST render in the bordered toolbar bar, even when it persists a
+   setting.
+3. The bordered toolbar MUST render exactly one row (the context-control bar);
+   it MUST NOT contain a document-action row.
+4. The head archive surfaces split by this axis: the show-archived-periods
+   filter is a context control (toolbar bar), while the published-period "Move
+   to archive" lifecycle button is a document action (header line).
+
+#### Scenario: the lead surface splits across the header and the toolbar
+
+- **WHEN** a lead opens their report for an editable period that has archived
+  periods in its history
+- **THEN** the header line's action group shows Fill-From, Save, and the Submit
+  Section commit
+- **AND** the bordered toolbar shows one row: period navigation, the
+  show-archived-periods filter, the Mine/Everyone scope, the Edit/Slides view
+  mode, expand-all, and Agent review
+
+#### Scenario: the head surface splits across the header and the toolbar
+
+- **WHEN** a head opens the review page for an open period
+- **THEN** the header line's action group shows the PDF export and the Publish &
+  Lock commit
+- **AND** the bordered toolbar shows one row: period navigation, the
+  show-archived-periods filter, the Product/Leads scope, the Edit/Slides view
+  mode, and Agent review
+
+#### Scenario: a published head period offers move-to-archive as a document action
+
+- **WHEN** a head views a published period that can be moved to the archive
+- **THEN** the Move to archive control renders in the header line's action group,
+  separate from the toolbar's show-archived-periods filter
+
+### Requirement: The header action group and the context bar are accessible as labeled groups with a stable focus order
+
+The report surface MUST expose the header action group and the context-control
+bar as distinct accessible groups and MUST keep keyboard focus moving through the
+header actions before the context controls.
+
+1. The header line's document-action group MUST carry an accessible group name
+   (e.g. `role="group" aria-label="Document actions"`) and the bordered toolbar
+   MUST carry its own (e.g. `aria-label="Context controls"`), so the split is not
+   conveyed by placement or colour alone.
+2. Every icon-only control MUST keep its existing `aria-label`/tooltip contract
+   after the move (no regression against `report-toolbar-parity`).
+3. Keyboard focus order MUST traverse the header action group, then the context
+   bar — satisfied by the header preceding the toolbar in the DOM.
+
+#### Scenario: a keyboard user tabs through the surface
+
+- **WHEN** a keyboard user tabs into the report surface
+- **THEN** focus visits the header document-action controls before the context
+  bar controls
+- **AND** the header action group and the context bar each expose an accessible
+  group name
