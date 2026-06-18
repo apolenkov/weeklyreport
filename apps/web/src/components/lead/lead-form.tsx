@@ -7,6 +7,7 @@ import type {
 } from "@customreport/shared";
 import { Separator } from "@customreport/ui/components/ui/separator";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -317,9 +318,16 @@ function RecordVisibilityToggle({
   readonly value: "mine" | "everyone";
   readonly onChange: (next: "mine" | "everyone") => void;
 }) {
-  const options: { key: "mine" | "everyone"; label: string }[] = [
-    { key: "mine", label: "Mine only" },
-    { key: "everyone", label: "Everyone" },
+  // Icon-only (User = mine, Users = everyone) so the toggle stays compact and
+  // does not crowd the period navigator; each keeps an accessible name via
+  // aria-label + tooltip.
+  const options: {
+    key: "mine" | "everyone";
+    label: string;
+    Icon: typeof User;
+  }[] = [
+    { key: "mine", label: "Mine only", Icon: User },
+    { key: "everyone", label: "Everyone", Icon: Users },
   ];
   return (
     <SegmentedToggle ariaLabel="Record visibility">
@@ -328,10 +336,14 @@ function RecordVisibilityToggle({
           key={option.key}
           type="button"
           aria-pressed={value === option.key}
+          aria-label={option.label}
+          title={option.label}
           onClick={() => onChange(option.key)}
-          className={`btn-press ${segmentClassName(value === option.key)}`}
+          className={`btn-press ${segmentClassName(value === option.key, {
+            iconOnly: true,
+          })}`}
         >
-          {option.label}
+          <option.Icon className="h-4 w-4" aria-hidden="true" />
         </button>
       ))}
     </SegmentedToggle>
@@ -1154,7 +1166,7 @@ export function LeadForm({
             {isSubmitted && currentUser.authorRole === "lead" && (
               <button
                 type="button"
-                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() => {
                   setReopenError(null);
                   setShowReopenDialog(true);
@@ -1168,7 +1180,7 @@ export function LeadForm({
             {isSubmitted && currentUser.authorRole !== "lead" && (
               <button
                 type="button"
-                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={handleRevoke}
                 disabled={revokeMut.isPending}
                 title="Revoke submission and unlock the section"
@@ -1179,7 +1191,7 @@ export function LeadForm({
             {!isSubmitted && !isReadOnly && (
               <button
                 type="button"
-                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={handleSubmit}
                 disabled={submitMut.isPending}
               >
@@ -1195,9 +1207,9 @@ export function LeadForm({
         <ReportToolbar
           contextControls={
             <>
-              {/* Inert Agent-review placeholder leads the context group
-                  (head-toolbar-semantics: compact, leading edge). */}
-              <AgentReviewComingSoon compact />
+              {/* Period navigation (and the show-archived filter) anchor the
+                  left; the view controls are pushed to the right by the spacer
+                  so "where you are" and "how you see it" read as two clusters. */}
               <PeriodNavigator
                 periods={visiblePeriods}
                 showLeadSubmissionMarkers
@@ -1217,6 +1229,10 @@ export function LeadForm({
                   />
                 </>
               )}
+              <div className="grow" aria-hidden="true" />
+              {/* Inert Agent-review placeholder leads the right-aligned view
+                  group (head-toolbar-semantics: compact, leading edge). */}
+              <AgentReviewComingSoon compact />
               {/* 7c.1: Record visibility toggle — edit mode only (not slides).
                   Disabled until the persisted state hydrates so a click cannot
                   race the restored value. */}
@@ -1249,7 +1265,7 @@ export function LeadForm({
                   decisions.length > 0) && (
                   <button
                     type="button"
-                    className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+                    className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
                     onClick={handleToggleAll}
                     title="Toggle All"
                   >

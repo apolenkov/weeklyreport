@@ -31,6 +31,16 @@
   --color-surface-hover: #f8f6f2;
   --color-surface-empty: #fafaf7;
 
+  /* Segmented view-toggle active fill (Edit/Slides, scope, visibility). A soft
+     slate — neutral and clearly "selected" without the harsh contrast of pure
+     foreground black, and deliberately NOT brand green (green = actions only). */
+  --color-toggle-active: #3f4a44;
+
+  /* One shared height for every report-toolbar control — icon buttons, pill
+     actions (Submit/Publish), period nav, segmented toggles, Agent review,
+     Toggle All — so the toolbar reads as a single row of equal-height controls. */
+  --toolbar-control-h: 2rem;
+
   /* ---- Skeleton ---- */
   --color-skeleton: #d8ddd4;
 

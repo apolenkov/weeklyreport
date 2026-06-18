@@ -166,11 +166,12 @@ export function HeadReportShell({
   // avoid double-mounting on the slides surface.
   const contextControls = (
     <>
-      {mode === "form" ? <AgentReviewComingSoon compact /> : null}
       {periods.length > 0 ? (
         <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
       ) : null}
       <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
+      <div className="grow" aria-hidden="true" />
+      {mode === "form" ? <AgentReviewComingSoon compact /> : null}
       <ScopeToggle
         value={scope}
         onChange={setScope}

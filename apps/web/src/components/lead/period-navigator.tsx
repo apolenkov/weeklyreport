@@ -86,7 +86,7 @@ function ChevronRight() {
 }
 
 export const PERIOD_NAV_ARROW_BUTTON_CLASS =
-  "inline-flex min-h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35";
+  "inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] focus-visible:shadow-[0_0_0_3px_rgba(0,98,65,0.3)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-35";
 
 export function PeriodNavigator({
   periods,
@@ -294,7 +294,7 @@ export function PeriodNavigator({
 
   return (
     <div
-      className="flex min-w-0 items-center gap-3 px-3 py-2"
+      className="flex min-w-0 items-center gap-1.5"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       role="group"
@@ -327,7 +327,7 @@ export function PeriodNavigator({
           aria-activedescendant={
             open ? `${optionIdPrefix}${activeIdx}` : undefined
           }
-          className="flex min-h-8 w-full cursor-pointer items-center gap-1.5 truncate rounded-[var(--radius)] border border-[var(--color-border)] bg-white px-2 pr-7 text-left text-[13px] font-semibold text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[rgba(0,117,74,0.16)]"
+          className="flex h-8 w-full cursor-pointer items-center gap-1.5 truncate rounded-[var(--radius)] border border-[var(--color-border)] bg-white px-2 pr-7 text-left text-[13px] font-semibold text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[rgba(0,117,74,0.16)]"
           onClick={() => setOpen((o) => !o)}
           onKeyDown={handleTriggerKeyDown}
         >
