@@ -104,7 +104,7 @@ export function SaveNowButton({ autosave }: SaveNowButtonProps) {
       onClick={handleClick}
       aria-label={ariaLabel}
       aria-busy={isSaving}
-      className={`btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1.5 rounded-[var(--radius-pill)] border px-4 font-[family-name:var(--font-sans)] text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed ${
+      className={`btn-press inline-flex h-[var(--toolbar-control-h)] min-w-[6.5rem] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border px-4 font-[family-name:var(--font-sans)] text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed ${
         isSaving ? savingClassName : restClassName
       }`}
     >
