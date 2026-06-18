@@ -1,5 +1,45 @@
 # Handoff — backlog converted to specs (2026-06-19)
 
+> **STATUS 2026-06-19 (later): ALL SIX CHANGES ARE NOW IMPLEMENTED + ARCHIVED.**
+> The "READY for the new session / ready to implement" framing below is
+> HISTORICAL — do not re-implement any of it. A follow-on autonomous session
+> built, gated, live-verified, and archived the whole backlog on this branch.
+>
+> **Repo:** `/home/user/work/customreport` · **Branch:** > `openspec-slides-comingsoon-greenseed`, **clean tree, NOT pushed** (branch-only,
+> push on request). `openspec list` → "No active changes found".
+>
+> **Feature commits (newest first):**
+>
+> - `1f6d0514` docs(openspec): archive the 7 shipped changes + sync specs
+> - `eb1de8a0` feat(slides): Mine/Everyone record visibility in the lead deck (flagship)
+> - `385c1693` feat(schema): require a stage on items + decisions at the write layer
+> - `5ebc2013` feat(lead-pipeline): "Your stages" label + reveal Mine-hidden stages
+> - `53716a23` feat(report-toolbar): sticky lead context bar on scroll
+> - `1954caa6` feat(seed): broaden co-owner cross-author content across both weeks
+>
+> Each landed gates-green (typecheck, web 1196, api 951, lint) + live-verified.
+> The flagship passed a Codex Act-2 review (VERDICT: REVISE → all 4 findings
+> folded in; see `openspec/changes/archive/.../slides-record-visibility/design.md`).
+>
+> **Open follow-ups (non-blocking, for the record — NOT rework):**
+>
+> 1. Flagship: the per-row "foreign" visual marker on slides is DEFERRED (the
+>    slide grids are flat `string[]`; ADR 0003). Counts + rows merge correctly.
+> 2. Flagship: Codex returned REVISE and was NOT resubmitted for an APPROVED
+>    verdict — the no-leak property was instead live-verified. If you re-run
+>    Codex, use a FRESH session (a resumed one rubber-stamps).
+> 3. Flagship: `lead-form`'s edit-path `crossAuthorContentQ` still fires in
+>    slides mode (gated on `isEveryone`, not own-deck). On a foreign `authorId`
+>    deck it caches the current user's OWN co-owner data but never displays it
+>    (slides render `LeadSlidesClient`, not the edit JSX) — not a leak, a loose
+>    seam if you want to tighten the fetch gate later.
+> 4. Codex `< /dev/null` fix: a bare `codex exec "..."` hangs on stdin-EOF, not
+>    the proxy — always redirect stdin (or use the codex:rescue agent).
+>
+> Everything below is the ORIGINAL pre-implementation handoff, kept for context.
+
+---
+
 **Repo:** `/home/user/work/customreport` · **Branch:**
 `openspec-slides-comingsoon-greenseed`, **not pushed**. Commits this session =
 the 5 implemented changes listed below + docs/openspec commits (A hardening, the
