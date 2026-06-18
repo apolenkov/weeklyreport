@@ -65,20 +65,25 @@ template is labeled "Print", not "Export PDF" or "Print PDF".
 
 ### Requirement: Deferred placeholders render visually subordinate
 
-An inert deferred-feature placeholder MUST render visually subordinate to real actions — compact — and MUST be positioned at the leading edge of its control group, whether that group is the head report header or the report toolbar's context-control bar.
+An inert deferred-feature placeholder MUST render visually subordinate to real actions — compact — and MUST lead its control group: the head report header, or the right-aligned view-control group of the report toolbar's context bar.
 
 Today this placeholder is `AgentReviewComingSoon`
 (`apps/web/src/components/report-shell/agent-review-coming-soon.tsx`). The inert
 ComingSoonBadge pattern (aria-disabled, no click handler, tooltip) MUST be
-preserved. It renders in the report toolbar's context-control bar, compact and at
-the leading edge of that group.
+preserved. In the report toolbar's context bar the controls form two clusters —
+period navigation (and the show-archived filter) anchored left, and the
+right-aligned view-control group (Agent review, scope, view mode, expand-all)
+pushed right by a spacer. The placeholder is compact and leads that right-aligned
+view-control group; it is NOT required to be the first element of the whole bar
+(the period navigator is).
 
 #### Scenario: the context bar renders a deferred placeholder
 
-- **WHEN** the report toolbar's context-control bar renders the Agent review
-  placeholder alongside real context controls
+- **WHEN** the report toolbar's context bar renders the Agent review placeholder
+  alongside the right-aligned view controls (scope, view mode)
 - **THEN** the placeholder is compact (smaller than the real actions) and is the
-  first element of the group
+  first element of the right-aligned view-control group, following the
+  left-anchored period navigation
 - **AND** it remains aria-disabled with the ComingSoonBadge tooltip
 
 ### Requirement: The word "Publish" appears on exactly one head control
