@@ -1,0 +1,111 @@
+# Handoff — backlog converted to specs (2026-06-19)
+
+**Repo:** `/Users/wrk/work/customreport` · **Branch:**
+`openspec-slides-comingsoon-greenseed` (5 commits this session, **not pushed**).
+
+## Bottom line
+
+The 2026-06-18 live-demo session shipped 5 small changes and then the user asked
+to **convert everything still outstanding into OpenSpec changes and start fresh
+next session**. This doc is the index. No further code was written after the 5
+commits; the rest is specs ready to implement.
+
+## Shipped + committed this session (branch only)
+
+1. `5d8ad0bb` fix(seed): Платформа интеграций fully green in small tier (live-verified).
+2. `e4c84bfb` test(coming-soon): one-canonical-style guards + corrected Holidays a11y premise (no prod code; aria-label deliberately NOT re-added).
+3. `76e658ef` feat(seed): archived history periods in small tier → show-archived toggle visible (live-verified).
+4. `54a3f0c5` feat(seed): co-owner cross-author records (Maria/Igor decisions) → Everyone shows them, Mine hides (live-verified).
+5. `afff9802` feat(lead): require a concrete stage when adding items+decisions (dialog layer; 5 tests; live-verified). OpenSpec: `require-stage-on-items-and-decisions`.
+
+All gates green at each commit (typecheck, lint, full test ~2700 tests, format).
+
+## OpenSpec changes READY for the new session (priority order)
+
+### 1. `slides-record-visibility` (the flagship — A)
+
+Mine/Everyone toggle in slides + toolbar parity. **Self-grilled + hardened this
+session** against the impact-map findings; `validate --strict` clean. Key
+hardenings folded in:
+
+- Decision 2 **resolved**: ScopeToggle "Own" → **"Summary"** (user-confirmed; value/key stays "own").
+- Decision 3 **sharpened**: merge at the SLIDE-MODEL layer producing NEW objects;
+  NEVER mutate the cached `ReportSectionReadModel` (it aliases `draftSection` →
+  that is the only view-only leak vector). Regression test: `sectionToDraftPayload`
+  stays own-only after a merge.
+- Decision 8 **added**: foreign-content mapper shape; the client mirror drops
+  `priorityRank`, so foreign rows fold into grids + blocked/at-risk counters but
+  are excluded from priority ranking (pin with a test, don't widen the mirror).
+- **Codex Act-2 review was NOT run** — `codex exec` hung on the corporate proxy
+  (0% CPU, killed). Run the Codex adversarial review from a clean network /
+  fresh session before implementing. The impact-map (serializers/gating/mapper)
+  is in this session's transcript.
+
+### 2. `enrich-cross-author-seed-more`
+
+More co-owner cross-author records in the small seed so Everyone reads fuller
+across both week buckets. (Authored 2026-06-19; validate before implementing.)
+
+### 3. `pipeline-own-stages-affordances`
+
+SdlcPipeline: a "Your stages" label on the N/M counter + a collapsed-stages
+indicator with a hover tooltip revealing the hidden (Mine-hidden) stages'
+statuses. Softens `lead-mine-hide-unowned-stages` toward hide-but-reveal-on-hover.
+
+### 4. `sticky-report-toolbar`
+
+Make the lead report context toolbar stick to the top on scroll.
+
+### 5. `require-stage-schema-enforcement`
+
+Server-side parity for change #5 above: tighten `itemInputSchema` /
+`decisionInputSchema` `stageIds` to `requiredStageIdsField` + "No stage set"
+render marker. **Prerequisite:** audit both seed tiers + fixtures for empty-stage
+items/decisions FIRST (else draft-save/submit rejects them).
+
+## Head-report annotation triage (live-checked 2026-06-19, NOT a formal change)
+
+Most are stale or fuzzy cosmetic placement asks superseded by the shipped toolbar
+redesign. Verify each visually with the user before doing anything:
+
+- **Present / Print links "not needed"** → DONE/STALE: both are already gone from
+  the head toolbar (`fix-report-surface-integrity` 308-redirects Present). Close.
+- **Agent-review placement / Edit-Slides placement** → both controls exist on the
+  head toolbar; only placement polish remains, likely already addressed. Confirm visually.
+- **ScopeToggle "4 buttons one style like Toggle All"** → head ScopeToggle is a
+  2-button Product/Leads segmented control today; the ask is visual-style parity
+  with the lead toggles. Genuinely open but cosmetic — get the user's eye first.
+- **Publish-lock message placement** → minor; confirm with user.
+
+## Decisions locked this session (so the new session doesn't re-litigate)
+
+1. Holidays Coming-Soon control gets **no** aria-label (reverting it would undo
+   the deliberate `verify-a11y-recommended-flip` removal; the deferred state is
+   already in the tab's accessible name).
+2. ScopeToggle "Own" → "Summary" (slides).
+3. Items + decisions **require a stage** (dialog layer shipped; schema layer = change #5).
+4. Access-consistency (own products / own stages per product / single-stage
+   auto-lock) was already enforced — verified live; not a bug.
+
+## Environment gotchas
+
+- `codex exec` **hangs on the corporate proxy** (0% CPU forever) — wrap in a
+  watchdog/kill, or run Codex from a clean network. This blocked A's Act-2.
+- Reseed: `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=1 pnpm db:seed:small`.
+- `npx prisma generate` before gates (client gets wiped by pnpm ops).
+- Web tests: run from `apps/web` (or `pnpm --filter @customreport/web`); no
+  `timeout` binary on macOS.
+- Push to `main` is allowed but do it only on request; this branch is unpushed.
+
+## Suggested start for the new session
+
+```
+# A: run Codex Act-2 (clean network), then implement
+/openspec-apply-change slides-record-visibility
+# then the satellites, simplest first
+/openspec-apply-change enrich-cross-author-seed-more
+/openspec-apply-change sticky-report-toolbar
+/openspec-apply-change pipeline-own-stages-affordances
+/openspec-apply-change require-stage-schema-enforcement
+# archive the 5 already-shipped changes (watch openspec-archive spec-debt)
+```

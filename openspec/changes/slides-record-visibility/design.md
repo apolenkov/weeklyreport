@@ -29,27 +29,41 @@ close to "Mine only" (a visibility scope: whose records). They are orthogonal �
 ScopeToggle = how the deck is grouped; Mine/Everyone = whose records populate it
 — but the labels collide.
 
-- **Decision (recommended):** keep both toggles, treat them as orthogonal, and
-  resolve the naming collision by relabeling the ScopeToggle's "Own" → a
-  layout-neutral word (e.g. "Summary" or "Section") so it no longer competes with
-  "Mine." Mine/Everyone lives in the toolbar (matching edit); ScopeToggle stays
-  in the slide hero. Tooltips clarify each.
-- **Open question for the user/implementer:** is relabeling "Own" acceptable, or
-  should the two concepts be merged into one control? Default if unanswered: keep
-  both, relabel "Own"→"Summary", because merging conflates layout with record
-  scope and would complicate the head deck that reuses ScopeToggle.
+- **Decision (resolved — user confirmed 2026-06-18):** keep both toggles, treat
+  them as orthogonal, and resolve the naming collision by relabeling the
+  ScopeToggle's "Own" → **"Summary"**. Mine/Everyone lives in the toolbar
+  (matching edit); ScopeToggle stays in the slide hero. Tooltips clarify each.
+  Merging the two was rejected — it conflates layout with record scope and would
+  complicate the head deck that reuses ScopeToggle. Only the `ScopeValue` "own"
+  _label_ changes to "Summary"; the value/key stays "own".
 
-## Decision 3: where the foreign merge happens
+## Decision 3: where the foreign merge happens (no-mutation is load-bearing)
 
 `buildSectionSlideModel(section)` derives every count and grid from a single
-`ReportSectionReadModel`. The cleanest merge point is to fold the
-`crossAuthorContent` rows into the section model BEFORE `buildSectionSlideModel`
-(or extend it to accept foreign rows), so tone/score/readiness/counts all flow
-through the existing logic unchanged. `buildProductScopedSlides` already
-aggregates multiple sections per product — reuse its merge shape rather than
-inventing a new one. Mark merged foreign rows so they can be visually
-distinguished (read-only styling) and, critically, excluded from any
-export/snapshot serializer.
+`ReportSectionReadModel`. **The merge MUST happen at the slide-model layer,
+producing NEW `SlideProduct`/`SectionSlideModel` objects — it MUST NOT fold
+foreign rows back into the `ReportSectionReadModel`.**
+
+Why this is the load-bearing rule (impact-map finding, 2026-06-18): the slides
+read `byPeriodQ.data.section` and lead-form seeds `draftSection` from the SAME
+cached React-Query object (identical `leadForm.byPeriod` query key → same object
+reference). Draft/submit serialize `draftSection` only; the slide model is a
+derived projection that no serializer reads back. So the merge is render-only —
+PROVIDED it never mutates that shared cached `ReportSectionReadModel`. Folding
+foreign rows "into the section model before `buildSectionSlideModel`" (the
+tempting shortcut) aliases the cache and would leak foreign rows into draft/submit.
+
+- Extend `buildSectionSlideModel` (or a wrapper) to ACCEPT foreign rows as a
+  separate argument and emit new slide-model objects — mirror the existing
+  `applyForeignProductHealth`, which already returns `{...product}` + new arrays
+  and mutates nothing. `buildProductScopedSlides` is the merge-shape reference.
+- Mark merged foreign rows on the SLIDE view type (`foreign: true`) for read-only
+  styling. No serializer-side "marked-foreign" filter is needed and adding one to
+  the WRITE schemas would be over-engineering — keep foreign rows out of the
+  read-model entirely. Snapshot/PDF are server-side and need no change.
+- A regression test MUST assert that, with foreign content merged into the deck,
+  `sectionToDraftPayload(draftSection)` still yields own-only rows (the cache was
+  not mutated).
 
 ## Decision 4: gating + purge parity with edit
 
@@ -94,6 +108,28 @@ items count the same way) — it is a pre-existing property, not introduced here
 - Not in scope: changing the app-wide health=risk-derived vs counts=record-count
   model. If the user wants blocked ITEMS to lift health, that is a separate
   cross-surface change.
+
+## Decision 8: foreign-content mapper shape + the priorityRank gap
+
+Slides today fetch ONLY `crossAuthors` (status-only). Everyone must ADD a
+`leadForm.crossAuthorContent` fetch and map its rows with the existing
+`mapForeignItems` / `mapForeignRisks` / `mapForeignDecisions`
+(`lib/mappers/lead-cross-author.ts`), which already tag rows `foreign: true`.
+
+- **Count sources:** foreign rows are NOT in `section.projects`, so they cannot
+  contribute the project-`trafficLight` counts; they fold into the blocked/at-risk
+  KPIs only via `item.workflowStatus === 'blocked'` and `risk.severity`. This
+  asymmetry with own rows is expected, not a bug.
+- **priorityRank gap (decided):** the client `CrossAuthorContentRow` mirror DROPS
+  `priorityRank` (and `tag`). Foreign items therefore cannot drive priority chips
+  or any priority-rank count in the deck. Decision: foreign rows contribute to the
+  content grids and the blocked/at-risk counters but are EXCLUDED from
+  priority-rank ranking — do NOT widen the mirror for this change. Pin it with a
+  test so it is intentional, not an accidental crash on a missing field.
+- **Hydration flash:** mirror the edit form — DISPLAY may default to a mode before
+  hydration, but the `crossAuthorContent` FETCH is gated on `visibilityHydrated`
+  so a restored "everyone" cannot fire the sensitive read before the persisted
+  value is known.
 
 ## View-only safety (testable)
 
