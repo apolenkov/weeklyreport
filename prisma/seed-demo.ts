@@ -325,6 +325,13 @@ const SMALL_DATASET: TierDataset = {
           status: ItemWorkflowStatus.in_progress,
           stages: ["Testing"],
         },
+        {
+          type: ItemType.next,
+          text: "Автоматизировать регрессию входа портала в CI на следующей неделе",
+          tag: "bugfix",
+          status: ItemWorkflowStatus.in_progress,
+          stages: ["Testing"],
+        },
       ],
       risk: {
         risk: "Нестабильные e2e-тесты входа маскируют реальные регрессии",
@@ -352,6 +359,13 @@ const SMALL_DATASET: TierDataset = {
           status: ItemWorkflowStatus.in_progress,
           stages: ["Testing"],
         },
+        {
+          type: ItemType.next,
+          text: "Подготовить нагрузочные тесты REST-коннектора к следующему спринту",
+          tag: "feature",
+          status: ItemWorkflowStatus.in_progress,
+          stages: ["Testing"],
+        },
       ],
       decision: {
         text: "Принять контрактные тесты как gate перед боевой интеграцией",
@@ -373,6 +387,13 @@ const SMALL_DATASET: TierDataset = {
           text: "Деплой дашборда BI заблокирован: не выделены ресурсы кластера",
           tag: "infra",
           status: ItemWorkflowStatus.blocked,
+          stages: ["DevOps"],
+        },
+        {
+          type: ItemType.next,
+          text: "Настроить мониторинг кластера BI после выделения ресурсов",
+          tag: "infra",
+          status: ItemWorkflowStatus.in_progress,
           stages: ["DevOps"],
         },
       ],
@@ -408,7 +429,22 @@ const SMALL_DATASET: TierDataset = {
       productLight: TrafficLightStatus.green,
       sectionStatus: ReportSectionStatus.draft,
       ownedStages: ["DevOps"],
-      items: [],
+      items: [
+        {
+          type: ItemType.current,
+          text: "Развернули стенд интеграций в общем кластере для приёмки",
+          tag: "infra",
+          status: ItemWorkflowStatus.in_progress,
+          stages: ["DevOps"],
+        },
+        {
+          type: ItemType.next,
+          text: "Автоматизировать выкладку коннектора через CI/CD пайплайн",
+          tag: "infra",
+          status: ItemWorkflowStatus.in_progress,
+          stages: ["DevOps"],
+        },
+      ],
     },
   ],
 };
