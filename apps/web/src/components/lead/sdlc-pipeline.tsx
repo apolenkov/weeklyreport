@@ -54,6 +54,28 @@ interface SdlcPipelineProps {
 // so the string is not inlined in JSX.
 const NO_OWN_STAGES_NOTE = "No stages assigned to you";
 
+// lead-pipeline-mine-reveal-and-own-stage-label (affordance 1): label the
+// completeness counter as the lead's OWN stages so "N/M" doesn't read as the
+// whole pipeline. Pure label — the count (computeCompleteness) is unchanged.
+const OWN_STAGES_LABEL = "Your stages";
+
+// lead-pipeline-mine-reveal-and-own-stage-label (affordance 2): in Mine mode
+// the filter hides foreign-owned and vacant chips. A small inert indicator near
+// the grid reports how many stages are collapsed; its `title` (hover) and
+// `aria-label` (non-visual) reveal each hidden stage's name and status,
+// mirroring the inert ComingSoon control pattern in nav-bar.tsx. It never
+// un-hides the chips, nor touches health or completeness.
+const HIDDEN_STAGES_ARIA_PREFIX = "Hidden stages —";
+
+// "Name: status" mirrors the per-chip aria convention (e.g. "DevOps: blocked").
+function hiddenStagesRevealText(hidden: readonly StageAssignment[]): string {
+  return hidden.map((s) => `${s.stageName}: ${s.status}`).join(", ");
+}
+
+function collapsedStagesIndicatorLabel(count: number): string {
+  return `+${count} more`;
+}
+
 // apply-status-palette (memo T5 opt 3 + user feedback 2026-06-10): every
 // product card shares ONE body — neutral card surface, neutral ring — and
 // only the 4px left-stripe color changes with the HEALTH status.
@@ -209,6 +231,14 @@ export function SdlcPipeline({
             : product.stages;
         const showNoOwnStagesNote =
           visibilityMode === "mine" && visibleStages.length === 0;
+        // Affordance 2: the stages the Mine filter collapsed (complement of
+        // visibleStages). Empty outside Mine mode so the indicator never shows
+        // in Everyone. Read from the full `product.stages`, so health and
+        // completeness (computed above from the full product) are untouched.
+        const hiddenStages =
+          visibilityMode === "mine"
+            ? product.stages.filter((s) => s.ownership !== "mine")
+            : [];
         return (
           <div
             key={product.id}
@@ -265,7 +295,7 @@ export function SdlcPipeline({
                   }
                   data-complete={completeness.complete}
                 >
-                  {completeness.filled}/{completeness.total} stages
+                  {completeness.filled}/{completeness.total} {OWN_STAGES_LABEL}
                 </span>
               )}
             </div>
@@ -317,6 +347,23 @@ export function SdlcPipeline({
                     </div>
                   );
                 })}
+                {/* Affordance 2: inert collapsed-stage indicator. Shows only in
+                    Mine mode (hiddenStages is empty otherwise) and only when
+                    the lead owns at least one stage (this grid branch). Hover
+                    (title) and screen readers (aria-label) reveal each hidden
+                    stage's name and status; it never re-renders the chips. */}
+                {hiddenStages.length > 0 && (
+                  <span
+                    role="img"
+                    data-testid="collapsed-stages-indicator"
+                    title={hiddenStagesRevealText(hiddenStages)}
+                    aria-label={`${HIDDEN_STAGES_ARIA_PREFIX} ${hiddenStagesRevealText(hiddenStages)}`}
+                    className="inline-flex cursor-default items-center rounded-[var(--radius-pill)] border border-dashed border-[var(--color-border)] px-2 text-[12px] font-medium text-[var(--color-muted-foreground)]"
+                    style={{ height: STAGE_CHIP_BOX_HEIGHT }}
+                  >
+                    {collapsedStagesIndicatorLabel(hiddenStages.length)}
+                  </span>
+                )}
               </div>
             )}
           </div>

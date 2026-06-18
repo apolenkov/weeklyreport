@@ -169,7 +169,7 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
       />,
     );
     const pill = getCompletenessPill(container);
-    expect(pill?.textContent).toContain("1/2 stages");
+    expect(pill?.textContent).toContain("1/2 Your stages");
   });
 
   it("wraps the pill in a dashed ring while own input is incomplete", () => {
@@ -213,7 +213,7 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
       />,
     );
     const pill = getCompletenessPill(container);
-    expect(pill?.textContent).toContain("1/1 stages");
+    expect(pill?.textContent).toContain("1/1 Your stages");
     expect(pill?.getAttribute("data-complete")).toBe("true");
   });
 
@@ -250,7 +250,7 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
       />,
     );
     const pill = getCompletenessPill(container);
-    expect(pill?.textContent).toContain("2/2 stages");
+    expect(pill?.textContent).toContain("2/2 Your stages");
     expect(pill?.getAttribute("data-complete")).toBe("true");
   });
 
@@ -284,7 +284,7 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
       />,
     );
     const pill = getCompletenessPill(container);
-    expect(pill?.textContent).toContain("1/2 stages");
+    expect(pill?.textContent).toContain("1/2 Your stages");
     expect(pill?.getAttribute("data-complete")).toBe("false");
   });
 });
@@ -688,6 +688,71 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     expect(renderedStageNames(container)).toHaveLength(3);
   });
 
+  // ---- reveal-on-hover: collapsed-stage indicator (Mine only) ----
+
+  const COLLAPSED_INDICATOR = '[data-testid="collapsed-stages-indicator"]';
+
+  it("Mine shows a collapsed-stage indicator revealing the hidden stages' names and statuses", () => {
+    const { container } = render(
+      <SdlcPipeline
+        products={[PRODUCT_OWN_FOREIGN_VACANT]}
+        readOnly={false}
+        visibilityMode="mine"
+      />,
+    );
+    const indicator = container.querySelector(COLLAPSED_INDICATOR);
+    expect(indicator).not.toBeNull();
+    // Visible count of collapsed stages (Testing + DevOps hidden).
+    expect(indicator?.textContent).toContain("2");
+    // Hover (title) and non-visual (aria-label) both reveal name: status.
+    const reveal = "Testing: at-risk, DevOps: empty";
+    expect(indicator?.getAttribute("title")).toBe(reveal);
+    expect(indicator?.getAttribute("aria-label")).toContain(reveal);
+    // It must NOT re-render the hidden chips inline.
+    expect(renderedStageNames(container)).toEqual(["Dev"]);
+  });
+
+  it("Everyone never shows the collapsed-stage indicator (full grid already)", () => {
+    const { container } = render(
+      <SdlcPipeline
+        products={[PRODUCT_OWN_FOREIGN_VACANT]}
+        readOnly={false}
+        visibilityMode="everyone"
+      />,
+    );
+    expect(container.querySelector(COLLAPSED_INDICATOR)).toBeNull();
+  });
+
+  it("a product where the lead owns every stage shows no indicator in Mine", () => {
+    const allMine: Product = {
+      id: "p-allmine",
+      name: "All Mine",
+      overallStatus: "on-track",
+      stages: [
+        {
+          stageName: "Dev",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "me",
+        },
+        {
+          stageName: "Testing",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "me",
+        },
+      ],
+    };
+    const { container } = render(
+      <SdlcPipeline
+        products={[allMine]}
+        readOnly={false}
+        visibilityMode="mine"
+      />,
+    );
+    expect(container.querySelector(COLLAPSED_INDICATOR)).toBeNull();
+  });
+
   it("a product with no own stages in Mine shows the note, not an empty grid", () => {
     const noOwn: Product = {
       id: "p-noown",
@@ -806,6 +871,6 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
         visibilityMode="mine"
       />,
     );
-    expect(container.textContent).toContain("1/2 stages");
+    expect(container.textContent).toContain("1/2 Your stages");
   });
 });
