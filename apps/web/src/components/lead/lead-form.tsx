@@ -246,7 +246,11 @@ function sectionToDraftPayload(
         workflowStatus: it.workflowStatus,
         carriedOver: it.carriedOver,
         completed: it.completed ?? null,
-        stageIds: it.stageIds,
+        // enforce-item-decision-stage-schema: the write schema now demands ≥1
+        // stage (mirrors risks). The read model stays tolerant of stage-less
+        // legacy rows; sending [] for such a row fails server-side validation
+        // loudly until the lead sets a stage.
+        stageIds: it.stageIds ?? [],
         // F1: include priorityRank in the autosave payload (was omitted, so the
         // dialog's rank never reached the backend → "doesn't save").
         priorityRank: it.priorityRank ?? null,
@@ -275,7 +279,10 @@ function sectionToDraftPayload(
         deadline: d.deadline ?? null,
         impact: d.impact,
         resolvedAt: d.resolvedAt ?? null,
-        stageIds: d.stageIds,
+        // enforce-item-decision-stage-schema: mirror risks/items — the write
+        // schema demands ≥1 stage; [] for a stage-less legacy row fails
+        // server-side validation loudly until the lead sets a stage.
+        stageIds: d.stageIds ?? [],
         productId: d.productId ?? null,
       })),
   };

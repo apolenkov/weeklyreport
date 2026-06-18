@@ -34,11 +34,22 @@ const baseSection: ReportSectionReadModel = {
       tag: "feature",
       workflowStatus: "in_progress",
       carriedOver: false,
+      // enforce-item-decision-stage-schema: items carry ≥1 stage on write;
+      // validSubmitPayload() reuses these items as a submit payload.
+      stageIds: ["Development"],
     },
   ],
   risks: [],
   decisions: [],
 };
+
+// enforce-item-decision-stage-schema: the read-model item types stageIds as
+// optional, but draft-save/submit payloads require it. Expose a stage-guaranteed
+// copy of the seeded items for the write-path test payloads below.
+const writeItems = baseSection.items.map((it) => ({
+  ...it,
+  stageIds: it.stageIds ?? [],
+}));
 
 function createRepository(
   section: ReportSectionReadModel,
@@ -91,7 +102,7 @@ describe("ReportSectionsService", () => {
           status: "yellow",
         },
       ],
-      items: baseSection.items,
+      items: writeItems,
       risks: [],
       decisions: [],
     });
@@ -115,7 +126,7 @@ describe("ReportSectionsService", () => {
               status: "yellow",
             },
           ],
-          items: baseSection.items,
+          items: writeItems,
           risks: [],
           decisions: [],
         },
@@ -138,7 +149,7 @@ describe("ReportSectionsService", () => {
             status: "green",
           },
         ],
-        items: baseSection.items,
+        items: writeItems,
         risks: [],
         decisions: [],
       }),
@@ -162,7 +173,7 @@ describe("ReportSectionsService", () => {
               status: "green",
             },
           ],
-          items: baseSection.items,
+          items: writeItems,
           risks: [],
           decisions: [],
         },
@@ -184,7 +195,7 @@ describe("ReportSectionsService", () => {
           status: "green",
         },
       ],
-      items: baseSection.items,
+      items: writeItems,
       risks: [],
       decisions: [],
     });
@@ -215,7 +226,7 @@ describe("ReportSectionsService", () => {
               status: "yellow",
             },
           ],
-          items: baseSection.items,
+          items: writeItems,
           risks: [],
           decisions: [],
         }),
@@ -239,7 +250,7 @@ describe("ReportSectionsService", () => {
             status: "green",
           },
         ],
-        items: baseSection.items,
+        items: writeItems,
         risks: [],
         decisions: [],
       });
@@ -268,7 +279,7 @@ describe("ReportSectionsService", () => {
             status: "yellow",
           },
         ],
-        items: baseSection.items,
+        items: writeItems,
         risks: [],
         decisions: [],
       });
@@ -301,7 +312,7 @@ describe("ReportSectionsService", () => {
               status: "yellow",
             },
           ],
-          items: baseSection.items,
+          items: writeItems,
           risks: [],
           decisions: [],
         }),
@@ -335,7 +346,7 @@ describe("ReportSectionsService", () => {
             status: "green",
           },
         ],
-        items: baseSection.items,
+        items: writeItems,
         risks: [],
         decisions: [],
       }),
@@ -411,7 +422,7 @@ describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
           status: "green" as const,
         },
       ],
-      items: baseSection.items,
+      items: writeItems,
       risks: [],
       decisions: [],
     };
@@ -594,6 +605,8 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
           text: "Current item",
           tag: "feature" as const,
           workflowStatus: "in_progress" as const,
+          // enforce-item-decision-stage-schema: items carry ≥1 stage on write.
+          stageIds: ["Development"],
         },
       ],
       risks: [],
@@ -639,6 +652,8 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
           text: "Current item",
           tag: "feature" as const,
           workflowStatus: "in_progress" as const,
+          // enforce-item-decision-stage-schema: items carry ≥1 stage on write.
+          stageIds: ["Development"],
         },
       ],
       risks: [],
