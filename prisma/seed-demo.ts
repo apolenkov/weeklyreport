@@ -2,10 +2,14 @@
  * DEMO seed — tiered, presenter-controlled demo data.
  *
  * One shared writer, two plain-data tiers selected from the CLI:
- *   - small (default) — ONE lead (Vasily) owning 3 products: two single-stage
- *     (Development, partial ownership) + one fully-owned 7-stage product (BI,
- *     all green, no risk). One BLOCKED item so the derived "Needs Attention"
- *     banner has content to demonstrate.
+ *   - small (default) — THREE leads co-owning Vasily's 3 products, role-shaped:
+ *     Vasily owns Development everywhere (+ Planning on the internal BI product,
+ *     exactly two owned stages there); Maria owns Testing; Igor owns DevOps.
+ *     BI leaves Testing unowned ("tester not hired"). Maria and Igor each seed a
+ *     foreign item + risk on a shared product, so the lead report's Mine/Everyone
+ *     toggle has a visible effect and the SDLC pipeline shows real split
+ *     ownership. One BLOCKED item so the derived "Needs Attention" banner has
+ *     content to demonstrate.
  *   - huge — the dense many-product fixture for stress/scroll demos
  *     (all canonical leads + products, templated content).
  *
@@ -52,6 +56,8 @@ import {
   PUBLISHED_REPORT_ID,
   DEFAULT_REPORTING_GROUP_ID,
   LEAD_1_ID,
+  LEAD_MARIA_ID,
+  LEAD_IGOR_ID,
   SEED_STAGES,
   SEED_USERS,
   SEED_PRODUCTS,
@@ -154,13 +160,33 @@ const PROD_PORTAL = SEED_PRODUCTS[0]!.id; // Маркетинговый порт
 const PROD_INTEGRATIONS = SEED_PRODUCTS[2]!.id; // Платформа интеграций → Vasily
 const PROD_BI = SEED_PRODUCTS[4]!.id; // Внутренний BI → Vasily
 
+// SMALL tier cast — role-shaped co-ownership across Vasily's three products.
+// Vasily owns Development everywhere (+ Planning on BI); Maria owns Testing;
+// Igor owns DevOps. The same colleague owns the same stage on each product
+// (consistent, not random). BI leaves Testing unowned to show a vacant role.
+const VASILY_LABEL = "Василий И.";
+const MARIA_LABEL = "Мария К.";
+const IGOR_LABEL = "Игорь В.";
+
 const SMALL_DATASET: TierDataset = {
   leads: [
     {
       id: LEAD_1_ID,
       email: "lead1@customreport.local",
-      name: "Василий И.",
+      name: VASILY_LABEL,
       samlId: "lead-1",
+    },
+    {
+      id: LEAD_MARIA_ID,
+      email: "maria@customreport.local",
+      name: MARIA_LABEL,
+      samlId: "lead-maria",
+    },
+    {
+      id: LEAD_IGOR_ID,
+      email: "igor@customreport.local",
+      name: IGOR_LABEL,
+      samlId: "lead-igor",
     },
   ],
   products: [
@@ -169,11 +195,12 @@ const SMALL_DATASET: TierDataset = {
     { id: PROD_BI, name: "Внутренний BI", leadId: LEAD_1_ID },
   ],
   sections: [
-    // Product A — single stage (Development). Carries the BLOCKED item so the
-    // derived "Needs Attention" escalation banner has content to demonstrate.
+    // --- Vasily (primary lead) — owns Development on each product ----------
+    // Portal — carries the BLOCKED item so the derived "Needs Attention"
+    // escalation banner has content to demonstrate.
     {
       leadId: LEAD_1_ID,
-      leadLabel: "Василий И.",
+      leadLabel: VASILY_LABEL,
       productId: PROD_PORTAL,
       productLight: TrafficLightStatus.yellow,
       sectionStatus: ReportSectionStatus.draft,
@@ -209,10 +236,10 @@ const SMALL_DATASET: TierDataset = {
         stage: "Development",
       },
     },
-    // Product B — single stage (Development).
+    // Integrations.
     {
       leadId: LEAD_1_ID,
-      leadLabel: "Василий И.",
+      leadLabel: VASILY_LABEL,
       productId: PROD_INTEGRATIONS,
       productLight: TrafficLightStatus.green,
       sectionStatus: ReportSectionStatus.draft,
@@ -247,45 +274,120 @@ const SMALL_DATASET: TierDataset = {
         stage: "Development",
       },
     },
-    // Product C — all seven SDLC stages, fully green (no risk). Showcases a
-    // complete, healthy product at the opposite end of the spectrum from Portal.
+    // BI — the internal product. Vasily owns EXACTLY TWO stages (Planning,
+    // Development); Testing is left unowned (tester not hired). Igor co-owns
+    // DevOps here (see his section below) and raises the blocker that lights
+    // this product's health red in Vasily's view even though Vasily owns
+    // neither the DevOps nor the Testing chip.
     {
       leadId: LEAD_1_ID,
-      leadLabel: "Василий И.",
+      leadLabel: VASILY_LABEL,
       productId: PROD_BI,
       productLight: TrafficLightStatus.green,
       sectionStatus: ReportSectionStatus.draft,
-      ownedStages: [
-        "Planning",
-        "Analysis",
-        "Design",
-        "Development",
-        "Testing",
-        "DevOps",
-        "Support",
-      ],
+      ownedStages: ["Planning", "Development"],
       items: [
         {
           type: ItemType.current,
-          text: "Новый дашборд BI: разработка и приёмочное тестирование идут параллельно",
+          text: "Новый дашборд BI: проектирование и разработка идут по плану",
           tag: "feature",
           status: ItemWorkflowStatus.in_progress,
-          stages: ["Development", "Testing"],
+          stages: ["Development"],
           priorityRank: 1,
         },
         {
           type: ItemType.next,
-          text: "Подготовить нагрузочный прогон дашборда BI",
+          text: "Спланировать целевые показатели следующего спринта дашборда BI",
           tag: "infra",
           status: ItemWorkflowStatus.in_progress,
-          stages: ["Testing"],
+          stages: ["Planning"],
         },
       ],
       decision: {
         text: "Утвердить целевые SLA по времени отклика дашборда BI",
-        impact: "Даёт измеримый порог приёмки для тестирования",
+        impact: "Даёт измеримый порог приёмки для разработки",
         stage: "Development",
       },
+    },
+    // --- Maria (co-owner) — owns Testing; foreign content on Portal --------
+    {
+      leadId: LEAD_MARIA_ID,
+      leadLabel: MARIA_LABEL,
+      productId: PROD_PORTAL,
+      productLight: TrafficLightStatus.yellow,
+      sectionStatus: ReportSectionStatus.draft,
+      ownedStages: ["Testing"],
+      items: [
+        {
+          type: ItemType.current,
+          text: "Прогон регрессии по сценариям входа портала, чиним флаки-тесты",
+          tag: "bugfix",
+          status: ItemWorkflowStatus.in_progress,
+          stages: ["Testing"],
+        },
+      ],
+      risk: {
+        risk: "Нестабильные e2e-тесты входа маскируют реальные регрессии",
+        impact: "Риск пропустить дефект авторизации в релиз",
+        mitigation: "Карантин флаки-тестов и стабилизация окружения стенда",
+        severity: "at-risk",
+        stage: "Testing",
+      },
+    },
+    // Maria also owns Testing on Integrations (consistent role), no extra
+    // content there.
+    {
+      leadId: LEAD_MARIA_ID,
+      leadLabel: MARIA_LABEL,
+      productId: PROD_INTEGRATIONS,
+      productLight: TrafficLightStatus.green,
+      sectionStatus: ReportSectionStatus.draft,
+      ownedStages: ["Testing"],
+      items: [],
+    },
+    // --- Igor (co-owner) — owns DevOps; foreign blocker on BI -------------
+    {
+      leadId: LEAD_IGOR_ID,
+      leadLabel: IGOR_LABEL,
+      productId: PROD_BI,
+      productLight: TrafficLightStatus.red,
+      sectionStatus: ReportSectionStatus.draft,
+      ownedStages: ["DevOps"],
+      items: [
+        {
+          type: ItemType.current,
+          text: "Деплой дашборда BI заблокирован: не выделены ресурсы кластера",
+          tag: "infra",
+          status: ItemWorkflowStatus.blocked,
+          stages: ["DevOps"],
+        },
+      ],
+      risk: {
+        risk: "Нет выделенных мощностей кластера под прод-стенд BI",
+        impact: "Релиз дашборда BI сдвигается до выделения ресурсов",
+        mitigation: "Заявка в инфраструктуру, временный деплой на общий стенд",
+        severity: "blocked",
+        stage: "DevOps",
+      },
+    },
+    // Igor also owns DevOps on Portal and Integrations (consistent role).
+    {
+      leadId: LEAD_IGOR_ID,
+      leadLabel: IGOR_LABEL,
+      productId: PROD_PORTAL,
+      productLight: TrafficLightStatus.green,
+      sectionStatus: ReportSectionStatus.draft,
+      ownedStages: ["DevOps"],
+      items: [],
+    },
+    {
+      leadId: LEAD_IGOR_ID,
+      leadLabel: IGOR_LABEL,
+      productId: PROD_INTEGRATIONS,
+      productLight: TrafficLightStatus.green,
+      sectionStatus: ReportSectionStatus.draft,
+      ownedStages: ["DevOps"],
+      items: [],
     },
   ],
 };
