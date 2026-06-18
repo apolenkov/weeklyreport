@@ -42,8 +42,15 @@ import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
 import { AccordionSection } from "../report-shell/accordion-section";
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../report-shell/archive-toggle";
-import { ReportToolbar } from "../report-shell/report-toolbar";
+import {
+  DocumentActionGroup,
+  ReportToolbar,
+} from "../report-shell/report-toolbar";
 import { SaveNowButton } from "../report-shell/save-now-button";
+import {
+  segmentClassName,
+  SegmentedToggle,
+} from "../report-shell/segmented-toggle";
 import { ViewModeToggle } from "../report-shell/view-mode-toggle";
 import { LeadSlidesClient } from "../slides/lead-slides-client";
 import { SlideFullscreenButton } from "../slides/slide-fullscreen-button";
@@ -315,30 +322,19 @@ function RecordVisibilityToggle({
     { key: "everyone", label: "Everyone" },
   ];
   return (
-    <div
-      role="group"
-      aria-label="Record visibility"
-      className="inline-flex items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] p-0.5"
-    >
-      {options.map((option) => {
-        const active = value === option.key;
-        return (
-          <button
-            key={option.key}
-            type="button"
-            aria-pressed={active}
-            onClick={() => onChange(option.key)}
-            className={`btn-press min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] px-3 py-1 font-[family-name:var(--font-sans)] text-sm font-semibold transition-colors ${
-              active
-                ? "bg-[var(--color-starbucks-accent)] text-white"
-                : "bg-transparent text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)]"
-            }`}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
+    <SegmentedToggle ariaLabel="Record visibility">
+      {options.map((option) => (
+        <button
+          key={option.key}
+          type="button"
+          aria-pressed={value === option.key}
+          onClick={() => onChange(option.key)}
+          className={`btn-press ${segmentClassName(value === option.key)}`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </SegmentedToggle>
   );
 }
 
@@ -1134,71 +1130,69 @@ export function LeadForm({
                 </span>
               ))}
           </div>
+          {/* report-toolbar-layout: document actions live on the header line's
+              right slot, not inside the bordered toolbar. A read-only past
+              period hides the real mutating actions (Save/Submit/Fill-From)
+              while the inert Coming-soon stubs remain (deferred-feature-pattern).
+              Submit Section is the single brand-green forward primary; reversal
+              actions (Request Reopen / Revoke) stay neutral/outline so green
+              keeps one "forward, safe-to-commit" meaning. */}
+          <DocumentActionGroup>
+            <VersionComingSoonControl />
+            {/* TODO(lead-pdf-export): lead is excluded from pdfExport
+                (role-coverage-gate); this inert ComingSoon control never
+                reaches a backend call. */}
+            <PdfExportComingSoonControl />
+            {!isReadOnly && (
+              <FillFromButton
+                periods={visiblePeriods}
+                disabled={fillFromMut.isPending}
+                onFillFrom={handleFillFrom}
+              />
+            )}
+            {!isReadOnly && <SaveNowButton autosave={autosave} />}
+            {isSubmitted && currentUser.authorRole === "lead" && (
+              <button
+                type="button"
+                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => {
+                  setReopenError(null);
+                  setShowReopenDialog(true);
+                }}
+                disabled={requestReopenMut.isPending}
+                title="Ask Head to unlock this section"
+              >
+                Request Reopen
+              </button>
+            )}
+            {isSubmitted && currentUser.authorRole !== "lead" && (
+              <button
+                type="button"
+                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={handleRevoke}
+                disabled={revokeMut.isPending}
+                title="Revoke submission and unlock the section"
+              >
+                Revoke
+              </button>
+            )}
+            {!isSubmitted && !isReadOnly && (
+              <button
+                type="button"
+                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={handleSubmit}
+                disabled={submitMut.isPending}
+              >
+                Submit Section
+              </button>
+            )}
+          </DocumentActionGroup>
         </header>
 
-        {/* report-toolbar-layout: the period toolbar splits by one axis.
-            Top (Document action) row: Version⏳ · PDF⏳ · Fill-From · Save ·
-            Submit Section. Bottom (Context control) row: Agent review · period
-            nav · show-archived · Mine|Everyone · Edit|Slides · Toggle All. A
-            read-only past period hides only the real mutating actions
-            (Save/Submit/Fill-From) but keeps the inert Coming-soon stubs
-            (deferred-feature-pattern). */}
+        {/* report-toolbar-layout: the bordered toolbar holds only the
+            Context-control bar: Agent review · period nav · show-archived ·
+            Mine|Everyone · Edit|Slides · Toggle All. */}
         <ReportToolbar
-          documentActions={
-            <>
-              <VersionComingSoonControl />
-              {/* TODO(lead-pdf-export): lead is excluded from pdfExport
-                  (role-coverage-gate); this inert ComingSoon control never
-                  reaches a backend call. */}
-              <PdfExportComingSoonControl />
-              {!isReadOnly && (
-                <FillFromButton
-                  periods={visiblePeriods}
-                  disabled={fillFromMut.isPending}
-                  onFillFrom={handleFillFrom}
-                />
-              )}
-              {!isReadOnly && <SaveNowButton autosave={autosave} />}
-              {/* Reversal lifecycle actions take a neutral/outline treatment so
-                  the brand-accent green stays a single "forward, safe-to-commit"
-                  meaning (report-toolbar-layout accent hierarchy). */}
-              {isSubmitted && currentUser.authorRole === "lead" && (
-                <button
-                  type="button"
-                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={() => {
-                    setReopenError(null);
-                    setShowReopenDialog(true);
-                  }}
-                  disabled={requestReopenMut.isPending}
-                  title="Ask Head to unlock this section"
-                >
-                  Request Reopen
-                </button>
-              )}
-              {isSubmitted && currentUser.authorRole !== "lead" && (
-                <button
-                  type="button"
-                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={handleRevoke}
-                  disabled={revokeMut.isPending}
-                  title="Revoke submission and unlock the section"
-                >
-                  Revoke
-                </button>
-              )}
-              {!isSubmitted && !isReadOnly && (
-                <button
-                  type="button"
-                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={handleSubmit}
-                  disabled={submitMut.isPending}
-                >
-                  Submit Section
-                </button>
-              )}
-            </>
-          }
           contextControls={
             <>
               {/* Inert Agent-review placeholder leads the context group

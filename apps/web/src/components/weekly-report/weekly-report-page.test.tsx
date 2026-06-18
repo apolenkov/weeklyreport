@@ -585,30 +585,36 @@ describe("WeeklyReportPage — async Export PDF button role gating (driver sweep
 });
 
 // report-toolbar-layout: the period-context bar renders through the shared
-// ReportToolbar container as two labeled rows (Document actions / Context
-// controls). The page always owns this single toolbar and sits below the page
-// header row (the lead arrangement). Department context is a header label now,
-// not a toolbar control, so the page's default toolbar carries no center label.
+// The page splits controls by axis: document actions render on the page header
+// line (DocumentActionGroup), and the bordered ReportToolbar holds only the
+// single Context-control bar below the header. Department context is a header
+// label, not a toolbar control, so the default toolbar carries no center label.
 describe("WeeklyReportPage — shared period toolbar (report-toolbar-layout)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
-  it("renders the shared ReportToolbar with two labeled action rows below the header", async () => {
+  it("renders document actions on the header line and the context bar below it", async () => {
     renderPage(makeWeeklyReportData("open"));
     const heading = await screen.findByRole("heading", {
       name: /status report/i,
     });
+    // The bordered toolbar IS the Context-control bar (one labeled group).
     const toolbar = screen.getByTestId("report-toolbar");
     expect(toolbar).toBeInTheDocument();
+    expect(toolbar).toHaveAttribute("aria-label", "Context controls");
+    // Document actions live on the header line, NOT inside the toolbar.
+    const docGroup = screen.getByRole("group", { name: "Document actions" });
     expect(
-      within(toolbar).getByRole("group", { name: "Document actions" }),
-    ).toBeInTheDocument();
+      within(toolbar).queryByRole("group", { name: "Document actions" }),
+    ).toBeNull();
+    // Focus order: the document-action group precedes the context bar in the DOM.
     expect(
-      within(toolbar).getByRole("group", { name: "Context controls" }),
-    ).toBeInTheDocument();
-    // The toolbar sits BELOW the page header row (lead arrangement).
+      docGroup.compareDocumentPosition(toolbar) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // The toolbar sits BELOW the page header row.
     expect(
       heading.compareDocumentPosition(toolbar) &
         Node.DOCUMENT_POSITION_FOLLOWING,
@@ -650,16 +656,16 @@ describe("WeeklyReportPage — shared period toolbar (report-toolbar-layout)", (
   });
 });
 
-// report-toolbar-parity + head-toolbar-semantics: the single labeled Export-PDF
-// moved OUT of the header action row INTO the shared ReportToolbar trailing
-// group; the publish precondition hint sits on the report-status row.
+// report-toolbar-parity + head-toolbar-semantics: exactly one labeled Export-PDF
+// renders, on the page header line's document-action group (not inside the
+// bordered toolbar); the publish precondition hint sits on the report-status row.
 describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
   });
 
-  it("renders exactly one Export-PDF, inside the toolbar trailing group (not the header)", async () => {
+  it("renders exactly one Export-PDF, on the header line (not inside the toolbar)", async () => {
     renderPage(makeWeeklyReportData("published"));
     await screen.findByRole("heading", { name: /status report/i });
 
@@ -668,11 +674,7 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
     });
     expect(exportButtons).toHaveLength(1);
 
-    // The single Export-PDF lives in the shared ReportToolbar, not the header.
-    const toolbar = screen.getByTestId("report-toolbar");
-    expect(
-      within(toolbar).getByRole("button", { name: /export pdf/i }),
-    ).toBeInTheDocument();
+    // The single Export-PDF lives on the header line, not the bordered toolbar.
     const header = screen
       .getByRole("heading", { name: /status report/i })
       .closest("header");
@@ -680,9 +682,11 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
       throw new Error("expected the report heading to sit inside a <header>");
     }
     expect(
-      within(header).queryByRole("button", {
-        name: /export pdf/i,
-      }),
+      within(header).getByRole("button", { name: /export pdf/i }),
+    ).toBeInTheDocument();
+    const toolbar = screen.getByTestId("report-toolbar");
+    expect(
+      within(toolbar).queryByRole("button", { name: /export pdf/i }),
     ).not.toBeInTheDocument();
   });
 

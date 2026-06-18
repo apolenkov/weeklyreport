@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 
+import { segmentClassName, SegmentedToggle } from "./segmented-toggle";
+
 function SlidesViewIcon() {
   return (
     <svg
@@ -32,32 +34,30 @@ export function ViewModeToggle({
   slidesHref,
   mode = "edit",
 }: ViewModeToggleProps) {
-  const activeClass = "bg-[var(--color-starbucks-accent)] text-white";
-  const inactiveClass =
-    "bg-[var(--color-surface)] text-[var(--color-starbucks-accent)]";
-
-  // Self-contained wrapper: the two segments must touch to read as ONE
-  // segmented pill. Without it, a parent flex container with `gap-*`
-  // (e.g. the lead header) splits the pill into two broken halves
-  // (user-reported 2026-06-10).
+  // Neutral segmented family via the shared primitive. The two segments stay
+  // `<Link>` URL navigation (slides is a separate route; `scroll={false}`),
+  // so middle-click / open-in-new-tab still work. The primitive's track keeps
+  // the segments touching as ONE pill even inside a parent `gap-*` flex row
+  // (the lead header), which a bare gap previously split (user-reported
+  // 2026-06-10).
   return (
-    <div className="inline-flex items-center">
+    <SegmentedToggle ariaLabel="View mode">
       <Link
         href={editHref}
         scroll={false}
-        className={`inline-flex min-h-[var(--touch-target-min)] min-w-[96px] items-center justify-center gap-1 rounded-l-[var(--radius-pill)] border border-r-0 border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors ${mode === "edit" ? activeClass : inactiveClass}`}
+        className={segmentClassName(mode === "edit")}
       >
         Edit
       </Link>
       <Link
         href={slidesHref}
         scroll={false}
-        className={`inline-flex min-h-[var(--touch-target-min)] min-w-[96px] items-center justify-center gap-1 rounded-r-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] px-3 text-sm font-semibold transition-colors ${mode === "slides" ? activeClass : inactiveClass}`}
+        className={segmentClassName(mode === "slides")}
         aria-label="Open slides mode"
       >
         <SlidesViewIcon />
         Slides
       </Link>
-    </div>
+    </SegmentedToggle>
   );
 }

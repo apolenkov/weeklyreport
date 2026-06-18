@@ -11,6 +11,7 @@ import { PeriodNavigator } from "../lead/period-navigator";
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../report-shell/archive-toggle";
 import {
+  DocumentActionGroup,
   ReportToolbar,
   ReportToolbarCenterLabel,
 } from "../report-shell/report-toolbar";
@@ -193,17 +194,12 @@ export function HeadReportShell({
       />
     ) : undefined;
 
-  // report-toolbar-layout: in slides mode the shell renders the page's single
-  // two-row ReportToolbar itself (slides has no WeeklyReportPage). The top
-  // Document action row carries the labeled Export-PDF; the bottom Context
-  // control row carries the period nav + scope / view-mode toggles. Publish &
+  // report-toolbar-layout: in slides mode the shell renders the toolbar itself
+  // (slides has no WeeklyReportPage). The bordered toolbar carries only the
+  // Context-control bar (period nav + scope / view-mode toggles); the labeled
+  // Export-PDF document action lives on the slides header line below. Publish &
   // Lock is a form-mode page action and is absent here, as before.
-  const slidesToolbar = (
-    <ReportToolbar
-      documentActions={exportPdf}
-      contextControls={contextControls}
-    />
-  );
+  const slidesToolbar = <ReportToolbar contextControls={contextControls} />;
 
   return (
     <div className="space-y-4">
@@ -220,6 +216,11 @@ export function HeadReportShell({
               </div>
               {headerContextLabel}
             </div>
+            {/* report-toolbar-layout: the Export-PDF document action sits on the
+                header line, not inside the bordered toolbar. */}
+            {exportPdf && (
+              <DocumentActionGroup>{exportPdf}</DocumentActionGroup>
+            )}
           </header>
           {slidesToolbar}
           <Suspense fallback={<SlideSkeleton />}>

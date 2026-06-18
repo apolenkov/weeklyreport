@@ -22,7 +22,10 @@ import type { PortfolioProduct, ProductReport } from "../dashboard/mock-data";
 import type { ReportPeriod } from "../lead/mock-data";
 import { PdfExportComingSoonControl } from "../lead/pdf-export-coming-soon";
 import { PeriodNavigator } from "../lead/period-navigator";
-import { ReportToolbar } from "../report-shell/report-toolbar";
+import {
+  DocumentActionGroup,
+  ReportToolbar,
+} from "../report-shell/report-toolbar";
 import { ExportPdfButton } from "./export-pdf-button";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
 import { ProductAccordion } from "./product-accordion";
@@ -449,7 +452,7 @@ export function WeeklyReportPage({
     <div className="space-y-4">
       {/* Page header */}
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
           <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
             Status Report
           </h1>
@@ -467,60 +470,61 @@ export function WeeklyReportPage({
               control, so it stays on the header line, out of the action rows. */}
           {headerContextLabel}
         </div>
+        {/* report-toolbar-layout: document actions live on the header line's
+            right slot, not inside the bordered toolbar. The labeled Export-PDF
+            (or a shell-supplied leading action) leads, then the head lifecycle
+            actions (Move-to-archive, Publish & Lock). Viewer and the lead
+            preview have no mutating actions, so only the export control renders. */}
+        <DocumentActionGroup>
+          {documentActionsLeading ?? (
+            <ToolbarExportControl
+              canExportPdf={canExportPdf}
+              showComingSoon={showLeadExportComingSoon}
+              reportId={view.period.reportId}
+              periodStatus={view.period.periodStatus}
+            />
+          )}
+          {/* A22: Move-to-archive — a published-period lifecycle action, so it
+              is a document action (neutral/outline), distinct from the
+              show-archived filter in the context bar. Hidden after archiving
+              because this page only navigates active periods. */}
+          {canMutatePeriod && view.period.periodStatus === "published" && (
+            <button
+              type="button"
+              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() =>
+                archiveMut.mutate({ reportId: view.period.reportId })
+              }
+              disabled={archiveMut.isPending}
+              aria-label="Move this report to the archive"
+            >
+              {archiveLabel}
+            </button>
+          )}
+          {canMutatePeriod && (
+            <PublishLockButton
+              pendingCount={pendingCount}
+              totalLeads={total}
+              periodStatus={view.period.periodStatus}
+              onPublish={() =>
+                publishMut.mutate({ reportId: view.period.reportId })
+              }
+              onReopen={() =>
+                reopenMut.mutate({ reportId: view.period.reportId })
+              }
+              isPending={publishMut.isPending || reopenMut.isPending}
+              canPublish={canPublishReport}
+              publishDisabledReason="No submitted report content yet."
+            />
+          )}
+        </DocumentActionGroup>
       </header>
 
-      {/* report-toolbar-layout: the page owns the single two-row ReportToolbar.
-          Top (Document action) row: the labeled Export-PDF (or a shell-supplied
-          leading action) plus the head lifecycle actions (Move-to-archive,
-          Publish & Lock). Bottom (Context control) row: either a shell-composed
-          row (head) or the page's default period navigator, optionally preceded
-          by leading controls (viewer's Agent review + Back to Archive). */}
+      {/* report-toolbar-layout: the bordered toolbar holds only the
+          Context-control bar — either a shell-composed row (head) or the page's
+          default period navigator, optionally preceded by leading controls
+          (viewer's Agent review + Back to Archive). */}
       <ReportToolbar
-        documentActions={
-          <>
-            {documentActionsLeading ?? (
-              <ToolbarExportControl
-                canExportPdf={canExportPdf}
-                showComingSoon={showLeadExportComingSoon}
-                reportId={view.period.reportId}
-                periodStatus={view.period.periodStatus}
-              />
-            )}
-            {/* A22: Move-to-archive — a published-period lifecycle action, so it
-                lives in the Document action row (neutral/outline), distinct from
-                the show-archived filter in the Context row. Hidden after
-                archiving because this page only navigates active periods. */}
-            {canMutatePeriod && view.period.periodStatus === "published" && (
-              <button
-                type="button"
-                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={() =>
-                  archiveMut.mutate({ reportId: view.period.reportId })
-                }
-                disabled={archiveMut.isPending}
-                aria-label="Move this report to the archive"
-              >
-                {archiveLabel}
-              </button>
-            )}
-            {canMutatePeriod && (
-              <PublishLockButton
-                pendingCount={pendingCount}
-                totalLeads={total}
-                periodStatus={view.period.periodStatus}
-                onPublish={() =>
-                  publishMut.mutate({ reportId: view.period.reportId })
-                }
-                onReopen={() =>
-                  reopenMut.mutate({ reportId: view.period.reportId })
-                }
-                isPending={publishMut.isPending || reopenMut.isPending}
-                canPublish={canPublishReport}
-                publishDisabledReason="No submitted report content yet."
-              />
-            )}
-          </>
-        }
         contextControls={
           contextControls ?? (
             <>
