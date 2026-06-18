@@ -20,14 +20,27 @@ The lead report toolbar and slide hero MUST present their controls with consiste
 3. Status badges in the slide hero row MUST share one height/baseline with the
    other elements of that row, at every status and product count.
 4. Every report-toolbar control — the document-action icon buttons and pill
-   actions (Submit Section, Publish & Lock, Toggle All, reversal actions), period
+   actions (Submit Section, Publish & Lock, reversal actions), period
    navigation, the segmented toggles, the Agent-review placeholder, and the
-   slides Fullscreen control — MUST sit on one shared height token
-   (`--toolbar-control-h`), so the toolbar reads as a single row of equal-height
-   controls.
+   mode-adaptive collapse/fullscreen control — MUST sit on one shared height
+   token (`--toolbar-control-h`), so the toolbar reads as a single row of
+   equal-height controls.
 5. The lead Mine/Everyone visibility toggle MUST render icon-only (one-person /
    group) while keeping an accessible name (sr-only text and/or tooltip), so it
    stays compact and does not crowd the period navigator.
+6. The lead context bar's trailing utility control MUST be a single
+   mode-adaptive icon-only control occupying one fixed-width slot: in edit mode
+   it collapses/expands all report sections; in slides mode it toggles
+   fullscreen. It MUST keep the same position and width across modes so switching
+   edit↔slides does not shift the row, and each variant MUST keep an accessible
+   name (sr-only text and/or tooltip). There MUST NOT be a separate slides-only
+   fullscreen control or an inert edit-only "Toggle All" rendered in slides where
+   it has nothing to expand; the single mode-adaptive control replaces both.
+   In edit mode its accessible name and tooltip MUST reflect the current state —
+   "Collapse all sections" when sections are expanded, "Expand all sections" when
+   collapsed. The slot MUST be reserved (rendered, disabled when there is nothing
+   to collapse — not removed from the DOM) so adding or removing sections within a
+   session never makes the control appear/disappear and shift the row.
 
 #### Scenario: the version coming-soon control sits among icon buttons
 
@@ -54,3 +67,26 @@ The lead report toolbar and slide hero MUST present their controls with consiste
   and the context bar)
 - **THEN** every control resolves to the same `--toolbar-control-h` height, so no
   control is visibly taller or shorter than its neighbours
+
+#### Scenario: the trailing control adapts by mode without shifting the row
+
+- **WHEN** a lead switches the same report between edit and slides mode
+- **THEN** the trailing utility control stays in the same slot at the same width,
+  showing a collapse-all icon in edit and a fullscreen icon in slides
+- **AND** activating it in edit collapses/expands all sections, while in slides
+  it toggles fullscreen
+- **AND** no separate slides-only fullscreen button or inert "Toggle All" renders
+  alongside it
+
+#### Scenario: the edit-mode label reflects collapse state
+
+- **WHEN** a lead in edit mode has all sections expanded, then collapses them via
+  the control
+- **THEN** the control's accessible name/tooltip reads "Collapse all sections"
+  while expanded and "Expand all sections" once collapsed
+
+#### Scenario: adding a section in-session does not shift the control
+
+- **WHEN** a lead with an empty edit report (nothing to collapse) adds a section
+- **THEN** the trailing control stayed in its reserved slot the whole time
+  (disabled while empty, then enabled), so its position never shifted
