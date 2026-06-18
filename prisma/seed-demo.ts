@@ -62,6 +62,7 @@ import {
   SEED_USERS,
   SEED_PRODUCTS,
   SEED_REPORTS,
+  SEED_HISTORY_REPORTS,
 } from "./seed-constants.js";
 
 // ---------------------------------------------------------------------------
@@ -679,6 +680,22 @@ async function seedReports(): Promise<void> {
           sections: [],
         },
       },
+      // History periods (N-2 .. N-4). N-3 and N-4 are archived so the lead
+      // report toolbar surfaces the show-archived filter (it renders only when
+      // the lead has at least one archived period). All are published.
+      ...SEED_HISTORY_REPORTS.map((h) => ({
+        id: h.id,
+        periodStart: new Date(h.periodStart),
+        periodEnd: new Date(h.periodEnd),
+        deadline: new Date(h.deadline),
+        weekLabel: h.weekLabel,
+        periodStatus: PeriodStatus.published,
+        status: ReportStatus.published,
+        periodState: h.archived ? PeriodState.archived : PeriodState.published,
+        archived: h.archived,
+        publishedAt: new Date(h.periodEnd),
+        publishedById: HEAD_USER_ID,
+      })),
     ],
   });
 }
@@ -806,21 +823,24 @@ async function seedActiveLeadSection(
   }
 }
 
-async function seedPublishedLeadSection(
+async function seedPriorLeadSection(
+  reportId: string,
+  submittedAt: Date,
   leadId: string,
   contributions: readonly DemoSection[],
   productNames: ReadonlyMap<string, string>,
 ): Promise<void> {
-  // One submitted prior-period section per lead so the published head view and
-  // period switching have non-empty content (one done item per product).
+  // One submitted prior-period section per lead so the published head view,
+  // archived history, and period switching have non-empty content (one done
+  // item per product).
   const sectionId = makeSectionId();
   await prisma.reportSection.create({
     data: {
       id: sectionId,
-      reportId: PUBLISHED_REPORT_ID,
+      reportId,
       authorId: leadId,
       status: ReportSectionStatus.submitted,
-      submittedAt: new Date(SEED_REPORTS.published.publishedAt),
+      submittedAt,
     },
   });
   for (const c of contributions) {
@@ -873,7 +893,26 @@ async function seedDemo(tier: Tier): Promise<void> {
     await seedActiveLeadSection(leadId, contributions);
   }
   for (const [leadId, contributions] of byLead) {
-    await seedPublishedLeadSection(leadId, contributions, productNames);
+    await seedPriorLeadSection(
+      PUBLISHED_REPORT_ID,
+      new Date(SEED_REPORTS.published.publishedAt),
+      leadId,
+      contributions,
+      productNames,
+    );
+  }
+  // History periods give the lead archived periods to surface the
+  // show-archived toggle, and keep the head/period-switch views non-empty.
+  for (const h of SEED_HISTORY_REPORTS) {
+    for (const [leadId, contributions] of byLead) {
+      await seedPriorLeadSection(
+        h.id,
+        new Date(h.periodEnd),
+        leadId,
+        contributions,
+        productNames,
+      );
+    }
   }
 
   const counts = {
