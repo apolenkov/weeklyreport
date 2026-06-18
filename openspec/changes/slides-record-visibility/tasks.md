@@ -12,18 +12,25 @@
 
 ## Group 2 — Everyone content in slides (the feature)
 
-- [ ] 3. Resolve the ScopeToggle naming collision per design Decision 2:
-     relabel the slide `ScopeToggle` "Own" → a layout-neutral label
-     (e.g. "Summary"/"Section") so it no longer reads as "Mine". (Confirm
-     wording with the user if possible.)
+- [ ] 3. Relabel the slide `ScopeToggle` "Own" → **"Summary"** (decided, design
+     Decision 2 — user-confirmed). Change only the `ScopeValue` "own" label in
+     `scope-toggle.tsx`; the value/key stays "own". The head deck reuses
+     ScopeToggle with `["lead","product"]`, so it is unaffected.
 - [ ] 4. In `LeadSlidesClient`, accept the visibility mode; fetch
-     `leadForm.crossAuthorContent` ONLY when `visibilityHydrated && isEveryone`;
-     purge that cache on identity/report change and on leaving Everyone (mirror
-     `lead-form.tsx`).
-- [ ] 5. Merge foreign cross-author rows into the slide model on Everyone:
-     extend `section-slide-utils.ts` (fold foreign items/risks/decisions on
-     shared products into `buildSectionSlideModel`'s counts + grids), reusing the
-     `buildProductScopedSlides` merge shape. Mark merged rows as foreign/read-only.
+     `leadForm.crossAuthorContent` ONLY when `visibilityHydrated && isEveryone`
+     AND the deck is the user's OWN (no foreign `authorId`); purge that cache on
+     identity/report change and on leaving Everyone (mirror `lead-form.tsx`).
+- [ ] 5. Merge foreign cross-author rows at the SLIDE-MODEL layer on Everyone
+     (design Decision 3): extend `buildSectionSlideModel` (or a wrapper) to
+     ACCEPT mapped foreign rows and emit NEW `SlideProduct`/`SectionSlideModel`
+     objects — mirror `applyForeignProductHealth` (zero mutation). Do NOT fold
+     foreign rows back into the cached `ReportSectionReadModel`. Mark merged rows
+     `foreign: true` for read-only styling. Map rows via the existing
+     `mapForeignItems`/`mapForeignRisks`/`mapForeignDecisions`.
+- [ ] 5a. priorityRank gap (design Decision 8): foreign rows fold into the
+      content grids + blocked/at-risk counters but are EXCLUDED from priority-rank
+      ranking (the client mirror drops `priorityRank`). Add a test pinning this so
+      a missing field is intentional, not a crash.
 - [ ] 6. Keep health honest: `applyForeignProductHealth` stays always-on; assert
      the product badge is identical Mine vs Everyone.
 - [ ] 7. View-only safety: add a test proving Everyone in slides does not change

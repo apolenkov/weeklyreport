@@ -48,8 +48,9 @@ design decision here — see `design.md`.
   this change targets the lead's in-report `?mode=slides` surface. `/lead/*` is
   lead-only and `crossAuthorContent` enforces co-ownership server-side, so no
   authz surface widens beyond edit-mode Everyone.
-- The existing slide `ScopeToggle` (Own / Product) keeps its current behavior;
-  its relationship to Mine/Everyone is resolved in `design.md` (open decision).
+- The existing slide `ScopeToggle` keeps its layout behavior; only its "Own"
+  label is relabeled to "Summary" so it stops colliding with "Mine" (decided,
+  `design.md` Decision 2). The value/key stays "own".
 - Changing what "Everyone" means: it stays the existing cross-author scope
   (co-owners of the lead's own products), NOT the whole group portfolio.
 
