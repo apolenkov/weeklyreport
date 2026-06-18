@@ -38,7 +38,21 @@ interface SdlcPipelineProps {
    * rendered as a subtle "Other contributors" row below each product card.
    */
   readonly crossAuthors?: readonly CrossAuthorEntry[];
+  /**
+   * lead-mine-hide-unowned-stages: which stage chips render. In "mine" only the
+   * lead's own stages render — foreign-owned and vacant stages are hidden (not
+   * greyed). In "everyone" the full grid renders (own + foreign-owned locked +
+   * vacant). Health (left edge) and own-input completeness are always computed
+   * from the full `product.stages` / `rawProduct.stages`, so hiding chips never
+   * changes those signals. Defaults to "everyone" so slides / head / read-only
+   * paths keep the full pipeline.
+   */
+  readonly visibilityMode?: "mine" | "everyone";
 }
+
+// lead-mine-hide-unowned-stages: empty-own-stages note copy, lifted to a const
+// so the string is not inlined in JSX.
+const NO_OWN_STAGES_NOTE = "No stages assigned to you";
 
 // apply-status-palette (memo T5 opt 3 + user feedback 2026-06-10): every
 // product card shares ONE body — neutral card surface, neutral ring — and
@@ -158,6 +172,7 @@ export function SdlcPipeline({
   readOnly = false,
   onStatusChange,
   crossAuthors = [],
+  visibilityMode = "everyone",
 }: SdlcPipelineProps) {
   function handleStatusChange(
     productId: string,
@@ -184,6 +199,16 @@ export function SdlcPipeline({
         // read-only mode there is nothing to finish, so it never renders.
         const showCompletenessRing =
           !readOnly && completeness.total > 0 && !completeness.complete;
+        // lead-mine-hide-unowned-stages: in Mine only the lead's own chips
+        // render; foreign-owned and vacant chips are hidden (not greyed).
+        // Everyone renders the full grid. Health and completeness above read
+        // the FULL `product`/`rawProduct`, so this filter never moves them.
+        const visibleStages =
+          visibilityMode === "mine"
+            ? product.stages.filter((s) => s.ownership === "mine")
+            : product.stages;
+        const showNoOwnStagesNote =
+          visibilityMode === "mine" && visibleStages.length === 0;
         return (
           <div
             key={product.id}
@@ -245,44 +270,55 @@ export function SdlcPipeline({
               )}
             </div>
 
-            {/* Stages row */}
-            <div className="flex flex-wrap justify-center items-start gap-2 pb-1">
-              {product.stages.map((stage, idx) => {
-                return (
-                  <div key={stage.stageName} className="flex items-start gap-2">
-                    {idx > 0 && (
-                      <div
-                        className="flex items-center text-lg font-bold"
-                        style={{
-                          height: STAGE_CHIP_BOX_HEIGHT,
-                          color:
-                            stage.ownership === "mine" ||
-                            product.stages[idx - 1]?.ownership === "mine"
-                              ? "var(--color-starbucks-accent)"
-                              : "var(--color-muted-foreground)",
-                        }}
-                      >
-                        &rarr;
+            {/* Stages row. lead-mine-hide-unowned-stages: a product on which the
+              lead owns no stage still renders (with its honest health above)
+              and shows a brief note instead of an empty grid. */}
+            {showNoOwnStagesNote ? (
+              <p className="pb-1 text-[13px] italic text-[var(--color-muted-foreground)]">
+                {NO_OWN_STAGES_NOTE}
+              </p>
+            ) : (
+              <div className="flex flex-wrap justify-center items-start gap-2 pb-1">
+                {visibleStages.map((stage, idx) => {
+                  return (
+                    <div
+                      key={stage.stageName}
+                      className="flex items-start gap-2"
+                    >
+                      {idx > 0 && (
+                        <div
+                          className="flex items-center text-lg font-bold"
+                          style={{
+                            height: STAGE_CHIP_BOX_HEIGHT,
+                            color:
+                              stage.ownership === "mine" ||
+                              visibleStages[idx - 1]?.ownership === "mine"
+                                ? "var(--color-starbucks-accent)"
+                                : "var(--color-muted-foreground)",
+                          }}
+                        >
+                          &rarr;
+                        </div>
+                      )}
+                      <div className="relative">
+                        <StageChip
+                          stage={stage}
+                          rawStatus={
+                            rawProduct.stages.find(
+                              (rs) => rs.stageName === stage.stageName,
+                            )?.status ?? stage.status
+                          }
+                          readOnly={readOnly}
+                          onStatusChange={(name, status) =>
+                            handleStatusChange(product.id, name, status)
+                          }
+                        />
                       </div>
-                    )}
-                    <div className="relative">
-                      <StageChip
-                        stage={stage}
-                        rawStatus={
-                          rawProduct.stages.find(
-                            (rs) => rs.stageName === stage.stageName,
-                          )?.status ?? stage.status
-                        }
-                        readOnly={readOnly}
-                        onStatusChange={(name, status) =>
-                          handleStatusChange(product.id, name, status)
-                        }
-                      />
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         );
       })}

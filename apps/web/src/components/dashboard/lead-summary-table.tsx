@@ -54,7 +54,7 @@ export function LeadSummaryTable({ leads, reportId }: LeadSummaryTableProps) {
   if (leads.length === 0) {
     return (
       <section
-        className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-5"
+        className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-5"
         aria-labelledby="lead-summary-heading"
       >
         <h2
@@ -72,7 +72,7 @@ export function LeadSummaryTable({ leads, reportId }: LeadSummaryTableProps) {
 
   return (
     <section
-      className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm"
+      className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm"
       aria-labelledby="lead-summary-heading"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-4">
