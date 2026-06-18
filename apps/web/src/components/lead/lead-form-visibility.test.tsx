@@ -362,14 +362,19 @@ describe("LeadForm — Record visibility: honest health is toggle-independent (7
   // status badge / at-risk signal in the product-status section.
   async function productSectionRedSignal(): Promise<boolean> {
     const section = await screen.findByTestId("lead-section-product-status");
-    // The product badge reads "At risk" / "Blocked" (or a destructive token)
-    // when health folds in the foreign red. A robust, render-agnostic proxy is
-    // the presence of either the textual badge or the destructive color token.
-    const text = section.textContent;
-    const html = section.innerHTML;
+    // Health is the product card's LEFT-EDGE stripe (getProductCardStyle). When
+    // the foreign red folds in, the stripe carries the blocked token; when it
+    // does not, it stays on-track. Asserting the actual stripe — not section
+    // text — gives the test teeth: an earlier text/destructive-token proxy was
+    // toothless because the section's static subtitle already contains the word
+    // "Blocked", so it matched on every render regardless of health.
+    const card = Array.from(section.querySelectorAll(".rounded-xl")).find(
+      (el) => (el.getAttribute("style") ?? "").includes("border-left"),
+    );
+    const style = card?.getAttribute("style") ?? "";
     return (
-      /At risk|Blocked|At Risk/i.test(text) ||
-      html.includes("--color-destructive")
+      style.includes("var(--color-chip-blocked-border)") &&
+      !style.includes("var(--color-chip-on-track-border)")
     );
   }
 

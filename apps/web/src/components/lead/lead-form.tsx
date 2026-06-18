@@ -1330,7 +1330,13 @@ export function LeadForm({
                 : {})}
               risksAddSignal={risksAddSignal}
               crossAuthors={crossAuthorEntries}
-              visibilityMode={recordVisibility}
+              // lead-mine-hide-unowned-stages: until the persisted visibility is
+              // hydrated, render the full grid ("everyone") to avoid a flash that
+              // briefly hides foreign/vacant chips when the restored value is
+              // "everyone" (the gated content fetch is likewise hydration-guarded).
+              visibilityMode={
+                visibilityHydrated ? recordVisibility : "everyone"
+              }
               displayRisks={risks}
             >
               <AccordionSection
