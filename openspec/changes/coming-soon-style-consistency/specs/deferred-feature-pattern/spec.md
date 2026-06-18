@@ -27,18 +27,25 @@ Every deferred-feature affordance MUST render its "Coming Soon" label through th
 - **THEN** no component renders a "Coming Soon" label outside the shared
   `ComingSoonBadge` primitive
 
-### Requirement: Deferred UI Controls Carry an Accessible Name
+### Requirement: Deferred Controls Announce Their Coming-Soon State
 
-Every inert deferred-feature control MUST expose a descriptive accessible name (an `aria-label`), not only a native `title`, so assistive technology announces what feature is coming soon.
+Every deferred-feature affordance MUST expose its coming-soon state to assistive technology through the focusable element's computed accessible name, by the mechanism appropriate to that element's role — NOT by forcing an `aria-label` onto an inert non-focusable child.
 
-1. Each Family-1 deferred control (an inert host button/affordance with a
-   hover-revealed `ComingSoonBadge`) MUST set an `aria-label` of the form
-   "<feature> is coming soon", consistent across controls.
-2. `HolidaysComingSoonControl` MUST carry an `aria-label` (it currently exposes
-   only `title="Coming Soon"`).
+1. A standalone focusable deferred control (e.g. the Agent-review `<button>`)
+   MUST carry an `aria-label` of the form "<feature> is coming soon" as its
+   accessible name.
+2. The `HolidaysComingSoonControl` is an inert `<span>` nested inside the
+   holidays `TabsTrigger` (`<button>`); its coming-soon state MUST be present in
+   that tab button's computed accessible name. The `ComingSoonBadge` text
+   ("Coming Soon") is a descendant of the tab button, so the tab's accessible
+   name already contains it. The inert span MUST NOT carry its own `aria-label`
+   (the `2026-06-10` `verify-a11y-recommended-flip` change removed it as
+   redundant; re-adding it would pollute the tab button's name computation).
 
-#### Scenario: the holidays deferred control is announced
+#### Scenario: the holidays deferred state is announced via the tab name
 
-- **WHEN** a screen-reader user focuses the admin Holidays deferred control
-- **THEN** it announces an accessible name describing that holiday management is
-  coming soon, matching the other deferred controls' convention
+- **WHEN** the admin Settings tablist is rendered
+- **THEN** the holidays tab's computed accessible name contains "Coming Soon"
+  (contributed by the descendant `ComingSoonBadge`), so a screen-reader user
+  hears the deferred state on the focusable tab
+- **AND** the inert holidays `<span>` carries no `aria-label` of its own
