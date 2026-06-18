@@ -1215,7 +1215,7 @@ export function LeadForm({
 
         {/* report-toolbar-layout: the bordered toolbar holds only the
             Context-control bar: Agent review · period nav · show-archived ·
-            Mine|Everyone · Edit|Slides · Toggle All. */}
+            Mine|Everyone · Edit|Slides · collapse/fullscreen. */}
         <ReportToolbar
           contextControls={
             <>
