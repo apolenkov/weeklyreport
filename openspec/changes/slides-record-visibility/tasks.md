@@ -31,6 +31,14 @@
      display-only). Highest-priority guard (design "View-only safety").
 - [ ] 8. Author an ADR in `docs/adr/` recording the reversal of "slides carry
      only own records" (design Decision 1).
+- [ ] 8a. Foreign `authorId` guard (Codex A-1, design Decision 6): when the
+      slides URL targets another author, force/lock Mine and do NOT run the
+      cross-author merge. Add a test that Everyone is unavailable on a foreign
+      `authorId` deck and no co-owner rows merge onto it.
+- [ ] 8b. Health/count coherence (Codex A-2, design Decision 7): merge foreign
+      records by the same rules as own; add a test that a foreign blocked item
+      counts identically to an own blocked item, health stays risk-derived in both
+      modes, and no foreign row is double-counted.
 
 ## Both groups
 

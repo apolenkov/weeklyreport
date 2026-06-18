@@ -65,6 +65,36 @@ Group 2 (Everyone content) does the merge. They ship together in this change so
 slides never present a dead/no-op toggle, but Group 1 is small and low-risk and
 can be reviewed/landed first within the change.
 
+## Decision 6: foreign `authorId` decks (Codex A-1)
+
+`LeadSlidesClient` reads `authorId` from the URL to select whose base deck is
+shown. If Everyone merged the CURRENT user's cross-author rows onto a FOREIGN
+author's base deck, it would mix two people's data and could expose content
+outside the viewer's co-ownership scope.
+
+- **Decision:** Everyone is offered only on the lead's OWN deck. When `authorId`
+  selects a different author, the visibility toggle is forced/locked to Mine and
+  the `crossAuthorContent` merge does not run. The merge is always scoped to the
+  current user's co-ownership, never re-targeted to the displayed author.
+- This keeps the authz surface identical to edit-mode Everyone.
+
+## Decision 7: health vs. counts coherence (Codex A-2)
+
+`applyForeignProductHealth` lifts health from risk-derived `crossAuthors` status
+only, while `buildSectionSlideModel` counts blocked items from content. A blocked
+ITEM with no covering risk therefore inflates the blocked KPI while the badge can
+stay green. **This divergence already exists in Mine/own mode** (own blocked
+items count the same way) — it is a pre-existing property, not introduced here.
+
+- **Decision:** the Everyone merge treats foreign records by the EXACT same rules
+  as own records, so it introduces no NEW divergence. Foreign blocked items count
+  exactly as own blocked items; health stays risk-derived in both modes. Add a
+  test pinning that parity (own vs foreign blocked item count identically; health
+  unchanged) and that foreign rows are not double-counted.
+- Not in scope: changing the app-wide health=risk-derived vs counts=record-count
+  model. If the user wants blocked ITEMS to lift health, that is a separate
+  cross-surface change.
+
 ## View-only safety (testable)
 
 A test MUST prove that switching slides to Everyone does not change any
