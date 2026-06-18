@@ -21,10 +21,15 @@ vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 
+// Mutable so a test can drive the addressed-route path (`/lead/report/<id>`),
+// which makes LeadSlidesClient resolve inReportMode=true. Vitest allows
+// `mock`-prefixed outer vars inside a hoisted vi.mock factory.
+let mockPathname = "/lead/report";
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
-  usePathname: () => "/lead/report",
+  usePathname: () => mockPathname,
 }));
 
 const SECTION_ID = "11111111-1111-1111-1111-111111111111";
@@ -98,6 +103,7 @@ function buildHarness(
     sectionStatus?: "draft" | "submitted";
     byPeriodReadOnly?: boolean;
     byPeriodQueryFn?: () => Promise<unknown>;
+    myHistory?: readonly unknown[];
   } = {},
 ) {
   const { proxy, captured } = createMockTRPC([
@@ -111,7 +117,7 @@ function buildHarness(
     },
     {
       path: ["reports", "myHistory"],
-      query: [],
+      query: opts.myHistory ?? [],
     },
     {
       path: ["reports", "saveDraft"],
@@ -180,6 +186,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks();
+  mockPathname = "/lead/report";
 });
 
 describe("LeadForm mutation wiring", () => {
@@ -652,18 +659,41 @@ describe("LeadForm mode-adaptive trailing control", () => {
   });
 
   it("slides mode: the trailing slot shows the fullscreen toggle, not a collapse/Toggle-All control", async () => {
-    const { Wrapper } = buildHarness();
+    // Drive the addressed route + matching history so LeadSlidesClient
+    // resolves inReportMode=true and actually renders its populated deck.
+    // That is the path where its own (`!inReportMode`) fullscreen button is
+    // suppressed — so the toHaveLength(1) assertion genuinely guards the
+    // "no separate slides-only fullscreen control" spec invariant: if that
+    // guard regressed, the deck would mount a second fullscreen button here.
+    mockPathname = `/lead/report/${REPORT_ID}`;
+    const { Wrapper } = buildHarness({
+      myHistory: [
+        {
+          sectionId: SECTION_ID,
+          reportId: REPORT_ID,
+          periodStart: new Date("2026-06-15T00:00:00Z"),
+          periodEnd: new Date("2026-06-21T00:00:00Z"),
+          reportStatus: "open",
+          sectionStatus: "draft",
+          submittedAt: null,
+          publishedAt: null,
+        },
+      ],
+    });
     render(
       <Wrapper>
         <LeadForm reportId={REPORT_ID} mode="slides" />
       </Wrapper>,
     );
 
-    // Exactly one fullscreen control (no duplicate slot-A + trailing mount).
+    // Exactly one fullscreen control (no duplicate context-bar + in-deck mount).
     const fsButtons = await screen.findAllByRole("button", {
       name: /Enter fullscreen/i,
     });
     expect(fsButtons).toHaveLength(1);
+    // The deck rendered for real (not the "No active slide" empty state), so
+    // the single-fullscreen assertion above covers the populated-deck path.
+    expect(screen.queryByText("No active slide")).toBeNull();
 
     // No collapse-all / "Toggle All" affordance renders in slides.
     expect(
