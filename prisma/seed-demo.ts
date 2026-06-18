@@ -261,13 +261,6 @@ const SMALL_DATASET: TierDataset = {
           stages: ["Development"],
         },
       ],
-      risk: {
-        risk: "Внешний API партнёра нестабилен в sandbox-среде",
-        impact: "Возможны повторные доработки коннектора",
-        mitigation: "Завести моки и контрактные тесты до боевой интеграции",
-        severity: "at-risk",
-        stage: "Development",
-      },
       decision: {
         text: "Зафиксировать версию API партнёра для интеграции",
         impact: "Снижает риск ломающих изменений на их стороне",
