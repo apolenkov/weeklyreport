@@ -1,7 +1,10 @@
 # Handoff — backlog converted to specs (2026-06-19)
 
 **Repo:** `/home/user/work/customreport` · **Branch:**
-`openspec-slides-comingsoon-greenseed` (5 commits this session, **not pushed**).
+`openspec-slides-comingsoon-greenseed`, **not pushed**. Commits this session =
+the 5 implemented changes listed below + docs/openspec commits (A hardening, the
+4 satellite specs, this handoff). Run `git log --oneline 16f85a94..HEAD` for the
+exact set; `16f85a94` is the pre-session base.
 
 ## Bottom line
 
