@@ -17,6 +17,6 @@
      now).
 - [x] 6. Update pipeline tests and snapshots that assume a fixed seven-chip
      grid; add tests for Mine-only-own, Everyone-reveals, and no-own-stages.
-- [ ] 7. Gates green (typecheck/lint/test). Live-verify at 1200px on the
+- [x] 7. Gates green (typecheck/lint/test). Live-verify at 1200px on the
      enriched small seed: Mine shows only own stages; Everyone reveals
      foreign/vacant; health unchanged across the toggle.
