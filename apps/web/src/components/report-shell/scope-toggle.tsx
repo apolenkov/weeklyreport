@@ -18,8 +18,13 @@ const DEFAULT_SCOPES: readonly ScopeValue[] = [
   "lead",
 ] as const;
 
+// slides-record-visibility (Decision 2): the slide layout scope "own" is
+// labeled "Summary" (section-summary vs per-product grid) so it does not read
+// as the Mine/Everyone RECORD-visibility scope, which lives in the toolbar. The
+// value/key stays "own"; only the label changes. The head deck reuses this with
+// ["lead","product"] and is unaffected.
 const LABELS: Record<ScopeValue, string> = {
-  own: "Own",
+  own: "Summary",
   product: "Product",
   lead: "Leads",
 };

@@ -8,7 +8,7 @@ import type {
 import { Separator } from "@customreport/ui/components/ui/separator";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { User, Users } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -321,9 +321,16 @@ function aggregateTrafficLight(
 function RecordVisibilityToggle({
   value,
   onChange,
+  disabled = false,
 }: {
   readonly value: "mine" | "everyone";
   readonly onChange: (next: "mine" | "everyone") => void;
+  /**
+   * slides-record-visibility (Decision 6): on a FOREIGN-author slide deck
+   * Everyone is not offered — the toggle is forced to Mine and made inert so the
+   * current user's co-owner rows can never be merged onto another author's deck.
+   */
+  readonly disabled?: boolean;
 }) {
   // Icon-only (User = mine, Users = everyone) so the toggle stays compact and
   // does not crowd the period navigator; each keeps an accessible name via
@@ -345,10 +352,11 @@ function RecordVisibilityToggle({
           aria-pressed={value === option.key}
           aria-label={option.label}
           title={option.label}
+          disabled={disabled}
           onClick={() => onChange(option.key)}
           className={`btn-press ${segmentClassName(value === option.key, {
             iconOnly: true,
-          })}`}
+          })} disabled:cursor-not-allowed disabled:opacity-50`}
         >
           <option.Icon className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -365,6 +373,7 @@ export function LeadForm({
   const trpc = useTRPC();
   const qc = useQueryClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const isSlidesMode = mode === "slides";
   // W9.A: ref shared between lead-form header (SlideFullscreenButton) and LeadSlidesClient (deck root div)
   const deckRef = useRef<HTMLDivElement>(null);
@@ -436,6 +445,16 @@ export function LeadForm({
     setVisibility: setRecordVisibility,
   } = useRecordVisibility(currentUserId, targetReportId);
   const isEveryone = recordVisibility === "everyone";
+
+  // slides-record-visibility (Decision 6): the slide deck can target another
+  // author's deck via `?authorId`. On such a FOREIGN deck Everyone is not
+  // offered — force the toolbar toggle to Mine and make it inert. The deck
+  // (LeadSlidesClient) enforces the same own-deck gate independently, so this
+  // is the matching toolbar affordance, not the security boundary.
+  const slidesAuthorId = searchParams.get("authorId");
+  const isForeignSlidesDeck =
+    isSlidesMode && slidesAuthorId !== null && slidesAuthorId !== currentUserId;
+  const toolbarVisibility = isForeignSlidesDeck ? "mine" : recordVisibility;
 
   // 7c.3: the full-content read is fetched ONLY in the Everyone state, and only
   // AFTER the persisted toggle has hydrated — so it never fires on the
@@ -1253,15 +1272,17 @@ export function LeadForm({
               {/* Inert Agent-review placeholder leads the right-aligned view
                   group (head-toolbar-semantics: compact, leading edge). */}
               <AgentReviewComingSoon compact />
-              {/* 7c.1: Record visibility toggle — edit mode only (not slides).
+              {/* slides-record-visibility: the Record-visibility toggle now
+                  renders in BOTH edit and slides (report-toolbar-parity) so the
+                  controls after it never shift between modes. In slides it
+                  drives the deck via the props threaded into LeadSlidesClient.
                   Disabled until the persisted state hydrates so a click cannot
                   race the restored value. */}
-              {!isSlidesMode && (
-                <RecordVisibilityToggle
-                  value={recordVisibility}
-                  onChange={setRecordVisibility}
-                />
-              )}
+              <RecordVisibilityToggle
+                value={toolbarVisibility}
+                onChange={setRecordVisibility}
+                disabled={isForeignSlidesDeck}
+              />
               <ViewModeToggle
                 mode={isSlidesMode ? "slides" : "edit"}
                 editHref={
@@ -1319,6 +1340,12 @@ export function LeadForm({
             initialReportId={targetReportId || pinnedReportId || null}
             chrome="content"
             deckRef={deckRef}
+            // slides-record-visibility: thread the toolbar's visibility state so
+            // the deck shows Mine vs Everyone. LeadSlidesClient owns the own-deck
+            // gate + the gated cross-author fetch/merge; lead-form just supplies
+            // the (hydrated) toggle value, forced to Mine on a foreign deck.
+            visibilityMode={toolbarVisibility}
+            visibilityHydrated={visibilityHydrated}
           />
         ) : (
           // Split-view: at xl the edit form (left) sits beside a live slide

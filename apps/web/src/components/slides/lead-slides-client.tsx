@@ -1,9 +1,18 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import type { ReportSectionReadModel } from "@customreport/shared";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useSearchParams } from "next/navigation";
-import { type RefObject, useContext, useMemo, useRef, useState } from "react";
+import {
+  type RefObject,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
+import type { CrossAuthorContentRow } from "../../lib/mappers/lead-cross-author";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
@@ -19,7 +28,10 @@ import { ReportSlides } from "./report-slides";
 import {
   applyForeignProductHealth,
   buildSectionSlideModel,
+  crossAuthorContentToSlideForeign,
+  mergeForeignSlideContent,
   paginateSectionSlides,
+  type SectionSlideModel,
 } from "./section-slide-utils";
 import { SlideFullscreenButton } from "./slide-fullscreen-button";
 import { SlideSkeleton } from "./slide-skeleton";
@@ -43,19 +55,59 @@ function SlideEmptyState({
   );
 }
 
+/**
+ * Assemble the lead deck's slide model: own records, then the risk-derived
+ * foreign HEALTH fold (own deck only), then the Everyone CONTENT merge. Each
+ * step returns NEW objects — the input `section` (the cached read-model the
+ * draft serializes) is never mutated, so Everyone stays view-only.
+ */
+function buildLeadDeckModel(
+  section: ReportSectionReadModel,
+  foreignHealth: Parameters<typeof applyForeignProductHealth>[1],
+  foreignContentRows: readonly CrossAuthorContentRow[],
+): SectionSlideModel {
+  const base = buildSectionSlideModel(section);
+  const withHealth =
+    foreignHealth.length === 0
+      ? base
+      : {
+          ...base,
+          productSlides: applyForeignProductHealth(
+            base.productSlides,
+            foreignHealth,
+          ),
+        };
+  if (foreignContentRows.length === 0) return withHealth;
+  return mergeForeignSlideContent(
+    withHealth,
+    crossAuthorContentToSlideForeign(foreignContentRows),
+  );
+}
+
 interface LeadSlidesClientProps {
   readonly initialReportId?: string | null;
   readonly chrome?: "full" | "content";
   /** W9.A: when provided, this ref is applied to the deck root div so the
    *  caller (lead-form header) can host the fullscreen button. */
   readonly deckRef?: RefObject<HTMLDivElement | null>;
+  /**
+   * slides-record-visibility: the lead-form owns the Record-visibility toggle
+   * (one `useRecordVisibility` instance) and threads its state down so the deck
+   * shows Mine vs Everyone. Defaults keep the deck Mine-only for any caller that
+   * does not drive the toggle.
+   */
+  readonly visibilityMode?: "mine" | "everyone";
+  readonly visibilityHydrated?: boolean;
 }
 
 export function LeadSlidesClient({
   initialReportId = null,
   deckRef: externalDeckRef,
+  visibilityMode = "mine",
+  visibilityHydrated = false,
 }: LeadSlidesClientProps) {
   const trpc = useTRPC();
+  const qc = useQueryClient();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const session = useContext(SessionContext);
@@ -72,6 +124,16 @@ export function LeadSlidesClient({
     ? initialReportId
     : searchParams.get("reportId");
   const authorId = searchParams.get("authorId") ?? undefined;
+  // slides-record-visibility (Decision 6 / Codex A-1): Everyone — and the
+  // cross-author health fold — apply ONLY to the lead's OWN deck. When the URL
+  // targets another author, this is a foreign deck: force Mine, run no
+  // cross-author merge, and do not fold the current user's co-owner status onto
+  // someone else's products.
+  const currentUserId = session?.user?.id ?? null;
+  const isOwnDeck =
+    authorId === undefined ||
+    (currentUserId !== null && authorId === currentUserId);
+  const isEveryone = isOwnDeck && visibilityMode === "everyone";
   const periodOptions = useMemo(
     () => buildLeadSlidePeriodOptions(historyQ.data ?? [], activeReportId),
     [historyQ.data, activeReportId],
@@ -96,13 +158,45 @@ export function LeadSlidesClient({
   // scope-lead-report-to-own-contribution: slides carry only own records, but
   // a co-owned product's health must stay honest. crossAuthors returns the
   // anonymized, risk-derived per-stage status (no foreign text/counts/names);
-  // we fold its worst stage into each product badge below.
+  // we fold its worst stage into each product badge below. Codex A-1: this read
+  // is the CURRENT user's co-ownership, so it is gated on the OWN deck — folding
+  // it onto a foreign author's deck would mix two people's health.
   const crossAuthorsQ = useQuery({
     ...trpc.leadForm.crossAuthors.queryOptions({
       reportId: targetReportId,
     }),
-    enabled: targetReportId !== "",
+    enabled: targetReportId !== "" && isOwnDeck,
   });
+
+  // slides-record-visibility (Decision 4 / Codex #4): the full cross-author
+  // CONTENT read mirrors the edit form — fetched ONLY after the persisted
+  // visibility hydrates, only in Everyone, and only on the OWN deck. Anything
+  // else keeps the deck own-only and never fires the sensitive read.
+  const crossAuthorContentQ = useQuery({
+    ...trpc.leadForm.crossAuthorContent.queryOptions({
+      reportId: targetReportId,
+    }),
+    enabled:
+      targetReportId !== "" && visibilityHydrated && isEveryone && isOwnDeck,
+  });
+
+  // Purge the fetched foreign content whenever the deck leaves Everyone, is not
+  // yet hydrated, or is a foreign deck — so leaving Everyone (or switching to a
+  // foreign author) drops the data and the merged model recomputes to own-only.
+  useEffect(() => {
+    if (isEveryone && visibilityHydrated) return;
+    qc.removeQueries({
+      queryKey: trpc.leadForm.crossAuthorContent.queryKey(),
+    });
+  }, [isEveryone, visibilityHydrated, targetReportId, qc, trpc]);
+
+  // Identity guard (mirror lead-form): on ANY identity change drop ALL cached
+  // foreign content so user B can never read user A's foreign records.
+  useEffect(() => {
+    qc.removeQueries({
+      queryKey: trpc.leadForm.crossAuthorContent.queryKey(),
+    });
+  }, [currentUserId, qc, trpc]);
 
   useQueryErrorHandler(activeQ, {
     event: "leadSlides.getActive.load_failed",
@@ -117,16 +211,25 @@ export function LeadSlidesClient({
     context: { reportId: targetReportId || null },
   });
 
+  // Foreign CONTENT is merged only on the own deck, in Everyone, after
+  // hydration — exactly the fetch gate above. The merge happens at the SLIDE-
+  // MODEL layer producing NEW objects; it never mutates `byPeriodQ.data.section`
+  // (the cached read-model the lead-form draft serializes), so Everyone stays
+  // strictly view-only (design Decision 3, spec status-slide-rendering §4).
+  const foreignContentRows = useMemo(
+    () =>
+      isEveryone && visibilityHydrated ? (crossAuthorContentQ.data ?? []) : [],
+    [isEveryone, visibilityHydrated, crossAuthorContentQ.data],
+  );
   const sectionModel = useMemo(() => {
     if (!byPeriodQ.data?.section) return null;
-    const base = buildSectionSlideModel(byPeriodQ.data.section);
-    const foreign = crossAuthorsQ.data ?? [];
-    if (foreign.length === 0) return base;
-    return {
-      ...base,
-      productSlides: applyForeignProductHealth(base.productSlides, foreign),
-    };
-  }, [byPeriodQ.data, crossAuthorsQ.data]);
+    return buildLeadDeckModel(
+      byPeriodQ.data.section,
+      // Health fold (risk-derived, toggle-independent) — own deck only.
+      isOwnDeck ? (crossAuthorsQ.data ?? []) : [],
+      foreignContentRows,
+    );
+  }, [byPeriodQ.data, crossAuthorsQ.data, foreignContentRows, isOwnDeck]);
 
   const slides = useMemo(
     () => (sectionModel ? paginateSectionSlides(sectionModel) : []),
