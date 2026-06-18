@@ -15,23 +15,39 @@ Language, Theme, Version, PDF export) compute to one identical pair —
 `background oklch(0.962 0.059 95.617)`, `color oklch(0.555 0.163 48.998)`. Agent
 review is byte-identical to the others; nothing about its color needs changing.
 
-So this change does **not** restyle anything. It does two small, durable things
-so the uniformity the user wants can never silently drift, plus fixes the one
-real inconsistency the audit surfaced:
+So this change does **not** restyle anything. It codifies "one Coming Soon
+style" as a testable invariant so the uniformity the user wants can never
+silently drift:
 
-1. Codify "one Coming Soon style" as a testable invariant (all deferred
-   affordances route through the shared `ComingSoonBadge`; no bespoke badge).
-2. Fix the single accessibility drift: `HolidaysComingSoonControl`
-   (`apps/web/src/components/admin/settings-tab.tsx`) is the only Family-1
-   control missing an `aria-label` — it has only `title="Coming Soon"`.
+1. All deferred affordances route through the shared `ComingSoonBadge`; no
+   bespoke badge or second color variant.
+2. The deferred state stays announced to assistive tech (regression guard).
+
+**Correction to the original premise (implementation finding):** the first draft
+claimed `HolidaysComingSoonControl` was "missing an `aria-label`" and treated it
+as a drift to fix. That is wrong. The `verify-a11y-recommended-flip` change
+(archived `2026-06-10`) **deliberately removed** that exact aria-label
+(`'Holidays calendar is coming soon'`) as redundant on an inert span, and pinned
+its absence with a regression test. The Holidays control is an inert `<span>`
+inside the holidays `TabsTrigger` (a `<button>`), so — unlike the standalone
+focusable Agent-review `<button>`, where `aria-label` is the correct name source
+— re-adding `aria-label` to the inner span would pollute the tab button's
+accessible-name computation. Empirically the deferred state is **already
+announced**: the badge's "Coming Soon" text is a descendant of the tab button, so
+the tab's computed accessible name already contains "Coming Soon" (verified via
+the accessible-name algorithm in test). There is no a11y gap, so this change adds
+no aria-label; it adds a regression test pinning that the announced state holds.
 
 ## What Changes
 
 - Add a regression guard (test) asserting that every rendered Coming Soon badge
   resolves to the same canonical style and that no component hand-rolls a
   "Coming Soon" pill outside `ComingSoonBadge`.
-- Give `HolidaysComingSoonControl` an `aria-label` ("Holiday management is coming
-  soon"), matching the other deferred controls' accessible-name convention.
+- Add a regression test pinning that the Holidays deferred control's coming-soon
+  state remains in the holidays tab's computed accessible name (the badge-in-
+  button mechanism), so the `2026-06-10` decision cannot silently regress.
+- **No aria-label change** — re-adding it would revert a settled a11y decision
+  and is the wrong mechanism for an inert span (see correction above).
 
 ## Out of scope
 
@@ -48,8 +64,8 @@ real inconsistency the audit surfaced:
 
 ## Impact
 
-- Affected specs: ADDED requirements under `deferred-feature-pattern` (single
-  canonical badge style is guarded; deferred controls carry an accessible name).
-- Affected code: `apps/web/src/components/admin/settings-tab.tsx`
-  (`HolidaysComingSoonControl` aria-label) + a new regression test. No visual
-  change to any existing badge.
+- Affected specs: ADDED requirement under `deferred-feature-pattern` (single
+  canonical badge style is guarded; deferred state stays announced to AT).
+- Affected code: **no production code change.** New regression tests only (one
+  canonical style + no-bespoke-pill guard + holidays announced-state pin). No
+  visual change to any existing badge; no aria-label change.

@@ -671,6 +671,23 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
     expect(span.hasAttribute("aria-label")).toBe(false);
   });
 
+  // coming-soon-style-consistency: the deferred state stays ANNOUNCED even
+  // though the inert span carries no aria-label — the ComingSoonBadge text is a
+  // descendant of the holidays TabsTrigger, so the tab's computed accessible
+  // name contains "Coming Soon". This pins the 2026-06-10 decision (aria-label
+  // removed as redundant) against silent regression. getByRole computes the
+  // accessible name via dom-accessibility-api.
+  it("holidays tab is announced as coming soon via its computed accessible name", () => {
+    const { proxy } = buildProxy();
+    renderSettings(proxy);
+
+    const announced = screen.queryAllByRole("tab", { name: /coming soon/i });
+    expect(announced).toHaveLength(1);
+    // The announced tab is the holidays one (hosts the inert coming-soon span).
+    const holidaysSpan = screen.getByTestId("holidays-coming-soon");
+    expect(announced[0]?.contains(holidaysSpan)).toBe(true);
+  });
+
   // Row 399: HolidaysComingSoonControl span — aria-disabled="true" preserved
   it("holidays-coming-soon span retains aria-disabled=true", () => {
     const { proxy } = buildProxy();
