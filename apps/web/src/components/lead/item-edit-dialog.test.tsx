@@ -532,3 +532,80 @@ describe("ItemEditDialog — cross-stage product preservation", () => {
     });
   });
 });
+
+// require-stage-on-items-and-decisions: an item must carry a concrete stage
+// when the product has owned stages (parity with the risk dialog).
+describe("ItemEditDialog — require a stage", () => {
+  it("blocks save with no stage on a multi-stage product", () => {
+    const onSave = vi.fn();
+    render(
+      <ItemEditDialog
+        open
+        item={null}
+        products={products}
+        week="current"
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev", "Testing"]}
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+    // Create pre-selects all owned stages; deselect both to reach the gap.
+    fireEvent.click(screen.getByRole("checkbox", { name: "Dev" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Testing" }));
+    fireEvent.change(screen.getByLabelText(/Description \*/i), {
+      target: { value: "An item without a stage" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByText(/Select at least one stage/i)).toBeInTheDocument();
+  });
+
+  it("auto-applies a single owned stage so save succeeds", () => {
+    const onSave = vi.fn();
+    render(
+      <ItemEditDialog
+        open
+        item={null}
+        products={products}
+        week="current"
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText(/Description \*/i), {
+      target: { value: "Single-stage item" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({ stageIds: ["Dev"] });
+  });
+
+  it("saves when at least one stage is selected on a multi-stage product", () => {
+    const onSave = vi.fn();
+    render(
+      <ItemEditDialog
+        open
+        item={null}
+        products={products}
+        week="current"
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev", "Testing"]}
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+    fireEvent.click(screen.getByRole("checkbox", { name: "Testing" }));
+    fireEvent.change(screen.getByLabelText(/Description \*/i), {
+      target: { value: "Item on Dev only" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({ stageIds: ["Dev"] });
+  });
+});

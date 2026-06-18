@@ -72,6 +72,7 @@ function DecisionEditDialogContent({
     text?: string;
     owner?: string;
     impact?: string;
+    stageIds?: string;
   }>({});
 
   const headerVerb = isCreate ? "Add Decision" : "Edit Decision";
@@ -80,10 +81,18 @@ function DecisionEditDialogContent({
     const t = text.trim();
     const o = owner.trim();
     const im = impact.trim();
+    // require-stage-on-items-and-decisions: a decision must carry a concrete
+    // stage when the lead owns stages — mirrors the risk/item dialogs. A single
+    // owned stage is implicitly selected so the lead can save without a click.
+    const stages = availableStages ?? [];
+    const effectiveStageIds =
+      stageIds.length === 0 && stages.length === 1 ? [...stages] : stageIds;
     const next: typeof errors = {};
     if (t.length === 0) next.text = "Decision text is required";
     if (o.length === 0) next.owner = "Owner is required";
     if (im.length === 0) next.impact = "Impact is required";
+    if (stages.length > 0 && effectiveStageIds.length === 0)
+      next.stageIds = "Select at least one stage.";
     if (Object.keys(next).length > 0) {
       setErrors(next);
       return;
@@ -97,7 +106,7 @@ function DecisionEditDialogContent({
       owner: o,
       impact: im,
       deadline: deadline ? deadline : null,
-      stageIds: stageIds.length > 0 ? stageIds : undefined,
+      stageIds: effectiveStageIds.length > 0 ? effectiveStageIds : undefined,
     });
   }
 
@@ -255,7 +264,13 @@ function DecisionEditDialogContent({
             id="dec-stage"
             value={stageIds}
             stages={availableStages ?? []}
-            onChange={setStageIds}
+            required
+            error={errors.stageIds}
+            onChange={(next) => {
+              setStageIds(next);
+              if (errors.stageIds)
+                setErrors((prev) => ({ ...prev, stageIds: undefined }));
+            }}
           />
 
           {/* Impact */}
