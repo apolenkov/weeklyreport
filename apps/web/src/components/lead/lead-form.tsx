@@ -1217,6 +1217,7 @@ export function LeadForm({
             Context-control bar: Agent review · period nav · show-archived ·
             Mine|Everyone · Edit|Slides · collapse/fullscreen. */}
         <ReportToolbar
+          sticky
           contextControls={
             <>
               {/* Period navigation (and the show-archived filter) anchor the
