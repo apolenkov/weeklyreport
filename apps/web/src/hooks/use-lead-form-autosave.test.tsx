@@ -42,6 +42,8 @@ function makePayload(text = "first"): DraftSavePayload {
         tag: "tag",
         workflowStatus: "in_progress",
         carriedOver: false,
+        // enforce-item-decision-stage-schema: stageIds required on write.
+        stageIds: ["Development"],
       },
     ],
     risks: [],

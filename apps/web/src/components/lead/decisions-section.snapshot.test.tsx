@@ -32,11 +32,12 @@ describe("DecisionsSection meta-row — pre-extract snapshot", () => {
     expect(screen.getByText("Vasily Lead")).toBeInTheDocument();
   });
 
-  it("renders All-stages pill when stageIds is absent", () => {
+  it("renders the 'No stage set' warning pill when stageIds is absent", () => {
     const { container } = render(
       <DecisionsSection decisions={[BASE_DECISION]} readOnly />,
     );
-    expect(screen.getByText("All stages")).toBeInTheDocument();
+    expect(screen.getByText("No stage set")).toBeInTheDocument();
+    expect(screen.queryByText("All stages")).not.toBeInTheDocument();
     const row = container.querySelector('[aria-label^="Decision stages:"]');
     expect(row).toMatchSnapshot();
   });

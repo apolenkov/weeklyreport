@@ -254,8 +254,12 @@ export function DecisionsSection({
               <MetaRow
                 authorName={decision.owner}
                 stageTags={stageTags}
-                ariaLabel={`Decision stages: ${stageTags.length === 0 ? "all stages" : stageTags.join(", ")}`}
+                // enforce-item-decision-stage-schema: a stage-less decision is
+                // a legacy anomaly, never an implicit "all stages" scope —
+                // render the loud "No stage set" warning, mirroring risks.
+                ariaLabel={`Decision stages: ${stageTags.length === 0 ? "No stage set" : stageTags.join(", ")}`}
                 foreign={false}
+                emptyStageChip="no-stage-warning"
               />
             </div>
           );

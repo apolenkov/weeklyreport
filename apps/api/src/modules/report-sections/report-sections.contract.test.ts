@@ -40,11 +40,20 @@ const baseSection: ReportSectionReadModel = {
       tag: "feature",
       workflowStatus: "in_progress",
       carriedOver: false,
+      // enforce-item-decision-stage-schema: items carry ≥1 stage on write.
+      stageIds: ["Development"],
     },
   ],
   risks: [],
   decisions: [],
 };
+
+// enforce-item-decision-stage-schema: read-model item types stageIds optional;
+// the write payloads below require it. Expose a stage-guaranteed copy.
+const writeItems = baseSection.items.map((it) => ({
+  ...it,
+  stageIds: it.stageIds ?? [],
+}));
 
 function createRepository(
   section: ReportSectionReadModel,
@@ -77,7 +86,7 @@ function validDraft(overrides: Record<string, unknown> = {}) {
     reportSectionId: SECTION_ID,
     status: "draft" as const,
     projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" as const }],
-    items: baseSection.items,
+    items: writeItems,
     risks: [],
     decisions: [],
     ...overrides,
@@ -168,6 +177,7 @@ describe("ReportSectionsService — saveDraft happy path", () => {
         tag: "planning",
         workflowStatus: "in_progress" as const,
         carriedOver: false,
+        stageIds: ["Development"],
       },
     ];
     const saved = await service.saveDraft(validDraft({ items: newItems }));
@@ -205,6 +215,7 @@ describe("ReportSectionsService — saveDraft happy path", () => {
             text: "Upgrade DB",
             owner: "Alice",
             impact: "Better performance",
+            stageIds: ["Development"],
           },
         ],
       }),
@@ -407,6 +418,7 @@ describe("ReportSectionsService — submitSection happy path", () => {
             tag: "feature",
             workflowStatus: "done",
             carriedOver: false,
+            stageIds: ["Development"],
           },
         ],
         risks: [
@@ -479,6 +491,7 @@ describe("ReportSectionsService — submitSection validation errors", () => {
               tag: "planning",
               workflowStatus: "in_progress",
               carriedOver: false,
+              stageIds: ["Development"],
             },
           ],
         }),
@@ -538,6 +551,7 @@ describe("ReportSectionsService — multi-project", () => {
         tag: "feature",
         workflowStatus: "in_progress",
         carriedOver: false,
+        stageIds: ["Development"],
       },
       {
         projectId: PROJECT_ID_2,
@@ -546,9 +560,16 @@ describe("ReportSectionsService — multi-project", () => {
         tag: "feature",
         workflowStatus: "in_progress",
         carriedOver: false,
+        stageIds: ["Development"],
       },
     ],
   };
+
+  // enforce-item-decision-stage-schema: stage-guaranteed copy for write payloads.
+  const multiWriteItems = multiProjectSection.items.map((it) => ({
+    ...it,
+    stageIds: it.stageIds ?? [],
+  }));
 
   it("saveDraft updates traffic lights for multiple projects", async () => {
     const service = new ReportSectionsService(
@@ -561,7 +582,7 @@ describe("ReportSectionsService — multi-project", () => {
         { projectId: PROJECT_ID_1, status: "green" },
         { projectId: PROJECT_ID_2, status: "yellow" },
       ],
-      items: multiProjectSection.items,
+      items: multiWriteItems,
       risks: [],
       decisions: [],
     });
@@ -582,7 +603,7 @@ describe("ReportSectionsService — multi-project", () => {
         status: "draft",
         confirmed: true,
         projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" }],
-        items: multiProjectSection.items,
+        items: multiWriteItems,
         risks: [],
         decisions: [],
       }),
@@ -612,6 +633,7 @@ describe("ReportSectionsService — multi-project", () => {
             tag: "feature",
             workflowStatus: "in_progress",
             carriedOver: false,
+            stageIds: ["Development"],
           },
         ],
         risks: [],
@@ -632,7 +654,7 @@ describe("ReportSectionsService — multi-project", () => {
         { projectId: PROJECT_ID_1, status: "green" },
         { projectId: PROJECT_ID_2, status: "red" },
       ],
-      items: multiProjectSection.items,
+      items: multiWriteItems,
       risks: [],
       decisions: [],
     });
@@ -683,6 +705,7 @@ describe("ReportSectionsService — edge cases", () => {
       tag: "feature",
       workflowStatus: "in_progress" as const,
       carriedOver: false,
+      stageIds: ["Development"],
     }));
     const saved = await service.saveDraft(validDraft({ items: maxItems }));
 
@@ -782,6 +805,7 @@ describe("ReportSectionsService — item tag and workflowStatus combinations", (
                 tag,
                 workflowStatus: ws,
                 carriedOver: false,
+                stageIds: ["Development"],
               },
             ],
           }),
