@@ -17,57 +17,54 @@ const REPORT_TOOLBAR_ROW_CLASS =
 
 interface ReportToolbarProps {
   /**
-   * Top row — controls that operate on the report document (Save, Submit
-   * Section, Publish & Lock, Fill-From, PDF export, Move to archive).
-   */
-  documentActions?: ReactNode;
-  /**
-   * Bottom row — controls that only change which report is shown or how it is
-   * presented (period navigation, show-archived filter, scope, view mode,
-   * expand-all, Agent review).
+   * The Context-control bar — the only row the bordered toolbar carries.
+   * Controls that change which report is shown or how it is presented (period
+   * navigation, show-archived filter, scope, view mode, expand-all, Agent
+   * review). Document actions do NOT live here — they render on the page header
+   * line via {@link DocumentActionGroup} (report-toolbar-layout).
    */
   contextControls?: ReactNode;
 }
 
 /**
- * report-toolbar-layout: the report toolbar groups its controls into a top
- * Document action row and a bottom Context control row, split by one axis —
- * "operates on the report document" vs "changes which / how it is shown". Both
- * rows live in one shared container (the report-toolbar-parity single-container
- * contract); the top row precedes the bottom row in the DOM so keyboard focus
- * traverses document actions before context controls without manual tabindex.
+ * report-toolbar-layout: the bordered report toolbar holds exactly one row —
+ * the Context-control bar. Document actions (Save, Submit Section, Publish &
+ * Lock, Fill-From, export, Move-to-archive) render on the page header line
+ * instead, so the box no longer stacks two rows of unequal height.
  */
-export function ReportToolbar({
-  documentActions,
-  contextControls,
-}: ReportToolbarProps) {
+export function ReportToolbar({ contextControls }: ReportToolbarProps) {
+  if (contextControls === undefined) return null;
   return (
     <div
       data-testid="report-toolbar"
-      className={`${REPORT_TOOLBAR_FRAME_CLASS} flex flex-col gap-1.5`}
+      role="group"
+      aria-label="Context controls"
+      // Start-aligned: `justify-end` would push overflow past the left edge
+      // where `overflow-x-auto` cannot scroll it back into reach, clipping the
+      // leftmost control at narrow widths (report-toolbar-layout: narrow-width
+      // reachability).
+      className={`${REPORT_TOOLBAR_FRAME_CLASS} ${REPORT_TOOLBAR_ROW_CLASS} justify-start`}
     >
-      {/* Both rows are start-aligned: `justify-end` would push overflow past
-          the left edge where `overflow-x-auto` cannot scroll it back into
-          reach, clipping the leftmost control at narrow widths
-          (report-toolbar-layout: narrow-width reachability). */}
-      {documentActions !== undefined && (
-        <div
-          role="group"
-          aria-label="Document actions"
-          className={`${REPORT_TOOLBAR_ROW_CLASS} justify-start`}
-        >
-          {documentActions}
-        </div>
-      )}
-      {contextControls !== undefined && (
-        <div
-          role="group"
-          aria-label="Context controls"
-          className={`${REPORT_TOOLBAR_ROW_CLASS} justify-start`}
-        >
-          {contextControls}
-        </div>
-      )}
+      {contextControls}
+    </div>
+  );
+}
+
+/**
+ * report-toolbar-layout: the page header line's document-action group. Controls
+ * that operate on the report document live here (right-aligned beside the
+ * title/status block), labeled as a group for assistive tech and rendered
+ * before the context bar in the DOM so keyboard focus traverses document
+ * actions first. `flex-wrap` keeps every action reachable at narrow widths.
+ */
+export function DocumentActionGroup({ children }: { children: ReactNode }) {
+  return (
+    <div
+      role="group"
+      aria-label="Document actions"
+      className="flex min-w-0 flex-wrap items-center justify-end gap-1.5"
+    >
+      {children}
     </div>
   );
 }
@@ -81,8 +78,7 @@ interface ReportToolbarCenterLabelProps {
  * Context label for the report header (department name plus a short page
  * descriptor), shared by the head review shell and the standalone weekly
  * report page so the wording and styling stay in one place. It is a label,
- * not a control, so the two-row layout keeps it on the header line rather than
- * inside either action row.
+ * not a control, so it sits on the header line rather than inside the toolbar.
  */
 export function ReportToolbarCenterLabel({
   label,
