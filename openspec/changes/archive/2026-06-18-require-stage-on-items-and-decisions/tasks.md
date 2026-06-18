@@ -26,7 +26,7 @@
 
 ## Documented follow-up (NOT in this change)
 
-- [ ] Tighten `itemInputSchema` / `decisionInputSchema` `stageIds` to
+- [x] Tighten `itemInputSchema` / `decisionInputSchema` `stageIds` to
       `requiredStageIdsField` (server-side parity with `riskInputSchema`) and add
       the "No stage set" render marker for stage-less legacy item/decision rows.
       Requires auditing both seed tiers and fixtures for explicit stages first.
