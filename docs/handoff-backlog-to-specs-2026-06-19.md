@@ -41,27 +41,40 @@ hardenings folded in:
   fresh session before implementing. The impact-map (serializers/gating/mapper)
   is in this session's transcript.
 
-### 2. `enrich-cross-author-seed-more`
+### 2. `enrich-small-seed-coowner-breadth`
 
 More co-owner cross-author records in the small seed so Everyone reads fuller
-across both week buckets. (Authored 2026-06-19; validate before implementing.)
+across both week buckets (each co-owner gets a current+next item pair across 2+
+shared sections). Zero new risks → resolved health stays fixed (Portal yellow,
+Integrations green anchor, BI red). Capability: `demo-seed-datasets`.
 
-### 3. `pipeline-own-stages-affordances`
+### 3. `lead-pipeline-mine-reveal-and-own-stage-label`
 
-SdlcPipeline: a "Your stages" label on the N/M counter + a collapsed-stages
-indicator with a hover tooltip revealing the hidden (Mine-hidden) stages'
-statuses. Softens `lead-mine-hide-unowned-stages` toward hide-but-reveal-on-hover.
+SdlcPipeline: a "Your stages" label on the N/M counter (pure relabel —
+`computeCompleteness` already counts `ownership === "mine"` only) + a
+collapsed-stages indicator with a hover tooltip (ComingSoon `title`+`aria-label`
+pattern) revealing the hidden (Mine-hidden) stages' statuses. Softens
+`lead-mine-hide-unowned-stages` toward hide-but-reveal-on-hover. Capability:
+`lead-pipeline-card`.
 
-### 4. `sticky-report-toolbar`
+### 4. `sticky-report-toolbar-on-scroll`
 
-Make the lead report context toolbar stick to the top on scroll.
+Make the bordered ReportToolbar row `position: sticky; top: 0` via a new opt-in
+`sticky` prop on `ReportToolbar`; the document-action header stays in normal
+flow (two-row layout preserved); stuck state gets an opaque bg + elevation +
+z-index below the NavBar dropdowns. Capability: `lead-toolbar-presentation`.
 
-### 5. `require-stage-schema-enforcement`
+### 5. `enforce-item-decision-stage-schema`
 
-Server-side parity for change #5 above: tighten `itemInputSchema` /
-`decisionInputSchema` `stageIds` to `requiredStageIdsField` + "No stage set"
-render marker. **Prerequisite:** audit both seed tiers + fixtures for empty-stage
-items/decisions FIRST (else draft-save/submit rejects them).
+Server-side parity for shipped change #5: require `stageIds` on items/decisions
+at the write schema + a "No stage set" marker for legacy rows. **Load-bearing
+catch (found in authoring):** items/decisions embed `itemInputSchema`/
+`decisionInputSchema` directly in `reportSectionReadModelSchema` (unlike risks'
+lenient `riskReadModelSchema`), so the change must add
+`itemReadModelSchema`/`decisionReadModelSchema` (re-loosening `stageIds` for the
+READ model) or stage-less legacy rows fail to parse on read. **Prerequisite:**
+audit both seed tiers + fixtures for empty-stage rows FIRST. Capability:
+`risk-stage-integrity`.
 
 ## Head-report annotation triage (live-checked 2026-06-19, NOT a formal change)
 
@@ -103,9 +116,9 @@ redesign. Verify each visually with the user before doing anything:
 # A: run Codex Act-2 (clean network), then implement
 /openspec-apply-change slides-record-visibility
 # then the satellites, simplest first
-/openspec-apply-change enrich-cross-author-seed-more
-/openspec-apply-change sticky-report-toolbar
-/openspec-apply-change pipeline-own-stages-affordances
-/openspec-apply-change require-stage-schema-enforcement
+/openspec-apply-change enrich-small-seed-coowner-breadth
+/openspec-apply-change sticky-report-toolbar-on-scroll
+/openspec-apply-change lead-pipeline-mine-reveal-and-own-stage-label
+/openspec-apply-change enforce-item-decision-stage-schema
 # archive the 5 already-shipped changes (watch openspec-archive spec-debt)
 ```
