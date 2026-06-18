@@ -36,6 +36,10 @@ design decision here — see `design.md`.
   edit-mode D4b rule and the lead-export-FORBIDDEN decision).
 - Everyone's full-content fetch in slides is gated and purged exactly like edit
   (hydration guard; purge `crossAuthorContent` on identity/report change).
+- Everyone is offered only on the lead's OWN deck: when the slides URL targets a
+  foreign `authorId`, the toggle is forced to Mine and no cross-author merge runs
+  (Codex review A-1). Health vs. KPI counts stay coherent — the merge uses the
+  same rules as own records, adding no new divergence (Codex review A-2).
 
 ## Out of scope
 
