@@ -8,6 +8,8 @@ interface ScopeToggleProps {
   value: ScopeValue;
   onChange: (next: ScopeValue) => void;
   allowedScopes?: readonly ScopeValue[];
+  /** "sm" = toolbar (default); "lg" = slide-hero row height. */
+  size?: "sm" | "lg";
 }
 
 const DEFAULT_SCOPES: readonly ScopeValue[] = [
@@ -30,9 +32,10 @@ export function ScopeToggle({
   value,
   onChange,
   allowedScopes = DEFAULT_SCOPES,
+  size = "sm",
 }: ScopeToggleProps) {
   return (
-    <SegmentedToggle role="radiogroup" ariaLabel="Slide scope">
+    <SegmentedToggle role="radiogroup" ariaLabel="Slide scope" size={size}>
       {allowedScopes.map((s) => (
         <button
           key={s}

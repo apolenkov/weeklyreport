@@ -1258,21 +1258,20 @@ export function LeadForm({
                     : "/lead/report"
                 }
               />
-              {!isSlidesMode &&
-                (currentWeekItems.length > 0 ||
-                  nextWeekItems.length > 0 ||
-                  risks.length > 0 ||
-                  decisions.length > 0) && (
-                  <button
-                    type="button"
-                    className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
-                    onClick={handleToggleAll}
-                    title="Toggle All"
-                  >
-                    <CollapseIcon />
-                    Toggle All
-                  </button>
-                )}
+              {(currentWeekItems.length > 0 ||
+                nextWeekItems.length > 0 ||
+                risks.length > 0 ||
+                decisions.length > 0) && (
+                <button
+                  type="button"
+                  className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+                  onClick={handleToggleAll}
+                  title="Toggle All"
+                >
+                  <CollapseIcon />
+                  Toggle All
+                </button>
+              )}
             </>
           }
         />

@@ -1,14 +1,37 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import type { AutosaveSnapshot } from "../../hooks/use-lead-form-autosave";
-import { ToolbarIconButton } from "./toolbar-icon-button";
 
 const SAVED_REVERT_MS = 1500;
 
 interface SaveNowButtonProps {
   autosave: AutosaveSnapshot;
+}
+
+/** State → { accessible label, visible label, icon }. Kept out of the component
+ *  so its branching does not inflate the component's cognitive complexity. */
+function deriveSaveView(
+  state: AutosaveSnapshot["state"],
+  isSaving: boolean,
+  showSaved: boolean,
+): { ariaLabel: string; label: string; icon: ReactNode } {
+  if (isSaving)
+    return {
+      ariaLabel: "Saving draft",
+      label: "Saving",
+      icon: <SpinnerIcon />,
+    };
+  if (showSaved)
+    return { ariaLabel: "Draft saved", label: "Saved", icon: <CheckIcon /> };
+  if (state === "error")
+    return {
+      ariaLabel: "Retry saving draft",
+      label: "Retry",
+      icon: <AlertIcon />,
+    };
+  return { ariaLabel: "Save draft now", label: "Save", icon: <DiscIcon /> };
 }
 
 /**
@@ -57,47 +80,37 @@ export function SaveNowButton({ autosave }: SaveNowButtonProps) {
   const isSaving = isInFlight;
   const isEnabled = (state === "pending" || state === "error") && !isSaving;
 
-  let ariaLabel: string;
-  if (isSaving) {
-    ariaLabel = "Saving draft";
-  } else if (showSaved) {
-    ariaLabel = "Draft saved";
-  } else if (state === "error") {
-    ariaLabel = "Retry saving draft";
-  } else {
-    ariaLabel = "Save draft now";
-  }
-
   function handleClick() {
     if (!isEnabled) return;
     void forceSave();
   }
 
-  // Base 32px circle styling lives in ToolbarIconButton (head-toolbar-parity
-  // D3); only the state-variant classes remain here.
-  const pendingClassName =
+  // Labeled neutral pill at the shared toolbar height — visible "Save" text,
+  // sized like the other labeled actions but NOT green: brand green stays the
+  // single forward-commit (Submit Section). The transient saving state keeps
+  // the accent busy treatment (report-toolbar-layout: Save busy accent is the
+  // one exemption to the single-primary rule).
+  const savingClassName =
     "border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] text-white disabled:opacity-100";
-  const idleClassName =
+  const restClassName =
     "border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-40";
 
+  const { ariaLabel, label, icon } = deriveSaveView(state, isSaving, showSaved);
+
   return (
-    <ToolbarIconButton
+    <button
+      type="button"
       disabled={!isEnabled}
       onClick={handleClick}
       aria-label={ariaLabel}
       aria-busy={isSaving}
-      className={isSaving ? pendingClassName : idleClassName}
+      className={`btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1.5 rounded-[var(--radius-pill)] border px-4 font-[family-name:var(--font-sans)] text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed ${
+        isSaving ? savingClassName : restClassName
+      }`}
     >
-      {isSaving ? (
-        <SpinnerIcon />
-      ) : showSaved ? (
-        <CheckIcon />
-      ) : state === "error" ? (
-        <AlertIcon />
-      ) : (
-        <DiscIcon />
-      )}
-    </ToolbarIconButton>
+      {icon}
+      <span>{label}</span>
+    </button>
   );
 }
 
