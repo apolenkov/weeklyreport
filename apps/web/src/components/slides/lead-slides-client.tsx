@@ -163,6 +163,7 @@ export function LeadSlidesClient({
         setSelectedIndex(0);
       }}
       allowedScopes={["own", "product"]}
+      size="lg"
     />
   );
 

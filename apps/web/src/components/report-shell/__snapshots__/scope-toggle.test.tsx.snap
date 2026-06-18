@@ -4,7 +4,7 @@ exports[`ScopeToggle > active scope button has accent background class; inactive
 <div>
   <div
     aria-label="Slide scope"
-    class="inline-flex h-[var(--toolbar-control-h)] items-center gap-0.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] p-0.5"
+    class="inline-flex items-center gap-0.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] p-0.5 h-[var(--toolbar-control-h)]"
     role="radiogroup"
   >
     <button
@@ -39,7 +39,7 @@ exports[`ScopeToggle > renders index-aware segmented rounding for the two-scope 
 <div>
   <div
     aria-label="Slide scope"
-    class="inline-flex h-[var(--toolbar-control-h)] items-center gap-0.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] p-0.5"
+    class="inline-flex items-center gap-0.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] p-0.5 h-[var(--toolbar-control-h)]"
     role="radiogroup"
   >
     <button
