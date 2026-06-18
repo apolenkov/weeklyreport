@@ -12,7 +12,7 @@ describe("ScopeToggle", () => {
         allowedScopes={["own", "product"]}
       />,
     );
-    expect(screen.getByRole("radio", { name: "Own" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Summary" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Product" })).toBeInTheDocument();
     expect(
       screen.queryByRole("radio", { name: "Leads" }),
@@ -45,7 +45,7 @@ describe("ScopeToggle", () => {
       "aria-checked",
       "true",
     );
-    expect(screen.getByRole("radio", { name: "Own" })).toHaveAttribute(
+    expect(screen.getByRole("radio", { name: "Summary" })).toHaveAttribute(
       "aria-checked",
       "false",
     );
@@ -54,7 +54,7 @@ describe("ScopeToggle", () => {
   it("renders all three scopes by default when allowedScopes is omitted", () => {
     const onChange = vi.fn();
     render(<ScopeToggle value={"own"} onChange={onChange} />);
-    expect(screen.getByRole("radio", { name: "Own" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Summary" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Product" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Leads" })).toBeInTheDocument();
   });

@@ -3,6 +3,7 @@ import type {
   ReportSectionReadModel,
 } from "@customreport/shared";
 
+import type { CrossAuthorContentRow } from "../../lib/mappers/lead-cross-author";
 import {
   stageStatusToTraffic,
   trafficToStageStatus,
@@ -831,6 +832,170 @@ export function applyForeignProductHealth(
       );
     return { ...product, status: worstTraffic(product.status, foreignWorst) };
   });
+}
+
+// ---- slides-record-visibility: Everyone foreign-content merge (view-only) ----
+
+/**
+ * Foreign co-owner content folded into the Everyone slide deck, PRE-CLASSIFIED
+ * so the merge needs no presentation mapper (Codex A-2). It carries exactly the
+ * fields `buildSectionSlideModel` derives from own rows — text + product +
+ * blocked/severity — with `workflowStatus`/`severity` resolved up front, and NO
+ * `priorityRank` (design Decision 8: foreign rows fold into grids + blocked/
+ * at-risk counters but are excluded from priority ranking).
+ */
+export interface SlideForeignContent {
+  readonly currentItems: readonly {
+    projectId: string;
+    text: string;
+    blocked: boolean;
+  }[];
+  readonly nextItems: readonly {
+    projectId: string;
+    text: string;
+    blocked: boolean;
+  }[];
+  readonly risks: readonly {
+    projectId: string;
+    text: string;
+    blocked: boolean;
+  }[];
+  readonly decisions: readonly { projectId: string; text: string }[];
+}
+
+export const EMPTY_SLIDE_FOREIGN_CONTENT: SlideForeignContent = {
+  currentItems: [],
+  nextItems: [],
+  risks: [],
+  decisions: [],
+};
+
+/**
+ * Adapt the gated `crossAuthorContent` rows into {@link SlideForeignContent}.
+ * Reads `workflowStatus` / `severity` DIRECTLY (not the presentation `status`
+ * the `mapForeign*` family emits), so the blocked/at-risk classification is
+ * explicit and cannot silently undercount (Codex A-2).
+ */
+export function crossAuthorContentToSlideForeign(
+  rows: readonly CrossAuthorContentRow[],
+): SlideForeignContent {
+  const currentItems: { projectId: string; text: string; blocked: boolean }[] =
+    [];
+  const nextItems: { projectId: string; text: string; blocked: boolean }[] = [];
+  const risks: { projectId: string; text: string; blocked: boolean }[] = [];
+  const decisions: { projectId: string; text: string }[] = [];
+  for (const ca of rows) {
+    for (const item of ca.items) {
+      const row = {
+        projectId: item.projectId,
+        text: item.text,
+        blocked: item.workflowStatus === "blocked",
+      };
+      if (item.type === "current") currentItems.push(row);
+      else if (item.type === "next") nextItems.push(row);
+    }
+    for (const risk of ca.risks) {
+      risks.push({
+        projectId: risk.projectId,
+        text: risk.risk,
+        blocked: risk.severity === "blocked",
+      });
+    }
+    for (const decision of ca.decisions) {
+      decisions.push({ projectId: decision.productId, text: decision.text });
+    }
+  }
+  return { currentItems, nextItems, risks, decisions };
+}
+
+/**
+ * Everyone merge: fold foreign co-owner content into a base slide model,
+ * producing NEW SlideProduct / SectionSlideModel objects (design Decision 3).
+ * It NEVER mutates `model` (or the `ReportSectionReadModel` it derived from), so
+ * the cached section the lead-form draft serializes stays own-only — the merge
+ * is render-only. Foreign rows land only on products already in the deck (the
+ * lead's shared, co-owned products); a row on a product the deck does not show
+ * is dropped, never double-counted. Priorities are untouched (foreign excluded).
+ */
+export function mergeForeignSlideContent(
+  model: SectionSlideModel,
+  foreign: SlideForeignContent,
+): SectionSlideModel {
+  const deckIds = new Set(model.productSlides.map((product) => product.id));
+  const landed = <T extends { projectId: string; text: string }>(
+    rows: readonly T[],
+  ): T[] =>
+    rows.filter((row) => deckIds.has(row.projectId) && nonEmpty(row.text));
+  const fCurrent = landed(foreign.currentItems);
+  const fNext = landed(foreign.nextItems);
+  const fRisks = landed(foreign.risks);
+  const fDecisions = landed(foreign.decisions);
+  if (
+    fCurrent.length + fNext.length + fRisks.length + fDecisions.length ===
+    0
+  ) {
+    return model;
+  }
+
+  const textFor = (
+    rows: readonly { projectId: string; text: string }[],
+    productId: string,
+  ): string[] =>
+    rows
+      .filter((row) => row.projectId === productId)
+      .map((row) => row.text.trim());
+
+  const productSlides = model.productSlides.map((product) => {
+    const current = textFor(fCurrent, product.id);
+    const next = textFor(fNext, product.id);
+    const risks = textFor(fRisks, product.id);
+    const decisions = textFor(fDecisions, product.id);
+    if (current.length + next.length + risks.length + decisions.length === 0) {
+      return product;
+    }
+    return {
+      ...product,
+      currentItems: [...product.currentItems, ...current],
+      nextItems: [...product.nextItems, ...next],
+      risks: [...product.risks, ...risks],
+      decisions: [...product.decisions, ...decisions],
+    };
+  });
+
+  const blockedAdd =
+    fCurrent.filter((r) => r.blocked).length +
+    fNext.filter((r) => r.blocked).length +
+    fRisks.filter((r) => r.blocked).length;
+  const atRiskAdd = fRisks.filter((r) => !r.blocked).length;
+  const counts = {
+    currentCount: model.currentCount + fCurrent.length,
+    nextCount: model.nextCount + fNext.length,
+    riskCount: model.riskCount + fRisks.length,
+    priorityCount: model.priorityCount,
+    blockedCount: model.blockedCount + blockedAdd,
+    atRiskCount: model.atRiskCount + atRiskAdd,
+  };
+  const trimText = (rows: readonly { text: string }[]): string[] =>
+    rows.map((row) => row.text.trim());
+
+  return {
+    ...model,
+    productSlides,
+    currentItems: [...model.currentItems, ...trimText(fCurrent)],
+    nextItems: [...model.nextItems, ...trimText(fNext)],
+    risks: [...model.risks, ...trimText(fRisks)],
+    decisions: [...model.decisions, ...trimText(fDecisions)],
+    currentCount: counts.currentCount,
+    nextCount: counts.nextCount,
+    riskCount: counts.riskCount,
+    decisionCount: model.decisionCount + fDecisions.length,
+    blockedCount: counts.blockedCount,
+    atRiskCount: counts.atRiskCount,
+    // readiness/score stay OWN-only: they measure the author's own input
+    // completeness, not the shared picture. Only the KPI counters + tone reflect
+    // own + foreign (spec: "grids and KPI counters").
+    tone: statusTone(counts),
+  };
 }
 
 interface ProductAcc {

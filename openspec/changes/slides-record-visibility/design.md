@@ -136,3 +136,32 @@ Slides today fetch ONLY `crossAuthors` (status-only). Everyone must ADD a
 A test MUST prove that switching slides to Everyone does not change any
 submit/draft/snapshot/export payload — the foreign rows are display-only. This is
 the single highest-value guard (reuses the edit-mode D4b test pattern).
+
+## Codex Act-2 review resolutions (2026-06-19)
+
+Codex reviewed this plan (VERDICT: REVISE) before implementation. All findings
+were folded into the build:
+
+1. **Foreign-deck health fold (BLOCKING).** `applyForeignProductHealth` is now
+   gated on `isOwnDeck` in `LeadSlidesClient` (and the `crossAuthors` fetch too),
+   so the current user's risk-derived co-owner status never folds onto another
+   author's deck. Live-verified: a foreign `authorId` deck shows that author's
+   own records only, no leak.
+2. **Counter field mismatch (BLOCKING).** The slide merge does NOT route foreign
+   rows through `mapForeignItems` (which emits a presentation `status`, no
+   `workflowStatus`). A dedicated `crossAuthorContentToSlideForeign` adapter reads
+   `workflowStatus` / `severity` directly into an explicit `SlideForeignContent`
+   shape, so blocked/at-risk classification cannot silently undercount. Pinned by
+   a blocked-item-parity test.
+3. **`foreign: true` marker (NICE-TO-HAVE → trimmed).** The slide grids are flat
+   `string[]`; a per-row marker would require restructuring the slide row types.
+   The spec contract requires only that foreign rows + counts appear (not visual
+   attribution), so the marker is deferred. Recorded in ADR 0003.
+4. **Hydration/ownership not threaded (BLOCKING).** `LeadSlidesClient` now
+   receives `visibilityMode` + `visibilityHydrated` props, computes `isOwnDeck`
+   from `authorId` vs the session user, and gates the content fetch + merge on
+   `visibilityHydrated && isEveryone && isOwnDeck`, with leaving-Everyone and
+   identity purges mirrored from the edit form.
+
+The view-only invariant is pinned by a unit test asserting `mergeForeignSlideContent`
+does not mutate the input section (the cached read-model the draft serializes).
