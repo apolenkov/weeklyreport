@@ -287,12 +287,18 @@ const SMALL_DATASET: TierDataset = {
       sectionStatus: ReportSectionStatus.draft,
       ownedStages: ["Planning", "Development"],
       items: [
+        // The one MULTI-STAGE item in the small tier (durable spec
+        // demo-seed-datasets "Small tier is minimal and stage-realistic"):
+        // Item.stageNames spans Development + Testing. With Testing unowned on
+        // BI (tester not hired), Vasily carries the acceptance work himself, so
+        // the item legitimately touches both phases. Portal/Integrations items
+        // stay single-stage.
         {
           type: ItemType.current,
-          text: "Новый дашборд BI: проектирование и разработка идут по плану",
+          text: "Новый дашборд BI: разработка и приёмочное тестирование идут параллельно",
           tag: "feature",
           status: ItemWorkflowStatus.in_progress,
-          stages: ["Development"],
+          stages: ["Development", "Testing"],
           priorityRank: 1,
         },
         {
