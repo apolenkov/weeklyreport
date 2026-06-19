@@ -18,16 +18,17 @@
       `@types/nodemailer@^8.0.1` (no `@types/nodemailer@9`; nodemailer 9 ships
       no types); confirm `pnpm --filter @customreport/api typecheck` passes and
       record the types-major lag. (a94ac81d)
-- [x] 2.2 Confirm `email.service.ts` builds unchanged (typecheck pass; only
+- [x] 2.2 `email.service.ts` builds unchanged (typecheck pass; only
       `secure:false` SMTP + `jsonTransport`, none of the 9.0 TLS-validated paths).
-      DEFERRED runtime: live Mailpit `sendMailMultipart` send (needs running
-      SMTP+Mailpit; ports held by parallel session).
+      VERIFIED LIVE: `sendMailMultipart` on nodemailer@9 → Mailpit SMTP (1025);
+      both halves arrived intact (HTML 3817B + plaintext 274B, both with content).
 - [x] 2.3 `@bull-board/api` + `@bull-board/express` 7→8 in lockstep. v8 API
       surface verified against `bull-board.module.ts` (createBullBoard, the
       `@bull-board/api/bullMQAdapter` subpath export present in v8, ExpressAdapter
       setBasePath/getRouter) — typechecks with no code change. No v7 residual. (35835696)
-- [~] 2.4 `/admin/queues` wiring byte-identical and typecheck-proven on v8.
-  DEFERRED runtime: live head-gated mount + queue listing (needs running API).
+- [x] 2.4 `/admin/queues` wiring byte-identical and typecheck-proven on v8.
+      VERIFIED LIVE (bull-board v8 mounted via harness on the running Redis):
+      401 no-cookie, 403 lead role, 200 head role; queues API lists pdf-export + email-reminder.
 - [x] 2.5 `eslint-plugin-unicorn` 65→68; allowlist migrated: v68 renamed
       `prefer-dom-node-dataset` to `dom-node-dataset` (old name is a no-op stub
       ESLint loads silently — adversarial review caught it, the initial lint pass
