@@ -836,6 +836,62 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     expect(indicator?.style.color).toBe("var(--color-chip-on-track-text)");
   });
 
+  it("reveals a co-owner's initials for a hidden foreign stage, not 'unassigned'", () => {
+    // Regression: in Mine mode the lead's own grid marks every non-own stage
+    // "unassigned"; the real owner lives in crossAuthors. The +N more reveal
+    // must consult it — a DevOps stage held by IG reads as "IG", and only the
+    // genuinely-vacant Support reads "unassigned" (the user reported the tooltip
+    // showing every hidden stage as empty/unassigned while co-owners held them).
+    const product: Product = {
+      id: "p-foreign-owned",
+      name: "Foreign Owned",
+      overallStatus: "on-track",
+      stages: [
+        {
+          stageName: "Dev",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "me",
+        },
+        // Grid marks these unassigned in Mine mode — ownership truth is in crossAuthors.
+        {
+          stageName: "DevOps",
+          status: "empty",
+          ownership: "unassigned",
+          assignee: null,
+        },
+        {
+          stageName: "Support",
+          status: "empty",
+          ownership: "unassigned",
+          assignee: null,
+        },
+      ],
+    };
+    const { container } = render(
+      <SdlcPipeline
+        products={[product]}
+        readOnly={false}
+        visibilityMode="mine"
+        crossAuthors={[
+          {
+            projectId: product.id,
+            projectName: product.name,
+            authorId: "a-ig",
+            authorInitials: "IG",
+            stageNames: ["DevOps"],
+            stages: [{ stageName: "DevOps", status: "green" }],
+          },
+        ]}
+      />,
+    );
+    const indicator = container.querySelector(COLLAPSED_INDICATOR);
+    const label = indicator?.getAttribute("aria-label") ?? "";
+    expect(label).toContain("DevOps — IG: on-track");
+    expect(label).toContain("Support — unassigned");
+    expect(label).not.toContain("DevOps — unassigned");
+  });
+
   it("Everyone never shows the collapsed-stage indicator (full grid already)", () => {
     const { container } = render(
       <SdlcPipeline
