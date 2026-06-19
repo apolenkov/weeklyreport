@@ -6,7 +6,7 @@
       `LeadSlideHero` at the same inset as the own-scope path (reuse the deck
       shell or match its padding token), so the hero x/y is identical across
       scopes.
-- [ ] 1.2 Live-verify: re-measure hero x and y in Summary vs Product — equal
+- [x] 1.2 Live-verify: re-measure hero x and y in Summary vs Product — equal
       within ±1px; content below the hero unchanged per scope.
 
 ## 2. Collapsed `+N more` styled tooltip (item 2 — CONFIRMED)
@@ -37,7 +37,7 @@
       inline integration badges untouched.
 - [x] 4.2 Extend `coming-soon-style.test.tsx`: every tooltip control's badge uses
       the centred anchor and carries no `right-0`.
-- [ ] 4.3 Live-verify the RIGHTMOST control (nav theme / slides agent-review): the
+- [x] 4.3 Live-verify the RIGHTMOST control (nav theme / slides agent-review): the
       centred badge does not clip off the viewport edge. If it does, add a
       per-control exception — do NOT revert the consolidation.
 
