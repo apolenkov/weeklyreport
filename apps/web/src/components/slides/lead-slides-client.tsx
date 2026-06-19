@@ -12,7 +12,6 @@ import {
   useState,
 } from "react";
 
-import { useIsFullscreen } from "../../hooks/use-is-fullscreen";
 import { crossAuthorContentFetchEnabled } from "../../lib/cross-author-content-gate";
 import type { CrossAuthorContentRow } from "../../lib/mappers/lead-cross-author";
 import { SessionContext } from "../../lib/session-provider";
@@ -20,7 +19,6 @@ import { useTRPC } from "../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
-import { ForeignTagsComingSoon } from "./foreign-tags-coming-soon";
 import { LeadProductGrid } from "./lead-product-grid";
 import { LeadSlideHero } from "./lead-slide-hero";
 import {
@@ -116,7 +114,6 @@ export function LeadSlidesClient({
   const session = useContext(SessionContext);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scope, setScope] = useState<ScopeValue>("own");
-  const isFullscreen = useIsFullscreen();
   const internalDeckRef = useRef<HTMLDivElement>(null);
   const deckRef = externalDeckRef ?? internalDeckRef;
 
@@ -335,10 +332,6 @@ export function LeadSlidesClient({
         heroControls={
           <div className="flex flex-wrap items-center gap-2">
             {scopeControls}
-            {/* close-slides-visibility-tails (tail 2): own-scope bullet view +
-                Everyone + not fullscreen — a working-view hint that co-owners'
-                merged rows are not yet per-author attributed (deferred). */}
-            {isEveryone && !isFullscreen && <ForeignTagsComingSoon />}
           </div>
         }
         toolbar={
