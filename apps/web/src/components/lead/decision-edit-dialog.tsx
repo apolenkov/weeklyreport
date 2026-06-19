@@ -138,7 +138,7 @@ function DecisionEditDialogContent({
     >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops propagation to the backdrop; Escape is handled by the backdrop's onKeyDown which bubbles up */}
       <div
-        className="w-full max-w-lg rounded-[var(--radius)] bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
+        className="w-full max-w-3xl rounded-[var(--radius)] bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -148,9 +148,154 @@ function DecisionEditDialogContent({
           {headerVerb}
         </h2>
 
-        <div className="space-y-4">
-          {/* R4-B: product picker — only when the lead owns more than one product */}
-          {products && products.length > 1 && (
+        {/* unify-record-dialogs: two-column layout mirroring the risk dialog —
+            prose on the left, a CLASSIFICATION panel (Product + Stages) on the
+            right. A decision carries no status/severity, so the panel is leaner. */}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:items-stretch">
+          {/* Left column: decision / owner+deadline / impact prose. */}
+          <div className="flex flex-1 flex-col gap-4">
+            {/* Decision text */}
+            <div>
+              <label
+                className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+                htmlFor="dec-text"
+              >
+                Decision *
+              </label>
+              <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
+                The choice you need leadership to make — phrase it as a yes/no
+                or short statement, not a discussion topic.
+              </p>
+              <textarea
+                id="dec-text"
+                // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
+                autoFocus
+                aria-invalid={errors.text ? "true" : "false"}
+                aria-describedby={errors.text ? "dec-text-error" : undefined}
+                className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                  errors.text
+                    ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
+                    : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
+                }`}
+                style={{ minHeight: "60px" }}
+                value={text}
+                onChange={(e) => {
+                  setText(e.target.value);
+                  setErrors((prev) => ({ ...prev, text: undefined }));
+                }}
+                placeholder="e.g. Approve hiring of 2 SDETs in Q3"
+              />
+              {errors.text && (
+                <p
+                  id="dec-text-error"
+                  className="mt-1 text-xs text-[var(--color-destructive)]"
+                >
+                  {errors.text}
+                </p>
+              )}
+            </div>
+
+            {/* Owner + Deadline row — items-end aligns the input bottoms even
+              though Owner has an extra helper <p> that makes its column taller (D-14). */}
+            <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
+              <div>
+                <label
+                  className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+                  htmlFor="dec-owner"
+                >
+                  Owner *
+                </label>
+                <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
+                  Accountable lead for this section. Saved as the section owner.
+                </p>
+                <input
+                  id="dec-owner"
+                  type="text"
+                  aria-invalid={errors.owner ? "true" : "false"}
+                  aria-describedby={
+                    errors.owner ? "dec-owner-error" : undefined
+                  }
+                  readOnly
+                  aria-readonly="true"
+                  className={`w-full rounded-xl border bg-[var(--color-muted)] px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                    errors.owner
+                      ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
+                      : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
+                  }`}
+                  value={owner}
+                  placeholder="e.g. yourself or Head"
+                />
+                {errors.owner && (
+                  <p
+                    id="dec-owner-error"
+                    className="mt-1 text-xs text-[var(--color-destructive)]"
+                  >
+                    {errors.owner}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label
+                  className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+                  htmlFor="dec-deadline"
+                >
+                  Deadline
+                </label>
+                <input
+                  id="dec-deadline"
+                  type="date"
+                  className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Impact */}
+            <div className="flex flex-1 flex-col">
+              <label
+                className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+                htmlFor="dec-impact"
+              >
+                Impact *
+              </label>
+              <textarea
+                id="dec-impact"
+                aria-invalid={errors.impact ? "true" : "false"}
+                aria-describedby={
+                  errors.impact ? "dec-impact-error" : undefined
+                }
+                className={`w-full flex-1 resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                  errors.impact
+                    ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
+                    : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
+                }`}
+                style={{ minHeight: "50px" }}
+                value={impact}
+                onChange={(e) => {
+                  setImpact(e.target.value);
+                  setErrors((prev) => ({ ...prev, impact: undefined }));
+                }}
+                placeholder="What changes when this is decided?"
+              />
+              {errors.impact && (
+                <p
+                  id="dec-impact-error"
+                  className="mt-1 text-xs text-[var(--color-destructive)]"
+                >
+                  {errors.impact}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Right column: CLASSIFICATION panel — Product + Stages. */}
+          <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+            <span className="block text-xs font-semibold tracking-wide text-[var(--color-muted-foreground)] uppercase">
+              Classification
+            </span>
+
+            {/* Product picker — always rendered so the dialogs read identically. */}
             <div>
               <label
                 className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
@@ -160,160 +305,31 @@ function DecisionEditDialogContent({
               </label>
               <select
                 id="dec-product"
-                className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+                className="select-chevron w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white py-2.5 pl-3 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
                 value={productId}
                 onChange={(e) => setProductAndStages(e.target.value)}
+                disabled={!products || products.length <= 1}
               >
-                {products.map((p) => (
+                {(products ?? []).map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>
                 ))}
               </select>
             </div>
-          )}
 
-          {/* Decision text */}
-          <div>
-            <label
-              className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-              htmlFor="dec-text"
-            >
-              Decision *
-            </label>
-            <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
-              The choice you need leadership to make — phrase it as a yes/no or
-              short statement, not a discussion topic.
-            </p>
-            <textarea
-              id="dec-text"
-              // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
-              autoFocus
-              aria-invalid={errors.text ? "true" : "false"}
-              aria-describedby={errors.text ? "dec-text-error" : undefined}
-              className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
-                errors.text
-                  ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
-                  : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
-              }`}
-              style={{ minHeight: "60px" }}
-              value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-                setErrors((prev) => ({ ...prev, text: undefined }));
+            <StageMultiSelect
+              id="dec-stage"
+              value={stageIds}
+              stages={stagesForProduct?.(productId) ?? []}
+              required
+              error={errors.stageIds}
+              onChange={(next) => {
+                setStageIds(next);
+                if (errors.stageIds)
+                  setErrors((prev) => ({ ...prev, stageIds: undefined }));
               }}
-              placeholder="e.g. Approve hiring of 2 SDETs in Q3"
             />
-            {errors.text && (
-              <p
-                id="dec-text-error"
-                className="mt-1 text-xs text-[var(--color-destructive)]"
-              >
-                {errors.text}
-              </p>
-            )}
-          </div>
-
-          {/* Owner + Deadline row — items-end aligns the input bottoms even
-              though Owner has an extra helper <p> that makes its column taller (D-14). */}
-          <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
-            <div>
-              <label
-                className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-                htmlFor="dec-owner"
-              >
-                Owner *
-              </label>
-              <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
-                Accountable lead for this section. Saved as the section owner.
-              </p>
-              <input
-                id="dec-owner"
-                type="text"
-                aria-invalid={errors.owner ? "true" : "false"}
-                aria-describedby={errors.owner ? "dec-owner-error" : undefined}
-                readOnly
-                aria-readonly="true"
-                className={`w-full rounded-xl border bg-[var(--color-muted)] px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
-                  errors.owner
-                    ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
-                    : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
-                }`}
-                value={owner}
-                placeholder="e.g. yourself or Head"
-              />
-              {errors.owner && (
-                <p
-                  id="dec-owner-error"
-                  className="mt-1 text-xs text-[var(--color-destructive)]"
-                >
-                  {errors.owner}
-                </p>
-              )}
-            </div>
-            <div>
-              <label
-                className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-                htmlFor="dec-deadline"
-              >
-                Deadline
-              </label>
-              <input
-                id="dec-deadline"
-                type="date"
-                className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <StageMultiSelect
-            id="dec-stage"
-            value={stageIds}
-            stages={stagesForProduct?.(productId) ?? []}
-            required
-            error={errors.stageIds}
-            onChange={(next) => {
-              setStageIds(next);
-              if (errors.stageIds)
-                setErrors((prev) => ({ ...prev, stageIds: undefined }));
-            }}
-          />
-
-          {/* Impact */}
-          <div>
-            <label
-              className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-              htmlFor="dec-impact"
-            >
-              Impact *
-            </label>
-            <textarea
-              id="dec-impact"
-              aria-invalid={errors.impact ? "true" : "false"}
-              aria-describedby={errors.impact ? "dec-impact-error" : undefined}
-              className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
-                errors.impact
-                  ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
-                  : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
-              }`}
-              style={{ minHeight: "50px" }}
-              value={impact}
-              onChange={(e) => {
-                setImpact(e.target.value);
-                setErrors((prev) => ({ ...prev, impact: undefined }));
-              }}
-              placeholder="What changes when this is decided?"
-            />
-            {errors.impact && (
-              <p
-                id="dec-impact-error"
-                className="mt-1 text-xs text-[var(--color-destructive)]"
-              >
-                {errors.impact}
-              </p>
-            )}
           </div>
         </div>
 

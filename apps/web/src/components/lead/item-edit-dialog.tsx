@@ -247,7 +247,7 @@ function ItemEditDialogContent({
     >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops propagation to keep clicks inside the dialog from closing it; there is no keyboard action to mirror */}
       <div
-        className="w-full max-w-lg rounded-[var(--radius)] bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
+        className="w-full max-w-3xl rounded-[var(--radius)] bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -262,127 +262,96 @@ function ItemEditDialogContent({
           ) : null}
         </h2>
 
-        <div className="space-y-4">
-          {/* Description */}
-          <div>
-            <label
-              className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-              htmlFor="item-text"
-            >
-              Description *
-            </label>
-            <textarea
-              id="item-text"
-              // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
-              autoFocus
-              aria-invalid={errors.text ? "true" : "false"}
-              aria-describedby={errors.text ? "item-text-error" : undefined}
-              // Border + focus-ring switch to destructive when validation
-              // failed so the error reads at-a-glance, not just from the
-              // sentence underneath.
-              className={`w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
-                errors.text
-                  ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
-                  : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
-              }`}
-              style={{ minHeight: "70px" }}
-              value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-                setErrors((prev) => ({ ...prev, text: undefined }));
-              }}
-              placeholder={
-                week === "current"
-                  ? "What was done or in progress…"
-                  : "What is planned for next week…"
-              }
-            />
-            {errors.text && (
-              <p
-                id="item-text-error"
-                className="mt-1 text-xs text-[var(--color-destructive)]"
+        {/* unify-record-dialogs: two-column layout mirroring the risk dialog —
+            prose on the left, a CLASSIFICATION panel (Product + Stages + Status)
+            on the right. */}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:items-stretch">
+          {/* Left column: description + priority rank. */}
+          <div className="flex flex-1 flex-col gap-4">
+            <div className="flex flex-1 flex-col">
+              <label
+                className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+                htmlFor="item-text"
               >
-                {errors.text}
-              </p>
-            )}
-          </div>
+                Description *
+              </label>
+              <textarea
+                id="item-text"
+                // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
+                autoFocus
+                aria-invalid={errors.text ? "true" : "false"}
+                aria-describedby={errors.text ? "item-text-error" : undefined}
+                // Border + focus-ring switch to destructive when validation
+                // failed so the error reads at-a-glance, not just from the
+                // sentence underneath.
+                className={`w-full flex-1 resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
+                  errors.text
+                    ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
+                    : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
+                }`}
+                style={{ minHeight: "70px" }}
+                value={text}
+                onChange={(e) => {
+                  setText(e.target.value);
+                  setErrors((prev) => ({ ...prev, text: undefined }));
+                }}
+                placeholder={
+                  week === "current"
+                    ? "What was done or in progress…"
+                    : "What is planned for next week…"
+                }
+              />
+              {errors.text && (
+                <p
+                  id="item-text-error"
+                  className="mt-1 text-xs text-[var(--color-destructive)]"
+                >
+                  {errors.text}
+                </p>
+              )}
+            </div>
 
-          {/* Priority rank — optional; set to mark this item as a top priority */}
-          <div>
-            <label
-              className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-              htmlFor="item-priority-rank"
-            >
-              Priority rank{" "}
-              <span className="font-normal">
-                (optional — leave blank if not a priority)
-              </span>
-            </label>
-            <select
-              id="item-priority-rank"
-              className="select-chevron w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white py-2.5 pl-3 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
-              value={priorityRank ?? ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                setPriorityRank(v === "" ? null : Number.parseInt(v, 10));
-              }}
-            >
-              <option value="">— none —</option>
-              {rankOptions.map((r) => {
-                const taken = takenRanks.has(r);
-                return (
-                  <option key={r} value={r} disabled={taken}>
-                    {r}
-                    {taken ? " (taken)" : ""}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-
-          <StageMultiSelect
-            id="item-stage"
-            value={stageIds}
-            stages={stagesForProduct?.(productId) ?? []}
-            required
-            error={errors.stageIds}
-            onChange={(next) => {
-              setStageIds(next);
-              if (errors.stageIds)
-                setErrors((prev) => ({ ...prev, stageIds: undefined }));
-            }}
-          />
-
-          {/* Status chips */}
-          <div>
-            <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
-              Status
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {choices.map((c) => {
-                const selected = status === c.value;
-                return (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setStatus(c.value)}
-                    className="inline-flex min-h-[34px] items-center gap-1 rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-[background-color,border-color,color,opacity]"
-                    style={{
-                      background: selected ? c.bg : "transparent",
-                      color: selected ? c.color : "var(--color-foreground)",
-                      border: `1.5px solid ${selected ? c.border : "rgba(0,0,0,0.15)"}`,
-                    }}
-                    aria-pressed={selected}
-                  >
-                    {c.label}
-                  </button>
-                );
-              })}
+            {/* Priority rank — optional; set to mark this item as a top priority */}
+            <div>
+              <label
+                className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+                htmlFor="item-priority-rank"
+              >
+                Priority rank{" "}
+                <span className="font-normal">
+                  (optional — leave blank if not a priority)
+                </span>
+              </label>
+              <select
+                id="item-priority-rank"
+                className="select-chevron w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white py-2.5 pl-3 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+                value={priorityRank ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setPriorityRank(v === "" ? null : Number.parseInt(v, 10));
+                }}
+              >
+                <option value="">— none —</option>
+                {rankOptions.map((r) => {
+                  const taken = takenRanks.has(r);
+                  return (
+                    <option key={r} value={r} disabled={taken}>
+                      {r}
+                      {taken ? " (taken)" : ""}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
           </div>
 
-          {/* Product picker — only meaningful when there are >1 products */}
-          {products.length > 1 && (
+          {/* Right column: CLASSIFICATION panel — Product, Stages, Status. */}
+          <div className="space-y-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] p-4">
+            <span className="block text-xs font-semibold tracking-wide text-[var(--color-muted-foreground)] uppercase">
+              Classification
+            </span>
+
+            {/* Product picker — always rendered so the dialogs read identically. */}
             <div>
               <label
                 className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
@@ -395,6 +364,7 @@ function ItemEditDialogContent({
                 className="select-chevron w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white py-2.5 pl-3 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
                 value={productId}
                 onChange={(e) => setProductAndStages(e.target.value)}
+                disabled={products.length <= 1}
               >
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -403,7 +373,48 @@ function ItemEditDialogContent({
                 ))}
               </select>
             </div>
-          )}
+
+            <StageMultiSelect
+              id="item-stage"
+              value={stageIds}
+              stages={stagesForProduct?.(productId) ?? []}
+              required
+              error={errors.stageIds}
+              onChange={(next) => {
+                setStageIds(next);
+                if (errors.stageIds)
+                  setErrors((prev) => ({ ...prev, stageIds: undefined }));
+              }}
+            />
+
+            {/* Status chips */}
+            <div>
+              <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
+                Status
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {choices.map((c) => {
+                  const selected = status === c.value;
+                  return (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setStatus(c.value)}
+                      className="inline-flex min-h-[34px] items-center gap-1 rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-[background-color,border-color,color,opacity]"
+                      style={{
+                        background: selected ? c.bg : "transparent",
+                        color: selected ? c.color : "var(--color-foreground)",
+                        border: `1.5px solid ${selected ? c.border : "rgba(0,0,0,0.15)"}`,
+                      }}
+                      aria-pressed={selected}
+                    >
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
