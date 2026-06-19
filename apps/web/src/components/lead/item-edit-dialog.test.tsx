@@ -324,13 +324,15 @@ describe("ItemEditDialog — UFB-014 stageIds", () => {
     fireEvent.change(screen.getByLabelText(/Description \*/i), {
       target: { value: "Implement OAuth callback" },
     });
+    // unify-record-dialogs: nothing is pre-selected on create, so clicking
+    // "Testing" selects exactly that stage.
     fireEvent.click(screen.getByRole("checkbox", { name: "Testing" }));
     fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
       text: "Implement OAuth callback",
-      stageIds: ["Dev"],
+      stageIds: ["Testing"],
     });
   });
 });
@@ -550,9 +552,8 @@ describe("ItemEditDialog — require a stage", () => {
         onCancel={() => undefined}
       />,
     );
-    // Create pre-selects all owned stages; deselect both to reach the gap.
-    fireEvent.click(screen.getByRole("checkbox", { name: "Dev" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "Testing" }));
+    // unify-record-dialogs: create starts with no stage selected, so the gap is
+    // reached without any deselection.
     fireEvent.change(screen.getByLabelText(/Description \*/i), {
       target: { value: "An item without a stage" },
     });
@@ -601,11 +602,11 @@ describe("ItemEditDialog — require a stage", () => {
     );
     fireEvent.click(screen.getByRole("checkbox", { name: "Testing" }));
     fireEvent.change(screen.getByLabelText(/Description \*/i), {
-      target: { value: "Item on Dev only" },
+      target: { value: "Item on Testing only" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave.mock.calls[0]?.[0]).toMatchObject({ stageIds: ["Dev"] });
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({ stageIds: ["Testing"] });
   });
 });

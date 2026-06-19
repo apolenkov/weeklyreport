@@ -25,10 +25,10 @@ interface DecisionsSectionProps {
    */
   readonly currentUserName?: string;
   /**
-   * 35-04: SDLC stages available to the lead across all assigned projects.
-   * Decisions are department-scoped, so the union is the right denominator.
+   * unify-record-dialogs: stages owned on the SELECTED product — passed through
+   * to the dialog so a decision is product-scoped like an item/risk.
    */
-  readonly availableStages?: readonly string[];
+  readonly stagesForProduct?: (productId: string) => readonly string[];
   /** R4-B: products the lead is assigned to, passed through to the dialog. */
   readonly products?: readonly Product[];
   readonly defaultProductId?: string;
@@ -102,7 +102,7 @@ export function DecisionsSection({
   onChange,
   defaultProductName,
   currentUserName,
-  availableStages,
+  stagesForProduct,
   products,
   defaultProductId,
   addSignal = 0,
@@ -279,7 +279,7 @@ export function DecisionsSection({
             : null
         }
         defaultOwner={currentUserName}
-        availableStages={availableStages}
+        stagesForProduct={stagesForProduct}
         products={products}
         defaultProductId={defaultProductId}
         onSave={handleDialogSave}

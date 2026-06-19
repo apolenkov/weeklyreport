@@ -861,11 +861,10 @@ export function LeadForm({
   const isReadOnly = data.readOnly || isSubmitted;
 
   // 35-04: per-project stages-the-lead-owns selector. Forwarded into the
-  // Item / Risk dialogs so the SDLC stage dropdown is scoped per project.
-  // Decisions / Priorities are department-scoped, so they get the union.
+  // Item / Risk / Decision dialogs so the SDLC stage dropdown is scoped per
+  // project (unify-record-dialogs made decisions product-scoped too).
   const stagesForProduct = (productId: string) =>
     ownedStagesForProject(draftSection, productId);
-  const availableStages = ownedStagesForProject(draftSection, undefined);
 
   // ---- onChange merge handlers ----
   // Decisions: merge text edits / additions / deletions back into raw section
@@ -1544,7 +1543,7 @@ export function LeadForm({
                 readOnly={isReadOnly}
                 onChange={handleDecisionsChange}
                 currentUserName={currentUser.name}
-                availableStages={availableStages}
+                stagesForProduct={stagesForProduct}
                 products={products}
                 defaultProductId={products[0]?.id}
                 addSignal={decisionsAddSignal}

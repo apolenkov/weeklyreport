@@ -16,11 +16,11 @@ interface DecisionEditDialogProps {
    */
   readonly defaultOwner?: string;
   /**
-   * 35-04 (FEAT-144): SDLC stages available to the lead across all
-   * assigned projects. Decisions are department-scoped (no projectId), so
-   * the union across projects is the right denominator for the dropdown.
+   * unify-record-dialogs: SDLC stages owned on the SELECTED product. A decision
+   * is now product-scoped like an item/risk — changing the product re-scopes its
+   * stage options (it no longer draws from the department-wide union).
    */
-  readonly availableStages?: readonly string[];
+  readonly stagesForProduct?: (productId: string) => readonly string[];
   /**
    * R4-B: products the lead is assigned to. When more than one, the dialog
    * shows a product picker so the lead can scope the decision to a product.
@@ -37,7 +37,7 @@ interface DecisionEditDialogProps {
  * useState from props; close = unmount. No useEffect reset is needed — the
  * remount is the structural reset, and the parent's openSeq dialogKey forces
  * a fresh mount on every open. This makes the A13 invariant (products /
- * availableStages never read in any deps array) structural.
+ * stagesForProduct never read in any deps array) structural.
  */
 export function DecisionEditDialog(props: DecisionEditDialogProps) {
   if (!props.open) return null;
@@ -47,7 +47,7 @@ export function DecisionEditDialog(props: DecisionEditDialogProps) {
 function DecisionEditDialogContent({
   decision,
   defaultOwner,
-  availableStages,
+  stagesForProduct,
   products,
   defaultProductId,
   onSave,
@@ -63,11 +63,19 @@ function DecisionEditDialogContent({
   const [productId, setProductId] = useState(
     decision?.productId || defaultProductId || products?.[0]?.id || "",
   );
-  // UFB-073 (R1): pre-select all owned stages on create; restore existing on edit.
+  // unify-record-dialogs: no stage pre-selected on create (mirrors item/risk);
+  // edit restores the saved stages. Required + single-owned-stage auto-apply
+  // live in handleSave.
   const [stageIds, setStageIds] = useState<string[]>(
-    decision?.stageIds ??
-      (isCreate && availableStages ? [...availableStages] : []),
+    decision?.stageIds ? [...decision.stageIds] : [],
   );
+
+  // unify-record-dialogs: changing the product re-scopes the stage options and
+  // clears the prior selection, exactly like the item/risk dialogs.
+  function setProductAndStages(nextProductId: string) {
+    setProductId(nextProductId);
+    setStageIds(stagesForProduct ? [...stagesForProduct(nextProductId)] : []);
+  }
   const [errors, setErrors] = useState<{
     text?: string;
     owner?: string;
@@ -84,7 +92,7 @@ function DecisionEditDialogContent({
     // require-stage-on-items-and-decisions: a decision must carry a concrete
     // stage when the lead owns stages — mirrors the risk/item dialogs. A single
     // owned stage is implicitly selected so the lead can save without a click.
-    const stages = availableStages ?? [];
+    const stages = stagesForProduct?.(productId) ?? [];
     const effectiveStageIds =
       stageIds.length === 0 && stages.length === 1 ? [...stages] : stageIds;
     const next: typeof errors = {};
@@ -154,7 +162,7 @@ function DecisionEditDialogContent({
                 id="dec-product"
                 className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
                 value={productId}
-                onChange={(e) => setProductId(e.target.value)}
+                onChange={(e) => setProductAndStages(e.target.value)}
               >
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -263,7 +271,7 @@ function DecisionEditDialogContent({
           <StageMultiSelect
             id="dec-stage"
             value={stageIds}
-            stages={availableStages ?? []}
+            stages={stagesForProduct?.(productId) ?? []}
             required
             error={errors.stageIds}
             onChange={(next) => {
