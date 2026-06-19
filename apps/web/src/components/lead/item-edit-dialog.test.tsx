@@ -142,6 +142,42 @@ describe("ItemEditDialog — D-12 reopen reset", () => {
   });
 });
 
+describe("ItemEditDialog — stage-label-canonicalization (spec 1.2)", () => {
+  it("saves a legacy 'Dev' stage as canonical 'Development' without re-toggling", () => {
+    const onSave = vi.fn();
+    const legacyItem: KanbanItem = {
+      id: "legacy-1",
+      productId: "p1",
+      productName: "DevOps Tools",
+      text: "Legacy item stored with the short stage alias",
+      status: "in-progress",
+      author: "Test Lead",
+      stageIds: ["Dev"],
+    };
+
+    render(
+      <ItemEditDialog
+        open={true}
+        item={legacyItem}
+        products={products}
+        week="current"
+        stagesForProduct={() => ["Development", "Testing"]}
+        onSave={onSave}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    // Save without touching the (already-checked) Development stage — the
+    // canonical value must still be persisted, never the legacy "Dev".
+    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      stageIds: ["Development"],
+    });
+  });
+});
+
 describe("ItemEditDialog — T-D12 save+reopen status reset", () => {
   it("shows updated item.status on reopen after save, not the previously-edited draft status", () => {
     const onSave = vi.fn();
@@ -583,7 +619,11 @@ describe("ItemEditDialog — require a stage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave.mock.calls[0]?.[0]).toMatchObject({ stageIds: ["Dev"] });
+    // stage-label-canonicalization 1.2: the auto-applied "Dev" owned stage is
+    // persisted as the canonical "Development", never the short alias.
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      stageIds: ["Development"],
+    });
   });
 
   it("saves when at least one stage is selected on a multi-stage product", () => {

@@ -377,7 +377,11 @@ describe("DecisionEditDialog — require a stage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave.mock.calls[0]?.[0]).toMatchObject({ stageIds: ["Dev"] });
+    // stage-label-canonicalization 1.2: the auto-applied "Dev" owned stage is
+    // persisted as the canonical "Development", never the short alias.
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      stageIds: ["Development"],
+    });
   });
 });
 

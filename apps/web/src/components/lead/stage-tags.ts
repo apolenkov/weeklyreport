@@ -15,6 +15,24 @@ export function canonicalStageName(name: string): string {
 }
 
 /**
+ * Canonicalize a stored stageIds list, dropping duplicates that collapse after
+ * aliasing (a legacy `["Dev", "Development"]` → `["Development"]`). Record
+ * dialogs run saved selections through this so a record always persists the
+ * canonical stage name (stage-label-canonicalization spec 1.2).
+ */
+export function canonicalStageIds(ids: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const id of ids) {
+    const canonical = canonicalStageName(id);
+    if (seen.has(canonical)) continue;
+    seen.add(canonical);
+    out.push(canonical);
+  }
+  return out;
+}
+
+/**
  * Display-only short labels for the SDLC pipeline chip, where seven chips share
  * one row. Keyed by canonical name; the short form is NEVER stored or matched.
  * Only "Development" shortens today ("Dev"); all other stages display in full.

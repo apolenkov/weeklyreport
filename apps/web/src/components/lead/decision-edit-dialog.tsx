@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import type { DecisionEntry, Product } from "./mock-data";
 import { ProductPicker } from "./product-picker";
 import { StageMultiSelect } from "./stage-multi-select";
+import { canonicalStageIds } from "./stage-tags";
 
 interface DecisionEditDialogProps {
   readonly open: boolean;
@@ -116,7 +117,10 @@ function DecisionEditDialogContent({
       owner: o,
       impact: im,
       deadline: deadline ? deadline : null,
-      stageIds: effectiveStageIds.length > 0 ? effectiveStageIds : undefined,
+      stageIds:
+        effectiveStageIds.length > 0
+          ? canonicalStageIds(effectiveStageIds)
+          : undefined,
     });
   }
 

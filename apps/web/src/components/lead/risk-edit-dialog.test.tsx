@@ -169,8 +169,10 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
     fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
+    // stage-label-canonicalization 1.2: the selected "Dev" option persists as
+    // the canonical "Development".
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
-      stageIds: ["Dev"],
+      stageIds: ["Development"],
       text: "Vendor delay",
       impact: "Slips Q3",
       mitigation: "Escalate",
