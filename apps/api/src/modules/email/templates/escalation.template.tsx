@@ -1,3 +1,4 @@
+import type * as React from "react";
 import {
   Body,
   Container,
@@ -8,8 +9,7 @@ import {
   Section,
   Tailwind,
   Text,
-} from "@react-email/components";
-import type * as React from "react";
+} from "react-email";
 
 /**
  * NOTIF-02 (Phase 29-05): T+2h escalation digest sent to the head when leads
