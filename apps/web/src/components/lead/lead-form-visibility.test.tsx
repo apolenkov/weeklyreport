@@ -328,10 +328,11 @@ describe("LeadForm — Record visibility: Mine only (7d.1)", () => {
     expect(screen.queryByText(CO_OWNER_NAME)).toBeNull();
     // lead-mine-hide-unowned-stages: Mine renders only the lead's own chips, so
     // the foreign "Testing" stage is hidden entirely — neither the co-lead's
-    // locked red nor a greyed "unassigned" chip. The lead's own "Dev" chip
-    // (from the "Development" ownedStage) still renders.
+    // locked red nor a greyed "unassigned" chip. The lead's own Development
+    // chip still renders (aria-label uses the canonical name; the chip face
+    // shows the short "Dev").
     expect(screen.queryByLabelText(/^Testing:/)).toBeNull();
-    expect(screen.queryByLabelText(/^Dev:/)).not.toBeNull();
+    expect(screen.queryByLabelText(/^Development:/)).not.toBeNull();
   });
 });
 

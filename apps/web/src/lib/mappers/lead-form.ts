@@ -50,6 +50,7 @@ import type {
   MyHistoryEntry,
   ReportSectionReadModel,
 } from "@customreport/shared";
+import { STAGE_NAMES } from "@customreport/shared";
 
 import { riskCoversStage } from "../../components/lead/stage-tags";
 import {
@@ -192,15 +193,10 @@ export interface LeadCurrentUser {
 
 // ---- Helpers ----
 
-const STAGE_NAMES = [
-  "Planning",
-  "Analysis",
-  "Design",
-  "Dev",
-  "Testing",
-  "DevOps",
-  "Support",
-] as const;
+// stage-label-canonicalization: SDLC stage names come from the shared canonical
+// `STAGE_NAMES` (imported above) — no local literal list. Dialogs source their
+// stage options from it, so a record stores the full "Development"; the pipeline
+// chip renders a display-only short label (`stageShortLabel`), never stored.
 
 const MONTHS = [
   "Jan",

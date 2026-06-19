@@ -1,15 +1,31 @@
 "use client";
 
+import { STAGE } from "@customreport/shared";
+
 const STAGE_SPLIT_RE = /[,;]+/;
 
 /** UI chip label → DB canonical stage name. "Dev" is the chip; "Development" is stored in stageIds. */
 const STAGE_ALIAS: Record<string, string> = {
-  dev: "Development",
+  dev: STAGE.DEVELOPMENT,
 };
 
 /** Normalize a stage name to its canonical DB form (resolves UI chip aliases). */
 export function canonicalStageName(name: string): string {
   return STAGE_ALIAS[name.toLowerCase()] ?? name;
+}
+
+/**
+ * Display-only short labels for the SDLC pipeline chip, where seven chips share
+ * one row. Keyed by canonical name; the short form is NEVER stored or matched.
+ * Only "Development" shortens today ("Dev"); all other stages display in full.
+ */
+const STAGE_SHORT_LABEL: Record<string, string> = {
+  [STAGE.DEVELOPMENT]: "Dev",
+};
+
+/** The short pipeline-chip label for a (canonical) stage name; full name if none. */
+export function stageShortLabel(name: string): string {
+  return STAGE_SHORT_LABEL[canonicalStageName(name)] ?? name;
 }
 
 export function splitStageNames(

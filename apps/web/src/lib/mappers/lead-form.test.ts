@@ -73,10 +73,10 @@ describe("mapLeadProducts", () => {
     expect(expectDefined(products[0]).name).toBe("CRM Platform");
     expect(expectDefined(products[0]).overallStatus).toBe("on-track");
     expect(expectDefined(products[0]).stages).toHaveLength(7);
-    // "Development" in the seed maps to the compact "Dev" pipeline label
-    // via the alias in buildStageGrid.
+    // stage-label-canonicalization: the grid carries the canonical "Development"
+    // stage name; the compact "Dev" is a pipeline-chip display label only.
     const devStage = expectDefined(products[0]).stages.find(
-      (s) => s.stageName === "Dev",
+      (s) => s.stageName === "Development",
     );
     expect(devStage?.ownership).toBe("mine");
     expect(devStage?.assignee).toBe("Тимлид 1");
@@ -149,7 +149,7 @@ describe("mapLeadProducts", () => {
     const product = mapLeadProducts(section).at(0);
     const stages = new Map(product?.stages.map((s) => [s.stageName, s.status]));
 
-    expect(stages.get("Dev")).toBe("on-track");
+    expect(stages.get("Development")).toBe("on-track");
     expect(stages.get("Testing")).toBe("blocked");
     expect(stages.get("DevOps")).toBe("empty");
   });
@@ -264,7 +264,9 @@ describe("mapLeadProducts", () => {
     });
 
     const products = mapLeadProducts(section);
-    const devStage = products[0]?.stages.find((s) => s.stageName === "Dev");
+    const devStage = products[0]?.stages.find(
+      (s) => s.stageName === "Development",
+    );
     expect(devStage?.status).toBe("at-risk");
   });
 
@@ -306,7 +308,7 @@ describe("mapLeadProducts", () => {
     });
 
     const devStage = mapLeadProducts(section)[0]?.stages.find(
-      (s) => s.stageName === "Dev",
+      (s) => s.stageName === "Development",
     );
     expect(devStage?.status).toBe("blocked");
   });
@@ -350,7 +352,9 @@ describe("mapLeadProducts", () => {
     });
 
     const stages = mapLeadProducts(section)[0]?.stages ?? [];
-    expect(stages.find((s) => s.stageName === "Dev")?.status).toBe("blocked");
+    expect(stages.find((s) => s.stageName === "Development")?.status).toBe(
+      "blocked",
+    );
     expect(stages.find((s) => s.stageName === "Testing")?.status).toBe(
       "blocked",
     );
@@ -394,7 +398,7 @@ describe("mapLeadProducts", () => {
     });
 
     const devStage = mapLeadProducts(section)[0]?.stages.find(
-      (s) => s.stageName === "Dev",
+      (s) => s.stageName === "Development",
     );
     expect(devStage?.status).toBe("empty");
     // W11: a covers-all (stageIds: []) legacy risk does NOT explicitly name the
@@ -443,7 +447,7 @@ describe("mapLeadProducts", () => {
     });
 
     const stages = mapLeadProducts(section)[0]?.stages ?? [];
-    const dev = stages.find((s) => s.stageName === "Dev");
+    const dev = stages.find((s) => s.stageName === "Development");
     const testing = stages.find((s) => s.stageName === "Testing");
     // The named stage: raw status preserved empty, but flagged covered.
     expect(dev?.status).toBe("empty");
@@ -483,7 +487,7 @@ describe("mapLeadProducts", () => {
     });
 
     const devStage = mapLeadProducts(section)[0]?.stages.find(
-      (s) => s.stageName === "Dev",
+      (s) => s.stageName === "Development",
     );
     expect(devStage?.status).toBe("on-track");
   });
@@ -520,7 +524,7 @@ describe("mapLeadProducts", () => {
     });
 
     const devStage = mapLeadProducts(section)[0]?.stages.find(
-      (s) => s.stageName === "Dev",
+      (s) => s.stageName === "Development",
     );
     expect(devStage?.status).toBe("on-track");
   });
@@ -571,7 +575,9 @@ describe("mapLeadProducts", () => {
 
     const products = mapLeadProducts(section);
     const productB = products.find((p) => p.id === PROJECT_B);
-    const devStageB = productB?.stages.find((s) => s.stageName === "Dev");
+    const devStageB = productB?.stages.find(
+      (s) => s.stageName === "Development",
+    );
     expect(devStageB?.status).toBe("on-track");
   });
 });
@@ -983,7 +989,7 @@ describe("stageNamesMatch", () => {
 });
 
 describe("ownedStagesForProject", () => {
-  it("returns canonical pipeline name 'Dev' when DB stores 'Development'", () => {
+  it("returns the canonical 'Development' name (no short alias) for an owned stage", () => {
     const section = baseSection({
       projects: [
         {
@@ -1002,8 +1008,8 @@ describe("ownedStagesForProject", () => {
       ],
     });
     const result = ownedStagesForProject(section, PROJECT_A);
-    expect(result).toContain("Dev");
-    expect(result).not.toContain("Development");
+    expect(result).toContain("Development");
+    expect(result).not.toContain("Dev");
   });
 
   it("returns canonical names for all owned stages scoped to a project", () => {
@@ -1039,7 +1045,7 @@ describe("ownedStagesForProject", () => {
       ],
     });
     const resultA = ownedStagesForProject(section, PROJECT_A);
-    expect([...resultA].sort()).toEqual(["Dev", "Testing"]);
+    expect([...resultA].sort()).toEqual(["Development", "Testing"]);
 
     const resultB = ownedStagesForProject(section, PROJECT_B);
     expect(resultB).toEqual(["Planning"]);
@@ -1072,7 +1078,7 @@ describe("ownedStagesForProject", () => {
       ],
     });
     const result = ownedStagesForProject(section, undefined);
-    expect([...result].sort()).toEqual(["Dev", "Planning"]);
+    expect([...result].sort()).toEqual(["Development", "Planning"]);
   });
 
   it("agrees with mapLeadProducts on which stages are 'mine'", () => {

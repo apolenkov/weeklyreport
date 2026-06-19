@@ -52,7 +52,9 @@ describe("DecisionsSection meta-row — pre-extract snapshot", () => {
     );
     expect(screen.getByText("Vasily Lead")).toBeInTheDocument();
     expect(screen.getByText("Analysis")).toBeInTheDocument();
-    expect(screen.getByText("Dev")).toBeInTheDocument();
+    // stage-label-canonicalization: a stored short "Dev" heals to the canonical
+    // "Development" at render (the decision row never shows the short form).
+    expect(screen.getByText("Development")).toBeInTheDocument();
     const row = container.querySelector('[aria-label^="Decision stages:"]');
     expect(row).toMatchSnapshot();
   });

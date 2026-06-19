@@ -12,6 +12,7 @@ import {
   STATUS_CONFIG,
   STATUS_OPTIONS,
 } from "./stage-chip-config";
+import { stageShortLabel } from "./stage-tags";
 
 interface StageChipProps {
   readonly stage: StageAssignment;
@@ -220,7 +221,7 @@ export function StageChip({
             The lock sits as a small corner badge instead of a third inline
             icon. */}
         <StageIconGlyph stageName={stage.stageName} />
-        {stage.stageName}
+        {stageShortLabel(stage.stageName)}
         {isLocked && (
           <span
             className="absolute -top-1.5 -right-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full border border-[rgba(0,0,0,0.12)] bg-white"

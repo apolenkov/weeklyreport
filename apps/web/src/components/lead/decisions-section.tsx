@@ -6,7 +6,7 @@ import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { DecisionEditDialog } from "./decision-edit-dialog";
 import type { DecisionEntry, Product } from "./mock-data";
-import { splitStageNames } from "./stage-tags";
+import { canonicalStageName, splitStageNames } from "./stage-tags";
 
 interface DecisionsSectionProps {
   readonly decisions: DecisionEntry[];
@@ -170,11 +170,15 @@ export function DecisionsSection({
       ) : (
         decisions.map((decision) => {
           const mine = isMine(decision.owner, currentUserName);
-          const stageTags =
+          const stageTags = (
             decision.stageIds && decision.stageIds.length > 0
               ? decision.stageIds
               : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-                splitStageNames(decision.stageName);
+                splitStageNames(decision.stageName)
+          )
+            // stage-label-canonicalization: heal legacy short "Dev" at render,
+            // mirroring the risk row and item card.
+            .map(canonicalStageName);
           return (
             <div
               key={decision.id}
