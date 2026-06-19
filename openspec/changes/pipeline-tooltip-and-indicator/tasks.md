@@ -9,19 +9,22 @@
       <status>"; unassigned → "<Stage> — unassigned". Never "empty" for an owned stage.
 - [x] 1.3 The inert `aria-label` reveal uses the same honest lines (comma-joined).
 
-## 2. Radix tooltip in the pipeline — DEFERRED to the live visual pass
+## 2. Radix tooltip in the pipeline — DONE (2026-06-20)
 
-Honest content is multi-line NOW: `useSdlcTooltip` renders `whitespace-pre-line`
-and the indicator passes newline-joined lines. The like-for-like swap to the
-`packages/ui` Radix `Tooltip` (chips + indicator) is a no-behavior-change visual
-refactor that risks the chip popover + many pipeline tests — batched with the
-two-column dialog layout for live verification (user-agreed).
+The chips and the `+N more` indicator now reveal through the shared `packages/ui`
+Radix `Tooltip` (same component on both). The custom `useSdlcTooltip` is no longer
+used anywhere in the pipeline; it survives only for the non-pipeline `lock-badge`
+caller (out of scope, per design.md). Live-verified in the browser: dark/light
+contrast resolves (`bg-foreground`/`text-background`), the multi-line reveal
+stacks, the indicator keeps its worst-status colour, and clicking a chip still
+opens the status popover with the tooltip not fighting it.
 
-- [~] 2.1 `TooltipProvider` mount — deferred (visual pass).
-- [~] 2.2 Chip hover → Radix — deferred (visual pass).
-- [x] 2.3 Indicator reveals multi-line (one honest line per stage) via the styled
-      tooltip; Radix component swap deferred.
-- [~] 2.4 Remove `useSdlcTooltip` from the pipeline — deferred (visual pass).
+- [x] 2.1 `TooltipProvider` mounted once at the `SdlcPipeline` root (covers chips + indicator); isolated chip/pipeline tests wrap with `TooltipProvider`.
+- [x] 2.2 Chip hover/focus → Radix `Tooltip` (`TooltipTrigger asChild` on the chip
+      button; content carries the existing `by risk` / `status set` suffix).
+- [x] 2.3 Indicator reveals multi-line (one honest line per stage) — now via the
+      shared Radix `Tooltip` (extracted to `CollapsedStagesIndicator`).
+- [x] 2.4 `useSdlcTooltip` removed from the pipeline (chips + indicator).
 
 ## 3. Full-scale indicator color
 
@@ -48,11 +51,11 @@ two-column dialog layout for live verification (user-agreed).
       Mine-mode status (always `empty` for foreign stages → always grey on the live
       surface). Now derives from the same cross-author-resolved set as the reveal
       (`hiddenStagesEffectiveStatuses`), with a regression test. Commit `ba3260f0`.
-- [ ] 5.2 BLOCKER for archive — Radix swap owed (user decision 2026-06-19): the
-      `lead-pipeline-card` spec's first requirement MANDATES the shared Radix
-      `Tooltip`. The user chose to KEEP Radix required (NOT to soften the spec), so
-      this change is genuinely INCOMPLETE until §2's Radix swap lands — replace the
-      pipeline's custom `useSdlcTooltip` (chips + collapsed indicator) with the
-      `packages/ui` Radix `Tooltip`. The honest multi-line reveal + cross-author
-      indicator colour already ship; only the tooltip-component swap remains. Do NOT
-      archive this change until the swap is done.
+- [x] 5.2 Radix swap LANDED (2026-06-20) — the archive blocker is cleared. The
+      `lead-pipeline-card` spec's MANDATE for the shared Radix `Tooltip` is now met:
+      both the chips and the collapsed `+N more` indicator reveal through the
+      `packages/ui` Radix `Tooltip`; the custom `useSdlcTooltip` is gone from the
+      pipeline. Implemented sequentially (not army-parallelised — coupled chip
+      popover + ref), gated (typecheck + 1219 web tests green, per-file lint clean),
+      and live-verified in the browser (contrast, multi-line, indicator colour,
+      chip-click popover). This change is now ready to archive.

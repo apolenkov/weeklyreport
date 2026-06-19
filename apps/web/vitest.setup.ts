@@ -5,6 +5,25 @@ import { afterAll, afterEach, beforeAll } from "vitest";
 
 import { server } from "./src/test-utils/msw-handlers";
 
+// Radix UI primitives (the shared Tooltip the SDLC pipeline now uses) open a
+// Popper layer that calls ResizeObserver + pointer-capture/scroll APIs jsdom omits.
+// The DOM lib types declare these as always present, so the stubs are installed
+// through loose casts and assigned unconditionally (test environment only).
+const noop = (): void => undefined;
+
+class ResizeObserverStub {
+  observe = noop;
+  unobserve = noop;
+  disconnect = noop;
+}
+const globalForStubs = globalThis as unknown as { ResizeObserver?: unknown };
+globalForStubs.ResizeObserver ??= ResizeObserverStub;
+
+const elementProto = Element.prototype as unknown as Record<string, unknown>;
+elementProto.hasPointerCapture = () => false;
+elementProto.releasePointerCapture = noop;
+elementProto.scrollIntoView = noop;
+
 beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
 afterEach(() => {
   server.resetHandlers();
