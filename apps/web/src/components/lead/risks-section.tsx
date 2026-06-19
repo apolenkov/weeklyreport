@@ -153,7 +153,7 @@ export function RisksSection({
             risk.stageIds && risk.stageIds.length > 0
               ? risk.stageIds.map(canonicalStageName)
               : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-                splitStageNames(risk.stageName);
+                splitStageNames(risk.stageName).map(canonicalStageName);
           // require-risk-stage (D2): a risk with no stages is an anomaly
           // (legacy row), never an implicit "all stages" scope — render the
           // loud "No stage set" warning chip instead of disguising it.

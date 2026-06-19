@@ -62,8 +62,11 @@ export function stageNameMatches(
   stageName: string | null | undefined,
   stage: string,
 ): boolean {
-  const tags = splitStageNames(stageName);
-  return tags.length === 0 || tags.includes(stage);
+  // stage-label-canonicalization 1.3: the legacy CSV path must treat a stored
+  // "Dev" as "Development", so canonicalize both the split tags and the target.
+  const target = canonicalStageName(stage);
+  const tags = splitStageNames(stageName).map(canonicalStageName);
+  return tags.length === 0 || tags.includes(target);
 }
 
 /**
