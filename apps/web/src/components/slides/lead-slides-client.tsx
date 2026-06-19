@@ -281,7 +281,10 @@ export function LeadSlidesClient({
   if (scope === "product") {
     return (
       <div ref={deckRef}>
-        <article className="slide-frame rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+        {/* lead-demo-feedback #88: match the own-scope LeadSlideArticle inset
+            (p-3) so toggling Summary↔Product never shifts the hero (the prior
+            p-6 put the hero 12px lower/right than the own-scope path). */}
+        <article className="slide-frame rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-3 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
           {sectionModel ? (
             <LeadSlideHero
               slide={sectionModel}

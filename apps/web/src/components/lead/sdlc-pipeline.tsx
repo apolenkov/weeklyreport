@@ -3,9 +3,10 @@
 import type { CSSProperties } from "react";
 
 import { trafficToStageStatus } from "../../lib/mappers/traffic-light";
+import { useSdlcTooltip } from "../ui/sdlc-tooltip";
 import type { Product, StageAssignment, StageStatus } from "./mock-data";
 import { StageChip } from "./stage-chip";
-import { STAGE_CHIP_BOX_HEIGHT } from "./stage-chip-config";
+import { STAGE_CHIP_BOX_HEIGHT, STATUS_CONFIG } from "./stage-chip-config";
 
 export interface CrossAuthorEntry {
   projectId: string;
@@ -112,6 +113,30 @@ function worstStatusOf(values: readonly StageStatus[]): StageStatus {
   );
 }
 
+// lead-demo-feedback #90: the collapsed `+N more` indicator takes the worst
+// hidden stage's status colour, but ONLY when that worst is blocked/at-risk.
+// An on-track/empty hidden set stays neutral grey — a green "+N" would wrongly
+// read as "the hidden stages are fine", which is noise, not the signal the
+// reviewer asked for. Neutral matches the indicator's prior look.
+const NEUTRAL_INDICATOR_COLORS = {
+  border: "var(--color-border)",
+  text: "var(--color-muted-foreground)",
+} as const;
+
+function collapsedIndicatorColors(hidden: readonly StageAssignment[]): {
+  border: string;
+  text: string;
+} {
+  const worst = worstStatusOf(hidden.map((s) => s.status));
+  if (worst === "blocked" || worst === "at-risk") {
+    return {
+      border: STATUS_CONFIG[worst].border,
+      text: STATUS_CONFIG[worst].text,
+    };
+  }
+  return NEUTRAL_INDICATOR_COLORS;
+}
+
 function worstOwnStatus(stages: StageAssignment[]): StageStatus {
   return worstStatusOf(
     stages.filter((s) => s.ownership === "mine").map((s) => s.status),
@@ -196,6 +221,11 @@ export function SdlcPipeline({
   crossAuthors = [],
   visibilityMode = "everyone",
 }: SdlcPipelineProps) {
+  // lead-demo-feedback #89: the collapsed `+N more` indicator drives the same
+  // styled tooltip the chips use (provider already wraps this surface via the
+  // lead-form). No-op when no provider is mounted (unit tests in isolation).
+  const tooltip = useSdlcTooltip();
+
   function handleStatusChange(
     productId: string,
     stageName: string,
@@ -347,23 +377,41 @@ export function SdlcPipeline({
                     </div>
                   );
                 })}
-                {/* Affordance 2: inert collapsed-stage indicator. Shows only in
-                    Mine mode (hiddenStages is empty otherwise) and only when
-                    the lead owns at least one stage (this grid branch). Hover
-                    (title) and screen readers (aria-label) reveal each hidden
-                    stage's name and status; it never re-renders the chips. */}
-                {hiddenStages.length > 0 && (
-                  <span
-                    role="img"
-                    data-testid="collapsed-stages-indicator"
-                    title={hiddenStagesRevealText(hiddenStages)}
-                    aria-label={`${HIDDEN_STAGES_ARIA_PREFIX} ${hiddenStagesRevealText(hiddenStages)}`}
-                    className="inline-flex cursor-default items-center rounded-[var(--radius-pill)] border border-dashed border-[var(--color-border)] px-2 text-[12px] font-medium text-[var(--color-muted-foreground)]"
-                    style={{ height: STAGE_CHIP_BOX_HEIGHT }}
-                  >
-                    {collapsedStagesIndicatorLabel(hiddenStages.length)}
-                  </span>
-                )}
+                {/* Affordance 2 (+ #89/#90): inert collapsed-stage indicator.
+                    Shows only in Mine mode (hiddenStages is empty otherwise) and
+                    only when the lead owns at least one stage (this grid branch).
+                    #89: hover/focus drives the SAME styled tooltip the chips use
+                    (the native `title` is gone); the aria-label still reveals the
+                    hidden stages to screen readers. #90: border+text take the
+                    worst hidden status colour when blocked/at-risk. It never
+                    re-renders the chips, nor touches health/completeness. */}
+                {hiddenStages.length > 0 &&
+                  (() => {
+                    const reveal = hiddenStagesRevealText(hiddenStages);
+                    const colors = collapsedIndicatorColors(hiddenStages);
+                    return (
+                      <span
+                        role="img"
+                        data-testid="collapsed-stages-indicator"
+                        aria-label={`${HIDDEN_STAGES_ARIA_PREFIX} ${reveal}`}
+                        className="inline-flex cursor-default items-center rounded-[var(--radius-pill)] border border-dashed px-2 text-[12px] font-medium"
+                        style={{
+                          height: STAGE_CHIP_BOX_HEIGHT,
+                          borderColor: colors.border,
+                          color: colors.text,
+                        }}
+                        onMouseEnter={(e) =>
+                          tooltip.show(
+                            e.currentTarget.getBoundingClientRect(),
+                            reveal,
+                          )
+                        }
+                        onMouseLeave={() => tooltip.hide()}
+                      >
+                        {collapsedStagesIndicatorLabel(hiddenStages.length)}
+                      </span>
+                    );
+                  })()}
               </div>
             )}
           </div>

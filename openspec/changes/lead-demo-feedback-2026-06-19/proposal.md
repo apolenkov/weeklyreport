@@ -44,34 +44,45 @@ stage chips beside it use the instant styled `useSdlcTooltip` portal. **Change:*
 the indicator reveals the hidden stages' names+statuses through the same
 `useSdlcTooltip` so the hover reads identically to the chips.
 
-### 3. Pipeline status legibility — ASSUMPTION / NEEDS-CONFIRM
+### 3. Pipeline status legibility — CONFIRMED (narrow: color the `+N more` indicator)
 
 Reviewer: "подсвечивать, что заполнено, что не заполнено, когда риск, когда
 блокер, когда зелёный, когда не заполнено полностью". Inventory of what ALREADY
 exists: stage chips color by status (solid = explicitly set, dashed = covered by
 own risk, dashed+pulse = empty); the product card has a health left-stripe and an
-`N/M Your stages` completeness counter. **Named gaps (assumption):** (a) the
-`+N more` indicator is neutral grey — it does not reveal that a hidden stage is
-blocked/at-risk; (b) "filled vs empty at a glance" may not be legible enough on
-the visible chips. **NEEDS-CONFIRM:** is the ask (a) color the `+N more`
-indicator by the worst hidden status (small, folds into item 2), or (b) a broader
-filled/empty legibility pass on the chips? No firm requirement until confirmed.
+`N/M Your stages` completeness counter. The one named gap: the `+N more`
+collapsed indicator is neutral grey — it does not reveal that a hidden stage is
+blocked/at-risk. **Reviewer decision (2026-06-19): the NARROW reading** — color
+the `+N more` indicator by the worst hidden status; leave the existing
+(already status-coloured) chip legibility untouched. This folds into item 2 (same
+element). **Change:** the indicator's border and text take the worst hidden
+stage's status colour when that worst is blocked or at-risk; otherwise it stays
+neutral grey. Green (`on-track`) and `empty` do NOT recolour it — a green "+N"
+would imply the hidden stages are "good", which is noise, not the signal asked
+for.
 
-### 4. ComingSoon tooltip consistency — NEEDS-CONFIRM (cause identified)
+### 4. ComingSoon tooltip consistency — CONFIRMED (normalize the badge anchor)
 
 Reviewer: the Agent-review ComingSoon tooltip "отличается" from other controls;
-make Version "по аналогии". Finding: ALL ComingSoon controls (nav theme/language,
-lead version/pdf-export, report-toolbar agent-review) already share the identical
-`ComingSoonBadge role="tooltip"` group-hover affordance (a guard test pins this).
-The likely real difference: `AgentReviewComingSoon` is the ONLY one with a text
-label (others are icon-only `h-8 w-8`), so its wider button + `absolute right-0`
-badge anchor make the same badge sit at a different offset. Separately, two
-tooltip _languages_ coexist app-wide — the dark `sdlc-tooltip` (chips, and item 2)
-vs the amber `ComingSoonBadge` — which the reviewer may want reconciled.
-**NEEDS-CONFIRM:** the exact control/pixel the reviewer means, and whether the
-dark-vs-amber duality is in scope. No firm requirement until confirmed.
+make Version "по аналогии". Finding: ALL ComingSoon tooltip controls (nav
+theme/language, lead version/pdf-export, report-toolbar agent-review, admin
+holidays) already share the identical `ComingSoonBadge role="tooltip"` group-hover
+affordance (a guard test pins the amber tokens). The real difference:
+`AgentReviewComingSoon` is the ONLY one with a text label (others are icon-only),
+so its wider button + `absolute right-0` badge anchor make the same badge sit at a
+different horizontal offset. **Reviewer decision (2026-06-19): normalize the
+anchor** — centre the badge under the control regardless of the control's width,
+so every ComingSoon tooltip reads identically. The dark-`sdlc-tooltip` vs
+amber-`ComingSoonBadge` duality is a larger app-wide call and is explicitly OUT of
+scope for this batch. **Change:** the six tooltip-anchored ComingSoon controls
+share ONE anchor class (extracted to a single web-side const) that centres the
+badge (`left-1/2 -translate-x-1/2`) instead of right-aligning it.
 
 ## Out of scope
 
-- Implementation of items 3 and 4 until the reviewer confirms their scope.
+- The broader filled-vs-empty chip legibility pass (item 3 narrow reading chosen).
+- Reconciling the dark `sdlc-tooltip` vs amber `ComingSoonBadge` tooltip languages
+  (item 4) — an app-wide decision, not implied by this feedback.
+- The three inline (non-tooltip) `ComingSoonBadge` usages in the admin
+  integrations sub-tab — they are static row badges, not hover anchors.
 - The flagship affordance revert (already committed on its own branch).
