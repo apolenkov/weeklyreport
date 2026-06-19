@@ -86,6 +86,35 @@ describe("ComingSoonBadge — single centred tooltip anchor (#91)", () => {
   });
 });
 
+describe("#91 — all six tooltip controls share the centred anchor (source scan)", () => {
+  // The render test above reaches only the 3 exported controls. The other 3
+  // (nav theme/language, admin holidays) are internal functions needing
+  // providers to render, so a filesystem scan guards them: each tooltip
+  // control's source MUST consume the shared const and carry no `right-0`
+  // anchor. Without this, hard-coding `right-0` onto e.g. the nav theme badge
+  // (tailwind-merge overriding the shared anchor) would pass every other test.
+  // This test file lives in apps/web/src/components, so its own dir is the
+  // root the control paths below are relative to.
+  const componentsRoot = path.dirname(fileURLToPath(import.meta.url));
+  const TOOLTIP_CONTROL_FILES = [
+    "report-shell/agent-review-coming-soon.tsx",
+    "lead/version-coming-soon.tsx",
+    "lead/pdf-export-coming-soon.tsx",
+    "navigation/nav-bar.tsx",
+    "admin/settings-tab.tsx",
+  ];
+
+  it("every tooltip control source consumes the shared const, none right-aligns", () => {
+    for (const rel of TOOLTIP_CONTROL_FILES) {
+      const source = readFileSync(path.join(componentsRoot, rel), "utf8");
+      expect(source).toContain("COMING_SOON_TOOLTIP_ANCHOR");
+      // A bespoke `right-0` anchor on a ComingSoon tooltip is the exact bug
+      // #91 fixes; the shared const centres instead.
+      expect(source).not.toContain("absolute right-0");
+    }
+  });
+});
+
 describe("deferred-feature-pattern — no bespoke 'Coming Soon' pill", () => {
   // The literal "Coming Soon" may appear ONLY as: the primitive's rendered
   // text, a native title="Coming Soon" attribute, or a comment. Any other

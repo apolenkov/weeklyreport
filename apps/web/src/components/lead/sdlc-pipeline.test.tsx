@@ -703,6 +703,9 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     );
     const indicator = container.querySelector(COLLAPSED_INDICATOR);
     expect(indicator).not.toBeNull();
+    // #89: the indicator stays inert — role="img", never a keyboard tab stop.
+    expect(indicator?.getAttribute("role")).toBe("img");
+    expect(indicator?.getAttribute("tabindex")).toBeNull();
     // Visible count of collapsed stages (Testing + DevOps hidden).
     expect(indicator?.textContent).toContain("2");
     // #89: the native `title` is gone; the non-visual aria-label is the
@@ -749,6 +752,12 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
       "var(--color-chip-at-risk-border)",
     );
     expect(indicator?.style.color).toBe("var(--color-chip-at-risk-text)");
+    // #90 MUST NOT: the indicator colour does not bleed into product health.
+    // Own Dev is on-track and there is no foreign severity, so the left stripe
+    // stays on-track even though the indicator went at-risk.
+    expect(getFirstCardStyle(container)).toContain(
+      "var(--color-chip-on-track-border)",
+    );
   });
 
   it("#90: an all-empty/on-track hidden set leaves the indicator neutral", () => {
