@@ -1,3 +1,4 @@
+import type * as React from "react";
 import {
   Body,
   Button,
@@ -9,14 +10,13 @@ import {
   Section,
   Tailwind,
   Text,
-} from "@react-email/components";
-import type * as React from "react";
+} from "react-email";
 
 /**
  * NOTIF-01/03 (Phase 28-03): T-24h deadline reminder email.
  *
  * react-email + <Tailwind> per CONTEXT.md decision lock (MJML rejected).
- * Renders to HTML via @react-email/render; the matching plaintext fallback
+ * Renders to HTML via react-email's render; the matching plaintext fallback
  * lives next to the component so multipart emails carry both halves —
  * corporate spam filters score multipart > HTML-only.
  */

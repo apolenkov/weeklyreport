@@ -8,10 +8,10 @@
  *  - snapshot med:  same lateLeads renders to identical HTML twice
  *
  * No jsdom / RTL — the api package runs in Node; html is obtained via
- * @react-email/render which is already a production dependency.
+ * react-email's render, already a production dependency.
  */
-import { render } from "@react-email/render";
 import * as React from "react";
+import { render } from "react-email";
 import { describe, expect, it } from "vitest";
 
 import {
