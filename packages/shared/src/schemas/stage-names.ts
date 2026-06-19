@@ -7,12 +7,27 @@ export type StageName =
   | "DevOps"
   | "Support";
 
+/**
+ * Canonical per-stage constants — the single source for SDLC stage names.
+ * Reference these (e.g. `STAGE.DEVELOPMENT`) instead of bare string literals in
+ * logic so the names live in exactly one place. This file is that one place.
+ */
+export const STAGE = {
+  PLANNING: "Planning",
+  ANALYSIS: "Analysis",
+  DESIGN: "Design",
+  DEVELOPMENT: "Development",
+  TESTING: "Testing",
+  DEVOPS: "DevOps",
+  SUPPORT: "Support",
+} as const satisfies Record<string, StageName>;
+
 export const STAGE_NAMES: readonly StageName[] = [
-  "Planning",
-  "Analysis",
-  "Design",
-  "Development",
-  "Testing",
-  "DevOps",
-  "Support",
+  STAGE.PLANNING,
+  STAGE.ANALYSIS,
+  STAGE.DESIGN,
+  STAGE.DEVELOPMENT,
+  STAGE.TESTING,
+  STAGE.DEVOPS,
+  STAGE.SUPPORT,
 ] as const;

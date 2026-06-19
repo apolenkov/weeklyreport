@@ -4,7 +4,7 @@ import { type CSSProperties, useEffect, useRef, useState } from "react";
 
 import { LockBadge } from "../report-shell/lock-badge";
 import type { KanbanItem } from "./mock-data";
-import { splitStageNames } from "./stage-tags";
+import { canonicalStageName, splitStageNames } from "./stage-tags";
 
 interface ItemCardProps {
   readonly item: KanbanItem;
@@ -128,11 +128,16 @@ export function ItemCard({
   const isBlocked = item.status === "blocked";
   const isPlanned = item.status === "planned";
   const locked = readOnly || item.foreign === true;
-  const stageTags =
+  const stageTags = (
     item.stageIds && item.stageIds.length > 0
       ? item.stageIds
       : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-        splitStageNames(item.stageName);
+        splitStageNames(item.stageName)
+  )
+    // stage-label-canonicalization: heal a legacy short "Dev" at render so the
+    // card reads the canonical "Development" alongside seeded rows; the pipeline
+    // chip keeps its own short label.
+    .map(canonicalStageName);
   // enforce-item-decision-stage-schema: a stage-less item is a legacy anomaly,
   // never an implicit "all stages" scope — render the loud "No stage set"
   // warning, mirroring the risk row.

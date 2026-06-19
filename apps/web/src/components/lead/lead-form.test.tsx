@@ -293,8 +293,9 @@ describe("LeadForm mutation wiring", () => {
     const editableChip = screen.getAllByRole("button").find((b) => {
       const label = b.getAttribute("aria-label") ?? "";
       return (
-        /^(Planning|Analysis|Design|Dev|Testing|DevOps|Support):/.test(label) &&
-        b.getAttribute("aria-disabled") !== "true"
+        /^(Planning|Analysis|Design|Development|Testing|DevOps|Support):/.test(
+          label,
+        ) && b.getAttribute("aria-disabled") !== "true"
       );
     }) as HTMLButtonElement | undefined;
     expect(editableChip).toBeDefined();
