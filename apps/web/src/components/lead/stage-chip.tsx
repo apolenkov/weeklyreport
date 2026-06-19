@@ -1,10 +1,14 @@
 "use client";
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@customreport/ui/components/ui/tooltip";
 import { Lock } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { useSdlcTooltip } from "../ui/sdlc-tooltip";
 import type { StageAssignment, StageStatus } from "./mock-data";
 import {
   STAGE_CHIP_BOX_HEIGHT,
@@ -56,7 +60,6 @@ export function StageChip({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const portalRef = useRef<HTMLDivElement>(null);
-  const tooltip = useSdlcTooltip();
   const config = STATUS_CONFIG[stage.status];
   const isEditable = stage.ownership === "mine" && !readOnly;
   const isLocked = stage.ownership === "locked";
@@ -180,57 +183,48 @@ export function StageChip({
         // dashed border must never read as unexplained to a sighted hover user.
         `${baseTooltip}${coverageSuffix}`;
 
-  function handleEnter() {
-    const el = buttonRef.current;
-    if (!el) return;
-    tooltip.show(el.getBoundingClientRect(), title);
-  }
-
-  function handleLeave() {
-    tooltip.hide();
-  }
-
   return (
     <div
       className="flex flex-col items-center gap-1 min-w-[90px]"
       ref={dropdownRef}
     >
-      <button
-        ref={buttonRef}
-        type="button"
-        className={chipClasses}
-        style={{
-          height: STAGE_CHIP_BOX_HEIGHT,
-          background: config.bg,
-          color: config.text,
-          border: borderStyle,
-        }}
-        aria-label={ariaLabel}
-        data-coverage={coveredByRisk ? "risk" : undefined}
-        onClick={handleChipClick}
-        onMouseEnter={handleEnter}
-        onMouseLeave={handleLeave}
-        onFocus={handleEnter}
-        onBlur={handleLeave}
-        aria-disabled={!isEditable}
-        tabIndex={isEditable || isLocked ? 0 : -1}
-      >
-        {/* User feedback 2026-06-10: no status glyph on the chip face — the
-            stage icon + label carry the status through color alone (the
-            popover/tooltip/aria-label still name the status textually).
-            The lock sits as a small corner badge instead of a third inline
-            icon. */}
-        <StageIconGlyph stageName={stage.stageName} />
-        {stageShortLabel(stage.stageName)}
-        {isLocked && (
-          <span
-            className="absolute -top-1.5 -right-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full border border-[rgba(0,0,0,0.12)] bg-white"
-            aria-hidden="true"
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            ref={buttonRef}
+            type="button"
+            className={chipClasses}
+            style={{
+              height: STAGE_CHIP_BOX_HEIGHT,
+              background: config.bg,
+              color: config.text,
+              border: borderStyle,
+            }}
+            aria-label={ariaLabel}
+            data-coverage={coveredByRisk ? "risk" : undefined}
+            onClick={handleChipClick}
+            aria-disabled={!isEditable}
+            tabIndex={isEditable || isLocked ? 0 : -1}
           >
-            <Lock className="h-[9px] w-[9px] text-[var(--color-muted-foreground)]" />
-          </span>
-        )}
-      </button>
+            {/* User feedback 2026-06-10: no status glyph on the chip face — the
+                stage icon + label carry the status through color alone (the
+                popover/tooltip/aria-label still name the status textually).
+                The lock sits as a small corner badge instead of a third inline
+                icon. */}
+            <StageIconGlyph stageName={stage.stageName} />
+            {stageShortLabel(stage.stageName)}
+            {isLocked && (
+              <span
+                className="absolute -top-1.5 -right-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full border border-[rgba(0,0,0,0.12)] bg-white"
+                aria-hidden="true"
+              >
+                <Lock className="h-[9px] w-[9px] text-[var(--color-muted-foreground)]" />
+              </span>
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{title}</TooltipContent>
+      </Tooltip>
 
       {/* Assignee label */}
       <span

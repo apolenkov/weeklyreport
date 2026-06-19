@@ -12,11 +12,19 @@
  */
 import "@testing-library/jest-dom/vitest";
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { TooltipProvider } from "@customreport/ui/components/ui/tooltip";
+import { fireEvent, render as rtlRender, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
-import { SdlcTooltipProvider } from "../ui/sdlc-tooltip";
 import { StageChip } from "./stage-chip";
+
+// StageChip now reveals its tooltip through the shared Radix Tooltip, which
+// requires a TooltipProvider ancestor (SdlcPipeline mounts one in the app).
+// Wrap every isolated chip render in the provider so the Radix Root resolves.
+function render(ui: ReactElement) {
+  return rtlRender(ui, { wrapper: TooltipProvider });
+}
 
 const BASE_LOCKED = {
   stageName: "DevOps",
@@ -214,24 +222,23 @@ describe("StageChip — covered-by-risk vs status-set distinction (W11 3.9)", ()
     ).toBeInTheDocument();
   });
 
-  it("covered chip with an explicit tooltip still surfaces 'by risk' on focus", () => {
+  it("covered chip with an explicit tooltip still surfaces 'by risk' on focus", async () => {
     // A pre-set tooltip must NOT swallow the coverage cue: a sighted hover
-    // user gets the dashed border AND the "by risk" explanation.
+    // user gets the dashed border AND the "by risk" explanation, now revealed
+    // through the shared Radix tooltip (opened here via keyboard focus).
     render(
-      <SdlcTooltipProvider>
-        <StageChip
-          stage={{
-            ...BASE_MINE,
-            status: "blocked",
-            coveredByOwnRisk: true,
-            tooltip: "Design · custom note",
-          }}
-          rawStatus="empty"
-        />
-      </SdlcTooltipProvider>,
+      <StageChip
+        stage={{
+          ...BASE_MINE,
+          status: "blocked",
+          coveredByOwnRisk: true,
+          tooltip: "Design · custom note",
+        }}
+        rawStatus="empty"
+      />,
     );
     fireEvent.focus(screen.getByRole("button"));
-    const tip = screen.getByTestId("sdlc-tooltip");
+    const tip = await screen.findByRole("tooltip");
     expect(tip).toHaveTextContent("Design · custom note by risk");
   });
 });
@@ -255,11 +262,7 @@ describe("StageChip — unassigned stage (D4 neutral copy)", () => {
   });
 
   it("unassigned chip does not show 'Contact admin'", () => {
-    render(
-      <SdlcTooltipProvider>
-        <StageChip stage={BASE_UNASSIGNED} />
-      </SdlcTooltipProvider>,
-    );
+    render(<StageChip stage={BASE_UNASSIGNED} />);
     fireEvent.focus(screen.getByRole("button"));
     expect(screen.queryByText(/Contact admin/i)).not.toBeInTheDocument();
   });

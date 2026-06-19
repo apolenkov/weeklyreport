@@ -10,7 +10,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { SdlcTooltipProvider } from "../ui/sdlc-tooltip";
 import type { Product } from "./mock-data";
 import { getProductCardStyle, SdlcPipeline } from "./sdlc-pipeline";
 
@@ -710,25 +709,26 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     expect(renderedStageNames(container)).toEqual(["Dev"]);
   });
 
-  it("#89: hovering +N more drives the shared styled tooltip; leaving hides it", () => {
+  it("#89: hovering +N more reveals the hidden stages through the shared Radix tooltip", async () => {
     render(
-      <SdlcTooltipProvider>
-        <SdlcPipeline
-          products={[PRODUCT_OWN_FOREIGN_VACANT]}
-          readOnly={false}
-          visibilityMode="mine"
-        />
-      </SdlcTooltipProvider>,
+      <SdlcPipeline
+        products={[PRODUCT_OWN_FOREIGN_VACANT]}
+        readOnly={false}
+        visibilityMode="mine"
+      />,
     );
     // No tooltip until hover.
-    expect(screen.queryByTestId("sdlc-tooltip")).toBeNull();
+    expect(screen.queryByRole("tooltip")).toBeNull();
     const indicator = screen.getByTestId("collapsed-stages-indicator");
-    fireEvent.mouseEnter(indicator);
-    const tip = screen.getByTestId("sdlc-tooltip");
-    // Multi-line, one honest line per hidden stage.
-    expect(tip.textContent).toBe("Testing — OL: at-risk\nDevOps — unassigned");
-    fireEvent.mouseLeave(indicator);
-    expect(screen.queryByTestId("sdlc-tooltip")).toBeNull();
+    // The indicator is inert (not a keyboard tab stop), so the Radix tooltip
+    // opens on pointer hover rather than focus.
+    fireEvent.pointerEnter(indicator);
+    fireEvent.pointerMove(indicator);
+    const tip = await screen.findByRole("tooltip");
+    // One honest line per hidden stage — owned-but-unstatused names its owner,
+    // a vacant stage reads "unassigned" — revealed via the shared Radix tooltip.
+    expect(tip).toHaveTextContent("Testing — OL: at-risk");
+    expect(tip).toHaveTextContent("DevOps — unassigned");
   });
 
   it("#90: the +N more indicator takes the worst hidden status colour (at-risk)", () => {

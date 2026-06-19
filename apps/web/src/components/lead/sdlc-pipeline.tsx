@@ -1,10 +1,11 @@
 "use client";
 
+import { TooltipProvider } from "@customreport/ui/components/ui/tooltip";
 import type { CSSProperties } from "react";
 
 import { trafficToStageStatus } from "../../lib/mappers/traffic-light";
-import { useSdlcTooltip } from "../ui/sdlc-tooltip";
 import type { Product, StageAssignment, StageStatus } from "./mock-data";
+import { CollapsedStagesIndicator } from "./sdlc-collapsed-indicator";
 import {
   foreignOwnersForProduct,
   hiddenStagesEffectiveStatuses,
@@ -64,18 +65,6 @@ const NO_OWN_STAGES_NOTE = "No stages assigned to you";
 // completeness counter as the lead's OWN stages so "N/M" doesn't read as the
 // whole pipeline. Pure label — the count (computeCompleteness) is unchanged.
 const OWN_STAGES_LABEL = "Your stages";
-
-// lead-pipeline-mine-reveal-and-own-stage-label (affordance 2): in Mine mode
-// the filter hides foreign-owned and vacant chips. A small inert indicator near
-// the grid reports how many stages are collapsed; its `title` (hover) and
-// `aria-label` (non-visual) reveal each hidden stage's name and status,
-// mirroring the inert ComingSoon control pattern in nav-bar.tsx. It never
-// un-hides the chips, nor touches health or completeness.
-const HIDDEN_STAGES_ARIA_PREFIX = "Hidden stages —";
-
-function collapsedStagesIndicatorLabel(count: number): string {
-  return `+${count} more`;
-}
 
 // apply-status-palette (memo T5 opt 3 + user feedback 2026-06-10): every
 // product card shares ONE body — neutral card surface, neutral ring — and
@@ -224,11 +213,6 @@ export function SdlcPipeline({
   crossAuthors = [],
   visibilityMode = "everyone",
 }: SdlcPipelineProps) {
-  // lead-demo-feedback #89: the collapsed `+N more` indicator drives the same
-  // styled tooltip the chips use (provider already wraps this surface via the
-  // lead-form). No-op when no provider is mounted (unit tests in isolation).
-  const tooltip = useSdlcTooltip();
-
   function handleStatusChange(
     productId: string,
     stageName: string,
@@ -239,187 +223,178 @@ export function SdlcPipeline({
   }
 
   return (
-    <div className="space-y-4">
-      {products.map((product) => {
-        // Completeness reads the RAW (pre-floor) product so a risk-derived
-        // severity floor never inflates the lead's own-input counter. The same
-        // raw product also feeds each chip its pre-floor status (W11 3.9), so a
-        // chip floored by the lead's own risk reads "by risk" rather than
-        // "status set".
-        const rawProduct =
-          rawProducts?.find((p) => p.id === product.id) ?? product;
-        const completeness = computeCompleteness(rawProduct);
-        // rethink-pipeline-state-vs-completeness: the completeness ring shows
-        // only in edit mode while the lead's own input is unfinished. In
-        // read-only mode there is nothing to finish, so it never renders.
-        const showCompletenessRing =
-          !readOnly && completeness.total > 0 && !completeness.complete;
-        // lead-mine-hide-unowned-stages: in Mine only the lead's own chips
-        // render; foreign-owned and vacant chips are hidden (not greyed).
-        // Everyone renders the full grid. Health and completeness above read
-        // the FULL `product`/`rawProduct`, so this filter never moves them.
-        const visibleStages =
-          visibilityMode === "mine"
-            ? product.stages.filter((s) => s.ownership === "mine")
-            : product.stages;
-        const showNoOwnStagesNote =
-          visibilityMode === "mine" && visibleStages.length === 0;
-        // Affordance 2: the stages the Mine filter collapsed (complement of
-        // visibleStages). Empty outside Mine mode so the indicator never shows
-        // in Everyone. Read from the full `product.stages`, so health and
-        // completeness (computed above from the full product) are untouched.
-        const hiddenStages =
-          visibilityMode === "mine"
-            ? product.stages.filter((s) => s.ownership !== "mine")
-            : [];
-        // pipeline-tooltip-and-indicator: the +N more reveal AND its colour both
-        // derive from the SAME cross-author-resolved hidden stages, so they never
-        // diverge (a hidden foreign blocked stage colours red, not grey).
-        const foreignOwners = foreignOwnersForProduct(product.id, crossAuthors);
-        const hiddenReveal = hiddenStagesRevealLines(
-          hiddenStages,
-          foreignOwners,
-        );
-        const hiddenColors = collapsedIndicatorColors(
-          hiddenStagesEffectiveStatuses(hiddenStages, foreignOwners),
-        );
-        return (
-          <div
-            key={product.id}
-            className="rounded-xl p-4"
-            style={getProductCardStyle(
-              productHealthStatus(product, crossAuthors),
-            )}
-          >
-            {/* Product header — SDLC-1 (Phase 33-04): replace plain riskSummary
+    <TooltipProvider>
+      <div className="space-y-4">
+        {products.map((product) => {
+          // Completeness reads the RAW (pre-floor) product so a risk-derived
+          // severity floor never inflates the lead's own-input counter. The same
+          // raw product also feeds each chip its pre-floor status (W11 3.9), so a
+          // chip floored by the lead's own risk reads "by risk" rather than
+          // "status set".
+          const rawProduct =
+            rawProducts?.find((p) => p.id === product.id) ?? product;
+          const completeness = computeCompleteness(rawProduct);
+          // rethink-pipeline-state-vs-completeness: the completeness ring shows
+          // only in edit mode while the lead's own input is unfinished. In
+          // read-only mode there is nothing to finish, so it never renders.
+          const showCompletenessRing =
+            !readOnly && completeness.total > 0 && !completeness.complete;
+          // lead-mine-hide-unowned-stages: in Mine only the lead's own chips
+          // render; foreign-owned and vacant chips are hidden (not greyed).
+          // Everyone renders the full grid. Health and completeness above read
+          // the FULL `product`/`rawProduct`, so this filter never moves them.
+          const visibleStages =
+            visibilityMode === "mine"
+              ? product.stages.filter((s) => s.ownership === "mine")
+              : product.stages;
+          const showNoOwnStagesNote =
+            visibilityMode === "mine" && visibleStages.length === 0;
+          // Affordance 2: the stages the Mine filter collapsed (complement of
+          // visibleStages). Empty outside Mine mode so the indicator never shows
+          // in Everyone. Read from the full `product.stages`, so health and
+          // completeness (computed above from the full product) are untouched.
+          const hiddenStages =
+            visibilityMode === "mine"
+              ? product.stages.filter((s) => s.ownership !== "mine")
+              : [];
+          // pipeline-tooltip-and-indicator: the +N more reveal AND its colour both
+          // derive from the SAME cross-author-resolved hidden stages, so they never
+          // diverge (a hidden foreign blocked stage colours red, not grey).
+          const foreignOwners = foreignOwnersForProduct(
+            product.id,
+            crossAuthors,
+          );
+          const hiddenReveal = hiddenStagesRevealLines(
+            hiddenStages,
+            foreignOwners,
+          );
+          const hiddenColors = collapsedIndicatorColors(
+            hiddenStagesEffectiveStatuses(hiddenStages, foreignOwners),
+          );
+          return (
+            <div
+              key={product.id}
+              className="rounded-xl p-4"
+              style={getProductCardStyle(
+                productHealthStatus(product, crossAuthors),
+              )}
+            >
+              {/* Product header — SDLC-1 (Phase 33-04): replace plain riskSummary
               text with an inline-flex pill featuring a *pulsing* red dot
               (`@keyframes risk-pulse` defined in globals.css). Mockup s2
               uses this to draw the eye to active blockers without users
               having to read the label. */}
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]">
-                  {product.name}
-                </span>
-                {product.riskSummary && (
-                  <span
-                    className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[rgba(200,32,20,0.08)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)]"
-                    title={product.riskSummary}
-                  >
-                    <span
-                      className="inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[var(--color-destructive)]"
-                      style={{
-                        animation: "risk-pulse 1.6s ease-in-out infinite",
-                      }}
-                      aria-hidden="true"
-                    />
-                    {product.riskSummary}
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]">
+                    {product.name}
                   </span>
-                )}
-              </div>
-              {/* rethink-pipeline-state-vs-completeness (D2): own-input
+                  {product.riskSummary && (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[rgba(200,32,20,0.08)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)]"
+                      title={product.riskSummary}
+                    >
+                      <span
+                        className="inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[var(--color-destructive)]"
+                        style={{
+                          animation: "risk-pulse 1.6s ease-in-out infinite",
+                        }}
+                        aria-hidden="true"
+                      />
+                      {product.riskSummary}
+                    </span>
+                  )}
+                </div>
+                {/* rethink-pipeline-state-vs-completeness (D2): own-input
                 completeness affordance — RIGHT side, never the health hue.
                 A dashed/dotted outline ring reads "unfinished sketch" while
                 incomplete; an "N/M stages" counter pill gives the exact
                 state. Neutral foreground only — health lives on the left
                 edge. Read-only mode has nothing to finish, so it is hidden. */}
-              {!readOnly && completeness.total > 0 && (
-                <span
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-[var(--color-muted-foreground)]"
-                  style={{
-                    borderRadius: COMPLETENESS_RING_RADIUS,
-                    border: showCompletenessRing
-                      ? `${COMPLETENESS_RING_WIDTH} ${COMPLETENESS_RING_STYLE} var(--color-muted-foreground)`
-                      : `${COMPLETENESS_RING_WIDTH} solid transparent`,
-                  }}
-                  title={
-                    completeness.complete
-                      ? "Your input is complete"
-                      : "Set a status on every stage you own to finish your input"
-                  }
-                  data-complete={completeness.complete}
-                >
-                  {completeness.filled}/{completeness.total} {OWN_STAGES_LABEL}
-                </span>
-              )}
-            </div>
-
-            {/* Stages row. lead-mine-hide-unowned-stages: a product on which the
-              lead owns no stage still renders (with its honest health above)
-              and shows a brief note instead of an empty grid. */}
-            {showNoOwnStagesNote ? (
-              <p className="pb-1 text-[13px] italic text-[var(--color-muted-foreground)]">
-                {NO_OWN_STAGES_NOTE}
-              </p>
-            ) : (
-              <div className="flex flex-wrap justify-center items-start gap-2 pb-1">
-                {visibleStages.map((stage, idx) => {
-                  return (
-                    <div
-                      key={stage.stageName}
-                      className="flex items-start gap-2"
-                    >
-                      {idx > 0 && (
-                        <div
-                          className="flex items-center text-lg font-bold"
-                          style={{
-                            height: STAGE_CHIP_BOX_HEIGHT,
-                            color:
-                              stage.ownership === "mine" ||
-                              visibleStages[idx - 1]?.ownership === "mine"
-                                ? "var(--color-starbucks-accent)"
-                                : "var(--color-muted-foreground)",
-                          }}
-                        >
-                          &rarr;
-                        </div>
-                      )}
-                      <div className="relative">
-                        <StageChip
-                          stage={stage}
-                          rawStatus={
-                            rawProduct.stages.find(
-                              (rs) => rs.stageName === stage.stageName,
-                            )?.status ?? stage.status
-                          }
-                          readOnly={readOnly}
-                          onStatusChange={(name, status) =>
-                            handleStatusChange(product.id, name, status)
-                          }
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-                {/* Inert collapsed-stage indicator (Mine only): hover reveals the
-                    hidden stages; border+text follow the cross-author status scale. */}
-                {hiddenStages.length > 0 && (
+                {!readOnly && completeness.total > 0 && (
                   <span
-                    role="img"
-                    data-testid="collapsed-stages-indicator"
-                    aria-label={`${HIDDEN_STAGES_ARIA_PREFIX} ${hiddenReveal.join(", ")}`}
-                    className="inline-flex cursor-default items-center rounded-[var(--radius-pill)] border border-dashed px-2 text-[12px] font-medium"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-[var(--color-muted-foreground)]"
                     style={{
-                      height: STAGE_CHIP_BOX_HEIGHT,
-                      borderColor: hiddenColors.border,
-                      color: hiddenColors.text,
+                      borderRadius: COMPLETENESS_RING_RADIUS,
+                      border: showCompletenessRing
+                        ? `${COMPLETENESS_RING_WIDTH} ${COMPLETENESS_RING_STYLE} var(--color-muted-foreground)`
+                        : `${COMPLETENESS_RING_WIDTH} solid transparent`,
                     }}
-                    onMouseEnter={(e) =>
-                      tooltip.show(
-                        e.currentTarget.getBoundingClientRect(),
-                        hiddenReveal.join("\n"),
-                      )
+                    title={
+                      completeness.complete
+                        ? "Your input is complete"
+                        : "Set a status on every stage you own to finish your input"
                     }
-                    onMouseLeave={() => tooltip.hide()}
+                    data-complete={completeness.complete}
                   >
-                    {collapsedStagesIndicatorLabel(hiddenStages.length)}
+                    {completeness.filled}/{completeness.total}{" "}
+                    {OWN_STAGES_LABEL}
                   </span>
                 )}
               </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
+
+              {/* Stages row. lead-mine-hide-unowned-stages: a product on which the
+              lead owns no stage still renders (with its honest health above)
+              and shows a brief note instead of an empty grid. */}
+              {showNoOwnStagesNote ? (
+                <p className="pb-1 text-[13px] italic text-[var(--color-muted-foreground)]">
+                  {NO_OWN_STAGES_NOTE}
+                </p>
+              ) : (
+                <div className="flex flex-wrap justify-center items-start gap-2 pb-1">
+                  {visibleStages.map((stage, idx) => {
+                    return (
+                      <div
+                        key={stage.stageName}
+                        className="flex items-start gap-2"
+                      >
+                        {idx > 0 && (
+                          <div
+                            className="flex items-center text-lg font-bold"
+                            style={{
+                              height: STAGE_CHIP_BOX_HEIGHT,
+                              color:
+                                stage.ownership === "mine" ||
+                                visibleStages[idx - 1]?.ownership === "mine"
+                                  ? "var(--color-starbucks-accent)"
+                                  : "var(--color-muted-foreground)",
+                            }}
+                          >
+                            &rarr;
+                          </div>
+                        )}
+                        <div className="relative">
+                          <StageChip
+                            stage={stage}
+                            rawStatus={
+                              rawProduct.stages.find(
+                                (rs) => rs.stageName === stage.stageName,
+                              )?.status ?? stage.status
+                            }
+                            readOnly={readOnly}
+                            onStatusChange={(name, status) =>
+                              handleStatusChange(product.id, name, status)
+                            }
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {/* Inert collapsed-stage indicator (Mine only): hover reveals the
+                    hidden stages; border+text follow the cross-author status scale. */}
+                  {hiddenStages.length > 0 && (
+                    <CollapsedStagesIndicator
+                      reveal={hiddenReveal}
+                      colors={hiddenColors}
+                      count={hiddenStages.length}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </TooltipProvider>
   );
 }
