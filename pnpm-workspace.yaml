@@ -12,3 +12,12 @@ onlyBuiltDependencies:
   - msgpackr-extract
   - msw
   - sharp
+
+overrides:
+  "@xmldom/xmldom": ">=0.8.13"
+  protobufjs: ">=8.0.2"
+  vite: ">=7.3.2"
+  fast-uri: ">=3.1.2"
+
+patchedDependencies:
+  "samlify@2.13.1": patches/samlify@2.13.1.patch

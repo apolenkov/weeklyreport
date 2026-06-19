@@ -77,28 +77,6 @@
     "typescript-eslint": "^8.60.0",
     "vitest": "^4.1.4"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "prisma",
-      "@prisma/client",
-      "@prisma/engines",
-      "@nestjs/core",
-      "playwright",
-      "esbuild",
-      "msgpackr-extract",
-      "msw",
-      "sharp"
-    ],
-    "overrides": {
-      "@xmldom/xmldom": ">=0.8.13",
-      "protobufjs": ">=8.0.2",
-      "vite": ">=7.3.2",
-      "fast-uri": ">=3.1.2"
-    },
-    "patchedDependencies": {
-      "samlify@2.13.1": "patches/samlify@2.13.1.patch"
-    }
-  },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs}": [
       "eslint --fix --no-warn-ignored",
