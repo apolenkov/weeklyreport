@@ -1,9 +1,7 @@
 "use client";
 
 import { Maximize2, Minimize2 } from "lucide-react";
-import { useCallback, useEffect } from "react";
-
-import { useIsFullscreen } from "../../hooks/use-is-fullscreen";
+import { useCallback, useEffect, useState } from "react";
 
 interface SlideFullscreenButtonProps {
   readonly targetRef: React.RefObject<HTMLElement | null>;
@@ -14,7 +12,7 @@ export function SlideFullscreenButton({
   targetRef,
   variant = "default",
 }: SlideFullscreenButtonProps) {
-  const isFullscreen = useIsFullscreen();
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const toggle = useCallback(() => {
     const el = targetRef.current;
@@ -31,13 +29,18 @@ export function SlideFullscreenButton({
   }, [targetRef]);
 
   useEffect(() => {
+    function onFullscreenChange() {
+      setIsFullscreen(!!document.fullscreenElement);
+    }
     function onKey(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement | null)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       if (e.key === "f" || e.key === "F") toggle();
     }
+    document.addEventListener("fullscreenchange", onFullscreenChange);
     document.addEventListener("keydown", onKey);
     return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
       document.removeEventListener("keydown", onKey);
     };
   }, [toggle]);
