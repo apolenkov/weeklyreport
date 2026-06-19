@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { ItemStatus, KanbanItem, Product } from "./mock-data";
 import { ProductPicker } from "./product-picker";
 import { StageMultiSelect } from "./stage-multi-select";
+import { canonicalStageIds } from "./stage-tags";
 
 interface ItemEditDialogProps {
   /** Open/close state. Caller controls so it can wire submit/cancel. */
@@ -222,7 +223,10 @@ function ItemEditDialogContent({
       id: item?.id ?? crypto.randomUUID(),
       productId: product.id,
       productName: product.name,
-      stageIds: effectiveStageIds.length > 0 ? effectiveStageIds : undefined,
+      stageIds:
+        effectiveStageIds.length > 0
+          ? canonicalStageIds(effectiveStageIds)
+          : undefined,
       text: trimmed,
       status,
       author: item?.author ?? currentUserName ?? "You",

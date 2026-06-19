@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import type { Product, RiskEntry } from "./mock-data";
 import { ProductPicker } from "./product-picker";
 import { StageMultiSelect } from "./stage-multi-select";
-import { canonicalStageName } from "./stage-tags";
+import { canonicalStageIds, canonicalStageName } from "./stage-tags";
 
 interface RiskEditDialogProps {
   readonly open: boolean;
@@ -238,7 +238,7 @@ function RiskEditDialogContent({
       id: risk?.id ?? crypto.randomUUID(),
       productId: product.id,
       productName: product.name,
-      stageIds: effectiveStageIds,
+      stageIds: canonicalStageIds(effectiveStageIds),
       severity,
       text: t,
       impact: im,

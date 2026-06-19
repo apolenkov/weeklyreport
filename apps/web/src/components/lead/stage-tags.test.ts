@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  canonicalStageIds,
   canonicalStageName,
   riskCoversStage,
   splitStageNames,
@@ -117,5 +118,25 @@ describe("canonicalStageName", () => {
   it("passes through unknown stage names unchanged", () => {
     expect(canonicalStageName("Testing")).toBe("Testing");
     expect(canonicalStageName("DevOps")).toBe("DevOps");
+  });
+});
+
+describe("canonicalStageIds", () => {
+  it("canonicalises every id (legacy 'Dev' → 'Development')", () => {
+    expect(canonicalStageIds(["Dev", "Testing"])).toEqual([
+      "Development",
+      "Testing",
+    ]);
+  });
+
+  it("drops duplicates that collapse after aliasing", () => {
+    expect(canonicalStageIds(["Dev", "Development"])).toEqual(["Development"]);
+  });
+
+  it("leaves an already-canonical list unchanged", () => {
+    expect(canonicalStageIds(["Development", "DevOps"])).toEqual([
+      "Development",
+      "DevOps",
+    ]);
   });
 });

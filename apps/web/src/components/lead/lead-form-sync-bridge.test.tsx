@@ -216,7 +216,9 @@ describe("LeadFormSyncBridge", () => {
     );
     expect(savedRisks).toHaveLength(1);
     expect(expectDefined(savedRisks[0]).severity).toBe("blocked");
-    expect(expectDefined(savedRisks[0]).stageIds).toEqual(["Dev"]);
+    // stage-label-canonicalization 1.2: the risk persists the canonical
+    // "Development" even though the raised chip shows the short "Dev" label.
+    expect(expectDefined(savedRisks[0]).stageIds).toEqual(["Development"]);
 
     // rethink-pipeline-state-vs-completeness: the chip raises through the
     // render-time floor, NOT a persisted write-through. The Dev chip renders
