@@ -20,7 +20,6 @@ import { describe, expect, it } from "vitest";
 import { PdfExportComingSoonControl } from "./lead/pdf-export-coming-soon";
 import { VersionComingSoonControl } from "./lead/version-coming-soon";
 import { AgentReviewComingSoon } from "./report-shell/agent-review-coming-soon";
-import { ForeignTagsComingSoon } from "./slides/foreign-tags-coming-soon";
 
 // The canonical amber tokens baked into the shared primitive. `cn` uses
 // tailwind-merge, so a control passing a conflicting `bg-*`/`text-*color*`
@@ -41,7 +40,6 @@ describe("ComingSoonBadge — single canonical style", () => {
       <AgentReviewComingSoon key="agent" />,
       <PdfExportComingSoonControl key="pdf" />,
       <VersionComingSoonControl key="version" />,
-      <ForeignTagsComingSoon key="foreign-tags" />,
     ];
     for (const control of controls) {
       const { container, unmount } = render(control);

@@ -54,12 +54,14 @@ The reversal is made safe by four constraints:
 - Foreign rows render as plain bullets (no per-row visual "foreign" marker): the
   slide grids are flat text arrays, and the spec contract requires only that the
   rows and counts appear, not that they are visually attributed. A per-row
-  marker would require restructuring the slide row types and is deferred. Per the
-  repo deferred-feature-pattern this deferral is surfaced as a visible Coming-Soon
-  affordance (`ForeignTagsComingSoon`), shown only on the own deck in Everyone in
-  the own-scope view and hidden in fullscreen presentation
-  (`close-slides-visibility-tails`, requirement "Everyone deck surfaces a
-  Coming-Soon affordance for per-row author attribution").
+  marker would require restructuring the slide row types and is deferred.
+  `close-slides-visibility-tails` briefly added a `ForeignTagsComingSoon`
+  affordance to surface the deferral, but it was REVERTED after live feedback
+  (2026-06-19): it added a second control to the slide hero's right side, which
+  is deliberately tuned to hold only the scope toggle on one line, so it wrapped
+  the controls and caused a layout jump in Everyone — and its value as a presenter
+  hint did not justify that. The deferral now lives only as this ADR note; no
+  visible affordance.
 
 ## Codex Act-2 disposition (recorded by close-slides-visibility-tails)
 
