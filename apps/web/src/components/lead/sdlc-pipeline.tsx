@@ -5,6 +5,10 @@ import type { CSSProperties } from "react";
 import { trafficToStageStatus } from "../../lib/mappers/traffic-light";
 import { useSdlcTooltip } from "../ui/sdlc-tooltip";
 import type { Product, StageAssignment, StageStatus } from "./mock-data";
+import {
+  foreignOwnersForProduct,
+  hiddenStagesRevealLines,
+} from "./sdlc-hidden-stages";
 import { StageChip } from "./stage-chip";
 import { STAGE_CHIP_BOX_HEIGHT, STATUS_CONFIG } from "./stage-chip-config";
 
@@ -67,22 +71,6 @@ const OWN_STAGES_LABEL = "Your stages";
 // mirroring the inert ComingSoon control pattern in nav-bar.tsx. It never
 // un-hides the chips, nor touches health or completeness.
 const HIDDEN_STAGES_ARIA_PREFIX = "Hidden stages —";
-
-// pipeline-tooltip-and-indicator: an honest per-stage line that distinguishes an
-// owned-but-unstatused stage from a vacant one — "empty" is never shown for a
-// stage that has an owner (the lead reported DevOps reading "empty" while it was
-// actually taken by another author).
-function hiddenStageLine(s: StageAssignment): string {
-  if (s.ownership === "unassigned") return `${s.stageName} — unassigned`;
-  const owner = s.assignee ?? "another author";
-  return s.status === "empty"
-    ? `${s.stageName} — ${owner} (no status set)`
-    : `${s.stageName} — ${owner}: ${s.status}`;
-}
-
-function hiddenStagesRevealLines(hidden: readonly StageAssignment[]): string[] {
-  return hidden.map(hiddenStageLine);
-}
 
 function collapsedStagesIndicatorLabel(count: number): string {
   return `+${count} more`;
@@ -397,7 +385,10 @@ export function SdlcPipeline({
                     re-renders the chips, nor touches health/completeness. */}
                 {hiddenStages.length > 0 &&
                   (() => {
-                    const lines = hiddenStagesRevealLines(hiddenStages);
+                    const lines = hiddenStagesRevealLines(
+                      hiddenStages,
+                      foreignOwnersForProduct(product.id, crossAuthors),
+                    );
                     const colors = collapsedIndicatorColors(hiddenStages);
                     return (
                       <span
