@@ -10,92 +10,28 @@ re-litigating it every audit.
 
 ## Requirements
 
-### Requirement: Deprecated Email Components Dependency MUST Have A Recorded Fallback Decision
-
-The `apps/api` workspace MUST retain `@react-email/components@^1.0.12` as a deliberate, recorded fallback for as long as the registry exposes no maintained successor that re-exports the component set its transactional-email templates import, rather than forcing a half-working swap. The retention MUST be revisited when a maintained successor ships, and the rendered transactional-email behavior MUST stay guarded by `render-template.test.ts`.
-
-#### Scenario: No maintained successor exists at decision time
-
-- **WHEN** the deprecation of `@react-email/components@1.0.12` is investigated against the registry
-- **THEN** the notice is the generic "Package no longer supported" boilerplate applied across the whole version line, `1.0.12` is the latest published version, and no republished package, no `@react-email/<component>` scoped set, and no `react-email` umbrella export covers the imported components (`Html, Head, Preview, Tailwind, Body, Container, Heading, Text, Button, Section`)
-- **AND** the `^1.0.12` pin is left in place as the safe fallback with the finding recorded for the user
-
-#### Scenario: The companion renderer is not dragged along
-
-- **WHEN** the fallback decision is recorded
-- **THEN** `@react-email/render@^2.0.8` is left untouched because it is not deprecated and the components retention does not force a coordinated bump
-
-#### Scenario: Behavior stays guarded while on the fallback
-
-- **WHEN** `pnpm --filter @customreport/api test` runs
-- **THEN** `render-template.test.ts` passes and `renderEmail` returns `{subject, html, text}` with both the HTML and plaintext multipart halves intact for the `deadline` and `escalation` kinds
-- **AND** no test is skipped, quarantined, or deleted to mask a regression
-
-#### Scenario: A maintained successor reopens the upgrade
-
-- **WHEN** a maintained successor that re-exports the imported component set is published
-- **THEN** the retention decision is revisited and the migration is reproposed as an isolated change
-- **AND** that migration changes only `@react-email/components`, an optionally-forced `@react-email/render` bump, `pnpm-lock.yaml`, and the email template/renderer files under `apps/api/src/modules/email/`, with no unrelated dependency moving alongside it
-
 ### Requirement: The @bull-board Package Pair MUST Be On a Single Major
 
 `@customreport/api` MUST declare `@bull-board/api` and `@bull-board/express` at
-the same major version, and that major MUST be v7 (`^7.1.5`). The two packages
+the same major version, and that major MUST be v8 (`^8.0.1`). The two packages
 form a coupled runtime contract — `@bull-board/api`'s `createBullBoard` consumes
 `@bull-board/express`'s `ExpressAdapter` — so a mixed-major install is forbidden
 because it produces a runtime adapter mismatch.
 
-#### Scenario: Declared versions share the v7 major
+#### Scenario: Declared versions share the v8 major
 
 - **WHEN** `apps/api/package.json` is inspected after the upgrade
-- **THEN** both `@bull-board/api` and `@bull-board/express` are pinned to a v7
-  range (`^7.1.5`)
-- **AND** the resolved lockfile contains a single 7.x line for the pair with no
-  residual v6 copy
+- **THEN** both `@bull-board/api` and `@bull-board/express` are pinned to a v8
+  range (`^8.0.1`)
+- **AND** the resolved lockfile contains a single 8.x line for the pair with no
+  residual v7 copy
 
 #### Scenario: A mixed-major install is rejected
 
-- **WHEN** one of the two `@bull-board/*` packages is on v7 and the other is on
-  v6
+- **WHEN** one of the two `@bull-board/*` packages is on v8 and the other is on
+  v7
 - **THEN** that state is treated as a defect and the change is not considered
-  complete until both are on the same v7 major
-
-### Requirement: Bull Board Mount Survives the v7 Migration Behaviorally Unchanged
-
-The queue monitoring UI MUST still mount at `/admin/queues` after migrating
-`apps/api/src/infrastructure/bullmq/bull-board.module.ts` to the v7 API, remain
-gated to the head role, and list the existing queues — with no change to the
-route, base path, queue construction, or auth middleware.
-
-#### Scenario: The board mounts and lists queues under v7
-
-- **WHEN** the API starts with `@bull-board/*` on v7 and an authenticated head
-  session requests `/admin/queues`
-- **THEN** the v7 Bull Board UI renders and lists the `pdf-export` and
-  `email-reminder` queues
-- **AND** the `createBullBoard` / `BullMQAdapter` / `ExpressAdapter` wiring uses
-  the v7 import paths and call shapes
-
-#### Scenario: The head-role gate is unchanged by the bump
-
-- **WHEN** `/admin/queues` is requested without a head session after the upgrade
-- **THEN** the request is rejected with 401 (no session) or 403 (non-head role)
-  exactly as before the bump
-- **AND** the `requireHead` middleware and the direct `new Queue(...)`
-  construction are byte-identical to their pre-upgrade form
-
-### Requirement: The v7 Bump MUST Pass All Gates Before Merge
-
-The upgrade MUST clear the full gate suite — `pnpm typecheck`, `pnpm lint`,
-`pnpm test`, and `pnpm build` — and the change is isolated so that a gate
-failure blocks only this change, never an unrelated bump in the same wave.
-
-#### Scenario: Gates run green on the isolated change
-
-- **WHEN** the four gates are run after the bump and migration
-- **THEN** all four exit 0
-- **AND** if any gate fails, only this `@bull-board` change is held back; other
-  wave items proceed independently
+  complete until both are on the same v8 major
 
 ### Requirement: apps/web MUST run @vitejs/plugin-react v6 on a satisfied Vite baseline
 
@@ -508,3 +444,161 @@ A dependency below version 1.0 MUST be verified against its direct consumer surf
 - **WHEN** `@anthropic-ai/sdk` is bumped from 0.98.0 to 0.100.1
 - **THEN** the AI-module facade under `apps/api/src/modules/ai/` is confirmed to compile
 - **AND** the AI-module tests, including `golden-set.eval.test.ts`, stay green
+
+### Requirement: pnpm Project Settings MUST Live Where pnpm Reads Them
+
+The repository MUST declare `overrides` and `patchedDependencies` in
+`pnpm-workspace.yaml`, not in the `package.json` `pnpm` field, because the
+installed pnpm (10.11.0) no longer reads that field and warns the keys are
+ignored. The security-floor overrides (`@xmldom/xmldom`, `protobufjs`, `vite`,
+`fast-uri`) and the `samlify@2.13.1` patch MUST stay applied across the move,
+proven by the lockfile, so the SAML auth patch and the version floors are not
+silently dropped on the next lockfile regeneration.
+
+#### Scenario: Settings are read from the supported location
+
+- **WHEN** any pnpm command runs after the move
+- **THEN** no "the pnpm field ... is no longer read" warning is emitted
+- **AND** `pnpm-workspace.yaml` declares `overrides` and `patchedDependencies`
+  alongside the existing `onlyBuiltDependencies`
+- **AND** the `package.json` `pnpm` field no longer carries `overrides` or
+  `patchedDependencies`
+
+#### Scenario: Security floors and the SAML patch survive the move
+
+- **WHEN** `pnpm install` resolves the workspace after the move
+- **THEN** `pnpm-lock.yaml` still records the `overrides` block
+  (`@xmldom/xmldom>=0.8.13`, `protobufjs>=8.0.2`, `vite>=7.3.2`,
+  `fast-uri>=3.1.2`)
+- **AND** `pnpm-lock.yaml` still records `patchedDependencies` for
+  `samlify@2.13.1` with the patch path applied
+- **AND** the resolved `vite` remains `>=7.3.2`
+
+### Requirement: nodemailer MUST Track Its Current Maintained Major
+
+The `@customreport/api` workspace MUST pin `nodemailer` to the current
+maintained major (`^9.0.1` at this change), and the transactional-email send
+path MUST keep working unchanged. The nodemailer 9.0 breaking change (TLS
+certificate validation defaulted on for remote-content, OAuth2-token, and
+HTTP/HTTPS-proxy sub-requests) MUST be confirmed not to affect the configured
+transports before the bump is accepted.
+
+#### Scenario: The send path is unaffected by the TLS default
+
+- **WHEN** `nodemailer@9` is resolved and `EmailService` is constructed
+- **THEN** the dev `jsonTransport` path and the prod SMTP `secure:false` path
+  both build with no code change beyond the version bump
+- **AND** the configured transports fetch no remote attachment, use no OAuth2
+  token endpoint, and route through no HTTP/HTTPS proxy, so the 9.0 TLS default
+  does not change behavior
+
+#### Scenario: A live multipart send still arrives intact
+
+- **WHEN** `sendMailMultipart` is exercised against a local Mailpit SMTP server
+  on `nodemailer@9`
+- **THEN** the message arrives with both the HTML and plaintext halves intact
+- **AND** no test is skipped or weakened to pass the bump
+
+#### Scenario: The types stub is reconciled, not stranded
+
+- **WHEN** `nodemailer` is bumped to 9 and `@customreport/api` is typechecked
+- **THEN** `@types/nodemailer` is kept at its current maintained major
+  (`^8.0.1`), because no `@types/nodemailer@9` is published and `nodemailer@9`
+  ships no bundled types, and the typecheck passes against `nodemailer@9`
+- **AND** the types major (8) lagging the runtime major (9) is recorded as the
+  documented justification, not silently left as drift
+
+### Requirement: eslint-plugin-unicorn MUST Track Its Current Maintained Major
+
+The root `eslint-plugin-unicorn` devDependency MUST pin the current maintained
+major (`^68.0.0` at this change), and the curated rule allowlist in
+`eslint.config.ts` MUST keep resolving every rule it names, with `pnpm lint`
+clean and no rule disabled to mask a removal or rename.
+
+#### Scenario: The curated allowlist still resolves on the new major
+
+- **WHEN** `pnpm lint` runs with `eslint-plugin-unicorn@68` resolved
+- **THEN** every `unicorn/*` rule enabled in `eslint.config.ts` resolves to a
+  real rule in the new major
+- **AND** the lint gate exits 0
+
+#### Scenario: A renamed or removed rule is migrated, not silenced
+
+- **WHEN** the bump renames or removes a `unicorn/*` rule the allowlist enables
+- **THEN** the allowlist entry is updated to the rule's new name or successor
+- **AND** the rule is not simply deleted or downgraded to silence the change
+
+### Requirement: Transactional Email MUST Track the Maintained react-email Package
+
+The `apps/api` transactional-email templates and renderer MUST import their
+components and `render` from the maintained `react-email` package (`^6.6.3` at
+this change), replacing the deprecated `@react-email/components` and
+`@react-email/render` scoped packages. The migration MUST preserve the rendered
+email behavior exactly and MUST stay guarded by `render-template.test.ts` and a
+live Mailpit send.
+
+#### Scenario: The maintained successor reopened the retention
+
+- **WHEN** the react-email ecosystem is re-investigated against the registry
+- **THEN** `react-email@6.x` is confirmed to re-export the imported component
+  set (`Body, Button, Container, Head, Heading, Html, Preview, Section,
+Tailwind, Text`) plus `render`, while every scoped `@react-email/<component>`
+  and `@react-email/components` is deprecated and frozen
+- **AND** the retention decision is reopened and the migration applied
+
+#### Scenario: Imports move to the umbrella in exactly the email files
+
+- **WHEN** the migration is implemented
+- **THEN** `render-template.ts`, `deadline.template.tsx`,
+  `escalation.template.tsx`, and `escalation.template.test.tsx` import from
+  `react-email`
+- **AND** `@react-email/components` and `@react-email/render` are removed from
+  `apps/api/package.json` and the lockfile
+
+#### Scenario: Rendered behavior stays guarded
+
+- **WHEN** `pnpm --filter @customreport/api test` runs after the migration
+- **THEN** `render-template.test.ts` passes and `renderEmail` returns
+  `{subject, html, text}` with both multipart halves intact for the `deadline`
+  and `escalation` kinds
+- **AND** a live Mailpit send renders both templates with no visual regression
+- **AND** no test is skipped, quarantined, or deleted to mask a regression
+
+### Requirement: Bull Board Mount Survives the v8 Migration Behaviorally Unchanged
+
+The queue monitoring UI MUST still mount at `/admin/queues` after migrating
+`apps/api/src/infrastructure/bullmq/bull-board.module.ts` to the `@bull-board`
+v8 API, remain gated to the head role, and list the existing queues — with no
+change to the route, base path, queue construction, or auth middleware.
+
+#### Scenario: The board mounts and lists queues under v8
+
+- **WHEN** the API starts with `@bull-board/*` on v8 and an authenticated head
+  session requests `/admin/queues`
+- **THEN** the v8 Bull Board UI renders and lists the `pdf-export` and
+  `email-reminder` queues
+- **AND** the `createBullBoard` / `BullMQAdapter` / `ExpressAdapter` wiring uses
+  the v8 import paths and call shapes
+
+#### Scenario: The head-role gate is unchanged by the bump
+
+- **WHEN** `/admin/queues` is requested without a head session after the upgrade
+- **THEN** the request is rejected with 401 (no session) or 403 (non-head role)
+  exactly as before the bump
+- **AND** the `requireHead` middleware and the direct `new Queue(...)`
+  construction are byte-identical to their pre-upgrade form
+
+### Requirement: The @bull-board v8 Bump MUST Pass All Gates
+
+The `@bull-board` v8 upgrade MUST clear the full gate suite — `pnpm typecheck`,
+`pnpm lint`, `pnpm test`, and `pnpm build`. Because this wave is deliberately
+bundled, a gate failure holds the whole change for the user's merge decision
+rather than only this bump; the implementation MUST keep the bump a separately
+revertable commit so it can be dropped if it is the sole failure.
+
+#### Scenario: Gates run green with the bump in the bundle
+
+- **WHEN** the four gates run after the v8 bump and module migration
+- **THEN** all four exit 0
+- **AND** if the bump is the sole gate failure, its commit can be reverted
+  without unwinding the rest of the wave
