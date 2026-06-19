@@ -115,6 +115,25 @@ describe("#91 — all six tooltip controls share the centred anchor (source scan
   });
 });
 
+describe("nav-bar Coming Soon controls — no stacked native title", () => {
+  // The inert nav theme/language controls expose their state through their
+  // `aria-label` plus the amber ComingSoonBadge tooltip. A native
+  // `title="Coming Soon"` on the same button stacked a SECOND browser-native
+  // tooltip over the badge — the double-tooltip glitch. The controls MUST NOT
+  // carry a native title; this source scan guards the regression.
+  const navBarSource = readFileSync(
+    path.join(
+      path.dirname(fileURLToPath(import.meta.url)),
+      "navigation/nav-bar.tsx",
+    ),
+    "utf8",
+  );
+
+  it("the inert nav controls carry no native title=Coming Soon", () => {
+    expect(navBarSource).not.toContain('title="Coming Soon"');
+  });
+});
+
 describe("deferred-feature-pattern — no bespoke 'Coming Soon' pill", () => {
   // The literal "Coming Soon" may appear ONLY as: the primitive's rendered
   // text, a native title="Coming Soon" attribute, or a comment. Any other

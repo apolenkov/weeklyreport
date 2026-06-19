@@ -157,7 +157,6 @@ function LanguageComingSoonControl() {
         type="button"
         aria-disabled="true"
         aria-label="Language selection is coming soon"
-        title="Coming Soon"
         data-testid="language-coming-soon"
         className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)]"
       >
@@ -178,7 +177,6 @@ function ThemeComingSoonControl() {
         type="button"
         aria-disabled="true"
         aria-label="Theme selection is coming soon"
-        title="Coming Soon"
         data-testid="theme-coming-soon"
         className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)]"
       >
