@@ -34,6 +34,13 @@ describe("stageNameMatches", () => {
   it("returns false when stage is not in the CSV list", () => {
     expect(stageNameMatches("Testing", "Development")).toBe(false);
   });
+
+  it("treats a legacy 'Dev' tag as 'Development' (stage-label-canonicalization 1.3)", () => {
+    expect(stageNameMatches("Dev", "Development")).toBe(true);
+    expect(stageNameMatches("Dev, Testing", "Development")).toBe(true);
+    // …and a stored 'Development' tag still matches a short 'Dev' query.
+    expect(stageNameMatches("Development", "Dev")).toBe(true);
+  });
 });
 
 describe("riskCoversStage — new stageIds format", () => {
@@ -76,6 +83,13 @@ describe("riskCoversStage — legacy stageName fallback", () => {
 
   it("legacy undefined stageName means all stages (backward compat)", () => {
     expect(riskCoversStage({ stageName: undefined }, "Development")).toBe(true);
+  });
+
+  it("legacy 'Dev' stageName covers 'Development' (canonicalized fallback, 1.3)", () => {
+    expect(riskCoversStage({ stageName: "Dev" }, "Development")).toBe(true);
+    expect(riskCoversStage({ stageName: "Dev, Testing" }, "Development")).toBe(
+      true,
+    );
   });
 });
 
