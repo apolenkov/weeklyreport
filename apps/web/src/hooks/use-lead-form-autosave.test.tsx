@@ -173,7 +173,7 @@ describe("useLeadFormAutosave", () => {
       await vi.advanceTimersByTimeAsync(2000);
     });
 
-    expect(calls.length).toBe(1);
+    expect(calls).toHaveLength(1);
   });
 
   it('sets state="saved" and lastSavedAt to a Date after success', async () => {
@@ -217,7 +217,7 @@ describe("useLeadFormAutosave", () => {
     });
 
     expect(result.current.state).toBe("saved");
-    expect(calls.length).toBe(1);
+    expect(calls).toHaveLength(1);
 
     // Pass an equivalent (new reference, identical content) payload.
     rerender({ payload: makePayload("same") });
@@ -228,7 +228,7 @@ describe("useLeadFormAutosave", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(5000);
     });
-    expect(calls.length).toBe(1);
+    expect(calls).toHaveLength(1);
   });
 
   it("does not autosave when enabled=false (e.g. read-only or submitted)", async () => {

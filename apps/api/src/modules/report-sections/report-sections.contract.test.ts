@@ -693,7 +693,7 @@ describe("ReportSectionsService — edge cases", () => {
     expect(first.projects[0]?.trafficLight).toBe(
       second.projects[0]?.trafficLight,
     );
-    expect(first.items.length).toBe(second.items.length);
+    expect(first.items).toHaveLength(second.items.length);
   });
 
   it("section with max boundary items (100) can be saved", async () => {

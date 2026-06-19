@@ -42,7 +42,7 @@ describe("WeeklyReportSkeleton", () => {
     const rightCluster = headerRow.children[1] as HTMLElement;
     // Two button placeholders, not three. UFB-072: real page renders
     // ExportPdfButton + PublishLockButton only.
-    expect(rightCluster.children.length).toBe(2);
+    expect(rightCluster.children).toHaveLength(2);
   });
 
   it("renders a 6-card portfolio grid (sm:grid-cols-2)", () => {
@@ -51,7 +51,7 @@ describe("WeeklyReportSkeleton", () => {
       String.raw`.sm\:grid-cols-2`,
     );
     expect(grid).not.toBeNull();
-    expect(grid?.children.length).toBe(6);
+    expect(grid?.children).toHaveLength(6);
   });
 
   it("renders 6 accordion placeholders to match the seeded product count", () => {
@@ -59,7 +59,7 @@ describe("WeeklyReportSkeleton", () => {
     const root = getRoot(container);
     // The last top-level child is the `space-y-3` list of accordion cards.
     const accordionList = root.lastElementChild as HTMLElement;
-    expect(accordionList.children.length).toBe(6);
+    expect(accordionList.children).toHaveLength(6);
   });
 
   // --- VA-0a: role="status" root element (high-priority unit-rtl rows) ---

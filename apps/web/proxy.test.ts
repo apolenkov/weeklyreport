@@ -153,7 +153,7 @@ describe("apps/web/proxy.ts — config matcher", () => {
   it("exports a config object with a matcher array of four entries", () => {
     expect(config).toBeDefined();
     expect(Array.isArray(config.matcher)).toBe(true);
-    expect(config.matcher.length).toBe(4);
+    expect(config.matcher).toHaveLength(4);
   });
 
   it("matcher is a positive allowlist of /lead, /head, /reports, /admin prefixes", () => {

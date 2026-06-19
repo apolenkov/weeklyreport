@@ -41,6 +41,7 @@ describe("TelemetryGauges — Phase 52-A (UFB-054)", () => {
     const gauges = new TelemetryGauges(buildPort({ onTimeRatio: 0.85 }));
     gauges.onModuleInit();
 
+    // eslint-disable-next-line sonarjs/no-floating-point-equality -- asserts the port value (0.85) passes through the gauge unchanged; exact equality is intended
     expect(await gaugeValue(customreportReportsOnTimeRatio)).toBe(0.85);
 
     gauges.onModuleDestroy();
@@ -63,6 +64,7 @@ describe("TelemetryGauges — Phase 52-A (UFB-054)", () => {
     const gauges = new TelemetryGauges(buildPort({ onTimeRatio: null }));
     gauges.onModuleInit();
 
+    // eslint-disable-next-line sonarjs/no-floating-point-equality -- asserts the pre-set sentinel (0.42) is preserved when the port returns null; exact equality is intended
     expect(await gaugeValue(customreportReportsOnTimeRatio)).toBe(0.42);
 
     gauges.onModuleDestroy();

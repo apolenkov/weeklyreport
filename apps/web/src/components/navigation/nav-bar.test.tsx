@@ -91,7 +91,7 @@ function expectLinkExists(container: HTMLElement, href: string): void {
 }
 
 function expectLinkMissing(container: HTMLElement, href: string): void {
-  expect(linksInContainer(container, href).length).toBe(0);
+  expect(linksInContainer(container, href)).toHaveLength(0);
 }
 
 function setRoute(pathname: string, query = ""): void {
@@ -111,8 +111,8 @@ function expectInactiveLink(container: HTMLElement, href: string): void {
   expect(
     container.querySelectorAll(
       `a[href="${CSS.escape(href)}"][aria-current="page"]`,
-    ).length,
-  ).toBe(0);
+    ),
+  ).toHaveLength(0);
 }
 
 describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {

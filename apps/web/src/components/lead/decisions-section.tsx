@@ -43,7 +43,7 @@ function isMine(owner: string | undefined, me: string | undefined): boolean {
     s
       .trim()
       .toLowerCase()
-      // eslint-disable-next-line sonarjs/slow-regex -- single quantified character class at end-anchor is linear, no backtracking
+      // eslint-disable-next-line sonarjs/super-linear-regex -- single quantified character class at end-anchor is linear, no backtracking
       .replaceAll(/[.\s]+$/g, "");
   return normalize(owner) === normalize(me);
 }
