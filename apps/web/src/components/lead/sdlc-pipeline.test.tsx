@@ -700,9 +700,10 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     expect(indicator?.getAttribute("tabindex")).toBeNull();
     // Visible count of collapsed stages (Testing + DevOps hidden).
     expect(indicator?.textContent).toContain("2");
-    // #89: the native `title` is gone; the non-visual aria-label is the
-    // screen-reader path and still lists each hidden stage as name: status.
-    const reveal = "Testing: at-risk, DevOps: empty";
+    // pipeline-tooltip-and-indicator: the aria-label lists each hidden stage with
+    // an honest owner line — an owned-but-unstatused stage names its owner, a
+    // vacant stage reads "unassigned" (never "empty" for an owned stage).
+    const reveal = "Testing — OL: at-risk, DevOps — unassigned";
     expect(indicator?.getAttribute("title")).toBeNull();
     expect(indicator?.getAttribute("aria-label")).toContain(reveal);
     // It must NOT re-render the hidden chips inline.
@@ -724,7 +725,8 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     const indicator = screen.getByTestId("collapsed-stages-indicator");
     fireEvent.mouseEnter(indicator);
     const tip = screen.getByTestId("sdlc-tooltip");
-    expect(tip.textContent).toBe("Testing: at-risk, DevOps: empty");
+    // Multi-line, one honest line per hidden stage.
+    expect(tip.textContent).toBe("Testing — OL: at-risk\nDevOps — unassigned");
     fireEvent.mouseLeave(indicator);
     expect(screen.queryByTestId("sdlc-tooltip")).toBeNull();
   });
@@ -752,12 +754,12 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     );
   });
 
-  it("#90: an all-empty/on-track hidden set leaves the indicator neutral", () => {
-    // Own Dev (mine) + two hidden non-own stages, both non-urgent (on-track /
-    // empty) → worst is not blocked/at-risk, so the indicator stays neutral.
-    const neutralHidden: Product = {
-      id: "p-neutral-hidden",
-      name: "Neutral Hidden",
+  it("an unfilled hidden stage keeps the indicator grey (full scale)", () => {
+    // Own Dev (mine) + a hidden on-track stage + a hidden vacant (empty) stage.
+    // No blocked/at-risk, but one stage is unfilled → grey ("not all filled").
+    const partlyFilled: Product = {
+      id: "p-partly-filled",
+      name: "Partly Filled",
       overallStatus: "on-track",
       stages: [
         {
@@ -782,14 +784,56 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     };
     const { container } = render(
       <SdlcPipeline
-        products={[neutralHidden]}
+        products={[partlyFilled]}
         readOnly={false}
         visibilityMode="mine"
       />,
     );
     const indicator = container.querySelector<HTMLElement>(COLLAPSED_INDICATOR);
-    expect(indicator?.style.borderColor).toBe("var(--color-border)");
+    expect(indicator?.style.borderColor).toBe("rgba(0, 0, 0, 0.15)");
     expect(indicator?.style.color).toBe("var(--color-muted-foreground)");
+  });
+
+  it("an all-on-track hidden set turns the indicator green (full scale)", () => {
+    // Every hidden stage is on-track → green, so the lead can trace a healthy
+    // collapsed set (reverses the old "neutral unless blocked/at-risk").
+    const allOnTrackHidden: Product = {
+      id: "p-green-hidden",
+      name: "Green Hidden",
+      overallStatus: "on-track",
+      stages: [
+        {
+          stageName: "Dev",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "me",
+        },
+        {
+          stageName: "Testing",
+          status: "on-track",
+          ownership: "locked",
+          assignee: "OL",
+        },
+        {
+          stageName: "DevOps",
+          status: "on-track",
+          ownership: "locked",
+          assignee: "IG",
+        },
+      ],
+    };
+    const { container } = render(
+      <SdlcPipeline
+        products={[allOnTrackHidden]}
+        readOnly={false}
+        visibilityMode="mine"
+      />,
+    );
+    const indicator = container.querySelector<HTMLElement>(COLLAPSED_INDICATOR);
+    expect(indicator?.style.borderColor).toBe(
+      "var(--color-chip-on-track-border)",
+    );
+    expect(indicator?.style.color).toBe("var(--color-chip-on-track-text)");
   });
 
   it("Everyone never shows the collapsed-stage indicator (full grid already)", () => {

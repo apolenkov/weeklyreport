@@ -68,9 +68,20 @@ const OWN_STAGES_LABEL = "Your stages";
 // un-hides the chips, nor touches health or completeness.
 const HIDDEN_STAGES_ARIA_PREFIX = "Hidden stages —";
 
-// "Name: status" mirrors the per-chip aria convention (e.g. "DevOps: blocked").
-function hiddenStagesRevealText(hidden: readonly StageAssignment[]): string {
-  return hidden.map((s) => `${s.stageName}: ${s.status}`).join(", ");
+// pipeline-tooltip-and-indicator: an honest per-stage line that distinguishes an
+// owned-but-unstatused stage from a vacant one — "empty" is never shown for a
+// stage that has an owner (the lead reported DevOps reading "empty" while it was
+// actually taken by another author).
+function hiddenStageLine(s: StageAssignment): string {
+  if (s.ownership === "unassigned") return `${s.stageName} — unassigned`;
+  const owner = s.assignee ?? "another author";
+  return s.status === "empty"
+    ? `${s.stageName} — ${owner} (no status set)`
+    : `${s.stageName} — ${owner}: ${s.status}`;
+}
+
+function hiddenStagesRevealLines(hidden: readonly StageAssignment[]): string[] {
+  return hidden.map(hiddenStageLine);
 }
 
 function collapsedStagesIndicatorLabel(count: number): string {
@@ -113,28 +124,31 @@ function worstStatusOf(values: readonly StageStatus[]): StageStatus {
   );
 }
 
-// lead-demo-feedback #90: the collapsed `+N more` indicator takes the worst
-// hidden stage's status colour, but ONLY when that worst is blocked/at-risk.
-// An on-track/empty hidden set stays neutral grey — a green "+N" would wrongly
-// read as "the hidden stages are fine", which is noise, not the signal the
-// reviewer asked for. Neutral matches the indicator's prior look.
-const NEUTRAL_INDICATOR_COLORS = {
-  border: "var(--color-border)",
-  text: "var(--color-muted-foreground)",
-} as const;
-
+// pipeline-tooltip-and-indicator (reverses #90): the collapsed `+N more`
+// indicator colours by the FULL status scale of the hidden stages, by
+// precedence — red if any blocked, else yellow if any at-risk, else grey if any
+// is unfilled (empty/unassigned), else green when every hidden stage is
+// on-track. This lets the lead trace the product's left health stripe to the
+// collapsed stages at a glance (the earlier "neutral unless blocked/at-risk"
+// hid the green/grey distinction the reviewer asked for).
 function collapsedIndicatorColors(hidden: readonly StageAssignment[]): {
   border: string;
   text: string;
 } {
-  const worst = worstStatusOf(hidden.map((s) => s.status));
-  if (worst === "blocked" || worst === "at-risk") {
-    return {
-      border: STATUS_CONFIG[worst].border,
-      text: STATUS_CONFIG[worst].text,
-    };
-  }
-  return NEUTRAL_INDICATOR_COLORS;
+  // Precedence: any blocked → red; else any at-risk → yellow; else any unfilled
+  // (empty own role or vacant stage) → grey; else all on-track → green.
+  const statuses = new Set(hidden.map((s) => s.status));
+  const status: StageStatus = statuses.has("blocked")
+    ? "blocked"
+    : statuses.has("at-risk")
+      ? "at-risk"
+      : statuses.has("empty")
+        ? "empty"
+        : "on-track";
+  return {
+    border: STATUS_CONFIG[status].border,
+    text: STATUS_CONFIG[status].text,
+  };
 }
 
 function worstOwnStatus(stages: StageAssignment[]): StageStatus {
@@ -377,23 +391,19 @@ export function SdlcPipeline({
                     </div>
                   );
                 })}
-                {/* Affordance 2 (+ #89/#90): inert collapsed-stage indicator.
-                    Shows only in Mine mode (hiddenStages is empty otherwise) and
-                    only when the lead owns at least one stage (this grid branch).
-                    #89: hover/focus drives the SAME styled tooltip the chips use
-                    (the native `title` is gone); the aria-label still reveals the
-                    hidden stages to screen readers. #90: border+text take the
-                    worst hidden status colour when blocked/at-risk. It never
+                {/* Inert collapsed-stage indicator (Mine mode only). Hover/focus
+                    reveals the hidden stages via the styled tooltip (one honest
+                    line each); border+text follow the full status scale. Never
                     re-renders the chips, nor touches health/completeness. */}
                 {hiddenStages.length > 0 &&
                   (() => {
-                    const reveal = hiddenStagesRevealText(hiddenStages);
+                    const lines = hiddenStagesRevealLines(hiddenStages);
                     const colors = collapsedIndicatorColors(hiddenStages);
                     return (
                       <span
                         role="img"
                         data-testid="collapsed-stages-indicator"
-                        aria-label={`${HIDDEN_STAGES_ARIA_PREFIX} ${reveal}`}
+                        aria-label={`${HIDDEN_STAGES_ARIA_PREFIX} ${lines.join(", ")}`}
                         className="inline-flex cursor-default items-center rounded-[var(--radius-pill)] border border-dashed px-2 text-[12px] font-medium"
                         style={{
                           height: STAGE_CHIP_BOX_HEIGHT,
@@ -403,7 +413,7 @@ export function SdlcPipeline({
                         onMouseEnter={(e) =>
                           tooltip.show(
                             e.currentTarget.getBoundingClientRect(),
-                            reveal,
+                            lines.join("\n"),
                           )
                         }
                         onMouseLeave={() => tooltip.hide()}

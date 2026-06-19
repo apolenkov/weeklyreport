@@ -89,7 +89,7 @@ export function SdlcTooltipProvider({
             <div
               role="tooltip"
               data-testid="sdlc-tooltip"
-              className="pointer-events-none fixed z-[9999] -translate-x-1/2 -translate-y-full rounded-md bg-[var(--color-foreground)] px-2 py-1 text-[11px] font-medium text-white shadow-lg"
+              className="pointer-events-none fixed z-[9999] -translate-x-1/2 -translate-y-full whitespace-pre-line rounded-md bg-[var(--color-foreground)] px-2 py-1 text-left text-[11px] font-medium leading-relaxed text-white shadow-lg"
               style={{ top: state.top, left: state.left, maxWidth: 280 }}
             >
               {state.content}
