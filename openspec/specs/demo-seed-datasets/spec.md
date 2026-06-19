@@ -185,9 +185,10 @@ fuller cross-author team picture, while resolved product health stays unchanged.
    product, preserving the existing cross-author decision coverage.
 4. New foreign rows MUST be on-track items (or decisions, which carry no
    severity); this requirement MUST NOT add any new risk, so resolved product
-   health is unchanged — Маркетинговый портал stays at-risk (yellow), Платформа
-   интеграций stays on-track (green, the `seed-all-green-example-product`
-   anchor), and Внутренний BI stays blocked (red).
+   health is unchanged — Маркетинговый портал stays blocked (red), Платформа
+   интеграций stays at-risk (yellow), and Внутренний BI stays on-track (green,
+   the broadly-staffed showcase with only Support vacant). This three-colour
+   mapping matches "The small tier shows at least one fully-green product".
 5. The enriched content MUST remain deterministic and idempotent: fixed ids and
    fixed text, no wall-clock or random values, stable across reseed (consistent
    with `seed-determinism` and the existing small-tier determinism requirement).
@@ -204,9 +205,9 @@ fuller cross-author team picture, while resolved product health stays unchanged.
 #### Scenario: enrichment does not move product health
 
 - **WHEN** the small tier is seeded with the broadened co-owner content
-- **THEN** Маркетинговый портал still reads at-risk (yellow), Платформа
-  интеграций still reads on-track (green), and Внутренний BI still reads
-  blocked (red)
+- **THEN** Маркетинговый портал still reads blocked (red), Платформа
+  интеграций still reads at-risk (yellow), and Внутренний BI still reads
+  on-track (green)
 - **AND** no new risk row was added by this enrichment
 
 #### Scenario: reseed is deterministic
