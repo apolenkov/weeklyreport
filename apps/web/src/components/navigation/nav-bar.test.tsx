@@ -209,14 +209,16 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     );
 
     expect(themeControl).not.toBeNull();
-    // Icon-only: visible text was removed in favour of aria-label/title (#2 navbar fix).
+    // Icon-only: visible text was removed in favour of the aria-label + amber
+    // ComingSoonBadge tooltip (#2 navbar fix). The native title="Coming Soon"
+    // was dropped so it no longer stacks a second tooltip over the badge.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- queried node + textContent are nullable in the DOM assertion
     expect(themeControl?.textContent?.trim()).toBe("");
     expect(themeControl).toHaveAttribute(
       "aria-label",
       "Theme selection is coming soon",
     );
-    expect(themeControl).toHaveAttribute("title", "Coming Soon");
+    expect(themeControl).not.toHaveAttribute("title");
     expect(themeControl).toHaveAttribute("aria-disabled", "true");
   });
 
@@ -229,14 +231,16 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     );
 
     expect(languageControl).not.toBeNull();
-    // Icon-only: visible text was removed in favour of aria-label/title (#2 navbar fix).
+    // Icon-only: visible text was removed in favour of the aria-label + amber
+    // ComingSoonBadge tooltip (#2 navbar fix). The native title="Coming Soon"
+    // was dropped so it no longer stacks a second tooltip over the badge.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- queried node + textContent are nullable in the DOM assertion
     expect(languageControl?.textContent?.trim()).toBe("");
     expect(languageControl).toHaveAttribute(
       "aria-label",
       "Language selection is coming soon",
     );
-    expect(languageControl).toHaveAttribute("title", "Coming Soon");
+    expect(languageControl).not.toHaveAttribute("title");
     expect(languageControl).toHaveAttribute("aria-disabled", "true");
   });
 
