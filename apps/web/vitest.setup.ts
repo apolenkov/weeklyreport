@@ -16,13 +16,20 @@ class ResizeObserverStub {
   unobserve = noop;
   disconnect = noop;
 }
-const globalForStubs = globalThis as unknown as { ResizeObserver?: unknown };
+const globalForStubs = globalThis as unknown as {
+  ResizeObserver?: unknown;
+  Element?: { prototype: Record<string, unknown> };
+};
 globalForStubs.ResizeObserver ??= ResizeObserverStub;
 
-const elementProto = Element.prototype as unknown as Record<string, unknown>;
-elementProto.hasPointerCapture = () => false;
-elementProto.releasePointerCapture = noop;
-elementProto.scrollIntoView = noop;
+// Guard on Element so node-environment unit tests (no DOM) do not throw here;
+// only jsdom tests render Radix and need the pointer/scroll stubs.
+if (globalForStubs.Element) {
+  const elementProto = globalForStubs.Element.prototype;
+  elementProto.hasPointerCapture = () => false;
+  elementProto.releasePointerCapture = noop;
+  elementProto.scrollIntoView = noop;
+}
 
 beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
 afterEach(() => {
