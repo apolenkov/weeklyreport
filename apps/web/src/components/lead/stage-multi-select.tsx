@@ -1,5 +1,7 @@
 "use client";
 
+import { canonicalStageName } from "./stage-tags";
+
 interface StageMultiSelectProps {
   readonly id: string;
   readonly value: string[];
@@ -30,9 +32,18 @@ export function StageMultiSelect({
   const helperId = `${id}-hint`;
   const errorId = `${id}-error`;
 
+  // stage-label-canonicalization: match the option against the stored value by
+  // canonical name, so a legacy "Dev"-stored selection still reads as checked
+  // when the option is the canonical "Development" (and toggling-off removes it).
+  function isSelected(stage: string): boolean {
+    const canonical = canonicalStageName(stage);
+    return selected.some((item) => canonicalStageName(item) === canonical);
+  }
+
   function toggle(stage: string) {
-    const next = selected.includes(stage)
-      ? selected.filter((item) => item !== stage)
+    const canonical = canonicalStageName(stage);
+    const next = isSelected(stage)
+      ? selected.filter((item) => canonicalStageName(item) !== canonical)
       : [...selected, stage];
     onChange(next);
   }
@@ -99,7 +110,7 @@ export function StageMultiSelect({
           className="flex flex-wrap gap-2"
         >
           {stages.map((stage) => {
-            const checked = selected.includes(stage);
+            const checked = isSelected(stage);
             return (
               <label
                 key={stage}

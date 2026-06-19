@@ -7,6 +7,7 @@ import type {
   RiskEntry,
   StageStatus,
 } from "../components/lead/mock-data";
+import { riskCoversStage } from "../components/lead/stage-tags";
 
 // ---------------------------------------------------------------------------
 // Status <-> Risk coupling (pure, render-time derivation)
@@ -75,11 +76,12 @@ export function computeCoupling(
       [];
     for (const stage of product.stages) {
       if (stage.status !== "at-risk" && stage.status !== "blocked") continue;
-      const isCovered = productRisks.some(
-        (r) =>
-          !r.stageIds ||
-          r.stageIds.length === 0 ||
-          r.stageIds.includes(stage.stageName),
+      // stage-label-canonicalization: match via the canonical `riskCoversStage`
+      // (empty stageIds = covers all; otherwise canonical name match) instead of
+      // a raw `includes`, so a legacy "Dev"-stored risk still covers the
+      // canonical "Development" stage.
+      const isCovered = productRisks.some((r) =>
+        riskCoversStage(r, stage.stageName),
       );
       if (!isCovered) {
         stagesWithoutRiskCoverage.push({
