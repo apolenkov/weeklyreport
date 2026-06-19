@@ -64,16 +64,16 @@ describe("LeadFormSkeleton — snapshot (VA-0b)", () => {
 
     // Snapshot the first block's row count and slot values for stability
     const firstBlock = spaceContainers[0];
-    const firstSnapshot = Array.from(firstBlock.children).map((el) =>
-      el.getAttribute("data-slot"),
+    const firstSnapshot = Array.from(firstBlock.children).map(
+      (el) => (el as HTMLElement).dataset.slot,
     );
 
     // Re-render should produce the same structure (index-keyed rows are stable)
     rerender(<LeadFormSkeleton />);
     const spaceContainersAfter = container.querySelectorAll(".space-y-2");
     const firstBlockAfter = spaceContainersAfter[0];
-    const afterSnapshot = Array.from(firstBlockAfter.children).map((el) =>
-      el.getAttribute("data-slot"),
+    const afterSnapshot = Array.from(firstBlockAfter.children).map(
+      (el) => (el as HTMLElement).dataset.slot,
     );
 
     expect(afterSnapshot).toEqual(firstSnapshot);

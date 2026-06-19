@@ -27,7 +27,7 @@ describe("ReportToolbar", () => {
   it("keeps the bordered frame and stays horizontally reachable at narrow widths", () => {
     render(<ReportToolbar contextControls={<span>Ctx</span>} />);
     const contextBar = screen.getByRole("group", { name: "Context controls" });
-    expect(contextBar.getAttribute("data-testid")).toBe("report-toolbar");
+    expect(contextBar.dataset.testid).toBe("report-toolbar");
     expect(contextBar.className).toContain("rounded-");
     expect(contextBar.className).toContain("overflow-x-auto");
   });

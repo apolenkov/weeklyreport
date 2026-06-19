@@ -181,7 +181,7 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
       />,
     );
     const pill = getCompletenessPill(container);
-    expect(pill?.getAttribute("data-complete")).toBe("false");
+    expect(pill?.dataset.complete).toBe("false");
     expect(pill?.getAttribute("style")).toContain("dashed");
   });
 
@@ -190,7 +190,7 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
       <SdlcPipeline products={[PRODUCT_WITH_ALL_FILLED]} readOnly={false} />,
     );
     const pill = getCompletenessPill(container);
-    expect(pill?.getAttribute("data-complete")).toBe("true");
+    expect(pill?.dataset.complete).toBe("true");
     expect(pill?.getAttribute("style")).not.toContain("dashed");
   });
 
@@ -215,7 +215,7 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
     );
     const pill = getCompletenessPill(container);
     expect(pill?.textContent).toContain("1/1 Your stages");
-    expect(pill?.getAttribute("data-complete")).toBe("true");
+    expect(pill?.dataset.complete).toBe("true");
   });
 
   it("W11: an empty own stage covered by the lead's OWN risk COUNTS toward completeness", () => {
@@ -252,7 +252,7 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
     );
     const pill = getCompletenessPill(container);
     expect(pill?.textContent).toContain("2/2 Your stages");
-    expect(pill?.getAttribute("data-complete")).toBe("true");
+    expect(pill?.dataset.complete).toBe("true");
   });
 
   it("W11: a display-only floored empty stage (no OWN-risk flag) still does NOT count", () => {
@@ -286,7 +286,7 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
     );
     const pill = getCompletenessPill(container);
     expect(pill?.textContent).toContain("1/2 Your stages");
-    expect(pill?.getAttribute("data-complete")).toBe("false");
+    expect(pill?.dataset.complete).toBe("false");
   });
 });
 
@@ -352,9 +352,7 @@ describe("SdlcPipeline — health and completeness are independent", () => {
     expect(getFirstCardStyle(container)).toContain(
       "var(--color-chip-blocked-border)",
     );
-    expect(getCompletenessPill(container)?.getAttribute("data-complete")).toBe(
-      "true",
-    );
+    expect(getCompletenessPill(container)?.dataset.complete).toBe("true");
   });
 
   it("green health + incomplete input: on-track edge, dashed ring", () => {
@@ -364,9 +362,7 @@ describe("SdlcPipeline — health and completeness are independent", () => {
     expect(getFirstCardStyle(container)).toContain(
       "var(--color-chip-on-track-border)",
     );
-    expect(getCompletenessPill(container)?.getAttribute("data-complete")).toBe(
-      "false",
-    );
+    expect(getCompletenessPill(container)?.dataset.complete).toBe("false");
   });
 
   it("green health + complete input", () => {
@@ -376,9 +372,7 @@ describe("SdlcPipeline — health and completeness are independent", () => {
     expect(getFirstCardStyle(container)).toContain(
       "var(--color-chip-on-track-border)",
     );
-    expect(getCompletenessPill(container)?.getAttribute("data-complete")).toBe(
-      "true",
-    );
+    expect(getCompletenessPill(container)?.dataset.complete).toBe("true");
   });
 
   it("red health + incomplete input", () => {
@@ -388,9 +382,7 @@ describe("SdlcPipeline — health and completeness are independent", () => {
     expect(getFirstCardStyle(container)).toContain(
       "var(--color-chip-blocked-border)",
     );
-    expect(getCompletenessPill(container)?.getAttribute("data-complete")).toBe(
-      "false",
-    );
+    expect(getCompletenessPill(container)?.dataset.complete).toBe("false");
   });
 });
 

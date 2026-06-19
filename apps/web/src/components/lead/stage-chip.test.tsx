@@ -174,9 +174,7 @@ describe("StageChip — covered-by-risk vs status-set distinction (W11 3.9)", ()
         rawStatus="empty"
       />,
     );
-    const coveredCoverage = screen
-      .getByRole("button")
-      .getAttribute("data-coverage");
+    const coveredCoverage = screen.getByRole("button").dataset.coverage;
     unmount();
     render(
       <StageChip
@@ -184,9 +182,7 @@ describe("StageChip — covered-by-risk vs status-set distinction (W11 3.9)", ()
         rawStatus="blocked"
       />,
     );
-    const setCoverage = screen
-      .getByRole("button")
-      .getAttribute("data-coverage");
+    const setCoverage = screen.getByRole("button").dataset.coverage;
     expect(coveredCoverage).toBe("risk");
     expect(setCoverage).not.toBe("risk");
   });
@@ -203,9 +199,7 @@ describe("StageChip — covered-by-risk vs status-set distinction (W11 3.9)", ()
     expect(
       screen.getByRole("button", { name: "Design: blocked" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button").getAttribute("data-coverage")).not.toBe(
-      "risk",
-    );
+    expect(screen.getByRole("button").dataset.coverage).not.toBe("risk");
   });
 
   it("locked chip keeps a plain status aria-label (no suffix)", () => {
