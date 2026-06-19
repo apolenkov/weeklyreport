@@ -28,8 +28,13 @@
       setBasePath/getRouter) — typechecks with no code change. No v7 residual. (35835696)
 - [~] 2.4 `/admin/queues` wiring byte-identical and typecheck-proven on v8.
   DEFERRED runtime: live head-gated mount + queue listing (needs running API).
-- [x] 2.5 `eslint-plugin-unicorn` 65→68; allowlist unchanged (all ~25 rules
-      resolve on v68, no rename/removal); `pnpm lint` clean. (0f27eac6)
+- [x] 2.5 `eslint-plugin-unicorn` 65→68; allowlist migrated: v68 renamed
+      `prefer-dom-node-dataset` to `dom-node-dataset` (old name is a no-op stub
+      ESLint loads silently — adversarial review caught it, the initial lint pass
+      did not). Renamed the entry; the now-active rule surfaced 21 pre-existing
+      `getAttribute('data-*')` violations across 7 test files, all migrated to
+      `.dataset` (with `HTMLElement` typing where the element was `Element`).
+      `pnpm lint` clean, no rule silenced. (0f27eac6 + review-fix commit)
 - [x] 2.6 Keep each major a separately revertable commit. (3 commits above)
 
 ## Phase 3 — react-email migration

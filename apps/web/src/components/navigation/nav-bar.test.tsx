@@ -245,8 +245,10 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     const { container } = render(<NavBar />);
 
     const comingSoonControls = Array.from(
-      container.querySelectorAll('button[data-testid$="coming-soon"]'),
-    ).map((element) => element.getAttribute("data-testid"));
+      container.querySelectorAll<HTMLButtonElement>(
+        'button[data-testid$="coming-soon"]',
+      ),
+    ).map((element) => element.dataset.testid);
 
     expect(comingSoonControls).toEqual([
       "theme-coming-soon",

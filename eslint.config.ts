@@ -159,7 +159,7 @@ export default defineConfig([
       "unicorn/consistent-existence-index-check": "error",
       "unicorn/prefer-includes": "error",
       "unicorn/prefer-dom-node-append": "error",
-      "unicorn/prefer-dom-node-dataset": "error",
+      "unicorn/dom-node-dataset": "error",
       "unicorn/prefer-optional-catch-binding": "error",
       "unicorn/prefer-set-has": "error",
       "unicorn/explicit-length-check": "error",

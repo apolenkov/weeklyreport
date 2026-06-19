@@ -523,9 +523,9 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     );
 
     // Baseline: 1 of 3 owned stages filled, incomplete.
-    const pillBefore = container.querySelector("[data-complete]");
+    const pillBefore = container.querySelector<HTMLElement>("[data-complete]");
     expect(pillBefore?.textContent).toContain("1/3 Your stages");
-    expect(pillBefore?.getAttribute("data-complete")).toBe("false");
+    expect(pillBefore?.dataset.complete).toBe("false");
 
     // Add a product-wide risk: every owned stage checked by default.
     await user.click(screen.getByRole("button", { name: /\+ Add Risk/i }));
@@ -536,9 +536,9 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
 
     // The risk floors the empty chips for DISPLAY, but completeness reads raw —
     // so the pill is unchanged: still 1/3, still incomplete.
-    const pillAfter = container.querySelector("[data-complete]");
+    const pillAfter = container.querySelector<HTMLElement>("[data-complete]");
     expect(pillAfter?.textContent).toContain("1/3 Your stages");
-    expect(pillAfter?.getAttribute("data-complete")).toBe("false");
+    expect(pillAfter?.dataset.complete).toBe("false");
     // No derived status was persisted onto the products.
     expect(onProductsChangeSpy).not.toHaveBeenCalled();
   });
@@ -587,9 +587,9 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     );
 
     // 2. Counts in X/7: the risk-covered empty stage ticks the completeness pill.
-    const pill = container.querySelector("[data-complete]");
+    const pill = container.querySelector<HTMLElement>("[data-complete]");
     expect(pill?.textContent).toContain("2/2 Your stages");
-    expect(pill?.getAttribute("data-complete")).toBe("true");
+    expect(pill?.dataset.complete).toBe("true");
 
     // 1 + 3. The Dev chip renders floored (blocked) AND announces "by risk", so
     // it is visibly distinct from the explicitly-set Testing chip ("status set").
@@ -633,9 +633,9 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     const { container } = render(
       <Harness initialProducts={[product]} initialRisks={[coversAllRisk]} />,
     );
-    const pill = container.querySelector("[data-complete]");
+    const pill = container.querySelector<HTMLElement>("[data-complete]");
     expect(pill?.textContent).toContain("1/2 Your stages");
-    expect(pill?.getAttribute("data-complete")).toBe("false");
+    expect(pill?.dataset.complete).toBe("false");
   });
 });
 

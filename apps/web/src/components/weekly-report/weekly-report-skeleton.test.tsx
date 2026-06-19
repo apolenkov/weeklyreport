@@ -91,7 +91,7 @@ describe("WeeklyReportSkeleton", () => {
       role: root.getAttribute("role"),
       ariaBusy: root.getAttribute("aria-busy"),
       ariaLabel: root.getAttribute("aria-label"),
-      testId: root.getAttribute("data-testid"),
+      testId: root.dataset.testid,
     }).toMatchSnapshot();
   });
 });
