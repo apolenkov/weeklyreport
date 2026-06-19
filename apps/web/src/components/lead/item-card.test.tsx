@@ -60,12 +60,16 @@ describe("ItemCard — stage tags container a11y (unit-rtl/high)", () => {
     expect(container).toHaveAttribute("aria-label", "Item stages: S1, S2");
   });
 
-  it("stage tags container aria-label is 'Item stages: All stages' when no stageIds", () => {
+  it("stage tags container shows the 'No stage set' warning when no stageIds", () => {
     render(<ItemCard item={{ ...BASE_ITEM, stageIds: [] }} />);
     const container = screen.getByRole("img", {
-      name: "Item stages: All stages",
+      name: "Item stages: No stage set",
     });
-    expect(container).toHaveAttribute("aria-label", "Item stages: All stages");
+    expect(container).toHaveAttribute(
+      "aria-label",
+      "Item stages: No stage set",
+    );
+    expect(screen.getByText("No stage set")).toBeInTheDocument();
   });
 });
 

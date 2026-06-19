@@ -40,9 +40,15 @@ vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 
+// Mutable search-params so a test can target a FOREIGN slides deck via
+// `?authorId=`. Hoisted so the vi.mock factory can read it; reset in beforeEach.
+const navState = vi.hoisted(() => ({
+  searchParams: new URLSearchParams(),
+}));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => navState.searchParams,
   usePathname: () => "/lead/report",
 }));
 
@@ -287,6 +293,7 @@ function clickMineOnly(): void {
 
 beforeEach(() => {
   installStorageStub();
+  navState.searchParams = new URLSearchParams();
   vi.clearAllMocks();
 });
 
@@ -319,11 +326,12 @@ describe("LeadForm — Record visibility: Mine only (7d.1)", () => {
     expect(screen.queryByText(FOREIGN_RISK_TEXT)).toBeNull();
     expect(screen.queryByText(FOREIGN_ITEM_TEXT)).toBeNull();
     expect(screen.queryByText(CO_OWNER_NAME)).toBeNull();
-    // The foreign override is skipped in Mine only, so the Testing chip stays
-    // unassigned (aria-label "Testing: empty") rather than the locked red the
-    // co-lead's status would otherwise paint.
-    expect(screen.queryByLabelText(/^Testing: blocked/)).toBeNull();
-    expect(screen.queryByLabelText(/^Testing: empty/)).not.toBeNull();
+    // lead-mine-hide-unowned-stages: Mine renders only the lead's own chips, so
+    // the foreign "Testing" stage is hidden entirely — neither the co-lead's
+    // locked red nor a greyed "unassigned" chip. The lead's own "Dev" chip
+    // (from the "Development" ownedStage) still renders.
+    expect(screen.queryByLabelText(/^Testing:/)).toBeNull();
+    expect(screen.queryByLabelText(/^Dev:/)).not.toBeNull();
   });
 });
 
@@ -361,14 +369,19 @@ describe("LeadForm — Record visibility: honest health is toggle-independent (7
   // status badge / at-risk signal in the product-status section.
   async function productSectionRedSignal(): Promise<boolean> {
     const section = await screen.findByTestId("lead-section-product-status");
-    // The product badge reads "At risk" / "Blocked" (or a destructive token)
-    // when health folds in the foreign red. A robust, render-agnostic proxy is
-    // the presence of either the textual badge or the destructive color token.
-    const text = section.textContent;
-    const html = section.innerHTML;
+    // Health is the product card's LEFT-EDGE stripe (getProductCardStyle). When
+    // the foreign red folds in, the stripe carries the blocked token; when it
+    // does not, it stays on-track. Asserting the actual stripe — not section
+    // text — gives the test teeth: an earlier text/destructive-token proxy was
+    // toothless because the section's static subtitle already contains the word
+    // "Blocked", so it matched on every render regardless of health.
+    const card = Array.from(section.querySelectorAll(".rounded-xl")).find(
+      (el) => (el.getAttribute("style") ?? "").includes("border-left"),
+    );
+    const style = card?.getAttribute("style") ?? "";
     return (
-      /At risk|Blocked|At Risk/i.test(text) ||
-      html.includes("--color-destructive")
+      style.includes("var(--color-chip-blocked-border)") &&
+      !style.includes("var(--color-chip-on-track-border)")
     );
   }
 
@@ -598,6 +611,24 @@ describe("LeadForm — Record visibility: publish/export independence (7d.8b)", 
     await waitFor(() => {
       expect(screen.queryByText(FOREIGN_DECISION_TEXT)).toBeNull();
     });
+  });
+
+  it("foreign slides deck (?authorId) fires NO crossAuthorContent read even with persisted Everyone (tail 1)", async () => {
+    // close-slides-visibility-tails: on a foreign `authorId` slides deck the
+    // own-deck gate must keep the sensitive content read disabled on the
+    // toolbar host, regardless of the current user's persisted Everyone toggle
+    // (7d.2 is the positive control proving the harness CAN fire it).
+    navState.searchParams = new URLSearchParams(`authorId=${CO_OWNER_ID}`);
+    const { Wrapper, contentFetch } = buildHarness({ seedEveryone: true });
+    render(
+      <Wrapper>
+        <LeadForm mode="slides" />
+      </Wrapper>,
+    );
+    await waitFor(() => {
+      expect(screen.queryByText(FOREIGN_DECISION_TEXT)).toBeNull();
+    });
+    expect(contentFetch).not.toHaveBeenCalled();
   });
 
   it("edit mode exposes an inert version + export ComingSoon control regardless of toggle", async () => {

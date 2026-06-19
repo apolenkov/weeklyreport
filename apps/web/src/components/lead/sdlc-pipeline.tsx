@@ -38,6 +38,42 @@ interface SdlcPipelineProps {
    * rendered as a subtle "Other contributors" row below each product card.
    */
   readonly crossAuthors?: readonly CrossAuthorEntry[];
+  /**
+   * lead-mine-hide-unowned-stages: which stage chips render. In "mine" only the
+   * lead's own stages render — foreign-owned and vacant stages are hidden (not
+   * greyed). In "everyone" the full grid renders (own + foreign-owned locked +
+   * vacant). Health (left edge) and own-input completeness are always computed
+   * from the full `product.stages` / `rawProduct.stages`, so hiding chips never
+   * changes those signals. Defaults to "everyone" so slides / head / read-only
+   * paths keep the full pipeline.
+   */
+  readonly visibilityMode?: "mine" | "everyone";
+}
+
+// lead-mine-hide-unowned-stages: empty-own-stages note copy, lifted to a const
+// so the string is not inlined in JSX.
+const NO_OWN_STAGES_NOTE = "No stages assigned to you";
+
+// lead-pipeline-mine-reveal-and-own-stage-label (affordance 1): label the
+// completeness counter as the lead's OWN stages so "N/M" doesn't read as the
+// whole pipeline. Pure label — the count (computeCompleteness) is unchanged.
+const OWN_STAGES_LABEL = "Your stages";
+
+// lead-pipeline-mine-reveal-and-own-stage-label (affordance 2): in Mine mode
+// the filter hides foreign-owned and vacant chips. A small inert indicator near
+// the grid reports how many stages are collapsed; its `title` (hover) and
+// `aria-label` (non-visual) reveal each hidden stage's name and status,
+// mirroring the inert ComingSoon control pattern in nav-bar.tsx. It never
+// un-hides the chips, nor touches health or completeness.
+const HIDDEN_STAGES_ARIA_PREFIX = "Hidden stages —";
+
+// "Name: status" mirrors the per-chip aria convention (e.g. "DevOps: blocked").
+function hiddenStagesRevealText(hidden: readonly StageAssignment[]): string {
+  return hidden.map((s) => `${s.stageName}: ${s.status}`).join(", ");
+}
+
+function collapsedStagesIndicatorLabel(count: number): string {
+  return `+${count} more`;
 }
 
 // apply-status-palette (memo T5 opt 3 + user feedback 2026-06-10): every
@@ -158,6 +194,7 @@ export function SdlcPipeline({
   readOnly = false,
   onStatusChange,
   crossAuthors = [],
+  visibilityMode = "everyone",
 }: SdlcPipelineProps) {
   function handleStatusChange(
     productId: string,
@@ -184,6 +221,24 @@ export function SdlcPipeline({
         // read-only mode there is nothing to finish, so it never renders.
         const showCompletenessRing =
           !readOnly && completeness.total > 0 && !completeness.complete;
+        // lead-mine-hide-unowned-stages: in Mine only the lead's own chips
+        // render; foreign-owned and vacant chips are hidden (not greyed).
+        // Everyone renders the full grid. Health and completeness above read
+        // the FULL `product`/`rawProduct`, so this filter never moves them.
+        const visibleStages =
+          visibilityMode === "mine"
+            ? product.stages.filter((s) => s.ownership === "mine")
+            : product.stages;
+        const showNoOwnStagesNote =
+          visibilityMode === "mine" && visibleStages.length === 0;
+        // Affordance 2: the stages the Mine filter collapsed (complement of
+        // visibleStages). Empty outside Mine mode so the indicator never shows
+        // in Everyone. Read from the full `product.stages`, so health and
+        // completeness (computed above from the full product) are untouched.
+        const hiddenStages =
+          visibilityMode === "mine"
+            ? product.stages.filter((s) => s.ownership !== "mine")
+            : [];
         return (
           <div
             key={product.id}
@@ -240,49 +295,77 @@ export function SdlcPipeline({
                   }
                   data-complete={completeness.complete}
                 >
-                  {completeness.filled}/{completeness.total} stages
+                  {completeness.filled}/{completeness.total} {OWN_STAGES_LABEL}
                 </span>
               )}
             </div>
 
-            {/* Stages row */}
-            <div className="flex flex-wrap justify-center items-start gap-2 pb-1">
-              {product.stages.map((stage, idx) => {
-                return (
-                  <div key={stage.stageName} className="flex items-start gap-2">
-                    {idx > 0 && (
-                      <div
-                        className="flex items-center text-lg font-bold"
-                        style={{
-                          height: STAGE_CHIP_BOX_HEIGHT,
-                          color:
-                            stage.ownership === "mine" ||
-                            product.stages[idx - 1]?.ownership === "mine"
-                              ? "var(--color-starbucks-accent)"
-                              : "var(--color-muted-foreground)",
-                        }}
-                      >
-                        &rarr;
+            {/* Stages row. lead-mine-hide-unowned-stages: a product on which the
+              lead owns no stage still renders (with its honest health above)
+              and shows a brief note instead of an empty grid. */}
+            {showNoOwnStagesNote ? (
+              <p className="pb-1 text-[13px] italic text-[var(--color-muted-foreground)]">
+                {NO_OWN_STAGES_NOTE}
+              </p>
+            ) : (
+              <div className="flex flex-wrap justify-center items-start gap-2 pb-1">
+                {visibleStages.map((stage, idx) => {
+                  return (
+                    <div
+                      key={stage.stageName}
+                      className="flex items-start gap-2"
+                    >
+                      {idx > 0 && (
+                        <div
+                          className="flex items-center text-lg font-bold"
+                          style={{
+                            height: STAGE_CHIP_BOX_HEIGHT,
+                            color:
+                              stage.ownership === "mine" ||
+                              visibleStages[idx - 1]?.ownership === "mine"
+                                ? "var(--color-starbucks-accent)"
+                                : "var(--color-muted-foreground)",
+                          }}
+                        >
+                          &rarr;
+                        </div>
+                      )}
+                      <div className="relative">
+                        <StageChip
+                          stage={stage}
+                          rawStatus={
+                            rawProduct.stages.find(
+                              (rs) => rs.stageName === stage.stageName,
+                            )?.status ?? stage.status
+                          }
+                          readOnly={readOnly}
+                          onStatusChange={(name, status) =>
+                            handleStatusChange(product.id, name, status)
+                          }
+                        />
                       </div>
-                    )}
-                    <div className="relative">
-                      <StageChip
-                        stage={stage}
-                        rawStatus={
-                          rawProduct.stages.find(
-                            (rs) => rs.stageName === stage.stageName,
-                          )?.status ?? stage.status
-                        }
-                        readOnly={readOnly}
-                        onStatusChange={(name, status) =>
-                          handleStatusChange(product.id, name, status)
-                        }
-                      />
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+                {/* Affordance 2: inert collapsed-stage indicator. Shows only in
+                    Mine mode (hiddenStages is empty otherwise) and only when
+                    the lead owns at least one stage (this grid branch). Hover
+                    (title) and screen readers (aria-label) reveal each hidden
+                    stage's name and status; it never re-renders the chips. */}
+                {hiddenStages.length > 0 && (
+                  <span
+                    role="img"
+                    data-testid="collapsed-stages-indicator"
+                    title={hiddenStagesRevealText(hiddenStages)}
+                    aria-label={`${HIDDEN_STAGES_ARIA_PREFIX} ${hiddenStagesRevealText(hiddenStages)}`}
+                    className="inline-flex cursor-default items-center rounded-[var(--radius-pill)] border border-dashed border-[var(--color-border)] px-2 text-[12px] font-medium text-[var(--color-muted-foreground)]"
+                    style={{ height: STAGE_CHIP_BOX_HEIGHT }}
+                  >
+                    {collapsedStagesIndicatorLabel(hiddenStages.length)}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         );
       })}

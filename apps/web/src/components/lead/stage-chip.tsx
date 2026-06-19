@@ -147,6 +147,11 @@ export function StageChip({
     setShowPopover(false);
   }
 
+  // TODO(why-status): deferred per-stage "why this status" affordance — attribute
+  // a chip's color to the specific covering risk/blocker in this tooltip
+  // composition (lead-mine-hide-unowned-stages, Out of scope; user decision
+  // 2026-06-18). The existing coverage suffix below ("by risk" / "status set")
+  // stays; no risk-attribution UI is built here yet.
   // W11 (3.9): three-way coverage suffix carried by BOTH the screen-reader
   // label and the visible tooltip.
   //  - covered by the lead's OWN risk on an empty stage → "<status> by risk"

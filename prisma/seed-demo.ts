@@ -2,10 +2,14 @@
  * DEMO seed — tiered, presenter-controlled demo data.
  *
  * One shared writer, two plain-data tiers selected from the CLI:
- *   - small (default) — ONE lead (Vasily) owning 3 products: two single-stage
- *     (Development, partial ownership) + one fully-owned 7-stage product (BI,
- *     all green, no risk). One BLOCKED item so the derived "Needs Attention"
- *     banner has content to demonstrate.
+ *   - small (default) — THREE leads co-owning Vasily's 3 products, role-shaped:
+ *     Vasily owns Development everywhere (+ Planning on the internal BI product,
+ *     exactly two owned stages there); Maria owns Testing; Igor owns DevOps.
+ *     BI leaves Testing unowned ("tester not hired"). Maria and Igor each seed a
+ *     foreign item + risk on a shared product, so the lead report's Mine/Everyone
+ *     toggle has a visible effect and the SDLC pipeline shows real split
+ *     ownership. One BLOCKED item so the derived "Needs Attention" banner has
+ *     content to demonstrate.
  *   - huge — the dense many-product fixture for stress/scroll demos
  *     (all canonical leads + products, templated content).
  *
@@ -52,10 +56,13 @@ import {
   PUBLISHED_REPORT_ID,
   DEFAULT_REPORTING_GROUP_ID,
   LEAD_1_ID,
+  LEAD_MARIA_ID,
+  LEAD_IGOR_ID,
   SEED_STAGES,
   SEED_USERS,
   SEED_PRODUCTS,
   SEED_REPORTS,
+  SEED_HISTORY_REPORTS,
 } from "./seed-constants.js";
 
 // ---------------------------------------------------------------------------
@@ -154,13 +161,33 @@ const PROD_PORTAL = SEED_PRODUCTS[0]!.id; // Маркетинговый порт
 const PROD_INTEGRATIONS = SEED_PRODUCTS[2]!.id; // Платформа интеграций → Vasily
 const PROD_BI = SEED_PRODUCTS[4]!.id; // Внутренний BI → Vasily
 
+// SMALL tier cast — role-shaped co-ownership across Vasily's three products.
+// Vasily owns Development everywhere (+ Planning on BI); Maria owns Testing;
+// Igor owns DevOps. The same colleague owns the same stage on each product
+// (consistent, not random). BI leaves Testing unowned to show a vacant role.
+const VASILY_LABEL = "Василий И.";
+const MARIA_LABEL = "Мария К.";
+const IGOR_LABEL = "Игорь В.";
+
 const SMALL_DATASET: TierDataset = {
   leads: [
     {
       id: LEAD_1_ID,
       email: "lead1@customreport.local",
-      name: "Василий И.",
+      name: VASILY_LABEL,
       samlId: "lead-1",
+    },
+    {
+      id: LEAD_MARIA_ID,
+      email: "maria@customreport.local",
+      name: MARIA_LABEL,
+      samlId: "lead-maria",
+    },
+    {
+      id: LEAD_IGOR_ID,
+      email: "igor@customreport.local",
+      name: IGOR_LABEL,
+      samlId: "lead-igor",
     },
   ],
   products: [
@@ -169,11 +196,12 @@ const SMALL_DATASET: TierDataset = {
     { id: PROD_BI, name: "Внутренний BI", leadId: LEAD_1_ID },
   ],
   sections: [
-    // Product A — single stage (Development). Carries the BLOCKED item so the
-    // derived "Needs Attention" escalation banner has content to demonstrate.
+    // --- Vasily (primary lead) — owns Development on each product ----------
+    // Portal — carries the BLOCKED item so the derived "Needs Attention"
+    // escalation banner has content to demonstrate.
     {
       leadId: LEAD_1_ID,
-      leadLabel: "Василий И.",
+      leadLabel: VASILY_LABEL,
       productId: PROD_PORTAL,
       productLight: TrafficLightStatus.yellow,
       sectionStatus: ReportSectionStatus.draft,
@@ -209,10 +237,10 @@ const SMALL_DATASET: TierDataset = {
         stage: "Development",
       },
     },
-    // Product B — single stage (Development).
+    // Integrations.
     {
       leadId: LEAD_1_ID,
-      leadLabel: "Василий И.",
+      leadLabel: VASILY_LABEL,
       productId: PROD_INTEGRATIONS,
       productLight: TrafficLightStatus.green,
       sectionStatus: ReportSectionStatus.draft,
@@ -234,37 +262,31 @@ const SMALL_DATASET: TierDataset = {
           stages: ["Development"],
         },
       ],
-      risk: {
-        risk: "Внешний API партнёра нестабилен в sandbox-среде",
-        impact: "Возможны повторные доработки коннектора",
-        mitigation: "Завести моки и контрактные тесты до боевой интеграции",
-        severity: "at-risk",
-        stage: "Development",
-      },
       decision: {
         text: "Зафиксировать версию API партнёра для интеграции",
         impact: "Снижает риск ломающих изменений на их стороне",
         stage: "Development",
       },
     },
-    // Product C — all seven SDLC stages, fully green (no risk). Showcases a
-    // complete, healthy product at the opposite end of the spectrum from Portal.
+    // BI — the internal product. Vasily owns EXACTLY TWO stages (Planning,
+    // Development); Testing is left unowned (tester not hired). Igor co-owns
+    // DevOps here (see his section below) and raises the blocker that lights
+    // this product's health red in Vasily's view even though Vasily owns
+    // neither the DevOps nor the Testing chip.
     {
       leadId: LEAD_1_ID,
-      leadLabel: "Василий И.",
+      leadLabel: VASILY_LABEL,
       productId: PROD_BI,
       productLight: TrafficLightStatus.green,
       sectionStatus: ReportSectionStatus.draft,
-      ownedStages: [
-        "Planning",
-        "Analysis",
-        "Design",
-        "Development",
-        "Testing",
-        "DevOps",
-        "Support",
-      ],
+      ownedStages: ["Planning", "Development"],
       items: [
+        // The one MULTI-STAGE item in the small tier (durable spec
+        // demo-seed-datasets "Small tier is minimal and stage-realistic"):
+        // Item.stageNames spans Development + Testing. With Testing unowned on
+        // BI (tester not hired), Vasily carries the acceptance work himself, so
+        // the item legitimately touches both phases. Portal/Integrations items
+        // stay single-stage.
         {
           type: ItemType.current,
           text: "Новый дашборд BI: разработка и приёмочное тестирование идут параллельно",
@@ -275,17 +297,154 @@ const SMALL_DATASET: TierDataset = {
         },
         {
           type: ItemType.next,
-          text: "Подготовить нагрузочный прогон дашборда BI",
+          text: "Спланировать целевые показатели следующего спринта дашборда BI",
           tag: "infra",
+          status: ItemWorkflowStatus.in_progress,
+          stages: ["Planning"],
+        },
+      ],
+      decision: {
+        text: "Утвердить целевые SLA по времени отклика дашборда BI",
+        impact: "Даёт измеримый порог приёмки для разработки",
+        stage: "Development",
+      },
+    },
+    // --- Maria (co-owner) — owns Testing; foreign content on Portal --------
+    {
+      leadId: LEAD_MARIA_ID,
+      leadLabel: MARIA_LABEL,
+      productId: PROD_PORTAL,
+      productLight: TrafficLightStatus.yellow,
+      sectionStatus: ReportSectionStatus.draft,
+      ownedStages: ["Testing"],
+      items: [
+        {
+          type: ItemType.current,
+          text: "Прогон регрессии по сценариям входа портала, чиним флаки-тесты",
+          tag: "bugfix",
+          status: ItemWorkflowStatus.in_progress,
+          stages: ["Testing"],
+        },
+        {
+          type: ItemType.next,
+          text: "Автоматизировать регрессию входа портала в CI на следующей неделе",
+          tag: "bugfix",
+          status: ItemWorkflowStatus.in_progress,
+          stages: ["Testing"],
+        },
+      ],
+      risk: {
+        risk: "Нестабильные e2e-тесты входа маскируют реальные регрессии",
+        impact: "Риск пропустить дефект авторизации в релиз",
+        mitigation: "Карантин флаки-тестов и стабилизация окружения стенда",
+        severity: "at-risk",
+        stage: "Testing",
+      },
+    },
+    // Maria also owns Testing on Integrations. She carries cross-author content
+    // here (an item + a decision) so the lead's "Everyone" visibility lens on
+    // Vasily's Integrations product shows co-owner records, not just own ones.
+    {
+      leadId: LEAD_MARIA_ID,
+      leadLabel: MARIA_LABEL,
+      productId: PROD_INTEGRATIONS,
+      productLight: TrafficLightStatus.green,
+      sectionStatus: ReportSectionStatus.draft,
+      ownedStages: ["Testing"],
+      items: [
+        {
+          type: ItemType.current,
+          text: "Контрактные тесты REST-коннектора зелёные на стенде интеграций",
+          tag: "feature",
+          status: ItemWorkflowStatus.in_progress,
+          stages: ["Testing"],
+        },
+        {
+          type: ItemType.next,
+          text: "Подготовить нагрузочные тесты REST-коннектора к следующему спринту",
+          tag: "feature",
           status: ItemWorkflowStatus.in_progress,
           stages: ["Testing"],
         },
       ],
       decision: {
-        text: "Утвердить целевые SLA по времени отклика дашборда BI",
-        impact: "Даёт измеримый порог приёмки для тестирования",
-        stage: "Development",
+        text: "Принять контрактные тесты как gate перед боевой интеграцией",
+        impact: "Ломающие изменения партнёрского API ловятся до релиза",
+        stage: "Testing",
       },
+    },
+    // --- Igor (co-owner) — owns DevOps; foreign blocker on BI -------------
+    {
+      leadId: LEAD_IGOR_ID,
+      leadLabel: IGOR_LABEL,
+      productId: PROD_BI,
+      productLight: TrafficLightStatus.red,
+      sectionStatus: ReportSectionStatus.draft,
+      ownedStages: ["DevOps"],
+      items: [
+        {
+          type: ItemType.current,
+          text: "Деплой дашборда BI заблокирован: не выделены ресурсы кластера",
+          tag: "infra",
+          status: ItemWorkflowStatus.blocked,
+          stages: ["DevOps"],
+        },
+        {
+          type: ItemType.next,
+          text: "Настроить мониторинг кластера BI после выделения ресурсов",
+          tag: "infra",
+          status: ItemWorkflowStatus.in_progress,
+          stages: ["DevOps"],
+        },
+      ],
+      risk: {
+        risk: "Нет выделенных мощностей кластера под прод-стенд BI",
+        impact: "Релиз дашборда BI сдвигается до выделения ресурсов",
+        mitigation: "Заявка в инфраструктуру, временный деплой на общий стенд",
+        severity: "blocked",
+        stage: "DevOps",
+      },
+      // Cross-author decision on Vasily's BI product, surfaced in his
+      // "Everyone" visibility lens alongside Igor's blocker.
+      decision: {
+        text: "Временно деплоить BI на общий стенд до выделения кластера",
+        impact: "Разблокирует приёмку дашборда, прод-деплой ждёт ресурсов",
+        stage: "DevOps",
+      },
+    },
+    // Igor also owns DevOps on Portal and Integrations (consistent role).
+    {
+      leadId: LEAD_IGOR_ID,
+      leadLabel: IGOR_LABEL,
+      productId: PROD_PORTAL,
+      productLight: TrafficLightStatus.green,
+      sectionStatus: ReportSectionStatus.draft,
+      ownedStages: ["DevOps"],
+      items: [],
+    },
+    {
+      leadId: LEAD_IGOR_ID,
+      leadLabel: IGOR_LABEL,
+      productId: PROD_INTEGRATIONS,
+      productLight: TrafficLightStatus.green,
+      sectionStatus: ReportSectionStatus.draft,
+      ownedStages: ["DevOps"],
+      items: [
+        {
+          type: ItemType.current,
+          text: "Развернули стенд интеграций в общем кластере для приёмки",
+          tag: "infra",
+          status: ItemWorkflowStatus.in_progress,
+          stages: ["DevOps"],
+        },
+        {
+          type: ItemType.next,
+          text: "Автоматизировать выкладку коннектора через CI/CD пайплайн",
+          tag: "infra",
+          status: ItemWorkflowStatus.in_progress,
+          stages: ["DevOps"],
+        },
+      ],
     },
   ],
 };
@@ -578,6 +737,22 @@ async function seedReports(): Promise<void> {
           sections: [],
         },
       },
+      // History periods (N-2 .. N-4). N-3 and N-4 are archived so the lead
+      // report toolbar surfaces the show-archived filter (it renders only when
+      // the lead has at least one archived period). All are published.
+      ...SEED_HISTORY_REPORTS.map((h) => ({
+        id: h.id,
+        periodStart: new Date(h.periodStart),
+        periodEnd: new Date(h.periodEnd),
+        deadline: new Date(h.deadline),
+        weekLabel: h.weekLabel,
+        periodStatus: PeriodStatus.published,
+        status: ReportStatus.published,
+        periodState: h.archived ? PeriodState.archived : PeriodState.published,
+        archived: h.archived,
+        publishedAt: new Date(h.periodEnd),
+        publishedById: HEAD_USER_ID,
+      })),
     ],
   });
 }
@@ -705,21 +880,24 @@ async function seedActiveLeadSection(
   }
 }
 
-async function seedPublishedLeadSection(
+async function seedPriorLeadSection(
+  reportId: string,
+  submittedAt: Date,
   leadId: string,
   contributions: readonly DemoSection[],
   productNames: ReadonlyMap<string, string>,
 ): Promise<void> {
-  // One submitted prior-period section per lead so the published head view and
-  // period switching have non-empty content (one done item per product).
+  // One submitted prior-period section per lead so the published head view,
+  // archived history, and period switching have non-empty content (one done
+  // item per product).
   const sectionId = makeSectionId();
   await prisma.reportSection.create({
     data: {
       id: sectionId,
-      reportId: PUBLISHED_REPORT_ID,
+      reportId,
       authorId: leadId,
       status: ReportSectionStatus.submitted,
-      submittedAt: new Date(SEED_REPORTS.published.publishedAt),
+      submittedAt,
     },
   });
   for (const c of contributions) {
@@ -772,7 +950,26 @@ async function seedDemo(tier: Tier): Promise<void> {
     await seedActiveLeadSection(leadId, contributions);
   }
   for (const [leadId, contributions] of byLead) {
-    await seedPublishedLeadSection(leadId, contributions, productNames);
+    await seedPriorLeadSection(
+      PUBLISHED_REPORT_ID,
+      new Date(SEED_REPORTS.published.publishedAt),
+      leadId,
+      contributions,
+      productNames,
+    );
+  }
+  // History periods give the lead archived periods to surface the
+  // show-archived toggle, and keep the head/period-switch views non-empty.
+  for (const h of SEED_HISTORY_REPORTS) {
+    for (const [leadId, contributions] of byLead) {
+      await seedPriorLeadSection(
+        h.id,
+        new Date(h.periodEnd),
+        leadId,
+        contributions,
+        productNames,
+      );
+    }
   }
 
   const counts = {

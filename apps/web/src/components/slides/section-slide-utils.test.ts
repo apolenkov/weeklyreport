@@ -1,13 +1,18 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import type { CrossAuthorContentRow } from "../../lib/mappers/lead-cross-author";
 import {
   applyForeignProductHealth,
   buildActivitySlideModel,
   buildProductScopedSlides,
   buildSectionSlideModel,
   buildUnifiedSlideModel,
+  crossAuthorContentToSlideForeign,
+  EMPTY_SLIDE_FOREIGN_CONTENT,
+  mergeForeignSlideContent,
   scopeSlideToProduct,
+  type SlideForeignContent,
   type SlideProduct,
   sortSlidesForReview,
 } from "./section-slide-utils";
@@ -907,5 +912,200 @@ describe("applyForeignProductHealth", () => {
   it("returns products unchanged when there are no cross-authors", () => {
     const products = [makeProduct({ status: "green" })];
     expect(applyForeignProductHealth(products, [])).toEqual(products);
+  });
+});
+
+// ---- slides-record-visibility: Everyone foreign-content merge ----
+
+const FOREIGN_AUTHOR_ID = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+
+function makeForeignRow(
+  overrides: Partial<CrossAuthorContentRow> = {},
+): CrossAuthorContentRow {
+  return {
+    authorId: FOREIGN_AUTHOR_ID,
+    authorName: "Bria Co-owner",
+    items: [],
+    risks: [],
+    decisions: [],
+    ...overrides,
+  };
+}
+
+describe("crossAuthorContentToSlideForeign", () => {
+  it("classifies items by week + blocked, and flattens risks/decisions", () => {
+    const out = crossAuthorContentToSlideForeign([
+      makeForeignRow({
+        items: [
+          {
+            id: "i1",
+            projectId: PRODUCT_ID,
+            type: "current",
+            text: "Foreign current",
+            workflowStatus: "blocked",
+            stageNames: ["Build"],
+          },
+          {
+            id: "i2",
+            projectId: PRODUCT_ID,
+            type: "next",
+            text: "Foreign next",
+            workflowStatus: "in_progress",
+            stageNames: ["Build"],
+          },
+        ],
+        risks: [
+          {
+            id: "r1",
+            projectId: PRODUCT_ID,
+            risk: "Foreign risk",
+            impact: "x",
+            mitigation: "y",
+            severity: "at-risk",
+            stageNames: ["Build"],
+          },
+        ],
+        decisions: [
+          {
+            id: "d1",
+            productId: PRODUCT_ID,
+            text: "Foreign decision",
+            owner: "Bria",
+            impact: "z",
+            deadline: null,
+            stageNames: ["Build"],
+          },
+        ],
+      }),
+    ]);
+    expect(out.currentItems).toEqual([
+      { projectId: PRODUCT_ID, text: "Foreign current", blocked: true },
+    ]);
+    expect(out.nextItems).toEqual([
+      { projectId: PRODUCT_ID, text: "Foreign next", blocked: false },
+    ]);
+    expect(out.risks).toEqual([
+      { projectId: PRODUCT_ID, text: "Foreign risk", blocked: false },
+    ]);
+    expect(out.decisions).toEqual([
+      { projectId: PRODUCT_ID, text: "Foreign decision" },
+    ]);
+  });
+});
+
+describe("mergeForeignSlideContent", () => {
+  const foreign: SlideForeignContent = {
+    currentItems: [
+      { projectId: PRODUCT_ID, text: "Foreign current", blocked: true },
+    ],
+    nextItems: [
+      { projectId: PRODUCT_ID, text: "Foreign next", blocked: false },
+    ],
+    risks: [{ projectId: PRODUCT_ID, text: "Foreign risk", blocked: false }],
+    decisions: [{ projectId: PRODUCT_ID, text: "Foreign decision" }],
+  };
+
+  it("folds foreign content into the product grid and KPI counters", () => {
+    const base = buildSectionSlideModel(makeSection());
+    const merged = mergeForeignSlideContent(base, foreign);
+
+    // Counters reflect own + foreign.
+    expect(merged.currentCount).toBe(base.currentCount + 1);
+    expect(merged.nextCount).toBe(base.nextCount + 1);
+    expect(merged.riskCount).toBe(base.riskCount + 1);
+    expect(merged.decisionCount).toBe(base.decisionCount + 1);
+    // Foreign blocked current item lifts the blocked KPI; foreign at-risk risk
+    // lifts at-risk. Health-derived priorities stay own-only.
+    expect(merged.blockedCount).toBe(base.blockedCount + 1);
+    expect(merged.atRiskCount).toBe(base.atRiskCount + 1);
+    expect(merged.priorityCount).toBe(base.priorityCount);
+
+    const product = merged.productSlides.find((p) => p.id === PRODUCT_ID);
+    expect(product?.currentItems).toContain("Foreign current");
+    expect(product?.nextItems).toContain("Foreign next");
+    expect(product?.risks).toContain("Foreign risk");
+    expect(product?.decisions).toContain("Foreign decision");
+  });
+
+  it("counts a foreign blocked item exactly like an own blocked item (parity)", () => {
+    const ownBlocked = buildSectionSlideModel(
+      makeSection({
+        items: [
+          {
+            id: "own-b",
+            projectId: PRODUCT_ID,
+            type: "current",
+            text: "Own blocked",
+            tag: "t",
+            workflowStatus: "blocked",
+            carriedOver: false,
+            completed: null,
+          },
+        ],
+      }),
+    );
+    const base = buildSectionSlideModel(
+      makeSection({
+        items: [
+          {
+            id: "own-ip",
+            projectId: PRODUCT_ID,
+            type: "current",
+            text: "Own in progress",
+            tag: "t",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            completed: null,
+          },
+        ],
+      }),
+    );
+    const mergedBlocked = mergeForeignSlideContent(base, {
+      ...EMPTY_SLIDE_FOREIGN_CONTENT,
+      currentItems: [
+        { projectId: PRODUCT_ID, text: "Foreign blocked", blocked: true },
+      ],
+    });
+    // own blocked vs foreign blocked contribute the same +1 to the blocked KPI.
+    expect(mergedBlocked.blockedCount).toBe(ownBlocked.blockedCount);
+  });
+
+  it("NEVER mutates the input model or its section (view-only invariant)", () => {
+    const section = makeSection();
+    const itemsRef = section.items;
+    const itemsLenBefore = section.items.length;
+    const base = buildSectionSlideModel(section);
+    const baseProductsRef = base.productSlides;
+    const baseCurrentBefore = base.currentCount;
+
+    mergeForeignSlideContent(base, foreign);
+
+    // The cached section the draft serializes is byte-for-byte unchanged.
+    expect(section.items).toBe(itemsRef);
+    expect(section.items.length).toBe(itemsLenBefore);
+    // The base slide model is not mutated either (new objects only).
+    expect(base.productSlides).toBe(baseProductsRef);
+    expect(base.currentCount).toBe(baseCurrentBefore);
+    const baseProduct = base.productSlides.find((p) => p.id === PRODUCT_ID);
+    expect(baseProduct?.currentItems).not.toContain("Foreign current");
+  });
+
+  it("drops a foreign row whose product is not in the deck (no orphan count)", () => {
+    const base = buildSectionSlideModel(makeSection());
+    const merged = mergeForeignSlideContent(base, {
+      ...EMPTY_SLIDE_FOREIGN_CONTENT,
+      currentItems: [
+        { projectId: PRODUCT_TWO_ID, text: "Off-deck foreign", blocked: false },
+      ],
+    });
+    expect(merged.currentCount).toBe(base.currentCount);
+    expect(merged).toBe(base); // nothing landed → same reference
+  });
+
+  it("returns the same model reference when there is no foreign content", () => {
+    const base = buildSectionSlideModel(makeSection());
+    expect(mergeForeignSlideContent(base, EMPTY_SLIDE_FOREIGN_CONTENT)).toBe(
+      base,
+    );
   });
 });

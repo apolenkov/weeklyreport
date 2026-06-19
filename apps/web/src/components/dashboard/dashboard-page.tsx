@@ -381,7 +381,7 @@ function DashboardLoadIssue({
         </h1>
       </header>
       <section
-        className="flex max-w-2xl flex-col gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm"
+        className="flex max-w-2xl flex-col gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-sm"
         role="alert"
       >
         <div className="flex items-start gap-3">
@@ -401,7 +401,7 @@ function DashboardLoadIssue({
         <button
           type="button"
           onClick={onRetry}
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] w-fit cursor-pointer items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-surface)] transition-colors hover:bg-[var(--color-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-starbucks-accent)]"
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] w-fit cursor-pointer items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-starbucks-accent)]"
         >
           <RefreshCw aria-hidden="true" className="h-4 w-4" />
           Retry

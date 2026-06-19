@@ -155,7 +155,9 @@ function ItemEditDialogContent({
         ? [...(stagesForProduct?.(initial.productId) ?? [])]
         : [],
   );
-  const [errors, setErrors] = useState<{ text?: string }>({});
+  const [errors, setErrors] = useState<{ text?: string; stageIds?: string }>(
+    {},
+  );
 
   // Ranks already taken by OTHER items. The item's own current rank is
   // excluded so the user can keep it without seeing a false "taken" marker.
@@ -184,8 +186,18 @@ function ItemEditDialogContent({
 
   function handleSave() {
     const trimmed = text.trim();
+    // require-stage-on-items-and-decisions: an item must carry a concrete stage
+    // when the product has owned stages — mirrors the risk dialog. A single
+    // owned stage is implicitly selected so the lead can save without a click.
+    const availableStages = stagesForProduct?.(productId) ?? [];
+    const effectiveStageIds =
+      stageIds.length === 0 && availableStages.length === 1
+        ? [...availableStages]
+        : stageIds;
     const next: typeof errors = {};
     if (trimmed.length === 0) next.text = "Description is required";
+    if (availableStages.length > 0 && effectiveStageIds.length === 0)
+      next.stageIds = "Select at least one stage.";
     if (Object.keys(next).length > 0) {
       setErrors(next);
       return;
@@ -206,7 +218,7 @@ function ItemEditDialogContent({
       id: item?.id ?? crypto.randomUUID(),
       productId: product.id,
       productName: product.name,
-      stageIds: stageIds.length > 0 ? stageIds : undefined,
+      stageIds: effectiveStageIds.length > 0 ? effectiveStageIds : undefined,
       text: trimmed,
       status,
       author: item?.author ?? currentUserName ?? "You",
@@ -332,7 +344,13 @@ function ItemEditDialogContent({
             id="item-stage"
             value={stageIds}
             stages={stagesForProduct?.(productId) ?? []}
-            onChange={setStageIds}
+            required
+            error={errors.stageIds}
+            onChange={(next) => {
+              setStageIds(next);
+              if (errors.stageIds)
+                setErrors((prev) => ({ ...prev, stageIds: undefined }));
+            }}
           />
 
           {/* Status chips */}

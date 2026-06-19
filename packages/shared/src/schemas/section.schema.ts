@@ -33,6 +33,16 @@ export const itemInputSchema = z.object({
   carriedOver: z.boolean().default(false),
   completed: z.boolean().nullable().optional(),
   priorityRank: z.number().int().min(1).nullable().optional(),
+  // enforce-item-decision-stage-schema: an item must always carry ≥1 concrete
+  // SDLC stage, mirroring riskInputSchema. BREAKING for API callers (or stale
+  // clients) that submit stage-less items.
+  stageIds: requiredStageIdsField,
+});
+
+// enforce-item-decision-stage-schema (mirrors riskReadModelSchema): the READ
+// model stays tolerant of stage-less legacy item rows so they still load and
+// can render the loud "No stage set" marker; only the write path rejects them.
+export const itemReadModelSchema = itemInputSchema.extend({
   stageIds: stageIdsField,
 });
 
@@ -63,8 +73,18 @@ export const decisionInputSchema = z.object({
   deadline: z.coerce.date().nullable().optional(),
   impact: safeText({ max: 500 }),
   resolvedAt: z.coerce.date().nullable().optional(),
-  stageIds: stageIdsField,
+  // enforce-item-decision-stage-schema: a decision must always carry ≥1
+  // concrete SDLC stage, mirroring riskInputSchema. BREAKING for API callers
+  // (or stale clients) that submit stage-less decisions.
+  stageIds: requiredStageIdsField,
   productId: z.uuid().nullable().optional(),
+});
+
+// enforce-item-decision-stage-schema (mirrors riskReadModelSchema): the READ
+// model tolerates stage-less legacy decision rows so they still load and render
+// the loud "No stage set" marker; only the write path rejects them.
+export const decisionReadModelSchema = decisionInputSchema.extend({
+  stageIds: stageIdsField,
 });
 
 export const draftSaveSchema = z.object({
@@ -158,9 +178,9 @@ export const reportSectionReadModelSchema = z.object({
   // legacy fixtures and pre-existing snapshots still parse; missing means
   // "no extra names" and the mappers fall back exactly as before.
   referencedProjects: z.array(referencedProjectSchema).optional(),
-  items: z.array(itemInputSchema),
+  items: z.array(itemReadModelSchema),
   risks: z.array(riskReadModelSchema),
-  decisions: z.array(decisionInputSchema),
+  decisions: z.array(decisionReadModelSchema),
 });
 
 export const submissionDashboardRowSchema = z.object({

@@ -203,6 +203,12 @@ interface BridgeContextValue {
   risksAddSignal?: number;
   /** F1: cross-author entries for the current report period. */
   crossAuthors?: readonly CrossAuthorEntry[];
+  /**
+   * lead-mine-hide-unowned-stages: the record visibility mode, forwarded to
+   * SdlcPipeline so Mine renders only the lead's own stage chips. Optional —
+   * tests / non-lead callers omit it and the pipeline defaults to "everyone".
+   */
+  visibilityMode?: "mine" | "everyone";
   /** W5: merged risks (own + foreign) for visual rendering only. The sync hook
    * still operates on `risks` (own-only) to avoid false-positive mutations. */
   displayRisks?: RiskEntry[];
@@ -247,6 +253,11 @@ export interface LeadFormSyncBridgeProviderProps {
   readonly risksAddSignal?: number;
   /** F1: cross-author entries for shared products. */
   readonly crossAuthors?: readonly CrossAuthorEntry[];
+  /**
+   * lead-mine-hide-unowned-stages: record visibility mode forwarded to the
+   * pipeline. Optional — defaults to "everyone" (full grid) when omitted.
+   */
+  readonly visibilityMode?: "mine" | "everyone";
   /** W5: merged risks for visual rendering; own-only risks drive sync hook. */
   readonly displayRisks?: RiskEntry[];
   readonly children: ReactNode;
@@ -262,6 +273,7 @@ function Provider({
   sectionAuthorName,
   risksAddSignal,
   crossAuthors,
+  visibilityMode,
   displayRisks,
   children,
 }: LeadFormSyncBridgeProviderProps) {
@@ -391,6 +403,7 @@ function Provider({
       ...(sectionAuthorName !== undefined ? { sectionAuthorName } : {}),
       ...(risksAddSignal !== undefined ? { risksAddSignal } : {}),
       ...(crossAuthors !== undefined ? { crossAuthors } : {}),
+      ...(visibilityMode !== undefined ? { visibilityMode } : {}),
       ...(displayRisks !== undefined ? { displayRisks } : {}),
       riskPrefill,
       handleStageStatusChange,
@@ -404,6 +417,7 @@ function Provider({
       sectionAuthorName,
       risksAddSignal,
       crossAuthors,
+      visibilityMode,
       displayRisks,
       riskPrefill,
       handleStageStatusChange,
@@ -474,6 +488,9 @@ function Pipeline() {
       onStatusChange={ctx.handleStageStatusChange}
       {...(ctx.crossAuthors !== undefined
         ? { crossAuthors: ctx.crossAuthors }
+        : {})}
+      {...(ctx.visibilityMode !== undefined
+        ? { visibilityMode: ctx.visibilityMode }
         : {})}
     />
   );

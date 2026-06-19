@@ -138,6 +138,7 @@ const reviewUpdate: DraftSavePayload = {
       text: "Reviewed current week update",
       tag: "feature",
       workflowStatus: "in_progress",
+      stageIds: ["Development"],
     },
   ],
   risks: [],
