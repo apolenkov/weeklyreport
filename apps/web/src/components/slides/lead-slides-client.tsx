@@ -12,7 +12,6 @@ import {
   useState,
 } from "react";
 
-import { useIsFullscreen } from "../../hooks/use-is-fullscreen";
 import { crossAuthorContentFetchEnabled } from "../../lib/cross-author-content-gate";
 import type { CrossAuthorContentRow } from "../../lib/mappers/lead-cross-author";
 import { SessionContext } from "../../lib/session-provider";
@@ -20,7 +19,6 @@ import { useTRPC } from "../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
-import { ForeignTagsComingSoon } from "./foreign-tags-coming-soon";
 import { LeadProductGrid } from "./lead-product-grid";
 import { LeadSlideHero } from "./lead-slide-hero";
 import {
@@ -116,7 +114,6 @@ export function LeadSlidesClient({
   const session = useContext(SessionContext);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scope, setScope] = useState<ScopeValue>("own");
-  const isFullscreen = useIsFullscreen();
   const internalDeckRef = useRef<HTMLDivElement>(null);
   const deckRef = externalDeckRef ?? internalDeckRef;
 
@@ -284,7 +281,10 @@ export function LeadSlidesClient({
   if (scope === "product") {
     return (
       <div ref={deckRef}>
-        <article className="slide-frame rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-6 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+        {/* lead-demo-feedback #88: match the own-scope LeadSlideArticle inset
+            (p-3) so toggling Summary↔Product never shifts the hero (the prior
+            p-6 put the hero 12px lower/right than the own-scope path). */}
+        <article className="slide-frame rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-3 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
           {sectionModel ? (
             <LeadSlideHero
               slide={sectionModel}
@@ -335,10 +335,6 @@ export function LeadSlidesClient({
         heroControls={
           <div className="flex flex-wrap items-center gap-2">
             {scopeControls}
-            {/* close-slides-visibility-tails (tail 2): own-scope bullet view +
-                Everyone + not fullscreen — a working-view hint that co-owners'
-                merged rows are not yet per-author attributed (deferred). */}
-            {isEveryone && !isFullscreen && <ForeignTagsComingSoon />}
           </div>
         }
         toolbar={

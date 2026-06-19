@@ -17,10 +17,10 @@ import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { COMING_SOON_TOOLTIP_ANCHOR } from "./coming-soon-tooltip-anchor";
 import { PdfExportComingSoonControl } from "./lead/pdf-export-coming-soon";
 import { VersionComingSoonControl } from "./lead/version-coming-soon";
 import { AgentReviewComingSoon } from "./report-shell/agent-review-coming-soon";
-import { ForeignTagsComingSoon } from "./slides/foreign-tags-coming-soon";
 
 // The canonical amber tokens baked into the shared primitive. `cn` uses
 // tailwind-merge, so a control passing a conflicting `bg-*`/`text-*color*`
@@ -41,7 +41,6 @@ describe("ComingSoonBadge — single canonical style", () => {
       <AgentReviewComingSoon key="agent" />,
       <PdfExportComingSoonControl key="pdf" />,
       <VersionComingSoonControl key="version" />,
-      <ForeignTagsComingSoon key="foreign-tags" />,
     ];
     for (const control of controls) {
       const { container, unmount } = render(control);
@@ -51,6 +50,67 @@ describe("ComingSoonBadge — single canonical style", () => {
       expect(badge?.classList.contains(CANONICAL_BG)).toBe(true);
       expect(badge?.classList.contains(CANONICAL_FG)).toBe(true);
       unmount();
+    }
+  });
+});
+
+describe("ComingSoonBadge — single centred tooltip anchor (#91)", () => {
+  // The shared anchor centres the badge under the control regardless of width.
+  // Splitting it into tokens gives the assertion teeth: a control that diverges
+  // (or reintroduces `right-0`) drops a token and fails.
+  const ANCHOR_TOKENS = COMING_SOON_TOOLTIP_ANCHOR.split(" ");
+
+  it("the shared anchor centres the badge and never right-aligns it", () => {
+    expect(ANCHOR_TOKENS).toContain("left-1/2");
+    expect(ANCHOR_TOKENS).toContain("-translate-x-1/2");
+    expect(ANCHOR_TOKENS).not.toContain("right-0");
+  });
+
+  it("every tooltip control's badge uses the identical centred anchor", () => {
+    const controls = [
+      <AgentReviewComingSoon key="agent" />,
+      <PdfExportComingSoonControl key="pdf" />,
+      <VersionComingSoonControl key="version" />,
+    ];
+    for (const control of controls) {
+      const { container, unmount } = render(control);
+      const badge = container.querySelector('[data-state="coming-soon"]');
+      expect(badge).not.toBeNull();
+      for (const token of ANCHOR_TOKENS) {
+        expect(badge?.classList.contains(token)).toBe(true);
+      }
+      // The wide text-labelled agent-review must NOT right-align (the bug).
+      expect(badge?.classList.contains("right-0")).toBe(false);
+      unmount();
+    }
+  });
+});
+
+describe("#91 — all six tooltip controls share the centred anchor (source scan)", () => {
+  // The render test above reaches only the 3 exported controls. The other 3
+  // (nav theme/language, admin holidays) are internal functions needing
+  // providers to render, so a filesystem scan guards them: each tooltip
+  // control's source MUST consume the shared const and carry no `right-0`
+  // anchor. Without this, hard-coding `right-0` onto e.g. the nav theme badge
+  // (tailwind-merge overriding the shared anchor) would pass every other test.
+  // This test file lives in apps/web/src/components, so its own dir is the
+  // root the control paths below are relative to.
+  const componentsRoot = path.dirname(fileURLToPath(import.meta.url));
+  const TOOLTIP_CONTROL_FILES = [
+    "report-shell/agent-review-coming-soon.tsx",
+    "lead/version-coming-soon.tsx",
+    "lead/pdf-export-coming-soon.tsx",
+    "navigation/nav-bar.tsx",
+    "admin/settings-tab.tsx",
+  ];
+
+  it("every tooltip control source consumes the shared const, none right-aligns", () => {
+    for (const rel of TOOLTIP_CONTROL_FILES) {
+      const source = readFileSync(path.join(componentsRoot, rel), "utf8");
+      expect(source).toContain("COMING_SOON_TOOLTIP_ANCHOR");
+      // A bespoke `right-0` anchor on a ComingSoon tooltip is the exact bug
+      // #91 fixes; the shared const centres instead.
+      expect(source).not.toContain("absolute right-0");
     }
   });
 });
