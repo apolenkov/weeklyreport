@@ -7,9 +7,10 @@
  * hue. Tests prove the two signals are independent across all four quadrants.
  */
 
-import { render } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { SdlcTooltipProvider } from "../ui/sdlc-tooltip";
 import type { Product } from "./mock-data";
 import { getProductCardStyle, SdlcPipeline } from "./sdlc-pipeline";
 
@@ -704,12 +705,90 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     expect(indicator).not.toBeNull();
     // Visible count of collapsed stages (Testing + DevOps hidden).
     expect(indicator?.textContent).toContain("2");
-    // Hover (title) and non-visual (aria-label) both reveal name: status.
+    // #89: the native `title` is gone; the non-visual aria-label is the
+    // screen-reader path and still lists each hidden stage as name: status.
     const reveal = "Testing: at-risk, DevOps: empty";
-    expect(indicator?.getAttribute("title")).toBe(reveal);
+    expect(indicator?.getAttribute("title")).toBeNull();
     expect(indicator?.getAttribute("aria-label")).toContain(reveal);
     // It must NOT re-render the hidden chips inline.
     expect(renderedStageNames(container)).toEqual(["Dev"]);
+  });
+
+  it("#89: hovering +N more drives the shared styled tooltip; leaving hides it", () => {
+    render(
+      <SdlcTooltipProvider>
+        <SdlcPipeline
+          products={[PRODUCT_OWN_FOREIGN_VACANT]}
+          readOnly={false}
+          visibilityMode="mine"
+        />
+      </SdlcTooltipProvider>,
+    );
+    // No tooltip until hover.
+    expect(screen.queryByTestId("sdlc-tooltip")).toBeNull();
+    const indicator = screen.getByTestId("collapsed-stages-indicator");
+    fireEvent.mouseEnter(indicator);
+    const tip = screen.getByTestId("sdlc-tooltip");
+    expect(tip.textContent).toBe("Testing: at-risk, DevOps: empty");
+    fireEvent.mouseLeave(indicator);
+    expect(screen.queryByTestId("sdlc-tooltip")).toBeNull();
+  });
+
+  it("#90: the +N more indicator takes the worst hidden status colour (at-risk)", () => {
+    // PRODUCT_OWN_FOREIGN_VACANT hides Testing(at-risk) + DevOps(empty);
+    // worst = at-risk → the indicator border + text use the at-risk tokens.
+    const { container } = render(
+      <SdlcPipeline
+        products={[PRODUCT_OWN_FOREIGN_VACANT]}
+        readOnly={false}
+        visibilityMode="mine"
+      />,
+    );
+    const indicator = container.querySelector<HTMLElement>(COLLAPSED_INDICATOR);
+    expect(indicator?.style.borderColor).toBe(
+      "var(--color-chip-at-risk-border)",
+    );
+    expect(indicator?.style.color).toBe("var(--color-chip-at-risk-text)");
+  });
+
+  it("#90: an all-empty/on-track hidden set leaves the indicator neutral", () => {
+    // Own Dev (mine) + two hidden non-own stages, both non-urgent (on-track /
+    // empty) → worst is not blocked/at-risk, so the indicator stays neutral.
+    const neutralHidden: Product = {
+      id: "p-neutral-hidden",
+      name: "Neutral Hidden",
+      overallStatus: "on-track",
+      stages: [
+        {
+          stageName: "Dev",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "me",
+        },
+        {
+          stageName: "Testing",
+          status: "on-track",
+          ownership: "locked",
+          assignee: "OL",
+        },
+        {
+          stageName: "DevOps",
+          status: "empty",
+          ownership: "unassigned",
+          assignee: null,
+        },
+      ],
+    };
+    const { container } = render(
+      <SdlcPipeline
+        products={[neutralHidden]}
+        readOnly={false}
+        visibilityMode="mine"
+      />,
+    );
+    const indicator = container.querySelector<HTMLElement>(COLLAPSED_INDICATOR);
+    expect(indicator?.style.borderColor).toBe("var(--color-border)");
+    expect(indicator?.style.color).toBe("var(--color-muted-foreground)");
   });
 
   it("Everyone never shows the collapsed-stage indicator (full grid already)", () => {

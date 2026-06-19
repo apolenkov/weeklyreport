@@ -24,6 +24,7 @@ import { useState, useSyncExternalStore } from "react";
 
 import { roleHomePath } from "../../lib/role-home";
 import { useSession } from "../../lib/session-provider";
+import { COMING_SOON_TOOLTIP_ANCHOR } from "../coming-soon-tooltip-anchor";
 import { DevRoleSwitcher } from "../dev/role-switcher";
 
 interface NavLink {
@@ -162,10 +163,7 @@ function LanguageComingSoonControl() {
       >
         <Globe2 size={14} strokeWidth={2} aria-hidden="true" />
       </button>
-      <ComingSoonBadge
-        role="tooltip"
-        className="pointer-events-none absolute right-0 top-[calc(100%+6px)] z-30 opacity-0 shadow-[0_8px_18px_-14px_rgba(0,0,0,0.22),0_1px_2px_rgba(0,0,0,0.08)] transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-      />
+      <ComingSoonBadge role="tooltip" className={COMING_SOON_TOOLTIP_ANCHOR} />
     </div>
   );
 }
@@ -186,10 +184,7 @@ function ThemeComingSoonControl() {
       >
         <Moon size={14} strokeWidth={2} aria-hidden="true" />
       </button>
-      <ComingSoonBadge
-        role="tooltip"
-        className="pointer-events-none absolute right-0 top-[calc(100%+6px)] z-30 opacity-0 shadow-[0_8px_18px_-14px_rgba(0,0,0,0.22),0_1px_2px_rgba(0,0,0,0.08)] transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
-      />
+      <ComingSoonBadge role="tooltip" className={COMING_SOON_TOOLTIP_ANCHOR} />
     </div>
   );
 }

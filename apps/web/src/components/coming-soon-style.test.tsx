@@ -17,6 +17,7 @@ import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { COMING_SOON_TOOLTIP_ANCHOR } from "./coming-soon-tooltip-anchor";
 import { PdfExportComingSoonControl } from "./lead/pdf-export-coming-soon";
 import { VersionComingSoonControl } from "./lead/version-coming-soon";
 import { AgentReviewComingSoon } from "./report-shell/agent-review-coming-soon";
@@ -48,6 +49,38 @@ describe("ComingSoonBadge — single canonical style", () => {
       // Each badge carries the canonical tokens — none overrides bg/fg.
       expect(badge?.classList.contains(CANONICAL_BG)).toBe(true);
       expect(badge?.classList.contains(CANONICAL_FG)).toBe(true);
+      unmount();
+    }
+  });
+});
+
+describe("ComingSoonBadge — single centred tooltip anchor (#91)", () => {
+  // The shared anchor centres the badge under the control regardless of width.
+  // Splitting it into tokens gives the assertion teeth: a control that diverges
+  // (or reintroduces `right-0`) drops a token and fails.
+  const ANCHOR_TOKENS = COMING_SOON_TOOLTIP_ANCHOR.split(" ");
+
+  it("the shared anchor centres the badge and never right-aligns it", () => {
+    expect(ANCHOR_TOKENS).toContain("left-1/2");
+    expect(ANCHOR_TOKENS).toContain("-translate-x-1/2");
+    expect(ANCHOR_TOKENS).not.toContain("right-0");
+  });
+
+  it("every tooltip control's badge uses the identical centred anchor", () => {
+    const controls = [
+      <AgentReviewComingSoon key="agent" />,
+      <PdfExportComingSoonControl key="pdf" />,
+      <VersionComingSoonControl key="version" />,
+    ];
+    for (const control of controls) {
+      const { container, unmount } = render(control);
+      const badge = container.querySelector('[data-state="coming-soon"]');
+      expect(badge).not.toBeNull();
+      for (const token of ANCHOR_TOKENS) {
+        expect(badge?.classList.contains(token)).toBe(true);
+      }
+      // The wide text-labelled agent-review must NOT right-align (the bug).
+      expect(badge?.classList.contains("right-0")).toBe(false);
       unmount();
     }
   });
