@@ -23,6 +23,7 @@ import {
   invalidateLeadForm,
   invalidateLeadHistory,
 } from "../../lib/cache-keys";
+import { crossAuthorContentFetchEnabled } from "../../lib/cross-author-content-gate";
 import { mapLeadFormData } from "../../lib/mappers";
 import {
   applyCrossAuthorStageOverrides,
@@ -459,11 +460,19 @@ export function LeadForm({
   // 7c.3: the full-content read is fetched ONLY in the Everyone state, and only
   // AFTER the persisted toggle has hydrated — so it never fires on the
   // pre-hydration "mine" default and then races a restored "everyone".
+  // close-slides-visibility-tails (tail 1): gate via the shared predicate, with
+  // own-deck = !isForeignSlidesDeck, so a foreign slides deck NEVER fires the
+  // read regardless of the persisted Everyone toggle (matches LeadSlidesClient).
   const crossAuthorContentQ = useQuery({
     ...trpc.leadForm.crossAuthorContent.queryOptions({
       reportId: targetReportId,
     }),
-    enabled: targetReportId !== "" && visibilityHydrated && isEveryone,
+    enabled: crossAuthorContentFetchEnabled({
+      hasReport: targetReportId !== "",
+      visibilityHydrated,
+      isEveryone,
+      isOwnDeck: !isForeignSlidesDeck,
+    }),
   });
 
   // 7c.6: purge the fetched foreign full content from the query cache whenever
@@ -792,8 +801,15 @@ export function LeadForm({
   // draft-merge handlers strip every `.foreign` row, so it never reaches the
   // submission (D4b).
   const productNameById = new Map(products.map((p) => [p.id, p.name]));
+  // close-slides-visibility-tails (tail 1, belt-and-suspenders): also gate the
+  // consume site on !isForeignSlidesDeck so foreign rows are excluded at BOTH
+  // the fetch and the merge — robust even if this memo is ever reused outside
+  // the edit-render branch. After the fetch gate the data is already empty on a
+  // foreign deck; this makes the invariant explicit rather than incidental.
   const foreignContentRows =
-    isEveryone && visibilityHydrated ? (crossAuthorContentQ.data ?? []) : [];
+    isEveryone && visibilityHydrated && !isForeignSlidesDeck
+      ? (crossAuthorContentQ.data ?? [])
+      : [];
   const currentWeekItems: KanbanItem[] = [
     ...ownCurrentWeekItems,
     ...mapForeignItems(foreignContentRows, productNameById, "current"),
