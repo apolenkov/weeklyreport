@@ -31,12 +31,25 @@ two-column dialog layout for live verification (user-agreed).
 
 ## 4. Tests & gates
 
-- [ ] 4.1 Update the #90 scenarios (neutral-when-on-track/empty) to the new
-      full-scale behavior.
-- [ ] 4.2 Add tests: owned hidden stage reveals owner + "no status set" (not
+- [x] 4.1 Update the #90 scenarios (neutral-when-on-track/empty) to the new
+      full-scale behavior. (`sdlc-pipeline.test.tsx`: at-risk/grey/green indicator cases.)
+- [x] 4.2 Add tests: owned hidden stage reveals owner + "no status set" (not
       "empty"); vacant reveals "unassigned"; all-on-track → green; any-unfilled → grey.
-- [ ] 4.3 Wrap pipeline unit tests that render in isolation with a `TooltipProvider`,
-      or assert the inert `aria-label` path.
-- [ ] 4.4 `status-color-semantics` token guard stays green (no hardcoded hues).
-- [ ] 4.5 `pnpm typecheck && pnpm lint && pnpm test` green; live-verify the tooltip is
+      (Covered, incl. the co-owner-initials regression case.)
+- [x] 4.3 Wrap pipeline unit tests that render in isolation with a `TooltipProvider`,
+      or assert the inert `aria-label` path. (`SdlcTooltipProvider` wrap + aria-label asserts.)
+- [x] 4.4 `status-color-semantics` token guard stays green (no hardcoded hues).
+- [x] 4.5 `pnpm typecheck && pnpm lint && pnpm test` green; live-verify the tooltip is
       multi-line + honest and the indicator color matches the full scale.
+
+## 5. Review disposition (Codex + multi-agent, 2026-06-19)
+
+- [x] 5.1 Cross-author color fix: §3's `collapsedIndicatorColors` read the raw
+      Mine-mode status (always `empty` for foreign stages → always grey on the live
+      surface). Now derives from the same cross-author-resolved set as the reveal
+      (`hiddenStagesEffectiveStatuses`), with a regression test. Commit `ba3260f0`.
+- [ ] 5.2 BLOCKER for archive — spec vs §2 conflict (user decision): the
+      `lead-pipeline-card` spec's first requirement MANDATES the shared Radix
+      `Tooltip`, but §2 deliberately DEFERS the Radix swap (still `useSdlcTooltip`).
+      Either soften the spec to "styled tooltip now, Radix as a tracked follow-up"
+      or schedule the Radix swap. Do NOT archive this change until resolved.
