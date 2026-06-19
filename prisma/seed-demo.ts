@@ -2,14 +2,15 @@
  * DEMO seed — tiered, presenter-controlled demo data.
  *
  * One shared writer, two plain-data tiers selected from the CLI:
- *   - small (default) — THREE leads co-owning Vasily's 3 products, role-shaped:
- *     Vasily owns Development everywhere (+ Planning on the internal BI product,
- *     exactly two owned stages there); Maria owns Testing; Igor owns DevOps.
- *     BI leaves Testing unowned ("tester not hired"). Maria and Igor each seed a
- *     foreign item + risk on a shared product, so the lead report's Mine/Everyone
- *     toggle has a visible effect and the SDLC pipeline shows real split
- *     ownership. One BLOCKED item so the derived "Needs Attention" banner has
- *     content to demonstrate.
+ *   - small (default) — THREE leads co-owning Vasily's 3 products, role-shaped,
+ *     showing all three health colours at once (BI green, Integrations yellow,
+ *     Portal red): Vasily owns Development everywhere (+ Planning on BI, two
+ *     owned stages there); Maria owns Testing (+ Analysis/Design on BI); Igor
+ *     owns DevOps. BI is broadly staffed and green, leaving only Support unowned
+ *     (a vacant SDLC role). Maria and Igor each seed foreign content on a shared
+ *     product, so the lead report's Mine/Everyone toggle has a visible effect and
+ *     the SDLC pipeline shows real split ownership. A BLOCKED item on the Portal
+ *     gives the derived "Needs Attention" banner content to demonstrate.
  *   - huge — the dense many-product fixture for stress/scroll demos
  *     (all canonical leads + products, templated content).
  *
@@ -164,7 +165,7 @@ const PROD_BI = SEED_PRODUCTS[4]!.id; // Внутренний BI → Vasily
 // SMALL tier cast — role-shaped co-ownership across Vasily's three products.
 // Vasily owns Development everywhere (+ Planning on BI); Maria owns Testing;
 // Igor owns DevOps. The same colleague owns the same stage on each product
-// (consistent, not random). BI leaves Testing unowned to show a vacant role.
+// (consistent, not random). BI leaves only Support unowned to show a vacant role.
 const VASILY_LABEL = "Василий И.";
 const MARIA_LABEL = "Мария К.";
 const IGOR_LABEL = "Игорь В.";
@@ -294,10 +295,10 @@ const SMALL_DATASET: TierDataset = {
       items: [
         // The one MULTI-STAGE item in the small tier (durable spec
         // demo-seed-datasets "Small tier is minimal and stage-realistic"):
-        // Item.stageNames spans Development + Testing. With Testing unowned on
-        // BI (tester not hired), Vasily carries the acceptance work himself, so
-        // the item legitimately touches both phases. Portal/Integrations items
-        // stay single-stage.
+        // Item.stageNames spans Development + Testing — development and
+        // acceptance testing run in parallel on this dashboard work, so the item
+        // legitimately touches both phases. Portal/Integrations items stay
+        // single-stage.
         {
           type: ItemType.current,
           text: "Новый дашборд BI: разработка и приёмочное тестирование идут параллельно",
