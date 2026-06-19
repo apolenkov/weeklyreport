@@ -8,6 +8,17 @@ export const REPORT_TOOLBAR_FRAME_CLASS =
   "rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-hover)]/70 px-2 py-1.5";
 
 /**
+ * Sticky variant of the frame (opt-in `sticky` prop). Pins the bar to the top
+ * of the viewport on scroll. Differences from the resting frame are
+ * positioning/surface only: an OPAQUE background (no `/70`) so scrolling
+ * content does not bleed through, a shadow elevation cue, and a z-index BELOW
+ * the NavBar dropdown layer (NavBar dropdowns use `z-30`) but above report
+ * content. The resting frame above stays byte-identical for non-opt-in usages.
+ */
+const REPORT_TOOLBAR_FRAME_STICKY_CLASS =
+  "rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-surface-hover)] px-2 py-1.5 sticky top-0 z-20 shadow-md";
+
+/**
  * One toolbar row. `overflow-x-auto` (not `-clip`) keeps every control
  * reachable via horizontal scroll at narrow widths
  * (report-toolbar-layout: narrow-width reachability).
@@ -24,6 +35,11 @@ interface ReportToolbarProps {
    * line via {@link DocumentActionGroup} (report-toolbar-layout).
    */
   contextControls?: ReactNode;
+  /**
+   * Opt-in: pin the bar to the top of the viewport on scroll (lead context bar
+   * only). Default false so every other usage keeps its non-sticky flow.
+   */
+  sticky?: boolean;
 }
 
 /**
@@ -32,8 +48,14 @@ interface ReportToolbarProps {
  * Lock, Fill-From, export, Move-to-archive) render on the page header line
  * instead, so the box no longer stacks two rows of unequal height.
  */
-export function ReportToolbar({ contextControls }: ReportToolbarProps) {
+export function ReportToolbar({
+  contextControls,
+  sticky = false,
+}: ReportToolbarProps) {
   if (contextControls === undefined) return null;
+  const frameClass = sticky
+    ? REPORT_TOOLBAR_FRAME_STICKY_CLASS
+    : REPORT_TOOLBAR_FRAME_CLASS;
   return (
     <div
       data-testid="report-toolbar"
@@ -43,7 +65,7 @@ export function ReportToolbar({ contextControls }: ReportToolbarProps) {
       // where `overflow-x-auto` cannot scroll it back into reach, clipping the
       // leftmost control at narrow widths (report-toolbar-layout: narrow-width
       // reachability).
-      className={`${REPORT_TOOLBAR_FRAME_CLASS} ${REPORT_TOOLBAR_ROW_CLASS} justify-start`}
+      className={`${frameClass} ${REPORT_TOOLBAR_ROW_CLASS} justify-start`}
     >
       {contextControls}
     </div>

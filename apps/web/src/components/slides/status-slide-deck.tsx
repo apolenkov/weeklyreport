@@ -499,7 +499,7 @@ export function StatusSlideDeck({
       {toolbar ? <div>{toolbar}</div> : null}
 
       {!slide ? (
-        <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-16 text-center">
+        <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] px-6 py-16 text-center">
           <p className="text-base font-semibold text-[var(--color-foreground)]">
             No slides available
           </p>

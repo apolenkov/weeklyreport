@@ -546,7 +546,7 @@ export function WeeklyReportPage({
           nudge. Keeps header + period nav intact so the head retains context. */}
       {submitted === 0 && view.period.periodStatus !== "published" ? (
         <div
-          className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] py-16 text-center"
+          className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] py-16 text-center"
           data-testid="empty-submissions-state"
         >
           <p className="text-base font-semibold text-[var(--color-foreground)]">

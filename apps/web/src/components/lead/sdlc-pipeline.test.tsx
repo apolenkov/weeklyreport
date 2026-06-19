@@ -169,7 +169,7 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
       />,
     );
     const pill = getCompletenessPill(container);
-    expect(pill?.textContent).toContain("1/2 stages");
+    expect(pill?.textContent).toContain("1/2 Your stages");
   });
 
   it("wraps the pill in a dashed ring while own input is incomplete", () => {
@@ -213,7 +213,7 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
       />,
     );
     const pill = getCompletenessPill(container);
-    expect(pill?.textContent).toContain("1/1 stages");
+    expect(pill?.textContent).toContain("1/1 Your stages");
     expect(pill?.getAttribute("data-complete")).toBe("true");
   });
 
@@ -250,7 +250,7 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
       />,
     );
     const pill = getCompletenessPill(container);
-    expect(pill?.textContent).toContain("2/2 stages");
+    expect(pill?.textContent).toContain("2/2 Your stages");
     expect(pill?.getAttribute("data-complete")).toBe("true");
   });
 
@@ -284,7 +284,7 @@ describe("SdlcPipeline — completeness affordance (right side)", () => {
       />,
     );
     const pill = getCompletenessPill(container);
-    expect(pill?.textContent).toContain("1/2 stages");
+    expect(pill?.textContent).toContain("1/2 Your stages");
     expect(pill?.getAttribute("data-complete")).toBe("false");
   });
 });
@@ -610,5 +610,267 @@ describe("SdlcPipeline — align-pipeline-arrows structural contract", () => {
     expect(arrowEl).toBeDefined();
     if (!arrowEl) return;
     expect(arrowEl.style.height).toBe(STAGE_CHIP_BOX_HEIGHT);
+  });
+});
+
+// ---- lead-mine-hide-unowned-stages: Mine renders only own stages ----
+//
+// In Mine mode the pipeline renders ONLY the lead's own stage chips; foreign-
+// owned (locked) and vacant (unassigned) chips are hidden, not greyed. Everyone
+// renders the full grid. Hiding chips MUST NOT move product health (left edge)
+// or own-input completeness, which read the full `product`/`rawProduct`.
+
+/** The stage names of every rendered chip (chips are buttons with aria-label). */
+function renderedStageNames(container: HTMLElement): string[] {
+  return Array.from(container.querySelectorAll("button[aria-label]")).map(
+    (b) => (b.getAttribute("aria-label") ?? "").split(":")[0]?.trim() ?? "",
+  );
+}
+
+describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () => {
+  // One own stage + one foreign-owned (locked) + one vacant (unassigned).
+  const PRODUCT_OWN_FOREIGN_VACANT: Product = {
+    id: "p-vis",
+    name: "Visibility Product",
+    overallStatus: "on-track",
+    stages: [
+      {
+        stageName: "Dev",
+        status: "on-track",
+        ownership: "mine",
+        assignee: "me",
+      },
+      {
+        stageName: "Testing",
+        status: "at-risk",
+        ownership: "locked",
+        assignee: "OL",
+      },
+      {
+        stageName: "DevOps",
+        status: "empty",
+        ownership: "unassigned",
+        assignee: null,
+      },
+    ],
+  };
+
+  it("Mine renders only the lead's own chips (foreign + vacant hidden)", () => {
+    const { container } = render(
+      <SdlcPipeline
+        products={[PRODUCT_OWN_FOREIGN_VACANT]}
+        readOnly={false}
+        visibilityMode="mine"
+      />,
+    );
+    expect(renderedStageNames(container)).toEqual(["Dev"]);
+  });
+
+  it("Everyone renders own + foreign-owned + vacant chips", () => {
+    const { container } = render(
+      <SdlcPipeline
+        products={[PRODUCT_OWN_FOREIGN_VACANT]}
+        readOnly={false}
+        visibilityMode="everyone"
+      />,
+    );
+    expect(renderedStageNames(container).sort()).toEqual([
+      "Dev",
+      "DevOps",
+      "Testing",
+    ]);
+  });
+
+  it("defaults to the full grid when visibilityMode is omitted", () => {
+    const { container } = render(
+      <SdlcPipeline products={[PRODUCT_OWN_FOREIGN_VACANT]} readOnly={false} />,
+    );
+    expect(renderedStageNames(container)).toHaveLength(3);
+  });
+
+  // ---- reveal-on-hover: collapsed-stage indicator (Mine only) ----
+
+  const COLLAPSED_INDICATOR = '[data-testid="collapsed-stages-indicator"]';
+
+  it("Mine shows a collapsed-stage indicator revealing the hidden stages' names and statuses", () => {
+    const { container } = render(
+      <SdlcPipeline
+        products={[PRODUCT_OWN_FOREIGN_VACANT]}
+        readOnly={false}
+        visibilityMode="mine"
+      />,
+    );
+    const indicator = container.querySelector(COLLAPSED_INDICATOR);
+    expect(indicator).not.toBeNull();
+    // Visible count of collapsed stages (Testing + DevOps hidden).
+    expect(indicator?.textContent).toContain("2");
+    // Hover (title) and non-visual (aria-label) both reveal name: status.
+    const reveal = "Testing: at-risk, DevOps: empty";
+    expect(indicator?.getAttribute("title")).toBe(reveal);
+    expect(indicator?.getAttribute("aria-label")).toContain(reveal);
+    // It must NOT re-render the hidden chips inline.
+    expect(renderedStageNames(container)).toEqual(["Dev"]);
+  });
+
+  it("Everyone never shows the collapsed-stage indicator (full grid already)", () => {
+    const { container } = render(
+      <SdlcPipeline
+        products={[PRODUCT_OWN_FOREIGN_VACANT]}
+        readOnly={false}
+        visibilityMode="everyone"
+      />,
+    );
+    expect(container.querySelector(COLLAPSED_INDICATOR)).toBeNull();
+  });
+
+  it("a product where the lead owns every stage shows no indicator in Mine", () => {
+    const allMine: Product = {
+      id: "p-allmine",
+      name: "All Mine",
+      overallStatus: "on-track",
+      stages: [
+        {
+          stageName: "Dev",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "me",
+        },
+        {
+          stageName: "Testing",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "me",
+        },
+      ],
+    };
+    const { container } = render(
+      <SdlcPipeline
+        products={[allMine]}
+        readOnly={false}
+        visibilityMode="mine"
+      />,
+    );
+    expect(container.querySelector(COLLAPSED_INDICATOR)).toBeNull();
+  });
+
+  it("a product with no own stages in Mine shows the note, not an empty grid", () => {
+    const noOwn: Product = {
+      id: "p-noown",
+      name: "No Own Stages",
+      overallStatus: "on-track",
+      stages: [
+        {
+          stageName: "Testing",
+          status: "at-risk",
+          ownership: "locked",
+          assignee: "OL",
+        },
+        {
+          stageName: "DevOps",
+          status: "empty",
+          ownership: "unassigned",
+          assignee: null,
+        },
+      ],
+    };
+    const { container } = render(
+      <SdlcPipeline
+        products={[noOwn]}
+        readOnly={false}
+        visibilityMode="mine"
+      />,
+    );
+    expect(renderedStageNames(container)).toEqual([]);
+    expect(container.textContent).toContain("No stages assigned to you");
+    // The card itself still renders (health left edge present).
+    expect(container.querySelector(".rounded-xl")).not.toBeNull();
+  });
+
+  it("health stays honest in Mine when the only blocked signal is a hidden foreign chip", () => {
+    // Own Dev is on-track; the ONLY blocked severity comes from a foreign
+    // (non-own) stage carried via crossAuthors. In Mine that foreign chip is
+    // hidden, yet the left edge MUST still read blocked — health derives from
+    // crossAuthors + own stages, never from which chips render. A regression
+    // that computed health from the visible chips would turn this on-track.
+    const ownOnTrack: Product = {
+      id: "p-honest",
+      name: "Honest Health",
+      overallStatus: "on-track",
+      stages: [
+        {
+          stageName: "Dev",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "me",
+        },
+        {
+          stageName: "DevOps",
+          status: "empty",
+          ownership: "unassigned",
+          assignee: null,
+        },
+      ],
+    };
+    const { container } = render(
+      <SdlcPipeline
+        products={[ownOnTrack]}
+        readOnly={false}
+        visibilityMode="mine"
+        crossAuthors={[
+          {
+            projectId: ownOnTrack.id,
+            projectName: ownOnTrack.name,
+            authorId: "a2",
+            authorInitials: "IG",
+            stageNames: ["DevOps"],
+            stages: [{ stageName: "DevOps", status: "red" }],
+          },
+        ]}
+      />,
+    );
+    // The foreign DevOps chip is hidden in Mine...
+    expect(renderedStageNames(container)).toEqual(["Dev"]);
+    // ...but the left edge still carries the blocked health hue.
+    expect(getFirstCardStyle(container)).toContain(
+      "var(--color-chip-blocked-border)",
+    );
+  });
+
+  it("completeness counter is unchanged by Mine hiding non-own chips", () => {
+    // Own input: Dev filled, Design empty → 1/2. Hiding the foreign/vacant
+    // chips in Mine must not change the counter (it reads the full rawProduct).
+    const mixed: Product = {
+      id: "p-complete",
+      name: "Completeness Product",
+      overallStatus: "on-track",
+      stages: [
+        {
+          stageName: "Design",
+          status: "empty",
+          ownership: "mine",
+          assignee: "me",
+        },
+        {
+          stageName: "Dev",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "me",
+        },
+        {
+          stageName: "Testing",
+          status: "at-risk",
+          ownership: "locked",
+          assignee: "OL",
+        },
+      ],
+    };
+    const { container } = render(
+      <SdlcPipeline
+        products={[mixed]}
+        readOnly={false}
+        visibilityMode="mine"
+      />,
+    );
+    expect(container.textContent).toContain("1/2 Your stages");
   });
 });

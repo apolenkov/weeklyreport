@@ -13,7 +13,7 @@ exports[`ScopeToggle > active scope button has accent background class; inactive
       role="radio"
       type="button"
     >
-      Own
+      Summary
     </button>
     <button
       aria-checked="true"
@@ -48,7 +48,7 @@ exports[`ScopeToggle > renders index-aware segmented rounding for the two-scope 
       role="radio"
       type="button"
     >
-      Own
+      Summary
     </button>
     <button
       aria-checked="false"

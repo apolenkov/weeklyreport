@@ -591,6 +591,7 @@ describe("PublicationService — contract tests", () => {
             text: "Updated item",
             tag: "feature",
             workflowStatus: "in_progress",
+            stageIds: ["Development"],
           },
         ],
         risks: [],

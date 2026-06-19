@@ -93,10 +93,11 @@ export const stageIdsField = z
   .max(MAX_SELECTED_STAGES)
   .optional();
 
-// require-risk-stage (D1): risk-specific variant — a risk must always carry
+// require-risk-stage (D1): the strict write variant — a row must always carry
 // at least one concrete SDLC stage, so missing/empty selections are rejected
-// on the write path. Items/decisions keep the optional `stageIdsField` above
-// (their empty selection means "all assigned stages" by design).
+// on the write path. enforce-item-decision-stage-schema extended this to items
+// and decisions too; the READ models re-loosen to `stageIdsField` so stage-less
+// legacy rows still load and render the loud "No stage set" marker.
 export const requiredStageIdsField = z
   .array(z.string())
   .min(1)

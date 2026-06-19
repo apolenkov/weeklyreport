@@ -66,20 +66,22 @@ so the archived-period count is not surfaced on the toggle itself.
 
 ### Requirement: Labeled header actions are not icon-ified by parity work
 
-Named commit and utility actions MUST keep their visible text labels whether they render on the page header line or inside `ReportToolbar`; only compact icon-only controls use the `ToolbarIconButton` primitive.
+Named commit actions MUST keep their visible text labels whether they render on the page header line or inside `ReportToolbar`; compact utility controls use icon-only treatments with an `aria-label` + tooltip.
 
 The rule is by control kind, not by container: a compact icon-only toolbar
-control (e.g. `Export PDF`) MUST render as the shared 32px `ToolbarIconButton`
-with an `aria-label` + tooltip; a named commit/utility control MUST keep its
-visible text label whether it sits on the page header line's document-action
-group or in the report toolbar's context-control bar. The named actions that
-durable specs require labeled (`Present`, `Print`, `Publish` — see
-`head-toolbar-semantics`) and the lead actions (`Submit Section`, `Toggle All`,
+control (e.g. `Export PDF`, and the mode-adaptive collapse-all / fullscreen
+control) MUST render with an `aria-label` + tooltip; a named commit control MUST
+keep its visible text label whether it sits on the page header line's
+document-action group or in the report toolbar's context-control bar. The named
+actions that durable specs require labeled (`Present`, `Print`, `Publish` — see
+`head-toolbar-semantics`) and the lead commit/reversal actions (`Submit Section`,
 `Request Reopen`, `Revoke`) MUST keep their visible text labels; promoting the
-document actions onto the page header line does NOT icon-ify them (`Toggle All`
-stays a labeled neutral button in the context bar). `Export PDF` stays out of the
-keep-labeled set (user sign-off 2026-06-16). The lead commit label is `Submit
-Section` (a period is never globally "submitted").
+document actions onto the page header line does NOT icon-ify them. The former
+`Toggle All` button is replaced by the icon-only mode-adaptive collapse-all
+(edit) / fullscreen (slides) control in the context bar, which carries its
+accessible name via `aria-label` + tooltip rather than a visible text label.
+`Export PDF` stays out of the keep-labeled set (user sign-off 2026-06-16). The
+lead commit label is `Submit Section` (a period is never globally "submitted").
 
 #### Scenario: labeled actions keep their text on the header line
 
@@ -87,10 +89,36 @@ Section` (a period is never globally "submitted").
   the page header line's document-action group
 - **THEN** `Publish` / `Submit Section` (and `Present` / `Print` / `Request
 Reopen` / `Revoke` where present) keep their visible text labels, not icon-only
-- **AND** `Toggle All` keeps its visible text label in the context-control bar
 
-#### Scenario: the report toolbar renders its trailing export control
+#### Scenario: the context-bar collapse/fullscreen control is icon-only
 
-- **WHEN** the report surface renders an export control
-- **THEN** `Export PDF` renders as a 32px icon button with an `aria-label`/tooltip
-  (an accessible name), not icon-only without one
+- **WHEN** the report toolbar's context bar renders the mode-adaptive
+  collapse-all / fullscreen control
+- **THEN** it is icon-only with an `aria-label` + tooltip (not a visible "Toggle
+  All" text label)
+
+### Requirement: The lead toolbar presents the same control set in edit and slides
+
+The lead report toolbar MUST render the same set of context controls in both edit and slides modes — including the Record-visibility toggle — so no control changes position or appears/disappears when the lead switches between modes.
+
+1. The Record-visibility toggle (Mine only / Everyone) MUST render in both edit
+   and slides modes (today it renders only in edit), so the controls after it do
+   not shift position between modes.
+2. The toolbar's control order and geometry MUST be identical across modes; the
+   only mode-adaptive slot is the existing trailing utility (collapse-all in
+   edit, fullscreen in slides), which already occupies one fixed-width position.
+3. The visibility toggle MUST be functional in slides, not an inert placeholder —
+   it drives the slide deck's record visibility (see `status-slide-rendering`).
+
+#### Scenario: switching edit to slides keeps controls in place
+
+- **WHEN** a lead toggles the view-mode control from edit to slides on their
+  report
+- **THEN** the Record-visibility toggle remains present in the same position and
+  the view-mode toggle and trailing utility do not shift horizontally
+
+#### Scenario: the visibility toggle is present and live in slides
+
+- **WHEN** a lead views their report in slides mode
+- **THEN** the Mine only / Everyone toggle is rendered and interactive, and
+  changing it changes what the deck shows (not a disabled placeholder)

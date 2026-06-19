@@ -434,6 +434,7 @@ function RiskEditDialogContent({
               onChange={handleStageChange}
               previewSeverity={severity}
               error={errors.stageIds}
+              required
             />
 
             {/* Severity chips */}

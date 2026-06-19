@@ -8,6 +8,13 @@ interface StageMultiSelectProps {
   readonly onChange: (next: string[]) => void;
   /** When provided, shows a consequence-preview banner above the stage chips. */
   readonly previewSeverity?: "at-risk" | "blocked";
+  /**
+   * When true, the host dialog requires at least one stage, so the helper copy
+   * drops the "optional / empty = all assigned stages" wording and the
+   * empty-selection "all stages" hint. A single owned stage still
+   * auto-applies, and saving with no stage is blocked by the host dialog.
+   */
+  readonly required?: boolean;
 }
 
 export function StageMultiSelect({
@@ -17,6 +24,7 @@ export function StageMultiSelect({
   error,
   onChange,
   previewSeverity,
+  required = false,
 }: StageMultiSelectProps) {
   const selected = value;
   const helperId = `${id}-hint`;
@@ -59,9 +67,9 @@ export function StageMultiSelect({
         id={helperId}
         className="mb-2 text-[11px] text-[var(--color-muted-foreground)]"
       >
-        Optional. Leave empty to apply to all assigned stages. Tip: mark the
-        stage as blocked on the SDLC pipeline above before pinning a risk — that
-        keeps your blocker scope honest.
+        {required
+          ? "Required. Select at least one assigned stage — a single owned stage is applied automatically."
+          : "Optional. Leave empty to apply to all assigned stages. Tip: mark the stage as blocked on the SDLC pipeline above before pinning a risk — that keeps your blocker scope honest."}
       </p>
       {bannerText && (
         <div
@@ -113,11 +121,14 @@ export function StageMultiSelect({
           })}
         </div>
       )}
-      {!previewSeverity && selected.length === 0 && isMultiChoice && (
-        <p className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">
-          Scope: all assigned stages.
-        </p>
-      )}
+      {!required &&
+        !previewSeverity &&
+        selected.length === 0 &&
+        isMultiChoice && (
+          <p className="mt-2 text-[11px] text-[var(--color-muted-foreground)]">
+            Scope: all assigned stages.
+          </p>
+        )}
       {error && (
         <p
           id={errorId}

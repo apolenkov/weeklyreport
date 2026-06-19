@@ -57,6 +57,8 @@ const validItem = () => ({
   text: "Ship feature X",
   tag: "feature",
   workflowStatus: "in_progress" as const,
+  // enforce-item-decision-stage-schema: stageIds is required (min 1) on write.
+  stageIds: ["Development"],
 });
 
 const validRisk = () => ({
@@ -72,6 +74,8 @@ const validDecision = () => ({
   text: "Upgrade to PostgreSQL 16",
   owner: "Alice",
   impact: "Better performance",
+  // enforce-item-decision-stage-schema: stageIds is required (min 1) on write.
+  stageIds: ["Development"],
 });
 
 const validDraft = () => ({
@@ -297,9 +301,10 @@ describe("riskInputSchema — safeText", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Group 3b: require-risk-stage \u2014 a risk always carries \u22651 concrete SDLC stage
-// on the write path; items/decisions keep optional stageIds; the read model
-// stays tolerant of stage-less legacy rows (D2 renders them as a warning).
+// Group 3b: require-risk-stage + enforce-item-decision-stage-schema \u2014 risks,
+// items, AND decisions must each carry \u22651 concrete SDLC stage on the write
+// path; the read model stays tolerant of stage-less legacy rows (rendered as a
+// loud "No stage set" warning).
 // ---------------------------------------------------------------------------
 
 describe("riskInputSchema \u2014 required stageIds (require-risk-stage)", () => {
@@ -331,14 +336,48 @@ describe("riskInputSchema \u2014 required stageIds (require-risk-stage)", () => 
     expect(result.success).toBe(false);
   });
 
-  it("still accepts items without stageIds (all-assigned-stages semantics)", () => {
-    const result = itemInputSchema.safeParse(validItem());
-    expect(result.success).toBe(true);
+  // enforce-item-decision-stage-schema: items + decisions now match risks —
+  // a stage-less write is rejected; only the read model stays tolerant.
+  it("rejects an item with missing stageIds", () => {
+    const { stageIds: _stageIds, ...itemWithoutStages } = validItem();
+    const result = itemInputSchema.safeParse(itemWithoutStages);
+    expect(result.success).toBe(false);
   });
 
-  it("still accepts decisions without stageIds (product-wide semantics)", () => {
-    const result = decisionInputSchema.safeParse(validDecision());
-    expect(result.success).toBe(true);
+  it("rejects an item with empty stageIds", () => {
+    const result = itemInputSchema.safeParse({ ...validItem(), stageIds: [] });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a decision with missing stageIds", () => {
+    const { stageIds: _stageIds, ...decisionWithoutStages } = validDecision();
+    const result = decisionInputSchema.safeParse(decisionWithoutStages);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a decision with empty stageIds", () => {
+    const result = decisionInputSchema.safeParse({
+      ...validDecision(),
+      stageIds: [],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a draft-save payload containing a stage-less item or decision", () => {
+    const { stageIds: _i, ...itemWithoutStages } = validItem();
+    const { stageIds: _d, ...decisionWithoutStages } = validDecision();
+    expect(
+      draftSaveSchema.safeParse({
+        ...validDraft(),
+        items: [itemWithoutStages],
+      }).success,
+    ).toBe(false);
+    expect(
+      draftSaveSchema.safeParse({
+        ...validDraft(),
+        decisions: [decisionWithoutStages],
+      }).success,
+    ).toBe(false);
   });
 
   it("read model still parses a stage-less legacy risk row (D2 tolerance)", () => {
@@ -354,6 +393,27 @@ describe("riskInputSchema \u2014 required stageIds (require-risk-stage)", () => 
       items: [],
       risks: [legacyRisk],
       decisions: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("read model still parses stage-less legacy item and decision rows (tolerance)", () => {
+    const { stageIds: _i, ...legacyItem } = {
+      ...validItem(),
+      projectId: PROJECT_UUID,
+    };
+    const { stageIds: _d, ...legacyDecision } = validDecision();
+    const result = reportSectionReadModelSchema.safeParse({
+      reportSectionId: uuid(),
+      reportId: uuid(),
+      authorId: uuid(),
+      authorName: "Test Lead",
+      status: "draft",
+      submittedAt: null,
+      projects: [],
+      items: [legacyItem],
+      risks: [],
+      decisions: [legacyDecision],
     });
     expect(result.success).toBe(true);
   });

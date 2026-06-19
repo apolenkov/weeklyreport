@@ -318,3 +318,62 @@ describe("DecisionEditDialog — D12 reopen renders fresh state", () => {
     expect(screen.getByLabelText(/^Decision \*/i)).toHaveValue("");
   });
 });
+
+// require-stage-on-items-and-decisions: a decision must carry a concrete stage
+// when the lead owns stages (parity with the risk dialog).
+describe("DecisionEditDialog — require a stage", () => {
+  it("blocks save with no stage when stages are available", () => {
+    const onSave = vi.fn();
+    render(
+      <DecisionEditDialog
+        open
+        decision={null}
+        defaultOwner="Test Lead"
+        availableStages={["Planning", "Dev"]}
+        products={products}
+        defaultProductId="p1"
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+    // Create pre-selects all owned stages; deselect both to reach the gap.
+    fireEvent.click(screen.getByRole("checkbox", { name: "Planning" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Dev" }));
+    fireEvent.change(screen.getByLabelText(/^Decision \*/i), {
+      target: { value: "A decision without a stage" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: "Some impact" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByText(/Select at least one stage/i)).toBeInTheDocument();
+  });
+
+  it("auto-applies a single owned stage so save succeeds", () => {
+    const onSave = vi.fn();
+    render(
+      <DecisionEditDialog
+        open
+        decision={null}
+        defaultOwner="Test Lead"
+        availableStages={["Dev"]}
+        products={products}
+        defaultProductId="p1"
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText(/^Decision \*/i), {
+      target: { value: "Single-stage decision" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: "Some impact" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({ stageIds: ["Dev"] });
+  });
+});

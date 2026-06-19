@@ -133,8 +133,11 @@ export function ItemCard({
       ? item.stageIds
       : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
         splitStageNames(item.stageName);
+  // enforce-item-decision-stage-schema: a stage-less item is a legacy anomaly,
+  // never an implicit "all stages" scope — render the loud "No stage set"
+  // warning, mirroring the risk row.
   const stageTagsLabel =
-    stageTags.length === 0 ? "All stages" : stageTags.join(", ");
+    stageTags.length === 0 ? "No stage set" : stageTags.join(", ");
   const visibleStageTags = stageTags.slice(0, 2);
   const hiddenStageCount = Math.max(
     stageTags.length - visibleStageTags.length,
@@ -271,8 +274,10 @@ export function ItemCard({
             title={stageTagsLabel}
           >
             {stageTags.length === 0 ? (
-              <span className="inline-flex w-fit items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
-                All stages
+              // Warning tokens match the risk row's "no-stage-warning" chip
+              // (#fef3c7 / #8a6d1b) so a stage-less item reads as an anomaly.
+              <span className="inline-flex w-fit items-center rounded-[var(--radius-pill)] bg-[#fef3c7] px-2 py-0.5 text-[10px] font-semibold text-[#8a6d1b]">
+                No stage set
               </span>
             ) : (
               visibleStageTags.map((stage) => (

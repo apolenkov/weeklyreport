@@ -8,7 +8,7 @@ import type {
 import { Separator } from "@customreport/ui/components/ui/separator";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { User, Users } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -23,6 +23,7 @@ import {
   invalidateLeadForm,
   invalidateLeadHistory,
 } from "../../lib/cache-keys";
+import { crossAuthorContentFetchEnabled } from "../../lib/cross-author-content-gate";
 import { mapLeadFormData } from "../../lib/mappers";
 import {
   applyCrossAuthorStageOverrides,
@@ -246,7 +247,11 @@ function sectionToDraftPayload(
         workflowStatus: it.workflowStatus,
         carriedOver: it.carriedOver,
         completed: it.completed ?? null,
-        stageIds: it.stageIds,
+        // enforce-item-decision-stage-schema: the write schema now demands ≥1
+        // stage (mirrors risks). The read model stays tolerant of stage-less
+        // legacy rows; sending [] for such a row fails server-side validation
+        // loudly until the lead sets a stage.
+        stageIds: it.stageIds ?? [],
         // F1: include priorityRank in the autosave payload (was omitted, so the
         // dialog's rank never reached the backend → "doesn't save").
         priorityRank: it.priorityRank ?? null,
@@ -275,7 +280,10 @@ function sectionToDraftPayload(
         deadline: d.deadline ?? null,
         impact: d.impact,
         resolvedAt: d.resolvedAt ?? null,
-        stageIds: d.stageIds,
+        // enforce-item-decision-stage-schema: mirror risks/items — the write
+        // schema demands ≥1 stage; [] for a stage-less legacy row fails
+        // server-side validation loudly until the lead sets a stage.
+        stageIds: d.stageIds ?? [],
         productId: d.productId ?? null,
       })),
   };
@@ -314,9 +322,16 @@ function aggregateTrafficLight(
 function RecordVisibilityToggle({
   value,
   onChange,
+  disabled = false,
 }: {
   readonly value: "mine" | "everyone";
   readonly onChange: (next: "mine" | "everyone") => void;
+  /**
+   * slides-record-visibility (Decision 6): on a FOREIGN-author slide deck
+   * Everyone is not offered — the toggle is forced to Mine and made inert so the
+   * current user's co-owner rows can never be merged onto another author's deck.
+   */
+  readonly disabled?: boolean;
 }) {
   // Icon-only (User = mine, Users = everyone) so the toggle stays compact and
   // does not crowd the period navigator; each keeps an accessible name via
@@ -338,10 +353,11 @@ function RecordVisibilityToggle({
           aria-pressed={value === option.key}
           aria-label={option.label}
           title={option.label}
+          disabled={disabled}
           onClick={() => onChange(option.key)}
           className={`btn-press ${segmentClassName(value === option.key, {
             iconOnly: true,
-          })}`}
+          })} disabled:cursor-not-allowed disabled:opacity-50`}
         >
           <option.Icon className="h-4 w-4" aria-hidden="true" />
         </button>
@@ -358,6 +374,7 @@ export function LeadForm({
   const trpc = useTRPC();
   const qc = useQueryClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const isSlidesMode = mode === "slides";
   // W9.A: ref shared between lead-form header (SlideFullscreenButton) and LeadSlidesClient (deck root div)
   const deckRef = useRef<HTMLDivElement>(null);
@@ -430,14 +447,32 @@ export function LeadForm({
   } = useRecordVisibility(currentUserId, targetReportId);
   const isEveryone = recordVisibility === "everyone";
 
+  // slides-record-visibility (Decision 6): the slide deck can target another
+  // author's deck via `?authorId`. On such a FOREIGN deck Everyone is not
+  // offered — force the toolbar toggle to Mine and make it inert. The deck
+  // (LeadSlidesClient) enforces the same own-deck gate independently, so this
+  // is the matching toolbar affordance, not the security boundary.
+  const slidesAuthorId = searchParams.get("authorId");
+  const isForeignSlidesDeck =
+    isSlidesMode && slidesAuthorId !== null && slidesAuthorId !== currentUserId;
+  const toolbarVisibility = isForeignSlidesDeck ? "mine" : recordVisibility;
+
   // 7c.3: the full-content read is fetched ONLY in the Everyone state, and only
   // AFTER the persisted toggle has hydrated — so it never fires on the
   // pre-hydration "mine" default and then races a restored "everyone".
+  // close-slides-visibility-tails (tail 1): gate via the shared predicate, with
+  // own-deck = !isForeignSlidesDeck, so a foreign slides deck NEVER fires the
+  // read regardless of the persisted Everyone toggle (matches LeadSlidesClient).
   const crossAuthorContentQ = useQuery({
     ...trpc.leadForm.crossAuthorContent.queryOptions({
       reportId: targetReportId,
     }),
-    enabled: targetReportId !== "" && visibilityHydrated && isEveryone,
+    enabled: crossAuthorContentFetchEnabled({
+      hasReport: targetReportId !== "",
+      visibilityHydrated,
+      isEveryone,
+      isOwnDeck: !isForeignSlidesDeck,
+    }),
   });
 
   // 7c.6: purge the fetched foreign full content from the query cache whenever
@@ -766,8 +801,15 @@ export function LeadForm({
   // draft-merge handlers strip every `.foreign` row, so it never reaches the
   // submission (D4b).
   const productNameById = new Map(products.map((p) => [p.id, p.name]));
+  // close-slides-visibility-tails (tail 1, belt-and-suspenders): also gate the
+  // consume site on !isForeignSlidesDeck so foreign rows are excluded at BOTH
+  // the fetch and the merge — robust even if this memo is ever reused outside
+  // the edit-render branch. After the fetch gate the data is already empty on a
+  // foreign deck; this makes the invariant explicit rather than incidental.
   const foreignContentRows =
-    isEveryone && visibilityHydrated ? (crossAuthorContentQ.data ?? []) : [];
+    isEveryone && visibilityHydrated && !isForeignSlidesDeck
+      ? (crossAuthorContentQ.data ?? [])
+      : [];
   const currentWeekItems: KanbanItem[] = [
     ...ownCurrentWeekItems,
     ...mapForeignItems(foreignContentRows, productNameById, "current"),
@@ -1113,6 +1155,18 @@ export function LeadForm({
             ? "⚠ Save failed"
             : "Autosaved";
 
+  // Trailing utility control (edit mode): collapse/expand all sections. The
+  // slot is always reserved and disabled when the report has nothing to
+  // collapse, so adding/removing sections in-session never shifts the row.
+  const hasCollapsibleContent =
+    currentWeekItems.length > 0 ||
+    nextWeekItems.length > 0 ||
+    risks.length > 0 ||
+    decisions.length > 0;
+  const collapseAllLabel = groupExpanded
+    ? "Collapse all sections"
+    : "Expand all sections";
+
   return (
     <SdlcTooltipProvider>
       <form className="space-y-6" data-testid="lead-report-form">
@@ -1203,8 +1257,9 @@ export function LeadForm({
 
         {/* report-toolbar-layout: the bordered toolbar holds only the
             Context-control bar: Agent review · period nav · show-archived ·
-            Mine|Everyone · Edit|Slides · Toggle All. */}
+            Mine|Everyone · Edit|Slides · collapse/fullscreen. */}
         <ReportToolbar
+          sticky
           contextControls={
             <>
               {/* Period navigation (and the show-archived filter) anchor the
@@ -1233,16 +1288,17 @@ export function LeadForm({
               {/* Inert Agent-review placeholder leads the right-aligned view
                   group (head-toolbar-semantics: compact, leading edge). */}
               <AgentReviewComingSoon compact />
-              {/* 7c.1: Record visibility toggle — edit mode only (not slides).
+              {/* slides-record-visibility: the Record-visibility toggle now
+                  renders in BOTH edit and slides (report-toolbar-parity) so the
+                  controls after it never shift between modes. In slides it
+                  drives the deck via the props threaded into LeadSlidesClient.
                   Disabled until the persisted state hydrates so a click cannot
                   race the restored value. */}
-              {!isSlidesMode && (
-                <RecordVisibilityToggle
-                  value={recordVisibility}
-                  onChange={setRecordVisibility}
-                />
-              )}
-              {isSlidesMode && <SlideFullscreenButton targetRef={deckRef} />}
+              <RecordVisibilityToggle
+                value={toolbarVisibility}
+                onChange={setRecordVisibility}
+                disabled={isForeignSlidesDeck}
+              />
               <ViewModeToggle
                 mode={isSlidesMode ? "slides" : "edit"}
                 editHref={
@@ -1258,18 +1314,23 @@ export function LeadForm({
                     : "/lead/report"
                 }
               />
-              {(currentWeekItems.length > 0 ||
-                nextWeekItems.length > 0 ||
-                risks.length > 0 ||
-                decisions.length > 0) && (
+              {/* Mode-adaptive trailing utility: one fixed-width icon slot.
+                  Edit → collapse/expand all sections (always reserved, disabled
+                  when empty so the row never shifts); slides → fullscreen toggle.
+                  Both render as a square icon button at the shared toolbar
+                  height in the same trailing position. */}
+              {isSlidesMode ? (
+                <SlideFullscreenButton targetRef={deckRef} />
+              ) : (
                 <button
                   type="button"
-                  className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+                  className="btn-press inline-flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={handleToggleAll}
-                  title="Toggle All"
+                  disabled={!hasCollapsibleContent}
+                  aria-label={collapseAllLabel}
+                  title={collapseAllLabel}
                 >
                   <CollapseIcon />
-                  Toggle All
                 </button>
               )}
             </>
@@ -1295,6 +1356,12 @@ export function LeadForm({
             initialReportId={targetReportId || pinnedReportId || null}
             chrome="content"
             deckRef={deckRef}
+            // slides-record-visibility: thread the toolbar's visibility state so
+            // the deck shows Mine vs Everyone. LeadSlidesClient owns the own-deck
+            // gate + the gated cross-author fetch/merge; lead-form just supplies
+            // the (hydrated) toggle value, forced to Mine on a foreign deck.
+            visibilityMode={toolbarVisibility}
+            visibilityHydrated={visibilityHydrated}
           />
         ) : (
           // Split-view: at xl the edit form (left) sits beside a live slide
@@ -1314,6 +1381,13 @@ export function LeadForm({
                 : {})}
               risksAddSignal={risksAddSignal}
               crossAuthors={crossAuthorEntries}
+              // lead-mine-hide-unowned-stages: until the persisted visibility is
+              // hydrated, render the full grid ("everyone") to avoid a flash that
+              // briefly hides foreign/vacant chips when the restored value is
+              // "everyone" (the gated content fetch is likewise hydration-guarded).
+              visibilityMode={
+                visibilityHydrated ? recordVisibility : "everyone"
+              }
               displayRisks={risks}
             >
               <AccordionSection
