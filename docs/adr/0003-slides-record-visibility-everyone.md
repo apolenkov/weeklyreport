@@ -54,4 +54,31 @@ The reversal is made safe by four constraints:
 - Foreign rows render as plain bullets (no per-row visual "foreign" marker): the
   slide grids are flat text arrays, and the spec contract requires only that the
   rows and counts appear, not that they are visually attributed. A per-row
-  marker would require restructuring the slide row types and is deferred.
+  marker would require restructuring the slide row types and is deferred. Per the
+  repo deferred-feature-pattern this deferral is surfaced as a visible Coming-Soon
+  affordance (`ForeignTagsComingSoon`), shown only on the own deck in Everyone in
+  the own-scope view and hidden in fullscreen presentation
+  (`close-slides-visibility-tails`, requirement "Everyone deck surfaces a
+  Coming-Soon affordance for per-row author attribution").
+
+## Codex Act-2 disposition (recorded by close-slides-visibility-tails)
+
+The flagship Codex adversarial review returned VERDICT: REVISE; all four
+findings were folded into this design before implementation (A-1 own-deck gate;
+A-2 same-rules counting; #4 hydration/Everyone/own-deck gated read with purge;
+Decision 8 mapper drops `priorityRank`). The review was NOT re-run to an
+APPROVED verdict at flagship time — `codex exec` hung on the corporate proxy.
+The load-bearing no-leak property (Everyone never reaches a draft / submission /
+published snapshot / export) is pinned by concrete tests rather than the prose
+scenario alone:
+
+- `apps/web/src/components/slides/section-slide-utils.test.ts` — `mergeForeignSlideContent`
+  produces new objects and leaves the input section reference-unchanged.
+- `apps/web/src/components/lead/lead-form-visibility.test.tsx` (7d.5 / 7d.8) —
+  the submitted payload carries own records only and is byte-identical in Mine
+  vs Everyone.
+
+Accepted bar: these guards plus the live-verified no-leak walk. A clean-network
+Codex re-run is optional, not blocking. (`close-slides-visibility-tails` itself
+DID pass a fresh Codex Act-2 review via the plugin runtime: REVISE → APPROVED in
+two rounds — see its `PLAN-REVIEW-LOG.md`.)
