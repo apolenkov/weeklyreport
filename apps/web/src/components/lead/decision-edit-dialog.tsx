@@ -71,10 +71,11 @@ function DecisionEditDialogContent({
   );
 
   // unify-record-dialogs: changing the product re-scopes the stage options and
-  // clears the prior selection, exactly like the item/risk dialogs.
+  // clears the prior selection, exactly like the item/risk dialogs (never
+  // default to all owned stages — W11 3.10).
   function setProductAndStages(nextProductId: string) {
     setProductId(nextProductId);
-    setStageIds(stagesForProduct ? [...stagesForProduct(nextProductId)] : []);
+    setStageIds([]);
   }
   const [errors, setErrors] = useState<{
     text?: string;

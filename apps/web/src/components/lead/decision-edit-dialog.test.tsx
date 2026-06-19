@@ -380,3 +380,43 @@ describe("DecisionEditDialog — require a stage", () => {
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({ stageIds: ["Dev"] });
   });
 });
+
+// unify-record-dialogs: changing the product re-scopes the stage options to the
+// new product and CLEARS the prior selection — never defaults to all owned
+// stages (regression guard: the product-switch handler once selected them all).
+describe("DecisionEditDialog — product switch re-scopes + clears stages", () => {
+  const twoProducts: Product[] = [
+    { id: "p1", name: "CRM", overallStatus: "on-track", stages: [] },
+    { id: "p2", name: "ERP", overallStatus: "on-track", stages: [] },
+  ];
+  const stagesByProduct = (productId: string) =>
+    productId === "p1" ? ["Planning", "Dev"] : ["Analysis", "Design"];
+
+  it("clears the selection and shows the new product's stages on switch", () => {
+    render(
+      <DecisionEditDialog
+        open
+        decision={null}
+        defaultOwner="Test Lead"
+        stagesForProduct={stagesByProduct}
+        products={twoProducts}
+        defaultProductId="p1"
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+      />,
+    );
+    // Pick a stage on the first product.
+    fireEvent.click(screen.getByRole("checkbox", { name: "Planning" }));
+    expect(screen.getByRole("checkbox", { name: "Planning" })).toBeChecked();
+
+    // Switch product → options re-scope to p2 and nothing stays checked.
+    fireEvent.change(screen.getByLabelText(/^Product/i), {
+      target: { value: "p2" },
+    });
+    expect(screen.queryByRole("checkbox", { name: "Planning" })).toBeNull();
+    expect(
+      screen.getByRole("checkbox", { name: "Analysis" }),
+    ).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Design" })).not.toBeChecked();
+  });
+});

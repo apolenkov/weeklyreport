@@ -181,7 +181,10 @@ function ItemEditDialogContent({
 
   function setProductAndStages(nextProductId: string) {
     setProductId(nextProductId);
-    setStageIds(stagesForProduct ? [...stagesForProduct(nextProductId)] : []);
+    // unify-record-dialogs: clear the stage selection on a product switch —
+    // never default to all owned stages (mirrors the risk dialog, W11 3.10).
+    // The single-owned-stage convenience still applies at save time.
+    setStageIds([]);
   }
 
   function handleSave() {
