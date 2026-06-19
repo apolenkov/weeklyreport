@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
 import type { Product, RiskEntry } from "./mock-data";
+import { ProductPicker } from "./product-picker";
 import { StageMultiSelect } from "./stage-multi-select";
 import { canonicalStageName } from "./stage-tags";
 
@@ -469,29 +470,13 @@ function RiskEditDialogContent({
               </div>
             </div>
 
-            {/* Product picker */}
-            {products.length > 1 && (
-              <div>
-                <label
-                  className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-                  htmlFor="risk-product"
-                >
-                  Product
-                </label>
-                <select
-                  id="risk-product"
-                  className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
-                  value={productId}
-                  onChange={(e) => setProductAndStages(e.target.value)}
-                >
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {/* Product picker — shared component, always rendered. */}
+            <ProductPicker
+              id="risk-product"
+              value={productId}
+              products={products}
+              onChange={setProductAndStages}
+            />
           </div>
         </div>
 
