@@ -242,7 +242,9 @@ const SMALL_DATASET: TierDataset = {
       leadId: LEAD_1_ID,
       leadLabel: VASILY_LABEL,
       productId: PROD_INTEGRATIONS,
-      productLight: TrafficLightStatus.green,
+      // small-seed-three-colors: Integrations is the YELLOW example — an at-risk
+      // stage (below), never blocked.
+      productLight: TrafficLightStatus.yellow,
       sectionStatus: ReportSectionStatus.draft,
       ownedStages: ["Development"],
       items: [
@@ -262,17 +264,26 @@ const SMALL_DATASET: TierDataset = {
           stages: ["Development"],
         },
       ],
+      risk: {
+        risk: "Партнёр задерживает финальную версию API коннектора",
+        impact: "Возможна переделка коннектора перед боевой интеграцией",
+        mitigation:
+          "Зафиксировать текущую версию API, заложить буфер на доработку",
+        severity: "at-risk",
+        stage: "Development",
+      },
       decision: {
         text: "Зафиксировать версию API партнёра для интеграции",
         impact: "Снижает риск ломающих изменений на их стороне",
         stage: "Development",
       },
     },
-    // BI — the internal product. Vasily owns EXACTLY TWO stages (Planning,
-    // Development); Testing is left unowned (tester not hired). Igor co-owns
-    // DevOps here (see his section below) and raises the blocker that lights
-    // this product's health red in Vasily's view even though Vasily owns
-    // neither the DevOps nor the Testing chip.
+    // BI — the internal product, the GREEN showcase (small-seed-three-colors).
+    // Vasily still owns EXACTLY TWO stages (Planning, Development). The rest are
+    // broadly staffed by co-owners — Maria on Analysis/Design/Testing, Igor on
+    // DevOps (all on-track, see their sections) — EXCEPT Support, deliberately
+    // left unowned to show a vacant SDLC role. No risk covers BI, so its health
+    // resolves green.
     {
       leadId: LEAD_1_ID,
       leadLabel: VASILY_LABEL,
@@ -373,54 +384,101 @@ const SMALL_DATASET: TierDataset = {
         stage: "Testing",
       },
     },
-    // --- Igor (co-owner) — owns DevOps; foreign blocker on BI -------------
+    // Maria also owns Analysis/Design/Testing on BI — the broad staffing that
+    // makes BI read as a fully-owned green showcase (Support stays the one
+    // vacant role). All on-track; single-stage items keep the tier minimal.
+    {
+      leadId: LEAD_MARIA_ID,
+      leadLabel: MARIA_LABEL,
+      productId: PROD_BI,
+      productLight: TrafficLightStatus.green,
+      sectionStatus: ReportSectionStatus.draft,
+      ownedStages: ["Analysis", "Design", "Testing"],
+      items: [
+        {
+          type: ItemType.current,
+          text: "Согласовали аналитику и макеты экранов дашборда BI",
+          tag: "feature",
+          status: ItemWorkflowStatus.in_progress,
+          stages: ["Analysis"],
+        },
+        {
+          type: ItemType.next,
+          text: "Прогнать приёмочные сценарии дашборда BI на следующей неделе",
+          tag: "bugfix",
+          status: ItemWorkflowStatus.in_progress,
+          stages: ["Testing"],
+        },
+      ],
+    },
+    // --- Igor (co-owner) — owns DevOps; on-track on BI (green showcase) -----
     {
       leadId: LEAD_IGOR_ID,
       leadLabel: IGOR_LABEL,
       productId: PROD_BI,
+      // small-seed-three-colors: BI is the green showcase — Igor's DevOps is
+      // on-track here (the cluster blocker moved to the Portal, see below).
+      productLight: TrafficLightStatus.green,
+      sectionStatus: ReportSectionStatus.draft,
+      ownedStages: ["DevOps"],
+      items: [
+        {
+          type: ItemType.current,
+          text: "Прод-стенд дашборда BI развёрнут, мониторинг кластера настроен",
+          tag: "infra",
+          status: ItemWorkflowStatus.in_progress,
+          stages: ["DevOps"],
+        },
+        {
+          type: ItemType.next,
+          text: "Автоматизировать выкладку дашборда BI через CI/CD пайплайн",
+          tag: "infra",
+          status: ItemWorkflowStatus.in_progress,
+          stages: ["DevOps"],
+        },
+      ],
+      // Cross-author decision on Vasily's BI product, surfaced in his
+      // "Everyone" visibility lens.
+      decision: {
+        text: "Закрепить регламент мониторинга кластера дашборда BI",
+        impact: "Фиксирует SLA эксплуатации после выхода в прод",
+        stage: "DevOps",
+      },
+    },
+    // Igor also owns DevOps on Portal and Integrations (consistent role).
+    // small-seed-three-colors: the cluster blocker lives on the Portal now — a
+    // FOREIGN-owned blocked stage, so Vasily sees his co-owned Portal go red on
+    // a stage he does not own (Product context demo), while BI stays green.
+    {
+      leadId: LEAD_IGOR_ID,
+      leadLabel: IGOR_LABEL,
+      productId: PROD_PORTAL,
       productLight: TrafficLightStatus.red,
       sectionStatus: ReportSectionStatus.draft,
       ownedStages: ["DevOps"],
       items: [
         {
           type: ItemType.current,
-          text: "Деплой дашборда BI заблокирован: не выделены ресурсы кластера",
+          text: "Деплой портала заблокирован: не выделены мощности кластера",
           tag: "infra",
           status: ItemWorkflowStatus.blocked,
           stages: ["DevOps"],
         },
         {
           type: ItemType.next,
-          text: "Настроить мониторинг кластера BI после выделения ресурсов",
+          text: "Настроить мониторинг кластера портала после выделения ресурсов",
           tag: "infra",
           status: ItemWorkflowStatus.in_progress,
           stages: ["DevOps"],
         },
       ],
       risk: {
-        risk: "Нет выделенных мощностей кластера под прод-стенд BI",
-        impact: "Релиз дашборда BI сдвигается до выделения ресурсов",
+        risk: "Нет выделенных мощностей кластера под прод-стенд портала",
+        impact: "Релиз портала сдвигается до выделения ресурсов",
         mitigation: "Заявка в инфраструктуру, временный деплой на общий стенд",
         severity: "blocked",
         stage: "DevOps",
       },
-      // Cross-author decision on Vasily's BI product, surfaced in his
-      // "Everyone" visibility lens alongside Igor's blocker.
-      decision: {
-        text: "Временно деплоить BI на общий стенд до выделения кластера",
-        impact: "Разблокирует приёмку дашборда, прод-деплой ждёт ресурсов",
-        stage: "DevOps",
-      },
-    },
-    // Igor also owns DevOps on Portal and Integrations (consistent role).
-    {
-      leadId: LEAD_IGOR_ID,
-      leadLabel: IGOR_LABEL,
-      productId: PROD_PORTAL,
-      productLight: TrafficLightStatus.green,
-      sectionStatus: ReportSectionStatus.draft,
-      ownedStages: ["DevOps"],
-      items: [],
     },
     {
       leadId: LEAD_IGOR_ID,
