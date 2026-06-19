@@ -46,7 +46,7 @@ describe("DecisionsSection meta-row — pre-extract snapshot", () => {
     const { container } = render(
       <DecisionsSection
         decisions={[{ ...BASE_DECISION, stageIds: ["Analysis", "Dev"] }]}
-        availableStages={["Analysis", "Dev"]}
+        stagesForProduct={() => ["Analysis", "Development"]}
         readOnly
       />,
     );

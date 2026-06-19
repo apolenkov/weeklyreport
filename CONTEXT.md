@@ -105,6 +105,15 @@ stripe or a dedicated marker — deliberately decoupled from the stage chip so o
 control carries one meaning.
 _Avoid_: stage (a stage is the SDLC phase, not the progress state).
 
+**Decision**:
+A choice a lead needs leadership to make, phrased as a yes/no or short
+statement and recorded against ONE product. Like an item or a risk, a decision
+is product-scoped: its SDLC stage options are the stages owned on the selected
+product, and changing the product re-scopes them. (Earlier the decision dialog
+drew stages from the department-wide union; that is no longer the model — all
+three record dialogs share one product↔stage rule.)
+_Avoid_: discussion topic (a decision is a specific call, not an open question).
+
 **Escalation / Needs Attention**:
 A distinct head-facing call-out for a product (an `Escalation` row surfaced as the
 "Needs Attention" banner). It MUST add information, never a verbatim copy of an

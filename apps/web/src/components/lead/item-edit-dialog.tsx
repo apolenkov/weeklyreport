@@ -147,13 +147,13 @@ function ItemEditDialogContent({
   const [priorityRank, setPriorityRank] = useState<number | null>(
     item?.priorityRank ?? null,
   );
-  // UFB-073 (R1): pre-select all owned stages on create; restore existing on edit.
+  // unify-record-dialogs: no stage is pre-selected on create — the lead makes an
+  // explicit choice (mirrors the risk dialog, which dropped the "all owned
+  // stages" default in fix-report-surface-integrity W11). Edit restores the
+  // record's saved stages. The required-stage rule + single-owned-stage
+  // auto-apply in handleSave still let a one-stage product save without a click.
   const [stageIds, setStageIds] = useState<string[]>(
-    item?.stageIds
-      ? [...item.stageIds]
-      : isCreate
-        ? [...(stagesForProduct?.(initial.productId) ?? [])]
-        : [],
+    item?.stageIds ? [...item.stageIds] : [],
   );
   const [errors, setErrors] = useState<{ text?: string; stageIds?: string }>(
     {},

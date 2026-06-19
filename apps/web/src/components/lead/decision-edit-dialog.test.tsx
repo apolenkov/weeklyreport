@@ -1,10 +1,10 @@
 /**
  * A13 regression: typed text must survive parent re-renders that pass a new
- * availableStages array reference (autosave → React Query invalidate cycle).
+ * stagesForProduct function reference (autosave → React Query invalidate cycle).
  *
- * Before fix: useEffect has availableStages in deps → fires on new ref →
+ * Before fix: useEffect has the stages prop in deps → fires on new ref →
  *             setText('') wipes user input.
- * After fix:  availableStages removed from deps → state preserved.
+ * After fix:  the stages prop is never in deps → state preserved.
  *
  * VA-0a: a11y regression tests for biome-ignore suppression justifications
  * (noStaticElementInteractions on backdrop, useKeyWithClickEvents on inner
@@ -22,7 +22,7 @@ const products: Product[] = [
 ];
 
 describe("DecisionEditDialog — A13 form-race regression", () => {
-  it("preserves typed text when parent re-renders with a new availableStages ref", () => {
+  it("preserves typed text when parent re-renders with a new stagesForProduct ref", () => {
     const stagesV1 = ["Planning", "Dev"] as const;
 
     const { rerender } = render(
@@ -30,7 +30,7 @@ describe("DecisionEditDialog — A13 form-race regression", () => {
         open={true}
         decision={null}
         defaultOwner="Test Lead"
-        availableStages={stagesV1}
+        stagesForProduct={() => stagesV1}
         products={products}
         defaultProductId="p1"
         onSave={vi.fn()}
@@ -51,7 +51,7 @@ describe("DecisionEditDialog — A13 form-race regression", () => {
         open={true}
         decision={null}
         defaultOwner="Test Lead"
-        availableStages={stagesV2}
+        stagesForProduct={() => stagesV2}
         products={products}
         defaultProductId="p1"
         onSave={vi.fn()}
@@ -71,7 +71,7 @@ describe("DecisionEditDialog — A13 form-race regression", () => {
         open={true}
         decision={null}
         defaultOwner="Test Lead"
-        availableStages={["Planning", "Dev"]}
+        stagesForProduct={() => ["Planning", "Dev"]}
         products={products}
         defaultProductId="p1"
         onSave={onSave}
@@ -85,6 +85,8 @@ describe("DecisionEditDialog — A13 form-race regression", () => {
     fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
       target: { value: "Unblocks team expansion" },
     });
+    // unify-record-dialogs: a multi-stage product requires an explicit pick.
+    fireEvent.click(screen.getByRole("checkbox", { name: "Planning" }));
     fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
@@ -102,7 +104,7 @@ describe("DecisionEditDialog — A13 form-race regression", () => {
         open={true}
         decision={null}
         defaultOwner="Test Lead"
-        availableStages={["Planning", "Dev"]}
+        stagesForProduct={() => ["Planning", "Dev"]}
         products={products}
         defaultProductId="p1"
         onSave={onSave}
@@ -116,13 +118,15 @@ describe("DecisionEditDialog — A13 form-race regression", () => {
     fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
       target: { value: "Unblocks team expansion" },
     });
+    // unify-record-dialogs: nothing pre-selected, so clicking "Planning" selects
+    // exactly that stage.
     fireEvent.click(screen.getByRole("checkbox", { name: "Planning" }));
     fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
       text: "Approve Q3 hiring plan",
-      stageIds: ["Dev"],
+      stageIds: ["Planning"],
     });
   });
 
@@ -141,7 +145,7 @@ describe("DecisionEditDialog — A13 form-race regression", () => {
           stageIds: ["Dev"],
         }}
         defaultOwner="Test Lead"
-        availableStages={["Planning", "Dev"]}
+        stagesForProduct={() => ["Planning", "Dev"]}
         products={products}
         defaultProductId="p1"
         onSave={vi.fn()}
@@ -166,7 +170,7 @@ const defaultProps = {
   open: true,
   decision: null,
   defaultOwner: "Test Lead",
-  availableStages: ["Planning", "Dev"] as readonly string[],
+  stagesForProduct: () => ["Planning", "Dev"] as readonly string[],
   products,
   defaultProductId: "p1",
   onSave: vi.fn(),
@@ -272,7 +276,7 @@ describe("DecisionEditDialog — D12 reopen renders fresh state", () => {
         open={true}
         decision={null}
         defaultOwner="Test Lead"
-        availableStages={["Planning", "Dev"]}
+        stagesForProduct={() => ["Planning", "Dev"]}
         products={products}
         defaultProductId="p1"
         onSave={vi.fn()}
@@ -293,7 +297,7 @@ describe("DecisionEditDialog — D12 reopen renders fresh state", () => {
         open={false}
         decision={null}
         defaultOwner="Test Lead"
-        availableStages={["Planning", "Dev"]}
+        stagesForProduct={() => ["Planning", "Dev"]}
         products={products}
         defaultProductId="p1"
         onSave={vi.fn()}
@@ -308,7 +312,7 @@ describe("DecisionEditDialog — D12 reopen renders fresh state", () => {
         open={true}
         decision={null}
         defaultOwner="Test Lead"
-        availableStages={["Planning", "Dev"]}
+        stagesForProduct={() => ["Planning", "Dev"]}
         products={products}
         defaultProductId="p1"
         onSave={vi.fn()}
@@ -329,16 +333,15 @@ describe("DecisionEditDialog — require a stage", () => {
         open
         decision={null}
         defaultOwner="Test Lead"
-        availableStages={["Planning", "Dev"]}
+        stagesForProduct={() => ["Planning", "Dev"]}
         products={products}
         defaultProductId="p1"
         onSave={onSave}
         onCancel={() => undefined}
       />,
     );
-    // Create pre-selects all owned stages; deselect both to reach the gap.
-    fireEvent.click(screen.getByRole("checkbox", { name: "Planning" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "Dev" }));
+    // unify-record-dialogs: create starts with no stage selected, so the gap is
+    // reached without any deselection.
     fireEvent.change(screen.getByLabelText(/^Decision \*/i), {
       target: { value: "A decision without a stage" },
     });
@@ -358,7 +361,7 @@ describe("DecisionEditDialog — require a stage", () => {
         open
         decision={null}
         defaultOwner="Test Lead"
-        availableStages={["Dev"]}
+        stagesForProduct={() => ["Dev"]}
         products={products}
         defaultProductId="p1"
         onSave={onSave}
