@@ -754,6 +754,54 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     );
   });
 
+  it("#90 (cross-author): a hidden foreign blocked stage colours the indicator red", () => {
+    // The live Mine-mode shape (the one the suite previously never exercised):
+    // the foreign DevOps stage is unassigned/empty in the lead's OWN grid, and
+    // its real blocked severity arrives only via crossAuthors. The indicator
+    // colour must follow that resolved severity, not the local "empty" (grey).
+    const product: Product = {
+      id: "p-foreign-blocked",
+      name: "Foreign Blocked",
+      overallStatus: "on-track",
+      stages: [
+        {
+          stageName: "Dev",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "me",
+        },
+        {
+          stageName: "DevOps",
+          status: "empty",
+          ownership: "unassigned",
+          assignee: null,
+        },
+      ],
+    };
+    const { container } = render(
+      <SdlcPipeline
+        products={[product]}
+        readOnly={false}
+        visibilityMode="mine"
+        crossAuthors={[
+          {
+            projectId: product.id,
+            projectName: product.name,
+            authorId: "a-ig",
+            authorInitials: "IG",
+            stageNames: ["DevOps"],
+            stages: [{ stageName: "DevOps", status: "red" }],
+          },
+        ]}
+      />,
+    );
+    const indicator = container.querySelector<HTMLElement>(COLLAPSED_INDICATOR);
+    expect(indicator?.style.borderColor).toBe(
+      "var(--color-chip-blocked-border)",
+    );
+    expect(indicator?.style.color).toBe("var(--color-chip-blocked-text)");
+  });
+
   it("an unfilled hidden stage keeps the indicator grey (full scale)", () => {
     // Own Dev (mine) + a hidden on-track stage + a hidden vacant (empty) stage.
     // No blocked/at-risk, but one stage is unfilled → grey ("not all filled").

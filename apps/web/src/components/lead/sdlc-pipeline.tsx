@@ -7,6 +7,7 @@ import { useSdlcTooltip } from "../ui/sdlc-tooltip";
 import type { Product, StageAssignment, StageStatus } from "./mock-data";
 import {
   foreignOwnersForProduct,
+  hiddenStagesEffectiveStatuses,
   hiddenStagesRevealLines,
 } from "./sdlc-hidden-stages";
 import { StageChip } from "./stage-chip";
@@ -119,18 +120,18 @@ function worstStatusOf(values: readonly StageStatus[]): StageStatus {
 // on-track. This lets the lead trace the product's left health stripe to the
 // collapsed stages at a glance (the earlier "neutral unless blocked/at-risk"
 // hid the green/grey distinction the reviewer asked for).
-function collapsedIndicatorColors(hidden: readonly StageAssignment[]): {
+function collapsedIndicatorColors(statuses: readonly StageStatus[]): {
   border: string;
   text: string;
 } {
-  // Precedence: any blocked → red; else any at-risk → yellow; else any unfilled
-  // (empty own role or vacant stage) → grey; else all on-track → green.
-  const statuses = new Set(hidden.map((s) => s.status));
-  const status: StageStatus = statuses.has("blocked")
+  // Over the cross-author-resolved statuses: blocked → red; else at-risk →
+  // yellow; else any unfilled → grey; else all on-track → green.
+  const set = new Set(statuses);
+  const status: StageStatus = set.has("blocked")
     ? "blocked"
-    : statuses.has("at-risk")
+    : set.has("at-risk")
       ? "at-risk"
-      : statuses.has("empty")
+      : set.has("empty")
         ? "empty"
         : "on-track";
   return {
@@ -271,6 +272,17 @@ export function SdlcPipeline({
           visibilityMode === "mine"
             ? product.stages.filter((s) => s.ownership !== "mine")
             : [];
+        // pipeline-tooltip-and-indicator: the +N more reveal AND its colour both
+        // derive from the SAME cross-author-resolved hidden stages, so they never
+        // diverge (a hidden foreign blocked stage colours red, not grey).
+        const foreignOwners = foreignOwnersForProduct(product.id, crossAuthors);
+        const hiddenReveal = hiddenStagesRevealLines(
+          hiddenStages,
+          foreignOwners,
+        );
+        const hiddenColors = collapsedIndicatorColors(
+          hiddenStagesEffectiveStatuses(hiddenStages, foreignOwners),
+        );
         return (
           <div
             key={product.id}
@@ -379,40 +391,30 @@ export function SdlcPipeline({
                     </div>
                   );
                 })}
-                {/* Inert collapsed-stage indicator (Mine mode only). Hover/focus
-                    reveals the hidden stages via the styled tooltip (one honest
-                    line each); border+text follow the full status scale. Never
-                    re-renders the chips, nor touches health/completeness. */}
-                {hiddenStages.length > 0 &&
-                  (() => {
-                    const lines = hiddenStagesRevealLines(
-                      hiddenStages,
-                      foreignOwnersForProduct(product.id, crossAuthors),
-                    );
-                    const colors = collapsedIndicatorColors(hiddenStages);
-                    return (
-                      <span
-                        role="img"
-                        data-testid="collapsed-stages-indicator"
-                        aria-label={`${HIDDEN_STAGES_ARIA_PREFIX} ${lines.join(", ")}`}
-                        className="inline-flex cursor-default items-center rounded-[var(--radius-pill)] border border-dashed px-2 text-[12px] font-medium"
-                        style={{
-                          height: STAGE_CHIP_BOX_HEIGHT,
-                          borderColor: colors.border,
-                          color: colors.text,
-                        }}
-                        onMouseEnter={(e) =>
-                          tooltip.show(
-                            e.currentTarget.getBoundingClientRect(),
-                            lines.join("\n"),
-                          )
-                        }
-                        onMouseLeave={() => tooltip.hide()}
-                      >
-                        {collapsedStagesIndicatorLabel(hiddenStages.length)}
-                      </span>
-                    );
-                  })()}
+                {/* Inert collapsed-stage indicator (Mine only): hover reveals the
+                    hidden stages; border+text follow the cross-author status scale. */}
+                {hiddenStages.length > 0 && (
+                  <span
+                    role="img"
+                    data-testid="collapsed-stages-indicator"
+                    aria-label={`${HIDDEN_STAGES_ARIA_PREFIX} ${hiddenReveal.join(", ")}`}
+                    className="inline-flex cursor-default items-center rounded-[var(--radius-pill)] border border-dashed px-2 text-[12px] font-medium"
+                    style={{
+                      height: STAGE_CHIP_BOX_HEIGHT,
+                      borderColor: hiddenColors.border,
+                      color: hiddenColors.text,
+                    }}
+                    onMouseEnter={(e) =>
+                      tooltip.show(
+                        e.currentTarget.getBoundingClientRect(),
+                        hiddenReveal.join("\n"),
+                      )
+                    }
+                    onMouseLeave={() => tooltip.hide()}
+                  >
+                    {collapsedStagesIndicatorLabel(hiddenStages.length)}
+                  </span>
+                )}
               </div>
             )}
           </div>
