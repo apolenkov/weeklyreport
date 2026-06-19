@@ -65,3 +65,21 @@ export function hiddenStagesRevealLines(
 ): string[] {
   return hidden.map((s) => hiddenStageLine(s, foreignOwners));
 }
+
+/**
+ * The status that drives each hidden stage's at-a-glance colour. A foreign-held
+ * stage uses the co-owner's status from `crossAuthors` (in Mine mode the lead's
+ * own grid marks it "unassigned"/"empty", so its raw status is meaningless);
+ * any other stage uses its own status. The "+N more" indicator colour is built
+ * from these so it always matches the reveal text, instead of collapsing to grey
+ * whenever the only severity lives in a foreign co-owner's stage.
+ */
+export function hiddenStagesEffectiveStatuses(
+  hidden: readonly StageAssignment[],
+  foreignOwners: Map<string, ForeignOwner>,
+): StageStatus[] {
+  return hidden.map(
+    (s) =>
+      foreignOwners.get(canonicalStageName(s.stageName))?.status ?? s.status,
+  );
+}
