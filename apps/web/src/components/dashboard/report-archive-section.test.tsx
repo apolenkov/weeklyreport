@@ -142,7 +142,7 @@ describe("ReportArchiveSection — ArchiveSkeletonGrid a11y (VA-0a/VA-0b)", () =
 
     // SKELETON_KEYS has 8 entries (sk-0 through sk-7)
     const skeletonDivs = container.querySelectorAll('[aria-hidden="true"]');
-    expect(skeletonDivs.length).toBe(8);
+    expect(skeletonDivs).toHaveLength(8);
     skeletonDivs.forEach((div) => {
       expect(div).toHaveAttribute("aria-hidden", "true");
     });

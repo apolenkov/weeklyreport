@@ -13,10 +13,10 @@
     "test": "vitest run --exclude '**/dist/**'"
   },
   "dependencies": {
-    "@trpc/server": "^11.17.0",
-    "zod": "^4.1.0"
+    "@trpc/server": "^11.18.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^24.9.1"
+    "@types/node": "^25.9.4"
   }
 }

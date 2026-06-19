@@ -36,6 +36,7 @@ describe("37-01 OTel bootstrap decision", () => {
     });
     expect(decision.started).toBe(true);
     if (decision.started) {
+      // eslint-disable-next-line sonarjs/no-floating-point-equality -- asserts the default sampling-ratio constant (0.1) passes through unchanged; exact equality is intended
       expect(decision.samplingRatio).toBe(0.1);
       expect(decision.endpoint).toBe("http://otel:4318");
     }
@@ -59,6 +60,7 @@ describe("37-01 OTel bootstrap decision", () => {
     });
     expect(decision.started).toBe(true);
     if (decision.started) {
+      // eslint-disable-next-line sonarjs/no-floating-point-equality -- asserts the default sampling-ratio constant (0.1) is used on malformed input; exact equality is intended
       expect(decision.samplingRatio).toBe(0.1);
     }
   });
@@ -69,6 +71,7 @@ describe("37-01 OTel bootstrap decision", () => {
       OTEL_TRACES_SAMPLER_ARG: "2.5",
     });
     expect(tooHigh.started).toBe(true);
+    // eslint-disable-next-line sonarjs/no-floating-point-equality -- asserts an out-of-range ratio clamps to the default constant (0.1); exact equality is intended
     if (tooHigh.started) expect(tooHigh.samplingRatio).toBe(0.1);
 
     const negative = decideOtelBootstrap({
@@ -76,6 +79,7 @@ describe("37-01 OTel bootstrap decision", () => {
       OTEL_TRACES_SAMPLER_ARG: "-0.5",
     });
     expect(negative.started).toBe(true);
+    // eslint-disable-next-line sonarjs/no-floating-point-equality -- asserts a negative ratio clamps to the default constant (0.1); exact equality is intended
     if (negative.started) expect(negative.samplingRatio).toBe(0.1);
   });
 

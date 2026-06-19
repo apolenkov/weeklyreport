@@ -60,7 +60,7 @@ describe("LeadFormSkeleton — snapshot (VA-0b)", () => {
 
     const spaceContainers = container.querySelectorAll(".space-y-2");
     // There are 6 PlaceholderAccordion blocks; each produces one .space-y-2
-    expect(spaceContainers.length).toBe(6);
+    expect(spaceContainers).toHaveLength(6);
 
     // Snapshot the first block's row count and slot values for stability
     const firstBlock = spaceContainers[0];

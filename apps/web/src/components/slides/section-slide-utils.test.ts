@@ -1082,7 +1082,7 @@ describe("mergeForeignSlideContent", () => {
 
     // The cached section the draft serializes is byte-for-byte unchanged.
     expect(section.items).toBe(itemsRef);
-    expect(section.items.length).toBe(itemsLenBefore);
+    expect(section.items).toHaveLength(itemsLenBefore);
     // The base slide model is not mutated either (new objects only).
     expect(base.productSlides).toBe(baseProductsRef);
     expect(base.currentCount).toBe(baseCurrentBefore);

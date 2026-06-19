@@ -39,7 +39,7 @@ describe("BlockedAtRiskTable — aria-hidden on decorative SVG icons", () => {
     const svgs = button.querySelectorAll("svg");
 
     // There are exactly two svgs in the button: AlertIcon + ChevronDown
-    expect(svgs.length).toBe(2);
+    expect(svgs).toHaveLength(2);
     const chevronSvg = svgs[1];
     expect(chevronSvg).toHaveAttribute("aria-hidden", "true");
 
