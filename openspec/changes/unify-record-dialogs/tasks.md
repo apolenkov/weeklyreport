@@ -18,20 +18,20 @@
 
 ## 3. Two-column layout for all three
 
-- [ ] 3.1 Extract or replicate the risk dialog's two-column shell (left text column + right CLASSIFICATION panel). Put Product → SDLC Stages → Status/Severity in
-      the panel, same order in all three.
-- [ ] 3.2 Item dialog: always render the Product picker (drop the `products.length > 1`
-      guard); move it into the panel with Status.
-- [ ] 3.3 Decision dialog: move Product into the panel; keep owner/deadline + text on
-      the left.
-- [ ] 3.4 Preserve the D12 mount/unmount shell and the A13 deps-array invariant.
+- [x] 3.1 Replicated the risk dialog's two-column shell (left prose column + right
+      CLASSIFICATION panel) in the item and decision dialogs (widened to max-w-3xl).
+- [x] 3.2 Item dialog: Product picker always renders in the panel (disabled when
+      a single product), grouped with SDLC Stages + Status.
+- [x] 3.3 Decision dialog: Product moved into the panel with SDLC Stages; owner/
+      deadline + text stay in the left column.
+- [x] 3.4 D12 mount/unmount shell + A13 deps-array invariant preserved (only JSX
+      reorganized; state/handlers unchanged).
 
 ## 4. Tests & gates
 
-- [ ] 4.1 Update item/decision dialog tests: create mode shows NO stage checked.
-- [ ] 4.2 Add a decision test: changing product re-scopes stage options + clears
-      selection.
-- [ ] 4.3 Keep required-stage + single-auto-apply tests green for all three.
-- [ ] 4.4 `lead-dialog-lifecycle` + `lead-report-controls-integrity` suites green.
-- [ ] 4.5 `pnpm typecheck && pnpm lint && pnpm test` green; live-verify all three
-      dialogs: empty stages on open, product change re-scopes, two-column layout.
+- [x] 4.1 Item/decision dialog tests updated: create mode shows NO stage checked.
+- [x] 4.2 Decision test: changing product re-scopes stage options + clears selection.
+- [x] 4.3 Required-stage + single-auto-apply tests green for all three.
+- [x] 4.4 Lead suite green (308); typecheck + lint clean.
+- [~] 4.5 Live-verify all three dialogs (empty stages on open, product change
+  re-scopes, two-column reads as one family) — DEFERRED to the live visual pass.
