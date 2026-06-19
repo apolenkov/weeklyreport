@@ -48,8 +48,11 @@ two-column dialog layout for live verification (user-agreed).
       Mine-mode status (always `empty` for foreign stages → always grey on the live
       surface). Now derives from the same cross-author-resolved set as the reveal
       (`hiddenStagesEffectiveStatuses`), with a regression test. Commit `ba3260f0`.
-- [ ] 5.2 BLOCKER for archive — spec vs §2 conflict (user decision): the
+- [ ] 5.2 BLOCKER for archive — Radix swap owed (user decision 2026-06-19): the
       `lead-pipeline-card` spec's first requirement MANDATES the shared Radix
-      `Tooltip`, but §2 deliberately DEFERS the Radix swap (still `useSdlcTooltip`).
-      Either soften the spec to "styled tooltip now, Radix as a tracked follow-up"
-      or schedule the Radix swap. Do NOT archive this change until resolved.
+      `Tooltip`. The user chose to KEEP Radix required (NOT to soften the spec), so
+      this change is genuinely INCOMPLETE until §2's Radix swap lands — replace the
+      pipeline's custom `useSdlcTooltip` (chips + collapsed indicator) with the
+      `packages/ui` Radix `Tooltip`. The honest multi-line reveal + cross-author
+      indicator colour already ship; only the tooltip-component swap remains. Do NOT
+      archive this change until the swap is done.
