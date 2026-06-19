@@ -3,7 +3,7 @@
 ## 1. Tail 1 — fetch-gate divergence (code)
 
 - [x] 1.1 Extract a pure predicate `crossAuthorContentFetchEnabled({ hasReport,
-  visibilityHydrated, isEveryone, isOwnDeck })` into a shared util; unit-test
+visibilityHydrated, isEveryone, isOwnDeck })` into a shared util; unit-test
       its truth table, crucially the foreign-deck row (`isOwnDeck:false ⇒ false`
       even when `isEveryone`).
 - [x] 1.2 Both hosts call it in their `enabled:` — `lead-form.tsx:466` passing
