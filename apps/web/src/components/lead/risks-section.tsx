@@ -47,6 +47,22 @@ interface RisksSectionProps {
   readonly addSignal?: number;
 }
 
+/**
+ * The canonical, display-ready stage tags for a risk (stage-label-canonicalization
+ * 2.1): prefer stageIds, fall back to the legacy CSV, canonicalize every value so a
+ * stored "Dev" reads as "Development" everywhere it is shown.
+ */
+function canonicalRiskStageTags(risk: {
+  stageIds?: readonly string[] | null;
+  stageName?: string | null;
+}): string[] {
+  const raw =
+    risk.stageIds && risk.stageIds.length > 0
+      ? risk.stageIds
+      : splitStageNames(risk.stageName);
+  return raw.map(canonicalStageName);
+}
+
 export function RisksSection({
   risks,
   readOnly = false,
@@ -149,11 +165,7 @@ export function RisksSection({
       ) : (
         risks.map((risk) => {
           const isBlocked = risk.severity === "blocked";
-          const stageTags =
-            risk.stageIds && risk.stageIds.length > 0
-              ? risk.stageIds.map(canonicalStageName)
-              : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-                splitStageNames(risk.stageName).map(canonicalStageName);
+          const stageTags = canonicalRiskStageTags(risk);
           // require-risk-stage (D2): a risk with no stages is an anomaly
           // (legacy row), never an implicit "all stages" scope — render the
           // loud "No stage set" warning chip instead of disguising it.
@@ -323,8 +335,10 @@ export function RisksSection({
         preview={pendingDelete?.text || "(no description)"}
         subtitle={
           pendingDelete
-            ? // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-              `${pendingDelete.productName} · ${(pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).length > 0 ? (pendingDelete.stageIds?.length ? pendingDelete.stageIds : splitStageNames(pendingDelete.stageName)).join(", ") : "no stage set"}`
+            ? `${pendingDelete.productName} · ${
+                canonicalRiskStageTags(pendingDelete).join(", ") ||
+                "no stage set"
+              }`
             : undefined
         }
         onConfirm={confirmDelete}
