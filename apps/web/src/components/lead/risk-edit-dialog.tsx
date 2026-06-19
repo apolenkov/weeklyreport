@@ -428,6 +428,16 @@ function RiskEditDialogContent({
               Classification
             </span>
 
+            {/* unify-record-dialogs: Product picker is kept FIRST so the
+                classification panel orders Product → Stages → Severity, the same
+                order as the item and decision dialogs. */}
+            <ProductPicker
+              id="risk-product"
+              value={productId}
+              products={products}
+              onChange={setProductAndStages}
+            />
+
             <StageMultiSelect
               id="risk-stage"
               value={stageIds}
@@ -469,14 +479,6 @@ function RiskEditDialogContent({
                 })}
               </div>
             </div>
-
-            {/* Product picker — shared component, always rendered. */}
-            <ProductPicker
-              id="risk-product"
-              value={productId}
-              products={products}
-              onChange={setProductAndStages}
-            />
           </div>
         </div>
 
