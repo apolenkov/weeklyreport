@@ -824,3 +824,30 @@ describe("RiskEditDialog — D12 reopen renders fresh state", () => {
     expect(screen.getByLabelText(/^Risk \*/i)).toHaveValue("");
   });
 });
+
+describe("RiskEditDialog — classification field order (unify-record-dialogs)", () => {
+  it("orders the classification panel Product → Stages → Severity", () => {
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Development", "Testing"]}
+      />,
+    );
+
+    const product = screen.getByLabelText("Product");
+    const stages = screen.getByText("SDLC Stages");
+    const severity = screen.getByText("Severity");
+
+    // The spec requires the same control order across all three dialogs
+    // (item/decision render Product → Stages → Status). A node FOLLOWS another
+    // when DOCUMENT_POSITION_FOLLOWING is set in compareDocumentPosition.
+    const FOLLOWING = Node.DOCUMENT_POSITION_FOLLOWING;
+    expect(product.compareDocumentPosition(stages) & FOLLOWING).toBeTruthy();
+    expect(stages.compareDocumentPosition(severity) & FOLLOWING).toBeTruthy();
+  });
+});
