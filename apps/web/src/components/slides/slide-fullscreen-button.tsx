@@ -1,50 +1,33 @@
 "use client";
 
 import { Maximize2, Minimize2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import type { Ref } from "react";
 
 interface SlideFullscreenButtonProps {
-  readonly targetRef: React.RefObject<HTMLElement | null>;
+  readonly isFullscreen: boolean;
+  readonly onToggle: () => void;
   readonly variant?: "default" | "floating";
+  /**
+   * Captures the DOM node so the deck-level `useFullscreen` owner can return
+   * focus to this persistent toggle when fullscreen ends (never the floating
+   * pill, which unmounts).
+   */
+  readonly buttonRef?: Ref<HTMLButtonElement>;
 }
 
+/**
+ * Presentational fullscreen toggle. The state — plus the `f` shortcut and the
+ * native `fullscreenchange` subscription — is owned by a single deck-level
+ * `useFullscreen` hook (add-slide-fullscreen-exit-affordance), so adding a
+ * second visible exit control never double-toggles. The `floating` variant
+ * self-gates: it renders nothing unless `isFullscreen`.
+ */
 export function SlideFullscreenButton({
-  targetRef,
+  isFullscreen,
+  onToggle,
   variant = "default",
+  buttonRef,
 }: SlideFullscreenButtonProps) {
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  const toggle = useCallback(() => {
-    const el = targetRef.current;
-    if (!el) return;
-    if (!document.fullscreenElement) {
-      el.requestFullscreen().catch(() => {
-        /* ignore — denied in iframe contexts */
-      });
-    } else {
-      document.exitFullscreen().catch(() => {
-        /* ignore */
-      });
-    }
-  }, [targetRef]);
-
-  useEffect(() => {
-    function onFullscreenChange() {
-      setIsFullscreen(!!document.fullscreenElement);
-    }
-    function onKey(e: KeyboardEvent) {
-      const tag = (e.target as HTMLElement | null)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-      if (e.key === "f" || e.key === "F") toggle();
-    }
-    document.addEventListener("fullscreenchange", onFullscreenChange);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("fullscreenchange", onFullscreenChange);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [toggle]);
-
   if (variant === "floating" && !isFullscreen) return null;
 
   // Floating overlay keeps its labeled pill; the in-toolbar default is an
@@ -59,8 +42,10 @@ export function SlideFullscreenButton({
 
   return (
     <button
+      ref={buttonRef}
       type="button"
-      onClick={toggle}
+      onClick={onToggle}
+      aria-pressed={isFullscreen}
       aria-label={label}
       title={label}
       className={className}

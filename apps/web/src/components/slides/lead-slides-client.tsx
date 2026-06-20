@@ -1,5 +1,12 @@
 "use client";
 
+/* eslint-disable max-lines -- add-slide-fullscreen-exit-affordance: this is one
+   cohesive lead-deck client component (data fetching + record-visibility gating
+   + summary/product render modes + the single deck-level fullscreen owner). The
+   reusable control bits (toggle, floating exit pill, Esc hint, toolbar cluster)
+   are already extracted to deck-fullscreen-overlay.tsx; splitting the data layer
+   further would scatter one cohesive unit for a marginal line count. */
+
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -12,13 +19,17 @@ import {
   useState,
 } from "react";
 
+import { useFullscreen } from "../../hooks/use-fullscreen";
 import { crossAuthorContentFetchEnabled } from "../../lib/cross-author-content-gate";
 import type { CrossAuthorContentRow } from "../../lib/mappers/lead-cross-author";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
-import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
+import {
+  DeckFullscreenOverlay,
+  DeckToolbarControls,
+} from "./deck-fullscreen-overlay";
 import { LeadProductGrid } from "./lead-product-grid";
 import { LeadSlideHero } from "./lead-slide-hero";
 import {
@@ -34,7 +45,6 @@ import {
   paginateSectionSlides,
   type SectionSlideModel,
 } from "./section-slide-utils";
-import { SlideFullscreenButton } from "./slide-fullscreen-button";
 import { SlideSkeleton } from "./slide-skeleton";
 
 function SlideEmptyState({
@@ -92,6 +102,14 @@ interface LeadSlidesClientProps {
    *  caller (lead-form header) can host the fullscreen button. */
   readonly deckRef?: RefObject<HTMLDivElement | null>;
   /**
+   * add-slide-fullscreen-exit-affordance: on the lead-form-hosted path the
+   * caller owns the single `useFullscreen` hook and threads its state here, so
+   * the deck's floating pill + Esc hint are presentational and add no second
+   * listener. Absent on the standalone path, where the deck owns the hook.
+   */
+  readonly isFullscreen?: boolean;
+  readonly onToggle?: () => void;
+  /**
    * slides-record-visibility: the lead-form owns the Record-visibility toggle
    * (one `useRecordVisibility` instance) and threads its state down so the deck
    * shows Mine vs Everyone. Defaults keep the deck Mine-only for any caller that
@@ -104,6 +122,8 @@ interface LeadSlidesClientProps {
 export function LeadSlidesClient({
   initialReportId = null,
   deckRef: externalDeckRef,
+  isFullscreen: externalIsFullscreen,
+  onToggle: externalOnToggle,
   visibilityMode = "mine",
   visibilityHydrated = false,
 }: LeadSlidesClientProps) {
@@ -116,6 +136,15 @@ export function LeadSlidesClient({
   const [scope, setScope] = useState<ScopeValue>("own");
   const internalDeckRef = useRef<HTMLDivElement>(null);
   const deckRef = externalDeckRef ?? internalDeckRef;
+  // add-slide-fullscreen-exit-affordance: the lead-form-hosted path passes
+  // isFullscreen/onToggle (it owns the single hook), so the local hook is
+  // disabled to keep exactly one `f`/fullscreenchange listener. The standalone
+  // path owns the hook here and returns focus to its toolbar toggle on exit.
+  const hosted = externalOnToggle !== undefined;
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
+  const localFs = useFullscreen(internalDeckRef, toggleButtonRef, !hosted);
+  const isFullscreen = externalIsFullscreen ?? localFs.isFullscreen;
+  const onToggle = externalOnToggle ?? localFs.toggle;
 
   const activeQ = useQuery(trpc.reports.getActive.queryOptions());
   const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
@@ -304,11 +333,18 @@ export function LeadSlidesClient({
           </div>
           {!inReportMode && (
             <div className="mt-4 flex items-center justify-end gap-2">
-              <AgentReviewComingSoon />
-              <SlideFullscreenButton targetRef={deckRef} />
+              <DeckToolbarControls
+                isFullscreen={isFullscreen}
+                onToggle={onToggle}
+                toggleRef={toggleButtonRef}
+              />
             </div>
           )}
         </article>
+        <DeckFullscreenOverlay
+          isFullscreen={isFullscreen}
+          onToggle={onToggle}
+        />
       </div>
     );
   }
@@ -340,12 +376,16 @@ export function LeadSlidesClient({
         toolbar={
           !inReportMode ? (
             <div className="flex items-center gap-2">
-              <AgentReviewComingSoon />
-              <SlideFullscreenButton targetRef={deckRef} />
+              <DeckToolbarControls
+                isFullscreen={isFullscreen}
+                onToggle={onToggle}
+                toggleRef={toggleButtonRef}
+              />
             </div>
           ) : undefined
         }
       />
+      <DeckFullscreenOverlay isFullscreen={isFullscreen} onToggle={onToggle} />
     </div>
   );
 }
