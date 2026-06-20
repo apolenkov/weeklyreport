@@ -1,11 +1,14 @@
 "use client";
 
+import { Fragment, useMemo } from "react";
+
 import { useEditableListDialog } from "../../hooks/use-editable-list-dialog";
 import { LockBadge } from "../report-shell/lock-badge";
 import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { DecisionEditDialog } from "./decision-edit-dialog";
 import type { DecisionEntry, Product } from "./mock-data";
+import { firstOverCapRowIds, SlideFitAdvisory } from "./slide-fit-advisory";
 import { canonicalStageName, splitStageNames } from "./stage-tags";
 
 interface DecisionsSectionProps {
@@ -121,6 +124,13 @@ export function DecisionsSection({
     clearPendingDelete,
   } = useEditableListDialog<DecisionEntry>({ readOnly, addSignal });
 
+  // add-slide-capacity-signals: per-product decision counts for the slide-fit
+  // advisory (decisions are department-scoped + flat, so group by productName).
+  const decisionOverflow = useMemo(
+    () => firstOverCapRowIds(decisions, (d) => d.productName),
+    [decisions],
+  );
+
   function handleDelete(id: string) {
     const decision = decisions.find((d) => d.id === id);
     if (!decision) return;
@@ -180,92 +190,100 @@ export function DecisionsSection({
             // mirroring the risk row and item card.
             .map(canonicalStageName);
           return (
-            <div
-              key={decision.id}
-              className="rounded-lg p-4"
-              style={{
-                background: "var(--color-background)",
-                opacity: decision.foreign ? 0.7 : 1,
-              }}
-            >
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]">
-                  {decision.productName}
-                </span>
-                {decision.deadline && (
-                  <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#fff7e6] px-2.5 py-0.5 text-[11px] font-semibold text-[#8a6d1b]">
-                    Due {formatDeadline(decision.deadline)}
+            <Fragment key={decision.id}>
+              {decisionOverflow.firstIds.has(decision.id) ? (
+                <SlideFitAdvisory
+                  count={
+                    decisionOverflow.countByKey.get(decision.productName) ?? 0
+                  }
+                />
+              ) : null}
+              <div
+                className="rounded-lg p-4"
+                style={{
+                  background: "var(--color-background)",
+                  opacity: decision.foreign ? 0.7 : 1,
+                }}
+              >
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]">
+                    {decision.productName}
                   </span>
-                )}
-                {/* Owned-by-someone-else marker — surfaces "this isn't yours
+                  {decision.deadline && (
+                    <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#fff7e6] px-2.5 py-0.5 text-[11px] font-semibold text-[#8a6d1b]">
+                      Due {formatDeadline(decision.deadline)}
+                    </span>
+                  )}
+                  {/* Owned-by-someone-else marker — surfaces "this isn't yours
                   to act on" without needing to open the dialog. */}
-                {!mine && decision.owner && (
-                  <span
-                    className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#eef2ff] px-2.5 py-0.5 text-[11px] font-semibold text-[#4338ca]"
-                    title={`Owner: ${decision.owner} — read-only for you`}
-                  >
-                    Owner: {decision.owner}
-                  </span>
-                )}
-                {!readOnly && mine && !decision.foreign ? (
-                  <div className="ml-auto flex gap-1">
-                    <button
-                      type="button"
-                      className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
-                      onClick={() => handleEdit(decision)}
-                      aria-label={`Edit decision`}
+                  {!mine && decision.owner && (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#eef2ff] px-2.5 py-0.5 text-[11px] font-semibold text-[#4338ca]"
+                      title={`Owner: ${decision.owner} — read-only for you`}
                     >
-                      <EditIcon />
-                    </button>
-                    <button
-                      type="button"
-                      className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
-                      onClick={() => handleDelete(decision.id)}
-                      aria-label={`Delete decision for ${decision.productName}`}
-                    >
-                      <DeleteIcon />
-                    </button>
+                      Owner: {decision.owner}
+                    </span>
+                  )}
+                  {!readOnly && mine && !decision.foreign ? (
+                    <div className="ml-auto flex gap-1">
+                      <button
+                        type="button"
+                        className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+                        onClick={() => handleEdit(decision)}
+                        aria-label={`Edit decision`}
+                      >
+                        <EditIcon />
+                      </button>
+                      <button
+                        type="button"
+                        className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
+                        onClick={() => handleDelete(decision.id)}
+                        aria-label={`Delete decision for ${decision.productName}`}
+                      >
+                        <DeleteIcon />
+                      </button>
+                    </div>
+                  ) : decision.foreign === true ? (
+                    <div className="ml-auto flex gap-1">
+                      <LockBadge authorName={decision.owner} />
+                    </div>
+                  ) : null}
+                </div>
+                <div className="space-y-2 text-sm text-[var(--color-foreground)]">
+                  <div>
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+                      Decision
+                    </span>
+                    <div className="mt-0.5 break-words">
+                      {decision.text || (
+                        <em className="text-[var(--color-muted-foreground)]">
+                          — pending
+                        </em>
+                      )}
+                    </div>
                   </div>
-                ) : decision.foreign === true ? (
-                  <div className="ml-auto flex gap-1">
-                    <LockBadge authorName={decision.owner} />
-                  </div>
-                ) : null}
-              </div>
-              <div className="space-y-2 text-sm text-[var(--color-foreground)]">
-                <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
-                    Decision
-                  </span>
-                  <div className="mt-0.5 break-words">
-                    {decision.text || (
-                      <em className="text-[var(--color-muted-foreground)]">
-                        — pending
-                      </em>
-                    )}
+                  <div>
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+                      Impact
+                    </span>
+                    <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">
+                      {decision.impact || "—"}
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
-                    Impact
-                  </span>
-                  <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">
-                    {decision.impact || "—"}
-                  </div>
-                </div>
+                {/* P5: unified [author …… chip] meta-row */}
+                <MetaRow
+                  authorName={decision.owner}
+                  stageTags={stageTags}
+                  // enforce-item-decision-stage-schema: a stage-less decision is
+                  // a legacy anomaly, never an implicit "all stages" scope —
+                  // render the loud "No stage set" warning, mirroring risks.
+                  ariaLabel={`Decision stages: ${stageTags.length === 0 ? "No stage set" : stageTags.join(", ")}`}
+                  foreign={false}
+                  emptyStageChip="no-stage-warning"
+                />
               </div>
-              {/* P5: unified [author …… chip] meta-row */}
-              <MetaRow
-                authorName={decision.owner}
-                stageTags={stageTags}
-                // enforce-item-decision-stage-schema: a stage-less decision is
-                // a legacy anomaly, never an implicit "all stages" scope —
-                // render the loud "No stage set" warning, mirroring risks.
-                ariaLabel={`Decision stages: ${stageTags.length === 0 ? "No stage set" : stageTags.join(", ")}`}
-                foreign={false}
-                emptyStageChip="no-stage-warning"
-              />
-            </div>
+            </Fragment>
           );
         })
       )}

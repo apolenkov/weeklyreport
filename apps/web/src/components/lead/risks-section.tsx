@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 
 import { useEditableListDialog } from "../../hooks/use-editable-list-dialog";
 import { LockBadge } from "../report-shell/lock-badge";
@@ -9,6 +9,7 @@ import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import type { Product, RiskEntry } from "./mock-data";
 import { DeleteIcon, EditIcon } from "./risk-card-icons";
 import { RiskEditDialog } from "./risk-edit-dialog";
+import { firstOverCapRowIds, SlideFitAdvisory } from "./slide-fit-advisory";
 import { canonicalStageName, splitStageNames } from "./stage-tags";
 
 interface RisksSectionProps {
@@ -74,6 +75,13 @@ export function RisksSection({
   addSignal = 0,
 }: RisksSectionProps) {
   const firstProductId = products?.[0]?.id;
+
+  // add-slide-capacity-signals: per-product risk counts for the slide-fit
+  // advisory (flat list — attach it to the first card of each over-cap group).
+  const riskOverflow = useMemo(
+    () => firstOverCapRowIds(risks, (r) => r.productId),
+    [risks],
+  );
 
   // Shared dialog lifecycle (DialogState union, D1 readOnly-ref add-signal
   // effect, D13 openSeq remount key, pending-delete). requireSeed is false:
@@ -185,107 +193,113 @@ export function RisksSection({
             stageTags.length === 0;
           const locked = readOnly || risk.foreign === true;
           return (
-            <div
-              key={risk.id}
-              data-testid="risk-card"
-              className="rounded-xl p-4"
-              style={{
-                background: isBlocked ? "#fdf8f8" : "#fffcf5",
-                border: `1px solid ${isBlocked ? "rgba(200,32,20,0.15)" : "rgba(212,160,23,0.15)"}`,
-                opacity: risk.foreign ? 0.7 : 1,
-              }}
-            >
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span
-                  className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold"
-                  style={{
-                    background: isBlocked ? "#fee2e2" : "#fef3c7",
-                    color: isBlocked ? "var(--color-destructive)" : "#8a6d1b",
-                  }}
-                >
-                  {isBlocked ? "Blocked" : "At Risk"}
-                </span>
-                <span className="font-[family-name:var(--font-sans)] text-sm font-semibold break-words">
-                  {risk.productName}
-                </span>
-                {!locked ? (
-                  <div className="ml-auto flex gap-1">
-                    <button
-                      type="button"
-                      className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
-                      onClick={() => handleEdit(risk)}
-                      aria-label={`Edit risk for ${risk.productName}`}
-                    >
-                      <EditIcon />
-                    </button>
-                    <button
-                      type="button"
-                      className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
-                      onClick={() => handleDelete(risk.id)}
-                      aria-label={`Delete risk for ${risk.productName}`}
-                    >
-                      <DeleteIcon />
-                    </button>
-                  </div>
-                ) : risk.foreign === true ? (
-                  <div className="ml-auto flex gap-1">
-                    <LockBadge
-                      authorName={risk.authorName ?? sectionAuthorName}
-                    />
-                  </div>
-                ) : null}
-              </div>
-              {/* Risk + impact + mitigation summary — read-only on the
+            <Fragment key={risk.id}>
+              {riskOverflow.firstIds.has(risk.id) ? (
+                <SlideFitAdvisory
+                  count={riskOverflow.countByKey.get(risk.productId) ?? 0}
+                />
+              ) : null}
+              <div
+                data-testid="risk-card"
+                className="rounded-xl p-4"
+                style={{
+                  background: isBlocked ? "#fdf8f8" : "#fffcf5",
+                  border: `1px solid ${isBlocked ? "rgba(200,32,20,0.15)" : "rgba(212,160,23,0.15)"}`,
+                  opacity: risk.foreign ? 0.7 : 1,
+                }}
+              >
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <span
+                    className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold"
+                    style={{
+                      background: isBlocked ? "#fee2e2" : "#fef3c7",
+                      color: isBlocked ? "var(--color-destructive)" : "#8a6d1b",
+                    }}
+                  >
+                    {isBlocked ? "Blocked" : "At Risk"}
+                  </span>
+                  <span className="font-[family-name:var(--font-sans)] text-sm font-semibold break-words">
+                    {risk.productName}
+                  </span>
+                  {!locked ? (
+                    <div className="ml-auto flex gap-1">
+                      <button
+                        type="button"
+                        className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+                        onClick={() => handleEdit(risk)}
+                        aria-label={`Edit risk for ${risk.productName}`}
+                      >
+                        <EditIcon />
+                      </button>
+                      <button
+                        type="button"
+                        className="flex min-h-[34px] min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
+                        onClick={() => handleDelete(risk.id)}
+                        aria-label={`Delete risk for ${risk.productName}`}
+                      >
+                        <DeleteIcon />
+                      </button>
+                    </div>
+                  ) : risk.foreign === true ? (
+                    <div className="ml-auto flex gap-1">
+                      <LockBadge
+                        authorName={risk.authorName ?? sectionAuthorName}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+                {/* Risk + impact + mitigation summary — read-only on the
                   card; the dialog is the only edit surface so we can
                   validate all three fields together. */}
-              <div className="space-y-2 text-sm text-[var(--color-foreground)]">
-                <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
-                    Risk
-                  </span>
-                  <div className="mt-0.5 break-words">
-                    {risk.text || (
-                      <em className="text-[var(--color-muted-foreground)]">
-                        — pending
-                      </em>
-                    )}
-                  </div>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="space-y-2 text-sm text-[var(--color-foreground)]">
                   <div>
                     <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
-                      Impact
+                      Risk
                     </span>
-                    <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">
-                      {risk.impact || "—"}
+                    <div className="mt-0.5 break-words">
+                      {risk.text || (
+                        <em className="text-[var(--color-muted-foreground)]">
+                          — pending
+                        </em>
+                      )}
                     </div>
                   </div>
-                  <div>
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
-                      Mitigation
-                    </span>
-                    <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">
-                      {risk.mitigation || "—"}
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+                        Impact
+                      </span>
+                      <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">
+                        {risk.impact || "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--color-muted-foreground)]">
+                        Mitigation
+                      </span>
+                      <div className="mt-0.5 break-words text-[var(--color-muted-foreground)]">
+                        {risk.mitigation || "—"}
+                      </div>
                     </div>
                   </div>
                 </div>
+                {/* F4: required-mark when product is at-risk/blocked but no stage selected */}
+                {needsStage && (
+                  <p className="mt-2 text-[11px] font-semibold text-[#8a6d1b]">
+                    ⚠ Select at least one stage — required for at-risk/blocked
+                    products.
+                  </p>
+                )}
+                {/* P5: unified [author …… chip] meta-row */}
+                <MetaRow
+                  authorName={risk.authorName ?? sectionAuthorName}
+                  stageTags={stageTags}
+                  ariaLabel={`Risk stages: ${stageTagsLabel}`}
+                  foreign={false}
+                  emptyStageChip="no-stage-warning"
+                />
               </div>
-              {/* F4: required-mark when product is at-risk/blocked but no stage selected */}
-              {needsStage && (
-                <p className="mt-2 text-[11px] font-semibold text-[#8a6d1b]">
-                  ⚠ Select at least one stage — required for at-risk/blocked
-                  products.
-                </p>
-              )}
-              {/* P5: unified [author …… chip] meta-row */}
-              <MetaRow
-                authorName={risk.authorName ?? sectionAuthorName}
-                stageTags={stageTags}
-                ariaLabel={`Risk stages: ${stageTagsLabel}`}
-                foreign={false}
-                emptyStageChip="no-stage-warning"
-              />
-            </div>
+            </Fragment>
           );
         })
       )}
