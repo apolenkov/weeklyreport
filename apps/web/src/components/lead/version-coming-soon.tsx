@@ -1,7 +1,5 @@
-import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
+import { ComingSoonTooltip } from "@customreport/ui/components/ui/tooltip";
 import { History } from "lucide-react";
-
-import { COMING_SOON_TOOLTIP_ANCHOR } from "../coming-soon-tooltip-anchor";
 
 /**
  * Inert toolbar control marking the removed version-history feature as
@@ -12,7 +10,7 @@ export function VersionComingSoonControl() {
   // TODO(versions-v2): replace this inert control with the real version
   // history UI when versioning returns (see the versions-v2 research draft).
   return (
-    <div className="group relative inline-flex">
+    <ComingSoonTooltip>
       <button
         type="button"
         aria-disabled="true"
@@ -22,7 +20,6 @@ export function VersionComingSoonControl() {
       >
         <History size={14} strokeWidth={2} aria-hidden="true" />
       </button>
-      <ComingSoonBadge role="tooltip" className={COMING_SOON_TOOLTIP_ANCHOR} />
-    </div>
+    </ComingSoonTooltip>
   );
 }
