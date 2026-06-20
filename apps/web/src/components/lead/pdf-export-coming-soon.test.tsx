@@ -8,7 +8,7 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { PdfExportComingSoonControl } from "./pdf-export-coming-soon";
@@ -29,8 +29,13 @@ describe("PdfExportComingSoonControl", () => {
     expect(control).toHaveAttribute("type", "button");
   });
 
-  it("carries the coming-soon tooltip", () => {
+  it("opens the coming-soon tooltip on focus, via the Radix portal", async () => {
     render(<PdfExportComingSoonControl />);
-    expect(screen.getByRole("tooltip")).toBeInTheDocument();
+
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+
+    fireEvent.focus(screen.getByTestId("lead-pdf-export-coming-soon"));
+
+    expect(await screen.findByRole("tooltip")).toBeInTheDocument();
   });
 });

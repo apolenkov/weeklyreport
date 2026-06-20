@@ -1,21 +1,18 @@
 /**
  * @vitest-environment jsdom
  */
+import "@testing-library/jest-dom/vitest";
 
-import { render } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { VersionComingSoonControl } from "./version-coming-soon";
 
 describe("VersionComingSoonControl", () => {
   it("renders an inert disabled control with Coming Soon metadata", () => {
-    const { container } = render(<VersionComingSoonControl />);
+    render(<VersionComingSoonControl />);
+    const control = screen.getByTestId("version-coming-soon");
 
-    const control = container.querySelector(
-      '[data-testid="version-coming-soon"]',
-    );
-
-    expect(control).not.toBeNull();
     expect(control).toHaveAttribute(
       "aria-label",
       "Version history is coming soon",
@@ -28,23 +25,23 @@ describe("VersionComingSoonControl", () => {
   });
 
   it("is a fully rounded 32x32 control matching its toolbar siblings", () => {
-    const { container } = render(<VersionComingSoonControl />);
+    render(<VersionComingSoonControl />);
+    const control = screen.getByTestId("version-coming-soon");
 
-    const control = container.querySelector(
-      '[data-testid="version-coming-soon"]',
-    );
-
-    expect(control?.className).toContain("h-8");
-    expect(control?.className).toContain("w-8");
-    expect(control?.className).toContain("rounded-full");
+    expect(control.className).toContain("h-8");
+    expect(control.className).toContain("w-8");
+    expect(control.className).toContain("rounded-full");
   });
 
-  it("renders the ComingSoonBadge tooltip", () => {
-    const { container } = render(<VersionComingSoonControl />);
+  it("opens the amber ComingSoonBadge tooltip on focus, via the Radix portal", async () => {
+    render(<VersionComingSoonControl />);
 
-    const tooltip = container.querySelector('[role="tooltip"]');
+    // Portaled: nothing is in the DOM before the control is interacted with.
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
 
-    expect(tooltip).not.toBeNull();
-    expect(tooltip?.textContent).toMatch(/coming soon/i);
+    fireEvent.focus(screen.getByTestId("version-coming-soon"));
+
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip.textContent).toMatch(/coming soon/i);
   });
 });

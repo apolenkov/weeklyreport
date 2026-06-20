@@ -7,9 +7,9 @@ import {
   TabsList,
   TabsTrigger,
 } from "@customreport/ui/components/ui/tabs";
+import { ComingSoonTooltip } from "@customreport/ui/components/ui/tooltip";
 import { Calendar } from "lucide-react";
 
-import { COMING_SOON_TOOLTIP_ANCHOR } from "../coming-soon-tooltip-anchor";
 import type { MockSettings } from "./mock-data";
 import { IdentitySubTab } from "./settings-identity-sub-tab";
 import { IntegrationsSubTab } from "./settings-integrations-sub-tab";
@@ -107,7 +107,7 @@ function HolidaysComingSoonControl() {
   // the holidays TabsTrigger (itself a <button>), so a nested <button> would be
   // invalid HTML and trigger a React hydration error.
   return (
-    <div className="group relative inline-flex">
+    <ComingSoonTooltip>
       <span
         aria-disabled="true"
         data-testid="holidays-coming-soon"
@@ -115,8 +115,13 @@ function HolidaysComingSoonControl() {
       >
         <Calendar size={14} strokeWidth={2} aria-hidden="true" />
         <span className="hidden xl:inline">Holidays</span>
+        {/* fix-coming-soon-tooltip-clipping: the Radix tooltip badge is portaled
+            and only mounts on hover, so a PERSISTENT visually-hidden
+            ComingSoonBadge keeps the coming-soon state in the holidays tab's
+            accessible name (the spec's "descendant ComingSoonBadge text", no
+            aria-label on the inert span). */}
+        <ComingSoonBadge className="sr-only" />
       </span>
-      <ComingSoonBadge role="tooltip" className={COMING_SOON_TOOLTIP_ANCHOR} />
-    </div>
+    </ComingSoonTooltip>
   );
 }

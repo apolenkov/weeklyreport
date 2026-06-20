@@ -171,3 +171,26 @@ view mode, expand-all, Agent review. A context control may persist a setting;
 persistence does not make it a document action.
 _Avoid_: filter (only some are filters); view control (view = the narrow
 edit/slides mode; Context control is the broader umbrella).
+
+## Slides & UI affordances
+
+**Tooltip / hover affordance**:
+There are THREE distinct hover-reveal systems — do not conflate them. (1) The
+shared **Radix tooltip** (the `ui/tooltip` primitive, content rendered in a
+portal so it is never clipped) — used by the pipeline "+N more" indicator, the
+SDLC stage chips, the sidebar, and the Coming-Soon controls. (2) The separate
+**stage-chip portal** (`sdlc-tooltip`, a `createPortal` singleton) that escapes
+accordion `overflow:hidden`; it is NOT Radix. (3) The **Coming-Soon tooltip** —
+the deferred-feature hover that shows the canonical amber `ComingSoonBadge`; it
+rides on the Radix system.
+_Avoid_: "the tooltip" unqualified (ambiguous across three systems); calling the
+`sdlc-tooltip` portal "Radix".
+
+**Slide capacity (soft cap)**:
+The advisory ceilings on how much content fits a slide before it overflows:
+`MAX_PRODUCTS_PER_LEAD` (products per person) and `SLIDE_SECTION_SOFT_CAP`
+(records per section). They warn the author; they never block saving or adding.
+Distinct from `MAX_VISIBLE_ITEMS`, the hard render truncation ("+N more") on the
+Product-scope grid path.
+_Avoid_: limit (a soft cap does not enforce); `MAX_VISIBLE_ITEMS` (that is render
+truncation on a different slide path, not an authoring advisory).
