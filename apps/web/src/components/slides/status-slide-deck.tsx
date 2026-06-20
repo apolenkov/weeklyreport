@@ -16,7 +16,9 @@ import {
 import Link from "next/link";
 import { type ReactNode, useRef, useState } from "react";
 
+import { useFullscreen } from "../../hooks/use-fullscreen";
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
+import { DeckFullscreenOverlay } from "./deck-fullscreen-overlay";
 import { LeadSlideHero, metricSegment } from "./lead-slide-hero";
 import { LeadUnifiedSlide } from "./lead-unified-slide";
 import type {
@@ -28,7 +30,6 @@ import {
   buildUnifiedSlideModel,
   scopeSlideToProduct,
 } from "./section-slide-utils";
-import { SlideFullscreenButton } from "./slide-fullscreen-button";
 import {
   mapTrafficLightToStatus,
   type ProductChipEntry,
@@ -239,6 +240,11 @@ function LeadSlideArticle({
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events -- click anywhere exits fullscreen; the browser already exits fullscreen on Escape, so no keyboard equivalent is needed
     <article
       className="slide-frame rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-3 shadow-[0_1px_2px_rgba(0,0,0,0.05)]"
+      // TODO(add-slide-fullscreen-exit-affordance): this click-anywhere-to-exit
+      // handler is now redundant with the floating exit pill + Esc hint, and it
+      // can bubble from interactive children (product chips) and exit
+      // unexpectedly. Candidate for scoping/removal; left intact in this change
+      // per design "Reviewed but NOT required here".
       onClick={() => {
         if (typeof document !== "undefined" && document.fullscreenElement) {
           void document.exitFullscreen();
@@ -273,6 +279,10 @@ function LeadSlideArticle({
 
 function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
   const articleRef = useRef<HTMLElement>(null);
+  // add-slide-fullscreen-exit-affordance: the head deck owns its single
+  // fullscreen hook; on exit focus returns to the article itself (made
+  // focusable via tabIndex={-1}) — the head deck has no persistent toggle.
+  const fullscreen = useFullscreen(articleRef, articleRef);
   const unified = buildUnifiedSlideModel(slide);
   /* Same gate as the lead idiom / the chip strip: badges only disambiguate
      when the slide aggregates more than one real product. */
@@ -281,9 +291,16 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
   return (
     <article
       ref={articleRef}
+      // add-slide-fullscreen-exit-affordance (Codex X2): a plain <article> is
+      // not focusable, so tabIndex={-1} makes it a programmatic focus target
+      // for focus-return on fullscreen exit without adding it to the tab order.
+      tabIndex={-1}
       className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(247,249,246,0.92)_100%)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_12px_24px_-18px_rgba(0,0,0,0.25),0_1px_2px_rgba(0,0,0,0.05)]"
     >
-      <SlideFullscreenButton targetRef={articleRef} variant="floating" />
+      <DeckFullscreenOverlay
+        isFullscreen={fullscreen.isFullscreen}
+        onToggle={fullscreen.toggle}
+      />
       <div className="grid gap-5 xl:grid-cols-[1fr_310px]">
         <div className="min-w-0 space-y-5">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[rgba(0,0,0,0.08)] pb-4">
