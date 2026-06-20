@@ -64,7 +64,7 @@ describe("DecisionEditDialog — A13 form-race regression", () => {
     expect(textField).toHaveValue("user typed this — must survive");
   });
 
-  it("saves with required fields when text, owner and impact are filled", () => {
+  it("saves text + impact; owner is auto-set to the author with no owner field", () => {
     const onSave = vi.fn();
     render(
       <DecisionEditDialog
@@ -78,6 +78,10 @@ describe("DecisionEditDialog — A13 form-race regression", () => {
         onCancel={() => undefined}
       />,
     );
+
+    // Owner is no longer a field — it is auto-set to the author (defaultOwner).
+    expect(document.getElementById("dec-owner")).toBeNull();
+    expect(screen.queryByLabelText(/^Owner/i)).toBeNull();
 
     fireEvent.change(screen.getByLabelText(/^Decision \*/i), {
       target: { value: "Approve Q3 hiring plan" },
@@ -93,6 +97,7 @@ describe("DecisionEditDialog — A13 form-race regression", () => {
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
       text: "Approve Q3 hiring plan",
       impact: "Unblocks team expansion",
+      // Persisted from defaultOwner even though there is no input for it.
       owner: "Test Lead",
     });
   });
@@ -157,6 +162,39 @@ describe("DecisionEditDialog — A13 form-race regression", () => {
       screen.getByRole("checkbox", { name: "Planning" }),
     ).not.toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Dev" })).toBeChecked();
+  });
+
+  it("editing preserves the decision's existing owner, not defaultOwner", () => {
+    const onSave = vi.fn();
+    render(
+      <DecisionEditDialog
+        open
+        decision={{
+          id: "decision-1",
+          productId: "p1",
+          productName: "CRM",
+          text: "Approve release gate",
+          owner: "Original Owner",
+          impact: "Unblocks production rollout",
+          deadline: null,
+          stageIds: ["Dev"],
+        }}
+        defaultOwner="Different Lead"
+        stagesForProduct={() => ["Planning", "Dev"]}
+        products={products}
+        defaultProductId="p1"
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    // owner comes from the decision, not the (different) defaultOwner prop.
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      owner: "Original Owner",
+    });
   });
 });
 

@@ -142,6 +142,19 @@ describe("SettingsTab — Identity sub-tab (UFB-047 / Phase 48-A)", () => {
     expect(screen.getByRole("tab", { name: /integrations/i })).toBeTruthy();
   });
 
+  it("exposes the inert Holidays tab's coming-soon state via its accessible name", () => {
+    // deferred-feature-pattern: the Holidays TabsTrigger holds an inert <span>
+    // (no aria-label) whose visible "Holidays" text is hidden below xl. Its
+    // coming-soon state reaches the tab's accessible name through the descendant
+    // ComingSoonBadge text. Removing the redundant native title="Coming Soon"
+    // must not strip that name — this locks it so the source scan has a runtime
+    // companion.
+    const { proxy } = buildProxy();
+    renderSettings(proxy);
+
+    expect(screen.getByRole("tab", { name: /coming soon/i })).toBeTruthy();
+  });
+
   it("loads the organization row into the Identity form", async () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);

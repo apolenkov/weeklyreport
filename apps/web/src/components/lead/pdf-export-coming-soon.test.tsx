@@ -19,7 +19,10 @@ describe("PdfExportComingSoonControl", () => {
     const control = screen.getByTestId("lead-pdf-export-coming-soon");
     expect(control).toHaveAttribute("aria-disabled", "true");
     expect(control).toHaveAttribute("aria-label", "PDF export is coming soon");
-    expect(control).toHaveAttribute("title", "Coming Soon");
+    // No native title — the aria-label carries the name and the amber
+    // ComingSoonBadge renders the visual tooltip. A stacked title="Coming Soon"
+    // would double the tooltip on hover (see coming-soon-style.test.tsx).
+    expect(control).not.toHaveAttribute("title");
     // The control must be a button that never submits the surrounding form and
     // carries no click handler that could reach a backend call.
     expect(control.tagName).toBe("BUTTON");
