@@ -122,12 +122,12 @@ describe("LeadProductGrid", () => {
     expect(screen.getByText("Shared blocker")).toBeInTheDocument();
   });
 
-  it("gives each card the h-full equal-height contract and a bottom-pinned footer", () => {
-    // jsdom has no layout engine, so we assert the MECHANISM that produces
-    // equal-height cards: the CSS-grid cell already stretches its child
-    // (align-items: stretch is the grid default), so a card with `h-full`
-    // fills the tallest cell in its row, and `mt-auto` pins the risk/decision
-    // footer to the bottom. We assert the classes, not computed pixels.
+  it("aligns bands via subgrid: every card spans the 4 shared row tracks, no mt-auto", () => {
+    // jsdom has no layout engine, so we assert the MECHANISM that aligns the
+    // bands across cards: each card is a `grid-rows-subgrid` participant
+    // spanning 4 shared row tracks (`row-span-4`), replacing the old
+    // `flex`/`h-full`/`mt-auto` bottom-pin which left Current/Next unaligned.
+    // The true horizontal alignment is proven only by the live check (4.2).
     const { container } = render(
       <LeadProductGrid
         products={[
@@ -137,19 +137,52 @@ describe("LeadProductGrid", () => {
       />,
     );
 
-    const tall = screen.getByText("Tall").closest("div.h-full");
-    const short = screen.getByText("Short").closest("div.h-full");
-    expect(tall).toHaveClass("h-full", "flex-col");
-    expect(short).toHaveClass("h-full", "flex-col");
+    const tall = screen.getByText("Tall").closest("div.grid-rows-subgrid");
+    const short = screen.getByText("Short").closest("div.grid-rows-subgrid");
+    expect(tall).toHaveClass("row-span-4", "grid-rows-subgrid");
+    expect(short).toHaveClass("row-span-4", "grid-rows-subgrid");
+    // The old flex bottom-pin mechanism is gone.
+    expect(tall?.className).not.toContain("mt-auto");
+    expect(tall?.className).not.toContain("h-full");
+    expect(short?.className).not.toContain("mt-auto");
+    expect(container.querySelector(".mt-auto")).toBeNull();
 
-    // The footer (risk/decision block) is pinned to the bottom via mt-auto.
-    const footer = within(tall as HTMLElement)
-      .getByText("Risks")
-      .closest("div.mt-auto");
-    expect(footer).not.toBeNull();
+    // The empty-content card STILL renders its Risks+Decisions band (a quiet
+    // placeholder) so the 4th track is held and neighbours stay aligned.
+    expect(
+      within(short as HTMLElement).getByText("No risks or decisions"),
+    ).toBeInTheDocument();
 
-    // Sanity: the grid root carries the responsive multi-column layout.
-    const grid = container.querySelector("div.grid");
+    // Sanity: the outer grid root carries the responsive multi-column layout.
+    const grid = container.querySelector("div.grid:not(.grid-rows-subgrid)");
     expect(grid).toHaveClass("lg:grid-cols-3");
+  });
+
+  it("renders all four bands on every card, including the empty Risks+Decisions placeholder", () => {
+    render(<LeadProductGrid products={[product({ name: "Solo" })]} />);
+
+    expect(screen.getByText("Solo")).toBeInTheDocument(); // header band
+    expect(screen.getByText("Current")).toBeInTheDocument(); // Current band
+    expect(screen.getByText("Next")).toBeInTheDocument(); // Next band
+    // 4th band renders even with no risks and no decisions.
+    expect(screen.getByText("No risks or decisions")).toBeInTheDocument();
+  });
+
+  it("caps the decisions list with a +N more row so the band stays bounded", () => {
+    render(
+      <LeadProductGrid
+        products={[
+          product({
+            decisions: ["d one", "d two", "d three", "d four", "d five"],
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByText(/d one/)).toBeInTheDocument();
+    expect(screen.getByText(/d three/)).toBeInTheDocument();
+    // The 4th and 5th decisions collapse into the overflow row.
+    expect(screen.queryByText(/d four/)).not.toBeInTheDocument();
+    expect(screen.getByText("+2 more")).toBeInTheDocument();
   });
 });

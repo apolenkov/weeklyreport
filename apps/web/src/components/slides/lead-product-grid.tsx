@@ -107,7 +107,7 @@ function ProductCard({ product }: { product: SlideProduct }) {
   const hasRisks = product.risks.length > 0;
   const hasDecisions = product.decisions.length > 0;
   return (
-    <div className="flex h-full flex-col gap-3 rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+    <div className="row-span-4 grid grid-rows-subgrid gap-3 rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
       <div className="flex items-start justify-between gap-2">
         <h3 className="break-words text-sm font-semibold text-[var(--color-foreground)]">
           {product.name}
@@ -123,38 +123,46 @@ function ProductCard({ product }: { product: SlideProduct }) {
         <ItemList items={product.nextItems} empty="No next focus" />
       </CardSection>
 
-      {hasRisks || hasDecisions ? (
-        <div className="mt-auto space-y-3 border-t border-[rgba(0,0,0,0.06)] pt-2">
-          {hasRisks ? (
-            <CardSection label="Risks" count={product.risks.length}>
-              <ul className="space-y-1">
-                {product.risks.slice(0, MAX_VISIBLE_ITEMS).map((risk, i) => (
-                  <li
-                    key={risk + String(i)}
-                    className="flex items-start gap-1 text-xs leading-4 text-[var(--color-foreground)]"
-                  >
-                    <AlertTriangle
-                      className="mt-0.5 h-3 w-3 shrink-0 text-[var(--color-destructive)]"
-                      aria-hidden="true"
-                    />
-                    <span>{risk}</span>
-                  </li>
-                ))}
-                {product.risks.length > MAX_VISIBLE_ITEMS ? (
-                  <li className="text-xs text-[var(--color-muted-foreground)]">
-                    +{product.risks.length - MAX_VISIBLE_ITEMS} more
-                  </li>
-                ) : null}
-              </ul>
-            </CardSection>
-          ) : null}
-          {hasDecisions ? (
-            <CardSection label="Decisions" count={product.decisions.length}>
-              <ItemList items={product.decisions} empty="No decisions" />
-            </CardSection>
-          ) : null}
-        </div>
-      ) : null}
+      {/* lead-product-grid-alignment: the Risks+Decisions band is the 4th and
+          final subgrid row and ALWAYS renders (no mt-auto bottom-pin, no
+          hasRisks||hasDecisions collapse) so its track stays aligned across
+          every card in the row. An empty band shows a quiet placeholder rather
+          than collapsing, which would unalign neighbouring cards. */}
+      <div className="space-y-3 border-t border-[rgba(0,0,0,0.06)] pt-2">
+        {hasRisks ? (
+          <CardSection label="Risks" count={product.risks.length}>
+            <ul className="space-y-1">
+              {product.risks.slice(0, MAX_VISIBLE_ITEMS).map((risk, i) => (
+                <li
+                  key={risk + String(i)}
+                  className="flex items-start gap-1 text-xs leading-4 text-[var(--color-foreground)]"
+                >
+                  <AlertTriangle
+                    className="mt-0.5 h-3 w-3 shrink-0 text-[var(--color-destructive)]"
+                    aria-hidden="true"
+                  />
+                  <span>{risk}</span>
+                </li>
+              ))}
+              {product.risks.length > MAX_VISIBLE_ITEMS ? (
+                <li className="text-xs text-[var(--color-muted-foreground)]">
+                  +{product.risks.length - MAX_VISIBLE_ITEMS} more
+                </li>
+              ) : null}
+            </ul>
+          </CardSection>
+        ) : null}
+        {hasDecisions ? (
+          <CardSection label="Decisions" count={product.decisions.length}>
+            <ItemList items={product.decisions} empty="No decisions" />
+          </CardSection>
+        ) : null}
+        {!hasRisks && !hasDecisions ? (
+          <p className="text-xs italic text-[var(--color-muted-foreground)]">
+            No risks or decisions
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -178,7 +186,7 @@ export function LeadProductGrid({ products }: LeadProductGridProps) {
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
       {products.map((product) => (
         <ProductCard key={product.id} product={product} />
       ))}
