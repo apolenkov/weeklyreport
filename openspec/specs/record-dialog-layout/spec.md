@@ -15,8 +15,10 @@ The Item, Risk, and Decision dialogs MUST render with the same two-column layout
 2. The SDLC Stages selector and the Status (item) / Severity (risk) control MUST sit
    in the same CLASSIFICATION panel, in the same order across dialogs.
 3. The primary text fields (item description; risk text/impact/mitigation; decision
-   text/impact; plus decision owner/deadline and item priority rank) MUST occupy the
-   left column.
+   text/impact; plus decision deadline and item priority rank) MUST occupy the
+   left column. The Decision dialog carries NO Owner field — a decision is always
+   owned by its author (the current lead on create, the saved owner on edit), so
+   `owner` is persisted automatically and never shown as an editable input.
 4. Where a consequence-preview banner already exists (the risk severity preview), it
    MUST remain above the stage selector.
 
@@ -31,3 +33,12 @@ The Item, Risk, and Decision dialogs MUST render with the same two-column layout
 - **WHEN** a lead opens any of the three dialogs
 - **THEN** the SDLC Stages selector and the Status/Severity control are grouped
   together in the CLASSIFICATION panel in the same order
+
+#### Scenario: the Decision dialog shows no Owner field
+
+- **WHEN** a lead opens the Decision dialog to create or edit a decision
+- **THEN** no Owner input is rendered, and the left column holds the decision
+  text, the deadline, and the impact
+- **AND** the saved decision still carries an `owner` derived from the author (the
+  current lead on create, the unchanged saved owner on edit), keeping the
+  mine/foreign and `LockBadge` logic intact
