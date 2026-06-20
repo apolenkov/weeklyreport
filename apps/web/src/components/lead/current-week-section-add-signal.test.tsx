@@ -16,9 +16,22 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { CurrentWeekSection } from "./current-week-section";
-import { MOCK_PRODUCTS } from "./mock-data";
+import { type KanbanItem, MOCK_PRODUCTS } from "./mock-data";
 
 const products = MOCK_PRODUCTS.slice(0, 1);
+const productId = products[0]?.id ?? "";
+const productName = products[0]?.name ?? "";
+
+function manyItems(n: number): KanbanItem[] {
+  return Array.from({ length: n }, (_, i) => ({
+    id: `item-${String(i)}`,
+    productId,
+    productName,
+    status: "in-progress" as const,
+    text: `Item ${String(i)}`,
+    author: "You",
+  }));
+}
 
 describe("CurrentWeekSection — addSignal snapshot regression (D1)", () => {
   it("does not reopen the dialog when readOnly toggles false→true→false with stale addSignal", () => {
@@ -60,5 +73,23 @@ describe("CurrentWeekSection — addSignal snapshot regression (D1)", () => {
       />,
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+describe("CurrentWeekSection — slide-capacity advisory (add-slide-capacity-signals)", () => {
+  it("shows a slide-fit advisory in a product column that exceeds the soft cap", () => {
+    render(<CurrentWeekSection items={manyItems(6)} products={products} />);
+
+    const notes = screen.getAllByTestId("slide-fit-advisory");
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toHaveTextContent(
+      "6 records may not fit cleanly on the slide",
+    );
+  });
+
+  it("shows no advisory when the column is at or under the soft cap", () => {
+    render(<CurrentWeekSection items={manyItems(5)} products={products} />);
+
+    expect(screen.queryByTestId("slide-fit-advisory")).not.toBeInTheDocument();
   });
 });
