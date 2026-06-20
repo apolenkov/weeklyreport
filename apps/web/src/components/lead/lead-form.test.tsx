@@ -373,7 +373,9 @@ describe("LeadForm mutation wiring", () => {
       "Version history is coming soon",
     );
     expect(control).toHaveAttribute("aria-disabled", "true");
-    expect(control).toHaveAttribute("title", "Coming Soon");
+    // No native title — aria-label + the amber ComingSoonBadge cover the name
+    // and the visual tooltip; a stacked title="Coming Soon" double-tooltips.
+    expect(control).not.toHaveAttribute("title");
   });
 
   it("renders exactly one shared ReportToolbar container (head-toolbar-parity pin)", async () => {

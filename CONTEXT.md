@@ -111,7 +111,10 @@ statement and recorded against ONE product. Like an item or a risk, a decision
 is product-scoped: its SDLC stage options are the stages owned on the selected
 product, and changing the product re-scopes them. (Earlier the decision dialog
 drew stages from the department-wide union; that is no longer the model — all
-three record dialogs share one product↔stage rule.)
+three record dialogs share one product↔stage rule.) A decision's **owner** is
+its author — the lead who raised it; ownership is implicit (set to the author on
+create, preserved on edit) and is NOT separately assignable, so the dialog shows
+no Owner field.
 _Avoid_: discussion topic (a decision is a specific call, not an open question).
 
 **Escalation / Needs Attention**:

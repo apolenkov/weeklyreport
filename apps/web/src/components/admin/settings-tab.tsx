@@ -110,7 +110,6 @@ function HolidaysComingSoonControl() {
     <div className="group relative inline-flex">
       <span
         aria-disabled="true"
-        title="Coming Soon"
         data-testid="holidays-coming-soon"
         className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] xl:w-[92px] xl:px-2.5"
       >

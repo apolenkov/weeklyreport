@@ -17,7 +17,6 @@ export function VersionComingSoonControl() {
         type="button"
         aria-disabled="true"
         aria-label="Version history is coming soon"
-        title="Coming Soon"
         data-testid="version-coming-soon"
         className="inline-flex h-8 w-8 shrink-0 cursor-default items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-empty)] text-[12px] font-semibold text-[var(--color-muted-foreground)]"
       >

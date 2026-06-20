@@ -58,8 +58,12 @@ function DecisionEditDialogContent({
   const isCreate = decision === null;
 
   const [text, setText] = useState(decision?.text ?? "");
-  // Read-only field (set once at mount); the value never changes after init.
-  const [owner] = useState(decision?.owner ?? defaultOwner ?? "");
+  // Owner is not user-editable: a decision is always owned by its author — the
+  // current lead on create, the saved owner on edit (you only ever open your
+  // own decisions; others' are locked). It is persisted but no longer shown as
+  // a field — the old read-only input read as editable and was the lone grey
+  // box among white inputs.
+  const owner = decision?.owner ?? defaultOwner ?? "";
   const [impact, setImpact] = useState(decision?.impact ?? "");
   const [deadline, setDeadline] = useState(decision?.deadline ?? "");
   const [productId, setProductId] = useState(
@@ -81,7 +85,6 @@ function DecisionEditDialogContent({
   }
   const [errors, setErrors] = useState<{
     text?: string;
-    owner?: string;
     impact?: string;
     stageIds?: string;
   }>({});
@@ -100,7 +103,6 @@ function DecisionEditDialogContent({
       stageIds.length === 0 && stages.length === 1 ? [...stages] : stageIds;
     const next: typeof errors = {};
     if (t.length === 0) next.text = "Decision text is required";
-    if (o.length === 0) next.owner = "Owner is required";
     if (im.length === 0) next.impact = "Impact is required";
     if (stages.length > 0 && effectiveStageIds.length === 0)
       next.stageIds = "Select at least one stage.";
@@ -158,7 +160,7 @@ function DecisionEditDialogContent({
             prose on the left, a CLASSIFICATION panel (Product + Stages) on the
             right. A decision carries no status/severity, so the panel is leaner. */}
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:items-stretch">
-          {/* Left column: decision / owner+deadline / impact prose. */}
+          {/* Left column: decision / deadline / impact prose. */}
           <div className="flex flex-1 flex-col gap-4">
             {/* Decision text */}
             <div>
@@ -201,60 +203,22 @@ function DecisionEditDialogContent({
               )}
             </div>
 
-            {/* Owner + Deadline row — items-end aligns the input bottoms even
-              though Owner has an extra helper <p> that makes its column taller (D-14). */}
-            <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
-              <div>
-                <label
-                  className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-                  htmlFor="dec-owner"
-                >
-                  Owner *
-                </label>
-                <p className="mb-1 text-[11px] text-[var(--color-muted-foreground)]">
-                  Accountable lead for this section. Saved as the section owner.
-                </p>
-                <input
-                  id="dec-owner"
-                  type="text"
-                  aria-invalid={errors.owner ? "true" : "false"}
-                  aria-describedby={
-                    errors.owner ? "dec-owner-error" : undefined
-                  }
-                  readOnly
-                  aria-readonly="true"
-                  className={`w-full rounded-xl border bg-[var(--color-muted)] px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
-                    errors.owner
-                      ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
-                      : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
-                  }`}
-                  value={owner}
-                  placeholder="e.g. yourself or Head"
-                />
-                {errors.owner && (
-                  <p
-                    id="dec-owner-error"
-                    className="mt-1 text-xs text-[var(--color-destructive)]"
-                  >
-                    {errors.owner}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label
-                  className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-                  htmlFor="dec-deadline"
-                >
-                  Deadline
-                </label>
-                <input
-                  id="dec-deadline"
-                  type="date"
-                  className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
-                  value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                />
-              </div>
+            {/* Deadline — Owner is auto-set to the author and no longer shown
+                as a field, so Deadline stands on its own row. */}
+            <div>
+              <label
+                className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+                htmlFor="dec-deadline"
+              >
+                Deadline
+              </label>
+              <input
+                id="dec-deadline"
+                type="date"
+                className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+              />
             </div>
 
             {/* Impact */}

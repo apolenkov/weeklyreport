@@ -20,7 +20,10 @@ describe("VersionComingSoonControl", () => {
       "aria-label",
       "Version history is coming soon",
     );
-    expect(control).toHaveAttribute("title", "Coming Soon");
+    // No native title — the aria-label carries the name and the amber
+    // ComingSoonBadge renders the visual tooltip. A stacked title="Coming Soon"
+    // would double the tooltip on hover (see coming-soon-style.test.tsx).
+    expect(control).not.toHaveAttribute("title");
     expect(control).toHaveAttribute("aria-disabled", "true");
   });
 

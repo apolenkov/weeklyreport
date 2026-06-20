@@ -20,7 +20,6 @@ export function AgentReviewComingSoon({
         type="button"
         aria-disabled="true"
         aria-label="Agent review is coming soon"
-        title="Coming Soon"
         data-testid="agent-review-coming-soon"
         className={`inline-flex cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] font-semibold text-[var(--color-muted-foreground)] ${
           compact

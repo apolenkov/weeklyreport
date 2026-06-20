@@ -115,22 +115,30 @@ describe("#91 — all six tooltip controls share the centred anchor (source scan
   });
 });
 
-describe("nav-bar Coming Soon controls — no stacked native title", () => {
-  // The inert nav theme/language controls expose their state through their
-  // `aria-label` plus the amber ComingSoonBadge tooltip. A native
-  // `title="Coming Soon"` on the same button stacked a SECOND browser-native
-  // tooltip over the badge — the double-tooltip glitch. The controls MUST NOT
-  // carry a native title; this source scan guards the regression.
-  const navBarSource = readFileSync(
-    path.join(
-      path.dirname(fileURLToPath(import.meta.url)),
-      "navigation/nav-bar.tsx",
-    ),
-    "utf8",
-  );
+describe("every inert Coming Soon control — no stacked native title", () => {
+  // Inert ComingSoon controls expose their state through their `aria-label`
+  // (or visible text) plus the amber ComingSoonBadge tooltip. A native
+  // `title="Coming Soon"` on the same control stacked a SECOND browser-native
+  // tooltip over the badge — the double-tooltip glitch the user hit on the
+  // lead toolbar's Agent-review control while the nav Theme control (already
+  // fixed) showed only the badge. No control may carry a native title; this
+  // source scan guards every one of them, not just nav-bar.
+  const componentsRoot = path.dirname(fileURLToPath(import.meta.url));
+  const INERT_CONTROL_FILES = [
+    "report-shell/agent-review-coming-soon.tsx",
+    "lead/version-coming-soon.tsx",
+    "lead/pdf-export-coming-soon.tsx",
+    "navigation/nav-bar.tsx",
+    "admin/settings-tab.tsx",
+  ];
 
-  it("the inert nav controls carry no native title=Coming Soon", () => {
-    expect(navBarSource).not.toContain('title="Coming Soon"');
+  it("no inert control source carries title=Coming Soon", () => {
+    const violations = INERT_CONTROL_FILES.filter((rel) =>
+      readFileSync(path.join(componentsRoot, rel), "utf8").includes(
+        'title="Coming Soon"',
+      ),
+    );
+    expect(violations).toEqual([]);
   });
 });
 
