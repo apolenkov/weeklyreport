@@ -63,7 +63,7 @@ function QuadrantCard({
 }) {
   return (
     <section
-      className={`relative min-h-[var(--slide-quadrant-min)] overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] border-l-4 ${
+      className={`relative min-h-0 overflow-y-auto rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] border-l-4 ${
         dashedFrame ? "border-dashed [border-left-style:solid]" : ""
       } ${stripeClass} bg-white/80 p-3`}
     >
@@ -137,12 +137,15 @@ export function LeadUnifiedSlide({ model }: Props) {
   return (
     /* slides-product-autofit D3: inside the fixed-aspect .slide-frame the
        grid sizes from the frame, not the viewport — flex-1/min-h-0 under the
-       article's column layout replaces the old min-h-[52dvh] floor, so
-       auto-rows-fr redistributes the quadrants over the full frame on every
-       content change (product pick, theme add). Fullscreen keeps its dvh
-       floor. */
+       article's column layout replaces the old min-h-[52dvh] floor, so the
+       quadrant tracks redistribute over the full frame on every content
+       change (product pick, theme add). Fullscreen keeps its dvh floor.
+       lead-slide-quadrants: the per-quadrant --slide-quadrant-min floor lives
+       on the grid TRACK (minmax(--slide-quadrant-min, 1fr)) — not the card —
+       so the floor coexists with each QuadrantCard's min-h-0 + overflow-y-auto
+       scroll (the two cannot both sit on the card's min-height). */
     <div
-      className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-3 [:fullscreen_&]:min-h-[60dvh] [:fullscreen_&]:content-between"
+      className="grid min-h-0 flex-1 auto-rows-[minmax(var(--slide-quadrant-min),1fr)] grid-cols-2 gap-3 [:fullscreen_&]:min-h-[60dvh] [:fullscreen_&]:content-between"
       data-testid="lead-unified-slide"
     >
       <QuadrantCard
