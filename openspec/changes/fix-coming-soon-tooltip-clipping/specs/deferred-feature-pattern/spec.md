@@ -23,8 +23,14 @@ Every tooltip-anchored ComingSoon control MUST render its tooltip through the sh
    content with no dark surface and no dark arrow.
 3. The control stays inert (`aria-disabled="true"`, never the `disabled`
    attribute, so Radix still receives the hover/focus that opens the tooltip);
-   the focusable trigger keeps its `aria-label` and the tooltip content is wired
-   as its description, so the accessible name is unchanged and not double-announced.
+   the focusable trigger keeps its `aria-label` (the accessible NAME is
+   unchanged). NOTE: Radix wires the open tooltip content as the trigger's
+   `aria-describedby`, so on a focusable control whose `aria-label` already ends
+   with "is coming soon", a screen reader announces the name plus the badge
+   description "Coming Soon" — a minor redundancy. Whether to shorten those five
+   `aria-label`s to the bare feature name (so the description carries the
+   coming-soon state exactly once) is a deferred decision; the Holidays inert
+   span is unaffected (its `describedby` is not on a focused button).
 4. Inline (non-tooltip) `ComingSoonBadge` usages — the static admin
    integration-row badges — are NOT tooltip anchors and are out of scope for this
    rule.

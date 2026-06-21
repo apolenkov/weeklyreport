@@ -34,10 +34,14 @@ the visual/geometry proofs are pending; everything else is green.
 - `pnpm test` ✓ (**1253** web tests + api/shared/ui packages)
 - `pnpm build` ✓ (5/5; Next compiled all routes — Tailwind subgrid/arbitrary classes OK)
 
-## ⚠ LIVE-VERIFY IS PENDING — this is the one real gap
+## ⚠ FULL-APP LIVE-VERIFY IS PARTIAL — the residual gap
 
 jsdom cannot prove the VISUAL/geometry fixes (advisor flagged C/A/E as
-browser-only). A clean live-verify was **blocked tonight**, NOT skipped:
+browser-only). **C's scroll geometry WAS browser-verified** this session via a
+standalone Chromium repro (see step 3 below). The remaining gaps are the in-app
+visual checks for A (tooltip clip-escape pixels), E (subgrid alignment), and the
+B fullscreen flow — a clean FULL-APP live-verify was **blocked tonight**, NOT
+skipped:
 
 - The shared docker API (`customreport-api-1`, :3002) has CORS pinned to
   `FRONTEND_URL=http://localhost:3000` and has been up 41h. The other agent owns
@@ -61,10 +65,15 @@ on a NON-prod DB), then:
    pill exit → the toggle flips back to "Enter fullscreen" and regains focus.
    Repeat on the head deck (`/head` slides, `f` to enter; focus returns to the
    article). Verify pressing `f` toggles exactly once (no double-toggle).
-3. **C — dense quadrant scroll:** a lead Summary slide with MANY records in one
-   quadrant (>~6 rows) → that quadrant SCROLLS inside its equal framed zone (no
-   clipped/lost rows); sparse quadrants still fill their zone; fullscreen still
-   works. (jsdom proved the classes; only the browser proves the scroll geometry.)
+3. **C — dense quadrant scroll** — the SCROLL GEOMETRY of the review-fix was
+   already BROWSER-VERIFIED this session via a standalone Chromium repro of the
+   exact structure (old vs new, sparse vs dense): NEW-sparse = zero scroll on
+   both axes (watermark clipped); NEW-dense = inner container scrolls vertically
+   306px (rows reachable, `h-full` resolves — no silent re-clip), zero horizontal
+   scroll; the section is `overflow:hidden` so no phantom scrollbar (vs the OLD
+   structure's measured 12px×12px). Residual full-app check: a real lead Summary
+   slide with MANY records in one quadrant scrolls inside its equal zone; sparse
+   quadrants fill; fullscreen works.
 4. **D — capacity advisory:** admin → assign a 6th active product to a lead →
    "6 of 6 products" + a gentle over-cap note; Save still works. Lead section with
    > 5 records for ONE product → "N records may not fit cleanly on the slide"
