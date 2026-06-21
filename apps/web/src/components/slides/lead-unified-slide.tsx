@@ -63,43 +63,53 @@ function QuadrantCard({
 }) {
   return (
     <section
-      className={`relative min-h-0 overflow-y-auto rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] border-l-4 ${
+      className={`relative min-h-0 overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] border-l-4 ${
         dashedFrame ? "border-dashed [border-left-style:solid]" : ""
-      } ${stripeClass} bg-white/80 p-3`}
+      } ${stripeClass} bg-white/80`}
     >
-      {/* D4: section headers stay neutral — the stripe carries the accent. */}
-      <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-        <Icon className="h-4 w-4" aria-hidden="true" />
-        {label}
+      {/* lead-slide-quadrants (review fix): the ROWS scroll in this inner
+          container (overflow-y-auto + min-h-0); the outer section stays
+          overflow-hidden so the decorative corner watermark (negative offsets)
+          is CLIPPED as before, not turned into a ~12px phantom scroll on BOTH
+          axes (overflow-y-auto on the section made overflow-x compute to auto,
+          so the watermark bled into a stray scrollbar on every card). */}
+      <div className="flex h-full min-h-0 flex-col overflow-y-auto p-3">
+        {/* D4: section headers stay neutral — the stripe carries the accent. */}
+        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+          <Icon className="h-4 w-4" aria-hidden="true" />
+          {label}
+        </div>
+        {items.length > 0 ? (
+          /* Feedback round 2 (2026-06-10): no count-based truncation — every
+             row always renders; the card grows with its content. */
+          <ul className="mt-2 space-y-1.5">
+            {items.map((row, idx) => (
+              <li
+                key={`${row.text}-${String(idx)}`}
+                className="flex min-w-0 items-baseline gap-2"
+              >
+                {/* Fixed-width slot so all item texts start at the same X. */}
+                <span className="inline-flex w-[28px] shrink-0 justify-center">
+                  {row.priorityRank != null
+                    ? priorityChip(row.priorityRank)
+                    : null}
+                </span>
+                {showBadges ? productBadge(row) : null}
+                <span className="min-w-0 line-clamp-3 text-[13px] leading-snug text-[var(--color-foreground)]">
+                  {row.text}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 rounded-[var(--radius)] border border-dashed border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted-foreground)]">
+            {emptyText}
+          </p>
+        )}
       </div>
-      {items.length > 0 ? (
-        /* Feedback round 2 (2026-06-10): no count-based truncation — every
-           row always renders; the card grows with its content. */
-        <ul className="mt-2 space-y-1.5">
-          {items.map((row, idx) => (
-            <li
-              key={`${row.text}-${String(idx)}`}
-              className="flex min-w-0 items-baseline gap-2"
-            >
-              {/* Fixed-width slot so all item texts start at the same X. */}
-              <span className="inline-flex w-[28px] shrink-0 justify-center">
-                {row.priorityRank != null
-                  ? priorityChip(row.priorityRank)
-                  : null}
-              </span>
-              {showBadges ? productBadge(row) : null}
-              <span className="min-w-0 line-clamp-3 text-[13px] leading-snug text-[var(--color-foreground)]">
-                {row.text}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-2 rounded-[var(--radius)] border border-dashed border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted-foreground)]">
-          {emptyText}
-        </p>
-      )}
-      {/* D9: low-opacity watermark fills sparse cards without new assets. */}
+      {/* D9: low-opacity watermark fills sparse cards without new assets. It
+          lives on the overflow-hidden section (NOT the scroll container) so it
+          is clipped and never contributes to scroll. */}
       <Icon
         aria-hidden="true"
         className="pointer-events-none absolute -bottom-3 -right-3 h-16 w-16 text-[var(--color-foreground)] opacity-[0.05]"

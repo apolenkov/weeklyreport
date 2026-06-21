@@ -27,15 +27,23 @@ function SlideEscHint({ isFullscreen }: { readonly isFullscreen: boolean }) {
     return () => clearTimeout(timer);
   }, [isFullscreen]);
 
-  if (!isFullscreen || !show) return null;
+  if (!isFullscreen) return null;
 
+  // Keep the polite live region in the DOM the whole time we are fullscreen and
+  // toggle only its text — several screen readers miss a region that mounts
+  // already populated, so it must exist (empty) before the text is injected
+  // (review fix). When dismissed it collapses to an empty sr-only node.
   return (
     <div
       role="status"
       data-testid="slide-esc-hint"
-      className="fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-[var(--color-card)] px-4 py-1.5 text-sm font-medium text-[var(--color-foreground)] shadow-lg"
+      className={
+        show
+          ? "fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-[var(--color-card)] px-4 py-1.5 text-sm font-medium text-[var(--color-foreground)] shadow-lg"
+          : "sr-only"
+      }
     >
-      Press Esc to exit fullscreen
+      {show ? "Press Esc to exit fullscreen" : ""}
     </div>
   );
 }

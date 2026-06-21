@@ -125,9 +125,11 @@ export function DecisionsSection({
   } = useEditableListDialog<DecisionEntry>({ readOnly, addSignal });
 
   // add-slide-capacity-signals: per-product decision counts for the slide-fit
-  // advisory (decisions are department-scoped + flat, so group by productName).
+  // advisory. Group by productId to match the risks path (a stable id, not a
+  // display string); review fix. Unscoped decisions carry productId "" and are
+  // SKIPPED (department-scoped, not a per-product slide group).
   const decisionOverflow = useMemo(
-    () => firstOverCapRowIds(decisions, (d) => d.productName),
+    () => firstOverCapRowIds(decisions, (d) => d.productId || undefined),
     [decisions],
   );
 
@@ -194,7 +196,7 @@ export function DecisionsSection({
               {decisionOverflow.firstIds.has(decision.id) ? (
                 <SlideFitAdvisory
                   count={
-                    decisionOverflow.countByKey.get(decision.productName) ?? 0
+                    decisionOverflow.countByKey.get(decision.productId) ?? 0
                   }
                 />
               ) : null}

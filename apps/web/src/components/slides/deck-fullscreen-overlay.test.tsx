@@ -29,14 +29,17 @@ describe("DeckFullscreenOverlay", () => {
     expect(
       screen.getByRole("button", { name: "Exit fullscreen" }),
     ).toBeInTheDocument();
-    expect(screen.getByTestId("slide-esc-hint")).toBeInTheDocument();
+    expect(screen.getByTestId("slide-esc-hint")).toHaveTextContent(
+      "Press Esc to exit fullscreen",
+    );
 
     act(() => {
       vi.advanceTimersByTime(3100);
     });
 
-    // The hint auto-dismisses; the persistent exit pill stays.
-    expect(screen.queryByTestId("slide-esc-hint")).not.toBeInTheDocument();
+    // The hint TEXT auto-dismisses; the polite live region stays present but
+    // empty (so screen readers reliably announce it), and the exit pill stays.
+    expect(screen.getByTestId("slide-esc-hint")).toHaveTextContent("");
     expect(
       screen.getByRole("button", { name: "Exit fullscreen" }),
     ).toBeInTheDocument();
