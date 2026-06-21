@@ -121,7 +121,7 @@ describe("LeadUnifiedSlide — frame fill (slides-product-autofit)", () => {
 });
 
 describe("LeadUnifiedSlide — dense quadrant overflow is scroll-reachable", () => {
-  it("a dense quadrant card scrolls (overflow-y-auto + min-h-0), never clips", () => {
+  it("a dense quadrant scrolls in an inner container; the card frame clips the watermark", () => {
     const rows = Array.from({ length: 12 }, (_, i) =>
       makeRow(`Risk row ${String(i + 1)}`, "Atlas"),
     );
@@ -135,11 +135,19 @@ describe("LeadUnifiedSlide — dense quadrant overflow is scroll-reachable", () 
     // proven only by the live height check in tasks.md 4.2).
     const card = screen.getByText("Risk row 12").closest("section");
     expect(card).not.toBeNull();
-    expect(card?.className).toContain("overflow-y-auto");
+    // The outer card frame stays overflow-hidden so the decorative watermark is
+    // clipped (no phantom 2-axis scroll); the floor moved off the card onto the
+    // grid track.
+    expect(card?.className).toContain("overflow-hidden");
     expect(card?.className).toContain("min-h-0");
-    expect(card?.className).not.toContain("overflow-hidden");
-    // The floor moved OFF the card and onto the grid track.
     expect(card?.className).not.toContain("min-h-[var(--slide-quadrant-min)]");
+    // The rows scroll inside an INNER container (overflow-y-auto + min-h-0),
+    // which carries no absolute pokers — so only dense content scrolls.
+    const scroller = screen
+      .getByText("Risk row 12")
+      .closest("div.overflow-y-auto");
+    expect(scroller).not.toBeNull();
+    expect(scroller?.className).toContain("min-h-0");
     const grid = screen.getByTestId("lead-unified-slide");
     expect(grid.className).toContain(
       "auto-rows-[minmax(var(--slide-quadrant-min),1fr)]",
