@@ -37,10 +37,12 @@ the visual/geometry proofs are pending; everything else is green.
 ## ⚠ FULL-APP LIVE-VERIFY IS PARTIAL — the residual gap
 
 jsdom cannot prove the VISUAL/geometry fixes (advisor flagged C/A/E as
-browser-only). **C's scroll geometry WAS browser-verified** this session via a
-standalone Chromium repro (see step 3 below). The remaining gaps are the in-app
-visual checks for A (tooltip clip-escape pixels), E (subgrid alignment), and the
-B fullscreen flow — a clean FULL-APP live-verify was **blocked tonight**, NOT
+browser-only). **The two highest-risk mechanisms — C's scroll geometry and E's
+subgrid band alignment — WERE browser-verified** this session via standalone
+Chromium repros (steps 3 and 5 below). The remaining gaps are lower-risk in-app
+visual checks: A (tooltip clip-escape — but Radix portals to `document.body`, so
+escaping the overflow ancestor is structural) and the B fullscreen flow (needs
+real fullscreen). A clean FULL-APP live-verify was **blocked tonight**, NOT
 skipped:
 
 - The shared docker API (`customreport-api-1`, :3002) has CORS pinned to
@@ -78,9 +80,12 @@ on a NON-prod DB), then:
    "6 of 6 products" + a gentle over-cap note; Save still works. Lead section with
    > 5 records for ONE product → "N records may not fit cleanly on the slide"
    > advisory on that product's group; adding still allowed.
-5. **E — product-grid alignment:** `/lead/report?mode=slides`, PRODUCT scope,
-   ≥2–3 products of different content volumes → the Current / Next /
-   Risks+Decisions bands line up horizontally across cards (nothing floats); an
+5. **E — product-grid alignment** — the SUBGRID band alignment was already
+   BROWSER-VERIFIED this session via a standalone Chromium repro of 3 cards with
+   uneven content: all four band tops (header / Current / Next / Risks+Decisions)
+   land at the IDENTICAL Y across all three cards (17 / 67 / 132 / 182 px) — so
+   subgrid aligns over the implicit auto-row tracks (no float). Residual full-app
+   check: PRODUCT scope with ≥2–3 real products of different content volumes; an
    empty Risks+Decisions band still holds its place.
 
 ## Adversarial review — done (disposition below)
