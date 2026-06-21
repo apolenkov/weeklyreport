@@ -2,16 +2,17 @@
 
 ## 1. Web — quadrant overflow (apps/web)
 
-- [x] 1.1 In `slides/lead-unified-slide.tsx`, replace the `QuadrantCard`
-      `overflow-hidden` with `overflow-y-auto` + `min-h-0` so the card scrolls
-      within its `auto-rows-fr` row instead of expanding it (no literal
-      `max-height` — the row track supplies the height). Move the per-quadrant
-      floor OFF the card and onto the grid track: `grid-auto-rows:
-    minmax(var(--slide-quadrant-min), 1fr)` (Tailwind
-      `auto-rows-[minmax(var(--slide-quadrant-min),1fr)]`) so the floor + equal
-      distribution live on the track and do not collide with the card's
-      `min-h-0`. Keep the stripe, the dashed empty placeholder, and the
-      fullscreen `dvh` behaviour; verify the layout interplay live.
+- [x] 1.1 In `slides/lead-unified-slide.tsx`, make the quadrant rows scrollable.
+      REVIEW-CORRECTED structure: the `QuadrantCard` `<section>` stays
+      `overflow-hidden` (so the decorative corner watermark, which has negative
+      offsets, is clipped and never turns `overflow-y:auto` into a phantom
+      cross-axis scrollbar), and an INNER container
+      (`flex h-full min-h-0 flex-col overflow-y-auto`) holds the header + rows and
+      scrolls when dense. Move the per-quadrant floor OFF the card and onto the
+      grid track: `auto-rows-[minmax(var(--slide-quadrant-min),1fr)]` so the floor + equal distribution live on the track. Keep the stripe, the dashed empty
+      placeholder, and the fullscreen `dvh` behaviour. (The naive "card itself
+      uses overflow-y-auto" caused a ~12px 2-axis phantom scroll from the
+      watermark — caught + fixed in adversarial review, verified in Chromium.)
 - [x] 1.2 Reconsider the per-row `line-clamp-3` now that the card scrolls —
       KEPT: `line-clamp-3` bounds each row to <=3 lines so the scroll is about
       row COUNT (predictable), not unbounded row height; the data-loss fix is
@@ -28,7 +29,7 @@
 - [x] 2.1 jsdom: render `LeadUnifiedSlide` with a quadrant of many rows; assert
       the card class is scroll-reachable (`overflow-y:auto` + `min-h-0`, NOT
       `overflow:hidden`) and the grid track uses `minmax(var(--slide-quadrant-min),
-    1fr)`. NOTE: do NOT rely on "every row node present" as the regression guard —
+  1fr)`. NOTE: do NOT rely on "every row node present" as the regression guard —
       rows are already in the DOM under `overflow:hidden` (it clips visually, not
       structurally), so that assertion passes against the buggy code too. Visual
       reachability is proven only by the live height check below. (The CLASS
