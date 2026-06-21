@@ -74,13 +74,27 @@ on a NON-prod DB), then:
    Risks+Decisions bands line up horizontally across cards (nothing floats); an
    empty Risks+Decisions band still holds its place.
 
-## Adversarial review
+## Adversarial review — done (disposition below)
 
-A multi-lens (5 Opus lenses: correctness / spec / a11y / css-visual-risk /
-test-quality) + Codex review workflow ran over `git diff main...HEAD`. See the
-final session summary / memory for the disposition. Any confirmed defect was
-fixed and re-gated before this handoff (if this line still says "running", the
-review had not landed when the doc was written — check the session).
+A multi-lens (5 Opus lenses) + Codex review ran over `git diff main...HEAD`
+(Codex errored on a stream timeout; the lenses + an adversarial verify carried
+it). 4 findings; disposition (commit `27d7d7c`):
+
+- **1 MAJOR, confirmed in real Chromium → FIXED.** Change C: the card's
+  `overflow-y-auto` turned the negative-offset corner watermark into a ~12px
+  phantom scroll on BOTH axes on every card (incl. sparse), with a stray
+  horizontal scrollbar (this was MY missed regression — I had dismissed the
+  watermark earlier; the reviewer measured it). Fix: rows scroll in an inner
+  container; the card frame stays `overflow-hidden` to clip the decorative
+  watermark. Spec + test updated.
+- **2 minor → FIXED.** D: group the decisions advisory by `productId` (match
+  risks; skip unscoped) instead of the display string `productName`. B: keep the
+  Esc-hint polite live region in the DOM and toggle only its text (reliable SR
+  announce).
+- **1 minor → DEFERRED to you (decision #3 below).**
+
+The full gate was re-run GREEN after the fixes (typecheck / lint / test 1253 /
+build 5/5).
 
 ## Two user decisions (still open — NOT blockers; both already coded as chosen)
 
@@ -90,14 +104,27 @@ review had not landed when the doc was written — check the session).
 2. **"+5 more" tooltip restyle** — still DEFERRED (out of change A per the repo
    "Visual And Theme Work" rule). The shared dark `TooltipContent` is UNTOUCHED.
    Pick a concrete surface to make it its own small change.
+3. **A11y double-announce on the 5 button Coming-Soon controls** (review minor,
+   NOT yet fixed). Radix auto-wires `aria-describedby` → the badge text "Coming
+   Soon", while each control's `aria-label` ALSO ends with "is coming soon" — so
+   a screen reader says "coming soon" twice. The deferred-feature-pattern design
+   explicitly chose to keep the verbose `aria-label`, so reversing it (shorten
+   the five labels to the bare feature name, letting the description carry
+   "Coming Soon" once) is a YOUR-call decision + touches ~5 test assertions.
+   Holidays is unaffected (its describedby sits on the inert span, not a focused
+   button). Recommend: shorten the labels.
 
 ## Next steps
 
-1. Live-verify per the steps above (the only outstanding proof).
-2. Merge the branch to `main` (the agent does NOT push to the default branch).
-   The five changes are already `openspec archive`-d on the branch (see the
-   `openspec/changes/archive/` entries) — or archive on merge if not yet done.
-3. Resolve the two open decisions.
+1. **Live-verify** per the steps above — the only outstanding proof, and the
+   gate for archiving.
+2. The five changes are still **ACTIVE (NOT archived)** — deliberately, because
+   archive = "fully verified/done" and live-verify is the pending gap. Run
+   `openspec archive <slug>` per change after live-verify (watch the
+   exact-header / spec-debt gotchas; `--skip-specs` if archive spec-sync aborts).
+3. **Merge** the branch to `main` (the agent does NOT push to the default
+   branch). A draft PR may already be open — check GitHub.
+4. Resolve the three open decisions.
 
 ## Gotchas carried this session
 
