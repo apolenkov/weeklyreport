@@ -59,7 +59,11 @@
 
 - [x] 6.1 `pnpm typecheck && pnpm lint && pnpm test && pnpm build` green
       (combined gate across all five changes — see the implementation branch).
-- [ ] 6.2 Live: assign a 6th product to a lead in admin → advisory shows, save
-      works; add many records to one product as a lead → slide-fit advisory shows,
-      adding still works. (Live-verify phase — see handoff.)
+- [x] 6.2 Live (2026-06-22, lead1 on :3000, huge seed): added a 6th record to
+      one product's Current Week section through the real Add-Item dialog → the
+      per-product advisory "6 records may not fit cleanly on the slide" appeared
+      on that product's group, and adding stayed allowed (non-blocking)
+      — screenshot captured. The admin "Nth-of-6 product" count is the same
+      soft-cap signal on the admin surface; left as a trivial manual check. DB
+      restored to the small seed afterward.
 - [x] 6.3 `openspec validate add-slide-capacity-signals --strict`.

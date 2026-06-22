@@ -52,11 +52,13 @@
 
 - [x] 4.1 `pnpm typecheck && pnpm lint && pnpm test && pnpm build` green
       (combined gate across all five changes — see the implementation branch).
-- [~] 4.2 Live (2026-06-22, lead1 on :3000): the sparse lead Summary slide in
-  fullscreen renders the four quadrants (Current Work / Next Focus / Risks /
-  Decisions) filling their equal zones cleanly (screenshot); fullscreen works
-  (see change B). The DENSE quadrant scroll geometry was browser-verified via
-  the standalone Chromium repro (handoff) — NOT re-exercised on a huge seed
-  here (would need a reseed). Full-app dense scroll on huge data is the one
-  remaining manual check.
+- [x] 4.2 Live (2026-06-22, lead1 on :3000): verified BOTH cases in the real app.
+      Sparse Summary renders the four quadrants filling their equal zones cleanly
+      (screenshot); fullscreen works (change B). DENSE (one product loaded to 6
+      Current-Week records via the real Add-Item dialog): the Current Work quadrant
+      FRAME stays `overflow:hidden` with hPhantom = 0 (NO horizontal phantom — the
+      review-caught watermark regression), while the INNER container scrolls
+      vertically (`scrollHeight - clientHeight = 361`px, hPhantom 0) so every row is
+      reachable inside the equal zone. The only visible horizontal-phantom elements
+      are `sr-only` a11y nodes (clip technique, harmless). DB restored to small after.
 - [x] 4.3 `openspec validate fix-lead-slide-quadrant-overflow --strict`.

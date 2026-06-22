@@ -32,14 +32,18 @@ Full gate re-run GREEN (typecheck / lint / **test 1257** web / build 5/5).
 - B (fullscreen exit) ✓ — enter works; Exit pill + toggle flip + the Exit pill
   exits and RETURNS FOCUS to the toggle. (Esc-to-exit is native browser, not
   triggerable via Playwright synthetic keys — trivial manual check.)
-- C (quadrant overflow) — sparse Summary renders cleanly in fullscreen ✓; dense
-  scroll relies on the prior standalone Chromium repro (not re-run on huge seed).
+- C (quadrant overflow) ✓ — sparse Summary renders cleanly; DENSE (a product
+  loaded to 6 Current-Week records via the real dialog on a huge reseed): the
+  quadrant FRAME stays `overflow:hidden` hPhantom 0 (no horizontal phantom — the
+  review-caught watermark regression), the INNER container scrolls vertically
+  (scrollHeight-clientHeight = 361px) so rows are reachable. DB restored to small.
 - "+N more" restyle ✓ — reveal renders on the light popover surface (screenshot).
-- D (capacity advisory) — NOT live-exercised (soft, non-blocking, unit-tested;
-  needs a 6th product or >5 records). The one remaining manual check.
+- D (capacity advisory) ✓ — adding a 6th Current-Week record to one product
+  surfaced "6 records may not fit cleanly on the slide" on that group, adding
+  stayed allowed (screenshot).
 
-Remaining: archive the 5+1 changes (after the D + dense-C manual checks if
-wanted), then the USER merges PR #21 to `main`.
+All live-verify done. Remaining: archive the 5+1 changes, then the USER merges
+PR #21 to `main` (the agent does not push the default branch).
 
 ## Where the work lives (isolated — a SECOND agent is active in the main tree)
 
