@@ -12,6 +12,14 @@
       identically. The shared dark `TooltipContent` is UNTOUCHED (restyle deferred,
       design Decision 2). Importable from `@customreport/ui/components/ui/tooltip`
       (existing subpath export; no barrel change needed).
+- [x] 1.2 Made the badge DECORATIVE for assistive tech: `ComingSoonTooltip`'s
+      `TooltipContent` now carries a whitespace `aria-label=" "`, which blanks the
+      sr-only description Radix renders (`ariaLabel || children`) and wires as the
+      trigger's `aria-describedby`. The control's own persistent `aria-label`
+      ("… is coming soon") stays the SINGLE coming-soon source — removing the
+      focus-time double-announce without shortening the label (which would lose
+      the browse-mode signal). Empirically confirmed: accessible description "",
+      visible amber badge still renders.
 
 ## 2. Web — migrate the six controls (apps/web)
 
@@ -25,7 +33,7 @@
 - [x] 2.5 Migrated the admin Holidays control in `admin/settings-tab.tsx` —
       `TooltipTrigger asChild` on the inert `<span>`, no nested button, no
       `aria-label`. ADDED a PERSISTENT visually-hidden `<ComingSoonBadge
-    className="sr-only" />` inside the span: the Radix tooltip badge is portaled
+  className="sr-only" />` inside the span: the Radix tooltip badge is portaled
       (hover-only), so the sr-only badge keeps "Coming Soon" in the holidays tab's
       computed accessible name (the spec's "descendant ComingSoonBadge text"),
       using the primitive (no bespoke literal).
@@ -52,6 +60,13 @@
 - [x] 3.4 Updated `version-coming-soon.test.tsx`, `pdf-export-coming-soon.test.tsx`
       (sync `getByRole("tooltip")` → async focus + `findByRole`); `lead-form.test.tsx`
       still green (no change needed — it asserts toolbar/dialog, not the tooltip).
+- [x] 3.5 Added the decorative-badge guard (task 1.2): each of the three
+      render-testable controls asserts the persistent accessible NAME matches
+      `/coming soon/i` AND the accessible DESCRIPTION is `""` (no double-announce).
+      The visible-badge queries moved from the sr-only `role="tooltip"` node to
+      the Radix content (`[data-slot="tooltip-content"]`), since the description
+      node is now blanked. `version-coming-soon.test.tsx` reveal query updated the
+      same way.
 
 ## 4. Docs & specs
 

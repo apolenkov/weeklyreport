@@ -65,13 +65,32 @@ describe("Coming-Soon controls render the amber badge through the Radix portal",
 
       fireEvent.focus(screen.getByTestId(testid));
 
-      const tip = await screen.findByRole("tooltip");
-      const badge = tip.querySelector('[data-state="coming-soon"]');
+      await screen.findByRole("tooltip");
+      // The VISIBLE badge lives in the Radix content (`data-slot`), not in the
+      // sr-only `role="tooltip"` description node (which the whitespace
+      // `aria-label` now blanks — see below).
+      const content = document.querySelector('[data-slot="tooltip-content"]');
+      expect(content).not.toBeNull();
+      const badge = content?.querySelector('[data-state="coming-soon"]');
       expect(badge).not.toBeNull();
       expect(badge?.classList.contains(CANONICAL_BG)).toBe(true);
       expect(badge?.classList.contains(CANONICAL_FG)).toBe(true);
       // The chromeless content must NOT fall back to the Radix dark surface.
-      expect(tip.classList.contains("bg-foreground")).toBe(false);
+      expect(content?.classList.contains("bg-foreground")).toBe(false);
+    },
+  );
+
+  it.each(controls)(
+    "$label: the badge is decorative — the control's own aria-label is the single coming-soon source (no double-announce)",
+    async ({ node, testid }) => {
+      render(node);
+      const control = screen.getByTestId(testid);
+      fireEvent.focus(control);
+      await screen.findByRole("tooltip");
+      // Persistent accessible name carries the coming-soon state (browse mode).
+      expect(control).toHaveAccessibleName(/coming soon/i);
+      // Radix's auto description is blanked, so SR users do not hear it twice.
+      expect(control).toHaveAccessibleDescription("");
     },
   );
 });
