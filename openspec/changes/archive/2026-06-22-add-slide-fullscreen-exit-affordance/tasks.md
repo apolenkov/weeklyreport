@@ -60,7 +60,7 @@
 - [x] 6.1 `pnpm typecheck && pnpm lint && pnpm test && pnpm build` green
       (combined gate across all five changes — see the implementation branch).
       NOTE: `lead-slides-client.tsx` carries a recorded `/* eslint-disable
-  max-lines */` (last-resort, with reason) — it is one cohesive deck client
+max-lines */` (last-resort, with reason) — it is one cohesive deck client
       whose reusable control bits are already extracted to
       `deck-fullscreen-overlay.tsx`; splitting the data layer further would
       scatter the unit for a marginal line count.
