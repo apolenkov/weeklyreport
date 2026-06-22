@@ -146,8 +146,12 @@ export function LeadSlideHero({
     /* Feedback round 2 (2026-06-10, frontend-design pass): one status strip.
        Everything static sits LEFT on a single line at one height (h-11):
        tone badge → author → segmented metric capsule. The interactive scope
-       toggle is the only thing on the right. */
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[rgba(0,0,0,0.08)] pb-4">
+       toggle is the only thing on the right.
+       Fullscreen: the floating "Exit" pill is fixed at the viewport top-right
+       (slide-fullscreen-button), so reserve right space ONLY in fullscreen to
+       push the right-hand controls (scope toggle) clear of it — otherwise the
+       pill overlaps the toggle. */
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[rgba(0,0,0,0.08)] pb-4 [:fullscreen_&]:pr-28">
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
         {/* Fixed badge and name widths keep the capsule at one X across
             slides/periods (feedback round 4: no floating layout). */}
