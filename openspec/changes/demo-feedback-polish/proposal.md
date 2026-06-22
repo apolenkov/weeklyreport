@@ -2,7 +2,7 @@
 
 ## Problem
 
-Five independent issues from the live demo on 2026-06-22, grouped into one
+Seven independent issues from the live demo on 2026-06-22, grouped into one
 change at the user's request:
 
 1. **Head sees an empty report while drafts exist.** The head Status Report
@@ -28,6 +28,11 @@ change at the user's request:
    sibling product cards: a card without risks floats its Decisions up to where
    a neighbour shows Risks, so the eye cannot scan across products. The earlier
    subgrid work aligned a single merged Risks+Decisions band, not each section.
+6. **Decisions band lacks a divider.** On the product grid the Risks band has a
+   top divider but Decisions does not, so the two read unevenly.
+7. **Fullscreen Exit pill overlaps the scope toggle.** In a fullscreen slide the
+   floating "Exit" pill (fixed top-right) sits on top of the hero's Summary/
+   Product scope toggle.
 
 ## Solution
 
@@ -60,6 +65,12 @@ change at the user's request:
    placeholder when empty — so the five shared row tracks line up across every
    card in a grid row. This MODIFIES the `lead-product-grid-alignment` spec
    (4 bands → 5 separate bands).
+6. **Decisions divider.** Give the Decisions band the same top divider Risks
+   already has, so both bands are delimited; the uniform divider preserves the
+   subgrid alignment. Cosmetic — no spec change.
+7. **Fullscreen Exit clearance.** Reserve right space on the hero status strip
+   ONLY in fullscreen (`[:fullscreen_&]:pr-28`) so the scope toggle clears the
+   fixed top-right Exit pill. Layout bug fix — no spec change.
 
 ## Non-goals
 

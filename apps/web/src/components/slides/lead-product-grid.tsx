@@ -161,8 +161,9 @@ function ProductCard({ product }: { product: SlideProduct }) {
           rows (5 tracks total: header + Current + Next + Risks + Decisions) so
           EACH section aligns independently across every card in the row — a
           card missing one still holds that row with a quiet placeholder rather
-          than letting the next section float up. The divider sits above the
-          Risks row to keep the two grouped visually. */}
+          than letting the next section float up. BOTH Risks and Decisions carry
+          a top divider so each band is clearly delimited (and the uniform
+          divider keeps the shared tracks aligned). */}
       <CardSection
         label="Risks"
         count={product.risks.length > 0 ? product.risks.length : undefined}
@@ -176,6 +177,7 @@ function ProductCard({ product }: { product: SlideProduct }) {
         count={
           product.decisions.length > 0 ? product.decisions.length : undefined
         }
+        className="border-t border-[rgba(0,0,0,0.06)] pt-2"
       >
         <ItemList items={product.decisions} empty="No decisions" />
       </CardSection>

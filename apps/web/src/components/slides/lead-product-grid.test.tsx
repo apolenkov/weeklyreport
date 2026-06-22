@@ -176,6 +176,19 @@ describe("LeadProductGrid", () => {
     expect(screen.getByText("No decisions")).toBeInTheDocument();
   });
 
+  it("draws a top divider above BOTH the Risks and Decisions bands", () => {
+    render(<LeadProductGrid products={[product({ name: "Solo" })]} />);
+
+    // Each band is a CardSection (div.space-y-1) whose top border delimits it;
+    // Decisions gets the same divider as Risks (live demo feedback).
+    const risksBand = screen.getByText("Risks").closest("div.space-y-1");
+    const decisionsBand = screen
+      .getByText("Decisions")
+      .closest("div.space-y-1");
+    expect(risksBand?.className).toContain("border-t");
+    expect(decisionsBand?.className).toContain("border-t");
+  });
+
   it("caps the decisions list with a +N more row so the band stays bounded", () => {
     render(
       <LeadProductGrid

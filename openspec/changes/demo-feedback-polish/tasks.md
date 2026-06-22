@@ -66,6 +66,22 @@
 - [x] 5.3 Live-verify: at 1728px all of Current/Next/Risks/Decisions share one
       baseline across all cards in a row even when a card lacks risks.
 
-## 6. Gates
+## 6. Product-grid Decisions divider (live demo feedback 2026-06-22, item 11)
 
-- [ ] 6.1 `pnpm typecheck && pnpm lint && pnpm test && openspec validate demo-feedback-polish --strict`.
+- [x] 6.1 Add the same top divider above the Decisions band as Risks has, so both
+      bands are delimited (`lead-product-grid.tsx`); +test asserting both bands
+      carry `border-t`. Uniform divider keeps the subgrid tracks aligned.
+
+## 7. Fullscreen Exit pill vs hero controls (live demo feedback 2026-06-22, item 12)
+
+- [x] 7.1 In fullscreen the floating "Exit" pill (`slide-fullscreen-button`
+      floating variant, `fixed top-4 right-4`) overlapped the hero's right-hand
+      scope toggle. Reserve right space ONLY in fullscreen on the hero status
+      strip (`[:fullscreen_&]:pr-28` in `lead-slide-hero.tsx`) so the toggle
+      clears the pill; non-fullscreen layout unchanged. Bug fix, no spec delta.
+      +test asserting the class. Live fullscreen verification pending (headless
+      fullscreen is restricted — verify on the user's real browser).
+
+## 8. Gates
+
+- [ ] 8.1 `pnpm typecheck && pnpm lint && pnpm test && openspec validate demo-feedback-polish --strict`.

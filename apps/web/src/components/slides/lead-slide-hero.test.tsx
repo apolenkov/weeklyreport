@@ -127,4 +127,19 @@ describe("LeadSlideHero", () => {
     expect(screen.getByText("Risks")).toBeInTheDocument();
     expect(screen.getByText("Priorities")).toBeInTheDocument();
   });
+
+  it("reserves right space in fullscreen so the floating Exit pill never overlaps the controls", () => {
+    const { container } = render(
+      <LeadSlideHero
+        slide={slide()}
+        heroControls={<div data-testid="hero-controls">controls</div>}
+      />,
+    );
+    // The hero status strip is the flex row with the bottom divider; in
+    // fullscreen it must reserve right padding so the right-hand controls clear
+    // the fixed top-right "Exit" pill (slide-fullscreen-button floating variant).
+    const strip = container.querySelector("div.justify-between");
+    expect(strip).not.toBeNull();
+    expect(strip?.className).toContain("[:fullscreen_&]:pr-28");
+  });
 });
