@@ -29,7 +29,7 @@
 - [x] 2.1 jsdom: render `LeadUnifiedSlide` with a quadrant of many rows; assert
       the card class is scroll-reachable (`overflow-y:auto` + `min-h-0`, NOT
       `overflow:hidden`) and the grid track uses `minmax(var(--slide-quadrant-min),
-  1fr)`. NOTE: do NOT rely on "every row node present" as the regression guard —
+1fr)`. NOTE: do NOT rely on "every row node present" as the regression guard —
       rows are already in the DOM under `overflow:hidden` (it clips visually, not
       structurally), so that assertion passes against the buggy code too. Visual
       reachability is proven only by the live height check below. (The CLASS
@@ -52,7 +52,11 @@
 
 - [x] 4.1 `pnpm typecheck && pnpm lint && pnpm test && pnpm build` green
       (combined gate across all five changes — see the implementation branch).
-- [ ] 4.2 Live: on a dense lead Summary slide every row is reachable by scroll
-      inside its quadrant; sparse quadrants still fill their zone; fullscreen
-      still works. (Live-verify phase — see handoff.)
+- [~] 4.2 Live (2026-06-22, lead1 on :3000): the sparse lead Summary slide in
+  fullscreen renders the four quadrants (Current Work / Next Focus / Risks /
+  Decisions) filling their equal zones cleanly (screenshot); fullscreen works
+  (see change B). The DENSE quadrant scroll geometry was browser-verified via
+  the standalone Chromium repro (handoff) — NOT re-exercised on a huge seed
+  here (would need a reseed). Full-app dense scroll on huge data is the one
+  remaining manual check.
 - [x] 4.3 `openspec validate fix-lead-slide-quadrant-overflow --strict`.

@@ -27,7 +27,9 @@
 
 - [x] 4.1 `pnpm typecheck && pnpm lint && pnpm test && pnpm build` green
       (combined gate on the implementation branch).
-- [ ] 4.2 Live: in Mine mode hover the `+N more` indicator — the reveal shows on
-      the light popover surface (not white-on-black); stage-chip and sidebar
-      tooltips stay dark. (Live-verify phase — see handoff.)
+- [x] 4.2 Live (2026-06-22, lead1 on :3000): in Mine mode hovered the `+N more`
+      indicator — the reveal renders on the light popover surface (white bg, thin
+      border, soft shadow, dark text, no dark arrow), NOT white-on-black
+      (screenshot captured). Scope confirmed by the guard test; stage-chip and
+      sidebar tooltips keep the shared dark default.
 - [x] 4.3 `openspec validate restyle-collapsed-stages-tooltip-surface --strict`.

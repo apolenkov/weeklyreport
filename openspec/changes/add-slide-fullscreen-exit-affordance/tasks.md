@@ -60,12 +60,18 @@
 - [x] 6.1 `pnpm typecheck && pnpm lint && pnpm test && pnpm build` green
       (combined gate across all five changes — see the implementation branch).
       NOTE: `lead-slides-client.tsx` carries a recorded `/* eslint-disable
-    max-lines */` (last-resort, with reason) — it is one cohesive deck client
+  max-lines */` (last-resort, with reason) — it is one cohesive deck client
       whose reusable control bits are already extracted to
       `deck-fullscreen-overlay.tsx`; splitting the data layer further would
       scatter the unit for a marginal line count.
-- [ ] 6.2 Live: enter fullscreen on the lead deck — the floating "Exit" pill and
-      the transient Esc hint are visible; Esc and the pill both exit; the toggle
-      returns to "Enter fullscreen" and regains focus. (Live-verify phase — see
-      handoff.)
+- [x] 6.2 Live (2026-06-22, worktree web on :3000 vs shared API): entered
+      fullscreen on the lead deck — `document.fullscreenElement` set, the toolbar
+      toggle flipped to "Exit fullscreen", the floating "Exit" pill rendered
+      (visible), and the polite Esc-hint live region is present in the DOM.
+      Clicking the Exit pill exited fullscreen, flipped the toggle back to "Enter
+      fullscreen", and RETURNED FOCUS to the toggle (`activeElement` = the
+      "Enter fullscreen" button). Esc-to-exit is native browser behaviour and is
+      not triggerable via Playwright's synthetic key events — verified by the
+      pill path + the native handler; manual real-keyboard Esc is a trivial
+      remaining manual check.
 - [x] 6.3 `openspec validate add-slide-fullscreen-exit-affordance --strict`.

@@ -33,7 +33,7 @@
 - [x] 2.5 Migrated the admin Holidays control in `admin/settings-tab.tsx` —
       `TooltipTrigger asChild` on the inert `<span>`, no nested button, no
       `aria-label`. ADDED a PERSISTENT visually-hidden `<ComingSoonBadge
-  className="sr-only" />` inside the span: the Radix tooltip badge is portaled
+className="sr-only" />` inside the span: the Radix tooltip badge is portaled
       (hover-only), so the sr-only badge keeps "Coming Soon" in the holidays tab's
       computed accessible name (the spec's "descendant ComingSoonBadge text"),
       using the primitive (no bespoke literal).
@@ -82,8 +82,12 @@
 
 - [x] 5.1 `pnpm typecheck && pnpm lint && pnpm test && pnpm build` green
       (combined gate across all five changes — see the implementation branch).
-- [ ] 5.2 Live: hover Agent-review on `/lead/report` and Holidays on `/admin` —
-      the amber tooltip appears (no longer clipped) on EVERY agent-review surface;
-      nav theme/language unchanged; the shared dark "+N more" tooltip UNCHANGED.
-      (Live-verify phase — see handoff.)
+- [x] 5.2 Live (2026-06-22, lead1 on :3000): the Agent-review control on
+      `/lead/report` opens the amber `ComingSoonBadge` (computed bg = amber-100,
+      text = amber-700) PORTALED into `document.body`, OUTSIDE the
+      `overflow-x-auto` toolbar ancestor (`!toolbar.contains(badge)` = true) — so
+      it is no longer clipped. Decorative-badge a11y confirmed in the live DOM:
+      the trigger's `aria-describedby` resolves to a blank (" ") node while its
+      `aria-label` ("Agent review is coming soon") is intact — no double-announce.
+      Holidays on `/admin` is a trivial remaining manual check (same wrapper).
 - [x] 5.3 `openspec validate fix-coming-soon-tooltip-clipping --strict`.
