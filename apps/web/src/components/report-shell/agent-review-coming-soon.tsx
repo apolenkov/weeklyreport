@@ -1,7 +1,5 @@
-import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
+import { ComingSoonTooltip } from "@customreport/ui/components/ui/tooltip";
 import { BotMessageSquare } from "lucide-react";
-
-import { COMING_SOON_TOOLTIP_ANCHOR } from "../coming-soon-tooltip-anchor";
 
 /**
  * Inert placeholder for the future agent-review surface.
@@ -15,7 +13,7 @@ export function AgentReviewComingSoon({
   compact?: boolean;
 }) {
   return (
-    <div className="group relative inline-flex">
+    <ComingSoonTooltip>
       <button
         type="button"
         aria-disabled="true"
@@ -30,7 +28,6 @@ export function AgentReviewComingSoon({
         <BotMessageSquare size={14} strokeWidth={2} aria-hidden="true" />
         <span>Agent review</span>
       </button>
-      <ComingSoonBadge role="tooltip" className={COMING_SOON_TOOLTIP_ANCHOR} />
-    </div>
+    </ComingSoonTooltip>
   );
 }

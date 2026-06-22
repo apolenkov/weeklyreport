@@ -1,7 +1,5 @@
-import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
+import { ComingSoonTooltip } from "@customreport/ui/components/ui/tooltip";
 import { FileDown } from "lucide-react";
-
-import { COMING_SOON_TOOLTIP_ANCHOR } from "../coming-soon-tooltip-anchor";
 
 /**
  * Inert toolbar control marking lead PDF export as deferred
@@ -15,7 +13,7 @@ export function PdfExportComingSoonControl() {
   // excluded from pdfExport (role-coverage-gate). This control stays inert;
   // do NOT wire it to pdfExport.request.
   return (
-    <div className="group relative inline-flex">
+    <ComingSoonTooltip>
       <button
         type="button"
         aria-disabled="true"
@@ -25,7 +23,6 @@ export function PdfExportComingSoonControl() {
       >
         <FileDown size={14} strokeWidth={2} aria-hidden="true" />
       </button>
-      <ComingSoonBadge role="tooltip" className={COMING_SOON_TOOLTIP_ANCHOR} />
-    </div>
+    </ComingSoonTooltip>
   );
 }

@@ -4,6 +4,8 @@ import { cn } from "@customreport/ui/lib/utils";
 import { Tooltip as TooltipPrimitive } from "radix-ui";
 import type * as React from "react";
 
+import { ComingSoonBadge } from "../coming-soon-badge";
+
 function TooltipProvider({
   delayDuration = 0,
   ...props
@@ -32,9 +34,13 @@ function TooltipTrigger({
 function TooltipContent({
   className,
   sideOffset = 0,
+  hideArrow = false,
   children,
   ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Content>) {
+}: React.ComponentProps<typeof TooltipPrimitive.Content> & {
+  /** Omit the dark Radix arrow — used by the chromeless ComingSoonTooltip. */
+  readonly hideArrow?: boolean;
+}) {
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
@@ -47,10 +53,60 @@ function TooltipContent({
         {...props}
       >
         {children}
-        <TooltipPrimitive.Arrow className="z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px] bg-foreground fill-foreground" />
+        {hideArrow ? null : (
+          <TooltipPrimitive.Arrow className="z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px] bg-foreground fill-foreground" />
+        )}
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   );
 }
 
-export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger };
+/*
+ * fix-coming-soon-tooltip-clipping: a self-contained Radix tooltip for the inert
+ * "Coming Soon" deferred controls. It embeds its OWN `TooltipProvider`, so every
+ * mount works without a shell-level provider (AgentReviewComingSoon renders on
+ * many standalone surfaces); it portals the content out of any `overflow`
+ * ancestor (the clipping bug it fixes); and it renders the canonical amber
+ * `ComingSoonBadge` on a CHROMELESS content (no dark surface, no arrow) so the
+ * single-amber-variant rule holds. The trigger is the existing inert control
+ * (`aria-disabled`, so it still receives pointer/focus events); Radix's content
+ * carries the `tooltip` role. One shared side/align positions all six controls
+ * identically (replacing the retired centred CSS anchor).
+ */
+function ComingSoonTooltip({
+  children,
+}: {
+  readonly children: React.ReactNode;
+}) {
+  return (
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>{children}</TooltipTrigger>
+        <TooltipContent
+          hideArrow
+          side="bottom"
+          align="center"
+          sideOffset={6}
+          // The amber badge is a VISUAL reinforcement only. Radix would otherwise
+          // wire the trigger's `aria-describedby` to a sr-only copy of this badge
+          // ("Coming Soon"), doubling up with each control's own `aria-label`
+          // (".. is coming soon") on focus. A whitespace `aria-label` here makes
+          // Radix's sr-only description blank (it renders `ariaLabel || children`),
+          // so the control's persistent `aria-label` stays the single source.
+          aria-label=" "
+          className="border-0 bg-transparent p-0 shadow-none"
+        >
+          <ComingSoonBadge />
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+export {
+  ComingSoonTooltip,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+};

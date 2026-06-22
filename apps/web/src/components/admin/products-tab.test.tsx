@@ -225,3 +225,60 @@ describe("ProductsTab — focus management (autofocus-admin-dialogs)", () => {
     expect(document.activeElement).toBe(addBtn);
   });
 });
+
+describe("ProductsTab — slide-capacity advisory (add-slide-capacity-signals)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function ownedProducts(n: number): MockProduct[] {
+    return Array.from({ length: n }, (_, i) => ({
+      id: `p-${String(i)}`,
+      name: `Product ${String(i)}`,
+      leadOwnerId: LEAD_ID,
+      stages: [],
+      status: "active" as const,
+    }));
+  }
+
+  it("shows the over-capacity advisory at the recommended max; Save stays enabled", async () => {
+    const user = userEvent.setup();
+    renderTab({ products: ownedProducts(6) });
+
+    await user.click(screen.getByRole("button", { name: /add new product/i }));
+
+    expect(screen.getByTestId("lead-product-count")).toHaveTextContent(
+      "6 of 6 products",
+    );
+    expect(screen.getByTestId("lead-product-overcap")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add Product" })).toBeEnabled();
+  });
+
+  it("shows no over-capacity advisory below the recommended ceiling", async () => {
+    const user = userEvent.setup();
+    renderTab({ products: ownedProducts(3) });
+
+    await user.click(screen.getByRole("button", { name: /add new product/i }));
+
+    expect(screen.getByTestId("lead-product-count")).toHaveTextContent(
+      "3 of 6 products",
+    );
+    expect(
+      screen.queryByTestId("lead-product-overcap"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("counts the lead's products from the FULL set, not a filtered view (F8)", async () => {
+    const user = userEvent.setup();
+    // productFilter narrows the visible list to a single product…
+    renderTab({ products: ownedProducts(6), productFilter: "p-0" });
+
+    await user.click(screen.getByRole("button", { name: /add new product/i }));
+
+    // …but the advisory still counts all six products the lead owns.
+    expect(screen.getByTestId("lead-product-count")).toHaveTextContent(
+      "6 of 6 products",
+    );
+    expect(screen.getByTestId("lead-product-overcap")).toBeInTheDocument();
+  });
+});

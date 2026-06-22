@@ -1,7 +1,6 @@
 "use client";
 
 import { DEFAULT_ORGANIZATION_IDENTITY, type Role } from "@customreport/shared";
-import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
 import {
   Sheet,
   SheetContent,
@@ -9,6 +8,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@customreport/ui/components/ui/sheet";
+import { ComingSoonTooltip } from "@customreport/ui/components/ui/tooltip";
 import {
   BarChart3,
   Clock,
@@ -24,7 +24,6 @@ import { useState, useSyncExternalStore } from "react";
 
 import { roleHomePath } from "../../lib/role-home";
 import { useSession } from "../../lib/session-provider";
-import { COMING_SOON_TOOLTIP_ANCHOR } from "../coming-soon-tooltip-anchor";
 import { DevRoleSwitcher } from "../dev/role-switcher";
 
 interface NavLink {
@@ -152,7 +151,7 @@ function LanguageComingSoonControl() {
   // TODO(i18n-future): replace this inert control with a real locale switch
   // when the dedicated i18n phase introduces dictionaries and routing.
   return (
-    <div className="group relative inline-flex">
+    <ComingSoonTooltip>
       <button
         type="button"
         aria-disabled="true"
@@ -162,8 +161,7 @@ function LanguageComingSoonControl() {
       >
         <Globe2 size={14} strokeWidth={2} aria-hidden="true" />
       </button>
-      <ComingSoonBadge role="tooltip" className={COMING_SOON_TOOLTIP_ANCHOR} />
-    </div>
+    </ComingSoonTooltip>
   );
 }
 
@@ -172,7 +170,7 @@ function ThemeComingSoonControl() {
   // after .planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md
   // is promoted into a new milestone.
   return (
-    <div className="group relative inline-flex">
+    <ComingSoonTooltip>
       <button
         type="button"
         aria-disabled="true"
@@ -182,8 +180,7 @@ function ThemeComingSoonControl() {
       >
         <Moon size={14} strokeWidth={2} aria-hidden="true" />
       </button>
-      <ComingSoonBadge role="tooltip" className={COMING_SOON_TOOLTIP_ANCHOR} />
-    </div>
+    </ComingSoonTooltip>
   );
 }
 

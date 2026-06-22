@@ -109,9 +109,52 @@ describe("LeadUnifiedSlide — frame fill (slides-product-autofit)", () => {
     expect(grid.className).toContain("min-h-0");
     // The old viewport-relative floor must not size the framed surface.
     expect(grid.className).not.toContain("52dvh");
-    // Even distribution and the fullscreen dvh floor stay.
-    expect(grid.className).toContain("auto-rows-fr");
+    // lead-slide-quadrants: equal distribution + the per-quadrant floor now
+    // live on the grid TRACK (minmax(--slide-quadrant-min, 1fr)) instead of
+    // bare auto-rows-fr, so the floor coexists with each card's min-h-0 scroll.
+    expect(grid.className).toContain(
+      "auto-rows-[minmax(var(--slide-quadrant-min),1fr)]",
+    );
+    expect(grid.className).not.toContain("auto-rows-fr");
     expect(grid.className).toContain("[:fullscreen_&]:min-h-[60dvh]");
+  });
+});
+
+describe("LeadUnifiedSlide — dense quadrant overflow is scroll-reachable", () => {
+  it("a dense quadrant scrolls in an inner container; the card frame clips the watermark", () => {
+    const rows = Array.from({ length: 12 }, (_, i) =>
+      makeRow(`Risk row ${String(i + 1)}`, "Atlas"),
+    );
+    const { container } = render(
+      <LeadUnifiedSlide model={makeModel({ risks: rows })} />,
+    );
+
+    // The teeth of this regression guard are the CLASS assertions — the rows
+    // are already in the DOM even under the buggy `overflow-hidden`, so a
+    // "rows present" check passes against the bug too (the visual clip is
+    // proven only by the live height check in tasks.md 4.2).
+    const card = screen.getByText("Risk row 12").closest("section");
+    expect(card).not.toBeNull();
+    // The outer card frame stays overflow-hidden so the decorative watermark is
+    // clipped (no phantom 2-axis scroll); the floor moved off the card onto the
+    // grid track.
+    expect(card?.className).toContain("overflow-hidden");
+    expect(card?.className).toContain("min-h-0");
+    expect(card?.className).not.toContain("min-h-[var(--slide-quadrant-min)]");
+    // The rows scroll inside an INNER container (overflow-y-auto + min-h-0),
+    // which carries no absolute pokers — so only dense content scrolls.
+    const scroller = screen
+      .getByText("Risk row 12")
+      .closest("div.overflow-y-auto");
+    expect(scroller).not.toBeNull();
+    expect(scroller?.className).toContain("min-h-0");
+    const grid = screen.getByTestId("lead-unified-slide");
+    expect(grid.className).toContain(
+      "auto-rows-[minmax(var(--slide-quadrant-min),1fr)]",
+    );
+    // No "+N more" truncation is introduced on this slide (user direction).
+    expect(container.textContent).not.toMatch(/\+\d+ more/);
+    expect(screen.getByText("Risk row 1")).toBeInTheDocument();
   });
 });
 

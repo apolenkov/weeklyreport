@@ -1,5 +1,6 @@
 "use client";
 
+import { MAX_PRODUCTS_PER_LEAD } from "@customreport/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -196,6 +197,17 @@ export function ProductsTab({
   const activeProducts = filteredProducts.filter((p) => p.status === "active");
   const archivedProducts = filteredProducts.filter(
     (p) => p.status === "archived",
+  );
+
+  // add-slide-capacity-signals: advisory count of active products owned by the
+  // lead picked in the dialog. Computed from the FULL `products` prop (active
+  // only) — NOT filteredProducts — so a name filter / search never undercounts.
+  const leadProductCount = useMemo(
+    () =>
+      products.filter(
+        (p) => p.leadOwnerId === formLeadId && p.status === "active",
+      ).length,
+    [products, formLeadId],
   );
 
   const isSaving = saveProjectMut.isPending;
@@ -424,6 +436,22 @@ export function ProductsTab({
                     </option>
                   ))}
                 </select>
+                <p
+                  className="mt-1.5 text-xs text-[var(--color-muted-foreground)]"
+                  data-testid="lead-product-count"
+                >
+                  {leadProductCount} of {MAX_PRODUCTS_PER_LEAD} products
+                </p>
+                {leadProductCount >= MAX_PRODUCTS_PER_LEAD ? (
+                  <p
+                    role="note"
+                    data-testid="lead-product-overcap"
+                    className="mt-1 text-xs font-medium text-[var(--color-status-at-risk-fg)]"
+                  >
+                    At or above the recommended {MAX_PRODUCTS_PER_LEAD}-product
+                    limit — you can still save.
+                  </p>
+                ) : null}
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">
