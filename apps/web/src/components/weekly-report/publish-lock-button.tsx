@@ -34,7 +34,7 @@ export function PublishLockButton({
   onReopen,
   isPending = false,
   canPublish = true,
-  publishDisabledReason = "No submitted report content yet.",
+  publishDisabledReason = "Publish requires at least one submitted section.",
 }: PublishLockButtonProps) {
   const [showDialog, setShowDialog] = useState(false);
   const [showReopenDialog, setShowReopenDialog] = useState(false);

@@ -2,39 +2,42 @@
 
 ## 1. Head draft visibility (items 6 + 4)
 
-- [ ] 1.1 Relax the empty-state gate in `weekly-report-page.tsx` (~line 547) so
+- [x] 1.1 Relax the empty-state gate in `weekly-report-page.tsx` (~line 547) so
       the head sees draft content; show the empty state only when content is truly
       empty (no section has data), not when `submitted === 0`.
-- [ ] 1.2 Keep `canPublish` gated at `submitted > 0`; ensure the "Nothing to
+- [x] 1.2 Keep `canPublish` gated at `submitted > 0`; ensure the "Nothing to
       publish" label and `showPublishHint` key off the publish precondition, not the
       empty screen. Relabel the now-misleading strings: the status-line hint
       "No submitted report content yet." (`weekly-report-page.tsx` ~line 466) and
       `publishDisabledReason` (~line 517) MUST read as a publish precondition
       (e.g. "Publish requires at least one submitted section."), not as
       absence-of-content.
-- [ ] 1.5 Define "truly empty" for the empty state as no item/risk/decision
+- [x] 1.5 Define "truly empty" for the empty state as no item/risk/decision
       across sections (reuse `hasExpandableProducts` or equivalent), never
       `submitted === 0`.
-- [ ] 1.3 Leave the API content query and the viewer service gate unchanged.
-- [ ] 1.4 Test: head + 0 submitted with drafts renders content; empty state only
+- [x] 1.3 Leave the API content query and the viewer service gate unchanged.
+- [x] 1.4 Test: head + 0 submitted with drafts renders content; empty state only
       on truly-empty content; viewer unpublished still rejected.
 
 ## 2. View-mode toggle (item 7)
 
-- [ ] 2.1 Pass `mode={mode === "slides" ? "slides" : "edit"}` into `ViewModeToggle`
+- [x] 2.1 Pass `mode={mode === "slides" ? "slides" : "edit"}` into `ViewModeToggle`
       in `head-report-shell.tsx`.
-- [ ] 2.2 Encode `scope` and `includeArchive` in the URL (currently local
+- [x] 2.2 Encode `scope` and `includeArchive` in the URL (currently local
       `useState`); restore them on load.
-- [ ] 2.3 Test: active segment matches URL mode; refresh / shared link restore
-      mode + scope.
+- [x] 2.3 Test: active segment matches URL mode; refresh / shared link restore
+      mode + scope + show-archived. Coverage split by layer: `head-report-shell.test.tsx`
+      asserts active-segment-reflects-mode, scope-restore, AND archive-restore
+      (aria-checked from `?archive=1`); `[reportId]/page.test.tsx` asserts the
+      route maps `?mode=slides`→`mode` prop (and defaults non-slides→form).
 
 ## 3. Pipeline tooltip color (item 9)
 
-- [ ] 3.1 Thread `hiddenStagesEffectiveStatuses` (`StageStatus[]`) into
+- [x] 3.1 Thread `hiddenStagesEffectiveStatuses` (`StageStatus[]`) into
       `CollapsedStagesIndicator` alongside the reveal lines.
-- [ ] 3.2 Color each row via `STATUS_CONFIG[status].text` + a leading status dot
+- [x] 3.2 Color each row via `STATUS_CONFIG[status].text` + a leading status dot
       (blocked/at-risk/on-track/neutral); no new token; keep the light popover surface.
-- [ ] 3.3 Test: mixed-status reveal rows carry the right token colors.
+- [x] 3.3 Test: mixed-status reveal rows carry the right token colors.
 
 ## 4. Summary clip (item 1) — conformance bug, no spec delta
 
