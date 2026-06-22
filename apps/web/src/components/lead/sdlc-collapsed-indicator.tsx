@@ -51,7 +51,18 @@ export function CollapsedStagesIndicator({
           {collapsedStagesIndicatorLabel(count)}
         </span>
       </TooltipTrigger>
-      <TooltipContent className="text-left">
+      {/*
+        Softer surface than the shared dark default: the lead found the
+        white-on-black "+N more" reveal harsher than the rest of the UI. Scoped
+        to THIS indicator via a className override (the same light popover tokens
+        as dropdown-menu/select) — the shared dark TooltipContent (stage chips,
+        sidebar) is left untouched. `hideArrow` drops the dark Radix arrow that
+        would clash with the light surface.
+      */}
+      <TooltipContent
+        hideArrow
+        className="border bg-popover text-left text-popover-foreground shadow-md"
+      >
         {reveal.map((line) => (
           <div key={line}>{line}</div>
         ))}

@@ -12,6 +12,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { useFullscreen } from "../../hooks/use-fullscreen";
 import {
   stableStringify,
   useLeadFormAutosave,
@@ -378,6 +379,17 @@ export function LeadForm({
   const isSlidesMode = mode === "slides";
   // W9.A: ref shared between lead-form header (SlideFullscreenButton) and LeadSlidesClient (deck root div)
   const deckRef = useRef<HTMLDivElement>(null);
+  const fullscreenToggleRef = useRef<HTMLButtonElement>(null);
+  // add-slide-fullscreen-exit-affordance: lead-form is the SINGLE fullscreen
+  // owner on the hosted path. It threads isFullscreen + toggle into BOTH its
+  // toolbar toggle AND LeadSlidesClient (whose local hook is disabled), so
+  // exactly one `f`/fullscreenchange listener exists. Focus returns to the
+  // toolbar toggle on exit. Gated on slides mode so the edit form adds no `f`.
+  const slidesFullscreen = useFullscreen(
+    deckRef,
+    fullscreenToggleRef,
+    isSlidesMode,
+  );
   const sessionState = useContext(SessionContext);
   const sessionRole = sessionState?.user?.role ?? null;
   const isHeadLikeSession = sessionRole === "head" || sessionRole === "admin";
@@ -1319,7 +1331,11 @@ export function LeadForm({
                   Both render as a square icon button at the shared toolbar
                   height in the same trailing position. */}
               {isSlidesMode ? (
-                <SlideFullscreenButton targetRef={deckRef} />
+                <SlideFullscreenButton
+                  isFullscreen={slidesFullscreen.isFullscreen}
+                  onToggle={slidesFullscreen.toggle}
+                  buttonRef={fullscreenToggleRef}
+                />
               ) : (
                 <button
                   type="button"
@@ -1355,6 +1371,11 @@ export function LeadForm({
             initialReportId={targetReportId || pinnedReportId || null}
             chrome="content"
             deckRef={deckRef}
+            // add-slide-fullscreen-exit-affordance: lead-form owns the single
+            // fullscreen hook; the deck's local hook is disabled and it renders
+            // the floating pill + Esc hint presentationally from these props.
+            isFullscreen={slidesFullscreen.isFullscreen}
+            onToggle={slidesFullscreen.toggle}
             // slides-record-visibility: thread the toolbar's visibility state so
             // the deck shows Mine vs Everyone. LeadSlidesClient owns the own-deck
             // gate + the gated cross-author fetch/merge; lead-form just supplies

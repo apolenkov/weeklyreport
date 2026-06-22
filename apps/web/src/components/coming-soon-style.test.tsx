@@ -1,10 +1,11 @@
 /**
  * @vitest-environment jsdom
  *
- * coming-soon-style-consistency: guards that every deferred-feature affordance
- * keeps the single canonical `ComingSoonBadge` style and that no component
- * hand-rolls a bespoke "Coming Soon" pill. No production code changed by this
- * change — these are the regression guards that pin the already-uniform state.
+ * fix-coming-soon-tooltip-clipping: the deferred-feature ComingSoon controls now
+ * render their tooltip through the shared Radix portal (escaping the
+ * `overflow-x-auto` clipping that hid the agent-review + holidays tooltips).
+ * These guards pin: the single canonical amber badge, the Radix wrapper on every
+ * control, retirement of the CSS anchor, and the no-bespoke-pill invariant.
  */
 
 import "@testing-library/jest-dom/vitest";
@@ -14,10 +15,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { COMING_SOON_TOOLTIP_ANCHOR } from "./coming-soon-tooltip-anchor";
 import { PdfExportComingSoonControl } from "./lead/pdf-export-coming-soon";
 import { VersionComingSoonControl } from "./lead/version-coming-soon";
 import { AgentReviewComingSoon } from "./report-shell/agent-review-coming-soon";
@@ -35,66 +35,70 @@ describe("ComingSoonBadge — single canonical style", () => {
     expect(badge).toHaveAttribute("data-state", "coming-soon");
     expect(badge).toHaveClass(CANONICAL_BG, CANONICAL_FG);
   });
+});
 
-  it("every deferred control's badge resolves to the same canonical tokens", () => {
-    const controls = [
-      <AgentReviewComingSoon key="agent" />,
-      <PdfExportComingSoonControl key="pdf" />,
-      <VersionComingSoonControl key="version" />,
-    ];
-    for (const control of controls) {
-      const { container, unmount } = render(control);
-      const badge = container.querySelector('[data-state="coming-soon"]');
+describe("Coming-Soon controls render the amber badge through the Radix portal", () => {
+  const controls = [
+    {
+      label: "agent-review",
+      node: <AgentReviewComingSoon />,
+      testid: "agent-review-coming-soon",
+    },
+    {
+      label: "pdf-export",
+      node: <PdfExportComingSoonControl />,
+      testid: "lead-pdf-export-coming-soon",
+    },
+    {
+      label: "version",
+      node: <VersionComingSoonControl />,
+      testid: "version-coming-soon",
+    },
+  ];
+
+  it.each(controls)(
+    "$label: focus opens a portaled amber ComingSoonBadge (no second colour variant)",
+    async ({ node, testid }) => {
+      render(node);
+      // Portaled: no badge is in the DOM before the control is interacted with.
+      expect(document.querySelector('[data-state="coming-soon"]')).toBeNull();
+
+      fireEvent.focus(screen.getByTestId(testid));
+
+      await screen.findByRole("tooltip");
+      // The VISIBLE badge lives in the Radix content (`data-slot`), not in the
+      // sr-only `role="tooltip"` description node (which the whitespace
+      // `aria-label` now blanks — see below).
+      const content = document.querySelector('[data-slot="tooltip-content"]');
+      expect(content).not.toBeNull();
+      const badge = content?.querySelector('[data-state="coming-soon"]');
       expect(badge).not.toBeNull();
-      // Each badge carries the canonical tokens — none overrides bg/fg.
       expect(badge?.classList.contains(CANONICAL_BG)).toBe(true);
       expect(badge?.classList.contains(CANONICAL_FG)).toBe(true);
-      unmount();
-    }
-  });
+      // The chromeless content must NOT fall back to the Radix dark surface.
+      expect(content?.classList.contains("bg-foreground")).toBe(false);
+    },
+  );
+
+  it.each(controls)(
+    "$label: the badge is decorative — the control's own aria-label is the single coming-soon source (no double-announce)",
+    async ({ node, testid }) => {
+      render(node);
+      const control = screen.getByTestId(testid);
+      fireEvent.focus(control);
+      await screen.findByRole("tooltip");
+      // Persistent accessible name carries the coming-soon state (browse mode).
+      expect(control).toHaveAccessibleName(/coming soon/i);
+      // Radix's auto description is blanked, so SR users do not hear it twice.
+      expect(control).toHaveAccessibleDescription("");
+    },
+  );
 });
 
-describe("ComingSoonBadge — single centred tooltip anchor (#91)", () => {
-  // The shared anchor centres the badge under the control regardless of width.
-  // Splitting it into tokens gives the assertion teeth: a control that diverges
-  // (or reintroduces `right-0`) drops a token and fails.
-  const ANCHOR_TOKENS = COMING_SOON_TOOLTIP_ANCHOR.split(" ");
-
-  it("the shared anchor centres the badge and never right-aligns it", () => {
-    expect(ANCHOR_TOKENS).toContain("left-1/2");
-    expect(ANCHOR_TOKENS).toContain("-translate-x-1/2");
-    expect(ANCHOR_TOKENS).not.toContain("right-0");
-  });
-
-  it("every tooltip control's badge uses the identical centred anchor", () => {
-    const controls = [
-      <AgentReviewComingSoon key="agent" />,
-      <PdfExportComingSoonControl key="pdf" />,
-      <VersionComingSoonControl key="version" />,
-    ];
-    for (const control of controls) {
-      const { container, unmount } = render(control);
-      const badge = container.querySelector('[data-state="coming-soon"]');
-      expect(badge).not.toBeNull();
-      for (const token of ANCHOR_TOKENS) {
-        expect(badge?.classList.contains(token)).toBe(true);
-      }
-      // The wide text-labelled agent-review must NOT right-align (the bug).
-      expect(badge?.classList.contains("right-0")).toBe(false);
-      unmount();
-    }
-  });
-});
-
-describe("#91 — all six tooltip controls share the centred anchor (source scan)", () => {
-  // The render test above reaches only the 3 exported controls. The other 3
-  // (nav theme/language, admin holidays) are internal functions needing
-  // providers to render, so a filesystem scan guards them: each tooltip
-  // control's source MUST consume the shared const and carry no `right-0`
-  // anchor. Without this, hard-coding `right-0` onto e.g. the nav theme badge
-  // (tailwind-merge overriding the shared anchor) would pass every other test.
-  // This test file lives in apps/web/src/components, so its own dir is the
-  // root the control paths below are relative to.
+describe("every tooltip control migrated to the shared Radix wrapper (source scan)", () => {
+  // The render test reaches only the 3 exported controls; the other 3 (nav
+  // theme/language, admin holidays) are internal functions needing providers/
+  // tab context, so a filesystem scan guards them.
   const componentsRoot = path.dirname(fileURLToPath(import.meta.url));
   const TOOLTIP_CONTROL_FILES = [
     "report-shell/agent-review-coming-soon.tsx",
@@ -104,14 +108,26 @@ describe("#91 — all six tooltip controls share the centred anchor (source scan
     "admin/settings-tab.tsx",
   ];
 
-  it("every tooltip control source consumes the shared const, none right-aligns", () => {
+  it("each control uses ComingSoonTooltip and dropped the retired CSS anchor", () => {
     for (const rel of TOOLTIP_CONTROL_FILES) {
       const source = readFileSync(path.join(componentsRoot, rel), "utf8");
-      expect(source).toContain("COMING_SOON_TOOLTIP_ANCHOR");
-      // A bespoke `right-0` anchor on a ComingSoon tooltip is the exact bug
-      // #91 fixes; the shared const centres instead.
+      expect(source).toContain("ComingSoonTooltip");
+      expect(source).not.toContain("COMING_SOON_TOOLTIP_ANCHOR");
+      // A bespoke `right-0` anchor on a ComingSoon tooltip was the original bug.
       expect(source).not.toContain("absolute right-0");
     }
+  });
+
+  it("the holidays tab keeps a persistent ComingSoonBadge for its accessible name", () => {
+    // The Radix tooltip badge is portaled (hover-only), so the holidays span
+    // carries a PERSISTENT (sr-only) ComingSoonBadge — the tab's accessible name
+    // still announces the coming-soon state without adding an aria-label.
+    const source = readFileSync(
+      path.join(componentsRoot, "admin/settings-tab.tsx"),
+      "utf8",
+    );
+    expect(source).toContain("ComingSoonBadge");
+    expect(source).toContain("sr-only");
   });
 });
 
@@ -119,10 +135,8 @@ describe("every inert Coming Soon control — no stacked native title", () => {
   // Inert ComingSoon controls expose their state through their `aria-label`
   // (or visible text) plus the amber ComingSoonBadge tooltip. A native
   // `title="Coming Soon"` on the same control stacked a SECOND browser-native
-  // tooltip over the badge — the double-tooltip glitch the user hit on the
-  // lead toolbar's Agent-review control while the nav Theme control (already
-  // fixed) showed only the badge. No control may carry a native title; this
-  // source scan guards every one of them, not just nav-bar.
+  // tooltip over the badge — the double-tooltip glitch. No control may carry a
+  // native title; this source scan guards every one of them.
   const componentsRoot = path.dirname(fileURLToPath(import.meta.url));
   const INERT_CONTROL_FILES = [
     "report-shell/agent-review-coming-soon.tsx",
