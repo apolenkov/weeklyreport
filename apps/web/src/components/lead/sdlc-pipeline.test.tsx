@@ -731,6 +731,25 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     expect(tip).toHaveTextContent("DevOps — unassigned");
   });
 
+  it("the +N more reveal uses the softer light popover surface, not the dark default", async () => {
+    render(
+      <SdlcPipeline
+        products={[PRODUCT_OWN_FOREIGN_VACANT]}
+        readOnly={false}
+        visibilityMode="mine"
+      />,
+    );
+    const indicator = screen.getByTestId("collapsed-stages-indicator");
+    fireEvent.pointerEnter(indicator);
+    fireEvent.pointerMove(indicator);
+    await screen.findByRole("tooltip");
+    const content = document.querySelector('[data-slot="tooltip-content"]');
+    expect(content).not.toBeNull();
+    // Scoped restyle: light popover tokens, NOT the shared dark surface.
+    expect(content?.classList.contains("bg-popover")).toBe(true);
+    expect(content?.classList.contains("bg-foreground")).toBe(false);
+  });
+
   it("#90: the +N more indicator takes the worst hidden status colour (at-risk)", () => {
     // PRODUCT_OWN_FOREIGN_VACANT hides Testing(at-risk) + DevOps(empty);
     // worst = at-risk → the indicator border + text use the at-risk tokens.
