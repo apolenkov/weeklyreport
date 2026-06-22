@@ -2,7 +2,7 @@
 
 ## Problem
 
-Four independent issues from the live demo on 2026-06-22, grouped into one
+Five independent issues from the live demo on 2026-06-22, grouped into one
 change at the user's request:
 
 1. **Head sees an empty report while drafts exist.** The head Status Report
@@ -23,6 +23,11 @@ change at the user's request:
 4. **Summary slide clips a row.** On the lead Summary scope, the bottom row of a
    section (e.g. NEXT FOCUS) is clipped by the panel edge instead of being
    reachable.
+5. **Product-grid sections drift between cards.** On the lead PRODUCT scope, the
+   four sections (Current / Next / Risks / Decisions) do not line up across
+   sibling product cards: a card without risks floats its Decisions up to where
+   a neighbour shows Risks, so the eye cannot scan across products. The earlier
+   subgrid work aligned a single merged Risks+Decisions band, not each section.
 
 ## Solution
 
@@ -49,6 +54,12 @@ change at the user's request:
    is therefore a CONFORMANCE bug against that existing contract, not a new
    requirement — so this fix adds NO new spec capability (avoids duplicating
    `lead-slide-quadrants`). It is carried as a bug-fix task + regression test.
+5. **Product-grid section alignment.** Split the merged Risks+Decisions band in
+   `LeadProductGrid` into two separate subgrid rows (five total: header,
+   Current, Next, Risks, Decisions). Each band always renders — a quiet
+   placeholder when empty — so the five shared row tracks line up across every
+   card in a grid row. This MODIFIES the `lead-product-grid-alignment` spec
+   (4 bands → 5 separate bands).
 
 ## Non-goals
 
@@ -62,7 +73,7 @@ change at the user's request:
 ## Source
 
 Live demo feedback, 2026-06-22, grill-with-docs-codex session. Images #1, #3,
-#4, #6.
+#4, #6 (items 1–4); annotated product-grid screenshot, same day (item 5).
 
 ## Activation trigger
 

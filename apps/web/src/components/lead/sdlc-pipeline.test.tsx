@@ -7,7 +7,7 @@
  * hue. Tests prove the two signals are independent across all four quadrants.
  */
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { Product } from "./mock-data";
@@ -729,6 +729,27 @@ describe("SdlcPipeline — lead-mine-hide-unowned-stages chip visibility", () =>
     // a vacant stage reads "unassigned" — revealed via the shared Radix tooltip.
     expect(tip).toHaveTextContent("Testing — OL: at-risk");
     expect(tip).toHaveTextContent("DevOps — unassigned");
+  });
+
+  it("pipeline-tooltip-and-indicator: each reveal row carries its stage status colour", async () => {
+    // PRODUCT_OWN_FOREIGN_VACANT hides Testing (OL: at-risk) + DevOps
+    // (unassigned/empty). Each reveal row MUST take its own status text token —
+    // at-risk for Testing, neutral for the unassigned DevOps — not plain text.
+    render(
+      <SdlcPipeline
+        products={[PRODUCT_OWN_FOREIGN_VACANT]}
+        readOnly={false}
+        visibilityMode="mine"
+      />,
+    );
+    const indicator = screen.getByTestId("collapsed-stages-indicator");
+    fireEvent.pointerEnter(indicator);
+    fireEvent.pointerMove(indicator);
+    const tip = await screen.findByRole("tooltip");
+    const atRiskRow = within(tip).getByText(/Testing — OL: at-risk/);
+    expect(atRiskRow).toHaveStyle({ color: "var(--color-chip-at-risk-text)" });
+    const neutralRow = within(tip).getByText(/DevOps — unassigned/);
+    expect(neutralRow).toHaveStyle({ color: "var(--color-muted-foreground)" });
   });
 
   it("the +N more reveal uses the softer light popover surface, not the dark default", async () => {

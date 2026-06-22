@@ -463,7 +463,7 @@ export function WeeklyReportPage({
               report-status row (not the action row). */}
           {showPublishHint && (
             <span className="text-xs text-[var(--color-muted-foreground)]">
-              No submitted report content yet.
+              Publish requires at least one submitted section.
             </span>
           )}
           {/* head-toolbar-parity D2: department context label — a label, not a
@@ -514,7 +514,7 @@ export function WeeklyReportPage({
               }
               isPending={publishMut.isPending || reopenMut.isPending}
               canPublish={canPublishReport}
-              publishDisabledReason="No submitted report content yet."
+              publishDisabledReason="Publish requires at least one submitted section."
             />
           )}
         </DocumentActionGroup>
@@ -540,11 +540,13 @@ export function WeeklyReportPage({
         }
       />
 
-      {/* A32: empty-state — no submissions in current open/reopened period.
-          When submissionCount === 0 and the period is not yet published,
-          replace the (blank) portfolio table and accordion with a helpful
-          nudge. Keeps header + period nav intact so the head retains context. */}
-      {submitted === 0 && view.period.periodStatus !== "published" ? (
+      {/* A32 + head-report-visibility: empty-state — only when the report has
+          NO section content at all (not merely zero submissions). The head sees
+          live draft content regardless of submission, so the gate keys off
+          `hasExpandableProducts` (any item/risk/decision/priority across
+          sections), never `submitted === 0`. Keeps header + period nav intact so
+          the head retains context. */}
+      {!hasExpandableProducts && view.period.periodStatus !== "published" ? (
         <div
           className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] py-16 text-center"
           data-testid="empty-submissions-state"

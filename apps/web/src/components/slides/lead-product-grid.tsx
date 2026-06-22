@@ -77,18 +77,21 @@ function ItemList({
 /**
  * A labeled card section ("Current", "Next", "Risks (N)"). The count is folded
  * into the header so the body shows the actual content, not just a tally.
+ * `className` lets a section carry a divider/spacing on top of its subgrid row.
  */
 function CardSection({
   label,
   count,
+  className,
   children,
 }: {
   label: string;
   count?: number;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <div className="space-y-1">
+    <div className={className ? `space-y-1 ${className}` : "space-y-1"}>
       <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-muted-foreground)]">
         {label}
         {count != null ? (
@@ -102,12 +105,43 @@ function CardSection({
   );
 }
 
+/** Risk bullets with the destructive triangle marker; quiet placeholder when
+ *  empty so the Risks subgrid row still holds its track. */
+function RiskList({ risks }: { risks: readonly string[] }) {
+  if (risks.length === 0) {
+    return (
+      <p className="text-xs italic text-[var(--color-muted-foreground)]">
+        No risks raised
+      </p>
+    );
+  }
+  return (
+    <ul className="space-y-1">
+      {risks.slice(0, MAX_VISIBLE_ITEMS).map((risk, i) => (
+        <li
+          key={risk + String(i)}
+          className="flex items-start gap-1 text-xs leading-4 text-[var(--color-foreground)]"
+        >
+          <AlertTriangle
+            className="mt-0.5 h-3 w-3 shrink-0 text-[var(--color-destructive)]"
+            aria-hidden="true"
+          />
+          <span>{risk}</span>
+        </li>
+      ))}
+      {risks.length > MAX_VISIBLE_ITEMS ? (
+        <li className="text-xs text-[var(--color-muted-foreground)]">
+          +{risks.length - MAX_VISIBLE_ITEMS} more
+        </li>
+      ) : null}
+    </ul>
+  );
+}
+
 function ProductCard({ product }: { product: SlideProduct }) {
   const isCross = product.id === "cross-product";
-  const hasRisks = product.risks.length > 0;
-  const hasDecisions = product.decisions.length > 0;
   return (
-    <div className="row-span-4 grid grid-rows-subgrid gap-3 rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+    <div className="row-span-5 grid grid-rows-subgrid gap-3 rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
       <div className="flex items-start justify-between gap-2">
         <h3 className="break-words text-sm font-semibold text-[var(--color-foreground)]">
           {product.name}
@@ -123,46 +157,28 @@ function ProductCard({ product }: { product: SlideProduct }) {
         <ItemList items={product.nextItems} empty="No next focus" />
       </CardSection>
 
-      {/* lead-product-grid-alignment: the Risks+Decisions band is the 4th and
-          final subgrid row and ALWAYS renders (no mt-auto bottom-pin, no
-          hasRisks||hasDecisions collapse) so its track stays aligned across
-          every card in the row. An empty band shows a quiet placeholder rather
-          than collapsing, which would unalign neighbouring cards. */}
-      <div className="space-y-3 border-t border-[rgba(0,0,0,0.06)] pt-2">
-        {hasRisks ? (
-          <CardSection label="Risks" count={product.risks.length}>
-            <ul className="space-y-1">
-              {product.risks.slice(0, MAX_VISIBLE_ITEMS).map((risk, i) => (
-                <li
-                  key={risk + String(i)}
-                  className="flex items-start gap-1 text-xs leading-4 text-[var(--color-foreground)]"
-                >
-                  <AlertTriangle
-                    className="mt-0.5 h-3 w-3 shrink-0 text-[var(--color-destructive)]"
-                    aria-hidden="true"
-                  />
-                  <span>{risk}</span>
-                </li>
-              ))}
-              {product.risks.length > MAX_VISIBLE_ITEMS ? (
-                <li className="text-xs text-[var(--color-muted-foreground)]">
-                  +{product.risks.length - MAX_VISIBLE_ITEMS} more
-                </li>
-              ) : null}
-            </ul>
-          </CardSection>
-        ) : null}
-        {hasDecisions ? (
-          <CardSection label="Decisions" count={product.decisions.length}>
-            <ItemList items={product.decisions} empty="No decisions" />
-          </CardSection>
-        ) : null}
-        {!hasRisks && !hasDecisions ? (
-          <p className="text-xs italic text-[var(--color-muted-foreground)]">
-            No risks or decisions
-          </p>
-        ) : null}
-      </div>
+      {/* lead-product-grid-alignment: Risks and Decisions are SEPARATE subgrid
+          rows (5 tracks total: header + Current + Next + Risks + Decisions) so
+          EACH section aligns independently across every card in the row — a
+          card missing one still holds that row with a quiet placeholder rather
+          than letting the next section float up. The divider sits above the
+          Risks row to keep the two grouped visually. */}
+      <CardSection
+        label="Risks"
+        count={product.risks.length > 0 ? product.risks.length : undefined}
+        className="border-t border-[rgba(0,0,0,0.06)] pt-2"
+      >
+        <RiskList risks={product.risks} />
+      </CardSection>
+
+      <CardSection
+        label="Decisions"
+        count={
+          product.decisions.length > 0 ? product.decisions.length : undefined
+        }
+      >
+        <ItemList items={product.decisions} empty="No decisions" />
+      </CardSection>
     </div>
   );
 }

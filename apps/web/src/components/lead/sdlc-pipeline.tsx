@@ -268,9 +268,14 @@ export function SdlcPipeline({
             hiddenStages,
             foreignOwners,
           );
-          const hiddenColors = collapsedIndicatorColors(
-            hiddenStagesEffectiveStatuses(hiddenStages, foreignOwners),
+          // pipeline-tooltip-and-indicator: the per-row effective statuses are
+          // 1:1 with the reveal lines; reuse them for BOTH the pill colour (worst
+          // status) and per-row colouring inside the popover.
+          const hiddenStatuses = hiddenStagesEffectiveStatuses(
+            hiddenStages,
+            foreignOwners,
           );
+          const hiddenColors = collapsedIndicatorColors(hiddenStatuses);
           return (
             <div
               key={product.id}
@@ -385,6 +390,7 @@ export function SdlcPipeline({
                   {hiddenStages.length > 0 && (
                     <CollapsedStagesIndicator
                       reveal={hiddenReveal}
+                      statuses={hiddenStatuses}
                       colors={hiddenColors}
                       count={hiddenStages.length}
                     />

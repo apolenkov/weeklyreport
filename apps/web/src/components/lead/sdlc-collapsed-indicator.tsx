@@ -6,7 +6,8 @@ import {
   TooltipTrigger,
 } from "@customreport/ui/components/ui/tooltip";
 
-import { STAGE_CHIP_BOX_HEIGHT } from "./stage-chip-config";
+import type { StageStatus } from "./mock-data";
+import { STAGE_CHIP_BOX_HEIGHT, STATUS_CONFIG } from "./stage-chip-config";
 
 // lead-pipeline-mine-reveal-and-own-stage-label (affordance 2): in Mine mode the
 // filter hides foreign-owned and vacant chips. This small inert indicator near
@@ -23,6 +24,12 @@ function collapsedStagesIndicatorLabel(count: number): string {
 interface CollapsedStagesIndicatorProps {
   /** One honest reveal line per hidden stage (name + owner + status). */
   readonly reveal: readonly string[];
+  /**
+   * The effective status of each hidden stage, aligned 1:1 with `reveal`, so a
+   * blocked/at-risk row stands out in the popover. Falls back to neutral when a
+   * row has no matching status.
+   */
+  readonly statuses: readonly StageStatus[];
   /** Border + text colour derived from the worst hidden status. */
   readonly colors: { readonly border: string; readonly text: string };
   /** Number of stages the Mine filter collapsed. */
@@ -31,6 +38,7 @@ interface CollapsedStagesIndicatorProps {
 
 export function CollapsedStagesIndicator({
   reveal,
+  statuses,
   colors,
   count,
 }: CollapsedStagesIndicatorProps) {
@@ -63,9 +71,24 @@ export function CollapsedStagesIndicator({
         hideArrow
         className="border bg-popover text-left text-popover-foreground shadow-md"
       >
-        {reveal.map((line) => (
-          <div key={line}>{line}</div>
-        ))}
+        {reveal.map((line, idx) => {
+          // pipeline-tooltip-and-indicator: colour each row by its stage status
+          // (reuse STATUS_CONFIG tokens, no new token) with a leading status
+          // dot, so a blocked/at-risk hidden stage stands out. The status is
+          // already announced in the text/aria-label, so the dot is decorative.
+          const status = statuses[idx] ?? "empty";
+          const color = STATUS_CONFIG[status].text;
+          return (
+            <div key={line} className="flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
+                style={{ backgroundColor: color }}
+              />
+              <span style={{ color }}>{line}</span>
+            </div>
+          );
+        })}
       </TooltipContent>
     </Tooltip>
   );
