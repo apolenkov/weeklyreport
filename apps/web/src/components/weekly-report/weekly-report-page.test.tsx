@@ -310,7 +310,7 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     expect(captured["period.publish"].mutationFn).not.toHaveBeenCalled();
   });
 
-  it("A32: shows empty-state with archive link when submissionCount === 0 and period is open", async () => {
+  it("A32: shows empty-state with archive link when the report has no content and the period is open", async () => {
     renderPage({
       ...makeWeeklyReportData("open", {
         portfolioOverview: [],

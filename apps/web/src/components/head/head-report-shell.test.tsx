@@ -575,4 +575,18 @@ describe("HeadReportShell — view-mode toggle reflects mode + URL view state", 
       expect.objectContaining({ scroll: false }),
     );
   });
+
+  it("restores the show-archived filter from the URL on load", () => {
+    // The spec's "refresh preserves the view state" scenario covers the archive
+    // filter too: a shared `?archive=1` URL must restore the toggle as checked,
+    // not just write it on click.
+    mockPathname.mockReturnValue("/head/report");
+    mockSearchParams.mockReturnValue(new URLSearchParams("archive=1"));
+    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="form" />);
+
+    expect(screen.getByRole("switch", { name: /archive/i })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
 });
