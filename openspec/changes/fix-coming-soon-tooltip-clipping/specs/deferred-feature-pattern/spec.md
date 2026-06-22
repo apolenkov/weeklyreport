@@ -23,14 +23,17 @@ Every tooltip-anchored ComingSoon control MUST render its tooltip through the sh
    content with no dark surface and no dark arrow.
 3. The control stays inert (`aria-disabled="true"`, never the `disabled`
    attribute, so Radix still receives the hover/focus that opens the tooltip);
-   the focusable trigger keeps its `aria-label` (the accessible NAME is
-   unchanged). NOTE: Radix wires the open tooltip content as the trigger's
-   `aria-describedby`, so on a focusable control whose `aria-label` already ends
-   with "is coming soon", a screen reader announces the name plus the badge
-   description "Coming Soon" — a minor redundancy. Whether to shorten those five
-   `aria-label`s to the bare feature name (so the description carries the
-   coming-soon state exactly once) is a deferred decision; the Holidays inert
-   span is unaffected (its `describedby` is not on a focused button).
+   the focusable trigger keeps its full `aria-label` (e.g. "Agent review is
+   coming soon") as the SINGLE, PERSISTENT source of the coming-soon state — the
+   only signal available in browse mode, when the hover/focus tooltip is closed.
+   The amber badge tooltip is therefore DECORATIVE: the shared ComingSoon wrapper
+   passes a whitespace `aria-label` to the Radix content, which blanks the
+   sr-only description Radix would otherwise wire as the trigger's
+   `aria-describedby`. This removes the focus-time double-announce (name +
+   "Coming Soon" description) WITHOUT shortening the `aria-label` (which would
+   drop the persistent signal). Shortening the five labels was considered and
+   REJECTED for that reason. The Holidays inert span is unaffected (its
+   accessible name already carries the state via a persistent sr-only badge).
 4. Inline (non-tooltip) `ComingSoonBadge` usages — the static admin
    integration-row badges — are NOT tooltip anchors and are out of scope for this
    rule.
@@ -69,3 +72,10 @@ Every tooltip-anchored ComingSoon control MUST render its tooltip through the sh
 - **WHEN** the wide text-labelled agent-review control and an icon-only control (nav theme) both show their tooltip
 - **THEN** both badges resolve to the same Radix `side`/`align`/`sideOffset`
 - **AND** no control reverts to the retired right-aligned or per-control CSS positioning
+
+#### Scenario: the badge is decorative — the coming-soon state is announced exactly once
+
+- **WHEN** a screen-reader user focuses a button ComingSoon control (e.g. agent-review) and its amber badge tooltip opens
+- **THEN** the control's persistent `aria-label` ("… is coming soon") is its accessible NAME
+- **AND** its accessible DESCRIPTION is empty (the wrapper blanks Radix's auto `aria-describedby`), so "coming soon" is announced once, not twice
+- **AND** with the tooltip closed (browse mode) the same `aria-label` still announces the coming-soon state
