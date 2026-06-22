@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Suspense, useCallback, useContext, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useContext, useMemo } from "react";
 
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
 import { SessionContext } from "../../lib/session-provider";
@@ -50,7 +51,39 @@ export function HeadReportShell({
   const departmentLabel =
     sessionState?.organization?.fullName ?? "CustomReport";
 
-  const [includeArchive, setIncludeArchive] = useState(false);
+  // head-toolbar-semantics: the head report view state — scope (Product/Leads)
+  // and the show-archived filter — lives in the URL so navigation, refresh, and
+  // shared links all restore the selection. `mode` is already a route concern
+  // (`?mode=slides`), resolved server-side and passed in as the `mode` prop.
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const buildQuery = useCallback(
+    (overrides: Record<string, string | null>) => {
+      const next = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(overrides)) {
+        if (value === null || value === "") next.delete(key);
+        else next.set(key, value);
+      }
+      const qs = next.toString();
+      return qs ? `?${qs}` : "";
+    },
+    [searchParams],
+  );
+
+  const includeArchive = searchParams.get("archive") === "1";
+  const setIncludeArchive = useCallback(
+    (value: boolean) => {
+      router.replace(
+        `${pathname}${buildQuery({ archive: value ? "1" : null })}`,
+        {
+          scroll: false,
+        },
+      );
+    },
+    [router, pathname, buildQuery],
+  );
 
   const historyQ = useQuery(
     trpc.reports.compiledHistory.queryOptions({ includeArchive }),
@@ -123,27 +156,34 @@ export function HeadReportShell({
     return [...prepended, ...historyPeriods];
   }, [historyQ.data, activeQ.data, displayedQ.data, reportId]);
 
+  // Period navigation preserves the current view state (mode, authorId, scope,
+  // show-archived) — all already live in the URL, so `buildQuery({})` carries
+  // them onto the next period's URL unchanged.
   const urlBuilder = useCallback(
-    (periodId: string) => {
-      const base = `/head/report/${encodeURIComponent(periodId)}`;
-      if (mode === "slides") return `${base}?mode=slides`;
-      if (authorId) return `${base}?authorId=${encodeURIComponent(authorId)}`;
-      return base;
-    },
-    [mode, authorId],
+    (periodId: string) =>
+      `/head/report/${encodeURIComponent(periodId)}${buildQuery({})}`,
+    [buildQuery],
   );
 
-  const authorSuffix = authorId
-    ? `?authorId=${encodeURIComponent(authorId)}`
-    : "";
-  const editHref = `/head/report/${encodeURIComponent(reportId)}${authorSuffix}`;
-  const slidesHref = `/head/report/${encodeURIComponent(reportId)}?mode=slides${
-    authorId ? `&authorId=${encodeURIComponent(authorId)}` : ""
-  }`;
+  // The view-mode toggle only flips `mode`; every other view param (authorId,
+  // scope, show-archived) is preserved so switching Edit↔Slides keeps state.
+  const editHref = `/head/report/${encodeURIComponent(reportId)}${buildQuery({ mode: null })}`;
+  const slidesHref = `/head/report/${encodeURIComponent(reportId)}${buildQuery({ mode: "slides" })}`;
 
   // Grouping axis for the form-mode status pane (UAT 2026-05-22): product (the
-  // classic per-product list) or lead (products bucketed under each lead).
-  const [scope, setScope] = useState<ScopeValue>("product");
+  // classic per-product list) or lead (products bucketed under each lead). Held
+  // in the URL (`?scope=lead`) so it survives navigation / refresh.
+  const scope: ScopeValue =
+    searchParams.get("scope") === "lead" ? "lead" : "product";
+  const setScope = useCallback(
+    (value: ScopeValue) => {
+      router.replace(
+        `${pathname}${buildQuery({ scope: value === "lead" ? "lead" : null })}`,
+        { scroll: false },
+      );
+    },
+    [router, pathname, buildQuery],
+  );
   const reportScope = scope === "lead" ? "lead" : "product";
 
   // head-toolbar-parity D2: the department context label moved off the toolbar
@@ -177,7 +217,11 @@ export function HeadReportShell({
         onChange={setScope}
         allowedScopes={["product", "lead"]}
       />
-      <ViewModeToggle editHref={editHref} slidesHref={slidesHref} />
+      <ViewModeToggle
+        editHref={editHref}
+        slidesHref={slidesHref}
+        mode={mode === "slides" ? "slides" : "edit"}
+      />
     </>
   );
 

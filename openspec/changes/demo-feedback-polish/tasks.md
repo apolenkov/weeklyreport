@@ -38,14 +38,34 @@
 
 ## 4. Summary clip (item 1) — conformance bug, no spec delta
 
-- [ ] 4.1 The own/Summary scope renders `LeadUnifiedSlide` (`lead-slides-client.tsx`,
-      `scope === "own"`). Fix the in-page (non-fullscreen) render so its quadrants
-      honor `overflow-y:auto` + `min-h-0` (the same rule `lead-slide-quadrants`
-      already mandates for the fullscreen quadrants) instead of clipping the last row.
-- [ ] 4.2 Regression test: an overflowing own-scope section scrolls and the last
-      row is fully visible (not clipped). This restores conformance with
-      `lead-slide-quadrants`; no new spec capability is added (Codex Act-2 Q5).
+- [x] 4.1 ALREADY CONFORMANT on main — no code change needed. The own/Summary
+      scope renders `LeadUnifiedSlide`, whose `QuadrantCard` inner already carries
+      `overflow-y-auto` + `min-h-0` for BOTH the in-page and fullscreen renders
+      (`lead-unified-slide.tsx:76`), so the rule `lead-slide-quadrants` mandates is
+      honored in-page, not fullscreen-only. The grill's premise (in-page clips) was
+      resolved earlier by `lead-slide-quadrants` / the lead-report-feedback batch
+      (PR #21, merged 2026-06-22).
+- [x] 4.2 Regression test ALREADY EXISTS: `lead-unified-slide.test.tsx`
+      "dense quadrant overflow is scroll-reachable" asserts the inner
+      `overflow-y-auto` + `min-h-0` (in-page render, no fullscreen). No duplicate
+      added.
+- [x] 4.3 Live-verified (1728px, lead Summary): the dense "Current work" quadrant
+      (9 rows) has `overflow-y:auto`, `min-height:0`, content 386px in a 260px card;
+      the last row is NOT visible at rest but IS reachable by scrolling — a working
+      scroll, not an unreachable clip. `slide-frame` and the grid do not clip.
 
-## 5. Gates
+## 5. Product-grid section alignment (live demo feedback 2026-06-22, item 10)
 
-- [ ] 5.1 `pnpm typecheck && pnpm lint && pnpm test && openspec validate demo-feedback-polish --strict`.
+- [x] 5.1 Split the merged Risks+Decisions band in `lead-product-grid.tsx` into
+      two SEPARATE subgrid rows so each of the five bands (header, Current, Next,
+      Risks, Decisions) aligns independently across sibling cards. Bump the card
+      to `row-span-5`; both Risks and Decisions ALWAYS render (quiet placeholder
+      when empty), so a risk-less card no longer floats its Decisions up.
+- [x] 5.2 Modify the `lead-product-grid-alignment` spec (4 bands → 5 separate
+      bands) and update the component test (row-span-5; both empty placeholders).
+- [x] 5.3 Live-verify: at 1728px all of Current/Next/Risks/Decisions share one
+      baseline across all cards in a row even when a card lacks risks.
+
+## 6. Gates
+
+- [ ] 6.1 `pnpm typecheck && pnpm lint && pnpm test && openspec validate demo-feedback-polish --strict`.

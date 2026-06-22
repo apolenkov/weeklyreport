@@ -355,6 +355,72 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     ).not.toBeInTheDocument();
   });
 
+  it("head-report-visibility: shows live draft content (no empty-state) with 0 submissions", async () => {
+    // The API returns draft sections regardless of submission; the head must
+    // see them. Empty-state keys off content presence, not the submitted count.
+    // authorId focuses Product Alpha, which auto-expands its accordion so the
+    // draft row text is rendered (not just counted).
+    renderPage(
+      {
+        ...makeWeeklyReportData("open", {
+          portfolioOverview: [
+            {
+              productId: PRODUCT_ID_A,
+              productName: "Product Alpha",
+              worstStatus: "green",
+              stageCount: 1,
+              leadNames: ["Alice"],
+            },
+          ],
+          leadSections: [
+            {
+              reportSectionId: "22222222-2222-4222-8222-aaaaaaaaaaa1",
+              reportId: REPORT_ID,
+              authorId: AUTHOR_ID_A,
+              authorName: "Alice",
+              status: "draft",
+              submittedAt: null,
+              projects: [
+                { projectId: PRODUCT_ID_A, projectName: "Product Alpha" },
+              ],
+              items: [
+                {
+                  id: "33333333-3333-4333-8333-aaaaaaaaaa01",
+                  projectId: PRODUCT_ID_A,
+                  type: "current",
+                  text: "Draft task in progress",
+                  tag: "Dev",
+                  workflowStatus: "in_progress",
+                  carriedOver: false,
+                  completed: false,
+                },
+              ],
+              risks: [],
+              decisions: [],
+              priorities: [],
+            },
+          ],
+        }),
+        submissionCount: 0,
+      },
+      AUTHOR_ID_A,
+    );
+
+    await screen.findByRole("heading", { name: /status report/i });
+
+    // Draft content renders: the focused product's draft row text is visible
+    // even though zero sections are submitted.
+    expect(screen.getByText("Draft task in progress")).toBeInTheDocument();
+    // The empty-state is NOT shown — there is content to display.
+    expect(
+      screen.queryByTestId("empty-submissions-state"),
+    ).not.toBeInTheDocument();
+    // Publish stays gated on submission, not on content presence.
+    expect(
+      screen.getByRole("button", { name: /nothing to publish/i }),
+    ).toBeInTheDocument();
+  });
+
   it("viewer can read a published report without period mutation actions", async () => {
     const published = makeWeeklyReportData("published");
 
@@ -709,7 +775,9 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
       throw new Error("expected the status pill to have a parent row");
     }
     expect(
-      within(statusRow).getByText(/no submitted report content yet/i),
+      within(statusRow).getByText(
+        /publish requires at least one submitted section/i,
+      ),
     ).toBeInTheDocument();
     // 2) NOT inside the publish button's action container.
     const publishButton = screen.getByRole("button", {
@@ -720,7 +788,9 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
       throw new Error("expected the publish button to have a parent row");
     }
     expect(
-      within(actionRow).queryByText(/no submitted report content yet/i),
+      within(actionRow).queryByText(
+        /publish requires at least one submitted section/i,
+      ),
     ).not.toBeInTheDocument();
   });
 
@@ -738,7 +808,7 @@ describe("WeeklyReportPage — Export-PDF relocation + publish hint", () => {
     );
     await screen.findByRole("heading", { name: /status report/i });
     expect(
-      screen.queryByText(/no submitted report content yet/i),
+      screen.queryByText(/publish requires at least one submitted section/i),
     ).not.toBeInTheDocument();
   });
 });

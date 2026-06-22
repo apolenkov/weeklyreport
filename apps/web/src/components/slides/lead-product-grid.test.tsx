@@ -122,12 +122,14 @@ describe("LeadProductGrid", () => {
     expect(screen.getByText("Shared blocker")).toBeInTheDocument();
   });
 
-  it("aligns bands via subgrid: every card spans the 4 shared row tracks, no mt-auto", () => {
+  it("aligns bands via subgrid: every card spans the 5 shared row tracks, no mt-auto", () => {
     // jsdom has no layout engine, so we assert the MECHANISM that aligns the
     // bands across cards: each card is a `grid-rows-subgrid` participant
-    // spanning 4 shared row tracks (`row-span-4`), replacing the old
-    // `flex`/`h-full`/`mt-auto` bottom-pin which left Current/Next unaligned.
-    // The true horizontal alignment is proven only by the live check (4.2).
+    // spanning 5 shared row tracks (`row-span-5`) — header + Current + Next +
+    // Risks + Decisions, each its own track — replacing the old `flex`/`h-full`/
+    // `mt-auto` bottom-pin and the merged 4th Risks+Decisions band that let a
+    // missing-Risks card float its Decisions up. True horizontal alignment is
+    // proven only by the live check.
     const { container } = render(
       <LeadProductGrid
         products={[
@@ -139,18 +141,21 @@ describe("LeadProductGrid", () => {
 
     const tall = screen.getByText("Tall").closest("div.grid-rows-subgrid");
     const short = screen.getByText("Short").closest("div.grid-rows-subgrid");
-    expect(tall).toHaveClass("row-span-4", "grid-rows-subgrid");
-    expect(short).toHaveClass("row-span-4", "grid-rows-subgrid");
+    expect(tall).toHaveClass("row-span-5", "grid-rows-subgrid");
+    expect(short).toHaveClass("row-span-5", "grid-rows-subgrid");
     // The old flex bottom-pin mechanism is gone.
     expect(tall?.className).not.toContain("mt-auto");
     expect(tall?.className).not.toContain("h-full");
     expect(short?.className).not.toContain("mt-auto");
     expect(container.querySelector(".mt-auto")).toBeNull();
 
-    // The empty-content card STILL renders its Risks+Decisions band (a quiet
-    // placeholder) so the 4th track is held and neighbours stay aligned.
+    // The empty-content card STILL renders BOTH its Risks and Decisions rows as
+    // quiet placeholders so each track is held and neighbours stay aligned.
     expect(
-      within(short as HTMLElement).getByText("No risks or decisions"),
+      within(short as HTMLElement).getByText("No risks raised"),
+    ).toBeInTheDocument();
+    expect(
+      within(short as HTMLElement).getByText("No decisions"),
     ).toBeInTheDocument();
 
     // Sanity: the outer grid root carries the responsive multi-column layout.
@@ -158,14 +163,17 @@ describe("LeadProductGrid", () => {
     expect(grid).toHaveClass("lg:grid-cols-3");
   });
 
-  it("renders all four bands on every card, including the empty Risks+Decisions placeholder", () => {
+  it("renders all five bands on every card, including empty Risks and Decisions placeholders", () => {
     render(<LeadProductGrid products={[product({ name: "Solo" })]} />);
 
     expect(screen.getByText("Solo")).toBeInTheDocument(); // header band
     expect(screen.getByText("Current")).toBeInTheDocument(); // Current band
     expect(screen.getByText("Next")).toBeInTheDocument(); // Next band
-    // 4th band renders even with no risks and no decisions.
-    expect(screen.getByText("No risks or decisions")).toBeInTheDocument();
+    // Risks and Decisions are now distinct always-rendered bands.
+    expect(screen.getByText("Risks")).toBeInTheDocument();
+    expect(screen.getByText("Decisions")).toBeInTheDocument();
+    expect(screen.getByText("No risks raised")).toBeInTheDocument();
+    expect(screen.getByText("No decisions")).toBeInTheDocument();
   });
 
   it("caps the decisions list with a +N more row so the band stays bounded", () => {
