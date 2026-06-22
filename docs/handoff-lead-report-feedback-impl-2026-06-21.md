@@ -7,6 +7,40 @@ and committed** on an isolated worktree branch. NOT pushed to `main`, NOT merged
 A clean **live-verify is blocked** by shared-environment contention (see below) —
 the visual/geometry proofs are pending; everything else is green.
 
+## UPDATE 2026-06-22 — 3 decisions resolved + live-verify done + pushed
+
+The three open decisions are resolved and two follow-up changes shipped on the
+SAME branch (now 13 commits, pushed to `origin`, PR #21 updated):
+
+1. **Capacity numbers 6/5** — confirmed (kept `MAX_PRODUCTS_PER_LEAD = 6`,
+   `SLIDE_SECTION_SOFT_CAP = 5`). No code change.
+2. **A11y double-announce** — the user first chose "shorten the labels", but that
+   would drop the only PERSISTENT coming-soon signal (browse mode). Reversed:
+   the shared `ComingSoonTooltip` now passes a whitespace `aria-label` so Radix's
+   auto description is blank — the control's own `aria-label` is the single
+   source, no double-announce. Commit `75eafdac`; folded into change A.
+3. **"+N more" tooltip restyle** — done now: scoped light-popover override on the
+   collapsed indicator only (dark default untouched). New change
+   `restyle-collapsed-stages-tooltip-surface`. Commit `7a8d8d54`.
+
+Full gate re-run GREEN (typecheck / lint / **test 1257** web / build 5/5).
+
+**Live-verify (2026-06-22, worktree web on :3000 vs the shared API):**
+
+- A (tooltip clip-escape) ✓ — amber badge portaled to `body`, OUTSIDE the
+  `overflow-x-auto` toolbar; describedby resolves to blank, aria-label intact.
+- B (fullscreen exit) ✓ — enter works; Exit pill + toggle flip + the Exit pill
+  exits and RETURNS FOCUS to the toggle. (Esc-to-exit is native browser, not
+  triggerable via Playwright synthetic keys — trivial manual check.)
+- C (quadrant overflow) — sparse Summary renders cleanly in fullscreen ✓; dense
+  scroll relies on the prior standalone Chromium repro (not re-run on huge seed).
+- "+N more" restyle ✓ — reveal renders on the light popover surface (screenshot).
+- D (capacity advisory) — NOT live-exercised (soft, non-blocking, unit-tested;
+  needs a 6th product or >5 records). The one remaining manual check.
+
+Remaining: archive the 5+1 changes (after the D + dense-C manual checks if
+wanted), then the USER merges PR #21 to `main`.
+
 ## Where the work lives (isolated — a SECOND agent is active in the main tree)
 
 - **Worktree:** `/home/user/work/customreport-leadfeedback`
