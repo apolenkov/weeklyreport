@@ -481,7 +481,7 @@ describe("StatusSlideDeck head layout (head-slide-density)", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("keeps head-specific surfaces distinct and cross-lead navigation working", () => {
+  it("navigates via a top carousel of slide cards, not a left sidebar list", () => {
     const onSelect = vi.fn();
     renderHeadDeck(
       [slideWithId("section-1"), slideWithId("section-2")],
@@ -489,19 +489,65 @@ describe("StatusSlideDeck head layout (head-slide-density)", () => {
       onSelect,
     );
 
-    // Multi-lead sidebar stays a navigable list (framed, neutral header).
-    const sidebar = screen.getByLabelText("Slides");
-    const leadButtons = within(sidebar).getAllByRole("button");
-    expect(leadButtons).toHaveLength(2);
+    // The deck navigates via a top carousel of slide cards above the slide.
+    const carousel = screen.getByTestId("head-slide-carousel");
+    const cards = within(carousel).getAllByRole("button");
+    expect(cards).toHaveLength(2);
 
-    fireEvent.click(leadButtons[1]);
+    // The former left sidebar list (a complementary <aside>) is gone.
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+
+    fireEvent.click(cards[1]);
     expect(onSelect).toHaveBeenCalledWith(1);
+  });
 
-    // Readiness aside stays a distinct review affordance.
-    expect(screen.getByText("Slide completion")).toBeInTheDocument();
-    // Agent-review deferred-feature control keeps its placement.
-    expect(screen.getByTestId("agent-review-coming-soon")).toBeInTheDocument();
-    // Portfolio metrics render as the segmented capsule labels.
+  it("renders the carousel only when there is more than one slide", () => {
+    renderHeadDeck([slide()]);
+    expect(screen.queryByTestId("head-slide-carousel")).not.toBeInTheDocument();
+  });
+
+  it("renders the slide status exactly once (no duplicate carousel-card badge)", () => {
+    renderHeadDeck(
+      [slideWithId("section-1"), slideWithId("section-2")],
+      0,
+      () => undefined,
+    );
+
+    // tone "blocked" → the "Blocked" status renders once, on the active slide
+    // header; the carousel cards deliberately carry no status badge.
+    expect(screen.getAllByText("Blocked")).toHaveLength(1);
+  });
+
+  it("folds readiness into the active slide as a compact in-slide strip", () => {
+    renderHeadDeck([slide()]);
+
+    const strip = screen.getByTestId("head-readiness-strip");
+    // The strip lives inside the active slide article, not a separate aside.
+    expect(strip.closest("article")).not.toBeNull();
+    expect(within(strip).getByText("Slide completion")).toBeInTheDocument();
+    expect(within(strip).getByText("100%")).toBeInTheDocument();
+    // The readiness checklist labels render inside the strip.
+    expect(within(strip).getByText("Scope")).toBeInTheDocument();
+  });
+
+  it("shows a quiet placeholder when the slide has no readiness items", () => {
+    renderHeadDeck([{ ...slide(), readiness: [] }]);
+
+    const strip = screen.getByTestId("head-readiness-strip");
+    expect(
+      within(strip).getByText("No readiness checks on this slide"),
+    ).toBeInTheDocument();
+    expect(within(strip).queryByText("Scope")).not.toBeInTheDocument();
+  });
+
+  it("places the inert Agent-review placeholder in a fixed slide-header slot", () => {
+    renderHeadDeck([slide()]);
+
+    const slot = screen.getByTestId("head-agent-review-slot");
+    expect(
+      within(slot).getByTestId("agent-review-coming-soon"),
+    ).toBeInTheDocument();
+    // Portfolio metrics still render as the segmented capsule labels.
     expect(screen.getByText("Priority")).toBeInTheDocument();
   });
 });
