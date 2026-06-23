@@ -106,7 +106,6 @@ function HeadSectionCard({
   stripeClass,
   showBadges,
   dashedFrame = false,
-  scrollItems = false,
 }: {
   readonly icon: LucideIcon;
   readonly label: string;
@@ -116,28 +115,22 @@ function HeadSectionCard({
   readonly showBadges: boolean;
   /** Lead idiom: plans (Next focus) read as a dashed "not yet" frame. */
   readonly dashedFrame?: boolean;
-  /** Decisions overflow stays reachable via in-card scroll (task 3.3). */
-  readonly scrollItems?: boolean;
 }) {
   return (
     <section
       data-testid="head-section-card"
-      className={`relative min-h-[var(--slide-quadrant-min)] overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] border-l-4 ${
+      className={`relative flex min-h-[var(--slide-quadrant-min)] flex-col overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] border-l-4 ${
         dashedFrame ? "border-dashed [border-left-style:solid]" : ""
       } ${stripeClass} bg-white/80 p-3`}
     >
       {/* Neutral header — the stripe carries the accent (status-color-semantics). */}
-      <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+      <div className="flex shrink-0 items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
         <Icon className="h-4 w-4" aria-hidden="true" />
         {label}
       </div>
       {items.length > 0 ? (
         /* No count-based truncation — every row always renders. */
-        <ul
-          className={`mt-2 space-y-1.5${
-            scrollItems ? " max-h-[300px] overflow-y-auto" : ""
-          }`}
-        >
+        <ul className="mt-2 min-h-0 flex-1 space-y-1.5 overflow-y-auto">
           {items.map((row, idx) => (
             <li
               key={`${row.text}-${String(idx)}`}
@@ -260,14 +253,14 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
       // not focusable, so tabIndex={-1} makes it a programmatic focus target
       // for focus-return on fullscreen exit without adding it to the tab order.
       tabIndex={-1}
-      className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(247,249,246,0.92)_100%)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_12px_24px_-18px_rgba(0,0,0,0.25),0_1px_2px_rgba(0,0,0,0.05)]"
+      className="slide-frame rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(247,249,246,0.92)_100%)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_12px_24px_-18px_rgba(0,0,0,0.25),0_1px_2px_rgba(0,0,0,0.05)]"
     >
       <DeckFullscreenOverlay
         isFullscreen={fullscreen.isFullscreen}
         onToggle={fullscreen.toggle}
       />
-      <div className="space-y-5">
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[rgba(0,0,0,0.08)] pb-4">
+      <div className="flex h-full flex-col gap-5">
+        <div className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-[rgba(0,0,0,0.08)] pb-4">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span
@@ -322,7 +315,7 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
         {/* Decision 1.1 #1: fixed 2×2 topology like the lead slide — framed,
               floored cards; no rhythm collapse at sparse density. */}
         <div
-          className="grid auto-rows-fr grid-cols-2 gap-3"
+          className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-3"
           data-testid="head-section-grid"
         >
           <HeadSectionCard
@@ -357,7 +350,6 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
             emptyText="No decisions recorded"
             stripeClass="border-l-[var(--color-decisions-accent)]"
             showBadges={showBadges}
-            scrollItems
           />
         </div>
       </div>

@@ -62,6 +62,14 @@ const baseLeadPending: LeadInfo = {
   submittedAtLabel: null,
 };
 
+// F5 (head-surface-uat-polish): the Period Summary renders per-lead cards
+// (<li>), not table rows. Resolve a lead's card by its unique name.
+function leadCard(name: string): HTMLElement {
+  const card = screen.getByText(name).closest("li");
+  if (!card) throw new Error(`No lead card found for "${name}"`);
+  return card;
+}
+
 describe("LeadSummaryTable", () => {
   it("D-29: renders per-lead status and content counts", () => {
     const leads: LeadInfo[] = [baseLeadSubmitted, baseLeadPending];
@@ -75,14 +83,16 @@ describe("LeadSummaryTable", () => {
       screen.getByText("Submitted sections and content counts by lead."),
     ).toBeVisible();
 
-    const aliceRow = screen.getByRole("row", { name: /Alice Lead/i });
+    // F5 (head-surface-uat-polish): rows are now per-lead cards (<li>), not
+    // table rows — query the card via the unique lead name.
+    const aliceRow = leadCard("Alice Lead");
     expect(within(aliceRow).getByText("Submitted")).toBeVisible();
     expect(within(aliceRow).getAllByText("2")).toHaveLength(2);
     expect(within(aliceRow).getByText("3")).toBeVisible();
     expect(within(aliceRow).getAllByText("1")).toHaveLength(3);
     expect(within(aliceRow).getByText("2026-05-14")).toBeVisible();
 
-    const bobRow = screen.getByRole("row", { name: /Bob Lead/i });
+    const bobRow = leadCard("Bob Lead");
     expect(within(bobRow).getByText("Not started")).toBeVisible();
     expect(within(bobRow).getByText("-")).toBeVisible();
   });

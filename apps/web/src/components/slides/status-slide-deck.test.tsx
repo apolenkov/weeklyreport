@@ -376,6 +376,18 @@ describe("StatusSlideDeck head layout (head-slide-density)", () => {
     );
   });
 
+  it("F3: the head slide renders in a fixed slide frame that the grid fills (head-surface-uat-polish)", () => {
+    renderHeadDeck([slide()]);
+
+    const grid = screen.getByTestId("head-section-grid");
+    // The 2×2 section grid fills the remaining frame height.
+    expect(grid.className).toContain("flex-1");
+    // The inline head slide is a fixed-aspect canvas, parity with the lead
+    // deck's .slide-frame.
+    const article = grid.closest("article");
+    expect(article?.className).toContain("slide-frame");
+  });
+
   it("renders section headers neutral — no red Risks or green Decisions hue", () => {
     renderHeadDeck([slide()]);
 

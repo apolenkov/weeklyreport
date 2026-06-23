@@ -45,6 +45,20 @@ const STATUS_CLASSES: Record<LeadInfo["status"], string> = {
     "border-[rgba(0,0,0,0.16)] bg-[var(--color-muted)] text-[var(--color-muted-foreground)]",
 };
 
+// head-surface-uat-polish (F5): per-lead counts render as compact labeled stat
+// cells (the History Summary idiom) instead of ten ruled table columns.
+const COUNT_FIELDS: readonly {
+  readonly label: string;
+  readonly get: (lead: LeadInfo) => number;
+}[] = [
+  { label: "Products", get: (l) => l.productCount ?? 0 },
+  { label: "Current", get: (l) => l.currentItemCount ?? 0 },
+  { label: "Next", get: (l) => l.nextItemCount ?? 0 },
+  { label: "Risks", get: (l) => l.riskCount ?? 0 },
+  { label: "Decisions", get: (l) => l.decisionCount ?? 0 },
+  { label: "Priorities", get: (l) => l.priorityCount ?? 0 },
+];
+
 interface LeadSummaryTableProps {
   readonly leads: readonly LeadInfo[];
   readonly reportId?: string;
@@ -56,6 +70,42 @@ interface LeadSummaryTableProps {
    * dead. Defaults to false so a caller that omits it never shows a dead Remind.
    */
   readonly canSendReminder?: boolean;
+}
+
+function LeadActionCell({
+  lead,
+  reportId,
+  canSendReminder,
+}: {
+  readonly lead: LeadInfo;
+  readonly reportId?: string;
+  readonly canSendReminder: boolean;
+}) {
+  if (canSendReminder && reportId && lead.status === "draft") {
+    return (
+      <RemindLeadButton
+        reportId={reportId}
+        leadId={lead.id}
+        leadName={lead.name}
+      />
+    );
+  }
+  if (lead.status === "submitted" && lead.reportSectionId) {
+    return (
+      <RevokeSectionButton
+        reportSectionId={lead.reportSectionId}
+        leadName={lead.name}
+      />
+    );
+  }
+  return (
+    <span
+      className="text-xs text-[var(--color-muted-foreground)]"
+      aria-hidden="true"
+    >
+      —
+    </span>
+  );
 }
 
 export function LeadSummaryTable({
@@ -82,154 +132,104 @@ export function LeadSummaryTable({
     );
   }
 
+  // head-surface-uat-polish (F5): the Period Summary adopts the
+  // BlockedAtRiskTable card idiom — a rounded, soft-shadowed container with
+  // gap-separated per-lead cards — instead of a 10-column ruled table that
+  // read "square" and risked a horizontal scrollbar.
   return (
     <section
-      className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm"
+      className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]"
       aria-labelledby="lead-summary-heading"
     >
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-4">
-        <div>
+      <div className="border-b border-[rgba(0,0,0,0.08)] px-4 py-4">
+        <div className="flex flex-wrap items-center gap-2">
           <h2
             id="lead-summary-heading"
             className="font-[family-name:var(--font-sans)] text-base font-semibold text-[var(--color-foreground)]"
           >
             Period Summary
           </h2>
-          <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-            Submitted sections and content counts by lead.
-          </p>
+          <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 text-[13px] font-semibold tabular-nums text-[var(--color-muted-foreground)]">
+            {leads.length} leads
+          </span>
         </div>
+        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+          Submitted sections and content counts by lead.
+        </p>
       </div>
 
-      <div className="overflow-x-auto">
-        {/* D1 (head-dashboard-declutter): fill the card width (no fixed
-            min-width) and use tighter cell padding so the 10 columns fit at
-            standard dashboard width — no phantom horizontal scrollbar. */}
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-[var(--color-border)] text-left text-xs font-semibold uppercase text-[var(--color-muted-foreground)]">
-              <th scope="col" className="px-3 py-3">
-                Lead
-              </th>
-              <th scope="col" className="px-3 py-3">
-                Status
-              </th>
-              <th scope="col" className="px-3 py-3 text-right">
-                Products
-              </th>
-              <th scope="col" className="px-3 py-3 text-right">
-                Current
-              </th>
-              <th scope="col" className="px-3 py-3 text-right">
-                Next
-              </th>
-              <th scope="col" className="px-3 py-3 text-right">
-                Risks
-              </th>
-              <th scope="col" className="px-3 py-3 text-right">
-                Decisions
-              </th>
-              <th scope="col" className="px-3 py-3 text-right">
-                Priorities
-              </th>
-              <th scope="col" className="px-3 py-3">
-                Submitted
-              </th>
-              <th scope="col" className="px-3 py-3 text-right">
-                Action
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {leads.map((lead) => {
-              // A submitted lead is done, not "gone quiet" — the 24h-inactive
-              // nudge styling only makes sense for leads with open work
-              // (draft/pending). Exempt submitted rows so a Monday submission
-              // does not read as stale (its date-only `lastActivity` would
-              // otherwise parse to local midnight and trip the >24h gate on
-              // every day but the period's first).
-              const inactive =
-                lead.status !== "submitted" && isInactive24h(lead.lastActivity);
-              return (
-                <tr
-                  key={lead.id}
-                  className={`border-b border-[var(--color-border)] last:border-0${
-                    inactive ? " bg-muted/30 opacity-60" : ""
-                  }`}
-                  data-testid={inactive ? "lead-row-inactive-24h" : undefined}
-                >
-                  <th scope="row" className="px-3 py-3 text-left">
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-muted)] text-xs font-bold text-[var(--color-primary)]">
-                        {lead.initials}
-                      </span>
-                      <div className="min-w-0">
-                        <span className="block truncate font-semibold text-[var(--color-foreground)]">
-                          {lead.name}
-                        </span>
-                        <span className="block truncate text-xs text-[var(--color-muted-foreground)]">
-                          {lead.role}
-                        </span>
-                      </div>
-                    </div>
-                  </th>
-                  <td className="px-3 py-3">
-                    <span
-                      className={`inline-flex items-center whitespace-nowrap rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-xs font-semibold ${
-                        STATUS_CLASSES[lead.status]
-                      }`}
-                    >
-                      {STATUS_LABELS[lead.status]}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3 text-right tabular-nums text-[var(--color-foreground)]">
-                    {lead.productCount ?? 0}
-                  </td>
-                  <td className="px-3 py-3 text-right tabular-nums text-[var(--color-foreground)]">
-                    {lead.currentItemCount ?? 0}
-                  </td>
-                  <td className="px-3 py-3 text-right tabular-nums text-[var(--color-foreground)]">
-                    {lead.nextItemCount ?? 0}
-                  </td>
-                  <td className="px-3 py-3 text-right tabular-nums text-[var(--color-foreground)]">
-                    {lead.riskCount ?? 0}
-                  </td>
-                  <td className="px-3 py-3 text-right tabular-nums text-[var(--color-foreground)]">
-                    {lead.decisionCount ?? 0}
-                  </td>
-                  <td className="px-3 py-3 text-right tabular-nums text-[var(--color-foreground)]">
-                    {lead.priorityCount ?? 0}
-                  </td>
-                  <td className="px-3 py-3 text-[var(--color-muted-foreground)]">
-                    {lead.submittedAtLabel ?? "-"}
-                  </td>
-                  <td className="px-3 py-3 text-right">
-                    {canSendReminder && reportId && lead.status === "draft" ? (
-                      <RemindLeadButton
-                        reportId={reportId}
-                        leadId={lead.id}
-                        leadName={lead.name}
-                      />
-                    ) : lead.status === "submitted" && lead.reportSectionId ? (
-                      <RevokeSectionButton
-                        reportSectionId={lead.reportSectionId}
-                        leadName={lead.name}
-                      />
-                    ) : (
-                      <span
-                        className="text-xs text-[var(--color-muted-foreground)]"
-                        aria-hidden="true"
-                      >
-                        —
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <ul className="space-y-2 p-4">
+        {leads.map((lead) => {
+          // A submitted lead is done, not "gone quiet" — the 24h-inactive
+          // nudge styling only makes sense for leads with open work
+          // (draft/pending). Exempt submitted rows so a Monday submission
+          // does not read as stale (its date-only `lastActivity` would
+          // otherwise parse to local midnight and trip the >24h gate on
+          // every day but the period's first).
+          const inactive =
+            lead.status !== "submitted" && isInactive24h(lead.lastActivity);
+          return (
+            <li
+              key={lead.id}
+              data-testid={
+                inactive ? "lead-row-inactive-24h" : "lead-summary-row"
+              }
+              className={`flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-[rgba(0,0,0,0.06)] bg-[rgba(0,0,0,0.02)] p-3${
+                inactive ? " opacity-60" : ""
+              }`}
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-muted)] text-xs font-bold text-[var(--color-primary)]">
+                  {lead.initials}
+                </span>
+                <div className="min-w-0">
+                  <span className="block truncate font-semibold text-[var(--color-foreground)]">
+                    {lead.name}
+                  </span>
+                  <span className="block truncate text-xs text-[var(--color-muted-foreground)]">
+                    {lead.role}
+                  </span>
+                </div>
+              </div>
+
+              <span
+                className={`inline-flex items-center whitespace-nowrap rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-xs font-semibold ${
+                  STATUS_CLASSES[lead.status]
+                }`}
+              >
+                {STATUS_LABELS[lead.status]}
+              </span>
+
+              <dl className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1">
+                {COUNT_FIELDS.map((field) => (
+                  <div
+                    key={field.label}
+                    className="flex min-w-[3rem] flex-col items-center"
+                  >
+                    <dd className="text-sm font-semibold tabular-nums text-[var(--color-foreground)]">
+                      {field.get(lead)}
+                    </dd>
+                    <dt className="text-[10px] font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]">
+                      {field.label}
+                    </dt>
+                  </div>
+                ))}
+              </dl>
+
+              <div className="flex shrink-0 flex-col items-end gap-1 text-right">
+                <span className="text-xs text-[var(--color-muted-foreground)]">
+                  {lead.submittedAtLabel ?? "-"}
+                </span>
+                <LeadActionCell
+                  lead={lead}
+                  reportId={reportId}
+                  canSendReminder={canSendReminder}
+                />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }
