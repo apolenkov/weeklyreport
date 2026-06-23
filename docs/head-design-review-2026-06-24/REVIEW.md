@@ -18,8 +18,8 @@ docker container, not local). Every F-item below was **re-verified against
 current `main`**, not the stale annotation.
 
 `/lead/report/{id}` as a head user **redirects** to `/head/report` (role gate),
-so the true lead view needs a lead login — captured separately / noted as a
-follow-up; the review focuses on the head surfaces the user named.
+so it was captured under a `role=lead` dev-login instead
+(`before-lead-report.png`). See the lead-surface note below.
 
 ## Surfaces
 
@@ -60,6 +60,12 @@ Smaller notes (not implemented): the corner watermark icons in each quadrant and
 the metrics capsule (Current/Next/Risks/Priority) vs the quadrant headers carry
 some redundancy — candidates for a later "remove one accessory" pass.
 
+Implementation watch-line (F3): the `--slide-quadrant-min` floor stays on the
+card, not the grid track (the lead pattern + this change's spec put it on the
+track). Kept on the card because a head test asserts that class. Verified clean
+at 1728px; at a very narrow viewport the bottom quadrant could clip instead of
+scrolling — worth a track-floor follow-up.
+
 ### `/head/report/{id}` (edit / accordion)
 
 Clean. The Portfolio Overview cards use full status-tinted fills (red/amber/
@@ -72,6 +78,17 @@ did not recognize it). **Decision parked (F2).**
 The most consistent surface — soft cards, a 2×2 stat grid in History Summary.
 A good internal reference for the target aesthetic (and for what Period Summary
 can become).
+
+### `/lead/report/{id}` (the lead's own editing surface)
+
+Captured under a `role=lead` dev-login (`before-lead-report.png`). The generic
+dev-login lead ("Lead 1") has no seeded products, so all sections show empty
+states — the seed data is assigned to the named leads (Василий И. / Игорь В. /
+Мария К.), not the generic login. Design is consistent with the rest of the app:
+rounded section cards, clear "Add Item / Add Risk / Add Decision" empty-state
+affordances, a Save/Submit header. No new design findings here — the F1–F5
+feedback was head-surface-specific. A data-populated lead view would need a
+seeded-lead login (follow-up).
 
 ## F1–F5 disposition
 
@@ -96,3 +113,14 @@ MODIFIED head-dashboard-clarity Period Summary). Before/after in this folder.
 Left deliberately un-coded — each is either ambiguous or a destructive removal
 that should not be guessed overnight. Recommendations are in the OpenSpec
 proposal's "Open Questions". One word each unblocks them.
+
+## Still owed — NOT in this PR
+
+- **Repo cleanup backlog (the session's first ask).** Earlier this session the
+  user asked to "убрать лишнее и легаси в репо" and chose "build the removal
+  backlog, no deletion." The live UAT flood took over before it was produced —
+  this PR does **not** include it. It is still owed: a read-only,
+  evidence-backed (codegraph + reference search) list of dead/legacy/superfluous
+  code for review, mindful that much "looks-like-cruft" here is intentionally
+  parked (ComingSoon, `openspec/deferred`, versions-v2).
+- **Data-populated lead view** (see lead-surface note above).
