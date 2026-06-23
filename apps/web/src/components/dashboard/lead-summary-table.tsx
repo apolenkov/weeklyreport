@@ -221,6 +221,7 @@ export function LeadSummaryTable({
 
               <div className="flex shrink-0 flex-col items-end gap-1 text-right">
                 <span className="text-xs text-[var(--color-muted-foreground)]">
+                  <span className="sr-only">Submitted: </span>
                   {lead.submittedAtLabel ?? "-"}
                 </span>
                 <LeadActionCell

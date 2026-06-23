@@ -34,7 +34,9 @@ var(--slide-aspect)` = `16 / 10`) and flexes its content to fill the frame.
 - **Head slide gets a fixed slide frame (F3).** `HeadSlideArticle` adopts the
   `.slide-frame` fixed-aspect canvas and the lead deck's fill model: hero/meta
   keep natural height, the 2×2 section grid stretches over the remaining frame
-  height (`flex-1 min-h-0`, `auto-rows-fr`), and a quadrant that overflows scrolls
+  height (`flex-1 min-h-0`, with the `--slide-quadrant-min` floor on the grid track —
+  `auto-rows-[minmax(...,1fr)]`, parity with the lead deck, not a card
+  min-height), and a quadrant that overflows scrolls
   inside its own card rather than growing the slide. Aspect reuses the existing
   `--slide-aspect` token (16:10) — no new aesthetic decision. Mirrors the
   `lead-slide-quadrants` "framed lead slide fills its frame" behavior.
