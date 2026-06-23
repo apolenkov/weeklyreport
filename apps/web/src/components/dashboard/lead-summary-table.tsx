@@ -204,14 +204,17 @@ export function LeadSummaryTable({
                 {COUNT_FIELDS.map((field) => (
                   <div
                     key={field.label}
-                    className="flex min-w-[3rem] flex-col items-center"
+                    // flex-col-reverse keeps the value visually on top while the
+                    // DOM stays <dt> before <dd> (correct term→definition order
+                    // for assistive tech).
+                    className="flex min-w-[3rem] flex-col-reverse items-center"
                   >
-                    <dd className="text-sm font-semibold tabular-nums text-[var(--color-foreground)]">
-                      {field.get(lead)}
-                    </dd>
                     <dt className="text-[10px] font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]">
                       {field.label}
                     </dt>
+                    <dd className="text-sm font-semibold tabular-nums text-[var(--color-foreground)]">
+                      {field.get(lead)}
+                    </dd>
                   </div>
                 ))}
               </dl>
