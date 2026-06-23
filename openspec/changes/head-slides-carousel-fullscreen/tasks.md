@@ -67,11 +67,17 @@
 
 ## 7. Verification (required before archive)
 
-- [ ] 7.1 Same-viewport before/after screenshots on `:3000` across one-lead,
-      many-leads, empty-section, dense-decisions, and fullscreen states for user
-      acceptance (per `head-slide-density`). BEFORE baseline captured to
-      `.verify-head-carousel/` (lead-scope, product-scope); AFTER matrix pending.
+- [~] 7.1 Same-viewport before/after screenshots on `:3000` for user acceptance
+  (per `head-slide-density`). BEFORE + AFTER captured to
+  `.verify-head-carousel/` with a `README.md` index: many-leads (lead +
+  product scope), per-active-slide (incl. an empty-section slide), and an
+  emulated fullscreen. **Awaiting user acceptance — NOT archived.** Gaps
+  noted in the README: a true one-lead carousel (this seed has 3 leads;
+  single-slide hides the carousel — unit-tested) and REAL fullscreen
+  (emulated only; needs a live `f`/Exit-pill check on the user's stack).
 
 ## 8. Gates
 
-- [ ] 8.1 `pnpm typecheck && pnpm lint && pnpm test && openspec validate head-slides-carousel-fullscreen --strict`.
+- [x] 8.1 `pnpm typecheck && pnpm lint && pnpm test && openspec validate head-slides-carousel-fullscreen --strict`
+      — all green at commit `4d5709a9` (typecheck 5/5, full lint clean, test
+      1275 passed, validate `--strict` valid).
