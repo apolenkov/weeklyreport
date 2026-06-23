@@ -23,6 +23,6 @@
 ## 3. Gates
 
 - [x] 3.1 `pnpm typecheck && pnpm lint && pnpm test && openspec validate
-    remove-dead-history-tab-param --strict` — all green.
+  remove-dead-history-tab-param --strict` — all green.
 - [x] 3.2 Live-verify on `:3000`: the History nav link href is `/reports`
       (no `?tab`) for lead and head; clicking it lands on `/reports`.
