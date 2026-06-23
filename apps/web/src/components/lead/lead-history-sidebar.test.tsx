@@ -125,6 +125,11 @@ describe("LeadHistorySidebar completed-week stats", () => {
 
     // Draft note is visible
     expect(screen.getByText(/1 draft not included/i)).toBeInTheDocument();
+
+    // Traffic-light footer denominator counts only the aggregated (completed)
+    // periods, matching the numerator — "across 2 periods", NOT "across 3".
+    expect(aside.textContent).toMatch(/across 2 periods/);
+    expect(aside.textContent).not.toMatch(/across 3 periods/);
   });
 
   it("shows no draft note when all entries are submitted", () => {

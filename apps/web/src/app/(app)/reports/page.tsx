@@ -21,10 +21,13 @@ import { useTRPC } from "../../../lib/trpc-context";
 /**
  * UX-17 (Phase 35-08): merged Reports page.
  *
- * Lead users get personal History. Non-lead users get compiled History.
- * Archive visibility is a local, non-URL toggle: History always defaults to
- * the current (non-archived) view and the address bar stays stable when the
- * Archive switch is flipped (lead-live-walk-2026-06-14 §4).
+ * One role-defaulted history view — lead users get personal History, non-lead
+ * users get compiled History. There is no tab state: the page does not read a
+ * `tab` query parameter, and the legacy `/lead/history` and `/head/history`
+ * routes redirect here without one. Archive visibility is a local, non-URL
+ * toggle: History always defaults to the current (non-archived) view and the
+ * address bar stays stable when the Archive switch is flipped
+ * (lead-live-walk-2026-06-14 §4).
  */
 
 const HISTORY_INITIAL_VISIBLE = 10;

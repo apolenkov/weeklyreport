@@ -121,8 +121,13 @@ export function LeadHistorySidebar({
               <span className="h-2 w-2 rounded-full bg-[var(--color-destructive)]" />{" "}
               {totalRed}
             </span>
+            {/* Denominator counts only the completed periods these
+                traffic-light sums are computed from (submittedEntries), so the
+                numerator and denominator describe the same set. A draft, when
+                present, is disclosed by the "N draft not included" note above,
+                not folded into this count. */}
             <span className="ml-auto">
-              across {total} {total === 1 ? "period" : "periods"}
+              across {submitted} {submitted === 1 ? "period" : "periods"}
             </span>
           </div>
         </SidebarCard>

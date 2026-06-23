@@ -343,7 +343,13 @@ export function createAppRouter(deps: RouterDeps) {
       myHistory: protectedProcedure.query(async ({ ctx }) => {
         const sections = await deps.prisma.reportSection.findMany({
           where: { authorId: ctx.session.userId },
-          orderBy: { createdAt: "desc" },
+          // Order by reporting-period chronology (newest period first), NOT by
+          // the section row's insertion time — `createdAt` is unrelated to the
+          // period a report covers (seeds insert in one run). This matches the
+          // `compiledHistory` ordering so both reads of the history surface
+          // agree, and keeps the summary-rail streak (which assumes
+          // newest-period-first) honest. `createdAt` is the stable tiebreak.
+          orderBy: [{ report: { periodStart: "desc" } }, { createdAt: "desc" }],
           include: {
             report: {
               select: {
