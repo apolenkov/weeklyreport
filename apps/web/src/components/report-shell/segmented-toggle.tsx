@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
  * (Edit/Slides, Product/Leads, Mine/Everyone): a neutral-bordered track on a
  * solid `--color-surface-empty` surface, with the active segment filled with a
  * soft slate (`--color-toggle-active`, white text) — NOT the brand accent.
- * Brand green is reserved for the header-line forward actions (Submit Section,
+ * Brand green is reserved for the header-line forward actions (Submit,
  * Publish & Lock).
  *
  * Every control sits on the shared toolbar height (`--toolbar-control-h`, 32px)

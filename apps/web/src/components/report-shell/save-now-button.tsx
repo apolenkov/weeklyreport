@@ -87,7 +87,7 @@ export function SaveNowButton({ autosave }: SaveNowButtonProps) {
 
   // Labeled neutral pill at the shared toolbar height — visible "Save" text,
   // sized like the other labeled actions but NOT green: brand green stays the
-  // single forward-commit (Submit Section). The transient saving state keeps
+  // single forward-commit (Submit). The transient saving state keeps
   // the accent busy treatment (report-toolbar-layout: Save busy accent is the
   // one exemption to the single-primary rule).
   const savingClassName =

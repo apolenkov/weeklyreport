@@ -433,10 +433,10 @@ describe("LeadForm — Record visibility: view-only submit (7d.5 / 7d.8)", () =>
     }
 
     // Open the submit confirm dialog (toolbar button), then confirm inside the
-    // dialog. Both buttons read "Submit Section", so scope the confirm to the
-    // dialog to avoid the ambiguous match.
+    // dialog. Both buttons read "Submit", so scope the confirm to the dialog
+    // to avoid the ambiguous match.
     const headerSubmit = await screen.findByRole("button", {
-      name: /Submit Section/i,
+      name: "Submit",
     });
     act(() => {
       headerSubmit.click();
@@ -445,7 +445,7 @@ describe("LeadForm — Record visibility: view-only submit (7d.5 / 7d.8)", () =>
       name: /Confirm submission/i,
     });
     const confirmBtn = within(dialog).getByRole("button", {
-      name: /Submit Section/i,
+      name: "Submit",
     });
     act(() => {
       confirmBtn.click();
