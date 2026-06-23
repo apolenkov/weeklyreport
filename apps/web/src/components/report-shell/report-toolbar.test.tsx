@@ -64,12 +64,12 @@ describe("DocumentActionGroup", () => {
   it("wraps document actions in a labeled group that wraps at narrow widths", () => {
     render(
       <DocumentActionGroup>
-        <button type="button">Submit Section</button>
+        <button type="button">Submit</button>
       </DocumentActionGroup>,
     );
     const group = screen.getByRole("group", { name: "Document actions" });
     expect(group).toContainElement(
-      screen.getByRole("button", { name: "Submit Section" }),
+      screen.getByRole("button", { name: "Submit" }),
     );
     // Header line wraps so no document action is clipped (no overflow clip).
     expect(group.className).toContain("flex-wrap");

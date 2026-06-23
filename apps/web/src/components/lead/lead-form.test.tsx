@@ -417,11 +417,11 @@ describe("LeadForm mutation wiring", () => {
     expect(screen.queryByRole("button", { name: /^Revoke$/i })).toBeNull();
   });
 
-  it("draft: Submit Section is a document action; view mode + agent review are context controls", async () => {
+  it("draft: Submit is a document action; view mode + agent review are context controls", async () => {
     // report-toolbar-layout: the forward commit sits in the Document action
     // row; the framing controls (view mode, agent review) sit in the Context
-    // control row. The commit copy is Submit Section (renamed from Submit
-    // Report to match the glossary).
+    // control row. The commit copy is "Submit" (on the lead page a lead sees
+    // only their own section, so "Section" added no information).
     const { Wrapper } = buildHarness();
     render(
       <Wrapper>
@@ -437,10 +437,12 @@ describe("LeadForm mutation wiring", () => {
       name: "Context controls",
     });
     expect(
-      within(documentActions).getByRole("button", { name: /submit section/i }),
+      within(documentActions).getByRole("button", { name: "Submit" }),
     ).toBeInTheDocument();
     expect(
-      within(documentActions).queryByRole("button", { name: /submit report/i }),
+      within(documentActions).queryByRole("button", {
+        name: /submit section|submit report/i,
+      }),
     ).toBeNull();
     // The inert document-action stubs reserve their top-row slot.
     expect(

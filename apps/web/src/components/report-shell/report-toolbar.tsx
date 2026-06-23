@@ -44,7 +44,7 @@ interface ReportToolbarProps {
 
 /**
  * report-toolbar-layout: the bordered report toolbar holds exactly one row —
- * the Context-control bar. Document actions (Save, Submit Section, Publish &
+ * the Context-control bar. Document actions (Save, Submit, Publish &
  * Lock, Fill-From, export, Move-to-archive) render on the page header line
  * instead, so the box no longer stacks two rows of unequal height.
  */

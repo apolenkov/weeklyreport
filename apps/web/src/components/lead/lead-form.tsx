@@ -1211,7 +1211,7 @@ export function LeadForm({
               right slot, not inside the bordered toolbar. A read-only past
               period hides the real mutating actions (Save/Submit/Fill-From)
               while the inert Coming-soon stubs remain (deferred-feature-pattern).
-              Submit Section is the single brand-green forward primary; reversal
+              Submit is the single brand-green forward primary; reversal
               actions (Request Reopen / Revoke) stay neutral/outline so green
               keeps one "forward, safe-to-commit" meaning. */}
           <DocumentActionGroup>
@@ -1260,7 +1260,7 @@ export function LeadForm({
                 onClick={handleSubmit}
                 disabled={submitMut.isPending}
               >
-                Submit Section
+                Submit
               </button>
             )}
           </DocumentActionGroup>
@@ -1584,7 +1584,7 @@ export function LeadForm({
             aria-label="Confirm submission"
           >
             <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-              Submit Section?
+              Submit your report?
             </h3>
             <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
               Your report will be locked and visible to the group head. You will
@@ -1635,7 +1635,7 @@ export function LeadForm({
                 onClick={handleConfirmSubmit}
                 disabled={submitMut.isPending}
               >
-                Submit Section
+                Submit
               </button>
             </div>
           </div>
