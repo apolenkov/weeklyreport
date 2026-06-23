@@ -221,10 +221,46 @@ function resolveStageName(
  * `prisma.project` query — that would leak products outside the caller's
  * scope (W8).
  */
+/**
+ * fix-published-empty-stage-risk-floor: fire the "flagged red" escalation off
+ * the risk-aware effective status, not the stale stored trafficLight, so the
+ * bug case (owned empty stage covered by a blocked own risk) emits the at_risk
+ * escalation alongside the existing unresolved_risk one.
+ *
+ * fix-flagged-red-escalation-dedup: a co-owned red product appears once per
+ * co-owner section, so the push is gated on `seen` to emit one escalation per
+ * `projectId` across the whole builder run. Returns null when the product is
+ * not red or was already emitted; mutates `seen` on first emission.
+ */
+function flaggedRedEscalation(
+  section: ReportSectionReadModel,
+  project: ReportSectionReadModel["projects"][number],
+  seen: Set<string>,
+): Escalation | null {
+  if (effectiveProjectStatus(section, project) !== "red") return null;
+  if (seen.has(project.projectId)) return null;
+  seen.add(project.projectId);
+  return {
+    type: "at_risk",
+    productName: project.projectName,
+    stageName: null,
+    leadName: section.authorName,
+    description: `Project ${project.projectName} is flagged red.`,
+  };
+}
+
 export function buildEscalationsFromReadSections(
   sections: readonly ReportSectionReadModel[],
 ): Escalation[] {
   const escalations: Escalation[] = [];
+  // fix-flagged-red-escalation-dedup: a co-owned red product appears once in
+  // EACH co-owner's section, so without this the project-level flagged-red
+  // push fires N identical rows. Track seen projectIds across the WHOLE section
+  // loop and emit the flagged-red escalation once per product; the first
+  // contributing lead's name survives (deterministic by loop order). Only the
+  // `at_risk` flagged-red push is gated — `blocked` items and `unresolved_risk`
+  // risks are genuinely per-record and stay un-deduped.
+  const seenFlaggedRedProjectIds = new Set<string>();
 
   for (const section of sections) {
     const productNames = new Map(
@@ -245,18 +281,12 @@ export function buildEscalationsFromReadSections(
     }
 
     for (const project of section.projects) {
-      // fix-published-empty-stage-risk-floor: fire the "flagged red" escalation
-      // off the risk-aware effective status, not the stale stored trafficLight,
-      // so the bug case (owned empty stage covered by a blocked own risk) emits
-      // the at_risk escalation alongside the existing unresolved_risk one.
-      if (effectiveProjectStatus(section, project) !== "red") continue;
-      escalations.push({
-        type: "at_risk",
-        productName: project.projectName,
-        stageName: null,
-        leadName: section.authorName,
-        description: `Project ${project.projectName} is flagged red.`,
-      });
+      const flaggedRed = flaggedRedEscalation(
+        section,
+        project,
+        seenFlaggedRedProjectIds,
+      );
+      if (flaggedRed) escalations.push(flaggedRed);
     }
 
     for (const risk of section.risks) {

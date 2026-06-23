@@ -12,11 +12,14 @@ count-based truncation. The durable `lead-slide-quadrants` spec governs only
 the lead "Own" slide and lists the head slide as a Non-goal; this is the
 parallel head contract. It governs the head slide surface, not a code module.
 
-The head-specific surfaces — the multi-lead sidebar, the per-lead readiness
-aside, the portfolio metric tiles, the owner identity header, and the
-`AgentReviewComingSoon` control — stay distinct and are not folded into the
-section-card grid. No new color token is introduced; every accent resolves
-through an existing `--color-*` token.
+The head deck keeps two surfaces the lead slide lacks — the portfolio metric
+capsule and the owner identity header — distinct from the section-card grid.
+Slide navigation is the top carousel (`head-slides-carousel-fullscreen`), not a
+sidebar. Per `head-slides-lead-parity`, the deck carries no head-only readiness
+strip and no in-deck `AgentReviewComingSoon` slot: the readiness panel is
+removed and the Agent-review placeholder lives on the report toolbar, so the
+deck reads like the lead-slides layout. No new color token is introduced; every
+accent resolves through an existing `--color-*` token.
 
 ## Requirements
 
@@ -153,38 +156,32 @@ card and in the focused slide header MUST NOT recur.
 - **THEN** that status badge renders exactly once on the surface
 - **AND** it is not repeated in a separate list card and slide header
 
-### Requirement: Readiness folds into the active slide
+### Requirement: The head slides deck renders no standalone heading band
 
-The per-slide readiness / completion signal MUST render inside the active slide
-as a compact in-slide strip — the score and the readiness checklist that
-previously lived in a separate right-hand SLIDE COMPLETION aside. The head deck
-MUST NOT render a separate side panel that the lead deck lacks.
+The head status deck MUST NOT render its own standalone title/subtitle
+heading band; the report shell slides-mode header
+(`apps/web/src/components/head/head-report-shell.tsx` — the `Status Report`
+title plus the department context label) is the single title for the surface.
+This mirrors the lead-slides layout (S1 umbrella): in slides mode the head
+deck reads like the lead deck's slides chrome — no extra heading band above
+the carousel, the report toolbar / header line hosts the deck's actions, and
+the deck body carries only the carousel and the active fullscreen slide. The
+deck MUST NOT render the `<h1>` "Group Status Slides", the subtitle "Group
+deck ordered by review risk before publishing.", or any duplicate report
+title inside the deck chrome.
 
-#### Scenario: the head views a slide's readiness
+#### Scenario: the head opens the slides deck
 
-- **WHEN** the head views the active slide
-- **THEN** the readiness score and checklist render inside the slide as a
-  compact strip
-- **AND** there is no separate right-hand completion panel beside the slide
+- **WHEN** the head views a report in `?mode=slides`
+- **THEN** the only report title on the surface is the report shell header
+  (`Status Report` + context label)
+- **AND** the deck renders no standalone "Group Status Slides" heading band or
+  duplicate subtitle above the carousel
 
-#### Scenario: a slide has no readiness items
+#### Scenario: the head slides chrome mirrors the lead deck
 
-- **WHEN** the active slide has zero readiness checklist items
-- **THEN** the readiness strip renders a quiet placeholder or is hidden
-- **AND** it MUST NOT render an empty block
-
-### Requirement: The Agent review placeholder occupies a fixed slide-header slot
-
-The inert `AgentReviewComingSoon` placeholder on the head slide MUST occupy a
-fixed slot in the slide header and MUST NOT float over or overlap other slide
-chrome. It MUST stay the inert ComingSoonBadge pattern (aria-disabled, no click
-handler, tooltip); the hover "is there anything for me" behavior is the deferred
-Agent-review feature and MUST NOT be built here.
-
-#### Scenario: the head slide renders the Agent review placeholder
-
-- **WHEN** the active head slide renders
-- **THEN** the Agent review placeholder sits in a fixed slide-header slot
-- **AND** it does not overlap the readiness strip or other slide chrome
-- **AND** it remains aria-disabled with the ComingSoonBadge tooltip and no real
-  Agent-review behavior
+- **WHEN** the head slides surface renders alongside the lead-slides layout as
+  the reference
+- **THEN** the head deck shows no head-only heading band the lead deck lacks
+- **AND** the deck body holds only the carousel and the active fullscreen
+  slide, with actions hosted on the report toolbar / header line

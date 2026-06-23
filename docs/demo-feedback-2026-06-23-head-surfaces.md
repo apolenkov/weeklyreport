@@ -111,6 +111,32 @@ Git на момент фиксации: локально на `main` == `origin/
 - D6: seed — **активное правило напоминаний** (чтобы Remind слал письмо) +
   гейтить Remind в `LeadSummaryTable` по `hasActiveReminderRule` (как `AlertBar`).
 
+> **Статус Change 1 (2026-06-23): РЕАЛИЗОВАН + live-проверен.** Все 16 задач
+> закрыты, гейты зелёные (typecheck/lint/test 1259/build), `openspec validate
+--strict` валиден.
+>
+> - D2/D4: `ProductKpiCard` и `Activity24hCard` (+тесты +`activity-querykey`
+>   дедуп-гард) удалены; `recharts` **оставлен** — он ещё нужен в
+>   `reports/trends` и `@customreport/ui`.
+> - D1: убран `min-w-[840px]` → `w-full` + паддинги ячеек `px-5`→`px-3`;
+>   натуральная ширина таблицы 940px. На стандартном десктопе (1440px, контент
+>   1086px) переполнения нет (live: overflow=0). Узкие окна (<~1000px) корректно
+>   скроллят через `overflow-x-auto`.
+> - D5: submitted-лид — **Мария К.** (чистый co-owner: не primary, не владелец
+>   red-блокера, не двигает три цвета). Vasily+Igor остаются draft → период open.
+>   Ортогональность подтверждена: `crossAuthorContent` берёт секции без фильтра
+>   по статусу, Everyone-линза не теряет foreign-контент.
+> - D5-побочное (решение пользователя): `submittedAt`=понедельник давал date-only
+>   `lastActivity`, и эвристика «неактивен 24ч» затеняла submitted-строку Maria
+>   (opacity-60), хотя она ровно ради Revoke. Детерминизм запрещает «свежий»
+>   submittedAt → починили в `LeadSummaryTable`: **submitted-строки исключены из
+>   24ч-затенения** (submitted = «готово», не «залежался»). Спека + тест на
+>   date-only-полночь добавлены; 2 date-logic теста переведены на draft-фикстуру.
+> - D6: seed `ReminderPolicy`(deadline)+`ReminderRule` на `ACTIVE_REPORT_ID`
+>   (форма из `seed-simple`, fixed UUID `d…9000…`, только small-tier). Live:
+>   Remind на draft-лиде реально отправил письмо в Mailpit, повторный клик →
+>   «Already sent» (дедуп), на submitted-строке — Revoke.
+
 **Change 2 — `head-slides-lead-parity`** (доводка отгруженной карусели):
 
 - S2: убрать заголовочный блок «Group Status Slides» (h1 + подзаголовок +

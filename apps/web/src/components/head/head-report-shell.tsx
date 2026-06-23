@@ -1,8 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useContext, useMemo } from "react";
+import { Suspense, useCallback, useContext, useMemo, useState } from "react";
 
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
 import { SessionContext } from "../../lib/session-provider";
@@ -58,6 +60,12 @@ export function HeadReportShell({
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // head-slides-lead-parity (S3): the slides deck reports its active slide's
+  // focused-report target up here so the "Open focused report" action lives on
+  // the header line beside Export-PDF, not inside the deck body. Null when no
+  // active slide / active period resolves, which hides the action.
+  const [focusHref, setFocusHref] = useState<string | null>(null);
 
   const buildQuery = useCallback(
     (overrides: Record<string, string | null>) => {
@@ -200,10 +208,9 @@ export function HeadReportShell({
   // Agent-review placeholder leads the group (head-toolbar-semantics: compact,
   // leading edge); period navigation, the show-archived filter, and the
   // segmented scope / view-mode toggles follow.
-  // one-placeholder-per-surface (mount-agent-review-placeholder): slides mode
-  // already carries an Agent-review placeholder inside the head slide deck
-  // (status-slide-deck.tsx), so the context row only mounts one in form mode to
-  // avoid double-mounting on the slides surface.
+  // head-slides-lead-parity (S6): the slide-header Agent-review slot was removed
+  // from the deck, so the toolbar context row now hosts the single placeholder
+  // in BOTH form and slides mode — exactly one per surface, no double-mount.
   const contextControls = (
     <>
       {periods.length > 0 ? (
@@ -211,7 +218,7 @@ export function HeadReportShell({
       ) : null}
       <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
       <div className="grow" aria-hidden="true" />
-      {mode === "form" ? <AgentReviewComingSoon compact /> : null}
+      <AgentReviewComingSoon compact />
       <ScopeToggle
         value={scope}
         onChange={setScope}
@@ -262,14 +269,32 @@ export function HeadReportShell({
               {headerContextLabel}
             </div>
             {/* report-toolbar-layout: the Export-PDF document action sits on the
-                header line, not inside the bordered toolbar. */}
-            {exportPdf && (
-              <DocumentActionGroup>{exportPdf}</DocumentActionGroup>
-            )}
+                header line, not inside the bordered toolbar. head-slides-lead-
+                parity (S3): the "Open focused report" drill-into-a-lead link
+                joins it here when the active slide resolves a target — rendered
+                independently of Export-PDF so neither gates the other. */}
+            {(focusHref ?? exportPdf) ? (
+              <DocumentActionGroup>
+                {focusHref ? (
+                  <Link
+                    href={focusHref}
+                    className="btn-press inline-flex h-8 items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-sm font-medium text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)]"
+                  >
+                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                    Open focused report
+                  </Link>
+                ) : null}
+                {exportPdf}
+              </DocumentActionGroup>
+            ) : null}
           </header>
           {slidesToolbar}
           <Suspense fallback={<SlideSkeleton />}>
-            <HeadSlidesClient reportId={reportId} scope={reportScope} />
+            <HeadSlidesClient
+              reportId={reportId}
+              scope={reportScope}
+              onFocusHrefChange={setFocusHref}
+            />
           </Suspense>
         </>
       ) : (

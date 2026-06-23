@@ -48,9 +48,21 @@ const STATUS_CLASSES: Record<LeadInfo["status"], string> = {
 interface LeadSummaryTableProps {
   readonly leads: readonly LeadInfo[];
   readonly reportId?: string;
+  /**
+   * D6 (head-dashboard-declutter): same `canSendReminder` gate the AlertBar
+   * honors (`periodStatus !== "published" && hasActiveReminderRule`). When
+   * false, the per-lead Remind button is not offered — without an active
+   * reminder rule a dispatch returns `no-active-rule`, so the action would be
+   * dead. Defaults to false so a caller that omits it never shows a dead Remind.
+   */
+  readonly canSendReminder?: boolean;
 }
 
-export function LeadSummaryTable({ leads, reportId }: LeadSummaryTableProps) {
+export function LeadSummaryTable({
+  leads,
+  reportId,
+  canSendReminder = false,
+}: LeadSummaryTableProps) {
   if (leads.length === 0) {
     return (
       <section
@@ -90,44 +102,54 @@ export function LeadSummaryTable({ leads, reportId }: LeadSummaryTableProps) {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-[840px] border-collapse text-sm">
+        {/* D1 (head-dashboard-declutter): fill the card width (no fixed
+            min-width) and use tighter cell padding so the 10 columns fit at
+            standard dashboard width — no phantom horizontal scrollbar. */}
+        <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-[var(--color-border)] text-left text-xs font-semibold uppercase text-[var(--color-muted-foreground)]">
-              <th scope="col" className="px-5 py-3">
+              <th scope="col" className="px-3 py-3">
                 Lead
               </th>
-              <th scope="col" className="px-5 py-3">
+              <th scope="col" className="px-3 py-3">
                 Status
               </th>
-              <th scope="col" className="px-5 py-3 text-right">
+              <th scope="col" className="px-3 py-3 text-right">
                 Products
               </th>
-              <th scope="col" className="px-5 py-3 text-right">
+              <th scope="col" className="px-3 py-3 text-right">
                 Current
               </th>
-              <th scope="col" className="px-5 py-3 text-right">
+              <th scope="col" className="px-3 py-3 text-right">
                 Next
               </th>
-              <th scope="col" className="px-5 py-3 text-right">
+              <th scope="col" className="px-3 py-3 text-right">
                 Risks
               </th>
-              <th scope="col" className="px-5 py-3 text-right">
+              <th scope="col" className="px-3 py-3 text-right">
                 Decisions
               </th>
-              <th scope="col" className="px-5 py-3 text-right">
+              <th scope="col" className="px-3 py-3 text-right">
                 Priorities
               </th>
-              <th scope="col" className="px-5 py-3">
+              <th scope="col" className="px-3 py-3">
                 Submitted
               </th>
-              <th scope="col" className="px-5 py-3 text-right">
+              <th scope="col" className="px-3 py-3 text-right">
                 Action
               </th>
             </tr>
           </thead>
           <tbody>
             {leads.map((lead) => {
-              const inactive = isInactive24h(lead.lastActivity);
+              // A submitted lead is done, not "gone quiet" — the 24h-inactive
+              // nudge styling only makes sense for leads with open work
+              // (draft/pending). Exempt submitted rows so a Monday submission
+              // does not read as stale (its date-only `lastActivity` would
+              // otherwise parse to local midnight and trip the >24h gate on
+              // every day but the period's first).
+              const inactive =
+                lead.status !== "submitted" && isInactive24h(lead.lastActivity);
               return (
                 <tr
                   key={lead.id}
@@ -136,7 +158,7 @@ export function LeadSummaryTable({ leads, reportId }: LeadSummaryTableProps) {
                   }`}
                   data-testid={inactive ? "lead-row-inactive-24h" : undefined}
                 >
-                  <th scope="row" className="px-5 py-3 text-left">
+                  <th scope="row" className="px-3 py-3 text-left">
                     <div className="flex items-center gap-3">
                       <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-muted)] text-xs font-bold text-[var(--color-primary)]">
                         {lead.initials}
@@ -151,7 +173,7 @@ export function LeadSummaryTable({ leads, reportId }: LeadSummaryTableProps) {
                       </div>
                     </div>
                   </th>
-                  <td className="px-5 py-3">
+                  <td className="px-3 py-3">
                     <span
                       className={`inline-flex items-center whitespace-nowrap rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-xs font-semibold ${
                         STATUS_CLASSES[lead.status]
@@ -160,29 +182,29 @@ export function LeadSummaryTable({ leads, reportId }: LeadSummaryTableProps) {
                       {STATUS_LABELS[lead.status]}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
+                  <td className="px-3 py-3 text-right tabular-nums text-[var(--color-foreground)]">
                     {lead.productCount ?? 0}
                   </td>
-                  <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
+                  <td className="px-3 py-3 text-right tabular-nums text-[var(--color-foreground)]">
                     {lead.currentItemCount ?? 0}
                   </td>
-                  <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
+                  <td className="px-3 py-3 text-right tabular-nums text-[var(--color-foreground)]">
                     {lead.nextItemCount ?? 0}
                   </td>
-                  <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
+                  <td className="px-3 py-3 text-right tabular-nums text-[var(--color-foreground)]">
                     {lead.riskCount ?? 0}
                   </td>
-                  <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
+                  <td className="px-3 py-3 text-right tabular-nums text-[var(--color-foreground)]">
                     {lead.decisionCount ?? 0}
                   </td>
-                  <td className="px-5 py-3 text-right tabular-nums text-[var(--color-foreground)]">
+                  <td className="px-3 py-3 text-right tabular-nums text-[var(--color-foreground)]">
                     {lead.priorityCount ?? 0}
                   </td>
-                  <td className="px-5 py-3 text-[var(--color-muted-foreground)]">
+                  <td className="px-3 py-3 text-[var(--color-muted-foreground)]">
                     {lead.submittedAtLabel ?? "-"}
                   </td>
-                  <td className="px-5 py-3 text-right">
-                    {reportId && lead.status === "draft" ? (
+                  <td className="px-3 py-3 text-right">
+                    {canSendReminder && reportId && lead.status === "draft" ? (
                       <RemindLeadButton
                         reportId={reportId}
                         leadId={lead.id}
