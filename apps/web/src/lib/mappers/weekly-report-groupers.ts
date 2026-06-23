@@ -115,7 +115,13 @@ export function groupItemsByProject(
         id:
           item.id ??
           `${item.projectId}-${item.type}-${bucket[item.type].length}`,
+        // stageLead is kept for the print template's `[{stageLead}]`; the
+        // redesigned accordion reads `stage`/`owner` instead. Next-week stays
+        // "Planned" in stageLead (print back-compat) while stage/owner carry the
+        // real values the accordion shows on every row.
         stageLead: item.type === "next" ? "Planned" : stageLead,
+        stage: stagePart,
+        owner: initials,
         text: item.text,
         status: deriveItemStatus({
           workflowStatus: item.workflowStatus,
@@ -164,8 +170,14 @@ export function groupRisksByProject(
       list.push({
         id: risk.id ?? `risk-${section.reportSectionId}-${list.length}`,
         badge: riskStages ? `${productName} · ${riskStages}` : productName,
+        // Gutter fields for the redesigned risk row; `badge`/`text` stay for print.
+        stage: riskStages,
+        owner: initialsFromName(section.authorName),
         severity,
         text,
+        problem: risk.risk,
+        impact: risk.impact,
+        mitigation: risk.mitigation,
       });
       map.set(risk.projectId, list);
     }
@@ -206,6 +218,7 @@ export function groupDecisionsByProject(
       decisionList.push({
         id: d.id ?? `decision-${section.reportSectionId}-${idx}`,
         badge: targetProduct.projectName,
+        owner: initialsFromName(section.authorName),
         text: d.text,
       });
       decisions.set(targetProduct.projectId, decisionList);
