@@ -41,24 +41,24 @@ const NAV_LINKS: readonly NavLink[] = [
   { href: "/lead/report", label: "Report", roles: ["lead"] },
   // UX-17 (Phase 35-08): one History page for both active and archived
   // report periods; archived visibility is a local toggle inside the page.
-  // The `?tab=` query is back-compat only and no longer forces archive on
-  // (lead-live-walk-2026-06-14 §4) — History defaults to the current view.
+  // remove-dead-history-tab-param: the History link targets bare `/reports` —
+  // the page does not read a `tab` query param, so emitting one is dead weight.
   {
-    href: "/reports?tab=drafts",
+    href: "/reports",
     label: "History",
     title: "Past weeks and closed reports",
     roles: ["lead"],
   },
-  // UAT 2026-05-22: /head/history now 307-redirects to /reports?tab=published
-  // (same surface as viewer). Nav link points directly to the destination.
+  // UAT 2026-05-22: /head/history 307-redirects to /reports (same surface as
+  // viewer). The nav link points directly to the destination.
   {
-    href: "/reports?tab=published",
+    href: "/reports",
     label: "History",
     title: "Past weeks and closed reports",
     roles: ["head"],
   },
   {
-    href: "/reports?tab=published",
+    href: "/reports",
     label: "History",
     title: "Past weeks and closed reports",
     roles: ["viewer"],
@@ -108,11 +108,11 @@ function isActiveLink(pathname: string, href: string): boolean {
   if (href === "/admin") return pathname.startsWith("/admin");
   if (href === "/head/report") return pathname.startsWith("/head/report");
   if (href === "/head/dashboard") return pathname === "/head/dashboard";
-  if (href.startsWith("/reports?")) {
-    // History active state is pathname-based only — independent of the
-    // archive toggle (lead-live-walk-2026-06-14 §4.3). Each role renders a
-    // single History link, so both hrefs activating on /reports never
-    // collides across roles.
+  if (href === "/reports") {
+    // History active state is pathname-based only — independent of the archive
+    // toggle (lead-live-walk-2026-06-14 §4.3) and of any stray `?tab` param.
+    // Exact match (not startsWith) so report subpaths fall through to
+    // isPublishedReportPath below rather than this History branch.
     return pathname === "/reports" || isPublishedReportPath(pathname);
   }
   return pathname.startsWith(href);
@@ -196,8 +196,7 @@ function NavIcon({ href }: { readonly href: string }) {
   switch (href) {
     case "/lead/report":
       return <FileText {...common} />;
-    case "/reports?tab=drafts":
-    case "/reports?tab=published":
+    case "/reports":
       return <Clock {...common} />;
     case "/head/dashboard":
       return <LayoutDashboard {...common} />;
