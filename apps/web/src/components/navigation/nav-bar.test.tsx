@@ -134,17 +134,16 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkMissing(container, "/head/report");
   });
 
-  it("viewer does NOT see /lead/* links (Report, History)", () => {
+  it("viewer does NOT see /lead/report", () => {
     setRole("viewer");
     const { container } = render(<NavBar />);
     expectLinkMissing(container, "/lead/report");
-    expectLinkMissing(container, "/reports?tab=drafts");
   });
 
   it("viewer sees read-only History", () => {
     setRole("viewer");
     const { container } = render(<NavBar />);
-    expectLinkExists(container, "/reports?tab=published");
+    expectLinkExists(container, "/reports");
   });
 
   it("lead sees Report and History, with Slides folded into the report mode switch", () => {
@@ -154,8 +153,7 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkMissing(container, "/head/report");
     expectLinkExists(container, "/lead/report");
     expectLinkMissing(container, "/lead/slides");
-    expectLinkExists(container, "/reports?tab=drafts");
-    expectLinkMissing(container, "/reports?tab=published");
+    expectLinkExists(container, "/reports");
   });
 
   it("lead does NOT see /admin link", () => {
@@ -175,11 +173,10 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     const { container } = render(<NavBar />);
     expectLinkExists(container, "/head/dashboard");
     expectLinkExists(container, "/head/report");
-    // UAT 2026-05-22: head History now points to /reports?tab=published
-    expectLinkExists(container, "/reports?tab=published");
+    // remove-dead-history-tab-param: head History points to bare /reports.
+    expectLinkExists(container, "/reports");
     expectLinkMissing(container, "/head/history");
     expectLinkMissing(container, "/head/slides");
-    expectLinkMissing(container, "/reports?tab=drafts");
   });
 
   it("activates Status on addressed /head/report/[reportId] pages", () => {
@@ -196,8 +193,7 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     setRole("admin");
     const { container } = render(<NavBar />);
     expectLinkExists(container, "/admin");
-    expectLinkMissing(container, "/reports?tab=drafts");
-    expectLinkMissing(container, "/reports?tab=published");
+    expectLinkMissing(container, "/reports");
   });
 
   it("renders the parked Theme control with Coming Soon in metadata", () => {
@@ -311,34 +307,32 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkMissing(container, "/lead/report");
   });
 
-  it("activates only History on /reports?tab=drafts", () => {
+  it("activates History on a stray /reports?tab=drafts URL (back-compat)", () => {
     setRole("lead");
     setRoute("/reports", "tab=drafts");
 
     const { container } = render(<NavBar />);
 
-    expectActiveLink(container, "/reports?tab=drafts");
-    expectLinkMissing(container, "/reports?tab=published");
+    expectActiveLink(container, "/reports");
   });
 
-  it("activates head History on /reports (tab=published)", () => {
+  it("activates head History on a stray /reports?tab=published URL", () => {
     setRole("head");
     setRoute("/reports", "tab=published");
 
     const { container } = render(<NavBar />);
 
-    expectActiveLink(container, "/reports?tab=published");
+    expectActiveLink(container, "/reports");
     expectInactiveLink(container, "/head/dashboard");
   });
 
-  it("keeps the lead History link active on the Archive tab", () => {
+  it("keeps the lead History link active on a stray tab URL", () => {
     setRole("lead");
     setRoute("/reports", "tab=published");
 
     const { container } = render(<NavBar />);
 
-    expectActiveLink(container, "/reports?tab=drafts");
-    expectLinkMissing(container, "/reports?tab=published");
+    expectActiveLink(container, "/reports");
   });
 
   it("keeps head History active on /reports with NO tab param (§4.3)", () => {
@@ -350,7 +344,7 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
 
     const { container } = render(<NavBar />);
 
-    expectActiveLink(container, "/reports?tab=published");
+    expectActiveLink(container, "/reports");
     expectInactiveLink(container, "/head/dashboard");
   });
 
@@ -360,8 +354,7 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
 
     const { container } = render(<NavBar />);
 
-    expectActiveLink(container, "/reports?tab=drafts");
-    expectLinkMissing(container, "/reports?tab=published");
+    expectActiveLink(container, "/reports");
   });
 
   it("does not activate History on report analytics routes", () => {
@@ -370,6 +363,6 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
 
     const { container } = render(<NavBar />);
 
-    expectInactiveLink(container, "/reports?tab=published");
+    expectInactiveLink(container, "/reports");
   });
 });
