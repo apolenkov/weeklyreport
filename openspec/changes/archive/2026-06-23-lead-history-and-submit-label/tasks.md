@@ -57,6 +57,6 @@
       re-read to confirm it still matches the shipped behavior.
 - [x] 5.2 `pnpm typecheck && pnpm lint && pnpm test && pnpm build` green.
 - [x] 5.3 `openspec validate lead-history-and-submit-label --strict` green.
-- [ ] 5.4 Live-verify on `:3000`: latest period on top, footer
+- [x] 5.4 Live-verify on `:3000`: latest period on top, footer
       denominator matches, draft note present, button reads "Submit",
       `/lead/history` lands on `/reports` with no `tab`.
