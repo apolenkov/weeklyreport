@@ -65,7 +65,12 @@ A period is "submitted" only from one lead's point of view: that lead has
 submitted their own section for that period (`ReportSection.submittedAt` set).
 It is per-lead and per-period — the same period can be submitted for one lead
 and not another. It is NOT a property of the period and NOT the same as the
-period being `published`.
+period being `published`. A lead's **history aggregates** (the summary rail's
+traffic-light totals, average items, total risks) count only _completed_
+periods — those submitted, published, or archived; a draft period is provisional
+and excluded, but disclosed beside the numbers ("N draft not included"). The
+history list itself is ordered by reporting-period chronology (newest period
+first), independent of when the section row was created.
 _Avoid_: submitted period (no such global state — always qualify "for lead X").
 
 **Archived period**:
@@ -158,9 +163,13 @@ visibility is a lead-page own-vs-everyone toggle).
 
 **Document action** (report toolbar vocabulary):
 A toolbar control that operates on the report document itself — it creates,
-persists, commits, or exports report content (Save, Submit Section, Publish &
+persists, commits, or exports report content (Save, Submit, Publish &
 Lock, Fill-From, PDF export). Distinguished from a Context control by what it
-acts on, not by whether it writes.
+acts on, not by whether it writes. The lead's commit control is labeled
+**Submit** (not "Submit Section"): on the lead page a lead only ever sees their
+own section, so "Section" added no information — it is the per-lead _Lead
+submission_ act, kept visually distinct from the head's whole-report "Publish &
+Lock".
 _Avoid_: action (period nav is also "an action"); write action (PDF/version do
 not write yet are document actions).
 
