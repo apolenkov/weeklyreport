@@ -38,3 +38,8 @@ scheduled_tasks.lock
 e2e/sweep/.reports/
 # pnpm content-addressable store (local cache, never committed)
 .pnpm-store/
+
+# macOS Finder metadata
+.DS_Store
+# Ad-hoc verification-run artifact dirs (regenerated per live-verify)
+.verify-*/
