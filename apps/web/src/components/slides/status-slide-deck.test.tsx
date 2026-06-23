@@ -1,25 +1,8 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { SectionSlideModel, SlideProduct } from "./section-slide-utils";
 import { StatusSlideDeck } from "./status-slide-deck";
-
-vi.mock("next/link", () => ({
-  default: ({
-    children,
-    href,
-    className,
-  }: {
-    children: ReactNode;
-    href: string;
-    className?: string;
-  }) => (
-    <a href={href} className={className}>
-      {children}
-    </a>
-  ),
-}));
 
 const PRODUCT_ID = "44444444-4444-4444-8444-444444444444";
 const PRODUCT_TWO_ID = "88888888-8888-4888-8888-888888888888";
@@ -96,8 +79,6 @@ function renderLeadDeck(slides: readonly SectionSlideModel[]) {
       slides={slides}
       selectedIndex={0}
       onSelect={() => undefined}
-      title="My Status Slide"
-      subtitle="Current section grouped by product and SDLC stage."
       mode="lead"
     />,
   );
@@ -113,8 +94,6 @@ function renderLeadDeckWith(
       slides={slides}
       selectedIndex={selectedIndex}
       onSelect={onSelect}
-      title="My Status Slide"
-      subtitle="Current section grouped by product and SDLC stage."
       mode="lead"
     />,
   );
@@ -338,8 +317,6 @@ describe("StatusSlideDeck lead — product chip filter (slides-product-autofit)"
         slides={pages}
         selectedIndex={selectedIndex}
         onSelect={() => undefined}
-        title="My Status Slide"
-        subtitle="Current section grouped by product and SDLC stage."
         mode="lead"
       />
     );
@@ -371,8 +348,6 @@ function renderHeadDeck(
       slides={slides}
       selectedIndex={selectedIndex}
       onSelect={onSelect}
-      title="Team Status"
-      subtitle="Review each lead's slide."
       mode="head"
     />,
   );
@@ -518,37 +493,41 @@ describe("StatusSlideDeck head layout (head-slide-density)", () => {
     expect(screen.getAllByText("Blocked")).toHaveLength(1);
   });
 
-  it("folds readiness into the active slide as a compact in-slide strip", () => {
+  it("renders no in-slide readiness strip (head-slides-lead-parity S5)", () => {
     renderHeadDeck([slide()]);
 
-    const strip = screen.getByTestId("head-readiness-strip");
-    // The strip lives inside the active slide article, not a separate aside.
-    expect(strip.closest("article")).not.toBeNull();
-    expect(within(strip).getByText("Slide completion")).toBeInTheDocument();
-    expect(within(strip).getByText("100%")).toBeInTheDocument();
-    // The readiness checklist labels render inside the strip.
-    expect(within(strip).getByText("Scope")).toBeInTheDocument();
-  });
-
-  it("shows a quiet placeholder when the slide has no readiness items", () => {
-    renderHeadDeck([{ ...slide(), readiness: [] }]);
-
-    const strip = screen.getByTestId("head-readiness-strip");
+    // The readiness strip and its score/checklist are gone from the deck —
+    // the head deck carries no completion panel the lead deck lacks.
     expect(
-      within(strip).getByText("No readiness checks on this slide"),
-    ).toBeInTheDocument();
-    expect(within(strip).queryByText("Scope")).not.toBeInTheDocument();
+      screen.queryByTestId("head-readiness-strip"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Slide completion")).not.toBeInTheDocument();
   });
 
-  it("places the inert Agent-review placeholder in a fixed slide-header slot", () => {
+  it("renders no slide-header Agent-review slot (head-slides-lead-parity S6)", () => {
     renderHeadDeck([slide()]);
 
-    const slot = screen.getByTestId("head-agent-review-slot");
+    // The Agent-review placeholder relocated to the toolbar context row; the
+    // deck no longer mounts it. Portfolio metrics still render in the header.
     expect(
-      within(slot).getByTestId("agent-review-coming-soon"),
-    ).toBeInTheDocument();
-    // Portfolio metrics still render as the segmented capsule labels.
+      screen.queryByTestId("head-agent-review-slot"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("agent-review-coming-soon"),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("Priority")).toBeInTheDocument();
+  });
+
+  it("renders no standalone heading band or in-deck focused-report link (S2/S3)", () => {
+    renderHeadDeck([slide()]);
+
+    // The deck stops rendering its own title/subtitle band; the shell header is
+    // the single title. The "Open focused report" action moved to the header
+    // line, so no link lives inside the deck body.
+    expect(screen.queryByText("Group Status Slides")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /open focused report/i }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -700,8 +679,6 @@ describe("StatusSlideDeck head tone pill — colors come from named tokens", () 
         slides={[{ ...slide(), tone }]}
         selectedIndex={0}
         onSelect={() => undefined}
-        title="My Status Slide"
-        subtitle="Sub"
         mode="head"
       />,
     );
