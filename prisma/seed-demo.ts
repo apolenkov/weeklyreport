@@ -46,6 +46,9 @@ import {
   ItemWorkflowStatus,
   PeriodStatus,
   PeriodState,
+  ReminderAudience,
+  ReminderRuleKind,
+  ReminderRuleStatus,
 } from "@prisma/client";
 
 import { assertNonProdDestructive } from "./_destructive-guard.js";
@@ -322,12 +325,20 @@ const SMALL_DATASET: TierDataset = {
       },
     },
     // --- Maria (co-owner) — owns Testing; foreign content on Portal --------
+    // D5 (head-dashboard-declutter): Maria is the ONE SUBMITTED lead so the head
+    // dashboard shows a Revoke affordance. All her contributions are flipped to
+    // `submitted` (seedActiveLeadSection submits the section only when EVERY
+    // contribution is submitted). Submission is orthogonal to product health and
+    // to the Everyone-lens content, so it moves neither: she defines no worst
+    // status (Portal red = Igor, Integrations yellow = Vasily) and crossAuthorContent
+    // does not filter by section status. Vasily + Igor stay draft → period stays
+    // `open` and a draft lead remains for the Remind demo.
     {
       leadId: LEAD_MARIA_ID,
       leadLabel: MARIA_LABEL,
       productId: PROD_PORTAL,
       productLight: TrafficLightStatus.yellow,
-      sectionStatus: ReportSectionStatus.draft,
+      sectionStatus: ReportSectionStatus.submitted,
       ownedStages: ["Testing"],
       items: [
         {
@@ -361,7 +372,7 @@ const SMALL_DATASET: TierDataset = {
       leadLabel: MARIA_LABEL,
       productId: PROD_INTEGRATIONS,
       productLight: TrafficLightStatus.green,
-      sectionStatus: ReportSectionStatus.draft,
+      sectionStatus: ReportSectionStatus.submitted, // D5: Maria submitted (see above)
       ownedStages: ["Testing"],
       items: [
         {
@@ -393,7 +404,7 @@ const SMALL_DATASET: TierDataset = {
       leadLabel: MARIA_LABEL,
       productId: PROD_BI,
       productLight: TrafficLightStatus.green,
-      sectionStatus: ReportSectionStatus.draft,
+      sectionStatus: ReportSectionStatus.submitted, // D5: Maria submitted (see above)
       ownedStages: ["Analysis", "Design", "Testing"],
       items: [
         {
@@ -816,6 +827,50 @@ async function seedReports(): Promise<void> {
   });
 }
 
+// D6 (head-dashboard-declutter): one active reminder policy + rule for the
+// active period so the head's per-lead Remind action both renders (the
+// `hasActiveReminderRule` gate counts active ReminderPolicies whose validity
+// window covers `Report.deadline`) and actually dispatches (`reminders.
+// dispatchPending` looks up an active ReminderRule scoped to the active report).
+// Mirrors the proven `seed-simple.ts` deadline policy+rule shape. Fixed UUIDs
+// (`d…9000…`, distinct from the `d…8000…` counter ids) keep reseed deterministic.
+const REMINDER_POLICY_DEADLINE_ID = "d0000000-0000-4000-9000-000000000001";
+const REMINDER_RULE_DEADLINE_ID = "d0000000-0000-4000-9000-000000000002";
+const REMINDER_OFFSET_MINUTES = -1440; // fire 24h before deadline (seed-simple parity)
+const REMINDER_TIMEZONE = "Europe/Moscow";
+
+async function seedReminders(): Promise<void> {
+  const activeDeadline = new Date(SEED_REPORTS.active.deadline);
+  // Deterministic fireAt derived from the active deadline — no wall-clock.
+  const fireAt = new Date(
+    activeDeadline.getTime() + REMINDER_OFFSET_MINUTES * 60_000,
+  );
+  await prisma.reminderPolicy.create({
+    data: {
+      id: REMINDER_POLICY_DEADLINE_ID,
+      kind: ReminderRuleKind.deadline,
+      offsetMinutes: REMINDER_OFFSET_MINUTES,
+      timezone: REMINDER_TIMEZONE,
+      audience: ReminderAudience.LEAD_WITH_DRAFT,
+      active: true,
+      // validFrom ≤ active deadline, no validUntil → covers the active period.
+      validFrom: new Date(SEED_REPORTS.active.periodStart),
+    },
+  });
+  await prisma.reminderRule.create({
+    data: {
+      id: REMINDER_RULE_DEADLINE_ID,
+      reportId: ACTIVE_REPORT_ID,
+      policyId: REMINDER_POLICY_DEADLINE_ID,
+      kind: ReminderRuleKind.deadline,
+      fireAt,
+      timezone: REMINDER_TIMEZONE,
+      status: ReminderRuleStatus.active,
+      version: 1,
+    },
+  });
+}
+
 async function seedStageAssignments(dataset: TierDataset): Promise<void> {
   // Ownership: each section's lead owns its declared stages on its product.
   // @@unique([stageId, projectId]) — one owner per (stage, product).
@@ -1001,6 +1056,14 @@ async function seedDemo(tier: Tier): Promise<void> {
   console.log(`[seed-demo:${tier}] Seeding reports (active + published)...`);
   await seedReports();
   await seedStageAssignments(dataset);
+
+  // D6: small tier seeds an active reminder policy+rule so the dashboard's
+  // per-lead Remind action renders and dispatches for real (the huge tier is a
+  // scroll/stress fixture and does not exercise the Remind affordance).
+  if (tier === "small") {
+    console.log(`[seed-demo:${tier}] Seeding active reminder policy + rule...`);
+    await seedReminders();
+  }
 
   console.log(`[seed-demo:${tier}] Seeding active + published sections...`);
   const byLead = groupByLead(dataset.sections);
