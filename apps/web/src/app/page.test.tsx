@@ -197,7 +197,7 @@ describe("Landing page — a11y heading (page-has-heading-one)", () => {
 
     const headings = await screen.findAllByRole("heading", { level: 1 });
     expect(headings).toHaveLength(1);
-    expect(headings[0]).toHaveTextContent("Your PULSE");
+    expect(headings[0]).toHaveTextContent("Weekly Report");
   });
 });
 

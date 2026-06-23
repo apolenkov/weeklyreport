@@ -1,11 +1,10 @@
 /**
- * Regression tests for PulseBackground — catalog: verify-a11y-recommended-flip
+ * Regression tests for PulseBackground.
  *
- * NOTE: The catalog header claims "aria-hidden='true' was added to the first
- * SVG path element (ECG primary track)". The current source hides the entire
- * decorative subtree at the container level (div.pulse-bg aria-hidden + svg
- * aria-hidden), not on individual path elements. Assertions reflect the actual
- * source; catalog prose about the path-level attribute is not implemented.
+ * The decorative ECG/heartbeat SVG layer was removed 2026-06-23 along
+ * with the rest of the pulse motif. The background is now a static
+ * container (gradient + dot grid), kept fully out of the a11y tree via
+ * aria-hidden on the wrapper.
  */
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
@@ -20,38 +19,23 @@ describe("PulseBackground", () => {
       expect(bg).not.toBeNull();
       expect(bg).toHaveAttribute("aria-hidden", "true");
     });
-  });
 
-  describe("SVG accessibility hierarchy", () => {
-    it("svg.pulse-bg-ecg has aria-hidden='true'", () => {
+    it("renders the static dot-grid layer", () => {
       const { container } = render(<PulseBackground />);
-      const svg = container.querySelector("svg.pulse-bg-ecg");
-      expect(svg).not.toBeNull();
-      expect(svg).toHaveAttribute("aria-hidden", "true");
+      expect(container.querySelector(".pulse-bg-dots")).not.toBeNull();
     });
   });
 
-  describe("ECG path elements remain in the DOM", () => {
-    it("primary ECG path is rendered and present in the DOM", () => {
+  describe("no decorative pulse motion", () => {
+    it("renders no ECG/heartbeat SVG layer", () => {
       const { container } = render(<PulseBackground />);
-      const svg = container.querySelector("svg.pulse-bg-ecg");
-      const paths = svg?.querySelectorAll("path");
-      expect(paths?.length).toBeGreaterThanOrEqual(1);
-      // First path (primary track) is in the DOM despite container aria-hidden
-      expect(paths?.[0]).not.toBeNull();
-    });
-
-    it("secondary ECG path is rendered and present in the DOM", () => {
-      const { container } = render(<PulseBackground />);
-      const svg = container.querySelector("svg.pulse-bg-ecg");
-      const paths = svg?.querySelectorAll("path");
-      expect(paths?.length).toBeGreaterThanOrEqual(2);
-      expect(paths?.[1]).not.toBeNull();
+      expect(container.querySelector("svg.pulse-bg-ecg")).toBeNull();
+      expect(container.querySelector("path")).toBeNull();
     });
   });
 
   describe("component snapshot", () => {
-    it("matches DOM snapshot (aria-hidden on container and svg, no path-level aria-hidden)", () => {
+    it("matches DOM snapshot (static gradient + dot grid, no ECG)", () => {
       const { container } = render(<PulseBackground />);
       expect(container.firstChild).toMatchSnapshot();
     });
