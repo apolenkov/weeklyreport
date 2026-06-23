@@ -5,19 +5,13 @@ import {
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
-  Check,
-  Circle,
   FileText,
-  Gauge,
-  Layers,
   Star,
   Target,
 } from "lucide-react";
-import Link from "next/link";
 import { type ReactNode, useRef, useState } from "react";
 
 import { useFullscreen } from "../../hooks/use-fullscreen";
-import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { DeckFullscreenOverlay } from "./deck-fullscreen-overlay";
 import { HeadSlideCarousel } from "./head-slide-carousel";
 import { LeadSlideHero, metricSegment } from "./lead-slide-hero";
@@ -41,17 +35,9 @@ interface StatusSlideDeckProps {
   readonly slides: readonly SectionSlideModel[];
   readonly selectedIndex: number;
   readonly onSelect: (index: number) => void;
-  readonly title: string;
-  readonly subtitle: string;
-  readonly groupLabel?: string | null;
-  readonly reportLabel?: string | null;
-  readonly sourceHref?: string;
-  readonly sourceLabel?: string;
-  readonly hideSourceLink?: boolean;
   readonly mode: "lead" | "head";
   readonly toolbar?: ReactNode;
   readonly heroControls?: ReactNode;
-  readonly showChrome?: boolean;
 }
 
 const toneClass: Record<SlideTone, string> = {
@@ -76,28 +62,6 @@ function toneLabel(tone: SlideTone): string {
     case "empty":
       return "Empty";
   }
-}
-
-function readinessDot(status: "ready" | "needs-work" | "optional") {
-  if (status === "ready") {
-    return (
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] text-white">
-        <Check className="h-3.5 w-3.5" aria-hidden="true" />
-      </span>
-    );
-  }
-  if (status === "needs-work") {
-    return (
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-status-blocked-bg)] text-[var(--color-destructive)]">
-        <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-      </span>
-    );
-  }
-  return (
-    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] text-[var(--color-muted-foreground)]">
-      <Circle className="h-2.5 w-2.5" aria-hidden="true" />
-    </span>
-  );
 }
 
 /* redesign-head-slide-density (decisions recorded 2026-06-10): the head
@@ -278,59 +242,6 @@ function LeadSlideArticle({
   );
 }
 
-/* Readiness folded into the active slide as a compact in-slide strip — the
-   score plus the readiness checklist that previously lived in the right-hand
-   SLIDE COMPLETION aside. The checklist detail moves to a hover title so the
-   strip stays one line tall; an empty checklist shows a quiet placeholder
-   instead of an empty block. */
-function ReadinessStrip({
-  score,
-  readiness,
-}: {
-  readonly score: number;
-  readonly readiness: SectionSlideModel["readiness"];
-}) {
-  return (
-    <div
-      data-testid="head-readiness-strip"
-      className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/80 px-4 py-3"
-    >
-      <div className="flex items-center gap-2">
-        <Gauge
-          className="h-5 w-5 text-[var(--color-starbucks-accent)]"
-          aria-hidden="true"
-        />
-        <span className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-          Slide completion
-        </span>
-        <span className="text-xl font-semibold text-[var(--color-primary)]">
-          {score}%
-        </span>
-      </div>
-      {readiness.length > 0 ? (
-        <ul className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          {readiness.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-center gap-2"
-              title={item.detail}
-            >
-              {readinessDot(item.status)}
-              <span className="text-sm font-medium text-[var(--color-foreground)]">
-                {item.label}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <span className="text-sm text-[var(--color-muted-foreground)]">
-          No readiness checks on this slide
-        </span>
-      )}
-    </div>
-  );
-}
-
 function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
   const articleRef = useRef<HTMLElement>(null);
   // add-slide-fullscreen-exit-affordance: the head deck owns its single
@@ -405,13 +316,6 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
                 <Star className="h-4 w-4" />,
               )}
             </div>
-            {/* Fixed slide-header slot for the inert Agent-review placeholder
-                  — it sits in the header's right cluster (normal flow, never
-                  floated/overlapping). The hover "is there anything for me"
-                  behavior is the deferred Agent-review feature (Phase 54). */}
-            <div data-testid="head-agent-review-slot">
-              <AgentReviewComingSoon />
-            </div>
           </div>
         </div>
 
@@ -456,11 +360,6 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
             scrollItems
           />
         </div>
-
-        {/* Readiness folds into the active slide as a compact in-slide strip
-              (no separate right-hand SLIDE COMPLETION aside) — the head deck no
-              longer carries a side panel the lead deck lacks. */}
-        <ReadinessStrip score={slide.score} readiness={slide.readiness} />
       </div>
     </article>
   );
@@ -470,17 +369,9 @@ export function StatusSlideDeck({
   slides,
   selectedIndex,
   onSelect,
-  title,
-  subtitle,
-  groupLabel,
-  reportLabel,
-  sourceHref,
-  sourceLabel = "Open source report",
-  hideSourceLink = false,
   mode,
   toolbar,
   heroControls,
-  showChrome = true,
 }: StatusSlideDeckProps) {
   const slide = selectedSlide(slides, selectedIndex);
   const canGoPrev = selectedIndex > 0;
@@ -508,41 +399,6 @@ export function StatusSlideDeck({
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
-      {showChrome ? (
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold text-[var(--color-primary)]">
-              {title}
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm leading-[1.4] text-[var(--color-muted-foreground)]">
-              {subtitle}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {groupLabel ? (
-              <span className="inline-flex min-h-[2rem] items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-sm font-medium text-[var(--color-foreground)]">
-                <Layers className="h-4 w-4" aria-hidden="true" />
-                {groupLabel}
-              </span>
-            ) : null}
-            {reportLabel ? (
-              <span className="inline-flex min-h-[2rem] items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-sm font-medium text-[var(--color-muted-foreground)]">
-                <FileText className="h-4 w-4" aria-hidden="true" />
-                {reportLabel}
-              </span>
-            ) : null}
-            {!hideSourceLink && sourceHref ? (
-              <Link
-                href={sourceHref}
-                className="btn-press inline-flex min-h-[2rem] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-accent)]"
-              >
-                {sourceLabel}
-              </Link>
-            ) : null}
-          </div>
-        </header>
-      ) : null}
-
       {toolbar ? <div>{toolbar}</div> : null}
 
       {!slide ? (

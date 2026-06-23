@@ -16,9 +16,25 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 /* ---- Module mocks (hoisted above all imports of the SUT) ---- */
 
-vi.mock("../slides/head-slides-client", () => ({
-  HeadSlidesClient: () => <div data-testid="head-slides-client-stub" />,
-}));
+// head-slides-lead-parity (S3): the deck reports its active slide's focused-
+// report href up to the shell via onFocusHrefChange. The stub fires a fixed,
+// non-null href on mount so the shell's header-line "Open focused report"
+// action renders (mirrors a resolvable active slide).
+vi.mock("../slides/head-slides-client", async () => {
+  const React = await vi.importActual<typeof import("react")>("react");
+  return {
+    HeadSlidesClient: ({
+      onFocusHrefChange,
+    }: {
+      onFocusHrefChange?: (href: string | null) => void;
+    }) => {
+      React.useEffect(() => {
+        onFocusHrefChange?.("/head/report/test-report-001?authorId=lead-1");
+      }, [onFocusHrefChange]);
+      return <div data-testid="head-slides-client-stub" />;
+    },
+  };
+});
 
 vi.mock("../weekly-report/weekly-report-page", () => ({
   // report-toolbar-layout: render the header context label + the two toolbar
@@ -162,16 +178,33 @@ describe("HeadReportShell — agent-review placeholder per mode", () => {
     ).toBeInTheDocument();
   });
 
-  it("slides mode keeps the placeholder out of the shell header (the deck owns it)", () => {
-    // deferred-feature-pattern: exactly one AgentReviewComingSoon per surface.
-    // On head slides the head slide deck (status-slide-deck) already mounts the
-    // single placeholder, so the shell header must NOT render a second one. The
-    // deck is stubbed here, so the shell itself renders zero.
+  it("slides mode renders exactly one placeholder in the toolbar context controls", () => {
+    // head-slides-lead-parity (S6): the deck's slide-header slot was removed, so
+    // the toolbar context row now hosts the single placeholder in slides mode
+    // too — exactly one per surface, like form mode.
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
+    expect(screen.getAllByTestId("agent-review-coming-soon")).toHaveLength(1);
     expect(
-      screen.queryByTestId("agent-review-coming-soon"),
-    ).not.toBeInTheDocument();
+      within(
+        screen.getByRole("group", { name: "Context controls" }),
+      ).getByTestId("agent-review-coming-soon"),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("head-slides-client-stub")).toBeInTheDocument();
+  });
+
+  it("slides mode renders Open focused report on the header line when a target resolves", () => {
+    // head-slides-lead-parity (S3): the action moved from the deck body to the
+    // shell's slides-mode header line (the Document-action group), beside
+    // Export-PDF. The stubbed deck reports a non-null focus href on mount.
+    render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
+    const link = screen.getByRole("link", { name: /open focused report/i });
+    expect(link).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("group", { name: "Document actions" })).getByRole(
+        "link",
+        { name: /open focused report/i },
+      ),
+    ).toBeInTheDocument();
   });
 });
 
@@ -309,8 +342,8 @@ describe("HeadReportShell — context control cluster (head-toolbar-semantics)",
     expect(
       screen.queryByRole("link", { name: /print/i }),
     ).not.toBeInTheDocument();
-    // Agent-review is intentionally NOT in the slides shell header — the head
-    // slide deck owns the single placeholder (deferred-feature-pattern).
+    // head-slides-lead-parity (S6): the single Agent-review placeholder now
+    // lives in the slides toolbar context row (asserted in the per-mode suite).
   });
 });
 

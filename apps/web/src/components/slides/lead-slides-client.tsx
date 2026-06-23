@@ -1,12 +1,5 @@
 "use client";
 
-/* eslint-disable max-lines -- add-slide-fullscreen-exit-affordance: this is one
-   cohesive lead-deck client component (data fetching + record-visibility gating
-   + summary/product render modes + the single deck-level fullscreen owner). The
-   reusable control bits (toggle, floating exit pill, Esc hint, toolbar cluster)
-   are already extracted to deck-fullscreen-overlay.tsx; splitting the data layer
-   further would scatter one cohesive unit for a marginal line count. */
-
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -356,18 +349,6 @@ export function LeadSlidesClient({
         selectedIndex={selectedIndex}
         onSelect={setSelectedIndex}
         variant="lead"
-        title={inReportMode ? "Report slides" : "My Status Slides"}
-        subtitle={
-          inReportMode
-            ? "Report sections grouped by product and SDLC stage."
-            : "Current section grouped by product and SDLC stage."
-        }
-        groupLabel={
-          inReportMode ? null : (session?.user?.reportingGroupName ?? null)
-        }
-        sourceHref={`/lead/report/${encodeURIComponent(targetReportId)}`}
-        sourceLabel="Open source section"
-        hideSourceLink={inReportMode}
         heroControls={
           <div className="flex flex-wrap items-center gap-2">
             {scopeControls}
