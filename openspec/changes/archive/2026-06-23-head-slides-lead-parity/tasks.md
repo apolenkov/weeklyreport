@@ -83,4 +83,4 @@
 ## 8. Gates
 
 - [x] 8.1 `pnpm typecheck && pnpm lint && pnpm test && openspec validate
-  head-slides-lead-parity --strict` — all green before archive.
+head-slides-lead-parity --strict` — all green before archive.
