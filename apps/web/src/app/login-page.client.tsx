@@ -162,9 +162,9 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
   // row (singleton). When Phase 59 ships, `org.getPublic` should be
   // tenant-aware — either derive from the request host (subdomain
   // routing) or from a `/org/<slug>/...` path segment. The PulseMark
-  // brand string itself can stay org-scoped because the «Your PULSE?»
-  // wordmark is the product brand, not the tenant brand; only the
-  // small-caps PEO footnote line below it should swap per tenant.
+  // wordmark itself stays org-agnostic because «Weekly Report» names the
+  // product artifact, not the tenant brand; only the small-caps PEO
+  // footnote line below it should swap per tenant.
   // See .planning/phases/59-multi-org-hierarchy/59-CONTEXT.md.
   //
   // UFB-070: initialOrg is server-fetched by the RSC wrapper (page.tsx)
@@ -258,12 +258,10 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
           graphical PulseMark wordmark, which carries no semantic heading. Give
           the page a single level-one heading for screen readers and document
           outline without altering the visual design. */}
-      <h1 className="sr-only">Your PULSE — Status Reporting System</h1>
-      {/* Left panel — «Your PULSE?» rebrand (UFB-058 / Phase 58).
-          PulseBackground renders dark green base + dot grid + ECG line.
-          PulseMark + TaglineCycler are positioned above it. The ECG
-          track in pulse.css is pinned to top:50% so the trace visually
-          passes through the `?` glyph of PulseMark. */}
+      <h1 className="sr-only">Weekly Report</h1>
+      {/* Left panel — «Weekly Report» hero. PulseBackground renders the
+          static dark-green base + dot grid (the pulse/ECG motif was
+          removed 2026-06-23). PulseMark + TaglineCycler sit above it. */}
       <div className="relative hidden flex-1 flex-col items-start justify-center overflow-hidden p-16 text-white lg:flex">
         <PulseBackground />
         <div className="relative z-10 max-w-[480px]">
@@ -283,9 +281,10 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
       <div className="relative flex w-full flex-col items-center justify-center bg-white px-6 sm:px-10 lg:w-[480px] lg:flex-none">
         <div className="w-full max-w-[320px] text-center">
           {/* UFB-060 (2026-05-11): brand mark removed from the right
-              column — the left panel already shows «Your PULSE» at
-              full size, duplicating it on a 480px wide sign-in column
-              was visual noise. Right column is now pure utility: a
+              column — the left panel already shows the «Weekly Report»
+              wordmark at full size, duplicating it on a 480px wide
+              sign-in column was visual noise. Right column is now pure
+              utility: a
               quiet tagline + the sign-in CTA. The Fraunces font import
               remains because nav-bar may use it for the in-app
               brand-pill once authenticated. */}

@@ -2,7 +2,7 @@
 
 exports[`PulseMark > component render tree matches snapshot 1`] = `
 <div
-  aria-label="Your PULSE"
+  aria-label="Weekly Report"
   class="pulse-mark"
   role="img"
 >
@@ -10,7 +10,7 @@ exports[`PulseMark > component render tree matches snapshot 1`] = `
     aria-hidden="true"
     class="pulse-word"
   >
-    YOUR
+    WEEKLY
   </span>
   <span
     class="pulse-line"
@@ -19,7 +19,7 @@ exports[`PulseMark > component render tree matches snapshot 1`] = `
       aria-hidden="true"
       class="pulse-strong"
     >
-      PULSE
+      REPORT
     </span>
   </span>
 </div>

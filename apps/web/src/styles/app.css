@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import "@customreport/ui/styles/globals.css" layer(base);
-/* UFB-058 / Phase 58: «Your PULSE?» landing rebrand */
+/* Landing hero styling — «Weekly Report» wordmark + static column */
 @import "./pulse.css";
 @source "../";
 @source "../../../../packages/ui/src";
