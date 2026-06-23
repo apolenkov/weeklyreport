@@ -19,6 +19,7 @@ import { type ReactNode, useRef, useState } from "react";
 import { useFullscreen } from "../../hooks/use-fullscreen";
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { DeckFullscreenOverlay } from "./deck-fullscreen-overlay";
+import { HeadSlideCarousel } from "./head-slide-carousel";
 import { LeadSlideHero, metricSegment } from "./lead-slide-hero";
 import { LeadUnifiedSlide } from "./lead-unified-slide";
 import type {
@@ -277,6 +278,59 @@ function LeadSlideArticle({
   );
 }
 
+/* Readiness folded into the active slide as a compact in-slide strip — the
+   score plus the readiness checklist that previously lived in the right-hand
+   SLIDE COMPLETION aside. The checklist detail moves to a hover title so the
+   strip stays one line tall; an empty checklist shows a quiet placeholder
+   instead of an empty block. */
+function ReadinessStrip({
+  score,
+  readiness,
+}: {
+  readonly score: number;
+  readonly readiness: SectionSlideModel["readiness"];
+}) {
+  return (
+    <div
+      data-testid="head-readiness-strip"
+      className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/80 px-4 py-3"
+    >
+      <div className="flex items-center gap-2">
+        <Gauge
+          className="h-5 w-5 text-[var(--color-starbucks-accent)]"
+          aria-hidden="true"
+        />
+        <span className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+          Slide completion
+        </span>
+        <span className="text-xl font-semibold text-[var(--color-primary)]">
+          {score}%
+        </span>
+      </div>
+      {readiness.length > 0 ? (
+        <ul className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {readiness.map((item) => (
+            <li
+              key={item.id}
+              className="flex items-center gap-2"
+              title={item.detail}
+            >
+              {readinessDot(item.status)}
+              <span className="text-sm font-medium text-[var(--color-foreground)]">
+                {item.label}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <span className="text-sm text-[var(--color-muted-foreground)]">
+          No readiness checks on this slide
+        </span>
+      )}
+    </div>
+  );
+}
+
 function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
   const articleRef = useRef<HTMLElement>(null);
   // add-slide-fullscreen-exit-affordance: the head deck owns its single
@@ -301,136 +355,112 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
         isFullscreen={fullscreen.isFullscreen}
         onToggle={fullscreen.toggle}
       />
-      <div className="grid gap-5 xl:grid-cols-[1fr_310px]">
-        <div className="min-w-0 space-y-5">
-          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[rgba(0,0,0,0.08)] pb-4">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={[
-                    "rounded-[var(--radius-pill)] border px-2.5 py-1 text-xs font-semibold",
-                    toneClass[slide.tone],
-                  ].join(" ")}
-                >
-                  {toneLabel(slide.tone)}
-                </span>
-                <span className="text-xs font-medium uppercase text-[var(--color-muted-foreground)]">
-                  {slide.ownerRole}
-                </span>
-              </div>
-              <h2 className="mt-3 text-3xl font-semibold text-[var(--color-primary)]">
-                {slide.ownerName}
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
-                {slide.products.length > 0
-                  ? slide.products.join(" / ")
-                  : "No products assigned"}
-              </p>
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[rgba(0,0,0,0.08)] pb-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={[
+                  "rounded-[var(--radius-pill)] border px-2.5 py-1 text-xs font-semibold",
+                  toneClass[slide.tone],
+                ].join(" ")}
+              >
+                {toneLabel(slide.tone)}
+              </span>
+              <span className="text-xs font-medium uppercase text-[var(--color-muted-foreground)]">
+                {slide.ownerRole}
+              </span>
             </div>
-            <div className="flex flex-col items-end gap-2">
-              {/* Decision 1.1 #5: portfolio metrics align to the lead hero's
+            <h2 className="mt-3 text-3xl font-semibold text-[var(--color-primary)]">
+              {slide.ownerName}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--color-muted-foreground)]">
+              {slide.products.length > 0
+                ? slide.products.join(" / ")
+                : "No products assigned"}
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            {/* Decision 1.1 #5: portfolio metrics align to the lead hero's
                   segmented capsule treatment. */}
-              <div className="inline-flex h-11 items-center divide-x divide-[rgba(0,0,0,0.08)] rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.12)] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
-                {metricSegment(
-                  slide.currentCount,
-                  "Current",
-                  <Target className="h-4 w-4" />,
-                )}
-                {metricSegment(
-                  slide.nextCount,
-                  "Next",
-                  <ArrowRight className="h-4 w-4" />,
-                )}
-                {metricSegment(
-                  slide.riskCount,
-                  "Risks",
-                  <AlertTriangle className="h-4 w-4" />,
-                )}
-                {metricSegment(
-                  slide.priorityCount,
-                  "Priority",
-                  <Star className="h-4 w-4" />,
-                )}
-              </div>
+            <div className="inline-flex h-11 items-center divide-x divide-[rgba(0,0,0,0.08)] rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.12)] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+              {metricSegment(
+                slide.currentCount,
+                "Current",
+                <Target className="h-4 w-4" />,
+              )}
+              {metricSegment(
+                slide.nextCount,
+                "Next",
+                <ArrowRight className="h-4 w-4" />,
+              )}
+              {metricSegment(
+                slide.riskCount,
+                "Risks",
+                <AlertTriangle className="h-4 w-4" />,
+              )}
+              {metricSegment(
+                slide.priorityCount,
+                "Priority",
+                <Star className="h-4 w-4" />,
+              )}
+            </div>
+            {/* Fixed slide-header slot for the inert Agent-review placeholder
+                  — it sits in the header's right cluster (normal flow, never
+                  floated/overlapping). The hover "is there anything for me"
+                  behavior is the deferred Agent-review feature (Phase 54). */}
+            <div data-testid="head-agent-review-slot">
               <AgentReviewComingSoon />
             </div>
           </div>
-
-          {/* Decision 1.1 #1: fixed 2×2 topology like the lead slide — framed,
-              floored cards; no rhythm collapse at sparse density. */}
-          <div
-            className="grid auto-rows-fr grid-cols-2 gap-3"
-            data-testid="head-section-grid"
-          >
-            <HeadSectionCard
-              icon={Target}
-              label="Current work"
-              items={unified.current}
-              emptyText="No current work on the slide"
-              stripeClass="border-l-[var(--color-chip-on-track-border)]"
-              showBadges={showBadges}
-            />
-            <HeadSectionCard
-              icon={ArrowRight}
-              label="Next focus"
-              items={unified.next}
-              emptyText="No next focus on the slide"
-              stripeClass="border-l-[var(--color-primary)]"
-              showBadges={showBadges}
-              dashedFrame
-            />
-            <HeadSectionCard
-              icon={AlertTriangle}
-              label="Risks"
-              items={unified.risks}
-              emptyText="No risks raised"
-              stripeClass="border-l-[var(--color-chip-at-risk-border)]"
-              showBadges={showBadges}
-            />
-            <HeadSectionCard
-              icon={FileText}
-              label="Decisions"
-              items={unified.decisions}
-              emptyText="No decisions recorded"
-              stripeClass="border-l-[var(--color-decisions-accent)]"
-              showBadges={showBadges}
-              scrollItems
-            />
-          </div>
         </div>
 
-        <aside className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/80 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-bold uppercase text-[var(--color-muted-foreground)]">
-                Slide completion
-              </p>
-              <p className="mt-1 text-3xl font-semibold text-[var(--color-primary)]">
-                {slide.score}%
-              </p>
-            </div>
-            <Gauge
-              className="h-8 w-8 text-[var(--color-starbucks-accent)]"
-              aria-hidden="true"
-            />
-          </div>
+        {/* Decision 1.1 #1: fixed 2×2 topology like the lead slide — framed,
+              floored cards; no rhythm collapse at sparse density. */}
+        <div
+          className="grid auto-rows-fr grid-cols-2 gap-3"
+          data-testid="head-section-grid"
+        >
+          <HeadSectionCard
+            icon={Target}
+            label="Current work"
+            items={unified.current}
+            emptyText="No current work on the slide"
+            stripeClass="border-l-[var(--color-chip-on-track-border)]"
+            showBadges={showBadges}
+          />
+          <HeadSectionCard
+            icon={ArrowRight}
+            label="Next focus"
+            items={unified.next}
+            emptyText="No next focus on the slide"
+            stripeClass="border-l-[var(--color-primary)]"
+            showBadges={showBadges}
+            dashedFrame
+          />
+          <HeadSectionCard
+            icon={AlertTriangle}
+            label="Risks"
+            items={unified.risks}
+            emptyText="No risks raised"
+            stripeClass="border-l-[var(--color-chip-at-risk-border)]"
+            showBadges={showBadges}
+          />
+          <HeadSectionCard
+            icon={FileText}
+            label="Decisions"
+            items={unified.decisions}
+            emptyText="No decisions recorded"
+            stripeClass="border-l-[var(--color-decisions-accent)]"
+            showBadges={showBadges}
+            scrollItems
+          />
+        </div>
 
-          <div className="mt-4 space-y-3">
-            {slide.readiness.map((item) => (
-              <div key={item.id} className="flex gap-3">
-                {readinessDot(item.status)}
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-[var(--color-foreground)]">
-                    {item.label}
-                  </div>
-                  <div className="text-xs leading-5 text-[var(--color-muted-foreground)]">
-                    {item.detail}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </aside>
+        {/* Readiness folds into the active slide as a compact in-slide strip
+              (no separate right-hand SLIDE COMPLETION aside) — the head deck no
+              longer carries a side panel the lead deck lacks. */}
+        <ReadinessStrip score={slide.score} readiness={slide.readiness} />
       </div>
     </article>
   );
@@ -559,68 +589,17 @@ export function StatusSlideDeck({
             </div>
           ) : null}
 
-          <div
-            className={
-              isLead
-                ? "space-y-3"
-                : "grid gap-5 lg:grid-cols-[minmax(220px,300px)_1fr]"
-            }
-          >
-            {!isLead ? (
-              /* Decision 1.1 #4: the multi-lead sidebar is restyled to the
-                 card idiom (frame + neutral header) — structure and cross-lead
-                 navigation stay head-specific, not folded into the grid. */
-              <aside
-                className="h-fit rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-white/80 p-3"
-                aria-label="Slides"
-              >
-                <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-                  Slides
-                </div>
-                <div className="mt-2 space-y-2">
-                  {slides.map((item, index) => {
-                    const selected = index === selectedIndex;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => onSelect(index)}
-                        className={[
-                          "w-full rounded-[var(--radius)] border px-3 py-3 text-left transition-colors",
-                          selected
-                            ? "border-[var(--color-starbucks-accent)] bg-white shadow-[0_0_0_2px_rgba(0,117,74,0.13)]"
-                            : "border-[rgba(0,0,0,0.10)] bg-white hover:border-[var(--color-border)]",
-                        ].join(" ")}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="truncate text-sm font-semibold text-[var(--color-foreground)]">
-                            {item.ownerName}
-                          </span>
-                          <span
-                            className={[
-                              "rounded-[var(--radius-pill)] border px-2 py-0.5 text-[11px] font-semibold",
-                              toneClass[item.tone],
-                            ].join(" ")}
-                          >
-                            {toneLabel(item.tone)}
-                          </span>
-                        </div>
-                        <div className="mt-1 truncate text-xs text-[var(--color-muted-foreground)]">
-                          {item.products.length > 0
-                            ? item.products.join(" / ")
-                            : "No product scope"}
-                        </div>
-                        <div className="mt-2 flex items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
-                          <Gauge className="h-3.5 w-3.5" aria-hidden="true" />
-                          <span>{item.score}% ready</span>
-                          <span aria-hidden="true">|</span>
-                          <span>{item.status}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </aside>
+          <div className="space-y-3">
+            {/* head-slides-carousel-fullscreen: the head deck navigates via a
+                top carousel of slide cards (replacing the former left sidebar),
+                with the active slide rendered full-width below. Selecting a card
+                or pressing the arrow keys changes the active slide. */}
+            {!isLead && slides.length > 1 ? (
+              <HeadSlideCarousel
+                slides={slides}
+                selectedIndex={selectedIndex}
+                onSelect={onSelect}
+              />
             ) : null}
 
             {isLead ? (
@@ -636,29 +615,6 @@ export function StatusSlideDeck({
               <HeadSlideArticle slide={slide} />
             )}
           </div>
-
-          {!isLead && slides.length > 1 ? (
-            <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => onSelect(selectedIndex - 1)}
-                disabled={!canGoPrev}
-                className="inline-flex min-h-[2.25rem] items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-4 text-sm font-semibold text-[var(--color-foreground)] disabled:cursor-not-allowed disabled:opacity-45"
-              >
-                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                Previous
-              </button>
-              <button
-                type="button"
-                onClick={() => onSelect(selectedIndex + 1)}
-                disabled={!canGoNext}
-                className="inline-flex min-h-[2.25rem] items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-4 text-sm font-semibold text-[var(--color-foreground)] disabled:cursor-not-allowed disabled:opacity-45"
-              >
-                Next
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </div>
-          ) : null}
         </>
       )}
     </section>
