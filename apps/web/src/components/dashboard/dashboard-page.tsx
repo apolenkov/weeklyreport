@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, RefreshCw, RotateCcw } from "lucide-react";
-import dynamic from "next/dynamic";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -14,32 +13,12 @@ import { mapDashboardData } from "../../lib/mappers";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
-import { KpiCards } from "./kpi-cards";
-
-// Vercel audit win #3: ProductKpiCard pulls the full Recharts bundle (~130kB)
-// for a below-fold card. Load it lazily (client-only) so it stays out of the
-// initial dashboard chunk.
-const ProductKpiCard = dynamic(
-  () => import("./product-kpi-card").then((m) => m.ProductKpiCard),
-  {
-    ssr: false,
-    // Reserve the card's height while the lazy chunk loads so the client-side
-    // mount doesn't push content down (keeps dashboard CLS near 0).
-    loading: () => (
-      <div
-        aria-hidden="true"
-        className="min-h-[173px] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)]"
-      />
-    ),
-  },
-);
-
 import { ConfirmationDialog } from "../ui/confirmation-dialog";
-import { Activity24hCard } from "./activity-24h-card";
 import { ActivityLivePanel } from "./activity-live-panel";
 import { AlertBar } from "./alert-bar";
 import { BlockedAtRiskTable } from "./blocked-at-risk-table";
 import { DashboardSkeleton } from "./dashboard-skeleton";
+import { KpiCards } from "./kpi-cards";
 import { LeadSummaryTable } from "./lead-summary-table";
 
 export const DASHBOARD_LOAD_STALL_MS = 8000;
@@ -333,21 +312,13 @@ export function DashboardPage() {
       {/* KPI Cards */}
       <KpiCards data={kpi} />
 
-      {/* T-F4-4 §23.4: 24h Activity KPI card — count of lead sections edited
-          in the last 24 hours. Uses the activity.live feed (same poll as
-          ActivityLivePanel above, no extra request). */}
-      <Activity24hCard />
-
       {/* D-29: head/admin need the per-lead submission table on the dashboard,
           not only the aggregate cards and alert row. */}
-      <LeadSummaryTable leads={leads} reportId={weeklyQ.data.reportId} />
-
-      {/* Phase 52 (UFB-054): product-KPI card — leadership-readable
-          numbers backed by telemetry.summary. Pulls its own data and
-          self-gates: lead role renders null. The head dashboard is
-          already head/admin-only, but the role gate is defence-in-depth
-          for when this card moves to a viewer-accessible surface. */}
-      <ProductKpiCard role={sessionState?.user?.role ?? null} />
+      <LeadSummaryTable
+        leads={leads}
+        reportId={weeklyQ.data.reportId}
+        canSendReminder={canSendReminder}
+      />
 
       {/* Alert bar for pending leads */}
       <AlertBar
