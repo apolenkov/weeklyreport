@@ -609,13 +609,11 @@ export default defineConfig([
       "apps/api/src/modules/admin/period-admin.service.ts", // one Admin period-lifecycle service class
       "apps/api/src/modules/auth/auth.routes.ts", // one post-auth chain; helpers private to buildUserSession
       "apps/api/src/modules/report-sections/report-sections.prisma-repository.ts", // one Prisma persistence layer; include/type/mapper/class coupled
-      String.raw`apps/web/src/app/print/\[reportId\]/page.tsx`, // one A4 print layout; helpers compose it, nothing reused
       "apps/web/src/components/admin/users-tab.tsx", // one CRUD panel; table + dialogs share one state tree
       "apps/web/src/components/admin/groups-tab.tsx", // one CRUD tab; dialogs share one state machine
       "apps/web/src/components/admin/products-tab.tsx", // one CRUD screen; private icon helpers only
       "apps/web/src/components/lead/risk-edit-dialog.tsx", // one dialog: state + validation + render
       "apps/web/src/components/lead/item-edit-dialog.tsx", // one create/edit dialog; shell + content coupled
-      "apps/web/src/components/lead/decision-edit-dialog.tsx", // one create/edit dialog
       "apps/web/src/components/lead/lead-form-sync-bridge.tsx", // one context bridge wiring sync to two consumers
       "apps/web/src/components/slides/status-slide-deck.tsx", // one navigable slide-deck widget
       "apps/web/src/components/navigation/nav-bar.tsx", // one role-aware nav widget; MobileNav/coming-soon have no external consumers
@@ -649,7 +647,6 @@ export default defineConfig([
     files: [
       "apps/api/src/modules/auth/auth.routes.ts", // 3 Express auth handlers; env-conditional mount order (dev before passport) is load-bearing
       "apps/web/src/app/(app)/reports/page.tsx", // role-aware history renderer; 5 roles × distinct query/filter/label paths
-      "apps/web/src/app/login-page.client.tsx", // 3-way auth-mode landing spec (session / dev+hint / dev default)
       "apps/web/src/components/admin/admin-panel.tsx", // 9-tab dispatch + skeleton/loaded gating; only ~3 pts extractable
       "apps/web/src/components/dashboard/dashboard-page.tsx", // orchestrator: 2 queries + shared state + 4 render branches, hook-coupled
       "apps/web/src/components/lead/decision-edit-dialog.tsx", // one create/edit dialog; per-field validation + conditional fields
@@ -680,14 +677,10 @@ export default defineConfig([
       "apps/api/src/modules/admin/admin-snapshot-write.queries.ts", // role-aware user upsert + FK-guarded deletion
       "apps/api/src/modules/admin/period-admin.service.ts", // manual period edit + per-field audit diff (only layer with before+after)
       "apps/api/src/modules/analytics/analytics.prisma-repository.ts", // 3-level traversal (reports→sections→statuses) → period×project matrix
-      "apps/api/src/modules/report-sections/lead-form.prisma-repository.ts", // group cross-authored assignments by (projectId, authorId)
       "apps/web/src/app/(app)/reports/page.tsx", // see cyclomatic block (same role-aware renderer)
-      "apps/web/src/app/login-page.client.tsx", // see cyclomatic block (same 3-way auth spec)
       "apps/web/src/components/dashboard/remind-lead-button.tsx", // one ConfirmState machine → label/message/icon/disabled
-      "apps/web/src/components/lead/lead-form-sync-bridge.tsx", // 3-phase risk→stage sync sharing mutable state in one useCallback
       "apps/web/src/components/lead/lead-form.tsx", // see cyclomatic block (same monolith)
       "apps/web/src/components/lead/lead-history-sidebar.tsx", // see cyclomatic block
-      "apps/web/src/components/lead/next-week-section.tsx", // see cyclomatic block
       "apps/web/src/components/lead/risks-section.tsx", // see cyclomatic block
       "apps/web/src/components/lead/stage-chip.tsx", // see cyclomatic block
       "apps/web/src/components/slides/section-slide-utils.ts", // see cyclomatic block
@@ -704,7 +697,6 @@ export default defineConfig([
     files: [
       "apps/web/src/components/landing/tagline-cycler.tsx", // self-recursive setTimeout handler mutating timer/visible/index state
       "apps/web/src/components/lead/lead-form.tsx", // array-transform pipelines inside React state setters
-      "apps/web/src/components/lead/sdlc-pipeline.tsx", // idiomatic map→find→some stage-match chain in JSX render
       "apps/web/src/hooks/use-status-risk.ts", // arrow callbacks in state-update chains; consolidated to avoid loops via syncSourceRef
       "apps/web/src/lib/trpc.ts", // RxJS observer/cleanup handlers in the error-link middleware
     ],
