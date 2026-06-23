@@ -60,11 +60,15 @@ Smaller notes (not implemented): the corner watermark icons in each quadrant and
 the metrics capsule (Current/Next/Risks/Priority) vs the quadrant headers carry
 some redundancy — candidates for a later "remove one accessory" pass.
 
-Implementation watch-line (F3): the `--slide-quadrant-min` floor stays on the
-card, not the grid track (the lead pattern + this change's spec put it on the
-track). Kept on the card because a head test asserts that class. Verified clean
-at 1728px; at a very narrow viewport the bottom quadrant could clip instead of
-scrolling — worth a track-floor follow-up.
+Implementation note (F3): the `--slide-quadrant-min` floor is on the grid track
+(`auto-rows-[minmax(...,1fr)]`), parity with the lead deck. The autonomous grill
+caught that the first pass put the floor on the card (`auto-rows-fr` + card
+`min-h`), which let the bottom quadrant row **overlap** the top below ~768px —
+fixed here (see `f3-narrow-before-390.png` vs `f3-narrow-after-700.png`). Desktop
+(1728px) is unchanged. One inherent property remains, shared with the lead deck:
+at very narrow widths (<~768px) the short 16:10 frame still clips the quadrants —
+that is the nature of the "fixed PowerPoint slide" the user asked for, not a bug.
+Making narrow head slides fully responsive would be a separate user decision.
 
 ### `/head/report/{id}` (edit / accordion)
 
@@ -124,3 +128,35 @@ proposal's "Open Questions". One word each unblocks them.
   code for review, mindful that much "looks-like-cruft" here is intentionally
   parked (ComingSoon, `openspec/deferred`, versions-v2).
 - **Data-populated lead view** (see lead-surface note above).
+- **Head-slide visual-acceptance set.** `head-slide-density` expects a before/after
+  screenshot set across the slide states (one-lead, many-leads, empty-section,
+  dense-decisions, fullscreen) for sign-off before archive. Only the one-lead and
+  two narrow-width states are captured here — the rest need a live look.
+
+## Autonomous grill (post-implementation, 2026-06-24)
+
+After implementing, an adversarial multi-lens grill (correctness, a11y, spec,
+design-taste, completeness) ran over the diff: 9 findings, 6 confirmed, 3 refuted.
+
+Fixed in this PR (objective, owned by this change):
+
+- **F3 narrow-width overlap → fixed.** Moved the quadrant floor from the card to
+  the grid track (lead parity), eliminating the bottom-row overlap below ~768px;
+  updated the head test + delta spec to match (resolves the card-vs-track
+  spec-debt the grill flagged). Verified at 390 / 700 / 1728px.
+- **F5 "Submitted" date a11y → fixed.** The table→card conversion had dropped the
+  one column-header association (the date became a bare span); added an sr-only
+  "Submitted:" label.
+- Doc corrections (the track-floor attribution above; this section).
+
+Needs the user (not changed — taste / design decisions):
+
+- **F5 repeated micro-labels (top design call).** Each lead card repeats all six
+  count labels (PRODUCTS/CURRENT/NEXT/RISKS/DECISIONS/PRIORITIES) — 18 repeats
+  across 3 cards — where the old table labelled them once. The card _chrome_
+  matches BlockedAtRisk, but the content is really a 6-tile stat strip, harder to
+  scan column-wise than the table was. Recommendation: label the counts once
+  (a header row or a single legend) and let the per-card cells carry values only,
+  or drop to the 2–3 counts that matter. This is a taste call for the user.
+- **Narrow-width head slides** — see the F3 note above (fixed-slide clip vs
+  responsive is a user decision).

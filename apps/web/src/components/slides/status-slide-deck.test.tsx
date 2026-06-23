@@ -359,9 +359,15 @@ describe("StatusSlideDeck head layout (head-slide-density)", () => {
 
     const cards = screen.getAllByTestId("head-section-card");
     expect(cards).toHaveLength(4);
-    // Fixed topology: every card carries the named min-height token.
+    // Fixed topology: the --slide-quadrant-min floor lives on the grid TRACK
+    // (parity with the lead deck), NOT on the card — so a bounded fixed frame
+    // distributes even, floored zones instead of letting a card min-height
+    // overflow and overlap its neighbour at narrow widths.
+    expect(screen.getByTestId("head-section-grid").className).toContain(
+      "auto-rows-[minmax(var(--slide-quadrant-min),1fr)]",
+    );
     for (const card of cards) {
-      expect(card.className).toContain("min-h-[var(--slide-quadrant-min)]");
+      expect(card.className).not.toContain("min-h-[var(--slide-quadrant-min)]");
     }
     // Per-card left stripe from the token map, in render order.
     expect(cards[0]?.className).toContain(

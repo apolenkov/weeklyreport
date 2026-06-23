@@ -119,7 +119,7 @@ function HeadSectionCard({
   return (
     <section
       data-testid="head-section-card"
-      className={`relative flex min-h-[var(--slide-quadrant-min)] flex-col overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] border-l-4 ${
+      className={`relative flex min-h-0 flex-col overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] border-l-4 ${
         dashedFrame ? "border-dashed [border-left-style:solid]" : ""
       } ${stripeClass} bg-white/80 p-3`}
     >
@@ -315,7 +315,7 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
         {/* Decision 1.1 #1: fixed 2×2 topology like the lead slide — framed,
               floored cards; no rhythm collapse at sparse density. */}
         <div
-          className="grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-3"
+          className="grid min-h-0 flex-1 auto-rows-[minmax(var(--slide-quadrant-min),1fr)] grid-cols-2 gap-3"
           data-testid="head-section-grid"
         >
           <HeadSectionCard
