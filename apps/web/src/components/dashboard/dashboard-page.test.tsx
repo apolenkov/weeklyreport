@@ -66,6 +66,37 @@ vi.mock("./blocked-at-risk-table", () => ({
   BlockedAtRiskTable: () => <div>Blocked</div>,
 }));
 
+vi.mock("./lead-summary-table", () => ({
+  LeadSummaryTable: () => <div>Lead summary</div>,
+}));
+
+vi.mock("../ui/confirmation-dialog", () => ({
+  ConfirmationDialog: () => null,
+}));
+
+// Mapper is unit-tested separately; stub it so the success-path render does not
+// need a full WeeklyReportReadModel fixture (head-dashboard-declutter test 5.1).
+vi.mock("../../lib/mappers", () => ({
+  mapDashboardData: () => ({
+    kpi: {
+      submitted: 0,
+      total: 0,
+      lastWeekSubmitted: 0,
+      lastWeekTotal: 0,
+      pendingCount: 0,
+      deadlineLabel: "2d 0h",
+      deadlineTime: "2026-05-15",
+      blockedCount: 0,
+      atRiskCount: 0,
+      decisionCount: 0,
+    },
+    leads: [],
+    blockedAtRisk: [],
+    archive: [],
+    pendingLeads: [],
+  }),
+}));
+
 interface QueryState {
   data?: unknown;
   error?: Error | null;
@@ -115,6 +146,27 @@ describe("DashboardPage loading guard", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  it("renders the live activity feed exactly once and no removed 24h card (head-dashboard-declutter)", () => {
+    setQueryState("review.dashboard", { data: [] });
+    setQueryState("weeklyReport.get", {
+      data: {
+        status: "ok",
+        reportId: "report-1",
+        weekLabel: "Week 20",
+        periodStatus: "open",
+        hasActiveReminderRule: true,
+      },
+    });
+
+    render(<DashboardPage />);
+
+    // ActivityLivePanel owns the activity.live feed; it must render exactly once
+    // (the duplicate Activity24hCard was removed).
+    expect(screen.getAllByText("Activity")).toHaveLength(1);
+    expect(screen.queryByTestId("activity-24h-card")).not.toBeInTheDocument();
+    expect(screen.getByText("Lead summary")).toBeInTheDocument();
   });
 
   it("does not keep the dashboard on the skeleton after a query error", () => {

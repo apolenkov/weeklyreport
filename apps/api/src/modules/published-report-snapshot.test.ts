@@ -145,6 +145,126 @@ describe("buildEscalationsFromReadSections", () => {
   });
 });
 
+// fix-flagged-red-escalation-dedup: a product co-owned by N (>= 2) leads and
+// flagged red appears once in EACH co-owner's section, so the builder used to
+// emit N identical "flagged red" `at_risk` rows. The dedupe collapses them to
+// ONE per `projectId` (cross-section), while leaving per-record `blocked` items
+// and `unresolved_risk` risks untouched. The single shared builder feeds both
+// the live dashboard and the published snapshot, so this regression covers both.
+describe("buildEscalationsFromReadSections — flagged-red dedupe", () => {
+  const SECOND_SECTION_ID = "3b334e9c-d5c3-484d-9b8c-26fdd63206d8";
+
+  function coOwnedRedSections(): ReportSectionReadModel[] {
+    const redProject = {
+      projectId: OWNED_PRODUCT,
+      projectName: "CRM Portal",
+      trafficLight: "red" as const,
+      ownedStages: [],
+    };
+    return [
+      makeSection({
+        authorName: "Alice Lead",
+        projects: [redProject],
+        items: [
+          {
+            id: "11111111-1111-4111-8111-111111111111",
+            projectId: OWNED_PRODUCT,
+            type: "current",
+            text: "Alice blocker",
+            tag: "infra",
+            workflowStatus: "blocked",
+            carriedOver: false,
+            completed: null,
+            priorityRank: null,
+            stageIds: ["Development"],
+          },
+        ],
+        risks: [
+          {
+            id: "22222222-2222-4222-8222-222222222222",
+            projectId: OWNED_PRODUCT,
+            risk: "Alice risk",
+            impact: "High",
+            mitigation: "Mitigate",
+            severity: "at-risk",
+            stageIds: ["Development"],
+          },
+        ],
+      }),
+      makeSection({
+        reportSectionId: SECOND_SECTION_ID,
+        authorName: "Bob Lead",
+        projects: [redProject],
+        items: [
+          {
+            id: "33333333-3333-4333-8333-333333333333",
+            projectId: OWNED_PRODUCT,
+            type: "current",
+            text: "Bob blocker",
+            tag: "infra",
+            workflowStatus: "blocked",
+            carriedOver: false,
+            completed: null,
+            priorityRank: null,
+            stageIds: ["Testing"],
+          },
+        ],
+        risks: [
+          {
+            id: "44444444-4444-4444-8444-444444444444",
+            projectId: OWNED_PRODUCT,
+            risk: "Bob risk",
+            impact: "Medium",
+            mitigation: "Mitigate",
+            severity: "at-risk",
+            stageIds: ["Testing"],
+          },
+        ],
+      }),
+    ];
+  }
+
+  it("collapses a co-owned flagged-red product to a single at_risk escalation", () => {
+    const atRisk = buildEscalationsFromReadSections(
+      coOwnedRedSections(),
+    ).filter((e) => e.type === "at_risk");
+
+    expect(atRisk).toHaveLength(1);
+    expect(atRisk[0]).toMatchObject({
+      productName: "CRM Portal",
+      description: "Project CRM Portal is flagged red.",
+    });
+    // leadName is non-nullable and deterministically the first contributor.
+    expect(atRisk[0]?.leadName).toBe("Alice Lead");
+  });
+
+  it("does not dedupe per-record blocked items or unresolved risks", () => {
+    const escalations = buildEscalationsFromReadSections(coOwnedRedSections());
+
+    // Each lead's own blocked item and risk stays a distinct row — only the
+    // product-level flagged-red signal collapses.
+    expect(
+      escalations.filter((e) => e.type === "blocked").map((e) => e.description),
+    ).toEqual(["Alice blocker", "Bob blocker"]);
+    expect(
+      escalations
+        .filter((e) => e.type === "unresolved_risk")
+        .map((e) => e.description),
+    ).toEqual(["Alice risk", "Bob risk"]);
+  });
+
+  it("emits one flagged-red per product regardless of call (live/snapshot parity)", () => {
+    // Both surfaces call this same builder, so a second invocation on the same
+    // read model must yield the identical single escalation — no leaked dedupe
+    // state across calls.
+    const first = buildEscalationsFromReadSections(coOwnedRedSections());
+    const second = buildEscalationsFromReadSections(coOwnedRedSections());
+
+    expect(first.filter((e) => e.type === "at_risk")).toHaveLength(1);
+    expect(second).toEqual(first);
+  });
+});
+
 // fix-published-empty-stage-risk-floor: an OWNED stage with no submitted
 // status (raw `status: null`) covered by the section author's OWN at-risk /
 // blocked risk must floor the product status. Today

@@ -2,9 +2,9 @@ import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
 /**
  * Loading-state skeleton for the head dashboard. Mirrors the dimensions of
- * ActivityLivePanel / KpiCards / Activity24hCard / LeadSummaryTable /
- * ProductKpiCard / AlertBar / BlockedAtRiskTable in the exact render order so
- * the load-to-data transition has minimal layout shift.
+ * ActivityLivePanel / KpiCards / LeadSummaryTable / AlertBar /
+ * BlockedAtRiskTable in the exact render order so the load-to-data transition
+ * has minimal layout shift.
  *
  * Stateless and hook-free — safe to render server-side.
  */
@@ -45,13 +45,6 @@ export function DashboardSkeleton() {
         ))}
       </div>
 
-      {/* Activity24hCard — single compact card */}
-      <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]">
-        <Skeleton className="mb-2 h-4 w-40" />
-        <Skeleton className="h-9 w-20" />
-        <Skeleton className="mt-2 h-3 w-56" />
-      </div>
-
       {/* LeadSummaryTable — header + table rows */}
       <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-4">
@@ -59,7 +52,7 @@ export function DashboardSkeleton() {
           <Skeleton className="h-5 w-24 rounded-[var(--radius-pill)]" />
         </div>
         <div className="overflow-x-auto">
-          <div className="min-w-[840px]">
+          <div className="w-full">
             {/* thead placeholder */}
             <div className="flex gap-4 border-b border-[var(--color-border)] px-5 py-3">
               {[120, 80, 80, 80, 100].map((w, i) => (
@@ -81,12 +74,6 @@ export function DashboardSkeleton() {
           </div>
         </div>
       </div>
-
-      {/* ProductKpiCard — reserved height matches the lazy-loaded card */}
-      <div
-        aria-hidden="true"
-        className="min-h-[173px] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)]"
-      />
 
       {/* AlertBar */}
       <Skeleton className="h-12 w-full rounded-[var(--radius)]" />

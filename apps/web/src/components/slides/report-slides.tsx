@@ -9,15 +9,8 @@ interface ReportSlidesProps {
   readonly slides: readonly SectionSlideModel[];
   readonly selectedIndex: number;
   readonly onSelect: (index: number) => void;
-  /** "lead" = single-section deck, no chrome; "head" = multi-section, full chrome */
+  /** "lead" = single-section deck; "head" = multi-section carousel. */
   readonly variant: "lead" | "head";
-  readonly title: string;
-  readonly subtitle: string;
-  readonly groupLabel?: string | null;
-  readonly reportLabel?: string | null;
-  readonly sourceHref?: string;
-  readonly sourceLabel?: string;
-  readonly hideSourceLink?: boolean;
   readonly toolbar?: ReactNode;
   /** Rendered inside the lead slide hero, inline with the tone badge. */
   readonly heroControls?: ReactNode;
@@ -28,13 +21,6 @@ export function ReportSlides({
   selectedIndex,
   onSelect,
   variant,
-  title,
-  subtitle,
-  groupLabel,
-  reportLabel,
-  sourceHref,
-  sourceLabel,
-  hideSourceLink,
   toolbar,
   heroControls,
 }: ReportSlidesProps) {
@@ -43,17 +29,9 @@ export function ReportSlides({
       slides={slides}
       selectedIndex={selectedIndex}
       onSelect={onSelect}
-      title={title}
-      subtitle={subtitle}
-      groupLabel={groupLabel}
-      reportLabel={reportLabel}
-      sourceHref={sourceHref}
-      sourceLabel={sourceLabel}
-      hideSourceLink={hideSourceLink}
       toolbar={toolbar}
       heroControls={heroControls}
       mode={variant}
-      showChrome={variant === "lead" ? false : undefined}
     />
   );
 }
