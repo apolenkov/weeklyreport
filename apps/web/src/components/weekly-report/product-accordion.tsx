@@ -3,7 +3,12 @@
 import { useEffect, useState } from "react";
 
 import { pluralize } from "../../lib/pluralize";
-import type { ProductReport } from "../dashboard/mock-data";
+import type {
+  ProductReport,
+  ReportDecision,
+  ReportItem,
+  ReportRisk,
+} from "../dashboard/mock-data";
 
 interface ProductAccordionProps {
   readonly report: ProductReport;
@@ -43,24 +48,53 @@ const STATUS_CONFIG = {
   },
 } as const satisfies Record<string, StatusConfig>;
 
-// report-card-clarity: the stage chip is an IDENTITY label (stage + initials),
-// rendered with one uniform treatment regardless of workflow status. The
-// workflow-status signal moves to the row's left stripe (below), so the chip
-// no longer encodes status in its fill. All colors resolve through named tokens.
-const STAGE_CHIP_CLASS =
-  "inline-flex flex-shrink-0 items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]";
+// head-report-accordion-redesign (user sign-off 2026-06-23): every content row
+// — item, risk, decision — shares ONE column grid so all stage labels share one
+// left edge and all content shares one left edge (the text no longer jumps).
+// Columns: priority | status rail | gutter (stage+owner) | content | status badge.
+const ROW_GRID =
+  "grid grid-cols-[20px_3px_minmax(0,124px)_minmax(0,1fr)_104px] items-start gap-x-3.5";
 
-// Workflow-status → row left-stripe color (named tokens only). EVERY workflow
-// status carries a visible, distinct marker so the chip can stay status-free
-// (status-color-semantics): blocked → red (the only alarm hue), completed →
-// solid success green, in-progress → neutral grey. The light --color-success
-// *tint* is a fill, not a stripe color — too pale to read at 3px, which is why
-// completed uses --color-success-foreground here.
-function itemStripeColor(status: string): string {
-  if (status === "blocked") return "var(--color-destructive)";
-  if (status === "completed") return "var(--color-success-foreground)";
-  if (status === "in-progress") return "var(--color-muted-foreground)";
-  return "var(--color-border)";
+// report-card-clarity: the product-status dot in the header reads its hue from a
+// named token (red=blocked alarm, amber=at-risk, green=on-track).
+const HEADER_STATUS_TONE = {
+  "on-track": "var(--color-chip-on-track-border)",
+  "at-risk": "var(--color-status-at-risk-border)",
+  blocked: "var(--color-destructive)",
+} as const satisfies Record<string, string>;
+
+// status-color-semantics: each workflow status resolves its badge through named
+// tokens — never hardcoded hex. blocked=red alarm, in-progress=steel-blue (the
+// added token), completed=success green, planned=muted.
+const STATUS_BADGE = {
+  blocked: {
+    label: "Blocked",
+    bg: "var(--color-status-blocked-bg)",
+    fg: "var(--color-destructive)",
+  },
+  "in-progress": {
+    label: "In Progress",
+    bg: "var(--color-status-in-progress-bg)",
+    fg: "var(--color-status-in-progress-fg)",
+  },
+  completed: {
+    label: "Done",
+    bg: "var(--color-success)",
+    fg: "var(--color-success-foreground)",
+  },
+  planned: {
+    label: "Planned",
+    bg: "var(--color-muted)",
+    fg: "var(--color-muted-foreground)",
+  },
+} as const satisfies Record<string, { label: string; bg: string; fg: string }>;
+
+// Item row left-stripe: red only for blocked (the alarm hue); every other status
+// is carried by the right-side badge, so the rail stays a neutral spine.
+function itemRailTone(status: string): string {
+  return status === "blocked"
+    ? "var(--color-destructive)"
+    : "var(--color-border)";
 }
 
 // Prioritized items first (rank 1, 2, …), the rest keep their order.
@@ -71,27 +105,6 @@ function sortByPriority<T extends { priorityRank?: number | null }>(
     (a, b) =>
       (a.priorityRank ?? Number.MAX_SAFE_INTEGER) -
       (b.priorityRank ?? Number.MAX_SAFE_INTEGER),
-  );
-}
-
-// Gold rank badge for prioritized items — replaces the former TOP
-// PRIORITIES section, which duplicated current-week items 1:1.
-function PriorityRankBadge({ rank }: { readonly rank: number }) {
-  return (
-    <span
-      className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold"
-      style={{
-        background:
-          rank === 1 ? "var(--color-starbucks-gold)" : "var(--color-border)",
-        color:
-          rank === 1
-            ? "var(--color-primary-foreground)"
-            : "var(--color-muted-foreground)",
-      }}
-      title={`Priority ${rank}`}
-    >
-      {rank}
-    </span>
   );
 }
 
@@ -110,6 +123,169 @@ function ChevronDown({ expanded }: { readonly expanded: boolean }) {
     </svg>
   );
 }
+
+// Gold rank marker in the dedicated left column — priorities-only hue
+// (status-color-semantics). Sitting in its own column keeps the gutter from
+// floating when an item is prioritized, and scales to several priorities.
+function RankMark({ rank }: { readonly rank: number }) {
+  return (
+    <span
+      className="flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold tabular-nums"
+      style={{
+        background: "var(--color-starbucks-gold)",
+        color: "var(--color-primary-foreground)",
+      }}
+      title={`Priority ${rank}`}
+    >
+      {rank}
+    </span>
+  );
+}
+
+function Rail({ tone }: { readonly tone: string }) {
+  return (
+    <span
+      className="min-h-[22px] self-stretch rounded-[2px]"
+      style={{ background: tone }}
+      aria-hidden="true"
+    />
+  );
+}
+
+// The fixed-width meta gutter: SDLC stage over the contributing lead's initials.
+// report-card-clarity: an identity surface — it never encodes workflow status.
+function Gutter({
+  stage,
+  owner,
+}: {
+  readonly stage: string;
+  readonly owner: string;
+}) {
+  return (
+    <span className="flex min-w-0 flex-col gap-0.5 pt-px">
+      {stage ? (
+        <span className="truncate text-[12.5px] font-semibold text-[var(--color-foreground)]">
+          {stage}
+        </span>
+      ) : null}
+      {owner ? (
+        <span className="text-[11px] font-medium tabular-nums text-[var(--color-muted-foreground)]">
+          {owner}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function StatusBadge({ status }: { readonly status: ReportItem["status"] }) {
+  const cfg = STATUS_BADGE[status];
+  return (
+    <span className="flex justify-end pt-px">
+      <span
+        className="whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold"
+        style={{ background: cfg.bg, color: cfg.fg }}
+      >
+        {cfg.label}
+      </span>
+    </span>
+  );
+}
+
+function ItemRow({ item }: { readonly item: ReportItem }) {
+  return (
+    <div className={ROW_GRID} data-accordion-row="item">
+      <span className="flex min-h-[18px] justify-center pt-px">
+        {item.priorityRank != null ? (
+          <RankMark rank={item.priorityRank} />
+        ) : null}
+      </span>
+      <Rail tone={itemRailTone(item.status)} />
+      <Gutter stage={item.stage ?? ""} owner={item.owner ?? ""} />
+      <span className="pt-px text-[14.5px] leading-normal text-[var(--color-foreground)]">
+        {item.text}
+      </span>
+      <StatusBadge status={item.status} />
+    </div>
+  );
+}
+
+function RiskRow({ risk }: { readonly risk: ReportRisk }) {
+  const tone =
+    risk.severity === "blocked"
+      ? "var(--color-destructive)"
+      : "var(--color-status-at-risk-border)";
+  return (
+    <div className={ROW_GRID} data-accordion-row="risk">
+      <span className="min-h-[18px]" aria-hidden="true" />
+      <Rail tone={tone} />
+      <Gutter stage={risk.stage ?? ""} owner={risk.owner ?? ""} />
+      <span className="pt-px">
+        <div className="text-[14.5px] leading-snug text-[var(--color-foreground)]">
+          {risk.problem ?? risk.text}
+        </div>
+        {risk.impact || risk.mitigation ? (
+          <div className="mt-1.5 grid grid-cols-[84px_minmax(0,1fr)] items-baseline gap-x-2.5 gap-y-1">
+            {risk.impact ? (
+              <>
+                <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--color-destructive)]">
+                  Impact
+                </span>
+                <span className="text-[13px] leading-snug">{risk.impact}</span>
+              </>
+            ) : null}
+            {risk.mitigation ? (
+              <>
+                <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
+                  Mitigation
+                </span>
+                <span className="text-[13px] leading-snug text-[var(--color-starbucks-accent)]">
+                  {risk.mitigation}
+                </span>
+              </>
+            ) : null}
+          </div>
+        ) : null}
+      </span>
+      <span aria-hidden="true" />
+    </div>
+  );
+}
+
+function DecisionRow({ decision }: { readonly decision: ReportDecision }) {
+  return (
+    <div className={ROW_GRID} data-accordion-row="decision">
+      <span className="min-h-[18px]" aria-hidden="true" />
+      <Rail tone="var(--color-decisions-accent)" />
+      <Gutter stage="Decision" owner={decision.owner ?? ""} />
+      <span className="pt-px text-[14.5px] leading-normal text-[var(--color-foreground)]">
+        {decision.text}
+      </span>
+      <span aria-hidden="true" />
+    </div>
+  );
+}
+
+function SectionHeader({
+  title,
+  count,
+}: {
+  readonly title: string;
+  readonly count: string;
+}) {
+  return (
+    <div className="mb-3">
+      <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-[var(--color-foreground)]">
+        {title}
+      </span>
+      <span className="ml-2 text-[12px] font-medium tabular-nums text-[var(--color-muted-foreground)]">
+        {count}
+      </span>
+    </div>
+  );
+}
+
+const SECTION_DIVIDER =
+  "border-t border-[rgba(0,0,0,0.06)] pt-5 first:border-t-0 first:pt-0";
 
 export function ProductAccordion({
   report,
@@ -136,6 +312,10 @@ export function ProductAccordion({
     : ((STATUS_CONFIG as Record<string, StatusConfig>)[report.status] ??
       STATUS_CONFIG["on-track"]);
   const statusLabel = isEmpty ? "No updates" : report.statusLabel;
+  const statusTone = isEmpty
+    ? "var(--color-muted-foreground)"
+    : ((HEADER_STATUS_TONE as Record<string, string>)[report.status] ??
+      HEADER_STATUS_TONE["on-track"]);
 
   // report-card-clarity: suppress the "Needs Attention" banner when its text is
   // verbatim one of the item rows already rendered in this card — the escalation
@@ -184,7 +364,7 @@ export function ProductAccordion({
     >
       <button
         type="button"
-        className={`flex w-full items-center justify-between p-4 transition-[background-color,border-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
+        className={`flex w-full items-center justify-between gap-3 p-4 transition-[background-color,border-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2 ${
           hasContent
             ? "cursor-pointer hover:bg-[var(--color-surface-muted)]"
             : "cursor-default bg-[var(--color-background)] opacity-65"
@@ -197,31 +377,34 @@ export function ProductAccordion({
         aria-expanded={hasContent ? expanded : false}
         data-product-accordion-toggle="true"
       >
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5 pr-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3 pr-3">
           <div
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"
             style={{ background: config.avatarBg, color: config.avatarText }}
           >
             {report.initials}
           </div>
-          <span className="min-w-0 truncate font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em]">
-            {report.name}
-          </span>
-          <span
-            className="inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[11px] font-semibold"
-            style={{ background: config.bg, color: config.text }}
-          >
-            {statusLabel}
-          </span>
-          <span
-            className={`inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-medium ${
-              isEmpty
-                ? "bg-[rgba(0,0,0,0.06)] text-[var(--color-muted-foreground)]"
-                : "bg-[var(--color-success)] text-[var(--color-primary)]"
-            }`}
-          >
-            {report.leads}
-          </span>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="truncate font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.015em]">
+                {report.name}
+              </span>
+              <span
+                className="inline-flex flex-shrink-0 items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.04em]"
+                style={{ color: statusTone }}
+              >
+                <span
+                  className="h-[7px] w-[7px] rounded-full"
+                  style={{ background: statusTone }}
+                  aria-hidden="true"
+                />
+                {statusLabel}
+              </span>
+            </div>
+            <span className="truncate text-[12.5px] text-[var(--color-muted-foreground)]">
+              {report.leads}
+            </span>
+          </div>
         </div>
         {hasContent ? (
           <ChevronDown expanded={expanded} />
@@ -236,10 +419,9 @@ export function ProductAccordion({
           style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
         >
           <div className="min-h-0 overflow-hidden">
-            <div className="space-y-3 border-t border-[rgba(0,0,0,0.06)] px-4 pb-4 pt-4">
-              {/* Needs Attention */}
+            <div className="space-y-5 border-t border-[rgba(0,0,0,0.06)] px-5 pb-5 pt-4">
               {showNeedsAttention && (
-                <div>
+                <div className={SECTION_DIVIDER}>
                   <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
                     Needs Attention
                   </div>
@@ -264,150 +446,69 @@ export function ProductAccordion({
                 </div>
               )}
 
-              {/* Current Week. User feedback 2026-06-10: the separate TOP
-                  PRIORITIES section duplicated these items 1:1 — instead,
-                  prioritized items sort first and carry a rank badge
-                  inline. */}
               {report.currentWeek.length > 0 && (
-                <div>
-                  <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                    Current Week &middot; {report.currentWeek.length}{" "}
-                    {pluralize(report.currentWeek.length, "item", "items")}
-                  </div>
-                  <div className="space-y-1">
-                    {sortByPriority(report.currentWeek).map((item) => {
-                      const isBlocked = item.status === "blocked";
-                      const stripe = itemStripeColor(item.status);
-                      return (
-                        <div
-                          key={item.id}
-                          className="flex items-center gap-2 rounded p-2 text-sm"
-                          style={{
-                            background: isBlocked
-                              ? "var(--color-status-blocked-bg)"
-                              : item.priorityRank === 1
-                                ? "var(--color-priority-row-bg)"
-                                : "var(--color-background)",
-                            borderLeft: `3px solid ${stripe}`,
-                          }}
-                        >
-                          {item.priorityRank != null && (
-                            <PriorityRankBadge rank={item.priorityRank} />
-                          )}
-                          <span className={STAGE_CHIP_CLASS}>
-                            {item.status === "planned"
-                              ? "Planned"
-                              : item.stageLead}
-                          </span>
-                          {item.text}
-                        </div>
-                      );
-                    })}
+                <div className={SECTION_DIVIDER}>
+                  <SectionHeader
+                    title="Current Week"
+                    count={`${report.currentWeek.length} ${pluralize(
+                      report.currentWeek.length,
+                      "item",
+                      "items",
+                    )}`}
+                  />
+                  <div className="space-y-px">
+                    {sortByPriority(report.currentWeek).map((item) => (
+                      <ItemRow key={item.id} item={item} />
+                    ))}
                   </div>
                 </div>
               )}
 
-              {/* Next Week */}
               {report.nextWeek.length > 0 && (
-                <div>
-                  <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                    Next Week &middot; {report.nextWeek.length}{" "}
-                    {pluralize(report.nextWeek.length, "item", "items")}
-                  </div>
-                  <div className="space-y-1">
+                <div className={SECTION_DIVIDER}>
+                  <SectionHeader
+                    title="Next Week"
+                    count={`${report.nextWeek.length} ${pluralize(
+                      report.nextWeek.length,
+                      "item",
+                      "items",
+                    )}`}
+                  />
+                  <div className="space-y-px">
                     {report.nextWeek.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center gap-2 rounded p-2 text-sm"
-                        style={{
-                          background: "var(--color-background)",
-                          border: "1px dashed var(--color-border)",
-                        }}
-                      >
-                        <span className="inline-flex flex-shrink-0 items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]">
-                          Planned
-                        </span>
-                        {item.text}
-                      </div>
+                      <ItemRow key={item.id} item={item} />
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Risks & Blockers */}
               {report.risks.length > 0 && (
-                <div>
-                  <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                    Risks & Blockers &middot; {report.risks.length}
-                  </div>
-                  <div className="space-y-1.5">
-                    {report.risks.map((risk) => {
-                      const isBlocked = risk.severity === "blocked";
-                      return (
-                        <div
-                          key={risk.id}
-                          className="rounded p-2.5 text-sm"
-                          style={
-                            isBlocked
-                              ? {
-                                  background: "var(--color-status-blocked-bg)",
-                                  color: "var(--color-destructive)",
-                                }
-                              : {
-                                  background: "var(--color-surface-muted)",
-                                  borderLeft:
-                                    "3px solid var(--color-status-at-risk-border)",
-                                  color: "var(--color-foreground)",
-                                }
-                          }
-                        >
-                          <span
-                            className="mr-1 inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-semibold"
-                            style={{
-                              background: isBlocked
-                                ? "var(--color-status-blocked-bg)"
-                                : "var(--color-muted)",
-                              color: isBlocked
-                                ? "var(--color-destructive)"
-                                : "var(--color-muted-foreground)",
-                            }}
-                          >
-                            {risk.badge}
-                          </span>
-                          {risk.text}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Decisions */}
-              {report.decisions.length > 0 && (
-                <div>
-                  <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                    Decisions &middot; {report.decisions.length}
-                  </div>
-                  <div className="space-y-1.5">
-                    {report.decisions.map((decision) => (
-                      <div
-                        key={decision.id}
-                        className="rounded p-2.5 text-sm"
-                        style={{ background: "var(--color-background)" }}
-                      >
-                        <span className="mr-1 inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-primary)]">
-                          {decision.badge}
-                        </span>
-                        {decision.text}
-                      </div>
+                <div className={SECTION_DIVIDER}>
+                  <SectionHeader
+                    title="Risks & Blockers"
+                    count={`${report.risks.length}`}
+                  />
+                  <div className="space-y-1">
+                    {report.risks.map((risk) => (
+                      <RiskRow key={risk.id} risk={risk} />
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* The former TOP PRIORITIES section is gone (user feedback
-                  2026-06-10): it duplicated current-week items verbatim.
-                  Ranks now render inline via PriorityRankBadge above. */}
+              {report.decisions.length > 0 && (
+                <div className={SECTION_DIVIDER}>
+                  <SectionHeader
+                    title="Decisions"
+                    count={`${report.decisions.length}`}
+                  />
+                  <div className="space-y-px">
+                    {report.decisions.map((decision) => (
+                      <DecisionRow key={decision.id} decision={decision} />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

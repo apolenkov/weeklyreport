@@ -69,6 +69,11 @@
   --color-status-at-risk-bg: #fef3c7;
   --color-status-at-risk-fg: #78350f;
   --color-status-at-risk-border: #a07c30;
+  /* in-progress badge surface (head-report-accordion-redesign, user sign-off
+     2026-06-23): steel-blue, distinct from the reserved alarm/at-risk/priority
+     hues. The only workflow status without a prior named token. */
+  --color-status-in-progress-bg: #e9eff3;
+  --color-status-in-progress-fg: #436079;
   --color-priority-row-bg: #faf6ee;
   --color-highlight-shadow: rgba(0, 117, 74, 0.16);
 
