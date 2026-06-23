@@ -25,6 +25,10 @@ export interface WeeklyPortfolioProduct {
 export interface WeeklyReportItem {
   id: string;
   stageLead: string;
+  /** SDLC stage name for the redesigned gutter (e.g. "Development"); "" when none. */
+  stage: string;
+  /** Contributing lead's initials for the gutter (e.g. "ВИ"). */
+  owner: string;
   text: string;
   status: ItemStatus;
   /** Priority rank (1 = top) when the item is a flagged priority; null otherwise. */
@@ -34,13 +38,24 @@ export interface WeeklyReportItem {
 export interface WeeklyReportRisk {
   id: string;
   badge: string;
+  /** SDLC stage name for the gutter; "" when none. */
+  stage: string;
+  /** Contributing lead's initials for the gutter. */
+  owner: string;
   severity: "blocked" | "at-risk";
+  /** Merged "problem — Impact: … — Mitigation: …" (kept for the print template). */
   text: string;
+  /** Structured fields for the redesigned risk row. */
+  problem: string;
+  impact: string;
+  mitigation: string;
 }
 
 export interface WeeklyReportDecision {
   id: string;
   badge: string;
+  /** Contributing lead's initials for the gutter. */
+  owner: string;
   text: string;
 }
 

@@ -1445,7 +1445,12 @@ async function main() {
         tag: it.tag,
         workflowStatus: ItemWorkflowStatus.in_progress,
         carriedOver: false,
-        completed: false,
+        // next-week items are planned work — `completed: null` derives the
+        // "planned" presentation status (deriveItemStatus). With the redesigned
+        // accordion surfacing real per-item status, a non-null `false` here would
+        // read as "In Progress" on every next-week row; the old card hid this
+        // behind a hardcoded "Planned" label.
+        completed: null,
         stageNames: [stageFor(idx + 100)],
       })),
     ];

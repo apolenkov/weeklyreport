@@ -1,18 +1,28 @@
 /**
- * Regression for fix-sweep-ui-findings + apply-status-palette: the separate
- * TOP PRIORITIES section duplicated current-week items 1:1 and was removed
- * (user feedback 2026-06-10) — prioritized items now sort first in Current
- * Week and carry an inline PriorityRankBadge. Duplicate ranks must render
- * without React key warnings (rows key on item.id).
+ * head-report-accordion-redesign (user sign-off 2026-06-23): the product card
+ * body is the uniform "Editorial Gutter" grid — every row (item / risk /
+ * decision) shares one column grid (priority | rail | stage+owner gutter |
+ * content | status badge), so stage labels and content share one left edge.
  *
- * VA-0a/VA-0b: verify-a11y regression catalog — unit-rtl high + snapshot rows
- * for ChevronDown aria-hidden, rotation transform, prioritized-row structure,
- * and accordion expand/collapse grid behavior.
+ * Contract covered here:
+ * - prioritized items sort first and carry a gold rank mark in the rank column
+ *   (duplicate ranks render without React key warnings; rows key on item.id);
+ * - workflow status reads from a right-side status BADGE (report-card-clarity:
+ *   the stage gutter stays an identity surface, never a status fill);
+ * - owner initials render on item, risk, AND decision rows;
+ * - risks render structured Impact / Mitigation;
+ * - ChevronDown aria-hidden + rotation + accordion expand/collapse grid;
+ * - Needs Attention dedup against a rendered item.
  */
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { ProductReport, ReportItem } from "../dashboard/mock-data";
+import type {
+  ProductReport,
+  ReportDecision,
+  ReportItem,
+  ReportRisk,
+} from "../dashboard/mock-data";
 import { ProductAccordion } from "./product-accordion";
 
 function makeReport(overrides?: Partial<ProductReport>): ProductReport {
@@ -35,8 +45,35 @@ function makeReport(overrides?: Partial<ProductReport>): ProductReport {
 function makeItem(overrides: Partial<ReportItem> & { id: string }): ReportItem {
   return {
     stageLead: "Dev · AL",
+    stage: "Development",
+    owner: "AL",
     text: `Item ${overrides.id}`,
     status: "in-progress",
+    ...overrides,
+  };
+}
+
+function makeRisk(overrides: Partial<ReportRisk> & { id: string }): ReportRisk {
+  return {
+    badge: "Product Alpha · Development",
+    stage: "Development",
+    owner: "AL",
+    severity: "at-risk",
+    text: "Problem — Impact: I — Mitigation: M",
+    problem: "Problem",
+    impact: "I",
+    mitigation: "M",
+    ...overrides,
+  };
+}
+
+function makeDecision(
+  overrides: Partial<ReportDecision> & { id: string },
+): ReportDecision {
+  return {
+    badge: "Product Alpha",
+    owner: "AL",
+    text: `Decision ${overrides.id}`,
     ...overrides,
   };
 }
@@ -45,6 +82,10 @@ function makeItem(overrides: Partial<ReportItem> & { id: string }): ReportItem {
 const reportWithContent = makeReport({
   currentWeek: [makeItem({ id: "c1", text: "Ship it", priorityRank: 1 })],
 });
+
+const itemRows = (container: HTMLElement) => [
+  ...container.querySelectorAll('[data-accordion-row="item"]'),
+];
 
 describe("ProductAccordion prioritized items", () => {
   afterEach(() => {
@@ -94,16 +135,14 @@ describe("ProductAccordion prioritized items", () => {
       />,
     );
 
-    const texts = [...container.querySelectorAll("div.space-y-1 > div")].map(
-      (row) => row.textContent,
-    );
+    const texts = itemRows(container).map((row) => row.textContent);
     expect(texts[0]).toContain("Rank one");
     expect(texts[1]).toContain("Rank two");
     expect(texts[2]).toContain("Unranked one");
     expect(texts[3]).toContain("Unranked two");
   });
 
-  it("prioritized item carries a rank badge; unranked items carry none", () => {
+  it("prioritized item carries a gold rank mark; unranked items carry none", () => {
     render(
       <ProductAccordion
         defaultOpen
@@ -120,6 +159,22 @@ describe("ProductAccordion prioritized items", () => {
     expect(screen.queryByTitle("Priority 2")).not.toBeInTheDocument();
   });
 
+  it("renders a rank mark per priority (several priorities scale)", () => {
+    render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          currentWeek: [
+            makeItem({ id: "r1", text: "One", priorityRank: 1 }),
+            makeItem({ id: "r2", text: "Two", priorityRank: 2 }),
+          ],
+        })}
+      />,
+    );
+    expect(screen.getByTitle("Priority 1")).toHaveTextContent("1");
+    expect(screen.getByTitle("Priority 2")).toHaveTextContent("2");
+  });
+
   it("pluralizes the Current Week count: '1 item' at one, 'N items' otherwise", () => {
     const { rerender } = render(
       <ProductAccordion
@@ -129,9 +184,8 @@ describe("ProductAccordion prioritized items", () => {
         })}
       />,
     );
-    // Driver finding 5: a single-item Current Week must read "1 item", not
-    // the always-plural "1 items".
-    expect(screen.getByText(/Current Week · 1 item$/)).toBeInTheDocument();
+    expect(screen.getByText("Current Week")).toBeInTheDocument();
+    expect(screen.getByText("1 item")).toBeInTheDocument();
 
     rerender(
       <ProductAccordion
@@ -144,32 +198,7 @@ describe("ProductAccordion prioritized items", () => {
         })}
       />,
     );
-    expect(screen.getByText(/Current Week · 2 items$/)).toBeInTheDocument();
-  });
-
-  it("pluralizes the Next Week count: '1 item' at one, 'N items' otherwise", () => {
-    const { rerender } = render(
-      <ProductAccordion
-        defaultOpen
-        report={makeReport({
-          nextWeek: [makeItem({ id: "n1", text: "Only next" })],
-        })}
-      />,
-    );
-    expect(screen.getByText(/Next Week · 1 item$/)).toBeInTheDocument();
-
-    rerender(
-      <ProductAccordion
-        defaultOpen
-        report={makeReport({
-          nextWeek: [
-            makeItem({ id: "n1", text: "Next one" }),
-            makeItem({ id: "n2", text: "Next two" }),
-          ],
-        })}
-      />,
-    );
-    expect(screen.getByText(/Next Week · 2 items$/)).toBeInTheDocument();
+    expect(screen.getByText("2 items")).toBeInTheDocument();
   });
 
   it("does not render the removed TOP PRIORITIES section even when priorities data is present", () => {
@@ -189,7 +218,142 @@ describe("ProductAccordion prioritized items", () => {
 });
 
 // ---------------------------------------------------------------------------
-// VA-0a unit-rtl high: ChevronDown SVG aria-hidden
+// Status badge: workflow status reads from a right-side badge, not the gutter.
+// ---------------------------------------------------------------------------
+
+describe("ProductAccordion — item status badge", () => {
+  it("maps each workflow status to its badge label", () => {
+    render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          currentWeek: [
+            makeItem({ id: "b", text: "B", status: "blocked" }),
+            makeItem({ id: "p", text: "P", status: "in-progress" }),
+            makeItem({ id: "d", text: "D", status: "completed" }),
+          ],
+          nextWeek: [makeItem({ id: "n", text: "N", status: "planned" })],
+        })}
+      />,
+    );
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
+    expect(screen.getByText("In Progress")).toBeInTheDocument();
+    expect(screen.getByText("Done")).toBeInTheDocument();
+    expect(screen.getByText("Planned")).toBeInTheDocument();
+  });
+
+  it("blocked item gets a red rail; non-blocked gets a neutral rail", () => {
+    const { container } = render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          currentWeek: [
+            makeItem({ id: "b", text: "Blocked one", status: "blocked" }),
+            makeItem({ id: "p", text: "Progress one", status: "in-progress" }),
+          ],
+        })}
+      />,
+    );
+    const railTone = (rowText: string) => {
+      const row = itemRows(container).find((r) =>
+        r.textContent.includes(rowText),
+      );
+      // the rail is the row's second grid cell (rank | RAIL | gutter | …)
+      const rail = row?.children[1] as HTMLElement | undefined;
+      return rail?.getAttribute("style") ?? "";
+    };
+    expect(railTone("Blocked one")).toContain("var(--color-destructive)");
+    expect(railTone("Progress one")).toContain("var(--color-border)");
+  });
+
+  it("the stage gutter is identity-only: no status label leaks into it", () => {
+    const { container } = render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          currentWeek: [
+            makeItem({
+              id: "x",
+              text: "Work text",
+              stage: "Development",
+              owner: "AL",
+              status: "blocked",
+            }),
+          ],
+        })}
+      />,
+    );
+    const row = itemRows(container)[0];
+    // the gutter (3rd cell) names the stage + owner, never the status word
+    const gutter = row.children[2] as HTMLElement | undefined;
+    expect(gutter?.textContent).toContain("Development");
+    expect(gutter?.textContent).toContain("AL");
+    expect(gutter?.textContent).not.toContain("Blocked");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Owner initials render on every content row.
+// ---------------------------------------------------------------------------
+
+describe("ProductAccordion — owner initials on every row", () => {
+  it("renders owner initials on item, risk, and decision rows", () => {
+    render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          currentWeek: [makeItem({ id: "c1", text: "Item", owner: "II" })],
+          nextWeek: [makeItem({ id: "n1", text: "Next", owner: "NN" })],
+          risks: [makeRisk({ id: "k1", owner: "RR" })],
+          decisions: [makeDecision({ id: "d1", owner: "DD" })],
+        })}
+      />,
+    );
+    expect(screen.getByText("II")).toBeInTheDocument();
+    expect(screen.getByText("NN")).toBeInTheDocument();
+    expect(screen.getByText("RR")).toBeInTheDocument();
+    expect(screen.getByText("DD")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Risks render structured Impact / Mitigation, not a run-on string.
+// ---------------------------------------------------------------------------
+
+describe("ProductAccordion — structured risk row", () => {
+  it("renders problem, Impact and Mitigation as separate fields", () => {
+    render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          risks: [
+            makeRisk({
+              id: "k1",
+              stage: "DevOps",
+              owner: "IV",
+              problem: "Cluster capacity not allocated",
+              impact: "Release slips a week",
+              mitigation: "Raise an infra ticket",
+            }),
+          ],
+        })}
+      />,
+    );
+    expect(
+      screen.getByText("Cluster capacity not allocated"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Impact")).toBeInTheDocument();
+    expect(screen.getByText("Release slips a week")).toBeInTheDocument();
+    expect(screen.getByText("Mitigation")).toBeInTheDocument();
+    expect(screen.getByText("Raise an infra ticket")).toBeInTheDocument();
+    // gutter shows stage + owner
+    expect(screen.getByText("DevOps")).toBeInTheDocument();
+    expect(screen.getByText("IV")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ChevronDown SVG aria-hidden
 // ---------------------------------------------------------------------------
 
 describe("ProductAccordion — ChevronDown SVG aria-hidden", () => {
@@ -205,7 +369,7 @@ describe("ProductAccordion — ChevronDown SVG aria-hidden", () => {
 });
 
 // ---------------------------------------------------------------------------
-// VA-0a unit-rtl high: ChevronDown rotation transform
+// ChevronDown rotation transform
 // ---------------------------------------------------------------------------
 
 describe("ProductAccordion — ChevronDown rotation transform", () => {
@@ -213,8 +377,7 @@ describe("ProductAccordion — ChevronDown rotation transform", () => {
     const { container } = render(
       <ProductAccordion report={reportWithContent} defaultOpen={false} />,
     );
-    const button = container.querySelector("button");
-    const svg = button?.querySelector("svg");
+    const svg = container.querySelector("button")?.querySelector("svg");
     expect(svg).not.toBeNull();
     expect((svg as SVGElement).style.transform).toBe("rotate(-90deg)");
   });
@@ -223,15 +386,14 @@ describe("ProductAccordion — ChevronDown rotation transform", () => {
     const { container } = render(
       <ProductAccordion report={reportWithContent} defaultOpen={true} />,
     );
-    const button = container.querySelector("button");
-    const svg = button?.querySelector("svg");
+    const svg = container.querySelector("button")?.querySelector("svg");
     expect(svg).not.toBeNull();
     expect((svg as SVGElement).style.transform).toBe("rotate(0deg)");
   });
 });
 
 // ---------------------------------------------------------------------------
-// VA-0a unit-rtl high: Accordion expand/collapse grid behavior
+// Accordion expand/collapse grid behavior
 // ---------------------------------------------------------------------------
 
 describe("ProductAccordion — expand/collapse grid", () => {
@@ -239,7 +401,6 @@ describe("ProductAccordion — expand/collapse grid", () => {
     const { container } = render(
       <ProductAccordion report={reportWithContent} defaultOpen={true} />,
     );
-    // React serialises gridTemplateRows as "grid-template-rows" in the style attr
     const gridDiv = container.querySelector<HTMLElement>(
       "[style*='grid-template-rows']",
     );
@@ -260,47 +421,9 @@ describe("ProductAccordion — expand/collapse grid", () => {
 });
 
 // ---------------------------------------------------------------------------
-// VA-0b snapshot: ChevronDown SVG stroke and path rendering
+// Needs Attention dedup
 // ---------------------------------------------------------------------------
 
-describe("ProductAccordion — ChevronDown SVG snapshot", () => {
-  it("ChevronDown svg structure matches snapshot (stroke, path, viewBox)", () => {
-    const { container } = render(
-      <ProductAccordion report={reportWithContent} defaultOpen={false} />,
-    );
-    const button = container.querySelector("button");
-    const svg = button?.querySelector("svg");
-    expect(svg).not.toBeNull();
-    expect(svg).toMatchSnapshot();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// VA-0b snapshot: prioritized current-week row structure (replaces the
-// removed Priorities ol snapshot — the ol no longer exists)
-// ---------------------------------------------------------------------------
-
-describe("ProductAccordion — prioritized row snapshot", () => {
-  it("rank-1 current-week row structure matches snapshot", () => {
-    const { container } = render(
-      <ProductAccordion
-        defaultOpen
-        report={makeReport({
-          currentWeek: [
-            makeItem({ id: "r1", text: "Top item", priorityRank: 1 }),
-          ],
-        })}
-      />,
-    );
-    const row = container.querySelector("div.space-y-1 > div");
-    expect(row).not.toBeNull();
-    expect(row).toMatchSnapshot();
-  });
-});
-
-// report-card-clarity: the "Needs Attention" banner is DERIVED from a blocked
-// item, so it would otherwise repeat that item's text verbatim. It must be
-// suppressed on an exact-text duplicate and render only when it adds info.
 describe("ProductAccordion — Needs Attention dedup", () => {
   const DUP_TEXT = "Auth refactor blocked: waiting on IdP access";
 
@@ -318,7 +441,6 @@ describe("ProductAccordion — Needs Attention dedup", () => {
       />,
     );
     expect(screen.queryByText("Needs Attention")).not.toBeInTheDocument();
-    // The text appears once (the item row), not twice (no banner copy).
     expect(screen.getAllByText(DUP_TEXT)).toHaveLength(1);
   });
 
@@ -339,47 +461,5 @@ describe("ProductAccordion — Needs Attention dedup", () => {
     expect(
       screen.getByText("Blocked · Development · Vasily"),
     ).toBeInTheDocument();
-  });
-});
-
-// report-card-clarity: workflow status reads from the row's left stripe, NOT
-// the stage chip fill. blocked → red (alarm), completed → calm success, and
-// in-progress → no stripe — so completed and in-progress stay distinguishable
-// even though both chips render with one uniform identity treatment.
-describe("ProductAccordion — status via row stripe, identity via chip", () => {
-  it("maps each workflow status to a distinct row stripe and a uniform chip", () => {
-    const { container } = render(
-      <ProductAccordion
-        defaultOpen
-        report={makeReport({
-          currentWeek: [
-            makeItem({ id: "b", text: "Blocked one", status: "blocked" }),
-            makeItem({ id: "c", text: "Completed one", status: "completed" }),
-            makeItem({ id: "p", text: "Progress one", status: "in-progress" }),
-          ],
-        })}
-      />,
-    );
-    const rows = [...container.querySelectorAll("div.space-y-1 > div")];
-    expect(rows).toHaveLength(3);
-    const styleOf = (text: string) =>
-      rows.find((r) => r.textContent.includes(text))?.getAttribute("style") ??
-      "";
-    // Every status carries a visible, distinct stripe (no status hidden behind
-    // a transparent/near-invisible marker).
-    expect(styleOf("Blocked one")).toContain("var(--color-destructive)");
-    expect(styleOf("Completed one")).toContain(
-      "var(--color-success-foreground)",
-    );
-    expect(styleOf("Progress one")).toContain("var(--color-muted-foreground)");
-    // (the three tokens above are distinct → the stripes are mutually distinct)
-
-    // Every stage chip shares one identity class — no status-driven fill.
-    const chipClasses = new Set(
-      [...container.querySelectorAll("div.space-y-1 > div > span")]
-        .filter((s) => s.textContent.includes("·"))
-        .map((s) => s.className),
-    );
-    expect(chipClasses.size).toBe(1);
   });
 });

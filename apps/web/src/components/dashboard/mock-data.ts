@@ -80,6 +80,10 @@ export interface PortfolioProduct {
 export interface ReportItem {
   id: string;
   stageLead: string;
+  /** SDLC stage name for the redesigned accordion gutter; live data always sets it. */
+  stage?: string;
+  /** Contributing lead's initials for the gutter; live data always sets it. */
+  owner?: string;
   text: string;
   status: "in-progress" | "completed" | "blocked" | "planned";
   /** Priority rank (1 = top) when the item is a flagged priority; null otherwise. */
@@ -89,13 +93,23 @@ export interface ReportItem {
 export interface ReportRisk {
   id: string;
   badge: string;
+  /** SDLC stage name for the gutter; live data always sets it. */
+  stage?: string;
+  /** Contributing lead's initials for the gutter; live data always sets it. */
+  owner?: string;
   severity: "blocked" | "at-risk";
   text: string;
+  /** Structured fields for the redesigned risk row; live data always sets them. */
+  problem?: string;
+  impact?: string;
+  mitigation?: string;
 }
 
 export interface ReportDecision {
   id: string;
   badge: string;
+  /** Contributing lead's initials for the gutter; live data always sets it. */
+  owner?: string;
   text: string;
 }
 
