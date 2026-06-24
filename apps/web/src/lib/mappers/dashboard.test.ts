@@ -338,10 +338,36 @@ describe("mapDashboardData", () => {
   });
 
   it("derives blockedAtRisk severity correctly from escalation type", () => {
+    // Distinct products so the product-level at_risk flag is NOT deduped against
+    // a concrete row — this test pins pure type→severity mapping.
     const result = mapDashboardData({
       review: makeReview(),
       archive: makeArchive(),
-      weeklyReport: makeWeeklyReport(),
+      weeklyReport: makeWeeklyReport({
+        escalations: [
+          {
+            type: "blocked",
+            productName: "Analytics",
+            stageName: "Development",
+            leadName: "Bob Lead",
+            description: "ETL memory leak",
+          },
+          {
+            type: "at_risk",
+            productName: "CRM Portal",
+            stageName: null,
+            leadName: "Alice Lead",
+            description: "Project CRM Portal is flagged red.",
+          },
+          {
+            type: "unresolved_risk",
+            productName: "Billing",
+            stageName: "QA",
+            leadName: "Alice Lead",
+            description: "Carried over risk",
+          },
+        ],
+      }),
       now: new Date("2026-04-17T10:00:00.000Z"),
     });
     expect(result.blockedAtRisk).toHaveLength(3);
@@ -351,6 +377,59 @@ describe("mapDashboardData", () => {
     const atRisk = result.blockedAtRisk.filter((b) => b.severity === "at-risk");
     expect(blocked).toHaveLength(1);
     expect(atRisk).toHaveLength(2);
+  });
+
+  it("drops the product-level at_risk flag when the product has a concrete stage row", () => {
+    // The "flagged red" roll-up restates a status the ProductCard header already
+    // shows; with a concrete blocker on the same product it is redundant noise.
+    const result = mapDashboardData({
+      review: makeReview(),
+      archive: makeArchive(),
+      weeklyReport: makeWeeklyReport({
+        escalations: [
+          {
+            type: "blocked",
+            productName: "Analytics",
+            stageName: "Development",
+            leadName: "Bob Lead",
+            description: "ETL memory leak",
+          },
+          {
+            type: "at_risk",
+            productName: "Analytics",
+            stageName: null,
+            leadName: "Bob Lead",
+            description: "Project Analytics is flagged red.",
+          },
+        ],
+      }),
+      now: new Date("2026-04-17T10:00:00.000Z"),
+    });
+    expect(result.blockedAtRisk).toHaveLength(1);
+    expect(result.blockedAtRisk[0]?.severity).toBe("blocked");
+  });
+
+  it('keeps a lone product-level at_risk flag and labels its stage "Flagged"', () => {
+    // A red product with nothing concrete to point at: the flag is the only
+    // signal, so it survives — but reads as "Flagged", never "No stage set".
+    const result = mapDashboardData({
+      review: makeReview(),
+      archive: makeArchive(),
+      weeklyReport: makeWeeklyReport({
+        escalations: [
+          {
+            type: "at_risk",
+            productName: "Analytics",
+            stageName: null,
+            leadName: "Bob Lead",
+            description: "Project Analytics is flagged red.",
+          },
+        ],
+      }),
+      now: new Date("2026-04-17T10:00:00.000Z"),
+    });
+    expect(result.blockedAtRisk).toHaveLength(1);
+    expect(result.blockedAtRisk[0]?.stage).toBe("Flagged");
   });
 
   it('renders "No stage set" for an escalation with a null stage', () => {

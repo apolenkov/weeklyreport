@@ -81,3 +81,37 @@ overflow-y-auto` — replaced the Decisions-only `scrollItems` special-case
 - [x] 6.2 Dashboard header "Revoke All" + "View Status Report" buttons:
       `min-h-[var(--touch-target-min)]` (44px) → `h-[var(--toolbar-control-h)]`
       (32px) so they match the height of every other control.
+
+## 7. Blocked & At Risk grouped into per-product cards (UAT 2026-06-24, third pass)
+
+- [x] 7.1 `blocked-at-risk-table.tsx`: rebuilt the flat list into one card per
+      product in the report `ProductAccordion` idiom (`groupByProduct` pure
+      helper, first-appearance order). Each card header: avatar (product
+      initials), product name, worst-severity status dot, contributing-assignee
+      line. Each issue row: status rail (red blocked / amber at-risk),
+      stage-over-assignee gutter, description, Blocked / At Risk badge. Outer F4
+      collapse + total count preserved; the trigger keeps exactly two svgs. Prop
+      type re-pointed from the dead `mock-data` duplicate to the live
+      `lib/mappers/dashboard` type.
+- [x] 7.2 `dashboard.ts` mapper: the product-level "flagged red" escalation (the
+      only `at_risk` source — a stage-less product roll-up) is suppressed from a
+      product's rows when that product already has a concrete `blocked` /
+      `unresolved_risk` row (the card header's status dot already conveys it).
+      Kept only as a product's sole signal, where its stage reads "Flagged", not
+      the alarming "No stage set". `escalationToBlockedItem` labels at_risk
+      "Flagged"; inlined the dedup to stay under the 300-line budget.
+- [x] 7.3 Tests: `blocked-at-risk-table.test.tsx` grouping coverage (one card
+      header per shared product; per-product cards in order; count stays total).
+      `dashboard.test.ts` severity test re-fixtured to distinct products (no
+      dedup interference) + two new cases (redundant flag dropped; lone flag kept
+      and labeled "Flagged"). 25/25 mapper+component pass; typecheck clean.
+- [x] 7.4 Live-verified at `/head/dashboard`: "Маркетинговый портал" shows once
+      as a product card with five concrete stage rows (the redundant
+      "is flagged red / No stage set" row gone), "Платформа интеграций" as a
+      second card; count "6 issues". After-screenshot at
+      `docs/head-design-review-2026-06-24/after-blocked-at-risk-grouped.png`.
+- [x] 7.5 Spec: rewrote the `head-dashboard-clarity` grouped requirement to the
+      ProductAccordion idiom + added the "product red roll-up does not duplicate
+      stage rows" requirement; dropped the now-false "Period Summary matches the
+      Blocked & At Risk treatment" parity scenario (the pivot intentionally
+      diverges the two card idioms).
