@@ -8,16 +8,20 @@ IdP-asserted.
 
 ### Requirement: First login creates a minimal stub
 
-SAML login SHALL create a missing user as a stub with `role = viewer`,
-`name = displayName`, and `firstName`/`lastName`/`middleName`/`position` unset
-(`null`), since the assertion carries no parts, position, or role.
+SAML login SHALL create a missing user as a stub with `role = viewer` and
+`name = displayName`. The structured name parts are required columns the
+assertion cannot supply, so the stub synthesizes them: `lastName` = the whole
+`displayName` (the IdP name order is not guessed), `firstName` = a placeholder
+the admin replaces, and `middleName` / `position` = `null`. Real ФИО parts,
+`position`, and `role` are admin-maintained afterwards.
 
 #### Scenario: unknown user registers
 
 - **WHEN** a person with no existing user logs in via SAML
 - **THEN** a user is created with `name = profile.displayName`
 - **AND** `role = "viewer"`
-- **AND** the name parts and `position` are `null`
+- **AND** `lastName = profile.displayName`, `firstName` is a placeholder, and
+  `middleName` / `position` are `null`
 
 ### Requirement: Existing users are never re-synced from the IdP
 
