@@ -70,17 +70,13 @@ Lint stack: ESLint + Prettier + stylelint. `pnpm lint` =
 - **stylelint** (`.stylelintrc.json`) owns CSS lint; only the two parity rules
   `no-descending-specificity` and `declaration-no-important` run at `warning`.
 
-Migration history (Biome → ESLint/Prettier) and toolchain rationale live in
-`openspec/specs/lint-toolchain-ownership/spec.md` and the archived change
-`openspec/changes/archive/2026-05-31-migrate-lint-to-eslint-prettier/`.
-
 Useful local operations:
 
 ```bash
 pnpm logs
 pnpm logs:errors
 pnpm observability:up
-pnpm db:wipe:manual-uat
+pnpm db:fresh:manual-uat
 ```
 
 ## Runtime Notes
@@ -231,10 +227,9 @@ branch in the same session.
 - API domain boundaries are Nest modules plus Prisma repositories.
 - Shared schemas and enums live in `packages/shared`; update them before
   duplicating types in app code.
-- During MVP, reshape the schema directly and keep the single init migration
-  in sync (see "Database Is Disposable"); migrations become append-only once a
-  production point exists. Review destructive migrations against
-  `prisma/_destructive-guard.ts`.
+- Migrations: during MVP reshape directly (see **MVP Phase: Database Is
+  Disposable**); they become append-only after the first production point.
+  Review destructive ones against `prisma/_destructive-guard.ts`.
 - For product/group/report-period behavior, inspect existing tests before
   changing query semantics; this area has had regression-heavy UAT work.
 
