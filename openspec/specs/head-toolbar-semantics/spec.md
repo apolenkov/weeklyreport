@@ -57,19 +57,17 @@ carried by wrapper border/spacing, not by divergent control styling.
 ### Requirement: Header utility actions carry visible text labels
 
 Head-report-header utility links MUST render a visible text label next to
-their icon ("Present", "Print", "Open focused report") — icon-only rendering
-is not allowed for the actions that navigate to a distinct surface (the
-`/head/report/[id]/present` link, the `/print/[reportId]` link, and the
-slides-mode "Open focused report" drill-into-a-lead link in
-`head-report-shell.tsx`). Labels MUST honestly name the surface: the
-browser-print template is labeled "Print", not "Export PDF" or "Print PDF".
+their icon ("Present", "Print") — icon-only rendering is not allowed for the
+actions that navigate to a distinct surface (the `/head/report/[id]/present`
+link and the `/print/[reportId]` link). Labels MUST honestly name the surface:
+the browser-print template is labeled "Print", not "Export PDF" or "Print PDF".
 
-In slides mode the "Open focused report" action MUST sit on the report
-toolbar / slides-mode header line (beside the Export-PDF document action),
-NOT inside the deck body — matching how the lead deck keeps its toolbar
-actions on the header line (S3). The action targets the active slide's lead
-focused report; when it cannot resolve a target (no active slide / no active
-period) it MUST NOT render.
+The slides-mode "Open focused report" drill-into-a-lead link is removed
+(head-surface-uat-polish F1): it duplicated the deck's own slide navigation. In
+its place the slides-mode header MUST host the same Publish & Lock / Reopen
+period action the edit mode offers (gated to head/admin), alongside the
+Export-PDF document action, so the head can lock a period straight from the
+review deck. No "Open focused report" link renders anywhere in slides mode.
 
 #### Scenario: utility links render
 
@@ -79,13 +77,13 @@ period) it MUST NOT render.
 - **AND** the print link is labeled "Print" (distinct from the
   publish-gated "Export PDF" action)
 
-#### Scenario: the slides-mode Open focused report sits on the header line
+#### Scenario: slides mode replaces the focused-report link with Publish & Lock
 
-- **WHEN** the head views the report in `?mode=slides` with a resolvable
-  active slide
-- **THEN** the "Open focused report" action renders on the report toolbar /
-  header line beside the Export-PDF action, not inside the deck body
-- **AND** it carries a visible "Open focused report" label
+- **WHEN** the head views the report in `?mode=slides`
+- **THEN** no "Open focused report" link renders on the header line or in the
+  deck body
+- **AND** the Publish & Lock / Reopen action renders on the header line for a
+  head/admin, beside the Export-PDF document action
 
 ### Requirement: Deferred placeholders render visually subordinate
 
