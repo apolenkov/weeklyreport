@@ -67,7 +67,7 @@ describe("BlockedAtRiskTable", () => {
     expect(screen.getByText("0 issues")).toBeVisible();
   });
 
-  it("adds top spacing and remains collapsible when issues exist", () => {
+  it("is collapsed by default and expands on click when issues exist (F4)", () => {
     render(
       <BlockedAtRiskTable
         items={[
@@ -87,12 +87,13 @@ describe("BlockedAtRiskTable", () => {
       name: /blocked & at risk/i,
     });
 
+    // F4: collapsed by default — the report below carries the same content.
     expect(trigger).not.toBeDisabled();
-    expect(trigger).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("Needs approval")).toBeVisible();
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
 
     fireEvent.click(trigger);
 
-    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("Needs approval")).toBeVisible();
   });
 });

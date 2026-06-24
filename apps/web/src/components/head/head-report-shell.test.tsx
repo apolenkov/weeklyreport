@@ -16,25 +16,22 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 /* ---- Module mocks (hoisted above all imports of the SUT) ---- */
 
-// head-slides-lead-parity (S3): the deck reports its active slide's focused-
-// report href up to the shell via onFocusHrefChange. The stub fires a fixed,
-// non-null href on mount so the shell's header-line "Open focused report"
-// action renders (mirrors a resolvable active slide).
-vi.mock("../slides/head-slides-client", async () => {
-  const React = await vi.importActual<typeof import("react")>("react");
-  return {
-    HeadSlidesClient: ({
-      onFocusHrefChange,
-    }: {
-      onFocusHrefChange?: (href: string | null) => void;
-    }) => {
-      React.useEffect(() => {
-        onFocusHrefChange?.("/head/report/test-report-001?authorId=lead-1");
-      }, [onFocusHrefChange]);
-      return <div data-testid="head-slides-client-stub" />;
-    },
-  };
-});
+// head-surface-uat-polish (F1): the per-slide "Open focused report" drill-in
+// link was removed, so the deck no longer surfaces a focus href to the shell.
+// The stub is a plain marker.
+vi.mock("../slides/head-slides-client", () => ({
+  HeadSlidesClient: () => <div data-testid="head-slides-client-stub" />,
+}));
+
+// head-surface-uat-polish (F1): the slides header hosts the Publish & Lock
+// action (a self-contained component with its own query/mutations). Stub it
+// here — the shell test only verifies it is mounted on the header line, not its
+// publish internals (those live in publish-lock-button.test).
+vi.mock("../weekly-report/head-publish-lock-action", () => ({
+  HeadPublishLockAction: () => (
+    <div data-testid="head-publish-lock-action-stub" />
+  ),
+}));
 
 vi.mock("../weekly-report/weekly-report-page", () => ({
   // report-toolbar-layout: render the header context label + the two toolbar
@@ -192,18 +189,18 @@ describe("HeadReportShell — agent-review placeholder per mode", () => {
     expect(screen.getByTestId("head-slides-client-stub")).toBeInTheDocument();
   });
 
-  it("slides mode renders Open focused report on the header line when a target resolves", () => {
-    // head-slides-lead-parity (S3): the action moved from the deck body to the
-    // shell's slides-mode header line (the Document-action group), beside
-    // Export-PDF. The stubbed deck reports a non-null focus href on mount.
+  it("slides mode drops the Open focused report link and hosts Publish & Lock (F1)", () => {
+    // head-surface-uat-polish (F1): the per-slide drill-in link was removed —
+    // it duplicated the deck's own slide navigation — and replaced by the same
+    // Publish & Lock action the edit mode offers, on the header line.
     render(<HeadReportShell reportId={TEST_REPORT_ID} mode="slides" />);
-    const link = screen.getByRole("link", { name: /open focused report/i });
-    expect(link).toBeInTheDocument();
     expect(
-      within(screen.getByRole("group", { name: "Document actions" })).getByRole(
-        "link",
-        { name: /open focused report/i },
-      ),
+      screen.queryByRole("link", { name: /open focused report/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole("group", { name: "Document actions" }),
+      ).getByTestId("head-publish-lock-action-stub"),
     ).toBeInTheDocument();
   });
 });

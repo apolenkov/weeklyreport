@@ -424,11 +424,13 @@ describe("ProductAccordion — expand/collapse grid", () => {
 // Needs Attention dedup
 // ---------------------------------------------------------------------------
 
-describe("ProductAccordion — Needs Attention dedup", () => {
+// head-surface-uat-polish (F2): the escalation no longer renders as a separate
+// "Needs Attention" banner — it folds into Risks & Blockers as a leading row.
+describe("ProductAccordion — escalation folds into Risks (F2)", () => {
   const DUP_TEXT = "Auth refactor blocked: waiting on IdP access";
 
-  it("suppresses the banner when its text matches a rendered item", () => {
-    render(
+  it("suppresses the escalation row when its text matches a rendered item", () => {
+    const { container } = render(
       <ProductAccordion
         defaultOpen
         report={makeReport({
@@ -440,12 +442,34 @@ describe("ProductAccordion — Needs Attention dedup", () => {
         })}
       />,
     );
-    expect(screen.queryByText("Needs Attention")).not.toBeInTheDocument();
+    expect(
+      container.querySelector('[data-accordion-row="escalation"]'),
+    ).not.toBeInTheDocument();
+    // The text shows once — as the item row, not also as an escalation.
     expect(screen.getAllByText(DUP_TEXT)).toHaveLength(1);
   });
 
-  it("renders the banner when its text is a distinct summary", () => {
-    render(
+  it("suppresses the escalation row when its text matches a rendered risk", () => {
+    const RISK_TEXT = "Partner is late delivering the final connector API";
+    const { container } = render(
+      <ProductAccordion
+        defaultOpen
+        report={makeReport({
+          needsAttention: RISK_TEXT,
+          needsAttentionSeverity: "at-risk",
+          risks: [makeRisk({ id: "k1", problem: RISK_TEXT })],
+        })}
+      />,
+    );
+    expect(
+      container.querySelector('[data-accordion-row="escalation"]'),
+    ).not.toBeInTheDocument();
+    // The text shows once — as the risk row, not also as an escalation.
+    expect(screen.getAllByText(RISK_TEXT)).toHaveLength(1);
+  });
+
+  it("renders a distinct escalation as a leading Risks & Blockers row", () => {
+    const { container } = render(
       <ProductAccordion
         defaultOpen
         report={makeReport({
@@ -457,9 +481,14 @@ describe("ProductAccordion — Needs Attention dedup", () => {
         })}
       />,
     );
-    expect(screen.getByText("Needs Attention")).toBeInTheDocument();
-    expect(
-      screen.getByText("Blocked · Development · Vasily"),
-    ).toBeInTheDocument();
+    // No standalone banner heading anymore.
+    expect(screen.queryByText("Needs Attention")).not.toBeInTheDocument();
+    // The escalation surfaces inside Risks & Blockers as an escalation row.
+    expect(screen.getByText("Risks & Blockers")).toBeInTheDocument();
+    const escalationRow = container.querySelector(
+      '[data-accordion-row="escalation"]',
+    );
+    expect(escalationRow).toBeInTheDocument();
+    expect(escalationRow).toHaveTextContent("Blocked · Development · Vasily");
   });
 });

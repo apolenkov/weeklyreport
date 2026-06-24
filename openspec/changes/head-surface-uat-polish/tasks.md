@@ -10,7 +10,7 @@
       `min-h-0`, keep `auto-rows-fr`), so the quadrants distribute over the frame.
 - [x] 1.3 Ensure an overflowing section scrolls inside its own card
       (`HeadSectionCard` is now a flex column; its list is `flex-1 min-h-0
-    overflow-y-auto` — replaced the Decisions-only `scrollItems` special-case
+overflow-y-auto` — replaced the Decisions-only `scrollItems` special-case
       with uniform per-card scroll) without expanding the frame; the
       `--slide-quadrant-min` floor is preserved.
 - [x] 1.4 `status-slide-deck.test.tsx` asserts the head article carries
@@ -43,9 +43,41 @@
       (1263 passed), `pnpm build` — all green.
 - [x] 3.2 `openspec validate head-surface-uat-polish --strict` passes.
 
-## 4. Decisions (NOT implemented — see proposal Open Questions)
+## 4. Decisions (resolved by the user 2026-06-24 — implemented)
 
-- [ ] 4.1 F1 — "Open focused report" in slides header: keep / relabel / remove.
-- [ ] 4.2 F2 — "Needs Attention" banner: relabel / rework / keep.
-- [ ] 4.3 F4 — dashboard Blocked & At Risk: keep-expanded / keep-collapsed /
-      remove.
+- [x] 4.1 F1 — **remove + replace with Publish & Lock**. Dropped the
+      slides-header "Open focused report" link (it duplicated the deck's own
+      slide navigation) + the `onFocusHrefChange`/`focusHref` plumbing
+      (`head-report-shell.tsx`, `head-slides-client.tsx`), and added a
+      self-contained `HeadPublishLockAction` (own query + publish/reopen
+      mutations, role-gated) to the slides header beside Export-PDF — the same
+      action edit mode offers. Edit/focus mode never lost it (role-gated). Tests
+      updated (`head-report-shell.test.tsx` asserts the link is gone and the
+      publish action is mounted; `status-slide-deck.test.tsx` comment).
+- [x] 4.2 F2 — **rework into Risks**. Removed the standalone "Needs Attention"
+      banner; the escalation now folds into Risks & Blockers as a leading
+      `data-accordion-row="escalation"` row (Flagged gutter + Blocked/At Risk
+      badge), shown only when `risks.length > 0 || showNeedsAttention`. Dedup
+      extended to risk texts so an escalation that duplicates a risk is
+      suppressed (no row above its twin). New unit test covers the risk-dedup.
+- [x] 4.3 F4 — **collapse by default**. `BlockedAtRiskTable` now starts
+      collapsed (`useState(false)`); test inverted to default-collapsed.
+
+## 5. F5 alignment follow-up (UAT 2026-06-24)
+
+- [x] 5.1 Put the Period Summary per-lead counts on shared CSS subgrid column
+      rails (`<ul>` defines the tracks; each `<li>` and its counts `<dl>` are
+      `grid-cols-subgrid` participants) so every column lines up across rows at
+      any value — the prior flex/`ml-auto` layout aligned only by accident. Full
+      count labels and warm cards retained intentionally (the grill's
+      repeated-label dedup was consciously declined in favor of warmth).
+- [x] 5.2 Live-verified at 1440px: columns aligned, Remind/Revoke not clipped
+      (status/date/action tracks are `auto`-sized to content).
+
+## 6. Live follow-ups (UAT 2026-06-24, second pass)
+
+- [x] 6.1 Slides-header order: Publish & Lock sits rightmost (after Export-PDF),
+      matching the edit-mode document-action order ("everything uniform").
+- [x] 6.2 Dashboard header "Revoke All" + "View Status Report" buttons:
+      `min-h-[var(--touch-target-min)]` (44px) → `h-[var(--toolbar-control-h)]`
+      (32px) so they match the height of every other control.

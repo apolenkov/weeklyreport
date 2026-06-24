@@ -275,7 +275,7 @@ export function DashboardPage() {
               disabled={revokeAllMutation.isPending}
               aria-busy={revokeAllMutation.isPending}
               data-testid="revoke-all-button"
-              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1.5 rounded-[var(--radius-pill)] border border-red-300 bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-default disabled:opacity-60"
+              className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1.5 rounded-[var(--radius-pill)] border border-red-300 bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-default disabled:opacity-60"
             >
               <RotateCcw aria-hidden="true" className="h-4 w-4" />
               Revoke All ({submittedCount})
@@ -283,7 +283,7 @@ export function DashboardPage() {
           )}
           <a
             href={`/head/report/${encodeURIComponent(weeklyQ.data.reportId)}`}
-            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
+            className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
           >
             View Status Report
           </a>

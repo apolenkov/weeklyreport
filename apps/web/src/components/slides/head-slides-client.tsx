@@ -44,20 +44,11 @@ interface HeadSlidesClientProps {
    * content for that product. Driven by the head shell ScopeToggle.
    */
   readonly scope?: "lead" | "product";
-  /**
-   * head-slides-lead-parity (S3): the deck no longer renders its own "Open
-   * focused report" link. Instead it surfaces the active slide's focused-report
-   * href to the shell so the action can live on the slides-mode header line
-   * beside Export-PDF. Fires `null` when no active slide / active period
-   * resolves so the shell hides the action.
-   */
-  readonly onFocusHrefChange?: (href: string | null) => void;
 }
 
 export function HeadSlidesClient({
   reportId,
   scope = "lead",
-  onFocusHrefChange,
 }: HeadSlidesClientProps = {}) {
   const trpc = useTRPC();
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -95,26 +86,6 @@ export function HeadSlidesClient({
     if (selectedIndex < slides.length) return;
     setSelectedIndex(0);
   }, [selectedIndex, slides.length]);
-
-  const selectedSlide =
-    slides.at(Math.min(Math.max(selectedIndex, 0), slides.length - 1)) ?? null;
-  const activeReportId =
-    weeklyQ.data && weeklyQ.data.status === "active"
-      ? weeklyQ.data.reportId
-      : null;
-  const focusHref =
-    activeReportId && selectedSlide
-      ? `/head/report/${encodeURIComponent(
-          activeReportId,
-        )}?authorId=${encodeURIComponent(selectedSlide.ownerId)}`
-      : null;
-
-  // S3: report the active slide's focused-report target up to the shell so it
-  // can host the "Open focused report" action on the header line. Keyed by the
-  // resolved href string, so it fires only when the target actually changes.
-  useEffect(() => {
-    onFocusHrefChange?.(focusHref);
-  }, [focusHref, onFocusHrefChange]);
 
   if (weeklyQ.isLoading || activityQ.isLoading) {
     return <SlideSkeleton />;
