@@ -175,6 +175,16 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
     ).not.toBeInTheDocument();
   });
 
+  // viewer-report-surface-parity (review P3): the read-only viewer surface
+  // labels the non-slides segment "Report", never the misleading "Edit"/pencil.
+  it("labels the non-slides view-mode segment 'Report', not 'Edit'", () => {
+    render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
+    expect(screen.getByRole("link", { name: "Report" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /edit/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it("view-mode toggle links target /reports/, never /head/report", () => {
     render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
     const slidesHref = screen

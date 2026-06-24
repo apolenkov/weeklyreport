@@ -51,6 +51,16 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     );
   }
 
+  async getReportPeriodStatusForSection(
+    sectionId: string,
+  ): Promise<string | null> {
+    const row = await this.prisma.reportSection.findUnique({
+      where: { id: sectionId },
+      select: { report: { select: { periodStatus: true } } },
+    });
+    return row?.report.periodStatus ?? null;
+  }
+
   async getSectionForPeriod(
     reportId: string,
     userId: string,

@@ -42,6 +42,7 @@ function makeSection(
 
 function createMockRepository(
   sections: Map<string, ReportSectionReadModel>,
+  periodStatus = "open",
 ): LeadFormRepository & {
   fillFromSection: ReturnType<typeof vi.fn>;
 } {
@@ -52,6 +53,10 @@ function createMockRepository(
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
     async getSectionById(id: string) {
       return sections.get(id) ?? null;
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
+    async getReportPeriodStatusForSection() {
+      return periodStatus;
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
     async getSectionForPeriod() {
@@ -145,5 +150,46 @@ describe("LeadFormService — fillFrom (integration)", () => {
     await expect(
       service.fillFrom(targetSectionId, sourceSectionId, userId),
     ).rejects.toThrow(`Target section ${targetSectionId} not found`);
+  });
+
+  // viewer-report-surface-parity (review P1): a draft section can sit inside a
+  // PUBLISHED report (publish needs only >=1 submitted section). fillFrom is the
+  // one path that would rewrite that section's live rows post-publish, diverging
+  // the viewer's live-row published search from the frozen-snapshot report read.
+  it("rejects fill when the target's report is published (draft section, published period)", async () => {
+    const target = makeSection({ status: "draft" });
+    const sections = new Map([[targetSectionId, target]]);
+    const repo = createMockRepository(sections, "published");
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.fillFrom(targetSectionId, sourceSectionId, userId),
+    ).rejects.toThrow("Cannot fill a section of a published report");
+    // The live-row mutation must never run.
+    expect(repo.fillFromSection).not.toHaveBeenCalled();
+  });
+
+  it("allows fill when the period is reopened (editable again, excluded from viewer search)", async () => {
+    const target = makeSection({ status: "draft" });
+    const source = makeSection({
+      reportSectionId: sourceSectionId,
+      status: "submitted",
+      submittedAt: new Date(),
+    });
+    const sections = new Map([
+      [targetSectionId, target],
+      [sourceSectionId, source],
+    ]);
+    const repo = createMockRepository(sections, "reopened");
+    const service = new LeadFormService(repo);
+
+    const result = await service.fillFrom(
+      targetSectionId,
+      sourceSectionId,
+      userId,
+    );
+
+    expect(result.success).toBe(true);
+    expect(repo.fillFromSection).toHaveBeenCalled();
   });
 });

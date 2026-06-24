@@ -176,6 +176,7 @@ export function ViewerReportShell({
         editHref={editHref}
         slidesHref={slidesHref}
         mode={mode === "slides" ? "slides" : "edit"}
+        readOnly
       />
     </>
   );

@@ -67,6 +67,21 @@ export class LeadFormService {
       throw new Error("Cannot fill a submitted section.");
     }
 
+    // viewer-report-surface-parity (review P1): refuse to mutate the live rows
+    // of a PUBLISHED period. The viewer's published search reads live Item/Risk/
+    // Decision rows, but the viewer content read serves the frozen publish
+    // snapshot — letting fillFrom rewrite a (draft) section inside a published
+    // report would make a viewer's search snippet reveal content absent from the
+    // report they can open. saveDraft/saveSection already block published edits;
+    // fillFrom was the one gap. Gate on periodStatus (the searchable column):
+    // a reopened period (periodStatus='reopened') is editable again and is
+    // excluded from the viewer's published search, so it stays allowed.
+    const periodStatus =
+      await this.repository.getReportPeriodStatusForSection(targetSectionId);
+    if (periodStatus === "published") {
+      throw new Error("Cannot fill a section of a published report.");
+    }
+
     // TODO(versions-v2): a pre-overwrite safety snapshot was taken here
     // until version snapshots were removed (defer-versions-coming-soon).
     const copiedItems = await this.repository.fillFromSection(
