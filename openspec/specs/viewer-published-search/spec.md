@@ -2,7 +2,9 @@
 
 ## Purpose
 
-TBD - created by archiving change viewer-report-surface-parity. Update Purpose after archive.
+Define the viewer's published-scoped search: it returns only published content the
+viewer can already open (matching report-read visibility) and routes every result
+inside the viewer surface, never to the lead or admin surfaces.
 
 ## Requirements
 

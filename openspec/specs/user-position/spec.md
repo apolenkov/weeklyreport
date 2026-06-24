@@ -2,7 +2,8 @@
 
 ## Purpose
 
-TBD - created by archiving change add-structured-user-name. Update Purpose after archive.
+Define the admin-maintained `position` field on a user (job title) and where it
+surfaces — the admin Users table column and the add/edit-user form.
 
 ## Requirements
 
