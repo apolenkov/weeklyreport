@@ -1,39 +1,39 @@
 ## 1. Backend — published search scope
 
-- [ ] 1.1 Add `published` to the scope enum across all sites: `searchQueryInputSchema` in `@customreport/shared`, the `SearchRepository.search` signature, the in-memory search fake, and the `SearchInput` `Scope` type
-- [ ] 1.2 Add an `INNER JOIN "Report"` (via `rs."reportId"`) with predicate `Report."periodStatus" = 'published'` to the item/risk/decision chunks in `search.prisma-repository.ts` for the `published` scope (RESOLVED: `periodStatus`, matching the viewer read gate `weekly-report.service.ts:130` — NOT `status`, NOT `periodState`)
-- [ ] 1.3 KEEP the existing `sectionGroupFilter` (author `reportingGroupId`) unchanged — it already matches the viewer's content read visibility (`weekly-report.prisma-repository.ts:94`). Do NOT switch to GroupProduct (it would diverge — see design Decision 2). The leak fix is the published gate in 1.2, not a group-axis change
-- [ ] 1.4 Authorize `published` for viewer (safe subset for head/admin) in the scope authorization switch; keep `all` head/admin-only
-- [ ] 1.5 Exclude `"project"` hits for the viewer (extend the existing `excludeTypes` logic)
-- [ ] 1.6 Emit `scopeAccessed` from the search path on a viewer cross-group hit, consistent with `weeklyReport.get`
-- [ ] 1.7 Tests: viewer published match returned; unpublished/reopened (`periodStatus != 'published'`) excluded; out-of-group (author group) excluded; search content visibility == report read visibility (author-group basis, per design Decision 2); no-access viewer empty; `project` excluded; `all` still forbidden for viewer
+- [x] 1.1 Add `published` to the scope enum across all sites: `searchQueryInputSchema` in `@customreport/shared`, the `SearchRepository.search` signature (service interface + Prisma impl), and the in-memory search fake. (Web `Scope` type → task 4.1/4.2)
+- [x] 1.2 Add an `INNER JOIN "Report"` (via `rs."reportId"`) with predicate `Report."periodStatus" = 'published'::"PeriodStatus"` to the item/risk/decision chunks in `search.prisma-repository.ts` for the `published` scope (RESOLVED: `periodStatus`, matching the viewer read gate — NOT `status`, NOT `periodState`)
+- [x] 1.3 KEEP the existing `sectionGroupFilter` (author `reportingGroupId`) unchanged — it already matches the viewer's content read visibility. Did NOT switch to GroupProduct (would diverge — design Decision 2)
+- [x] 1.4 Authorize `published` for every role in the scope authorization switch (it can only surface published, group-scoped content); kept `all` head/admin-only — no new guard needed since the gate only blocks `all`
+- [x] 1.5 Exclude `"project"` hits for the viewer (extended the existing lead `excludeTypes` logic to `lead || viewer`)
+- [x] 1.6 RESOLVED no-op (design Decision 8): `scopeAccessed` is defined over cross-group **products** via the `GroupProduct` join; search uses neither (author-group filter + project excluded for viewer), so a viewer search can never produce a cross-group access — there is no triggering condition. `scopeDenied` on a forbidden scope remains.
+- [x] 1.7 Tests: service-layer (`search.service.test.ts`) — published forwarded for viewer, project excluded for viewer, empty-access viewer; SQL-layer integration (`search.prisma-repository.scope-filter.integration.test.ts`) — published+in-group returned, unpublished excluded, **reopened excluded (proves periodStatus not status)**, out-of-group excluded, exact read-parity, both-groups, and `all` still surfaces unpublished (gate is scope-specific). Teeth verified by mutation (neutralizing the join → 4 red).
 
 ## 2. Backend — group-content-aware latest published
 
-- [ ] 2.1 Add a resolver (canonical viewer-inclusive builder per `role-coverage-gate`) returning the latest published report that has at least one viewer-visible product, or none
-- [ ] 2.2 Tests: returns latest report with viewer-visible content; skips a published report with no viewer-visible product; returns none when no qualifying report; never returns an unpublished period
+- [x] 2.1 Added `reports.latestPublished` (`anyRoleProcedure`) — gates on `periodStatus='published'` (the openable column, NOT list `status`) + `sections.some(sectionScope)` reusing `compiledHistory`'s group filter; `orderBy periodStart desc`; returns `{ reportId }` or `{ reportId: null }`. Shared `latestPublishedReportSchema`.
+- [x] 2.2 Tests (`reports-latest-published.test.ts`, stub-prisma + createCaller): correct where (periodStatus + group section filter) ordered newest-first; null empty-state; no-access viewer → zero-row filter; lead → own authored sections; admin → no group filter. (SQL group-visibility itself covered by the group-1 integration test.)
 
 ## 3. Frontend — `/reports/latest` route + nav entry
 
-- [ ] 3.1 Add a `reports/latest` route that calls the resolver and `307`-redirects (`redirect()`, not `permanentRedirect()` — target is dynamic) to `/reports/[reportId]`, or renders the empty state when none. The route is reachable by any `/reports`-eligible role (lead/head/admin/viewer); it resolves the same published, group-scoped content for all of them (a lead hitting it is harmless)
-- [ ] 3.2 Add a viewer nav link in `nav-bar.tsx` to the static `/reports/latest`, alongside the existing viewer "History" link; do not point at `/head/report`
+- [x] 3.1 Added `reports/latest/page.tsx`. DEVIATION (recorded, advisor-confirmed): a CLIENT component with `router.replace`, not a server `redirect()` — the web app has NO server-side data path (every read is browser-cookie tRPC; nothing uses `next/headers`). The "307 not 308" requirement encodes "re-resolve every visit, never permanent-cache", which `router.replace` satisfies; `replace` (not `push`) also avoids the Back-button redirect loop. Renders the empty state on null; reachable by any /reports role.
+- [x] 3.2 Added a viewer-only `/reports/latest` NAV_LINK ("Latest") before the viewer History link + a `NavIcon` case; `isActiveLink` default `startsWith` covers it (no branch needed). Tests: viewer sees Latest, non-viewers don't.
 
 ## 4. Frontend — viewer search
 
-- [ ] 4.1 In `reports/page.tsx`, set the viewer `searchScope` to `published` and render `SearchInput` for the viewer
-- [ ] 4.2 In `search-input.tsx`, rewrite non-excluded result targets to `/reports/[reportId]` when the role is viewer (never `/lead/report/...` or `/admin...`); suppress `project` results for the viewer
-- [ ] 4.3 Empty viewer access → empty results surface (no other-group leakage)
+- [x] 4.1 `reports/page.tsx`: viewer `searchScope` now `published` (was `null` → SearchInput renders); viewer placeholder "Search published reports…"
+- [x] 4.2 `search-input.tsx`: threaded `useSession`; `targetUrlFor(hit, isViewer)` routes viewer item/risk/decision to `/reports/[reportId]` (never `/lead/report` or `/admin`); viewer project hits filtered client-side (defensive) + dead-ended. Web `Scope` type widened to include `published` (the 5th lockstep site from 1.1). Tests: viewer→/reports routing, project suppressed, published forwarded.
+- [x] 4.3 Empty viewer access → empty results: enforced server-side (groupIds `[]` → early empty, `search.service.ts`) and covered by the existing service test; no client leak path.
 
 ## 5. Frontend — viewer report shell (toolbar parity + slides)
 
-- [ ] 5.1 Build a viewer report shell (read-only analogue of `HeadReportShell`) composing `ReportToolbar` through the page `toolbar` slot, with URL-backed scope and view-mode
-- [ ] 5.2 Wire the product/lead `ScopeToggle` and the `ViewModeToggle` (`?mode=slides` → `…SlidesClient`) for the viewer; keep Export-PDF
-- [ ] 5.3 Confirm Publish & Lock / Reopen / Move-to-archive never render for the viewer (driven by `canMutatePeriod`)
-- [ ] 5.4 Verify the `/present` redirect and `?mode=slides` render real slides for the viewer (fixes the current inert deep link)
-- [ ] 5.5 Verify the viewer control set is stable across edit/slides modes and uses the shared toolbar container
+- [x] 5.1 Built `components/viewer/viewer-report-shell.tsx` (read-only analogue of `HeadReportShell`) composing `ReportToolbar` via WeeklyReportPage's `contextControls` slot, URL-backed scope (`?scope=lead`) + view-mode (`?mode=slides`). `/reports/[reportId]/page.tsx` now a server component rendering it.
+- [x] 5.2 Wired `ScopeToggle` (product/lead) + `ViewModeToggle` (URLs → `/reports/...`, slides → `HeadSlidesClient` with `enableActivity={false}` since `activity.live` is head-only); Export-PDF kept (real export for viewer).
+- [x] 5.3 No mutation affordance: omitted `HeadPublishLockAction`; `WeeklyReportPage` already gates Publish/Reopen/Move-to-archive on `canMutatePeriod` (head/admin). Test asserts no publish/lock/reopen button in form OR slides.
+- [x] 5.4 `?mode=slides` now resolved by the shell → real slides; the existing `/present` `permanentRedirect` to `?mode=slides` therefore renders the deck (was inert). DEVIATION: reused `HeadSlidesClient` (parameterized) rather than a net-new `ViewerSlidesClient` — avoids duplicating ~120 lines of slide-building.
+- [x] 5.5 Control set stable across edit/slides (same `contextControls` row in both; one shared `ReportToolbar`). Covered by `viewer-report-shell.test.tsx` (6 tests).
 
 ## 6. Verification
 
-- [ ] 6.1 Live-verify as a viewer (dev role switch): search returns published-only, group-scoped hits matching report visibility; `/reports/latest` opens the latest visible published report; slides present; unpublished period still 404s
-- [ ] 6.2 Gates green: `pnpm typecheck && pnpm lint && pnpm test && pnpm build`
-- [ ] 6.3 `openspec validate "viewer-report-surface-parity" --strict` clean
+- [ ] 6.1 Live-verify as a viewer (dev role switch): search returns published-only, group-scoped hits matching report visibility; `/reports/latest` opens the latest visible published report; slides present; unpublished period still 404s — PENDING (manual browser / ai-ui-driver; deferred to the verify pass)
+- [x] 6.2 Gates green: `pnpm typecheck` (5/5), `pnpm lint` (clean), `pnpm test` (shared 300 / api 959 / web 1279), `pnpm build` (5/5). Search published-gate integration test 7/7 (teeth proven by mutation). `_test` DB `migrate reset` applied for change A's columns.
+- [x] 6.3 `openspec validate "viewer-report-surface-parity" --strict` → valid

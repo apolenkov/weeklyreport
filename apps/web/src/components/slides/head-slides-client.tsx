@@ -44,11 +44,20 @@ interface HeadSlidesClientProps {
    * content for that product. Driven by the head shell ScopeToggle.
    */
   readonly scope?: "lead" | "product";
+  /**
+   * viewer-report-surface-parity: the empty-report fallback pulls live activity
+   * (`activity.live`), which is a head-only procedure — a viewer would get
+   * FORBIDDEN. The viewer shell passes `false` to skip that query and its
+   * fallback entirely; a viewer deck is built from the published sections only.
+   * Defaults to `true` so the head surface is unchanged.
+   */
+  readonly enableActivity?: boolean;
 }
 
 export function HeadSlidesClient({
   reportId,
   scope = "lead",
+  enableActivity = true,
 }: HeadSlidesClientProps = {}) {
   const trpc = useTRPC();
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -56,7 +65,10 @@ export function HeadSlidesClient({
   const weeklyQ = useQuery(
     trpc.weeklyReport.get.queryOptions(reportId ? { reportId } : {}),
   );
-  const activityQ = useQuery(trpc.activity.live.queryOptions());
+  const activityQ = useQuery({
+    ...trpc.activity.live.queryOptions(),
+    enabled: enableActivity,
+  });
 
   useQueryErrorHandler(weeklyQ, {
     event: "headSlides.weeklyReport.load_failed",
@@ -77,21 +89,22 @@ export function HeadSlidesClient({
         base.flatMap((model) => paginateSectionSlides(model)),
       );
     }
+    if (!enableActivity) return [];
     return sortSlidesForReview(
       (activityQ.data?.rows ?? []).map((row) => buildActivitySlideModel(row)),
     );
-  }, [weeklyQ.data, activityQ.data, scope]);
+  }, [weeklyQ.data, activityQ.data, scope, enableActivity]);
 
   useEffect(() => {
     if (selectedIndex < slides.length) return;
     setSelectedIndex(0);
   }, [selectedIndex, slides.length]);
 
-  if (weeklyQ.isLoading || activityQ.isLoading) {
+  if (weeklyQ.isLoading || (enableActivity && activityQ.isLoading)) {
     return <SlideSkeleton />;
   }
 
-  if (weeklyQ.isError || activityQ.isError) {
+  if (weeklyQ.isError || (enableActivity && activityQ.isError)) {
     return (
       <SlideEmptyState
         title="Slides could not load"

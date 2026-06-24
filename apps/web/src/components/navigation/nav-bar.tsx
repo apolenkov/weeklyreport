@@ -61,6 +61,15 @@ const NAV_LINKS: readonly NavLink[] = [
     title: "Past weeks and closed reports",
     roles: ["head"],
   },
+  // viewer-report-surface-parity (task 3.2): a viewer entry point straight to
+  // the latest published report they can open. The static `/reports/latest`
+  // route resolves the dynamic target server-side and client-redirects.
+  {
+    href: "/reports/latest",
+    label: "Latest",
+    title: "Open the latest published report",
+    roles: ["viewer"],
+  },
   {
     href: "/reports",
     label: "History",
@@ -188,6 +197,8 @@ function NavIcon({ href }: { readonly href: string }) {
   const common = { size: 14, strokeWidth: 2, "aria-hidden": true };
   switch (href) {
     case "/lead/report":
+      return <FileText {...common} />;
+    case "/reports/latest":
       return <FileText {...common} />;
     case "/reports":
       return <Clock {...common} />;

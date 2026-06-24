@@ -53,10 +53,15 @@ export type SearchHit = z.infer<typeof searchHitSchema>;
  * - `scope='mine'` filters to rows the caller authored (item/risk/decision)
  *   or leads (project). `scope='all'` is admin/head-only and is rejected
  *   server-side for `lead` sessions with FORBIDDEN.
+ * - `scope='published'` returns only rows whose Report is published
+ *   (`Report.periodStatus = 'published'`), group-scoped like `mine`/`all`.
+ *   It is the viewer's search surface — viewers author nothing, so `mine`
+ *   is empty for them, and `all` is forbidden; `published` exposes exactly
+ *   the published, in-group content the viewer can already read.
  */
 export const searchQueryInputSchema = z.object({
   q: z.string().min(2).max(200),
-  scope: z.enum(["mine", "all"]).default("mine"),
+  scope: z.enum(["mine", "all", "published"]).default("mine"),
   limit: z.number().int().min(1).max(50).default(20),
 });
 export type SearchQueryInput = z.infer<typeof searchQueryInputSchema>;

@@ -28,9 +28,15 @@ const permanentRedirect = vi.fn((url: string) => {
 const redirect = vi.fn((url: string) => {
   throw new Error(`NEXT_REDIRECT:${url}`);
 });
+// viewer-report-surface-parity: PublishedReportPage now renders the real
+// ViewerReportShell, which uses the navigation hooks for its URL-backed scope /
+// view-mode / archive toggles. Stub them so the shell mounts in jsdom.
 vi.mock("next/navigation", () => ({
   permanentRedirect: (url: string) => permanentRedirect(url),
   redirect: (url: string) => redirect(url),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+  usePathname: () => "/reports/test-report-001",
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 // The /print server gate reads the cookie once via this helper; mock it
@@ -47,20 +53,15 @@ vi.mock("../../components/lead/lead-section-preview-auth", () => ({
 }));
 
 vi.mock("../../components/weekly-report/weekly-report-page", () => ({
-  // report-toolbar-layout: the viewer routes its bottom-row controls (the
-  // agent-review placeholder + Back-to-Archive nav) through the
-  // `contextControlsLeading` slot. Render it so the viewer's single placeholder
-  // is observable in these tests.
-  WeeklyReportPage: ({
-    contextControlsLeading,
-  }: {
-    contextControlsLeading?: ReactNode;
-  }) => (
+  // viewer-report-surface-parity: the viewer now wraps WeeklyReportPage in
+  // ViewerReportShell, which routes the full bottom-row controls (agent-review
+  // placeholder + Back-to-Archive + scope/view-mode toggles) through the
+  // `contextControls` slot. Render that slot so the viewer's single placeholder
+  // and Back-to-Archive link stay observable in these surface-audit tests.
+  WeeklyReportPage: ({ contextControls }: { contextControls?: ReactNode }) => (
     <div data-testid="weekly-report-page-stub">
       <h1>Status Report</h1>
-      <div data-testid="weekly-report-context-controls">
-        {contextControlsLeading}
-      </div>
+      <div data-testid="weekly-report-context-controls">{contextControls}</div>
     </div>
   ),
 }));
@@ -92,12 +93,32 @@ vi.mock("@tanstack/react-query", async () => {
   );
   return {
     ...actual,
-    useQuery: vi.fn(() => ({
-      data: { status: "open" },
-      isLoading: false,
-      isError: false,
-      error: null,
-    })),
+    // The viewer shell's displayed-period query needs a real published period so
+    // its Export-PDF + period navigator render; every other surface keeps the
+    // prior generic `{ status: "open" }` shape.
+    useQuery: vi.fn((opts: { queryKey?: unknown[] }) => {
+      if (opts.queryKey?.[0] === "weeklyReport.get") {
+        return {
+          data: {
+            status: "active",
+            reportId: "test-report-001",
+            periodStart: "2026-06-08T00:00:00.000Z",
+            periodEnd: "2026-06-14T00:00:00.000Z",
+            periodStatus: "published",
+          },
+          isLoading: false,
+          isError: false,
+          error: null,
+        };
+      }
+      return {
+        data: { status: "open" },
+        isLoading: false,
+        isError: false,
+        error: null,
+      };
+    }),
+    useMutation: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   };
 });
 
@@ -105,8 +126,21 @@ vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
 vi.mock("../../lib/trpc-context", () => ({
   useTRPC: () => ({
+    reports: {
+      compiledHistory: {
+        queryOptions: () => ({ queryKey: ["reports.compiledHistory"] }),
+      },
+    },
     weeklyReport: {
-      get: { queryOptions: () => ({ queryKey: ["weeklyReport.get"] }) },
+      get: {
+        queryOptions: (input?: { reportId?: string }) => ({
+          queryKey: ["weeklyReport.get", input?.reportId ?? null],
+        }),
+      },
+    },
+    pdfExport: {
+      request: { mutationOptions: () => ({}) },
+      status: { queryOptions: () => ({ queryKey: ["pdfExport.status"] }) },
     },
   }),
 }));
@@ -173,35 +207,32 @@ const TEST_REPORT_ID = "test-report-001";
 /* ---- Published viewer ---- */
 
 describe("PublishedReportPage — agent-review placeholder", () => {
-  it("renders exactly one agent-review-coming-soon control", () => {
-    render(
-      <PublishedReportPage
-        params={paramsOf(TEST_REPORT_ID)}
-        searchParams={searchParamsOf()}
-      />,
-    );
+  it("renders exactly one agent-review-coming-soon control", async () => {
+    const ui = (await PublishedReportPage({
+      params: paramsOf(TEST_REPORT_ID),
+      searchParams: searchParamsOf(),
+    })) as ReactElement;
+    render(ui);
     const controls = screen.getAllByTestId("agent-review-coming-soon");
     expect(controls).toHaveLength(1);
   });
 
-  it("control has aria-disabled='true'", () => {
-    render(
-      <PublishedReportPage
-        params={paramsOf(TEST_REPORT_ID)}
-        searchParams={searchParamsOf()}
-      />,
-    );
+  it("control has aria-disabled='true'", async () => {
+    const ui = (await PublishedReportPage({
+      params: paramsOf(TEST_REPORT_ID),
+      searchParams: searchParamsOf(),
+    })) as ReactElement;
+    render(ui);
     const control = screen.getByTestId("agent-review-coming-soon");
     expect(control).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("control carries the English copy 'Agent review'", () => {
-    render(
-      <PublishedReportPage
-        params={paramsOf(TEST_REPORT_ID)}
-        searchParams={searchParamsOf()}
-      />,
-    );
+  it("control carries the English copy 'Agent review'", async () => {
+    const ui = (await PublishedReportPage({
+      params: paramsOf(TEST_REPORT_ID),
+      searchParams: searchParamsOf(),
+    })) as ReactElement;
+    render(ui);
     expect(screen.getByText("Agent review")).toBeInTheDocument();
   });
 });
@@ -212,26 +243,24 @@ describe("PublishedReportPage — agent-review placeholder", () => {
 // and routes its actions through the page's `contextControlsLeading` slot, so
 // the title shows exactly once.
 describe("PublishedReportPage — single title + header actions (task 2.0)", () => {
-  it("renders exactly one Status Report title and no wrapper-level Report-ID", () => {
-    render(
-      <PublishedReportPage
-        params={paramsOf(TEST_REPORT_ID)}
-        searchParams={searchParamsOf()}
-      />,
-    );
+  it("renders exactly one Status Report title and no wrapper-level Report-ID", async () => {
+    const ui = (await PublishedReportPage({
+      params: paramsOf(TEST_REPORT_ID),
+      searchParams: searchParamsOf(),
+    })) as ReactElement;
+    render(ui);
     expect(
       screen.getAllByRole("heading", { name: "Status Report" }),
     ).toHaveLength(1);
     expect(screen.queryByText(/report id:/i)).not.toBeInTheDocument();
   });
 
-  it("routes the viewer actions through the context controls slot", () => {
-    render(
-      <PublishedReportPage
-        params={paramsOf(TEST_REPORT_ID)}
-        searchParams={searchParamsOf()}
-      />,
-    );
+  it("routes the viewer actions through the context controls slot", async () => {
+    const ui = (await PublishedReportPage({
+      params: paramsOf(TEST_REPORT_ID),
+      searchParams: searchParamsOf(),
+    })) as ReactElement;
+    render(ui);
     expect(screen.queryByTestId("report-actions-pill")).not.toBeInTheDocument();
     const contextControls = screen.getByTestId(
       "weekly-report-context-controls",
@@ -251,13 +280,12 @@ describe("PublishedReportPage — single title + header actions (task 2.0)", () 
   // the single labeled Export-PDF rendered by WeeklyReportPage's trailing
   // group (the now-broken `/print` deep link is removed — the print route
   // 308-redirects humans away).
-  it("renders no standalone Present or browser-Print links", () => {
-    render(
-      <PublishedReportPage
-        params={paramsOf(TEST_REPORT_ID)}
-        searchParams={searchParamsOf()}
-      />,
-    );
+  it("renders no standalone Present or browser-Print links", async () => {
+    const ui = (await PublishedReportPage({
+      params: paramsOf(TEST_REPORT_ID),
+      searchParams: searchParamsOf(),
+    })) as ReactElement;
+    render(ui);
     expect(
       screen.queryByRole("link", { name: /presentation/i }),
     ).not.toBeInTheDocument();

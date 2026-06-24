@@ -5,15 +5,18 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
+import { useSession } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
 
 /**
  * 39-05 (PERF-05): full-text search input.
  *
- * Mounted in two places:
- *   - /lead/history sidebar with `scope='mine'` (lead's own content)
- *   - /admin?tab=products with `scope='all'` (head/admin only — server
- *     rejects 'all' for leads with FORBIDDEN)
+ * Mounted in three places:
+ *   - /reports (lead) sidebar with `scope='mine'` (lead's own content)
+ *   - /reports (head/admin) with `scope='all'` (server rejects 'all' for leads)
+ *   - /reports (viewer) with `scope='published'` (viewer-report-surface-parity):
+ *     published, group-scoped content only; project hits are excluded and
+ *     item/risk/decision hits route to the read-only `/reports/[reportId]`.
  *
  * Behaviour:
  *   - Debounces the input by 300ms before firing the tRPC query.
@@ -29,7 +32,7 @@ import { useTRPC } from "../../lib/trpc-context";
  * <mark> element. We split on the literal markers (not regex) because the
  * markers are server-controlled and can't be confused with user text.
  */
-type Scope = "mine" | "all";
+type Scope = "mine" | "all" | "published";
 
 interface SearchInputProps {
   readonly scope: Scope;
@@ -62,12 +65,18 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
  * the anchor never resolved and only produced a dead scroll. Strip it
  * rather than render a per-section-UUID target the form is not shaped for.
  */
-function targetUrlFor(hit: SearchHit): string {
+function targetUrlFor(hit: SearchHit, isViewer: boolean): string {
   if (hit.type === "project") {
-    return `/admin?tab=products&filter=${hit.id}`;
+    // A viewer has no product surface (Decision 3); project hits are excluded
+    // server-side and filtered client-side, so this is a defensive dead-end.
+    return isViewer ? "#" : `/admin?tab=products&filter=${hit.id}`;
   }
   if (hit.reportId) {
-    return `/lead/report/${hit.reportId}`;
+    // viewer-report-surface-parity (Decision 4): a viewer's item/risk/decision
+    // hits route to the read-only published report, never the lead form.
+    return isViewer
+      ? `/reports/${hit.reportId}`
+      : `/lead/report/${hit.reportId}`;
   }
   return "#";
 }
@@ -111,6 +120,8 @@ export function SearchInput({
 }: SearchInputProps) {
   const router = useRouter();
   const trpc = useTRPC();
+  const { user } = useSession();
+  const isViewer = user?.role === "viewer";
   const reactId = useId().replaceAll(":", "");
   const inputId = `${reactId}-search-input`;
   const resultsId = `${reactId}-search-results`;
@@ -128,7 +139,12 @@ export function SearchInput({
     staleTime: 30_000,
   });
 
-  const hits = useMemo<readonly SearchHit[]>(() => data ?? [], [data]);
+  const hits = useMemo<readonly SearchHit[]>(() => {
+    const all = data ?? [];
+    // Defensive: the server already excludes project hits for a viewer; drop
+    // any that slip through so a viewer never sees a product dead-end row.
+    return isViewer ? all.filter((hit) => hit.type !== "project") : all;
+  }, [data, isViewer]);
 
   // Reset selection when results change.
   useEffect(() => {
@@ -167,7 +183,7 @@ export function SearchInput({
       if (hit) {
         e.preventDefault();
         setOpen(false);
-        router.push(targetUrlFor(hit));
+        router.push(targetUrlFor(hit, isViewer));
       }
     }
   }
@@ -243,7 +259,7 @@ export function SearchInput({
 
           {hits.map((hit, idx) => {
             const isActive = idx === activeIndex;
-            const url = targetUrlFor(hit);
+            const url = targetUrlFor(hit, isViewer);
             const date = new Date(hit.createdAt).toLocaleDateString();
             const badge = TYPE_BADGE[hit.type];
             return (

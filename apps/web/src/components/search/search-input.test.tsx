@@ -31,6 +31,14 @@ vi.mock("../../lib/trpc-context", () => ({
   }),
 }));
 
+// viewer-report-surface-parity: SearchInput now reads the session role to pick
+// per-role result targets. Default to a non-viewer so the existing lead/admin
+// routing assertions hold; viewer tests override this per case.
+const useSessionMock = vi.fn(() => ({ user: { role: "head" } }));
+vi.mock("../../lib/session-provider", () => ({
+  useSession: () => useSessionMock() as unknown as { user: { role: string } },
+}));
+
 import { SearchInput } from "./search-input";
 
 const ITEM_ID = "11111111-1111-4111-8111-111111111111";
@@ -44,6 +52,8 @@ describe("SearchInput — 39-05 (PERF-05)", () => {
     useQueryMock.mockReset();
     queryOptionsMock.mockClear();
     pushMock.mockClear();
+    useSessionMock.mockReset();
+    useSessionMock.mockReturnValue({ user: { role: "head" } });
     useQueryMock.mockReturnValue({ data: [], isFetching: false });
   });
 
@@ -309,6 +319,95 @@ describe("SearchInput — 39-05 (PERF-05)", () => {
     expect(pushMock).toHaveBeenCalledWith(
       `/admin?tab=products&filter=${PROJECT_ID}`,
     );
+  });
+
+  // viewer-report-surface-parity (task 4.2): a viewer's item/risk/decision hit
+  // routes to the read-only `/reports/[reportId]`, never the lead form.
+  it("routes a viewer's item hit to /reports/[reportId], not /lead/report", () => {
+    useSessionMock.mockReturnValue({ user: { role: "viewer" } });
+    useQueryMock.mockReturnValue({
+      data: [
+        {
+          type: "item",
+          id: ITEM_ID,
+          title: "Published task",
+          snippet: "Published <<task>>",
+          rank: 0.9,
+          projectId: PROJECT_ID,
+          reportId: REPORT_ID,
+          reportSectionId: SECTION_ID,
+          createdAt: "2026-05-06T08:00:00.000Z",
+        },
+      ],
+      isFetching: false,
+    });
+
+    render(<SearchInput scope="published" />);
+    const input = screen.getByRole("combobox");
+    act(() => {
+      fireEvent.change(input, { target: { value: "task" } });
+      fireEvent.focus(input);
+    });
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+    act(() => {
+      fireEvent.keyDown(input, { key: "Enter" });
+    });
+
+    expect(pushMock).toHaveBeenCalledWith(`/reports/${REPORT_ID}`);
+    expect(pushMock).not.toHaveBeenCalledWith(
+      expect.stringContaining("/lead/report"),
+    );
+  });
+
+  // task 4.2: even if the server leaks a project hit, the viewer never sees it.
+  it("suppresses a project hit for a viewer", () => {
+    useSessionMock.mockReturnValue({ user: { role: "viewer" } });
+    useQueryMock.mockReturnValue({
+      data: [
+        {
+          type: "project",
+          id: PROJECT_ID,
+          title: "E-Commerce Platform",
+          snippet: "<<E-Commerce>> Platform",
+          rank: 0.7,
+          projectId: PROJECT_ID,
+          createdAt: "2026-05-06T08:00:00.000Z",
+        },
+      ],
+      isFetching: false,
+    });
+
+    render(<SearchInput scope="published" />);
+    const input = screen.getByRole("combobox");
+    act(() => {
+      fireEvent.change(input, { target: { value: "platform" } });
+      fireEvent.focus(input);
+    });
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    expect(screen.queryByText("E-Commerce Platform")).not.toBeInTheDocument();
+    expect(screen.getByText("No results found")).toBeInTheDocument();
+  });
+
+  it('forwards scope="published" through to queryOptions', () => {
+    useSessionMock.mockReturnValue({ user: { role: "viewer" } });
+    render(<SearchInput scope="published" />);
+    const input = screen.getByRole("combobox");
+    act(() => {
+      fireEvent.change(input, { target: { value: "platform" } });
+    });
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    const lastQueryOptionsArg = queryOptionsMock.mock.calls.at(-1)?.[0] as
+      | { scope?: string }
+      | undefined;
+    expect(lastQueryOptionsArg?.scope).toBe("published");
   });
 
   // VA-0a / VA-0b: badge span — aria-label removed, visible text retained.

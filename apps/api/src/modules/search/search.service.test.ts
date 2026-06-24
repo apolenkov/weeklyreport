@@ -48,7 +48,7 @@ function makeHit(overrides: Partial<SearchHit> = {}): SearchHit {
 function createRepository(
   handler: (params: {
     q: string;
-    scope: "mine" | "all";
+    scope: "mine" | "all" | "published";
     userId: string;
     groupIds: string[] | null;
     excludeTypes: SearchHit["type"][];
@@ -367,6 +367,64 @@ describe("SearchService", () => {
 
     const result = await service.query(
       { q: "release", scope: "mine", limit: 20 },
+      makeSession({ role: "viewer", viewerGroupAccess: [] }),
+    );
+
+    expect(result).toEqual([]);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  // viewer-report-surface-parity: the `published` viewer search surface.
+  it('allows scope="published" for viewer and forwards it to the repository', async () => {
+    const repo = createRepository((params) => {
+      expect(params.scope).toBe("published");
+      expect(params.groupIds).toEqual([groupA]);
+      return [makeHit({ title: "published item" })];
+    });
+    const service = new SearchService(repo);
+
+    const result = await service.query(
+      { q: "release", scope: "published", limit: 20 },
+      makeSession({ role: "viewer", viewerGroupAccess: [groupA] }),
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.title).toBe("published item");
+  });
+
+  it("excludes project hits for a viewer (no product destination, no publish state)", async () => {
+    let seenExclude: SearchHit["type"][] | undefined;
+    const repo = createRepository((params) => {
+      seenExclude = params.excludeTypes;
+      return [
+        makeHit({ id: itemId, type: "item", title: "CRM blocker", rank: 0.9 }),
+        makeHit({
+          id: projectId,
+          type: "project",
+          title: "CRM-Sales Hub",
+          rank: 0.8,
+          reportId: undefined,
+          reportSectionId: undefined,
+        }),
+      ];
+    });
+    const service = new SearchService(repo);
+
+    const result = await service.query(
+      { q: "CRM", scope: "published", limit: 20 },
+      makeSession({ role: "viewer", viewerGroupAccess: [groupA] }),
+    );
+
+    expect(seenExclude).toEqual(["project"]);
+    expect(result.map((r) => r.type)).toEqual(["item"]);
+  });
+
+  it('viewer with no granted groups returns empty for scope="published" without calling repository', async () => {
+    const spy = vi.fn(() => [] as SearchHit[]);
+    const service = new SearchService(createRepository(spy));
+
+    const result = await service.query(
+      { q: "release", scope: "published", limit: 20 },
       makeSession({ role: "viewer", viewerGroupAccess: [] }),
     );
 

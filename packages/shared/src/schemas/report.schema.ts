@@ -262,6 +262,17 @@ export const compiledHistoryResultSchema = z.object({
   archiveCount: z.number().int().min(0),
 });
 
+/**
+ * viewer-report-surface-parity (task 2.1): result of the latest-published
+ * resolver behind `/reports/latest`. `reportId` is the most recent report the
+ * caller can OPEN (`periodStatus = 'published'`) that has at least one
+ * group-visible section, or `null` when none qualifies (empty state).
+ */
+export const latestPublishedReportSchema = z.object({
+  reportId: z.uuid().nullable(),
+});
+export type LatestPublishedReport = z.infer<typeof latestPublishedReportSchema>;
+
 export const adminSnapshotSchema = z.object({
   users: z.array(adminUserSchema),
   groups: z.array(reportingGroupSchema).default([]),
