@@ -12,7 +12,9 @@ model User {
   name                    String
   // Structured ФИО parts (surname-first). `name` stays the stored,
   // denormalized display value recomputed from these on admin write.
-  // SAML stubs leave the parts null and carry only `name` (= displayName).
+  // lastName/firstName are NOT NULL; SAML stubs synthesize them
+  // (lastName = whole displayName, firstName = " " placeholder, middleName =
+  // null) since the IdP name order isn't known — an admin completes them later.
   lastName                String
   firstName               String
   middleName              String?

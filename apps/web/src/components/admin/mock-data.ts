@@ -141,7 +141,7 @@ export const MOCK_GROUPS: MockGroup[] = [
 export const MOCK_USERS: MockUser[] = [
   {
     id: "u1",
-    name: "Alexey Petrov",
+    name: "Petrov Alexey",
     lastName: "Petrov",
     firstName: "Alexey",
     middleName: null,
@@ -154,7 +154,7 @@ export const MOCK_USERS: MockUser[] = [
   },
   {
     id: "u2",
-    name: "Maria Ivanova",
+    name: "Ivanova Maria",
     lastName: "Ivanova",
     firstName: "Maria",
     middleName: null,
@@ -167,7 +167,7 @@ export const MOCK_USERS: MockUser[] = [
   },
   {
     id: "u3",
-    name: "Dmitry Sokolov",
+    name: "Sokolov Dmitry",
     lastName: "Sokolov",
     firstName: "Dmitry",
     middleName: null,
@@ -180,7 +180,7 @@ export const MOCK_USERS: MockUser[] = [
   },
   {
     id: "u4",
-    name: "Elena Kuznetsova",
+    name: "Kuznetsova Elena",
     lastName: "Kuznetsova",
     firstName: "Elena",
     middleName: null,
@@ -193,7 +193,7 @@ export const MOCK_USERS: MockUser[] = [
   },
   {
     id: "u5",
-    name: "Sergey Volkov",
+    name: "Volkov Sergey",
     lastName: "Volkov",
     firstName: "Sergey",
     middleName: null,
@@ -206,7 +206,7 @@ export const MOCK_USERS: MockUser[] = [
   },
   {
     id: "u6",
-    name: "Anna Fedorova",
+    name: "Fedorova Anna",
     lastName: "Fedorova",
     firstName: "Anna",
     middleName: null,
@@ -219,7 +219,7 @@ export const MOCK_USERS: MockUser[] = [
   },
   {
     id: "u7",
-    name: "Igor Smirnov",
+    name: "Smirnov Igor",
     lastName: "Smirnov",
     firstName: "Igor",
     middleName: null,
@@ -232,7 +232,7 @@ export const MOCK_USERS: MockUser[] = [
   },
   {
     id: "u8",
-    name: "Olga Morozova",
+    name: "Morozova Olga",
     lastName: "Morozova",
     firstName: "Olga",
     middleName: null,
