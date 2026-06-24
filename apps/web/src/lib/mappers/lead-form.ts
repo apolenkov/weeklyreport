@@ -50,7 +50,10 @@ import type {
   MyHistoryEntry,
   ReportSectionReadModel,
 } from "@customreport/shared";
-import { STAGE_NAMES } from "@customreport/shared";
+import {
+  initialsFromName as sharedInitialsFromName,
+  STAGE_NAMES,
+} from "@customreport/shared";
 
 import { riskCoversStage } from "../../components/lead/stage-tags";
 import {
@@ -242,17 +245,11 @@ function clampRank(rank: number): number {
   return rank;
 }
 
+// Avatar initials via the canonical shared helper (surname-first ФИО), with
+// this surface's "??" placeholder for an empty name. The token logic lives once
+// in @customreport/shared (see commit 8fd7e8bf — four cloned copies diverged).
 function initialsFromName(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0];
-  if (!first) return "??";
-  if (parts.length === 1) {
-    return first.slice(0, 2).toUpperCase();
-  }
-  // Surname-first ФИО: initials are surname + given name (first + SECOND
-  // token), not first + last — the last token is the patronymic.
-  const second = parts[1] ?? first;
-  return (first.charAt(0) + second.charAt(0)).toUpperCase();
+  return sharedInitialsFromName(name) || "??";
 }
 
 function buildProjectIndex(section: ReportSectionReadModel): Map<

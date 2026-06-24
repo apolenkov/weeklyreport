@@ -8,6 +8,7 @@ import type {
   ReportSectionReadModel,
   WeeklyReportReadModel,
 } from "@customreport/shared";
+import { initialsFromName as sharedInitialsFromName } from "@customreport/shared";
 
 import { formatPeriodRangeWithYear, formatWeekLabel } from "../format-date";
 import { deriveItemStatus } from "./item-status";
@@ -20,17 +21,11 @@ import type {
   WeeklyReportRisk,
 } from "./weekly-report-types";
 
+// Avatar initials via the canonical shared helper (surname-first ФИО), with
+// this surface's "??" placeholder for an empty name. The token logic lives once
+// in @customreport/shared (see commit 8fd7e8bf — four cloned copies diverged).
 export function initialsFromName(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  const first = parts[0];
-  if (!first) return "??";
-  if (parts.length === 1) {
-    return first.slice(0, 2).toUpperCase();
-  }
-  // Surname-first ФИО: initials are surname + given name (first + SECOND
-  // token), not first + last — the last token is the patronymic.
-  const second = parts[1] ?? first;
-  return (first.charAt(0) + second.charAt(0)).toUpperCase();
+  return sharedInitialsFromName(name) || "??";
 }
 
 export function isoWeekLabel(date: Date): string {
