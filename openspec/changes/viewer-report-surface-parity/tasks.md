@@ -1,12 +1,12 @@
 ## 1. Backend — published search scope
 
 - [ ] 1.1 Add `published` to the scope enum across all sites: `searchQueryInputSchema` in `@customreport/shared`, the `SearchRepository.search` signature, the in-memory search fake, and the `SearchInput` `Scope` type
-- [ ] 1.2 Add an `INNER JOIN "Report"` with a published predicate (confirm `periodState`/`periodStatus` column) to each text chunk in `search.prisma-repository.ts` for the `published` scope
-- [ ] 1.3 Route the viewer `published` group filter through the same GroupProduct-based access the report path uses — NOT `User.reportingGroupId` (the leak fix)
+- [ ] 1.2 Add an `INNER JOIN "Report"` (via `rs."reportId"`) with predicate `Report."periodStatus" = 'published'` to the item/risk/decision chunks in `search.prisma-repository.ts` for the `published` scope (RESOLVED: `periodStatus`, matching the viewer read gate `weekly-report.service.ts:130` — NOT `status`, NOT `periodState`)
+- [ ] 1.3 KEEP the existing `sectionGroupFilter` (author `reportingGroupId`) unchanged — it already matches the viewer's content read visibility (`weekly-report.prisma-repository.ts:94`). Do NOT switch to GroupProduct (it would diverge — see design Decision 2). The leak fix is the published gate in 1.2, not a group-axis change
 - [ ] 1.4 Authorize `published` for viewer (safe subset for head/admin) in the scope authorization switch; keep `all` head/admin-only
 - [ ] 1.5 Exclude `"project"` hits for the viewer (extend the existing `excludeTypes` logic)
 - [ ] 1.6 Emit `scopeAccessed` from the search path on a viewer cross-group hit, consistent with `weeklyReport.get`
-- [ ] 1.7 Tests: viewer published match returned; unpublished excluded; out-of-group excluded; search visibility == report visibility for a product; no-access viewer empty; `project` excluded; `all` still forbidden for viewer
+- [ ] 1.7 Tests: viewer published match returned; unpublished/reopened (`periodStatus != 'published'`) excluded; out-of-group (author group) excluded; search content visibility == report read visibility (author-group basis, per design Decision 2); no-access viewer empty; `project` excluded; `all` still forbidden for viewer
 
 ## 2. Backend — group-content-aware latest published
 

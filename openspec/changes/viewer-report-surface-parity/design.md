@@ -10,9 +10,11 @@ affordances gated by role. The published-only gate (`head-report-visibility`)
 
 Adversarial review surfaced three load-bearing facts the first draft missed:
 
-- Search scopes groups via the legacy `User.reportingGroupId` author join
-  (`search.prisma-repository.ts:91,95`), NOT the GroupProduct gate the report uses
-  — so search and report visibility can diverge for the same viewer.
+- Search has NO published-report predicate today, so a viewer `published` scope
+  would otherwise match content in unpublished/reopened periods it cannot read.
+  This — not the group join — is the real divergence to fix (see Decision 2, which
+  phase-0 verification reversed: the existing author-group join already matches the
+  viewer's content visibility).
 - The scope toggle and slides view-mode controls live only in `HeadReportShell`;
   the viewer route renders `WeeklyReportPage` directly with no shell and no `mode`
   handling, so "enable a flag" is not possible — a viewer shell is required.
@@ -34,19 +36,37 @@ no product (`project`) search results for the viewer in v1.
 ### 1. New `published` search scope with a real Report join
 
 Add `scope="published"` to the shared scope enum and the service. The repository
-gains an `INNER JOIN "Report"` on each text chunk with a published predicate
-(`periodState`/`periodStatus = 'published'` — confirm the exact column at
-implementation against `prisma/schema.prisma`). Chosen over a `publishedOnly` flag
-on `all`: a distinct scope name is explicit and enforceable in the authorization
-switch, with no default-off leak risk.
+gains an `INNER JOIN "Report"` (via `rs."reportId"` on the item/risk/decision
+chunks) with the published predicate **`Report."periodStatus" = 'published'`**
+— RESOLVED 2026-06-24. `periodStatus` is the exact column the viewer content-read
+gate uses (`weekly-report.service.ts:130` throws NOT_FOUND when
+`periodStatus !== 'published'`; the snapshot is also selected on
+`periodStatus === 'published'`). `Report.status` is the report-LIST column
+(`compiledHistory`) and can stay `'published'` while a reopened period's
+`periodStatus = 'reopened'` makes the content unreadable — so `status` would leak;
+`periodState` is the separate archive lifecycle, not a publish gate. Chosen over a
+`publishedOnly` flag on `all`: a distinct scope name is explicit and enforceable in
+the authorization switch, with no default-off leak risk.
 
-### 2. Search group filter MUST match the report group filter (the leak fix — P0)
+### 2. KEEP the author-group filter — it already matches report visibility (RESOLVED 2026-06-24, reverses the first draft)
 
-Today search filters via `authorId/leadId IN (User WHERE reportingGroupId IN …)`.
-For the viewer `published` scope, route the group filter through the **same
-GroupProduct-based access the report path uses**, so search visibility equals
-report visibility product-for-product. A regression test MUST assert that a product
-hidden from the viewer's report is also absent from search.
+Phase-0 verification against current code reverses this decision. The viewer's
+searchable hits are `item`/`risk`/`decision` only (the `project` chunk is excluded
+— Decision 3). All three are gated in `search.prisma-repository.ts` (lines
+142/167/187) by `sectionGroupFilter` = `rs."authorId" IN (User WHERE
+reportingGroupId IN …)` — the **section author's** group. The report read path
+gates the SAME content the SAME way: `getWeeklyReport` filters `sections` by
+`author.reportingGroupId` (`weekly-report.prisma-repository.ts:94`), and
+item/risk/decision render inside those sections. The GroupProduct join the report
+path uses applies ONLY to the **product portfolio** axis
+(`useExplicitGroupProducts`, repo:86-88) — and product hits are excluded for the
+viewer. So the existing author-group join in search ALREADY equals the viewer's
+content visibility; switching it to GroupProduct would make search DIVERGE from the
+read (hiding items the viewer can see in the report). **KEEP `sectionGroupFilter`
+unchanged.** The leak the first draft conflated with the group axis is the missing
+publish gate (Decision 1). A regression test MUST assert: a viewer match in an
+unpublished/reopened period is excluded, and a match authored outside the viewer's
+group(s) is excluded.
 
 ### 3. Exclude `project` hits for the viewer (v1)
 
@@ -98,9 +118,10 @@ unaudited — rejected, it would silently weaken `scope-accessed-audit`.)
 
 ## Risks / Trade-offs
 
-- [Published/group filter leaks unpublished or out-of-group rows] → both the Report
-  publish predicate and the GroupProduct group filter applied server-side; tests for
-  unpublished-excluded, out-of-group-excluded, and search==report visibility.
+- [Published/group filter leaks unpublished or out-of-group rows] → the Report
+  `periodStatus='published'` predicate plus the existing author-group filter applied
+  server-side; tests for unpublished/reopened-excluded, out-of-group-excluded, and
+  search==report content visibility (author-group basis, per Decision 2).
 - [Latest-published opens a report with no viewer content] → resolver is
   group-content-aware, not merely period-published; empty state when none.
 - [Viewer shell drifts from head shell] → reuse the same `report-shell` primitives
@@ -116,8 +137,15 @@ viewer surface is restored with no residual state.
 
 ## Open Questions
 
-- Exact published column/state on `Report` (`periodState` vs `periodStatus`) —
-  confirm against the schema at implementation.
+- ~~Exact published column/state on `Report`~~ — RESOLVED 2026-06-24:
+  `periodStatus = 'published'` (Decision 1). Not `status` (list-only), not
+  `periodState` (archive lifecycle).
+- ~~Whether to route search groups through GroupProduct~~ — RESOLVED 2026-06-24:
+  KEEP the author-group join (Decision 2); GroupProduct would diverge from the
+  viewer's content read path.
 - Whether the viewer shell is a distinct component or a parameterization of the
   head shell with mutations disabled (prefer a distinct read-only shell to avoid
   accidental mutation-control exposure).
+- Pre-existing (out of scope, flag only): on reopen, `compiledHistory` (filters
+  `status`) and the content-read gate (`periodStatus`) can disagree — a viewer may
+  see a reopened report in `/reports` yet get NOT_FOUND opening it.

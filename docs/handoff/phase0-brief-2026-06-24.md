@@ -13,40 +13,39 @@ change's `proposal.md` / `design.md` / `tasks.md` — it does not replace them.
 
 ---
 
-## CRITICAL — resolve before coding Change B
+## RESOLVED 2026-06-24 — both Change B contradictions (baked into design.md + tasks.md)
 
-### 1. Published-column contradiction (three candidates on `Report`)
+### 1. Published column → `Report.periodStatus = 'published'`
 
-Two verification agents disagreed because there are genuinely **two different
-publish gates on two different paths**:
+- The viewer content-read gate is exactly `weekly-report.service.ts:130`
+  (`periodStatus !== 'published'` → NOT_FOUND); the snapshot is also selected on
+  `periodStatus === 'published'` (`weekly-report.prisma-repository.ts:147`).
+- Publish writes `status`+`periodStatus`+`periodState` atomically
+  (`publication.service.ts:250-253`), but on **reopen** `periodStatus → 'reopened'`
+  while `status` may stay `'published'`. So `status` is the **list** column
+  (`compiledHistory`), not the content gate — using it would leak reopened content.
+  `periodState` is the archive lifecycle, never the publish gate.
+- Search must match the **read** path → `periodStatus`. Add
+  `INNER JOIN "Report" ON rs."reportId"` + `periodStatus='published'` to the
+  item/risk/decision chunks (this is the real leak fix — search has no publish
+  predicate today).
 
-- `Report.status` (`ReportStatus` enum, `'published'`) — used by the report
-  **LIST** path `reports.compiledHistory` (`trpc.router.ts:449`). This is what a
-  viewer's `/reports` **and** `/reports/latest` list actually reads.
-- `periodStatus` (`PeriodStatus` enum, `'published'`) — used by the **single
-  report** viewer gate `weekly-report.service.ts:130`.
-- `periodState` — a **separate archive lifecycle** (`scheduled/open/published/archived`); **NOT** a publish gate. Never use it for search.
+### 2. Group join → KEEP `author.reportingGroupId` (do NOT switch to GroupProduct)
 
-**Action:** search must match the **same path** the parity test (task 1.7) pins.
-`compiledHistory` uses `status`; `weeklyReport.get` uses `periodStatus`. Confirm
-whether `status` and `periodStatus` move in lockstep; if not, pick the column of
-the path under test. **Do not blindly assume `periodStatus`.**
+- The handoff's "highest-risk" GroupProduct instruction was a misread.
+- Viewer hits = item/risk/decision (project excluded). All three are gated by
+  `sectionGroupFilter` = section `author.reportingGroupId`
+  (`search.prisma-repository.ts:142/167/187`).
+- The report read gates the **same** content the same way: sections filtered by
+  `author.reportingGroupId` (`weekly-report.prisma-repository.ts:94`); items/risks/
+  decisions render inside those sections. GroupProduct governs only the **product
+  portfolio** axis (repo:86-88), and product hits are excluded for the viewer.
+- So the existing author-group join **already** matches report visibility;
+  switching to GroupProduct would make search **diverge** (hide items the viewer
+  can see). KEEP `sectionGroupFilter` unchanged. Task 1.3 rewritten accordingly.
 
-### 2. GroupProduct vs `reportingGroupId` contradiction
-
-The handoff's "highest-risk" instruction says route viewer search through
-**GroupProduct** access, NOT `User.reportingGroupId`. But:
-
-- The report **LIST** path `compiledHistory` itself filters via
-  `author.reportingGroupId` (`group-scope.ts:72-73`).
-- Only the **single-report** `weeklyReport.get` uses the GroupProduct join
-  (`scopeWhere(session,'project',{useExplicitGroupProducts:true})`).
-
-So mechanically switching viewer search to GroupProduct could make search
-**diverge** from the list surface (`/reports` + `/reports/latest`) — the opposite
-of the intent. **Action:** decide which "report path" the task-1.7 regression
-test asserts equality against, and keep the latest-published resolver (task 2.1)
-on the **same** basis.
+> Pre-existing, out of scope: on reopen, `/reports` list (`status`) and the
+> content read (`periodStatus`) can disagree — flagged in design Open Questions.
 
 ---
 

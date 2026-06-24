@@ -3,14 +3,17 @@
 ### Requirement: Viewer search returns only published content the viewer can see
 
 The system SHALL let a viewer search reports, items, risks, and decisions,
-restricting results to **published** reports and to content the viewer can see
-through the **same group-to-product access the viewer's report uses** (the
-GroupProduct-based gate), not the legacy author `reportingGroupId` join. A result
-MUST never reveal a product or section that the viewer's own report would hide.
-Unpublished content MUST never appear, and a viewer with no group access MUST get
-an empty result set. Product (`project`) hits MUST be excluded for the viewer in
-v1, because a product has no publish state and its result destination is the admin
-surface the viewer cannot reach.
+restricting results to **published** reports (`Report.periodStatus = 'published'`
+— the column the viewer's report read gate uses) and to content the viewer can see
+through the **same section author-group access the viewer's report content uses**
+(the `author.reportingGroupId` join, which already equals the report read's section
+visibility). The report's GroupProduct join governs only the product-portfolio
+axis, and product hits are excluded for the viewer, so it does not apply to
+searchable content. A result MUST never reveal a section the viewer's own report
+would hide. Unpublished or reopened content MUST never appear, and a viewer with no
+group access MUST get an empty result set. Product (`project`) hits MUST be
+excluded for the viewer in v1, because a product has no publish state and its
+result destination is the admin surface the viewer cannot reach.
 
 This runs under a dedicated `published` scope; it does not widen the head/admin
 `all` scope, and it replaces the prior behavior where a viewer had no search at all
@@ -26,15 +29,17 @@ This runs under a dedicated `published` scope; it does not widen the head/admin
 
 #### Scenario: Result visibility matches the viewer's report
 
-- **GIVEN** a product visible in search via one group join but hidden from the
-  viewer's report via the GroupProduct gate
-- **WHEN** the viewer searches for content under that product
+- **GIVEN** a published item, risk, or decision whose section author is outside the
+  viewer's group(s) — hidden from the viewer's report read
+- **WHEN** the viewer searches for a term matching it
 - **THEN** the result is NOT returned
-- **AND** search visibility equals the viewer's report visibility for every product
+- **AND** search content visibility equals the viewer's report read visibility
+  (the section author-group basis)
 
 #### Scenario: Unpublished content is excluded
 
-- **GIVEN** a report period that is not yet published
+- **GIVEN** a report period that is not published (`periodStatus` is `open` or
+  `reopened`)
 - **WHEN** a viewer searches for a term that would match content in it
 - **THEN** that content is NOT included in the viewer's results
 
