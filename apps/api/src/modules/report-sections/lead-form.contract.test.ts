@@ -66,6 +66,7 @@ function createMockRepository(
   return {
     getSectionById: vi.fn().mockResolvedValue(null),
     getSectionForPeriod: vi.fn().mockResolvedValue(null),
+    getReportPeriodStatusForSection: vi.fn().mockResolvedValue("open"),
     revokeSectionSubmission: vi.fn().mockResolvedValue(undefined),
     fillFromSection: vi.fn().mockResolvedValue(5),
     createReopenRequest: vi.fn().mockResolvedValue(undefined),
@@ -414,6 +415,43 @@ describe("LeadFormService — fillFrom", () => {
     await expect(
       service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, OTHER_USER_ID),
     ).rejects.toThrow("Can only fill your own section.");
+  });
+
+  // viewer-report-surface-parity (review P1): fillFrom must refuse a published
+  // period — the only post-publish path that mutates live Item/Risk/Decision
+  // rows. Published search reads live rows while the viewer read serves the
+  // frozen snapshot; allowing the rewrite would leak content absent from the
+  // report the viewer can open.
+  it("fails for a section in a published report", async () => {
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
+      getReportPeriodStatusForSection: vi.fn().mockResolvedValue("published"),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID),
+    ).rejects.toThrow("Cannot fill a section of a published report.");
+    // The mutating repo call must never be reached.
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.fillFromSection).not.toHaveBeenCalled();
+  });
+
+  it("allows a section in a reopened report (editable again, excluded from viewer search)", async () => {
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
+      getReportPeriodStatusForSection: vi.fn().mockResolvedValue("reopened"),
+      fillFromSection: vi.fn().mockResolvedValue(3),
+    });
+    const service = new LeadFormService(repo);
+
+    const result = await service.fillFrom(
+      SECTION_ID,
+      SOURCE_SECTION_ID,
+      AUTHOR_ID,
+    );
+
+    expect(result).toEqual({ success: true, copiedItems: 3 });
   });
 
   it("fails for a submitted section", async () => {

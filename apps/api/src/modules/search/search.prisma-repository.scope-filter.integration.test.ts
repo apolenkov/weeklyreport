@@ -51,6 +51,14 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
   const ITEM_REOPENED_IN_GROUP = "b0000000-0000-4000-a000-000000000103";
   const ITEM_PUB_OUT_GROUP = "b0000000-0000-4000-a000-000000000104";
 
+  // Risk + Decision rows exercise the OTHER two published-gated chunks: a
+  // dropped join from either would leak unpublished/out-of-group content that
+  // an Item-only suite cannot catch.
+  const RISK_PUB_IN_GROUP = "b0000000-0000-4000-a000-000000000201";
+  const RISK_OPEN_IN_GROUP = "b0000000-0000-4000-a000-000000000202";
+  const DECISION_PUB_IN_GROUP = "b0000000-0000-4000-a000-000000000301";
+  const DECISION_PUB_OUT_GROUP = "b0000000-0000-4000-a000-000000000302";
+
   // Distinct token present in every item's text so plainto_tsquery matches.
   const Q = "paritysearchtoken";
 
@@ -95,6 +103,38 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
         text: `${Q} release blocker`,
         tag: "general",
         workflowStatus: "in_progress",
+      },
+    });
+  }
+
+  async function createRisk(
+    id: string,
+    reportSectionId: string,
+  ): Promise<void> {
+    await prisma.risk.create({
+      data: {
+        id,
+        reportSectionId,
+        projectId: PROJECT_ID,
+        risk: `${Q} schedule risk`,
+        impact: "high",
+        mitigation: "mitigate",
+      },
+    });
+  }
+
+  async function createDecision(
+    id: string,
+    reportSectionId: string,
+  ): Promise<void> {
+    await prisma.decision.create({
+      data: {
+        id,
+        reportSectionId,
+        productId: PROJECT_ID,
+        text: `${Q} go decision`,
+        owner: "owner",
+        impact: "high",
       },
     });
   }
@@ -174,6 +214,13 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
     await createItem(ITEM_OPEN_IN_GROUP, SECTION_OPEN_A_ID);
     await createItem(ITEM_REOPENED_IN_GROUP, SECTION_REOPENED_A_ID);
     await createItem(ITEM_PUB_OUT_GROUP, SECTION_PUB_B_ID);
+
+    // Risk + Decision: one published in-group (must surface) and one each in a
+    // non-qualifying section (unpublished / out-of-group; must be excluded).
+    await createRisk(RISK_PUB_IN_GROUP, SECTION_PUB_A_ID);
+    await createRisk(RISK_OPEN_IN_GROUP, SECTION_OPEN_A_ID);
+    await createDecision(DECISION_PUB_IN_GROUP, SECTION_PUB_A_ID);
+    await createDecision(DECISION_PUB_OUT_GROUP, SECTION_PUB_B_ID);
   });
 
   afterAll(async () => {
@@ -213,9 +260,26 @@ describe("SearchPrismaRepository — published scope read-parity (integration)",
     expect(ids).not.toContain(ITEM_PUB_OUT_GROUP);
   });
 
-  it("published scope returns EXACTLY the in-group published content (read-parity)", async () => {
+  // Risk + Decision exercise the other two published-gated chunks. A dropped
+  // join from either chunk would surface unpublished/out-of-group content that
+  // the Item-only assertions above cannot catch.
+  it("applies the publish gate to the Risk chunk (in-group published surfaces, unpublished excluded)", async () => {
     const ids = await publishedSearch([GROUP_A_ID]);
-    expect([...ids].sort()).toEqual([ITEM_PUB_IN_GROUP]);
+    expect(ids).toContain(RISK_PUB_IN_GROUP);
+    expect(ids).not.toContain(RISK_OPEN_IN_GROUP);
+  });
+
+  it("applies the publish + group gate to the Decision chunk", async () => {
+    const ids = await publishedSearch([GROUP_A_ID]);
+    expect(ids).toContain(DECISION_PUB_IN_GROUP);
+    expect(ids).not.toContain(DECISION_PUB_OUT_GROUP);
+  });
+
+  it("published scope returns EXACTLY the in-group published content across all chunks (read-parity)", async () => {
+    const ids = await publishedSearch([GROUP_A_ID]);
+    expect([...ids].sort()).toEqual(
+      [ITEM_PUB_IN_GROUP, RISK_PUB_IN_GROUP, DECISION_PUB_IN_GROUP].sort(),
+    );
   });
 
   it("a viewer with access to BOTH groups also sees the group-B published item", async () => {

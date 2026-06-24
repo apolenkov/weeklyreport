@@ -20,6 +20,16 @@ export interface LeadFormRepository {
     reportId: string,
     userId: string,
   ): Promise<{ section: ReportSectionReadModel; readOnly: boolean } | null>;
+  /**
+   * The `periodStatus` of the report owning `sectionId`, or null when the
+   * section is missing. Used by fillFrom to refuse mutating a published
+   * period's live rows (viewer-report-surface-parity: published search reads
+   * live rows, the viewer read serves the frozen snapshot — they must not
+   * diverge). `periodStatus`, not `status`: a reopened period (status stays
+   * 'published', periodStatus='reopened') is editable again and is excluded
+   * from the viewer's published search, so fillFrom stays allowed there.
+   */
+  getReportPeriodStatusForSection(sectionId: string): Promise<string | null>;
   revokeSectionSubmission(sectionId: string, revokedBy: string): Promise<void>;
   fillFromSection(
     targetSectionId: string,
