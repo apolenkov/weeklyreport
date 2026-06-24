@@ -2,12 +2,13 @@
 
 Supersedes `session-wrap-2026-06-24.md`. Everything that doc left open is now done.
 
-**Branch:** `feat/user-record-and-viewer-parity` — several commits ahead of
-`origin/main`, **UNPUSHED, unmerged** (push/merge left to you — see Tails).
+**Branch:** `feat/user-record-and-viewer-parity` — **MERGED to `main`
+(fast-forward), pushed to `origin/main`, and the local branch deleted.** `main`
+is at the catalog-fix commit; the tree is clean.
 
 **Bottom line:** both changes are **implemented, reviewed, review-findings fixed,
-deferred coverage closed, live-verified, and ARCHIVED with full spec sync.** No
-open work items remain on A/B.
+deferred coverage closed, the pre-existing fillFrom source-auth bug fixed,
+live-verified, ARCHIVED with full spec sync, and SHIPPED to main.** Nothing open.
 
 ## What this session added (on top of the 2026-06-24 state)
 
@@ -63,11 +64,12 @@ new latestPublished integration 4/4 · `openspec validate --strict` both valid.
 - B → `viewer-published-search`, `viewer-report-navigation` (created),
   `report-toolbar-parity` (updated).
 
-## Tails (left for you — NOT done autonomously)
+## Tails
 
-1. **Push / merge the branch.** Pre-authorized by MVP rules but the 2026-06-24
-   handoff explicitly deferred the decision to you; the branch is unpushed and
-   unmerged. Nothing red — push when ready.
+1. ~~Push / merge the branch.~~ **DONE** (you chose merge+delete): fast-forwarded
+   to `main`, pushed (pre-push ran the full suite, 1296 web tests green), local
+   branch deleted. The `/reports/latest` route also needed an e2e catalog
+   scenario to clear the pre-push drift gate — added in the same push.
 2. ~~File the `fillFrom` source-auth bug.~~ **FIXED this session** (user chose
    "fix now"): `fillFrom` now authorizes the SOURCE section too — it rejects any
    `sourceSectionId` not authored by the caller (the fill-from picker only ever
