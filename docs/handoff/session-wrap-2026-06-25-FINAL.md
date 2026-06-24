@@ -42,6 +42,16 @@ sufficed. All confirmed:
   Last/First/Middle/Position inputs.
 - Screenshots: `verify-viewer-slides.png`, `verify-admin-users-position.png` (repo root, untracked).
 
+**Read-only caveat (honest scope of "live-verified"):** the pass NAVIGATED and
+read; it did NOT mutate (no reseed/restart, to avoid colliding with the parallel
+session). So two A/11.3 sub-points were NOT exercised in the browser and rest on
+tests instead: (a) the admin add/edit-user write round-trip with/without
+patronymic — covered by `toAdminUserInput` + snapshot-recompute unit/integration
+tests (commit 47f1777); (b) the SAML-stub initials render (`firstName=" "`) —
+covered only by reasoning + the shared `initials` unit cases, not a browser run.
+Neither is a known defect; flagged so "live-verified" is not read as "including
+writes."
+
 ## Gates (at the deterministic checkpoint)
 
 typecheck 5/5 · lint clean · `pnpm test` (web 1296, api/shared cached green) ·
@@ -65,3 +75,7 @@ new latestPublished integration 4/4 · `openspec validate --strict` both valid.
    autonomously. Ready-to-file draft: `docs/handoff/fillFrom-source-auth-issue-draft.md`
    (`gh issue create ... --body-file <that>`). Independent of A/B.
 3. **Untracked verify screenshots** in the repo root — delete if unwanted.
+4. **Spec `Purpose` placeholders.** The 5 archive-created specs carry openspec's
+   default `Purpose: TBD — Update after archive` line (normal for newly created
+   specs; the Requirements/Scenarios are complete and accurate). Fill the
+   one-line purposes when convenient — not blocking.
