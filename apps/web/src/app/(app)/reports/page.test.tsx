@@ -36,8 +36,18 @@ vi.mock("sonner", () => ({
 }));
 
 vi.mock("../../../components/search/search-input", () => ({
-  SearchInput: ({ placeholder }: { readonly placeholder?: string }) => (
-    <input aria-label="Search Reports" placeholder={placeholder} />
+  SearchInput: ({
+    placeholder,
+    scope,
+  }: {
+    readonly placeholder?: string;
+    readonly scope?: string;
+  }) => (
+    <input
+      aria-label="Search Reports"
+      placeholder={placeholder}
+      data-scope={scope}
+    />
   ),
 }));
 
@@ -205,6 +215,17 @@ describe("ReportsPage history archive toggle", () => {
     expect(screen.getByText("Week 15, Apr 6–12, 2026")).toBeInTheDocument();
     // §4.2: head toggle is also URL-stable.
     expect(navigationMock.push).not.toHaveBeenCalled();
+  });
+
+  it("renders the published-scoped search for a viewer (was no search before parity)", () => {
+    // viewer-report-surface-parity (task 4.1 / review P3): a viewer's search
+    // scope is 'published'; previously it was null and no search rendered.
+    setRole("viewer");
+    render(<ReportsPage />);
+
+    const search = screen.getByLabelText("Search Reports");
+    expect(search).toHaveAttribute("data-scope", "published");
+    expect(search).toHaveAttribute("placeholder", "Search published reports…");
   });
 
   it("defaults head History to NO archive even when the URL is ?tab=published", () => {
