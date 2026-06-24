@@ -2,7 +2,9 @@
 
 ## Purpose
 
-TBD - created by archiving change add-structured-user-name. Update Purpose after archive.
+Define how a user's name is stored as structured ФИО parts (surname / first name
+/ patronymic) alongside a denormalized display `name`, and how the display name,
+short form, and avatar initials derive from those parts in surname-first order.
 
 ## Requirements
 

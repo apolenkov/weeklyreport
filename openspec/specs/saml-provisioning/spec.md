@@ -2,7 +2,9 @@
 
 ## Purpose
 
-TBD - created by archiving change add-structured-user-name. Update Purpose after archive.
+Define SAML create-only provisioning: a missing user is created as a
+least-privilege viewer with synthesized name parts, and an existing user is never
+overwritten (name / role / group / parts) on SAML login.
 
 ## Requirements
 

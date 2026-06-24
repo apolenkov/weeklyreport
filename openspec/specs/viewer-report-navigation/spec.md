@@ -2,7 +2,9 @@
 
 ## Purpose
 
-TBD - created by archiving change viewer-report-surface-parity. Update Purpose after archive.
+Define the viewer's primary navigation entry to the latest published report it can
+see (a stable `/reports/latest` redirect) and the read-only report surface that
+mirrors the head shell's toolbar without any mutation affordance.
 
 ## Requirements
 

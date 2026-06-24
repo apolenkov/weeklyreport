@@ -68,14 +68,13 @@ new latestPublished integration 4/4 · `openspec validate --strict` both valid.
 1. **Push / merge the branch.** Pre-authorized by MVP rules but the 2026-06-24
    handoff explicitly deferred the decision to you; the branch is unpushed and
    unmerged. Nothing red — push when ready.
-2. **File the `fillFrom` source-auth bug.** Pre-existing, still live (verified in
-   code this session): `fillFrom` authorizes only the target section, never the
-   source — on an OPEN report a lead can copy another group's content into their
-   own draft. The auto-mode classifier blocked me from creating the GitHub issue
-   autonomously. Ready-to-file draft: `docs/handoff/fillFrom-source-auth-issue-draft.md`
-   (`gh issue create ... --body-file <that>`). Independent of A/B.
-3. **Untracked verify screenshots** in the repo root — delete if unwanted.
-4. **Spec `Purpose` placeholders.** The 5 archive-created specs carry openspec's
-   default `Purpose: TBD — Update after archive` line (normal for newly created
-   specs; the Requirements/Scenarios are complete and accurate). Fill the
-   one-line purposes when convenient — not blocking.
+2. ~~File the `fillFrom` source-auth bug.~~ **FIXED this session** (user chose
+   "fix now"): `fillFrom` now authorizes the SOURCE section too — it rejects any
+   `sourceSectionId` not authored by the caller (the fill-from picker only ever
+   offers the lead's own past sections), closing the cross-group copy on open
+   reports. `lead-form.service.ts`; tests in `fill-from.integration.test.ts`
+   (cross-author source rejected + fillFromSection never runs; missing source
+   throws). The issue draft was removed as obsolete.
+
+(Done since the first FINAL revision: spec `Purpose` placeholders filled for all 5
+archive-created specs; verify screenshots removed.)
