@@ -116,8 +116,10 @@ function initialsFromName(name: string): string {
   if (parts.length === 1) {
     return first.slice(0, 2).toUpperCase();
   }
-  const last = parts[parts.length - 1] ?? first;
-  return (first.charAt(0) + last.charAt(0)).toUpperCase();
+  // Surname-first ФИО: initials are surname + given name (first + SECOND
+  // token), not first + last — the last token is the patronymic.
+  const second = parts[1] ?? first;
+  return (first.charAt(0) + second.charAt(0)).toUpperCase();
 }
 
 function isoDateLabel(date: Date): string {
