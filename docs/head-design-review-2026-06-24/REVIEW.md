@@ -96,27 +96,49 @@ seeded-lead login (follow-up).
 
 ## F1–F5 disposition
 
-| Item | Verbatim (garbled)                         | Current-main truth                                                                                                | Disposition                       |
-| ---- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| F1   | "Чего эта кнопка? … смысла не вижу"        | "Open focused report" = slides-mode drill-into-focused-report link, moved to header (`head-report-shell.tsx:284`) | Decision: keep / relabel / remove |
-| F2   | "а это что такое?" / "это что не понял"    | `showNeedsAttention` banner (`product-accordion.tsx:423`), dedup-suppressed                                       | Decision: relabel / rework / keep |
-| F3   | "нужна фиксация слайда типа PowerPoint"    | head slide lacks the `.slide-frame` the lead slide has                                                            | **Implemented** (parity)          |
-| F4   | "это не надо … атака будет дальше, вместе" | Blocked & At Risk = **real** data (not mock), redundant with report                                               | Decision: keep-collapsed / remove |
-| F5   | "квадратное; как BlockedAtRisk"            | Period Summary still a ruled `<table>`; spec already requires card idiom                                          | **Implemented** (spec + parity)   |
+| Item | Verbatim (garbled)                         | Current-main truth                                                                                                | Disposition                                     |
+| ---- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| F1   | "Чего эта кнопка? … смысла не вижу"        | "Open focused report" = slides-mode drill-into-focused-report link, moved to header (`head-report-shell.tsx:284`) | **Implemented** — removed; Publish & Lock added |
+| F2   | "а это что такое?" / "это что не понял"    | `showNeedsAttention` banner (`product-accordion.tsx:423`), dedup-suppressed                                       | **Implemented** — folded into Risks             |
+| F3   | "нужна фиксация слайда типа PowerPoint"    | head slide lacks the `.slide-frame` the lead slide has                                                            | **Implemented** (parity)                        |
+| F4   | "это не надо … атака будет дальше, вместе" | Blocked & At Risk = **real** data (not mock), redundant with report                                               | **Implemented** — default collapsed             |
+| F5   | "квадратное; как BlockedAtRisk"            | Period Summary still a ruled `<table>`; spec already requires card idiom                                          | **Implemented** (card + subgrid align)          |
 
 ## Implemented in this change
 
+- **F1** — removed the slides-header "Open focused report" link + its plumbing;
+  added the Publish & Lock / Reopen action there instead (`HeadPublishLockAction`).
+- **F2** — escalation folds into Risks & Blockers (Flagged row), banner removed.
 - **F3** — `HeadSlideArticle` gets the fixed `.slide-frame` + fill model.
-- **F5** — `LeadSummaryTable` rebuilt as a BlockedAtRisk-style card list.
+- **F4** — Blocked & At Risk dashboard block defaults collapsed.
+- **F5** — `LeadSummaryTable` rebuilt as a BlockedAtRisk-style card list, then
+  put on shared subgrid column rails for clean horizontal/vertical alignment.
 
-Spec: OpenSpec change `head-surface-uat-polish` (ADDED head-slide-density frame;
-MODIFIED head-dashboard-clarity Period Summary). Before/after in this folder.
+Spec: OpenSpec change `head-surface-uat-polish` (ADDED head-slide-density frame
 
-## Decisions needed from the user (F1, F2, F4)
+- head-dashboard-clarity Blocked-collapsed; MODIFIED head-dashboard-clarity
+  Period Summary + subgrid align, report-card-clarity escalation-into-Risks,
+  head-toolbar-semantics focused-link → Publish & Lock). Before/after in this
+  folder.
 
-Left deliberately un-coded — each is either ambiguous or a destructive removal
-that should not be guessed overnight. Recommendations are in the OpenSpec
-proposal's "Open Questions". One word each unblocks them.
+## Decisions from the user (F1, F2, F4) — RESOLVED & implemented 2026-06-24
+
+The user chose each (see the proposal's "Resolved decisions" for detail):
+
+- **F1 → remove + replace with Publish & Lock**: dropped the slides-header
+  "Open focused report" link (duplicated the deck's slide navigation) and put
+  the same Publish & Lock / Reopen action edit mode offers there instead
+  (role-gated `HeadPublishLockAction`), beside Export-PDF.
+- **F2 → rework into Risks**: the escalation folds into Risks & Blockers as a
+  leading Flagged/At-Risk row instead of a standalone banner; dedup extended to
+  risk text (in the current seed the escalation duplicates a risk, so the risk
+  row alone carries it).
+- **F4 → collapse by default**: the Blocked & At Risk dashboard block starts
+  collapsed (the report below carries the same content).
+
+All three are coded, gated (typecheck / lint / 1264 web + 955 api tests /
+build), and live-verified; spec deltas added for `head-toolbar-semantics`,
+`report-card-clarity`, and `head-dashboard-clarity`.
 
 ## Still owed — NOT in this PR
 
@@ -149,14 +171,19 @@ Fixed in this PR (objective, owned by this change):
   "Submitted:" label.
 - Doc corrections (the track-floor attribution above; this section).
 
-Needs the user (not changed — taste / design decisions):
+Resolved with the user (2026-06-24):
 
-- **F5 repeated micro-labels (top design call).** Each lead card repeats all six
-  count labels (PRODUCTS/CURRENT/NEXT/RISKS/DECISIONS/PRIORITIES) — 18 repeats
-  across 3 cards — where the old table labelled them once. The card _chrome_
-  matches BlockedAtRisk, but the content is really a 6-tile stat strip, harder to
-  scan column-wise than the table was. Recommendation: label the counts once
-  (a header row or a single legend) and let the per-card cells carry values only,
-  or drop to the 2–3 counts that matter. This is a taste call for the user.
+- **F5 repeated micro-labels (the grill's top design call) — DECLINED in favor
+  of warmth.** The grill recommended labelling the counts once. Shown three live
+  variants, the user picked the one that **keeps** the per-card labels but puts
+  the counts on shared subgrid column rails. So the 18 label repeats stay by
+  choice; the real complaint was alignment, not duplication, and the subgrid
+  rails fix that (columns line up across rows at any value; status/date/action
+  tracks auto-size so Remind/Revoke is never clipped). Full labels retained — the
+  earlier mockup abbreviations were a narrow-column artifact, not an ask. A future
+  reviewer should not re-flag the repeated labels: it was a conscious call.
+
+Still open (taste / design decisions):
+
 - **Narrow-width head slides** — see the F3 note above (fixed-slide clip vs
   responsive is a user decision).

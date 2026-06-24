@@ -251,6 +251,52 @@ function RiskRow({ risk }: { readonly risk: ReportRisk }) {
   );
 }
 
+// head-surface-uat-polish (F2): a lead-raised escalation ("needs attention")
+// is folded into Risks & Blockers as a leading row instead of a separate banner
+// the head did not recognize. It carries only a description + severity (no
+// stage/impact/mitigation), so it renders as a compact risk-style row with a
+// "Flagged" gutter and a Blocked / At Risk badge.
+function EscalationRow({
+  description,
+  severity,
+}: {
+  readonly description: string;
+  readonly severity: "blocked" | "at-risk";
+}) {
+  const isBlocked = severity === "blocked";
+  const tone = isBlocked
+    ? "var(--color-destructive)"
+    : "var(--color-status-at-risk-border)";
+  return (
+    <div className={ROW_GRID} data-accordion-row="escalation">
+      <span className="min-h-[18px]" aria-hidden="true" />
+      <Rail tone={tone} />
+      <Gutter stage="Flagged" owner="" />
+      <span className="pt-px text-[14.5px] leading-snug text-[var(--color-foreground)]">
+        {description}
+      </span>
+      <span className="flex justify-end pt-px">
+        <span
+          className="whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold"
+          style={
+            isBlocked
+              ? {
+                  background: "var(--color-status-blocked-bg)",
+                  color: "var(--color-destructive)",
+                }
+              : {
+                  background: "var(--color-surface-muted)",
+                  color: "#8a6d1b",
+                }
+          }
+        >
+          {isBlocked ? "Blocked" : "At Risk"}
+        </span>
+      </span>
+    </div>
+  );
+}
+
 function DecisionRow({ decision }: { readonly decision: ReportDecision }) {
   return (
     <div className={ROW_GRID} data-accordion-row="decision">
@@ -317,17 +363,21 @@ export function ProductAccordion({
     : ((HEADER_STATUS_TONE as Record<string, string>)[report.status] ??
       HEADER_STATUS_TONE["on-track"]);
 
-  // report-card-clarity: suppress the "Needs Attention" banner when its text is
-  // verbatim one of the item rows already rendered in this card — the escalation
-  // is DERIVED from a blocked item, so it would otherwise repeat that row. A
-  // distinct head-facing summary (no exact item match) still renders.
-  const renderedItemTexts = new Set([
+  // report-card-clarity / head-surface-uat-polish (F2): suppress the escalation
+  // when its text is verbatim a row already rendered in this card. The
+  // escalation is DERIVED from a blocked item or risk, so it would otherwise
+  // repeat that row — and since F2 folds it INTO Risks & Blockers, a matching
+  // risk would sit immediately above its duplicate. A genuinely distinct
+  // head-facing summary (no exact item/risk match) still surfaces as a leading
+  // Flagged row.
+  const renderedTexts = new Set([
     ...report.currentWeek.map((item) => item.text),
     ...report.nextWeek.map((item) => item.text),
+    ...report.risks.map((risk) => risk.problem ?? risk.text),
   ]);
   const showNeedsAttention =
     Boolean(report.needsAttention) &&
-    !renderedItemTexts.has(report.needsAttention ?? "");
+    !renderedTexts.has(report.needsAttention ?? "");
 
   useEffect(() => {
     if (highlighted && hasContent) setExpanded(true);
@@ -420,32 +470,6 @@ export function ProductAccordion({
         >
           <div className="min-h-0 overflow-hidden">
             <div className="space-y-5 border-t border-[rgba(0,0,0,0.06)] px-5 pb-5 pt-4">
-              {showNeedsAttention && (
-                <div className={SECTION_DIVIDER}>
-                  <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
-                    Needs Attention
-                  </div>
-                  <div
-                    className="rounded p-2.5 text-sm"
-                    style={
-                      report.needsAttentionSeverity === "blocked"
-                        ? {
-                            background: "var(--color-status-blocked-bg)",
-                            color: "var(--color-destructive)",
-                          }
-                        : {
-                            background: "var(--color-surface-muted)",
-                            borderLeft:
-                              "3px solid var(--color-status-at-risk-border)",
-                            color: "var(--color-foreground)",
-                          }
-                    }
-                  >
-                    {report.needsAttention}
-                  </div>
-                </div>
-              )}
-
               {report.currentWeek.length > 0 && (
                 <div className={SECTION_DIVIDER}>
                   <SectionHeader
@@ -482,13 +506,19 @@ export function ProductAccordion({
                 </div>
               )}
 
-              {report.risks.length > 0 && (
+              {(report.risks.length > 0 || showNeedsAttention) && (
                 <div className={SECTION_DIVIDER}>
                   <SectionHeader
                     title="Risks & Blockers"
-                    count={`${report.risks.length}`}
+                    count={`${report.risks.length + (showNeedsAttention ? 1 : 0)}`}
                   />
                   <div className="space-y-1">
+                    {showNeedsAttention && report.needsAttention ? (
+                      <EscalationRow
+                        description={report.needsAttention}
+                        severity={report.needsAttentionSeverity ?? "at-risk"}
+                      />
+                    ) : null}
                     {report.risks.map((risk) => (
                       <RiskRow key={risk.id} risk={risk} />
                     ))}

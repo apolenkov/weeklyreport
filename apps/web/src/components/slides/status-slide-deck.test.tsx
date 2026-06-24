@@ -540,8 +540,8 @@ describe("StatusSlideDeck head layout (head-slide-density)", () => {
     renderHeadDeck([slide()]);
 
     // The deck stops rendering its own title/subtitle band; the shell header is
-    // the single title. The "Open focused report" action moved to the header
-    // line, so no link lives inside the deck body.
+    // the single title. The "Open focused report" action was removed entirely
+    // (head-surface-uat-polish F1), so no such link lives inside the deck body.
     expect(screen.queryByText("Group Status Slides")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: /open focused report/i }),

@@ -132,10 +132,14 @@ export function LeadSummaryTable({
     );
   }
 
-  // head-surface-uat-polish (F5): the Period Summary adopts the
+  // head-surface-uat-polish (F5): the Period Summary keeps the
   // BlockedAtRiskTable card idiom — a rounded, soft-shadowed container with
-  // gap-separated per-lead cards — instead of a 10-column ruled table that
-  // read "square" and risked a horizontal scrollbar.
+  // gap-separated per-lead cards. UAT follow-up: the per-lead counts now sit on
+  // shared subgrid column rails (the `<ul>` defines the tracks; each `<li>` and
+  // its counts `<dl>` are `grid-cols-subgrid` participants) so every column
+  // lines up across rows at any value — the earlier flex/`ml-auto` layout only
+  // aligned by accident and drifted on uneven content. The full count labels
+  // and warm cards are retained intentionally (see design note in the spec).
   return (
     <section
       className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]"
@@ -158,7 +162,7 @@ export function LeadSummaryTable({
         </p>
       </div>
 
-      <ul className="space-y-2 p-4">
+      <ul className="grid grid-cols-[minmax(10rem,1fr)_auto_repeat(6,4.5rem)_auto_auto] gap-x-4 gap-y-2 p-4">
         {leads.map((lead) => {
           // A submitted lead is done, not "gone quiet" — the 24h-inactive
           // nudge styling only makes sense for leads with open work
@@ -174,7 +178,7 @@ export function LeadSummaryTable({
               data-testid={
                 inactive ? "lead-row-inactive-24h" : "lead-summary-row"
               }
-              className={`flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-[rgba(0,0,0,0.06)] bg-[rgba(0,0,0,0.02)] p-3${
+              className={`col-span-full grid grid-cols-subgrid items-center rounded-lg border border-[rgba(0,0,0,0.06)] bg-[rgba(0,0,0,0.02)] p-3${
                 inactive ? " opacity-60" : ""
               }`}
             >
@@ -193,21 +197,21 @@ export function LeadSummaryTable({
               </div>
 
               <span
-                className={`inline-flex items-center whitespace-nowrap rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-xs font-semibold ${
+                className={`inline-flex w-fit items-center justify-self-start whitespace-nowrap rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-xs font-semibold ${
                   STATUS_CLASSES[lead.status]
                 }`}
               >
                 {STATUS_LABELS[lead.status]}
               </span>
 
-              <dl className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1">
+              <dl className="col-span-6 grid grid-cols-subgrid items-center">
                 {COUNT_FIELDS.map((field) => (
                   <div
                     key={field.label}
                     // flex-col-reverse keeps the value visually on top while the
                     // DOM stays <dt> before <dd> (correct term→definition order
                     // for assistive tech).
-                    className="flex min-w-[3rem] flex-col-reverse items-center"
+                    className="flex flex-col-reverse items-center"
                   >
                     <dt className="text-[10px] font-medium uppercase tracking-wide text-[var(--color-muted-foreground)]">
                       {field.label}
@@ -219,11 +223,12 @@ export function LeadSummaryTable({
                 ))}
               </dl>
 
-              <div className="flex shrink-0 flex-col items-end gap-1 text-right">
-                <span className="text-xs text-[var(--color-muted-foreground)]">
-                  <span className="sr-only">Submitted: </span>
-                  {lead.submittedAtLabel ?? "-"}
-                </span>
+              <span className="justify-self-end text-right text-xs text-[var(--color-muted-foreground)]">
+                <span className="sr-only">Submitted: </span>
+                {lead.submittedAtLabel ?? "-"}
+              </span>
+
+              <div className="flex justify-end">
                 <LeadActionCell
                   lead={lead}
                   reportId={reportId}
