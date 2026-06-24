@@ -1,4 +1,4 @@
-import type { ReminderPolicy } from "@customreport/shared";
+import { composeName, type ReminderPolicy } from "@customreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
@@ -72,9 +72,19 @@ describe("AdminPrismaRepository (integration)", () => {
   it("saveSnapshot updates entities correctly", async () => {
     const snapshot = await repo.getSnapshot();
 
-    // Modify the snapshot: update the lead's name
+    // Modify the snapshot: update the lead's name via the structured parts
+    // (the denormalized `name` is recomputed server-side from these parts, so
+    // setting `name` directly no longer persists — set the parts that compose
+    // to the expected display name).
     const updatedUsers = snapshot.users.map((u) =>
-      u.id === testData.lead.id ? { ...u, name: "Updated Lead Name" } : u,
+      u.id === testData.lead.id
+        ? {
+            ...u,
+            lastName: "Updated",
+            firstName: "Lead",
+            middleName: "Name",
+          }
+        : u,
     );
 
     // Add a new project
@@ -107,6 +117,47 @@ describe("AdminPrismaRepository (integration)", () => {
     );
     expect(savedProject).toBeDefined();
     expect(expectDefined(savedProject).name).toBe("New Admin Project");
+  });
+
+  // add-structured-user-name (review finding P2): the denormalized `User.name`
+  // is recomputed from the structured parts SERVER-SIDE on every snapshot write,
+  // so a client/import that supplies a name disagreeing with the parts cannot
+  // persist drift — the data layer owns the `name === composeName(parts)`
+  // invariant, not just the web form mapper.
+  it("recomputes a drifted name from the structured parts on saveSnapshot", async () => {
+    const snapshot = await repo.getSnapshot();
+
+    const driftedUsers = snapshot.users.map((u) =>
+      u.id === testData.lead.id
+        ? {
+            ...u,
+            // Deliberate mismatch: name says one thing, parts say another.
+            name: "TOTALLY WRONG DISPLAY NAME",
+            lastName: "Иванов",
+            firstName: "Пётр",
+            middleName: "Сергеевич",
+          }
+        : u,
+    );
+
+    const saved = await repo.saveSnapshot({ ...snapshot, users: driftedUsers });
+
+    const savedLead = expectDefined(
+      saved.users.find((u) => u.id === testData.lead.id),
+    );
+    const expected = composeName({
+      lastName: "Иванов",
+      firstName: "Пётр",
+      middleName: "Сергеевич",
+    });
+    expect(savedLead.name).toBe(expected);
+    expect(savedLead.name).not.toBe("TOTALLY WRONG DISPLAY NAME");
+
+    // The persisted row (not just the returned snapshot) must also be reconciled.
+    const dbLead = expectDefined(
+      await prisma.user.findUnique({ where: { id: testData.lead.id } }),
+    );
+    expect(dbLead.name).toBe(expected);
   });
 
   // -------------------------------------------------------------------

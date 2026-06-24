@@ -282,6 +282,34 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expect(brandLink?.textContent).toBe("TU");
   });
 
+  // add-structured-user-name (review finding P3): the avatar must derive initials
+  // from the structured ФИО parts (surname + given), NOT the name-string
+  // fallback. Pin it with a name whose fallback ("ZY") differs from the parts.
+  it("derives initials from the structured name parts, not the name fallback", () => {
+    useSessionMock.mockReturnValue({
+      user: {
+        id: "u1",
+        name: "Zzz Yyy",
+        lastName: "Иванов",
+        firstName: "Пётр",
+        email: "t@test.local",
+        role: "lead",
+        reportingGroupName: "Software Development",
+      },
+      organization: {
+        shortName: "Demo",
+        fullName: "Example Software Department",
+      },
+      isLoading: false,
+      isAuthenticated: true,
+    });
+
+    const { container } = render(<NavBar />);
+    const brandLink = container.querySelector('a[aria-label="Zzz Yyy home"]');
+
+    expect(brandLink?.textContent).toBe("ИП");
+  });
+
   it("renders organization identity as restrained text metadata", () => {
     setRole("lead");
     const { container } = render(<NavBar />);

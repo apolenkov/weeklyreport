@@ -104,3 +104,33 @@ describe("AUTH-02: SAML profile → JWT → session.role round-trip (role-free)"
     expect(session.role).toBe("viewer");
   });
 });
+
+// add-structured-user-name (review finding P2/P3): the new name-part fields were
+// added to `userSessionSchema` as OPTIONAL. signSession/verifySessionToken run
+// `.parse()`, and Zod STRIPS unknown keys — so if the schema had omitted the
+// parts they would be silently dropped on every request with a green typecheck.
+// This test pins that they survive the sign → verify round-trip.
+describe("session name parts survive sign → verify (not Zod-stripped)", () => {
+  it("round-trips lastName / firstName / middleName intact", () => {
+    const ctrl = createAuthController(env);
+    const session: UserSession = {
+      userId: "a0000000-0000-4000-8000-000000000009",
+      email: "parts@customreport.local",
+      name: "Иванов Пётр Сергеевич",
+      lastName: "Иванов",
+      firstName: "Пётр",
+      middleName: "Сергеевич",
+      role: "viewer",
+      activeReportId: null,
+      activeReportSectionId: null,
+    };
+
+    const { token } = ctrl.issueSessionCookie(session);
+    const verified = ctrl.verifySessionToken(token);
+
+    expect(verified.lastName).toBe("Иванов");
+    expect(verified.firstName).toBe("Пётр");
+    expect(verified.middleName).toBe("Сергеевич");
+    expect(verified.name).toBe("Иванов Пётр Сергеевич");
+  });
+});

@@ -123,7 +123,51 @@ describe("buildUserSession — admin SAML login (Phase 32-C / H-01)", () => {
     expect(createArg?.data.role).toBe("admin");
   });
 
-  it("preserves role=admin on existing user update (samlId rebind)", async () => {
+  // add-structured-user-name (review finding P3): the SAML stub synthesizes the
+  // structured parts since the IdP name order is unknown — lastName = whole
+  // displayName, firstName = " " (a single-space placeholder an admin completes
+  // on edit; canSave trims it so it can't be re-saved), middleName/position null.
+  it("create: SAML stub synthesizes name parts from displayName", async () => {
+    const prisma = fakePrisma({ existingUser: null });
+    const profile: SamlProfile = {
+      samlId: "saml-new-1",
+      email: "newcomer@customreport.local",
+      displayName: "Department Head",
+      role: "viewer",
+    };
+
+    await buildUserSession(prisma, profile);
+
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    const createMock = prisma.user.create as unknown as ReturnType<
+      typeof vi.fn
+    >;
+    const data = createMock.mock.calls[0]?.[0] as
+      | {
+          data: {
+            name: string;
+            lastName: string;
+            firstName: string;
+            middleName: string | null;
+            position: string | null;
+          };
+        }
+      | undefined;
+    expect(data?.data.name).toBe("Department Head");
+    expect(data?.data.lastName).toBe("Department Head");
+    expect(data?.data.firstName).toBe(" ");
+    expect(data?.data.middleName).toBeNull();
+    expect(data?.data.position).toBeNull();
+  });
+
+  // add-structured-user-name (Decision: SAML is create-only). An existing user
+  // hit by a plain SAML re-login is returned UNTOUCHED — no update, no create —
+  // and the session reflects the EXISTING row, never the SAML profile's values.
+  // (Previously this test was mislabeled "existing user update": it called the
+  // create-only branch but only checked role==='admin', which is true of the
+  // existing row regardless, so it gave false confidence on the central
+  // contract. Review finding P2.)
+  it("create-only: a SAML re-login never overwrites an existing user", async () => {
     const prisma = fakePrisma({
       existingUser: {
         id: "existing-admin-id",
@@ -142,13 +186,58 @@ describe("buildUserSession — admin SAML login (Phase 32-C / H-01)", () => {
 
     const session = await buildUserSession(prisma, profile);
 
+    // Session reflects the EXISTING row, not the SAML profile.
     expect(session.role).toBe("admin");
+    expect(session.name).toBe("Old Name");
+    // The existing row is returned untouched: no write of any kind.
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    const updateMock = prisma.user.update as unknown as ReturnType<
+      typeof vi.fn
+    >;
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    const createMock = prisma.user.create as unknown as ReturnType<
+      typeof vi.fn
+    >;
+    expect(updateMock).not.toHaveBeenCalled();
+    expect(createMock).not.toHaveBeenCalled();
     // No admin section auto-creation (admin is not a lead)
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     const createSection = prisma.reportSection.create as unknown as ReturnType<
       typeof vi.fn
     >;
     expect(createSection).not.toHaveBeenCalled();
+  });
+
+  // dev-login shares buildUserSession but passes resyncExisting:true so its
+  // `?role=` switch still updates the live row — the one path that DOES write an
+  // existing user. This guards the create-only carve-out from regressing closed.
+  it("resyncExisting=true (dev-login) DOES update the existing user", async () => {
+    const prisma = fakePrisma({
+      existingUser: {
+        id: "existing-lead-id",
+        email: "lead@customreport.local",
+        name: "Lead One",
+        role: "lead",
+        samlId: "lead-saml",
+      },
+    });
+    const profile: SamlProfile = {
+      samlId: "lead-saml",
+      email: "lead@customreport.local",
+      displayName: "Lead One",
+      role: "head",
+    };
+
+    const session = await buildUserSession(prisma, profile, {
+      resyncExisting: true,
+    });
+
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    const updateMock = prisma.user.update as unknown as ReturnType<
+      typeof vi.fn
+    >;
+    expect(updateMock).toHaveBeenCalledTimes(1);
+    expect(session.role).toBe("head");
   });
 });
 

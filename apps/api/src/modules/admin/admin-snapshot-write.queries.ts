@@ -1,4 +1,4 @@
-import type { AdminSnapshot } from "@customreport/shared";
+import { type AdminSnapshot, composeName } from "@customreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { PolicyApplicatorService } from "../reminders/policy-applicator.service";
@@ -56,7 +56,14 @@ async function upsertUsers(
         where: { id: user.id },
         data: {
           email: user.email,
-          name: user.name,
+          // Recompute the denormalized display name from the structured parts
+          // server-side so the `name === composeName(parts)` invariant holds for
+          // EVERY admin client / imported snapshot, not just the web form mapper.
+          name: composeName({
+            lastName: user.lastName,
+            firstName: user.firstName,
+            middleName: user.middleName,
+          }),
           lastName: user.lastName,
           firstName: user.firstName,
           middleName: user.middleName,
@@ -70,7 +77,11 @@ async function upsertUsers(
         data: {
           id: user.id,
           email: user.email,
-          name: user.name,
+          name: composeName({
+            lastName: user.lastName,
+            firstName: user.firstName,
+            middleName: user.middleName,
+          }),
           lastName: user.lastName,
           firstName: user.firstName,
           middleName: user.middleName,
