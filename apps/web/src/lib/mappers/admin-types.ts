@@ -18,10 +18,19 @@ export type UserRole = "lead" | "head" | "admin" | "viewer";
 
 export interface MockUser {
   id: string;
+  // Stored display name, denormalized from the parts below.
   name: string;
+  // Structured ФИО parts (surname-first). last/first required, patronymic
+  // optional. The Users table renders the short form; the avatar uses initials.
+  lastName: string;
+  firstName: string;
+  middleName: string | null;
+  // Admin-maintained HR job title (должность), independent of `role`.
+  position: string | null;
   email: string;
   role: UserRole;
   groupId: string;
+  // Reporting-group display label (NOT an HR field — distinct from `position`).
   department: string;
   // A2 (UAT-v7 2026-05-12): soft-deactivation flag from the API.
   isActive: boolean;

@@ -30,6 +30,12 @@ import { useTRPC } from "./trpc-context";
 export interface SessionUser {
   id: string;
   name: string;
+  // Structured ФИО parts plumbed from `auth.me`; optional because SAML stubs
+  // and the PDF-export session carry only `name`. The nav avatar prefers these
+  // for initials and falls back to `name` when absent.
+  lastName?: string;
+  firstName?: string;
+  middleName?: string | null;
   email: string;
   role: "lead" | "head" | "viewer" | "admin";
   reportingGroupName?: string;
@@ -76,6 +82,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       user: {
         id: data.userId,
         name: data.name,
+        lastName: data.lastName,
+        firstName: data.firstName,
+        middleName: data.middleName,
         email: data.email,
         role: data.role,
         reportingGroupName: data.reportingGroupName,

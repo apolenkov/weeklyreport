@@ -67,7 +67,11 @@ const GROUP: MockGroup = {
 
 const USER: MockUser = {
   id: "u1",
-  name: "Alice",
+  name: "Ivanova Alice",
+  lastName: "Ivanova",
+  firstName: "Alice",
+  middleName: null,
+  position: "Team Lead",
   email: "alice@example.com",
   role: "lead",
   groupId: "g1",
@@ -181,7 +185,8 @@ describe("UsersTab — invalidation contract (D4)", () => {
     openDialog();
 
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText(/name/i), "New Person");
+    await user.type(screen.getByLabelText(/^last name$/i), "Petrov");
+    await user.type(screen.getByLabelText(/^first name$/i), "Ivan");
     await user.type(screen.getByLabelText(/email/i), "new@example.com");
 
     await user.click(screen.getByRole("button", { name: /^add user$/i }));
@@ -205,11 +210,11 @@ describe("UsersTab — focus management (autofocus-admin-dialogs)", () => {
     vi.clearAllMocks();
   });
 
-  it("user-name input receives focus when the dialog opens (autoFocus)", () => {
+  it("last-name input receives focus when the dialog opens (autoFocus)", () => {
     renderTab();
     openDialog();
 
-    const input = screen.getByLabelText(/^name$/i);
+    const input = screen.getByLabelText(/^last name$/i);
     // React honours autoFocus on conditionally-mounted elements in jsdom;
     // dropping the autoFocus wiring in production code fails this assert.
     expect(input).toHaveFocus();

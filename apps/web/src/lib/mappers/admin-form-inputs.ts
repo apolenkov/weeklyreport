@@ -6,9 +6,10 @@
  * field renames) collects in one place.
  */
 
-import type {
-  ReminderAudience,
-  ReminderPolicyKind,
+import {
+  composeName,
+  type ReminderAudience,
+  type ReminderPolicyKind,
 } from "@customreport/shared";
 
 import type { UserRole } from "./admin-types";
@@ -31,7 +32,13 @@ function newId(): string {
 }
 
 export interface AdminUserFormInput {
-  name: string;
+  // Structured ФИО parts. `middleName`/`position` hold "" when empty; the
+  // mapper trims them to `null`. `name` is recomputed from the parts, never
+  // entered directly.
+  lastName: string;
+  firstName: string;
+  middleName: string;
+  position: string;
   email: string;
   role: UserRole;
   groupId: string;
@@ -41,7 +48,8 @@ export interface AdminUserFormInput {
  * Maps the Users tab form state to the `adminUserSchema` payload. When editing
  * an existing user, pass `existingId`; when adding a new user, omit it and a
  * fresh UUID is generated client-side (the server will accept the inserted id
- * as-is per the schema's `id: uuid()`).
+ * as-is per the schema's `id: uuid()`). `name` is recomputed from the parts in
+ * surname-first ФИО order.
  */
 export function toAdminUserInput(
   form: AdminUserFormInput,
@@ -50,13 +58,24 @@ export function toAdminUserInput(
   id: string;
   email: string;
   name: string;
+  lastName: string;
+  firstName: string;
+  middleName: string | null;
+  position: string | null;
   role: UserRole;
   reportingGroupId: string | null;
 } {
+  const lastName = form.lastName.trim();
+  const firstName = form.firstName.trim();
+  const middleName = form.middleName.trim() || null;
   return {
     id: existingId ?? newId(),
     email: form.email.trim(),
-    name: form.name.trim(),
+    name: composeName({ lastName, firstName, middleName }),
+    lastName,
+    firstName,
+    middleName,
+    position: form.position.trim() || null,
     role: form.role,
     reportingGroupId: form.groupId || null,
   };

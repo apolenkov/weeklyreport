@@ -1,6 +1,10 @@
 "use client";
 
-import { DEFAULT_ORGANIZATION_IDENTITY, type Role } from "@customreport/shared";
+import {
+  DEFAULT_ORGANIZATION_IDENTITY,
+  initials as deriveInitials,
+  type Role,
+} from "@customreport/shared";
 import {
   Sheet,
   SheetContent,
@@ -136,17 +140,6 @@ function useHydratedClient(): boolean {
   );
 }
 
-// Initials helper — first char of first word + first char of last word;
-// single-word names fall back to the first 2 chars.
-function initialsFromName(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const first = parts[0];
-  if (!first) return "??";
-  if (parts.length === 1) return first.slice(0, 2).toUpperCase();
-  const last = parts[parts.length - 1] ?? first;
-  return (first.charAt(0) + last.charAt(0)).toUpperCase();
-}
-
 function LanguageComingSoonControl() {
   // TODO(i18n-future): replace this inert control with a real locale switch
   // when the dedicated i18n phase introduces dictionaries and routing.
@@ -224,7 +217,13 @@ export function NavBar() {
   const visibleLinks: readonly NavLink[] =
     role === null ? [] : NAV_LINKS.filter((link) => link.roles.includes(role));
 
-  const initials = visibleUser ? initialsFromName(visibleUser.name) : "?";
+  const initials = visibleUser
+    ? deriveInitials({
+        lastName: visibleUser.lastName,
+        firstName: visibleUser.firstName,
+        name: visibleUser.name,
+      }) || "??"
+    : "?";
   const roleLabel = role ? getRoleLabel(role) : "";
   // UFB-066 (2026-05-11): show a skeleton placeholder for the brand pill
   // while the session query is in-flight, instead of flashing the

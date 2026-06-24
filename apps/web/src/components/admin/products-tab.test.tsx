@@ -61,6 +61,10 @@ const PRODUCT_ID = "p-product-1";
 const mockLead: MockUser = {
   id: LEAD_ID,
   name: "Alice",
+  lastName: "Alice",
+  firstName: "Lead",
+  middleName: null,
+  position: null,
   email: "alice@example.com",
   role: "lead",
   groupId: "g1",

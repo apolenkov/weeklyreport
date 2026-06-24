@@ -110,36 +110,36 @@ export function verifySamlProfile(
     const email = firstString(rawProfile.email) ?? "unknown@example.com";
     const displayName =
       firstString(rawProfile.displayName, rawProfile.cn) ?? "Unknown User";
-    const rawRole = rawProfile.role;
-    const role: Role =
-      typeof rawRole === "string" &&
-      ["lead", "head", "admin", "viewer"].includes(rawRole.toLowerCase())
-        ? (rawRole.toLowerCase() as Role)
-        : "viewer";
-    return { ok: true, profile: { samlId, email, displayName, role } };
+    // The assertion no longer carries a role (structured-user-name change):
+    // every SAML-provisioned user defaults to viewer; admins assign roles.
+    return {
+      ok: true,
+      profile: { samlId, email, displayName, role: "viewer" },
+    };
   }
 
   const parsed = SamlProfileSchema.safeParse({
     nameID: rawProfile.nameID,
     email: rawProfile.email,
     displayName: rawProfile.displayName ?? rawProfile.cn,
-    role: rawProfile.role,
   });
 
   if (!parsed.success) {
     return {
       ok: false,
-      error: new Error("SAML profile missing required role attribute"),
+      error: new Error("SAML profile missing required nameID/email attribute"),
     };
   }
 
+  // Role is not carried by the assertion (structured-user-name change):
+  // default every SAML-provisioned user to viewer; admins assign roles.
   return {
     ok: true,
     profile: {
       samlId: parsed.data.nameID,
       email: parsed.data.email,
       displayName: parsed.data.displayName ?? "Unknown User",
-      role: parsed.data.role,
+      role: "viewer",
     },
   };
 }

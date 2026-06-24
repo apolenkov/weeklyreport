@@ -25,6 +25,10 @@ const USERS: MockUser[] = [
   {
     id: "u-head-1",
     name: "Alice Head",
+    lastName: "Alice",
+    firstName: "Head",
+    middleName: null,
+    position: null,
     email: "alice@example.com",
     role: "head",
     groupId: "g-1",

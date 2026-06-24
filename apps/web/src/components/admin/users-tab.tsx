@@ -1,5 +1,6 @@
 "use client";
 
+import { shortName } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -11,7 +12,10 @@ import type { MockGroup, MockUser, UserRole } from "./mock-data";
 import { TabFilter, TabHeader, TabSearch } from "./tab-header";
 
 interface UserFormData {
-  name: string;
+  lastName: string;
+  firstName: string;
+  middleName: string;
+  position: string;
   email: string;
   role: UserRole;
   groupId: string;
@@ -19,7 +23,10 @@ interface UserFormData {
 
 function emptyForm(groups: readonly MockGroup[]): UserFormData {
   return {
-    name: "",
+    lastName: "",
+    firstName: "",
+    middleName: "",
+    position: "",
     email: "",
     role: "lead",
     groupId:
@@ -180,7 +187,10 @@ export function UsersTab({ users, groups }: UsersTabProps) {
     dialogTriggerRef.current = document.activeElement as HTMLElement;
     setEditingUser(user);
     setForm({
-      name: user.name,
+      lastName: user.lastName,
+      firstName: user.firstName,
+      middleName: user.middleName ?? "",
+      position: user.position ?? "",
       email: user.email,
       role: user.role,
       groupId: user.groupId,
@@ -210,7 +220,10 @@ export function UsersTab({ users, groups }: UsersTabProps) {
   const isSaving = saveUserMut.isPending;
   const isDeleting = deleteUserMut.isPending;
   const canSave =
-    (form.role === "viewer" || form.groupId.length > 0) && !isSaving;
+    form.lastName.trim().length > 0 &&
+    form.firstName.trim().length > 0 &&
+    (form.role === "viewer" || form.groupId.length > 0) &&
+    !isSaving;
   const filteredUsers = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return users.filter((user) => {
@@ -219,7 +232,13 @@ export function UsersTab({ users, groups }: UsersTabProps) {
       if (statusFilter === "active" && !user.isActive) return false;
       if (statusFilter === "inactive" && user.isActive) return false;
       if (!needle) return true;
-      return [user.name, user.email, user.role, user.department]
+      return [
+        user.name,
+        user.email,
+        user.role,
+        user.department,
+        user.position ?? "",
+      ]
         .join(" ")
         .toLowerCase()
         .includes(needle);
@@ -295,6 +314,9 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                 <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
                   Group
                 </th>
+                <th className="px-4 py-3 font-semibold text-[var(--color-foreground)]">
+                  Position
+                </th>
                 <th className="px-4 py-3 text-right font-semibold text-[var(--color-foreground)]">
                   Actions
                 </th>
@@ -308,7 +330,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                 >
                   <td className="px-4 py-3 font-medium text-[var(--color-foreground)]">
                     <span className="flex items-center gap-2">
-                      {user.name}
+                      {shortName(user)}
                       {!user.isActive && (
                         <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-500">
                           inactive
@@ -324,6 +346,9 @@ export function UsersTab({ users, groups }: UsersTabProps) {
                   </td>
                   <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
                     {user.department}
+                  </td>
+                  <td className="px-4 py-3 text-[var(--color-muted-foreground)]">
+                    {user.position ?? "—"}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -404,18 +429,71 @@ export function UsersTab({ users, groups }: UsersTabProps) {
             <div className="mt-4 space-y-4">
               <div>
                 <label
-                  htmlFor="user-name"
+                  htmlFor="user-last-name"
                   className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
                 >
-                  Name
+                  Last name
                 </label>
                 <input
-                  id="user-name"
+                  id="user-last-name"
                   type="text"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  value={form.lastName}
+                  onChange={(e) =>
+                    setForm({ ...form, lastName: e.target.value })
+                  }
                   // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
                   autoFocus
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="user-first-name"
+                  className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+                >
+                  First name
+                </label>
+                <input
+                  id="user-first-name"
+                  type="text"
+                  value={form.firstName}
+                  onChange={(e) =>
+                    setForm({ ...form, firstName: e.target.value })
+                  }
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="user-middle-name"
+                  className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+                >
+                  Middle name
+                </label>
+                <input
+                  id="user-middle-name"
+                  type="text"
+                  value={form.middleName}
+                  onChange={(e) =>
+                    setForm({ ...form, middleName: e.target.value })
+                  }
+                  className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="user-position"
+                  className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
+                >
+                  Position
+                </label>
+                <input
+                  id="user-position"
+                  type="text"
+                  value={form.position}
+                  onChange={(e) =>
+                    setForm({ ...form, position: e.target.value })
+                  }
                   className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
                 />
               </div>

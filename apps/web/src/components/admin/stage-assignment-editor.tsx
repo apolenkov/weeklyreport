@@ -1,5 +1,6 @@
 "use client";
 
+import { shortName } from "@customreport/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { toast } from "sonner";
@@ -185,7 +186,7 @@ export function StageAssignmentEditor({
               <option value="">-- unassigned --</option>
               {filteredLeads.map((lead) => (
                 <option key={lead.id} value={lead.id}>
-                  {lead.name.split(" ")[0]}
+                  {shortName(lead)}
                 </option>
               ))}
             </select>

@@ -181,6 +181,8 @@ describe("LeadFormPrismaRepository (integration)", () => {
         id: "c0000000-0000-4000-c000-000000000001",
         email: "lead2@test.local",
         name: "Anna Karenina",
+        lastName: "Anna",
+        firstName: "Karenina",
         role: "lead",
         samlId: "lead-test-2",
         reportingGroupId: testData.head.reportingGroupId,

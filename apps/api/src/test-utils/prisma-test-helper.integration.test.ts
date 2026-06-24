@@ -75,6 +75,8 @@ describe("prisma-test-helper (integration)", () => {
         id: "b0000000-0000-4000-a000-000000000002",
         email: "viewer@test.local",
         name: "Viewer User",
+        lastName: "Viewer",
+        firstName: "User",
         role: "viewer",
         samlId: "viewer-test",
         reportingGroupId: group.id,

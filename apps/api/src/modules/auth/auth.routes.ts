@@ -174,15 +174,28 @@ async function ensureWeeklyReport(
   return { reportId, sectionId: section.id };
 }
 
-export async function buildUserSession(
+const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
+
+// SAML stubs carry only `name` (= displayName); the structured ФИО parts are
+// required columns the IdP cannot supply. Per the resolved decision we do NOT
+// guess the name order: the whole displayName becomes `lastName`, and
+// `firstName` is a whitespace placeholder — it satisfies the non-empty column
+// while the name helpers treat it as absent (short form shows just the surname,
+// avatar shows its initial). The admin sets the real parts on edit; canSave
+// trims, so the placeholder can never be re-saved.
+const SAML_STUB_FIRST_NAME_PLACEHOLDER = " ";
+
+/**
+ * Write (create or re-sync) a provisioned user. Only reached for a brand-new
+ * user or a dev-login resync — the SAML create-only path reuses the existing
+ * row untouched, so the reporting-group fallback machinery here never mutates
+ * an existing admin-authored record.
+ */
+async function writeProvisionedUser(
   prisma: PrismaClient,
   profile: SamlProfile,
-): Promise<UserSession> {
-  // Prefer email match (seed users may not have samlId), fall back to samlId
-  const existing =
-    (await prisma.user.findFirst({ where: { email: profile.email } })) ??
-    (await prisma.user.findFirst({ where: { samlId: profile.samlId } }));
-
+  existing: { id: string; reportingGroupId: string | null } | null,
+) {
   const needsOwningGroup =
     profile.role !== "viewer" && !existing?.reportingGroupId;
   const fallbackReportingGroup = needsOwningGroup
@@ -192,9 +205,9 @@ export async function buildUserSession(
         select: { id: true },
       })) ??
       (await prisma.reportingGroup.upsert({
-        where: { id: "a0000000-0000-4000-8000-000000000301" },
+        where: { id: DEFAULT_REPORTING_GROUP_ID },
         create: {
-          id: "a0000000-0000-4000-8000-000000000301",
+          id: DEFAULT_REPORTING_GROUP_ID,
           name: "Software Development",
           description: "Default reporting group for newly provisioned users",
           archived: false,
@@ -208,27 +221,52 @@ export async function buildUserSession(
       ? null
       : (existing?.reportingGroupId ??
         fallbackReportingGroup?.id ??
-        "a0000000-0000-4000-8000-000000000301");
+        DEFAULT_REPORTING_GROUP_ID);
 
-  const user = existing
-    ? await prisma.user.update({
-        where: { id: existing.id },
-        data: {
-          samlId: profile.samlId,
-          name: profile.displayName,
-          role: profile.role,
-          reportingGroupId: nextReportingGroupId,
-        },
-      })
-    : await prisma.user.create({
-        data: {
-          samlId: profile.samlId,
-          email: profile.email,
-          name: profile.displayName,
-          role: profile.role,
-          reportingGroupId: nextReportingGroupId,
-        },
-      });
+  if (existing) {
+    return prisma.user.update({
+      where: { id: existing.id },
+      data: {
+        samlId: profile.samlId,
+        name: profile.displayName,
+        role: profile.role,
+        reportingGroupId: nextReportingGroupId,
+      },
+    });
+  }
+
+  return prisma.user.create({
+    data: {
+      samlId: profile.samlId,
+      email: profile.email,
+      name: profile.displayName,
+      lastName: profile.displayName.trim() || profile.email,
+      firstName: SAML_STUB_FIRST_NAME_PLACEHOLDER,
+      middleName: null,
+      position: null,
+      role: profile.role,
+      reportingGroupId: nextReportingGroupId,
+    },
+  });
+}
+
+export async function buildUserSession(
+  prisma: PrismaClient,
+  profile: SamlProfile,
+  options: { resyncExisting?: boolean } = {},
+): Promise<UserSession> {
+  // Prefer email match (seed users may not have samlId), fall back to samlId
+  const existing =
+    (await prisma.user.findFirst({ where: { email: profile.email } })) ??
+    (await prisma.user.findFirst({ where: { samlId: profile.samlId } }));
+
+  // SAML is create-only: an existing record is the source of truth and is
+  // NEVER re-synced from the IdP. dev-login passes { resyncExisting: true } so
+  // its query-param role switch still updates the live row (the UAT mechanism).
+  const user =
+    existing && options.resyncExisting !== true
+      ? existing
+      : await writeProvisionedUser(prisma, profile, existing);
 
   const reportingGroup = user.reportingGroupId
     ? await prisma.reportingGroup.findUnique({
@@ -264,6 +302,11 @@ export async function buildUserSession(
     userId: user.id,
     email: user.email,
     name: user.name,
+    // Structured ФИО parts plumbed into the session so the nav avatar can
+    // render correct surname+given initials (falls back to `name` when null).
+    lastName: user.lastName,
+    firstName: user.firstName,
+    middleName: user.middleName,
     role: user.role,
     activeReportId: activeSection?.reportId ?? activeReport?.id ?? null,
     activeReportSectionId: activeSection?.id ?? null,
@@ -454,12 +497,19 @@ export function mountAuthRoutes(
               : (samlIdByRole[role] ?? `dev-${role}`));
           const displayName = dbUser?.name ?? nameByRole[role];
 
-          const session = await buildUserSession(prisma, {
-            samlId,
-            email,
-            displayName,
-            role: role as Role,
-          });
+          // dev-login is the UAT role switcher: re-sync an existing row so a
+          // ?role= switch updates the live user (unlike SAML, which is
+          // create-only and never overwrites an existing record).
+          const session = await buildUserSession(
+            prisma,
+            {
+              samlId,
+              email,
+              displayName,
+              role: role as Role,
+            },
+            { resyncExisting: true },
+          );
 
           const { setCookieHeader } =
             authController.issueSessionCookie(session);

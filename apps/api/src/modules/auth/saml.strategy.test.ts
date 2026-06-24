@@ -35,43 +35,33 @@ describe("verifySamlProfile (AUTH-02)", () => {
       if (result.ok) expect(result.profile.role).toBe("viewer");
     });
 
-    it("honours role when present", () => {
+    it("ignores an asserted role and defaults to viewer (role is admin-assigned)", () => {
       const result = verifySamlProfile(devOptions, {
         nameID: "u-2",
         email: "h@example.com",
         role: "head",
       });
       expect(result.ok).toBe(true);
-      if (result.ok) expect(result.profile.role).toBe("head");
-    });
-
-    it("normalises mixed-case role even in dev mode", () => {
-      const result = verifySamlProfile(devOptions, {
-        nameID: "u-3",
-        email: "h@example.com",
-        role: "HEAD",
-      });
-      expect(result.ok).toBe(true);
-      if (result.ok) expect(result.profile.role).toBe("head");
+      if (result.ok) expect(result.profile.role).toBe("viewer");
     });
   });
 
   describe("devMode=false (production strict path)", () => {
-    it("rejects a profile without a role attribute (A-2 mitigation)", () => {
+    it("accepts a profile without a role attribute and defaults to viewer", () => {
       const result = verifySamlProfile(prodOptions, {
         nameID: "u-1",
         email: "u@example.com",
         displayName: "U",
       });
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.message).toContain(
-          "missing required role attribute",
-        );
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.profile.role).toBe("viewer");
+        expect(result.profile.email).toBe("u@example.com");
+        expect(result.profile.samlId).toBe("u-1");
       }
     });
 
-    it("accepts a valid head profile", () => {
+    it("ignores an asserted role attribute and still defaults to viewer", () => {
       const result = verifySamlProfile(prodOptions, {
         nameID: "u-2",
         email: "head@example.com",
@@ -80,32 +70,20 @@ describe("verifySamlProfile (AUTH-02)", () => {
       });
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.profile.role).toBe("head");
+        expect(result.profile.role).toBe("viewer");
         expect(result.profile.email).toBe("head@example.com");
         expect(result.profile.samlId).toBe("u-2");
       }
     });
 
-    it("normalises uppercase role (HEAD → head)", () => {
+    it("rejects a profile missing nameID/email", () => {
       const result = verifySamlProfile(prodOptions, {
-        nameID: "u-3",
-        email: "h@example.com",
-        role: "HEAD",
-      });
-      expect(result.ok).toBe(true);
-      if (result.ok) expect(result.profile.role).toBe("head");
-    });
-
-    it("rejects an unrecognised role value", () => {
-      const result = verifySamlProfile(prodOptions, {
-        nameID: "u-4",
-        email: "bad@example.com",
-        role: "superuser",
+        displayName: "No Identity",
       });
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error.message).toContain(
-          "missing required role attribute",
+          "missing required nameID/email attribute",
         );
       }
     });
