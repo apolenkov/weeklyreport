@@ -281,12 +281,10 @@ export function DashboardPage() {
               Revoke All ({submittedCount})
             </button>
           )}
-          <a
-            href={`/head/report/${encodeURIComponent(weeklyQ.data.reportId)}`}
-            className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)]"
-          >
-            View Status Report
-          </a>
+          {/* head-surface-uat-polish (UAT 2026-06-24): the "View Status Report"
+              link was removed — it pointed at the current period, the same
+              destination as the always-present "Status" nav tab, so it was a
+              redundant duplicate. */}
         </div>
       </header>
 
