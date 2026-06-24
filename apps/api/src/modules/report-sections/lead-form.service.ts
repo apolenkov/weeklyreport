@@ -82,6 +82,20 @@ export class LeadFormService {
       throw new Error("Cannot fill a section of a published report.");
     }
 
+    // Authorize the SOURCE section too. The fill-from picker only ever offers
+    // the lead's OWN past sections (`LeadReportPeriod.sourceSectionId` is sourced
+    // from `MyHistoryEntry.sectionId`), so any sourceSectionId authored by
+    // someone else is a forged request — without this guard a lead could copy
+    // another group's Item/Risk/Decision content into their own draft on an open
+    // report. fillFrom copies your own history; it is never cross-author.
+    const source = await this.repository.getSectionById(sourceSectionId);
+    if (!source) {
+      throw new Error(`Source section ${sourceSectionId} not found.`);
+    }
+    if (source.authorId !== userId) {
+      throw new Error("Can only fill from your own section.");
+    }
+
     // TODO(versions-v2): a pre-overwrite safety snapshot was taken here
     // until version snapshots were removed (defer-versions-coming-soon).
     const copiedItems = await this.repository.fillFromSection(

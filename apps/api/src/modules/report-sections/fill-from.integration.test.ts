@@ -169,6 +169,43 @@ describe("LeadFormService — fillFrom (integration)", () => {
     expect(repo.fillFromSection).not.toHaveBeenCalled();
   });
 
+  // Source-section authorization: the fill-from picker only ever offers the
+  // lead's OWN past sections, so a sourceSectionId authored by someone else is a
+  // forged request that would copy another group's content into this draft.
+  it("rejects fill when the SOURCE section is authored by another user", async () => {
+    const target = makeSection({ status: "draft" });
+    const source = makeSection({
+      reportSectionId: sourceSectionId,
+      authorId: otherUserId,
+      status: "submitted",
+      submittedAt: new Date(),
+    });
+    const sections = new Map([
+      [targetSectionId, target],
+      [sourceSectionId, source],
+    ]);
+    const repo = createMockRepository(sections);
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.fillFrom(targetSectionId, sourceSectionId, userId),
+    ).rejects.toThrow("Can only fill from your own section");
+    // The cross-group content copy must never run.
+    expect(repo.fillFromSection).not.toHaveBeenCalled();
+  });
+
+  it("throws when the SOURCE section does not exist", async () => {
+    const target = makeSection({ status: "draft" });
+    const sections = new Map([[targetSectionId, target]]);
+    const repo = createMockRepository(sections);
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.fillFrom(targetSectionId, sourceSectionId, userId),
+    ).rejects.toThrow(`Source section ${sourceSectionId} not found`);
+    expect(repo.fillFromSection).not.toHaveBeenCalled();
+  });
+
   it("allows fill when the period is reopened (editable again, excluded from viewer search)", async () => {
     const target = makeSection({ status: "draft" });
     const source = makeSection({
