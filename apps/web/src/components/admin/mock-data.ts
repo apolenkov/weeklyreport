@@ -9,10 +9,19 @@ export type UserRole = "lead" | "head" | "admin" | "viewer";
 
 export interface MockUser {
   id: string;
+  // Stored display name, denormalized from the parts below.
   name: string;
+  // Structured ФИО parts (surname-first). last/first required, patronymic
+  // optional. The Users table renders the short form; the avatar uses initials.
+  lastName: string;
+  firstName: string;
+  middleName: string | null;
+  // Admin-maintained HR job title (должность), independent of `role`.
+  position: string | null;
   email: string;
   role: UserRole;
   groupId: string;
+  // Reporting-group display label (NOT an HR field — distinct from `position`).
   department: string;
   // A2 (UAT-v7 2026-05-12): soft-deactivation flag from the API.
   isActive: boolean;
@@ -133,6 +142,10 @@ export const MOCK_USERS: MockUser[] = [
   {
     id: "u1",
     name: "Alexey Petrov",
+    lastName: "Petrov",
+    firstName: "Alexey",
+    middleName: null,
+    position: "Team Lead",
     email: "a.petrov@company.com",
     role: "lead",
     groupId: DEFAULT_GROUP_ID,
@@ -142,6 +155,10 @@ export const MOCK_USERS: MockUser[] = [
   {
     id: "u2",
     name: "Maria Ivanova",
+    lastName: "Ivanova",
+    firstName: "Maria",
+    middleName: null,
+    position: "Team Lead",
     email: "m.ivanova@company.com",
     role: "lead",
     groupId: DEFAULT_GROUP_ID,
@@ -151,6 +168,10 @@ export const MOCK_USERS: MockUser[] = [
   {
     id: "u3",
     name: "Dmitry Sokolov",
+    lastName: "Sokolov",
+    firstName: "Dmitry",
+    middleName: null,
+    position: "Team Lead",
     email: "d.sokolov@company.com",
     role: "lead",
     groupId: DEFAULT_GROUP_ID,
@@ -160,6 +181,10 @@ export const MOCK_USERS: MockUser[] = [
   {
     id: "u4",
     name: "Elena Kuznetsova",
+    lastName: "Kuznetsova",
+    firstName: "Elena",
+    middleName: null,
+    position: "Team Lead",
     email: "e.kuznetsova@company.com",
     role: "lead",
     groupId: DEFAULT_GROUP_ID,
@@ -169,6 +194,10 @@ export const MOCK_USERS: MockUser[] = [
   {
     id: "u5",
     name: "Sergey Volkov",
+    lastName: "Volkov",
+    firstName: "Sergey",
+    middleName: null,
+    position: "Team Lead",
     email: "s.volkov@company.com",
     role: "lead",
     groupId: DEFAULT_GROUP_ID,
@@ -178,6 +207,10 @@ export const MOCK_USERS: MockUser[] = [
   {
     id: "u6",
     name: "Anna Fedorova",
+    lastName: "Fedorova",
+    firstName: "Anna",
+    middleName: null,
+    position: "Team Lead",
     email: "a.fedorova@company.com",
     role: "lead",
     groupId: DEFAULT_GROUP_ID,
@@ -187,6 +220,10 @@ export const MOCK_USERS: MockUser[] = [
   {
     id: "u7",
     name: "Igor Smirnov",
+    lastName: "Smirnov",
+    firstName: "Igor",
+    middleName: null,
+    position: "Department Head",
     email: "i.smirnov@company.com",
     role: "head",
     groupId: DEFAULT_GROUP_ID,
@@ -196,6 +233,10 @@ export const MOCK_USERS: MockUser[] = [
   {
     id: "u8",
     name: "Olga Morozova",
+    lastName: "Morozova",
+    firstName: "Olga",
+    middleName: null,
+    position: null,
     email: "o.morozova@company.com",
     role: "viewer",
     groupId: "",

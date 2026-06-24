@@ -26,8 +26,13 @@ export const DEFAULT_REPORTING_GROUP_ID =
 
 export type SeedUser = {
   id: string;
-  email: string;
+  // Stored display name = surname-first ФИО composition of the parts below.
   name: string;
+  lastName: string;
+  firstName: string;
+  middleName: string | null;
+  position: string | null;
+  email: string;
   role: "head" | "viewer" | "admin" | "lead";
   samlId: string;
   reportingGroupId: string | null;
@@ -56,11 +61,20 @@ export const SEED_REPORTING_GROUPS: readonly SeedReportingGroup[] = [
  * Lead UUIDs use range ...0011 through ...0016 to avoid collision with
  * report UUIDs (...0001, ...0002).
  */
+// Phase (structured-user-name): names rebuilt into surname-first ФИО with
+// real parts. `name` is the composed display value
+// (`{lastName} {firstName} {middleName}`); the surname initials match the
+// legacy abbreviated strings («Антон К.» → Климов Антон ...). `position` is
+// the admin-maintained HR title (Russian data, allowed in seeds).
 export const SEED_USERS: readonly SeedUser[] = [
   {
     id: HEAD_USER_ID,
     email: "head@customreport.local",
-    name: "Антон К.",
+    name: "Климов Антон Сергеевич",
+    lastName: "Климов",
+    firstName: "Антон",
+    middleName: "Сергеевич",
+    position: "Руководитель отдела",
     role: "head",
     samlId: "head-1",
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
@@ -68,7 +82,11 @@ export const SEED_USERS: readonly SeedUser[] = [
   {
     id: VIEWER_USER_ID,
     email: "viewer@customreport.local",
-    name: "Дарья В.",
+    name: "Власова Дарья Игоревна",
+    lastName: "Власова",
+    firstName: "Дарья",
+    middleName: "Игоревна",
+    position: "Директор по развитию",
     role: "viewer",
     samlId: "viewer-1",
     reportingGroupId: null,
@@ -76,20 +94,23 @@ export const SEED_USERS: readonly SeedUser[] = [
   {
     id: ADMIN_USER_ID,
     email: "admin@customreport.local",
-    name: "Михаил Б.",
+    name: "Баленков Михаил Владимирович",
+    lastName: "Баленков",
+    firstName: "Михаил",
+    middleName: "Владимирович",
+    position: "Системный администратор",
     role: "admin",
     samlId: "admin-1",
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
   },
-  // Phase 35-08: lead names switched to RU Cyrillic so the dashboard +
-  // forms match the rest of the demo content. Tests that pin against the
-  // legacy person-specific lead strings have been updated alongside the
-  // seed (see /Users/ap/work/customreport/.planning/phases/35-ux-polish/
-  // 35-08-SUMMARY.md for the full RU sweep).
   {
     id: "a0000000-0000-4000-8000-000000000011",
     email: "lead1@customreport.local",
-    name: "Василий И.",
+    name: "Иванов Василий Петрович",
+    lastName: "Иванов",
+    firstName: "Василий",
+    middleName: "Петрович",
+    position: "Тимлид",
     role: "lead",
     samlId: "lead-1",
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
@@ -97,7 +118,11 @@ export const SEED_USERS: readonly SeedUser[] = [
   {
     id: "a0000000-0000-4000-8000-000000000012",
     email: "maria@customreport.local",
-    name: "Мария К.",
+    name: "Кузнецова Мария Андреевна",
+    lastName: "Кузнецова",
+    firstName: "Мария",
+    middleName: "Андреевна",
+    position: "Тимлид",
     role: "lead",
     samlId: "lead-maria",
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
@@ -105,7 +130,11 @@ export const SEED_USERS: readonly SeedUser[] = [
   {
     id: "a0000000-0000-4000-8000-000000000013",
     email: "igor@customreport.local",
-    name: "Игорь В.",
+    name: "Волков Игорь Олегович",
+    lastName: "Волков",
+    firstName: "Игорь",
+    middleName: "Олегович",
+    position: "Ведущий разработчик",
     role: "lead",
     samlId: "lead-igor",
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
@@ -113,7 +142,11 @@ export const SEED_USERS: readonly SeedUser[] = [
   {
     id: "a0000000-0000-4000-8000-000000000014",
     email: "dmitry@customreport.local",
-    name: "Дмитрий С.",
+    name: "Соколов Дмитрий Максимович",
+    lastName: "Соколов",
+    firstName: "Дмитрий",
+    middleName: "Максимович",
+    position: "Тимлид",
     role: "lead",
     samlId: "lead-dmitry",
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
@@ -121,7 +154,11 @@ export const SEED_USERS: readonly SeedUser[] = [
   {
     id: "a0000000-0000-4000-8000-000000000015",
     email: "olga@customreport.local",
-    name: "Ольга Н.",
+    name: "Никитина Ольга Сергеевна",
+    lastName: "Никитина",
+    firstName: "Ольга",
+    middleName: "Сергеевна",
+    position: "Ведущий аналитик",
     role: "lead",
     samlId: "lead-olga",
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
@@ -129,7 +166,11 @@ export const SEED_USERS: readonly SeedUser[] = [
   {
     id: "a0000000-0000-4000-8000-000000000016",
     email: "sergey@customreport.local",
-    name: "Сергей Т.",
+    name: "Тихонов Сергей Дмитриевич",
+    lastName: "Тихонов",
+    firstName: "Сергей",
+    middleName: "Дмитриевич",
+    position: "Тимлид",
     role: "lead",
     samlId: "lead-sergey",
     reportingGroupId: DEFAULT_REPORTING_GROUP_ID,

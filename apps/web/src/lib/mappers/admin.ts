@@ -117,6 +117,10 @@ function mapUser(api: AdminUser): MockUser {
   return {
     id: api.id,
     name: api.name,
+    lastName: api.lastName,
+    firstName: api.firstName,
+    middleName: api.middleName,
+    position: api.position,
     email: api.email,
     role: api.role,
     groupId: api.reportingGroupId ?? "",

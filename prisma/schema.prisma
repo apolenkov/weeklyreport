@@ -10,6 +10,15 @@ model User {
   id                      String              @id @default(uuid())
   email                   String              @unique
   name                    String
+  // Structured ФИО parts (surname-first). `name` stays the stored,
+  // denormalized display value recomputed from these on admin write.
+  // SAML stubs leave the parts null and carry only `name` (= displayName).
+  lastName                String
+  firstName               String
+  middleName              String?
+  // Admin-maintained HR job title (должность), distinct from the access
+  // `role`. Free-text, nullable, never sourced from the IdP.
+  position                String?
   role                    Role
   samlId                  String              @unique
   reportingGroupId        String?

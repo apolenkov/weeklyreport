@@ -8,9 +8,11 @@ import {
 } from "../../../modules/auth/saml.strategy.js";
 
 // ---------------------------------------------------------------------------
-// AUTH-02 contract test (Phase 29-02): SAML profile.role survives the full
-// SAML → JWT → ctx.session.role pipeline. Closes A-2 (silent over-grant via
-// undefined role) at every link in the chain.
+// AUTH-02 contract test (structured-user-name): the SAML assertion no longer
+// carries a role. verifySamlProfile defaults EVERY provisioned user to viewer
+// (least privilege); roles are admin-assigned afterwards. This test pins that
+// posture through the full SAML → JWT → ctx.session.role pipeline: regardless
+// of any asserted role, the session round-trips as viewer.
 // ---------------------------------------------------------------------------
 
 const baseOptions = {
@@ -49,8 +51,8 @@ function buildSession(profile: {
   };
 }
 
-describe("AUTH-02: SAML profile → JWT → session.role round-trip", () => {
-  it("a verified head profile produces a JWT decodable to role=head", () => {
+describe("AUTH-02: SAML profile → JWT → session.role round-trip (role-free)", () => {
+  it("an asserted head role is ignored — the session round-trips as viewer", () => {
     const verified = verifySamlProfile(prodOptions, {
       nameID: "u-head",
       email: "head@customreport.local",
@@ -59,33 +61,34 @@ describe("AUTH-02: SAML profile → JWT → session.role round-trip", () => {
     });
     expect(verified.ok).toBe(true);
     if (!verified.ok) return;
+    expect(verified.profile.role).toBe("viewer");
 
     const ctrl = createAuthController(env);
     const { token } = ctrl.issueSessionCookie(buildSession(verified.profile));
     const session = ctrl.verifySessionToken(token);
 
-    expect(session.role).toBe("head");
+    expect(session.role).toBe("viewer");
     expect(session.email).toBe("head@customreport.local");
   });
 
-  it("a verified lead profile produces a JWT decodable to role=lead", () => {
+  it("a role-less profile is accepted and round-trips as viewer (least privilege)", () => {
     const verified = verifySamlProfile(prodOptions, {
-      nameID: "u-lead",
-      email: "lead@customreport.local",
-      displayName: "Team Lead",
-      role: "lead",
+      nameID: "u-no-role",
+      email: "no-role@customreport.local",
+      displayName: "Roleless",
     });
     expect(verified.ok).toBe(true);
     if (!verified.ok) return;
+    expect(verified.profile.role).toBe("viewer");
 
     const ctrl = createAuthController(env);
     const { token } = ctrl.issueSessionCookie(buildSession(verified.profile));
     const session = ctrl.verifySessionToken(token);
 
-    expect(session.role).toBe("lead");
+    expect(session.role).toBe("viewer");
   });
 
-  it("admin profile (Phase 27 widening) round-trips via JWT", () => {
+  it("an asserted admin role does not over-grant — session is still viewer", () => {
     const verified = verifySamlProfile(prodOptions, {
       nameID: "u-admin",
       email: "admin@customreport.local",
@@ -98,33 +101,6 @@ describe("AUTH-02: SAML profile → JWT → session.role round-trip", () => {
     const { token } = ctrl.issueSessionCookie(buildSession(verified.profile));
     const session = ctrl.verifySessionToken(token);
 
-    expect(session.role).toBe("admin");
-  });
-
-  it("a SAML profile without role is rejected before any JWT is issued (A-2)", () => {
-    const verified = verifySamlProfile(prodOptions, {
-      nameID: "u-no-role",
-      email: "no-role@customreport.local",
-      displayName: "Roleless",
-    });
-    expect(verified.ok).toBe(false);
-    if (verified.ok) return;
-    expect(verified.error.message).toContain("missing required role attribute");
-  });
-
-  it("mixed-case role (HEAD) round-trips as lowercase head in the session", () => {
-    const verified = verifySamlProfile(prodOptions, {
-      nameID: "u-mixed",
-      email: "mixed@customreport.local",
-      role: "HEAD",
-    });
-    expect(verified.ok).toBe(true);
-    if (!verified.ok) return;
-
-    const ctrl = createAuthController(env);
-    const { token } = ctrl.issueSessionCookie(buildSession(verified.profile));
-    const session = ctrl.verifySessionToken(token);
-
-    expect(session.role).toBe("head");
+    expect(session.role).toBe("viewer");
   });
 });

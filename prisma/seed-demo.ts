@@ -686,6 +686,10 @@ async function seedScaffold(dataset: TierDataset): Promise<void> {
         id: HEAD_USER_ID,
         email: "head@customreport.local",
         name: HEAD_NAME,
+        lastName: "Климов",
+        firstName: "Антон",
+        middleName: "Сергеевич",
+        position: "Руководитель отдела",
         role: Role.head,
         samlId: "head-1",
         reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
@@ -693,7 +697,11 @@ async function seedScaffold(dataset: TierDataset): Promise<void> {
       {
         id: VIEWER_USER_ID,
         email: "viewer@customreport.local",
-        name: "Дарья В.",
+        name: "Власова Дарья Игоревна",
+        lastName: "Власова",
+        firstName: "Дарья",
+        middleName: "Игоревна",
+        position: "Директор по развитию",
         role: Role.viewer,
         samlId: "viewer-1",
         reportingGroupId: null,
@@ -701,19 +709,31 @@ async function seedScaffold(dataset: TierDataset): Promise<void> {
       {
         id: ADMIN_USER_ID,
         email: "admin@customreport.local",
-        name: "Михаил Б.",
+        name: "Баленков Михаил Владимирович",
+        lastName: "Баленков",
+        firstName: "Михаил",
+        middleName: "Владимирович",
+        position: "Системный администратор",
         role: Role.admin,
         samlId: "admin-1",
         reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
       },
-      ...dataset.leads.map((lead) => ({
-        id: lead.id,
-        email: lead.email,
-        name: lead.name,
-        role: Role.lead,
-        samlId: lead.samlId,
-        reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
-      })),
+      ...dataset.leads.map((lead) => {
+        const seedUser = SEED_USERS.find((u) => u.email === lead.email);
+        return {
+          id: lead.id,
+          email: lead.email,
+          name: seedUser?.name ?? lead.name,
+          lastName:
+            seedUser?.lastName ?? lead.name.split(/\s+/)[0] ?? lead.name,
+          firstName: seedUser?.firstName ?? lead.name.split(/\s+/)[1] ?? "Lead",
+          middleName: seedUser?.middleName ?? null,
+          position: seedUser?.position ?? null,
+          role: Role.lead,
+          samlId: lead.samlId,
+          reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+        };
+      }),
     ],
   });
 

@@ -89,7 +89,15 @@ export const pdfExportJobSchema = z.object({
 export const adminUserSchema = z.object({
   id: z.uuid(),
   email: z.email(),
+  // Stored display name, denormalized from the parts below on write.
   name: z.string().min(1),
+  // Structured ФИО parts (surname-first). last/first required, patronymic
+  // optional. The admin form recomputes `name` from these on save.
+  lastName: z.string().min(1),
+  firstName: z.string().min(1),
+  middleName: z.string().nullable(),
+  // Admin-maintained HR job title (должность), independent of `role`.
+  position: z.string().nullable(),
   role: roleSchema,
   reportingGroupId: z.uuid().nullable().optional(),
   reportingGroupName: z.string().min(1).max(200).nullable().optional(),

@@ -24,6 +24,14 @@ export const userSessionSchema = z.object({
   userId: z.uuid(),
   email: z.email(),
   name: z.string().min(1),
+  /**
+   * Structured ФИО parts, plumbed from `auth.me` so the nav avatar renders
+   * correct surname+given initials. Optional because the synthetic PDF-export
+   * session and SAML stubs carry only `name` — consumers fall back to it.
+   */
+  lastName: z.string().optional(),
+  firstName: z.string().optional(),
+  middleName: z.string().nullable().optional(),
   role: sessionRoleSchema,
   activeReportId: z.uuid().nullable().optional(),
   activeReportSectionId: z.uuid().nullable().optional(),
