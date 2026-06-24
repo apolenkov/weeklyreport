@@ -109,12 +109,31 @@ and keeps Export-PDF. `canMutatePeriod` (head/admin only) keeps Publish & Lock /
 Reopen / Move-to-archive off the viewer. This also makes the existing `/present`
 redirect render real slides.
 
-### 8. Audit parity for search
+### 8. Audit parity for search — RESOLVED 2026-06-24: no emission (vacuous for search)
 
-`scopeAccessed` is currently emitted only from `weeklyReport.get`; search emits
-only `scopeDenied`. To keep the cross-group read invariant, emit `scopeAccessed`
-from the search path on a viewer cross-group hit. (Alternative: state search is
-unaudited — rejected, it would silently weaken `scope-accessed-audit`.)
+The first draft proposed emitting `scopeAccessed` from the search path on a
+viewer cross-group hit. Phase-0 verification + the Decision 2 reversal make this
+**vacuous**, so search emits nothing:
+
+- `scope-accessed-audit` defines a cross-group access narrowly: a **product**
+  whose owner group is outside the caller's groups that surfaces **via the
+  explicit `GroupProduct` join** (`scope-accessed-audit/spec.md`; the
+  `crossGroup` signal in `weekly-report.scope-filter.integration.test.ts`).
+- Search does NOT use `GroupProduct` at all — it gates item/risk/decision on the
+  section author's `reportingGroupId` (Decision 2). With that filter, a viewer's
+  search can never return a row authored outside their groups, so there is no
+  cross-group access to audit.
+- The viewer's only product-axis hit (`project`) is excluded entirely
+  (Decision 3), so no product surfaces through search to a viewer.
+
+Therefore the `scopeAccessed` event — defined over cross-group _products_ via
+`GroupProduct` — has no triggering condition in the search path. Emitting a
+synthetic/reduced event would be a false audit entry (no cross-group access
+occurred) and the typed payload (`productIds`/`groupIds`) has no value to carry.
+`scopeDenied` on a forbidden scope remains. This is consistent with Decision 2:
+search and the report read legitimately differ on the product/audit axis because
+search exposes no products to the viewer. (Alternative — widen the repository
+return shape to fabricate a cross-group signal — rejected as misleading.)
 
 ## Risks / Trade-offs
 

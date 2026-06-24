@@ -146,6 +146,22 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     expectLinkExists(container, "/reports");
   });
 
+  // viewer-report-surface-parity (task 3.2): viewer-only entry point to the
+  // latest published report.
+  it("viewer sees a Latest link to /reports/latest", () => {
+    setRole("viewer");
+    const { container } = render(<NavBar />);
+    expectLinkExists(container, "/reports/latest");
+  });
+
+  it("non-viewer roles do not see the Latest link", () => {
+    for (const role of ["lead", "head", "admin"] as const) {
+      setRole(role);
+      const { container } = render(<NavBar />);
+      expectLinkMissing(container, "/reports/latest");
+    }
+  });
+
   it("lead sees Report and History, with Slides folded into the report mode switch", () => {
     setRole("lead");
     const { container } = render(<NavBar />);

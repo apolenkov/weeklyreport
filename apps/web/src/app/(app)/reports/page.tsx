@@ -40,11 +40,15 @@ export default function ReportsPage() {
   const isLead = role === "lead";
   const usesCompiledHistory =
     role === "head" || role === "viewer" || role === "admin";
+  // viewer-report-surface-parity (task 4.1): the viewer searches published,
+  // group-scoped content (previously `null` → no search input rendered).
   const searchScope = isLead
     ? "mine"
     : role === "head" || role === "admin"
       ? "all"
-      : null;
+      : role === "viewer"
+        ? "published"
+        : null;
 
   // History defaults to the current (non-archived) view for every role; the
   // archive toggle is local state only, never derived from the URL.
@@ -136,7 +140,9 @@ export default function ReportsPage() {
                     placeholder={
                       isLead
                         ? "Search my reports…"
-                        : "Search reports and products…"
+                        : role === "viewer"
+                          ? "Search published reports…"
+                          : "Search reports and products…"
                     }
                   />
                 ) : null}

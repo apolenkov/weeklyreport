@@ -49,7 +49,7 @@ export class SearchPrismaRepository implements SearchRepository {
 
   async search(params: {
     q: string;
-    scope: "mine" | "all";
+    scope: "mine" | "all" | "published";
     userId: string;
     groupIds: string[] | null;
     excludeTypes: SearchHit["type"][];
@@ -94,6 +94,21 @@ export class SearchPrismaRepository implements SearchRepository {
         ? Prisma.empty
         : Prisma.sql`AND p."leadId" IN (SELECT "id" FROM "User" WHERE "reportingGroupId" IN (${Prisma.join(groupIds)}))`;
 
+    // viewer-report-surface-parity (Decision 1): the `published` scope adds an
+    // INNER JOIN to "Report" gated on `periodStatus = 'published'` for the
+    // item/risk/decision chunks. This is the SAME column the viewer content
+    // read gates on (`weekly-report.service.ts`: NOT_FOUND when
+    // `periodStatus !== 'published'`), NOT `status` (the list column, which can
+    // stay 'published' on a reopened period whose content is unreadable). The
+    // join reaches Report via `rs."reportId"`, which every chunk already has.
+    // For 'mine'/'all' this stays empty — those scopes are unchanged. The
+    // `project` chunk has no Report and is excluded for the only consumer
+    // (viewer), so it carries no published gate.
+    const publishedReportJoin =
+      scope === "published"
+        ? Prisma.sql`INNER JOIN "Report" rpt ON rpt."id" = rs."reportId" AND rpt."periodStatus" = 'published'::"PeriodStatus"`
+        : Prisma.empty;
+
     // Excluded types are omitted from the query entirely (chunk + its leading
     // UNION ALL), so they never consume a slot in the outer `LIMIT`. Only the
     // `project` chunk is currently excludable (the lead-role rule); guard each
@@ -137,6 +152,7 @@ export class SearchPrismaRepository implements SearchRepository {
             i."createdAt" AS "createdAt"
           FROM "Item" i
           INNER JOIN "ReportSection" rs ON rs."id" = i."reportSectionId"
+          ${publishedReportJoin}
           WHERE i."searchTsv" @@ plainto_tsquery('russian', ${q})
           ${itemMineFilter}
           ${sectionGroupFilter}
@@ -162,6 +178,7 @@ export class SearchPrismaRepository implements SearchRepository {
             r."createdAt" AS "createdAt"
           FROM "Risk" r
           INNER JOIN "ReportSection" rs ON rs."id" = r."reportSectionId"
+          ${publishedReportJoin}
           WHERE r."searchTsv" @@ plainto_tsquery('russian', ${q})
           ${riskMineFilter}
           ${sectionGroupFilter}
@@ -182,6 +199,7 @@ export class SearchPrismaRepository implements SearchRepository {
             d."createdAt" AS "createdAt"
           FROM "Decision" d
           INNER JOIN "ReportSection" rs ON rs."id" = d."reportSectionId"
+          ${publishedReportJoin}
           WHERE d."searchTsv" @@ plainto_tsquery('russian', ${q})
           ${decisionMineFilter}
           ${sectionGroupFilter}

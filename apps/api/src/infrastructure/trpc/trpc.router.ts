@@ -11,6 +11,7 @@ import {
   DEFAULT_ORGANIZATION_IDENTITY,
   draftSaveSchema,
   groupProductEdgeInputSchema,
+  latestPublishedReportSchema,
   leadVelocityInputSchema,
   myHistoryEntrySchema,
   organizationUpdateSchema,
@@ -545,6 +546,39 @@ export function createAppRouter(deps: RouterDeps) {
             throw mapDomainError(error);
           }
         }),
+
+      // viewer-report-surface-parity (task 2.1): resolve the latest report the
+      // caller can OPEN, for the `/reports/latest` redirect. The gate mirrors
+      // the content read, NOT the list: `periodStatus = 'published'` (the exact
+      // column `weeklyReport.get` 404s on), so the redirect never lands on a
+      // reopened period that would then NOT_FOUND. It also requires at least one
+      // group-visible section (`sections.some(sectionScope)`), reusing the same
+      // group filter as `compiledHistory` so a department-wide report with no
+      // viewer-visible content is skipped. Reachable by any /reports role; a
+      // lead resolves their own latest published section.
+      latestPublished: anyRoleProcedure.query(async ({ ctx }) => {
+        try {
+          const sectionScope: Prisma.ReportSectionWhereInput =
+            ctx.session.role === "lead"
+              ? { authorId: ctx.session.userId }
+              : groupScopeFilter(ctx.session, "reportSection");
+
+          const report = await deps.prisma.report.findFirst({
+            where: {
+              periodStatus: "published" as const,
+              sections: { some: sectionScope },
+            },
+            orderBy: { periodStart: "desc" },
+            select: { id: true },
+          });
+
+          return latestPublishedReportSchema.parse({
+            reportId: report?.id ?? null,
+          });
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
 
       saveDraft: protectedProcedure
         .input(draftSaveSchema)

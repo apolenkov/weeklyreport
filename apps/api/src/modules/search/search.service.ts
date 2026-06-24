@@ -22,8 +22,11 @@ export interface SearchRepository {
     /** When 'mine', only rows authored by `userId` are returned (item/risk/
      * decision via reportSection.authorId; project via leadId). When 'all',
      * rows are unfiltered — the service layer enforces the role gate before
-     * calling this. */
-    scope: "mine" | "all";
+     * calling this. When 'published', rows are unfiltered by author but
+     * constrained to published reports (`Report.periodStatus = 'published'`)
+     * via an INNER JOIN on the item/risk/decision chunks — the viewer's
+     * read-parity search surface. */
+    scope: "mine" | "all" | "published";
     userId: string;
     /**
      * TD-03: group IDs derived via groupScopeFilter logic.
@@ -74,9 +77,11 @@ export class SearchService {
    *     maps this to TRPCError code FORBIDDEN.
    *   - `head` / `admin` roles can use either scope.
    *   - `viewer` role with `scope='mine'` is technically callable but
-   *     returns an empty list because viewers author nothing; we still
-   *     reject `scope='all'` for symmetry — viewers see only published
-   *     reports through the archive surface, not raw search.
+   *     returns an empty list because viewers author nothing; `scope='all'`
+   *     stays rejected. The viewer's real search surface is
+   *     `scope='published'`, which is authorized for every role (it can only
+   *     ever surface published, group-scoped content) and exposes exactly the
+   *     published reports the viewer can already open.
    *
    * Query sanitisation: we never interpolate `q` into raw SQL. The Prisma
    * repository uses `plainto_tsquery('russian', $1)` which auto-quotes
@@ -126,8 +131,13 @@ export class SearchService {
     // a slot in the `limit` budget; the lead's own items/risks/decisions for
     // that product still surface (they deep-link into /lead/report). Found by
     // the AI UI Driver (behavioral-ui-regression-gate task 3.1).
+    //
+    // A `viewer` is excluded for the same reason: a Project has no publish
+    // state and its destination (/admin?tab=products) is unreachable for a
+    // viewer (viewer-report-surface-parity Decision 3). Their item/risk/
+    // decision hits route to /reports/[reportId] instead.
     const excludeTypes: SearchHit["type"][] =
-      session.role === "lead" ? ["project"] : [];
+      session.role === "lead" || session.role === "viewer" ? ["project"] : [];
 
     const hits = await this.repository.search({
       q: parsed.q,
