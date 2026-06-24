@@ -1,65 +1,78 @@
-# Design — structured user name parts (ФИО)
+# Design — user-record overhaul (ФИО, position, display, SAML create-only)
 
 ## Context
 
-`User.name` is a single `String` and the canonical display name. Two hard
-constraints shape the design:
+`User.name` is a single `String` and the canonical display name. Hard
+constraints:
 
-1. **SAML supplies only a single `displayName`** (`saml-profile.ts:29`,
-   provisioned at `auth.routes.ts:213-231`). It has no name parts and is the
-   production identity path.
-2. **`name` is read in 30+ places** (web components, reports, sections, lead
-   identity). Touching all of them is out of proportion to the ask.
+1. **SAML supplies only `displayName`** (`saml-profile.ts:29`, written at
+   `auth.routes.ts:213-231`) — no name parts, and (per the grilling) no role.
+2. **`name` is read in 30+ places** plus the **session** user
+   (`SessionUser`, `session-provider.tsx:30`), which carries only `name`.
+3. **Bug:** `initialsFromName` (`nav-bar.tsx:141`) = first-word + last-word →
+   surname+patronymic for an ФИО string.
 
-## Decision 1 — `name` stays a stored, denormalized field (NOT derived)
+## Decision 1 — `name` stays stored, denormalized (NOT derived)
 
-`name` remains a real `String` column. The three parts are _additional_ columns.
-On the admin write path the form recomputes `name` from the parts and stores it.
-On the SAML path `name` is written directly from `displayName` and the parts are
-left `null`.
+Unchanged from the original change. `name` is a real column; the admin form
+recomputes it from the parts on save; SAML writes it directly from
+`displayName` with parts `null`. Deriving `name` would blank SAML users.
 
-- **Why not derive `name` from parts?** SAML has no parts. A computed/virtual
-  `name` would render empty for every SAML-provisioned production user. Storing
-  `name` keeps every existing read site and the SAML flow working untouched.
-- **Trade-off:** `name` and the parts can drift if a writer sets one without the
-  other. Mitigated by funnelling the only part-aware writer (the admin form
-  mapper) through `toAdminUserInput`, which always emits both together.
-- **Rejected alternative:** SAML best-effort-splits `displayName` on whitespace
-  so `name` could be truly derived. Lossy on single-token / "Unknown User"
-  names and guesses patronymic incorrectly; rejected.
+## Decision 2 — display order ФИО, surname-first
 
-## Decision 2 — display composition order is ФИО (surname-first)
+`name = [lastName, firstName, middleName].filter(Boolean).join(" ").trim()`.
+Short form = `surname + " " + initials(firstName[, middleName])`, e.g.
+«Берёзов А.В.», or «Берёзов А.» without a patronymic.
 
-`name = [lastName, firstName, middleName].filter(Boolean).join(" ")`.
+## Decision 3 — initials from parts, with a name-string fallback
 
-- Matches the explicit "surname, name, patronymic" framing of the request.
-- **Visible effect:** seed displays move from "Alexey Petrov" to "Petrov Alexey
-  …". Stated as an Open Question so the user can keep Western order at sign-off;
-  the spec's default is surname-first.
+A single shared helper computes initials and the short form. It PREFERS
+structured parts (`lastName[0] + firstName[0]` → «БА»). Records without parts
+(SAML stubs — the common production case, parts are `null`) fall back to a
+name-string heuristic: split on whitespace and take the **first + second**
+token under the surname-first convention (not first + last). Single-token →
+first two letters. This guarantees the avatar never regresses to "??" for SAML
+users while giving correct initials once an admin fills the parts.
 
-## Decision 3 — required vs optional parts
+To use parts in the nav avatar, the parts are plumbed through `auth.me`
+(`auth.routes.ts:265`) into `SessionUser`. The Users table and stage chip read
+parts directly from the admin snapshot (`adminUserSchema`), so they need no
+session plumbing.
 
-- `lastName`, `firstName` — required (`min(1)`), replacing today's single
-  `name.min(1)` validation.
-- `middleName` — nullable/optional; отчество is genuinely optional in Russian
-  names and absent for many users.
-- The recomputed `name` is therefore never empty (last + first guarantee it).
+## Decision 4 — position is independent of role
 
-## Decision 4 — English UI labels
+`position` is a free-text HR title, admin-owned, nullable, never sourced from
+the IdP. `role` remains the access level. They are separate columns and
+separate form fields; the spec keeps them in distinct capabilities
+(`user-position` vs the access role) to prevent the conceptual merge the user
+explicitly warned against.
 
-Form labels are `Last name` / `First name` / `Middle name` (English) per the
-repo UI-strings rule — no hardcoded Cyrillic in `apps/web/src/**/*.tsx`. The
-seed _data_ may still be Cyrillic; only the labels are constrained.
+## Decision 5 — SAML is create-only, role-free, viewer-default
 
-## Decision 5 — no FTS / no read-path change
+- **Create-only:** an existing user is the source of truth after first login;
+  the IdP never overwrites `name`/`role`/`reportingGroupId`/parts/position.
+  This is what makes admin-authored ФИО, role, and position durable.
+- **Role removed from the assertion:** Keycloak has no role; requiring it (the
+  current `SamlProfileSchema`) is impossible to satisfy. Default `viewer` is the
+  least-privilege posture — strictly safer than trusting an IdP-asserted role.
+  The threat-model comment is updated to record the rationale flip.
+- **dev-login untouched:** it sets role from a query param and does not use
+  `SamlProfileSchema`, so the dev role switcher (the UAT mechanism) keeps
+  working.
+- **Admin bootstrap:** seeds set `role=admin`, so viewer-default never locks
+  everyone out of admin.
+- **Account key:** corporate email == `samlId`; no separate username, no
+  domain allow-list.
 
-`User` has no `searchTsv` column (FTS is on `Project` only); the admin user
-search filters `name` client-side. So no FTS migration is needed and the search
-keeps working on the stored `name`. The 30+ `name` read sites are explicitly
-out of scope and stay as-is.
+## Decision 6 — English UI labels, no FTS, read sites unchanged
+
+Form labels stay English (`Last name` / `First name` / `Middle name` /
+`Position`) per the repo UI-strings rule. `User` has no `searchTsv` (FTS is on
+`Project`), so no FTS work. The 30+ `name` read sites are out of scope — the
+payoff of keeping `name` stored.
 
 ## Migration posture
 
 MVP "Database Is Disposable": reshape `prisma/schema.prisma` directly, keep the
-single init migration in sync, and `migrate reset` to re-apply. No incremental
-alter-table migration. Existing rows are rebuilt from seeds.
+single init migration in sync, `migrate reset` + reseed. No alter-table
+backfill. One pass for all four parts of this change.

@@ -181,6 +181,42 @@ persistence does not make it a document action.
 _Avoid_: filter (only some are filters); view control (view = the narrow
 edit/slides mode; Context control is the broader umbrella).
 
+## Identity & users
+
+**User name (ФИО)**:
+Authored as three parts — `lastName` (Фамилия, required), `firstName` (Имя,
+required), `middleName` (Отчество / patronymic, optional). The single `name`
+column is KEPT as a stored, denormalized display value recomputed from the parts
+on write (not removed — SAML supplies only a combined `displayName` with no
+parts, so a derived `name` would blank SAML users). Display forms come from the
+parts: full «Берёзов Александр Владимирович», short «Берёзов А.В.» (no
+patronymic → «Берёзов А.»), and a two-letter avatar / stage-chip mark «БА» —
+first letters of surname + given name, in that order.
+_Avoid_: editing `name` directly (it is derived from the parts); first-word +
+last-word initials (that yields surname + patronymic «БВ», a known bug).
+
+**Position (должность)**:
+A person's HR job title (e.g. «Тимлид», «Аналитик»). Free text, optional,
+maintained only by the admin. Independent of Role: any access Role can hold any
+job title. Keycloak carries its own должность attribute, but it is NOT pulled —
+the admin owns this field.
+_Avoid_: role (Position is the HR title; Role is the access level).
+
+**Role**:
+The access level a user has in the app — `lead` / `head` / `admin` / `viewer`.
+Set ONLY by the admin; every newly registered user defaults to `viewer`. Not
+carried by the IdP (Keycloak has no role attribute) and never synced from it. A
+`viewer` not attached to any product sees nothing — they can only log in.
+_Avoid_: position (Role is access, not the job title).
+
+**Account (УЗ) / corporate email**:
+A user's identity, keyed by their corporate email — which is also the SAML
+identifier (`samlId`). SAML / Keycloak exists ONLY to authenticate and minimally
+register a person on first login; it is not the source of the rich profile.
+After that first registration the record is never re-synced from the IdP — the
+admin owns the profile thereafter.
+_Avoid_: login / username (the corporate email is the account key).
+
 ## Slides & UI affordances
 
 **Tooltip / hover affordance**:

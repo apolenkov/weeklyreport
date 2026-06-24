@@ -1,83 +1,123 @@
-# Add structured user name parts (ФИО) to the User model and admin form
+# User-record overhaul: structured ФИО, position, display forms, SAML create-only
 
 ## Why
 
-Live admin UAT (2026-06-24, `/admin?tab=users`, Edit-user dialog). The user
-flagged that the single freeform **Name** field really represents a Russian
-**ФИО** — фамилия / имя / отчество (surname / first name / patronymic) — and
-asked to "do something about it". The decision (user, 2026-06-24): do a **full
-data-model change**, not a form-only cosmetic split. This work is scoped to a
-separate work stream ("Work 3"); this change is the spec it implements. No code
-changes land in the current tree from this proposal.
+Live admin UAT (2026-06-24, `/admin?tab=users`) plus a parallel ФИО grilling
+session. One bundle of related user-record changes came back; they all reshape
+the same `User` record + admin form + identity flow, so they land as one change
+(MVP "Database Is Disposable" — a single `migrate reset` + reseed, no
+incremental migration). Implemented by Work 3.
 
-Today `User.name` is a single `String`. It is the canonical display name read in
-30+ web sites plus reports, sections, and lead identity on projects. In
-production it is provisioned from SAML, which supplies only a single
-`displayName` (`saml-profile.ts:29`) — never name parts. Any design must keep
-those two facts intact.
+Today `User.name` is a single `String`, the canonical display name read in 30+
+web sites plus reports, sections, and lead identity. In production it is
+provisioned from SAML, which supplies only a single `displayName`
+(`saml-profile.ts:29`) — never name parts and (per the grilling) never a role.
+
+Base decision (kept): `name` STAYS a stored, denormalized display field — a
+computed/derived `name` would blank out every SAML-provisioned user.
 
 ## What Changes
 
-- **Add three structured name columns to `User`:** `lastName` (required),
-  `firstName` (required), `middleName` (nullable — отчество is optional).
-- **Keep `name` as the canonical, STORED display field — denormalized, not
-  derived.** This is load-bearing: SAML supplies only `displayName` and has no
-  parts, so a _computed_ `name` would blank out every SAML-provisioned
-  (production) user. Instead `name` stays a real stored column; the admin form
-  **recomputes** it from the three parts on save; SAML keeps writing `name`
-  directly with `firstName/lastName/middleName = null`.
-- **Display composition order = ФИО, surname-first** (decided by the user,
-  2026-06-24): `"{lastName} {firstName} {middleName}"`, trimmed. Current seeds
-  use Western order ("Alexey Petrov"); this change deliberately reorders the
-  recomputed display name to surname-first across the app and seeds.
-- **Admin Edit/Add-user form edits the three parts** with English labels
-  (`Last name` / `First name` / `Middle name`) per the repo UI-strings rule;
-  validation: last + first required, middle optional. On save the form sends the
-  three parts plus the recomputed `name`.
-- **The 30+ `name` read sites stay unchanged** — that is the entire payoff of
-  keeping `name` stored. No read-path edits; the change is bounded to the write
-  paths, the form, the schema, and seeds.
-- **Seeds populate the parts** and keep `name` consistent with the chosen order.
+### 1. Structured ФИО name parts
+
+- Add `lastName` (required), `firstName` (required), `middleName` (nullable —
+  отчество is optional) to `User`. `name` stays a stored column, recomputed from
+  the parts in ФИО / surname-first order (`"{lastName} {firstName}
+{middleName}"`, trimmed) on the admin write path.
+- `adminUserSchema` + `AdminUser` carry the parts; the admin form edits three
+  English-labelled inputs (`Last name` / `First name` / `Middle name`),
+  last+first required.
+
+### 2. Position (должность)
+
+- Add `position String?` to `User` — free-text HR job title (e.g. «Тимлид»),
+  nullable, **admin-maintained only**. Keycloak carries its own должность but it
+  is NOT pulled.
+- DISTINCT from `role` (the access level). `adminUserSchema` gains
+  `position: z.string().nullable()`; the form gets a `Position` input; the Users
+  table gets a `Position` column.
+
+### 3. Display forms + initials bug fix
+
+- **Short form** «Берёзов А.В.» = surname + given/patronymic initials; no
+  patronymic → «Берёзов А.». Shown in the Users table.
+- **Initials fix.** `initialsFromName` (`nav-bar.tsx:141`) takes first-word +
+  **last**-word, so an ФИО string yields surname+patronymic («БВ»). It must be
+  surname + given («БА»). The avatar reads the **session** user
+  (`SessionUser`, which today carries only `name`), so the parts are plumbed
+  through `auth.me` (`auth.routes.ts:265`) into `SessionUser`; the shared
+  initials helper prefers parts and falls back to a name-string heuristic
+  (first+second token under surname-first order) for records without parts
+  (SAML stubs). `stage-assignment-editor.tsx:188` (`lead.name.split(" ")[0]`)
+  switches to the structured surname.
+
+### 4. SAML create-only / registration-only provisioning
+
+- **Create-only.** First login of a missing user CREATES a stub
+  (`role = viewer` always, `name = displayName`, parts + `position` `null`). An
+  EXISTING user is NEVER re-synced — today `auth.routes.ts:213-231` overwrites
+  `name`/`role`/`reportingGroupId` every login; change to create-only so the
+  admin's ФИО, role, and position survive logins.
+- **Role removed from the IdP.** Keycloak has no role attribute: drop `role`
+  from `SamlProfileSchema` / `verifySamlProfile`; every SAML-provisioned user
+  defaults to `viewer`. Roles are admin-assigned only. The threat-model comment
+  in `saml-profile.ts` flips from "role REQUIRED, no over-grant" to "role
+  absent, default viewer (least privilege)".
+- **Account key = corporate email** (= `samlId`); no separate username, no
+  corporate-domain allow-list.
+- **Not affected:** dev-login (`AUTH_DEV_MODE`, `auth.routes.ts:404`) takes its
+  role from a query param and does NOT use `SamlProfileSchema` — its role
+  switching is untouched. The first admin comes from seeds
+  (`seed-constants.ts:80`), so viewer-default does not lock anyone out of admin.
 
 ## Resolved decisions (user, 2026-06-24)
 
-1. **Display order = ФИО, surname-first.** The recomputed `name` is
-   `"{lastName} {firstName} {middleName}"`. Existing seed displays reorder from
-   "Alexey Petrov" to surname-first; this is intended.
-2. **Existing records are fully rebuilt, not migrated.** Per the MVP "Database
-   Is Disposable" rule the plan reshapes the schema and `migrate reset` +
-   reseeds; there is NO alter-table backfill of old `name` values. Every seeded
-   user is recreated with the three parts populated. SAML-provisioned rows that
-   appear after launch keep `name` only, parts `null`, until edited in the admin
-   form.
+1. **Display order = ФИО, surname-first.** Seed displays reorder from "Alexey
+   Petrov" to surname-first; intended.
+2. **Existing records fully rebuilt, not migrated** — `migrate reset` + reseed,
+   no alter-table backfill.
+3. **One change, not two.** SAML provisioning ships in this same change; within
+   the change the spec is split into topic capabilities for readability only.
 
 ## Impact
 
-- Affected specs:
-  - `structured-user-name` (NEW capability — all requirements ADDED).
-- Affected code (implemented by Work 3, not here):
-  - `prisma/schema.prisma` — `User` gains `lastName`, `firstName`, `middleName`.
-    No FTS change (User has no `searchTsv`; the admin user search is client-side
-    over `name`).
+- Affected specs (deltas, all in this one change):
+  - `structured-user-name` (NEW): name parts, stored display name, ФИО order,
+    short form, initials helper.
+  - `user-position` (NEW): admin-maintained position field.
+  - `saml-provisioning` (NEW): create-only, viewer default, role removed from
+    the assertion, email-as-key.
+- Affected code (Work 3):
+  - `prisma/schema.prisma` — `User` gains `lastName`, `firstName`, `middleName`,
+    `position`. No FTS change (User has no `searchTsv`).
   - `packages/shared/src/schemas/report.schema.ts` — `adminUserSchema` gains the
-    three parts; `AdminUser` type follows.
-  - `apps/web/src/lib/mappers/admin-form-inputs.ts` — `AdminUserFormInput` +
-    `toAdminUserInput` carry the parts and recompute `name`.
-  - `apps/web/src/components/admin/users-tab.tsx` — form fields + the Name table
-    column source.
-  - `apps/web/src/components/admin/mock-data.ts` — `MockUser` gains the parts.
-  - `apps/api/src/modules/admin/admin-snapshot-write.queries.ts` — user
-    create/update writes the parts + `name`.
-  - `apps/api/src/modules/admin/admin-snapshot.queries.ts` — read mapping
-    surfaces the parts.
-  - `apps/api/src/modules/auth/auth.routes.ts:213-231` — SAML user create/update
-    keeps `name: profile.displayName`, parts default `null` (the concrete
-    parts-are-null touchpoint).
+    four fields; `AdminUser` follows.
+  - `packages/shared/src/auth/saml-profile.ts` — `role` removed from
+    `SamlProfileSchema`; threat-model comment updated.
+  - `apps/api/src/modules/auth/saml.strategy.ts` (`verifySamlProfile`) — stop
+    requiring/forwarding role.
+  - `apps/api/src/modules/auth/auth.routes.ts` — SAML branch becomes create-only
+    (no overwrite of existing); new users default `role=viewer`; `auth.me`
+    (`:265`) returns the name parts for the session.
+  - `apps/web/src/lib/session-provider.tsx` — `SessionUser` gains `lastName` /
+    `firstName` (+ optional `middleName`).
+  - shared initials/short-form helper (new, in `@customreport/shared`) consumed
+    by the Users table, nav avatar, and stage chip.
+  - `apps/web/src/lib/mappers/admin-form-inputs.ts`,
+    `apps/web/src/components/admin/users-tab.tsx`,
+    `apps/web/src/components/admin/mock-data.ts` — parts + position in the form,
+    table columns (Position + short-form name).
+  - `apps/web/src/components/navigation/nav-bar.tsx` (`initialsFromName`),
+    `apps/web/src/components/admin/stage-assignment-editor.tsx:188` — initials /
+    surname from structured parts.
+  - `apps/api/src/modules/admin/admin-snapshot-write.queries.ts`,
+    `apps/api/src/modules/admin/admin-snapshot.queries.ts` — write/read the parts
+    - position.
   - `prisma/seed.ts`, `prisma/seed-simple.ts`, `prisma/seed-demo.ts`,
-    `prisma/seed-constants.ts` — split single-string names into parts.
+    `prisma/seed-constants.ts` — split names into parts (surname-first), populate
+    position where natural.
+  - `CONTEXT.md` — "Identity & users" glossary section (committed with this
+    change).
   - Tests across the above.
 - Not changed: the 30+ `name` read sites; Project/report FTS; print template;
-  SAML profile schema (still single `displayName`).
-- MVP freedom used: schema is reshaped directly and the single init migration is
-  kept in sync (`migrate reset`), per "Database Is Disposable" — no incremental
-  alter-table migration.
+  dev-login role flow.

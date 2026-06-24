@@ -90,18 +90,50 @@ The shared `adminUserSchema` (and its `AdminUser` type) SHALL include
 - **THEN** it requires non-empty `lastName` and `firstName`
 - **AND** accepts `middleName` as a string or null
 
-### Requirement: SAML provisioning leaves parts unset
+### Requirement: Short display form
 
-SAML login SHALL keep writing `name` from the assertion `displayName` and MUST
-set `firstName`/`lastName`/`middleName` to `null`, since SAML supplies no name
-parts.
+The system SHALL provide a short name form composed as surname plus the
+initials of the given name and patronymic — «Берёзов А.В.», or «Берёзов А.»
+when there is no patronymic — and the admin Users table SHALL show this short
+form.
 
-#### Scenario: first SAML login
+#### Scenario: short form with patronymic
 
-- **WHEN** a user is provisioned via SAML at `auth.routes.ts`
-- **THEN** `name` is set to `profile.displayName`
-- **AND** the three structured parts are `null`
-- **AND** the user can later be given parts via the admin form
+- **WHEN** parts are lastName="Берёзов", firstName="Александр",
+  middleName="Владимирович"
+- **THEN** the short form is "Берёзов А.В."
+
+#### Scenario: short form without patronymic
+
+- **WHEN** parts are lastName="Берёзов", firstName="Александр", middleName=null
+- **THEN** the short form is "Берёзов А."
+
+### Requirement: Initials derive surname + given name
+
+The shared initials helper SHALL return surname-initial + given-name-initial
+when structured parts are present (e.g. «БА»), and MUST NOT use the
+first-word + last-word heuristic that yields surname + patronymic. When parts
+are absent (e.g. a SAML stub), it SHALL fall back to a name-string heuristic
+that takes the first and second whitespace tokens under the surname-first
+order, and a single token yields its first two letters.
+
+#### Scenario: initials from parts
+
+- **WHEN** parts are lastName="Берёзов", firstName="Александр",
+  middleName="Владимирович"
+- **THEN** the avatar initials are "БА" (not "БВ")
+
+#### Scenario: initials fallback for a part-less record
+
+- **WHEN** a record has only `name` "Берёзов Александр Владимирович" and no
+  parts
+- **THEN** the initials are "БА" from the first two tokens
+
+#### Scenario: session avatar uses parts
+
+- **WHEN** the nav avatar renders for the session user
+- **THEN** the session carries `lastName`/`firstName` (plumbed via `auth.me`)
+  and the initials use them, falling back to `name` only when parts are null
 
 ### Requirement: Seeds populate structured parts
 
