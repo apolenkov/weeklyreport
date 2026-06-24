@@ -80,6 +80,21 @@ routes:
         when: "viewer navigates to /reports/history"
         then: "browser is redirected (307) to /reports?tab=published"
         note: "Redirect stub (UX-17, Phase 35-08) — handles legacy bookmarks. No UI is rendered on this route itself; the redirect is the only observable behavior."
+  - route: /reports/latest
+    access: [viewer]
+    intents:
+      - id: viewer-latest-redirects-to-newest-published
+        intent: "Viewer opens the 'Latest' nav entry and lands on the newest published report they can see"
+        given: "viewer is authenticated and has at least one visible published report"
+        when: "viewer navigates to /reports/latest"
+        then: "reports.latestPublished resolves the newest published in-group report and the client redirects (router.replace) to /reports/[reportId]; while resolving, an 'Opening the latest report…' status is shown"
+        note: "viewer-report-surface-parity (task 3.1) — a client redirect, not a server 307 (the web app has no server-side data path). replace (not push) avoids a Back-button redirect loop."
+      - id: viewer-latest-empty-state
+        intent: "Viewer with no visible published report sees an empty state, not an error or an unpublished period"
+        given: "viewer is authenticated but no published report contains viewer-visible content"
+        when: "viewer navigates to /reports/latest"
+        then: "no redirect occurs and the empty state 'No published report is available to you yet.' is shown; on a query error the copy is 'Could not load the latest report.'"
+        note: "Neither branch ever exposes an unpublished or draft period; resolution is group-content-aware via reports.latestPublished."
   - route: /reports/trends
     access: [viewer]
     intents:
