@@ -151,6 +151,27 @@ fresh approval needed each time.
 
 This freedom ends when the first real production point exists — revisit then.
 
+### MVP Phase: Commit to Main + Prune Freely
+
+Same MVP rationale as the disposable database: there is no production point yet,
+so `main` is not sacred and the repo is allowed to shed weight. This OVERRIDES
+the global "branch first on the default branch / commit only when asked" caution
+for this repo — until the first production point.
+
+- **Commit and push directly to `main` is pre-authorized.** No feature branch,
+  no per-action confirmation. Still: never push a red/broken tree, and on a
+  shared worktree stage only your own paths (a parallel session may hold
+  unrelated changes).
+- **Prune obsolete files freely.** Removing genuinely no-longer-needed cruft
+  (stale build/screenshot artifacts, dead code, leftover scratch, superseded
+  docs) is pre-authorized — no fresh approval each time.
+- **But still prove "unused" before deleting.** Confirm with evidence
+  (codegraph / grep all references + imports + build config), per Surgical
+  Changes; if you cannot confirm, ask or leave a note. Never delete another
+  session's untracked work.
+
+This freedom ends when the first real production point exists — revisit then.
+
 ### Docker Databases
 
 Non-production `POSTGRES_DB` names and the database name inside
