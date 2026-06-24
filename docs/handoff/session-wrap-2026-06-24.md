@@ -1,3 +1,7 @@
+> **SUPERSEDED by `session-wrap-2026-06-25-FINAL.md`** — everything below that
+> this doc lists as "DEFERRED / NOT verified / NOT archived" is now DONE
+> (verified live + archived). Read the FINAL doc.
+
 # Session wrap — user-record (A) + viewer-parity (B) — 2026-06-24
 
 **Branch:** `feat/user-record-and-viewer-parity` (+8 ahead / 0 behind `origin/main`, **unpushed**).
