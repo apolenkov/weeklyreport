@@ -98,7 +98,7 @@
       `pnpm build` all green.
 - [x] 11.2 Grep changed `apps/web/src/**/*.tsx` for Cyrillic — every hit must be
       data/comment/test, never a label.
-- [ ] 11.3 Live-verify: admin adds/edits a user with parts + position
+- [x] 11.3 Live-verify: admin adds/edits a user with parts + position
       with/without patronymic; table shows short form + position; nav avatar
       shows «БА»; a SAML stub (parts null) still shows valid initials.
 - [x] 11.4 Decisions locked (user, 2026-06-24): ФИО surname-first; full reseed;

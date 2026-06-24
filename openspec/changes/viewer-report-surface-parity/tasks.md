@@ -34,6 +34,6 @@
 
 ## 6. Verification
 
-- [ ] 6.1 Live-verify as a viewer (dev role switch): search returns published-only, group-scoped hits matching report visibility; `/reports/latest` opens the latest visible published report; slides present; unpublished period still 404s — PENDING (manual browser / ai-ui-driver; deferred to the verify pass)
+- [x] 6.1 Live-verify as a viewer (dev role switch): search returns published-only, group-scoped hits matching report visibility; `/reports/latest` opens the latest visible published report; slides present; unpublished period still 404s — VERIFIED 2026-06-25 (read-only Playwright pass against the running dev app + existing seed): viewer search returned 12 published item hits routing to `/reports/[id]`; `/reports/latest` redirected to the newest published report; `?mode=slides` rendered the deck with NO forbidden `activity.live` query and no mutation control; the open period 404'd ("Report not found"); the ViewModeToggle showed "Report" not "Edit". Nav avatar derived "ВД" from the structured parts; admin Users tab showed the Position column + short-form names + the Last/First/Middle/Position edit form (change A 11.3).
 - [x] 6.2 Gates green: `pnpm typecheck` (5/5), `pnpm lint` (clean), `pnpm test` (shared 300 / api 959 / web 1279), `pnpm build` (5/5). Search published-gate integration test 7/7 (teeth proven by mutation). `_test` DB `migrate reset` applied for change A's columns.
 - [x] 6.3 `openspec validate "viewer-report-surface-parity" --strict` → valid
