@@ -49,13 +49,17 @@
   остался для коротких чипов в демо-текстах.
 - **⚠ Требуется reseed**, чтобы увидеть вживую — правка только в коде seed
   (`prisma/seed-simple.ts`), существующая БД ещё несёт старые owner-строки. НЕ
-  делал reseed автономно: приложение было открыто на текущей БД. Команда —
-  именно та, что прогоняет `seed-simple.ts`:
+  делал reseed автономно: приложение было открыто на текущей БД. Любой reseed
+  ниже — **деструктивный** (сносит все данные и пересоздаёт), не «поверх».
+- **Команда** — именно та, что прогоняет `seed-simple.ts`:
   `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=1 pnpm db:fresh:simple`
-  (`db:reset:hard` + `tsx prisma/seed-simple.ts`). НЕ `db:fresh:manual-uat` —
-  он запускает `wipe-manual-uat.ts` (только очистка, без сидирования
-  seed-simple), и фикс не применится. Без hard-reset можно `pnpm db:seed:middle`
-  (тот же `seed-simple.ts`), если decisions нужно пересоздать поверх.
+  (`db:reset:hard` + `tsx prisma/seed-simple.ts`). Эквивалент без migrate-reset
+  — `pnpm db:seed:middle` (тот же `seed-simple.ts`; он сам начинается с
+  `deleteMany` по всем таблицам, так что данные тоже стираются полностью —
+  разница лишь в том, что схема/миграции не пересоздаются).
+- **НЕ `db:fresh:manual-uat`** — он запускает `wipe-manual-uat.ts`, который
+  делает factory-wipe и реседит СВОЙ пресет (не `seed-simple.ts`), поэтому эта
+  правка owner туда не попадёт.
 - **Проверка после reseed:** залогиниться лидом (Иванов Василий Петрович),
   открыть активный отчёт → у своих decisions должны появиться edit/delete.
 
