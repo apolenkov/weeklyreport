@@ -84,7 +84,17 @@ export function useEditableListDialog<TEntity extends { id: string }>({
   // stays in the effect deps (canonical), so a products-list change while a
   // stale non-zero signal exists would otherwise re-open the dialog. Track
   // the highest handled signal and only open when the counter advances.
-  const lastHandledSignal = useRef(NO_SIGNAL_HANDLED);
+  //
+  // D16 (slides-remount stale-signal): seed this ref from the CURRENT addSignal
+  // at mount, NOT from NO_SIGNAL_HANDLED. The slides<->edit toggle conditionally
+  // renders the form, so each return to edit REMOUNTS this section while the
+  // parent (LeadForm) persists across the route's searchParams change — carrying
+  // a stale non-zero addSignal. Seeding from 0 made the mount effect read that
+  // stale counter as "advanced" and spuriously re-open the create dialog (two
+  // stacked Add dialogs after Add Risk -> slides -> Add Decision -> slides).
+  // Capturing the mount-time value short-circuits the effect on remount, while a
+  // genuine later "+ Add" increment still advances past it and opens.
+  const lastHandledSignal = useRef(addSignal);
 
   // Identity-stable across readOnly changes (guards through readOnlyRef, not
   // the readOnly prop) so the risks chip-raise effect can list it in deps

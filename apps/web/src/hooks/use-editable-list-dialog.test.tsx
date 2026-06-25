@@ -38,10 +38,13 @@ describe("useEditableListDialog", () => {
     const { result, rerender } = renderHook(
       ({ readOnly, addSignal }) =>
         useEditableListDialog<TestEntity>({ readOnly, addSignal }),
-      { initialProps: { readOnly: false, addSignal: 1 } },
+      { initialProps: { readOnly: false, addSignal: 0 } },
     );
 
-    // Signal fired once → create open.
+    // Counter starts idle (parent's initial state); the "+ Add" click advances
+    // it 0→1 → create open. (Mounting straight at 1 is a remount, never a first
+    // mount — see the D16 case.)
+    rerender({ readOnly: false, addSignal: 1 });
     expect(result.current.dialogState.open).toBe(true);
 
     // User cancels; signal counter is not reset by the (external) owner.
@@ -60,6 +63,43 @@ describe("useEditableListDialog", () => {
     expect(result.current.dialogState.open).toBe(true);
   });
 
+  it("does NOT reopen on remount while the parent signal stays stale (D16 slides toggle)", () => {
+    // The slides<->edit toggle conditionally renders the form, so the section
+    // UNMOUNTS in slides mode and REMOUNTS on return — while the parent
+    // (LeadForm) persists the addSignal counter across the route's searchParams
+    // change. A stale non-zero signal must not auto-open the create dialog on
+    // remount (the "two stacked Add dialogs" bug).
+
+    // First edit-mode mount: the counter starts idle at 0 (LeadForm's initial
+    // state). The "+ Add" click advances it 0→1 → create open, then the user
+    // cancels (the parent does NOT reset the counter).
+    const first = renderHook(
+      ({ addSignal }) =>
+        useEditableListDialog<TestEntity>({ readOnly: false, addSignal }),
+      { initialProps: { addSignal: 0 } },
+    );
+    first.rerender({ addSignal: 1 });
+    expect(first.result.current.dialogState.open).toBe(true);
+    act(() => first.result.current.close());
+    expect(first.result.current.dialogState.open).toBe(false);
+
+    // Enter slides mode → the section unmounts.
+    first.unmount();
+
+    // Return to edit → the section REMOUNTS carrying the SAME stale signal.
+    const second = renderHook(
+      ({ addSignal }) =>
+        useEditableListDialog<TestEntity>({ readOnly: false, addSignal }),
+      { initialProps: { addSignal: 1 } },
+    );
+    // Must stay closed — the mount-time seed short-circuits the stale signal.
+    expect(second.result.current.dialogState.open).toBe(false);
+
+    // A genuine new "+ Add" increment after remount still opens.
+    second.rerender({ addSignal: 2 });
+    expect(second.result.current.dialogState.open).toBe(true);
+  });
+
   it("does NOT reopen when seedProductId changes while the signal is stale (D4)", () => {
     const { result, rerender } = renderHook(
       ({ seedProductId, addSignal }) =>
@@ -68,9 +108,10 @@ describe("useEditableListDialog", () => {
           addSignal,
           seedProductId,
         }),
-      { initialProps: { seedProductId: "crm", addSignal: 1 } },
+      { initialProps: { seedProductId: "crm", addSignal: 0 } },
     );
 
+    rerender({ seedProductId: "crm", addSignal: 1 });
     expect(result.current.dialogState.open).toBe(true);
     act(() => result.current.close());
     expect(result.current.dialogState.open).toBe(false);
