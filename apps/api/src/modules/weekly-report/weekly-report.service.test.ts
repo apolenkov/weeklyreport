@@ -100,10 +100,12 @@ function createSpyRepository(
   reports: Map<string, WeeklyReportReadModel>,
   activeId: string | null = null,
   currentEditableId: string | null = null,
+  latestPublishedId: string | null = null,
 ): WeeklyReportRepository & {
   getWeeklyReport: ReturnType<typeof vi.fn>;
   getActiveReportId: ReturnType<typeof vi.fn>;
   getCurrentEditableId: ReturnType<typeof vi.fn>;
+  getLatestPublishedId: ReturnType<typeof vi.fn>;
 } {
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract (no awaitable work in the stub)
@@ -115,6 +117,8 @@ function createSpyRepository(
     getActiveReportId: vi.fn(async () => activeId),
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract (no awaitable work in the stub)
     getCurrentEditableId: vi.fn(async () => currentEditableId),
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract (no awaitable work in the stub)
+    getLatestPublishedId: vi.fn(async () => latestPublishedId),
   };
 }
 
@@ -358,6 +362,62 @@ describe("WeeklyReportService — viewer-live-status published-or-current gate (
     expect(result.leadSections).toHaveLength(0);
   });
 
+  // viewer + NO reportId: the default MUST resolve via the SAME source as the
+  // gate (getCurrentEditableId), never getActiveReportId — otherwise a tie or an
+  // archived-open period would make the resolved default a period the gate then
+  // 404s. This is the teeth: getActiveReportId returns a DIFFERENT (stale) id;
+  // if the code used it, the gate would reject and the call would 404.
+  it("viewer no-reportId resolves via the current editable id, not getActiveReportId", async () => {
+    const current = makeWeeklyReport({ reportId, periodStatus: "open" });
+    const stale = makeWeeklyReport({
+      reportId: activeReportId,
+      periodStatus: "open",
+    });
+    const reports = new Map([
+      [reportId, current],
+      [activeReportId, stale],
+    ]);
+    const service = new WeeklyReportService(
+      // getActiveReportId → activeReportId (stale); getCurrentEditableId → reportId
+      createSpyRepository(reports, activeReportId, reportId),
+    );
+
+    const result = await service.getWeeklyReport(undefined, "viewer");
+
+    expect(result.status).toBe("active");
+    if (result.status !== "active") throw new Error("expected active");
+    expect(result.reportId).toBe(reportId);
+  });
+
+  // viewer + NO reportId + no current editable period → falls back to the newest
+  // published (a gate-accepted period), NOT getActiveReportId's editable query.
+  it("viewer no-reportId falls back to the latest published when no current editable", async () => {
+    const published = makeWeeklyReport({ periodStatus: "published" });
+    const reports = new Map([[reportId, published]]);
+    const service = new WeeklyReportService(
+      // no current editable; latest published → reportId
+      createSpyRepository(reports, null, null, reportId),
+    );
+
+    const result = await service.getWeeklyReport(undefined, "viewer");
+
+    expect(result.status).toBe("active");
+    if (result.status !== "active") throw new Error("expected active");
+    expect(result.periodStatus).toBe("published");
+    expect(result.reportId).toBe(reportId);
+  });
+
+  // viewer + NO reportId + nothing to show → no-period sentinel (never a 404).
+  it("viewer no-reportId with neither current nor published returns no-period", async () => {
+    const service = new WeeklyReportService(
+      createSpyRepository(new Map(), null, null, null),
+    );
+
+    const result = await service.getWeeklyReport(undefined, "viewer");
+
+    expect(result.status).toBe("no-period");
+  });
+
   it("head role reads draft (open) period without filter", async () => {
     const draft = makeWeeklyReport({ periodStatus: "open" });
     const reports = new Map([[reportId, draft]]);
@@ -424,6 +484,10 @@ function createCrossGroupRepository(
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
     async getCurrentEditableId() {
+      return null;
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
+    async getLatestPublishedId() {
       return null;
     },
   };

@@ -73,6 +73,14 @@ export interface WeeklyReportRepository {
    * cannot leak a published or archived-open period through it.
    */
   getCurrentEditableId(): Promise<string | null>;
+  /**
+   * viewer-live-status: the newest `published` report id (deterministic
+   * `periodStart desc`, then `id desc`), or null. Used to resolve the viewer's
+   * default report (no `reportId`) consistently with the published-or-current
+   * gate — the editable part comes from `getCurrentEditableId`, the fallback
+   * from here, so the resolved default is always a period the gate accepts.
+   */
+  getLatestPublishedId(): Promise<string | null>;
 }
 
 export class WeeklyReportService {
@@ -98,6 +106,27 @@ export class WeeklyReportService {
    */
   getCurrentEditableId(): Promise<string | null> {
     return this.repository.getCurrentEditableId();
+  }
+
+  /**
+   * viewer-live-status: resolve the default report when the caller passes no
+   * `reportId`. For a viewer it MUST be a period the published-or-current gate
+   * accepts — the current editable period (from the same source the gate uses)
+   * else the newest published — otherwise the resolved default could be a period
+   * the gate then rejects (a self-inflicted 404). `getActiveReportId` is NOT
+   * used for viewers: its editable query has no `archived` filter and a
+   * published fallback, so it can diverge from `getCurrentEditableId` and pick an
+   * archived-open or different tied period the gate rejects. Non-viewer roles
+   * keep `getActiveReportId` (they can read any period, so no gate divergence).
+   */
+  private async resolveDefaultReportId(role?: Role): Promise<string | null> {
+    if (role === "viewer") {
+      return (
+        (await this.repository.getCurrentEditableId()) ??
+        (await this.repository.getLatestPublishedId())
+      );
+    }
+    return this.repository.getActiveReportId();
   }
 
   /**
@@ -131,7 +160,7 @@ export class WeeklyReportService {
     role?: Role,
     session?: WeeklyReportScopeSession,
   ): Promise<WeeklyReportServiceResult> {
-    const resolvedId = reportId ?? (await this.repository.getActiveReportId());
+    const resolvedId = reportId ?? (await this.resolveDefaultReportId(role));
 
     if (!resolvedId) {
       // R3a: no active period — return sentinel instead of throwing NOT_FOUND.
