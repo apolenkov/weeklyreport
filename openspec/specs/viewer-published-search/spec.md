@@ -11,21 +11,23 @@ inside the viewer surface, never to the lead or admin surfaces.
 ### Requirement: Viewer search returns only published content the viewer can see
 
 The system SHALL let a viewer search reports, items, risks, and decisions,
-restricting results to **published** reports (`Report.periodStatus = 'published'`
-— the column the viewer's report read gate uses) and to content the viewer can see
-through the **same section author-group access the viewer's report content uses**
-(the `author.reportingGroupId` join, which already equals the report read's section
-visibility). The report's GroupProduct join governs only the product-portfolio
-axis, and product hits are excluded for the viewer, so it does not apply to
-searchable content. A result MUST never reveal a section the viewer's own report
-would hide. Unpublished or reopened content MUST never appear, and a viewer with no
-group access MUST get an empty result set. Product (`project`) hits MUST be
-excluded for the viewer in v1, because a product has no publish state and its
-result destination is the admin surface the viewer cannot reach.
+restricting results to **published** reports (`Report.periodStatus = 'published'`)
+and to content the viewer can see through the **section author-group access**
+(the `author.reportingGroupId` join). Unpublished or reopened content MUST never
+appear in search, and a viewer with no group access MUST get an empty result set.
+Product (`project`) hits MUST be excluded for the viewer in v1, because a product
+has no publish state and its result destination is the admin surface the viewer
+cannot reach.
+
+Search visibility is **narrower than the viewer's report read**, by design: under
+`viewer-live-status` the viewer READS the current period live (drafts included),
+but search stays **published-scoped**. A live submitted or draft record is therefore
+**readable before it is searchable** — an explicit, accepted v1 divergence; making
+search live is deferred. Search results MUST still route inside the viewer surface
+(`/reports/[reportId]`), never to the lead or admin surfaces.
 
 This runs under a dedicated `published` scope; it does not widen the head/admin
-`all` scope, and it replaces the prior behavior where a viewer had no search at all
-(`all` forbidden, `mine` empty).
+`all` scope.
 
 #### Scenario: Viewer searches within accessible, published content
 
@@ -35,14 +37,22 @@ This runs under a dedicated `published` scope; it does not widen the head/admin
 - **THEN** the matching published results are returned
 - **AND** the search input is rendered on the viewer's `/reports` surface
 
-#### Scenario: Result visibility matches the viewer's report
+#### Scenario: A live record is readable but not yet searchable
+
+- **GIVEN** a submitted or draft record in the current (non-published) period that
+  the viewer can READ via the Status entry
+- **WHEN** the viewer searches for a term matching it
+- **THEN** the record is NOT returned by search (search is published-scoped)
+- **AND** this read/search divergence is the accepted v1 behavior
+
+#### Scenario: Published content authored outside the viewer's groups is excluded
 
 - **GIVEN** a published item, risk, or decision whose section author is outside the
-  viewer's group(s) — hidden from the viewer's report read
+  viewer's granted group(s)
 - **WHEN** the viewer searches for a term matching it
 - **THEN** the result is NOT returned
-- **AND** search content visibility equals the viewer's report read visibility
-  (the section author-group basis)
+- **AND** search content stays bounded by the section author-group access (even
+  though the viewer's live READ may be broader)
 
 #### Scenario: Unpublished content is excluded
 
@@ -73,9 +83,11 @@ This runs under a dedicated `published` scope; it does not widen the head/admin
 - **AND** it never targets the lead (`/lead/report/...`) or admin (`/admin...`)
   surfaces
 
-#### Scenario: Cross-group viewer search reads are audited
+#### Scenario: Viewer search produces no cross-group access to audit
 
-- **WHEN** a viewer search returns a hit from a group other than the viewer's home
-  context
-- **THEN** the read is recorded with `scopeAccessed`, consistent with the report
-  read path
+- **GIVEN** viewer search filters by the section author-group and excludes
+  `project` hits
+- **WHEN** a viewer runs any search
+- **THEN** it cannot surface a cross-group product read, so no `scopeAccessed`
+  audit event is produced
+- **AND** this is a no-op by construction, not an audit gap
