@@ -109,19 +109,38 @@ function getRoleLabel(role: Role): string {
   }
 }
 
-function isPublishedReportPath(pathname: string): boolean {
-  return (
-    pathname === "/reports/history" ||
-    /^\/reports\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
-      pathname,
-    )
+function isReportDetailPath(pathname: string): boolean {
+  return /^\/reports\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+    pathname,
   );
 }
 
-function isActiveLink(pathname: string, href: string): boolean {
+function isPublishedReportPath(pathname: string): boolean {
+  return pathname === "/reports/history" || isReportDetailPath(pathname);
+}
+
+function isActiveLink(
+  pathname: string,
+  href: string,
+  role: Role | null,
+): boolean {
   if (href === "/admin") return pathname.startsWith("/admin");
   if (href === "/head/report") return pathname.startsWith("/head/report");
   if (href === "/head/dashboard") return pathname === "/head/dashboard";
+  // viewer-live-status: the viewer's Status entry (`/reports/latest`) resolves
+  // to a `/reports/[id]` detail page, so for a viewer a report detail path must
+  // light **Status**, not History — clicking Status and seeing History
+  // highlighted is the reported bug. History stays lit only on the bare
+  // `/reports` list. Scoped to the viewer so the head/lead History-active
+  // contract (lead-history-summary, lit on published-report paths) is untouched.
+  if (role === "viewer") {
+    if (href === "/reports/latest") {
+      return pathname === "/reports/latest" || isReportDetailPath(pathname);
+    }
+    if (href === "/reports") {
+      return pathname === "/reports";
+    }
+  }
   if (href === "/reports") {
     // History active state is pathname-based only — independent of the archive
     // toggle (lead-live-walk-2026-06-14 §4.3) and of any stray `?tab` param.
@@ -317,7 +336,7 @@ export function NavBar() {
           className="hidden sm:flex sm:items-center sm:gap-0.5"
         >
           {visibleLinks.map((link) => {
-            const active = isActiveLink(pathname, link.href);
+            const active = isActiveLink(pathname, link.href, role);
             return (
               <a
                 key={link.href}
@@ -459,7 +478,7 @@ function MobileNav({
           </SheetHeader>
           <nav aria-label="Mobile navigation" className="flex flex-col p-2">
             {links.map((link) => {
-              const active = isActiveLink(pathname, link.href);
+              const active = isActiveLink(pathname, link.href, role);
               return (
                 <a
                   key={link.href}

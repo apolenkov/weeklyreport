@@ -292,6 +292,7 @@ describe("Landing page — last-role hint (UFB-071)", () => {
     const href = viewerOption.getAttribute("href") ?? "";
     expect(href).toContain("role=viewer");
     expect(href).toContain("email=viewer%40customreport.local");
-    expect(href).toContain("redirect=%2Freports%3Ftab%3Dpublished");
+    // viewer-live-status: the viewer lands on the Status entry, not History.
+    expect(href).toContain("redirect=%2Freports%2Flatest");
   });
 });

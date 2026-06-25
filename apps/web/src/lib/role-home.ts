@@ -10,10 +10,13 @@ import type { Role } from "@customreport/shared";
  *
  * Mapping rationale:
  *
- *   - admin    → `/admin`                  admin panel is admin-only post UFB-038
- *   - head     → `/head/dashboard`         submission dashboard is the head's main surface
- *   - lead     → `/lead/report`            active section editor for the open period
- *   - viewer   → `/reports?tab=published`  archive history, no edit affordances
+ *   - admin    → `/admin`              admin panel is admin-only post UFB-038
+ *   - head     → `/head/dashboard`     submission dashboard is the head's main surface
+ *   - lead     → `/lead/report`        active section editor for the open period
+ *   - viewer   → `/reports/latest`     the Status entry (current period live);
+ *                                      viewer-live-status made the viewer a status
+ *                                      observer, so the Status target — not the
+ *                                      History list — is the viewer's landing page
  *
  * Anonymous (no role) callers should fall back to `/` and let the proxy /
  * landing redirect logic decide.
@@ -27,6 +30,6 @@ export function roleHomePath(role: Role): string {
     case "lead":
       return "/lead/report";
     case "viewer":
-      return "/reports?tab=published";
+      return "/reports/latest";
   }
 }
