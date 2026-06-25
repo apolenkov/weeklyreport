@@ -47,11 +47,15 @@
 - **Фикс:** добавлено поле `name` (полное имя) на каждого лида; `owner` сидируется
   из него (основные секции + W6 cross-author секции Boris/Victor/Galina). `label`
   остался для коротких чипов в демо-текстах.
-- **⚠ Требуется reseed**, чтобы увидеть вживую — правка только в коде seed,
-  существующая БД ещё несёт старые owner-строки. НЕ делал reseed автономно:
-  приложение было открыто на текущей БД. Команда:
-  `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=1 pnpm db:fresh:manual-uat`
-  (или штатный reset dev-БД).
+- **⚠ Требуется reseed**, чтобы увидеть вживую — правка только в коде seed
+  (`prisma/seed-simple.ts`), существующая БД ещё несёт старые owner-строки. НЕ
+  делал reseed автономно: приложение было открыто на текущей БД. Команда —
+  именно та, что прогоняет `seed-simple.ts`:
+  `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=1 pnpm db:fresh:simple`
+  (`db:reset:hard` + `tsx prisma/seed-simple.ts`). НЕ `db:fresh:manual-uat` —
+  он запускает `wipe-manual-uat.ts` (только очистка, без сидирования
+  seed-simple), и фикс не применится. Без hard-reset можно `pnpm db:seed:middle`
+  (тот же `seed-simple.ts`), если decisions нужно пересоздать поверх.
 - **Проверка после reseed:** залогиниться лидом (Иванов Василий Петрович),
   открыть активный отчёт → у своих decisions должны появиться edit/delete.
 
