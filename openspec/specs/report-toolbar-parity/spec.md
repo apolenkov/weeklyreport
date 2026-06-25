@@ -138,8 +138,10 @@ modes MUST NOT add, remove, or reposition any of the viewer's controls. The
 report in slides mode for the viewer, not silently fall back to form mode.
 
 This brings the viewer toolbar to "head minus mutation" so a viewer can present the
-report, while the read-only and published-only guarantees stay intact. It does not
-change the lead or head toolbars.
+report, while the read-only guarantee stays intact. The **published-only guarantee
+is removed** by `viewer-live-status` (the viewer now reads the current period live);
+the toolbar's control set and read-only stance are unchanged. It does not change the
+lead or head toolbars.
 
 #### Scenario: Viewer sees the presenting controls
 
