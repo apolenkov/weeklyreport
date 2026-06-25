@@ -265,10 +265,13 @@ describe("PublishedReportPage — single title + header actions (task 2.0)", () 
     const contextControls = screen.getByTestId(
       "weekly-report-context-controls",
     );
-    const back = within(contextControls).getByRole("link", {
-      name: /back to archive/i,
-    });
-    expect(back).toHaveAttribute("href", "/reports?tab=published");
+    // viewer-live-status (task 5.1): Back-to-Archive is removed; the Agent-review
+    // coming-soon control stays (deferred-feature-pattern contract).
+    expect(
+      within(contextControls).queryByRole("link", {
+        name: /back to archive/i,
+      }),
+    ).not.toBeInTheDocument();
     expect(
       within(contextControls).getByTestId("agent-review-coming-soon"),
     ).toBeInTheDocument();

@@ -99,9 +99,11 @@ function makeRepoResult(
 function createSpyRepository(
   reports: Map<string, WeeklyReportReadModel>,
   activeId: string | null = null,
+  currentEditableId: string | null = null,
 ): WeeklyReportRepository & {
   getWeeklyReport: ReturnType<typeof vi.fn>;
   getActiveReportId: ReturnType<typeof vi.fn>;
+  getCurrentEditableId: ReturnType<typeof vi.fn>;
 } {
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract (no awaitable work in the stub)
@@ -111,6 +113,8 @@ function createSpyRepository(
     }),
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract (no awaitable work in the stub)
     getActiveReportId: vi.fn(async () => activeId),
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract (no awaitable work in the stub)
+    getCurrentEditableId: vi.fn(async () => currentEditableId),
   };
 }
 
@@ -202,21 +206,106 @@ describe("WeeklyReportService — unit tests", () => {
 /*  AUTH-04 viewer scoping (Phase 28-01)                                */
 /* ------------------------------------------------------------------ */
 
-describe("WeeklyReportService — AUTH-04 viewer scoping", () => {
-  it("viewer cannot read a draft (open) period", async () => {
-    const draft = makeWeeklyReport({ periodStatus: "open" });
-    const reports = new Map([[reportId, draft]]);
-    const service = new WeeklyReportService(createSpyRepository(reports));
+describe("WeeklyReportService — viewer-live-status published-or-current gate (task 2.3)", () => {
+  // viewer + current open draft → visible
+  it("viewer reads the CURRENT open period (drafts included)", async () => {
+    const open = makeWeeklyReport({ periodStatus: "open" });
+    const reports = new Map([[reportId, open]]);
+    // currentEditableId === the fetched id → the gate admits it
+    const service = new WeeklyReportService(
+      createSpyRepository(reports, null, reportId),
+    );
+
+    const result = await service.getWeeklyReport(reportId, "viewer");
+
+    expect(result.status).toBe("active");
+    if (result.status !== "active") throw new Error("expected active");
+    expect(result.periodStatus).toBe("open");
+    expect(result.reportId).toBe(reportId);
+  });
+
+  // viewer + submitted section in the current open period → visible
+  it("viewer reads a submitted section in the current open period", async () => {
+    const open = makeWeeklyReport({ periodStatus: "open" });
+    // makeWeeklyReport's lead section defaults to status "submitted"
+    expect(open.leadSections[0]?.status).toBe("submitted");
+    const reports = new Map([[reportId, open]]);
+    const service = new WeeklyReportService(
+      createSpyRepository(reports, null, reportId),
+    );
+
+    const result = await service.getWeeklyReport(reportId, "viewer");
+
+    expect(result.status).toBe("active");
+  });
+
+  // viewer + current reopened → live content (Decision 4: no snapshot-sticky)
+  it("viewer reads the CURRENT reopened period live", async () => {
+    const reopened = makeWeeklyReport({ periodStatus: "reopened" });
+    const reports = new Map([[reportId, reopened]]);
+    const service = new WeeklyReportService(
+      createSpyRepository(reports, null, reportId),
+    );
+
+    const result = await service.getWeeklyReport(reportId, "viewer");
+
+    expect(result.status).toBe("active");
+    if (result.status !== "active") throw new Error("expected active");
+    expect(result.periodStatus).toBe("reopened");
+  });
+
+  // viewer + explicit NON-current open id → rejected. This test is also the
+  // mutation sentinel for the gate's id check: drop `resolvedId !==
+  // currentEditableId` and a non-current/future/stale period would leak.
+  it("viewer is REJECTED on a non-current open period (id check teeth)", async () => {
+    const open = makeWeeklyReport({ periodStatus: "open" });
+    const reports = new Map([[reportId, open]]);
+    // the current editable period is a DIFFERENT id
+    const service = new WeeklyReportService(
+      createSpyRepository(reports, null, activeReportId),
+    );
 
     await expect(
       service.getWeeklyReport(reportId, "viewer"),
     ).rejects.toBeInstanceOf(WeeklyReportDomainError);
   });
 
-  it("viewer can read a published period", async () => {
+  // viewer + archived-open id → rejected (the helper excludes archived, so it
+  // is never the current editable id → null here)
+  it("viewer is REJECTED on an archived-open period", async () => {
+    const archivedOpen = makeWeeklyReport({ periodStatus: "open" });
+    const reports = new Map([[reportId, archivedOpen]]);
+    const service = new WeeklyReportService(
+      createSpyRepository(reports, null, null),
+    );
+
+    await expect(
+      service.getWeeklyReport(reportId, "viewer"),
+    ).rejects.toBeInstanceOf(WeeklyReportDomainError);
+  });
+
+  // viewer + scheduled-future open id → rejected (a future period is excluded
+  // from currentEditableId by the periodStart<=now filter → not current)
+  it("viewer is REJECTED on a scheduled-future open period", async () => {
+    const future = makeWeeklyReport({ periodStatus: "open" });
+    const reports = new Map([[reportId, future]]);
+    const service = new WeeklyReportService(
+      createSpyRepository(reports, null, null),
+    );
+
+    await expect(
+      service.getWeeklyReport(reportId, "viewer"),
+    ).rejects.toBeInstanceOf(WeeklyReportDomainError);
+  });
+
+  // viewer + past published id → snapshot (published is always readable)
+  it("viewer reads a past published period", async () => {
     const published = makeWeeklyReport({ periodStatus: "published" });
     const reports = new Map([[reportId, published]]);
-    const service = new WeeklyReportService(createSpyRepository(reports));
+    // no current editable period at all
+    const service = new WeeklyReportService(
+      createSpyRepository(reports, null, null),
+    );
 
     const result = await service.getWeeklyReport(reportId, "viewer");
 
@@ -224,6 +313,49 @@ describe("WeeklyReportService — AUTH-04 viewer scoping", () => {
     if (result.status !== "active") throw new Error("expected active");
     expect(result.periodStatus).toBe("published");
     expect(result.reportId).toBe(reportId);
+  });
+
+  // viewer + open→published race → rejected on the stale-open fetch, then the
+  // published snapshot on re-fetch (Decision 1 fail-closed ordering)
+  it("viewer race open→published is rejected, then reads the snapshot on re-fetch", async () => {
+    const open = makeWeeklyReport({ periodStatus: "open" });
+    const published = makeWeeklyReport({ periodStatus: "published" });
+    // the period was published mid-request, so there is no current editable id
+    const repo = createSpyRepository(new Map(), null, null);
+    repo.getWeeklyReport
+      .mockResolvedValueOnce(makeRepoResult(open)) // stale-open read
+      .mockResolvedValueOnce(makeRepoResult(published)); // after the flip
+    const service = new WeeklyReportService(repo);
+
+    await expect(
+      service.getWeeklyReport(reportId, "viewer"),
+    ).rejects.toBeInstanceOf(WeeklyReportDomainError);
+
+    const recovered = await service.getWeeklyReport(reportId, "viewer");
+    expect(recovered.status).toBe("active");
+    if (recovered.status !== "active") throw new Error("expected active");
+    expect(recovered.periodStatus).toBe("published");
+  });
+
+  // viewer + no group access → empty content (zero-row scope), no leak. The gate
+  // admits the period; the empty section scope yields no content.
+  it("viewer with no access reads an empty current period (no leak)", async () => {
+    const emptyOpen = makeWeeklyReport({
+      periodStatus: "open",
+      leadSections: [],
+      portfolioOverview: [],
+      escalations: [],
+    });
+    const reports = new Map([[reportId, emptyOpen]]);
+    const service = new WeeklyReportService(
+      createSpyRepository(reports, null, reportId),
+    );
+
+    const result = await service.getWeeklyReport(reportId, "viewer");
+
+    expect(result.status).toBe("active");
+    if (result.status !== "active") throw new Error("expected active");
+    expect(result.leadSections).toHaveLength(0);
   });
 
   it("head role reads draft (open) period without filter", async () => {
@@ -288,6 +420,10 @@ function createCrossGroupRepository(
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
     async getActiveReportId() {
+      return null;
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async WeeklyReportRepository contract
+    async getCurrentEditableId() {
       return null;
     },
   };

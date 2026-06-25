@@ -263,15 +263,16 @@ export const compiledHistoryResultSchema = z.object({
 });
 
 /**
- * viewer-report-surface-parity (task 2.1): result of the latest-published
- * resolver behind `/reports/latest`. `reportId` is the most recent report the
- * caller can OPEN (`periodStatus = 'published'`) that has at least one
- * group-visible section, or `null` when none qualifies (empty state).
+ * viewer-live-status (task 1.1): result of the Status-target resolver behind
+ * `/reports/latest`. `reportId` is the **Status target** — the current editable
+ * period (when it has a viewer-visible section), else the newest viewer-visible
+ * `published` report, else `null` (empty state). Replaces
+ * `latestPublishedReportSchema`.
  */
-export const latestPublishedReportSchema = z.object({
+export const latestForViewerReportSchema = z.object({
   reportId: z.uuid().nullable(),
 });
-export type LatestPublishedReport = z.infer<typeof latestPublishedReportSchema>;
+export type LatestForViewerReport = z.infer<typeof latestForViewerReportSchema>;
 
 export const adminSnapshotSchema = z.object({
   users: z.array(adminUserSchema),

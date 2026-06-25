@@ -64,6 +64,15 @@ export interface WeeklyReportRepository {
     session?: WeeklyReportScopeSession,
   ): Promise<WeeklyReportRepositoryResult | null>;
   getActiveReportId(): Promise<string | null>;
+  /**
+   * viewer-live-status (Decision 0): the single newest **editable** period —
+   * `open`/`reopened`, non-archived, `periodStart <= now`, NO published
+   * fallback. This is the one id both the viewer read gate and the
+   * `latestForViewer` resolver hinge on. Distinct from `getActiveReportId`
+   * (which carries a published fallback and no `archived` filter), so the gate
+   * cannot leak a published or archived-open period through it.
+   */
+  getCurrentEditableId(): Promise<string | null>;
 }
 
 export class WeeklyReportService {
@@ -82,8 +91,19 @@ export class WeeklyReportService {
   constructor(private readonly repository: WeeklyReportRepository) {}
 
   /**
-   * AUTH-04 (Phase 28-01): viewers see only PUBLISHED report periods. Non-viewer
-   * roles (head/lead/admin) keep their existing visibility (open + published).
+   * viewer-live-status (Decision 0): passthrough to the repository's single
+   * source of truth for the current editable period id. The router resolves
+   * `latestForViewer` through this (it holds the service, not the repository),
+   * so the gate and the entry resolver share one query and cannot diverge.
+   */
+  getCurrentEditableId(): Promise<string | null> {
+    return this.repository.getCurrentEditableId();
+  }
+
+  /**
+   * viewer-live-status: viewers read the Status target — any `published` report
+   * OR the current editable period (drafts included), gated published-or-current.
+   * Non-viewer roles (head/lead/admin) keep their existing visibility.
    *
    * R3a (UFB-HEAD-DASH): when no active Period exists the service returns
    * `{ status: 'no-period', report: null }` instead of throwing. This
@@ -101,8 +121,8 @@ export class WeeklyReportService {
    *   - no active period → { status: 'no-period', report: null } (never throws)
    *   - reportId given but not found → throws WeeklyReportDomainError (explicit
    *     lookup; the caller asked for a specific report that doesn't exist)
-   *   - role==='viewer' AND `report.periodStatus !== 'published'` → throw
-   *     WeeklyReportDomainError (viewer sees "no published report yet")
+   *   - role==='viewer' AND not published AND not the current editable period →
+   *     throw WeeklyReportDomainError (published-or-current gate, fail-closed)
    *   - role===undefined → no scoping (legacy contract for existing callers)
    *   - role==='lead' | 'head' | 'admin' → existing behaviour preserved
    */
@@ -127,8 +147,20 @@ export class WeeklyReportService {
 
     const { readModel, crossGroup } = result;
 
+    // viewer-live-status (Decision 1): published-or-current read gate. A viewer
+    // may read a report iff its period is `published` OR it is the current
+    // editable period. `currentEditableId` is resolved here — AFTER the report
+    // fetch — and is editable-only (no published fallback), so an
+    // `open → published` race rejects (the fetched-open id no longer equals the
+    // now-recomputed current id) and a mid-request new period fails closed. Every
+    // race resolves toward not-found, never a stale live model or a leak. The
+    // route recovers a race not-found via a one-shot re-resolution through
+    // `/reports/latest` (see viewer-report-shell).
     if (role === "viewer" && readModel.periodStatus !== "published") {
-      throw new WeeklyReportDomainError(`Report ${resolvedId} not found.`);
+      const currentEditableId = await this.repository.getCurrentEditableId();
+      if (resolvedId !== currentEditableId) {
+        throw new WeeklyReportDomainError(`Report ${resolvedId} not found.`);
+      }
     }
 
     this.logger.info("weekly report fetched", { reportId: resolvedId, role });

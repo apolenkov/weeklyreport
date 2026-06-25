@@ -87,6 +87,50 @@ describe("WeeklyReportPrismaRepository.getActiveReportId", () => {
   });
 });
 
+// viewer-live-status (task 0.2, fast feedback): the where-shape of the
+// current-editable query — the always-run unit counterpart to the real-Prisma
+// integration test. Pins archived:false + the editable-only filter + the
+// absence of any published fallback so the gate cannot be silently widened.
+describe("WeeklyReportPrismaRepository.getCurrentEditableId", () => {
+  it("queries editable-only, non-archived, already-started periods, newest-first", async () => {
+    const findFirst = vi.fn().mockResolvedValue({ id: "current-editable-id" });
+    const repository = createRepository(findFirst);
+
+    await expect(repository.getCurrentEditableId()).resolves.toBe(
+      "current-editable-id",
+    );
+
+    // Single query — NO published fallback (unlike getActiveReportId).
+    expect(findFirst).toHaveBeenCalledOnce();
+    const callArgs = findFirst.mock.calls[0]?.[0] as {
+      where: {
+        periodStatus: { in: string[] };
+        periodStart: { lte: Date };
+        archived: boolean;
+      };
+      orderBy: { periodStart: string };
+      select: { id: boolean };
+    };
+    expect(callArgs.where.periodStatus).toEqual({ in: ["open", "reopened"] });
+    expect(callArgs.where.periodStart.lte).toBeInstanceOf(Date);
+    // The archived:false guard (mutation sentinel: dropping it would let an
+    // archived-open row be mistaken for the current period).
+    expect(callArgs.where.archived).toBe(false);
+    expect(callArgs.orderBy).toEqual({ periodStart: "desc" });
+    expect(callArgs.select).toEqual({ id: true });
+  });
+
+  it("returns null with NO published fallback when no editable period exists", async () => {
+    const findFirst = vi.fn().mockResolvedValue(null);
+    const repository = createRepository(findFirst);
+
+    await expect(repository.getCurrentEditableId()).resolves.toBeNull();
+
+    // Exactly one call: a null result must NOT fall through to a published query.
+    expect(findFirst).toHaveBeenCalledOnce();
+  });
+});
+
 // Live-path parity: the live escalations are built by mapping the Prisma row
 // via mapPrismaToReportSection and then running the SAME shared builder the
 // published-snapshot path uses. This test drives that exact pipeline so a

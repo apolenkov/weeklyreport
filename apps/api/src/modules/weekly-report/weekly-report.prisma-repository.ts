@@ -58,6 +58,33 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     return publishedReport?.id ?? null;
   }
 
+  /**
+   * viewer-live-status (Decision 0): the single source of truth for the
+   * **current editable period** — the newest non-archived `open`/`reopened`
+   * report that has actually started (`periodStart <= now`). Deliberately:
+   *   - NO published fallback (unlike `getActiveReportId`): the viewer gate
+   *     already admits any `published` report via its first clause, so a
+   *     fallback here would let the gate's id-equality match a published id and
+   *     defeat the `open → published` race rejection.
+   *   - `archived: false`: the admin archive path does not force `periodStatus`,
+   *     so an archived row can still read `open`; a `Current period` is
+   *     non-archived (CONTEXT.md), and excluding archived rows keeps an
+   *     archived-open period from being mistaken for the current one.
+   */
+  async getCurrentEditableId(): Promise<string | null> {
+    const editableReport = await this.prisma.report.findFirst({
+      where: {
+        periodStatus: { in: ["open", "reopened"] },
+        periodStart: { lte: new Date() },
+        archived: false,
+      },
+      orderBy: { periodStart: "desc" },
+      select: { id: true },
+    });
+
+    return editableReport?.id ?? null;
+  }
+
   async getWeeklyReport(
     reportId: string,
     session?: WeeklyReportScopeSession,

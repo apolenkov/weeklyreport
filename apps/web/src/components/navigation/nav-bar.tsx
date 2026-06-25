@@ -61,13 +61,14 @@ const NAV_LINKS: readonly NavLink[] = [
     title: "Past weeks and closed reports",
     roles: ["head"],
   },
-  // viewer-report-surface-parity (task 3.2): a viewer entry point straight to
-  // the latest published report they can open. The static `/reports/latest`
-  // route resolves the dynamic target server-side and client-redirects.
+  // viewer-live-status (task 4.1): the viewer is a status observer of the
+  // current period. The entry resolves the Status target (the current editable
+  // period, else the latest visible published report) via the static
+  // `/reports/latest` route, which redirects to the resolved report.
   {
     href: "/reports/latest",
-    label: "Latest",
-    title: "Open the latest published report",
+    label: "Status",
+    title: "Open the current status report",
     roles: ["viewer"],
   },
   {
