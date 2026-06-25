@@ -44,7 +44,12 @@ published reports.
   `open → published` race rejects rather than serving a stale live model
   (fail-closed). Because "current" is the newest editable period, two concurrent
   `open` periods resolve deterministically — so this change does NOT depend on the
-  deferred period-creation-lock.
+  deferred period-creation-lock. Determinism requires a TOTAL order: two
+  concurrent editable periods can share a `periodStart`, so `currentEditableId`
+  orders by `periodStart desc` **then `id desc`** (a stable tiebreak over the
+  unique key). Without it a tie would let the gate and the entry resolver — which
+  call the helper separately — pick different periods, 404-ing the viewer's own
+  Status entry.
 - On the period it is allowed to read, the viewer sees the **same report content
   the head sees on the current period**, including unsubmitted DRAFT sections.
   Visibility stays scoped to the viewer's `ViewerGroupAccess` groups (unchanged

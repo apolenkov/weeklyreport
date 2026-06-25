@@ -96,4 +96,21 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId (integration)", () =
 
     await expect(repository.getCurrentEditableId()).resolves.toBeNull();
   });
+
+  it("breaks a same-periodStart tie deterministically (concurrent editable periods)", async () => {
+    // Two concurrent editable periods sharing a periodStart is a SUPPORTED state
+    // (no period-creation lock). Without a total-order tiebreak the DB could
+    // return either row, and because the gate and the resolver call this helper
+    // separately they could pick DIFFERENT periods. The `id desc` tiebreak makes
+    // the pick stable: OLD_OPEN (…f1) and NEW_OPEN (…f2) share a periodStart, so
+    // the higher id wins, identically on every call.
+    await createReport(OLD_OPEN, "open", "2026-05-18T00:00:00.000Z");
+    await createReport(NEW_OPEN, "open", "2026-05-18T00:00:00.000Z");
+
+    const first = await repository.getCurrentEditableId();
+    const second = await repository.getCurrentEditableId();
+
+    expect(first).toBe(NEW_OPEN);
+    expect(second).toBe(first);
+  });
 });

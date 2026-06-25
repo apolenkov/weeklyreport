@@ -100,7 +100,7 @@ describe("reports.latestForViewer", () => {
             some: { author: { reportingGroupId: { in: [GROUP_A] } } },
           },
         },
-        orderBy: { periodStart: "desc" },
+        orderBy: [{ periodStart: "desc" }, { id: "desc" }],
         select: { id: true },
       }),
     );
@@ -124,7 +124,7 @@ describe("reports.latestForViewer", () => {
             some: { author: { reportingGroupId: { in: [GROUP_A] } } },
           },
         },
-        orderBy: { periodStart: "desc" },
+        orderBy: [{ periodStart: "desc" }, { id: "desc" }],
       }),
     );
   });

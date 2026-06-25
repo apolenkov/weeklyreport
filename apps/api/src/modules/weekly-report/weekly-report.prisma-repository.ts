@@ -70,6 +70,16 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
    *     so an archived row can still read `open`; a `Current period` is
    *     non-archived (CONTEXT.md), and excluding archived rows keeps an
    *     archived-open period from being mistaken for the current one.
+   *
+   * Determinism (Decision 3): the period-creation lock is a separate change, so
+   * two concurrent editable periods can share the same `periodStart`. A
+   * `periodStart desc` sort alone leaves that tie to the DB's arbitrary row
+   * order — and because the gate and the `latestForViewer` resolver call this
+   * helper SEPARATELY, a nondeterministic tie could let them pick DIFFERENT
+   * periods (the resolver targets one, the gate authorizes the other → the
+   * viewer's own Status entry 404s). The secondary `id desc` key is a total,
+   * stable order over the unique primary key, so every call resolves the same
+   * id for the same data.
    */
   async getCurrentEditableId(): Promise<string | null> {
     const editableReport = await this.prisma.report.findFirst({
@@ -78,7 +88,7 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
         periodStart: { lte: new Date() },
         archived: false,
       },
-      orderBy: { periodStart: "desc" },
+      orderBy: [{ periodStart: "desc" }, { id: "desc" }],
       select: { id: true },
     });
 
