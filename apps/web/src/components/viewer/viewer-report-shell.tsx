@@ -63,6 +63,15 @@ export function ViewerReportShell({
   const buildQuery = useCallback(
     (overrides: Record<string, string | null>) => {
       const next = new URLSearchParams(searchParams.toString());
+      // viewer-live-status (task 4.3): `source`/`recovery` are one-shot markers
+      // the `/reports/latest` redirect places on the FIRST report URL. They must
+      // never be carried forward by any in-shell navigation (period navigator,
+      // scope / archive / view-mode toggles) — otherwise a History selection or
+      // a toggle would inherit `source=status` and a later NOT_FOUND would be
+      // misread as a Status navigation and bounce the viewer back to the Status
+      // target. Strip them here so they live exactly on the entry redirect.
+      next.delete("source");
+      next.delete("recovery");
       for (const [key, value] of Object.entries(overrides)) {
         if (value === null || value === "") next.delete(key);
         else next.set(key, value);

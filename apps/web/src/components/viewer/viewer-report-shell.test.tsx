@@ -219,6 +219,23 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
     expect(slidesHref).toContain("scope=lead");
   });
 
+  // viewer-live-status (task 4.3): the one-shot source/recovery markers from the
+  // Status entry redirect must NOT leak into in-shell navigation links, else a
+  // later History selection would be misread as a Status navigation.
+  it("strips the source/recovery markers from navigation links", () => {
+    mockSearchParams.mockReturnValue(
+      new URLSearchParams("source=status&recovery=0&scope=lead"),
+    );
+    render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
+    const slidesHref = screen
+      .getByRole("link", { name: /slides/i })
+      .getAttribute("href");
+    expect(slidesHref).not.toContain("source=");
+    expect(slidesHref).not.toContain("recovery=");
+    // a legitimate param is still threaded through
+    expect(slidesHref).toContain("scope=lead");
+  });
+
   it("slides mode renders the deck with activity disabled (head-only procedure)", () => {
     render(<ViewerReportShell reportId={REPORT_ID} mode="slides" />);
     const deck = screen.getByTestId("slides-client-stub");
