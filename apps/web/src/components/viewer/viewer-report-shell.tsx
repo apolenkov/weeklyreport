@@ -1,10 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useMemo } from "react";
+import { Suspense, useCallback, useEffect, useMemo } from "react";
 
+import { getClientErrorDetails } from "../../lib/client-error-reporting";
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
 import { useTRPC } from "../../lib/trpc-context";
 import type { ReportPeriod } from "../lead/mock-data";
@@ -26,11 +26,9 @@ interface ViewerReportShellProps {
   readonly authorId?: string;
 }
 
-const ARCHIVE_HREF = "/reports?tab=published";
-
 /**
- * viewer-report-surface-parity (task 5): read-only analogue of
- * `HeadReportShell`. It composes the same `ReportToolbar` primitives —
+ * viewer-report-surface-parity (task 5) + viewer-live-status: read-only analogue
+ * of `HeadReportShell`. It composes the same `ReportToolbar` primitives —
  * `PeriodNavigator`, `ArchiveToggle`, `ScopeToggle`, `ViewModeToggle`,
  * `ExportPdfButton` — with URL-backed scope (`?scope=lead`) and view-mode
  * (`?mode=slides`), so the viewer gets the same present/slides surface the head
@@ -38,14 +36,19 @@ const ARCHIVE_HREF = "/reports?tab=published";
  * `WeeklyReportPage` already gates Publish/Reopen/Move-to-archive on
  * `canMutatePeriod` (head/admin only), so a viewer never sees them.
  *
- * Unlike the head shell it does NOT fetch the active period (a viewer's active
- * period is unpublished → `weeklyReport.get` 404s for a viewer); every report a
- * viewer can open is published and therefore already in `compiledHistory`. The
- * displayed report is prepended only if the archive toggle hides it.
+ * viewer-live-status (task 5.1): the Back-to-Archive affordance is removed
+ * (History lives in the nav, no durable spec governs it); the `Agent-review`
+ * coming-soon control is KEPT (the `deferred-feature-pattern` contract mandates
+ * exactly one on every report-reading surface, viewer included).
  *
- * The Back-to-Archive + Agent-review affordances that the standalone viewer page
- * carried in `contextControlsLeading` are preserved here inside the full
- * Context-control row (the two slots are mutually exclusive).
+ * viewer-live-status (task 4.3): the read gate is published-or-current and
+ * fail-closed, so an `open → published` race yields a `NOT_FOUND` the query
+ * client never retries. When that happens AND we arrived from the Status entry
+ * (`?source=status&recovery=0`), recover ONCE by redirecting to
+ * `/reports/latest?recovery=1`, which re-resolves to the published snapshot. A
+ * `NOT_FOUND` carrying `recovery=1`, or any without `source=status` (History /
+ * a directly-typed id), shows the terminal notice without redirecting (loop
+ * guard).
  */
 export function ViewerReportShell({
   reportId,
@@ -85,6 +88,26 @@ export function ViewerReportShell({
     trpc.reports.compiledHistory.queryOptions({ includeArchive }),
   );
   const displayedQ = useQuery(trpc.weeklyReport.get.queryOptions({ reportId }));
+
+  // viewer-live-status (task 4.3): one-shot race recovery. A published-or-current
+  // gate rejection (the open→published flip) surfaces here as an invalid-link
+  // NOT_FOUND. Recover ONCE when we arrived from the Status entry and have not
+  // yet retried (`source=status`, `recovery` defaulting to 0). The flag set to
+  // `1` on the re-resolution bars a redirect loop; a direct/History NOT_FOUND
+  // (no `source=status`) falls through to the terminal notice unchanged. The
+  // redirect lives in ONE place (here) — `WeeklyReportPage`'s own fetch shares
+  // this query key, so React Query dedupes it; intercepting once is enough.
+  const source = searchParams.get("source");
+  const alreadyRetried = searchParams.get("recovery") === "1";
+  const isInvalidLink =
+    displayedQ.isError && getClientErrorDetails(displayedQ.error).isInvalidLink;
+  const shouldRecover = isInvalidLink && source === "status" && !alreadyRetried;
+
+  useEffect(() => {
+    if (shouldRecover) {
+      router.replace("/reports/latest?recovery=1");
+    }
+  }, [shouldRecover, router]);
 
   const periods: ReportPeriod[] = useMemo(() => {
     const entries = historyQ.data?.entries ?? [];
@@ -147,17 +170,6 @@ export function ViewerReportShell({
   );
   const reportScope = scope === "lead" ? "lead" : "product";
 
-  const backToArchive = (
-    <a
-      href={ARCHIVE_HREF}
-      className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-3 py-1.5 text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)]"
-      aria-label="Back to Archive"
-    >
-      <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-      <span>Back to Archive</span>
-    </a>
-  );
-
   const contextControls = (
     <>
       {periods.length > 0 ? (
@@ -166,7 +178,6 @@ export function ViewerReportShell({
       <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
       <div className="grow" aria-hidden="true" />
       <AgentReviewComingSoon compact />
-      {backToArchive}
       <ScopeToggle
         value={scope}
         onChange={setScope}
@@ -180,6 +191,20 @@ export function ViewerReportShell({
       />
     </>
   );
+
+  // viewer-live-status (task 4.3): while the one-shot recovery redirect is in
+  // flight, short-circuit to a resolving state so the terminal "Report not
+  // found" notice from `WeeklyReportPage` never flashes before the navigation.
+  if (shouldRecover) {
+    return (
+      <p
+        className="py-16 text-center text-sm text-[var(--color-muted-foreground)]"
+        role="status"
+      >
+        Opening the status report…
+      </p>
+    );
+  }
 
   const displayed = displayedQ.data;
   const exportPdf =

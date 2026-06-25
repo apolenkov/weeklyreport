@@ -523,7 +523,7 @@ export function WeeklyReportPage({
       {/* report-toolbar-layout: the bordered toolbar holds only the
           Context-control bar — either a shell-composed row (head) or the page's
           default period navigator, optionally preceded by leading controls
-          (viewer's Agent review + Back to Archive). */}
+          (the viewer's Agent review). */}
       <ReportToolbar
         contextControls={
           contextControls ?? (

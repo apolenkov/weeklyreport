@@ -82,6 +82,21 @@ hue.
 _Avoid_: deleted (archived data is retained), locked (that maps to
 `published`).
 
+**Status observation (the viewer's relationship to a period)**:
+The viewer role observes the **Current period** live — the same report content
+the head sees, INCLUDING unsubmitted drafts — scoped to the viewer's granted
+groups (`ViewerGroupAccess`), strictly read-only. The viewer is a _status
+observer_, not a consumer of finished reports: visibility is NOT gated on
+`published`. The resolved destination is the **Status target**: the Current period
+when one exists with viewer-visible content, else the latest viewer-visible
+published report (a published fallback is NOT a Current period — that term stays
+reserved for the editable state). Search remains published-scoped, so a live
+submitted record is readable before it is searchable — an accepted v1 divergence
+(see ADR 0007).
+_Avoid_: published-only viewer (the prior, reversed model — a viewer once saw a
+report only once its period was `published`); consumer (a viewer watches live
+status, not only completed reports).
+
 ## Products, stages, items & scope
 
 **Product**:

@@ -1,10 +1,12 @@
 /**
  * @vitest-environment jsdom
  *
- * viewer-report-surface-parity (task 5): the read-only viewer shell mirrors the
- * head shell's toolbar primitives (ScopeToggle, ViewModeToggle, Export-PDF,
- * period nav, Back-to-Archive) but renders NO mutation affordance, and its URLs
- * target `/reports/...`, not `/head/report/...`.
+ * viewer-report-surface-parity (task 5) + viewer-live-status (task 5.1/4.3): the
+ * read-only viewer shell mirrors the head shell's toolbar primitives
+ * (ScopeToggle, ViewModeToggle, Export-PDF, period nav) but renders NO mutation
+ * affordance, and its URLs target `/reports/...`, not `/head/report/...`.
+ * Back-to-Archive is removed; the Agent-review coming-soon control stays. A
+ * published-or-current race NOT_FOUND recovers once through the Status entry.
  */
 
 import "@testing-library/jest-dom/vitest";
@@ -101,6 +103,17 @@ vi.mock("@tanstack/react-query", async () => {
   };
 });
 
+// The shell is the only consumer of getClientErrorDetails in this render tree
+// (WeeklyReportPage is stubbed). Mock it so the recovery tests can flag an
+// invalid-link NOT_FOUND without constructing a real TRPCClientError.
+vi.mock("../../lib/client-error-reporting", () => ({
+  getClientErrorDetails: (error: unknown) => ({
+    isInvalidLink:
+      (error as { data?: { code?: string } } | null)?.data?.code ===
+      "NOT_FOUND",
+  }),
+}));
+
 vi.mock("../../lib/trpc-context", () => ({
   useTRPC: () => ({
     reports: {
@@ -133,7 +146,7 @@ afterEach(() => {
 });
 
 describe("ViewerReportShell — read-only toolbar parity", () => {
-  it("form mode renders the scope toggle, view-mode toggle, and Back-to-Archive in the context controls", () => {
+  it("form mode renders the scope toggle and view-mode toggle, keeps Agent-review, and drops Back-to-Archive", () => {
     render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
 
     const contextControls = screen.getByRole("group", {
@@ -143,12 +156,14 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
     expect(
       within(contextControls).getByRole("link", { name: /slides/i }),
     ).toBeInTheDocument();
-    expect(
-      within(contextControls).getByRole("link", { name: /back to archive/i }),
-    ).toBeInTheDocument();
+    // viewer-live-status (task 5.1): Agent-review stays (deferred-feature-pattern).
     expect(
       within(contextControls).getByTestId("agent-review-coming-soon"),
     ).toBeInTheDocument();
+    // viewer-live-status (task 5.1): Back-to-Archive is removed.
+    expect(
+      within(contextControls).queryByRole("link", { name: /back to archive/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders exactly one Export-PDF, in the document-action row (viewer gets the real export)", () => {
@@ -213,5 +228,69 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
     expect(
       screen.queryByRole("button", { name: /publish|lock|reopen/i }),
     ).not.toBeInTheDocument();
+  });
+});
+
+// viewer-live-status (task 4.3): one-shot race recovery on the report route.
+// A published-or-current gate rejection surfaces as an invalid-link NOT_FOUND.
+describe("ViewerReportShell — one-shot race recovery (task 4.3)", () => {
+  function makeGetErrorImpl() {
+    return (opts: { queryKey?: readonly unknown[] }) => {
+      if (opts.queryKey?.[0] === "weeklyReport.get") {
+        return {
+          data: undefined,
+          isLoading: false,
+          isError: true,
+          // Shape getClientErrorDetails reads as a NOT_FOUND → isInvalidLink.
+          error: { data: { code: "NOT_FOUND" } },
+        } as unknown as ReturnType<typeof useQuery>;
+      }
+      return {
+        data: { entries: [] },
+        isLoading: false,
+        isError: false,
+      } as unknown as ReturnType<typeof useQuery>;
+    };
+  }
+
+  afterEach(() => {
+    mockSearchParams.mockReturnValue(new URLSearchParams());
+    mockReplace.mockReset();
+    vi.mocked(useQuery).mockReset();
+  });
+
+  it("redirects once to /reports/latest?recovery=1 from the Status entry (source=status, recovery=0)", () => {
+    mockSearchParams.mockReturnValue(
+      new URLSearchParams("source=status&recovery=0"),
+    );
+    vi.mocked(useQuery).mockImplementation(makeGetErrorImpl());
+
+    render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
+
+    expect(mockReplace).toHaveBeenCalledWith("/reports/latest?recovery=1");
+    // The terminal "Report not found" notice must not flash; show resolving.
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /opening the status report/i,
+    );
+  });
+
+  it("does NOT redirect when already retried (recovery=1) — loop guard", () => {
+    mockSearchParams.mockReturnValue(
+      new URLSearchParams("source=status&recovery=1"),
+    );
+    vi.mocked(useQuery).mockImplementation(makeGetErrorImpl());
+
+    render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
+
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it("does NOT redirect on a direct/History NOT_FOUND (no source=status)", () => {
+    mockSearchParams.mockReturnValue(new URLSearchParams());
+    vi.mocked(useQuery).mockImplementation(makeGetErrorImpl());
+
+    render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
+
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 });

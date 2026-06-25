@@ -11,7 +11,7 @@ import {
   DEFAULT_ORGANIZATION_IDENTITY,
   draftSaveSchema,
   groupProductEdgeInputSchema,
-  latestPublishedReportSchema,
+  latestForViewerReportSchema,
   leadVelocityInputSchema,
   myHistoryEntrySchema,
   organizationUpdateSchema,
@@ -446,14 +446,30 @@ export function createAppRouter(deps: RouterDeps) {
             const visibleSectionWhere: Prisma.ReportWhereInput = {
               sections: { some: sectionScope },
             };
+            // viewer-live-status (task 3.1 / Decision 5): the viewer read gate is
+            // published-or-current, so a reopened period (legacy
+            // `status="published"`, `periodStatus="reopened"`) would otherwise be
+            // listed in the viewer's History as a gate-rejected broken link.
+            // Narrow the VIEWER History to `periodStatus="published"` only. This
+            // MUST be viewer-only — `compiledHistory` is a shared
+            // `anyRoleProcedure`, and an unconditional filter would silently drop
+            // reopened periods from head/lead History (a non-goal). Applied to
+            // BOTH `listWhere` and `archiveCountWhere` so the list and the
+            // archive count agree for the viewer.
+            const viewerPeriodFilter: Prisma.ReportWhereInput =
+              ctx.session.role === "viewer"
+                ? { periodStatus: "published" as const }
+                : {};
             const listWhere: Prisma.ReportWhereInput = {
               status: "published" as const,
               ...(includeArchive ? {} : { archived: false }),
+              ...viewerPeriodFilter,
               ...visibleSectionWhere,
             };
             const archiveCountWhere: Prisma.ReportWhereInput = {
               status: "published" as const,
               archived: true,
+              ...viewerPeriodFilter,
               ...visibleSectionWhere,
             };
 
@@ -547,23 +563,44 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      // viewer-report-surface-parity (task 2.1): resolve the latest report the
-      // caller can OPEN, for the `/reports/latest` redirect. The gate mirrors
-      // the content read, NOT the list: `periodStatus = 'published'` (the exact
-      // column `weeklyReport.get` 404s on), so the redirect never lands on a
-      // reopened period that would then NOT_FOUND. It also requires at least one
-      // group-visible section (`sections.some(sectionScope)`), reusing the same
-      // group filter as `compiledHistory` so a department-wide report with no
-      // viewer-visible content is skipped. Reachable by any /reports role; a
-      // lead resolves their own latest published section.
-      latestPublished: anyRoleProcedure.query(async ({ ctx }) => {
+      // viewer-live-status (task 1.1): resolve the **Status target** for the
+      // `/reports/latest` redirect. The target is the current editable period
+      // (Decision 0 — the exact id the read gate authorizes) when that period
+      // has a viewer-visible section, else the newest viewer-visible published
+      // report, else `null` (empty state). It must NOT search older editable
+      // periods: the gate authorizes only the current editable id, so routing to
+      // an older editable report would land on a target the gate rejects.
+      // `sections.some(sectionScope)` reuses the same group filter as
+      // `compiledHistory`; a lead resolves their own authored sections.
+      latestForViewer: anyRoleProcedure.query(async ({ ctx }) => {
         try {
           const sectionScope: Prisma.ReportSectionWhereInput =
             ctx.session.role === "lead"
               ? { authorId: ctx.session.userId }
               : groupScopeFilter(ctx.session, "reportSection");
 
-          const report = await deps.prisma.report.findFirst({
+          // Decision 0: one source of truth, through the service (the router
+          // has no repository handle).
+          const currentEditableId =
+            await deps.weeklyReportService.getCurrentEditableId();
+
+          if (currentEditableId) {
+            const currentVisible = await deps.prisma.report.findFirst({
+              where: {
+                id: currentEditableId,
+                sections: { some: sectionScope },
+              },
+              select: { id: true },
+            });
+            if (currentVisible) {
+              return latestForViewerReportSchema.parse({
+                reportId: currentVisible.id,
+              });
+            }
+          }
+
+          // Fallback: newest viewer-visible published report (group-scoped).
+          const published = await deps.prisma.report.findFirst({
             where: {
               periodStatus: "published" as const,
               sections: { some: sectionScope },
@@ -572,8 +609,8 @@ export function createAppRouter(deps: RouterDeps) {
             select: { id: true },
           });
 
-          return latestPublishedReportSchema.parse({
-            reportId: report?.id ?? null,
+          return latestForViewerReportSchema.parse({
+            reportId: published?.id ?? null,
           });
         } catch (error) {
           throw mapDomainError(error);

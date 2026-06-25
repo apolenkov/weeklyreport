@@ -98,6 +98,7 @@ function makeWeeklyReport(
 function createRepository(
   reports: Map<string, WeeklyReportReadModel>,
   activeId: string | null = null,
+  currentEditableId: string | null = null,
 ): WeeklyReportRepository {
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
@@ -111,6 +112,10 @@ function createRepository(
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
     async getActiveReportId() {
       return activeId;
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
+    async getCurrentEditableId() {
+      return currentEditableId;
     },
   };
 }

@@ -84,6 +84,7 @@ function makeWeeklyReport(
 function createSpyRepository(
   reports: Map<string, WeeklyReportReadModel>,
   activeId: string | null = null,
+  currentEditableId: string | null = null,
 ): WeeklyReportRepository {
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
@@ -94,6 +95,8 @@ function createSpyRepository(
     }),
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
     getActiveReportId: vi.fn(async () => activeId),
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
+    getCurrentEditableId: vi.fn(async () => currentEditableId),
   };
 }
 
