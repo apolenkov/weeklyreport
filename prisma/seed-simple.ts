@@ -860,15 +860,18 @@ async function main() {
     "[seed-simple] Creating sections + items + risks + priorities (RU)...",
   );
   // Active report — 6 sections, one per lead. Mix of statuses + traffic lights
-  // so the dashboard has visible variety. `label` mirrors the user's
-  // `name` exactly so seeded decision-owner strings stay equal to
-  // `data.currentUser.name` once the form loads.
+  // so the dashboard has visible variety. `name` is the user's FULL display
+  // name; it seeds each decision's `owner` so the value stays equal to
+  // `data.currentUser.name` once the form loads — otherwise `isMine` fails and
+  // the lead loses Edit/Delete on their own decisions. `label` is the short
+  // chip form, used only in demo prose strings.
   type LeadCfg = {
     id: string;
     productId: string;
     status: ReportSectionStatus;
     lightStatus: TrafficLightStatus;
     label: string;
+    name: string;
   };
   const leads: LeadCfg[] = [
     {
@@ -877,6 +880,7 @@ async function main() {
       status: ReportSectionStatus.draft,
       lightStatus: TrafficLightStatus.red,
       label: "Василий И.",
+      name: "Иванов Василий Петрович",
     },
     {
       id: LEAD_MARIA,
@@ -884,6 +888,7 @@ async function main() {
       status: ReportSectionStatus.submitted,
       lightStatus: TrafficLightStatus.yellow,
       label: "Мария К.",
+      name: "Каштанова Мария Андреевна",
     },
     {
       id: LEAD_IGOR,
@@ -891,6 +896,7 @@ async function main() {
       status: ReportSectionStatus.draft,
       lightStatus: TrafficLightStatus.green,
       label: "Игорь В.",
+      name: "Ветров Игорь Олегович",
     },
     {
       id: LEAD_DMITRY,
@@ -898,6 +904,7 @@ async function main() {
       status: ReportSectionStatus.submitted,
       lightStatus: TrafficLightStatus.green,
       label: "Дмитрий С.",
+      name: "Соснов Дмитрий Максимович",
     },
     {
       id: LEAD_OLGA,
@@ -905,6 +912,7 @@ async function main() {
       status: ReportSectionStatus.draft,
       lightStatus: TrafficLightStatus.yellow,
       label: "Ольга Н.",
+      name: "Незабудкина Ольга Сергеевна",
     },
     {
       id: LEAD_SERGEY,
@@ -912,6 +920,7 @@ async function main() {
       status: ReportSectionStatus.draft,
       lightStatus: TrafficLightStatus.green,
       label: "Сергей Т.",
+      name: "Тополев Сергей Дмитриевич",
     },
     // P13: PM leads — non-technical, Plan/Analysis/Design focus
     {
@@ -920,6 +929,7 @@ async function main() {
       status: ReportSectionStatus.draft,
       lightStatus: TrafficLightStatus.yellow,
       label: "Борис С.",
+      name: "Сиренев Борис",
     },
     {
       id: LEAD_CLOUD_PM,
@@ -927,6 +937,7 @@ async function main() {
       status: ReportSectionStatus.draft,
       lightStatus: TrafficLightStatus.green,
       label: "Виктор Л.",
+      name: "Липов Виктор",
     },
     {
       id: LEAD_DEVOPS_PM,
@@ -934,6 +945,7 @@ async function main() {
       status: ReportSectionStatus.draft,
       lightStatus: TrafficLightStatus.yellow,
       label: "Галина М.",
+      name: "Малиновая Галина",
     },
   ];
 
@@ -1519,7 +1531,7 @@ async function main() {
         reportSectionId: sectionId,
         productId: lead.productId,
         text: d.text,
-        owner: lead.label,
+        owner: lead.name,
         impact: d.impact,
         deadline: d.deadline ?? null,
         stageNames: [stageFor(dIdx)],
@@ -1622,7 +1634,7 @@ async function main() {
       reportSectionId: borisSectionId,
       productId: PROD_CRM,
       text: "Утвердить структуру аналитического API до начала разработки",
-      owner: "Борис С.",
+      owner: "Сиренев Борис",
       impact: "Позволяет Design-команде начать прототипирование немедленно",
       stageNames: ["Planning"],
     },
@@ -1651,7 +1663,7 @@ async function main() {
       reportSectionId: borisSectionId,
       productId: PROD_PAYMENTS,
       text: "Согласовать SLA платёжного API для мобильного чек-аута",
-      owner: "Борис С.",
+      owner: "Сиренев Борис",
       impact: "Снимает блокер интеграции до начала Dev-фазы",
       stageNames: ["Planning"],
     },
@@ -1706,7 +1718,7 @@ async function main() {
       reportSectionId: victorSectionId,
       productId: PROD_CRM,
       text: "Использовать GraphQL вместо REST для аналитического слоя",
-      owner: "Виктор Л.",
+      owner: "Липов Виктор",
       impact: "Единая точка доступа, меньше over-fetching",
       stageNames: ["Analysis"],
     },
@@ -1761,7 +1773,7 @@ async function main() {
       reportSectionId: galinaSectionId,
       productId: PROD_CRM,
       text: "Принять Material Design 3 как базовую дизайн-систему для портала",
-      owner: "Галина М.",
+      owner: "Малиновая Галина",
       impact: "Ускоряет разработку компонентов на 30%",
       stageNames: ["Design"],
     },
