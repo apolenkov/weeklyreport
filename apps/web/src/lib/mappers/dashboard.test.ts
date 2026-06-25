@@ -2,6 +2,7 @@ import {
   type ArchiveReportSummary,
   archiveReportSummarySchema,
   type PaginatedResult,
+  shortNameFromName,
   type SubmissionDashboardRow,
   submissionDashboardRowSchema,
   type WeeklyReportReadModel,
@@ -302,7 +303,7 @@ describe("mapDashboardData", () => {
       weeklyReport: makeWeeklyReport(),
       now: new Date("2026-04-17T10:00:00.000Z"),
     });
-    expect(result.pendingLeads).toEqual(["Cara Lead"]);
+    expect(result.pendingLeads).toEqual(["Cara L."]);
   });
 
   // Phase 48-C (UFB-040): regression for the alert-bar pendingLeads leak.
@@ -321,7 +322,12 @@ describe("mapDashboardData", () => {
       weeklyReport: makeWeeklyReport(),
       now: new Date("2026-04-17T10:00:00.000Z"),
     });
-    const reviewNames = new Set(makeReview().map((r) => r.leadName));
+    // pendingLeads carries the short display form (ADR 0006); the subset
+    // invariant still holds — every pending lead must come from a `review` row,
+    // compared on that same short form.
+    const reviewNames = new Set(
+      makeReview().map((r) => shortNameFromName(r.leadName)),
+    );
     for (const name of result.pendingLeads) {
       expect(reviewNames.has(name)).toBe(true);
     }

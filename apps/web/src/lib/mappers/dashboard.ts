@@ -33,7 +33,10 @@ import type {
   SubmissionDashboardRow,
   WeeklyReportReadModel,
 } from "@customreport/shared";
-import { initialsFromName as sharedInitialsFromName } from "@customreport/shared";
+import {
+  initialsFromName as sharedInitialsFromName,
+  shortNameFromName,
+} from "@customreport/shared";
 
 import { formatPeriodRangeWithYear, formatWeekLabel } from "../format-date";
 import { deriveLeadStatus, type LeadStatus } from "./lead-status";
@@ -192,7 +195,7 @@ function escalationToBlockedItem(
       severity: "blocked",
       product: escalation.productName,
       stage: escalation.stageName ?? NO_STAGE_LABEL,
-      assignee: escalation.leadName,
+      assignee: shortNameFromName(escalation.leadName),
       description: escalation.description,
     };
   }
@@ -204,7 +207,7 @@ function escalationToBlockedItem(
       // Always null for at_risk (a product-level flag), so this resolves to
       // "Flagged" — the product roll-up, not a stage.
       stage: escalation.stageName ?? FLAGGED_STAGE_LABEL,
-      assignee: escalation.leadName,
+      assignee: shortNameFromName(escalation.leadName),
       description: escalation.description,
     };
   }
@@ -214,7 +217,7 @@ function escalationToBlockedItem(
     severity: "at-risk",
     product: escalation.productName,
     stage: escalation.stageName ?? NO_STAGE_LABEL,
-    assignee: escalation.leadName,
+    assignee: shortNameFromName(escalation.leadName),
     description: escalation.description,
   };
 }
@@ -300,7 +303,8 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
       id: row.leadId,
       reportId: weeklyReport.reportId,
       initials: initialsFromName(row.leadName),
-      name: row.leadName,
+      // ADR 0006: the leads table shows the short form; the avatar stays 2-letter.
+      name: shortNameFromName(row.leadName),
       role: row.role,
       status,
       trafficLights,

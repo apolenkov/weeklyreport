@@ -20,6 +20,8 @@
  *     name. Drives the `mapForeign*` content mappers below.
  */
 
+import { shortNameFromName } from "@customreport/shared";
+
 import { type ItemStatus, workflowToItemStatus } from "./item-status";
 import {
   type LeadDecisionEntry,
@@ -42,6 +44,8 @@ export interface CrossAuthorRow {
   projectId: string;
   authorId: string;
   authorInitials: string;
+  /** Short form «Каштанова М.А.» for the cross-author stage label (ADR 0006). */
+  authorShortName: string;
   stageNames: readonly string[];
   stages: readonly {
     stageName: string;
@@ -143,7 +147,9 @@ export function buildCrossAuthorStageMap(
         stageNamesMatch(s.stageName, sn),
       );
       const status = trafficToStageStatus(stageEntry?.status ?? null);
-      stageMap.set(norm, { assignee: ca.authorInitials, status });
+      // ADR 0006: the cross-author STAGE label shows the short form, not the
+      // two-letter mark (which stays for avatars / micro-chips).
+      stageMap.set(norm, { assignee: ca.authorShortName, status });
     }
   }
   return map;
@@ -218,7 +224,7 @@ export function mapForeignItems(
           stageIds: i.stageNames,
           status: coerceWorkflowToItemStatus(i.workflowStatus),
           text: i.text,
-          author: ca.authorName,
+          author: shortNameFromName(ca.authorName),
           authorId: ca.authorId,
           foreign: true,
         }),
@@ -245,7 +251,7 @@ export function mapForeignRisks(
         text: r.risk,
         impact: r.impact,
         mitigation: r.mitigation,
-        authorName: ca.authorName,
+        authorName: shortNameFromName(ca.authorName),
         authorId: ca.authorId,
         foreign: true,
       }),

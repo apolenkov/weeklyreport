@@ -79,7 +79,7 @@ describe("mapLeadProducts", () => {
       (s) => s.stageName === "Development",
     );
     expect(devStage?.ownership).toBe("mine");
-    expect(devStage?.assignee).toBe("Тимлид 1");
+    expect(devStage?.assignee).toBe("Тимлид 1.");
     expect(devStage?.status).toBe("on-track");
     // Stages outside ownedStages render as unassigned with no assignee.
     const planningStage = expectDefined(products[0]).stages.find(

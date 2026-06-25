@@ -68,6 +68,28 @@ export function initialsFromName(name: string): string {
 }
 
 /**
+ * Short display form from a plain name string: surname plus the dotted initials
+ * of every following token, under the surname-first order. e.g.
+ * "Иванов Василий Петрович" → "Иванов В.П."; "Каштанова Мария" → "Каштанова М.".
+ * A single token returns just that token; an empty string returns "". Use this
+ * everywhere a name is rendered as a text label (stage owners, slide owners,
+ * cross-author authors) — the full ФИО stays only in the top user badge, and the
+ * compact 2-letter form ({@link initialsFromName}) stays for round avatar chips.
+ * @param name a plain surname-first display name string
+ * @returns the short "Surname I.O." form
+ */
+export function shortNameFromName(name: string): string {
+  const tokens = name.trim().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return "";
+  const [surname, ...rest] = tokens;
+  if (rest.length === 0) return surname;
+  const initials = rest
+    .map((token) => `${firstLetter(token).toUpperCase()}.`)
+    .join("");
+  return `${surname} ${initials}`;
+}
+
+/**
  * Avatar initials, preferring structured parts (surname-initial +
  * given-initial → "БА"). Falls back to the name-string heuristic when the
  * parts are absent — the common SAML-stub case where only `name` is set.

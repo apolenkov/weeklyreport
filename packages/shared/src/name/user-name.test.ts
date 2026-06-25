@@ -5,6 +5,7 @@ import {
   initials,
   initialsFromName,
   shortName,
+  shortNameFromName,
 } from "./user-name";
 
 describe("composeName", () => {
@@ -58,6 +59,30 @@ describe("shortName", () => {
         middleName: null,
       }),
     ).toBe("Берёзов А.");
+  });
+});
+
+describe("shortNameFromName", () => {
+  it("surname + dotted initials of the remaining tokens", () => {
+    expect(shortNameFromName("Иванов Василий Петрович")).toBe("Иванов В.П.");
+  });
+
+  it("surname + given initial when there is no patronymic", () => {
+    expect(shortNameFromName("Каштанова Мария")).toBe("Каштанова М.");
+  });
+
+  it("single token returns just the surname", () => {
+    expect(shortNameFromName("Иванов")).toBe("Иванов");
+  });
+
+  it("collapses noisy whitespace", () => {
+    expect(shortNameFromName(`Иванов${" ".repeat(3)}Василий`)).toBe(
+      "Иванов В.",
+    );
+  });
+
+  it("empty string yields empty", () => {
+    expect(shortNameFromName(" ".repeat(3))).toBe("");
   });
 });
 
