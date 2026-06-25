@@ -53,6 +53,30 @@ flag. A period is never "submitted"; submission is a per-lead act on a section
 within the period (see _Lead submission_).
 _Avoid_: week (the period is the window, not the calendar week label).
 
+**Period policy** (Settings → Periods sub-tab):
+The organization-wide DEFAULTS and automation rules for how reporting periods
+behave, stored on the `AppSettings` singleton. Two kinds: cadence/deadline
+defaults (period length, working days, default deadline days, grace hours,
+deadline time) and automation switches that real consumers read — the
+period-creator / auto-publisher / auto-archiver schedulers and the request-path
+late-submission and reopen guards (`autoCreatePeriods`,
+`autoPublishAfterDeadline`, `autoArchiveWeeksAfterPublish`,
+`allowLateSubmissions`, `allowReopenAfterPublish` + `reopenWindowHours`). It does
+NOT create individual periods — that is _Period management_. Policy is the org
+rule; management is the instance.
+_Avoid_: period settings used loosely (say "period policy" for the org rules,
+"period management" for the per-instance tab); "deferred / not wired yet" (most
+policy knobs have live consumers — only describe a field as deferred when its
+consumer genuinely does not exist).
+
+**Period management** (Admin → Periods tab):
+The CRUD-and-lifecycle surface for INDIVIDUAL reporting-period instances —
+manually create / edit / publish / reopen / archive / delete a specific period,
+listed by lifecycle state (active vs archived). It acts on one `Report` row at a
+time. Distinct from _Period policy_, which sets the org-wide defaults that
+automation applies across periods; the two are complementary, not duplicates.
+_Avoid_: period settings (that is the policy sub-tab, not this instance tab).
+
 **Current period**:
 The single active reporting period a role is working in now — `open` or
 `reopened`, not archived. In a period navigator it is marked as current (e.g. a

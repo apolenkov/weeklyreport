@@ -111,12 +111,9 @@ export interface MockSettings {
   allowLateSubmissions: boolean;
   autoPublishAfterDeadline: boolean;
   autoArchiveWeeksAfterPublish: number;
-  // UFB-051 — period-cycle knobs (Periods tab, after the 48-B inputs)
-  firstDayOfWeek: number; // 1=Monday..7=Sunday (ISO)
-  deadlineDayOfWeek: number; // 1=Monday..7=Sunday (ISO)
+  // UFB-051 period-cycle knobs (consumer-less ones removed in
+  // admin-settings-surface-cleanup)
   deadlineTime: string; // HH:MM (24h)
-  maxOpenPeriods: number;
-  requireAllSectionsToPublish: boolean;
   allowReopenAfterPublish: boolean;
   reopenWindowHours: number;
   // Reminders tab
@@ -522,12 +519,8 @@ export const MOCK_SETTINGS: MockSettings = {
   allowLateSubmissions: true,
   autoPublishAfterDeadline: false,
   autoArchiveWeeksAfterPublish: 0,
-  // UFB-051 (Phase 51-A) defaults — mirror SQL.
-  firstDayOfWeek: 1,
-  deadlineDayOfWeek: 5,
+  // UFB-051 defaults — mirror SQL.
   deadlineTime: "18:00",
-  maxOpenPeriods: 1,
-  requireAllSectionsToPublish: true,
   allowReopenAfterPublish: true,
   reopenWindowHours: 72,
   defaultTimezone: "Europe/Moscow",

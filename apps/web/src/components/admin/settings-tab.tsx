@@ -8,7 +8,6 @@ import {
   TabsTrigger,
 } from "@customreport/ui/components/ui/tabs";
 import { ComingSoonTooltip } from "@customreport/ui/components/ui/tooltip";
-import { Calendar } from "lucide-react";
 
 import type { MockSettings } from "./mock-data";
 import { IdentitySubTab } from "./settings-identity-sub-tab";
@@ -55,9 +54,9 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
           <TabsTrigger value="periods">Periods</TabsTrigger>
           <TabsTrigger value="reminders">Reminders</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          {/* UFB-056 / Phase 55-5: external-integrations badges. v1 only
-              surfaces Telegram (seeds-only); future integrations (Slack,
-              MS Teams, webhook fan-out) join the same sub-tab. */}
+          {/* UFB-056 / Phase 55-5: external-integrations badges. Surfaces
+              Telegram (seeds-only) and AI (Coming-Soon) as status cards.
+              Slack + CI were removed in admin-settings-surface-cleanup. */}
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="holidays">
             <HolidaysComingSoonControl />
@@ -103,18 +102,20 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
 function HolidaysComingSoonControl() {
   // TODO(holidays-activation): replace with real holidays calendar form when
   // the dedicated holiday-management phase ships.
-  // Rendered as a <span>, not a <button>: this control is inert and lives inside
-  // the holidays TabsTrigger (itself a <button>), so a nested <button> would be
-  // invalid HTML and trigger a React hydration error.
+  // admin-settings-surface-cleanup: the trigger now matches the sibling tabs'
+  // plain-text underline style — the outlined pill + Calendar icon were removed
+  // so no sub-tab trigger stands out. The nested label stays inert (rendered as
+  // a <span>, not a <button>, since the holidays TabsTrigger is itself a
+  // <button> and a nested <button> would be invalid HTML / hydration error),
+  // while the surrounding TabsTrigger remains selectable like its siblings.
   return (
     <ComingSoonTooltip>
       <span
         aria-disabled="true"
         data-testid="holidays-coming-soon"
-        className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] xl:w-[92px] xl:px-2.5"
+        className="inline-flex cursor-default items-center"
       >
-        <Calendar size={14} strokeWidth={2} aria-hidden="true" />
-        <span className="hidden xl:inline">Holidays</span>
+        Holidays
         {/* fix-coming-soon-tooltip-clipping: the Radix tooltip badge is portaled
             and only mounts on hover, so a PERSISTENT visually-hidden
             ComingSoonBadge keeps the coming-soon state in the holidays tab's

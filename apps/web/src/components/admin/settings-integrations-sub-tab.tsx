@@ -37,12 +37,7 @@ export function IntegrationsSubTab() {
     );
   }
 
-  const { telegram, ci } = statusQ.data;
-  // The query type marks `ci` non-null, but the Phase-55 integrations payload
-  // can omit it (the Zod contract only guarantees `telegram`), so the optional
-  // chain is a real runtime guard, not a redundant one.
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- ci absent at runtime despite the optimistic query type (deferred Phase-55 contract)
-  const isCiConfigured = ci?.configured ?? false;
+  const { telegram } = statusQ.data;
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -88,67 +83,10 @@ export function IntegrationsSubTab() {
         </dl>
       </div>
 
-      <div
-        className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
-        data-testid="integration-row-ci"
-      >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-              CI Integration
-            </h3>
-            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Trigger report generation automatically from CI/CD pipelines — no
-              manual deadline tracking needed.
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-auto sm:justify-end">
-            <ComingSoonBadge data-testid="integration-badge-ci-coming-soon" />
-            {isCiConfigured ? (
-              <span
-                className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--radius-pill)] bg-[var(--color-primary)]/10 px-3 py-1 text-xs font-semibold text-[var(--color-primary)]"
-                data-testid="integration-badge-ci"
-                data-state="configured"
-              >
-                Configured
-              </span>
-            ) : (
-              <span
-                className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-3 py-1 text-xs font-semibold text-[var(--color-muted-foreground)]"
-                data-testid="integration-badge-ci"
-                data-state="not-configured"
-              >
-                Not configured
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Slack — third provider, Coming Soon until Phase 56 (A11). */}
-      <div
-        className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
-        data-testid="integration-row-slack"
-      >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-              Slack
-            </h3>
-            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Daily digest and deadline alerts to a team Slack channel — keeps
-              everyone updated without checking the dashboard.
-            </p>
-          </div>
-          <ComingSoonBadge
-            className="self-start sm:self-auto"
-            data-testid="integration-badge-slack"
-          />
-        </div>
-      </div>
-
       {/* AI Integration — Phase 54 seeds-only; placeholder until provider
-          is selected (Anthropic / Yandex / Llama). TODO(Phase-54-activation) */}
+          is selected (Anthropic / Yandex / Llama). A single provider/model
+          selection drives every AI feature (summary, risk extraction, RAG).
+          TODO(Phase-54-activation) */}
       <div
         className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
         data-testid="integration-row-ai"
@@ -156,11 +94,11 @@ export function IntegrationsSubTab() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-              AI Summary
+              AI
             </h3>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Auto-summary of statuses and extracted risks — 5-second read
-              instead of reviewing 30 minutes of section data.
+              One provider and model applied across every AI feature — status
+              summaries, risk extraction, and RAG search.
             </p>
           </div>
           <ComingSoonBadge

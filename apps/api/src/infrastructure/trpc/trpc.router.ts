@@ -801,13 +801,10 @@ export function createAppRouter(deps: RouterDeps) {
 
       /**
        * UFB-056 / Phase 55-4: read the external-integrations status bundle
-       * for the Settings → Integrations sub-tab. v1 carries Telegram and CI
-       * Integration. Telegram is considered «active» only when both the API
-       * has `TG_BOT_TOKEN` set AND at least one TelegramBinding row has
+       * for the Settings → Integrations sub-tab. v1 carries Telegram only.
+       * Telegram is considered «active» only when both the API has
+       * `TG_BOT_TOKEN` set AND at least one TelegramBinding row has
        * `active=true`. Either gate failing keeps the badge muted.
-       *
-       * CI Integration shows status based on presence of CI_WEBHOOK_SECRET
-       * environment variable.
        *
        * adminProcedure-gated (head/admin) so a regular lead can't poll the
        * binding count.
@@ -818,14 +815,10 @@ export function createAppRouter(deps: RouterDeps) {
           const bindings = await deps.prisma.telegramBinding.count({
             where: { active: true },
           });
-          const ciWebhookSecret = process.env.CI_WEBHOOK_SECRET?.trim() ?? "";
           return {
             telegram: {
               configured: token !== "",
               bindings,
-            },
-            ci: {
-              configured: ciWebhookSecret !== "",
             },
           };
         } catch (error) {

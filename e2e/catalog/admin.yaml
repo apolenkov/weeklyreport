@@ -87,8 +87,8 @@ routes:
         intent: "Configure organization identity, period defaults, reminder defaults, notification settings, and external integrations."
         given: "The admin is on the Settings tab."
         when: "the admin edits organization short/full name (Identity), period cycle parameters (Periods sub-tab), reminder timezone/audience defaults (Reminders sub-tab), notification from-email (Notifications sub-tab), or views integration status (Integrations sub-tab, seeds-only in v1)"
-        then: "A toast appears with 'Organization identity saved', 'Period settings saved', 'Reminders saved', or 'Notifications saved'; the landing page cache is revalidated (A9); form state reflects saved values on next invalidate."
-        note: "UFB-047/Phase 48-B: tabbed layout (Identity, Periods, Reminders, Notifications, Integrations, Holidays). Holidays is coming-soon and read-only. Period cycle knobs (8 new in 51-A) and org identity are saved via PATCH semantics."
+        then: "A toast appears with 'Organization identity saved', 'Period policy saved', 'Reminders saved', or 'Notifications saved'; the landing page cache is revalidated (A9); form state reflects saved values on next invalidate."
+        note: "UFB-047/Phase 48-B: tabbed layout (Identity, Periods, Reminders, Notifications, Integrations, Holidays). Holidays is coming-soon and read-only (styled like the other sub-tabs). Period policy knobs and org identity are saved via PATCH semantics."
   - route: /admin/products
     access: [admin]
     intents:
@@ -152,9 +152,9 @@ routes:
       - id: admin-save-period-settings
         intent: "Configure reporting period cycle and automation rules"
         given: "the admin is on the Periods sub-tab"
-        when: "the admin modifies period configuration (length, working days, auto-create, deadlines, grace window, auto-publish, auto-archive, week/deadline day, max periods, section requirements, reopen rules) then clicks Save Period Settings"
-        then: "a success toast displays \"Period settings saved\" with a green checkmark; all draft values persist"
-        note: "Conditional disable: auto-publish disabled when auto-create is off; reopen window disabled when allow-reopen is off. tRPC mutation: admin.updateSettings with PATCH semantics (only period fields)."
+        when: "the admin modifies period policy (length, working days, auto-create, deadlines, grace window, auto-publish, auto-archive, deadline time, reopen rules) then clicks Save Period Policy"
+        then: "a success toast displays \"Period policy saved\" with a green checkmark; all draft values persist"
+        note: "Reopen window disabled when allow-reopen is off. Auto-publish has NO auto-create dependency (the scheduler reads it independently). admin-settings-surface-cleanup removed firstDayOfWeek/deadlineDayOfWeek/maxOpenPeriods/requireAllSectionsToPublish. tRPC mutation: admin.updateSettings with PATCH semantics (only period fields)."
       - id: admin-save-reminder-defaults
         intent: "Set default timezone and audience for new reminder policies"
         given: "the admin is on the Reminders sub-tab"
@@ -171,7 +171,7 @@ routes:
         intent: "View external integration configuration status"
         given: "the admin is on the Integrations sub-tab"
         when: "the integrations status query completes"
-        then: "the page displays status cards for Telegram (bot configured yes/no, active bindings count), CI (configured/not configured badge + coming-soon), Slack (coming soon), and AI Summary (provider + RAG corpus, coming soon); all cards are read-only"
+        then: "the page displays status cards for Telegram (bot configured yes/no, active bindings count, coming-soon) and AI (provider + RAG corpus, coming-soon); all cards are read-only. No Slack or CI card (removed in admin-settings-surface-cleanup)."
         note: "Read-only tab. Phase 55 seeds-only: Telegram user binding + bot outbound not yet active. tRPC query: admin.integrationsStatus. Failures show error message."
   - route: /head/dashboard
     access: [admin]

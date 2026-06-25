@@ -83,13 +83,8 @@ const defaultSettings: AppSettings = {
   allowLateSubmissions: true,
   autoPublishAfterDeadline: false,
   autoArchiveWeeksAfterPublish: 0,
-  // UFB-051 (Phase 51-A): period-cycle knobs default to SQL defaults so
-  // the in-memory repo round-trips identical shape to the Prisma path.
-  firstDayOfWeek: 1,
-  deadlineDayOfWeek: 5,
+  // UFB-051 period-cycle knobs at SQL defaults.
   deadlineTime: "18:00",
-  maxOpenPeriods: 1,
-  requireAllSectionsToPublish: true,
   allowReopenAfterPublish: true,
   reopenWindowHours: 72,
 };
@@ -241,25 +236,18 @@ describe("AdminService — settings (integration)", () => {
     expect(result.defaultDeadlineDays).toBe(10);
   });
 
-  // UFB-051 (Phase 51-A): round-trip the 7 period-cycle knobs (UFB-068 dropped periodCadence).
+  // UFB-051: round-trip the retained period-cycle knobs (admin-settings-
+  // surface-cleanup removed the four consumer-less ones).
   it("UFB-051: round-trips the period-cycle AppSettings fields", async () => {
     const service = new AdminService(createRepository(initialSnapshot));
 
     const result = await service.updateSettings({
-      firstDayOfWeek: 7, // Sunday-first calendar
-      deadlineDayOfWeek: 4, // Thursday deadline
       deadlineTime: "09:30",
-      maxOpenPeriods: 3,
-      requireAllSectionsToPublish: false,
       allowReopenAfterPublish: false,
       reopenWindowHours: 24,
     });
 
-    expect(result.firstDayOfWeek).toBe(7);
-    expect(result.deadlineDayOfWeek).toBe(4);
     expect(result.deadlineTime).toBe("09:30");
-    expect(result.maxOpenPeriods).toBe(3);
-    expect(result.requireAllSectionsToPublish).toBe(false);
     expect(result.allowReopenAfterPublish).toBe(false);
     expect(result.reopenWindowHours).toBe(24);
     // legacy + 48-B fields preserved by the PATCH semantics
@@ -272,11 +260,7 @@ describe("AdminService — settings (integration)", () => {
     const service = new AdminService(createRepository(initialSnapshot));
     const result = await service.getSettings();
 
-    expect(result.firstDayOfWeek).toBe(1);
-    expect(result.deadlineDayOfWeek).toBe(5);
     expect(result.deadlineTime).toBe("18:00");
-    expect(result.maxOpenPeriods).toBe(1);
-    expect(result.requireAllSectionsToPublish).toBe(true);
     expect(result.allowReopenAfterPublish).toBe(true);
     expect(result.reopenWindowHours).toBe(72);
   });

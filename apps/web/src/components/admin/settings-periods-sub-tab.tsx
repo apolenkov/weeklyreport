@@ -14,16 +14,18 @@ export function PeriodsSubTab({
 }) {
   const [draft, setDraft] = useState<MockSettings>(serverSettings);
   useEffect(() => setDraft(serverSettings), [serverSettings]);
-  const updateSettingsMut = useUpdateSettingsMut("Period settings");
+  const updateSettingsMut = useUpdateSettingsMut("Period policy");
 
   function handleSave() {
     // PATCH semantics — only fields owned by this sub-tab go on the wire.
     // UFB-047 / Phase 49-01: `departmentName` is no longer part of the
     // payload; brand identity lives on the Organization singleton (Identity
     // tab) and is mutated via `admin.updateOrganization`.
-    // UFB-051 (Phase 51-A): the 8 new period-cycle knobs are bundled into
-    // this same PATCH because they live on the Periods tab. Cron consumers
-    // arrive in 51-C; today these only flow through the wire and persist.
+    // UFB-051: the period-cycle knobs ride the same PATCH because they live on
+    // this Periods sub-tab. Each field below has a live consumer (the
+    // period-creator / auto-publisher / auto-archiver schedulers and the
+    // request-path late-submission and reopen gates). The four consumer-less
+    // knobs were removed in admin-settings-surface-cleanup.
     updateSettingsMut.mutate({
       autoCreatePeriods: draft.autoCreatePeriods,
       defaultDeadlineDays: draft.defaultDeadlineDays,
@@ -33,11 +35,7 @@ export function PeriodsSubTab({
       allowLateSubmissions: draft.allowLateSubmissions,
       autoPublishAfterDeadline: draft.autoPublishAfterDeadline,
       autoArchiveWeeksAfterPublish: draft.autoArchiveWeeksAfterPublish,
-      firstDayOfWeek: draft.firstDayOfWeek,
-      deadlineDayOfWeek: draft.deadlineDayOfWeek,
       deadlineTime: draft.deadlineTime,
-      maxOpenPeriods: draft.maxOpenPeriods,
-      requireAllSectionsToPublish: draft.requireAllSectionsToPublish,
       allowReopenAfterPublish: draft.allowReopenAfterPublish,
       reopenWindowHours: draft.reopenWindowHours,
     });
@@ -54,12 +52,8 @@ export function PeriodsSubTab({
       <PeriodBaseFields draft={draft} setDraft={setDraft} />
 
       {/* ─────────────────────────────────────────────────────────────
-          UFB-051 (Phase 51-A) — Period-cycle knobs.
-
-          These inputs persist the new AppSettings columns landed in
-          migration 20260510215245_period_model_expansion. Consumers
-          (PeriodCreator cadence-aware step, publish/reopen gating)
-          ship in Phase 51-C — today the values only round-trip.
+          UFB-051 — Period-cycle knobs (deadline-time default + reopen
+          gating). All have live consumers; see PeriodCycleFields.
           ───────────────────────────────────────────────────────────── */}
       <PeriodCycleFields draft={draft} setDraft={setDraft} />
 
@@ -69,14 +63,14 @@ export function PeriodsSubTab({
           onClick={handleSave}
           disabled={isSaving}
           className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-          aria-label="Save period settings"
+          aria-label="Save period policy"
         >
-          {isSaving ? "Saving…" : "Save Period Settings"}
+          {isSaving ? "Saving…" : "Save Period Policy"}
         </button>
         {updateSettingsMut.isSuccess && (
           <span className="flex items-center gap-1 text-sm font-medium text-[var(--color-primary)]">
             <CheckIcon />
-            Period settings saved
+            Period policy saved
           </span>
         )}
       </div>

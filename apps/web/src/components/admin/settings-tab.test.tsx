@@ -110,12 +110,8 @@ const baseSettings: MockSettings = {
   allowLateSubmissions: true,
   autoPublishAfterDeadline: false,
   autoArchiveWeeksAfterPublish: 0,
-  // UFB-051 (Phase 51-A) defaults — mirror SQL.
-  firstDayOfWeek: 1,
-  deadlineDayOfWeek: 5,
+  // UFB-051 defaults — mirror SQL.
   deadlineTime: "18:00",
-  maxOpenPeriods: 1,
-  requireAllSectionsToPublish: true,
   allowReopenAfterPublish: true,
   reopenWindowHours: 72,
   defaultTimezone: "Europe/Moscow",
@@ -305,7 +301,7 @@ describe("SettingsTab — UFB-048 Periods sub-tab (Phase 48-B)", () => {
     fireEvent.change(grace, { target: { value: "48" } });
 
     await user.click(
-      screen.getByRole("button", { name: /save period settings/i }),
+      screen.getByRole("button", { name: /save period policy/i }),
     );
 
     const updateSettingsFn = captured["admin.updateSettings"].mutationFn;
@@ -321,7 +317,10 @@ describe("SettingsTab — UFB-048 Periods sub-tab (Phase 48-B)", () => {
     expect(payload.allowLateSubmissions).toBe(true);
   });
 
-  it("disables autoPublishAfterDeadline when autoCreatePeriods is off", async () => {
+  it("leaves autoPublishAfterDeadline enabled regardless of autoCreatePeriods", async () => {
+    // admin-settings-surface-cleanup: the auto-publisher scheduler reads
+    // autoPublishAfterDeadline independently, so the UI no longer imposes a
+    // false «requires Auto-create periods» dependency.
     const { proxy } = buildProxy();
     renderSettings(proxy);
 
@@ -331,15 +330,17 @@ describe("SettingsTab — UFB-048 Periods sub-tab (Phase 48-B)", () => {
     const checkbox = screen.getByRole("checkbox", {
       name: /auto-publish after deadline/i,
     }) as HTMLInputElement;
-    expect(checkbox.disabled).toBe(true);
+    expect(checkbox.disabled).toBe(false);
   });
 });
 
 // ---------------------------------------------------------------------------
-// UFB-051 (Phase 51-A): Periods sub-tab gains 8 new period-cycle inputs.
-// Tests assert: (1) the inputs render with seeded values, (2) edits flow
-// to the updateSettings PATCH payload, (3) the «reopen window» field
-// greys out when «allow reopen» is off (UI-only — enforcement is 51-C).
+// UFB-051: Periods sub-tab period-cycle inputs (deadline-time default +
+// reopen gating). admin-settings-surface-cleanup removed the four
+// consumer-less inputs (firstDayOfWeek, deadlineDayOfWeek, maxOpenPeriods,
+// requireAllSectionsToPublish). Tests assert: (1) the remaining inputs render
+// with seeded values, (2) edits flow to the updateSettings PATCH payload,
+// (3) «reopen window» greys out when «allow reopen» is off.
 // ---------------------------------------------------------------------------
 
 describe("SettingsTab — UFB-051 Periods sub-tab (Phase 51-A)", () => {
@@ -348,24 +349,12 @@ describe("SettingsTab — UFB-051 Periods sub-tab (Phase 51-A)", () => {
     toastError.mockReset();
   });
 
-  it("renders the 8 new period-cycle inputs with seeded defaults", async () => {
+  it("renders the period-cycle inputs with seeded defaults", async () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /periods/i }));
-
-    // firstDayOfWeek — Monday radio is selected by default.
-    const mondayRadio = screen.getByLabelText(
-      /monday \(iso\)/i,
-    ) as HTMLInputElement;
-    expect(mondayRadio.checked).toBe(true);
-
-    // deadlineDayOfWeek — Friday (5) selected by default.
-    const deadlineDay = screen.getByLabelText(
-      /deadline day of week/i,
-    ) as HTMLSelectElement;
-    expect(deadlineDay.value).toBe("5");
 
     // deadlineTime — 18:00 default.
     const deadlineTime = screen.getByLabelText(
@@ -373,17 +362,15 @@ describe("SettingsTab — UFB-051 Periods sub-tab (Phase 51-A)", () => {
     ) as HTMLInputElement;
     expect(deadlineTime.value).toBe("18:00");
 
-    // maxOpenPeriods — 1 default.
-    const maxOpen = screen.getByLabelText(
-      /max open periods/i,
-    ) as HTMLInputElement;
-    expect(maxOpen.value).toBe("1");
-
-    // requireAllSectionsToPublish — checked by default.
-    const requireAll = screen.getByRole("checkbox", {
-      name: /require all sections to publish/i,
-    }) as HTMLInputElement;
-    expect(requireAll.checked).toBe(true);
+    // The four consumer-less inputs were removed.
+    expect(screen.queryByLabelText(/monday \(iso\)/i)).toBeNull();
+    expect(screen.queryByLabelText(/deadline day of week/i)).toBeNull();
+    expect(screen.queryByLabelText(/max open periods/i)).toBeNull();
+    expect(
+      screen.queryByRole("checkbox", {
+        name: /require all sections to publish/i,
+      }),
+    ).toBeNull();
 
     // allowReopenAfterPublish — checked by default.
     const allowReopen = screen.getByRole("checkbox", {
@@ -399,38 +386,17 @@ describe("SettingsTab — UFB-051 Periods sub-tab (Phase 51-A)", () => {
     expect(reopenWindow.disabled).toBe(false);
   });
 
-  it("edits the 8 new fields and sends them on Save", async () => {
+  it("edits the period-cycle fields and sends them on Save", async () => {
     const { proxy, captured } = buildProxy();
     renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /periods/i }));
 
-    // Switch firstDayOfWeek → Sunday.
-    fireEvent.click(screen.getByLabelText(/sunday/i));
-
-    // Switch deadlineDayOfWeek → Thursday.
-    fireEvent.change(
-      screen.getByLabelText(/deadline day of week/i) as HTMLSelectElement,
-      { target: { value: "4" } },
-    );
-
     // Change deadlineTime → 09:30.
     fireEvent.change(screen.getByLabelText(/deadline time/i), {
       target: { value: "09:30" },
     });
-
-    // Bump maxOpenPeriods → 3.
-    fireEvent.change(screen.getByLabelText(/max open periods/i), {
-      target: { value: "3" },
-    });
-
-    // Untick requireAllSectionsToPublish.
-    fireEvent.click(
-      screen.getByRole("checkbox", {
-        name: /require all sections to publish/i,
-      }),
-    );
 
     // Bump reopenWindowHours → 24.
     fireEvent.change(screen.getByLabelText(/reopen window \(hours\)/i), {
@@ -438,7 +404,7 @@ describe("SettingsTab — UFB-051 Periods sub-tab (Phase 51-A)", () => {
     });
 
     await user.click(
-      screen.getByRole("button", { name: /save period settings/i }),
+      screen.getByRole("button", { name: /save period policy/i }),
     );
 
     const updateSettingsFn = captured["admin.updateSettings"].mutationFn;
@@ -447,11 +413,7 @@ describe("SettingsTab — UFB-051 Periods sub-tab (Phase 51-A)", () => {
     });
     const payload = updateSettingsFn.mock
       .calls[0]?.[0] as Partial<MockSettings>;
-    expect(payload.firstDayOfWeek).toBe(7);
-    expect(payload.deadlineDayOfWeek).toBe(4);
     expect(payload.deadlineTime).toBe("09:30");
-    expect(payload.maxOpenPeriods).toBe(3);
-    expect(payload.requireAllSectionsToPublish).toBe(false);
     expect(payload.reopenWindowHours).toBe(24);
     // allowReopenAfterPublish was not touched — stays true.
     expect(payload.allowReopenAfterPublish).toBe(true);
@@ -565,7 +527,8 @@ describe("SettingsTab — UFB-048 Notifications sub-tab (Phase 48-B)", () => {
 describe("SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)", () => {
   // A11: Telegram is seeds-only — badge is always "Coming Soon" regardless
   // of configured/bindings state. Technical details still rendered for
-  // debugging; Slack card (third provider) also always "Coming Soon".
+  // debugging. admin-settings-surface-cleanup removed the Slack and CI cards;
+  // the AI card is now a general "AI" integration (still Coming Soon).
   it("renders Coming Soon badge for Telegram regardless of configured state", async () => {
     const { proxy } = buildProxy({
       telegram: { configured: false, bindings: 0 },
@@ -620,19 +583,20 @@ describe("SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)", () => {
     ).toBe("yes");
   });
 
-  it("renders the Slack Coming Soon card (A11 third provider)", async () => {
+  it("does not render Slack or CI cards (removed in cleanup)", async () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
 
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /integrations/i }));
 
-    const slackBadge = await screen.findByTestId("integration-badge-slack");
-    await waitFor(() => expect(slackBadge.dataset.state).toBe("coming-soon"));
-    expect(slackBadge.textContent).toMatch(/coming soon/i);
+    // Telegram card present anchors the tab content before asserting absence.
+    await screen.findByTestId("integration-badge-telegram");
+    expect(screen.queryByTestId("integration-row-slack")).toBeNull();
+    expect(screen.queryByTestId("integration-row-ci")).toBeNull();
   });
 
-  it("renders the AI Integration Coming Soon card (B8)", async () => {
+  it("renders the AI Coming Soon card", async () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
 
@@ -710,15 +674,14 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
     expect(span.getAttribute("aria-disabled")).toBe("true");
   });
 
-  // Row 401: Calendar (lucide-react) icon SVG — aria-hidden="true"
-  it("Calendar icon SVG inside holidays tab trigger has aria-hidden=true", () => {
+  // admin-settings-surface-cleanup: the Calendar icon was removed so the
+  // Holidays trigger matches the icon-less sibling tabs. Lock the absence.
+  it("holidays tab trigger has no icon (matches sibling tabs)", () => {
     const { proxy } = buildProxy();
     renderSettings(proxy);
 
     const span = screen.getByTestId("holidays-coming-soon");
-    const svg = span.querySelector("svg");
-    expect(svg).not.toBeNull();
-    expect(svg?.getAttribute("aria-hidden")).toBe("true");
+    expect(span.querySelector("svg")).toBeNull();
   });
 
   // Row 402: CheckIcon SVG — aria-hidden="true" static attribute
@@ -781,7 +744,7 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
   });
 
   // Row 404: CheckIcon SVG aria-hidden in Periods success message
-  it("CheckIcon SVG aria-hidden=true in Period settings saved message", async () => {
+  it("CheckIcon SVG aria-hidden=true in Period policy saved message", async () => {
     const { proxy, captured } = buildProxy();
     captured["admin.updateSettings"].mutationFn.mockResolvedValue(undefined);
     renderSettings(proxy);
@@ -794,10 +757,10 @@ describe("SettingsTab — a11y regression (verify-a11y-recommended-flip)", () =>
     });
 
     await user.click(
-      screen.getByRole("button", { name: /save period settings/i }),
+      screen.getByRole("button", { name: /save period policy/i }),
     );
 
-    const successMsg = await screen.findByText(/period settings saved/i);
+    const successMsg = await screen.findByText(/period policy saved/i);
     const container = successMsg.closest("span");
     const svg = container?.querySelector("svg");
     expect(svg).not.toBeNull();

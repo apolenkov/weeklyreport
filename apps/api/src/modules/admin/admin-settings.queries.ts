@@ -34,12 +34,9 @@ function rowToAppSettings(row: {
   allowLateSubmissions: boolean;
   autoPublishAfterDeadline: boolean;
   autoArchiveWeeksAfterPublish: number;
-  // UFB-051 (Phase 51-A): period-cycle knobs.
-  firstDayOfWeek: number;
-  deadlineDayOfWeek: number;
+  // UFB-051 (Phase 51-A): period-cycle knobs (consumer-less ones removed in
+  // admin-settings-surface-cleanup).
   deadlineTime: string;
-  maxOpenPeriods: number;
-  requireAllSectionsToPublish: boolean;
   allowReopenAfterPublish: boolean;
   reopenWindowHours: number;
 }): AppSettings {
@@ -60,11 +57,7 @@ function rowToAppSettings(row: {
     allowLateSubmissions: row.allowLateSubmissions,
     autoPublishAfterDeadline: row.autoPublishAfterDeadline,
     autoArchiveWeeksAfterPublish: row.autoArchiveWeeksAfterPublish,
-    firstDayOfWeek: row.firstDayOfWeek,
-    deadlineDayOfWeek: row.deadlineDayOfWeek,
     deadlineTime: row.deadlineTime,
-    maxOpenPeriods: row.maxOpenPeriods,
-    requireAllSectionsToPublish: row.requireAllSectionsToPublish,
     allowReopenAfterPublish: row.allowReopenAfterPublish,
     reopenWindowHours: row.reopenWindowHours,
   });
@@ -112,15 +105,7 @@ export async function updateSettings(
     dbData.autoPublishAfterDeadline = data.autoPublishAfterDeadline;
   if (data.autoArchiveWeeksAfterPublish !== undefined)
     dbData.autoArchiveWeeksAfterPublish = data.autoArchiveWeeksAfterPublish;
-  if (data.firstDayOfWeek !== undefined)
-    dbData.firstDayOfWeek = data.firstDayOfWeek;
-  if (data.deadlineDayOfWeek !== undefined)
-    dbData.deadlineDayOfWeek = data.deadlineDayOfWeek;
   if (data.deadlineTime !== undefined) dbData.deadlineTime = data.deadlineTime;
-  if (data.maxOpenPeriods !== undefined)
-    dbData.maxOpenPeriods = data.maxOpenPeriods;
-  if (data.requireAllSectionsToPublish !== undefined)
-    dbData.requireAllSectionsToPublish = data.requireAllSectionsToPublish;
   if (data.allowReopenAfterPublish !== undefined)
     dbData.allowReopenAfterPublish = data.allowReopenAfterPublish;
   if (data.reopenWindowHours !== undefined)

@@ -64,11 +64,7 @@ const defaultSettings: AppSettings = {
   allowLateSubmissions: true,
   autoPublishAfterDeadline: false,
   autoArchiveWeeksAfterPublish: 0,
-  firstDayOfWeek: 1,
-  deadlineDayOfWeek: 5,
   deadlineTime: "18:00",
-  maxOpenPeriods: 1,
-  requireAllSectionsToPublish: true,
   allowReopenAfterPublish: true,
   reopenWindowHours: 72,
 };

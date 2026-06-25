@@ -275,12 +275,8 @@ describe("mapAdminSettings", () => {
       allowLateSubmissions: true,
       autoPublishAfterDeadline: false,
       autoArchiveWeeksAfterPublish: 0,
-      // UFB-051 (Phase 51-A): period-cycle knobs default-fall-through.
-      firstDayOfWeek: 1,
-      deadlineDayOfWeek: 5,
+      // UFB-051 period-cycle knobs default-fall-through.
       deadlineTime: "18:00",
-      maxOpenPeriods: 1,
-      requireAllSectionsToPublish: true,
       allowReopenAfterPublish: true,
       reopenWindowHours: 72,
       defaultTimezone: "Europe/Moscow",
@@ -322,20 +318,12 @@ describe("mapAdminSettings", () => {
     const api: AppSettings = appSettingsSchema.parse({
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
-      firstDayOfWeek: 7,
-      deadlineDayOfWeek: 4,
       deadlineTime: "09:30",
-      maxOpenPeriods: 3,
-      requireAllSectionsToPublish: false,
       allowReopenAfterPublish: false,
       reopenWindowHours: 24,
     });
     const mapped = mapAdminSettings(api);
-    expect(mapped.firstDayOfWeek).toBe(7);
-    expect(mapped.deadlineDayOfWeek).toBe(4);
     expect(mapped.deadlineTime).toBe("09:30");
-    expect(mapped.maxOpenPeriods).toBe(3);
-    expect(mapped.requireAllSectionsToPublish).toBe(false);
     expect(mapped.allowReopenAfterPublish).toBe(false);
     expect(mapped.reopenWindowHours).toBe(24);
   });
