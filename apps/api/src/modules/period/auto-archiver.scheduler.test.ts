@@ -17,14 +17,8 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
     defaultTimezone: "Europe/Moscow",
     defaultReminderAudience: "lead-with-draft",
     notificationFromEmail: null,
-    // UFB-051 (Phase 51-A): period-cycle knobs default to SQL defaults.
-    // The AutoArchiver does not yet stamp `Report.autoArchived` — that
-    // consumer arrives in 51-C alongside the state-machine dashboard.
-    firstDayOfWeek: 1,
-    deadlineDayOfWeek: 5,
+    // UFB-051 period-cycle knobs at SQL defaults.
     deadlineTime: "18:00",
-    maxOpenPeriods: 1,
-    requireAllSectionsToPublish: true,
     allowReopenAfterPublish: true,
     reopenWindowHours: 72,
     ...overrides,

@@ -535,27 +535,21 @@ model AppSettings {
   allowLateSubmissions         Boolean          @default(true)
   autoPublishAfterDeadline     Boolean          @default(false)
   autoArchiveWeeksAfterPublish Int              @default(0)
-  // UFB-051 / Phase 51-A: period-cycle expansion. Seven org-wide knobs
-  // that describe how a period is anchored on the calendar
-  // (firstDayOfWeek, deadlineDayOfWeek, deadlineTime), how concurrency
-  // works (maxOpenPeriods), and how publish/reopen gating behaves
-  // (requireAllSectionsToPublish, allowReopenAfterPublish, reopenWindowHours).
+  // UFB-051 / Phase 51-A: period-cycle expansion. Org-wide knobs for the
+  // manual-creation deadline default (deadlineTime, HH:MM in defaultTimezone)
+  // and publish/reopen gating (allowReopenAfterPublish, reopenWindowHours).
   // All carry SQL defaults so the singleton row updates in-place without a
   // manual data migration. Wire schema mirrors these via `appSettingsSchema`
   // defaults in packages/shared.
   //
   // UFB-068: periodCadence (the "weekly"/"bi-weekly" radio) was removed —
-  // it was a dead column that the schedulers never read. Period length is
-  // expressed solely by periodLengthDays.
+  // a dead column the schedulers never read. Period length is expressed
+  // solely by periodLengthDays.
   //
-  // firstDayOfWeek + deadlineDayOfWeek use ISO weekday numbering
-  // (1=Monday..7=Sunday). deadlineTime is HH:MM in defaultTimezone.
-  // Period length is controlled exclusively by periodLengthDays above.
-  firstDayOfWeek               Int              @default(1)
-  deadlineDayOfWeek            Int              @default(5)
+  // admin-settings-surface-cleanup: firstDayOfWeek, deadlineDayOfWeek,
+  // maxOpenPeriods, and requireAllSectionsToPublish were removed — they had
+  // no consumer anywhere (read/written only by the settings form).
   deadlineTime                 String           @default("18:00")
-  maxOpenPeriods               Int              @default(1)
-  requireAllSectionsToPublish  Boolean          @default(true)
   allowReopenAfterPublish      Boolean          @default(true)
   reopenWindowHours            Int              @default(72)
   updatedAt                    DateTime         @updatedAt

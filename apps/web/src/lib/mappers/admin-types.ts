@@ -121,12 +121,9 @@ export interface MockSettings {
   allowLateSubmissions: boolean;
   autoPublishAfterDeadline: boolean;
   autoArchiveWeeksAfterPublish: number;
-  // UFB-051 (Phase 51-A) — period-cycle knobs surfaced on the Periods tab.
-  firstDayOfWeek: number; // 1=Monday..7=Sunday (ISO)
-  deadlineDayOfWeek: number; // 1=Monday..7=Sunday (ISO)
+  // UFB-051 period-cycle knobs (consumer-less ones removed in
+  // admin-settings-surface-cleanup).
   deadlineTime: string; // HH:MM (24h)
-  maxOpenPeriods: number;
-  requireAllSectionsToPublish: boolean;
   allowReopenAfterPublish: boolean;
   reopenWindowHours: number;
   // Reminders tab

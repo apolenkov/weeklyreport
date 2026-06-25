@@ -240,22 +240,15 @@ export const appSettingsSchema = z.object({
   // Nullable email; `''` is rejected (admins can clear by sending null).
   notificationFromEmail: z.union([z.email().max(254), z.null()]).default(null),
   // ---- UFB-051 (Phase 51-A): Period-cycle knobs -----------------------
-  // Calendar anchoring + concurrency + publish/reopen gating. All carry
-  // `.default()` so pre-51-A fixtures (and partial PATCH payloads from
-  // older clients) keep parsing. Consumers ship in Phase 51-C — 51-A
-  // persists the values and renders them in the Settings UI only.
-  // ISO weekday numbering: 1=Monday..7=Sunday.
-  firstDayOfWeek: z.number().int().min(1).max(7).default(1),
-  deadlineDayOfWeek: z.number().int().min(1).max(7).default(5),
+  // Publish/reopen gating + manual-creation deadline default. The four
+  // consumer-less knobs (firstDayOfWeek, deadlineDayOfWeek, maxOpenPeriods,
+  // requireAllSectionsToPublish) were removed in admin-settings-surface-cleanup
+  // — nothing read them. The fields below all have live consumers.
   // HH:MM in the configured `defaultTimezone`. Regex pins the format so
-  // garbage values cannot reach the future deadline-computation path.
+  // garbage values cannot reach the deadline-computation path. Manual period
+  // creation applies it at whole-hour precision; the auto-creation scheduler
+  // currently uses a fixed 18:00.
   deadlineTime: z.string().regex(deadlineTimeRegex).default("18:00"),
-  // Concurrency cap on simultaneously-open periods. Sensible 51-A
-  // default is `1` (current weekly cadence). Upper bound chosen
-  // defensively (`12`) — admins likely never go above a handful but
-  // 12 covers a quarter's worth of overlapping monthly periods.
-  maxOpenPeriods: z.number().int().min(1).max(12).default(1),
-  requireAllSectionsToPublish: z.boolean().default(true),
   allowReopenAfterPublish: z.boolean().default(true),
   // Window after `publishedAt` during which a published report can be
   // reopened. `0..168` (one week) matches the 48-B `gracePeriodHours`

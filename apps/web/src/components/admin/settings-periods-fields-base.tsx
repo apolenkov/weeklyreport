@@ -76,8 +76,8 @@ export function PeriodBaseFields({
           ))}
         </div>
         <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-          Metadata only in v1 — UI hint for admins. Deadline math still uses
-          Mon-Fri until a follow-up plan wires the calendar logic.
+          Feeds the deadline (business-day) calculation used when periods are
+          created.
         </p>
       </fieldset>
 
@@ -156,8 +156,9 @@ export function PeriodBaseFields({
           className="w-40 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
         />
         <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-          Late submissions accepted within this many hours past the deadline
-          when «allow late submissions» is on. Must be 0..168 (one week).
+          Submissions within this many hours past the deadline are always
+          accepted, regardless of «allow late submissions». Must be 0..168 (one
+          week).
         </p>
       </div>
 
@@ -175,41 +176,31 @@ export function PeriodBaseFields({
         <span>
           <span className="block font-medium">Allow late submissions</span>
           <span className="block text-xs text-[var(--color-muted-foreground)]">
-            When on, leads can submit within the grace window above. When off,
-            the deadline is hard — submissions past the deadline are rejected.
+            Governs only what happens AFTER the grace window. When on,
+            submissions are still accepted past the grace window. When off,
+            submissions past deadline + grace are rejected.
           </span>
         </span>
       </label>
 
       {/* ── autoPublishAfterDeadline (UFB-048) ── */}
-      <label
-        className={`flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white p-3 text-sm text-[var(--color-foreground)] ${
-          draft.autoCreatePeriods ? "" : "opacity-60"
-        }`}
-      >
+      <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white p-3 text-sm text-[var(--color-foreground)]">
         <input
           name="auto-publish-after-deadline"
           type="checkbox"
-          disabled={!draft.autoCreatePeriods}
           checked={draft.autoPublishAfterDeadline}
           onChange={(e) =>
             setDraft({ ...draft, autoPublishAfterDeadline: e.target.checked })
           }
-          className="mt-1 h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-starbucks-accent)] disabled:cursor-not-allowed"
+          className="mt-1 h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-starbucks-accent)]"
         />
         <span>
           <span className="block font-medium">Auto-publish after deadline</span>
           <span className="block text-xs text-[var(--color-muted-foreground)]">
-            Scheduler publishes the period at <code>deadline + grace</code>;
-            missing sections render 'No submission' placeholder. Scheduler logic
-            is deferred — toggle is persisted, the cron consumer arrives in a
-            follow-up plan.
-            {!draft.autoCreatePeriods && (
-              <>
-                {" "}
-                <b>Requires «Auto-create periods».</b>
-              </>
-            )}
+            When on, the hourly auto-publisher publishes any still-draft period
+            once <code>deadline + grace</code> has passed (at the next top of
+            the hour); sections leads never submitted appear empty in the
+            published report. Independent of «Auto-create periods».
           </span>
         </span>
       </label>

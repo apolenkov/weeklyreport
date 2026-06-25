@@ -1383,54 +1383,16 @@ describe("appSettingsSchema", () => {
   // partial PATCH payloads keep working and constraints reject garbage.
   // -------------------------------------------------------------------
 
-  it("UFB-051: applies defaults for the 8 new period-cycle fields when omitted", () => {
+  it("UFB-051: applies defaults for the period-cycle fields when omitted", () => {
     const result = appSettingsSchema.safeParse({
       autoCreatePeriods: false,
       defaultDeadlineDays: 5,
     });
     expect(result.success).toBe(true);
     if (!result.success) return;
-    expect(result.data.firstDayOfWeek).toBe(1);
-    expect(result.data.deadlineDayOfWeek).toBe(5);
     expect(result.data.deadlineTime).toBe("18:00");
-    expect(result.data.maxOpenPeriods).toBe(1);
-    expect(result.data.requireAllSectionsToPublish).toBe(true);
     expect(result.data.allowReopenAfterPublish).toBe(true);
     expect(result.data.reopenWindowHours).toBe(72);
-  });
-
-  it("UFB-051: rejects firstDayOfWeek out of [1..7]", () => {
-    expect(
-      appSettingsSchema.safeParse({
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
-        firstDayOfWeek: 0,
-      }).success,
-    ).toBe(false);
-    expect(
-      appSettingsSchema.safeParse({
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
-        firstDayOfWeek: 8,
-      }).success,
-    ).toBe(false);
-  });
-
-  it("UFB-051: rejects deadlineDayOfWeek out of [1..7]", () => {
-    expect(
-      appSettingsSchema.safeParse({
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
-        deadlineDayOfWeek: 0,
-      }).success,
-    ).toBe(false);
-    expect(
-      appSettingsSchema.safeParse({
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
-        deadlineDayOfWeek: 8,
-      }).success,
-    ).toBe(false);
   });
 
   it("UFB-051: rejects malformed deadlineTime (must be HH:MM 24h)", () => {
@@ -1476,23 +1438,8 @@ describe("appSettingsSchema", () => {
   });
 
   // UFB-068: periodCadence removed — no validation test needed.
-
-  it("UFB-051: rejects maxOpenPeriods out of [1..12]", () => {
-    expect(
-      appSettingsSchema.safeParse({
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
-        maxOpenPeriods: 0,
-      }).success,
-    ).toBe(false);
-    expect(
-      appSettingsSchema.safeParse({
-        autoCreatePeriods: false,
-        defaultDeadlineDays: 5,
-        maxOpenPeriods: 13,
-      }).success,
-    ).toBe(false);
-  });
+  // admin-settings-surface-cleanup: firstDayOfWeek / deadlineDayOfWeek /
+  // maxOpenPeriods / requireAllSectionsToPublish removed — bounds tests dropped.
 
   it("UFB-051: rejects reopenWindowHours out of [0..168]", () => {
     expect(

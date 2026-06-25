@@ -4,10 +4,12 @@ import { z } from "zod";
  * Phase 55 (UFB-056) — payload shape for `admin.integrationsStatus`.
  *
  * The Integrations sub-tab in /admin?tab=settings reads this to render a
- * status badge for every external integration. v1 only covers Telegram;
- * future integrations (Slack, MS Teams, webhook fan-out) extend the same
- * envelope with sibling keys so the UI never has to branch on missing
- * sections.
+ * status badge for every external integration. The payload covers only
+ * Telegram (the one integration with a real backend); the AI card on the
+ * sub-tab is UI-only Coming-Soon and reads no field here. A future
+ * integration with real status would extend the same envelope with a sibling
+ * key so the UI never has to branch on missing sections. (Slack and CI were
+ * removed in admin-settings-surface-cleanup.)
  *
  * Field semantics for the Telegram surface:
  *
