@@ -20,8 +20,13 @@ import { DecisionsSection } from "./decisions-section";
 
 describe("DecisionsSection — addSignal snapshot regression (D1)", () => {
   it("does not reopen the dialog when readOnly toggles false→true→false with stale addSignal", () => {
-    // Step 1: addSignal=1, readOnly=false → effect fires, dialog opens.
+    // Step 1: counter starts idle at 0 (parent's initial state); the "+ Add"
+    // click advances it 0→1 → effect fires, dialog opens. (Mounting straight at
+    // a non-zero signal models a remount, which must NOT auto-open — D16.)
     const { rerender } = render(
+      <DecisionsSection decisions={[]} addSignal={0} readOnly={false} />,
+    );
+    rerender(
       <DecisionsSection decisions={[]} addSignal={1} readOnly={false} />,
     );
 
