@@ -27,7 +27,9 @@ const AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB === "true";
  * New behaviour:
  *   - lead          → /lead/report
  *   - head | admin  → /head/dashboard
- *   - viewer        → /reports?tab=published
+ *   - viewer        → /reports/latest  (the Status entry; viewer-live-status
+ *                     made the viewer a status observer, so they land on the
+ *                     current Status report, not the History list)
  *
  * Authentication path:
  *   1. Read auth.me.
@@ -45,7 +47,7 @@ const DEFAULT_FOR_ROLE: Record<Role, string> = {
   lead: "/lead/report",
   head: "/head/dashboard",
   admin: "/admin",
-  viewer: "/reports?tab=published",
+  viewer: "/reports/latest",
 };
 
 /**

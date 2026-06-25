@@ -162,6 +162,34 @@ describe("NavBar — AUTH-06 role-aware visibility (Phase 29-06)", () => {
     }
   });
 
+  // viewer-live-status: the Status entry resolves to a /reports/[id] detail
+  // page, so for a viewer that path must light Status, not History (the
+  // reported bug: clicking Status highlighted History).
+  it("activates Status (not History) for a viewer on a /reports/[id] detail page", () => {
+    setRole("viewer");
+    setRoute("/reports/a0000000-0000-4000-8000-000000000001");
+    const { container } = render(<NavBar />);
+    expectActiveLink(container, "/reports/latest");
+    expectInactiveLink(container, "/reports");
+  });
+
+  it("activates History (not Status) for a viewer on the bare /reports list", () => {
+    setRole("viewer");
+    setRoute("/reports");
+    const { container } = render(<NavBar />);
+    expectActiveLink(container, "/reports");
+    expectInactiveLink(container, "/reports/latest");
+  });
+
+  // Non-regression: the head keeps History lit on a /reports/[id] detail page
+  // (lead-history-summary contract — viewer-only special-casing must not leak).
+  it("keeps History active for a head on a /reports/[id] detail page", () => {
+    setRole("head");
+    setRoute("/reports/a0000000-0000-4000-8000-000000000001");
+    const { container } = render(<NavBar />);
+    expectActiveLink(container, "/reports");
+  });
+
   it("lead sees Report and History, with Slides folded into the report mode switch", () => {
     setRole("lead");
     const { container } = render(<NavBar />);
