@@ -2,6 +2,7 @@ import type {
   ActivityLiveRow,
   ReportSectionReadModel,
 } from "@customreport/shared";
+import { shortNameFromName } from "@customreport/shared";
 
 import type { CrossAuthorContentRow } from "../../lib/mappers/lead-cross-author";
 import {
@@ -449,7 +450,9 @@ export function buildSectionSlideModel(
   return {
     id: section.reportSectionId,
     ownerId: section.authorId,
-    ownerName: section.authorName,
+    // Slide owner labels use the short form ("Иванов В.П."); full ФИО stays in
+    // the top user badge only.
+    ownerName: shortNameFromName(section.authorName),
     ownerRole: section.authorRole ?? "lead",
     status: section.status,
     submittedAt: section.submittedAt,
@@ -551,7 +554,7 @@ export function buildActivitySlideModel(
   return {
     id: row.reportSectionId ?? row.leadId,
     ownerId: row.leadId,
-    ownerName: row.leadName,
+    ownerName: shortNameFromName(row.leadName),
     ownerRole: "lead",
     status: row.status,
     submittedAt: row.submittedAt,
@@ -1049,8 +1052,9 @@ export function buildProductScopedSlides(
     if (acc.seenSections.has(section.reportSectionId)) return;
     acc.seenSections.add(section.reportSectionId);
     if (!acc.contributorSet.has(section.authorName)) {
+      // Dedup on the full name (collision-safe), display the short form.
       acc.contributorSet.add(section.authorName);
-      acc.contributors.push(section.authorName);
+      acc.contributors.push(shortNameFromName(section.authorName));
     }
     const submitted = section.status === "submitted";
     acc.anySubmitted = acc.anySubmitted || submitted;
@@ -1138,6 +1142,10 @@ export function buildProductScopedSlides(
     const model = buildSectionSlideModel(pseudoSection);
     return {
       ...model,
+      // The product-scoped slide's owner heading is the PRODUCT name — restore it
+      // in full (buildSectionSlideModel shortened it via the person-name path,
+      // which does not apply to a product label).
+      ownerName: acc.projectName,
       ownerRole: "product",
       // Subtitle / nav rail show contributing leads instead of the (single)
       // product name, which the h2 owner heading already displays.

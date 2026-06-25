@@ -88,7 +88,7 @@ describe("section slide utilities", () => {
   it("builds a ready owner slide from a complete section", () => {
     const slide = buildSectionSlideModel(makeSection());
 
-    expect(slide.ownerName).toBe("Alex Lead");
+    expect(slide.ownerName).toBe("Alex L.");
     expect(slide.products).toEqual(["Core Product"]);
     expect(slide.currentCount).toBe(1);
     expect(slide.nextCount).toBe(1);
@@ -744,7 +744,7 @@ describe("section slide utilities", () => {
       submittedAt: null,
     });
 
-    expect(slide.ownerName).toBe("Alex Lead");
+    expect(slide.ownerName).toBe("Alex L.");
     expect(slide.tone).toBe("empty");
     expect(slide.score).toBe(0);
     expect(slide.readiness).toContainEqual(

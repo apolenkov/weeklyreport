@@ -1,4 +1,5 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
+import { shortNameFromName } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
@@ -255,6 +256,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       projectName: string;
       authorId: string;
       authorInitials: string;
+      authorShortName: string;
       stageNames: string[];
       stages: {
         stageName: string;
@@ -327,6 +329,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         projectName: string;
         authorId: string;
         authorInitials: string;
+        authorShortName: string;
         stageNames: Set<string>;
         stageEntries: {
           stageName: string;
@@ -353,8 +356,12 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
           projectId: row.projectId,
           projectName: row.project.name,
           authorId: row.user.id,
-          // Derive initials server-side; the full name never leaves the method.
+          // Derive display forms server-side (ADR 0006): the two-letter mark for
+          // avatars/micro-chips, and the SHORT form ("Кузнецова М.А.") for the
+          // cross-author stage label. Only these leave the method — never the
+          // full ФИО.
           authorInitials: initialsFromName(row.user.name),
+          authorShortName: shortNameFromName(row.user.name),
           stageNames: new Set([row.stage.name]),
           stageEntries: [{ stageName: row.stage.name, status: stageStatus }],
         });
@@ -372,6 +379,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       projectName: g.projectName,
       authorId: g.authorId,
       authorInitials: g.authorInitials,
+      authorShortName: g.authorShortName,
       stageNames: [...g.stageNames],
       stages: g.stageEntries,
     }));

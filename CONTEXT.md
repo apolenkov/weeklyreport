@@ -189,11 +189,20 @@ required), `middleName` (Отчество / patronymic, optional). The single `n
 column is KEPT as a stored, denormalized display value recomputed from the parts
 on write (not removed — SAML supplies only a combined `displayName` with no
 parts, so a derived `name` would blank SAML users). Display forms come from the
-parts: full «Баленков Александр Владимирович», short «Баленков А.В.» (no
-patronymic → «Баленков А.»), and a two-letter avatar / stage-chip mark «БА» —
-first letters of surname + given name, in that order.
+parts: **full** «Баленков Александр Владимирович», **short** «Баленков А.В.»
+(surname + dotted initials of the remaining parts; no patronymic → «Баленков
+А.»), and a **two-letter mark** «БА» (first letters of surname + given name, in
+that order). Where each form appears is a fixed policy (see ADR 0006): the full
+ФИО shows ONLY in the user's own top navigation badge; the two-letter mark is for
+round avatar chips and the tightest inline marks (the item-row stage micro-chip
+«Development · ВИ»); every other place a name is rendered as a spelled-out text
+label — SDLC stage owners (own AND cross-author), slide owners + contributors,
+the leads table, cross-author authors, dashboard escalations — uses the short
+form. A foreign co-owner's short name is allowed to leave the server for the
+cross-author stage label (it carries surname + initials, never the full ФИО).
 _Avoid_: editing `name` directly (it is derived from the parts); first-word +
-last-word initials (that yields surname + patronymic «БВ», a known bug).
+last-word initials (that yields surname + patronymic «БВ», a known bug); the full
+ФИО anywhere except the user's own top badge.
 
 **Position (должность)**:
 A person's HR job title (e.g. «Тимлид», «Аналитик»). Free text, optional,

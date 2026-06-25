@@ -23,6 +23,7 @@ describe("buildCrossAuthorStageMap", () => {
     projectId: "proj-a",
     authorId: "author-1",
     authorInitials: "BL",
+    authorShortName: "Baker L.",
     stageNames: ["Development", "Testing"],
     stages: [
       { stageName: "Dev", status: "green" },
@@ -41,12 +42,12 @@ describe("buildCrossAuthorStageMap", () => {
     const map = buildCrossAuthorStageMap([crossAuthor]);
     // Dev: green traffic → on-track (no risks/items passed, so no override).
     expect(map.get("proj-a")?.get("dev")).toEqual({
-      assignee: "BL",
+      assignee: "Baker L.",
       status: "on-track",
     });
     // Testing: null traffic → empty.
     expect(map.get("proj-a")?.get("testing")).toEqual({
-      assignee: "BL",
+      assignee: "Baker L.",
       status: "empty",
     });
   });
@@ -54,7 +55,7 @@ describe("buildCrossAuthorStageMap", () => {
   it("derives 'empty' status when stage list is empty", () => {
     const map = buildCrossAuthorStageMap([{ ...crossAuthor, stages: [] }]);
     expect(map.get("proj-a")?.get("dev")).toEqual({
-      assignee: "BL",
+      assignee: "Baker L.",
       status: "empty",
     });
   });
@@ -75,11 +76,11 @@ describe("buildCrossAuthorStageMap", () => {
     };
     const map = buildCrossAuthorStageMap([derived]);
     expect(map.get("proj-a")?.get("dev")).toEqual({
-      assignee: "BL",
+      assignee: "Baker L.",
       status: "at-risk",
     });
     expect(map.get("proj-a")?.get("testing")).toEqual({
-      assignee: "BL",
+      assignee: "Baker L.",
       status: "blocked",
     });
   });
@@ -116,9 +117,9 @@ describe("applyCrossAuthorStageOverrides", () => {
     [
       "proj-a",
       new Map([
-        ["dev", { assignee: "BL", status: "blocked" as const }],
-        ["testing", { assignee: "BL", status: "at-risk" as const }],
-        ["support", { assignee: "BL", status: "on-track" as const }],
+        ["dev", { assignee: "Baker L.", status: "blocked" as const }],
+        ["testing", { assignee: "Baker L.", status: "at-risk" as const }],
+        ["support", { assignee: "Baker L.", status: "on-track" as const }],
       ]),
     ],
   ]);
@@ -132,7 +133,7 @@ describe("applyCrossAuthorStageOverrides", () => {
         stageName: "Testing",
         status: "at-risk",
         ownership: "locked",
-        assignee: "BL",
+        assignee: "Baker L.",
       },
       // already-'locked' untouched.
       product.stages[2],

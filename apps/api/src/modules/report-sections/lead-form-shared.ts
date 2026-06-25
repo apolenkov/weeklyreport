@@ -52,6 +52,7 @@ export interface LeadFormRepository {
       projectName: string;
       authorId: string;
       authorInitials: string;
+      authorShortName: string;
       stageNames: string[];
       stages: {
         stageName: string;

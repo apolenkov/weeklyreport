@@ -52,6 +52,7 @@ import type {
 } from "@customreport/shared";
 import {
   initialsFromName as sharedInitialsFromName,
+  shortNameFromName,
   STAGE_NAMES,
 } from "@customreport/shared";
 
@@ -384,7 +385,9 @@ function buildStageGrid(
                 [],
               ),
         ownership: "mine" as const,
-        assignee: ownerLabel,
+        // Stage owner labels render the short form ("Иванов В.П."); the full ФИО
+        // is reserved for the top user badge. Avatar chips keep 2-letter initials.
+        assignee: shortNameFromName(ownerLabel),
         // W11 (fix-report-surface-integrity): flag a stage the lead's OWN risk
         // EXPLICITLY names (strict — non-empty stageIds). A covers-all (`[]`) or
         // legacy stage-less risk is excluded, so it never inflates the counter.

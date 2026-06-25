@@ -264,7 +264,10 @@ describe("LeadFormPrismaRepository (integration)", () => {
 
       // Initials derived server-side from "Anna Karenina" → "AK".
       expect(row.authorInitials).toBe("AK");
-      // Full name must NOT appear on the wire.
+      // ADR 0006: the SHORT form (surname + initials) now leaves the server for
+      // the cross-author stage label — "Anna Karenina" → "Anna K.".
+      expect(row.authorShortName).toBe("Anna K.");
+      // The FULL ФИО must still NOT appear on the wire.
       expect(Object.keys(row)).not.toContain("authorName");
       // The three removed count fields must not appear.
       expect(Object.keys(row)).not.toContain("itemCount");
