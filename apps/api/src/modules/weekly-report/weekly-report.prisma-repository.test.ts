@@ -108,7 +108,7 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId", () => {
         periodStart: { lte: Date };
         archived: boolean;
       };
-      orderBy: { periodStart: string };
+      orderBy: { periodStart?: string; id?: string }[];
       select: { id: boolean };
     };
     expect(callArgs.where.periodStatus).toEqual({ in: ["open", "reopened"] });
@@ -116,7 +116,9 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId", () => {
     // The archived:false guard (mutation sentinel: dropping it would let an
     // archived-open row be mistaken for the current period).
     expect(callArgs.where.archived).toBe(false);
-    expect(callArgs.orderBy).toEqual({ periodStart: "desc" });
+    // Deterministic order: periodStart desc, then id desc as a total-order
+    // tiebreak so concurrent same-periodStart periods resolve to one stable id.
+    expect(callArgs.orderBy).toEqual([{ periodStart: "desc" }, { id: "desc" }]);
     expect(callArgs.select).toEqual({ id: true });
   });
 

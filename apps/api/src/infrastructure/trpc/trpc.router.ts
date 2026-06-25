@@ -600,12 +600,15 @@ export function createAppRouter(deps: RouterDeps) {
           }
 
           // Fallback: newest viewer-visible published report (group-scoped).
+          // `id desc` is a deterministic tiebreak so two published reports
+          // sharing a `periodStart` resolve to a stable id (same rationale as
+          // getCurrentEditableId — Decision 3).
           const published = await deps.prisma.report.findFirst({
             where: {
               periodStatus: "published" as const,
               sections: { some: sectionScope },
             },
-            orderBy: { periodStart: "desc" },
+            orderBy: [{ periodStart: "desc" }, { id: "desc" }],
             select: { id: true },
           });
 
