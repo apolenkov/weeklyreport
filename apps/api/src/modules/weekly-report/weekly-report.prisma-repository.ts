@@ -95,6 +95,22 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     return editableReport?.id ?? null;
   }
 
+  /**
+   * viewer-live-status: the newest `published` report id. Used as the viewer's
+   * default-report fallback when no current editable period exists, so the
+   * resolved default is a period the published-or-current gate accepts. The
+   * `id desc` tiebreak keeps the pick deterministic on a shared `periodStart`.
+   */
+  async getLatestPublishedId(): Promise<string | null> {
+    const publishedReport = await this.prisma.report.findFirst({
+      where: { periodStatus: "published" },
+      orderBy: [{ periodStart: "desc" }, { id: "desc" }],
+      select: { id: true },
+    });
+
+    return publishedReport?.id ?? null;
+  }
+
   async getWeeklyReport(
     reportId: string,
     session?: WeeklyReportScopeSession,

@@ -117,6 +117,10 @@ function createRepository(
     async getCurrentEditableId() {
       return currentEditableId;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async WeeklyReportRepository contract (no awaitable work in the stub)
+    async getLatestPublishedId() {
+      return null;
+    },
   };
 }
 

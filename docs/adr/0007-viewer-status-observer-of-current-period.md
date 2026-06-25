@@ -49,7 +49,11 @@ published reports.
   orders by `periodStart desc` **then `id desc`** (a stable tiebreak over the
   unique key). Without it a tie would let the gate and the entry resolver — which
   call the helper separately — pick different periods, 404-ing the viewer's own
-  Status entry.
+  Status entry. For the same reason, when a viewer calls the read with NO explicit
+  `reportId` the default is resolved from `getCurrentEditableId` (else the newest
+  published), NOT from the legacy `getActiveReportId` — the latter has no
+  `archived` filter and a different fallback, so it could resolve a default the
+  gate then rejects.
 - On the period it is allowed to read, the viewer sees the **same report content
   the head sees on the current period**, including unsubmitted DRAFT sections.
   Visibility stays scoped to the viewer's `ViewerGroupAccess` groups (unchanged
