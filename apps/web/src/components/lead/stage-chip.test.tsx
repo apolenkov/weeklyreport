@@ -243,45 +243,12 @@ describe("StageChip — covered-by-risk vs status-set distinction (W11 3.9)", ()
   });
 });
 
-// ---- realistic-small-demo-seed: unassigned chip (D4 quiet/neutral copy) ----
-// An unowned stage (ownership === "unassigned") must render muted and neutral:
-// no "Contact admin" action-prompt, no error framing, still in the pipeline.
-// mine and locked paths must be unaffected.
+// ---- assignee-label invariants for the two live ownership states ----
+// `StageOwnership` narrowed to "mine" | "locked" (feat 9f2018fd excludes
+// unassigned stages from the pipeline before they reach a chip), so the old
+// "unassigned" StageChip cases are gone; mine/locked label invariants stay.
 
-const BASE_UNASSIGNED = {
-  stageName: "Planning",
-  ownership: "unassigned" as const,
-  status: "empty" as const,
-  assignee: null,
-};
-
-describe("StageChip — unassigned stage (D4 neutral copy)", () => {
-  it("unassigned chip renders in the document (stays in the pipeline)", () => {
-    render(<StageChip stage={BASE_UNASSIGNED} />);
-    expect(screen.getByRole("button")).toBeInTheDocument();
-  });
-
-  it("unassigned chip does not show 'Contact admin'", () => {
-    render(<StageChip stage={BASE_UNASSIGNED} />);
-    fireEvent.focus(screen.getByRole("button"));
-    expect(screen.queryByText(/Contact admin/i)).not.toBeInTheDocument();
-  });
-
-  it("unassigned chip assignee label does not contain 'unassigned' text", () => {
-    const { container } = render(<StageChip stage={BASE_UNASSIGNED} />);
-    const spans = Array.from(container.querySelectorAll("span"));
-    spans.forEach((span) => {
-      expect(span.textContent).not.toMatch(/unassigned/i);
-    });
-  });
-
-  it("unassigned chip is not editable — no status popover on click", () => {
-    render(<StageChip stage={BASE_UNASSIGNED} />);
-    screen.getByRole("button").click();
-    expect(screen.queryByText("✓ On Track")).not.toBeInTheDocument();
-    expect(screen.queryByText("✕ Blocked")).not.toBeInTheDocument();
-  });
-
+describe("StageChip — assignee label invariants (mine/locked)", () => {
   it("mine chip assignee label is unchanged", () => {
     render(
       <StageChip
