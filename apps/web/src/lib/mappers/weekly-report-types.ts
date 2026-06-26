@@ -81,6 +81,19 @@ export interface WeeklyProductReport {
   priorities: WeeklyReportPriority[];
 }
 
+// report-overview-scope-parity: one row of the Report overview in `by lead`
+// scope — derived from the already-computed per-lead groups. `worstStatus` is
+// the worst traffic light across the lead's sliced products; the counts are
+// summed over those products. Mirrors the product overview card's three counts.
+export interface LeadOverviewRow {
+  id: string;
+  name: string;
+  worstStatus: WeeklyProductStatus;
+  currentCount: number;
+  nextCount: number;
+  riskCount: number;
+}
+
 export interface WeeklyReportPeriod {
   id: string;
   /**

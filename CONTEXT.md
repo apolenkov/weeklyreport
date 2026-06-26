@@ -190,6 +190,16 @@ decisions / stages), so a lead with two products shows two cards under them and 
 other author's content mixes in.
 _Avoid_: view (view = edit/slides mode; scope = the grouping axis).
 
+**Report overview** (the summary band atop the report):
+The at-a-glance grid above the report body. It is SCOPE-ADAPTIVE: in `by product`
+scope it summarizes products (one card per product); in `by lead` scope it
+summarizes leads (one card per lead that has content, carrying the lead's name,
+their worst product status, and their summed record counts), and a card jumps to
+that lead's group. The overview's grouping unit ALWAYS matches the report body's
+grouping unit so the summary and the body agree.
+_Avoid_: "Portfolio Overview" as a fixed product-only label (the overview's unit
+follows scope; the heading adapts).
+
 **Own contribution**:
 The records a lead authored in a period — their items, risks, decisions, and the
 stages they own. In the default **Mine only** record visibility, the lead's own
