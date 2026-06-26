@@ -5,12 +5,14 @@ import type { StageAssignment, StageStatus } from "./mock-data";
 import type { CrossAuthorEntry } from "./sdlc-pipeline";
 import { canonicalStageName } from "./stage-tags";
 
-// pipeline-tooltip-and-indicator: the "+N more" reveal must be honest about who
-// holds each hidden stage. In Mine mode the lead's own grid marks every non-own
-// stage "unassigned" — the real foreign ownership lives in `crossAuthors` (the
+// pipeline-tooltip-and-indicator / unassigned-stage-reporting-exclusion: the
+// "+N more" reveal must be honest about who holds each hidden stage. In Mine
+// mode a non-own stage in the product's stageSet arrives as foreign-owned
+// (locked) with a null assignee — the real owner lives in `crossAuthors` (the
 // same source that floors product health). We consult it so a stage taken by a
-// co-owner reads as their initials, not "unassigned" (the lead reported DevOps
-// showing empty/unassigned while another author actually held it).
+// co-owner reads as their initials, falling back to "another lead" when the
+// owner is not yet resolved (the lead reported DevOps showing empty while
+// another author actually held it).
 
 interface ForeignOwner {
   owner: string;
@@ -37,9 +39,12 @@ export function foreignOwnersForProduct(
 }
 
 /**
- * One honest line per hidden stage: a stage held by a co-owner names their
- * initials; a genuinely unowned stage reads "unassigned". "empty" is never
- * shown for a stage that has an owner.
+ * One honest line per hidden stage. unassigned-stage-reporting-exclusion: a
+ * hidden stage is always foreign-owned now (the "unassigned" category is gone).
+ * A stage whose co-owner is resolved (via `crossAuthors`) names their initials;
+ * one whose owner has not been resolved yet (Mine mode without cross-author
+ * data) reads "another lead". "empty" is never shown for a stage that has an
+ * owner.
  */
 function hiddenStageLine(
   s: StageAssignment,
@@ -56,7 +61,7 @@ function hiddenStageLine(
       ? `${s.stageName} — ${s.assignee} (no status set)`
       : `${s.stageName} — ${s.assignee}: ${s.status}`;
   }
-  return `${s.stageName} — unassigned`;
+  return `${s.stageName} — another lead`;
 }
 
 export function hiddenStagesRevealLines(
@@ -69,7 +74,7 @@ export function hiddenStagesRevealLines(
 /**
  * The status that drives each hidden stage's at-a-glance colour. A foreign-held
  * stage uses the co-owner's status from `crossAuthors` (in Mine mode the lead's
- * own grid marks it "unassigned"/"empty", so its raw status is meaningless);
+ * own grid carries it as locked/"empty", so its raw status is meaningless);
  * any other stage uses its own status. The "+N more" indicator colour is built
  * from these so it always matches the reveal text, instead of collapsing to grey
  * whenever the only severity lives in a foreign co-owner's stage.

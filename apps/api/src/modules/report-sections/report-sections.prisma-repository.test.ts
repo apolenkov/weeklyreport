@@ -16,6 +16,7 @@ const AUTHOR_ID = "33333333-3333-4333-8333-333333333333";
 const OWNED_PROJECT = "44444444-4444-4444-8444-444444444444";
 const UNOWNED_PROJECT = "55555555-5555-4555-8555-555555555555";
 const STAGE_ID = "66666666-6666-4666-8666-666666666666";
+const TESTING_STAGE_ID = "aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa";
 
 type FabricatedRow = Pick<
   PrismaReportSectionWithRelations,
@@ -201,6 +202,94 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
   });
 });
 
+// unassigned-stage-reporting-exclusion: the read model exposes a per-product
+// `stageSet` — the union of all leads' assignments on the product — as READ-ONLY
+// display metadata. The writable `ownedStages` stays the author's own stages, so
+// the write path (handleProductsChange skips non-mine chips; sectionToDraftPayload
+// and saveSection persist from ownedStages only) can never write a foreign stage.
+describe("mapPrismaToReportSection — assigned-stage set", () => {
+  // A row where the author owns Development, and the product also carries a
+  // Testing assignment held by ANOTHER lead.
+  function rowWithCrossLeadAssignments(): FabricatedRow {
+    return baseRow({
+      author: {
+        name: "Lead 1",
+        role: "lead",
+        id: AUTHOR_ID,
+        stageAssignments: [
+          {
+            userId: AUTHOR_ID,
+            stageId: STAGE_ID,
+            projectId: OWNED_PROJECT,
+            project: {
+              id: OWNED_PROJECT,
+              name: "Owned Project",
+              archived: false,
+              // The product's full assignment set across all leads.
+              stageAssignments: [
+                {
+                  stageId: STAGE_ID,
+                  stage: { id: STAGE_ID, name: "Development", sortOrder: 4 },
+                },
+                {
+                  stageId: TESTING_STAGE_ID,
+                  stage: {
+                    id: TESTING_STAGE_ID,
+                    name: "Testing",
+                    sortOrder: 5,
+                  },
+                },
+                // Duplicate Development row (e.g. a second relation read) must
+                // dedupe by stageId, not double-count.
+                {
+                  stageId: STAGE_ID,
+                  stage: { id: STAGE_ID, name: "Development", sortOrder: 4 },
+                },
+              ],
+            },
+            stage: { id: STAGE_ID, name: "Development", sortOrder: 4 },
+          },
+        ],
+      },
+    });
+  }
+
+  it("exposes the union of all leads' assignments, deduped and ordered by sortOrder", () => {
+    const project = mapRow(rowWithCrossLeadAssignments()).projects.find(
+      (p) => p.projectId === OWNED_PROJECT,
+    );
+
+    expect(project?.stageSet).toEqual([
+      { stageId: STAGE_ID, stageName: "Development", sortOrder: 4 },
+      { stageId: TESTING_STAGE_ID, stageName: "Testing", sortOrder: 5 },
+    ]);
+  });
+
+  it("keeps a foreign stage in stageSet but OUT of ownedStages (write path stays owned-only)", () => {
+    const project = mapRow(rowWithCrossLeadAssignments()).projects.find(
+      (p) => p.projectId === OWNED_PROJECT,
+    );
+
+    // Testing is assigned to another lead: visible as display metadata...
+    expect(project?.stageSet?.map((s) => s.stageName)).toContain("Testing");
+    // ...but never in the writable ownedStages, so a lead can never persist a
+    // status for a stage they do not own.
+    expect(project?.ownedStages?.map((s) => s.stageName)).toEqual([
+      "Development",
+    ]);
+  });
+
+  it("falls back to an empty stageSet when the project carries no assignment relation (legacy fixture)", () => {
+    // baseRow's project omits `stageAssignments` (pre-include shape); the mapper
+    // must not throw and yields an empty set (web falls back to ownedStages).
+    const project = mapRow(baseRow()).projects.find(
+      (p) => p.projectId === OWNED_PROJECT,
+    );
+
+    expect(project?.stageSet).toEqual([]);
+  });
+});
+
 // fix-published-empty-stage-risk-floor (task 3.2): the PDF export product
 // mapping inherits the floor because it maps via the SAME
 // mapPrismaToReportSection. These pin the mapper-level floor: an OWNED stage
@@ -290,5 +379,36 @@ describe("mapPrismaToReportSection — own-risk product floor", () => {
     expect(
       section.projects.find((p) => p.projectId === OWNED_PROJECT)?.trafficLight,
     ).toBe("red");
+  });
+
+  // unassigned-stage-reporting-exclusion (task 4.1): a risk naming a stage the
+  // author does NOT own never floored the product (the floor folds risks through
+  // OWNED stages only), so excluding such a vacant stage changes no health
+  // number — and the risk stays listed in the risk section, so the severity is
+  // always explained by a visible object even with no stage chip.
+  it("a risk on a non-owned (vacant) stage does not floor health and stays listed", () => {
+    const section = mapRow(
+      baseRow({
+        projectStatuses: [
+          {
+            projectId: OWNED_PROJECT,
+            status: "green",
+            project: {
+              id: OWNED_PROJECT,
+              name: "Owned Project",
+              archived: false,
+            },
+          },
+        ],
+        // Author owns Development; this blocked risk names Testing only.
+        risks: [coveringRisk("blocked", ["Testing"])],
+      }),
+    );
+
+    const project = section.projects.find((p) => p.projectId === OWNED_PROJECT);
+    // Health is unchanged — the vacant Testing stage never drove the light.
+    expect(project?.trafficLight).toBe("green");
+    // The covering risk is still listed (explains any severity without a chip).
+    expect(section.risks.map((r) => r.risk)).toContain("Own covering risk");
   });
 });

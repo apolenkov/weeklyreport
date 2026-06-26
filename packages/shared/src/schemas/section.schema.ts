@@ -110,14 +110,27 @@ export const submitSectionSchema = draftSaveSchema.extend({
 
 // 35-04: per-project list of stages owned by the section author on this
 // project. Sourced from `StageAssignment` rows scoped by (projectId,
-// userId=author). Empty array == author has no stake on this project,
-// in which case the lead-form renders the project's stages as
-// `unassigned` chips with assignee=null.
+// userId=author). Empty array == author has no stake on this project.
+// unassigned-stage-reporting-exclusion: the lead-form renders the grid from
+// `stageSet` (assignments across all leads); a stage the author does not own
+// shows foreign-owned, and a stage with no assignment is excluded entirely.
 export const ownedStageSchema = z.object({
   stageId: z.uuid(),
   stageName: z.string().min(1),
   sortOrder: z.number().int().min(0),
   status: trafficLightStatusSchema.nullable().optional(),
+});
+
+// unassigned-stage-reporting-exclusion: one entry per stage that has an
+// assignment to ANY lead on the product (the union across all leads). This is
+// READ-ONLY display metadata: it sources the lead-form stage grid so a stage
+// with NO assignment is excluded entirely (not rendered as a vacant chip),
+// while a stage assigned to another lead renders foreign-owned. It NEVER feeds
+// the write path — `saveSection` persists status only from `ownedStages`.
+export const stageSetEntrySchema = z.object({
+  stageId: z.uuid(),
+  stageName: z.string().min(1),
+  sortOrder: z.number().int().min(0),
 });
 
 export const projectReadModelSchema = z.object({
@@ -133,6 +146,16 @@ export const projectReadModelSchema = z.object({
    * which the lead-form mapper handles symmetrically.
    */
   ownedStages: z.array(ownedStageSchema).optional(),
+  /**
+   * unassigned-stage-reporting-exclusion: the product's assigned-stage set —
+   * every stage with an assignment to ANY lead on the product. READ-ONLY
+   * display metadata that sources the lead-form grid (a stage absent from the
+   * set is excluded; one present but not in `ownedStages` is foreign-owned).
+   * Optional so legacy fixtures and frozen snapshots that pre-date this change
+   * still parse; missing -> the mapper falls back to `ownedStages` (own stages
+   * only, no foreign chips).
+   */
+  stageSet: z.array(stageSetEntrySchema).optional(),
 });
 
 // fix-lead-surface-name-resolution: name-only entry for a project that a
@@ -202,6 +225,7 @@ export type ReportSectionReadModel = z.infer<
 export type ProjectReadModel = z.infer<typeof projectReadModelSchema>;
 export type ReferencedProject = z.infer<typeof referencedProjectSchema>;
 export type OwnedStage = z.infer<typeof ownedStageSchema>;
+export type StageSetEntry = z.infer<typeof stageSetEntrySchema>;
 export type SubmissionDashboardRow = z.infer<
   typeof submissionDashboardRowSchema
 >;

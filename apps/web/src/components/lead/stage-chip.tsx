@@ -63,12 +63,11 @@ export function StageChip({
   const config = STATUS_CONFIG[stage.status];
   const isEditable = stage.ownership === "mine" && !readOnly;
   const isLocked = stage.ownership === "locked";
-  const isUnassigned = stage.ownership === "unassigned";
   const isEmpty = stage.status === "empty" && isEditable;
   // W11 (3.9): the raw status defaults to the floored display status for
   // callers (read-only / head) that thread no pre-floor signal. The
   // covered/status-set distinction applies only to the lead's OWN stages —
-  // a locked/unassigned chip never carries the lead's authoring intent.
+  // a foreign-owned locked chip never carries the lead's authoring intent.
   const isMine = stage.ownership === "mine";
   const effectiveRawStatus = rawStatus ?? stage.status;
   const coveredByRisk =
@@ -116,21 +115,18 @@ export function StageChip({
       ? "cursor-pointer border-dashed animate-[sdlc-pulse_3s_infinite] motion-reduce:animate-none hover:animate-none hover:shadow-[0_0_0_2px_rgba(0,117,74,0.2)]"
       : "",
     isLocked ? "cursor-not-allowed" : "",
-    isUnassigned ? "cursor-not-allowed" : "",
   ]
     .filter(Boolean)
     .join(" ");
 
   const borderStyle = isEmpty
     ? `1.5px dashed var(--color-starbucks-accent)`
-    : isUnassigned
-      ? "1.5px dashed rgba(0,0,0,0.15)"
-      : // W11 (3.9): a stage floored to its severity purely by the lead's own
-        // risk reads as a dashed "sketch" of the same hue — same color, not
-        // pixel-identical to a status the lead explicitly set (solid).
-        coveredByRisk
-        ? `1.5px dashed ${config.border}`
-        : `1.5px solid ${config.border}`;
+    : // W11 (3.9): a stage floored to its severity purely by the lead's own
+      // risk reads as a dashed "sketch" of the same hue — same color, not
+      // pixel-identical to a status the lead explicitly set (solid).
+      coveredByRisk
+      ? `1.5px dashed ${config.border}`
+      : `1.5px solid ${config.border}`;
 
   function handleChipClick() {
     if (!isEditable) return;
@@ -160,7 +156,7 @@ export function StageChip({
   // label and the visible tooltip.
   //  - covered by the lead's OWN risk on an empty stage → "<status> by risk"
   //  - a status the lead set explicitly → "<status> — status set"
-  //  - foreign floor / locked / unassigned → no suffix (plain status)
+  //  - foreign floor / locked → no suffix (plain status)
   const coverageSuffix = coveredByRisk
     ? " by risk"
     : isExplicitlySet
@@ -176,12 +172,10 @@ export function StageChip({
       ]
         .filter(Boolean)
         .join(" · ")
-    : isUnassigned
-      ? "Not part of this contribution"
-      : // Append the coverage suffix OUTSIDE the `??` so a chip that carries an
-        // explicit tooltip still gets the "by risk" / "status set" cue — the
-        // dashed border must never read as unexplained to a sighted hover user.
-        `${baseTooltip}${coverageSuffix}`;
+    : // Append the coverage suffix OUTSIDE the `??` so a chip that carries an
+      // explicit tooltip still gets the "by risk" / "status set" cue — the
+      // dashed border must never read as unexplained to a sighted hover user.
+      `${baseTooltip}${coverageSuffix}`;
 
   return (
     <div
@@ -237,7 +231,7 @@ export function StageChip({
           fontWeight: stage.ownership === "mine" ? 600 : 400,
         }}
       >
-        {isUnassigned ? "—" : stage.assignee}
+        {stage.assignee ?? "—"}
       </span>
 
       {/* Status popover — click-to-apply menu. Each option is a single

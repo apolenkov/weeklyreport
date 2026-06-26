@@ -143,6 +143,22 @@ treatment, NOT a status hue. Workflow status is conveyed separately (the row
 stripe / a dedicated signal), never by the chip's fill.
 _Avoid_: status badge (the chip is identity, not status).
 
+**Stage assignment / unassigned stage**:
+A stage belongs to a product for reporting only when a person is assigned to it
+on that product (the stage×product slot is occupied). An **unassigned stage** is
+a stage×product slot with no assignment — nobody is accountable for reporting it.
+An unassigned stage is OUT of that product's reporting (not shown, not counted,
+not awaited), as if the stage does not exist for the product. Exclusion is purely
+assignment-driven — there is NO traceability carve-out: a risk or persisted
+status NEVER keeps an unassigned stage visible. Health stays traceable anyway
+because product health folds covering risks only through OWNED stages (a risk on
+an unassigned stage never drove the traffic light), and the covering risk stays
+listed in the risk section, so any severity is explained by a visible object
+without the stage chip. Distinct from a **foreign-owned stage**, which IS assigned
+(to another lead) and remains part of the pipeline.
+_Avoid_: vacant chip / grey stage (an unassigned stage is excluded, not rendered
+greyed).
+
 **Workflow status** (of an item):
 `in-progress` / `completed` / `blocked` / `planned`. Surfaced via the row's left
 stripe or a dedicated marker — deliberately decoupled from the stage chip so one
