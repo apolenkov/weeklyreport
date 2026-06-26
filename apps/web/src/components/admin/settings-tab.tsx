@@ -55,8 +55,9 @@ export function SettingsTab({ settings: serverSettings }: SettingsTabProps) {
           <TabsTrigger value="reminders">Reminders</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           {/* UFB-056 / Phase 55-5: external-integrations badges. Surfaces
-              Telegram (seeds-only) and AI (Coming-Soon) as status cards.
-              Slack + CI were removed in admin-settings-surface-cleanup. */}
+              Element (roadmapped messaging, Coming-Soon label) and AI
+              (Coming-Soon). Slack + CI were removed in
+              admin-settings-surface-cleanup. */}
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="holidays">
             <HolidaysComingSoonControl />
