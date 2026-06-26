@@ -53,3 +53,17 @@ scope change.
 
 No remaining flaws. Consistency fix confirmed; `validate --strict` passes.
 Converged after 3 rounds.
+
+## Implementation amendments
+
+Two scope decisions were adjusted during implementation (not in the original
+approved plan) and are now reflected in proposal.md, design.md, spec.md, and
+tasks.md:
+
+1. **Inline editing instead of a modal dialog.** The Edit form renders in place
+   of the edited card; Add renders the same form at the top of the list. This
+   keeps the admin in context and avoids a modal.
+2. **True hard-delete instead of archive/soft-delete.** The user requested
+   deletion rather than archiving. The backend `removePolicy` flow now deletes
+   the `ReminderPolicy` and its derived `ReminderRule` rows (executions cascade
+   with rules). The remove-confirm dialog warns that the action is irreversible.
