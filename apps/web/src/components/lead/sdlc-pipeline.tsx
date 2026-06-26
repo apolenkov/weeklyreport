@@ -105,7 +105,7 @@ function worstStatusOf(values: readonly StageStatus[]): StageStatus {
 // pipeline-tooltip-and-indicator (reverses #90): the collapsed `+N more`
 // indicator colours by the FULL status scale of the hidden stages, by
 // precedence — red if any blocked, else yellow if any at-risk, else grey if any
-// is unfilled (empty/unassigned), else green when every hidden stage is
+// is unfilled (empty), else green when every hidden stage is
 // on-track. This lets the lead trace the product's left health stripe to the
 // collapsed stages at a glance (the earlier "neutral unless blocked/at-risk"
 // hid the green/grey distinction the reviewer asked for).

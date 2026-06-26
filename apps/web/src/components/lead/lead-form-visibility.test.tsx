@@ -114,6 +114,21 @@ function makeSection() {
             sortOrder: 3,
           },
         ],
+        // unassigned-stage-reporting-exclusion: the product's assigned-stage set
+        // includes the lead's own Development AND the co-lead's Testing, so the
+        // foreign Testing stage renders as a locked chip in Everyone mode.
+        stageSet: [
+          {
+            stageId: "88888888-8888-4888-8888-888888888888",
+            stageName: "Development",
+            sortOrder: 3,
+          },
+          {
+            stageId: "99999999-9999-4999-8999-999999999999",
+            stageName: "Testing",
+            sortOrder: 4,
+          },
+        ],
       },
     ],
     items: [

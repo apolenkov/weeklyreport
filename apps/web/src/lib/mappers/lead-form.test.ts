@@ -42,12 +42,13 @@ function baseSection(
 }
 
 describe("mapLeadProducts", () => {
-  it("marks a stage as `mine` when it appears in ownedStages and renders the rest as unassigned", () => {
+  it("marks a stage `mine` and excludes vacant stages when no stageSet is provided", () => {
     // 35-04: the lead owns the Dev stage on this project (real
     // StageAssignment data), so the chip surfaces as `mine` with the
-    // project's traffic-light status. Pre-35-04 this was synthesized
-    // unconditionally — the bug was that the synthesized "Dev" chip
-    // didn't reflect actual assignments.
+    // project's traffic-light status. unassigned-stage-reporting-exclusion:
+    // with no `stageSet`, the grid is the owned stages only — every other
+    // canonical stage is vacant on this product and is EXCLUDED (no chip),
+    // not rendered as a grey "unassigned" placeholder.
     const section = baseSection({
       projects: [
         {
@@ -72,7 +73,8 @@ describe("mapLeadProducts", () => {
     expect(expectDefined(products[0]).id).toBe(PROJECT_A);
     expect(expectDefined(products[0]).name).toBe("CRM Platform");
     expect(expectDefined(products[0]).overallStatus).toBe("on-track");
-    expect(expectDefined(products[0]).stages).toHaveLength(7);
+    // Only the owned stage renders — vacant stages are excluded entirely.
+    expect(expectDefined(products[0]).stages).toHaveLength(1);
     // stage-label-canonicalization: the grid carries the canonical "Development"
     // stage name; the compact "Dev" is a pipeline-chip display label only.
     const devStage = expectDefined(products[0]).stages.find(
@@ -81,12 +83,51 @@ describe("mapLeadProducts", () => {
     expect(devStage?.ownership).toBe("mine");
     expect(devStage?.assignee).toBe("Тимлид 1.");
     expect(devStage?.status).toBe("on-track");
-    // Stages outside ownedStages render as unassigned with no assignee.
+    // A vacant stage (no assignment) produces NO chip at all.
     const planningStage = expectDefined(products[0]).stages.find(
       (s) => s.stageName === "Planning",
     );
-    expect(planningStage?.ownership).toBe("unassigned");
-    expect(planningStage?.assignee).toBeNull();
+    expect(planningStage).toBeUndefined();
+  });
+
+  it("renders a stageSet stage the lead does not own as foreign-owned (locked) and excludes stages absent from the set", () => {
+    // unassigned-stage-reporting-exclusion: the grid is sourced from the
+    // product's `stageSet` (assignments across all leads). A set stage the
+    // lead owns → `mine`; a set stage owned by another lead → `locked`
+    // (read-only, assignee filled later from cross-author data); a stage
+    // absent from the set → excluded.
+    const section = baseSection({
+      projects: [
+        {
+          projectId: PROJECT_A,
+          projectName: "CRM Platform",
+          trafficLight: "green",
+          ownedStages: [
+            {
+              stageId: "stage-dev",
+              stageName: "Development",
+              sortOrder: 3,
+              status: "green",
+            },
+          ],
+          stageSet: [
+            { stageId: "stage-dev", stageName: "Development", sortOrder: 3 },
+            { stageId: "stage-test", stageName: "Testing", sortOrder: 4 },
+          ],
+        },
+      ],
+    });
+
+    const stages = expectDefined(mapLeadProducts(section)[0]).stages;
+    // Development (mine) + Testing (foreign-owned); Planning is absent.
+    expect(stages).toHaveLength(2);
+    expect(stages.find((s) => s.stageName === "Development")?.ownership).toBe(
+      "mine",
+    );
+    const testing = stages.find((s) => s.stageName === "Testing");
+    expect(testing?.ownership).toBe("locked");
+    expect(testing?.assignee).toBeNull();
+    expect(stages.find((s) => s.stageName === "Planning")).toBeUndefined();
   });
 
   it("maps a null trafficLight project to overallStatus empty", () => {
@@ -212,7 +253,11 @@ describe("mapLeadProducts", () => {
     expect(product?.stages.every((s) => s.ownership === "mine")).toBe(true);
   });
 
-  it("without ownedStages, every stage is unassigned (the lead has no stake on this project)", () => {
+  it("without ownedStages or stageSet, the grid is empty (the lead has no stake and no stage is assigned)", () => {
+    // unassigned-stage-reporting-exclusion: with no owned stages AND no
+    // assigned-stage set, there is nothing to render — every canonical stage
+    // is vacant on this product, and vacant stages are excluded. The grid is
+    // empty rather than seven grey "unassigned" placeholders.
     const section = baseSection({
       projects: [
         {
@@ -225,9 +270,7 @@ describe("mapLeadProducts", () => {
     });
 
     const product = mapLeadProducts(section).at(0);
-    expect(product?.stages.every((s) => s.ownership === "unassigned")).toBe(
-      true,
-    );
+    expect(product?.stages).toHaveLength(0);
   });
 
   it("a covering risk floors a stale persisted on-track status (unify-risk-stage-status D1, supersedes PRJ-2)", () => {

@@ -156,9 +156,13 @@ export function buildCrossAuthorStageMap(
 }
 
 /**
- * F8: rewrite ONLY `ownership === 'unassigned'` stages to `'locked'` with
- * the cross-author assignee and derived status. Stages the current user
- * owns (or that are already locked) are never touched.
+ * F8 / unassigned-stage-reporting-exclusion: fill the real cross-author
+ * assignee + derived status onto foreign-owned (`locked`) stages. Since the
+ * "unassigned" category is gone, `buildStageGrid` now emits foreign-owned
+ * stages as `locked` with `assignee: null` directly; this resolves who holds
+ * each one and its status from the cross-author query. Stages the current user
+ * owns (`mine`) are never touched, and a locked stage with no cross-author
+ * entry keeps its null assignee.
  */
 export function applyCrossAuthorStageOverrides(
   products: readonly LeadProduct[],
@@ -170,12 +174,11 @@ export function applyCrossAuthorStageOverrides(
     return {
       ...product,
       stages: product.stages.map((stage) => {
-        if (stage.ownership !== "unassigned") return stage;
+        if (stage.ownership !== "locked") return stage;
         const entry = stageMap.get(normalizeStageName(stage.stageName));
         if (!entry) return stage;
         return {
           ...stage,
-          ownership: "locked" as const,
           assignee: entry.assignee,
           status: entry.status,
         };

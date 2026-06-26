@@ -780,15 +780,16 @@ export function LeadForm({
     history: historyQ.data,
   });
 
-  // F8: enrich unassigned stages with cross-author initials + risk-derived
-  // status. crossAuthorsQ.data has { projectId, stageNames, authorInitials,
-  // stages } per shared product. Stages not owned by the current user but
-  // assigned to another lead become ownership:"locked" with that lead's
-  // initials and risk-derived color instead of gray "empty". No foreign
+  // F8 / unassigned-stage-reporting-exclusion: enrich foreign-owned (locked)
+  // stages with cross-author initials + risk-derived status. crossAuthorsQ.data
+  // has { projectId, stageNames, authorInitials, stages } per shared product. A
+  // stage in the product's stageSet not owned by the current user arrives as
+  // ownership:"locked" with a null assignee (from buildStageGrid); this override
+  // fills that lead's initials and risk-derived color. No foreign
   // item/risk/decision text is read here.
   //
   // 7c.4: the foreign stage CHIPS show only in Everyone. In Mine only we skip
-  // the override so co-owners' stages stay hidden (unassigned/gray). Product
+  // the override so co-owners' stages stay hidden. Product
   // HEALTH stays honest in BOTH states — it derives from `crossAuthorEntries`
   // (the always-fetched status read) inside SdlcPipeline, independent of these
   // chips (D4d).

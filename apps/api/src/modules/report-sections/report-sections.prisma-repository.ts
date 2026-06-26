@@ -30,7 +30,19 @@ export const reportSectionFullInclude = {
       id: true,
       stageAssignments: {
         include: {
-          project: true,
+          // unassigned-stage-reporting-exclusion: include the product's FULL
+          // assignment set (across all leads, with each stage) so the read
+          // model can expose the per-product `stageSet` — the union needed to
+          // tell a vacant stage (excluded) from a foreign-owned one. Display
+          // metadata only; the writable `ownedStages` stays the author's own
+          // assignments.
+          project: {
+            include: {
+              stageAssignments: {
+                include: { stage: true },
+              },
+            },
+          },
           stage: true,
         },
       },
@@ -64,7 +76,20 @@ export type PrismaReportSectionWithRelations = NonNullable<
       userId: string;
       stageId: string;
       projectId: string;
-      project: { id: string; name: string; archived: boolean };
+      // unassigned-stage-reporting-exclusion: `project.stageAssignments` is the
+      // product's full assignment set across ALL leads (used to build the
+      // per-product `stageSet`). The author's own assignments stay the outer
+      // rows that drive `ownedStages`. Optional so legacy fixtures that pre-date
+      // the include widening still map (stageSet falls back to empty).
+      project: {
+        id: string;
+        name: string;
+        archived: boolean;
+        stageAssignments?: {
+          stageId: string;
+          stage: { id: string; name: string; sortOrder: number };
+        }[];
+      };
       stage: { id: string; name: string; sortOrder: number };
     }[];
   };
@@ -259,7 +284,9 @@ export function mapPrismaToReportSection(
   const assignmentsByProjectId = new Map<
     string,
     {
-      project: { id: string; name: string; archived: boolean };
+      // Carries `stageAssignments` (the product's full cross-lead set) so the
+      // per-product `stageSet` can be derived below.
+      project: (typeof row.author.stageAssignments)[number]["project"];
       assignments: typeof row.author.stageAssignments;
     }
   >();
@@ -331,6 +358,30 @@ export function mapPrismaToReportSection(
           }))
           .sort((a, b) => a.sortOrder - b.sortOrder);
 
+        // unassigned-stage-reporting-exclusion: the product's assigned-stage
+        // set — every stage with an assignment to ANY lead on the product,
+        // deduped by stageId and ordered by pipeline sortOrder. READ-ONLY
+        // display metadata; the lead-form grid renders only stages in this set
+        // (a vacant stage is excluded). The writable `ownedStages` is untouched.
+        const stageSet = [
+          ...new Map(
+            // `?? []` guards legacy fixtures / callers that predate the
+            // `project.stageAssignments` include; real Prisma rows always carry
+            // it. An empty set lets the web fall back to `ownedStages`.
+            (project.stageAssignments ?? []).map(
+              (sa) =>
+                [
+                  sa.stageId,
+                  {
+                    stageId: sa.stageId,
+                    stageName: sa.stage.name,
+                    sortOrder: sa.stage.sortOrder,
+                  },
+                ] as const,
+            ),
+          ).values(),
+        ].sort((a, b) => a.sortOrder - b.sortOrder);
+
         const rawTrafficLight =
           aggregateStageTraffic(ownedStages) ??
           projectStatusByProjectId.get(project.id) ??
@@ -355,6 +406,7 @@ export function mapPrismaToReportSection(
             })),
           }),
           ownedStages,
+          stageSet,
         };
       })
       .sort((a, b) => a.projectName.localeCompare(b.projectName, "ru")),

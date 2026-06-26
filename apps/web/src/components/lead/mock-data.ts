@@ -7,7 +7,10 @@
 
 export type StageStatus = "on-track" | "at-risk" | "blocked" | "empty";
 
-export type StageOwnership = "mine" | "locked" | "unassigned";
+// unassigned-stage-reporting-exclusion: "unassigned" is gone — a stage is the
+// lead's own ("mine") or another lead's ("locked", read-only). A stage with no
+// assignment is excluded from the grid entirely (see buildStageGrid).
+export type StageOwnership = "mine" | "locked";
 
 export interface StageAssignment {
   stageName: string;
@@ -202,22 +205,10 @@ export const MOCK_PRODUCTS: Product[] = [
     riskCount: 2,
     stages: [
       {
-        stageName: "Planning",
-        status: "empty",
-        ownership: "unassigned",
-        assignee: null,
-      },
-      {
         stageName: "Analysis",
         status: "on-track",
         ownership: "locked",
         assignee: "Ivanov A.",
-      },
-      {
-        stageName: "Design",
-        status: "empty",
-        ownership: "unassigned",
-        assignee: null,
       },
       {
         stageName: "Dev",
@@ -238,12 +229,6 @@ export const MOCK_PRODUCTS: Product[] = [
         ownership: "locked",
         assignee: "Sidorov P.",
       },
-      {
-        stageName: "Support",
-        status: "empty",
-        ownership: "unassigned",
-        assignee: null,
-      },
     ],
   },
   {
@@ -253,18 +238,6 @@ export const MOCK_PRODUCTS: Product[] = [
     riskSummary: "1 risk",
     riskCount: 1,
     stages: [
-      {
-        stageName: "Planning",
-        status: "empty",
-        ownership: "unassigned",
-        assignee: null,
-      },
-      {
-        stageName: "Analysis",
-        status: "empty",
-        ownership: "unassigned",
-        assignee: null,
-      },
       {
         stageName: "Design",
         status: "at-risk",
@@ -278,23 +251,11 @@ export const MOCK_PRODUCTS: Product[] = [
         assignee: "Smirnov K.",
       },
       {
-        stageName: "Testing",
-        status: "empty",
-        ownership: "unassigned",
-        assignee: null,
-      },
-      {
         stageName: "DevOps",
         status: "on-track",
         ownership: "mine",
         assignee: "Тимлид 1",
         tooltip: "Your stage - On Track",
-      },
-      {
-        stageName: "Support",
-        status: "empty",
-        ownership: "unassigned",
-        assignee: null,
       },
     ],
   },
@@ -306,22 +267,10 @@ export const MOCK_PRODUCTS: Product[] = [
     riskCount: 1,
     stages: [
       {
-        stageName: "Planning",
-        status: "empty",
-        ownership: "unassigned",
-        assignee: null,
-      },
-      {
         stageName: "Analysis",
         status: "on-track",
         ownership: "locked",
         assignee: "Ivanov A.",
-      },
-      {
-        stageName: "Design",
-        status: "empty",
-        ownership: "unassigned",
-        assignee: null,
       },
       {
         stageName: "Dev",
@@ -341,12 +290,6 @@ export const MOCK_PRODUCTS: Product[] = [
         status: "on-track",
         ownership: "locked",
         assignee: "Sidorov P.",
-      },
-      {
-        stageName: "Support",
-        status: "empty",
-        ownership: "unassigned",
-        assignee: null,
       },
     ],
   },
@@ -386,12 +329,6 @@ export const MOCK_PRODUCTS: Product[] = [
         assignee: "Тимлид 1",
       },
       {
-        stageName: "DevOps",
-        status: "empty",
-        ownership: "unassigned",
-        assignee: null,
-      },
-      {
         stageName: "Support",
         status: "on-track",
         ownership: "locked",
@@ -404,12 +341,6 @@ export const MOCK_PRODUCTS: Product[] = [
     name: "Integration Gateway",
     overallStatus: "on-track",
     stages: [
-      {
-        stageName: "Planning",
-        status: "empty",
-        ownership: "unassigned",
-        assignee: null,
-      },
       {
         stageName: "Analysis",
         status: "on-track",
@@ -427,24 +358,6 @@ export const MOCK_PRODUCTS: Product[] = [
         status: "empty",
         ownership: "mine",
         assignee: "Тимлид 1",
-      },
-      {
-        stageName: "Testing",
-        status: "empty",
-        ownership: "unassigned",
-        assignee: null,
-      },
-      {
-        stageName: "DevOps",
-        status: "empty",
-        ownership: "unassigned",
-        assignee: null,
-      },
-      {
-        stageName: "Support",
-        status: "empty",
-        ownership: "unassigned",
-        assignee: null,
       },
     ],
   },

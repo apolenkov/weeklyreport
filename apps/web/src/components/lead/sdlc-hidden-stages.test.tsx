@@ -50,7 +50,7 @@ describe("hiddenStagesRevealLines — owned-but-unstatused reveal", () => {
       crossAuthor("DevOps", null),
     ]);
     const lines = hiddenStagesRevealLines(
-      [hiddenStage("DevOps", "unassigned", "empty", null)],
+      [hiddenStage("DevOps", "locked", "empty", null)],
       foreignOwners,
     );
     expect(lines).toEqual(["DevOps — MK (no status set)"]);
@@ -72,17 +72,21 @@ describe("hiddenStagesRevealLines — owned-but-unstatused reveal", () => {
       crossAuthor("DevOps", "red"),
     ]);
     const lines = hiddenStagesRevealLines(
-      [hiddenStage("DevOps", "unassigned", "empty", null)],
+      [hiddenStage("DevOps", "locked", "empty", null)],
       foreignOwners,
     );
     expect(lines).toEqual(["DevOps — MK: blocked"]);
   });
 
-  it("a genuinely unowned stage reads 'unassigned'", () => {
+  it("a foreign stage with no resolved owner reads '<stage> — another lead'", () => {
+    // unassigned-stage-reporting-exclusion: hidden stages are foreign-owned
+    // now; a locked stage whose owner has not been resolved (Mine mode without
+    // cross-author data) reads "another lead", never "unassigned".
     const lines = hiddenStagesRevealLines(
-      [hiddenStage("Support", "unassigned", "empty", null)],
+      [hiddenStage("Support", "locked", "empty", null)],
       new Map(),
     );
-    expect(lines).toEqual(["Support — unassigned"]);
+    expect(lines).toEqual(["Support — another lead"]);
+    expect(lines[0]).not.toContain("unassigned");
   });
 });

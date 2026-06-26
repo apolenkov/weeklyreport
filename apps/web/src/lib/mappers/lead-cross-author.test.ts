@@ -87,6 +87,10 @@ describe("buildCrossAuthorStageMap", () => {
 });
 
 describe("applyCrossAuthorStageOverrides", () => {
+  // unassigned-stage-reporting-exclusion: foreign-owned stages now arrive as
+  // `locked` with `assignee: null` straight from buildStageGrid; the override
+  // fills the real assignee + status. Mine stays untouched; a locked stage with
+  // no matching cross-author entry keeps its null assignee.
   const product: LeadProduct = {
     id: "proj-a",
     name: "Alpha Product",
@@ -101,14 +105,14 @@ describe("applyCrossAuthorStageOverrides", () => {
       {
         stageName: "Testing",
         status: "empty",
-        ownership: "unassigned",
+        ownership: "locked",
         assignee: null,
       },
       {
         stageName: "Support",
         status: "empty",
         ownership: "locked",
-        assignee: "Someone",
+        assignee: null,
       },
     ],
   };
@@ -119,12 +123,12 @@ describe("applyCrossAuthorStageOverrides", () => {
       new Map([
         ["dev", { assignee: "Baker L.", status: "blocked" as const }],
         ["testing", { assignee: "Baker L.", status: "at-risk" as const }],
-        ["support", { assignee: "Baker L.", status: "on-track" as const }],
+        // no "support" entry — a locked stage with no cross-author match stays.
       ]),
     ],
   ]);
 
-  it("rewrites ONLY 'unassigned' stages to 'locked' with assignee and status", () => {
+  it("fills foreign-owned (locked) stages from cross-author data, leaving mine and unmatched locked untouched", () => {
     const [result] = applyCrossAuthorStageOverrides([product], overrides);
     expect(result.stages).toEqual([
       // 'mine' untouched even though an override exists for "dev".
@@ -135,7 +139,7 @@ describe("applyCrossAuthorStageOverrides", () => {
         ownership: "locked",
         assignee: "Baker L.",
       },
-      // already-'locked' untouched.
+      // locked with no matching override entry stays untouched (null assignee).
       product.stages[2],
     ]);
   });

@@ -74,7 +74,11 @@ import {
 // Mirrors `apps/web/src/components/lead/mock-data.ts` so consumers can depend
 // on this barrel rather than importing a value from `mock-data.ts`.
 
-export type LeadStageOwnership = "mine" | "locked" | "unassigned";
+// unassigned-stage-reporting-exclusion: the "unassigned" category is gone. A
+// stage is either the lead's own ("mine") or assigned to another lead on the
+// product ("locked", read-only). A stage with NO assignment is excluded from
+// the grid entirely, so it never reaches a chip.
+export type LeadStageOwnership = "mine" | "locked";
 
 export interface LeadStageAssignment {
   stageName: string;
@@ -326,10 +330,16 @@ export function stageNamesMatch(a: string, b: string): boolean {
 }
 
 /**
- * Build the 7-stage grid for one project from the read model's `ownedStages`.
+ * Build the stage grid for one project from the product's assigned-stage set.
  *
- * Stages whose name appears in `ownedStages` (matched via `stageNamesMatch`)
- * are flagged `mine`; the rest stay `unassigned`.
+ * unassigned-stage-reporting-exclusion: the grid is sourced from `stageSet`
+ * (the union of all leads' assignments on the product), NOT all seven canonical
+ * stages. A stage owned by this lead (name in `ownedStages`) is `mine`; a stage
+ * in the set but not owned is foreign-owned (`locked`, read-only); a stage with
+ * NO assignment is absent from the set and excluded entirely. `ownedStages` is
+ * unioned into the membership test defensively so the lead's own stages always
+ * render even if `stageSet` is missing (legacy fixtures / frozen snapshots).
+ * Order follows the canonical `STAGE_NAMES` pipeline order.
  *
  * rethink-pipeline-state-vs-completeness (D1): an EMPTY owned stage — one the
  * lead never set a status on — keeps its raw `status: "empty"` even when a
@@ -360,9 +370,17 @@ function buildStageGrid(
     stageName: string;
     status?: TrafficLightStatus | null;
   }[],
+  stageSet: readonly { stageName: string }[] = [],
   risks: readonly { stageIds?: readonly string[]; severity?: string }[] = [],
 ): LeadStageAssignment[] {
-  return STAGE_NAMES.map((stageName) => {
+  // unassigned-stage-reporting-exclusion: membership is assignment-driven —
+  // a stage renders only if it is in the product's `stageSet` (assigned to some
+  // lead) or owned by this lead. Owned is unioned in defensively so the lead's
+  // own stages survive a missing/partial `stageSet`.
+  const inStageSet = (stageName: string): boolean =>
+    stageSet.some((s) => stageNamesMatch(s.stageName, stageName)) ||
+    ownedStages.some((s) => stageNamesMatch(s.stageName, stageName));
+  return STAGE_NAMES.filter(inStageSet).map((stageName) => {
     const ownedStage =
       ownedStages.find((s) => stageNamesMatch(s.stageName, stageName)) ?? null;
     if (ownedStage) {
@@ -401,10 +419,14 @@ function buildStageGrid(
         ),
       };
     }
+    // unassigned-stage-reporting-exclusion: in the product's stage set but not
+    // owned by this lead — foreign-owned, rendered read-only (`locked`). In
+    // Everyone mode `applyCrossAuthorStageOverrides` fills the real assignee +
+    // status; in Mine mode it is hidden by the visibility filter.
     return {
       stageName,
       status: "empty" as const,
-      ownership: "unassigned" as const,
+      ownership: "locked" as const,
       assignee: null,
     };
   });
@@ -413,10 +435,11 @@ function buildStageGrid(
 /**
  * Map a section's projects -> presentation Product[].
  *
- * 35-04: each project's `ownedStages` (sourced from `StageAssignment` rows
- * scoped to the section author) drive which of the 7 SDLC chips render as
- * "mine" vs "unassigned". Stages outside `ownedStages` still render so the
- * user sees the full pipeline context, but they're greyed and unowned.
+ * 35-04 / unassigned-stage-reporting-exclusion: each project's `stageSet` (the
+ * union of all leads' `StageAssignment` rows on the product) sources the grid;
+ * `ownedStages` (scoped to the section author) marks which of those render as
+ * "mine" vs foreign-owned "locked". A stage with no assignment is absent from
+ * the set and excluded — no vacant chip.
  *
  * Pre-35-04 this mapper synthesized a fake grid that hard-coded the lead
  * onto "Dev" — that's the bug where assigning a lead to all 7 stages on
@@ -440,7 +463,14 @@ export function mapLeadProducts(
       id: p.projectId,
       name: p.projectName,
       overallStatus,
-      stages: buildStageGrid(section.authorName, ownedStages, coveringRisks),
+      // unassigned-stage-reporting-exclusion: the product's assigned-stage set
+      // sources the grid; a stage with no assignment is excluded entirely.
+      stages: buildStageGrid(
+        section.authorName,
+        ownedStages,
+        p.stageSet ?? [],
+        coveringRisks,
+      ),
     };
   });
 }
