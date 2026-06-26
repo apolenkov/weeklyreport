@@ -9,7 +9,13 @@
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -525,11 +531,13 @@ describe("SettingsTab — UFB-048 Notifications sub-tab (Phase 48-B)", () => {
 // ─── UFB-056 / Phase 55-5: Integrations sub-tab (A11) ────────────────────
 
 describe("SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)", () => {
-  // A11: Telegram is seeds-only — badge is always "Coming Soon" regardless
-  // of configured/bindings state. Technical details still rendered for
-  // debugging. admin-settings-surface-cleanup removed the Slack and CI cards;
-  // the AI card is now a general "AI" integration (still Coming Soon).
-  it("renders Coming Soon badge for Telegram regardless of configured state", async () => {
+  // integrations-card-element-label: the messaging card names the roadmapped
+  // channel "Element" with a Coming-Soon badge. It renders NO live messaging
+  // status — the configured/bindings rows were removed because they read live
+  // Telegram state and would be a false claim under an "Element" heading.
+  // admin-settings-surface-cleanup removed the Slack and CI cards; the AI card
+  // is a general "AI" integration (still Coming Soon).
+  it("names the messaging card Element with a Coming Soon badge", async () => {
     const { proxy } = buildProxy({
       telegram: { configured: false, bindings: 0 },
     });
@@ -538,19 +546,21 @@ describe("SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("tab", { name: /integrations/i }));
 
+    const row = await screen.findByTestId("integration-row-telegram");
+    expect(within(row).getByRole("heading", { name: /element/i })).toBeTruthy();
+
     const badge = await screen.findByTestId("integration-badge-telegram");
     await waitFor(() => expect(badge.dataset.state).toBe("coming-soon"));
     expect(badge.textContent).toMatch(/coming soon/i);
 
-    expect(
-      screen.getByTestId("integration-telegram-configured").textContent,
-    ).toBe("no");
-    expect(
-      screen.getByTestId("integration-telegram-bindings").textContent,
-    ).toBe("0");
+    // The card must not surface a "Telegram" heading to the user.
+    expect(within(row).queryByText(/telegram/i)).toBeNull();
   });
 
-  it("still shows Coming Soon when token is configured and bindings exist", async () => {
+  it("renders no Telegram-derived messaging status under the Element card", async () => {
+    // Even when the Telegram transport reports configured + active bindings,
+    // the Element card surfaces NO live status — showing Telegram state under
+    // an "Element" heading would be a false claim. Honesty rule (Codex review).
     const { proxy } = buildProxy({
       telegram: { configured: true, bindings: 4 },
     });
@@ -561,26 +571,13 @@ describe("SettingsTab — UFB-056 Integrations sub-tab (Phase 55-5)", () => {
 
     const badge = await screen.findByTestId("integration-badge-telegram");
     await waitFor(() => expect(badge.dataset.state).toBe("coming-soon"));
-    expect(badge.textContent).toMatch(/coming soon/i);
-    expect(
-      screen.getByTestId("integration-telegram-bindings").textContent,
-    ).toBe("4");
-  });
 
-  it("still shows Coming Soon when token is set but no users are bound yet", async () => {
-    const { proxy } = buildProxy({
-      telegram: { configured: true, bindings: 0 },
-    });
-    renderSettings(proxy);
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("tab", { name: /integrations/i }));
-
-    const badge = await screen.findByTestId("integration-badge-telegram");
-    await waitFor(() => expect(badge.dataset.state).toBe("coming-soon"));
-    expect(
-      screen.getByTestId("integration-telegram-configured").textContent,
-    ).toBe("yes");
+    // The configured/bindings status rows are gone — no "yes"/"4" leaks.
+    expect(screen.queryByTestId("integration-telegram-configured")).toBeNull();
+    expect(screen.queryByTestId("integration-telegram-bindings")).toBeNull();
+    const row = screen.getByTestId("integration-row-telegram");
+    expect(within(row).queryByText("4")).toBeNull();
+    expect(within(row).queryByText(/^yes$/i)).toBeNull();
   });
 
   it("does not render Slack or CI cards (removed in cleanup)", async () => {

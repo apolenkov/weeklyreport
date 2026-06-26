@@ -6,16 +6,19 @@ import { useQuery } from "@tanstack/react-query";
 import { useTRPC } from "../../lib/trpc-context";
 
 /**
- * Read-only status surface for external integrations. v1 only shows
- * Telegram: green «Подключён» badge when both `TG_BOT_TOKEN` is set on
- * the API AND at least one active TelegramBinding row exists. Otherwise
- * muted «Не активно».
+ * Read-only surface for external integrations. The messaging card names the
+ * roadmapped channel — Element, the corporate messenger — as a Coming-Soon
+ * label only. It deliberately renders NO live messaging status: the
+ * underlying dispatch seam is still the deferred Telegram transport
+ * (`TG_BOT_TOKEN` / TelegramBinding), so surfacing that state under an
+ * "Element" heading would assert Telegram status as Element — a false claim
+ * when the Telegram transport is configured. The seam is unchanged; only the
+ * displayed name is the roadmap target.
  *
  * Phase 55 is seeds-only: there is no real bot, no user-binding UI, no
  * outbound flow beyond the admin smoke-test (which lives on the API
- * surface only, not exposed in this tab). The card text states that
- * explicitly so a head/admin reading the tab does not expect /start to
- * work yet.
+ * surface only, not exposed in this tab). The card stays Coming-Soon so a
+ * head/admin reading the tab does not expect messaging to work yet.
  */
 export function IntegrationsSubTab() {
   const trpc = useTRPC();
@@ -37,8 +40,6 @@ export function IntegrationsSubTab() {
     );
   }
 
-  const { telegram } = statusQ.data;
-
   return (
     <div className="max-w-2xl space-y-4">
       <p className="text-sm text-[var(--color-muted-foreground)]">
@@ -46,8 +47,10 @@ export function IntegrationsSubTab() {
         admin-issued credentials and a follow-on rollout phase.
       </p>
 
-      {/* Telegram — Phase 55 seeds-only; always shows Coming Soon until the
-          full activation phase ships (user binding + real outbound bot). */}
+      {/* Element — roadmapped messaging channel; Coming-Soon label only. No
+          live status is rendered: the dispatch seam is still the deferred
+          Telegram transport, so showing its state under "Element" would be a
+          false claim. data-testid stays "telegram" (internal seam name). */}
       <div
         className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-hover)] p-4 opacity-70"
         data-testid="integration-row-telegram"
@@ -55,11 +58,11 @@ export function IntegrationsSubTab() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-[var(--color-foreground)]">
-              Telegram
+              Element
             </h3>
             <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-              Push notifications and quick-reply via Telegram bot — replaces
-              email reminders for mobile-first teams.
+              Push notifications and quick-reply via Element — replaces email
+              reminders for mobile-first teams.
             </p>
           </div>
           <ComingSoonBadge
@@ -67,20 +70,6 @@ export function IntegrationsSubTab() {
             data-testid="integration-badge-telegram"
           />
         </div>
-
-        <dl className="mt-3 grid grid-cols-[max-content_minmax(0,1fr)] gap-x-4 gap-y-1 text-xs text-[var(--color-muted-foreground)]">
-          <dt>Bot configured</dt>
-          <dd
-            className="font-mono"
-            data-testid="integration-telegram-configured"
-          >
-            {telegram.configured ? "yes" : "no"}
-          </dd>
-          <dt>Active bindings</dt>
-          <dd className="font-mono" data-testid="integration-telegram-bindings">
-            {telegram.bindings}
-          </dd>
-        </dl>
       </div>
 
       {/* AI Integration — Phase 54 seeds-only; placeholder until provider
