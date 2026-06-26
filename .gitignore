@@ -43,3 +43,5 @@ e2e/sweep/.reports/
 .DS_Store
 # Ad-hoc verification-run artifact dirs (regenerated per live-verify)
 .verify-*/
+
+.omo
