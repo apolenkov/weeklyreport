@@ -52,7 +52,7 @@
 
 - [x] 5.1 `lead-pipeline-card` delta authored (ADD exclusion rule + MODIFY the
       four vacant-rendering requirements). Re-run `openspec validate
-    unassigned-stage-reporting-exclusion --strict`.
+  unassigned-stage-reporting-exclusion --strict`.
 
 ## 6. Tests + gates
 

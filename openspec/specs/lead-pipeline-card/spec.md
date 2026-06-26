@@ -141,11 +141,14 @@ non-visual user gets the same distinction as a sighted one.
 The lead SDLC pipeline MUST scope which stage chips render to the visibility mode, so that Mine reads as the lead's own contribution and Everyone shows the fuller team picture, without changing the health or completeness signals.
 
 1. In **Mine** mode the pipeline MUST render only the stages the current lead
-   owns. Stages owned by another author, and stages with no owner (vacant),
-   MUST NOT render inline — they are hidden, not greyed.
+   owns. Stages owned by another author MUST NOT render inline — they are hidden,
+   not greyed. A stage with no assignment on the product is NOT part of the
+   product's stage set (see "Unassigned stages are excluded from a product's
+   pipeline") and therefore never renders in any mode.
 2. In **Everyone** mode the pipeline MUST render the lead's own stages plus the
-   stages owned by other authors (as the existing locked chips) and any vacant
-   (unassigned) stages, so the full pipeline is visible.
+   stages owned by other authors (the existing locked chips). It MUST NOT render
+   an "unassigned"/vacant chip — an unassigned stage is excluded from the
+   product's stage set, not greyed.
 3. Hiding non-owned chips MUST NOT change the product health (left edge)
    severity or the own-input completeness count: both are derived from the
    underlying risks/status and the lead's owned-stage set, independent of which
@@ -170,15 +173,17 @@ The lead SDLC pipeline MUST scope which stage chips render to the visibility mod
 
 #### Scenario: Mine shows only the lead's stages
 
-- **WHEN** a lead views a product in Mine mode where they own two of the seven
-  stages and other authors own the rest
+- **WHEN** a lead views a product in Mine mode where they own two of the
+  product's assigned stages and other authors own the rest
 - **THEN** only the two owned stage chips render; the other stages do not appear
 
-#### Scenario: Everyone reveals foreign and vacant stages
+#### Scenario: Everyone reveals foreign-owned stages, not vacant ones
 
 - **WHEN** the same lead switches that product to Everyone mode
-- **THEN** the two owned chips plus the foreign-owned (locked) chips and any
-  vacant stage render, showing the full pipeline
+- **THEN** the two owned chips plus the foreign-owned (locked) chips render,
+  showing the full pipeline of the product's assigned stages
+- **AND** no "unassigned"/vacant chip appears — unassigned stages are excluded
+  from the product's stage set
 
 #### Scenario: hiding chips does not change health or completeness
 
@@ -197,17 +202,18 @@ The lead SDLC pipeline MUST scope which stage chips render to the visibility mod
 
 #### Scenario: Mine shows a collapsed-stage indicator that reveals hidden statuses on hover
 
-- **WHEN** a lead views a product in Mine mode where they own two of the seven
-  stages and the other five are hidden by the filter
-- **THEN** the card shows a small inert indicator that five stages are collapsed
-- **AND** hovering the indicator reveals those five hidden stages' names and
-  statuses
+- **WHEN** a lead views a product in Mine mode where they own some of the
+  product's assigned stages and the rest are hidden by the filter
+- **THEN** the card shows a small inert indicator that the remaining stages are
+  collapsed
+- **AND** hovering the indicator reveals those hidden stages' names and statuses
 - **AND** the same hidden-stage statuses are exposed non-visually through the
   indicator's accessible label, not by visual hover alone
 
 #### Scenario: no indicator when the lead owns every stage
 
-- **WHEN** a lead views a product in Mine mode where they own all of its stages
+- **WHEN** a lead views a product in Mine mode where they own all of its assigned
+  stages
 - **THEN** no stage is hidden, so the collapsed-stage indicator does NOT appear
 
 #### Scenario: the indicator never appears in Everyone mode
@@ -237,15 +243,18 @@ The own-input completeness counter MUST label its count as the lead's OWN stages
 
 ### Requirement: The collapsed-stages indicator reveals through the styled tooltip
 
-The `+N more` collapsed-stages indicator MUST reveal the hidden stages through the shared Radix `Tooltip` from `packages/ui` — the same component the stage chips use — as a multi-line list (one stage per line), and MUST distinguish an owned-but-unstatused stage from a vacant one so it never mislabels an occupied stage as empty. The indicator's tooltip surface MUST use the app's light popover tokens (`bg-popover`/`text-popover-foreground` with a border and shadow), NOT the shared Radix dark default (`bg-foreground`/`text-background`), and the dark Radix arrow MUST be hidden — applied as a scoped override on this one indicator so the shared dark default still serves the stage chips and the sidebar.
+The `+N more` collapsed-stages indicator MUST reveal the hidden stages through the shared Radix `Tooltip` from `packages/ui` — the same component the stage chips use — as a multi-line list (one stage per line), and MUST distinguish an owned-but-unstatused stage from one with a covering status so it never mislabels an occupied stage as empty. The indicator's tooltip surface MUST use the app's light popover tokens (`bg-popover`/`text-popover-foreground` with a border and shadow), NOT the shared Radix dark default (`bg-foreground`/`text-background`), and the dark Radix arrow MUST be hidden — applied as a scoped override on this one indicator so the shared dark default still serves the stage chips and the sidebar.
 
 1. On pointer hover/focus the indicator MUST show the hidden stages through the
-   shared Radix tooltip, one stage per line; the custom `useSdlcTooltip` is no longer
-   used for the pipeline.
+   shared Radix tooltip, one stage per line; the custom `useSdlcTooltip` is no
+   longer used for the pipeline.
 2. A hidden stage that is OWNED by another author MUST read as that owner plus an
-   explicit "no status set" note when the lead has set no status; it MUST NOT read as
-   "empty".
-3. A hidden stage with no owner MUST read as "unassigned" (vacant).
+   explicit "no status set" note when the lead has set no status; it MUST NOT
+   read as "empty".
+3. Every hidden stage is foreign-owned (assigned to another lead); there is NO
+   unassigned hidden row, because unassigned stages are excluded from the stage
+   set entirely. A hidden foreign-owned stage with no status set MUST read as its
+   owner plus "no status set", NOT as "unassigned".
 4. The non-visual `aria-label` listing the hidden stages MUST be retained as the
    screen-reader path (the indicator is inert and not a keyboard tab stop).
 5. The indicator's tooltip surface MUST be the light popover surface (the same
@@ -262,10 +271,11 @@ The `+N more` collapsed-stages indicator MUST reveal the hidden stages through t
 - **THEN** that line shows the owner and "no status set"
 - **AND** it does not read as "empty"
 
-#### Scenario: A vacant hidden stage reads as unassigned
+#### Scenario: There is no unassigned hidden row
 
-- **WHEN** a hidden stage has no owner
-- **THEN** its line reads "unassigned"
+- **WHEN** a lead in Mine mode hovers the `+N more` indicator
+- **THEN** every revealed row is a foreign-owned stage (by owner + status); no row
+  reads "unassigned", because unassigned stages are not in the stage set
 
 #### Scenario: The reveal is multi-line through the shared Radix tooltip
 
@@ -284,8 +294,8 @@ The `+N more` collapsed-stages indicator MUST reveal the hidden stages through t
 The `+N more` collapsed-stages indicator MUST color its border and text by the full status scale of the hidden stages, by precedence, so the product's left health stripe is traceable to the collapsed stages at a glance.
 
 1. The color precedence MUST be: red when any hidden stage is `blocked`; otherwise
-   yellow when any is `at-risk`; otherwise grey when any is unfilled
-   (`empty`/unassigned); otherwise green when every hidden stage is `on-track`.
+   yellow when any is `at-risk`; otherwise grey when any is unfilled (`empty` —
+   owned but unstatused); otherwise green when every hidden stage is `on-track`.
 2. This reverses the prior "neutral grey unless blocked/at-risk" behaviour: a
    fully on-track hidden set now reads green, and a partially unfilled set reads grey.
 3. This color is derived from the same hidden-stage set the indicator reveals; it
@@ -299,8 +309,8 @@ The `+N more` collapsed-stages indicator MUST color its border and text by the f
 
 #### Scenario: An unfilled hidden stage colors the indicator grey
 
-- **WHEN** the worst hidden stage is no worse than `on-track` but at least one hidden
-  stage is `empty` or unassigned
+- **WHEN** the worst hidden stage is no worse than `on-track` but at least one
+  hidden stage is `empty` (owned but unstatused)
 - **THEN** the `+N more` indicator renders grey
 
 #### Scenario: A hidden blocked stage colors the indicator red
@@ -310,20 +320,15 @@ The `+N more` collapsed-stages indicator MUST color its border and text by the f
 
 ### Requirement: The +N more reveal color-codes each hidden stage row by status
 
-The `+N more` reveal popover MUST color-code each hidden-stage row by that
-stage's effective status so problem stages stand out at a glance: blocked → the
-blocked (red) token, at-risk → the at-risk (amber) token, on-track → the
-on-track (green) token, and unassigned/empty → a neutral muted treatment. The
-colors MUST resolve through the existing `STATUS_CONFIG` / `--color-*` tokens —
-no new color token may be introduced — and the per-row status MUST come from the
-already-computed effective status of each hidden stage, not a re-derivation.
+The `+N more` reveal popover MUST color-code each hidden-stage row by that stage's effective status so problem stages stand out at a glance: blocked → the blocked (red) token, at-risk → the at-risk (amber) token, on-track → the on-track (green) token, and `empty` (owned but unstatused) → a neutral muted treatment. The colors MUST resolve through the existing `STATUS_CONFIG` / `--color-*` tokens — no new color token may be introduced — and the per-row status MUST come from the already-computed effective status of each hidden stage, not a re-derivation.
 
 #### Scenario: hidden stages have mixed statuses
 
 - **WHEN** the lead hovers the `+N more` reveal and the hidden stages include a
-  blocked stage, an at-risk stage, an on-track stage, and an unassigned stage
+  blocked stage, an at-risk stage, an on-track stage, and an `empty` (owned but
+  unstatused) stage
 - **THEN** the blocked row renders in the red token, the at-risk row in amber,
-  the on-track row in green, and the unassigned row in the neutral muted treatment
+  the on-track row in green, and the empty row in the neutral muted treatment
 - **AND** every color resolves through an existing token (no new token is added)
 
 #### Scenario: a foreign-owned stage shows the covering status
@@ -331,3 +336,57 @@ already-computed effective status of each hidden stage, not a re-derivation.
 - **WHEN** a hidden stage is held by another owner with a covering status
 - **THEN** the row is colored by that covering (effective) status, consistent
   with the chip's display floor
+
+### Requirement: Unassigned stages are excluded from a product's pipeline
+
+A stage with no assignment on a product MUST be excluded from that product's
+stage set — it MUST NOT render (in Mine or Everyone mode), MUST NOT be counted,
+and MUST NOT be awaited — as if the stage does not exist for the product.
+Exclusion is purely assignment-driven: the product's stage set is exactly the
+stages with an assignment to ANY lead on the product. A **foreign-owned** stage
+(assigned to another lead) is NOT unassigned and stays in the set. The stage set
+is READ-ONLY display metadata: it MUST NOT widen the write path, so a lead can
+never persist a stage status for a stage they do not own (the save path stays
+scoped to the lead's owned stages). Excluding unassigned stages MUST NOT change
+any product-health, severity, or completeness number: a risk only floors health
+through owned stages today, so a stage nobody owns never drove the traffic light;
+a covering risk stays listed in the risk section, so severity stays explained by
+a visible object. Published report snapshots are frozen: this requirement governs
+the live/draft pipeline render and MUST NOT retroactively alter an
+already-published snapshot when assignments later change.
+
+#### Scenario: an unassigned stage does not render
+
+- **WHEN** a product has no assignment on the DevOps stage
+- **THEN** the DevOps stage chip does not render in Mine or Everyone mode
+- **AND** DevOps is not part of that product's stage set, not counted in any
+  stage total, and not awaited for reporting
+
+#### Scenario: a foreign-owned stage is not treated as unassigned
+
+- **WHEN** a stage on the product is assigned to another lead (not the current
+  lead)
+- **THEN** that stage stays in the product's stage set — hidden in Mine mode,
+  rendered as a locked chip in Everyone mode — and is never excluded as
+  "unassigned"
+
+#### Scenario: a risk on an unassigned stage keeps severity explained without the chip
+
+- **WHEN** no one is assigned to a stage but a risk names that stage for the
+  period
+- **THEN** the stage chip is still excluded from the pipeline (no assignment)
+- **AND** the covering risk remains listed in the risk section, and no
+  product-health number changes versus before the exclusion
+
+#### Scenario: the stage set never widens the write path
+
+- **WHEN** a product's stage set includes a stage the current lead does not own
+  (assigned to another lead)
+- **THEN** that stage is shown read-only and the lead cannot persist a status for
+  it; saving the section writes statuses only for the lead's owned stages
+
+#### Scenario: a published snapshot is not changed by later unassignment
+
+- **WHEN** a stage that was assigned at publish time later loses its assignment
+- **THEN** the already-published report's snapshot still shows that stage as it
+  was at publish; only the live/draft pipeline reflects the new exclusion
