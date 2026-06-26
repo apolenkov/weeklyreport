@@ -291,6 +291,40 @@ After that first registration the record is never re-synced from the IdP — the
 admin owns the profile thereafter.
 _Avoid_: login / username (the corporate email is the account key).
 
+## Reminders & notifications
+
+**Reminder**:
+The admin-facing concept of a configurable nudge the org sends about a report
+period — the unit an admin manages on the Reminders tab. An admin turns a
+Reminder on or off and sets when it fires relative to the period deadline (e.g.
+«24h before»). One Reminder card corresponds to exactly one Reminder policy.
+_Avoid_: «policy» in admin-facing copy (the UI word is Reminder); conflating a
+Reminder with a single sent email (one Reminder fans out to many sends).
+
+**Reminder type**:
+The meaningful what-plus-who of a Reminder, chosen as one preset: «Deadline
+reminder to leads» (nudges leads who still have a draft, before the deadline) or
+«Escalation digest to head» (tells the head about late leads, after the
+deadline). The engine stores this as a kind × audience pair; the admin picks the
+pair as one choice, never two independent dropdowns.
+_Avoid_: exposing `kind` and `audience` as separate admin controls (only the
+two presets above are valid pairings; `follow_up` kind is unused).
+
+**Reminder policy**:
+The durable engine template behind a Reminder — declares the type, the timing
+offset from the deadline, timezone, and a validity window (when the policy is
+live). The source of truth the scheduler reads. «Reminder policy» is the
+internal/engine name; the admin sees it as a «Reminder».
+_Avoid_: surfacing the term «policy» to admins.
+
+**Reminder rule**:
+The concrete per-period instance a Reminder policy generates for one report
+period (fires once for that period). Engine-internal bookkeeping; not shown to
+admins as a managed list.
+_Avoid_: presenting the generated rules as a «schedule» the admin edits — they
+are derived, read-only, and after the simplification collapse to a single
+«next send» hint.
+
 ## Slides & UI affordances
 
 **Tooltip / hover affordance**:
