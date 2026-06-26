@@ -66,9 +66,9 @@ describe("DecisionsSection meta-row — pre-extract snapshot", () => {
 // Source: openspec/changes/verify-a11y-recommended-flip/design.md
 // Section: apps/web/src/components/lead/decisions-section.tsx
 //
-// Buttons render when: !readOnly && isMine(owner, currentUserName) && !foreign.
-// isMine returns true when currentUserName is undefined (permissive fallback),
-// so rendering without readOnly and without currentUserName shows the buttons.
+// Buttons render when: !readOnly && !foreign. Ownership is the id-based
+// `foreign` flag, NOT a free-text owner/name match — so an own (non-foreign)
+// decision shows Edit/Delete regardless of the owner string.
 // ---------------------------------------------------------------------------
 
 describe("DecisionsSection — VA-0a a11y: EditIcon and DeleteIcon aria-hidden", () => {
@@ -146,5 +146,47 @@ describe("DecisionsSection — VA-0b snapshots: Edit and Delete button DOM acces
       name: "Delete decision for CRM",
     });
     expect(deleteButton).toMatchSnapshot();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Regression: ownership is the id-based `foreign` flag, not a name match.
+// A lead lost Edit/Delete on their OWN decisions whenever the seeded owner
+// string ("Василий И.") differed from their user display name — the old
+// `isMine(owner, currentUserName)` gate failed on the mismatch. Own
+// (non-foreign) decisions must always be editable, regardless of the owner
+// string vs the signed-in name.
+// ---------------------------------------------------------------------------
+
+describe("DecisionsSection — own decision stays editable despite owner/name mismatch", () => {
+  it("renders Edit and Delete when the owner string differs from currentUserName", () => {
+    render(
+      <DecisionsSection
+        decisions={[{ ...BASE_DECISION, owner: "Василий И." }]}
+        currentUserName="Иванов Василий Петрович"
+        readOnly={false}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Edit decision" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Delete decision for CRM" }),
+    ).toBeInTheDocument();
+    // The old "Owner: … — read-only for you" marker must be gone.
+    expect(screen.queryByText(/Owner:/)).not.toBeInTheDocument();
+  });
+
+  it("hides Edit/Delete and shows the lock badge for a foreign decision", () => {
+    render(
+      <DecisionsSection
+        decisions={[{ ...BASE_DECISION, owner: "Мария К.", foreign: true }]}
+        currentUserName="Иванов Василий Петрович"
+        readOnly={false}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Edit decision" }),
+    ).not.toBeInTheDocument();
   });
 });
