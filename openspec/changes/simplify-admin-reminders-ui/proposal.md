@@ -26,12 +26,15 @@ the machinery.
   "Next send: <date>, then every period" — computed client-side from the derived
   rules already passed to the row. An inactive policy, or one with no upcoming
   rule, reads "No upcoming sends".
-- **The Add/Edit dialog collapses the two `Kind` + `Audience` dropdowns into one
+- **The Add/Edit form collapses the two `Kind` + `Audience` dropdowns into one
   "Reminder type" preset.** Only the two meaningful pairings are offered:
   "Deadline reminder to leads" (`kind=deadline`, `audience=lead-with-draft`) and
   "Escalation digest to head" (`kind=escalation`, `audience=head-of-late`). The
   unused `follow_up` kind is not offered. This also removes the current footgun
   where an admin can build a nonsensical pair (e.g. `deadline` → `head-of-late`).
+- **Editing happens inline.** Clicking Edit on a card replaces that card with the
+  edit form directly in the list. Adding a new reminder still opens the form at the
+  top of the list. This keeps the admin in context and avoids a modal dialog.
 - **The humane timing input stays as-is** (number + minutes/hours/days +
   before/after deadline) — it already matches the admin's "give it a time".
 - **Timezone and the validity window (`Valid from` / `Valid until` / forever)
@@ -39,14 +42,17 @@ the machinery.
   They remain fully editable for the admin who needs dated rollout; they just
   stop cluttering the common path.
 - **Copy uses the canonical term "Reminder", never "policy", across the whole
-  tab** — not just the card and dialog. The tab title ("Reminder Policies"), the
-  description, the search placeholder/aria, the "New Policy" CTA, the
-  save/remove toasts ("Policy updated/created/removed"), and the remove-confirm
-  dialog ("Remove reminder policy?") all currently say "policy" and are rewritten
-  to "Reminder". The remove-confirm preview stops using the jargon headline
-  (`formatPolicyHeadline` → raw `kind · T-offset · audience`) and shows the same
-  plain timing + recipient line as the card. All copy stays English per the repo
-  UI-strings rule.
+  tab** — not just the card and form. The tab title ("Reminder Policies"), the
+  description, the search placeholder/aria, the "New Policy" CTA, and the
+  save/remove toasts ("Policy updated/created/removed") all currently say "policy"
+  and are rewritten to "Reminder". The remove-confirm preview stops using the
+  jargon headline (`formatPolicyHeadline` → raw `kind · T-offset · audience`) and
+  shows the same plain timing + recipient line as the card. All copy stays English
+  per the repo UI-strings rule.
+- **Removing a reminder permanently deletes it.** The previous archive/soft-delete
+  behavior (which kept derived rules as paused) is replaced by a true hard-delete
+  that removes the `ReminderPolicy` and its derived `ReminderRule` rows. The
+  remove-confirm dialog warns that the action is irreversible.
 - **Creating a new reminder always starts from a valid preset.** Today
   `emptyPolicyForm` hard-codes `kind=deadline` but takes `audience` from the
   org default, so a `head-of-late` default would silently build the invalid
@@ -74,7 +80,8 @@ audience; that cleanup is noted as a follow-up in `design.md`, not done here.
   - `apps/web/src/components/admin/policy-row.tsx` — card re-presentation; drop
     the Schedule expander + `DerivedRulesPanel`; add the next-send line.
   - `apps/web/src/components/admin/policy-form.tsx` — preset selector replaces
-    Kind+Audience; Advanced section wraps timezone + validity.
+    Kind+Audience; Advanced section wraps timezone + validity; renders inline for
+    editing and at the top of the list for new reminders.
   - `apps/web/src/components/admin/reminders-tab.tsx` — wire the preset and the
     Advanced state; remove derived-rules wiring from the row; rewrite the tab
     title, description, search placeholder/aria, the "New Policy" CTA, the

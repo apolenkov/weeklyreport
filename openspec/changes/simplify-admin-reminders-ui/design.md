@@ -85,6 +85,23 @@ follow-up below.
   `savePolicy` mutation (same path as the dialog's Active checkbox today); no new
   endpoint.
 
+### D8 — Inline editing, modal-less Add
+
+Clicking Edit on a card replaces that single card with the edit form in the list.
+Adding a new reminder renders the same form at the top of the list. This keeps
+the admin in the list context and avoids a modal dialog. The form is the same
+component used for both Add and Edit, only its placement and initial values
+differ. Cancellation collapses the form back to the card (or removes it for a new
+reminder).
+
+### D9 — Remove permanently deletes the policy and its derived rules
+
+The user explicitly asked for deletion rather than archiving. The backend API
+`removePolicy` hard-deletes the `ReminderPolicy` and its `ReminderRule` rows
+(executions cascade with their rules). The UI remove-confirm dialog states the
+action is permanent and cannot be undone. This changes the previous
+archive/soft-delete semantics where derived rules were parked as `paused`.
+
 ## Follow-up (not in this change)
 
 `Settings → Reminders` still exposes a "Default audience" control. After D7 it no
