@@ -13,7 +13,12 @@ import {
 } from "../../lib/cache-keys";
 import { getClientErrorDetails } from "../../lib/client-error-reporting";
 import { joinPeriodLabel } from "../../lib/format-date";
-import { mapWeeklyReport, mapWeeklyReportLeadGroups } from "../../lib/mappers";
+import {
+  type LeadOverviewRow,
+  mapWeeklyReport,
+  mapWeeklyReportLeadGroups,
+  mapWeeklyReportLeadOverview,
+} from "../../lib/mappers";
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
@@ -154,7 +159,16 @@ function ReportAccordionBody({
     return (
       <div className="space-y-6">
         {leadGroups.map((group) => (
-          <section key={group.id} aria-label={group.name} className="space-y-3">
+          // report-overview-scope-parity: stable anchor + focus target so a
+          // by-lead overview card can scroll/focus this section (the by-lead
+          // analogue of report-product-<id>).
+          <section
+            key={group.id}
+            id={`report-lead-${group.id}`}
+            tabIndex={-1}
+            aria-label={group.name}
+            className="space-y-3 scroll-mt-4 focus:outline-none"
+          >
             <h3 className="font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)]">
               {group.name}
             </h3>
@@ -166,6 +180,27 @@ function ReportAccordionBody({
   }
 
   return <div className="space-y-3">{products.map(renderAccordion)}</div>;
+}
+
+/**
+ * report-overview-scope-parity: the scope-adaptive Report overview band.
+ * Extracted so the page function stays under the cognitive-complexity budget.
+ * In by-lead scope it renders lead cards from `leadOverviewRows`; otherwise the
+ * product cards from `portfolio`.
+ */
+function ReportOverviewBand({
+  scope,
+  portfolio,
+  leadOverviewRows,
+}: {
+  readonly scope: "product" | "lead";
+  readonly portfolio: PortfolioProduct[];
+  readonly leadOverviewRows: LeadOverviewRow[];
+}) {
+  if (scope === "lead") {
+    return <PortfolioOverviewTable scope="lead" leads={leadOverviewRows} />;
+  }
+  return <PortfolioOverviewTable products={portfolio} />;
 }
 
 /**
@@ -389,14 +424,16 @@ export function WeeklyReportPage({
   // "lead" scope (the default product path stays cheap). This replaced the old
   // bucketing that reused the cross-lead aggregate cards, which repeated the
   // whole merged card under every author of a multi-author product.
-  const leadGroups =
-    scope === "lead"
-      ? (mapWeeklyReportLeadGroups(reportData) as {
-          id: string;
-          name: string;
-          products: ProductReport[];
-        }[])
-      : [];
+  const rawLeadGroups =
+    scope === "lead" ? mapWeeklyReportLeadGroups(reportData) : [];
+  const leadGroups = rawLeadGroups as {
+    id: string;
+    name: string;
+    products: ProductReport[];
+  }[];
+  // report-overview-scope-parity: per-lead overview rows derived from the SAME
+  // groups the body renders, so the summary band and the body agree 1:1.
+  const leadOverviewRows = mapWeeklyReportLeadOverview(rawLeadGroups);
 
   const hasReportContent = (report: ProductReport) =>
     Boolean(report.needsAttention) ||
@@ -566,8 +603,12 @@ export function WeeklyReportPage({
         </div>
       ) : (
         <>
-          {/* Portfolio Overview */}
-          <PortfolioOverviewTable products={portfolio} />
+          {/* Report overview — scope-adaptive (report-overview-scope-parity). */}
+          <ReportOverviewBand
+            scope={scope}
+            portfolio={portfolio}
+            leadOverviewRows={leadOverviewRows}
+          />
 
           {/* Accordion sections — by product (default) or grouped by lead */}
           <ReportAccordionBody

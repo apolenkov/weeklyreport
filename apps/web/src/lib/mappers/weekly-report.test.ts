@@ -7,7 +7,12 @@ import {
   formatWeekRange,
   mapWeeklyReport,
   mapWeeklyReportLeadGroups,
+  mapWeeklyReportLeadOverview,
 } from "./weekly-report";
+import type {
+  WeeklyProductReport,
+  WeeklyReportItem,
+} from "./weekly-report-types";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
 const PROJECT_A = "22222222-2222-4222-8222-222222222222";
@@ -797,5 +802,115 @@ describe("mapWeeklyReportLeadGroups (by-lead slice)", () => {
     expect(cardB.currentWeek.map((i) => i.text)).toEqual([
       "Mobile auth screen",
     ]);
+  });
+});
+
+// report-overview-scope-parity: the per-lead overview rows derived from the
+// already-grouped lead data.
+describe("mapWeeklyReportLeadOverview", () => {
+  const item = (text: string): WeeklyReportItem =>
+    ({ id: text, text, status: "in-progress" }) as WeeklyReportItem;
+
+  function product(
+    overrides: Partial<WeeklyProductReport> = {},
+  ): WeeklyProductReport {
+    return {
+      id: "prod",
+      authorIds: ["a"],
+      initials: "PA",
+      name: "Product",
+      status: "on-track",
+      statusLabel: "On Track",
+      leads: "Lead",
+      currentWeek: [],
+      nextWeek: [],
+      risks: [],
+      decisions: [],
+      priorities: [],
+      ...overrides,
+    };
+  }
+
+  function group(
+    id: string,
+    name: string,
+    products: WeeklyProductReport[],
+  ): { id: string; name: string; products: WeeklyProductReport[] } {
+    return { id, name, products };
+  }
+
+  it("takes the worst status and sums the counts across a lead's products", () => {
+    const rows = mapWeeklyReportLeadOverview([
+      group("L1", "Lead One", [
+        product({
+          status: "on-track",
+          currentWeek: [item("c1"), item("c2")],
+          nextWeek: [item("n1")],
+          risks: [],
+        }),
+        product({
+          status: "blocked",
+          currentWeek: [item("c3")],
+          nextWeek: [],
+          risks: [{ id: "r1" } as never],
+        }),
+      ]),
+    ]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toEqual({
+      id: "L1",
+      name: "Lead One",
+      worstStatus: "blocked", // worst-of on-track + blocked
+      currentCount: 3, // 2 + 1
+      nextCount: 1, // 1 + 0
+      riskCount: 1, // 0 + 1
+    });
+  });
+
+  it("includes a lead whose only content is decisions / priorities / Needs-Attention (zero current/next/risk)", () => {
+    const rows = mapWeeklyReportLeadOverview([
+      group("D", "Decisions Only", [
+        product({ status: "on-track", decisions: [{ id: "d1" } as never] }),
+      ]),
+      group("P", "Priorities Only", [
+        product({
+          status: "at-risk",
+          priorities: [{ rank: 1, text: "P" }],
+        }),
+      ]),
+      group("N", "Needs Attention Only", [
+        product({ status: "blocked", needsAttention: "Escalated" }),
+      ]),
+    ]);
+
+    // All three appear — membership comes from the upstream group filter, not
+    // from the current/next/risk counts (which print 0 here).
+    expect(rows.map((r) => r.name)).toEqual([
+      "Needs Attention Only", // blocked → first
+      "Priorities Only", // at-risk
+      "Decisions Only", // on-track
+    ]);
+    expect(rows.every((r) => r.currentCount === 0 && r.riskCount === 0)).toBe(
+      true,
+    );
+  });
+
+  it("sorts worst-status-first with a lead-name tiebreak, deterministically across shuffled inputs", () => {
+    const a = group("a", "Anna", [product({ status: "at-risk" })]);
+    const b = group("b", "Boris", [product({ status: "blocked" })]);
+    const c = group("c", "Clara", [product({ status: "at-risk" })]);
+    const d = group("d", "Dmitri", [product({ status: "on-track" })]);
+
+    const order1 = mapWeeklyReportLeadOverview([a, b, c, d]).map((r) => r.name);
+    const order2 = mapWeeklyReportLeadOverview([d, c, b, a]).map((r) => r.name);
+
+    // blocked first, then the two at-risk by name, then on-track.
+    expect(order1).toEqual(["Boris", "Anna", "Clara", "Dmitri"]);
+    expect(order2).toEqual(order1);
+  });
+
+  it("returns an empty array for no lead groups", () => {
+    expect(mapWeeklyReportLeadOverview([])).toEqual([]);
   });
 });

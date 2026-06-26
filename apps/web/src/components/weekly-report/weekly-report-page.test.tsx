@@ -285,6 +285,25 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     expect(
       await screen.findByRole("heading", { name: "Alice", level: 3 }),
     ).toBeInTheDocument();
+    // report-overview-scope-parity: the overview band follows scope — it shows
+    // the per-lead "Leads Overview" summary, not the product band.
+    expect(screen.getByText("Leads Overview")).toBeInTheDocument();
+    expect(screen.queryByText("Portfolio Overview")).not.toBeInTheDocument();
+  });
+
+  it("viewer inherits the by-lead overview from the shared page (report-overview-scope-parity 4.2)", async () => {
+    // The viewer renders the SAME WeeklyReportPage as the head, so making the
+    // overview scope-aware applies to the viewer with no viewer-specific code.
+    // In by-lead scope the viewer's overview groups by lead, matching the head.
+    renderPage(makeWeeklyReportData("open"), undefined, "viewer", "lead");
+    expect(
+      await screen.findByRole("heading", { name: "Alice", level: 3 }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Leads Overview")).toBeInTheDocument();
+    // The lead section carries the scroll/focus anchor the overview card targets.
+    expect(
+      document.getElementById(`report-lead-${AUTHOR_ID_A}`),
+    ).not.toBeNull();
   });
 
   it("disables publish and hides Toggle All for an empty weekly report", async () => {

@@ -111,8 +111,10 @@ export {
 } from "./traffic-light";
 export {
   formatWeekRange,
+  type LeadOverviewRow,
   mapWeeklyReport,
   mapWeeklyReportLeadGroups,
+  mapWeeklyReportLeadOverview,
   type MapWeeklyReportResult,
   type WeeklyPortfolioProduct,
   type WeeklyProductReport,

@@ -36,9 +36,11 @@ import {
   trafficToProductStatus,
 } from "./weekly-report-groupers";
 import type {
+  LeadOverviewRow,
   MapWeeklyReportResult,
   WeeklyPortfolioProduct,
   WeeklyProductReport,
+  WeeklyProductStatus,
   WeeklyReportPeriod,
 } from "./weekly-report-types";
 
@@ -232,6 +234,61 @@ export function mapWeeklyReportLeadGroups(
       return { id: section.authorId, name: section.authorName, products };
     })
     .filter((group) => group.products.length > 0);
+}
+
+// report-overview-scope-parity: status precedence for the per-lead overview —
+// blocked (worst) < at-risk < on-track. Lower rank = worse, so the overview
+// sorts ascending (worst first) and the worst-of fold keeps the lowest rank.
+const LEAD_STATUS_RANK: Record<WeeklyProductStatus, number> = {
+  blocked: 0,
+  "at-risk": 1,
+  "on-track": 2,
+};
+
+/**
+ * report-overview-scope-parity: derive the `by lead` Report overview rows from
+ * the already-computed lead groups (the output of `mapWeeklyReportLeadGroups`).
+ * One row per lead WITH content — membership inherits the body's content filter
+ * (the groups are already pruned of empty leads), so a decisions-only or
+ * Needs-Attention-only lead still gets a row. Pure mapping: no new server data.
+ *
+ * `worstStatus` is the worst traffic light across the lead's sliced products
+ * (their own contribution); counts are summed over those products. Rows sort
+ * worst-status-first, ties broken by lead name — a total, stable order matching
+ * the product overview's status-first sort.
+ */
+export function mapWeeklyReportLeadOverview(
+  leadGroups: readonly {
+    id: string;
+    name: string;
+    products: readonly WeeklyProductReport[];
+  }[],
+): LeadOverviewRow[] {
+  const sumOver = (
+    products: readonly WeeklyProductReport[],
+    pick: (p: WeeklyProductReport) => number,
+  ) => products.reduce((total, p) => total + pick(p), 0);
+
+  return leadGroups
+    .map((group) => ({
+      id: group.id,
+      name: group.name,
+      worstStatus: group.products.reduce<WeeklyProductStatus>(
+        (worst, p) =>
+          LEAD_STATUS_RANK[p.status] < LEAD_STATUS_RANK[worst]
+            ? p.status
+            : worst,
+        "on-track",
+      ),
+      currentCount: sumOver(group.products, (p) => p.currentWeek.length),
+      nextCount: sumOver(group.products, (p) => p.nextWeek.length),
+      riskCount: sumOver(group.products, (p) => p.risks.length),
+    }))
+    .sort(
+      (a, b) =>
+        LEAD_STATUS_RANK[a.worstStatus] - LEAD_STATUS_RANK[b.worstStatus] ||
+        a.name.localeCompare(b.name),
+    );
 }
 
 // Internal exports for tests.
