@@ -22,9 +22,9 @@ interface DecisionsSectionProps {
    */
   readonly defaultProductName?: string;
   /**
-   * Display name of the currently signed-in user. Used to (1) seed the
-   * Owner field for newly-created decisions, and (2) hide Edit/Delete on
-   * decisions whose owner is someone else.
+   * Display name of the currently signed-in user. Used to seed the Owner
+   * field for newly-created decisions. Ownership for Edit/Delete is decided
+   * by the id-based `foreign` flag, NOT by matching this free-text name.
    */
   readonly currentUserName?: string;
   /**
@@ -36,19 +36,6 @@ interface DecisionsSectionProps {
   readonly products?: readonly Product[];
   readonly defaultProductId?: string;
   readonly addSignal?: number;
-}
-
-function isMine(owner: string | undefined, me: string | undefined): boolean {
-  if (!me) return true; // No identity yet — be permissive.
-  if (!owner) return true; // Unowned rows behave like own.
-  // Case- and punctuation-loose match: tolerate trailing punctuation/spacing.
-  const normalize = (s: string) =>
-    s
-      .trim()
-      .toLowerCase()
-      // eslint-disable-next-line sonarjs/super-linear-regex -- single quantified character class at end-anchor is linear, no backtracking
-      .replaceAll(/[.\s]+$/g, "");
-  return normalize(owner) === normalize(me);
 }
 
 function EditIcon() {
@@ -181,7 +168,6 @@ export function DecisionsSection({
         </div>
       ) : (
         decisions.map((decision) => {
-          const mine = isMine(decision.owner, currentUserName);
           const stageTags = (
             decision.stageIds && decision.stageIds.length > 0
               ? decision.stageIds
@@ -216,17 +202,7 @@ export function DecisionsSection({
                       Due {formatDeadline(decision.deadline)}
                     </span>
                   )}
-                  {/* Owned-by-someone-else marker — surfaces "this isn't yours
-                  to act on" without needing to open the dialog. */}
-                  {!mine && decision.owner && (
-                    <span
-                      className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#eef2ff] px-2.5 py-0.5 text-[11px] font-semibold text-[#4338ca]"
-                      title={`Owner: ${decision.owner} — read-only for you`}
-                    >
-                      Owner: {decision.owner}
-                    </span>
-                  )}
-                  {!readOnly && mine && !decision.foreign ? (
+                  {!readOnly && !decision.foreign ? (
                     <div className="ml-auto flex gap-1">
                       <button
                         type="button"
