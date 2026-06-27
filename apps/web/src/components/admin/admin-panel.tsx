@@ -133,13 +133,12 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
                   <RemindersTab
                     policies={data.policies}
                     derivedRulesByPolicyId={derivedRulesByPolicyId}
-                    periods={data.periods}
-                    // UFB-048 (Phase 48-B): seed the «New Policy» form with
-                    // org-wide defaults from AppSettings. Falls back to
-                    // hardcoded Europe/Moscow + lead-with-draft when settings
-                    // haven't loaded yet (handled inside emptyPolicyForm).
+                    // UFB-048 (Phase 48-B): seed the new-reminder form's
+                    // timezone from AppSettings. Falls back to Europe/Moscow
+                    // when settings haven't loaded yet (handled inside
+                    // emptyPolicyForm). The audience default no longer feeds
+                    // the preset pairing (D7).
                     defaultTimezone={settings?.defaultTimezone}
-                    defaultAudience={settings?.defaultReminderAudience}
                   />
                 );
               })()}

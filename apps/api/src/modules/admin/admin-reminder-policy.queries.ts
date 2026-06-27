@@ -74,30 +74,16 @@ export async function saveReminderPolicy(
 }
 
 /**
- * Soft-delete by flipping `active=false`. Hard delete is only allowed
- * when no `ReminderRule` row references this policy — this matches the
- * 44-01 schema decision (FK is `ON DELETE SET NULL` so a hard delete
- * would orphan rules silently). Caller surfaces the explicit guard.
+ * Hard-delete a reminder policy and its derived rules. The policy→rule FK is
+ * `ON DELETE SET NULL`, so we delete the `ReminderRule` rows explicitly first
+ * (their `ReminderExecution` rows cascade with them) rather than orphaning
+ * them, then delete the `ReminderPolicy` itself. This is a true delete — the
+ * previous archive/soft-delete semantics are gone (D9).
  */
-export async function archiveReminderPolicy(
+export async function deleteReminderPolicy(
   prisma: PrismaService,
   policyId: string,
 ): Promise<void> {
-  const derivedRuleCount = await prisma.reminderRule.count({
-    where: { policyId },
-  });
-  if (derivedRuleCount === 0) {
-    await prisma.reminderPolicy.delete({ where: { id: policyId } });
-    return;
-  }
-  await prisma.reminderPolicy.update({
-    where: { id: policyId },
-    data: { active: false },
-  });
-  // Soft-delete parks the policy inactive; park its derived rules `paused`
-  // too so the scheduler stops firing them (same cascade as a manual pause).
-  await prisma.reminderRule.updateMany({
-    where: { policyId },
-    data: { status: "paused" },
-  });
+  await prisma.reminderRule.deleteMany({ where: { policyId } });
+  await prisma.reminderPolicy.delete({ where: { id: policyId } });
 }

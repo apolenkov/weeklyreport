@@ -6,9 +6,10 @@ import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../lib/cache-keys";
 import { toReminderPolicyInput } from "../../lib/mappers";
+import { pluralize } from "../../lib/pluralize";
 import { useTRPC } from "../../lib/trpc-context";
 import { ConfirmDeleteDialog } from "../lead/confirm-delete-dialog";
-import type { MockPeriod, MockReminder, MockReminderPolicy } from "./mock-data";
+import type { MockReminder, MockReminderPolicy } from "./mock-data";
 import { PlusIcon, PolicyForm } from "./policy-form";
 import { PolicyRow } from "./policy-row";
 import { RemindersEmptyState } from "./reminders-empty-state";
@@ -18,87 +19,91 @@ import {
   policyToForm,
 } from "./reminders-form-state";
 import {
-  formatOffset,
-  formatPolicyAudience,
-  formatPolicyHeadline,
+  describeRecipient,
   formatPolicyTiming,
   formatValidityWindow,
+  isoFromDate,
 } from "./reminders-tab-format";
 import { TabHeader, TabSearch } from "./tab-header";
 
+/**
+ * The inline editor is mutually exclusive: a new reminder renders at the top
+ * of the list ("add"), and editing replaces a single card in place ("edit").
+ */
+type Editor =
+  | { readonly mode: "closed" }
+  | { readonly mode: "add" }
+  | { readonly mode: "edit"; readonly id: string };
+
 interface RemindersTabProps {
-  /** UFB-036 (Phase 44-04): policies are the new top-level editable rows. */
   readonly policies: readonly MockReminderPolicy[];
   /**
-   * Read-only derived rules grouped by `policyId`. The Reminders Tab's
-   * expander surfaces them under each policy. Rules whose `policyId`
-   * is `null` (legacy, pre-44-01) are NOT surfaced here — they still
-   * exist in the DB but live outside the policy model.
+   * Read-only derived rules grouped by `policyId`, used only to compute each
+   * card's next-send line. Rules whose `policyId` is `null` (legacy) are not
+   * surfaced here.
    */
   readonly derivedRulesByPolicyId: Readonly<
     Record<string, readonly MockReminder[]>
   >;
-  /** Used by the derived-rules panel to render period labels. */
-  readonly periods: readonly MockPeriod[];
   /**
-   * UFB-048 (Phase 48-B): organisation-wide defaults for new policies.
-   * When the admin opens the «New Policy» form, the timezone and audience
-   * controls prefill from these values instead of hardcoded constants.
-   * Optional — older callers (and component tests that predate 48-B) get
-   * the historical Europe/Moscow + lead-with-draft defaults.
+   * UFB-048 (Phase 48-B): organisation-wide timezone default for a new
+   * reminder. Optional — older callers get the historical Europe/Moscow
+   * default. The audience default no longer feeds the pairing (D7).
    */
   readonly defaultTimezone?: string;
-  readonly defaultAudience?: MockReminderPolicy["audience"];
+}
+
+function toggledPayload(policy: MockReminderPolicy) {
+  return toReminderPolicyInput(
+    {
+      kind: policy.kind,
+      offsetMinutes: policy.offsetMinutes,
+      timezone: policy.timezone,
+      audience: policy.audience,
+      active: !policy.active,
+      validFromIso: isoFromDate(policy.validFrom),
+      validUntilIso:
+        policy.validUntil === null ? null : isoFromDate(policy.validUntil),
+    },
+    policy.id,
+  );
 }
 
 export function RemindersTab({
   policies,
   derivedRulesByPolicyId,
-  periods,
   defaultTimezone,
-  defaultAudience,
 }: RemindersTabProps) {
   const trpc = useTRPC();
   const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
-  const [showForm, setShowForm] = useState(policies.length === 0);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  // UFB-048 (Phase 48-B): seed the form with org-wide defaults so the «New
-  // Policy» form opens with the admin's preferred timezone and audience.
-  const [form, setForm] = useState<PolicyFormState>(() =>
-    emptyPolicyForm({
-      timezone: defaultTimezone,
-      audience: defaultAudience,
-    }),
+  const [editor, setEditor] = useState<Editor>(() =>
+    policies.length === 0 ? { mode: "add" } : { mode: "closed" },
   );
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const [form, setForm] = useState<PolicyFormState>(() =>
+    emptyPolicyForm({ timezone: defaultTimezone }),
+  );
   const [pendingDelete, setPendingDelete] = useState<MockReminderPolicy | null>(
     null,
   );
+  // Id of the reminder whose own save/remove is in flight — so a mutation
+  // disables only that row's controls, not the whole list.
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  const periodById = useMemo(
-    () => new Map(periods.map((p) => [p.id, p] as const)),
-    [periods],
-  );
+  // Captured once so the next-send line is stable across re-renders.
+  const now = useMemo(() => new Date(), []);
+
+  function resetForm() {
+    setForm(emptyPolicyForm({ timezone: defaultTimezone }));
+  }
 
   const saveMut = useMutation(
     trpc.admin.savePolicy.mutationOptions({
-      onSuccess: () => {
-        invalidateAdmin(qc, trpc);
-        toast.success(editingId ? "Policy updated" : "Policy created");
-        setShowForm(false);
-        setEditingId(null);
-        setForm(
-          emptyPolicyForm({
-            timezone: defaultTimezone,
-            audience: defaultAudience,
-          }),
-        );
-      },
+      onSuccess: () => invalidateAdmin(qc, trpc),
       onError: (err: unknown) => {
         const message =
-          err instanceof Error ? err.message : "Failed to save policy";
+          err instanceof Error ? err.message : "Failed to save reminder";
         toast.error(message);
       },
     }),
@@ -108,41 +113,35 @@ export function RemindersTab({
     trpc.admin.removePolicy.mutationOptions({
       onSuccess: () => {
         invalidateAdmin(qc, trpc);
-        toast.success("Policy removed");
+        toast.success("Reminder removed");
       },
       onError: (err: unknown) => {
         const message =
-          err instanceof Error ? err.message : "Failed to remove policy";
+          err instanceof Error ? err.message : "Failed to remove reminder";
         toast.error(message);
       },
     }),
   );
 
-  const isMutating = saveMut.isPending || removeMut.isPending;
-
-  // Derived: validity-window guard for the Save button.
   const validityValid = useMemo(() => {
     if (form.foreverChecked) return true;
     if (form.validUntilIso === null) return true;
     return form.validUntilIso >= form.validFromIso;
   }, [form.foreverChecked, form.validFromIso, form.validUntilIso]);
 
-  function handleNewPolicy() {
-    setEditingId(null);
-    // UFB-048 (Phase 48-B): seed with org defaults from AppSettings.
-    setForm(
-      emptyPolicyForm({
-        timezone: defaultTimezone,
-        audience: defaultAudience,
-      }),
-    );
-    setShowForm(true);
+  function handleNewReminder() {
+    resetForm();
+    setEditor({ mode: "add" });
   }
 
-  function handleEditPolicy(policy: MockReminderPolicy) {
-    setEditingId(policy.id);
+  function handleEditReminder(policy: MockReminderPolicy) {
     setForm(policyToForm(policy));
-    setShowForm(true);
+    setEditor({ mode: "edit", id: policy.id });
+  }
+
+  function closeEditor() {
+    setEditor({ mode: "closed" });
+    resetForm();
   }
 
   function handleSave() {
@@ -150,6 +149,7 @@ export function RemindersTab({
       toast.error("End date must be after start date");
       return;
     }
+    const wasEditing = editor.mode === "edit";
     const payload = toReminderPolicyInput(
       {
         kind: form.kind,
@@ -160,27 +160,32 @@ export function RemindersTab({
         validFromIso: form.validFromIso,
         validUntilIso: form.foreverChecked ? null : form.validUntilIso,
       },
-      editingId ?? undefined,
+      editor.mode === "edit" ? editor.id : undefined,
     );
-    saveMut.mutate(payload);
+    saveMut.mutate(payload, {
+      onSuccess: () => {
+        toast.success(wasEditing ? "Reminder updated" : "Reminder created");
+        closeEditor();
+      },
+    });
+  }
+
+  function handleToggleActive(policy: MockReminderPolicy) {
+    setBusyId(policy.id);
+    saveMut.mutate(toggledPayload(policy), {
+      onSuccess: () => toast.success("Reminder updated"),
+      onSettled: () => setBusyId(null),
+    });
   }
 
   function handleConfirmRemove() {
     if (!pendingDelete) return;
-    removeMut.mutate({ id: pendingDelete.id });
+    setBusyId(pendingDelete.id);
+    removeMut.mutate(
+      { id: pendingDelete.id },
+      { onSettled: () => setBusyId(null) },
+    );
     setPendingDelete(null);
-  }
-
-  function toggleExpanded(policyId: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(policyId)) {
-        next.delete(policyId);
-      } else {
-        next.add(policyId);
-      }
-      return next;
-    });
   }
 
   const normalizedSearch = search.trim().toLowerCase();
@@ -188,13 +193,9 @@ export function RemindersTab({
     if (!normalizedSearch) return policies;
     return policies.filter((p) =>
       [
-        p.kind,
-        p.timezone,
-        p.audience,
         formatPolicyTiming(p),
-        formatPolicyAudience(p.audience),
-        p.active ? "active" : "disabled",
-        formatOffset(p.offsetMinutes),
+        describeRecipient(p.audience),
+        p.active ? "active on" : "disabled off",
       ]
         .join(" ")
         .toLowerCase()
@@ -205,48 +206,39 @@ export function RemindersTab({
   return (
     <div className="space-y-4">
       <TabHeader
-        title="Reminder Policies"
-        description="Configure once. Each policy is auto-applied to every report period whose deadline falls inside the validity window."
-        count={`${policies.length} policies`}
+        title="Reminders"
+        description="Each reminder fires automatically before every report deadline inside its validity window."
+        count={`${policies.length} ${pluralize(policies.length, "reminder", "reminders")}`}
         search={
           <TabSearch
             value={search}
             onChange={setSearch}
-            placeholder="Search reminder policies…"
+            placeholder="Search reminders…"
             testId="reminders-search"
-            ariaLabel="Search reminder policies"
+            ariaLabel="Search reminders"
           />
         }
         actions={
           <button
             type="button"
-            onClick={handleNewPolicy}
+            onClick={handleNewReminder}
             data-testid="new-policy-button"
             className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] bg-[var(--color-starbucks-accent)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
           >
             <PlusIcon />
-            New Policy
+            New Reminder
           </button>
         }
       />
 
-      {showForm && (
+      {editor.mode === "add" && (
         <PolicyForm
           form={form}
-          editing={editingId !== null}
+          editing={false}
           isSaving={saveMut.isPending}
           validityValid={validityValid}
           onChange={setForm}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingId(null);
-            setForm(
-              emptyPolicyForm({
-                timezone: defaultTimezone,
-                audience: defaultAudience,
-              }),
-            );
-          }}
+          onCancel={closeEditor}
           onSave={handleSave}
         />
       )}
@@ -255,48 +247,53 @@ export function RemindersTab({
         {filteredPolicies.length === 0 && (
           <RemindersEmptyState
             hasNoPolicies={policies.length === 0}
-            onCreate={handleNewPolicy}
+            onCreate={handleNewReminder}
           />
         )}
 
-        {filteredPolicies.length > 0 && (
-          <div className="space-y-3">
-            {filteredPolicies.map((policy) => {
-              const derivedRules = derivedRulesByPolicyId[policy.id] ?? [];
-              const isExpanded = expanded.has(policy.id);
-              return (
-                <PolicyRow
-                  key={policy.id}
-                  policy={policy}
-                  derivedCount={derivedRules.length}
-                  isExpanded={isExpanded}
-                  isMutating={isMutating}
-                  derivedRules={derivedRules}
-                  periodById={periodById}
-                  onToggle={() => toggleExpanded(policy.id)}
-                  onEdit={() => handleEditPolicy(policy)}
-                  onRemove={() => setPendingDelete(policy)}
-                />
-              );
-            })}
-          </div>
+        {filteredPolicies.map((policy) =>
+          editor.mode === "edit" && editor.id === policy.id ? (
+            <PolicyForm
+              key={policy.id}
+              form={form}
+              editing
+              isSaving={saveMut.isPending}
+              validityValid={validityValid}
+              onChange={setForm}
+              onCancel={closeEditor}
+              onSave={handleSave}
+            />
+          ) : (
+            <PolicyRow
+              key={policy.id}
+              policy={policy}
+              derivedRules={derivedRulesByPolicyId[policy.id] ?? []}
+              isBusy={busyId === policy.id}
+              now={now}
+              onToggleActive={() => handleToggleActive(policy)}
+              onEdit={() => handleEditReminder(policy)}
+              onRemove={() => setPendingDelete(policy)}
+            />
+          ),
         )}
       </div>
 
       <ConfirmDeleteDialog
         open={pendingDelete !== null}
-        title="Remove reminder policy?"
-        preview={pendingDelete ? formatPolicyHeadline(pendingDelete) : ""}
+        title="Delete reminder?"
+        preview={
+          pendingDelete
+            ? `${formatPolicyTiming(pendingDelete)} · ${describeRecipient(
+                pendingDelete.audience,
+              )}`
+            : ""
+        }
         subtitle={
           pendingDelete ? formatValidityWindow(pendingDelete) : undefined
         }
-        consequence={
-          pendingDelete
-            ? `This will remove ${
-                (derivedRulesByPolicyId[pendingDelete.id] ?? []).length
-              } derived rule(s) and stop further reminders.`
-            : ""
-        }
+        consequence="This permanently deletes the reminder and its schedule. This cannot be undone."
+        confirmLabel="Delete"
+        reversible={false}
         onConfirm={handleConfirmRemove}
         onCancel={() => setPendingDelete(null)}
       />

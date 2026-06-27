@@ -37,11 +37,11 @@ export function RemindersEmptyState({
             </svg>
           </div>
           <p className="text-sm font-medium text-[var(--color-foreground)]">
-            No reminder policies yet
+            No reminders yet
           </p>
           <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-            Policies fire automatically before each deadline — for all periods
-            that fall inside the validity window.
+            Reminders fire automatically before each deadline — for every period
+            inside the validity window.
           </p>
           <button
             type="button"
@@ -49,12 +49,12 @@ export function RemindersEmptyState({
             className="btn-press mt-4 inline-flex items-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.25)] bg-[rgba(0,117,74,0.08)] px-4 py-2 text-sm font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-success)]"
           >
             <PlusIcon />
-            Create first policy
+            Create first reminder
           </button>
         </>
       ) : (
         <p className="text-sm text-[var(--color-muted-foreground)]">
-          No reminder policies match the search.
+          No reminders match the search.
         </p>
       )}
     </div>

@@ -1,43 +1,54 @@
 /**
- * Policy-editor form-state type + factories for the Reminders tab, extracted
- * from `reminders-tab.tsx` (R3a-4 max-lines split). Pure data construction —
- * no JSX. Shared by the tab (initial + reset state) and the PolicyForm editor.
+ * Policy-editor form-state type + factories for the Reminders tab. Pure data
+ * construction — no JSX. Shared by the tab (initial + reset state) and the
+ * PolicyForm editor.
  */
 
 import type { AdminReminderPolicyFormInput } from "../../lib/mappers";
 import type { MockReminderPolicy } from "./mock-data";
-import { isoFromDate } from "./reminders-tab-format";
+import {
+  isoFromDate,
+  presetForPolicy,
+  presetPairing,
+  type ReminderPresetChoice,
+} from "./reminders-tab-format";
 
 export type PolicyFormState = AdminReminderPolicyFormInput & {
+  /**
+   * The selected Reminder type. `kind`/`audience` are derived from it on
+   * save for a real preset, and preserved verbatim for a "custom" row (D2/D3).
+   */
+  preset: ReminderPresetChoice;
   /** ISO `YYYY-MM-DD` of "now" when this form was first opened. */
   todayIso: string;
   /**
-   * Mirrors the "forever" checkbox. When `true`, `validUntilIso` is
-   * forced to `null` and the upper-bound input is hidden.
+   * Mirrors the "forever" checkbox. When `true`, `validUntilIso` is forced to
+   * `null` and the upper-bound input is hidden.
    */
   foreverChecked: boolean;
 };
+
+const DEFAULT_PRESET = "deadline-leads" as const;
 
 function todayIsoString(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
 /**
- * UFB-048 (Phase 48-B): the timezone + audience defaults are now sourced
- * from AppSettings (the org-wide singleton) rather than hardcoded here.
- * Historical fallbacks preserved so component tests that don't pipe in
- * settings still render with the same shape they did pre-48-B.
+ * A new reminder always starts from a valid preset (D7). The org default
+ * audience is intentionally NOT blended into the pairing — that was the
+ * footgun (`deadline → head-of-late`) this change removes. Only the timezone
+ * default is sourced from AppSettings.
  */
-export function emptyPolicyForm(opts?: {
-  timezone?: string;
-  audience?: MockReminderPolicy["audience"];
-}): PolicyFormState {
+export function emptyPolicyForm(opts?: { timezone?: string }): PolicyFormState {
   const today = todayIsoString();
+  const { kind, audience } = presetPairing(DEFAULT_PRESET);
   return {
-    kind: "deadline",
+    preset: DEFAULT_PRESET,
+    kind,
+    audience,
     offsetMinutes: -1440, // T-24h
     timezone: opts?.timezone ?? "Europe/Moscow",
-    audience: opts?.audience ?? "lead-with-draft",
     active: true,
     validFromIso: today,
     validUntilIso: null,
@@ -48,6 +59,7 @@ export function emptyPolicyForm(opts?: {
 
 export function policyToForm(policy: MockReminderPolicy): PolicyFormState {
   return {
+    preset: presetForPolicy(policy.kind, policy.audience),
     kind: policy.kind,
     offsetMinutes: policy.offsetMinutes,
     timezone: policy.timezone,
