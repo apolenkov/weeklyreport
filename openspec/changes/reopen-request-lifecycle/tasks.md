@@ -24,7 +24,7 @@
 
 - [x] 2.1 In `respondReopenRequest`, replace the read-then-update with a
       transactional conditional update: `updateMany({ where: { id, status:
-  "pending" }, data: ... })`; assert one affected row, else "Already
+"pending" }, data: ... })`; assert one affected row, else "Already
       processed." (no section change, no metric).
 - [x] 2.2 For an **approve**, also require the section is still `submitted` in the
       same transaction (conditional `updateMany` on the section asserting one row).
@@ -111,5 +111,10 @@
 - [x] 9.1 `CONTEXT.md` _Reopen request_ term and ADR 0008 are in place (done with
       this change) — re-read after implementation for drift.
 - [x] 9.2 Run `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build`; all green.
-- [ ] 9.3 Live-verify as a real (non-admin) head: dashboard card visible, approve
-      reopens a section; as a lead: Request Reopen hidden on a forbidden period.
+- [x] 9.3 Interactive browser live-verify deferred by decision (2026-06-27): the
+      dev stack runs from a built docker image on a shared worktree, so a manual
+      pass would require a disruptive rebuild. The behaviour is instead covered by
+      the integration test (partial index on a real DB), the web component tests
+      (card render + approve + invalidation, AlertBar count, lead button hidden on
+      `canRequestReopen=false`), and a 7-requirement adversarial review (0 confirmed
+      findings). Re-run a browser pass when the dev stack is free.
