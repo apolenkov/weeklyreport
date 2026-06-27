@@ -121,6 +121,24 @@ _Avoid_: published-only viewer (the prior, reversed model — a viewer once saw 
 report only once its period was `published`); consumer (a viewer watches live
 status, not only completed reports).
 
+**Reopen request (section reopen)**:
+A lead-initiated ask to edit their OWN already-submitted section again — one
+`ReopenRequest` row (status `pending` → `approved` / `rejected`) tied to one
+`ReportSection`. The decision is a **review** act owned by the **head** (admin
+inherits it): approving flips that section `submitted` → `draft` (clears
+`submittedAt`, stamps `revokedAt` / `revokedBy`) so the lead can edit again;
+rejecting leaves the section submitted with an optional head note. It is
+**per-section**, NOT a period-level reopen — it never changes the period
+lifecycle. A reopen request is only meaningful while the section is editable
+after approval, i.e. the period is `open` or `reopened`; a `published` /
+`archived` period is reached only through a period-level reopen first (see
+_Period management_). Distinct from **Revoke**, the head's proactive un-submit
+of a section without any lead request (`revokeAllSubmitted` / per-section
+revoke).
+_Avoid_: "reopen the period" (that is the period-level lifecycle reopen in
+_Period management_, not this); "head un-submitted it" (that is _Revoke_, no
+request involved).
+
 ## Products, stages, items & scope
 
 **Product**:
