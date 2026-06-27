@@ -1,0 +1,6 @@
+# Vitest/Jest snapshots are machine-generated serializations of rendered output.
+# They legitimately contain trailing whitespace (e.g. JSX " and " text nodes that
+# serialize as a standalone " and " line), so exempt them from git's whitespace
+# checks — otherwise `git diff --check` / `git apply` flag every regenerated
+# snapshot as a corrupt patch. The fix is per the snapshot class, not per file.
+*.snap -whitespace
