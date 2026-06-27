@@ -625,7 +625,17 @@ export interface MapLeadFormArgs {
    * `byPeriod.section` when present (period-scoped read), else fall back to
    * `active`.
    */
-  byPeriod: { section: ReportSectionReadModel; readOnly: boolean };
+  byPeriod: {
+    section: ReportSectionReadModel;
+    readOnly: boolean;
+    /**
+     * reopen-request-lifecycle (D4): server-computed flag — true only when the
+     * lead may file a reopen request (submitted section, open/reopened period,
+     * no pending request). The button reads this; it does NOT reconstruct the
+     * policy. Optional so legacy/test args without it default to "hidden".
+     */
+    canRequestReopen?: boolean;
+  };
   history: readonly MyHistoryEntry[];
 }
 
@@ -640,6 +650,11 @@ export interface MappedLeadForm {
   currentUser: LeadCurrentUser;
   /** Whether the section is locked for the current user (submitted or period published). */
   readOnly: boolean;
+  /**
+   * reopen-request-lifecycle (D4): whether to show the lead's Request Reopen
+   * control. Server-computed; the client never reconstructs the lifecycle.
+   */
+  canRequestReopen: boolean;
 }
 
 /**
@@ -683,6 +698,7 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
       authorRole,
     },
     readOnly,
+    canRequestReopen: args.byPeriod.canRequestReopen ?? false,
   };
 }
 

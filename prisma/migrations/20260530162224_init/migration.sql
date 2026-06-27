@@ -727,3 +727,13 @@ ALTER TABLE "TelegramBinding" ADD CONSTRAINT "TelegramBinding_userId_fkey" FOREI
 ALTER TABLE "Risk"
   ADD CONSTRAINT "Risk_severity_check"
   CHECK ("severity" IN ('at-risk', 'blocked'));
+
+-- reopen-request-lifecycle (D5): at most ONE pending reopen request per
+-- section. Prisma cannot express a partial unique index (the WHERE predicate),
+-- so it is hand-written here. Approved/rejected rows are unconstrained, so a
+-- section can be reopened, re-submitted, and requested again. This is the
+-- durable guarantee behind the friendly application-level "already pending"
+-- error and the race guard between two concurrent requestReopen calls.
+CREATE UNIQUE INDEX "ReopenRequest_one_pending_per_section"
+  ON "ReopenRequest"("reportSectionId")
+  WHERE "status" = 'pending';

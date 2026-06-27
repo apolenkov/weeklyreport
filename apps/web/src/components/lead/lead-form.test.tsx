@@ -102,6 +102,7 @@ function buildHarness(
   opts: {
     sectionStatus?: "draft" | "submitted";
     byPeriodReadOnly?: boolean;
+    canRequestReopen?: boolean;
     byPeriodQueryFn?: () => Promise<unknown>;
     myHistory?: readonly unknown[];
   } = {},
@@ -134,6 +135,11 @@ function buildHarness(
         (() => ({
           section: makeSection({ status: opts.sectionStatus }),
           readOnly: opts.byPeriodReadOnly ?? false,
+          // reopen-request-lifecycle (D4): the server-computed flag. Defaults to
+          // true for a submitted section so the existing Request-Reopen test
+          // keeps its precondition; tests override it to assert the hidden case.
+          canRequestReopen:
+            opts.canRequestReopen ?? opts.sectionStatus === "submitted",
         })),
     },
     {
@@ -415,6 +421,27 @@ describe("LeadForm mutation wiring", () => {
       await screen.findByRole("button", { name: /Request Reopen/i }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Revoke$/i })).toBeNull();
+  });
+
+  it("reopen-request-lifecycle: Request Reopen is hidden when canRequestReopen is false", async () => {
+    // A submitted section on a closed (published/archived) period, or with a
+    // request already pending, comes back with canRequestReopen=false. The
+    // control must not render — the client never reconstructs the policy.
+    const { Wrapper } = buildHarness({
+      sectionStatus: "submitted",
+      canRequestReopen: false,
+    });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+
+    // The toolbar settles, but the Request Reopen control stays hidden.
+    expect(await screen.findByTestId("report-toolbar")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Request Reopen/i }),
+    ).toBeNull();
   });
 
   it("draft: Submit is a document action; view mode + agent review are context controls", async () => {

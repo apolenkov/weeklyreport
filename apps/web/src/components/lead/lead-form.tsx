@@ -653,6 +653,9 @@ export function LeadForm({
       onSuccess: () => {
         setShowReopenDialog(false);
         setReopenError(null);
+        // reopen-request-lifecycle (D4): refresh byPeriod so the now-pending
+        // request flips canRequestReopen to false and hides the control.
+        invalidateLeadForm(qc, trpc);
         toast.success("Reopen request sent to Head");
       },
       onError: (err: unknown) => {
@@ -776,7 +779,11 @@ export function LeadForm({
   // Map raw draft state -> Lead* presentation shapes for existing children.
   const data = mapLeadFormData({
     active: activeQ.data ?? draftSection,
-    byPeriod: { section: draftSection, readOnly: byPeriodQ.data.readOnly },
+    byPeriod: {
+      section: draftSection,
+      readOnly: byPeriodQ.data.readOnly,
+      canRequestReopen: byPeriodQ.data.canRequestReopen,
+    },
     history: historyQ.data,
   });
 
@@ -1229,20 +1236,26 @@ export function LeadForm({
               />
             )}
             {!isReadOnly && <SaveNowButton autosave={autosave} />}
-            {isSubmitted && currentUser.authorRole === "lead" && (
-              <button
-                type="button"
-                className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={() => {
-                  setReopenError(null);
-                  setShowReopenDialog(true);
-                }}
-                disabled={requestReopenMut.isPending}
-                title="Ask Head to unlock this section"
-              >
-                Request Reopen
-              </button>
-            )}
+            {/* reopen-request-lifecycle (D4): the control is driven by the
+                server-computed `canRequestReopen` flag — hidden when the period
+                is published/archived or a request is already pending. The client
+                does NOT reconstruct the lifecycle policy. */}
+            {isSubmitted &&
+              currentUser.authorRole === "lead" &&
+              data.canRequestReopen && (
+                <button
+                  type="button"
+                  className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => {
+                    setReopenError(null);
+                    setShowReopenDialog(true);
+                  }}
+                  disabled={requestReopenMut.isPending}
+                  title="Ask Head to unlock this section"
+                >
+                  Request Reopen
+                </button>
+              )}
             {isSubmitted && currentUser.authorRole !== "lead" && (
               <button
                 type="button"

@@ -10,7 +10,10 @@ import { CarryOverDomainError } from "../../modules/carry-over/carry-over.servic
 import { PdfExportDomainError } from "../../modules/pdf-export/pdf-export.service.js";
 import { PublicationAccessError } from "../../modules/publication/publication.service.js";
 import { ReminderDomainError } from "../../modules/reminders/reminders.service.js";
-import { LeadFormDomainError } from "../../modules/report-sections/lead-form.service.js";
+import {
+  LeadFormDomainError,
+  ReopenRequestError,
+} from "../../modules/report-sections/lead-form.service.js";
 import { ReportSectionDomainError } from "../../modules/report-sections/report-sections.service.js";
 import { ReviewAccessError } from "../../modules/review/review.service.js";
 import { WeeklyReportDomainError } from "../../modules/weekly-report/weekly-report.service.js";
@@ -182,6 +185,17 @@ describe("mapDomainError", () => {
 
     expect(mapped.code).toBe("NOT_FOUND");
     expect(mapped.message).toContain("No section found");
+    expect(mapped.cause).toBe(error);
+  });
+
+  it("maps ReopenRequestError to BAD_REQUEST (lifecycle/one-pending block)", () => {
+    const error = new ReopenRequestError(
+      "This period is published; ask Head to reopen the period before editing sections.",
+    );
+    const mapped = mapDomainError(error);
+
+    expect(mapped.code).toBe("BAD_REQUEST");
+    expect(mapped.message).toContain("published");
     expect(mapped.cause).toBe(error);
   });
 

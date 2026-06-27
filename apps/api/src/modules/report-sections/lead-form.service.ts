@@ -5,9 +5,13 @@ import {
   customreportReopenRequestsTotal,
 } from "../../infrastructure/metrics/metrics.registry.js";
 import {
+  computeReopenEligibility,
   type CrossAuthorSectionRow,
+  LeadFormAccessError,
   LeadFormDomainError,
   type LeadFormRepository,
+  reopenBlockedMessage,
+  ReopenRequestError,
 } from "./lead-form-shared";
 
 // Re-export the error classes and shared types from their original module
@@ -17,8 +21,14 @@ import {
 export type {
   CrossAuthorSectionRow,
   LeadFormRepository,
+  ReopenEligibilityFacts,
 } from "./lead-form-shared";
-export { LeadFormAccessError, LeadFormDomainError } from "./lead-form-shared";
+export {
+  computeReopenEligibility,
+  LeadFormAccessError,
+  LeadFormDomainError,
+  ReopenRequestError,
+} from "./lead-form-shared";
 
 /**
  * Lead-form facade: reopen / cross-author / revoke / by-period / fill-from.
@@ -112,18 +122,27 @@ export class LeadFormService {
     userId: string,
     reason?: string,
   ): Promise<{ success: true }> {
-    const section = await this.repository.getSectionById(sectionId);
+    // reopen-request-lifecycle (D4): one read carries ownership + the lifecycle
+    // facts, and `computeReopenEligibility` is the SAME function that drives the
+    // lead-form `canRequestReopen` flag — so the server guard and the button can
+    // never drift. Ownership → FORBIDDEN; a missing section → NOT_FOUND; a
+    // lifecycle/one-pending block → BAD_REQUEST.
+    const context = await this.repository.getSectionReopenContext(sectionId);
 
-    if (!section) {
-      throw new Error(`Section ${sectionId} not found.`);
+    if (!context) {
+      throw new LeadFormDomainError(`Section ${sectionId} not found.`);
     }
 
-    if (section.authorId !== userId) {
-      throw new Error("Can only request reopen for your own section.");
+    if (context.authorId !== userId) {
+      throw new LeadFormAccessError(
+        "Can only request reopen for your own section.",
+      );
     }
 
-    if (section.status !== "submitted") {
-      throw new Error("Only submitted sections can request reopen.");
+    const { canRequestReopen, reason: blockedReason } =
+      computeReopenEligibility(context.facts);
+    if (!canRequestReopen && blockedReason !== null) {
+      throw new ReopenRequestError(reopenBlockedMessage(blockedReason));
     }
 
     await this.repository.createReopenRequest(sectionId, userId, reason);
@@ -140,7 +159,12 @@ export class LeadFormService {
     userId: string,
     role?: Role,
     requestedAuthorId?: string,
-  ): Promise<{ section: ReportSectionReadModel; readOnly: boolean }> {
+  ): Promise<{
+    section: ReportSectionReadModel;
+    readOnly: boolean;
+    canRequestReopen: boolean;
+    reopenBlockedReason: string | null;
+  }> {
     const isHeadLike = role === "head" || role === "admin";
     const canViewOtherAuthor =
       isHeadLike ||
@@ -160,9 +184,21 @@ export class LeadFormService {
       );
     }
 
+    // reopen-request-lifecycle (D4): the lead-only Request-Reopen affordance.
+    // Same `computeReopenEligibility` the write guard uses, so the button shows
+    // exactly when `requestReopen` would succeed. A head/admin or cross-author
+    // viewer never files a reopen request, so it is false when viewing a
+    // section that is not the caller's own. `reopenFacts` never leaves the API.
+    const isOwnSection = sectionAuthorId === userId;
+    const { canRequestReopen, reason } = computeReopenEligibility(
+      result.reopenFacts,
+    );
+
     return {
-      ...result,
-      readOnly: result.readOnly || sectionAuthorId !== userId,
+      section: result.section,
+      readOnly: result.readOnly || !isOwnSection,
+      canRequestReopen: isOwnSection && canRequestReopen,
+      reopenBlockedReason: isOwnSection ? reason : null,
     };
   }
 

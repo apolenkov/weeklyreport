@@ -20,6 +20,7 @@ import { BlockedAtRiskTable } from "./blocked-at-risk-table";
 import { DashboardSkeleton } from "./dashboard-skeleton";
 import { KpiCards } from "./kpi-cards";
 import { LeadSummaryTable } from "./lead-summary-table";
+import { ReopenRequestsCard } from "./reopen-requests-card";
 
 export const DASHBOARD_LOAD_STALL_MS = 8000;
 
@@ -318,12 +319,17 @@ export function DashboardPage() {
         canSendReminder={canSendReminder}
       />
 
-      {/* Alert bar for pending leads */}
+      {/* Alert bar for pending leads + pending reopen requests */}
       <AlertBar
         pendingLeads={pendingLeads}
         reportId={weeklyQ.data.reportId}
         canSendReminder={canSendReminder}
       />
+
+      {/* reopen-request-lifecycle (D2): head-side queue of pending reopen
+          requests with inline approve/reject. Renders nothing when the queue
+          is empty. */}
+      <ReopenRequestsCard />
 
       {/* Blocked & At Risk */}
       <BlockedAtRiskTable items={blockedAtRisk} />

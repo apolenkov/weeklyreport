@@ -1525,8 +1525,11 @@ export function createAppRouter(deps: RouterDeps) {
 
       // Reopen requests — Lead-initiated, Head-decided. The Lead's
       // `leadForm.requestReopen` mutation persists a row with status=pending;
-      // the Admin Panel "Reopen Requests" tab consumes these procedures.
-      listReopenRequests: adminProcedure
+      // the head dashboard card and the Admin Panel "Reopen Requests" tab
+      // consume these procedures. reopen-request-lifecycle (ADR 0008): the gate
+      // is `headProcedure` (head + admin), not `adminProcedure` — in the real
+      // deployment head ≠ admin, and reopen-decisioning is a head capability.
+      listReopenRequests: headProcedure
         .input(
           z
             .object({
@@ -1536,12 +1539,17 @@ export function createAppRouter(deps: RouterDeps) {
             })
             .optional(),
         )
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
           try {
             const status = input?.status ?? "pending";
-            const where = status === "all" ? {} : { status };
+            const statusFilter = status === "all" ? {} : { status };
+            // reopen-request-lifecycle (D8): a head sees only its own group's
+            // requests; admin is global ({}). The scope fragment is a
+            // ReportSectionWhereInput, so it nests UNDER reportSection — these
+            // are ReopenRequest queries, not ReportSection queries.
+            const scope = groupScopeFilter(ctx.session, "reportSection");
             const rows = await deps.prisma.reopenRequest.findMany({
-              where,
+              where: { ...statusFilter, reportSection: scope },
               orderBy: { createdAt: "desc" },
               take: 100,
               include: {
@@ -1584,7 +1592,7 @@ export function createAppRouter(deps: RouterDeps) {
           }
         }),
 
-      respondReopenRequest: adminProcedure
+      respondReopenRequest: headProcedure
         .input(
           z.object({
             id: z.uuid(),
@@ -1594,54 +1602,125 @@ export function createAppRouter(deps: RouterDeps) {
         )
         .mutation(async ({ input, ctx }) => {
           try {
-            const req = await deps.prisma.reopenRequest.findUnique({
-              where: { id: input.id },
-              include: { reportSection: true },
+            // reopen-request-lifecycle (D8): scoped re-load — a head cannot
+            // decide an out-of-group request by passing its id (the scoped
+            // findFirst finds nothing → reject). Admin scope is {} (global).
+            const scope = groupScopeFilter(ctx.session, "reportSection");
+            const req = await deps.prisma.reopenRequest.findFirst({
+              where: { id: input.id, reportSection: scope },
+              select: { id: true, reportSectionId: true },
             });
-            if (!req) throw new Error("Reopen request not found.");
-            if (req.status !== "pending") throw new Error("Already processed.");
+            if (!req) {
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Reopen request not found.",
+              });
+            }
 
-            const result = await deps.prisma.$transaction(async (tx) => {
-              await tx.reopenRequest.update({
-                where: { id: input.id },
+            const reviewNote = input.note?.trim() ? input.note.trim() : null;
+            const decidedBy = ctx.session.userId;
+
+            // reopen-request-lifecycle (D6): the decision is race-safe against a
+            // second decider (head + admin can both act). The status re-check
+            // and the section flip happen inside ONE transaction via conditional
+            // updateMany; only the row-count-1 winner takes effect.
+            const outcome = await deps.prisma.$transaction(async (tx) => {
+              const decided = await tx.reopenRequest.updateMany({
+                where: { id: req.id, status: "pending" },
                 data: {
                   status: input.decision,
-                  reviewedById: ctx.session.userId,
+                  reviewedById: decidedBy,
                   reviewedAt: new Date(),
-                  reviewNote: input.note?.trim() ? input.note.trim() : null,
+                  reviewNote,
                 },
               });
-
-              // Approve = flip the section back to draft + clear submittedAt
-              // so the lead can edit again. The section's revokedAt/revokedBy
-              // mirror the existing /head/report revoke flow for audit.
-              if (input.decision === "approved") {
-                await tx.reportSection.update({
-                  where: { id: req.reportSectionId },
-                  data: {
-                    status: "draft",
-                    submittedAt: null,
-                    revokedAt: new Date(),
-                    revokedBy: ctx.session.userId,
-                  },
-                });
+              // Loser of a concurrent decision: nothing changed.
+              if (decided.count === 0) {
+                return { kind: "already-processed" as const };
               }
 
-              return { success: true as const, decision: input.decision };
+              if (input.decision === "rejected") {
+                return {
+                  kind: "decided" as const,
+                  decision: "rejected" as const,
+                };
+              }
+
+              // Approve = flip the section back to draft so the lead can edit
+              // again, but ONLY if it is still submitted. A separate revoke can
+              // have moved it to draft while the request stayed pending.
+              const flipped = await tx.reportSection.updateMany({
+                where: { id: req.reportSectionId, status: "submitted" },
+                data: {
+                  status: "draft",
+                  submittedAt: null,
+                  revokedAt: new Date(),
+                  revokedBy: decidedBy,
+                },
+              });
+              if (flipped.count === 0) {
+                // Stale approve: the section was already reopened elsewhere.
+                // Make the request terminal (rejected + auto-note) so it leaves
+                // the pending queue, flip nothing, and skew NO funnel metric —
+                // an auto-close is not a real decision (the funnel stays
+                // requested/approved/rejected).
+                await tx.reopenRequest.update({
+                  where: { id: req.id },
+                  data: {
+                    status: "rejected",
+                    reviewedById: decidedBy,
+                    reviewedAt: new Date(),
+                    reviewNote:
+                      "Auto-closed: the section was already reopened.",
+                  },
+                });
+                return { kind: "stale" as const };
+              }
+
+              return {
+                kind: "decided" as const,
+                decision: "approved" as const,
+              };
             });
-            // Phase 52-A (UFB-054): increment AFTER the transaction commits
-            // so a rolled-back decision does not skew the funnel.
-            customreportReopenRequestsTotal.inc({ state: input.decision });
-            return result;
+
+            // Loser of a concurrent decision: changed nothing. A 409 CONFLICT
+            // is the honest code (the request moved out from under this call);
+            // no funnel metric.
+            if (outcome.kind === "already-processed") {
+              throw new TRPCError({
+                code: "CONFLICT",
+                message: "Already processed.",
+              });
+            }
+            // Stale auto-close: the request is now terminal and out of the
+            // pending queue; report it without skewing the funnel.
+            if (outcome.kind === "stale") {
+              return {
+                success: true as const,
+                decision: "rejected" as const,
+                staleAutoClosed: true as const,
+              };
+            }
+            // Phase 52-A (UFB-054): only a winning, real decision increments the
+            // funnel, AFTER the transaction commits.
+            customreportReopenRequestsTotal.inc({ state: outcome.decision });
+            return {
+              success: true as const,
+              decision: outcome.decision,
+              staleAutoClosed: false as const,
+            };
           } catch (error) {
             throw mapDomainError(error);
           }
         }),
 
-      pendingReopenCount: adminProcedure.query(async () => {
+      pendingReopenCount: headProcedure.query(async ({ ctx }) => {
         try {
+          // reopen-request-lifecycle (D8): same group scope as the list — a
+          // head counts only its own group's pending requests; admin global.
+          const scope = groupScopeFilter(ctx.session, "reportSection");
           const count = await deps.prisma.reopenRequest.count({
-            where: { status: "pending" },
+            where: { status: "pending", reportSection: scope },
           });
           return { count };
         } catch (error) {

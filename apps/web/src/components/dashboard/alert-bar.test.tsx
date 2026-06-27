@@ -34,6 +34,11 @@ vi.mock("../../lib/trpc-context", () => ({
         queryOptions: () => ({ queryKey: ["auth.me"] }),
       },
     },
+    admin: {
+      pendingReopenCount: {
+        queryOptions: () => ({ queryKey: ["admin.pendingReopenCount"] }),
+      },
+    },
     reminders: {
       dispatchPending: {
         mutationOptions: (opts: unknown) => opts,
@@ -204,5 +209,55 @@ describe("AlertBar — Phase 48-C role gating", () => {
     const { container } = render(<AlertBar {...baseProps} pendingLeads={[]} />);
 
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// reopen-request-lifecycle (D3): pending-reopen indicator
+// ---------------------------------------------------------------------------
+
+describe("AlertBar — reopen indicator", () => {
+  it("renders the indicator when reopen count > 0 even with zero missing leads", () => {
+    useQueryMock.mockReturnValue({ data: { count: 2 } });
+
+    render(<AlertBar {...baseProps} pendingLeads={[]} canSendReminder />);
+
+    expect(screen.getByText(/2 reopen requests pending/i)).toBeInTheDocument();
+    // No missing leads → no reminder affordance.
+    expect(
+      screen.queryByRole("button", { name: /send reminder/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("singularizes the count", () => {
+    useQueryMock.mockReturnValue({ data: { count: 1 } });
+
+    render(<AlertBar {...baseProps} pendingLeads={[]} canSendReminder />);
+
+    expect(screen.getByText(/1 reopen request pending/i)).toBeInTheDocument();
+  });
+
+  it("renders nothing when both missing leads and reopen count are zero", () => {
+    useQueryMock.mockReturnValue({ data: { count: 0 } });
+
+    const { container } = render(
+      <AlertBar {...baseProps} pendingLeads={[]} canSendReminder />,
+    );
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("shows missing leads AND the reopen indicator together", () => {
+    useQueryMock.mockReturnValue({ data: { count: 3 } });
+
+    render(
+      <AlertBar {...baseProps} pendingLeads={["Alice"]} canSendReminder />,
+    );
+
+    expect(screen.getByText(/haven't submitted/i)).toBeInTheDocument();
+    expect(screen.getByText(/3 reopen requests pending/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /send reminder/i }),
+    ).toBeInTheDocument();
   });
 });

@@ -62,6 +62,10 @@ function createMockRepository(
     async getSectionForPeriod() {
       return null;
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
+    async getSectionReopenContext() {
+      return null;
+    },
     async revokeSectionSubmission() {
       /* intentionally empty: mock stub fulfils the LeadFormRepository contract; no awaitable work needed in this test */
     },
