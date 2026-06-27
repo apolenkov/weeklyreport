@@ -118,3 +118,8 @@
       (card render + approve + invalidation, AlertBar count, lead button hidden on
       `canRequestReopen=false`), and a 7-requirement adversarial review (0 confirmed
       findings). Re-run a browser pass when the dev stack is free.
+      PREREQUISITE for that pass: `customreport_dev` was NOT reset, so the partial
+      unique index `ReopenRequest_one_pending_per_section` is absent there
+      (`migrate deploy` will not re-apply the same-named init migration). Run
+      `prisma migrate reset` on the dev DB first, or the DB-level one-pending guard
+      is missing (the app-level check still holds, but a TOCTOU window opens).
