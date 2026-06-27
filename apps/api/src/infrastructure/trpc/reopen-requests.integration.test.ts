@@ -66,6 +66,37 @@ describe("ReopenRequest one-pending partial index (integration)", () => {
     expect(count).toBe(1);
   });
 
+  it("serializes two concurrent decisions — exactly one conditional update wins (D6)", async () => {
+    // The race guard behind respondReopenRequest is a conditional
+    // `updateMany({ where: { id, status: 'pending' } })`. Two deciders (head +
+    // admin) can fire at once; Postgres must let only ONE flip the still-pending
+    // row. This proves the load-bearing primitive against the real DB, beyond
+    // the mock-level branch test in reopen-requests.router.test.ts.
+    const req = await prisma.reopenRequest.create({
+      data: {
+        reportSectionId: testData.section.id,
+        requestedById: testData.lead.id,
+      },
+    });
+
+    const [a, b] = await Promise.all([
+      prisma.reopenRequest.updateMany({
+        where: { id: req.id, status: "pending" },
+        data: { status: "approved" },
+      }),
+      prisma.reopenRequest.updateMany({
+        where: { id: req.id, status: "pending" },
+        data: { status: "rejected" },
+      }),
+    ]);
+
+    expect(a.count + b.count).toBe(1);
+    const finalReq = await prisma.reopenRequest.findUniqueOrThrow({
+      where: { id: req.id },
+    });
+    expect(finalReq.status).not.toBe("pending");
+  });
+
   it("allows a new pending request once the prior one is decided", async () => {
     const first = await prisma.reopenRequest.create({
       data: {
