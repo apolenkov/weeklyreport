@@ -66,7 +66,7 @@ export interface AdminRepository {
   // repo doesn't implement them.
   listReminderPolicies?(): Promise<ReminderPolicy[]>;
   saveReminderPolicy?(policy: ReminderPolicy): Promise<ReminderPolicy>;
-  archiveReminderPolicy?(policyId: string): Promise<void>;
+  deleteReminderPolicy?(policyId: string): Promise<void>;
   // UFB-052 (Phase 51-B): rich period rows for the redesigned Admin
   // Periods tab. Optional so existing in-memory test repositories
   // (e.g. admin.service.test.ts) keep compiling — service callers fall

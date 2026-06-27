@@ -91,8 +91,8 @@ export class AdminPrismaRepository implements AdminRepository {
     return policyQueries.saveReminderPolicy(this.prisma, policy);
   }
 
-  archiveReminderPolicy(policyId: string): Promise<void> {
-    return policyQueries.archiveReminderPolicy(this.prisma, policyId);
+  deleteReminderPolicy(policyId: string): Promise<void> {
+    return policyQueries.deleteReminderPolicy(this.prisma, policyId);
   }
 
   // ---- AdminSnapshot ----

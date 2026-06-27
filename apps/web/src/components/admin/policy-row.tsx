@@ -1,38 +1,43 @@
 "use client";
 
-import { DerivedRulesPanel } from "./derived-rules-panel";
-import type { MockPeriod, MockReminder, MockReminderPolicy } from "./mock-data";
+import type { MockReminder, MockReminderPolicy } from "./mock-data";
 import {
-  formatGeneratedRulesSummary,
-  formatPolicyAudience,
+  describeRecipient,
   formatPolicyTiming,
-  formatValidityWindow,
+  nextSendDate,
 } from "./reminders-tab-format";
 
 interface PolicyRowProps {
   readonly policy: MockReminderPolicy;
-  readonly derivedCount: number;
-  readonly isExpanded: boolean;
-  readonly isMutating: boolean;
+  /** Derived rules for this policy — used only to compute the next-send line. */
   readonly derivedRules: readonly MockReminder[];
-  readonly periodById: ReadonlyMap<string, MockPeriod>;
-  readonly onToggle: () => void;
+  /** True only while THIS reminder's own save/remove is in flight. */
+  readonly isBusy: boolean;
+  /** Injected so the next-send line is deterministic in tests. */
+  readonly now: Date;
+  readonly onToggleActive: () => void;
   readonly onEdit: () => void;
   readonly onRemove: () => void;
 }
 
+const ACTION_CLASS =
+  "btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-empty)] disabled:cursor-not-allowed disabled:opacity-50";
+
 export function PolicyRow({
   policy,
-  derivedCount,
-  isExpanded,
-  isMutating,
   derivedRules,
-  periodById,
-  onToggle,
+  isBusy,
+  now,
+  onToggleActive,
   onEdit,
   onRemove,
 }: PolicyRowProps) {
-  const generatedSummary = formatGeneratedRulesSummary(derivedCount);
+  const timing = formatPolicyTiming(policy);
+  const headingId = `reminder-${policy.id}-heading`;
+  const next = policy.active ? nextSendDate(derivedRules, now) : null;
+  const nextSendLine = next
+    ? `Next send: ${next}, then every period`
+    : "No upcoming sends";
 
   return (
     <div
@@ -40,58 +45,64 @@ export function PolicyRow({
       className="rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
     >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0 space-y-2">
-          <div>
-            <h3 className="text-base font-semibold leading-6 text-[var(--color-foreground)]">
-              {formatPolicyTiming(policy)}
-            </h3>
-            <p className="text-sm text-[var(--color-muted-foreground)]">
-              {formatPolicyAudience(policy.audience)} · {policy.timezone}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted-foreground)]">
-            <span>{formatValidityWindow(policy)}</span>
-            <span aria-hidden="true">·</span>
-            <span>{generatedSummary}</span>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-          <span
-            className="inline-flex items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider"
+        <div className="flex min-w-0 items-start gap-3">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={policy.active}
+            // Stable per-reminder name — on/off state is carried by aria-checked,
+            // and the timing phrase disambiguates this row from the others.
+            aria-label={`Reminder active: ${timing}`}
+            data-testid={`toggle-${policy.id}`}
+            disabled={isBusy}
+            onClick={onToggleActive}
+            className="btn-press mt-0.5 inline-flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
             style={{
               backgroundColor: policy.active
                 ? "var(--color-success)"
                 : "var(--color-muted)",
-              color: policy.active
-                ? "var(--color-primary)"
-                : "var(--color-muted-foreground)",
             }}
           >
-            {policy.active ? "Active" : "Disabled"}
-          </span>
-          <button
-            type="button"
-            onClick={onToggle}
-            data-testid={`expand-${policy.id}`}
-            aria-expanded={isExpanded}
-            className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-empty)]"
-          >
-            {isExpanded ? "Hide schedule" : "Schedule"}
+            <span
+              aria-hidden="true"
+              className="h-4 w-4 rounded-full bg-white shadow-sm transition-transform"
+              style={{
+                transform: policy.active ? "translateX(16px)" : "translateX(0)",
+              }}
+            />
           </button>
+          <div className="min-w-0">
+            <h3
+              id={headingId}
+              className="text-base font-semibold leading-6 text-[var(--color-foreground)]"
+            >
+              {timing}
+            </h3>
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              {describeRecipient(policy.audience)}
+            </p>
+            <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+              {nextSendLine}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
           <button
             type="button"
             onClick={onEdit}
-            disabled={isMutating}
+            disabled={isBusy}
+            aria-label={`Edit reminder: ${timing}`}
             data-testid={`edit-${policy.id}`}
-            className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-3 text-xs font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-empty)] disabled:cursor-not-allowed disabled:opacity-50"
+            className={ACTION_CLASS}
           >
-            Edit policy
+            Edit
           </button>
           <button
             type="button"
             onClick={onRemove}
-            disabled={isMutating}
+            disabled={isBusy}
+            aria-label={`Remove reminder: ${timing}`}
             data-testid={`remove-${policy.id}`}
             className="btn-press inline-flex min-h-[34px] items-center rounded-[var(--radius-pill)] border border-transparent bg-white px-3 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:border-[rgba(200,32,20,0.3)] hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -99,32 +110,6 @@ export function PolicyRow({
           </button>
         </div>
       </div>
-
-      {isExpanded && (
-        <div
-          data-testid={`policy-details-${policy.id}`}
-          className="mt-3 border-t border-[var(--color-border)] pt-3"
-        >
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                Generated schedule
-              </span>
-              <span className="rounded-[var(--radius-pill)] bg-[var(--color-surface-empty)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                Read-only
-              </span>
-            </div>
-            <span className="text-[var(--color-muted-foreground)]">
-              {generatedSummary}
-            </span>
-          </div>
-          <DerivedRulesPanel
-            policyId={policy.id}
-            rules={derivedRules}
-            periodById={periodById}
-          />
-        </div>
-      )}
     </div>
   );
 }

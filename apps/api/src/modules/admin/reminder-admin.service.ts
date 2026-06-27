@@ -106,18 +106,18 @@ export class ReminderAdminService {
   }
 
   /**
-   * Soft-archive a reminder policy. The repository decides whether the
-   * row is hard-deleted (no derived rules) or flipped to `active=false`
-   * (rules still reference it).
+   * Permanently delete a reminder policy and its derived rules. The
+   * repository hard-deletes the rules (executions cascade) then the policy;
+   * there is no soft-delete fallback (D9).
    */
   async removePolicy(policyId: string): Promise<{ success: true }> {
-    if (!this.repository.archiveReminderPolicy) {
+    if (!this.repository.deleteReminderPolicy) {
       throw new Error(
-        "AdminRepository.archiveReminderPolicy is not implemented for this repository.",
+        "AdminRepository.deleteReminderPolicy is not implemented for this repository.",
       );
     }
-    this.logger.info("archived reminder policy", { policyId });
-    await this.repository.archiveReminderPolicy(policyId);
+    this.logger.info("deleted reminder policy", { policyId });
+    await this.repository.deleteReminderPolicy(policyId);
     return { success: true };
   }
 }

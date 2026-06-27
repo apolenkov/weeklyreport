@@ -408,12 +408,28 @@ describe("AdminPrismaRepository (integration)", () => {
       expect(await ruleStatus()).toBe("active");
     });
 
-    it("archiveReminderPolicy soft-delete parks derived rules as paused", async () => {
+    it("deleteReminderPolicy hard-deletes the policy, its rules, and their executions", async () => {
       await seedActiveRule();
+      // Seed an execution on the rule so the documented cascade (executions
+      // follow their rule on delete) is actually exercised.
+      const executionId = "c3333333-3333-4333-8333-333333333333";
+      await prisma.reminderExecution.create({
+        data: { id: executionId, ruleId, dedupeKey: `dk-${ruleId}` },
+      });
 
-      await repo.archiveReminderPolicy(policyId);
+      await repo.deleteReminderPolicy(policyId);
 
-      expect(await ruleStatus()).toBe("paused");
+      expect(
+        await prisma.reminderPolicy.findUnique({ where: { id: policyId } }),
+      ).toBeNull();
+      expect(
+        await prisma.reminderRule.findUnique({ where: { id: ruleId } }),
+      ).toBeNull();
+      expect(
+        await prisma.reminderExecution.findUnique({
+          where: { id: executionId },
+        }),
+      ).toBeNull();
     });
   });
 });

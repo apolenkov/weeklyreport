@@ -445,7 +445,7 @@ describe("SettingsTab — UFB-048 Reminders sub-tab (Phase 48-B)", () => {
     toastError.mockReset();
   });
 
-  it("renders defaults and sends timezone + audience on Save", async () => {
+  it("sends only the timezone default on Save; the stale audience control is gone", async () => {
     const { proxy, captured } = buildProxy();
     renderSettings(proxy);
 
@@ -458,10 +458,11 @@ describe("SettingsTab — UFB-048 Reminders sub-tab (Phase 48-B)", () => {
     expect(tzSelect.value).toBe("Europe/Moscow");
     fireEvent.change(tzSelect, { target: { value: "Asia/Yekaterinburg" } });
 
-    const audSelect = screen.getByLabelText(
-      /default audience/i,
-    ) as HTMLSelectElement;
-    fireEvent.change(audSelect, { target: { value: "head-of-late" } });
+    // The Reminder type preset now owns the kind/audience pairing (design D7),
+    // so the inert "Default audience" control was removed — it must not render.
+    expect(
+      screen.queryByLabelText(/default audience/i),
+    ).not.toBeInTheDocument();
 
     await user.click(
       screen.getByRole("button", { name: /save reminder defaults/i }),
@@ -473,7 +474,6 @@ describe("SettingsTab — UFB-048 Reminders sub-tab (Phase 48-B)", () => {
     });
     expect(updateSettingsFn.mock.calls[0]?.[0]).toEqual({
       defaultTimezone: "Asia/Yekaterinburg",
-      defaultReminderAudience: "head-of-late",
     });
   });
 });

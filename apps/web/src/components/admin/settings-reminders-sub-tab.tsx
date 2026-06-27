@@ -16,9 +16,13 @@ export function RemindersSubTab({
   const updateSettingsMut = useUpdateSettingsMut("Reminder defaults");
 
   function handleSave() {
+    // TODO(simplify-admin-reminders-ui): the `defaultReminderAudience`
+    // AppSettings column is now inert — the Reminder type preset owns the
+    // kind/audience pairing (design D7), so a default audience can no longer
+    // preselect anything. The control was removed here to stop it lying;
+    // dropping the column + Zod field is a deferred follow-up.
     updateSettingsMut.mutate({
       defaultTimezone: draft.defaultTimezone,
-      defaultReminderAudience: draft.defaultReminderAudience,
     });
   }
   const isSaving = updateSettingsMut.isPending;
@@ -26,8 +30,8 @@ export function RemindersSubTab({
   return (
     <div className="max-w-lg space-y-5">
       <p className="text-sm text-[var(--color-muted-foreground)]">
-        Defaults applied to the «New Policy» form on the Reminders tab. Existing
-        policies keep their per-policy values.
+        Default timezone applied when an admin creates a new reminder. Existing
+        reminders keep their own timezone.
       </p>
 
       <div>
@@ -57,35 +61,7 @@ export function RemindersSubTab({
           ))}
         </select>
         <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-          IANA zone used as default when admins create a new ReminderPolicy.
-        </p>
-      </div>
-
-      <div>
-        <label
-          htmlFor="default-audience"
-          className="mb-1 block text-sm font-medium text-[var(--color-foreground)]"
-        >
-          Default audience
-        </label>
-        <select
-          id="default-audience"
-          name="default-audience"
-          value={draft.defaultReminderAudience}
-          onChange={(e) =>
-            setDraft({
-              ...draft,
-              defaultReminderAudience: e.target
-                .value as MockSettings["defaultReminderAudience"],
-            })
-          }
-          className="w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-        >
-          <option value="lead-with-draft">Leads with draft</option>
-          <option value="head-of-late">Head of late leads</option>
-        </select>
-        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
-          Recipient group preselected on the «New Policy» form.
+          IANA zone used as the default when an admin creates a new reminder.
         </p>
       </div>
 
