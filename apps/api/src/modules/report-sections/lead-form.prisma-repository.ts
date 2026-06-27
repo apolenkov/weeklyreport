@@ -1,6 +1,7 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type {
@@ -8,7 +9,11 @@ import type {
   LeadFormRepository,
 } from "./lead-form.service";
 import type { ReopenEligibilityFacts } from "./lead-form-shared";
-import { initialsFromName } from "./lead-form-shared";
+import {
+  initialsFromName,
+  reopenBlockedMessage,
+  ReopenRequestError,
+} from "./lead-form-shared";
 import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
@@ -281,13 +286,32 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     // the Admin Panel "Reopen Requests" tab. Status starts at `pending`; the
     // head's response (approve/reject) updates the row + may flip the
     // section back to draft when approved.
-    await this.prisma.reopenRequest.create({
-      data: {
-        reportSectionId: sectionId,
-        requestedById: userId,
-        reason: reason && reason.trim().length > 0 ? reason.trim() : null,
-      },
-    });
+    try {
+      await this.prisma.reopenRequest.create({
+        data: {
+          reportSectionId: sectionId,
+          requestedById: userId,
+          reason: reason && reason.trim().length > 0 ? reason.trim() : null,
+        },
+      });
+    } catch (error) {
+      // reopen-request-lifecycle (D5): a true race between two requestReopen
+      // calls passes the app-level pending check on both, then the partial
+      // unique index `ReopenRequest_one_pending_per_section` rejects the second
+      // with P2002. Translate it to the SAME friendly domain error the
+      // app-level check raises, instead of letting it surface as a 500. The
+      // ReopenRequest table has no other unique constraint, so P2002 here can
+      // only be the one-pending guard.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        throw new ReopenRequestError(
+          reopenBlockedMessage("pending_request_exists"),
+        );
+      }
+      throw error;
+    }
   }
 
   async hasSharedProduct(userId1: string, userId2: string): Promise<boolean> {

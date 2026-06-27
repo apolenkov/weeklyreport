@@ -1,5 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
+import { LeadFormPrismaRepository } from "../../modules/report-sections/lead-form.prisma-repository";
+import { ReopenRequestError } from "../../modules/report-sections/lead-form.service";
 import {
   cleanDatabase,
   createTestPrisma,
@@ -95,6 +97,18 @@ describe("ReopenRequest one-pending partial index (integration)", () => {
       where: { id: req.id },
     });
     expect(finalReq.status).not.toBe("pending");
+  });
+
+  it("createReopenRequest translates the P2002 race into a friendly ReopenRequestError", async () => {
+    // The app-level pending check can be passed by two concurrent callers; the
+    // partial index then rejects the second with P2002. The repository must
+    // translate that into the same domain error (→ BAD_REQUEST), not a 500.
+    const repo = new LeadFormPrismaRepository(prisma as never);
+    await repo.createReopenRequest(testData.section.id, testData.lead.id);
+
+    await expect(
+      repo.createReopenRequest(testData.section.id, testData.lead.id),
+    ).rejects.toBeInstanceOf(ReopenRequestError);
   });
 
   it("allows a new pending request once the prior one is decided", async () => {
