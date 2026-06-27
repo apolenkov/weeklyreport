@@ -13,6 +13,7 @@ import { ReminderDomainError } from "../../modules/reminders/reminders.service.j
 import {
   LeadFormAccessError,
   LeadFormDomainError,
+  ReopenRequestError,
 } from "../../modules/report-sections/lead-form.service.js";
 import {
   ReportSectionAccessError,
@@ -77,6 +78,16 @@ export function mapDomainError(error: unknown): TRPCError {
   if (error instanceof LeadFormDomainError) {
     return new TRPCError({
       code: "NOT_FOUND",
+      message: error.message,
+      cause: error,
+    });
+  }
+
+  // reopen-request-lifecycle (D4): a lifecycle/one-pending block is a state
+  // conflict, not a missing resource — surface it as BAD_REQUEST.
+  if (error instanceof ReopenRequestError) {
+    return new TRPCError({
+      code: "BAD_REQUEST",
       message: error.message,
       cause: error,
     });

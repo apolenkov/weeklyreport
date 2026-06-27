@@ -32,28 +32,30 @@ exports[`VA-0b: AlertBar snapshots > alert bar semantic structure — decorative
       y2="17"
     />
   </svg>
-  <span
-    class="flex-1 text-sm"
+  <div
+    class="flex flex-1 flex-col gap-1 text-sm"
   >
     <span>
-      <strong>
-        Alice
-      </strong>
-       (
-      Draft
-      )
-       and 
+      <span>
+        <strong>
+          Alice
+        </strong>
+         (
+        Draft
+        )
+         and 
+      </span>
+      <span>
+        <strong>
+          Bob
+        </strong>
+         (
+        Not started
+        )
+      </span>
+       haven't submitted
     </span>
-    <span>
-      <strong>
-        Bob
-      </strong>
-       (
-      Not started
-      )
-    </span>
-     haven't submitted
-  </span>
+  </div>
   <button
     class="btn-press ml-auto inline-flex min-h-[36px] items-center rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-3.5 py-1.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
     type="button"

@@ -14,12 +14,43 @@ export class LeadFormAccessError extends Error {
   }
 }
 
+/**
+ * reopen-request-lifecycle (D4): a reopen request rejected by the period
+ * lifecycle or the one-pending rule. A state conflict, not a missing resource,
+ * so the tRPC error-mapper renders it BAD_REQUEST (distinct from
+ * `LeadFormDomainError` → NOT_FOUND).
+ */
+export class ReopenRequestError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ReopenRequestError";
+  }
+}
+
 export interface LeadFormRepository {
   getSectionById(sectionId: string): Promise<ReportSectionReadModel | null>;
   getSectionForPeriod(
     reportId: string,
     userId: string,
-  ): Promise<{ section: ReportSectionReadModel; readOnly: boolean } | null>;
+  ): Promise<{
+    section: ReportSectionReadModel;
+    readOnly: boolean;
+    /**
+     * reopen-request-lifecycle (D4): the period-lifecycle facts the service
+     * needs to compute `canRequestReopen` without a second read. `archived`
+     * is the explicit `Report` flag, NOT a `periodStatus` value.
+     */
+    reopenFacts: ReopenEligibilityFacts;
+  } | null>;
+  /**
+   * reopen-request-lifecycle (D4): the lifecycle facts for a single section,
+   * keyed by sectionId, so `requestReopen` can enforce the same rule the lead
+   * form's `canRequestReopen` flag advertises. Null when the section is missing.
+   * `authorId` lets the service keep the ownership check.
+   */
+  getSectionReopenContext(
+    sectionId: string,
+  ): Promise<{ authorId: string; facts: ReopenEligibilityFacts } | null>;
   /**
    * The `periodStatus` of the report owning `sectionId`, or null when the
    * section is missing. Used by fillFrom to refuse mutating a published
@@ -128,6 +159,72 @@ export interface CrossAuthorSectionRow {
     resolvedAt: Date | null;
     stageNames: string[];
   }[];
+}
+
+/**
+ * reopen-request-lifecycle (D4): the period-lifecycle facts a reopen-request
+ * decision turns on. `sectionStatus` is the `ReportSectionStatus`, `periodStatus`
+ * the `PeriodStatus` (open/published/reopened), `archived` the explicit `Report`
+ * flag, and `hasPendingReopen` whether the section already holds a pending
+ * request.
+ */
+export interface ReopenEligibilityFacts {
+  sectionStatus: string;
+  periodStatus: string;
+  archived: boolean;
+  hasPendingReopen: boolean;
+}
+
+/**
+ * Machine-readable reason a reopen request is not allowed, for logging and the
+ * lead-form flag. `null` reason means it IS allowed.
+ */
+export type ReopenBlockedReason =
+  | "not_submitted"
+  | "period_archived"
+  | "period_closed"
+  | "pending_request_exists";
+
+/**
+ * reopen-request-lifecycle (D4): the single source of truth for whether a lead
+ * may file a reopen request. Both the lead-form read (`canRequestReopen`) and
+ * the `requestReopen` write guard call this, so the button and the server can
+ * never drift. A request is allowed only for a `submitted` section on an
+ * `open`/`reopened`, non-`archived` period with no pending request already.
+ * `archived` is checked before `periodStatus` so an archived report yields the
+ * more specific reason.
+ */
+export function computeReopenEligibility(facts: ReopenEligibilityFacts): {
+  canRequestReopen: boolean;
+  reason: ReopenBlockedReason | null;
+} {
+  if (facts.sectionStatus !== "submitted") {
+    return { canRequestReopen: false, reason: "not_submitted" };
+  }
+  if (facts.archived) {
+    return { canRequestReopen: false, reason: "period_archived" };
+  }
+  if (facts.periodStatus !== "open" && facts.periodStatus !== "reopened") {
+    return { canRequestReopen: false, reason: "period_closed" };
+  }
+  if (facts.hasPendingReopen) {
+    return { canRequestReopen: false, reason: "pending_request_exists" };
+  }
+  return { canRequestReopen: true, reason: null };
+}
+
+/** Human-readable English message for a blocked reopen request. */
+export function reopenBlockedMessage(reason: ReopenBlockedReason): string {
+  switch (reason) {
+    case "not_submitted":
+      return "Only submitted sections can request a reopen.";
+    case "period_archived":
+      return "This period is archived; its sections can no longer be reopened.";
+    case "period_closed":
+      return "This period is published; ask Head to reopen the period before editing sections.";
+    case "pending_request_exists":
+      return "A reopen request for this section is already pending.";
+  }
 }
 
 /**

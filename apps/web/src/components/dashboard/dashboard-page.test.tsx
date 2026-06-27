@@ -62,6 +62,10 @@ vi.mock("./alert-bar", () => ({
   AlertBar: () => <div>Alerts</div>,
 }));
 
+vi.mock("./reopen-requests-card", () => ({
+  ReopenRequestsCard: () => <div>Reopen requests</div>,
+}));
+
 vi.mock("./blocked-at-risk-table", () => ({
   BlockedAtRiskTable: () => <div>Blocked</div>,
 }));

@@ -7,9 +7,13 @@ import {
 } from "../../infrastructure/metrics/metrics.registry.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
+  computeReopenEligibility,
+  LeadFormAccessError,
   LeadFormDomainError,
   type LeadFormRepository,
   LeadFormService,
+  type ReopenEligibilityFacts,
+  ReopenRequestError,
 } from "./lead-form.service";
 
 // ---------------------------------------------------------------------------
@@ -66,6 +70,7 @@ function createMockRepository(
   return {
     getSectionById: vi.fn().mockResolvedValue(null),
     getSectionForPeriod: vi.fn().mockResolvedValue(null),
+    getSectionReopenContext: vi.fn().mockResolvedValue(null),
     getReportPeriodStatusForSection: vi.fn().mockResolvedValue("open"),
     revokeSectionSubmission: vi.fn().mockResolvedValue(undefined),
     fillFromSection: vi.fn().mockResolvedValue(5),
@@ -481,13 +486,54 @@ describe("LeadFormService — fillFrom", () => {
 // getByPeriod (API-10)
 // ---------------------------------------------------------------------------
 
+// reopen-request-lifecycle helpers: build the repo return shapes that now
+// carry the period-lifecycle facts.
+function forPeriod(
+  section: ReportSectionReadModel,
+  readOnly: boolean,
+  facts: Partial<ReopenEligibilityFacts> = {},
+): {
+  section: ReportSectionReadModel;
+  readOnly: boolean;
+  reopenFacts: ReopenEligibilityFacts;
+} {
+  return {
+    section,
+    readOnly,
+    reopenFacts: {
+      sectionStatus: section.status,
+      periodStatus: "open",
+      archived: false,
+      hasPendingReopen: false,
+      ...facts,
+    },
+  };
+}
+
+function reopenContext(
+  facts: Partial<ReopenEligibilityFacts> = {},
+  authorId = AUTHOR_ID,
+): { authorId: string; facts: ReopenEligibilityFacts } {
+  return {
+    authorId,
+    facts: {
+      sectionStatus: "submitted",
+      periodStatus: "open",
+      archived: false,
+      hasPendingReopen: false,
+      ...facts,
+    },
+  };
+}
+
 describe("LeadFormService — getByPeriod", () => {
-  it("returns readOnly=true for a published period", async () => {
+  it("returns readOnly=true and canRequestReopen=false for a published period", async () => {
     const repo = createMockRepository({
-      getSectionForPeriod: vi.fn().mockResolvedValue({
-        section: structuredClone(submittedSection),
-        readOnly: true,
-      }),
+      getSectionForPeriod: vi.fn().mockResolvedValue(
+        forPeriod(structuredClone(submittedSection), true, {
+          periodStatus: "published",
+        }),
+      ),
     });
     const service = new LeadFormService(repo);
 
@@ -495,33 +541,80 @@ describe("LeadFormService — getByPeriod", () => {
 
     expect(result.readOnly).toBe(true);
     expect(result.section.reportSectionId).toBe(SECTION_ID);
+    expect(result.canRequestReopen).toBe(false);
   });
 
   it("returns readOnly=false for an open period", async () => {
     const repo = createMockRepository({
-      getSectionForPeriod: vi.fn().mockResolvedValue({
-        section: structuredClone(draftSection),
-        readOnly: false,
-      }),
+      getSectionForPeriod: vi
+        .fn()
+        .mockResolvedValue(forPeriod(structuredClone(draftSection), false)),
     });
     const service = new LeadFormService(repo);
 
     const result = await service.getByPeriod(REPORT_ID, AUTHOR_ID);
 
     expect(result.readOnly).toBe(false);
+    // A draft is not submitted, so a reopen request is meaningless.
+    expect(result.canRequestReopen).toBe(false);
   });
 
-  it("lets head view a requested author section as read-only", async () => {
+  it("canRequestReopen=true for a submitted section on an open period", async () => {
+    const repo = createMockRepository({
+      getSectionForPeriod: vi
+        .fn()
+        .mockResolvedValue(forPeriod(structuredClone(submittedSection), false)),
+    });
+    const service = new LeadFormService(repo);
+
+    const result = await service.getByPeriod(REPORT_ID, AUTHOR_ID);
+
+    expect(result.canRequestReopen).toBe(true);
+    expect(result.reopenBlockedReason).toBeNull();
+  });
+
+  it("canRequestReopen=true on a reopened period (and the section is editable)", async () => {
+    const repo = createMockRepository({
+      getSectionForPeriod: vi.fn().mockResolvedValue(
+        forPeriod(structuredClone(submittedSection), false, {
+          periodStatus: "reopened",
+        }),
+      ),
+    });
+    const service = new LeadFormService(repo);
+
+    const result = await service.getByPeriod(REPORT_ID, AUTHOR_ID);
+
+    expect(result.readOnly).toBe(false);
+    expect(result.canRequestReopen).toBe(true);
+  });
+
+  it("canRequestReopen=false when a pending request already exists", async () => {
+    const repo = createMockRepository({
+      getSectionForPeriod: vi.fn().mockResolvedValue(
+        forPeriod(structuredClone(submittedSection), false, {
+          hasPendingReopen: true,
+        }),
+      ),
+    });
+    const service = new LeadFormService(repo);
+
+    const result = await service.getByPeriod(REPORT_ID, AUTHOR_ID);
+
+    expect(result.canRequestReopen).toBe(false);
+    expect(result.reopenBlockedReason).toBe("pending_request_exists");
+  });
+
+  it("lets head view a requested author section as read-only, no reopen affordance", async () => {
     const otherAuthorSection = {
-      ...structuredClone(draftSection),
+      ...structuredClone(submittedSection),
       authorId: OTHER_USER_ID,
       authorName: "Lead 2",
     };
     const repo = createMockRepository({
-      getSectionForPeriod: vi.fn().mockResolvedValue({
-        section: otherAuthorSection,
-        readOnly: false,
-      }),
+      getSectionForPeriod: vi
+        .fn()
+        .mockResolvedValue(forPeriod(otherAuthorSection, false)),
     });
     const service = new LeadFormService(repo);
 
@@ -539,6 +632,8 @@ describe("LeadFormService — getByPeriod", () => {
     );
     expect(result.section.authorId).toBe(OTHER_USER_ID);
     expect(result.readOnly).toBe(true);
+    // canRequestReopen is a lead-self affordance: false when viewing another.
+    expect(result.canRequestReopen).toBe(false);
   });
 
   it("lets lead view a requested author section as read-only when they share a product", async () => {
@@ -548,10 +643,9 @@ describe("LeadFormService — getByPeriod", () => {
       authorName: "Lead 2",
     };
     const repo = createMockRepository({
-      getSectionForPeriod: vi.fn().mockResolvedValue({
-        section: otherAuthorSection,
-        readOnly: false,
-      }),
+      getSectionForPeriod: vi
+        .fn()
+        .mockResolvedValue(forPeriod(otherAuthorSection, false)),
       hasSharedProduct: vi.fn().mockResolvedValue(true),
     });
     const service = new LeadFormService(repo);
@@ -574,10 +668,9 @@ describe("LeadFormService — getByPeriod", () => {
 
   it("ignores requestedAuthorId for lead with no shared product", async () => {
     const repo = createMockRepository({
-      getSectionForPeriod: vi.fn().mockResolvedValue({
-        section: structuredClone(draftSection),
-        readOnly: false,
-      }),
+      getSectionForPeriod: vi
+        .fn()
+        .mockResolvedValue(forPeriod(structuredClone(draftSection), false)),
       hasSharedProduct: vi.fn().mockResolvedValue(false),
     });
     const service = new LeadFormService(repo);
@@ -609,15 +702,85 @@ describe("LeadFormService — getByPeriod", () => {
 });
 
 // ---------------------------------------------------------------------------
-// requestReopen (API-04)
+// computeReopenEligibility — the single source of truth (D4)
+// ---------------------------------------------------------------------------
+
+describe("computeReopenEligibility", () => {
+  it("allows a submitted section on an open period with no pending request", () => {
+    expect(
+      computeReopenEligibility({
+        sectionStatus: "submitted",
+        periodStatus: "open",
+        archived: false,
+        hasPendingReopen: false,
+      }),
+    ).toEqual({ canRequestReopen: true, reason: null });
+  });
+
+  it("allows a reopened period", () => {
+    expect(
+      computeReopenEligibility({
+        sectionStatus: "submitted",
+        periodStatus: "reopened",
+        archived: false,
+        hasPendingReopen: false,
+      }).canRequestReopen,
+    ).toBe(true);
+  });
+
+  it("blocks a non-submitted section", () => {
+    expect(
+      computeReopenEligibility({
+        sectionStatus: "draft",
+        periodStatus: "open",
+        archived: false,
+        hasPendingReopen: false,
+      }),
+    ).toEqual({ canRequestReopen: false, reason: "not_submitted" });
+  });
+
+  it("blocks an archived report before checking periodStatus", () => {
+    expect(
+      computeReopenEligibility({
+        sectionStatus: "submitted",
+        periodStatus: "published",
+        archived: true,
+        hasPendingReopen: false,
+      }),
+    ).toEqual({ canRequestReopen: false, reason: "period_archived" });
+  });
+
+  it("blocks a published period", () => {
+    expect(
+      computeReopenEligibility({
+        sectionStatus: "submitted",
+        periodStatus: "published",
+        archived: false,
+        hasPendingReopen: false,
+      }),
+    ).toEqual({ canRequestReopen: false, reason: "period_closed" });
+  });
+
+  it("blocks when a pending request already exists", () => {
+    expect(
+      computeReopenEligibility({
+        sectionStatus: "submitted",
+        periodStatus: "open",
+        archived: false,
+        hasPendingReopen: true,
+      }),
+    ).toEqual({ canRequestReopen: false, reason: "pending_request_exists" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// requestReopen (API-04) — period-lifecycle guard (D4)
 // ---------------------------------------------------------------------------
 
 describe("LeadFormService — requestReopen", () => {
-  it("succeeds for a submitted section by the author", async () => {
+  it("succeeds for a submitted section by the author on an open period", async () => {
     const repo = createMockRepository({
-      getSectionById: vi
-        .fn()
-        .mockResolvedValue(structuredClone(submittedSection)),
+      getSectionReopenContext: vi.fn().mockResolvedValue(reopenContext()),
     });
     const service = new LeadFormService(repo);
 
@@ -636,28 +799,99 @@ describe("LeadFormService — requestReopen", () => {
     );
   });
 
-  it("fails when caller is not the section author", async () => {
+  it("succeeds on a reopened period", async () => {
     const repo = createMockRepository({
-      getSectionById: vi
+      getSectionReopenContext: vi
         .fn()
-        .mockResolvedValue(structuredClone(submittedSection)),
+        .mockResolvedValue(reopenContext({ periodStatus: "reopened" })),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(service.requestReopen(SECTION_ID, AUTHOR_ID)).resolves.toEqual(
+      { success: true },
+    );
+  });
+
+  it("rejects a published period with a BAD_REQUEST-mapped domain error", async () => {
+    const repo = createMockRepository({
+      getSectionReopenContext: vi
+        .fn()
+        .mockResolvedValue(reopenContext({ periodStatus: "published" })),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(service.requestReopen(SECTION_ID, AUTHOR_ID)).rejects.toThrow(
+      ReopenRequestError,
+    );
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.createReopenRequest).not.toHaveBeenCalled();
+  });
+
+  it("rejects an archived period", async () => {
+    const repo = createMockRepository({
+      getSectionReopenContext: vi
+        .fn()
+        .mockResolvedValue(
+          reopenContext({ periodStatus: "published", archived: true }),
+        ),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(service.requestReopen(SECTION_ID, AUTHOR_ID)).rejects.toThrow(
+      ReopenRequestError,
+    );
+  });
+
+  it("rejects when a pending request already exists", async () => {
+    const repo = createMockRepository({
+      getSectionReopenContext: vi
+        .fn()
+        .mockResolvedValue(reopenContext({ hasPendingReopen: true })),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(service.requestReopen(SECTION_ID, AUTHOR_ID)).rejects.toThrow(
+      ReopenRequestError,
+    );
+  });
+
+  it("rejects a non-submitted section", async () => {
+    const repo = createMockRepository({
+      getSectionReopenContext: vi
+        .fn()
+        .mockResolvedValue(reopenContext({ sectionStatus: "draft" })),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(service.requestReopen(SECTION_ID, AUTHOR_ID)).rejects.toThrow(
+      ReopenRequestError,
+    );
+  });
+
+  it("rejects when the caller is not the section author (FORBIDDEN)", async () => {
+    const repo = createMockRepository({
+      getSectionReopenContext: vi.fn().mockResolvedValue(reopenContext()),
     });
     const service = new LeadFormService(repo);
 
     await expect(
       service.requestReopen(SECTION_ID, OTHER_USER_ID),
-    ).rejects.toThrow("Can only request reopen for your own section.");
+    ).rejects.toThrow(LeadFormAccessError);
   });
 
-  // Phase 52-A (UFB-054): the `requested` slice of the reopen-funnel
-  // counter increments only on the success path. An unauthorized caller
-  // (different author) MUST NOT bump the counter — that would let any
-  // role inflate the funnel by hammering the endpoint.
+  it("rejects when the section does not exist (NOT_FOUND)", async () => {
+    const repo = createMockRepository();
+    const service = new LeadFormService(repo);
+
+    await expect(service.requestReopen(SECTION_ID, AUTHOR_ID)).rejects.toThrow(
+      LeadFormDomainError,
+    );
+  });
+
+  // The reopen-funnel counter's `requested` slice increments only on success.
   it('increments customreport_reopen_requests_total{state="requested"} on success', async () => {
     const repo = createMockRepository({
-      getSectionById: vi
-        .fn()
-        .mockResolvedValue(structuredClone(submittedSection)),
+      getSectionReopenContext: vi.fn().mockResolvedValue(reopenContext()),
     });
     const service = new LeadFormService(repo);
 
@@ -674,11 +908,11 @@ describe("LeadFormService — requestReopen", () => {
     ).toBe(before + 1);
   });
 
-  it("does not increment the counter when authorization fails", async () => {
+  it("does not increment the counter when the lifecycle guard rejects", async () => {
     const repo = createMockRepository({
-      getSectionById: vi
+      getSectionReopenContext: vi
         .fn()
-        .mockResolvedValue(structuredClone(submittedSection)),
+        .mockResolvedValue(reopenContext({ periodStatus: "published" })),
     });
     const service = new LeadFormService(repo);
 
@@ -687,7 +921,7 @@ describe("LeadFormService — requestReopen", () => {
     });
 
     await expect(
-      service.requestReopen(SECTION_ID, OTHER_USER_ID),
+      service.requestReopen(SECTION_ID, AUTHOR_ID),
     ).rejects.toThrow();
 
     expect(

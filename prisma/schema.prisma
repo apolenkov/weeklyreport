@@ -502,6 +502,13 @@ model ReopenRequest {
   @@index([reportSectionId])
   @@index([requestedById])
   @@index([reviewedById])
+  // reopen-request-lifecycle (D5): at most ONE pending request per section.
+  // Enforced by a PARTIAL unique index `ReopenRequest_one_pending_per_section`
+  // ON ("reportSectionId") WHERE "status" = 'pending'. Prisma cannot express a
+  // partial-index predicate, so the index is hand-written in the init migration
+  // (prisma/migrations/20260530162224_init/migration.sql). Approved/rejected
+  // rows are unconstrained, so a section can be reopened, re-submitted, and
+  // requested again.
 }
 
 // UFB-048 (Phase 48-B): AppSettings expansion. Nine new org-wide knobs that

@@ -7,6 +7,7 @@ import type {
   CrossAuthorSectionRow,
   LeadFormRepository,
 } from "./lead-form.service";
+import type { ReopenEligibilityFacts } from "./lead-form-shared";
 import { initialsFromName } from "./lead-form-shared";
 import {
   mapPrismaToReportSection,
@@ -65,12 +66,23 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
   async getSectionForPeriod(
     reportId: string,
     userId: string,
-  ): Promise<{ section: ReportSectionReadModel; readOnly: boolean } | null> {
+  ): Promise<{
+    section: ReportSectionReadModel;
+    readOnly: boolean;
+    reopenFacts: ReopenEligibilityFacts;
+  } | null> {
     const row = await this.prisma.reportSection.findUnique({
       where: { reportId_authorId: { reportId, authorId: userId } },
       include: {
         ...reportSectionFullInclude,
-        report: { select: { periodStatus: true } },
+        report: { select: { periodStatus: true, archived: true } },
+        // reopen-request-lifecycle (D4/D5): does this section already hold a
+        // pending reopen request? Drives `canRequestReopen` (one-pending rule).
+        reopenRequests: {
+          where: { status: "pending" },
+          select: { id: true },
+          take: 1,
+        },
       },
     });
 
@@ -82,13 +94,59 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       row as unknown as Parameters<typeof mapPrismaToReportSection>[0],
     );
 
-    // readOnly when the period is not open (published periods are locked;
-    // note: 'reopened' is treated as non-open per spec — callers may refine)
-    const readOnly =
-      (row as unknown as { report: { periodStatus: string } }).report
-        .periodStatus !== "open";
+    const report = (
+      row as unknown as { report: { periodStatus: string; archived: boolean } }
+    ).report;
+    const reopenRequests = (row as unknown as { reopenRequests: unknown[] })
+      .reopenRequests;
 
-    return { section, readOnly };
+    // reopen-request-lifecycle (D4/G6): a 'reopened' period is editable again
+    // (the whole point of the state), so it is read-write alongside 'open'.
+    // 'published'/'archived' stay read-only — this closes the "callers may
+    // refine" gap that previously left an approved reopen non-editable.
+    const readOnly =
+      report.periodStatus !== "open" && report.periodStatus !== "reopened";
+
+    const reopenFacts: ReopenEligibilityFacts = {
+      sectionStatus: section.status,
+      periodStatus: report.periodStatus,
+      archived: report.archived,
+      hasPendingReopen: reopenRequests.length > 0,
+    };
+
+    return { section, readOnly, reopenFacts };
+  }
+
+  async getSectionReopenContext(
+    sectionId: string,
+  ): Promise<{ authorId: string; facts: ReopenEligibilityFacts } | null> {
+    const row = await this.prisma.reportSection.findUnique({
+      where: { id: sectionId },
+      select: {
+        authorId: true,
+        status: true,
+        report: { select: { periodStatus: true, archived: true } },
+        reopenRequests: {
+          where: { status: "pending" },
+          select: { id: true },
+          take: 1,
+        },
+      },
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      authorId: row.authorId,
+      facts: {
+        sectionStatus: row.status,
+        periodStatus: row.report.periodStatus,
+        archived: row.report.archived,
+        hasPendingReopen: row.reopenRequests.length > 0,
+      },
+    };
   }
 
   async revokeSectionSubmission(
