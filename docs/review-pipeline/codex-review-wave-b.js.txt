@@ -1,0 +1,99 @@
+export const meta = {
+  name: "codex-review-wave-b",
+  description:
+    "Adversarial Codex review (read-only) of each Wave B OpenSpec change. One Codex pass per change dir, 900s watchdog + time-box. Returns VERDICT + issues. No edits.",
+  phases: [{ title: "Review", detail: "one Codex reviewer per change (codex exec, read-only, 900s)" }],
+};
+
+const CHANGES = [
+  "scope-period-lifecycle-authz",
+  "scope-reminder-authz",
+  "enforce-deactivation-pdf-bullboard",
+  "make-publish-atomic",
+  "transactional-snapshot-restore",
+  "period-uniqueness-db-constraint",
+  "scope-leadform-getbyperiod",
+  "map-domain-errors",
+];
+
+const SCHEMA = {
+  type: "object",
+  required: ["changeId", "available", "verdict", "issues"],
+  properties: {
+    changeId: { type: "string" },
+    available: { type: "boolean" },
+    verdict: { enum: ["APPROVED", "REVISE", "UNKNOWN"] },
+    issues: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["severity", "where", "problem", "fix"],
+        properties: {
+          severity: { enum: ["Blocker", "High", "Medium", "Low"] },
+          where: { type: "string" },
+          problem: { type: "string" },
+          fix: { type: "string" },
+        },
+      },
+    },
+    notes: { type: "string" },
+  },
+};
+
+const reviewPrompt = (id) =>
+  `You are an adversarial reviewer for an OpenSpec change proposal in the CustomReport monorepo. Your cwd IS the repo. You are STRICTLY READ-ONLY — change nothing.
+
+Read the ENTIRE change directory openspec/changes/${id}/ : proposal.md, every specs/**/spec.md delta, design.md, tasks.md. Then read the product code the change cites and any existing openspec/specs/** it touches, to judge feasibility and conflicts.
+
+WORK EFFICIENTLY — you have a hard time budget. Spot-check the cited files; do NOT crawl the whole repo. Emit your JSON before you run long.
+
+Be skeptical and specific. Find concrete flaws: security holes the fix misses, race conditions, missing edge cases, requirements with no scenario coverage, scenarios that contradict the design, tasks that do not trace to a requirement, wrong assumptions about how the actual code works, conflicts with an existing spec, or a materially simpler correct approach. Respect repo conventions: hardcoded Russian is only a bug in apps/web JSX; ComingSoon is intentional; a single init migration is intentional (MVP); English-only prod UI is intentional.
+
+Return ONLY a single minified JSON object, no prose, no markdown fence:
+{"verdict":"APPROVED"|"REVISE","issues":[{"severity":"Blocker|High|Medium|Low","where":"file or artifact","problem":"...","fix":"one-line fix"}],"notes":"..."}
+Use REVISE if there is any material problem; APPROVED if the change is sound enough to implement.`;
+
+phase("Review");
+const results = await parallel(
+  CHANGES.map((id) => () => {
+    const bash = `F=$(mktemp "\${TMPDIR:-/tmp}/codexrevB-${id}.XXXXXX")
+cat > "$F" <<'CODEXREV_EOF'
+${reviewPrompt(id)}
+CODEXREV_EOF
+O=$(mktemp)
+codex exec -s read-only --json "$(cat "$F")" > "$O" 2>/dev/null &
+P=$!; ( sleep 900; kill -9 $P 2>/dev/null ) & W=$!
+wait $P 2>/dev/null; kill -9 $W 2>/dev/null
+grep '"type":"item.completed"' "$O" | tail -1`;
+    return agent(
+      `You are a RELAY for OpenAI Codex reviewing OpenSpec change "${id}". Run Codex
+read-only and return ITS verdict verbatim — do NOT review it yourself.
+
+Run this EXACT Bash as a SINGLE invocation:
+
+${bash}
+
+The printed line is a JSON item.completed whose .item.text holds Codex's answer
+object {"verdict":...,"issues":[...],"notes":...}. Parse it and return as your
+structured output with changeId:"${id}" and available:true. If empty / timed out /
+unparseable, return changeId:"${id}", available:false, verdict:"UNKNOWN",
+issues:[], notes explaining what went wrong.`,
+      {
+        label: `codex-review:${id}`,
+        phase: "Review",
+        model: "sonnet",
+        effort: "medium",
+        schema: SCHEMA,
+      },
+    );
+  }),
+);
+
+const done = results.filter(Boolean);
+const up = done.filter((r) => r.available);
+log(
+  `Codex reviewed ${up.length}/${CHANGES.length}. ` +
+    `APPROVED ${up.filter((r) => r.verdict === "APPROVED").length}, ` +
+    `REVISE ${up.filter((r) => r.verdict === "REVISE").length}.`,
+);
+return { reviews: done };
