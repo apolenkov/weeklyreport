@@ -33,15 +33,33 @@ the API rather than falling through to the web frontend.
 The system SHALL serve generated PDF artifacts exclusively through a download
 endpoint that requires a valid caller session and authorizes the caller against
 the bound export job, with no unauthenticated static file mount remaining on any
-port. The caller is authorized when the caller is the export job's original
-requester OR the caller has role-and-scope read access to the report the job is
-bound to.
+port. The caller is authorized only when the caller currently has role-and-scope
+read access to the report the job is bound to. Being the export job's original
+`requestedBy` does NOT by itself grant access: once the caller's read access to
+the bound report is revoked, the artifact MUST NOT be served, mirroring the
+per-request scope hydration that prevents stale-access leaks on the report read
+path. The endpoint MUST stream only a job whose status is `completed` and whose
+persisted artifact path matches the requested path.
 
-#### Scenario: Original requester downloads their own export
+#### Scenario: Original requester with current read access downloads their own export
 
 - **GIVEN** a completed export job whose `requestedBy` is the caller
+- **AND** the caller currently has role-and-scope read access to the bound report
 - **WHEN** the caller requests that artifact with a valid session cookie
 - **THEN** the endpoint streams the PDF with `Content-Type: application/pdf`
+
+#### Scenario: Original requester who lost report access is rejected
+
+- **GIVEN** a completed export job whose `requestedBy` is the caller
+- **AND** the caller's read access to the bound report has since been revoked (for example a viewer whose `ViewerGroupAccess` row was removed)
+- **WHEN** the caller requests that artifact with a valid session cookie
+- **THEN** the endpoint responds 403 and serves no file bytes, because original-requester identity does not survive revoked read access
+
+#### Scenario: A non-completed or path-mismatched job is not served
+
+- **GIVEN** an export job whose status is not `completed`, or whose persisted artifact path does not match the requested `/pdfs/{jobId}.pdf` path
+- **WHEN** an authenticated, in-scope caller requests that artifact
+- **THEN** the endpoint responds 404 and serves no file bytes, even if a same-named file exists on disk
 
 #### Scenario: In-scope reader downloads an artifact requested by someone else
 
@@ -73,7 +91,12 @@ bound to.
 The system SHALL apply the same session-verification pipeline used by the tRPC
 context — token verification, the revocation fast path, and the `isActive`
 account check — before streaming any artifact, so a stale, revoked, or
-deactivated session cannot pull files.
+deactivated session cannot pull files. The download endpoint MUST resolve the
+caller through a dedicated user-session resolver that accepts ONLY a valid human
+user session: it MUST NOT fall back to the PDF-export worker token path (the
+`signPdfExportToken` / `verifyPdfExportToken` JWT carried in the same
+`customreport_session` cookie) nor to the dev-mode synthetic session, both of
+which the full `trpc.context` resolver chain accepts.
 
 #### Scenario: Revoked session cannot download
 
@@ -86,3 +109,15 @@ deactivated session cannot pull files.
 - **GIVEN** a session token whose user row has `isActive = false`
 - **WHEN** the caller requests an artifact
 - **THEN** the endpoint denies access and serves no file bytes
+
+#### Scenario: PDF-export worker token cannot download
+
+- **GIVEN** a `customreport_session` cookie carrying a PDF-export worker JWT (`verifyPdfExportToken`) rather than a human user session
+- **WHEN** the caller requests an artifact
+- **THEN** the endpoint rejects it with 401 and serves no file bytes, because the dedicated resolver does not honor the worker-token fallback
+
+#### Scenario: Dev-mode synthetic session cannot download
+
+- **GIVEN** a request with no valid user session while a dev-auth flag (`AUTH_DEV_MODE`) is set in a non-production environment
+- **WHEN** the caller requests an artifact
+- **THEN** the endpoint rejects it with 401 and serves no file bytes, because the dedicated resolver does not fall back to the dev-mode synthetic session

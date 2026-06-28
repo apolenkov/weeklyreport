@@ -18,12 +18,19 @@ wired feature, not a stub, so both gaps bite real users.
 - **BREAKING (artifact serving):** replace the unauthenticated
   `express.static('/pdfs')` mount with an authenticated, authorized download
   handler. The handler resolves the caller's ambient session cookie
-  (`customreport_session`, the same path `trpc.context` already uses) and
-  serves the file only when the caller is the job's original requester OR has
-  role+scope read access to the bound report.
+  (`customreport_session`) through a dedicated user-session resolver and serves
+  the file only when the caller currently has role+scope read access to the
+  bound report. Being the job's original `requestedBy` is not a standalone grant:
+  once that read access is revoked the artifact is no longer served, so a viewer
+  who exported while in-scope cannot keep pulling the bytes after losing access.
 - Reuse the existing session-verification pipeline (revocation + `isActive`
   checks) for the download handler so a stale or deactivated session cannot
-  pull artifacts.
+  pull artifacts. The resolver accepts only a human user session — it does NOT
+  fall back to the PDF-export worker token or the dev-mode synthetic session
+  that the full `trpc.context` chain otherwise accepts.
+- Serve only a job whose `status` is `completed` and whose persisted artifact
+  path matches the requested path, so a pending/failed row or an orphan
+  same-named file on disk is never streamed.
 
 Non-goals:
 

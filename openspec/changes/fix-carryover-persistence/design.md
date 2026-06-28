@@ -85,14 +85,46 @@ carried item is indistinguishable from a hand-entered one in those columns.
 Wrap the execution insert and catch `Prisma.PrismaClientKnownRequestError` with
 `code === "P2002"`, following the established reopen-request translation in
 `lead-form.prisma-repository.ts:305`. On conflict, re-read the existing
-execution by `dedupeKey` and return it (idempotent success), or throw a
-`CarryOverDomainError` mapped to a conflict by the tRPC error mapper. Either way
-the status stays `completed`; no `failed` row is written.
+execution by `dedupeKey` and return it (idempotent success — the default).
+
+Only if the existing execution cannot be re-read should the path surface a
+conflict, and it MUST NOT reuse `CarryOverDomainError` for it.
+`CarryOverDomainError` is mapped class-wide to `BAD_REQUEST`
+(`trpc.error-mapper.ts:96-105`) and is already shared by the validation errors
+(same source/target report, missing sections). Remapping that class to
+`CONFLICT` would regress those `BAD_REQUEST` responses, while leaving it
+unchanged would never satisfy a conflict branch. Introduce a distinct
+`CarryOverConflictError` subclass for the dedupe conflict and add a dedicated
+error-mapper branch that maps only `CarryOverConflictError` to `CONFLICT`,
+leaving the existing `CarryOverDomainError` → `BAD_REQUEST` branch untouched.
+Either way the status stays `completed`; no `failed` row is written.
 
 Alternative considered: `upsert` on `dedupeKey` / `createMany` with
 `skipDuplicates`. Workable for the execution row, but a bare upsert would still
 need a re-read to return the winning execution and its records, so the
 catch-and-reread path is clearer and matches the repo's existing pattern.
+
+### D5: Counts and records track matched target sections only
+
+The matching rule stays `authorId`-based (see Non-Goals), so a source section
+whose author has no section in the target report cannot land its carried rows in
+any target `ReportSection`. Yet the service today computes
+`carriedItemCount` / `carriedDecisionCount` and the `CarryOverRecord` set from
+EVERY source section before matching. Counting those unmatched rows would make
+the execution counts exceed the `Item` / `Decision` rows actually persisted and
+emit `CarryOverRecord` rows whose `targetItemId` / `targetDecisionId` point at
+rows that were never written (dangling references).
+
+Restrict the carried set the service counts and records to source sections that
+have a matching target section. Build `allCarriedItems` / `allCarriedDecisions`
+from matched source sections only (or filter them before computing counts and
+records), so `carriedItemCount` / `carriedDecisionCount`, the emitted
+`CarryOverRecord` rows, and the persisted `Item` / `Decision` rows all agree.
+
+Alternative considered: create a target section on the fly for an unmatched
+source author. Rejected — section creation is owned by the report-sections /
+period-open path, not carry-over; inventing a section here would duplicate that
+ownership and risk a section with no lead assignment.
 
 ## Risks / Trade-offs
 

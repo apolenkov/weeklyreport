@@ -85,10 +85,17 @@ does not support it at the top level (verified against repo usage + Prisma docs)
 Same constraint, same pattern. Inside the existing `$transaction`: first
 `findMany({ where: { reportId, status: "submitted", ...scope }, select: { id:
 true } })` (relation filter on the read collects only the in-scope submitted
-section ids), then `updateMany({ where: { id: { in: ids } } })` (scalar write).
+section ids), then `updateMany({ where: { id: { in: ids }, status: "submitted" }
+})` (scalar write). The scalar write keeps the `status: "submitted"` predicate —
+mirroring D2's single-path write — so a section a concurrent transaction already
+revoked between the `findMany` and the `updateMany` is not re-stamped with this
+caller's `revokedAt` / `revokedBy`; the original single bulk `updateMany` carried
+this same predicate, so this is parity, not a new guard.
 For a head `scope` is `author: { reportingGroupId: { in: [groupA] } }`; for admin
 `scope` is `{}` so the `findMany` collects every submitted section (unchanged).
-`revokedCount` is the `updateMany` count, which equals the in-scope id count.
+`revokedCount` is the `updateMany` count: in the race-free case it equals the
+in-scope id count, and in the rare concurrent-revoke case it is `≤` that count
+(only rows still `submitted` at write time are flipped and counted).
 
 Alternative — keep one `updateMany` with the scope spread into its where:
 rejected for the same relation-filter reason as D2.

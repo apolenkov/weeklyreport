@@ -14,10 +14,12 @@ host `evil.com`). This is the P0-7 finding (BL-OPEN-REDIRECT) from the
 ## What Changes
 
 - Replace the prefix-string `sanitizeNext` heuristic on the web landing page
-  with URL-parser validation: a candidate is accepted only if
-  `new URL(value, window.location.origin).origin` equals the current origin,
-  with manual rejection of backslash and second-character `/`|`\` as
-  defense-in-depth. Invalid input falls back to the role default.
+  with URL-parser validation: a candidate is accepted only when it resolves to
+  the same origin, with manual rejection of backslash and second-character
+  `/`|`\` as defense-in-depth. The web helper is SSR-safe — it parses against a
+  fixed in-code sentinel base instead of reading `window.location.origin` during
+  render, and returns the relative path. Invalid input falls back to the role
+  default.
 - Harden the API SAML dev short-circuit guard (currently
   `startsWith('/') && !includes('://')`) the same way — the existing guard is
   itself vulnerable to the `/\` bypass, so it is a fix site, not a template.

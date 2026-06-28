@@ -19,12 +19,24 @@ has no `build.args` for the `web` service, so the Dockerfile defaults
 (`AUTH_STUB=true`, `API_URL=localhost:3002`) compile into every production
 image.
 
-A secondary issue: the Dockerfile default `API_URL=http://api:3002` is an
-internal Docker hostname at port 3002, while `docker-compose.prod.yml` runtime
-environment sets `NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://api:3001}`
-(port 3001). The runtime env is irrelevant for `NEXT_PUBLIC_*` (already
-inlined), so the mismatch is latent but the actual public API origin must be
-supplied explicitly in `docker-compose.prod.yml` build args.
+A secondary, non-public issue: `next.config.ts` builds its rewrites for
+`/trpc`, `/auth`, `/health`, and `/api` from the server-side `API_URL`
+(falling back to `NEXT_PUBLIC_API_URL`, then `http://localhost:3002`). Next.js
+evaluates `rewrites()` **once at build time** and bakes the destinations into
+`routes-manifest.json`; the standalone server reads the manifest at runtime and
+does **not** re-run `rewrites()` (confirmed against the Next.js
+`loadCustomRoutes` / `filesystem.ts` behaviour). The Dockerfile default is
+`API_URL=http://api:3002`, but the prod `api` service listens on internal port
+`3001`, so the baked rewrites point at a dead `http://api:3002`. The runtime
+`environment: API_URL` on the `web` service is too late to fix the baked
+rewrites — `API_URL` must therefore also be a **build arg**.
+
+This is the path that actually breaks the browser: the tRPC client uses a
+relative `url: "/trpc"` (`apps/web/src/lib/trpc.ts`), so the browser hits the
+web origin and relies on the baked rewrite to reach the API. `NEXT_PUBLIC_API_URL`
+is a separate concern — it is inlined into the client bundle and rendered as
+browser-clickable `/health/*` and `/metrics` links by the API-readiness
+placeholder, so it must be the public, browser-reachable origin.
 
 ## Goals / Non-Goals
 
@@ -32,9 +44,12 @@ supplied explicitly in `docker-compose.prod.yml` build args.
 
 - The production web image bakes `AUTH_STUB=false`, disabling dev-login.
 - The production web image bakes `DEV_ROLE_SWITCHER=false`.
-- The production web image bakes the real `NEXT_PUBLIC_API_URL` (supplied via
-  environment-variable interpolation so each deployment controls its own
-  origin).
+- The production web image bakes the real `NEXT_PUBLIC_API_URL` (the public,
+  browser-reachable origin, supplied via required-error interpolation so each
+  deployment controls its own origin and a missing value fails the build).
+- The production web image bakes the non-public `API_URL` build arg pointing at
+  the internal API service origin (`http://api:3001`) so the build-time-baked
+  `next.config.ts` rewrites proxy `/trpc`, `/auth`, `/health`, `/api` correctly.
 - `AUTH_STUB` derivation in `login-page.client.tsx` acquires a `NODE_ENV`
   guard as a second line of defence.
 - Dev and UAT compose files are unmodified.
@@ -59,12 +74,26 @@ the contract visible at the deployment boundary — a reader of
 check `Dockerfile.web`. Future environments (staging, UAT) can also set their
 own values without modifying the shared Dockerfile.
 
-### Decision 2: `NEXT_PUBLIC_API_URL` is supplied via env interpolation, not a hard-coded value
+### Decision 2: `NEXT_PUBLIC_API_URL` uses required-error interpolation, not bare `${VAR}`
 
-The public API origin is deployment-specific. Using
-`NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}` (no fallback) forces the
-operator to supply the value and prevents a silent fallback to localhost. The
+The public API origin is deployment-specific, so it must be operator-supplied.
+The bare `NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}` form does **not** enforce
+this: Docker Compose substitutes an unset variable as an empty string and only
+prints a warning — it does not abort. That would bake an empty origin into the
+client bundle. The build arg therefore uses the required-error form
+`NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL must be set}`,
+which makes Compose exit with an error before the build starts. The
 `.env.example` file SHOULD document this required var.
+
+### Decision 2b: `API_URL` build arg defaults to the internal service origin
+
+Unlike the public origin, `API_URL` is the internal Docker-network address of
+the API and is stable within the prod compose project (`http://api:3001`). It is
+given a sensible default `API_URL: ${API_URL:-http://api:3001}` that mirrors the
+existing runtime `environment:` block and never falls back to `localhost`. The
+build args are **additive** to that runtime `environment:` block, which is kept
+because it still feeds the server-side consumers (`resolveApiUrl` in
+`get-server-session.ts` reads `API_URL` at runtime).
 
 ### Decision 3: Add `NODE_ENV !== 'production'` guard to `AUTH_STUB` derivation
 
@@ -85,14 +114,15 @@ implement both in a single commit.
 ## Risks / Trade-offs
 
 - **[Risk] Operator forgets `NEXT_PUBLIC_API_URL` in deployment env** →
-  Docker Compose will emit an error on unset vars when no default is provided,
-  making the omission visible at deploy time. Document the var in
+  The required-error interpolation `${NEXT_PUBLIC_API_URL:?...}` makes Docker
+  Compose abort with an error before the build starts (the bare `${VAR}` form
+  would only warn and substitute empty, so it is not used). Document the var in
   `.env.example`.
 
 - **[Risk] A future staging/UAT compose still lacks build args** →
   The `NODE_ENV` guard on `AUTH_STUB` provides a partial safety net (the Next.js
-  runner always exports `NODE_ENV=production` in standalone mode), but the API
-  URL would still default to localhost. Document the three required build args
+  runner always exports `NODE_ENV=production` in standalone mode), but the
+  public API URL would still default to localhost. Document the four build args
   in `.env.example` and in ops runbook commentary in `docker-compose.prod.yml`.
 
 - **[Trade-off] No automated test verifies build-arg correctness** →
@@ -101,18 +131,32 @@ implement both in a single commit.
   production login page renders an SSO button and not a dev-login CTA, but
   that requires a production-built image in CI. Noted as a future improvement.
 
+- **[Dependency] `API_URL` build arg must track the API's internal listen
+  port** → This change hardcodes the rewrite destination as `http://api:3001`
+  to match the `api` service in `docker-compose.prod.yml` (internal port `3001`,
+  per its `wget ... http://localhost:3001/health/ready` healthcheck). No other
+  change in this review backlog owns the prod API port/publication, so there is
+  no cross-change handoff here — but if a later change moves the API's internal
+  port, the `web` service `API_URL` build arg (and the runtime `environment:`
+  value) must move with it, or the baked rewrites break again.
+
 ## Migration Plan
 
-1. Update `docker-compose.prod.yml`: add `web.build.args` with the three
-   prod-safe values.
+1. Update `docker-compose.prod.yml`: add `web.build.args` with the four
+   prod-safe values (`NEXT_PUBLIC_AUTH_STUB=false`,
+   `NEXT_PUBLIC_DEV_ROLE_SWITCHER=false`,
+   `API_URL=${API_URL:-http://api:3001}`,
+   `NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:?...}`). Keep the existing runtime
+   `environment:` block — the build args are additive.
 2. Update `apps/web/src/app/login-page.client.tsx`: extend the `AUTH_STUB`
    constant with `&& process.env.NODE_ENV !== 'production'`.
 3. Update `.env.example`: document `NEXT_PUBLIC_API_URL` as a required
    production build arg.
 4. Rebuild the production web image (`docker compose -f docker-compose.prod.yml
 build web`).
-5. Smoke-test the login page: SSO button visible, no dev-login picker, network
-   tab shows tRPC calls to the correct origin.
+5. Smoke-test the login page: SSO button visible, no dev-login picker, and the
+   same-origin `/trpc` requests are proxied to the internal API (no 502/404 from
+   a stale `http://api:3002` rewrite destination).
 
 No rollback is needed — reverting the compose change and rebuilding restores the
 previous (broken) state.

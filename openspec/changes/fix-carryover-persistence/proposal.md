@@ -26,6 +26,9 @@ fails on four fronts:
 
 - Persist carried items and decisions for ALL target sections, not just the
   first; the persisted record count matches the execution's reported counts.
+- Keep the `authorId` matching rule but stop counting/recording carried rows
+  from a source lead that has no matching target section, so counts and
+  `CarryOverRecord` rows never exceed what is persisted (no dangling targets).
 - Write carried-decision and carried-item stage labels as `stageNames` (array),
   mirroring `report-sections.prisma-repository.ts`; remove the bad `stageName`.
 - Carry `priorityRank` and `stageNames` onto created items.

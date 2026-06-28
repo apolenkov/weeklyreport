@@ -46,8 +46,28 @@ applies the same normalization the browser will, so
 `new URL("/\evil.com", "http://localhost:3000").origin` is `http://evil.com`,
 caught by `resolved.origin === expectedOrigin`. Verified empirically:
 `/\evil.com`, `//evil.com`, `https://evil.com` all resolve off-origin; `/admin`
-and `/lead/report` resolve same-origin. Web reads `window.location.origin`; the
-API reads `new URL(env.FRONTEND_URL).origin`.
+and `/lead/report` resolve same-origin.
+
+The two sites read the base origin differently:
+
+- API (Node) reads `new URL(env.FRONTEND_URL).origin`. No browser globals.
+- Web validates against a fixed sentinel base, NOT `window.location.origin`.
+
+**Decision: the web helper is SSR-safe — it never reads `window` during render.**
+
+Rationale: `sanitizeNext` runs inside `LoginPageBody`, a client component whose
+body executes server-side during dynamic SSR, where `window` is `undefined`.
+Reading `window.location.origin` in render would throw a ReferenceError on the
+server. The Suspense boundary around `useSearchParams` may defer the body during
+static prerender, but the validation must not depend on that timing. The helper
+therefore parses the candidate against a fixed in-code sentinel base origin
+(e.g. `new URL(value, "https://app.invalid")`), accepts it only when the
+resolved `origin` still equals the sentinel (proving it is a true relative
+path), and returns only `pathname + search + hash` — never an absolute href.
+The result is a relative path the browser later resolves against its real
+origin, so the validated value is correct in both runtimes without any
+browser-global access at render time. The defense-in-depth string checks
+(reject leading `//`, `/\`, second char `/`|`\`) are kept on top.
 
 Alternative considered: extend the denylist with a backslash check only. Rejected
 — it patches one vector and leaves the class open (control chars, future quirks).

@@ -8,22 +8,20 @@
       containing `<` / `>` and accepts a normal brand name with punctuation,
       spaces, and the existing length limits.
 
-## 2. Inline-script encoding (web)
+## 2. Remove the dead inline script (web)
 
-- [ ] 2.1 Add a small server-side helper (e.g.
-      `apps/web/src/lib/server/serialize-inline-json.ts`) that runs
-      `JSON.stringify` then escapes `<`, `>`, `/`, U+2028, U+2029 to their
-      `\uXXXX` JSON escapes; unit-test that the output contains no literal
-      `</script>` and round-trips through `JSON.parse` unchanged.
-- [ ] 2.2 In `apps/web/src/app/layout.tsx`, replace the raw
-      `JSON.stringify(orgPublic)` in the `<script id="__org_data">`
-      `dangerouslySetInnerHTML` with the new encoder; update the
-      `eslint-disable react/no-danger` comment to state the value is
-      breakout-encoded.
-- [ ] 2.3 Extend `apps/web/src/app/layout.test.tsx` with a breakout-attempt
-      case: render with a malicious `fullName` and assert the emitted script
-      body contains no literal `</script>` and the parsed DOM has no injected
-      element, while the benign case still parses back to the original values.
+- [ ] 2.1 In `apps/web/src/app/layout.tsx`, delete the `<script id="__org_data">`
+      element together with its `react/no-danger` eslint-disable, and remove the
+      now-unused `const orgPublic = await getOrgPublic()` from `RootLayout`
+      (confirm `generateMetadata` keeps its own `getOrgPublic` call for the title).
+- [ ] 2.2 Update `apps/web/src/app/layout.test.tsx`: drop the `__org_data`
+      presence and round-trip assertions; assert the rendered layout emits no
+      inline `__org_data` script, including when `fullName` is a
+      `</script><img ...>` breakout payload — the parsed DOM has no injected
+      element and no `</script>` sequence sourced from org data appears.
+- [ ] 2.3 Add or confirm a landing render test that the brand `shortName`/`fullName`
+      paint from the RSC prop (`page.tsx` `initialData`) with no "ORG" placeholder
+      flash and without relying on the removed script.
 
 ## 3. Verify
 

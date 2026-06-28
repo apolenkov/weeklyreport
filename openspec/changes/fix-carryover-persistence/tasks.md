@@ -8,6 +8,11 @@
       the empty-sections guard.
 - [ ] 1.3 Decide the `CarryOverResult` shape (keep `targetSection` as first
       section for back-compat, or widen to `targetSections`) and update the interface.
+- [ ] 1.4 Restrict the counted/recorded carried set to source sections that have
+      a matching target section (by `authorId`), so `carriedItemCount` /
+      `carriedDecisionCount` and the emitted `CarryOverRecord` rows never exceed the
+      rows persisted across target sections (no dangling `targetItemId` /
+      `targetDecisionId`).
 
 ## 2. API — repository (persistence fidelity)
 
@@ -20,16 +25,20 @@
       `stageNames: i.stageIds ?? []` to the carried `Item.createMany` payload.
 - [ ] 2.4 Wrap the execution insert to catch
       `Prisma.PrismaClientKnownRequestError` `code === "P2002"` on `dedupeKey`; on
-      conflict re-read the existing execution and return it idempotently, or throw a
-      `CarryOverDomainError` conflict — never write a `failed` status.
+      conflict re-read the existing execution and return it idempotently, or (only if
+      it cannot be re-read) throw a distinct `CarryOverConflictError` — never reuse
+      `CarryOverDomainError`, and never write a `failed` status.
 - [ ] 2.5 Ensure `mapPrismaToExecution` counts and the returned result stay
       consistent with the rows actually written across all sections.
 
 ## 3. API — error mapping
 
-- [ ] 3.1 If 2.4 surfaces a domain conflict, confirm the tRPC error mapper
-      (`trpc.error-mapper.ts`) maps `CarryOverDomainError` to a CONFLICT without
-      leaking internal messages; add the branch if missing.
+- [ ] 3.1 If 2.4 surfaces a conflict, add a distinct `CarryOverConflictError` (do
+      NOT reuse `CarryOverDomainError`, which is mapped class-wide to `BAD_REQUEST`
+      and shared by the validation errors) and add a dedicated `trpc.error-mapper.ts`
+      branch mapping only `CarryOverConflictError` to CONFLICT without leaking
+      internal messages, leaving the existing `CarryOverDomainError` → BAD_REQUEST
+      branch unchanged.
 
 ## 4. Tests
 
@@ -45,6 +54,9 @@
       source/target) asserting no unhandled error and the documented resolution.
 - [ ] 4.5 Update `carry-over.service.test.ts` / `carry-over.contract.test.ts`
       doubles for the widened `saveCarryOver` signature.
+- [ ] 4.6 Add a case: a source lead with no matching target section does not
+      inflate `carriedItemCount` / `carriedDecisionCount` and emits no dangling
+      `CarryOverRecord` (every persisted record resolves to a written row).
 
 ## 5. Verification
 

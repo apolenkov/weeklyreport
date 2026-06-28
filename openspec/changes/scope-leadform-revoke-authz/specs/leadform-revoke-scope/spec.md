@@ -75,15 +75,19 @@ reflect only the rows the caller was authorized to mutate.
 
 ### Requirement: A regression test proves cross-group revocation is blocked
 
-The system SHALL include a regression test, under
-`apps/api/src/modules/report-sections/`, that authenticates a head for one
+The system SHALL include a regression test that authenticates a head for one
 reporting group and attempts to revoke a section (and bulk-revoke a report)
-owned by another group. The test MUST assert that the request is rejected at the
-API boundary and that no out-of-group rows are mutated.
+owned by another group. The test MUST drive the `leadForm.revoke` and
+`leadForm.revokeAllSubmitted` tRPC procedures through the router (an `appRouter`
+caller built with the head session), not the service in isolation, so that the
+router's scope-threading is exercised end to end (router → service →
+repository) — a router that fails to build or pass `groupScopeFilter` MUST make
+this test fail. The test MUST assert that the request is rejected at the API
+boundary and that no out-of-group rows are mutated.
 
 #### Scenario: Group-A head attempts to revoke group-B data
 
 - **GIVEN** a test fixture with a group-A head and submitted group-B sections
-- **WHEN** the test invokes `revoke` and `revokeAllSubmitted` as the group-A head against the group-B data
+- **WHEN** the test invokes the `leadForm.revoke` and `leadForm.revokeAllSubmitted` procedures through the router as the group-A head against the group-B data
 - **THEN** the single-section call rejects as not-found and the bulk call reports `revokedCount: 0`
 - **AND** the group-B sections remain `submitted` after both calls
