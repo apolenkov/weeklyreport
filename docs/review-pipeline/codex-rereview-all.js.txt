@@ -1,0 +1,112 @@
+export const meta = {
+  name: "codex-rereview-all",
+  description:
+    "Convergence round: adversarial Codex re-review (read-only) of the REVISED versions of all 18 Wave A+B OpenSpec changes. One Codex pass per change; returns VERDICT + any remaining issues. No edits.",
+  phases: [{ title: "Re-review", detail: "one Codex reviewer per revised change (codex exec, read-only)" }],
+};
+
+const CHANGES = [
+  "fix-carryover-persistence",
+  "fix-prod-web-build-args",
+  "route-pdfs-and-authz",
+  "set-express-trust-proxy",
+  "scope-analytics-to-group",
+  "scope-leadform-revoke-authz",
+  "fix-open-redirect-next-param",
+  "escape-org-data-script",
+  "add-section-optimistic-lock",
+  "guard-autopublish-archived",
+  "scope-period-lifecycle-authz",
+  "scope-reminder-authz",
+  "enforce-deactivation-pdf-bullboard",
+  "make-publish-atomic",
+  "transactional-snapshot-restore",
+  "period-uniqueness-db-constraint",
+  "scope-leadform-getbyperiod",
+  "map-domain-errors",
+];
+
+const SCHEMA = {
+  type: "object",
+  required: ["changeId", "available", "verdict", "issues"],
+  properties: {
+    changeId: { type: "string" },
+    available: { type: "boolean" },
+    verdict: { enum: ["APPROVED", "REVISE", "UNKNOWN"] },
+    issues: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["severity", "where", "problem", "fix"],
+        properties: {
+          severity: { enum: ["Blocker", "High", "Medium", "Low"] },
+          where: { type: "string" },
+          problem: { type: "string" },
+          fix: { type: "string" },
+        },
+      },
+    },
+    notes: { type: "string" },
+  },
+};
+
+const reviewPrompt = (id) =>
+  `You are an adversarial reviewer for an OpenSpec change proposal in the CustomReport monorepo. Your cwd IS the repo. You are STRICTLY READ-ONLY — change nothing.
+
+This change was ALREADY revised once after a prior review. Review the CURRENT artifacts as they stand now — confirm the prior fixes are coherent and hunt for any REMAINING material problem.
+
+Read the ENTIRE change directory openspec/changes/${id}/ : proposal.md, every specs/**/spec.md delta, design.md, tasks.md. Then read the product code it cites and any existing openspec/specs/** it touches.
+
+WORK EFFICIENTLY — spot-check the cited files, do NOT crawl the whole repo. Emit your JSON before you run long.
+
+Be skeptical and specific. Find concrete REMAINING flaws: security holes, race conditions, missing edge cases, requirements with no scenario coverage, scenarios that contradict the design, tasks that do not trace to a requirement, internal contradictions introduced by the prior revision, wrong assumptions about the actual code, conflicts with an existing durable spec, or a materially simpler approach. Respect repo conventions: hardcoded Russian is only a bug in apps/web JSX; ComingSoon is intentional; a single init migration is intentional (MVP); English-only prod UI is intentional; markdownlint is intentionally removed (do not flag pnpm lint:md).
+
+Return ONLY a single minified JSON object, no prose, no markdown fence:
+{"verdict":"APPROVED"|"REVISE","issues":[{"severity":"Blocker|High|Medium|Low","where":"file or artifact","problem":"...","fix":"one-line fix"}],"notes":"..."}
+Use APPROVED if the change is now sound enough to implement; REVISE only if a material problem remains.`;
+
+phase("Re-review");
+const results = await parallel(
+  CHANGES.map((id) => () => {
+    const bash = `F=$(mktemp "\${TMPDIR:-/tmp}/codexrr-${id}.XXXXXX")
+cat > "$F" <<'CODEXRR_EOF'
+${reviewPrompt(id)}
+CODEXRR_EOF
+O=$(mktemp)
+codex exec -s read-only --json "$(cat "$F")" > "$O" 2>/dev/null &
+P=$!; ( sleep 590; kill -9 $P 2>/dev/null ) & W=$!
+wait $P 2>/dev/null; kill -9 $W 2>/dev/null
+grep '"type":"item.completed"' "$O" | tail -1`;
+    return agent(
+      `You are a RELAY for OpenAI Codex re-reviewing OpenSpec change "${id}". Run Codex
+read-only and return ITS verdict verbatim — do NOT review it yourself.
+
+Run this EXACT Bash as a SINGLE invocation:
+
+${bash}
+
+The printed line is a JSON item.completed whose .item.text holds Codex's answer
+object {"verdict":...,"issues":[...],"notes":...}. Parse it and return as your
+structured output with changeId:"${id}" and available:true. If empty / timed out /
+unparseable, return changeId:"${id}", available:false, verdict:"UNKNOWN",
+issues:[], notes explaining what went wrong.`,
+      {
+        label: `rereview:${id}`,
+        phase: "Re-review",
+        model: "sonnet",
+        effort: "medium",
+        schema: SCHEMA,
+      },
+    );
+  }),
+);
+
+const done = results.filter(Boolean);
+const up = done.filter((r) => r.available);
+log(
+  `Re-reviewed ${up.length}/${CHANGES.length}. ` +
+    `APPROVED ${up.filter((r) => r.verdict === "APPROVED").length}, ` +
+    `REVISE ${up.filter((r) => r.verdict === "REVISE").length}, ` +
+    `unavailable ${done.length - up.length}.`,
+);
+return { reviews: done };

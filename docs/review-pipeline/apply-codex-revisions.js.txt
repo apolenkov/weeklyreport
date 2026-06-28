@@ -1,0 +1,131 @@
+export const meta = {
+  name: "apply-codex-revisions",
+  description:
+    "Apply the valid Codex review findings to each Wave A OpenSpec change. One agent per change: verify each finding as a candidate against the artifact + code, apply valid ones to proposal/specs/design/tasks, reject spurious with a note, re-validate --strict. No product code changes.",
+  phases: [{ title: "Revise", detail: "one reviser per change, verify-then-apply, validate --strict" }],
+};
+
+const REVIEW_FILE = "docs/repo-excellence-review-2026-06-28.codex-review.json";
+
+// changeId -> true if Codex produced a verdict; false means self-review needed.
+const CHANGES = [
+  { id: "fix-carryover-persistence", hasVerdict: true },
+  { id: "fix-prod-web-build-args", hasVerdict: true },
+  { id: "route-pdfs-and-authz", hasVerdict: true },
+  { id: "set-express-trust-proxy", hasVerdict: true },
+  { id: "scope-analytics-to-group", hasVerdict: true },
+  { id: "scope-leadform-revoke-authz", hasVerdict: false },
+  { id: "fix-open-redirect-next-param", hasVerdict: true },
+  { id: "escape-org-data-script", hasVerdict: true },
+  { id: "add-section-optimistic-lock", hasVerdict: true },
+  { id: "guard-autopublish-archived", hasVerdict: true },
+];
+
+const SCHEMA = {
+  type: "object",
+  required: ["changeId", "validated", "applied", "rejected"],
+  properties: {
+    changeId: { type: "string" },
+    validated: { type: "boolean" },
+    applied: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["issue", "how"],
+        properties: { issue: { type: "string" }, how: { type: "string" } },
+      },
+    },
+    rejected: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["issue", "why"],
+        properties: { issue: { type: "string" }, why: { type: "string" } },
+      },
+    },
+    notes: { type: "string" },
+  },
+};
+
+const GUARD = `
+Treat each Codex finding as a CANDIDATE, not gospel — Codex sometimes misreads
+(e.g. flags something the design already handles, or assumes code it did not read).
+For each finding: open the actual artifact and the cited code, CONFIRM it is real
+and not already addressed, THEN apply. Reject a finding that is wrong or already
+handled and record why in "rejected". Respect repo conventions: hardcoded Russian
+is only a bug in apps/web JSX; ComingSoon is intentional; a single init migration
+is intentional (MVP); English-only prod UI is intentional. You are editing the
+OpenSpec change ARTIFACTS only — do NOT modify product code and do NOT check off
+tasks as done. If a fix depends on a shared concern owned by another change (e.g.
+the direct API host-port publication), state it as a cross-reference/dependency in
+design.md rather than assuming the other change handles it.`;
+
+const leadformRetry = (id) => {
+  const prompt = `You are an adversarial reviewer for the OpenSpec change openspec/changes/${id}/ in the CustomReport repo (cwd, READ-ONLY). Read proposal.md, specs/**/spec.md, design.md, tasks.md ONLY — do not crawl the whole repo, spot-check at most the 2-3 cited files. Find concrete flaws (authz/IDOR/scope gaps, missing scenarios, tasks not tracing to requirements, wrong code assumptions). Return ONLY minified JSON: {"verdict":"APPROVED"|"REVISE","issues":[{"severity":"","where":"","problem":"","fix":""}],"notes":""}.`;
+  return `# No Codex verdict exists for this change (Codex timed out twice). FIRST try one
+# fast artifacts-only Codex pass, then fall back to your own careful review.
+F=$(mktemp "\${TMPDIR:-/tmp}/codexrev3-${id}.XXXXXX")
+cat > "$F" <<'CODEXRETRY_EOF'
+${prompt}
+CODEXRETRY_EOF
+O=$(mktemp)
+codex exec -s read-only --json "$(cat "$F")" > "$O" 2>/dev/null &
+P=$!; ( sleep 420; kill -9 $P 2>/dev/null ) & W=$!
+wait $P 2>/dev/null; kill -9 $W 2>/dev/null
+grep '"type":"item.completed"' "$O" | tail -1`;
+};
+
+phase("Revise");
+const results = await parallel(
+  CHANGES.map((c) => () =>
+    agent(
+      `Revise ONE OpenSpec change in the CustomReport repo by applying the valid
+adversarial-review findings. You edit only openspec/changes/${c.id}/ artifacts.
+
+CHANGE: ${c.id}
+
+STEP 1 — get the findings:
+${
+  c.hasVerdict
+    ? `Read ${REVIEW_FILE} (a JSON array). Find the object whose changeId === "${c.id}". Its "issues" array holds the Codex findings (severity/where/problem/fix).`
+    : `This change has NO Codex verdict yet (it timed out twice). Run this EXACT Bash
+once to get a fast artifacts-only Codex pass; parse the item.completed .item.text
+JSON for {verdict,issues}. If it is empty/timed-out/unparseable, instead do your
+OWN careful adversarial review of the change (authz/IDOR/scope, scenario coverage,
+task-to-requirement tracing, code assumptions) and use those as the findings.
+${leadformRetry(c.id)}`
+}
+
+STEP 2 — verify + apply (candidates, not gospel):
+For each finding, open the cited artifact in openspec/changes/${c.id}/ and the cited
+product code. If the finding is REAL and not already handled, apply the fix by
+editing the right artifact: a missing requirement/scenario -> specs/**/spec.md; a
+design gap -> design.md; a missing/▢ task -> tasks.md; scope/why -> proposal.md.
+Keep delta-spec rules: "## ADDED/MODIFIED Requirements", "### Requirement:" with the
+SHALL clause on the first body line, every requirement has a "#### Scenario:" with
+GIVEN/WHEN/THEN. If the finding is wrong or already covered, do NOT edit — record it
+in "rejected" with the reason.
+
+STEP 3 — validate:
+Run \`openspec validate "${c.id}" --strict\` and fix until it exits 0.
+
+Return {changeId, validated, applied:[{issue,how}], rejected:[{issue,why}], notes}.
+${GUARD}`,
+      {
+        label: `revise:${c.id}`,
+        phase: "Revise",
+        model: "opus",
+        effort: "high",
+        schema: SCHEMA,
+      },
+    ),
+  ),
+);
+
+const done = results.filter(Boolean);
+log(
+  `Revised ${done.length}/${CHANGES.length}; validated ${done.filter((r) => r.validated).length}; ` +
+    `applied ${done.reduce((n, r) => n + (r.applied?.length || 0), 0)}, ` +
+    `rejected ${done.reduce((n, r) => n + (r.rejected?.length || 0), 0)}.`,
+);
+return { revised: done };

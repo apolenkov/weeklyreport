@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CustomReport — статус repo-excellence review (2026-06-29)</title>
+<style>
+  :root { --bg:#0f1419; --panel:#1a2230; --ink:#e6edf3; --muted:#9aa7b4; --line:#2b3645;
+          --p0:#ff6b6b; --p1:#ffa94d; --p2:#ffd43b; --p3:#74c0fc; --ok:#51cf66; --accent:#2d4f47; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 -apple-system,Segoe UI,Roboto,sans-serif; }
+  .wrap { max-width:960px; margin:0 auto; padding:32px 24px 80px; }
+  h1 { font-size:24px; margin:0 0 4px; }
+  h2 { font-size:18px; margin:34px 0 12px; padding-bottom:6px; border-bottom:1px solid var(--line); }
+  h3 { font-size:15px; margin:20px 0 8px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .sub { color:var(--muted); margin:0 0 20px; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin:12px 0; }
+  .bottomline { border-left:4px solid var(--accent); }
+  table { width:100%; border-collapse:collapse; margin:10px 0; font-size:14px; }
+  th,td { text-align:left; padding:7px 9px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; }
+  code { background:#0b0f14; padding:1px 6px; border-radius:4px; font-size:13px; color:#c0e0ff; }
+  .tag { display:inline-block; padding:1px 8px; border-radius:20px; font-size:12px; font-weight:700; color:#0b0f14; }
+  .t0{background:var(--p0)} .t1{background:var(--p1)} .t2{background:var(--p2)} .t3{background:var(--p3)} .tok{background:var(--ok)}
+  ol,ul { margin:8px 0 8px 20px; padding:0; } li { margin:4px 0; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media(max-width:680px){ .grid{grid-template-columns:1fr} }
+  .muted { color:var(--muted); }
+  .big { font-size:30px; font-weight:800; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>CustomReport — итог ревью всего репозитория</h1>
+  <p class="sub">Сгенерировано автономно · 2026-06-29 · ветка <code>main</code></p>
+
+  <div class="panel bottomline">
+    <strong>Bottom line.</strong> Здоровье репозитория — <span class="tag t0">КРАСНОЕ</span>, к продакшену не готов.
+    Проведён многомодельный ревью всего репо → <strong>56 находок</strong> в backlog
+    (P0:10 · P1:19 · P2:22 · P3:5). Находки переводятся в отслеживаемые OpenSpec-changes.
+    Это <em>планы</em>: продуктовый код НЕ менялся.
+  </div>
+
+  <h2>1. Что это и зачем</h2>
+  <p>Репозиторий писался «вайбкодингом» и ни разу не проверялся на уровне кода.
+  Задача — довести его до состояния enterprise / open-source: найти все дефекты, перевести в
+  отслеживаемый backlog (OpenSpec-changes), отревьюить кросс-модельно и подготовить к реализации.</p>
+  <p>Движок ревью — многомодельный конвейер на каждую «волну»:
+  <strong>каркас → Codex-ревью → применение валидных правок → convergence (повторное ревью)</strong>.
+  Codex/Kimi/Qwen/GLM выступают независимыми ревьюерами; находки каждого проверяются как
+  <em>кандидаты</em> (не догма) против реального кода.</p>
+
+  <h2>2. Прогресс по волнам</h2>
+  <table>
+    <tr><th>Волна</th><th>Приоритет</th><th>Changes</th><th>Каркас</th><th>Codex-ревью</th><th>Правки</th><th>Convergence</th></tr>
+    <tr><td>A</td><td><span class="tag t0">P0</span></td><td>10</td><td><span class="tag tok">✓</span></td><td><span class="tag tok">✓</span></td><td><span class="tag tok">✓ 17</span></td><td><span class="tag tok">✓ r2</span></td></tr>
+    <tr><td>B</td><td><span class="tag t1">P1</span></td><td>8</td><td><span class="tag tok">✓</span></td><td><span class="tag tok">✓</span></td><td><span class="tag tok">✓ 20</span></td><td><span class="tag tok">✓ r2</span></td></tr>
+    <tr><td>C</td><td><span class="tag t1">P1</span></td><td>13</td><td class="muted">в работе</td><td class="muted">завтра (Codex)</td><td class="muted">—</td><td class="muted">—</td></tr>
+    <tr><td>D</td><td><span class="tag t2">P2</span>/<span class="tag t3">P3</span></td><td>4 группы</td><td class="muted">в работе</td><td class="muted">завтра (Codex)</td><td class="muted">—</td><td class="muted">—</td></tr>
+  </table>
+  <p class="muted">Волны A+B (18 changes) полностью обработаны и сошлись: round-2 convergence
+  дал в основном устранение рассинхрона + пара реальных коррекций; все 18 проходят
+  <code>openspec validate --strict</code>.</p>
+
+  <h2>3. Что осталось сделать (автономно за ночь)</h2>
+  <ol>
+    <li><strong>Доделать каркасы Wave C + D</strong> (идёт сейчас, Claude-лимит вернулся в 01:00).</li>
+    <li><strong>Codex-ревью Wave C/D</strong> — после сброса Codex-лимита в <code>02:46</code> (запланировано).</li>
+    <li><strong>OpenCode-go (Kimi/Qwen/GLM)</strong> — второй независимый ревьюер, экономно и параллельно Codex.</li>
+    <li><strong>Применить валидные правки</strong> (сверка как с кандидатами) → ре-валидация.</li>
+    <li>Обновить этот отчёт финальными цифрами.</li>
+  </ol>
+  <p class="muted">Экономия без потери качества: дешёвые модели (sonnet) — на механическое
+  (config-фиксы, графики, health), Opus/Codex — на суждение (authz, данные, архитектура).
+  Codex-ревью вызывается контролируемо, стоп-гейт держится выключенным в автономе.</p>
+
+  <h2>4. Что делать ТЕБЕ завтра</h2>
+  <ol>
+    <li><strong>Просмотреть готовые changes</strong> в <code>openspec/changes/</code> — начни с P0
+      (Wave A): <code>set-express-trust-proxy</code>, <code>route-pdfs-and-authz</code>,
+      <code>fix-prod-web-build-args</code>, <code>fix-carryover-persistence</code>.</li>
+    <li><strong>Реализовать</strong> по <code>tasks.md</code> каждого change — любой моделью
+      (план уже выверен и провалидирован, джуну будет понятно).</li>
+    <li>Порядок реализации: волна A (прод-блокеры) → B (авторизация) → C → D.</li>
+    <li>Каждый change закрывается через <code>openspec archive</code> после реализации.</li>
+  </ol>
+
+  <h2>5. Где что лежит</h2>
+  <table>
+    <tr><th>Артефакт</th><th>Путь</th></tr>
+    <tr><td>Человеческий отчёт-ревью</td><td><code>docs/repo-excellence-review-2026-06-28.md</code></td></tr>
+    <tr><td>Машиночитаемый backlog</td><td><code>docs/repo-excellence-review-2026-06-28.data.json</code></td></tr>
+    <tr><td>Codex-обзоры (A / B / convergence)</td><td><code>docs/repo-excellence-review-2026-06-28.*review.json</code></td></tr>
+    <tr><td>Готовые OpenSpec-changes</td><td><code>openspec/changes/&lt;name&gt;/</code></td></tr>
+    <tr><td>Конвейер (переиспользуемые скрипты)</td><td><code>docs/review-pipeline/*.js</code></td></tr>
+    <tr><td>Handoff для свежей сессии</td><td><code>docs/handoff-repo-excellence-review-results-2026-06-28.md</code></td></tr>
+    <tr><td>Этот отчёт</td><td><code>docs/repo-excellence-review-status-2026-06-29.html</code></td></tr>
+  </table>
+
+  <h2>6. Топ-риски (из ревью)</h2>
+  <table>
+    <tr><th></th><th>Находка</th><th>Где</th></tr>
+    <tr><td><span class="tag t0">P0</span></td><td>trust proxy не выставлен → rate-limit/audit-IP схлопнуты за Caddy</td><td>api/main.ts</td></tr>
+    <tr><td><span class="tag t0">P0</span></td><td>/pdfs не за Caddy + неавторизованная отдача артефактов</td><td>deploy/caddy + pdf-export</td></tr>
+    <tr><td><span class="tag t0">P0</span></td><td>prod web-образ печёт dev-логин вместо SSO</td><td>Dockerfile.web</td></tr>
+    <tr><td><span class="tag t0">P0</span></td><td>carry-over теряет данные + краш</td><td>api/carry-over</td></tr>
+    <tr><td><span class="tag t0">P0</span></td><td>аналитика утекает между группами; revoke BOLA; open-redirect; stored XSS</td><td>api + web</td></tr>
+  </table>
+
+  <p class="muted" style="margin-top:30px">Принципы: правильные спеки, без оверинженеринга,
+  модульная архитектура без костылей, код понятен джуну. Все находки зафиксированы и
+  отслеживаемы. Конклик (сходимость) по A+B достигнут; C/D — к утру.</p>
+</div>
+</body>
+</html>
