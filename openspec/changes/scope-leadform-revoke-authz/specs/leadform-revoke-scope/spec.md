@@ -41,9 +41,9 @@ MUST be indistinguishable from a genuinely missing id (no existence oracle). An
 The system SHALL restrict `leadForm.revokeAllSubmitted`
 (`LeadFormService.revokeAllSubmitted` →
 `LeadFormRepository.revokeAllSubmitted`) to sections whose author is in the
-caller's allowed reporting groups. The repository MUST collect the eligible
-section ids with the `reportSection` group-scope filter applied (a scoped read
-on `reportId` + `status: "submitted"` + scope), then write only those ids, so a
+caller's allowed reporting groups. The repository MUST apply the `reportSection`
+group-scope filter to the revocation write — an `updateMany` scoped by
+`reportId` + `status: "submitted"` + the group-scope `author` filter — so a
 non-admin head revokes only their own group's submissions inside a multi-group
 report, never the whole organisation's. An `admin` session MUST remain global and
 revoke every submitted section in the report. The returned `revokedCount` MUST

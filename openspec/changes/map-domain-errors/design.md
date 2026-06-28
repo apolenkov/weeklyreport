@@ -15,6 +15,7 @@ Four throw sites currently bypass this convention by throwing bare `Error`:
 | `lead-form.service.ts` `fillFrom`                       | submitted section guard                                 | `LeadFormConstraintError` (**new**, maps to BAD_REQUEST)     |
 | `lead-form.service.ts` `fillFrom`                       | published-period guard                                  | `LeadFormConstraintError` (**new**, maps to BAD_REQUEST)     |
 | `lead-form.service.ts` `fillFrom`                       | source section absent                                   | `LeadFormDomainError` (existing, maps to NOT_FOUND)          |
+| `lead-form.prisma-repository.ts` `fillFromSection`      | source section absent on copy re-read (TOCTOU race)     | `LeadFormDomainError` (existing, maps to NOT_FOUND)          |
 | `lead-form.service.ts` `fillFrom`                       | forged cross-author source (caller is not source owner) | `LeadFormAccessError` (existing, maps to FORBIDDEN)          |
 | `lead-form.service.ts` `revokeSubmission`               | section absent                                          | `LeadFormDomainError` (existing, maps to NOT_FOUND)          |
 | `lead-form.service.ts` `revokeSubmission`               | non-submitted state guard                               | `LeadFormConstraintError` (**new**, maps to BAD_REQUEST)     |
@@ -28,7 +29,7 @@ All of these fall through to `INTERNAL_SERVER_ERROR` today.
 
 **Goals:**
 
-- Replace every bare `Error` at the eleven listed throw sites with the
+- Replace every bare `Error` at the twelve listed throw sites with the
   appropriate typed domain error class.
 - Add three new domain error classes: `LeadFormConstraintError`,
   `AdminGroupProductConflictError`, and `PublicationNotFoundError`.
@@ -82,15 +83,28 @@ The fallback `INTERNAL_SERVER_ERROR` branch is always last. The new
 after the existing `AdminPeriodNotFoundError` block and before the fallback.
 This keeps the file readable (known → unknown).
 
+**D5 — The repository `fillFromSection` source-missing throw is typed too, not just the service precheck.**
+
+`fillFrom` prechecks source existence in the service, but `fillFromSection`
+re-reads the source inside the repository before copying. A bare `Error` there
+falls through to `INTERNAL_SERVER_ERROR` if the source row is deleted between the
+service precheck and the repository copy (a TOCTOU race). Because this throw is
+on the same `fillFrom` path the change claims to fix, it is typed as
+`LeadFormDomainError` so the spec's source-missing → NOT_FOUND requirement holds
+even under the race. No new class or mapper branch is needed — it reuses the
+existing `LeadFormDomainError → NOT_FOUND` branch.
+
 ## Risks / Trade-offs
 
-**All eleven sites have no integration tests today** (verified via codegraph). The
+**The twelve sites have no error-type tests today** (verified via codegraph). The
 `trpc.error-mapper.test.ts` unit tests cover only the mapper function in
 isolation. Changing throw sites without adding call-path tests means a future
 refactor could accidentally revert to bare `Error` without a gate catching it.
 Mitigation: the tasks include adding mapper unit tests for the two new classes
 and a contract test for the `revokeSubmission` state guard (which lacks any test
-coverage today).
+coverage today). The `fillFromSection` source-missing throw lives in
+`lead-form.prisma-repository.integration.test.ts`, where a re-read-missing test
+can assert `LeadFormDomainError`.
 
 **`getAssembledReport` is called by three callers inside `publication.service.ts`
 itself** (`publishReport`, `publishAuto`, `updateSectionForReview`). All three
@@ -102,5 +116,5 @@ calling out.
 
 ## Open Questions
 
-_(none — the four call sites and two new classes are fully enumerated; no
+_(none — the twelve throw sites and three new classes are fully enumerated; no
 schema or API surface changes are required.)_

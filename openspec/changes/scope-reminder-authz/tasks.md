@@ -10,13 +10,13 @@
 
 - [ ] 2.1 Thread `ctx` into the `reminders.listExecutions` query handler.
 - [ ] 2.2 Load the `ReminderRule` by `ruleId`, resolve `reportId`, and for a non-admin session assert an in-scope section author exists; throw `FORBIDDEN` otherwise.
-- [ ] 2.3 For a non-admin session, resolve the set of in-scope recipient emails (section authors within `groupScopeFilter(ctx.session, "reportSection")` on that report, plus the caller's own email) and drop any returned execution whose `recipientEmail` is outside that set, so a mixed-scope shared report cannot leak group-B `recipientEmail`/`dedupeKey` rows.
-- [ ] 2.4 Return the execution rows only after the scope check and recipient filter; keep existing pagination behavior.
+- [ ] 2.3 For a non-admin session, resolve the set of in-scope recipient emails (section authors within `groupScopeFilter(ctx.session, "reportSection")` on that report, plus the caller's own email) and apply this recipient predicate to the full execution slice BEFORE cursor pagination — inside `RemindersService.listExecutions` ahead of its slice/cursor computation, or pushed into the repository's execution query — so a mixed-scope shared report cannot leak group-B `recipientEmail`/`dedupeKey` rows AND out-of-scope rows cannot consume the page size or surface as `nextCursor`.
+- [ ] 2.4 Compute the page and `nextCursor` over the already-scoped set (not the unscoped newest-100 slice); admin paginates the unfiltered set as before.
 
 ## 3. API — reminders.dispatchPending
 
 - [ ] 3.1 For the bulk path (no `leadId`), spread `groupScopeFilter(ctx.session, "reportSection")` into the `draftSections` `findMany` `where`, alongside the existing `reportId`/`status` clauses, so only in-scope draft authors are dispatched.
-- [ ] 3.2 When `input.leadId` is supplied, evaluate the lead's group scope separately from draft status: resolve the lead's section author on that report and throw `FORBIDDEN` only when that author is outside `groupScopeFilter(ctx.session, "reportSection")`. Preserve the existing `no-matching-section` result for an in-scope lead with no draft section (do NOT conflate no-pending-work with an authorization failure).
+- [ ] 3.2 When `input.leadId` is supplied, authorize the lead against the `User` row: load the user by `leadId` under `groupScopeFilter(ctx.session, "user")` and throw `FORBIDDEN` when no in-scope user matches (out of scope or nonexistent). Do NOT key this check on a `ReportSection` — one may not exist yet, which would make an in-scope lead with no section indistinguishable from an out-of-scope lead. Preserve the existing `no-matching-section` result for an in-scope lead with no draft section (do NOT conflate no-pending-work with an authorization failure).
 - [ ] 3.3 Keep the existing `activeReportId === reportId` guard and admin god-mode behavior unchanged.
 
 ## 4. Tests

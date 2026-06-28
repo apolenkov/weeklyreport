@@ -8,19 +8,30 @@ analytics surface. The three analytics read paths
 head or lead of group A sees group B's project statuses, leads, and risks. This
 is the P0-5 cross-group read leak from the 2026-06-28 repo-excellence review.
 
-The sibling read paths already solve this: `compiledHistory`
-(`trpc.router.ts`) and the archive repository thread `ctx.session` and spread
-`groupScopeFilter(session, "reportSection")` into their `where`. Analytics is
-the one read surface that skipped it.
+The `groupScopeFilter(session, "reportSection")` helper is already established:
+`compiledHistory` (`trpc.router.ts`) and the archive repository thread
+`ctx.session` and apply it. Analytics is the one read surface that skipped
+scoping entirely. But analytics needs the stronger variant: because it
+aggregates the contents of a report's included sections (not just a period
+list), the closest precedent is `weekly-report.prisma-repository.ts`, which
+scopes the nested included sections — see the design for why a report-level
+filter alone would still leak co-located group-B sections.
 
 ## What Changes
 
 - Thread `ctx.session` from the three `analytics.*` tRPC procedures into
   `AnalyticsService` and the `AnalyticsRepository` methods. **BREAKING** to the
   internal repository/service method signatures (not the tRPC input contract).
-- Apply `groupScopeFilter(session, "reportSection")` to the report `where` in
-  all three repository methods via `sections.some`, mirroring `compiledHistory`.
-  Admin → no filter; viewer with no granted groups → zero rows.
+- Apply `groupScopeFilter(session, "reportSection")` to the nested
+  `include.sections.where` in all three repository methods — the load-bearing
+  fix, since a single `Report` is a unified period holding sections from every
+  group and the methods aggregate over those included sections. This mirrors
+  `weekly-report.prisma-repository.ts`, NOT `compiledHistory`: that path returns
+  only the period list, so a report-level filter suffices there, but analytics
+  reads section contents and must scope the included sections. Additionally keep
+  an optional top-level `sections: { some: <scope> }` only to drop periods with
+  no in-scope section. Admin → both omitted (no filter); viewer with no granted
+  groups → zero rows.
 - Fold a scope discriminator into the analytics Redis cache key so a result
   computed for group A is never served from cache to group B. Today the key
   hashes only the input.

@@ -58,47 +58,56 @@ Alternative — pass `ctx.session` into the service and let it call
 `groupScopeFilter`: rejected. It couples the service to auth types and the
 relation-path knowledge that the helper deliberately centralises.
 
-### D2 — Scope the LOAD with a relation filter, then write by scalar id
+### D2 — `revokeSubmission`: scoped read for the error contract, then write by id
 
-Verified constraint: a top-level `updateMany.where` does NOT accept a to-one
-relation filter (`author: { reportingGroupId: { in } }`). The whole repo bears
-this out — every `updateMany` / `deleteMany` filters on scalar columns only, and
-`respondReopenRequest` itself scopes via a **scoped `findFirst`** (relation
-filters ARE supported on reads) and then runs a **scalar `updateMany` by the
-validated id**. This change mirrors that exact pattern.
+`revokeSubmission` keeps a read-then-write shape, mirroring
+`respondReopenRequest`'s scoped `findFirst`. The read is here for the ERROR
+CONTRACT, not for any Prisma limitation: one scoped read lets the service tell
+"out-of-group OR missing" (→ `NOT_FOUND`) apart from "in-group but not
+submitted" (→ the existing precondition error). A bare `updateMany` count could
+not make that distinction.
 
 `revokeSubmission`: load the target with a scoped `findFirst({ where: { id,
-...scope } })` (relation filter on the read). A null result — out-of-group OR
+...scope } })`. The `reportSection` scope is `{ author: { reportingGroupId: { in
+} } }`, a relation filter — supported on reads. A null result — out-of-group OR
 genuinely missing — throws `LeadFormDomainError`, which the error-mapper already
 maps to tRPC `NOT_FOUND` (no existence oracle, no new mapper branch). NOTE: the
 current code throws a **plain `Error`** here, which finding P1-7 shows surfaces
 as a 500; this change switches it to the typed `LeadFormDomainError` so the
-404 contract actually holds. Then flip via scalar `updateMany({ where: { id,
-status: "submitted" } })` on the validated id, so the status precondition stays
-race-safe without needing a relation filter in the write.
+404 contract actually holds. The validated id is then flipped by the existing
+scalar write (`updateMany({ where: { id, status: "submitted" } })`), keeping the
+status precondition race-safe; the scope is not repeated in the write because the
+read already proved the id is in scope.
 
-Alternative — relation filter inside the write `updateMany`: rejected, Prisma
-does not support it at the top level (verified against repo usage + Prisma docs).
+Alternative — collapse to a single scoped `updateMany({ where: { id, status:
+"submitted", ...scope } })` and infer `NOT_FOUND` from a zero count: rejected.
+Prisma DOES accept the `author` relation filter in an `updateMany.where`
+(`ReportSectionUpdateManyArgs.where` is the full `ReportSectionWhereInput`, which
+includes `author?`), so this is mechanically possible — but a zero count cannot
+tell an out-of-group id apart from an in-group not-submitted section, so the
+distinct precondition error would be lost.
 
-### D3 — `revokeAllSubmitted`: scoped `findMany` of ids, then scalar bulk write
+### D3 — `revokeAllSubmitted`: one scoped `updateMany`
 
-Same constraint, same pattern. Inside the existing `$transaction`: first
-`findMany({ where: { reportId, status: "submitted", ...scope }, select: { id:
-true } })` (relation filter on the read collects only the in-scope submitted
-section ids), then `updateMany({ where: { id: { in: ids }, status: "submitted" }
-})` (scalar write). The scalar write keeps the `status: "submitted"` predicate —
-mirroring D2's single-path write — so a section a concurrent transaction already
-revoked between the `findMany` and the `updateMany` is not re-stamped with this
-caller's `revokedAt` / `revokedBy`; the original single bulk `updateMany` carried
-this same predicate, so this is parity, not a new guard.
-For a head `scope` is `author: { reportingGroupId: { in: [groupA] } }`; for admin
-`scope` is `{}` so the `findMany` collects every submitted section (unchanged).
-`revokedCount` is the `updateMany` count: in the race-free case it equals the
-in-scope id count, and in the rare concurrent-revoke case it is `≤` that count
-(only rows still `submitted` at write time are flipped and counted).
+The bulk path is a single scoped `updateMany` — the scope is spread straight into
+its `where`. Prisma accepts the `author` relation filter at the top level of
+`updateMany.where` (it is the full `ReportSectionWhereInput`), so no
+collect-ids-then-write two-step is needed:
 
-Alternative — keep one `updateMany` with the scope spread into its where:
-rejected for the same relation-filter reason as D2.
+`updateMany({ where: { reportId, status: "submitted", ...scope }, data: { status:
+"draft", revokedAt, revokedBy } })`. For a head `scope` is `{ author: {
+reportingGroupId: { in: [groupA] } } }`, so only group-A submitted sections in
+the report are flipped; for admin `scope` is `{}`, so every submitted section is
+flipped (unchanged from today). This is the original single bulk `updateMany`
+with the scope added to its `where` — the `status: "submitted"` predicate stays,
+so the write is race-safe and only rows still `submitted` at write time are
+stamped with this caller's `revokedAt` / `revokedBy`. `revokedCount` is the
+`updateMany` count, which by construction counts only the rows the caller was
+authorized to flip.
+
+Alternative — collect ids with a scoped `findMany`, then write by `id: { in }`:
+rejected as needless. It is an extra round-trip the relation-filter `updateMany`
+makes redundant; the single write is both simpler and atomic.
 
 ### Before / After data flow
 
@@ -118,8 +127,9 @@ AFTER   head(A) -> revoke(B-section-id)        -> NOT_FOUND, no row mutated
   by the revoke path, so `fillFrom` / reopen reads keep their current behavior.
 - [Scope fragment shape must match the Prisma model relations] → reuse
   `groupScopeFilter(..., "reportSection")` verbatim; it already encodes
-  `author.reportingGroupId` and is unit-tested. It is only ever spread into a
-  READ (`findFirst` / `findMany`), never into a write `updateMany`.
+  `author.reportingGroupId` and is unit-tested. It is spread into the single-path
+  read (`findFirst`) and into the bulk-path write (`updateMany`); both accept the
+  `author` relation filter.
 - [Plain `Error` would surface as 500, not 404 (finding P1-7)] → throw the typed
   `LeadFormDomainError`, which the error-mapper already maps to `NOT_FOUND`; no
   new mapper branch, no plain `Error` on this path.

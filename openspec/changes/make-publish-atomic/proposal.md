@@ -31,8 +31,11 @@ Source: repo-excellence review backlog item `BL-PUBLISH-ATOMICITY` (P1),
   `PeriodService.publishPeriod` and `review.publish` →
   `PublicationService.publishReport`.
 - Resolve the `review.publish` / `review.assembledReport` target period from
-  the database (the current open/reopened period, same query
-  `review.dashboard` uses) instead of `ctx.session.activeReportId`.
+  the database via the shared current-editable resolver `getCurrentEditableId`
+  (newest non-archived open/reopened period, `periodStart <= now`, ordered by
+  `periodStart` desc then `id` desc) instead of `ctx.session.activeReportId`,
+  and move `review.dashboard` onto the same resolver so all three agree on the
+  target.
 
 ## Non-goals
 
@@ -63,6 +66,8 @@ Source: repo-excellence review backlog item `BL-PUBLISH-ATOMICITY` (P1),
 - `apps/api/src/modules/period/period.prisma-repository.ts`
 - `apps/api/src/modules/publication/publication.service.ts`
 - `apps/api/src/infrastructure/trpc/trpc.router.ts` (`review.publish`,
-  `review.assembledReport`)
+  `review.assembledReport`, `review.dashboard` — all onto the shared resolver)
+- `apps/api/src/modules/weekly-report/weekly-report.prisma-repository.ts`
+  (`getCurrentEditableId`, the shared current-editable resolver reused here)
 - Telemetry consumers of the two publish counters and the on-time-ratio gauge.
 - No schema change; no migration (MVP phase).

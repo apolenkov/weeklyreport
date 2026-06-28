@@ -16,7 +16,7 @@
 - [ ] 3.1 Add a download handler mounted at the `/pdfs/:file` base in `apps/api/src/main.ts`
 - [ ] 3.2 In the handler: resolve+verify the `customreport_session` cookie; respond 401 when absent/invalid/revoked/inactive
 - [ ] 3.3 Parse `jobId` from the path, load the export job, read `status`, persisted `filePath`/`artifactUrl`, and bound `reportId`; respond 404 when the job is missing, the file is missing, the job `status !== 'completed'`, or the persisted artifact path does not match the requested `/pdfs/{jobId}.pdf` (the job row, not the filesystem, decides whether bytes may be served)
-- [ ] 3.4 Apply the authorize predicate; respond 403 when the caller is neither requester nor in-scope reader
+- [ ] 3.4 Apply the authorize predicate; respond 403 when the caller does not currently have role+scope read access to `job.reportId` (being the original `requestedBy` is not a standalone grant — D3)
 - [ ] 3.5 Stream the file from `PDF_OUTPUT_DIR` with `Content-Type: application/pdf` and `Content-Disposition: attachment`
 - [ ] 3.6 Remove the unauthenticated `express.static('/pdfs')` mount so no unauthenticated path remains on any port
 - [ ] 3.7 (Pending D-Open) Decide whether an in-scope download writes a `scope-accessed-audit` entry; wire it if yes

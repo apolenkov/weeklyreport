@@ -22,7 +22,8 @@ falls back to `localhost:3002` instead of the real public origin.
 
 - Add `build.args` to the `web` service in `docker-compose.prod.yml`:
   `NEXT_PUBLIC_AUTH_STUB=false`, `NEXT_PUBLIC_DEV_ROLE_SWITCHER=false`,
-  `API_URL` bound to the internal API service origin (`http://api:3001`) so the
+  `API_URL` hardcoded as a fixed literal to the internal API service origin
+  (`http://api:3001`, not interpolated from `${API_URL}`) so the
   build-time-baked rewrites proxy correctly, and `NEXT_PUBLIC_API_URL` bound to
   the public origin via required-error interpolation (`${VAR:?...}`) so an unset
   value fails the build hard. The build args are additive to the existing

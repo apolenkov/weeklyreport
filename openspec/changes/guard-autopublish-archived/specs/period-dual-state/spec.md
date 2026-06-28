@@ -58,3 +58,35 @@ that closes the race.
   guard requires `status="draft"` and `archived=false`
 - **AND** the report is not transitioned to `periodState="published"` and remains
   `periodState="archived"`, `archived=true`
+
+### Requirement: Auto-Publish Skip Must Suppress All Success Side-Effects
+
+The auto-publish path SHALL propagate an explicit skipped outcome when the
+compare-and-set write matches zero rows, so that none of the publish success
+side-effects fire for the skipped period: the publish metrics
+(`customreportReportsSubmittedTotal`, `customreportPeriodStateTransitionsTotal`),
+the snapshot-ingestion enqueue, the `periodAutoPublish` audit event, the
+missing-section count, and the report id in the scheduler's returned `periodIds`.
+
+The compare-and-set alone is necessary but not sufficient: `AssembledReport`
+exposes neither `archived` nor `periodState` (only `status`), so a re-read of the
+still-archived draft after a zero-row write is indistinguishable by shape from a
+freshly published report. If the skip is inferred from the returned report rather
+than signaled explicitly, `PublicationService.publishAuto` would still increment
+metrics and enqueue ingestion, and `AutoPublisherScheduler.runOnce` would still
+count missing sections, emit the audit event, and add the id to `periodIds` — a
+period the spec says was skipped would be reported as a successful auto-publish.
+The skip must therefore be carried as a discriminated result from the repository
+write through `publishAuto` to the scheduler, not derived from the returned report.
+
+#### Scenario: Skipped auto-publish emits no success side-effects
+
+- **WHEN** a draft `Report` selected as a candidate is archived before its
+  auto-publish write, so the compare-and-set guard matches zero rows
+- **THEN** `PublicationService.publishAuto` returns an explicit skipped outcome
+  rather than an `AssembledReport` for that period
+- **AND** no publish metric is incremented for that period
+- **AND** no snapshot-ingestion job is enqueued for that period
+- **AND** no `periodAutoPublish` audit event is emitted for that period
+- **AND** no missing-section count is computed for that period
+- **AND** the report id is not included in the scheduler's returned `periodIds`

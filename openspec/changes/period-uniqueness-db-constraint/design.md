@@ -50,8 +50,11 @@ catch (`report-sections/lead-form.prisma-repository.ts::createReopenRequest`
   true range overlap). Considered and deferred — see Decisions.
 - Any change to the period state machine's transition LOGIC, the field set
   `buildTransition` emits, or the `period-dual-state` invariant. This change
-  does wrap the writers that move a row into `periodState = 'open'` with a
-  `P2002` catch (see D5), but it does not change what they write on success.
+  adds a `P2002` catch around the writers that move a row into
+  `periodState = 'open'` (see D5) — and restructures the scheduler
+  `scheduled → open` flip into a per-boundary loop so its recovery is correct
+  — but every flip still emits the same `buildTransition` field set, so what is
+  written on the success path is unchanged.
 
 ## Decisions
 
@@ -135,10 +138,21 @@ writers that can do this, and the prescribed handling, are:
   boundary, or skip the tick) and return a non-error outcome; an uncaught
   `P2002` would crash the scheduled job. Unrelated errors re-throw.
 - `PeriodCreatorScheduler` `scheduled → open` flip (`updateMany`, ~line 83) —
-  flipping a scheduled row to `open` while another open row already holds the
-  same boundary (or two scheduled rows sharing a boundary flip together)
-  raises `P2002`. Handle the same way as the scheduler create: treat as a
-  benign already-open collision, do not crash the tick.
+  flipping a scheduled row to `open` raises `P2002` in two distinct cases that
+  need DIFFERENT recovery, so a single bulk `updateMany` cannot recover
+  correctly: replace it with a per-boundary (per due scheduled row) flip. On
+  `P2002` for a boundary, re-read for an existing `open` row on that boundary:
+
+  - an open row already exists → another writer opened it; treat as a benign
+    already-open collision and skip that boundary.
+  - no open row exists → two `scheduled` rows share the boundary and collided
+    with each other; deterministically flip exactly ONE to `open` and leave
+    (and log) the duplicate scheduled row, so the boundary is never left with
+    no open period. Blanket-skipping here would silently drop the lifecycle
+    transition for that boundary.
+
+  Either way the tick does not crash; unrelated errors re-throw.
+
 - `reopenPeriod` (`period.prisma-repository.ts`) and `unarchivePeriod`
   (`admin-period.queries.ts`) — both can set `periodState = 'open'` on an
   existing row. If another open row already holds that boundary the update
@@ -177,7 +191,10 @@ Auto-period scheduler tick (collision case):
   cron tick throws and the job fails.
 - After: `report.create` → `P2002` caught → tick treats the period as
   already-created (re-read or skip) and returns a benign outcome; the
-  `scheduled → open` flip catches the same `P2002` and degrades gracefully.
+  per-boundary `scheduled → open` flip catches the same `P2002` — skipping a
+  boundary that already has an open row, or opening exactly one of two
+  colliding scheduled rows so the boundary is never left without an open
+  period.
 
 Admin reopen / unarchive into a contested boundary (collision case):
 
@@ -217,8 +234,10 @@ Admin reopen / unarchive into a contested boundary (collision case):
 2. `prisma migrate reset` on `_dev`, then on `_test` (independent), with
    `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION` set; `prisma generate`.
 3. Add the `P2002` catch in the admin create/update repository path, in
-   `ensureWeeklyReport`, in the `PeriodCreatorScheduler` create and
-   `scheduled → open` flip, and in `reopenPeriod` / `unarchivePeriod` (D5).
+   `ensureWeeklyReport`, in the `PeriodCreatorScheduler` create, and in
+   `reopenPeriod` / `unarchivePeriod` (D5); restructure the scheduler
+   `scheduled → open` flip into the per-boundary loop with its own `P2002`
+   recovery (D5).
 4. Add the real-DB index test and the translation tests; run the full
    gate.
 

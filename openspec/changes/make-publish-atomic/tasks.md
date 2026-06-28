@@ -47,11 +47,19 @@
 ## 4. Database-resolved publish target (api)
 
 - [ ] 4.1 In `trpc.router.ts`, resolve `review.publish` and
-      `review.assembledReport` from the DB open/reopened period using the same
-      query as `review.dashboard`, replacing `ctx.session.activeReportId`.
-- [ ] 4.2 When no open/reopened period exists, raise a domain "no active
-      period" error mapped to a tRPC error; remove the now-dead `activeReportId`
-      null-check branches.
+      `review.assembledReport` through the shared `getCurrentEditableId` resolver
+      (newest non-archived open/reopened period, `periodStart <= now`, ordered by
+      `periodStart` desc then `id` desc), replacing `ctx.session.activeReportId`.
+      Move `review.dashboard` off its looser inline query onto the same resolver
+      so all three pick the identical period.
+- [ ] 4.2 When the resolver returns nothing, raise a domain "no active period"
+      error mapped to a tRPC error for `review.publish` / `review.assembledReport`
+      and remove the now-dead `activeReportId` null-check branches; keep
+      `review.dashboard`'s existing empty-result response for that state.
+- [ ] 4.3 Add a test that the resolved publish target excludes an archived
+      open/reopened row and breaks a shared-`periodStart` tie deterministically by
+      `id` desc, so `review.dashboard`, `review.assembledReport`, and
+      `review.publish` resolve the same period.
 
 ## 5. Keep the dual-state invariant machine-checked (api)
 

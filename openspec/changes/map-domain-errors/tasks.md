@@ -15,6 +15,11 @@
 - [ ] 2.7 In `revokeSubmission`: replace bare `throw new Error(\`Section … not found.\`)`with`throw new LeadFormDomainError(\`Section … not found.\`)`
 - [ ] 2.8 In `revokeSubmission`: replace bare `throw new Error("Only submitted sections can be revoked.")` with `throw new LeadFormConstraintError("Only submitted sections can be revoked.")`
 
+## 2b. Throw-site fix — lead-form.prisma-repository.ts
+
+- [ ] 2b.1 Add `LeadFormDomainError` to the existing value import from `./lead-form-shared` at the top of `lead-form.prisma-repository.ts` (the file already imports value symbols from that module)
+- [ ] 2b.2 In `fillFromSection`: replace bare `throw new Error(\`Source section … not found.\`)`with`throw new LeadFormDomainError(\`Source section … not found.\`)` (source re-read after the service precheck → keep NOT_FOUND under the TOCTOU race)
+
 ## 3. Throw-site fix — admin-period.queries.ts
 
 - [ ] 3.1 In `unarchivePeriod`: replace bare `throw new Error(\`Report … not found.\`)`with`throw new AdminPeriodNotFoundError(\`Report … not found.\`)`
@@ -48,10 +53,11 @@
 - [ ] 7.6 In `lead-form.contract.test.ts` (or the same file): add a test that asserts `fillFrom` with a forged cross-author `sourceSectionId` (source owned by another user) rejects with `LeadFormAccessError`
 - [ ] 7.7 In `trpc.error-mapper.test.ts`: add a test case asserting `mapDomainError(new LeadFormAccessError("…"))` returns a `TRPCError` with `code: "FORBIDDEN"` (this change makes `LeadFormAccessError` load-bearing for `fillFrom`'s target/source owner guards, and the mapper test currently has no direct case for it)
 - [ ] 7.8 In `trpc.error-mapper.test.ts`: add a test case asserting `mapDomainError(new AdminPeriodNotFoundError("…"))` returns a `TRPCError` with `code: "NOT_FOUND"` (this change routes `unarchivePeriod` through it, and the mapper test currently has no direct case for it)
+- [ ] 7.9 In `lead-form.prisma-repository.integration.test.ts`: add a test that asserts `fillFromSection` with a `sourceSectionId` that does not exist rejects with `LeadFormDomainError` (covers the source re-read TOCTOU race)
 
 ## 8. Verification
 
 - [ ] 8.1 Run `pnpm typecheck` — zero errors
 - [ ] 8.2 Run `pnpm lint` — zero errors
 - [ ] 8.3 Run `pnpm test` — all existing tests pass; new tests pass
-- [ ] 8.4 Confirm no remaining bare `throw new Error(…)` in the five touched files that should be typed (grep each file manually)
+- [ ] 8.4 Confirm no remaining bare `throw new Error(…)` in the six touched files that should be typed — `lead-form.service.ts`, `lead-form.prisma-repository.ts`, `admin-period.queries.ts`, `admin-group-product.queries.ts`, `publication.service.ts`, `trpc.error-mapper.ts` (grep each file manually)

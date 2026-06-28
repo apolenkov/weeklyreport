@@ -149,16 +149,22 @@ AFTER   client save (carries loaded version)
 - **A 409 surfaces to a single user who only had one tab open** → the in-flight
   autosave-vs-manual race is the likely trigger. The lead form must handle two
   distinct same-user cases, NOT a blanket refetch:
-  - **Queued autosave continuation** — `useLeadFormAutosave`
-    (`apps/web/src/hooks/use-lead-form-autosave.ts`) queues a second payload
-    while the first save is in flight, then fires that queued snapshot from the
-    first save's `onSuccess` (lines 111–128) before the invalidated query has
-    refetched. That queued snapshot carries the version loaded BEFORE the first
-    save bumped it, so it would self-conflict; and recovering it by refetch would
-    discard the user's queued local edits. Fix: `onSuccess(data)` consumes the
-    bumped `version` from the mutation result (the read model D5 already returns)
-    and rebases the queued payload's `version` onto it before firing — never
-    refetch-discard a queued payload that holds unsaved edits.
+  - **Same-client continuation while a save is in flight** — `useLeadFormAutosave`
+    (`apps/web/src/hooks/use-lead-form-autosave.ts`) has TWO independent save
+    triggers: the debounce timer (lines 163–184) and `forceSave` (lines
+    206–236). Only `forceSave` checks `saveDraftMut.isPending` and queues
+    (firing the stashed snapshot from `onSuccess`, lines 111–128); the debounce
+    timer calls `mutate` unconditionally, so a debounced edit can start a second
+    `saveDraft` while the first is still pending. After `version` is required
+    both stale-version saves self-conflict (409), and recovering either by
+    refetch would discard the user's queued local edits. Fix: centralise save
+    triggering so BOTH paths funnel through one in-flight queue — when a mutation
+    is pending, stash the payload instead of firing a concurrent `saveDraft`;
+    `onSuccess(data)` then consumes the bumped `version` from the mutation result
+    (the read model D5 already returns) and rebases the queued payload's
+    `version` onto it before firing — never let the debounce timer fire a
+    concurrent save and never refetch-discard a queued payload that holds unsaved
+    edits.
   - **Genuine cross-writer conflict** (a real second writer) → refetch and let
     the next save proceed silently, so the user sees a brief reload, not an error
     toast.

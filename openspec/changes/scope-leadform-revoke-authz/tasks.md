@@ -1,8 +1,8 @@
 ## 1. API — repository (lead-form.prisma-repository.ts)
 
 - [ ] 1.1 Add a scoped single-section load for the revoke path: a `findFirst` keyed by `id` plus the caller's `reportSection` scope fragment spread into the `where` (relation filter on a READ — supported). Do NOT change the shared `getSectionById` signature; add a new method or a `scope` param defaulting to `{}`.
-- [ ] 1.2 Single-section write stays scalar: after the scoped read validates the id, flip via `updateMany({ where: { id, status: "submitted" } })` on the validated id (do NOT put the relation scope in the write `updateMany` — Prisma rejects a top-level relation filter there).
-- [ ] 1.3 Scope the bulk path read-then-write: in `revokeAllSubmitted`, `findMany({ where: { reportId, status: "submitted", ...scope }, select: { id: true } })` to collect in-scope ids, then `updateMany({ where: { id: { in: ids }, status: "submitted" } })` (keep the `status: "submitted"` predicate on the scalar write for race-safety parity with the single path, matching the original bulk `updateMany`); keep the `$transaction` shape and return the count.
+- [ ] 1.2 Single-section write stays scalar: after the scoped read validates the id, flip via `updateMany({ where: { id, status: "submitted" } })` on the validated id. The scope is not repeated in the write — the scoped read already proved the id is in scope (not because Prisma forbids it; `updateMany.where` does accept the `author` relation filter).
+- [ ] 1.3 Scope the bulk path with one `updateMany`: in `revokeAllSubmitted`, spread the scope straight into the write — `updateMany({ where: { reportId, status: "submitted", ...scope } })` (`updateMany.where` accepts the `author` relation filter, so no collect-ids step is needed). Keep the `status: "submitted"` predicate for race-safety, keep the existing method shape, and return the count.
 - [ ] 1.4 Update the `LeadFormRepository` interface in `lead-form-shared.ts` so both revoke methods accept the scope fragment.
 
 ## 2. API — service (lead-form.service.ts)

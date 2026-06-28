@@ -18,14 +18,16 @@ council (Codex) flagged this as a High-severity authorization gap
   section in the caller's scope, and reject a `recipientEmail` that is not a
   draft-section author within the caller's scope on that report.
 - `listExecutions`: reject a `ruleId` whose report is out of the caller's
-  scope, and additionally drop returned execution rows whose `recipientEmail`
-  is out of scope, so a mixed-scope shared report cannot leak group-B
-  `recipientEmail` / `dedupeKey` rows.
+  scope, and additionally filter execution rows to in-scope `recipientEmail`
+  BEFORE cursor pagination, so a mixed-scope shared report cannot leak group-B
+  `recipientEmail` / `dedupeKey` rows and out-of-scope rows cannot drive the
+  page or `nextCursor`.
 - `dispatchPending`: apply `groupScopeFilter(session, "reportSection")` to
   the bulk `draftSections` query (keeping the existing `activeReportId`
-  guard); for a single `leadId`, check the lead's group scope separately from
-  draft status — reject FORBIDDEN only for an out-of-scope lead, and preserve
-  the `no-matching-section` result for an in-scope lead with no draft section.
+  guard); for a single `leadId`, authorize the lead against the `User` row via
+  `groupScopeFilter(session, "user")` (not a section, which may not exist yet)
+  — reject FORBIDDEN only for an out-of-scope lead, and preserve the
+  `no-matching-section` result for an in-scope lead with no draft section.
 - Reuse the canonical `groupScopeFilter` helper
   (`apps/api/src/lib/group-scope.js`); admin sessions keep god-mode because
   the helper returns `{}` for `role === "admin"`.

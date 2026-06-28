@@ -16,6 +16,12 @@ authorization miss from the 2026-06-28 repo-excellence review
   server-derived active period, not the client-supplied `reportId`. A
   `reportId` that does not match the current active target is rejected, never
   silently retargeted.
+- The head's **default weekly-report resolution** (the no-`reportId` path for a
+  head) migrates from `getActiveReportId` to the same deterministic,
+  non-archived resolvers the lifecycle authz uses (`getCurrentEditableId`, else
+  a new latest-published-non-archived resolver), so the `reportId` the head UI
+  submits always equals the server-derived lifecycle target and a legitimate
+  head action is never false-rejected. Lead and viewer resolution are unchanged.
 - **Archived** periods are rejected for both publish and reopen, regardless of
   role.
 - Acting on an **arbitrary** (non-active) `reportId` is reserved for `admin`;
@@ -35,21 +41,29 @@ authorization miss from the 2026-06-28 repo-excellence review
 
 ### Modified Capabilities
 
-<!-- None. period-lifecycle-ui governs UI rendering/confirmation; period-dual-state
-     governs atomic dual-field writes. Neither governs target resolution or the
-     head-vs-admin authorization of the mutation, so no requirement there changes. -->
+<!-- None. The head default-report resolution change is captured as an ADDED
+     requirement in the new period-lifecycle-authz capability — it has no durable
+     spec today (it lives only in code comments). period-lifecycle-ui governs UI
+     rendering/confirmation; period-dual-state governs atomic dual-field writes;
+     viewer-report-navigation governs the VIEWER (not head) default resolution.
+     None of those govern target resolution or the head-vs-admin authorization of
+     the mutation, so no requirement there changes. -->
 
 ## Impact
 
+- `apps/api/src/modules/weekly-report/weekly-report.prisma-repository.ts` — add
+  `getLatestPublishedNonArchivedId` (`archived: false`, deterministic
+  `periodStart desc, id desc`) alongside the existing resolvers; do NOT mutate
+  the shared `getLatestPublishedId` (viewer default-report fallback).
+- `apps/api/src/modules/weekly-report/weekly-report.service.ts` — migrate the
+  `head` branch of `resolveDefaultReportId` from `getActiveReportId` to
+  `getCurrentEditableId() ?? getLatestPublishedNonArchivedId()`; lead/viewer
+  unchanged.
 - `apps/api/src/modules/period/period.service.ts` — add active-target
-  resolution, archived rejection, and the admin-only arbitrary-id branch.
+  resolution (reusing the shared resolvers via its repository port — no second
+  copy), archived rejection, and the admin-only arbitrary-id branch.
 - `apps/api/src/infrastructure/trpc/trpc.router.ts` — `period.publish` /
   `period.reopen`; thread `ctx.session` into reopen (publish already passes it).
-- `apps/api/src/modules/period/period.prisma-repository.ts` — expose the
-  active-target resolvers. The editable resolver mirrors `getCurrentEditableId`
-  (already non-archived); the latest-published resolver adds `archived: false`
-  and so diverges from the shared `getLatestPublishedId`, which does not exclude
-  archived rows.
 - Two new typed domain errors (`PeriodScopeError` → `FORBIDDEN`,
   `PeriodNotFoundError` → `NOT_FOUND`) + matching branches in
   `apps/api/src/infrastructure/trpc/trpc.error-mapper.ts`.

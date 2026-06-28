@@ -29,8 +29,9 @@ the link is opened.
 **Goals:**
 
 - PDF download works end-to-end in production, staging, and local dev.
-- An artifact is streamed only to a caller who is the job's `requestedBy` OR has
-  role+scope read access to the bound report.
+- An artifact is streamed only to a caller who currently has role+scope read
+  access to the bound report (`job.reportId`); being the job's `requestedBy` is
+  not a standalone grant (see D3).
 - No unauthenticated path to artifact bytes remains on any port.
 - Reuse the existing session-verification + revocation + `isActive` pipeline.
 

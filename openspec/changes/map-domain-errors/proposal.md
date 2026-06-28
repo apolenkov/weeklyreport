@@ -27,6 +27,12 @@ to the four uncovered paths closes the gap without introducing new machinery.
   `INTERNAL_SERVER_ERROR` instead of a 403.
   `LeadFormConstraintError` is a new typed class, parallel to `ReopenRequestError`,
   declared in `lead-form-shared.ts`.
+- `lead-form.prisma-repository.ts` — replace the bare `Error` in
+  `fillFromSection` (source section re-read) with `LeadFormDomainError` (→
+  NOT_FOUND). The service prechecks source existence, but the repository copy
+  path re-reads the source and would surface a false `INTERNAL_SERVER_ERROR` if
+  the source disappears between the service precheck and the copy (a TOCTOU
+  race). Typing it preserves NOT_FOUND on that same `fillFrom` path.
 - `lead-form-shared.ts` — introduce `LeadFormConstraintError` (extends `Error`,
   maps to BAD_REQUEST; declared next to `ReopenRequestError`).
 - `admin-group-product.queries.ts` — introduce `AdminGroupProductConflictError`;
@@ -64,6 +70,10 @@ is API-side.)_
 
 - **`apps/api/src/modules/report-sections/lead-form.service.ts`** — throw sites
   changed; import list grows by zero (error classes already in scope).
+- **`apps/api/src/modules/report-sections/lead-form.prisma-repository.ts`** —
+  single `fillFromSection` source-missing throw changed to `LeadFormDomainError`
+  (already imports from `./lead-form-shared`; add the class to that value
+  import).
 - **`apps/api/src/modules/admin/admin-group-product.queries.ts`** — new class
   `AdminGroupProductConflictError`; local or extracted to `admin-shared.ts`.
 - **`apps/api/src/modules/admin/admin-period.queries.ts`** — single throw site
@@ -72,5 +82,6 @@ is API-side.)_
   `PublicationNotFoundError`.
 - **`apps/api/src/infrastructure/trpc/trpc.error-mapper.ts`** — two new
   `instanceof` branches added; existing branches untouched.
-- **Tests** — `trpc.error-mapper.test.ts`, `lead-form.contract.test.ts`.
+- **Tests** — `trpc.error-mapper.test.ts`, `lead-form.contract.test.ts`,
+  `lead-form.prisma-repository.integration.test.ts`.
 - No schema changes, no frontend changes, no API surface changes.

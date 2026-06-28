@@ -100,6 +100,52 @@ head from reopening the newest non-archived published period.
   `FORBIDDEN`
 - **AND** no period is reopened
 
+### Requirement: Head Default Report Resolution Shares the Lifecycle Resolvers
+
+The head's default weekly-report resolution SHALL share the period-lifecycle
+resolvers so the `reportId` the head UI submits to `period.publish` /
+`period.reopen` always equals the server-derived lifecycle target and a
+legitimate head action is never false-rejected. The no-`reportId` path for a
+`head` session in `resolveDefaultReportId`
+(`apps/api/src/modules/weekly-report/weekly-report.service.ts`) MUST resolve to
+the current editable period (`getCurrentEditableId`), else the latest published
+non-archived period, and MUST NOT use `getActiveReportId` — whose published
+fallback, missing `archived` filter, and absent `id` tiebreak can diverge from
+the lifecycle target. The `lead` default resolution stays on `getActiveReportId`
+(it has no lifecycle gate, so no divergence to close) and the viewer path is
+unchanged.
+
+#### Scenario: Head default resolves the current editable period for publish
+
+- **GIVEN** a head session and a current non-archived editable period `R`
+- **WHEN** the head loads its default weekly report with no `reportId`
+- **THEN** the server resolves `R` via `getCurrentEditableId`
+- **AND** that is the same id the `period.publish` authz check resolves, so the
+  head's publish of `R` is not rejected as out-of-scope
+
+#### Scenario: Head default resolves the latest published non-archived period for reopen
+
+- **GIVEN** a head session, no current editable period, and a latest published
+  non-archived period `R`
+- **WHEN** the head loads its default weekly report with no `reportId`
+- **THEN** the server resolves `R` via the latest-published-non-archived
+  resolver, the same id the `period.reopen` authz check resolves
+
+#### Scenario: Head default skips an archived newest-published period
+
+- **GIVEN** a head session, the newest `published` report is archived, and an
+  older `published` report `R` is non-archived
+- **WHEN** the head loads its default weekly report with no `reportId`
+- **THEN** the server resolves `R`, not the archived newest-published id
+- **AND** the head can reopen `R` through the normal flow without the archived
+  guard blocking it
+
+#### Scenario: Lead default resolution is unchanged
+
+- **GIVEN** a lead session
+- **WHEN** the lead loads its default weekly report with no `reportId`
+- **THEN** the server resolves via `getActiveReportId`, unchanged by this change
+
 ### Requirement: Archived Periods Are Never a Valid Lifecycle Target
 
 The `period.publish` and `period.reopen` mutations SHALL reject any target

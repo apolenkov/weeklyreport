@@ -66,8 +66,11 @@ therefore additionally drop every returned execution whose `recipientEmail`
 is not an in-scope recipient — that is, not the email of a `ReportSection`
 author within `groupScopeFilter(session, "reportSection")` on that report
 and not the caller's own email (escalation reminders addressed to the head
-themself). An admin session bypasses both the rule-level check and the
-recipient filter.
+themself). This recipient filter MUST be applied BEFORE cursor pagination
+computes the page and `nextCursor`, because the service paginates the
+repository's unscoped newest-100 slice; filtering the already-paginated page
+would let out-of-scope rows consume the page size or surface as the cursor.
+An admin session bypasses both the rule-level check and the recipient filter.
 
 #### Scenario: Head lists executions for an in-scope rule
 
@@ -93,6 +96,14 @@ recipient filter.
 - **THEN** the procedure returns only the execution rows whose recipient is in group A
 - **AND** no group-B recipient email or dedupe key is present in the response
 
+#### Scenario: Mixed-scope listing paginates over the scoped set
+
+- **GIVEN** a head authenticated for group A
+- **AND** a `ReminderRule` whose newest executions interleave group-A and group-B recipients
+- **WHEN** the head pages through `reminders.listExecutions` with a limit
+- **THEN** each page contains only group-A recipient rows up to the limit
+- **AND** the returned `nextCursor` is a group-A execution id, never a group-B id
+
 #### Scenario: Admin lists executions for any rule
 
 - **GIVEN** an admin session
@@ -113,13 +124,16 @@ The procedure (`apps/api/src/infrastructure/trpc/trpc.router.ts`, the
 "reportSection")` into the `draftSections` `findMany` so a shared or
 cross-group active report cannot fan a reminder out to out-of-group leads.
 When a `leadId` is supplied, the group-scope check on the lead MUST be
-evaluated separately from the lead's draft status, because the existing
-`no-matching-section` result is a valid success state for an in-scope lead
-with no draft section (already submitted, or no section yet). The procedure
-MUST reject with FORBIDDEN only when the supplied `leadId`'s author is out of
-the caller's scope on that report; an in-scope `leadId` with zero draft
-sections MUST still return the `no-matching-section` result, not FORBIDDEN.
-An admin session applies no scope filter.
+evaluated against the `User` row via `groupScopeFilter(session, "user")`
+(which filters `User.reportingGroupId` directly), NOT against a
+`ReportSection`, because a section may not exist yet and a section-based check
+cannot distinguish an in-scope lead with no section from an out-of-scope lead.
+This keeps the existing `no-matching-section` result a valid success state for
+an in-scope lead with no draft section (already submitted, or no section yet).
+The procedure MUST reject with FORBIDDEN only when the supplied `leadId` user
+is outside the caller's scope (or does not exist); an in-scope `leadId` with
+zero draft sections MUST still return the `no-matching-section` result, not
+FORBIDDEN. An admin session applies no scope filter.
 
 #### Scenario: Head dispatches to all in-scope pending authors
 

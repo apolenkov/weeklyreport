@@ -43,8 +43,8 @@ read model carries no child `createdAt`, so it stays out of this change.
 ### New Capabilities
 
 - `report-section-write-integrity`: optimistic-concurrency control for section
-  writes — version compare-and-set, 409 on conflict, server-minted child ids,
-  preserved provenance.
+  writes — version compare-and-set, 409 on conflict, and server-minted child ids
+  (child `createdAt` provenance preservation is deferred — see Why).
 
 ### Modified Capabilities
 

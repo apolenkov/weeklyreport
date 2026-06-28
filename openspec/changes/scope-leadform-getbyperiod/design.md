@@ -26,6 +26,8 @@ cross-product content is not disclosed.
 
 - Bound the `lead` cross-author branch of `getByPeriod` to the viewer/author
   shared-product set.
+- Require the caller's own report access (their own section in the report) before
+  any `lead` cross-author read, matching `getCrossAuthorContent`.
 - Keep the own-section read and the head/admin read byte-for-byte unchanged.
 - Add a contract test that fails if unshared-product records leak.
 
@@ -102,6 +104,28 @@ This tightens the gate relative to today's `hasSharedProduct`: archived-only
 co-ownership no longer opens the foreign section. It does NOT touch the
 head/admin branch, whose authorization is group-scoped, not product-scoped.
 
+### D4: Require the caller's own report access before any cross-author read
+
+The shared-product set (D1/D3) is report-independent: it is computed from
+report-wide stage assignments, exactly as `getCrossAuthorContent` derives it, so
+it proves product co-ownership but NOT that the caller belongs to the requested
+report. `getCrossAuthorContent` closes that gap with an own-section precheck —
+`getSectionForPeriod(reportId, userId)` — before reading any foreign content; the
+`lead` cross-author branch of `getByPeriod` has no equivalent today, so global
+co-ownership alone admits a read of B's section in a report A does not belong to.
+
+Mirror that precheck: in the `lead` cross-author branch, resolve the caller's
+own section in the requested report FIRST. If the caller has no own section in
+the report, do not read the foreign section — deny without returning the foreign
+section's status, metadata, or records. Only when the caller both holds an own
+section in the report AND has a non-empty shared non-archived set (D3) does
+`getByPeriod` read and filter the foreign section.
+
+This is the same posture as `getCrossAuthorContent`: report access (own a
+section in the report) AND co-ownership are BOTH required; neither alone
+authorizes a foreign read. The head/admin branch is untouched — its access is
+group-scoped and enforced separately.
+
 ## Before / After
 
 Before — case 3 (`lead` views co-lead B):
@@ -114,7 +138,8 @@ getByPeriod → hasSharedProduct(A,B)=true → getSectionForPeriod(report, B)
 After — case 3:
 
 ```
-getByPeriod → sharedIds = co-owned-non-archived(A,B)
+getByPeriod → A has own section in report? no → deny (no foreign read)
+            → sharedIds = co-owned-non-archived(A,B)
             → sharedIds empty? → fall back to A's own section (no foreign read)
             → sharedIds non-empty → getSectionForPeriod(report, B)
             → return B's section with items/risks/decisions/stage-statuses,
@@ -143,6 +168,9 @@ Cases 1 (own) and 2 (head/admin) are unchanged.
   `stageSet`) and recompute `referencedProjects` from the filtered rows.
 - [Gate vs filter disagree on archived products] → derive both from one shared
   non-archived set (D3); archived-only sharing falls back to the own section.
+- [Co-ownership without report access opens a foreign report] → require the
+  caller's own section in the requested report before any cross-author read
+  (D4); the contract test covers a co-owner with no section in the report.
 - [Over-narrowing the own/head path] → keep the filter strictly inside the
   `lead`-cross-author branch (`requestedAuthorId && canViewOtherAuthor &&
 !isHeadLike && requestedAuthorId !== userId`); the test asserts own and head

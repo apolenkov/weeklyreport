@@ -46,10 +46,14 @@
       `P2002`, treat the tick as already-created (re-read the open period on the
       boundary or skip) and return a non-error outcome; re-throw any non-P2002
       error unchanged.
-- [ ] 3b.2 In the same scheduler, guard the `scheduled → open` `updateMany`
-      (~line 83) against the `Report_one_open_per_boundary` `P2002`: degrade
-      gracefully (the boundary is already open) without crashing the tick;
-      re-throw unrelated errors.
+- [ ] 3b.2 In the same scheduler, replace the bulk `scheduled → open`
+      `updateMany` (~line 83) with a per-boundary (per due scheduled row) flip
+      guarded against the `Report_one_open_per_boundary` `P2002`: on `P2002`
+      re-read for an existing open row on the boundary — skip it as already-open
+      if found, otherwise (two scheduled rows collided with no open row yet)
+      deterministically flip exactly ONE scheduled row to `open` and leave (and
+      log) the duplicate so the boundary is never left without an open period —
+      without crashing the tick; re-throw unrelated errors.
 - [ ] 3b.3 In `reopenPeriod` (`apps/api/src/modules/period/period.prisma-repository.ts`)
       and `unarchivePeriod` (`apps/api/src/modules/admin/admin-period.queries.ts`),
       catch the `Report_one_open_per_boundary` `P2002` on the `report.update`
@@ -81,6 +85,14 @@
       `unarchivePeriod`'s `report.update`; assert each surfaces
       `AdminPeriodOverlapError` (→ `BAD_REQUEST`), not a 500; assert a
       non-P2002 error propagates unchanged.
+
+- [ ] 4.6 Scheduler scheduled-to-open flip test: force the
+      `Report_one_open_per_boundary` `P2002` on the due `scheduled → open` flip.
+      Cover BOTH recoveries: (a) an existing open row on the boundary → the
+      boundary is skipped as already-open; (b) two scheduled rows on the
+      boundary with no open row → exactly one is flipped to `open` and the
+      duplicate is left/reported, so the boundary is not left without an open
+      period. Assert a non-P2002 failure still propagates.
 
 ## 5. Verification
 

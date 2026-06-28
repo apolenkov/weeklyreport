@@ -20,11 +20,20 @@ head tabs both pass the check, both rebuild the snapshot, both increment
 `customreportPeriodStateTransitionsTotal`, corrupting the on-time-ratio gauge
 numerator.
 
-Separately, `review.dashboard` already resolves the current open/reopened
-period from the database (newest `periodStatus in ("open","reopened")` with
-`periodStart <= now`), but `review.publish` and `review.assembledReport` still
-read `ctx.session.activeReportId` from the JWT, which is baked at login and can
-point at an older period.
+Separately, `review.dashboard` already resolves the current period from the
+database, but `review.publish` and `review.assembledReport` still read
+`ctx.session.activeReportId` from the JWT, which is baked at login and can point
+at an older period. The durable "current editable period" contract
+(`viewer-live-status`, `CONTEXT.md`) is the newest **non-archived**
+`periodStatus in ("open","reopened")` row with `periodStart <= now`, ordered by
+`periodStart` desc then `id` desc, and is already implemented as
+`getCurrentEditableId`
+(`apps/api/src/modules/weekly-report/weekly-report.prisma-repository.ts`).
+`review.dashboard` today inlines a looser variant of that query — it omits
+`archived: false` and the `id` desc tiebreak — so an archived-open row or a
+shared-`periodStart` tie could surface an arbitrary or archived period; all
+three procedures must adopt the canonical resolver rather than copy the loose
+inline query.
 
 ## Goals / Non-Goals
 
@@ -35,7 +44,8 @@ point at an older period.
 - Gate the snapshot rebuild, ingestion enqueue, and counter increments on the
   compare-and-set having transitioned exactly one row.
 - Resolve the `review.publish` / `review.assembledReport` target from the
-  database, matching `review.dashboard`.
+  database via the shared `getCurrentEditableId` resolver, and move
+  `review.dashboard` onto the same resolver so all three agree on the target.
 
 **Non-Goals:**
 
@@ -99,13 +109,21 @@ nothing. The transition counter's `from` label is the row's prior `periodStatus`
 (`"open"` or `"reopened"`), carried out of the guarded write — for the
 publication path this replaces the hardcoded `from: "open"` (see decision 2).
 
-### 4. Database-resolved publish target
+### 4. Database-resolved publish target via the shared current-editable resolver
 
-`review.publish` and `review.assembledReport` adopt the exact query
-`review.dashboard` uses to resolve the open/reopened period, replacing
-`ctx.session.activeReportId`. When the query returns nothing they raise a
-domain "no active period" error mapped to a tRPC error, instead of acting on a
-stale id.
+`review.publish` and `review.assembledReport` resolve the target through the
+shared `getCurrentEditableId` resolver — newest non-archived
+`periodStatus in ("open","reopened")` row with `periodStart <= now`, ordered by
+`periodStart` desc then `id` desc — replacing `ctx.session.activeReportId`.
+`review.dashboard` is moved off its looser inline query onto the same resolver,
+so all three procedures pick the identical period; the `archived: false` filter
+and the `id` desc tiebreak are what keep the pick non-arbitrary when period
+uniqueness is a non-goal. `getCurrentEditableId` is the right resolver (not
+`getActiveReportId`, which adds a published fallback the publish/dashboard paths
+must not have). When the resolver returns nothing, `review.publish` and
+`review.assembledReport` raise a domain "no active period" error mapped to a
+tRPC error instead of acting on a stale id; `review.dashboard` keeps its
+existing empty-result response for that state.
 
 ## Risks / Trade-offs
 

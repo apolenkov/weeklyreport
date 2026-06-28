@@ -1,7 +1,8 @@
-## 1. API: repository port + active-target resolution
+## 1. API: shared active-target resolvers + head default convergence
 
-- [ ] 1.1 Extend the `PeriodRepository` interface in `apps/api/src/modules/period/period.service.ts` with a current-active-editable resolver and a latest-published-**non-archived** resolver; include `archived` in the `getReportById` projection.
-- [ ] 1.2 Implement the two resolvers and the `archived` field in `apps/api/src/modules/period/period.prisma-repository.ts`. The editable resolver mirrors `getCurrentEditableId` verbatim (it already filters `archived: false`). The latest-published resolver MUST add `archived: false` and so **diverges** from the shared `getLatestPublishedId` (which filters only `periodStatus = 'published'`); do not reuse `getLatestPublishedId` and do not mutate it (it feeds the viewer default-report fallback). Otherwise keep the identical `orderBy periodStart desc, id desc` shape so the head's active target matches the weekly-report page resolver.
+- [ ] 1.1 In `apps/api/src/modules/weekly-report/weekly-report.prisma-repository.ts`, add `getLatestPublishedNonArchivedId` (newest `published` with `archived: false`, `orderBy periodStart desc, id desc`) alongside the existing `getCurrentEditableId` / `getLatestPublishedId`. Do NOT reuse or mutate `getLatestPublishedId` (it feeds the viewer default-report fallback).
+- [ ] 1.2 In `apps/api/src/modules/weekly-report/weekly-report.service.ts`, migrate the `head` branch of `resolveDefaultReportId` from `getActiveReportId` to `getCurrentEditableId() ?? getLatestPublishedNonArchivedId()`. Keep the `lead` branch on `getActiveReportId` (no lifecycle gate → no divergence to close) and leave the viewer branch unchanged. This is the fix for the head's submitted `reportId` and the lifecycle authz target diverging.
+- [ ] 1.3 Expose `getCurrentEditableId` and `getLatestPublishedNonArchivedId` to `PeriodService` through its repository port (interface in `apps/api/src/modules/period/period.service.ts`), reusing the SAME query definitions — do not author a second copy of the resolvers inside the period repository. Include `archived` in the `getReportById` projection.
 
 ## 2. API: service authorization + archived rejection
 
@@ -20,7 +21,8 @@
 - [ ] 4.1 Service unit tests: head publish/reopen on the active target succeeds; head on a stale/foreign id is rejected; admin on an arbitrary non-archived id succeeds; archived target is rejected for both head and admin.
 - [ ] 4.2 Service unit test: head publish/reopen when no active target exists is rejected (no write, no telemetry increment).
 - [ ] 4.3 Error-mapper / router test: out-of-scope denial maps to `FORBIDDEN`, missing report maps to `NOT_FOUND`, neither surfaces as `INTERNAL_SERVER_ERROR`.
-- [ ] 4.4 Service unit test (the archived-latest reopen case): when the newest `published` row is archived and an older `published` row is non-archived, the latest-published resolver returns the non-archived id, and a head reopening that non-archived id succeeds (proves the resolver diverges from `getLatestPublishedId` and is not blocked by the archived guard).
+- [ ] 4.4 Service unit test (the archived-latest reopen case): when the newest `published` row is archived and an older `published` row is non-archived, the latest-published-non-archived resolver returns the non-archived id, and a head reopening that non-archived id succeeds (proves the resolver diverges from `getLatestPublishedId` and is not blocked by the archived guard).
+- [ ] 4.5 Weekly-report service test (head default convergence): a `head` with no `reportId` resolves its default report via `getCurrentEditableId() ?? getLatestPublishedNonArchivedId()` (NOT `getActiveReportId`), so the head's default `reportId` equals the lifecycle authz target. Cover the archived-newest-published case (head default lands on the older non-archived published id). Assert `lead` still resolves via `getActiveReportId` and the viewer path is unchanged.
 
 ## 5. Verification
 

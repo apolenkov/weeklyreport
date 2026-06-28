@@ -33,8 +33,12 @@ dual-state the candidate filter was meant to prevent.
 - Close the read-then-write race by making the auto-publish write conditional on
   the row still being `status="draft"` and `archived=false` (compare-and-set), so
   a period archived after candidate selection is never promoted.
-- Cover both the candidate exclusion and the race with dedicated unit-test
-  scenarios alongside the existing auto-publisher tests.
+- Propagate an explicit skipped outcome on a zero-row compare-and-set so the
+  publish success side-effects (metrics, snapshot-ingestion enqueue,
+  `periodAutoPublish` audit, missing-section count, scheduler `periodIds`) do NOT
+  fire for the skipped period.
+- Cover the candidate exclusion, the race, and the skip-side-effect suppression
+  with dedicated unit-test scenarios alongside the existing auto-publisher tests.
 
 **Non-Goals:**
 
@@ -62,6 +66,29 @@ the period was archived or already published after selection). This stays on the
 auto path only; the manual `publishReport` path keeps its existing `where:{id}`
 write. The `status==="published"` idempotency check in `publishAuto` is retained
 but is not sufficient on its own, because `archive` leaves `status="draft"`.
+
+**D4 — Make the skip an explicit discriminated outcome, not an inferred one.**
+The compare-and-set stops the DB write, but on its own it leaves every downstream
+success side-effect intact. Today `PublicationService.publishAuto` increments
+`customreportReportsSubmittedTotal` / `customreportPeriodStateTransitionsTotal`
+and calls `enqueueIngestion` after `saveAssembledReport` returns, and
+`AutoPublisherScheduler.runOnce` counts missing sections, emits the
+`periodAutoPublish` audit event, and pushes the id to `periodIds` after
+`publishAuto` returns (the scheduler currently discards the return value
+entirely). The skip cannot be inferred from the returned report: `AssembledReport`
+carries `status` but neither `archived` nor `periodState`
+(`packages/shared/src/schemas/report.schema.ts`), so a re-read of the still-archived
+draft after a zero-row write looks like a normal `status="draft"` report and is
+indistinguishable from any non-published assembled report. Therefore the repository
+write SHALL report whether it matched a row, `publishAuto` SHALL return a
+discriminated result — a published outcome carrying the `AssembledReport`, or a
+skipped outcome carrying no report — and SHALL increment metrics and enqueue
+ingestion only on the published branch. `runOnce` SHALL branch on that outcome and
+run the missing-section count, audit event, and `periodIds` push only for a
+published outcome. The skipped branch is distinct from the existing `catch` error
+branch: a skip is an expected no-op (no error log), not a failure. `publishAuto`
+is called only by the scheduler and its tests, so widening the return type has no
+other caller to update.
 
 **D2 — Mirror the auto-archiver spelling exactly.**
 The auto-archiver uses `archived: false` (a Prisma scalar equality filter).

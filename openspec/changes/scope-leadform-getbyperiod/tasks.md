@@ -17,6 +17,13 @@
       from 1.1. When that set is empty, fall back to the viewer's own section (the
       existing `sectionAuthorId = userId` path) — no foreign status or metadata.
       Leave the head/admin branch untouched.
+- [ ] 2.1a Before reading any foreign section in the `lead` cross-author branch,
+      resolve the caller's OWN section in the requested report (the same
+      `getSectionForPeriod(reportId, userId)` precheck `getCrossAuthorContent`
+      uses). If the caller has no own section in the report, do not read the
+      foreign section — deny without returning its status, metadata, or records.
+      Co-ownership is report-independent, so it alone must not authorize the read.
+      Leave the head/admin branch untouched.
 - [ ] 2.2 For the `lead` cross-author branch only, filter the returned section's
       `items` (current and next week), `risks`, `decisions`, per-stage statuses,
       the `projects` array (drop entries for unshared products, including their
@@ -41,6 +48,10 @@
 - [ ] 3.4 Add a case where the pair shares ONLY an archived product: assert the
       cross-author read is denied and falls back to the viewer's own section
       (no foreign section status or metadata is returned).
+- [ ] 3.5 Add a case where the caller co-owns a non-archived product with the
+      author but has NO own section in the requested report: assert the
+      cross-author read is denied (no foreign section status, metadata, or
+      records returned), proving the report-access precheck.
 
 ## 4. Verification
 
