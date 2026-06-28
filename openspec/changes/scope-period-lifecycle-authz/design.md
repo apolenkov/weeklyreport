@@ -45,45 +45,70 @@ review.
 
 ## Decisions
 
-### D1: Reuse the existing active-period resolvers, do not invent new ones
+### D1: One shared resolver pair for both the head UI default and the authz check
 
-The weekly-report repository already defines the canonical resolvers:
-`getCurrentEditableId` (newest non-archived `open`/`reopened` with
-`periodStart <= now`) and `getLatestPublishedId` (newest `published`).
+The weekly-report repository already defines `getCurrentEditableId` (newest
+non-archived `open`/`reopened` with `periodStart <= now`, ordered
+`periodStart desc, id desc`) and `getLatestPublishedId` (newest `published`,
+archived-inclusive).
 
-**Publish** targets the editable id and reuses `getCurrentEditableId` verbatim —
-it already filters `archived: false`, so it satisfies the spec's "non-archived"
-requirement as-is.
+**The trap this change must close:** the head weekly-report page does NOT resolve
+its default `reportId` through `getCurrentEditableId`. The non-viewer branch of
+`resolveDefaultReportId` (`weekly-report.service.ts:129`) returns
+`getActiveReportId`, which (a) has a published fallback, (b) has NO
+`archived: false` filter on its editable query, and (c) orders by
+`periodStart desc` only — no `id desc` tiebreak. So the head's submitted
+`reportId` and a lifecycle authz target resolved from `getCurrentEditableId` can
+diverge on a `periodStart` tie, an archived-open row, or the published-fallback
+path — and the fail-closed equality check would then reject a legitimate head.
+(The viewer already migrated off `getActiveReportId` for exactly this reason once
+it gained a read gate; the head is now gaining a lifecycle gate, so the same
+rationale applies.)
 
-**Reopen** targets the latest published _non-archived_ period. Here we must
-**diverge** from the shared `getLatestPublishedId`: that method filters only
-`periodStatus = 'published'` and does **not** exclude archived rows
-(`weekly-report.prisma-repository.ts:104`). Reusing it verbatim would resolve the
-target to an archived id when the newest published row is archived; the
-archived-rejection guard (D-archived) would then reject every non-archived
-candidate, so a head could never reopen the latest non-archived published period
-— the exact bug Codex flagged. The lifecycle-authz reopen resolver therefore adds
-`archived: false` to the latest-published query (otherwise identical:
-`orderBy periodStart desc, id desc`).
+**Fix — converge the head default resolution onto the lifecycle resolvers.**
+Define ONE deterministic, non-archived resolver pair and use it for BOTH the head
+default resolution and the authz target:
 
-Do **not** mutate the shared `getLatestPublishedId` to add the filter: its
-docstring shows it feeds the viewer's default-report fallback
-(`viewer-live-status`), so changing it would alter that durable viewer behavior
-and need a MODIFIED delta plus a viewer regression check. The lifecycle path
-gets its own dedicated non-archived resolver instead.
+- Editable / publish target — `getCurrentEditableId` (already non-archived and
+  deterministic; no change to the query).
+- Latest-published / reopen target — a NEW `getLatestPublishedNonArchivedId`
+  (adds `archived: false`; otherwise identical `orderBy periodStart desc,
+id desc`). It is DISTINCT from the shared `getLatestPublishedId` so the
+  archived-rejection guard cannot block a head from reopening the newest
+  non-archived published period when the newest published row is archived.
 
-Expose both resolvers to `PeriodService` through its repository port rather than
-duplicating the queries inline in the service, so the head's "active period"
-matches what the head's own weekly-report page resolved.
+Migrate the `head` branch of `resolveDefaultReportId` from `getActiveReportId` to
+`getCurrentEditableId() ?? getLatestPublishedNonArchivedId()`. The `lead` branch
+stays on `getActiveReportId` (lead has no lifecycle gate, so there is no
+divergence to close — the same reasoning the existing viewer comment records); the
+viewer branch is unchanged.
 
-- Alternative considered — re-query inside `PeriodService` with fresh Prisma
-  calls. Rejected: it would create a second copy of the resolution logic that
-  can drift from `weekly-report.prisma-repository.ts` (the repo already carries
-  a documented `getActiveReportId` vs `getCurrentEditableId` divergence; adding
-  a third copy compounds that trap).
+Define the resolver pair ONCE in the weekly-report repository (the canonical home
+of `getCurrentEditableId`) and expose both to `PeriodService` through its
+repository port — no second copy. This makes the design goal real: the head's
+"active period" and the lifecycle target are resolved by the same queries and
+cannot drift.
+
+Do **not** mutate the shared `getLatestPublishedId`: its docstring shows it feeds
+the viewer's default-report fallback (`viewer-live-status`), so changing it would
+alter that durable viewer behavior and need a MODIFIED delta plus a viewer
+regression check. Add the dedicated `getLatestPublishedNonArchivedId` alongside it
+instead.
+
+- Alternative considered — leave the head default on `getActiveReportId` and make
+  the authz resolver match it (the finding's option B). Rejected: in the reopen
+  state `getActiveReportId`'s published fallback returns the newest published row
+  WITHOUT an archived filter, so when that row is archived the archived guard
+  blocks it and the older non-archived period is never offered — killing the
+  "latest published is archived" scenario and its test — and its missing `id desc`
+  tiebreak reintroduces the cross-call determinism hole the viewer migration
+  eliminated.
 - Alternative considered — add `archived: false` directly to the shared
   `getLatestPublishedId`. Rejected: it is shared with the viewer default-report
   fallback and changing it would be an undeclared durable-spec change.
+- Alternative considered — re-query inside `PeriodService` with a second copy of
+  the resolvers. Rejected: a second copy drifts from the weekly-report repository
+  — the exact divergence this change is closing.
 
 ### D2: Authorize by role inside the service, not by adding a new procedure
 
@@ -152,14 +177,19 @@ the requested `reportId`.
 
 ## Risks / Trade-offs
 
-- [A head's UI normally already sends the active `reportId`, so the new check is
+- [A head's UI sends the server-resolved default `reportId`, so the new check is
   usually a no-op for legitimate use] → low regression risk; the only behavior
   change is rejecting hand-crafted/stale ids. Add a regression test that a head
   with a stale id is rejected while the active id succeeds.
-- [The active-period resolver and the head's page resolver could momentarily
-  disagree during a fast open→publish→reopen sequence] → both derive from the
-  same `getCurrentEditableId` / latest-published semantics, so they converge;
-  the equality check fails closed (reject), never opens access.
+- [The head's page resolver and the authz target must not disagree] → D1 migrates
+  the head default resolution onto the SAME `getCurrentEditableId` /
+  `getLatestPublishedNonArchivedId` queries the authz check uses, so they resolve
+  identically by construction; the equality check fails closed (reject), never
+  opens access.
+- [The head default resolution change touches the weekly-report read path
+  (regression-heavy per CLAUDE.md)] → scoped to the `head` branch only; lead and
+  viewer resolution are untouched; cover head/lead/viewer resolution and the
+  archived-newest-published case with tests before relying on it.
 - [Overloading `PeriodAccessError` for the new scope denial] → rejected (see
   D4). It already carries the UFB-052 state/policy errors; a shared
   `FORBIDDEN` mapping would reclassify those, touching a non-goal. The change
@@ -168,14 +198,18 @@ the requested `reportId`.
 
 ## Migration Plan
 
-Pure code change, no migration. Deploy is API-only; the web clients already send
-the values they send today (head sends the active id, admin sends arbitrary
-ids), so no coordinated frontend release is required. Rollback is reverting the
-service/router/error-mapper diff.
+Pure code change, no migration. Deploy is API-only; the web clients still send a
+server-resolved `reportId` (head sends `view.period.reportId`, admin sends
+arbitrary ids), so no coordinated frontend release is required even though the
+head's server-side default resolution changes. Rollback is reverting the
+weekly-report-resolution / period-service / router / error-mapper diff.
 
 ## Open Questions
 
-- Confirm the head weekly-report toolbar always sources `reportId` from the
-  server-resolved active period (it appears to via `view.period.reportId`); if a
-  reopened-then-stale page can hold an old id, the head may need a refetch-then-
-  retry, but failing closed with a clear `FORBIDDEN` is acceptable for v1.
+- The head weekly-report toolbar sources `reportId` from the server-resolved
+  default (`view.period.reportId`). D1 converges that default onto the same
+  resolvers the authz check uses, so the normal flow cannot self-reject. A head
+  that has NAVIGATED to a stale/older period and acts on it still fails closed
+  with a clear `FORBIDDEN`, which is acceptable for v1 (hiding/disabling the
+  toolbar control for a non-target period is a `period-lifecycle-ui` concern,
+  out of scope here).

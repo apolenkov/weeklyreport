@@ -6,7 +6,10 @@ The admin snapshot write SHALL apply all of its entity phases inside a single in
 
 This governs `AdminRepository.saveSnapshot`, implemented by `saveSnapshot` in
 `admin-snapshot-write.queries.ts`, across the reporting-group, user, project,
-period, and reminder-rule phases.
+period, and reminder-rule phases. EVERY database write the call performs runs
+inside the transaction — including the fallback reporting-group provisioning
+(`ensureFallbackReportingGroup`), which itself upserts a default group and so
+must not be allowed to commit on its own ahead of a later-phase failure.
 
 This requirement is about all-or-nothing persistence, not about which rows are
 touched (that is governed separately by "Admin mutations target only the
@@ -19,6 +22,15 @@ referenced entity").
 - **THEN** the user upserts are rolled back with the rest of the transaction
 - **AND** the database matches its pre-call state, with no manual recovery
   needed.
+
+#### Scenario: Fallback-group provisioning rolls back with a later failure
+
+- **GIVEN** a snapshot whose groups are all archived, so the write provisions a
+  default fallback reporting group
+- **WHEN** a later phase (e.g. the user or reminder-rule phase) throws
+- **THEN** the fallback group insert is rolled back with the rest of the
+  transaction
+- **AND** no default reporting group is left committed in the database.
 
 #### Scenario: Successful write commits every phase together
 

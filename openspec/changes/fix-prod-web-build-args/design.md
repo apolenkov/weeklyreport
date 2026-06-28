@@ -85,15 +85,29 @@ client bundle. The build arg therefore uses the required-error form
 which makes Compose exit with an error before the build starts. The
 `.env.example` file SHOULD document this required var.
 
-### Decision 2b: `API_URL` build arg defaults to the internal service origin
+### Decision 2b: `API_URL` build arg is a fixed literal, not interpolated
 
 Unlike the public origin, `API_URL` is the internal Docker-network address of
-the API and is stable within the prod compose project (`http://api:3001`). It is
-given a sensible default `API_URL: ${API_URL:-http://api:3001}` that mirrors the
-existing runtime `environment:` block and never falls back to `localhost`. The
-build args are **additive** to that runtime `environment:` block, which is kept
-because it still feeds the server-side consumers (`resolveApiUrl` in
-`get-server-session.ts` reads `API_URL` at runtime).
+the API and is fixed within the prod compose project: the service is named
+`api` and listens on internal port `3001`, so the build-time rewrite
+destination is always `http://api:3001`. The build arg is therefore a **fixed
+literal** `API_URL: http://api:3001`, **not** the interpolated
+`${API_URL:-http://api:3001}` form.
+
+The bake is permanent — Next.js writes the rewrite destination into
+`routes-manifest.json` at build time and never re-reads it. Interpolating from
+the operator's `${API_URL}` would let a stray shell/`.env` value (e.g.
+`http://localhost:3002` or `http://api:3002`) be baked in permanently, which
+recreates the exact rewrite failure this change eliminates. A required-var form
+(`${API_URL:?...}`) would force the value to be _set_ but not _correct_, so it
+does not enforce the invariant either; only the literal does. (The interpolated
+default was an earlier draft choice that mirrored the runtime block — that
+overridability is precisely the bug, so it is dropped here.)
+
+The build arg is **additive** to the runtime `environment:` block, which is kept
+unchanged (it still feeds the server-side consumers — `resolveApiUrl` in
+`get-server-session.ts` reads `API_URL` at runtime — and stays a runtime-only
+knob).
 
 ### Decision 3: Add `NODE_ENV !== 'production'` guard to `AUTH_STUB` derivation
 
@@ -145,7 +159,7 @@ implement both in a single commit.
 1. Update `docker-compose.prod.yml`: add `web.build.args` with the four
    prod-safe values (`NEXT_PUBLIC_AUTH_STUB=false`,
    `NEXT_PUBLIC_DEV_ROLE_SWITCHER=false`,
-   `API_URL=${API_URL:-http://api:3001}`,
+   `API_URL=http://api:3001` (fixed literal, not interpolated),
    `NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:?...}`). Keep the existing runtime
    `environment:` block — the build args are additive.
 2. Update `apps/web/src/app/login-page.client.tsx`: extend the `AUTH_STUB`

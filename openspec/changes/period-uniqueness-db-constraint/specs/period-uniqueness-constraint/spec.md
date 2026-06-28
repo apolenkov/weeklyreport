@@ -88,7 +88,7 @@ The `PeriodCreatorScheduler` SHALL catch the `Report_one_open_per_boundary` `P20
 
 ### Requirement: Lifecycle Writers Moving A Row Into The Open State Handle The Constraint Violation
 
-Because the partial unique index constrains UPDATEs as well as INSERTs, every writer that moves an existing `Report` into `periodState = 'open'` SHALL handle the `Report_one_open_per_boundary` `P2002` rather than surface a 500. The admin-triggered lifecycle writers — `reopenPeriod` and `unarchivePeriod` — MUST translate it into `AdminPeriodOverlapError` (→ `BAD_REQUEST`); the background scheduler `scheduled → open` flip MUST degrade gracefully (treat the boundary as already-open) without crashing the tick. Each catch MUST assert on `Report_one_open_per_boundary` so an unrelated unique violation re-throws.
+Because the partial unique index constrains UPDATEs as well as INSERTs, every writer that moves an existing `Report` into `periodState = 'open'` SHALL handle the `Report_one_open_per_boundary` `P2002` rather than surface a 500. The admin-triggered lifecycle writers — `reopenPeriod` and `unarchivePeriod` — MUST translate it into `AdminPeriodOverlapError` (→ `BAD_REQUEST`); the background scheduler `scheduled → open` flip MUST recover per boundary, never with a blanket skip: on `P2002` it re-reads for an existing open row on the boundary, skips that boundary as already-open if one exists, otherwise (two scheduled rows collided with no open row yet) deterministically flips exactly one scheduled row to `open` so the boundary is never left without an open period — all without crashing the tick. Each catch MUST assert on `Report_one_open_per_boundary` so an unrelated unique violation re-throws.
 
 #### Scenario: Reopen collides with an existing open period on the same boundary
 
@@ -104,12 +104,19 @@ Because the partial unique index constrains UPDATEs as well as INSERTs, every wr
 - **THEN** the resulting `report.update` raises `P2002` on `Report_one_open_per_boundary`
 - **AND** the writer translates it into `AdminPeriodOverlapError` (→ `BAD_REQUEST`)
 
-#### Scenario: The scheduled-to-open flip collides
+#### Scenario: The scheduled-to-open flip collides with an existing open period
 
-- **GIVEN** a `scheduled` `Report` whose `periodStart` has been reached and an open `Report` already holding the same boundary
-- **WHEN** the scheduler's `scheduled → open` `updateMany` runs on a tick
+- **GIVEN** a `scheduled` `Report` whose `periodStart` has been reached and a separate open `Report` already holding the same boundary
+- **WHEN** the scheduler flips the due scheduled row toward `open`
 - **THEN** the flip raises `P2002` on `Report_one_open_per_boundary`
-- **AND** the scheduler degrades gracefully (the boundary is already open) and the tick does not crash
+- **AND** the scheduler re-reads, finds the existing open row on the boundary, skips that boundary as already-open, and the tick does not crash
+
+#### Scenario: Two due scheduled rows share a boundary with no open row yet
+
+- **GIVEN** two `scheduled` `Report` rows on the same boundary `(W, W')`, both with `periodStart` reached, and no open `Report` on that boundary
+- **WHEN** the scheduler flips the due scheduled rows toward `open`
+- **THEN** the flip raises `P2002` on `Report_one_open_per_boundary`
+- **AND** the scheduler re-reads, finds no existing open row, deterministically flips exactly one scheduled row to `open`, and leaves (and reports) the duplicate so the boundary is never left without an open period
 
 ### Requirement: The Database Guard Is Covered By An Automated Test
 

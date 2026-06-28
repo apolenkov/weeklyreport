@@ -39,8 +39,10 @@ comment lies and there is no database backstop.
   (`updateMany`), `reopenPeriod`, and `unarchivePeriod`. After the index
   lands these can hit the same `P2002`; translate the admin lifecycle ones
   (`reopen` / `unarchive`) into the domain overlap error (→ `BAD_REQUEST`)
-  and make the background `scheduled → open` flip degrade gracefully rather
-  than surface a 500.
+  and make the background `scheduled → open` flip recover per boundary — on
+  `P2002` skip a boundary that already has an open row, else open exactly one
+  of the colliding scheduled rows — rather than surface a 500 or leave a
+  boundary with no open period.
 
 ## Capabilities
 
@@ -78,5 +80,8 @@ comment lies and there is no database backstop.
   never promised it and it pulls in a new Postgres extension.
 - No change to the period state machine's transition LOGIC, the field set
   `buildTransition` emits, or the `period-dual-state` invariant. The change
-  only WRAPS the writers that move a row into `periodState = 'open'` with a
-  `P2002` catch; it does not alter what they write on the success path.
+  adds a `P2002` catch around the writers that move a row into
+  `periodState = 'open'`, and restructures the scheduler `scheduled → open`
+  flip into a per-boundary loop for correct recovery; every flip still emits
+  the same `buildTransition` field set, so what is written on the success path
+  is unchanged.

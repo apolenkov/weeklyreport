@@ -64,6 +64,29 @@ the filter then empties.
 - **THEN** the cross-author gate does not grant access
 - **AND** the call falls back to lead A's own section rather than returning B's section status or metadata
 
+### Requirement: Cross-Author Read Requires the Caller's Own Report Access
+
+The `lead` cross-author branch of `getByPeriod` MUST first prove the caller
+holds their own section in the requested report before reading any foreign
+author's section, mirroring the own-section precheck `getCrossAuthorContent`
+performs (`apps/api/src/modules/report-sections/lead-form.service.ts`). Product
+co-ownership is report-independent — the shared-product set is derived from
+report-wide stage assignments, not from membership in a specific report — so
+co-ownership alone MUST NOT authorize a foreign read; the caller MUST also
+belong to the requested report.
+
+When the caller has no own section in the requested report, the cross-author
+read MUST NOT be performed and the call MUST NOT return the foreign section's
+status, metadata, or records.
+
+#### Scenario: Co-ownership without report access does not open the foreign section
+
+- **GIVEN** lead A and lead B co-lead a non-archived product P
+- **AND** lead A has no section in report R, while lead B authors a section in report R
+- **WHEN** lead A reads via `getByPeriod` for report R requesting B as the author
+- **THEN** the cross-author read is not performed
+- **AND** no part of B's section (status, metadata, or records) is returned
+
 ### Requirement: Own Section and Head/Admin Reads Are Not Narrowed
 
 The shared-product filter MUST apply ONLY to the `lead` cross-author branch of
@@ -95,6 +118,11 @@ assertions MUST cover not only `items`, `risks`, and `decisions` but also the
 per-stage data (`ownedStages` and `stageSet`), and `referencedProjects`, so a
 stage- or project-level leak cannot pass the suite.
 
+The suite MUST also assert that a caller who co-owns a product with the author
+but holds no own section in the requested report is denied the foreign section
+(report-access precheck), so report-independent co-ownership alone cannot open a
+report the caller does not belong to.
+
 #### Scenario: Test fails if the foreign section leaks unshared records
 
 - **WHEN** the cross-author read is exercised with a shared and an unshared product present
@@ -102,3 +130,8 @@ stage- or project-level leak cannot pass the suite.
 - **AND** the test asserts the returned `projects` array has no entry for the unshared product (no `projectName`, `trafficLight`, `ownedStages`, or `stageSet`)
 - **AND** the test asserts `referencedProjects` has no unshared-product entry
 - **AND** the test asserts the shared-product records and project card are still present
+
+#### Scenario: Test fails if co-ownership opens a report the caller does not belong to
+
+- **WHEN** the cross-author read is exercised by a co-owner who has no own section in the requested report
+- **THEN** the test asserts no part of the foreign section (status, metadata, or records) is returned

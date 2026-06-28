@@ -76,9 +76,9 @@ persisted artifact path matches the requested path.
 
 #### Scenario: Out-of-scope caller is rejected
 
-- **GIVEN** an authenticated caller who is neither the requester nor an in-scope reader of the bound report
+- **GIVEN** an authenticated caller who does not currently have role-and-scope read access to the bound report
 - **WHEN** the caller requests that artifact
-- **THEN** the endpoint responds 403 and serves no file bytes
+- **THEN** the endpoint responds 403 and serves no file bytes, regardless of whether the caller is the job's original `requestedBy`
 
 #### Scenario: No unauthenticated static mount remains on any port
 

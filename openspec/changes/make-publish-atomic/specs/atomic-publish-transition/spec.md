@@ -67,23 +67,42 @@ existing published result as an idempotent response.
 ### Requirement: Publish Target Resolves From the Database
 
 The system SHALL resolve the target period for `review.publish` and
-`review.assembledReport` from the database — the current open or reopened
-period — rather than from the JWT `ctx.session.activeReportId`, which is baked
-at login and can be stale.
+`review.assembledReport` from the database — the current editable period —
+rather than from the JWT `ctx.session.activeReportId`, which is baked at login
+and can be stale.
 
-The resolution MUST use the same database query as `review.dashboard`
-(`apps/api/src/infrastructure/trpc/trpc.router.ts`): the newest period with
-`periodStatus in ("open", "reopened")` and `periodStart <= now`. When no such
-period exists, the procedures MUST surface a domain "no active period" error
-rather than acting on a stale id.
+The resolution MUST use the shared current-editable resolver
+`getCurrentEditableId`
+(`apps/api/src/modules/weekly-report/weekly-report.prisma-repository.ts`), the
+durable `viewer-live-status` "current editable period" contract: the newest
+**non-archived** report with `periodStatus in ("open", "reopened")` and
+`periodStart <= now`, ordered by `periodStart` desc then `id` desc. `archived`
+MUST be excluded and the `id` desc tiebreak MUST be applied — period uniqueness
+is a non-goal (`period-uniqueness-db-constraint`), so two rows can share a
+`periodStart` and an archived row can still read `open`; without these two
+guards publish could target an archived or arbitrary period. `review.dashboard`
+MUST resolve the same period through the same resolver so all three procedures
+agree on the target; only the no-period response differs (see below). When no
+such period exists, `review.publish` and `review.assembledReport` MUST surface a
+domain "no active period" error rather than acting on a stale id.
 
 #### Scenario: Publish targets the period shown on the dashboard
 
 - **WHEN** the head triggers `review.publish` while the session
   `activeReportId` points at an older period than the current open period
-- **THEN** the publish acts on the current open/reopened period resolved from
-  the database, the same one `review.dashboard` displays
+- **THEN** the publish acts on the current editable period resolved through
+  `getCurrentEditableId`, the same one `review.dashboard` displays
 - **AND** the stale `activeReportId` is not used to select the target
+
+#### Scenario: Publish ignores an archived period and breaks a periodStart tie deterministically
+
+- **WHEN** the publish target is resolved and an archived row also reads
+  `periodStatus = "open"`, or two non-archived open/reopened rows share the same
+  `periodStart`
+- **THEN** the `archived` row is excluded and never selected as the target
+- **AND** the `id` desc tiebreak selects the same single row on every call, so
+  `review.dashboard`, `review.assembledReport`, and `review.publish` resolve the
+  identical period
 
 #### Scenario: Assembled report reflects the database-resolved period
 
@@ -94,6 +113,8 @@ rather than acting on a stale id.
 #### Scenario: No open period yields a domain error
 
 - **WHEN** `review.publish` or `review.assembledReport` runs and the database
-  has no open or reopened period with `periodStart <= now`
+  has no non-archived open or reopened period with `periodStart <= now`
 - **THEN** the procedure raises a domain "no active period" error
 - **AND** no period is published
+- **AND** `review.dashboard` for the same empty state returns its empty result,
+  not the "no active period" error

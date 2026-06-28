@@ -12,10 +12,11 @@ even though no admin ever touched it. See backlog item BL-SNAPSHOT-RECONCILE
 
 ## What Changes
 
-- Wrap the snapshot write phases (groups → users → projects → periods →
-  reminder rules) in a single interactive `prisma.$transaction`, so a
-  mid-write failure rolls the whole restore back instead of leaving a partial
-  state.
+- Wrap every DB write of the snapshot restore — the phases (groups → users →
+  projects → periods → reminder rules) and the fallback reporting-group
+  provisioning that runs between the group and user phases — in a single
+  interactive `prisma.$transaction`, so a mid-write failure rolls the whole
+  restore back instead of leaving a partial state (e.g. a stray default group).
 - Replace whole-snapshot destructive reconciliation with targeted mutations
   keyed by entity id: an edit upserts only the touched row; a removal deletes
   or archives only the named row. Rows the admin never referenced are no longer

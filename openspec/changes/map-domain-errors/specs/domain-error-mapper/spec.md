@@ -71,6 +71,11 @@ typed error at the service or query layer and routing it through the matching
 NOT_FOUND` branch).
 - `lead-form.service.ts` `fillFrom`: source section absent → throw
   `LeadFormDomainError` (same existing `LeadFormDomainError → NOT_FOUND` branch).
+- `lead-form.prisma-repository.ts` `fillFromSection`: source section absent on
+  the copy-path re-read (a TOCTOU race after the service precheck) → throw
+  `LeadFormDomainError` (same existing `LeadFormDomainError → NOT_FOUND` branch),
+  so the source-missing classification holds even if the source row is deleted
+  between the service precheck and the repository copy.
 - `admin-period.queries.ts` `unarchivePeriod`: report row absent → throw
   `AdminPeriodNotFoundError` (routes through the existing
   `AdminPeriodNotFoundError → NOT_FOUND` branch).
@@ -89,6 +94,14 @@ NOT_FOUND` branch).
 
 - **WHEN** `leadForm.fillFrom` is invoked with a `sourceSectionId` that does not
   exist in the database
+- **THEN** the tRPC procedure returns a `NOT_FOUND` error
+- **AND** the error message is not "Unexpected error"
+
+#### Scenario: fillFrom source section deleted before the repository copy
+
+- **WHEN** `leadForm.fillFrom` passes its service precheck but the
+  `sourceSectionId` row is deleted before `fillFromSection` re-reads it for the
+  copy
 - **THEN** the tRPC procedure returns a `NOT_FOUND` error
 - **AND** the error message is not "Unexpected error"
 

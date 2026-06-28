@@ -38,10 +38,12 @@ silent success. A new domain error in the report-sections module is added to
 `apps/api/src/infrastructure/trpc/trpc.error-mapper.ts` and resolves to
 `CONFLICT`, alongside the existing publication-conflict branch. The client can
 distinguish a conflict from a validation `BAD_REQUEST` and reload the section
-before retrying. A same-client save queued while an earlier save is in flight
-SHALL adopt the bumped version returned by that earlier save before it fires, so
-the continuation does not self-conflict against the version loaded before the
-first save and does not lose its queued local edits to a recovery refetch.
+before retrying. Any same-client save trigger (the debounce autosave or a forced/manual save) that
+would fire while an earlier save is in flight SHALL be queued — not fired
+concurrently — and SHALL adopt the bumped version returned by that earlier save
+before it fires, so the continuation does not self-conflict against the version
+loaded before the first save and does not lose its queued local edits to a
+recovery refetch.
 
 #### Scenario: A stale save is rejected
 
@@ -58,12 +60,14 @@ first save and does not lose its queued local edits to a recovery refetch.
 - **THEN** it does not present the save as succeeded
 - **AND** it refetches the section so the next save carries the current version
 
-#### Scenario: A queued autosave continuation adopts the bumped version
+#### Scenario: A queued same-client continuation adopts the bumped version
 
 - **GIVEN** a lead loaded `version` 4 and edits again while the first save is
-  still in flight, queuing a second save that still references `version` 4
+  still in flight — whether the continuation is triggered by the debounce timer
+  or a forced save — queuing a second save that still references `version` 4
 - **WHEN** the first save succeeds and bumps the row to `version` 5
 - **THEN** the queued save adopts `version` 5 before it fires
+- **AND** no second save is fired concurrently while the first is in flight
 - **AND** the queued save does not raise a `CONFLICT`
 - **AND** the lead's queued local edits are preserved, not discarded by a refetch
 

@@ -43,8 +43,11 @@ repo.upsertUser(user)                ← targeted upsert by id, no whole-snapsho
 caller.removeUser(id)
 repo.removeUser(id)                  ← explicit guarded delete by id
 
-(full saveSnapshot, where still used) wraps its phases in
-  prisma.$transaction(async (tx) => { upsert* against tx })   ← all-or-nothing
+(full saveSnapshot, where still used) wraps ALL its DB work in
+  prisma.$transaction(async (tx) => {                         ← all-or-nothing
+    upsert* against tx
+    ensureFallbackReportingGroup(tx)  ← its default-group upsert is in-tx too
+  })
   then PolicyApplicator.applyToPeriod(...) AFTER commit       ← unchanged timing
 ```
 
@@ -130,6 +133,13 @@ Inside `$transaction(async (tx) => …)` the helpers receive
 it to the transaction-client type so the same functions run under `tx`. This is
 the pattern already used in `lead-form.prisma-repository.ts` and
 `report-sections.prisma-repository.ts`.
+
+`ensureFallbackReportingGroup` (`admin-group.queries.ts`) is widened the same
+way: `saveSnapshot` calls it between the group and user phases and it performs a
+`reportingGroup.upsert`, so it must run under `tx` rather than the raw client —
+otherwise the default-group insert could commit before a later-phase failure,
+breaking atomicity. `saveSnapshot` is its only caller, so the signature change
+has no other call site to update.
 
 ### D4 — PolicyApplicator stays strictly post-commit
 

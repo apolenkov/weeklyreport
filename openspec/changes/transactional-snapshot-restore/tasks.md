@@ -11,13 +11,20 @@
 
 ## 2. API write path — atomicity
 
-- [ ] 2.1 In `admin-snapshot-write.queries.ts`, wrap the five phases of
-      `saveSnapshot` (`upsertGroups` → `upsertUsers` → `upsertProjects` →
-      `upsertPeriods` → `upsertReminderRules`) in a single
-      `prisma.$transaction(async (tx) => …)`.
-- [ ] 2.2 Widen each `upsert*` helper's first parameter from `PrismaService`
-      to the Prisma transaction-client type so they run under `tx` (follow the
-      `lead-form.prisma-repository.ts` pattern).
+- [ ] 2.1 In `admin-snapshot-write.queries.ts`, wrap every DB operation of
+      `saveSnapshot` in a single `prisma.$transaction(async (tx) => …)`: the
+      `currentRules` read, `upsertGroups`, the fallback-group resolution
+      (`ensureFallbackReportingGroup`, which itself does a `reportingGroup.upsert`
+      and so must NOT run on the raw client), `upsertUsers`, `upsertProjects`,
+      `upsertPeriods`, and `upsertReminderRules`. Only the post-commit applicator
+      loop and the final `getSnapshot` return read stay outside the transaction.
+- [ ] 2.2 Widen each helper that writes inside the transaction —
+      every `upsert*` helper AND `ensureFallbackReportingGroup` in
+      `admin-group.queries.ts` — from `PrismaService` to the Prisma
+      transaction-client type so they run under `tx` (follow the
+      `lead-form.prisma-repository.ts` pattern). `saveSnapshot` is the only
+      caller of `ensureFallbackReportingGroup`, so widening its signature to the
+      transaction-client type has no other call site to break.
 - [ ] 2.3 Keep `PolicyApplicatorService.applyToPeriod` strictly AFTER the
       transaction returns; assert by structure that the applicator loop is outside
       the `$transaction` callback.

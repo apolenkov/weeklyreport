@@ -10,6 +10,20 @@
       `updateMany`/guarded `where`); a zero-row match means the period was archived
       or already published after selection and is skipped. Do NOT change the manual
       `publishReport` write path
+- [ ] 1.3 Make the skip explicit so success side-effects do not fire: have the
+      repository auto-path report whether the compare-and-set matched a row, and
+      have `PublicationService.publishAuto` return a discriminated result — a
+      published outcome carrying the `AssembledReport`, or a skipped outcome with no
+      report. Increment the publish metrics
+      (`customreportReportsSubmittedTotal`, `customreportPeriodStateTransitionsTotal`)
+      and call `enqueueIngestion` ONLY on the published branch. (`AssembledReport`
+      has no `archived`/`periodState`, so the skip cannot be inferred from the
+      returned report.)
+- [ ] 1.4 In `auto-publisher.scheduler.ts`, branch on the `publishAuto` outcome:
+      run the missing-section count, the `periodAutoPublish` audit event, and the
+      `periodIds` push ONLY for a published outcome; for a skipped outcome do none
+      of these and do not log it as an error (skip is an expected no-op, distinct
+      from the `catch` failure branch)
 
 ## 2. Tests
 
@@ -25,7 +39,12 @@
       `PublicationPrismaRepository` / `publishAuto`): when the row is archived after
       selection, the guarded write affects zero rows and the period stays
       `periodState="archived"`, `archived=true` (never `periodState="published"`)
-- [ ] 2.4 Confirm the existing auto-publisher tests still pass with the new guard
+- [ ] 2.4 Add a skip-side-effects test: when the compare-and-set matches zero rows,
+      `publishAuto` returns the skipped outcome and the scheduler emits NO publish
+      metric, NO `enqueueIngestion`, NO `periodAutoPublish` audit, NO missing-section
+      count, and excludes the id from the returned `periodIds` (assert the spies are
+      not called for the skipped period)
+- [ ] 2.5 Confirm the existing auto-publisher tests still pass with the new guard
       (`pnpm test --filter @customreport/api -- auto-publisher`)
 
 ## 3. Verification

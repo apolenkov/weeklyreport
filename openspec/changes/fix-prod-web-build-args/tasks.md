@@ -3,8 +3,11 @@
 - [ ] 1.1 In `docker-compose.prod.yml`, add a `build.args` block under
       `web.build` with `NEXT_PUBLIC_AUTH_STUB: "false"`,
       `NEXT_PUBLIC_DEV_ROLE_SWITCHER: "false"`,
-      `API_URL: ${API_URL:-http://api:3001}` (internal service origin for the
-      build-time-baked `next.config.ts` rewrites), and
+      `API_URL: http://api:3001` (a fixed literal — the internal service origin
+      for the build-time-baked `next.config.ts` rewrites; NOT interpolated from
+      `${API_URL}`, because a stray operator/shell `API_URL` such as
+      `http://localhost:3002` would otherwise be baked permanently and preserve
+      the rewrite failure this change eliminates), and
       `NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL must be set}`
       (required-error interpolation so an unset value fails the build hard,
       rather than the bare `${NEXT_PUBLIC_API_URL}` form which Compose
@@ -33,9 +36,11 @@
 - [ ] 3.1 In `.env.example`, add a comment block for the production web build
       args: `NEXT_PUBLIC_AUTH_STUB` and `NEXT_PUBLIC_DEV_ROLE_SWITCHER` (set to
       `false` in prod), `NEXT_PUBLIC_API_URL` (required public origin, no
-      default), and `API_URL` (internal API origin, defaults to
-      `http://api:3001`). Note that these are consumed by
-      `docker-compose.prod.yml` `build.args` at build time.
+      default). Note that these are consumed by `docker-compose.prod.yml`
+      `build.args` at build time. `API_URL` is documented as a runtime-only env
+      knob (it feeds the runtime `environment:` block, defaulting to
+      `http://api:3001`); it is NOT a build input — the build arg for the baked
+      rewrites is a fixed literal `http://api:3001`, not driven by this var.
 - [ ] 3.2 Add a comment in `docker-compose.prod.yml` above the new `build.args`
       block explaining that `NEXT_PUBLIC_*` values are inlined at build time and
       cannot be overridden at runtime.

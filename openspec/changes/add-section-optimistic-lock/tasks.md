@@ -71,15 +71,20 @@
       (draft autosave + manual save + submit).
 - [ ] 7.2 On a genuine cross-writer `CONFLICT`, do not present success; refetch
       the section so the next save carries the current version.
-- [ ] 7.3 Fix the queued-autosave continuation in `useLeadFormAutosave`
-      (`apps/web/src/hooks/use-lead-form-autosave.ts`): make `onSuccess(data)`
-      consume the bumped `version` from the mutation result and rebase the queued
-      payload's `version` onto it BEFORE firing the queued save, so the
-      same-client continuation neither self-conflicts on the stale loaded version
-      nor loses the queued local edits via a refetch.
-- [ ] 7.4 Add a test for edit-while-save-in-flight: a payload queued during an
-      in-flight save fires with the bumped version, succeeds without a 409, and
-      preserves the queued local edits.
+- [ ] 7.3 Centralise same-client save triggering in `useLeadFormAutosave`
+      (`apps/web/src/hooks/use-lead-form-autosave.ts`) so BOTH the debounce timer
+      (lines 163–184) and `forceSave` (lines 206–236) funnel through one
+      in-flight queue: when `saveDraftMut.isPending`, stash the payload instead of
+      firing a second `saveDraft`. Then make `onSuccess(data)` consume the bumped
+      `version` from the mutation result and rebase the queued payload's `version`
+      onto it BEFORE firing the queued save, so the same-client continuation
+      neither self-conflicts on the stale loaded version nor loses the queued
+      local edits via a refetch.
+- [ ] 7.4 Add tests for edit-while-save-in-flight covering BOTH triggers — a
+      debounced edit AND a `forceSave` issued while a save is in flight: each
+      queued payload fires with the bumped version, succeeds without a 409,
+      preserves the queued local edits, and no second `saveDraft` is fired
+      concurrently while the first is in flight.
 
 ## 8. Verify
 

@@ -22,11 +22,19 @@ rejected cross-product disclosure. This read path leaks past that posture.
   as the filter (not the archived-counting `hasSharedProduct`), and fall back to
   the viewer's own section when that set is empty, so archived-only co-ownership
   cannot expose the foreign section's status or metadata.
+- The cross-author branch MUST first prove the caller holds their OWN section in
+  the requested report (the same own-section precheck `getCrossAuthorContent`
+  performs) before reading any foreign section. Co-ownership is report-independent
+  — the shared-product set comes from report-wide stage assignments — so it alone
+  MUST NOT authorize the read; a caller with no section in the report is denied
+  without the foreign section being read.
 - The lead's OWN section is unchanged (full section, no filter).
 - `head` and `admin` cross-author reads are unchanged (full section): their
   scope is group-level, not product co-ownership, and is enforced elsewhere.
 - A contract test asserts that for a shared-product co-lead view, records on
-  unshared products are excluded while shared-product records remain.
+  unshared products are excluded while shared-product records remain, and that a
+  co-owner with no own section in the requested report is denied the foreign
+  section.
 
 ## Non-goals
 
@@ -41,8 +49,9 @@ rejected cross-product disclosure. This read path leaks past that posture.
 ### New Capabilities
 
 - `leadform-section-read-scope`: least-privilege scoping of the cross-author
-  section read in `getByPeriod`, so a co-lead view returns only the records on
-  products the two leads share, never the foreign author's whole section.
+  section read in `getByPeriod`, so a co-lead view is allowed only for a report
+  the caller belongs to and returns only the records on products the two leads
+  share, never the foreign author's whole section.
 
 ### Modified Capabilities
 
