@@ -76,11 +76,6 @@ const VERCEL_SKILLS = [
   ".claude/skills/web-design-guidelines",
 ];
 
-// Session scratchpad — council wrapper agents write each external model's
-// prompt here before shelling out. Provided by the harness for this session.
-const SCRATCH =
-  "/private/tmp/claude-501/-Users-wrk-work-customreport/d815e4e1-328d-481f-8bab-80c340658709/scratchpad";
-
 // Optional scope controls (passed via Workflow `args`) for a cheap dry-run that
 // validates the live agent->CLI->JSON->schema seam before the full fan-out.
 //   { unitLimit: 3, dimLimit: 2 }  -> review 3 units + 2 dimensions, full council
@@ -784,6 +779,8 @@ Two jobs:
 
 Be specific and evidence-based. Do NOT invent. Respect repo conventions: hardcoded Russian is only a bug in apps/web JSX; ComingSoon is intentional; a single init migration is intentional; English-only prod UI is intentional.
 
+TIME-BOX your exploration. Spot-check at most a handful of cited files; do NOT crawl the whole repo. If you are running long, STOP exploring and emit the JSON with what you have — producing valid JSON quickly matters more than exhaustive coverage.
+
 Return ONLY a single minified JSON object, no prose, no markdown fence:
 {"falsePositives":[{"id":"","reason":""}],"missed":[{"title":"","severity":"","area":"","evidence":"","suggestion":""}],"notes":""}
 
@@ -797,30 +794,33 @@ const COUNCIL = [
   { member: "glm", kind: "opencode", modelId: "opencode-go/glm-5.2" },
 ];
 
+// Build one self-contained Bash block per member: mktemp a prompt file (no
+// hardcoded session path), heredoc the external prompt into it (quoted EOF so
+// backlog JSON is taken literally), run the model read-only under a watchdog,
+// print the model's final answer line. OpenCode reasoning models over-explore,
+// so they get more headroom than Codex.
 const councilBash = (m) => {
-  const file = `${SCRATCH}/council-${m.member}.txt`;
-  if (m.kind === "codex") {
-    return {
-      file,
-      runAndExtract: `O=$(mktemp)
-codex exec -s read-only --json "$(cat '${file}')" > "$O" 2>/dev/null &
-P=$!; ( sleep 600; kill -9 $P 2>/dev/null ) & W=$!
+  const isCodex = m.kind === "codex";
+  const cli = isCodex
+    ? `codex exec -s read-only --json "$(cat "$F")" > "$O" 2>/dev/null`
+    : `opencode run -m ${m.modelId} "$(cat "$F")" --format json > "$O" 2>/dev/null`;
+  const extract = isCodex
+    ? `grep '"type":"item.completed"' "$O" | tail -1`
+    : `grep '"type":"text"' "$O" | tail -1`;
+  const note = isCodex
+    ? "the agent_message .item.text field (a JSON object)"
+    : "the last text part's .part.text field (a JSON object; strip any markdown fence)";
+  const timeout = isCodex ? 600 : 900;
+  const bash = `F=$(mktemp "\${TMPDIR:-/tmp}/council-${m.member}.XXXXXX")
+cat > "$F" <<'COUNCIL_PROMPT_EOF'
+${councilExtPrompt}
+COUNCIL_PROMPT_EOF
+O=$(mktemp)
+${cli} &
+P=$!; ( sleep ${timeout}; kill -9 $P 2>/dev/null ) & W=$!
 wait $P 2>/dev/null; kill -9 $W 2>/dev/null
-# Codex final answer = last item.completed agent_message .item.text :
-grep '"type":"item.completed"' "$O" | tail -1`,
-      note: "Parse the agent_message .item.text (a JSON object).",
-    };
-  }
-  return {
-    file,
-    runAndExtract: `O=$(mktemp)
-opencode run -m ${m.modelId} "$(cat '${file}')" --format json > "$O" 2>/dev/null &
-P=$!; ( sleep 600; kill -9 $P 2>/dev/null ) & W=$!
-wait $P 2>/dev/null; kill -9 $W 2>/dev/null
-# OpenCode final answer = the last text part's .part.text :
-grep '"type":"text"' "$O" | tail -1`,
-    note: "Parse the .part.text field (a JSON object; strip any markdown fence).",
-  };
+${extract}`;
+  return { bash, note };
 };
 
 const councilRaw = await parallel(
@@ -831,23 +831,18 @@ const councilRaw = await parallel(
 Run it over our candidate backlog and return ITS verdict — do NOT substitute your
 own judgment, do NOT review the code yourself.
 
-Steps:
-1. Use the Write tool to save the EXTERNAL PROMPT below — everything between the
-   markers <<<PROMPT_BEGIN>>> and <<<PROMPT_END>>>, exclusive, VERBATIM — to this
-   exact path:
-     ${b.file}
-2. Run the external model READ-ONLY with a mandatory watchdog (it can hang) using
-   Bash, exactly:
-${b.runAndExtract}
-3. ${b.note} It will contain {"falsePositives":[...],"missed":[...],"notes":""}.
-4. Return that parsed object as your structured output, adding member:"${m.member}"
-   and available:true. If the output is empty / timed out / unparseable, return
-   member:"${m.member}", available:false, falsePositives:[], missed:[], and a
-   notes string explaining what went wrong.
+Run this EXACT Bash command as a SINGLE invocation. It mktemps a prompt file,
+heredocs the review prompt into it, runs the model read-only under a watchdog, and
+prints the model's final answer line:
 
-<<<PROMPT_BEGIN>>>
-${councilExtPrompt}
-<<<PROMPT_END>>>`,
+${b.bash}
+
+The printed line is ${b.note}. It contains
+{"falsePositives":[...],"missed":[...],"notes":""}.
+Return that parsed object as your structured output, adding member:"${m.member}" and
+available:true. If the line is empty / the model timed out / the JSON is
+unparseable, return member:"${m.member}", available:false, falsePositives:[],
+missed:[], and a notes string explaining what went wrong.`,
       {
         label: `council:${m.member}`,
         phase: "Council",
