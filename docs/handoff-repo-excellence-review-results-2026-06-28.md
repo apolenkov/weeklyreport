@@ -112,3 +112,27 @@
 - **Баги исправлены:** (1) парсинг `args` (приходил строкой) — флаги `unitLimit/dimLimit` теперь работают для дешёвого dry-run; (2) убран хардкод scratch-пути прошлой сессии — обёртки совета теперь `mktemp` + heredoc (переиспользуемо в любой сессии); (3) watchdog OpenCode поднят до 900с + промпт совета тайм-боксит исследование, чтобы Qwen/GLM не упирались в таймаут.
 - **Known:** 1 verify-агент упал на StructuredOutput-cap (1 находка из 169 без вердикта). Фикс таймаута Qwen/GLM не проверен живьём — подтвердится на следующем council-прогоне.
 - Полный прогон: ~239 агентов, ~7.4M токенов, ~57 мин (resume из кэша после session-лимита).
+
+## Phase-2 (Wave C/D Codex review) — запланировано на 02:52 MSK 2026-06-29
+
+Все 35 changes (A:10+B:8+C:13+D:4) закаркашены и проходят `openspec validate --strict`.
+Wave A+B уже Codex-ревьюнуты + гарденнуты + convergence. Осталось: Codex-ревью + применение для 17 Wave C/D.
+
+**Авто:** session-only cron `d75a7733` на 02:52 MSK (после сброса Codex 02:46). Сработает,
+только если Claude-сессия жива и простаивает. Гейт оставлен ВЫКЛЮЧЕННЫМ.
+
+**Ручной запуск Phase-2 (если cron не сработал) — из этого репо:**
+
+```text
+# 1) Codex-ревью 17 Wave C/D (codex должен быть доступен):
+Workflow({ scriptPath: 'docs/review-pipeline/codex-review-wave-cd.js.txt' })
+# (если ругается на расширение — скопируй .txt -> /tmp/x.js и запусти оттуда)
+# 2) Сохрани reviews -> docs/repo-excellence-review-2026-06-28.wave-cd.codex-review.json
+# 3) Применение валидных правок (сверка как с кандидатами):
+Workflow({ scriptPath: 'docs/review-pipeline/apply-codex-revisions-wave-cd.js.txt' })
+# 4) openspec validate --strict по всем 35; commit openspec/changes/ + json в main.
+```
+
+Скрипты-конвейера: `docs/review-pipeline/*.txt` (переименуй в `.js` для запуска).
+Принципы применения: находки Codex — КАНДИДАТЫ, сверять с кодом (вкл. сгенерированные
+Prisma-типы), спорные отклонять с причиной; продуктовый код НЕ трогать; tasks не закрывать.
