@@ -58,11 +58,13 @@ the "reuse the canonical helper" goal.
   exists -> assert `recipientEmail` is one of those in-scope draft authors ->
   then call the service.
 - `listExecutions` before: `listExecutions(input.ruleId, ...)`.
-  after: load rule -> assert in-scope report -> then list.
+  after: load rule -> assert in-scope report -> list -> then drop rows whose
+  `recipientEmail` is out of scope (see "Recipient-level filter" below).
 - `dispatchPending` before: `findMany({ reportId, status: "draft", leadId? })`.
-  after: spread `groupScopeFilter(session, "reportSection")` into that
-  `where`; when `leadId` is supplied and resolves to zero in-scope rows,
-  reject FORBIDDEN instead of returning a silent `no-matching-section`.
+  after: for the bulk path (no `leadId`) spread `groupScopeFilter(session,
+"reportSection")` into that `where`; when `leadId` is supplied, check the
+  lead's group scope separately from draft status (see "Lead scope vs draft
+  status" below).
 
 ### Admin stays god-mode for free
 
@@ -76,6 +78,43 @@ For non-admin out-of-scope `ruleId` / `reportId` / `leadId`, throw a tRPC
 `FORBIDDEN` (matching the `dispatchPending` `report-not-active` precedent),
 not a silent empty result, so the boundary behaves like the other scope
 guards and the regression test can assert a 403-equivalent.
+
+### Recipient-level filter on `listExecutions` (Codex P1-4 High)
+
+The rule-level "report has at least one in-scope section author" check is
+necessary but NOT sufficient for `listExecutions`. A `ReminderRule` is
+rule-wide (`ReminderExecution.ruleId`, no per-recipient scope column), and a
+shared report can carry both group-A and group-B draft-section authors. The
+scheduler fans out one execution per draft author regardless of group, so the
+rule's execution set mixes recipients. Each row exposes `recipientEmail` and
+`dedupeKey` (the dedupe key embeds the recipient email), so the rule-passes
+check alone would let a group-A head read group-B lead identities.
+
+Decision: after the rule-level check, resolve the set of in-scope recipient
+emails — section authors within `groupScopeFilter(session, "reportSection")`
+on the rule's report, plus the caller's own email for escalation reminders
+addressed to the head themself — and drop every returned execution whose
+`recipientEmail` is not in that set. The filter runs in the router/service
+after the repository slice; admin bypasses it. This keeps the legitimate
+shared-report use case (a head reviewing their own group's executions) while
+closing the cross-group leak. Alternative considered: reject non-admin
+listing outright for any mixed-scope report. Rejected — it breaks the
+legitimate case and is coarser than necessary.
+
+### Lead scope vs draft status on `dispatchPending` (Codex P1-4 Medium)
+
+`no-matching-section` is a valid success state, not an authorization failure:
+an in-scope lead can have an already-submitted section or no section yet, and
+`remind-lead-button.tsx` renders this as the `no-section` confirmation. So
+"`leadId` resolves to zero draft rows" must NOT be treated as out-of-scope.
+
+Decision: for the single-lead path, evaluate group scope on the lead's
+section author independently of draft status. Resolve the lead's section on
+that report (any status) under `groupScopeFilter(session, "reportSection")`;
+throw FORBIDDEN only when the lead is out of scope. An in-scope lead with no
+draft section still flows to the existing `no-matching-section` result. The
+bulk path (no `leadId`) keeps the simple `groupScopeFilter` spread into the
+`draftSections` query — there is no per-lead success state to preserve there.
 
 ## Risks / Trade-offs
 

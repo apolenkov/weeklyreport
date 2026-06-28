@@ -31,13 +31,21 @@ referenced entity").
 
 ### Requirement: Admin mutations target only the referenced entity
 
-An admin add or edit of a single user, project, reporting group, or reminder rule SHALL persist only that entity by id and SHALL NOT delete or archive any row that the admin did not reference.
+An admin add or edit of a single user, project, reporting group, reminder rule, or report period SHALL persist only that entity by id and SHALL NOT delete, archive, or overwrite any row that the admin did not reference.
 
 The whole-snapshot destructive reconcile — which deleted users/reminder rules
 and archived projects merely for being absent from the in-memory snapshot — is
-removed. This closes the data-loss window where a row created between the
-caller's `getSnapshot` read and the `saveSnapshot` write (for example a SAML
-just-in-time user) was reconciled away.
+removed. Equally, no single-entity edit re-writes unrelated collections from the
+caller's stale `getSnapshot` read: each add/edit goes through a targeted upsert
+by id rather than `getSnapshot → saveSnapshot`. This closes the data-loss window
+where a row created between the caller's `getSnapshot` read and the write (for
+example a SAML just-in-time user) was reconciled away or clobbered with a stale
+copy.
+
+`PeriodAdminService.upsertPeriod` is covered by this requirement: it formerly
+read the whole snapshot and re-saved it, so a period edit could overwrite stale
+copies of groups, users, projects, and reminder rules; it now upserts only the
+named period.
 
 #### Scenario: Concurrent insert survives an unrelated edit
 
@@ -54,6 +62,16 @@ just-in-time user) was reconciled away.
 - **WHEN** an admin upserts a single project
 - **THEN** only that project row is created or updated
 - **AND** no other project is archived as a side effect.
+
+#### Scenario: Editing one period does not overwrite unrelated collections
+
+- **GIVEN** an admin edits one report period
+- **AND** a user, project, or reminder rule was created (or edited by another
+  actor) after the admin's snapshot was read but before the write commits
+- **WHEN** the admin's period edit is persisted
+- **THEN** only the named period row is created or updated
+- **AND** the concurrently-created or concurrently-edited rows are neither
+  deleted nor reverted to the admin's stale copy.
 
 ### Requirement: Entity removal is explicit, not reconcile-driven
 
@@ -126,10 +144,11 @@ is `status='published'` while `periodState='open'` and
 
 ### Requirement: Reminder-policy materialization runs after commit
 
-After the snapshot transaction commits, the write path SHALL run
-`PolicyApplicatorService.applyToPeriod` for each newly-created period, OUTSIDE
-the transaction, so that a failure in the applicator cannot roll back the
-committed periods.
+After a period is newly created, the write path SHALL run
+`PolicyApplicatorService.applyToPeriod` for it OUTSIDE the committing write, so
+that a failure in the applicator cannot roll back the committed period. This
+holds whether the period is created by the whole-snapshot `saveSnapshot` write
+or by the targeted `upsertPeriod` mutation.
 
 #### Scenario: Applicator failure does not undo committed periods
 
@@ -138,3 +157,44 @@ committed periods.
 - **WHEN** the write returns
 - **THEN** the newly-created periods remain committed
 - **AND** only the post-commit applicator step is reported as failed.
+
+#### Scenario: Targeted period create still materializes its policies
+
+- **GIVEN** an admin creates a new period through the targeted `upsertPeriod`
+  mutation
+- **WHEN** the period write commits
+- **THEN** `applyToPeriod` runs for the new period AFTER the commit
+- **AND** an applicator failure leaves the newly-created period committed.
+
+### Requirement: Whole-snapshot restore is additive-only
+
+The retained `AdminRepository.saveSnapshot` whole-snapshot write SHALL be additive-only: it upserts every supplied row and SHALL NOT delete or archive any existing row merely for being absent from the supplied snapshot.
+
+Removals never occur through snapshot absence; they are performed only by the
+targeted removal operations (`removeUser`, `removeProject`,
+`removeReminderRule`). This is the decided removal contract for `saveSnapshot` —
+not an implementation choice deferred to later. A future import path that
+genuinely needs whole-snapshot removals would carry an explicit deletion id-set;
+absence alone is never a deletion signal.
+
+#### Scenario: Absent user is not deleted by a restore
+
+- **GIVEN** a user exists in the database
+- **AND** a `saveSnapshot` payload that does not include that user
+- **WHEN** the snapshot write commits
+- **THEN** the absent user is still present afterwards
+- **AND** is neither deleted nor archived.
+
+#### Scenario: Absent project is not archived by a restore
+
+- **GIVEN** an active project exists in the database
+- **AND** a `saveSnapshot` payload that does not include that project
+- **WHEN** the snapshot write commits
+- **THEN** the absent project remains active afterwards.
+
+#### Scenario: Absent reminder rule is not deleted by a restore
+
+- **GIVEN** a reminder rule exists in the database
+- **AND** a `saveSnapshot` payload that does not include that rule
+- **WHEN** the snapshot write commits
+- **THEN** the absent reminder rule still exists afterwards.

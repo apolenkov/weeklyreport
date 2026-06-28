@@ -65,6 +65,23 @@ The `period.reopen` procedure MUST thread `ctx.session` into the service so the
 role and scope are available for this decision; today the procedure calls the
 service without the session.
 
+The latest-published resolver used for this decision MUST exclude archived rows
+(`archived = false`). It therefore diverges from the shared
+`getLatestPublishedId` in
+`apps/api/src/modules/weekly-report/weekly-report.prisma-repository.ts`, which
+filters only `periodStatus = 'published'` and would otherwise resolve the target
+to an archived id when the newest published row is archived — wrongly blocking a
+head from reopening the newest non-archived published period.
+
+#### Scenario: Latest published period is archived
+
+- **GIVEN** a head session, the newest `published` report is archived, and an
+  older `published` report `R` is non-archived
+- **WHEN** the head calls `period.reopen` with `reportId = R`
+- **THEN** the server resolves the latest published non-archived period as `R`
+  and reopens it
+- **AND** the archived rejection does not block this reopen
+
 #### Scenario: Head reopens the latest published period
 
 - **GIVEN** a head session and the server resolves report `R` as the latest

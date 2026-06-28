@@ -10,17 +10,19 @@
 - [ ] 2.2 In `fillFrom`: replace bare `throw new Error("Can only fill your own section.")` with `throw new LeadFormAccessError("Can only fill your own section.")`
 - [ ] 2.3 In `fillFrom`: replace bare `throw new Error("Cannot fill a submitted section.")` with `throw new LeadFormConstraintError("Cannot fill a submitted section.")`
 - [ ] 2.4 In `fillFrom`: replace bare `throw new Error("Cannot fill a section of a published report.")` with `throw new LeadFormConstraintError("Cannot fill a section of a published report.")`
-- [ ] 2.5 In `revokeSubmission`: replace bare `throw new Error(\`Section … not found.\`)`with`throw new LeadFormDomainError(\`Section … not found.\`)`
-- [ ] 2.6 In `revokeSubmission`: replace bare `throw new Error("Only submitted sections can be revoked.")` with `throw new LeadFormConstraintError("Only submitted sections can be revoked.")`
+- [ ] 2.5 In `fillFrom`: replace bare `throw new Error(\`Source section … not found.\`)`with`throw new LeadFormDomainError(\`Source section … not found.\`)` (source-section missing → NOT_FOUND)
+- [ ] 2.6 In `fillFrom`: replace bare `throw new Error("Can only fill from your own section.")` with `throw new LeadFormAccessError("Can only fill from your own section.")` (forged cross-author source → FORBIDDEN; security-relevant)
+- [ ] 2.7 In `revokeSubmission`: replace bare `throw new Error(\`Section … not found.\`)`with`throw new LeadFormDomainError(\`Section … not found.\`)`
+- [ ] 2.8 In `revokeSubmission`: replace bare `throw new Error("Only submitted sections can be revoked.")` with `throw new LeadFormConstraintError("Only submitted sections can be revoked.")`
 
 ## 3. Throw-site fix — admin-period.queries.ts
 
 - [ ] 3.1 In `unarchivePeriod`: replace bare `throw new Error(\`Report … not found.\`)`with`throw new AdminPeriodNotFoundError(\`Report … not found.\`)`
-- [ ] 3.2 Import `AdminPeriodNotFoundError` from `../admin-shared.js` at the top of `admin-period.queries.ts`
+- [ ] 3.2 Import `AdminPeriodNotFoundError` from `./admin-shared.js` at the top of `admin-period.queries.ts` (the file lives in `apps/api/src/modules/admin/`, so the sibling `admin-shared.ts` is `./`, not `../`)
 
 ## 4. Throw-site fix — admin-group-product.queries.ts
 
-- [ ] 4.1 Import `AdminGroupProductConflictError` from `../admin-shared.js` at the top of `admin-group-product.queries.ts`
+- [ ] 4.1 Import `AdminGroupProductConflictError` from `./admin-shared.js` at the top of `admin-group-product.queries.ts` (sibling file in the same `admin/` directory, so `./`, not `../`)
 - [ ] 4.2 In `attachProductToGroup`: replace bare `throw new Error(\`Product is already attached to …\`)`with`throw new AdminGroupProductConflictError(\`Product is already attached to …\`)`
 
 ## 5. Throw-site fix — publication.service.ts
@@ -42,7 +44,10 @@
 - [ ] 7.2 In `trpc.error-mapper.test.ts`: add a test case asserting `mapDomainError(new AdminGroupProductConflictError("…"))` returns a `TRPCError` with `code: "CONFLICT"`
 - [ ] 7.3 In `trpc.error-mapper.test.ts`: add a test case asserting `mapDomainError(new PublicationNotFoundError("…"))` returns a `TRPCError` with `code: "NOT_FOUND"`
 - [ ] 7.4 In `lead-form.contract.test.ts` (or a new `lead-form.service.test.ts`): add a test that asserts `revokeSubmission` of a non-submitted section rejects with `LeadFormConstraintError`
-- [ ] 7.5 In `lead-form.contract.test.ts` (or the same file): add a test that asserts `fillFrom` with a non-owner caller rejects with `LeadFormAccessError`
+- [ ] 7.5 In `lead-form.contract.test.ts` (or the same file): add a test that asserts `fillFrom` with a non-owner caller (target section owned by another user) rejects with `LeadFormAccessError`
+- [ ] 7.6 In `lead-form.contract.test.ts` (or the same file): add a test that asserts `fillFrom` with a forged cross-author `sourceSectionId` (source owned by another user) rejects with `LeadFormAccessError`
+- [ ] 7.7 In `trpc.error-mapper.test.ts`: add a test case asserting `mapDomainError(new LeadFormAccessError("…"))` returns a `TRPCError` with `code: "FORBIDDEN"` (this change makes `LeadFormAccessError` load-bearing for `fillFrom`'s target/source owner guards, and the mapper test currently has no direct case for it)
+- [ ] 7.8 In `trpc.error-mapper.test.ts`: add a test case asserting `mapDomainError(new AdminPeriodNotFoundError("…"))` returns a `TRPCError` with `code: "NOT_FOUND"` (this change routes `unarchivePeriod` through it, and the mapper test currently has no direct case for it)
 
 ## 8. Verification
 

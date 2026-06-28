@@ -48,8 +48,10 @@ catch (`report-sections/lead-form.prisma-repository.ts::createReopenRequest`
   application best-effort via `findOverlappingPeriod`.
 - A `btree_gist` exclusion constraint (the only DB tool that backstops
   true range overlap). Considered and deferred — see Decisions.
-- Any change to the period state machine, the transition writer, or the
-  `period-dual-state` invariant.
+- Any change to the period state machine's transition LOGIC, the field set
+  `buildTransition` emits, or the `period-dual-state` invariant. This change
+  does wrap the writers that move a row into `periodState = 'open'` with a
+  `P2002` catch (see D5), but it does not change what they write on success.
 
 ## Decisions
 
@@ -118,6 +120,37 @@ recovery empty. Re-reading by boundary + `periodState = 'open'` resolves the
 real blocker (draft or reopened) and makes concurrent first-logins
 converge instead of 500.
 
+### D5 — The index constrains UPDATEs into 'open', not just inserts, so every open-writer must catch P2002
+
+A partial unique index fires on any row that ends up matching its predicate,
+whether it arrived there via `INSERT` or via `UPDATE`. So the index does not
+only guard the two insert paths in D3/D4 — it also rejects any UPDATE that
+moves a second row into `(periodStart, periodEnd, periodState='open')`. The
+writers that can do this, and the prescribed handling, are:
+
+- `PeriodCreatorScheduler.report.create` (insert) — the proposal names the
+  scheduler race (two API instances, scheduler vs manual/login) explicitly,
+  yet D3/D4 only cover admin create/update and login. On `P2002` the cron
+  tick MUST treat the period as already-created (re-read the open row on the
+  boundary, or skip the tick) and return a non-error outcome; an uncaught
+  `P2002` would crash the scheduled job. Unrelated errors re-throw.
+- `PeriodCreatorScheduler` `scheduled → open` flip (`updateMany`, ~line 83) —
+  flipping a scheduled row to `open` while another open row already holds the
+  same boundary (or two scheduled rows sharing a boundary flip together)
+  raises `P2002`. Handle the same way as the scheduler create: treat as a
+  benign already-open collision, do not crash the tick.
+- `reopenPeriod` (`period.prisma-repository.ts`) and `unarchivePeriod`
+  (`admin-period.queries.ts`) — both can set `periodState = 'open'` on an
+  existing row. If another open row already holds that boundary the update
+  raises `P2002`. These are admin-triggered, so translate to the domain
+  overlap error (→ `BAD_REQUEST`) like D3, never a 500.
+
+The narrow `P2002`-on-`Report_one_open_per_boundary` assertion from D3
+applies to all of these — an unrelated unique violation re-throws. The
+`publication` "open" write (`publication.prisma-repository.ts` ~line 54) is
+NOT in scope: it updates an already-open draft row to `open`, which is a
+no-op against the predicate and cannot collide with a sibling.
+
 ## Before / After data flow
 
 Admin manual create (collision case):
@@ -137,11 +170,29 @@ First login (collision case):
   boundary + `periodState='open'` (resolves a draft OR a reopened-published
   blocker) → both logins resolve the same `reportId`.
 
+Auto-period scheduler tick (collision case):
+
+- Before: mostRecent check (miss, lost race vs another instance / manual) →
+  `report.create` → duplicate open period; or (post-index, no catch) → the
+  cron tick throws and the job fails.
+- After: `report.create` → `P2002` caught → tick treats the period as
+  already-created (re-read or skip) and returns a benign outcome; the
+  `scheduled → open` flip catches the same `P2002` and degrades gracefully.
+
+Admin reopen / unarchive into a contested boundary (collision case):
+
+- Before (post-index, no catch): the lifecycle update raises `P2002` and the
+  admin sees a 500.
+- After: the update's `P2002` is translated to `AdminPeriodOverlapError`
+  (→ `BAD_REQUEST`), surfacing the friendly overlap message instead.
+
 ## Invariants touched
 
 - `period-dual-state` — preserved, untouched. The index keys only on
-  `periodStart`, `periodEnd`, `periodState`; no writer's field set changes
-  and the transition writer is not involved.
+  `periodStart`, `periodEnd`, `periodState`; no writer's field set changes.
+  The transition writers (`reopen` / `unarchive` / `scheduled → open`) are
+  wrapped with a `P2002` catch (D5) but their emitted field set is unchanged,
+  so the dual-state atomic-write invariant still holds on the success path.
 - `destructive-db guard` — `migrate reset` runs under the standing MVP
   authorization; `_test`/`_dev` suffix rules still apply.
 - `role-coverage gate`, `deferred-feature pattern` — not touched.
@@ -165,8 +216,9 @@ First login (collision case):
    schema comment to state the truth + the best-effort caveat.
 2. `prisma migrate reset` on `_dev`, then on `_test` (independent), with
    `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION` set; `prisma generate`.
-3. Add the `P2002` catch in the admin create/update repository path and in
-   `ensureWeeklyReport`.
+3. Add the `P2002` catch in the admin create/update repository path, in
+   `ensureWeeklyReport`, in the `PeriodCreatorScheduler` create and
+   `scheduled → open` flip, and in `reopenPeriod` / `unarchivePeriod` (D5).
 4. Add the real-DB index test and the translation tests; run the full
    gate.
 

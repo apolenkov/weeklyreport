@@ -69,21 +69,35 @@ Alternative considered: keep `update` and catch the "already published" via a
 `SELECT … FOR UPDATE` row lock. Rejected — heavier, and `updateMany`'s atomic
 predicate is the idiomatic single-statement compare-and-set.
 
-### 2. Publication path returns a transitioned flag
+### 2. Publication path keys on `periodStatus` and returns the prior status
 
-`PublicationService.publishReport` keeps its fast-path
-`status === "published"` rejection, but the underlying write becomes
-conditional (the repository save applies only to a not-published row and
-reports whether it transitioned). The service rebuilds the snapshot, enqueues
-ingestion, and increments counters only when the write transitioned the row;
-a zero-transition result returns the already-published assembled report (or a
-domain "already published" error), never a second snapshot rebuild.
+`PublicationService.publishReport` reads the assembled report through
+`assembledReportSchema`, which today exposes only the legacy `status`. A reopened
+period carries legacy `status = "published"` with `periodStatus = "reopened"`, so
+the current `status === "published"` fast-path rejection would refuse to
+republish a reopened period — the exact period the DB-resolved target
+(decision 4) points at. The fast-path and the conditional write therefore MUST
+key on `periodStatus`, not legacy `status`:
+
+- The publication repository result (or a dedicated guarded transition method)
+  exposes the row's `periodStatus`; the assembled-report read model carries only
+  legacy `status` today, so `periodStatus` must be surfaced alongside it.
+- The conditional write applies only to a `periodStatus != "published"` row and
+  reports both whether it transitioned and the row's prior `periodStatus`.
+- The fast-path rejection tests `periodStatus === "published"`, so a reopened
+  period stays publishable while a truly-published one is rejected.
+- The service rebuilds the snapshot, enqueues ingestion, and increments counters
+  only when the write transitioned the row; a zero-transition result returns the
+  already-published assembled report (or a domain "already published" error),
+  never a second snapshot rebuild.
 
 ### 3. Counter emission keyed on the transition count
 
 Both services move the two `.inc()` calls behind `if (count === 1)`. This is
 the `manual-publish-telemetry` MODIFIED requirement: redundant publishes emit
-nothing.
+nothing. The transition counter's `from` label is the row's prior `periodStatus`
+(`"open"` or `"reopened"`), carried out of the guarded write — for the
+publication path this replaces the hardcoded `from: "open"` (see decision 2).
 
 ### 4. Database-resolved publish target
 

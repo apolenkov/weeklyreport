@@ -48,15 +48,26 @@ admin session carries no scope filter and retains god-mode access.
 ### Requirement: Reminder Execution Listing Is Scoped to the Caller's Group
 
 The `reminders.listExecutions` tRPC procedure SHALL reject a `ruleId`
-whose report is outside the non-admin caller's authorized group before
-returning any execution rows.
+whose report is outside the non-admin caller's authorized group, AND SHALL
+filter the returned execution rows to recipients inside the caller's scope,
+before returning any execution rows.
 
 The procedure (`apps/api/src/infrastructure/trpc/trpc.router.ts`, the
 `reminders.listExecutions` query) MUST thread `ctx.session` into its
 handler. For a non-admin head it MUST load the `ReminderRule` named by
 `ruleId`, resolve its `reportId`, and confirm that report has at least one
 `ReportSection` author inside `groupScopeFilter(session, "reportSection")`
-before listing executions. An admin session bypasses the filter.
+before listing executions. Because a `ReminderRule` is rule-wide and a
+shared report can carry both in-scope and out-of-scope section authors, the
+rule-level check alone is insufficient: the report-passes check would let a
+group-A head read group-B execution rows, whose `recipientEmail` /
+`dedupeKey` expose out-of-group lead identities. The procedure MUST
+therefore additionally drop every returned execution whose `recipientEmail`
+is not an in-scope recipient — that is, not the email of a `ReportSection`
+author within `groupScopeFilter(session, "reportSection")` on that report
+and not the caller's own email (escalation reminders addressed to the head
+themself). An admin session bypasses both the rule-level check and the
+recipient filter.
 
 #### Scenario: Head lists executions for an in-scope rule
 
@@ -73,6 +84,15 @@ before listing executions. An admin session bypasses the filter.
 - **THEN** the procedure rejects with a FORBIDDEN error
 - **AND** no execution rows from group B are returned
 
+#### Scenario: Head lists executions for a mixed-scope shared report
+
+- **GIVEN** a head authenticated for group A
+- **AND** a `ReminderRule` whose report has both group-A and group-B draft-section authors
+- **AND** execution rows exist for both a group-A recipient and a group-B recipient
+- **WHEN** the head calls `reminders.listExecutions` with that `ruleId`
+- **THEN** the procedure returns only the execution rows whose recipient is in group A
+- **AND** no group-B recipient email or dedupe key is present in the response
+
 #### Scenario: Admin lists executions for any rule
 
 - **GIVEN** an admin session
@@ -88,12 +108,18 @@ active-report guard.
 
 The procedure (`apps/api/src/infrastructure/trpc/trpc.router.ts`, the
 `reminders.dispatchPending` mutation) MUST keep the existing
-`ctx.session.activeReportId === input.reportId` guard. For a non-admin head
-it MUST additionally spread `groupScopeFilter(session, "reportSection")`
-into the `draftSections` `findMany` so a shared or cross-group active report
-cannot fan a reminder out to out-of-group leads. When a `leadId` is
-supplied it MUST reject a `leadId` whose author is not in scope rather than
-silently dispatching zero. An admin session applies no scope filter.
+`ctx.session.activeReportId === input.reportId` guard. For the bulk path (no
+`leadId`) and a non-admin head it MUST spread `groupScopeFilter(session,
+"reportSection")` into the `draftSections` `findMany` so a shared or
+cross-group active report cannot fan a reminder out to out-of-group leads.
+When a `leadId` is supplied, the group-scope check on the lead MUST be
+evaluated separately from the lead's draft status, because the existing
+`no-matching-section` result is a valid success state for an in-scope lead
+with no draft section (already submitted, or no section yet). The procedure
+MUST reject with FORBIDDEN only when the supplied `leadId`'s author is out of
+the caller's scope on that report; an in-scope `leadId` with zero draft
+sections MUST still return the `no-matching-section` result, not FORBIDDEN.
+An admin session applies no scope filter.
 
 #### Scenario: Head dispatches to all in-scope pending authors
 
@@ -109,6 +135,14 @@ silently dispatching zero. An admin session applies no scope filter.
 - **WHEN** the head calls `reminders.dispatchPending` with a `leadId` whose author is in group B
 - **THEN** the procedure rejects with a FORBIDDEN error
 - **AND** no reminder is dispatched
+
+#### Scenario: Head dispatches to an in-scope lead with no draft section
+
+- **GIVEN** a head authenticated for group A with group A as the active report
+- **AND** a group-A lead whose section is already submitted or absent
+- **WHEN** the head calls `reminders.dispatchPending` with that in-scope `leadId`
+- **THEN** the procedure does not reject with FORBIDDEN
+- **AND** it returns the `no-matching-section` result with zero dispatched
 
 #### Scenario: Admin dispatches across groups
 

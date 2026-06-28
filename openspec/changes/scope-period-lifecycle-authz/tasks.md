@@ -1,24 +1,26 @@
 ## 1. API: repository port + active-target resolution
 
-- [ ] 1.1 Extend the `PeriodRepository` interface in `apps/api/src/modules/period/period.service.ts` with a current-active-editable resolver and a latest-published resolver (mirroring `getCurrentEditableId` / `getLatestPublishedId` semantics from `weekly-report.prisma-repository.ts`); include `archived` in the `getReportById` projection.
-- [ ] 1.2 Implement the two resolvers and the `archived` field in `apps/api/src/modules/period/period.prisma-repository.ts`, reusing the exact non-archived / `periodStart <= now` / `periodStatus` query shapes so the head's active target matches the weekly-report page resolver.
+- [ ] 1.1 Extend the `PeriodRepository` interface in `apps/api/src/modules/period/period.service.ts` with a current-active-editable resolver and a latest-published-**non-archived** resolver; include `archived` in the `getReportById` projection.
+- [ ] 1.2 Implement the two resolvers and the `archived` field in `apps/api/src/modules/period/period.prisma-repository.ts`. The editable resolver mirrors `getCurrentEditableId` verbatim (it already filters `archived: false`). The latest-published resolver MUST add `archived: false` and so **diverges** from the shared `getLatestPublishedId` (which filters only `periodStatus = 'published'`); do not reuse `getLatestPublishedId` and do not mutate it (it feeds the viewer default-report fallback). Otherwise keep the identical `orderBy periodStart desc, id desc` shape so the head's active target matches the weekly-report page resolver.
 
 ## 2. API: service authorization + archived rejection
 
-- [ ] 2.1 Add a typed domain error for out-of-scope/archived denials (a `PeriodScopeError`, or extend the existing `PeriodAccessError` family) in `apps/api/src/modules/period/period.service.ts`.
-- [ ] 2.2 In `publishPeriod`, reject archived reports for all roles, and for a non-admin `head` require `reportId` to equal the resolved active editable id (reject mismatch with the typed error); admin skips the equality check. No silent retarget.
-- [ ] 2.3 In `reopenPeriod`, accept `session`, reject archived reports for all roles, and for a non-admin `head` require `reportId` to equal the resolved latest-published id; admin skips the equality check. Keep the existing UFB-052 reopen-policy gates unchanged.
+- [ ] 2.1 Add **two distinct** typed domain errors in `apps/api/src/modules/period/period.service.ts`: `PeriodScopeError` (out-of-scope / archived denial → `FORBIDDEN`) and `PeriodNotFoundError` (missing report → `NOT_FOUND`). Do **not** overload the existing `PeriodAccessError`, and do not add a mapper branch for it — it keeps carrying the UFB-052 state/policy errors unchanged (mapping it would reclassify those, a non-goal).
+- [ ] 2.2 Replace the bare `throw new Error("Report … not found.")` in **both** `publishPeriod` (~`period.service.ts:101`) and `reopenPeriod` (~`:146`) with `throw new PeriodNotFoundError(...)` so a missing report becomes `NOT_FOUND`, not `INTERNAL_SERVER_ERROR`.
+- [ ] 2.3 In `publishPeriod`, reject archived reports for all roles, and for a non-admin `head` require `reportId` to equal the resolved active editable id (reject mismatch with `PeriodScopeError`); admin skips the equality check. No silent retarget.
+- [ ] 2.4 In `reopenPeriod`, accept `session`, reject archived reports for all roles, and for a non-admin `head` require `reportId` to equal the resolved latest-published non-archived id (reject mismatch with `PeriodScopeError`); admin skips the equality check. Keep the existing UFB-052 reopen-policy gates unchanged.
 
 ## 3. API: tRPC wiring + error mapping
 
 - [ ] 3.1 In `apps/api/src/infrastructure/trpc/trpc.router.ts`, thread `ctx.session` into the `period.reopen` mutation call (publish already passes it); both mutations stay on `headProcedure`.
-- [ ] 3.2 Add the `FORBIDDEN` (out-of-scope / archived) and `NOT_FOUND` (missing report) branches for the period domain error in `apps/api/src/infrastructure/trpc/trpc.error-mapper.ts`, following the `requestReopen` convention; never leak internal detail.
+- [ ] 3.2 Add two `instanceof` branches in `apps/api/src/infrastructure/trpc/trpc.error-mapper.ts`: `PeriodScopeError → FORBIDDEN` and `PeriodNotFoundError → NOT_FOUND`, following the `requestReopen` convention; never leak internal detail. Map **only** these two new classes — do not add a `PeriodAccessError` branch.
 
 ## 4. Tests
 
 - [ ] 4.1 Service unit tests: head publish/reopen on the active target succeeds; head on a stale/foreign id is rejected; admin on an arbitrary non-archived id succeeds; archived target is rejected for both head and admin.
 - [ ] 4.2 Service unit test: head publish/reopen when no active target exists is rejected (no write, no telemetry increment).
 - [ ] 4.3 Error-mapper / router test: out-of-scope denial maps to `FORBIDDEN`, missing report maps to `NOT_FOUND`, neither surfaces as `INTERNAL_SERVER_ERROR`.
+- [ ] 4.4 Service unit test (the archived-latest reopen case): when the newest `published` row is archived and an older `published` row is non-archived, the latest-published resolver returns the non-archived id, and a head reopening that non-archived id succeeds (proves the resolver diverges from `getLatestPublishedId` and is not blocked by the archived guard).
 
 ## 5. Verification
 

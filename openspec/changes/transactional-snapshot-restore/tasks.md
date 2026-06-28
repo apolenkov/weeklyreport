@@ -3,11 +3,11 @@
 - [ ] 1.1 Extend the `AdminRepository` interface in `admin-shared.ts` with
       entity-level persistence methods: `upsertUser`, `removeUser`,
       `upsertProject`, `removeProject` (archive), `upsertReminderRule`,
-      `removeReminderRule` — each keyed by id and returning the canonical row or
-      `void`.
-- [ ] 1.2 Decide and document the whole-snapshot `saveSnapshot` removal
-      contract (additive-only vs. delete-within-supplied-set, per design Open
-      Questions) and reflect the chosen contract in the interface doc comment.
+      `removeReminderRule`, `upsertPeriod` — each keyed by id and returning the
+      canonical row or `void`.
+- [ ] 1.2 Document the decided additive-only `saveSnapshot` removal contract
+      (per design D2: never delete/archive a row for snapshot absence) in the
+      interface doc comment.
 
 ## 2. API write path — atomicity
 
@@ -34,10 +34,17 @@
 - [ ] 3.3 Implement targeted `upsertReminderRule` / `removeReminderRule`
       (upsert by id; delete by id). Do not delete rules merely for snapshot
       absence.
-- [ ] 3.4 Remove the whole-snapshot destructive reconcile branches
+- [ ] 3.4 Implement targeted `upsertPeriod` (upsert one period by id; preserve
+      the non-transition `resolveLifecycle` write). When the upsert CREATES a new
+      period, run `PolicyApplicatorService.applyToPeriod` for it AFTER the write
+      commits — mirroring the `newlyCreatedPeriods` post-commit step in
+      `saveSnapshot`; never inside the period write.
+- [ ] 3.5 Remove the whole-snapshot destructive reconcile branches
       (`removedUserIds`, `removedProjectIds`, `removedRuleIds`) from the per-phase
-      helpers; route removals only through the explicit methods.
-- [ ] 3.5 Wire the new methods through `admin.prisma-repository.ts` to the
+      helpers; route removals only through the explicit methods. Confirm the
+      retained `saveSnapshot` is additive-only (no row deleted/archived for
+      payload absence).
+- [ ] 3.6 Wire the new methods through `admin.prisma-repository.ts` to the
       write-queries module.
 
 ## 4. API caller services
@@ -48,14 +55,19 @@
       the targeted repository methods.
 - [ ] 4.3 Rewrite `ReminderAdminService.upsertReminderRule` /
       `removeReminderRule` to call the targeted repository methods.
-- [ ] 4.4 Confirm each service still returns the response shape its tRPC
+- [ ] 4.4 Rewrite `PeriodAdminService.upsertPeriod` to call the targeted
+      `upsertPeriod` repository method instead of `getSnapshot → saveSnapshot`,
+      so a single-period edit never re-writes stale copies of groups, users,
+      projects, or reminder rules.
+- [ ] 4.5 Confirm each service still returns the response shape its tRPC
       procedure expects (re-read the affected row, or return the updated snapshot
       if the procedure contract requires it).
 
 ## 5. Test repository + tests
 
-- [ ] 5.1 Add the new entity-level methods to the in-memory test repository so
-      contract tests exercise the same surface as the prisma repository.
+- [ ] 5.1 Add the new entity-level methods (including `upsertPeriod`) to the
+      in-memory test repository so contract tests exercise the same surface as the
+      prisma repository.
 - [ ] 5.2 Audit `admin.service.test.ts` for cases that assert the destructive
       reconcile (an absent row gets deleted/archived) and re-express them against
       the targeted mutations — do not weaken or delete coverage.
@@ -67,7 +79,13 @@
 - [ ] 5.5 Add tests for explicit removal (user delete honors the FK guard;
       project archive touches only the named row; rule delete touches only the
       named row).
-- [ ] 5.6 Update `admin.integration.test.ts` / `admin.contract.test.ts` for the
+- [ ] 5.6 Add a test proving `PeriodAdminService.upsertPeriod` touches only the
+      named period: a user/project/rule created after the period read survives
+      the period edit, and a new period still triggers the post-commit applicator.
+- [ ] 5.7 Add a test proving the retained `saveSnapshot` is additive-only: a
+      user, a project, and a reminder rule absent from the supplied snapshot are
+      NOT deleted or archived by the restore.
+- [ ] 5.8 Update `admin.integration.test.ts` / `admin.contract.test.ts` for the
       new repository contract.
 
 ## 6. Validation

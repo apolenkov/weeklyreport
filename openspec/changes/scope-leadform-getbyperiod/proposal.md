@@ -13,9 +13,15 @@ rejected cross-product disclosure. This read path leaks past that posture.
 ## What Changes
 
 - The cross-author branch of `getByPeriod` (a `lead` viewing another author's
-  section) MUST restrict the returned section's items, risks, decisions, and
-  per-stage statuses to products the two leads share — mirroring
-  `getCrossAuthorContent`'s `sharedIds` filter.
+  section) MUST restrict EVERY product-scoped collection of the returned section
+  — items, risks, decisions, per-stage statuses, the `projects` array (with its
+  `projectName`/`trafficLight`/`ownedStages`/`stageSet`), and `referencedProjects`
+  — to products the two leads share, mirroring `getCrossAuthorContent`'s
+  `sharedIds` filter. `referencedProjects` is recomputed from the filtered rows.
+- The cross-author authorization gate MUST use the SAME shared non-archived set
+  as the filter (not the archived-counting `hasSharedProduct`), and fall back to
+  the viewer's own section when that set is empty, so archived-only co-ownership
+  cannot expose the foreign section's status or metadata.
 - The lead's OWN section is unchanged (full section, no filter).
 - `head` and `admin` cross-author reads are unchanged (full section): their
   scope is group-level, not product co-ownership, and is enforced elsewhere.

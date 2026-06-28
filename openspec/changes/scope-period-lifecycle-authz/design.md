@@ -49,17 +49,41 @@ review.
 
 The weekly-report repository already defines the canonical resolvers:
 `getCurrentEditableId` (newest non-archived `open`/`reopened` with
-`periodStart <= now`) and `getLatestPublishedId` (newest `published`). Publish
-targets the editable id; reopen targets the latest-published id. Expose these to
-`PeriodService` through its repository port rather than duplicating the queries,
-so the head's "active period" matches what the head's own weekly-report page
-resolved.
+`periodStart <= now`) and `getLatestPublishedId` (newest `published`).
+
+**Publish** targets the editable id and reuses `getCurrentEditableId` verbatim —
+it already filters `archived: false`, so it satisfies the spec's "non-archived"
+requirement as-is.
+
+**Reopen** targets the latest published _non-archived_ period. Here we must
+**diverge** from the shared `getLatestPublishedId`: that method filters only
+`periodStatus = 'published'` and does **not** exclude archived rows
+(`weekly-report.prisma-repository.ts:104`). Reusing it verbatim would resolve the
+target to an archived id when the newest published row is archived; the
+archived-rejection guard (D-archived) would then reject every non-archived
+candidate, so a head could never reopen the latest non-archived published period
+— the exact bug Codex flagged. The lifecycle-authz reopen resolver therefore adds
+`archived: false` to the latest-published query (otherwise identical:
+`orderBy periodStart desc, id desc`).
+
+Do **not** mutate the shared `getLatestPublishedId` to add the filter: its
+docstring shows it feeds the viewer's default-report fallback
+(`viewer-live-status`), so changing it would alter that durable viewer behavior
+and need a MODIFIED delta plus a viewer regression check. The lifecycle path
+gets its own dedicated non-archived resolver instead.
+
+Expose both resolvers to `PeriodService` through its repository port rather than
+duplicating the queries inline in the service, so the head's "active period"
+matches what the head's own weekly-report page resolved.
 
 - Alternative considered — re-query inside `PeriodService` with fresh Prisma
   calls. Rejected: it would create a second copy of the resolution logic that
   can drift from `weekly-report.prisma-repository.ts` (the repo already carries
   a documented `getActiveReportId` vs `getCurrentEditableId` divergence; adding
   a third copy compounds that trap).
+- Alternative considered — add `archived: false` directly to the shared
+  `getLatestPublishedId`. Rejected: it is shared with the viewer default-report
+  fallback and changing it would be an undeclared durable-spec change.
 
 ### D2: Authorize by role inside the service, not by adding a new procedure
 
@@ -79,13 +103,32 @@ by reference identity) and avoids splitting one mutation into two procedures.
 must pass `ctx.session` (mirroring `publish`) so the service can read the role
 and apply the head/admin branch. This is the one router-signature change.
 
-### D4: New typed domain error mapped in the error-mapper
+### D4: Two new distinct typed domain errors, mapped to different codes
 
-Add a `PeriodScopeError` (or reuse the existing `PeriodAccessError` family) for
-the out-of-scope/archived denial and map it to `FORBIDDEN` in
-`trpc.error-mapper.ts`; a missing report maps to `NOT_FOUND`. This follows the
-`requestReopen` convention and aligns with the separate `BL-ERROR-MAPPING`
-finding (bare `Error` currently surfaces as 500).
+Scope/archived denials and missing-report failures map to **different** tRPC
+codes (`FORBIDDEN` vs `NOT_FOUND`), so they need **two distinct error classes**,
+not one:
+
+- `PeriodScopeError` — out-of-scope (head/admin) and archived-target denial →
+  `FORBIDDEN`.
+- `PeriodNotFoundError` — the report id does not exist → `NOT_FOUND`. Today both
+  `publishPeriod` (~`period.service.ts:101`) and `reopenPeriod` (~`:146`) throw a
+  bare `new Error("Report … not found.")`, which `mapDomainError` cannot
+  recognize and so surfaces as `INTERNAL_SERVER_ERROR`; replace both throw sites
+  with `PeriodNotFoundError`.
+
+Add an `instanceof` branch in `trpc.error-mapper.ts` for **each** of these two
+new classes only, following the `requestReopen` convention.
+
+**Do not reuse the existing `PeriodAccessError` for either case, and do not add a
+`PeriodAccessError → FORBIDDEN` branch.** `PeriodAccessError` currently carries
+state/policy failures — already-published, non-published reopen, and the UFB-052
+disabled-reopen / expired-window gates — all of which are unmapped today and
+surface as 500. Mapping `PeriodAccessError` wholesale to `FORBIDDEN` would
+silently reclassify those UFB-052 policy errors, which this change lists as a
+non-goal (reopen-policy gating unchanged). `PeriodAccessError` therefore stays
+exactly as it is today — unmapped, unchanged. Fixing its pre-existing 500s is out
+of scope here (it belongs to the separate `BL-ERROR-MAPPING` finding).
 
 ## Data flow: before / after
 
@@ -117,9 +160,11 @@ the requested `reportId`.
   disagree during a fast open→publish→reopen sequence] → both derive from the
   same `getCurrentEditableId` / latest-published semantics, so they converge;
   the equality check fails closed (reject), never opens access.
-- [Reusing `PeriodAccessError` vs adding `PeriodScopeError`] → either works;
-  pick one consistent with the error-mapper branches so the code stays
-  `FORBIDDEN` not 500. Decide at implementation time.
+- [Overloading `PeriodAccessError` for the new scope denial] → rejected (see
+  D4). It already carries the UFB-052 state/policy errors; a shared
+  `FORBIDDEN` mapping would reclassify those, touching a non-goal. The change
+  adds two dedicated classes (`PeriodScopeError`, `PeriodNotFoundError`) and maps
+  only those.
 
 ## Migration Plan
 

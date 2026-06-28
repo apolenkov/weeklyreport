@@ -70,6 +70,47 @@ The recovery re-read MUST match the index predicate — the `Report` on the curr
 - **WHEN** `report.create` in `ensureWeeklyReport` fails for any reason other than the `Report_one_open_per_boundary` `P2002`
 - **THEN** the error is re-thrown unchanged, so unrelated failures are not masked as a successful re-read
 
+### Requirement: The Auto-Period Scheduler Recovers From The Constraint Violation
+
+The `PeriodCreatorScheduler` SHALL catch the `Report_one_open_per_boundary` `P2002` violation on its `report.create` and treat the tick as already-created — re-reading the open period on the boundary or skipping the tick — instead of letting the scheduled job throw. The proposal names the scheduler racing manual/login/another instance as a duplicate-period source, so this writer MUST converge idempotently rather than surface an unhandled Prisma error. Any non-P2002 error MUST re-throw unchanged.
+
+#### Scenario: The scheduler create loses the race to another open insert
+
+- **GIVEN** the scheduler computes boundary `(W, W')` and passes its most-recent-period precheck
+- **WHEN** another writer (a second API instance, an admin create, or a first login) inserts the open period on `(W, W')` before the scheduler's `report.create` commits
+- **THEN** the scheduler's `report.create` raises `P2002` on `Report_one_open_per_boundary`
+- **AND** the scheduler catches it, treats the tick as already-created, and returns a non-error outcome instead of crashing the job
+
+#### Scenario: A non-P2002 scheduler failure still propagates
+
+- **WHEN** the scheduler's `report.create` fails for any reason other than the `Report_one_open_per_boundary` `P2002`
+- **THEN** the error is re-thrown unchanged, so unrelated failures are not silently swallowed as a successful tick
+
+### Requirement: Lifecycle Writers Moving A Row Into The Open State Handle The Constraint Violation
+
+Because the partial unique index constrains UPDATEs as well as INSERTs, every writer that moves an existing `Report` into `periodState = 'open'` SHALL handle the `Report_one_open_per_boundary` `P2002` rather than surface a 500. The admin-triggered lifecycle writers — `reopenPeriod` and `unarchivePeriod` — MUST translate it into `AdminPeriodOverlapError` (→ `BAD_REQUEST`); the background scheduler `scheduled → open` flip MUST degrade gracefully (treat the boundary as already-open) without crashing the tick. Each catch MUST assert on `Report_one_open_per_boundary` so an unrelated unique violation re-throws.
+
+#### Scenario: Reopen collides with an existing open period on the same boundary
+
+- **GIVEN** a published `Report` on boundary `(W, W')` and a separate open `Report` already holding the same boundary
+- **WHEN** an admin reopens the published period, so `reopenPeriod` updates it to `periodState = 'open'`
+- **THEN** the update raises `P2002` on `Report_one_open_per_boundary`
+- **AND** the writer translates it into `AdminPeriodOverlapError` (→ `BAD_REQUEST`), not a 500
+
+#### Scenario: Unarchive collides with an existing open period on the same boundary
+
+- **GIVEN** an archived `Report` on boundary `(W, W')` that unarchives back to `periodState = 'open'`, while another open `Report` already holds `(W, W')`
+- **WHEN** an admin unarchives the period
+- **THEN** the resulting `report.update` raises `P2002` on `Report_one_open_per_boundary`
+- **AND** the writer translates it into `AdminPeriodOverlapError` (→ `BAD_REQUEST`)
+
+#### Scenario: The scheduled-to-open flip collides
+
+- **GIVEN** a `scheduled` `Report` whose `periodStart` has been reached and an open `Report` already holding the same boundary
+- **WHEN** the scheduler's `scheduled → open` `updateMany` runs on a tick
+- **THEN** the flip raises `P2002` on `Report_one_open_per_boundary`
+- **AND** the scheduler degrades gracefully (the boundary is already open) and the tick does not crash
+
 ### Requirement: The Database Guard Is Covered By An Automated Test
 
 At least one automated test SHALL prove the `Report_one_open_per_boundary` index has teeth by inducing the duplicate-open-boundary insert against a real database and asserting the second insert is rejected, plus an application-level test asserting the `P2002` is translated (not surfaced as a 500).

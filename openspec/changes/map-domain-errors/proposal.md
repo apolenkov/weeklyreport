@@ -18,7 +18,13 @@ to the four uncovered paths closes the gap without introducing new machinery.
 - `lead-form.service.ts` — replace bare `Error` in `fillFrom` and
   `revokeSubmission` with `LeadFormAccessError` (ownership denial → FORBIDDEN),
   the new `LeadFormConstraintError` (state-constraint violations → BAD_REQUEST),
-  or the existing `LeadFormDomainError` (missing resource → NOT_FOUND).
+  or the existing `LeadFormDomainError` (missing resource → NOT_FOUND). This
+  covers BOTH the target-section guards (missing, non-owner, submitted,
+  published-period) AND the source-section guards in `fillFrom`: a missing
+  source section (→ NOT_FOUND) and a forged cross-author source where the caller
+  is not the source owner (→ FORBIDDEN). The forged-source guard is
+  security-relevant — without a typed class it surfaces as a false
+  `INTERNAL_SERVER_ERROR` instead of a 403.
   `LeadFormConstraintError` is a new typed class, parallel to `ReopenRequestError`,
   declared in `lead-form-shared.ts`.
 - `lead-form-shared.ts` — introduce `LeadFormConstraintError` (extends `Error`,
@@ -33,8 +39,11 @@ to the four uncovered paths closes the gap without introducing new machinery.
 - `trpc.error-mapper.ts` — add BAD_REQUEST branch for `LeadFormConstraintError`,
   CONFLICT branch for `AdminGroupProductConflictError`, and NOT_FOUND branch for
   `PublicationNotFoundError`.
-- Tests — extend `trpc.error-mapper.test.ts` to cover all three new classes;
-  add contract tests for the `revokeSubmission` and `fillFrom` state guards.
+- Tests — extend `trpc.error-mapper.test.ts` to cover the three new classes plus
+  `LeadFormAccessError` and `AdminPeriodNotFoundError` (newly load-bearing here,
+  no direct mapper test today); add contract tests for the `revokeSubmission`
+  state guard and the `fillFrom` target-owner and forged cross-author source
+  guards.
 
 ## Capabilities
 

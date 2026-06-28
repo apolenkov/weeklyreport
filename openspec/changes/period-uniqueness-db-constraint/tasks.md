@@ -39,6 +39,24 @@
       reopened-published blocker) — and continue with its id; re-throw any
       non-P2002 error unchanged.
 
+## 3b. API — scheduler and lifecycle writers into 'open' (D5)
+
+- [ ] 3b.1 In `apps/api/src/modules/period/period-creator.scheduler.ts`, wrap
+      the `report.create` in try/catch; on the `Report_one_open_per_boundary`
+      `P2002`, treat the tick as already-created (re-read the open period on the
+      boundary or skip) and return a non-error outcome; re-throw any non-P2002
+      error unchanged.
+- [ ] 3b.2 In the same scheduler, guard the `scheduled → open` `updateMany`
+      (~line 83) against the `Report_one_open_per_boundary` `P2002`: degrade
+      gracefully (the boundary is already open) without crashing the tick;
+      re-throw unrelated errors.
+- [ ] 3b.3 In `reopenPeriod` (`apps/api/src/modules/period/period.prisma-repository.ts`)
+      and `unarchivePeriod` (`apps/api/src/modules/admin/admin-period.queries.ts`),
+      catch the `Report_one_open_per_boundary` `P2002` on the `report.update`
+      and translate it to `AdminPeriodOverlapError` (→ `BAD_REQUEST`); re-throw
+      all other errors. Assert on the index name so an unrelated unique
+      violation re-throws.
+
 ## 4. Tests
 
 - [ ] 4.1 Real-DB integration test (mirroring the reopen-request integration
@@ -54,11 +72,21 @@
       existing `reportId`; cover the reopened-period case (blocker has
       `status='published'`, `periodState='open'`) so a `status='draft'` re-read
       would fail the test; assert a non-P2002 error propagates unchanged.
+- [ ] 4.4 Scheduler test: simulate the `Report_one_open_per_boundary` `P2002`
+      on the scheduler's `report.create`; assert the tick converges to a
+      non-error outcome (already-created) and does not throw; assert a
+      non-P2002 error still propagates. Prove teeth: removing the catch makes
+      the test fail.
+- [ ] 4.5 Lifecycle test: simulate the `P2002` on `reopenPeriod` /
+      `unarchivePeriod`'s `report.update`; assert each surfaces
+      `AdminPeriodOverlapError` (→ `BAD_REQUEST`), not a 500; assert a
+      non-P2002 error propagates unchanged.
 
 ## 5. Verification
 
 - [ ] 5.1 Run the gates: `pnpm typecheck && pnpm lint && pnpm test && pnpm build`.
-- [ ] 5.2 Run `pnpm lint:md` for the OpenSpec markdown and
+- [ ] 5.2 Run `pnpm format:check` for the OpenSpec markdown (Markdown is
+      formatted, not markdown-linted — there is no `lint:md` script) and
       `openspec validate "period-uniqueness-db-constraint" --strict`.
 - [ ] 5.3 Stage only this change's paths; do not commit unrelated parallel
       session work.

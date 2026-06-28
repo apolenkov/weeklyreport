@@ -72,9 +72,14 @@ failure modes verbatim, so the extraction cannot regress the
 ### D3: Bull Board gains DI and goes async
 
 `mountBullBoard(_app)` already receives `INestApplication`. It will resolve
-`PrismaService` via `_app.get(PrismaService)` and construct a
-`SessionRevocationService` the same way `createContextFactory` does
-(`trpc.context.ts` lines 178-183). `requireHead` becomes an `async` handler;
+`PrismaService` via `_app.get(PrismaService)` and likewise resolve the existing
+`SessionRevocationService` via `_app.get(SessionRevocationService)`. That
+service is already provided and exported by `AdminModule`
+(`admin.module.ts`), so `_app.get` (non-strict, application-wide) returns the
+DI-managed singleton whose `onModuleDestroy` Nest calls on shutdown. Resolving
+from DI — rather than `new`-ing a fresh instance the way `createContextFactory`
+does — avoids adding a third unmanaged ioredis client whose lifecycle hook would
+never fire. `requireHead` becomes an `async` handler;
 the helper call sits after `verifySessionToken` and the `role === "head"`
 check, denying with 401 on a barred user. Express 5 awaits async handlers and
 forwards rejections, so the existing `try/catch` still maps a thrown verify to 401.
@@ -112,10 +117,13 @@ Regular tRPC session (unchanged behavior)
 - [Async guard could change error propagation] → mitigated by keeping the
   existing `try/catch` and verifying Express 5 awaits the handler; add a test
   asserting a deactivated head gets 401.
-- [Constructing a second `SessionRevocationService` in `mountBullBoard`] →
-  acceptable: it is a thin ioredis wrapper with `lazyConnect`; `onModuleDestroy`
-  cleanup is per-instance. If duplication is undesirable later, the singleton
-  can be lifted to a Nest provider — out of scope here.
+- [Acquiring `SessionRevocationService` in `mountBullBoard`] → resolve the
+  existing DI singleton via `_app.get(SessionRevocationService)`, not a fresh
+  `new`. The service is already provided and exported by `AdminModule`, so its
+  `onModuleDestroy` (which calls `redis.quit()`) runs on shutdown. A manually
+  constructed instance would NOT get that hook called by Nest, leaking an
+  ioredis handle that can keep tests and process shutdown from settling. Reusing
+  the singleton also avoids a second redundant ioredis client.
 
 ## Migration Plan
 

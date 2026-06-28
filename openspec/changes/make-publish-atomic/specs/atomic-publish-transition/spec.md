@@ -12,10 +12,14 @@ Both publish entry points are governed: the repository write behind
 tRPC procedure `period.publish`) and the assembled-report write behind
 `PublicationService.publishReport`
 (`apps/api/src/modules/publication/publication.service.ts`, tRPC procedure
-`review.publish`). Each write MUST carry the not-published predicate (the
-`periodStatus`/`status` field `!= "published"`) in its `WHERE` clause and MUST
-report how many rows it transitioned (0 or 1). The pre-write status check MAY
-remain as a fast-path rejection, but it MUST NOT be the only guard.
+`review.publish`). Each write MUST carry the not-published predicate
+(`periodStatus != "published"`) in its `WHERE` clause and MUST report how many
+rows it transitioned (0 or 1). The predicate MUST key on `periodStatus`, NOT the
+legacy `status` field: a reopened period carries `periodStatus = "reopened"` with
+legacy `status = "published"`, so a `status != "published"` guard would refuse to
+publish the exact reopened period the head is republishing. The pre-write status
+check MAY remain as a fast-path rejection — but it too MUST test `periodStatus`,
+and it MUST NOT be the only guard.
 
 #### Scenario: Two concurrent publishes transition the period once
 
@@ -27,10 +31,19 @@ remain as a fast-path rejection, but it MUST NOT be the only guard.
 
 #### Scenario: Publishing an already-published period transitions nothing
 
-- **WHEN** a publish runs against a period whose status is already
+- **WHEN** a publish runs against a period whose `periodStatus` is already
   `"published"`
 - **THEN** the compare-and-set matches zero rows
 - **AND** no field of the period is modified
+
+#### Scenario: Republishing a reopened period transitions one row
+
+- **WHEN** `review.publish` (or `period.publish`) runs against a reopened period
+  (`periodStatus = "reopened"`, legacy `status = "published"`)
+- **THEN** the compare-and-set matches the row on `periodStatus != "published"`
+  and transitions exactly one row to published
+- **AND** the legacy `status = "published"` value does not cause the fast-path
+  rejection or the guard to refuse the republish
 
 ### Requirement: Redundant Publish Side Effects Run At Most Once
 

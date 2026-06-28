@@ -7,7 +7,7 @@
 
 - [ ] 2.1 Refactor the regular session path in `trpc.context.ts` (lines ~201-212) to call the helper, asserting unchanged observable behavior (revoked/deactivated token treated as invalid).
 - [ ] 2.2 In `buildPdfExportSession` (`trpc.context.ts`), call the helper on `requestedBy` before hydrating; return `null` when barred. Leave the legacy no-`requestedBy` path untouched.
-- [ ] 2.3 In `mountBullBoard` (`bull-board.module.ts`), resolve `PrismaService` via `_app.get(...)` and construct `SessionRevocationService` as `createContextFactory` does; make `requireHead` async and call the helper after the role check, denying 401 when barred.
+- [ ] 2.3 In `mountBullBoard` (`bull-board.module.ts`), resolve both `PrismaService` and the existing `SessionRevocationService` from Nest DI via `_app.get(...)` (the service is provided+exported by `AdminModule`, so its `onModuleDestroy` cleanup still fires — do NOT `new` a fresh instance); make `requireHead` async and call the helper after the role check, denying 401 when barred.
 
 ## 3. Tests (api)
 
