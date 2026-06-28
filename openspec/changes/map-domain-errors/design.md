@@ -8,17 +8,19 @@ client. The convention is: each domain module declares its own error class(es);
 
 Four throw sites currently bypass this convention by throwing bare `Error`:
 
-| Site                                                    | Condition                              | Missing type                                                 |
-| ------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------ |
-| `lead-form.service.ts` `fillFrom`                       | target section absent                  | `LeadFormDomainError` (existing, maps to NOT_FOUND)          |
-| `lead-form.service.ts` `fillFrom`                       | caller is not owner                    | `LeadFormAccessError` (existing, maps to FORBIDDEN)          |
-| `lead-form.service.ts` `fillFrom`                       | submitted section guard                | `LeadFormConstraintError` (**new**, maps to BAD_REQUEST)     |
-| `lead-form.service.ts` `fillFrom`                       | published-period guard                 | `LeadFormConstraintError` (**new**, maps to BAD_REQUEST)     |
-| `lead-form.service.ts` `revokeSubmission`               | section absent                         | `LeadFormDomainError` (existing, maps to NOT_FOUND)          |
-| `lead-form.service.ts` `revokeSubmission`               | non-submitted state guard              | `LeadFormConstraintError` (**new**, maps to BAD_REQUEST)     |
-| `admin-period.queries.ts` `unarchivePeriod`             | report absent                          | `AdminPeriodNotFoundError` (existing, maps to NOT_FOUND)     |
-| `admin-group-product.queries.ts` `attachProductToGroup` | product already owned by another group | `AdminGroupProductConflictError` (**new**, maps to CONFLICT) |
-| `publication.service.ts` `getAssembledReport`           | report row absent                      | `PublicationNotFoundError` (**new**, maps to NOT_FOUND)      |
+| Site                                                    | Condition                                               | Missing type                                                 |
+| ------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------ |
+| `lead-form.service.ts` `fillFrom`                       | target section absent                                   | `LeadFormDomainError` (existing, maps to NOT_FOUND)          |
+| `lead-form.service.ts` `fillFrom`                       | caller is not owner                                     | `LeadFormAccessError` (existing, maps to FORBIDDEN)          |
+| `lead-form.service.ts` `fillFrom`                       | submitted section guard                                 | `LeadFormConstraintError` (**new**, maps to BAD_REQUEST)     |
+| `lead-form.service.ts` `fillFrom`                       | published-period guard                                  | `LeadFormConstraintError` (**new**, maps to BAD_REQUEST)     |
+| `lead-form.service.ts` `fillFrom`                       | source section absent                                   | `LeadFormDomainError` (existing, maps to NOT_FOUND)          |
+| `lead-form.service.ts` `fillFrom`                       | forged cross-author source (caller is not source owner) | `LeadFormAccessError` (existing, maps to FORBIDDEN)          |
+| `lead-form.service.ts` `revokeSubmission`               | section absent                                          | `LeadFormDomainError` (existing, maps to NOT_FOUND)          |
+| `lead-form.service.ts` `revokeSubmission`               | non-submitted state guard                               | `LeadFormConstraintError` (**new**, maps to BAD_REQUEST)     |
+| `admin-period.queries.ts` `unarchivePeriod`             | report absent                                           | `AdminPeriodNotFoundError` (existing, maps to NOT_FOUND)     |
+| `admin-group-product.queries.ts` `attachProductToGroup` | product already owned by another group                  | `AdminGroupProductConflictError` (**new**, maps to CONFLICT) |
+| `publication.service.ts` `getAssembledReport`           | report row absent                                       | `PublicationNotFoundError` (**new**, maps to NOT_FOUND)      |
 
 All of these fall through to `INTERNAL_SERVER_ERROR` today.
 
@@ -26,7 +28,7 @@ All of these fall through to `INTERNAL_SERVER_ERROR` today.
 
 **Goals:**
 
-- Replace every bare `Error` at the eight listed throw sites with the
+- Replace every bare `Error` at the eleven listed throw sites with the
   appropriate typed domain error class.
 - Add three new domain error classes: `LeadFormConstraintError`,
   `AdminGroupProductConflictError`, and `PublicationNotFoundError`.
@@ -82,7 +84,7 @@ This keeps the file readable (known → unknown).
 
 ## Risks / Trade-offs
 
-**All eight sites have no integration tests today** (verified via codegraph). The
+**All eleven sites have no integration tests today** (verified via codegraph). The
 `trpc.error-mapper.test.ts` unit tests cover only the mapper function in
 isolation. Changing throw sites without adding call-path tests means a future
 refactor could accidentally revert to bare `Error` without a gate catching it.

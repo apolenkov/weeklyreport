@@ -86,6 +86,21 @@ entirely: an edit is an upsert by id, a removal is a delete/archive by id. It is
 the more direct fix and matches how the rest of the admin surface already works
 (`saveReportingGroup`, `saveStageAssignment`, the GroupProduct edges).
 
+This applies to **every** single-entity caller that today round-trips through
+`saveSnapshot`, including `PeriodAdminService.upsertPeriod`. Reporting-group
+upsert already uses the targeted `saveReportingGroup`, and period archive/
+unarchive already use targeted `archivePeriod`/`unarchivePeriod`; the remaining
+gap is `upsertPeriod`, which still does `getSnapshot → saveSnapshot` and so
+would re-write stale T0 copies of groups, users, projects, and reminder rules
+even after the destructive reconcile is gone. It gets a targeted `upsertPeriod`
+by id like the other entities.
+
+One subtlety: a targeted `upsertPeriod` that creates a NEW period must preserve
+the post-commit `PolicyApplicatorService.applyToPeriod` step that `saveSnapshot`
+runs today for newly-created periods (D4). The targeted path detects whether the
+upsert created a new row and, if so, runs the applicator AFTER its own write
+commits — same ordering, same failure isolation.
+
 Trade-off: route (a) is a wider diff — it adds entity-level methods to the
 `AdminRepository` contract and rewires three caller services and the in-memory
 test repo. Accepted; the blast radius is enumerated in tasks.md.
@@ -95,10 +110,17 @@ test repo. Accepted; the blast radius is enumerated in tasks.md.
 Some paths legitimately restore a whole snapshot (e.g. importing an
 `AdminSnapshot`). Keep `saveSnapshot` for that use, but wrap its phases in one
 interactive `prisma.$transaction(async (tx) => …)`. The per-entity caller
-mutations (D1) stop going through it. Where a whole-snapshot restore must still
-support removals, deletions stay explicit to the supplied set rather than
-inferred from absence — or the import path is documented as additive. Settle the
-exact whole-restore removal contract during implementation (see Open Questions).
+mutations (D1) stop going through it.
+
+The retained `saveSnapshot` is **additive-only**: it upserts every supplied row
+and NEVER deletes or archives a row merely for being absent from the payload.
+This is decided now, not deferred — no current caller needs whole-snapshot
+removals (all removals go through the explicit targeted methods of D1), so the
+"delete-within-supplied-set" alternative would add a contract surface with no
+consumer. If a future import path genuinely needs removals, it adds an explicit
+deletion id-set parameter then; absence never implies deletion. The additive-only
+contract is pinned by scenarios in the spec (absent users, projects, and
+reminder rules all survive a restore).
 
 ### D3 — Thread the transaction client through the upsert helpers
 
@@ -149,7 +171,6 @@ needs no coordinated change.
 
 ## Open Questions
 
-- For a genuine whole-snapshot import via `saveSnapshot`, is the removal
-  contract additive-only (never delete absent rows) or does it delete only
-  within an explicitly supplied id set? Resolve before implementing D2; default
-  to additive-only unless an import caller needs deletions.
+- None. The previously-open whole-restore removal contract is now decided in D2:
+  `saveSnapshot` is additive-only (never deletes a row for snapshot absence). A
+  future import that needs removals would add an explicit deletion id-set then.

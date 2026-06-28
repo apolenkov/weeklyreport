@@ -46,9 +46,12 @@ authorization miss from the 2026-06-28 repo-excellence review
 - `apps/api/src/infrastructure/trpc/trpc.router.ts` — `period.publish` /
   `period.reopen`; thread `ctx.session` into reopen (publish already passes it).
 - `apps/api/src/modules/period/period.prisma-repository.ts` — expose the
-  active-target resolver (reuse the existing `getCurrentEditableId` /
-  latest-published query semantics from `weekly-report.prisma-repository.ts`).
-- A new typed domain error + a branch in
+  active-target resolvers. The editable resolver mirrors `getCurrentEditableId`
+  (already non-archived); the latest-published resolver adds `archived: false`
+  and so diverges from the shared `getLatestPublishedId`, which does not exclude
+  archived rows.
+- Two new typed domain errors (`PeriodScopeError` → `FORBIDDEN`,
+  `PeriodNotFoundError` → `NOT_FOUND`) + matching branches in
   `apps/api/src/infrastructure/trpc/trpc.error-mapper.ts`.
 - No schema change. No UI string change (admin/head controls keep their copy).
 

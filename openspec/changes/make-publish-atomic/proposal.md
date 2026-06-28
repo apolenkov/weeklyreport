@@ -17,8 +17,10 @@ Source: repo-excellence review backlog item `BL-PUBLISH-ATOMICITY` (P1),
 ## What Changes
 
 - Turn the publish write into a conditional compare-and-set: the repository
-  `UPDATE ... WHERE id = ? AND <status> != 'published'` and reports how many
-  rows it transitioned (0 or 1).
+  `UPDATE ... WHERE id = ? AND periodStatus != 'published'` and reports how many
+  rows it transitioned (0 or 1). The guard keys on `periodStatus`, not legacy
+  `status`, so a reopened period (legacy `status = 'published'`) stays
+  publishable.
 - Treat a publish that transitions 0 rows as a no-op idempotent result, not a
   second transition: the snapshot is rebuilt and ingestion enqueued at most
   once per real transition.

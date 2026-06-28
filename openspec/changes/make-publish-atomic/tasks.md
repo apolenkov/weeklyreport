@@ -8,6 +8,13 @@
 - [ ] 1.3 Add a test that `review.publish` / `review.assembledReport` act on
       the DB-resolved open/reopened period, not a stale `ctx.session.activeReportId`
       (seed an older activeReportId, a newer open period); FAIL before the fix.
+- [ ] 1.4 Add a `review.publish` characterization/contract test that a
+      DB-resolved reopened period (`periodStatus = "reopened"`, legacy
+      `status = "published"`) is republishable and emits the transition counter
+      with `from: "reopened", to: "published"`; it should FAIL before the fix
+      (today the publication read model exposes only legacy `status`, the
+      `status === "published"` fast-path rejects, and the counter hardcodes
+      `from: "open"`).
 
 ## 2. Compare-and-set in the period publish path (api)
 
@@ -25,8 +32,13 @@
 ## 3. Compare-and-set in the publication path (api)
 
 - [ ] 3.1 Make the `PublicationService.publishReport` write conditional on a
-      not-published row and report whether it transitioned (adjust the repository
-      save or add a guarded transition method).
+      `periodStatus != "published"` row (NOT legacy `status`, so a reopened period
+      stays publishable) and report both whether it transitioned and the row's
+      prior `periodStatus`. Change the fast-path rejection to test
+      `periodStatus === "published"`. Surface `periodStatus` through the
+      publication repository/read model — the assembled-report read model exposes
+      only legacy `status` today — so the service has the prior status for the
+      counter `from` label.
 - [ ] 3.2 Gate the snapshot rebuild, ingestion enqueue, and both counter
       increments on `count === 1`; on a zero-transition result return the
       already-published assembled report or a domain "already published" error
@@ -53,7 +65,10 @@
 - [ ] 6.1 Assert a redundant concurrent publish increments each counter
       exactly once (covers the `manual-publish-telemetry` MODIFIED requirement)
       for both `period.publish` and `review.publish`.
-- [ ] 6.2 Re-run the characterization tests from group 1 and confirm they now
+- [ ] 6.2 Assert the transition counter's `from` label carries the actual prior
+      `periodStatus` (`"open"` vs `"reopened"`) for both `period.publish` and
+      `review.publish`, never a hardcoded `from: "open"`.
+- [ ] 6.3 Re-run the characterization tests from group 1 and confirm they now
       pass.
 
 ## 7. Verification

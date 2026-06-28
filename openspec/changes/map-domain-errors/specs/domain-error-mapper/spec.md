@@ -5,12 +5,25 @@
 The system SHALL classify an ownership-denied mutation in `fillFrom` as tRPC
 `FORBIDDEN` by throwing `LeadFormAccessError` at the service layer and routing
 it through the existing `LeadFormAccessError` branch in `mapDomainError`.
-Covered operation: `fillFrom` invoked by a caller who is not the section author.
+Covered cases: `fillFrom` invoked by a caller who is not the TARGET section
+author, AND `fillFrom` invoked with a forged `sourceSectionId` whose author is
+not the caller (a cross-author source copy). Both bypass the typed mapper today
+and surface as a false `INTERNAL_SERVER_ERROR`; the forged-source case is
+security-relevant because it gates copying another lead's content.
 
-#### Scenario: fillFrom called on another lead's section
+#### Scenario: fillFrom called on another lead's target section
 
 - **WHEN** `leadForm.fillFrom` is invoked with a `targetSectionId` owned by a
   different user
+- **THEN** the tRPC procedure returns a `FORBIDDEN` error
+- **AND** the error message is the human-readable denial reason, not
+  "Unexpected error"
+
+#### Scenario: fillFrom called with a forged cross-author source section
+
+- **WHEN** `leadForm.fillFrom` is invoked with a `sourceSectionId` whose author
+  is a different user (a forged request, since the picker only offers the
+  caller's own past sections)
 - **THEN** the tRPC procedure returns a `FORBIDDEN` error
 - **AND** the error message is the human-readable denial reason, not
   "Unexpected error"
@@ -56,6 +69,8 @@ typed error at the service or query layer and routing it through the matching
 - `lead-form.service.ts` `fillFrom`: target section absent → throw
   `LeadFormDomainError` (routes through the existing `LeadFormDomainError →
 NOT_FOUND` branch).
+- `lead-form.service.ts` `fillFrom`: source section absent → throw
+  `LeadFormDomainError` (same existing `LeadFormDomainError → NOT_FOUND` branch).
 - `admin-period.queries.ts` `unarchivePeriod`: report row absent → throw
   `AdminPeriodNotFoundError` (routes through the existing
   `AdminPeriodNotFoundError → NOT_FOUND` branch).
@@ -66,6 +81,13 @@ NOT_FOUND` branch).
 #### Scenario: fillFrom target section is missing
 
 - **WHEN** `leadForm.fillFrom` is invoked with a `targetSectionId` that does not
+  exist in the database
+- **THEN** the tRPC procedure returns a `NOT_FOUND` error
+- **AND** the error message is not "Unexpected error"
+
+#### Scenario: fillFrom source section is missing
+
+- **WHEN** `leadForm.fillFrom` is invoked with a `sourceSectionId` that does not
   exist in the database
 - **THEN** the tRPC procedure returns a `NOT_FOUND` error
 - **AND** the error message is not "Unexpected error"
@@ -122,15 +144,22 @@ branch in `mapDomainError` and MUST NOT be tightened further.
 - **AND** the server log contains the original error's constructor name, message,
   and stack via the `cause` field
 
-### Requirement: Error mapper test coverage for every domain error class
+### Requirement: Error mapper test coverage for classes added or newly routed by this change
 
 The system SHALL have a unit test in `trpc.error-mapper.test.ts` that asserts
-the correct tRPC code for each domain error class handled by `mapDomainError`,
-including `LeadFormConstraintError`, `AdminGroupProductConflictError`, and
-`PublicationNotFoundError` introduced by this change.
+the correct tRPC code for each domain error class that this change adds to or
+newly routes errors through `mapDomainError`. Specifically: the three new
+classes `LeadFormConstraintError` (BAD_REQUEST),
+`AdminGroupProductConflictError` (CONFLICT), and `PublicationNotFoundError`
+(NOT_FOUND); plus `LeadFormAccessError` (FORBIDDEN) and `AdminPeriodNotFoundError`
+(NOT_FOUND), which this change makes load-bearing at previously bare-`Error`
+throw sites and which lack a direct mapper test today. This requirement does
+NOT obligate adding tests for pre-existing mapper branches untouched by this
+change.
 
-#### Scenario: mapper test matrix is exhaustive
+#### Scenario: a class added or newly routed by this change has a mapper test
 
-- **WHEN** a new domain error class is added to `mapDomainError`
-- **THEN** a corresponding test case in `trpc.error-mapper.test.ts` asserts the
+- **WHEN** this change adds a domain error class to `mapDomainError`, or routes
+  a previously bare-`Error` throw site through an existing mapper branch
+- **THEN** `trpc.error-mapper.test.ts` contains a test case asserting the
   expected tRPC error code for that class

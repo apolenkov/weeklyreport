@@ -54,7 +54,7 @@ This requirement covers only the `requestedBy` path; the legacy no-`requestedBy`
 
 ### Requirement: Bull Board queue-admin guard enforces deactivation
 
-The system SHALL reject access to `/admin/queues` when the session's user is revoked or deactivated, by making the `requireHead` guard async, wiring `PrismaService` and `SessionRevocationService` into `mountBullBoard`, and consulting the shared helper after the JWT verification and head-role check.
+The system SHALL reject access to `/admin/queues` when the session's user is revoked or deactivated, by making the `requireHead` guard async, resolving `PrismaService` and the existing `SessionRevocationService` from Nest DI (`_app.get`, not a freshly constructed instance, so the service's lifecycle cleanup still runs), and consulting the shared helper after the JWT verification and head-role check.
 
 #### Scenario: Deactivated head is denied queue admin
 

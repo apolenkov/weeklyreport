@@ -18,9 +18,9 @@ jobs) for the JWT's ~1h TTL. See backlog `BL-DEACTIVATION-BYPASS` (P1) in
 - Call the helper in `buildPdfExportSession` (the `requestedBy` path): a
   deactivated requester yields `null`, so the auth middleware rejects.
 - Call the helper in the Bull Board `requireHead` guard: a deactivated head is
-  rejected with 401 instead of passing on role alone. This requires wiring
-  `PrismaService` and `SessionRevocationService` into `mountBullBoard` and making
-  the guard async.
+  rejected with 401 instead of passing on role alone. This requires resolving
+  `PrismaService` and `SessionRevocationService` from Nest DI (`_app.get`) in
+  `mountBullBoard` and making the guard async.
 - Refactor the regular tRPC session path to call the same helper, so all three
   sites share one source of truth (a true extraction, not a third copy).
 
@@ -44,7 +44,12 @@ jobs) for the JWT's ~1h TTL. See backlog `BL-DEACTIVATION-BYPASS` (P1) in
 
 ### Modified Capabilities
 
-<!-- none: no existing capability governs session-token deactivation enforcement -->
+- `dependency-currency`: the "Bull Board Mount Survives the v8 Migration
+  Behaviorally Unchanged" requirement currently mandates the `requireHead` auth
+  middleware stay byte-identical to its pre-upgrade form. This change adds a
+  MODIFIED delta that supersedes only that byte-identical auth-middleware clause
+  (so `requireHead` can go async and gain the deactivation check) while keeping
+  the route, base path, queue construction, and adapter wiring unchanged.
 
 ## Impact
 

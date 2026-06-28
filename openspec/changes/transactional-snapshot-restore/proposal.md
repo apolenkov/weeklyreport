@@ -20,15 +20,24 @@ even though no admin ever touched it. See backlog item BL-SNAPSHOT-RECONCILE
   keyed by entity id: an edit upserts only the touched row; a removal deletes
   or archives only the named row. Rows the admin never referenced are no longer
   reconciled away. This closes the concurrent-insert data-loss window.
-- Re-express the three caller services (`SnapshotAdminService`,
-  `ProjectAdminService`, `ReminderAdminService`) so user/project/rule
-  add-edit-remove no longer round-trips through "read whole → mutate one →
-  save whole", and extend the `AdminRepository` contract with entity-level
-  persistence methods.
+- Re-express the four caller services (`SnapshotAdminService`,
+  `ProjectAdminService`, `ReminderAdminService`, `PeriodAdminService`) so
+  user/project/rule/period add-edit-remove no longer round-trips through "read
+  whole → mutate one → save whole", and extend the `AdminRepository` contract
+  with entity-level persistence methods. `PeriodAdminService.upsertPeriod` is
+  included: it currently does `getSnapshot → saveSnapshot`, so even after the
+  destructive reconcile is removed it would re-write stale copies of every
+  unrelated collection (groups, users, projects, reminder rules) from the T0
+  read.
 - **BREAKING (internal contract):** the `AdminRepository.saveSnapshot`
   full-snapshot reconcile semantics change; the in-memory test repository and
   affected `admin.service.test.ts` cases that encode destructive reconcile as
   intended behavior are re-expressed against targeted mutations.
+- Settle the retained `saveSnapshot` removal contract as **additive-only**: a
+  whole-snapshot restore upserts the supplied rows and never deletes or archives
+  a row merely for being absent from the payload. No current caller needs
+  delete-within-supplied-set, so the simpler additive contract is chosen now
+  (not deferred to implementation) and covered by scenarios.
 
 ### Non-goals
 
@@ -53,9 +62,9 @@ even though no admin ever touched it. See backlog item BL-SNAPSHOT-RECONCILE
 
 - Code: `apps/api/src/modules/admin/admin-snapshot-write.queries.ts`,
   `snapshot-admin.service.ts`, `project-admin.service.ts`,
-  `reminder-admin.service.ts`, `admin.prisma-repository.ts`, the
-  `AdminRepository` interface in `admin-shared.ts`, and the in-memory test
-  repository.
+  `reminder-admin.service.ts`, `period-admin.service.ts`,
+  `admin.prisma-repository.ts`, the `AdminRepository` interface in
+  `admin-shared.ts`, and the in-memory test repository.
 - Tests: `admin.service.test.ts`, `admin.integration.test.ts`,
   `admin.contract.test.ts`.
 - No API wire shape, schema, dependency, or deployment change.
