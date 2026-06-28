@@ -71,11 +71,40 @@
   - тест-инфра (#41) → `web-trpc-test-harness`, `web-test-timer-discipline`, `sweep-runtime-correctness`
 - Уже отслеживается, в дорожную карту НЕ включено: BL-STATUS-WORST-SSOT (traffic-light SSOT).
 
+## Обновление 2026-06-28 — Wave A + Wave B закаркашены и гарденнуты
+
+Конвейер на каждую волну: каркас → Codex-ревью (по одному на change) →
+применение валидных правок (сверка как с кандидатами) → ре-валидация → коммит.
+
+- **Wave A (10 P0)** — закоммичено `f3bdb8f` (каркас), `4abb5c0` (Codex-обзор,
+  23 находки), `b710c80` (17 применено, 9 отклонено — все 6 analytics-находок
+  Codex были мисридами, отклонены с пруфами).
+- **Wave B (8 P1)** — `83b8134` (каркас), `36ca823` (Codex-обзор, 20 находок),
+  `6895a74` (20 применено, 0 отклонено — все реальны).
+  - 4 из 8 Codex-обзоров шли через ФОНОВЫЙ `codex exec` (`/tmp/codex-bg-review.sh`),
+    т.к. foreground Bash режет на 600с, а codex за прокси медленный. Фон обходит потолок.
+  - `enforce-deactivation-pdf-bullboard` добавил MODIFIED-дельту к durable-спеке
+    `dependency-currency` (та требовала requireHead байт-в-байт) — кросс-спек конфликт.
+- Все 18 changes проходят `openspec validate --strict`. Это ПЛАНЫ: 0 задач, код не тронут.
+- Машиночитаемые обзоры: `docs/repo-excellence-review-2026-06-28.codex-review.json`
+  (Wave A), `...wave-b.codex-review.json` (Wave B).
+- Стоп-time Codex-гейт ОТКЛЮЧЁН (падал на прокси, избыточен — обзор в конвейере).
+  Вернуть: `codex-companion.mjs setup --enable-review-gate`.
+
+### Что осталось (НЕ в OpenSpec)
+
+- **Wave C** — P1 корректность/наблюдаемость (~13 changes, #19-31 в дорожной карте).
+- **Wave D** — P2/P3 гигиена (~12, #32-43). P2/P3 многие расширяют существующие
+  специ — каркасить поштучно не обязательно.
+- Те же три workflow в `/tmp` (`scaffold-*`, `codex-review-*`, `apply-codex-*`)
+  переиспользуемы: сменить встроенный список changeId.
+
 ## Что дальше (с твоего согласия)
 
-1. Решить, какие P0-changes каркасить первыми (рекомендую Волну A: безопасность + потеря данных).
-2. Каркасить через `opsx:propose` — расширяя спеки из дедуп-карты выше, НЕ реализуя.
-3. (Опц.) council-only добор Qwen+GLM.
+1. Реализовать P0/P1 (выход из «только ревью») — рекомендую начать с прод-ломающих
+   config-фиксов Wave A (trust-proxy, /pdfs, dev-auth, autopublish).
+2. Либо закаркасить Wave C тем же конвейером.
+3. (Опц.) council-only добор Qwen+GLM на следующем прогоне.
 
 ## Движок: что изменено и known issues
 
