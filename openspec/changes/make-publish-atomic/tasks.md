@@ -1,0 +1,66 @@
+## 1. Characterization tests first (api)
+
+- [ ] 1.1 Add a real-DB test that two concurrent `PeriodService.publishPeriod`
+      calls on one open period transition the row once (assert one snapshot, one
+      set of counter increments); it should FAIL before the fix.
+- [ ] 1.2 Add the equivalent concurrent test for `review.publish` →
+      `PublicationService.publishReport`.
+- [ ] 1.3 Add a test that `review.publish` / `review.assembledReport` act on
+      the DB-resolved open/reopened period, not a stale `ctx.session.activeReportId`
+      (seed an older activeReportId, a newer open period); FAIL before the fix.
+
+## 2. Compare-and-set in the period publish path (api)
+
+- [ ] 2.1 Change `period.prisma-repository.ts::publishPeriod` to use
+      `tx.report.updateMany({ where: { id, periodStatus: { not: "published" } }, data: buildTransition("publish", …) })`
+      and capture `{ count }`.
+- [ ] 2.2 When `count === 0`, return a no-op result without rebuilding the
+      snapshot; when `count === 1`, read the row via `findUniqueOrThrow` with
+      `reportFullIncludeForSnapshot` and write the snapshot in the same
+      transaction. Return the transitioned flag/count to the service.
+- [ ] 2.3 In `period.service.ts::publishPeriod`, emit both counters and run the
+      ingestion enqueue only when the repository reported a transition
+      (`count === 1`); keep the prior-status `from` label.
+
+## 3. Compare-and-set in the publication path (api)
+
+- [ ] 3.1 Make the `PublicationService.publishReport` write conditional on a
+      not-published row and report whether it transitioned (adjust the repository
+      save or add a guarded transition method).
+- [ ] 3.2 Gate the snapshot rebuild, ingestion enqueue, and both counter
+      increments on `count === 1`; on a zero-transition result return the
+      already-published assembled report or a domain "already published" error
+      (one consistent choice across both paths — resolve the design Open Question).
+
+## 4. Database-resolved publish target (api)
+
+- [ ] 4.1 In `trpc.router.ts`, resolve `review.publish` and
+      `review.assembledReport` from the DB open/reopened period using the same
+      query as `review.dashboard`, replacing `ctx.session.activeReportId`.
+- [ ] 4.2 When no open/reopened period exists, raise a domain "no active
+      period" error mapped to a tRPC error; remove the now-dead `activeReportId`
+      null-check branches.
+
+## 5. Keep the dual-state invariant machine-checked (api)
+
+- [ ] 5.1 Confirm the `period-dual-state` CI gate recognizes the new
+      `report.updateMany` lifecycle write (extend the matcher to cover
+      `updateMany`, or add the reviewed per-site marker); the publish `data` still
+      comes from `buildTransition`.
+
+## 6. Telemetry-contract tests (api)
+
+- [ ] 6.1 Assert a redundant concurrent publish increments each counter
+      exactly once (covers the `manual-publish-telemetry` MODIFIED requirement)
+      for both `period.publish` and `review.publish`.
+- [ ] 6.2 Re-run the characterization tests from group 1 and confirm they now
+      pass.
+
+## 7. Verification
+
+- [ ] 7.1 Run `pnpm typecheck`.
+- [ ] 7.2 Run `pnpm lint`.
+- [ ] 7.3 Run `pnpm test`.
+- [ ] 7.4 Run `pnpm build`.
+- [ ] 7.5 Run `openspec validate "make-publish-atomic" --strict` and confirm it
+      exits 0.
