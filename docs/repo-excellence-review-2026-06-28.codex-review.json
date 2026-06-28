@@ -1,0 +1,219 @@
+[
+  {
+    "changeId": "fix-carryover-persistence",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/fix-carryover-persistence/design.md:43-44; openspec/changes/fix-carryover-persistence/specs/carry-over-persistence/spec.md:25-32; apps/api/src/modules/carry-over/carry-over.service.ts:148-217",
+        "problem": "The change promises persisted record counts match rows written, but it explicitly does not change authorId matching. Current service computes records/counts from every source section before matching, then only attaches rows to target sections with a matching authorId; a source-only lead still produces records/counts that no target section can persist.",
+        "fix": "Add a requirement/scenario and tasks for missing target-section authors, either filtering counts/records to matched sections or explicitly creating/rejecting missing targets."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/fix-carryover-persistence/design.md:85-90; openspec/changes/fix-carryover-persistence/tasks.md:30-32; apps/api/src/infrastructure/trpc/trpc.error-mapper.ts:96-104; apps/api/src/modules/carry-over/carry-over.service.ts:119-136",
+        "problem": "The optional domain-conflict path assumes CarryOverDomainError can map to CONFLICT, but the current mapper sends all CarryOverDomainError instances to BAD_REQUEST, and the same class is used for validation errors like same source/target and missing sections. Changing the class-wide mapping would regress those errors; leaving it unchanged would not satisfy the proposed CONFLICT branch.",
+        "fix": "Use a distinct CarryOverConflictError for dedupe conflicts, or make the race strictly idempotent and remove the CONFLICT/error-mapper requirement."
+      }
+    ],
+    "notes": "Read the full change directory, cited implementation, durable touched specs, schema blocks, and existing carry-over tests; openspec validate fix-carryover-persistence --strict exits 0."
+  },
+  {
+    "changeId": "fix-prod-web-build-args",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/fix-prod-web-build-args/design.md",
+        "problem": "The change fixes only NEXT_PUBLIC_API_URL, but the web production build also consumes Dockerfile.web ARG API_URL through apps/web/next.config.ts rewrites. Dockerfile.web defaults API_URL to http://api:3002 while docker-compose.prod.yml runs the API on port 3001, so production /trpc,/auth,/health,/api rewrites can remain baked to the wrong internal port even after this change.",
+        "fix": "Add API_URL to the prod web build args with the internal prod API origin, e.g. API_URL: ${API_URL:-http://api:3001}, and cover that in the requirement/tasks."
+      },
+      {
+        "severity": "High",
+        "where": "openspec/changes/fix-prod-web-build-args/tasks.md",
+        "problem": "The required build arg uses NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}, but Docker Compose does not fail hard for an unset variable in that form; it substitutes an empty value with a warning. That contradicts the spec scenario that missing NEXT_PUBLIC_API_URL is detected before build and can still produce a broken compiled bundle with an empty API origin.",
+        "fix": "Use required interpolation, e.g. NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL must be set}, and update the scenario/task wording to require a hard compose failure."
+      }
+    ],
+    "notes": "Read the full change directory, cited production compose/Dockerfile/login code, and adjacent redirect change; the proposal is directionally right but misses the non-public API_URL build-time path and overstates Compose unset-variable enforcement."
+  },
+  {
+    "changeId": "route-pdfs-and-authz",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/route-pdfs-and-authz/design.md D3; apps/api/src/infrastructure/trpc/trpc.context.ts:319-323; openspec/specs/viewer-report-navigation/spec.md:133-138",
+        "problem": "The requester-OR predicate preserves artifact access after report access is revoked: a viewer who generated a PDF while in-scope remains the job.requestedBy and can still download the report bytes after ViewerGroupAccess is removed, despite existing access semantics explicitly hydrating viewer grants per request to prevent stale-access leaks and requiring no-access viewers to see no content.",
+        "fix": "Require the requester to still have current report read access, or add an explicit bounded artifact-ownership requirement/scenario that accepts post-revocation downloads."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/route-pdfs-and-authz/tasks.md:16-21; apps/api/src/modules/pdf-export/pdf-export.prisma-repository.ts:76-85; apps/api/src/infrastructure/bullmq/pdf-export.processor.ts:116-124",
+        "problem": "The handler contract loads the job and streams PDF_OUTPUT_DIR/{jobId}.pdf but never requires job.status === completed or that the row's artifactUrl/filePath matches the requested /pdfs/{jobId}.pdf. That can serve stale/orphan bytes for a pending/failed row if a same-named file exists, bypassing the job state stored in PdfExportJob.",
+        "fix": "Authorize and stream only completed jobs whose persisted artifactUrl exactly matches the requested artifact path."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/route-pdfs-and-authz/tasks.md:10; apps/api/src/infrastructure/trpc/trpc.context.ts:231-294",
+        "problem": "Task 2.1 allows calling the existing tRPC context path, but that path falls back from regular session JWTs to PDF-export worker tokens and then dev-mode synthetic sessions. A download endpoint using that whole path would accept non-human PDF worker cookies or AUTH_DEV_MODE fallback instead of only a valid user session with revocation/isActive checks, contradicting the new spec's session requirement.",
+        "fix": "Specify and test a dedicated user-session resolver that rejects PDF-export tokens and dev-mode fallback for /pdfs downloads."
+      }
+    ],
+    "notes": "openspec validate route-pdfs-and-authz --strict passes, but the proposal needs the authorization edge cases tightened before implementation."
+  },
+  {
+    "changeId": "set-express-trust-proxy",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "Blocker",
+        "where": "openspec/changes/set-express-trust-proxy/design.md; openspec/changes/set-express-trust-proxy/specs/express-trust-proxy/spec.md; docker-compose.prod.yml:198",
+        "problem": "The design assumes all production traffic reaches Express through the single Caddy hop and therefore mandates global `expressApp.set('trust proxy', 1)`, but `docker-compose.prod.yml` still publishes the API directly on `${API_PORT:-3001}:3001`. Direct callers can send their own `X-Forwarded-For`; with `trust proxy: 1`, Express will treat that spoofed value as `req.ip`, letting attackers evade the auth rate limit and poison audit/access logs on the direct API port.",
+        "fix": "Either remove/bind-local the production API host port as part of this change, or use a trusted Caddy CIDR/IP trust-proxy configuration and add a scenario/test proving direct non-Caddy requests cannot spoof `req.ip`."
+      }
+    ],
+    "notes": "`openspec validate set-express-trust-proxy --strict` passes, and the cited main.ts/rate-limit/trpc paths match the proposal, but the proposal misses the direct API exposure edge case that materially changes the security result."
+  },
+  {
+    "changeId": "scope-analytics-to-group",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "Blocker",
+        "where": "design.md / apps/api analytics service",
+        "problem": "The design proposes filtering analytics queries by `userGroupId` derived from the authenticated user, but the proposal and design never address the case where a user belongs to multiple groups or changes groups. If `userGroupId` is not stable on the user record, analytics queries could silently return wrong data or throw.",
+        "fix": "Spec must require that `userGroupId` is a single, stable FK on the User model (or define how multi-group is handled) before analytics scoping can be implemented."
+      },
+      {
+        "severity": "High",
+        "where": "design.md - Analytics tRPC router",
+        "problem": "The design says analytics endpoints will apply a `groupId` filter derived from `ctx.user.groupId`, but the existing analytics router (if any) is not cited or shown. There is no verification that the current analytics procedures even accept a `groupId` filter parameter or that Prisma queries have the right `where` clause shape.",
+        "fix": "Explicitly cite the current analytics router file and show the before/after Prisma `where` clauses in the design."
+      },
+      {
+        "severity": "High",
+        "where": "tasks.md",
+        "problem": "Task T4 says 'update analytics queries to scope by group' but has no subtasks distinguishing which queries (report counts, submission rates, period summaries, etc.) are in scope. A developer could implement only one query and call T4 done.",
+        "fix": "Enumerate each analytics query that must be scoped; make them explicit checklist items in T4."
+      },
+      {
+        "severity": "Medium",
+        "where": "proposal.md - security model",
+        "problem": "The proposal does not address whether a group admin can view analytics for their own group only, or whether a super-admin can view cross-group analytics. The access-control boundary is underspecified.",
+        "fix": "Add an explicit RBAC table: which roles see which groups' analytics data."
+      },
+      {
+        "severity": "Medium",
+        "where": "specs/analytics/spec.md delta",
+        "problem": "The spec delta adds a SHALL requirement for group-scoped analytics but has no corresponding scenario (Given/When/Then) covering the negative case: a user from Group A must NOT see Group B data.",
+        "fix": "Add a negative-path scenario asserting cross-group data is absent from the response."
+      },
+      {
+        "severity": "Low",
+        "where": "tasks.md - T1",
+        "problem": "T1 references adding a `groupId` column to the analytics or reporting table, but the MVP rule is to reshape the init migration directly, not add an incremental migration. The task wording ('add migration') contradicts repo convention.",
+        "fix": "Reword T1 to 'update prisma/schema.prisma and hand-edit the init migration SQL' per repo convention."
+      }
+    ],
+    "notes": "The core idea is sound but the design skips two load-bearing details: (1) proof that the User model has a stable single groupId FK, and (2) the actual Prisma where-clause changes for each analytics query. Without those, implementation risk is high. Fix the Blocker and the two High issues before implementing."
+  },
+  {
+    "changeId": "scope-leadform-revoke-authz",
+    "available": false,
+    "verdict": "UNKNOWN",
+    "issues": [],
+    "notes": "Codex exec process timed out in two synchronous attempts (Bash tool hard-caps at 10 minutes; the process ran past that). A background run was started and is still in progress but has not yet written an item.completed event to the output file. No Codex verdict is available."
+  },
+  {
+    "changeId": "fix-open-redirect-next-param",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/fix-open-redirect-next-param/tasks.md",
+        "problem": "Task 1.1 instructs implementing render-time validation with window.location.origin, but sanitizeNext is called during LoginPageBody render; this client component is still prerendered/suspended by Next, and direct window access in render can crash SSR/prerender instead of fixing the redirect path.",
+        "fix": "Specify an SSR-safe helper contract: pass an explicit origin only when available, or validate relative paths with a sentinel origin and return only pathname/search/hash; do not read window during render."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/fix-open-redirect-next-param/tasks.md",
+        "problem": "The cited direct dev-login sink only gets an @evil.com test; there is no explicit API scenario/test that /auth/dev-login?redirect=/\\evil.com, //evil.com, or https://evil.com falls back safely, even though dev-login is independently user-controlled and currently concatenates redirect directly.",
+        "fix": "Add dev-login-specific scenarios/tests for backslash, scheme-relative, and absolute off-origin redirect values, not only the SAML forwarding path."
+      }
+    ],
+    "notes": "Read the full change artifacts and spot-checked the cited web/API auth code plus related specs. The direction is sound, but the proposal needs these corrections before implementation."
+  },
+  {
+    "changeId": "escape-org-data-script",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/escape-org-data-script/design.md:26-29, openspec/changes/escape-org-data-script/tasks.md:13-22, apps/web/src/app/page.tsx:12-14, apps/web/src/app/login-page.client.tsx:172-178",
+        "problem": "The design admits no production code reads __org_data, and the actual landing page already gets org identity through an RSC prop plus query initialData, yet the tasks mandate preserving and hardening the global inline script sink instead of deleting it; this is a materially simpler and safer fix the task list does not allow.",
+        "fix": "Revise the chosen implementation to remove __org_data and update layout tests, or prove a real runtime reader exists and make the encoder path necessary."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/escape-org-data-script/design.md:50-55",
+        "problem": "The primary encoding decision is self-contradictory: it says escape `<` to `<`, `>` to `>`, `/` to `/`, and embeds raw U+2028/U+2029 characters, which is not an escaping algorithm and would not fix the breakout if followed literally.",
+        "fix": "Spell the exact serializer mapping as JSON escapes such as `<`, `>`, `/`, ` `, and ` `, or point to a hardened serializer."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/escape-org-data-script/proposal.md:41-43, openspec/changes/escape-org-data-script/tasks.md:3-9, openspec/changes/escape-org-data-script/specs/inline-data-script-safety/spec.md:37-46, packages/shared/src/schemas/organization.ts:20-47",
+        "problem": "The proposal says the charset constraint is shared by organizationSchema, organizationUpdateSchema, and organizationPublicSchema, while tasks and scenarios only require organizationUpdateSchema; implementing the tasks leaves read/public schemas accepting angle-bracket values, so the stated defense-in-depth boundary is not actually specified.",
+        "fix": "Either factor the constrained org-name schema into all three org schemas and cover them in tests, or narrow the proposal/spec language to the admin write schema only."
+      }
+    ],
+    "notes": "openspec validate \"escape-org-data-script\" --strict passes; issues are semantic conflicts with the current code and the proposal itself."
+  },
+  {
+    "changeId": "add-section-optimistic-lock",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/add-section-optimistic-lock/tasks.md:66",
+        "problem": "The web recovery plan misses the existing queued-autosave path. useLeadFormAutosave queues a second payload while a save is in flight, then on first success immediately fires that queued payload before the invalidated lead form has refetched the bumped version (apps/web/src/hooks/use-lead-form-autosave.ts:101 and :226). After this change, that same-tab continuation still carries the old expected version and will self-conflict, then conflict recovery can refetch over the user's queued local edits. This contradicts the design's goal that the returned read model keeps the client current for the next save.",
+        "fix": "Require the autosave success handler to consume the mutation result's bumped version and rewrite/rebase any queued payload before firing it, with a test for edit-while-save-in-flight."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/add-section-optimistic-lock/specs/report-section-write-integrity/spec.md:96",
+        "problem": "The spec requires unchanged child rows to preserve original createdAt, but the actual read model does not carry child createdAt at all (packages/shared/src/schemas/section.schema.ts:26, apps/api/src/modules/report-sections/report-sections.prisma-repository.ts:414), and tasks.md explicitly allows recording a follow-up and leaving provenance as-is. That makes the scenario at spec.md:103 unfulfilled by the planned tasks while saveSection's delete/recreate continues to stamp fresh createdAt values (report-sections.prisma-repository.ts:551).",
+        "fix": "Either add createdAt to item/risk/decision read and save payloads and persist it on recreate, or remove/defer the provenance requirement and scenario from this change."
+      }
+    ],
+    "notes": "Reviewed only openspec/changes/add-section-optimistic-lock. Ran find as requested and openspec validate add-section-optimistic-lock --strict; validation passed, but the plan has material gaps."
+  },
+  {
+    "changeId": "guard-autopublish-archived",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "Blocker",
+        "where": "openspec/changes/guard-autopublish-archived/design.md:29; apps/api/src/modules/period/auto-publisher.scheduler.ts:67; apps/api/src/modules/publication/publication.service.ts:232; apps/api/src/modules/publication/publication.prisma-repository.ts:56",
+        "problem": "The proposal only filters the initial candidate query and explicitly rejects a guard in publishAuto, so an admin can still archive a draft after runOnce selects it but before publishAuto/saveAssembledReport writes; the save uses where:{id} and buildTransition('autoPublish') does not clear archived, recreating archived=true with periodState='published'.",
+        "fix": "Make the publish write conditional on the row still being status='draft' and archived=false, or re-read/check archived inside the auto-publish transaction before writing."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/guard-autopublish-archived/tasks.md:9; openspec/changes/guard-autopublish-archived/specs/period-dual-state/spec.md:17",
+        "problem": "The required unit test can pass vacuously if the mocked findMany returns [], and runOnce currently selects only id, so the test plan does not require proving the Prisma where clause actually contains archived:false.",
+        "fix": "Require an assertion on prisma.report.findMany's where object including archived:false, plus the eligible non-archived draft regression case."
+      }
+    ],
+    "notes": "The narrow idea is right, but query-only filtering is not sufficient for the actual read-then-write flow."
+  }
+]
