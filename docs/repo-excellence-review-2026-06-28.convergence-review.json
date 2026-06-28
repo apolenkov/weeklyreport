@@ -1,0 +1,237 @@
+[
+  {
+    "changeId": "fix-carryover-persistence",
+    "available": true,
+    "verdict": "APPROVED",
+    "issues": [],
+    "notes": "Read the full change directory, validated it strictly, and spot-checked the cited service/repository/schema/error-mapper/spec surfaces. The revised unmatched-author handling, stageNames/priorityRank persistence requirements, and CarryOverDomainError vs conflict-error distinction are coherent with current code and durable specs."
+  },
+  {
+    "changeId": "fix-prod-web-build-args",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/fix-prod-web-build-args/design.md:88-96; openspec/changes/fix-prod-web-build-args/tasks.md:3-13; openspec/changes/fix-prod-web-build-args/specs/prod-web-build-hardening/spec.md:58-80",
+        "problem": "The requirement says the prod image SHALL bake the internal API origin http://api:3001 for Next rewrites, but the prescribed build arg is API_URL: ${API_URL:-http://api:3001}. Docker Compose will use any API_URL from the operator shell/.env, so a common dev/staging value such as http://localhost:3002 or http://api:3002 can still be baked into routes-manifest.json and preserve the production rewrite failure this change is meant to eliminate.",
+        "fix": "Do not reuse the generic API_URL interpolation for the prod build arg; hardcode API_URL: http://api:3001 in docker-compose.prod.yml or introduce a dedicated required internal-build var with validation/documentation that it must be the Docker-network API origin."
+      }
+    ],
+    "notes": "Read all current change artifacts plus cited product code and relevant durable specs; openspec validate fix-prod-web-build-args --strict passes, but the API_URL interpolation leaves the central production-build invariant unenforced."
+  },
+  {
+    "changeId": "route-pdfs-and-authz",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/route-pdfs-and-authz/design.md:31-33; openspec/changes/route-pdfs-and-authz/tasks.md:19; openspec/changes/route-pdfs-and-authz/specs/pdf-artifact-delivery/spec.md:77-81",
+        "problem": "The revision's core decision says requestedBy is not a standalone grant, but the design goals and handler task still specify an OR authorization shape, and the out-of-scope scenario preserves that old model; an implementer following tasks could reintroduce the stale-requester download leak the change is meant to close.",
+        "fix": "Make every artifact state the single predicate: current role-and-scope read access to job.reportId; remove requester-as-OR wording from goals, task 3.4, and the out-of-scope scenario."
+      }
+    ],
+    "notes": "The cited code facts otherwise check out: /pdfs is currently an unauthenticated express.static mount, the browser opens relative artifactUrl, Caddy/dev rewrites omit /pdfs, and createContext has worker-token/dev-session fallbacks that justify a dedicated human-session resolver."
+  },
+  {
+    "changeId": "set-express-trust-proxy",
+    "available": true,
+    "verdict": "APPROVED",
+    "issues": [],
+    "notes": "Read the full change directory, cited API/bootstrap/rate-limit/tRPC code, docker-compose.prod.yml, route-pdfs-and-authz references, and searched durable specs for conflicting proxy/IP requirements. No material remaining flaw found. pnpm openspec validate could not run in this read-only sandbox because pnpm tried to create a repo-local temp file and hit EPERM."
+  },
+  {
+    "changeId": "scope-analytics-to-group",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/scope-analytics-to-group/proposal.md",
+        "problem": "The proposal's What Changes still says to apply groupScopeFilter only to the report where via sections.some, mirroring compiledHistory, but the revised design/spec/tasks correctly identify that as insufficient and require nested include.sections.where as the load-bearing fix. This stale top-level-only instruction contradicts the core security requirement and could lead implementation back to the original leak.",
+        "fix": "Update proposal.md to state that all three methods must scope the nested included sections, with top-level sections.some only as an optional/drop-empty companion."
+      }
+    ],
+    "notes": "Read proposal.md, design.md, tasks.md, the delta spec, relevant durable specs, analytics repository/service/cache assumptions, tRPC analytics wiring, group-scope helper, and Prisma Report/ReportSection schema. openspec validate scope-analytics-to-group --strict passes."
+  },
+  {
+    "changeId": "scope-leadform-revoke-authz",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/scope-leadform-revoke-authz/design.md:61-101, tasks.md:3-5",
+        "problem": "The revised design is built around a false Prisma constraint: current generated Prisma types show ReportSectionUpdateManyArgs.where is ReportSectionWhereInput, and ReportSectionWhereInput includes author?: XOR<UserScalarRelationFilter, UserWhereInput>, so a top-level updateMany where can accept the same author.reportingGroupId relation filter the proposal claims Prisma rejects. The proposal therefore mandates a more complex findMany-ids-then-updateMany bulk path and a read-then-write pattern for the single path based on an incorrect assumption.",
+        "fix": "Replace D2/D3/tasks with the simpler scoped updateMany where clauses, or provide a repo-local failing type/runtime proof if relation-filter updateMany is actually unusable here."
+      }
+    ],
+    "notes": "Read the full change directory, the cited lead-form service/repository/router/group-scope/error-mapper code, generated Prisma types, and the relevant durable specs. Prior fixes around typed NOT_FOUND and router-level scope threading are coherent, but the Prisma relation-filter premise still needs correction before implementation."
+  },
+  {
+    "changeId": "fix-open-redirect-next-param",
+    "available": true,
+    "verdict": "APPROVED",
+    "issues": [],
+    "notes": "Reviewed current proposal, design, tasks, safe-redirect-validation delta, cited web/API auth code, related SAML/landing/routing specs, and openspec validate --strict passes. No remaining material blocker found."
+  },
+  {
+    "changeId": "escape-org-data-script",
+    "available": true,
+    "verdict": "APPROVED",
+    "issues": [],
+    "notes": "Reviewed proposal.md, design.md, tasks.md, delta spec, cited layout/login/org schema/router/service/test files, and relevant durable specs. The revised direction is coherent: remove the dead inline org-data sink, keep read schemas tolerant, constrain the admin write schema, and preserve the RSC initialOrg landing path. I attempted openspec validation, but pnpm failed in this read-only sandbox with EPERM creating a temp file, so no validation result is claimed."
+  },
+  {
+    "changeId": "add-section-optimistic-lock",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/add-section-optimistic-lock/design.md:149-164, tasks.md:74-82, spec.md:61-68, apps/web/src/hooks/use-lead-form-autosave.ts:169-175",
+        "problem": "The revised artifacts only cover the queued forceSave continuation, but the actual debounced autosave path can still fire a second save while saveDraftMut is pending; after version becomes required this same-client save can race with the manual/in-flight save using the stale loaded version, producing the 409/refetch path the spec says must not discard queued local edits.",
+        "fix": "Centralize save triggering so the debounce timer also queues/rebases when a mutation is in flight, and add the 7.4 test for debounced edit-while-save-in-flight, not only forceSave."
+      },
+      {
+        "severity": "Low",
+        "where": "openspec/changes/add-section-optimistic-lock/proposal.md:45-47",
+        "problem": "The capability summary still advertises 'preserved provenance' even though proposal.md:38-39, design.md:53-56/165-172, tasks.md:50-53, and the delta spec intentionally defer child createdAt preservation.",
+        "fix": "Remove 'preserved provenance' from the capability summary or explicitly label it deferred."
+      }
+    ],
+    "notes": "Read the full change directory and spot-checked the cited schemas, repository/service paths, tRPC mapper, lead autosave hook, durable specs, Prisma schema/init migration, and openspec validate; validate passes, but the debounce race remains a material same-client conflict gap."
+  },
+  {
+    "changeId": "guard-autopublish-archived",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/guard-autopublish-archived/tasks.md:6",
+        "problem": "The revised CAS plan stops the row update but still leaves the existing publishAuto success path ambiguous: PublicationService.publishAuto unconditionally increments publish metrics and enqueues ingestion after saveAssembledReport returns (apps/api/src/modules/publication/publication.service.ts:242-267), and AutoPublisherScheduler unconditionally counts missing sections, emits periodAutoPublish audit, and adds the id after publishAuto returns (apps/api/src/modules/period/auto-publisher.scheduler.ts:92-111). Because AssembledReport does not expose archived/periodState (packages/shared/src/schemas/report.schema.ts:59-70; apps/api/src/modules/published-report-snapshot.ts:55-66), a zero-row guarded update that simply re-reads/returns the current archived draft can be misreported as a successful auto-publish even though the spec says it was skipped.",
+        "fix": "Specify and test an explicit skipped outcome from the auto path (repository/service/scheduler) so CAS zero-row matches do not emit publish metrics, ingestion, audit, missing-section counts, or periodIds."
+      }
+    ],
+    "notes": "openspec validate guard-autopublish-archived --strict passes; candidate-query and row-state requirements are coherent, but the success/skip contract remains underspecified against the current service and scheduler call flow."
+  },
+  {
+    "changeId": "scope-period-lifecycle-authz",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/scope-period-lifecycle-authz/design.md:48-77; apps/api/src/modules/weekly-report/weekly-report.service.ts:122-130; apps/api/src/modules/weekly-report/weekly-report.prisma-repository.ts:33-58",
+        "problem": "The design says the new head lifecycle target should match the head weekly-report page resolver by using getCurrentEditableId, but the actual non-viewer default path still uses getActiveReportId, which has a published fallback, no archived filter, and different ordering. A head on the main weekly report page can therefore receive one reportId from weeklyReport.get and then be rejected by period.publish/reopen because the lifecycle authz resolver chooses a different target.",
+        "fix": "Either align the head/default weeklyReport.get resolver with the proposed lifecycle resolver and cover that behavior, or make the lifecycle authz resolver match the actual UI target and update the delta/specs accordingly."
+      }
+    ],
+    "notes": "Read the full change artifacts, validated the change, and spot-checked the cited service/repository/router/web paths plus touched durable specs. The remaining blocker is a concrete wrong assumption about the current resolver used by the head UI."
+  },
+  {
+    "changeId": "scope-reminder-authz",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/scope-reminder-authz/design.md:111-115; openspec/changes/scope-reminder-authz/specs/reminder-scope-authz/spec.md:115-121",
+        "problem": "The single-lead dispatch design says to prove scope by resolving the lead's ReportSection on that report, but the spec also requires an in-scope lead with no section yet to return no-matching-section. With no ReportSection row, that proposed check cannot distinguish 'in-scope lead with no section' from 'out-of-scope lead' even though User.reportingGroupId is the actual group link in prisma/schema.prisma:24-34.",
+        "fix": "For leadId, authorize against the User via groupScopeFilter(session, \"user\") when no report section exists; only then check draft section status for no-matching-section."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/scope-reminder-authz/design.md:93-99; openspec/changes/scope-reminder-authz/tasks.md:13-14",
+        "problem": "The plan filters listExecutions recipients after the existing service/repository pagination, but RemindersService paginates before return (apps/api/src/modules/reminders/reminders.service.ts:230-241) over the repository's unscoped newest-100 slice (apps/api/src/modules/reminders/reminders.prisma-repository.ts:290-295). In a mixed-scope report, out-of-scope rows can consume the page and drive nextCursor, yielding empty/incorrect pages and potentially exposing an out-of-scope execution id as the cursor.",
+        "fix": "Filter to the caller-visible recipient set before pagination/cursor calculation, or move the recipient predicate into the execution query and paginate the scoped set."
+      }
+    ],
+    "notes": "Read the full change directory, cited router/reminder/group-scope code, touched durable specs, and ran openspec validate scope-reminder-authz --strict; structural validation passes but the remaining semantic issues above need revision."
+  },
+  {
+    "changeId": "enforce-deactivation-pdf-bullboard",
+    "available": true,
+    "verdict": "APPROVED",
+    "issues": [],
+    "notes": "Reviewed the full current change directory, the dependency-currency base spec it modifies, absence of an existing session-deactivation-enforcement spec, and the cited API code paths for tRPC context/PDF export/Bull Board/session revocation. The revised artifacts are coherent and openspec validate --strict passes."
+  },
+  {
+    "changeId": "make-publish-atomic",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/make-publish-atomic/specs/atomic-publish-transition/spec.md",
+        "problem": "The DB-resolved publish target is specified as the same query review.dashboard currently uses: periodStatus in open/reopened and periodStart <= now. That query omits archived:false and a deterministic id desc tiebreak, while the durable current-editable contract and repository implementation define the current editable period as non-archived and ordered by periodStart desc, id desc. Because period uniqueness is explicitly a non-goal, two matching rows or an archived-open row can make dashboard/assembledReport/publish pick an arbitrary or archived period, reintroducing a stale/wrong publish target under the new path.",
+        "fix": "Specify and test a shared current-editable resolver/query for review.dashboard, review.assembledReport, and review.publish: periodStatus in open/reopened, periodStart <= now, archived:false, orderBy periodStart desc then id desc."
+      }
+    ],
+    "notes": "Read proposal.md, design.md, tasks.md, both spec deltas, relevant durable specs, and cited code; openspec validate make-publish-atomic --strict passes."
+  },
+  {
+    "changeId": "transactional-snapshot-restore",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/transactional-snapshot-restore/tasks.md:14",
+        "problem": "The atomicity plan wraps only the five named upsert phases, but current saveSnapshot also calls ensureFallbackReportingGroup between group and user phases; that helper performs a reportingGroup.upsert (apps/api/src/modules/admin/admin-snapshot-write.queries.ts:282, apps/api/src/modules/admin/admin-group.queries.ts:29), so leaving it outside the transaction can still commit a default group before a later user/project/period/rule failure, contradicting the spec's 'database matches its pre-call state' requirement.",
+        "fix": "Require ensureFallbackReportingGroup/current snapshot write setup that can write DB rows to run inside the same transaction, and widen its client type like the upsert helpers."
+      }
+    ],
+    "notes": "Read proposal.md, design.md, tasks.md, the delta spec, touched durable specs, and cited admin code; openspec validate transactional-snapshot-restore --strict passes, but this remaining atomicity gap is material."
+  },
+  {
+    "changeId": "period-uniqueness-db-constraint",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/period-uniqueness-db-constraint/design.md:137",
+        "problem": "The scheduled-to-open recovery is internally wrong for one of the cases it explicitly names: if two scheduled rows with the same boundary are flipped by the same updateMany, the new partial unique index can reject the statement even though no open row exists yet; treating that P2002 as 'already-open' would leave the boundary with no opened period and silently skip the lifecycle transition. Current code uses one bulk updateMany for all due scheduled rows at apps/api/src/modules/period/period-creator.scheduler.ts:83, and the spec only covers the simpler case where an open row already exists at openspec/changes/period-uniqueness-db-constraint/specs/period-uniqueness-constraint/spec.md:107.",
+        "fix": "Change the scheduled-to-open plan to update due scheduled rows per boundary/row and, on P2002, re-read for an existing open row; if none exists, deterministically open one scheduled row and leave/report the duplicates instead of blanket-skipping."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/period-uniqueness-db-constraint/tasks.md:75",
+        "problem": "The tasks require implementing a P2002 guard for the scheduler scheduled-to-open updateMany at tasks.md:49, and the spec has a dedicated scheduled-to-open collision scenario at spec.md:107, but the test list only covers scheduler report.create plus reopen/unarchive; there is no task that proves the scheduled-to-open catch works or catches the no-open duplicate-scheduled case above.",
+        "fix": "Add a scheduler scheduled-to-open test that forces P2002 on the due scheduled flip, verifies the intended recovery, and verifies non-P2002 failures still propagate."
+      }
+    ],
+    "notes": "Read proposal.md, design.md, tasks.md, the delta spec, cited scheduler/auth/admin/period code, schema/migration tail, and touched durable specs; openspec validate period-uniqueness-db-constraint --strict passes."
+  },
+  {
+    "changeId": "scope-leadform-getbyperiod",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/scope-leadform-getbyperiod/specs/leadform-section-read-scope/spec.md",
+        "problem": "The revised gate is still only specified as viewer/author non-archived co-ownership, but current leadForm.byPeriod is just a protected procedure that passes arbitrary reportId/authorId to getByPeriod, and getByPeriod currently resolves a foreign section from requestedAuthorId after hasSharedProduct without first proving the caller has their own section/access in that report (apps/api/src/infrastructure/trpc/trpc.router.ts:2099-2113; apps/api/src/modules/report-sections/lead-form.service.ts:168-179). The sibling getCrossAuthorContent path the proposal cites does have that report-access precheck before returning foreign content (apps/api/src/modules/report-sections/lead-form.service.ts:256-264). As written, the change can still allow a lead who currently co-owns a product with the author to read that author's section for a report/period the caller does not belong to, only now filtered to shared products.",
+        "fix": "Require and test a caller-owned/access-granting section in the requested report before any lead cross-author getByPeriod read, matching getCrossAuthorContent's ownSection precheck; otherwise fall back/deny without reading the foreign section."
+      }
+    ],
+    "notes": "Read proposal.md, design.md, tasks.md, the spec delta, relevant service/router/repository code, touched durable specs, and openspec validate returned valid; the remaining issue is a report-access gate gap, not structural OpenSpec validity."
+  },
+  {
+    "changeId": "map-domain-errors",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "Medium",
+        "where": "apps/api/src/modules/report-sections/lead-form.prisma-repository.ts:192",
+        "problem": "The proposal types the service-level fillFrom source-missing check, but the actual copy path still has a bare `throw new Error` when `fillFromSection` re-reads the source. If the source section disappears between the service precheck and repository copy, the spec's source-section-missing => NOT_FOUND requirement still falls through as INTERNAL_SERVER_ERROR, and tasks 8.4 would miss it because it only greps the five planned files.",
+        "fix": "Include `lead-form.prisma-repository.ts` in scope and throw `LeadFormDomainError` for the repository source-missing guard, or otherwise make the copy path preserve NOT_FOUND under the race."
+      }
+    ],
+    "notes": "OpenSpec validation passes and the revised service/mapper coverage is mostly coherent, but the remaining repository throw leaves a concrete reachable false-500 edge in the same fillFrom path the change claims to fix."
+  }
+]
