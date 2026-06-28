@@ -30,6 +30,41 @@ supplied by the Caddy edge proxy.
 - **THEN** the structured HTTP access log entry's `ip` field contains the
   real client IP
 
+### Requirement: Trust-proxy must not let non-edge ingress spoof the client IP
+
+The system SHALL ensure that, with `trust proxy` enabled, only the Caddy edge
+hop can influence `req.ip`; production deployment MUST therefore make Caddy the
+sole ingress to the Express socket before trust proxy is enabled, because a
+caller reaching the API outside the Caddy hop could otherwise forge
+`X-Forwarded-For` and have Express resolve `req.ip` to the spoofed value,
+evading the auth rate limit and poisoning the audit and HTTP access logs.
+
+The direct API host-port publication in `docker-compose.prod.yml`
+(`${API_PORT:-3001}:3001`) is the concrete non-edge ingress and is owned by the
+separate deploy-seam concern `BL-DEPLOY-SEAM-MISC`; production enablement of
+trust proxy is gated on that port being removed or bound to localhost. A
+CIDR-based trust list does NOT satisfy this requirement, because Docker
+host-published traffic arrives from the bridge gateway inside the same
+compose-network subnet as Caddy.
+
+#### Scenario: Forged X-Forwarded-For on a direct non-Caddy connection is not trusted
+
+- **GIVEN** trust proxy is enabled on the Express instance
+- **AND** the production API is reachable only through the Caddy edge (the
+  direct host port is closed per `BL-DEPLOY-SEAM-MISC`)
+- **WHEN** an attacker attempts to connect to the API outside the Caddy hop and
+  sends a forged `X-Forwarded-For: 203.0.113.99`
+- **THEN** the connection does not reach the Express socket, so the forged
+  header cannot set `req.ip`, and the rate-limit key and audit IP are unaffected
+
+#### Scenario: Production rollout is gated on host-port closure
+
+- **GIVEN** trust proxy has been added to `main.ts`
+- **WHEN** a production rollout is prepared while the API container port is still
+  host-published in `docker-compose.prod.yml`
+- **THEN** trust proxy MUST NOT be enabled in production until the direct host
+  port is removed or bound to localhost (the deploy-seam prerequisite)
+
 ### Requirement: False trust-proxy comment is removed from rate-limit middleware
 
 The system SHALL NOT contain the claim that `app.set('trust proxy', 1)` is

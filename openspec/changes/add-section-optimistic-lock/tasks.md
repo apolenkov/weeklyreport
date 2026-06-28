@@ -47,8 +47,10 @@
 - [ ] 5.2 Remove the `...(i.id ? { id } : {})` / risk / decision id spreads so
       the database mints child ids; catch `P2002` and rethrow as the
       domain error that maps to `BAD_REQUEST`.
-- [ ] 5.3 Preserve `createdAt` on child creates where the read model carries it;
-      if it does not, record a follow-up note and leave provenance as-is.
+- [ ] 5.3 Provenance is out of scope: the read model carries no child
+      `createdAt`, so leave the delete-then-recreate provenance behavior as-is
+      and record the follow-up to add `createdAt` to the read + input schemas and
+      persist it on recreate (deferred, see proposal/design Non-Goals).
 - [ ] 5.4 Apply the same compare-and-set + server-minted ids to
       `fillFromSection` in `lead-form.prisma-repository.ts`.
 
@@ -67,8 +69,17 @@
 
 - [ ] 7.1 Send the loaded `version` from the lead form save path
       (draft autosave + manual save + submit).
-- [ ] 7.2 On a `CONFLICT` response, do not present success; refetch the section
-      so the next save carries the current version.
+- [ ] 7.2 On a genuine cross-writer `CONFLICT`, do not present success; refetch
+      the section so the next save carries the current version.
+- [ ] 7.3 Fix the queued-autosave continuation in `useLeadFormAutosave`
+      (`apps/web/src/hooks/use-lead-form-autosave.ts`): make `onSuccess(data)`
+      consume the bumped `version` from the mutation result and rebase the queued
+      payload's `version` onto it BEFORE firing the queued save, so the
+      same-client continuation neither self-conflicts on the stale loaded version
+      nor loses the queued local edits via a refetch.
+- [ ] 7.4 Add a test for edit-while-save-in-flight: a payload queued during an
+      in-flight save fires with the bumped version, succeeds without a 409, and
+      preserves the queued local edits.
 
 ## 8. Verify
 

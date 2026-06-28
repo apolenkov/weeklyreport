@@ -71,6 +71,12 @@ yet resolve to a different origin when the redirect is issued.
 - **WHEN** the route issues the post-login redirect
 - **THEN** the Location resolves to the application origin, not host `evil.com`
 
+#### Scenario: Dev-login rejects backslash and off-origin redirect values
+
+- **GIVEN** AUTH_DEV_MODE is enabled and dev-login is hit directly with `redirect=/\evil.com`, `redirect=//evil.com`, or `redirect=https://evil.com`
+- **WHEN** the route issues the post-login redirect
+- **THEN** the Location resolves to the visitor's role default, not host `evil.com`
+
 #### Scenario: Dev-login honours a legitimate same-origin redirect
 
 - **GIVEN** AUTH_DEV_MODE is enabled and dev-login receives `redirect=/admin`

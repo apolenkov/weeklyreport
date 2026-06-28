@@ -50,6 +50,10 @@ $transaction:
   from `viewedSnapshotVersion` in the lead form.
 - No multi-author section editing or merge UI.
 - No change to head/viewer read paths.
+- No `createdAt` provenance preservation on the child delete-then-recreate. The
+  read model carries no child `createdAt`, so preserving it would mean widening
+  the read and input schemas plus the persistence in two repositories — out of
+  scope for the optimistic-lock fix; tracked as a follow-up.
 
 ## Decisions
 
@@ -143,14 +147,29 @@ AFTER   client save (carries loaded version)
 ## Risks / Trade-offs
 
 - **A 409 surfaces to a single user who only had one tab open** → the in-flight
-  autosave-vs-manual race is the likely trigger; mitigate by refetching and
-  letting the next save proceed silently, so the user sees a brief reload, not
-  an error toast, for the common self-conflict.
-- **`createdAt` provenance can only be preserved for rows whose `createdAt` the
-  read model actually carries** → the delete-recreate strategy otherwise resets
-  it; the spec scopes the guarantee to carried provenance, and if the read model
-  does not carry child `createdAt` this becomes a follow-up (note it in tasks),
-  not a blocker for the concurrency fix.
+  autosave-vs-manual race is the likely trigger. The lead form must handle two
+  distinct same-user cases, NOT a blanket refetch:
+  - **Queued autosave continuation** — `useLeadFormAutosave`
+    (`apps/web/src/hooks/use-lead-form-autosave.ts`) queues a second payload
+    while the first save is in flight, then fires that queued snapshot from the
+    first save's `onSuccess` (lines 111–128) before the invalidated query has
+    refetched. That queued snapshot carries the version loaded BEFORE the first
+    save bumped it, so it would self-conflict; and recovering it by refetch would
+    discard the user's queued local edits. Fix: `onSuccess(data)` consumes the
+    bumped `version` from the mutation result (the read model D5 already returns)
+    and rebases the queued payload's `version` onto it before firing — never
+    refetch-discard a queued payload that holds unsaved edits.
+  - **Genuine cross-writer conflict** (a real second writer) → refetch and let
+    the next save proceed silently, so the user sees a brief reload, not an error
+    toast.
+- **`createdAt` provenance is NOT preserved by this change** → the read model
+  carries no child `createdAt` (confirmed:
+  `itemReadModelSchema` / `riskReadModelSchema` / `decisionReadModelSchema` in
+  `packages/shared/src/schemas/section.schema.ts` and the repo read mapper omit
+  it), so the delete-recreate strategy stamps a fresh `createdAt` on every save.
+  Preserving it would require widening read + input schemas and persistence in
+  two repositories; that is deferred as a follow-up, not a blocker for the
+  concurrency fix. The spec carries no provenance requirement.
 - **Forgetting to bump `version` on any new section write path** → centralise
   the compare-and-set in `saveSection` / `fillFromSection` and add a
   characterization test so a future writer that bypasses it fails CI.

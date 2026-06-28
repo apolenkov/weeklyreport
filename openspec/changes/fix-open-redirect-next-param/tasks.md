@@ -1,6 +1,6 @@
 ## 1. Web landing page guard
 
-- [ ] 1.1 Replace `sanitizeNext` in `apps/web/src/app/login-page.client.tsx` with same-origin validation using `new URL(value, window.location.origin)` and `resolved.origin === window.location.origin`, plus defense-in-depth rejection of leading `//`, `/\`, and second char `/`|`\`; fall back to the role default on failure
+- [ ] 1.1 Replace `sanitizeNext` in `apps/web/src/app/login-page.client.tsx` with an SSR-safe same-origin check that does NOT read `window` during render: parse the candidate against a fixed in-code sentinel base (`new URL(value, "https://app.invalid")`), accept only when `resolved.origin` still equals the sentinel, and return `resolved.pathname + resolved.search + resolved.hash` (a relative path, never an absolute href), plus defense-in-depth rejection of leading `//`, `/\`, and second char `/`|`\`; fall back to the role default on failure
 - [ ] 1.2 Confirm the auto-redirect (`window.location.replace`) and the SSO `next` query both consume the validated value only
 - [ ] 1.3 Verify no hardcoded Russian and no new lint/type errors in the changed file
 
@@ -14,7 +14,7 @@
 
 - [ ] 3.1 Web unit tests for `sanitizeNext`: accept `/lead/report`; reject `/\evil.com`, `//evil.com`, `https://evil.com`; empty → role default
 - [ ] 3.2 API route tests for the SAML dev short-circuit: `next=/\evil.com` forwards the role default
-- [ ] 3.3 API route tests for dev-login: `redirect=@evil.com` resolves on-origin; `redirect=/admin` redirects to `/admin`
+- [ ] 3.3 API route tests for dev-login (independently user-controlled — direct `/auth/dev-login?redirect=…` hits, not only via the SAML short-circuit): `redirect=@evil.com` resolves on-origin; `redirect=/\evil.com`, `redirect=//evil.com`, `redirect=https://evil.com` each fall back to the role default; `redirect=/admin` redirects to `/admin`
 
 ## 4. Verification
 

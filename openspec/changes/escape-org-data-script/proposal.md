@@ -11,15 +11,19 @@ attribute does not prevent the breakout. This is the P0-8 finding
 
 ## What Changes
 
-- Encode the org payload so it can never break out of the inline `<script>`:
-  escape `<`, `>`, `/`, and the line/paragraph separators (or adopt a hardened
-  serializer), OR remove the inline-script path in favour of passing the org
-  identity as a prop / data attribute.
-- Add defence-in-depth charset validation to the org identity Zod schemas in
+- Remove the dead inline `<script id="__org_data">` org-identity sink from
+  `layout.tsx`: a grep confirms no production code reads it, and the landing page
+  already receives org identity via the server-rendered RSC prop path
+  (`page.tsx` → `login-page.client.tsx` `initialData`). Deleting the sink removes
+  the breakout class entirely. (Any future inline script that must embed
+  server data has to encode the breakout-class characters to `\uXXXX` escapes —
+  the durable invariant carried in the spec.)
+- Add defence-in-depth charset validation to the org identity write schema in
   `@customreport/shared` so admin-supplied `shortName`/`fullName` reject
   HTML-dangerous characters at the write boundary.
 - Add tests proving a malicious org string is neutralised at both layers
-  (the inline-script encoder and the schema validator).
+  (the layout no longer emits an injectable script, and the write-schema
+  validator rejects the dangerous value).
 
 ## Capabilities
 
@@ -27,8 +31,9 @@ attribute does not prevent the breakout. This is the P0-8 finding
 
 - `inline-data-script-safety`: server data embedded into inline HTML
   `<script>` tags is encoded so attacker-controlled strings cannot terminate
-  the script element or inject markup; org identity strings are charset-validated
-  at the schema boundary as defence in depth.
+  the script element or inject markup — and the dead `__org_data` sink that
+  carries org strings today is removed rather than hardened; org identity strings
+  are charset-validated at the write schema boundary as defence in depth.
 
 ### Modified Capabilities
 
@@ -36,11 +41,16 @@ attribute does not prevent the breakout. This is the P0-8 finding
 
 ## Impact
 
-- `apps/web/src/app/layout.tsx` — inline `<script id="__org_data">` encoding.
-- `apps/web/src/app/layout.test.tsx` — add a breakout-attempt case.
+- `apps/web/src/app/layout.tsx` — remove the dead inline `<script id="__org_data">`
+  and the now-unused `orgPublic` fetch in `RootLayout`.
+- `apps/web/src/app/layout.test.tsx` — drop the presence/round-trip assertions;
+  assert the script is gone and the brand still renders, including under a
+  breakout-attempt `fullName`.
 - `packages/shared/src/schemas/organization.ts` — charset constraint on
-  `shortName`/`fullName` (shared by `organizationSchema`,
-  `organizationUpdateSchema`, `organizationPublicSchema`).
+  `shortName`/`fullName` at the admin write boundary (`organizationUpdateSchema`
+  only). The read/projection schemas (`organizationSchema`,
+  `organizationPublicSchema`) parse DB output and stay unconstrained to avoid
+  throwing on stored data.
 - Blast radius is every page including the anonymous landing page; the write
   surface is admin-only (privileged stored XSS). Standard, low-risk fix; no
   data migration needed.

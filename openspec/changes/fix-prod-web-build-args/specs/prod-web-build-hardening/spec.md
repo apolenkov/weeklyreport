@@ -30,11 +30,15 @@ into the production bundle.
 - **WHEN** the web service is built via `docker-compose.prod.yml`
 - **THEN** the compiled bundle has `NEXT_PUBLIC_DEV_ROLE_SWITCHER` inlined as `false`
 
-### Requirement: Production web image bakes the public API origin
+### Requirement: Production web image bakes the public API origin for browser-inlined consumers
 
 The production web Docker image SHALL be built with `NEXT_PUBLIC_API_URL` bound
-to the public-facing API origin (not `localhost` or an internal Docker hostname)
-so the client-side tRPC calls reach the correct endpoint.
+to the public-facing, browser-reachable API origin (not `localhost`) so that
+the browser-facing components that inline this value — the API-readiness
+placeholder renders clickable `/health/*` and `/metrics` links from it — resolve
+to an address the user's browser can reach. (The browser tRPC client uses a
+relative `/trpc` URL and does not read this value; see the separate
+internal-origin requirement for the rewrite path.)
 
 #### Scenario: API URL is not localhost in production build
 
@@ -42,11 +46,37 @@ so the client-side tRPC calls reach the correct endpoint.
   `NEXT_PUBLIC_API_URL` set to the deployment origin
 - **THEN** the compiled bundle contains the public origin, not `localhost`
 
-#### Scenario: Missing env var is detected before build
+#### Scenario: Missing env var fails the build hard
 
 - **WHEN** `NEXT_PUBLIC_API_URL` is not provided in the deployment environment
-- **THEN** the operator is able to detect the misconfiguration from the compose
-  file before starting the build (no silent fallback to a localhost default)
+- **THEN** the build arg uses required-error interpolation
+  (`${NEXT_PUBLIC_API_URL:?...}`) so Docker Compose aborts with an error before
+  the build starts
+- **AND** the build does not proceed with an empty substituted value (the bare
+  `${NEXT_PUBLIC_API_URL}` form, which only warns, is not used)
+
+### Requirement: Production web image bakes the internal API origin for build-time rewrites
+
+The production web Docker image SHALL be built with the non-public `API_URL`
+build arg set to the API's internal service origin (`http://api:3001`) so that
+the `next.config.ts` rewrites for `/trpc`, `/auth`, `/health`, and `/api` —
+which Next.js evaluates once at build time and bakes into `routes-manifest.json`
+— proxy to the correct internal endpoint rather than the dev-only Dockerfile
+default `http://api:3002`.
+
+#### Scenario: Rewrites are baked to the internal API origin, not the stale default
+
+- **WHEN** the web service is built via `docker-compose.prod.yml`
+- **THEN** the baked rewrites in `routes-manifest.json` target the internal API
+  service origin (`http://api:3001`)
+- **AND** they do not target the Dockerfile ARG default `http://api:3002`
+- **AND** a same-origin browser request to `/trpc` is proxied to the running API
+
+#### Scenario: Build arg matches the API service internal listen port
+
+- **WHEN** the prod compose `api` service listens on internal port `3001`
+- **THEN** the `web` service `API_URL` build arg resolves to that same internal
+  origin so the build-time rewrite destination and the runtime API port agree
 
 ### Requirement: AUTH_STUB derivation is guarded by NODE_ENV
 

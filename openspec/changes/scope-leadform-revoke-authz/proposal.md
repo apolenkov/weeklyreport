@@ -61,5 +61,9 @@ local testing never exercises a cross-group head.
 - `apps/api/src/infrastructure/trpc/trpc.router.ts` — `revoke` /
   `revokeAllSubmitted` build the scope from `ctx.session` and pass it down.
 - `apps/api/src/lib/group-scope.ts` — reused (`groupScopeFilter`), unchanged.
-- New regression test under `apps/api/src/modules/report-sections/`.
+- New regression test driving the `leadForm.revoke` /
+  `leadForm.revokeAllSubmitted` tRPC procedures through the router (an
+  `appRouter` caller), co-located with the other router tests under
+  `apps/api/src/infrastructure/trpc/` or under
+  `apps/api/src/modules/report-sections/` provided it goes through the router.
 - No schema or migration change; no client-facing contract change.

@@ -33,3 +33,28 @@ forbids.
   set and calls `publishAuto`
 - **AND** the report transitions to `periodState="published"`, `status="published"`,
   `archived=false` after the tick
+
+### Requirement: Auto-Publish Write Must Skip Periods Archived After Candidate Selection
+
+The auto-publish write SHALL be conditioned on the target report still being
+`status="draft"` and `archived=false` at write time, so a period archived between
+candidate selection and the write is never promoted to `published`.
+
+The candidate query filter alone cannot close this gap: `runOnce` reads candidate
+ids, then writes per candidate. If an admin archives a draft after it was selected
+but before its write, the `archive` transition leaves `status="draft"`, so neither
+the candidate filter nor the `status==="published"` idempotency guard rejects it,
+and the `autoPublish` transition does not clear `archived`. A compare-and-set on
+the write (matching only `status="draft"` and `archived=false`) is the only point
+that closes the race.
+
+#### Scenario: Period archived after selection is not promoted to published
+
+- **WHEN** `AutoPublisherScheduler.runOnce` has selected a draft `Report` as a
+  candidate, and an admin archives that report (`archived=true`,
+  `periodState="archived"`, `status` stays `"draft"`) before its auto-publish
+  write executes
+- **THEN** the auto-publish write matches no row because its compare-and-set
+  guard requires `status="draft"` and `archived=false`
+- **AND** the report is not transitioned to `periodState="published"` and remains
+  `periodState="archived"`, `archived=true`

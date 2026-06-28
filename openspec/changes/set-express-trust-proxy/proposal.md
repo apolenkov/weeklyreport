@@ -9,6 +9,13 @@ auth throttle collapses to a 5-req/min global limit, nullifying brute-force
 protection and risking org-wide lockout), and every audit row in the system
 records the proxy IP rather than the client's real address.
 
+Caveat (security prerequisite): enabling trust proxy is only safe when Caddy is
+the sole ingress. The API container port is still host-published in
+`docker-compose.prod.yml` (`${API_PORT:-3001}:3001`), so a non-Caddy caller
+could forge `X-Forwarded-For` and spoof `req.ip` once trust proxy is on. Closing
+that port is owned by the deploy-seam concern `BL-DEPLOY-SEAM-MISC`; this change
+declares it a hard prerequisite for production enablement (see `design.md`).
+
 ## What Changes
 
 - Add `expressApp.set('trust proxy', 1)` in `apps/api/src/main.ts`, before
@@ -42,3 +49,7 @@ resolution)_
   IP resolution from `X-Forwarded-For`.
 - No schema changes, no migration, no frontend changes.
 - No breaking changes to the public API surface.
+- Cross-change dependency — production enablement of trust proxy is gated on the
+  API host port being closed (deploy-seam concern `BL-DEPLOY-SEAM-MISC`). No
+  edit to `docker-compose.prod.yml` is made here; the dependency is documented
+  in `design.md` and verified by a task before any prod rollout.

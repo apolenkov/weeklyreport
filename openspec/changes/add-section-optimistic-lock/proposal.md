@@ -10,10 +10,14 @@ already carries the deferred `TODO(v8.5-A-occ)` for exactly this gap
 (`prisma/schema.prisma` line 241). The review backlog flags it P0
 (`BL-SECTION-OPTIMISTIC-LOCK`, `docs/repo-excellence-review-2026-06-28.md`).
 
-Two related defects ride along: the recreate honours client-supplied child PKs
+One related defect rides along: the recreate honours client-supplied child PKs
 (`i.id` / `r.id` / `d.id`), so a stale or cross-section id collides and surfaces
-as a raw 500 (`P2002`); and `createMany` omits `createdAt`, resetting row
-provenance on every save.
+as a raw 500 (`P2002`). A second known gap — `createMany` omits `createdAt`,
+resetting row provenance on every save — is deferred out of this change: the
+section read model carries no child `createdAt` today, so preserving it would
+require widening three read schemas, three input schemas, and the persistence in
+two repositories, which is tangential to the optimistic-lock fix. It is tracked
+as a follow-up, not fixed here.
 
 ## What Changes
 
@@ -28,9 +32,11 @@ provenance on every save.
   expected value and refresh after a 409. Web and API must ship together.
 - Stop trusting client-supplied child ids on create — let the database mint
   them (or catch `P2002` and surface `BAD_REQUEST`).
-- Preserve `createdAt` provenance where the read model carries it.
 - Apply the same conflict guard to `fillFromSection`, which has the identical
   delete-then-recreate shape.
+
+`createdAt` provenance preservation is explicitly **deferred** (see Why) — the
+read model carries no child `createdAt`, so it stays out of this change.
 
 ## Capabilities
 
