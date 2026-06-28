@@ -1,0 +1,33 @@
+## 1. Web hook — serialize the debounce path
+
+- [ ] 1.1 In `apps/web/src/hooks/use-lead-form-autosave.ts`, in the debounce
+      timer callback, when `saveDraftMut.isPending` stash the current payload
+      key and snapshot into `queuedKeyRef` / `queuedPayloadRef` and return
+      without calling `mutateRef.current(...)` — mirroring the guard in
+      `forceSave`. Only start a mutation (set `state="saving"`, write
+      `inFlightRef`, call `mutateRef.current(...)`) when no save is in flight.
+- [ ] 1.2 In the `onSuccess` queued-save drain, replace
+      `void mutateAsyncRef.current({ ... })` with the fire-and-forget
+      `mutateRef.current({ ... })` so the mutation's own `onSuccess` / `onError`
+      handle the outcome and no unhandled promise rejection leaks.
+- [ ] 1.3 Confirm `inFlightRef` is only written when a mutation actually starts
+      (debounce start branch and the drain), so it is never overwritten while a
+      save is pending — preserving the "lastSavedRef stamps only confirmed
+      payloads" invariant.
+
+## 2. Tests
+
+- [ ] 2.1 Add/extend the autosave hook test: continued edits while a save is in
+      flight queue the newer payload (one mutation at a time), and an earlier
+      save's `onSuccess` does not stamp `lastSavedRef` with the newer
+      unconfirmed key (so `dirty` stays true until the queued save confirms).
+- [ ] 2.2 Add a test that a failing queued save surfaces exactly one error
+      (mutation `onError`) and emits no unhandled promise rejection from the
+      drain call site.
+
+## 3. Verification
+
+- [ ] 3.1 Run the gates and record results: `pnpm typecheck`, `pnpm lint`,
+      `pnpm test`, `pnpm build`.
+- [ ] 3.2 Run `openspec validate "serialize-autosave" --strict` and confirm
+      exit 0.
