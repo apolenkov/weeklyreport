@@ -38,7 +38,7 @@ const STANDARD = `Exemplary Code Standard (docs/exemplary-code-standard.md):
 - NO fallbacks/defaults for product config (no '?? localhost', no zod .default for product vars); requireEnv; explicit per env file; fail loud.
 - NO non-obvious magic literals (e.g. bare "draft-7"): name+document or remove.
 - comment hygiene: delete change-log/ticket/phase archaeology (Phase 35-08, UFB-036, AUTH-08, FIX-02, R3a-4, ...); keep load-bearing WHY rewritten without the prefix; never narrate what the code says.
-- exemplary WITHOUT exemption: the file must be lint-green with NO eslint.config.ts exempt/override entry.
+- exemplary WITHOUT exemption: eslint clean with --max-warnings 0 (zero errors AND zero warnings) and NO eslint.config.ts exempt/override entry for the file.
 - a module owns only its domain; cross-domain logic delegated via injection at the composition root.`;
 
 const INVENTORY_SCHEMA = {

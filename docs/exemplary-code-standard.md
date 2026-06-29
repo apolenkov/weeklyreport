@@ -51,9 +51,11 @@ pnpm test && pnpm build` green, plus a live boot from source where a boot path
    in-place mutation, no parameter mutation. Build new values with
    `map`/`filter`/`reduce`/spread. Pure functions; side effects isolated.
 5. **Small, single-purpose units** (see thresholds below).
-6. **Exemplary WITHOUT exemption.** A file is "done" only when it is lint-green
-   with NO entry in any `eslint.config.ts` exempt/override list. Removing the
-   exemption is the done-signal, not silencing the rule.
+6. **Exemplary WITHOUT exemption — zero exemptions, zero warnings, zero errors.**
+   "Lint-green" means `eslint` runs with `--max-warnings 0` (warnings ARE
+   failures) AND there is NO entry for the file in any `eslint.config.ts`
+   exempt/override list. Removing the exemption is the done-signal, not silencing
+   the rule; a surviving warning is not "green".
 7. **Correct architecture.** A module owns only its domain; cross-domain logic is
    delegated via injection (composition root wires it). dev and prod are split by
    explicit env files and dev-only modules, not by in-code branches with
@@ -134,6 +136,8 @@ once. Until then, tighten per-folder via local overrides that you then delete.
 
 - Every `src` file < 250 lines; every function ≤ 50 lines, cognitive complexity
   < 10; zero `let`/mutation; zero `eslint.config.ts` exempt entries for `src`.
+- `pnpm lint` runs clean with `--max-warnings 0` — **zero errors AND zero
+  warnings** across the repo (a warning is a failure, not an acceptable state).
 - Zero config fallbacks/defaults for product-critical values; boot fails loud.
 - Airbnb/Google/Vercel strict rule sets active, Prettier-reconciled.
 - The OpenSpec backlog triaged: implemented+archived or explicitly closed.
