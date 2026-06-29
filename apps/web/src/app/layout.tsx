@@ -26,11 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function RootLayout({ children }: RootLayoutProps) {
-  // UFB-070: pre-fetch org identity server-side so the landing page can read
-  // it from a <script> tag on first paint — eliminates the "ORG" flash.
-  const orgPublic = await getOrgPublic();
-
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -49,13 +45,6 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         <link
           href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap"
           rel="stylesheet"
-        />
-        {/* UFB-070: org identity injected server-side for zero-flash first paint */}
-        <script
-          id="__org_data"
-          type="application/json"
-          // eslint-disable-next-line react/no-danger -- trusted server-fetched org identity serialized via JSON.stringify into an application/json script for zero-flash first paint
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgPublic) }}
         />
       </head>
       <body className="min-h-svh bg-background font-sans antialiased tracking-[-0.01em]">
