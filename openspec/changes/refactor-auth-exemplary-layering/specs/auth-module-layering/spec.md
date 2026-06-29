@@ -36,10 +36,24 @@ report-section domain, invoked through a narrow injected function.
 - **WHEN** the lead logs in
 - **THEN** the current-week `Report` is created by the period factory through
   `buildTransition` (both `periodState` and the legacy tuple set atomically)
+- **AND** because the new period's deadline is in the future, the factory
+  materialises its `ReminderRule` rows via `applyToPeriod`, identically to the
+  period-creator scheduler path (closing the Phase 50-A lazy-path asymmetry)
 - **AND** the lead's `ReportSection` and per-project `ProjectStatus` rows are
   created by the report-section domain
 - **AND** the auth module performs no `Report` / `ReportSection` / `ProjectStatus`
   create itself
+
+#### Scenario: Lead login after the deadline does not schedule stale reminders
+
+- **GIVEN** a lead whose first login of the week creates the period AFTER its own
+  deadline has already passed (e.g. a weekend first-login)
+- **WHEN** the period factory creates that `Report`
+- **THEN** it does NOT call `applyToPeriod` for that period
+- **AND** so no active `ReminderRule` with an already-elapsed `fireAt` is
+  materialised — the hourly reminders scheduler fires any active past-due rule
+  (it has no elapsed-`fireAt` guard), so this is the guard point that prevents a
+  stale "deadline approaching" dispatch
 
 #### Scenario: Lead login when the current-week period already exists
 
@@ -48,17 +62,46 @@ report-section domain, invoked through a narrow injected function.
 - **THEN** the period factory returns the existing `Report` without creating a new one
 - **AND** the lead's section is created in that existing `Report` if absent
 
+#### Scenario: Concurrent creation races resolve without error
+
+- **GIVEN** two concurrent creators (two lead logins, or a login racing the
+  period-creator cron) that both find no current-week `Report`
+- **WHEN** both attempt to create it
+- **THEN** the partial-unique index `Report_one_open_per_boundary` lets one create
+  succeed and the other receive a `P2002`
+- **AND** the factory catches that `P2002`, re-reads, and returns the existing
+  `Report` rather than throwing
+
+#### Scenario: Concurrent same-lead login does not duplicate the section
+
+- **GIVEN** the same lead logging in twice concurrently against one `Report`
+- **WHEN** both calls reach `ensureLeadSection(reportId, userId)`
+- **THEN** exactly one `ReportSection` exists for `(reportId, authorId)` afterwards
+- **AND** neither call throws an unhandled unique-constraint error
+
 ### Requirement: Authentication behaviour is unchanged by the refactor
 
 The refactor MUST preserve SAML provisioning, dev-login, logout, and session
-cookie behaviour exactly. The session payload shape, the email-as-account-key
-resolution, the create-only SAML rule, and the dev-login resync rule MUST remain
-as specified by `saml-provisioning`.
+cookie behaviour exactly. The session payload shape, the create-only SAML rule,
+and the dev-login resync rule MUST remain as today. User resolution MUST move
+verbatim: it stays email-first with the existing `samlId` fallback
+(`findFirst({email}) ?? findFirst({samlId})`). This requirement does NOT assert
+pure email-as-account-key resolution — the `samlId` fallback is a pre-existing
+behaviour the `saml-provisioning` wording does not describe, and this change
+neither removes nor reconciles it.
 
 #### Scenario: SAML and dev-login sessions are identical before and after
 
 - **GIVEN** the same SAML profile or dev-login role
 - **WHEN** a session is built after the refactor
 - **THEN** the resulting `UserSession` fields are identical to the pre-refactor
-  session for the same input, except for any deadline change governed by
-  `period-dual-state`
+  session for the same input, except for any deadline change from the unified
+  period factory
+
+#### Scenario: The samlId resolution fallback is preserved
+
+- **GIVEN** an existing user whose stored `email` does not match the incoming
+  profile email but whose `samlId` does
+- **WHEN** the session is built after the refactor
+- **THEN** that existing user is resolved via the `samlId` fallback, exactly as
+  before the refactor

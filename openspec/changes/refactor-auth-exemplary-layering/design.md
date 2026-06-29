@@ -37,18 +37,70 @@ Shape (illustrative, not binding on the implementer):
 
 ```
 // period/period-factory.ts (inside the sanctioned boundary)
-ensureCurrentPeriod(prisma, now, settings) -> { reportId, periodStart, periodEnd }
+ensureCurrentPeriod(prisma, now, settings)
+  -> { reportId, periodStart, periodEnd, deadline, periodState }
   // find draft Report for the week of `now` (getCurrentWeekBounds + length)
   // if absent: create via buildTransition(initialPeriodState(...)) + computeDeadline(...)
+  // on create conflict: catch P2002 on "Report_one_open_per_boundary", re-read, return existing
 ```
 
-- `period-creator.scheduler.ts::runOnce` is refactored to call the factory for
-  the create step, so the scheduler and the lazy login path share one formula.
-  The scheduler keeps its own "skip when a future period exists" and
-  scheduled→open flip logic — those are scheduler policy, not creation.
+- The factory returns the full created/found shape — including `deadline` and
+  `periodState` — because the scheduler needs them for its log/audit payload
+  (`period-creator.scheduler.ts:149-164`). A `{reportId, periodStart, periodEnd}`-
+  only return would silently drop those.
+- **The factory materialises reminder rules on create, when the deadline is in
+  the future.** When (and only when) it creates a new `Report` whose deadline has
+  not yet passed, the factory calls `policyApplicator.applyToPeriod(created)`
+  (idempotent upsert). This folds reminder-policy materialisation into the single
+  creation point, so every creator gets it and none can forget — see D2b. The
+  `deadline > now` guard is load-bearing: the reminders scheduler fires any active
+  rule whose `fireAt` is already past (verified: `findDueDeadlineRules` filters
+  `fireAt: { lte: now }` with no lower bound), so a period minted AFTER its own
+  deadline (a late weekend first-login) would otherwise blast a stale reminder on
+  the next tick. Such a period is past its deadline anyway, so skipping its
+  reminders is correct. `policyApplicator` is injected into the factory the same
+  optional way the scheduler holds it, so tests without a reminder mock still pass.
+- `period-creator.scheduler.ts::runOnce` is refactored to call the factory for the
+  create step. The factory now owns `applyToPeriod`, so the scheduler DROPS its own
+  `policyApplicator.applyToPeriod(created)` call (the factory did it). The scheduler
+  KEEPS its `logger.log` line and its `auditLogger.periodAutoCreate({... deadline,
+... periodState})` event — those are scheduler policy, not creation. It also keeps
+  its "skip when a future period exists" and scheduled→open flip logic.
+
+### D2b — fix the lazy-path reminder-rule asymmetry (exemplary cleanup)
+
+Today two period creators call `applyToPeriod` (the period-creator cron and admin
+snapshot restore), but the lazy login-create path (`ensureWeeklyReport`,
+Phase 50-A) does NOT — it predates the Phase 50-B/TD-06 wiring of reminder policy
+into period creation and was never updated. (Admin manual create also does not
+call `applyToPeriod` — a separate, pre-existing gap left out of scope here; this
+change describes only what it touches.) The result
+is a latent bug: when a lead login is the FIRST to create the current period
+(scheduler off or not yet ticked), that period gets no `ReminderRule` rows and its
+deadline reminders never fire. `applyToPeriod` was designed to be called by every
+creator (idempotent upsert), so the lazy path is simply a missed call site. Routing
+both creators through the one factory (D2) — which calls `applyToPeriod` on create —
+removes the asymmetry as a side effect of unifying the writer. Edge case to test:
+a created period whose deadline is already in the past must not retroactively
+schedule reminders for elapsed `fireAt` instants beyond what the scheduler already
+guards.
+
 - The factory is added to the enumerated writer list in the `period-dual-state`
   spec (MODIFIED), making the previously-implicit lazy writer explicit and
   compliant.
+
+### D2a — concurrent-create race on the partial-unique index
+
+`Report` carries a partial unique index `Report_one_open_per_boundary` (schema.prisma:223,
+`ON (periodStart, periodEnd) WHERE periodState='open'`). Two creators racing —
+two concurrent lead logins, or a login racing the period-creator cron — can both
+pass the find step and both attempt a create; one wins, the other gets a Prisma
+`P2002`. The factory MUST catch **only** `P2002` whose target is
+`Report_one_open_per_boundary`, re-read the now-existing row by
+`(periodStart, periodEnd, periodState='open')`, and return it; any other error
+re-throws. (Codex cited a `period-uniqueness-constraint` spec that does not exist;
+the constraint itself is real and lives in the schema/init migration — the race
+handling is the substantive requirement, not a spec reference.)
 
 ### D3 — deadline behaviour change (the contestable one)
 
@@ -76,6 +128,14 @@ save", which `period-dual-state` explicitly classifies as a non-period writer
 report-section domain and is invoked by `buildUserSession` through a narrow
 injected function. Auth stops importing `ReportSection` / `ProjectStatus`.
 
+The current code does `findUnique` then `create` in two calls — a TOCTOU window
+where two concurrent logins of the **same** lead can both miss and both create,
+hitting the `ReportSection_reportId_authorId_key` unique index. The moved
+`ensureLeadSection(reportId, userId)` MUST close it: either an `upsert` on
+`(reportId, authorId)`, or a `create` that catches the unique-violation `P2002`
+and re-reads. `ProjectStatus` rows already use `createMany({ skipDuplicates })`,
+so they are safe; the section create is the gap to fix.
+
 ### D5 — `mountAuthRoutes` decomposition
 
 Each route handler becomes a named module-level function
@@ -88,8 +148,14 @@ compile rather than silently missing an entry.
 
 ### D6 — shared helpers, immutability, dead-code removal
 
-- A single `requireEnv(env, key)` helper in `lib` replaces the three copies
-  (`auth.controller.ts`, `jwt.strategy.ts`→deleted, `saml.strategy.ts`).
+- A single **generic** `requireEnv(env, key)` presence helper in `lib` replaces
+  the three "throw if missing" copies (`auth.controller.ts`, `jwt.strategy.ts`→
+  deleted, `saml.strategy.ts`). It MUST stay generic: `requireJwtSecret` (which the
+  `harden-jwt-verify-algorithms` change extends with a `>= 32` length check) is a
+  **distinct** function layered on top of `requireEnv`, not folded into it. If
+  `harden-jwt-verify-algorithms` has already landed, the dedup MUST preserve its
+  length check and the `jwt.verify` `{ algorithms: ["HS256"] }` pin — see the
+  ordering note in the proposal.
 - A single `SESSION_COOKIE_NAME` resolution (`env.AUTH_JWT_COOKIE_NAME ??
 "customreport_session"`) replaces the five literals; logout reuses
   `createSessionCookie(... maxAge:0)` instead of hand-building the clear-cookie
