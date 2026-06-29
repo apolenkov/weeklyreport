@@ -97,6 +97,8 @@ import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
       inject: [PrismaService, AdminService],
     },
   ],
-  exports: [PeriodService],
+  // PolicyApplicatorService is exported so the composition root (`main.ts`) can
+  // resolve it for the login-time period factory's reminder materialisation.
+  exports: [PeriodService, PolicyApplicatorService],
 })
 export class PeriodModule {}
