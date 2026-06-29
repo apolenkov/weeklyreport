@@ -1,4 +1,5 @@
 import type { AppSettings, PeriodState } from "@customreport/shared";
+import { Logger } from "@nestjs/common";
 import type { PrismaClient } from "@prisma/client";
 
 import {
@@ -7,6 +8,8 @@ import {
 } from "../../lib/business-date.js";
 import type { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
 import { buildTransition, initialPeriodState } from "./period-transition.js";
+
+const logger = new Logger("PeriodFactory");
 
 /**
  * refactor-auth-exemplary-layering: the single sanctioned period-creation
@@ -168,11 +171,24 @@ export async function ensureCurrentPeriod(
     // (a period created after some of its reminders' fireAt — a late first-login)
     // while keeping still-future ones; the reminders scheduler has no
     // elapsed-fireAt guard, so a stale active rule would fire on the next tick.
+    //
+    // Best-effort: the period is the durable artifact, so a failure to
+    // materialise the (secondary) reminder rules must NOT fail the caller — a
+    // login must not 500 over reminders, and a cron tick should still record the
+    // period. The rows are recoverable via `pnpm db:backfill:reminder-policies`.
     if (policyApplicator) {
-      await policyApplicator.applyToPeriod(
-        { id: created.id, deadline: created.deadline },
-        now,
-      );
+      try {
+        await policyApplicator.applyToPeriod(
+          { id: created.id, deadline: created.deadline },
+          now,
+        );
+      } catch (error) {
+        logger.warn(
+          `applyToPeriod failed for period=${created.id}; reminder rules deferred to backfill: ${
+            error instanceof Error ? error.message : "unknown error"
+          }`,
+        );
+      }
     }
 
     return {
