@@ -7,6 +7,33 @@ context, exceptions, and current source-of-truth pointers.
 `AGENTS.md` is a symlink to this file, so these instructions are also the
 Codex repo overlay.
 
+## Exemplary By Default
+
+This codebase is being deliberately raised to an exemplary standard — it is
+meant to read as a reference others copy. So in this repo, default to the
+**exemplary** solution, not the merely-working one. When the quick path and the
+clean path diverge, take the clean path; if it costs materially more, do it
+anyway and say why in one line.
+
+Exemplary here means, concretely:
+
+- **Functional and immutable.** Prefer `const`, pure functions, and
+  `map`/`filter`/`reduce` + spread. Avoid `let`, reassignment, and in-place
+  mutation (including `Date.set*`) unless the alternative is clearly worse.
+- **Small, single-purpose units.** No long-but-flat functions that only pass
+  because there is no per-function lint rule — decompose to named atoms.
+- **Correct layering.** A module owns only its own concern. Don't let one
+  module's logic (or persistence) live in another; delegate across a narrow
+  seam. A lower layer must not import an upper one.
+- **No duplication, no magic literals, no dead code.** Lift repeated literals to
+  a named `const`; dedup helpers; delete code proven unused (per Surgical
+  Changes).
+- **Tighten standards globally, never per-folder.** Raise lint/quality bars
+  through the repo-wide ratchet (`tighten-code-quality-ratchet` stream), not a
+  local override that creates a second standard.
+
+This is a standing bar, not a per-task ask — apply it even when not reminded.
+
 ## Load First
 
 Use current files instead of memory:
