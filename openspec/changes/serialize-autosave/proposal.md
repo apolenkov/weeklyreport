@@ -24,6 +24,14 @@ spurious error report. The review backlog flags this P1
   the fire-and-forget `mutateRef.current(...)` so the mutation's own
   `onSuccess` / `onError` handle the result and no unhandled promise rejection
   leaks.
+- The queued-save drain MUST target the section that the queued payload was
+  built for, not the latest `reportSectionIdRef.current`. Today the drain
+  overrides `queued.reportSectionId` with the latest section id; because the
+  hook is not remounted when the lead navigates reports or periods
+  (`sectionIdForActions` changes in place), a payload queued for section A can
+  be written to section B if the lead switches before the in-flight save
+  resolves. The drain MUST instead send the queued payload's own
+  `reportSectionId` (captured at queue time).
 - Behavior contract only — no schema, API, or shared-package change.
 
 ## Capabilities
@@ -42,7 +50,8 @@ spurious error report. The review backlog flags this P1
 
 ## Impact
 
-- `apps/web/src/hooks/use-lead-form-autosave.ts` — debounce-timer guard and
-  queued-drain call site (the only behavioral edit).
+- `apps/web/src/hooks/use-lead-form-autosave.ts` — debounce-timer guard,
+  queued-drain call site, and queued-drain section targeting (the only
+  behavioral edits).
 - Relates to `openspec/specs/client-error-policy/spec.md` (the unhandled
   rejection is the same defect family) but does not change its requirements.

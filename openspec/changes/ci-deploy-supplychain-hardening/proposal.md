@@ -7,7 +7,8 @@ review share one root theme — a gate that is declared but not enforced:
 
 - **CI is dormant and unenforceable** (`BL-CI-CD-GATES`): `.github/workflows/ci.yml`
   is `workflow_dispatch`-only with zero runners, the local `pre-push` hook never
-  runs a TypeScript typecheck, and the CI E2E job calls a non-existent
+  runs a TypeScript typecheck (and masks an early gate failure for lack of
+  `set -e`), and the CI visual-regression job calls a non-existent
   `pnpm db:seed:simple` script (the real scripts are `db:seed:small` /
   `db:seed:middle` / `db:seed:huge`), so the job would fail on its own seed step
   if a runner ever picked it up.
@@ -30,13 +31,16 @@ review share one root theme — a gate that is declared but not enforced:
 
 ### CI is an enforced gate (`ci-pipeline-enforcement`)
 
-- Fix the broken seed reference in `.github/workflows/ci.yml`: replace
-  `pnpm db:seed:simple` with the deterministic-fixture script that actually
-  exists (`pnpm db:seed:middle`, which runs `prisma/seed-simple.ts`).
+- Fix the broken seed reference in `.github/workflows/ci.yml`: replace the
+  visual-regression job's `pnpm db:seed:simple` with the deterministic-fixture
+  script that actually exists (`pnpm db:seed:middle`, which runs
+  `prisma/seed-simple.ts`), and grep-confirm `db:seed:simple` is gone from the
+  whole workflow.
 - Bring the local `.husky/pre-push` hook to parity with the cheap deterministic
   CI jobs: add `pnpm turbo typecheck` (and `pnpm lint` + `pnpm format:check`)
-  ahead of the existing `catalog:check` + `pnpm test`, so a type- or lint-broken
-  tree is caught before it leaves the machine.
+  ahead of the existing `catalog:check` + `pnpm test`, and add `set -e` so any
+  failing gate aborts the push, so a type- or lint-broken tree is caught before
+  it leaves the machine.
 - Document and (when a runner exists) restore the server-side gate: assign a
   runner, restore `push` / `pull_request` triggers, and enable required status
   checks; until then, record that `main` has no enforced server-side protection.
@@ -103,11 +107,12 @@ but not Docker base-image digests or lockfile-frozen installs;
 
 ## Impact
 
-- `.github/workflows/ci.yml` — fix the `db:seed:simple` reference; make installs
-  explicit `--frozen-lockfile`; digest-pin base images; (deferred until a runner
-  exists) restore `push`/`pull_request` triggers and required checks.
+- `.github/workflows/ci.yml` — fix the visual-regression job's `db:seed:simple`
+  reference; make installs explicit `--frozen-lockfile`; digest-pin base images;
+  (deferred until a runner exists) restore `push`/`pull_request` triggers and
+  required checks.
 - `.husky/pre-push` — add typecheck + lint + format:check ahead of the existing
-  catalog/test steps.
+  catalog/test steps, and add `set -e` so any failing gate aborts the push.
 - `Dockerfile.web` — `--no-frozen-lockfile` → `--frozen-lockfile`; digest-pin
   `node:25-alpine`; pin `turbo`.
 - `Dockerfile.api` — digest-pin base image; align `EXPOSE`/`HEALTHCHECK` to the

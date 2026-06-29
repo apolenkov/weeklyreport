@@ -31,6 +31,16 @@
       both `collect` functions), both errors are logged and neither propagates —
       verify by asserting `Logger.prototype.error` call count is 2 and no
       exception is thrown from either call.
+- [ ] 2.5 Add a registry-boundary test that exercises the real failure path:
+      import `metricsRegistry` from
+      `apps/api/src/infrastructure/metrics/metrics.registry.ts`, install the
+      throwing-port `TelemetryGauges` via `onModuleInit`, then `await
+    metricsRegistry.metrics()` and assert (a) the promise resolves without
+      rejecting and (b) the returned scrape text still contains a known
+      DB-independent metric family (e.g. `process_cpu`/`nodejs_heap` or another
+      always-registered counter), proving the `Promise.all` aggregation in
+      `Registry.metrics()` survives the failing collect callbacks. This is the
+      scenario the spec asserts but the per-callback tests above do not cover.
 
 ## 3. Verification
 

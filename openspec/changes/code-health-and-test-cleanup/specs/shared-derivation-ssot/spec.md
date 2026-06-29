@@ -61,7 +61,7 @@ The traffic-light worst-status / severity roll-up MUST be computed by a single
 `TrafficLightStatus`-typed `computeWorstStatus` (with its `statusSeverity`
 map) imported by both the live and published paths; the loosely string-typed
 duplicate MUST be removed. The canonical copy lives in
-`apps/api/src/modules/weekly-report/published-report-snapshot.ts` and MUST be
+`apps/api/src/modules/published-report-snapshot.ts` and MUST be
 imported by `apps/api/src/modules/weekly-report/weekly-report.prisma-repository.ts`.
 
 #### Scenario: live and published roll-ups use one rule

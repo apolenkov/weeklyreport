@@ -10,43 +10,44 @@ that share a display name each retain their own data without collision.
 
 #### Scenario: two leads share a display name in LeadVelocityChart
 
-- **WHEN** `LeadVelocityChart` receives two lead entries with identical
-  `leadName` values but distinct `leadId` values for the same period
-- **THEN** each lead's `submittedSections` count is present independently in
-  the rendered output
+- **WHEN** `LeadVelocityChart` builds its chart data from two lead entries with
+  identical `leadName` values but distinct `leadId` values for the same period
+- **THEN** that period's data point holds two separate columns, one keyed by
+  each `leadId`, each carrying that lead's own `submittedSections` count
 - **AND** neither lead's value is overwritten by the other's
 
 #### Scenario: two projects share a display name in TrafficLightHistoryChart
 
-- **WHEN** `TrafficLightHistoryChart` receives two rows with identical
-  `projectName` values but distinct `projectId` values
-- **THEN** each project's status history is preserved independently in the
-  rendered output
+- **WHEN** `TrafficLightHistoryChart` builds its chart data from two rows with
+  identical `projectName` values but distinct `projectId` values
+- **THEN** each period's data point holds two separate columns, one keyed by
+  each `projectId`, each carrying that project's own status value
 - **AND** neither project's status series is silently dropped
 
-### Requirement: Display names appear in legend and tooltip via the name prop
+### Requirement: Display names appear via the recharts name prop
 
 Each `Bar` in `LeadVelocityChart` MUST carry a `name` prop set to the lead's
-display name, and each `Line` in `TrafficLightHistoryChart` MUST carry a `name`
-prop set to the project's display name, so recharts legend entries and tooltip
-labels show human-readable names while the underlying data column key is a UUID.
+display name so its recharts legend and tooltip entries show the human-readable
+name, and each `Line` in `TrafficLightHistoryChart` MUST carry a `name` prop set
+to the project's display name so its recharts tooltip labels show the
+human-readable name, while the underlying data column key is a UUID.
+`TrafficLightHistoryChart` renders a tooltip but no legend, so its `name` prop
+surfaces only in the tooltip.
 
-#### Scenario: legend shows lead names when leads share a display name
+#### Scenario: bar series carry lead names when leads share a display name
 
-- **WHEN** `LeadVelocityChart` renders with two leads that have the same
-  `leadName`
-- **THEN** each `Bar` element has a `name` attribute equal to the shared
-  `leadName`
-- **AND** the `dataKey` of each `Bar` element differs between the two (one
+- **WHEN** `LeadVelocityChart` builds its bar series for two leads that have the
+  same `leadName`
+- **THEN** each series descriptor carries a `name` equal to the shared `leadName`
+- **AND** each series descriptor's `dataKey` differs between the two (one
   per `leadId`)
 
-#### Scenario: legend shows project names in TrafficLightHistoryChart
+#### Scenario: tooltip series carry project names in TrafficLightHistoryChart
 
-- **WHEN** `TrafficLightHistoryChart` renders with at least one project row
-- **THEN** each `Line` element has a `name` attribute equal to its
-  `projectName`
-- **AND** the `dataKey` of each `Line` element is the corresponding
-  `projectId`
+- **WHEN** `TrafficLightHistoryChart` builds its line series for at least one
+  project row
+- **THEN** each series descriptor carries a `name` equal to its `projectName`
+- **AND** each series descriptor's `dataKey` is the corresponding `projectId`
 
 ### Requirement: The period x-axis key is unaffected by the id-keying change
 

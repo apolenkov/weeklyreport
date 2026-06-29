@@ -3,8 +3,8 @@
 - [ ] 1.1 In `apps/web/src/components/admin/periods-tab-dialog.tsx`, fix the
       submit parse in `handleSubmit`: replace `new Date(deadline)` with
       `new Date(\`${deadline}:00.000Z\`)`so the`datetime-local`value is read
-    as UTC wall-clock, the exact inverse of the`dateTimeInputValue` display
-    (`toISOString().slice(0,16)`).
+  as UTC wall-clock, the exact inverse of the`dateTimeInputValue` display
+  (`toISOString().slice(0,16)`).
 - [ ] 1.2 In the same file, fix the in-dialog deadline range validation
       (`deadlineError`): parse the deadline with the same `:00.000Z` UTC suffix
       before comparing it against the UTC-parsed `periodStart`
@@ -19,14 +19,28 @@
 
 ## 2. Test
 
-- [ ] 2.1 Add a Vitest unit test (colocated with the dialog, e.g.
-      `apps/web/src/components/admin/periods-tab-dialog.test.tsx` or a helper
-      test) asserting the deadline display→parse round-trip is byte-stable: a
-      stored `Date` rendered via `dateTimeInputValue` then re-parsed with the
-      `:00.000Z` suffix yields the identical UTC instant under a non-UTC offset.
-- [ ] 2.2 Add a case asserting the range-validation parse and the submit parse
-      resolve the same instant for an in-range non-UTC deadline (no false
-      "before period start" error).
+- [ ] 2.1 Add a component regression that drives the REAL dialog submit path,
+      not a detached display/parse helper. Extend the existing
+      `apps/web/src/components/admin/periods-tab.test.tsx` suite (which already
+      captures `admin.updatePeriodManual` payloads via its `captured` harness)
+      and exercise the actual `PeriodsTab` → `CreatePeriodDialog` edit-submit
+      flow with `userEvent`. Open the edit dialog on a row whose stored
+      deadline is a non-midnight UTC instant and submit WITHOUT touching the
+      deadline field; assert the captured `deadline` payload is byte-identical
+      to the original stored ISO instant (no -N-hour drift).
+- [ ] 2.2 Force a non-UTC process timezone for the regression so the old
+      `new Date(deadline)` local parse would actually fail. Set `process.env.TZ`
+      to a non-UTC zone (e.g. `Europe/Moscow`, UTC+3) before the test body — via
+      a `beforeAll`/`afterAll` restore or a per-file `vi.stubEnv('TZ', …)` — and
+      confirm the default UTC test process is no longer relied on to pass. A
+      detached parser-only assertion is NOT sufficient; the bug must be provable
+      through the dialog submit path.
+- [ ] 2.3 Add a case asserting the in-dialog range validation and the submit
+      parse resolve the SAME instant for an in-range non-UTC deadline: under the
+      non-UTC timezone, enter an early-in-day deadline that is in range only
+      when parsed as UTC, and assert no "Deadline cannot be before period start"
+      error is shown AND the deadline reaches the captured submit payload as the
+      UTC-parsed instant.
 
 ## 3. Verification
 

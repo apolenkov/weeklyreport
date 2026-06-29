@@ -68,8 +68,9 @@ validation drifting.
 ## Migration Plan
 
 Pure client-side logic fix; no migration, no rollback concern. Verify with
-`pnpm typecheck`, `pnpm lint`, and the new Vitest unit test, then
-`pnpm build`.
+`pnpm typecheck`, `pnpm lint`, and the new component regression test (the real
+`PeriodsTab` → `CreatePeriodDialog` submit path, run under a non-UTC process
+timezone), then `pnpm build`.
 
 ## Open Questions
 

@@ -72,7 +72,11 @@ recipient)` even under concurrent ticks.
 
 Resolve the recipient from the late lead's `ReportingGroup.headUserId` (the
 `ReportingGroup.head` relation, role `head`/`admin` by the model's
-application-level invariant), independent of `Report.publishedBy`.
+application-level invariant), independent of `Report.publishedBy`. The head
+must additionally be active (`User.isActive = true`); a deactivated head is
+treated like an unresolved head per the repo's soft-deactivation model — no
+guard prevents a group from pointing at a head who is later deactivated, so the
+filter belongs in recipient resolution.
 
 A `Report` (period) spans the whole department; its late leads can belong to
 different reporting groups, each with its own head. So `findDueEscalationRules`
@@ -124,9 +128,10 @@ enqueue with the insert).
   per-group grouping; the scheduler's `dispatchEscalation` must iterate group
   heads. → Covered by the spec scenario "each group head receives only their
   group's late leads"; unit-test the multi-group case.
-- [Unassigned group head]: a late lead in a head-less group produces no digest.
-  → Spec requires logging the unresolved case and continuing other groups; do
-  not throw.
+- [Unassigned or deactivated group head]: a late lead in a head-less group, or
+  one whose head has `isActive = false`, produces no digest. → Spec requires
+  logging the unresolved-active-head case and continuing other groups; do not
+  throw.
 - [Insert-then-enqueue lost-email hole]: gating the enqueue on `inserted` trades
   the duplicate-email race for a small lost-email window — if the process dies
   between the committed insert and `emailQueue.add`, the row exists, so every

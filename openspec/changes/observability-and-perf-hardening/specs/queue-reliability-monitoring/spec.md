@@ -23,20 +23,25 @@ producing a `NaN` comparison.
 
 ### Requirement: Telegram terminal failures count toward DLQ metrics
 
-The `telegram-outbound` queue MUST be included in the monitored `QUEUE_NAMES`,
-and the telegram worker's failed handler MUST increment
-`cr_dlq_failed_total{queue="telegram-outbound"}` when a job exhausts its
-retries, so telegram terminal failures contribute to the DLQ counter and the
-alert threshold instead of being invisible. Until the telegram feature is
-active (Phase 55), the activation point MUST carry a `TODO(Phase 55)` trace per
-the deferred-feature convention.
+The `telegram-outbound` queue MUST be included in the monitored `QUEUE_NAMES`
+so the existing DLQ monitor increments
+`cr_dlq_failed_total{queue="telegram-outbound"}` exactly once per terminal
+failure via its `QueueEvents` listener, the same single-owner path it already
+uses for `email-reminder` and `pdf-export`. The change MUST NOT add a second
+increment from a telegram worker handler, which would double-count. Because
+telegram is a Phase 55 deferred feature, the `QUEUE_NAMES` entry — the new
+activation point — MUST carry a `TODO(Phase 55)` trace per the deferred-feature
+convention.
 
-#### Scenario: A terminal telegram failure increments the DLQ counter
+#### Scenario: A terminal telegram failure increments the DLQ counter once
 
-- **GIVEN** a `telegram-outbound` job that has exhausted its retry attempts
-- **WHEN** the worker's failed handler runs
-- **THEN** `cr_dlq_failed_total{queue="telegram-outbound"}` increments
-- **AND** that failure is eligible to trip the DLQ alert threshold
+- **GIVEN** `telegram-outbound` is in the monitored `QUEUE_NAMES`
+- **AND** a `telegram-outbound` job that has exhausted its retry attempts
+- **WHEN** the DLQ monitor observes the terminal failure via `QueueEvents`
+- **THEN** `cr_dlq_failed_total{queue="telegram-outbound"}` increments exactly
+  once, with no second increment from any worker handler
+- **AND** that failure is eligible to trip the DLQ alert threshold because the
+  threshold poll iterates the same monitored queue set
 
 #### Scenario: Telegram queue is part of the monitored set
 

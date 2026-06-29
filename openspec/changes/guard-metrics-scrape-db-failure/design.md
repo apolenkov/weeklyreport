@@ -70,7 +70,10 @@ prom-client API surface.
 **Silently stale gauge during an outage** → Prometheus will emit the last
 value set before the outage began, not `NaN`. This is acceptable: the value
 is bounded by scrape cadence (~15 s), and the `Logger.error` call creates a
-log-line in Loki/Bugsink that correlates with the DB alert. A future
+log-line in the app log (shipped to Loki) that correlates with the DB alert.
+Note: this caught-and-logged error does NOT reach Bugsink — Bugsink only
+receives errors via `Sentry.captureException` in `SentryExceptionFilter`
+(5xx and non-HTTP exceptions), not from `Logger.error`. A future
 enhancement could reset the gauge explicitly (call `.reset()` or set `NaN`)
 on error — that is out of scope here.
 
@@ -78,7 +81,7 @@ on error — that is out of scope here.
 (wraps only the `await repo.*` call) and the error is always logged at
 `error` level, never silently discarded. The catch does not re-throw, which
 is the required behaviour; any tool catching "unhandled rejections" will not
-see these errors, but Loki and Bugsink will.
+see these errors, but the app log (Loki) will.
 
 ## Migration Plan
 

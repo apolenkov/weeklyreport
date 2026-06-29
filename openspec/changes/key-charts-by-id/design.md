@@ -8,9 +8,10 @@ name, both elements point at the same column and the second write wins, silently
 zeroing the first entity's contribution.
 
 The fix is mechanical: use the stable UUID as the data column key and pass the
-human-readable name through recharts' `name` prop. recharts renders legend
-entries and tooltip labels from `name` when it is present, so users see
-unchanged display text while each series is individually addressable.
+human-readable name through recharts' `name` prop. recharts renders tooltip
+labels (and legend entries where a legend is present — `LeadVelocityChart` has
+one, `TrafficLightHistoryChart` does not) from `name`, so users see unchanged
+display text while each series is individually addressable.
 
 The shared schemas already expose `leadId` and `projectId` in every row, so no
 API or Prisma change is needed.
@@ -48,6 +49,20 @@ the chart component and requires no shared-schema change.
 "Alice (2)"). Rejected — it changes user-visible text based on peer entities,
 which is confusing and fragile.
 
+### Extract a pure data-and-series builder so the regression is testable
+
+Each chart's pivot logic moves into a pure exported function returning
+`{ data, series }`, where `series` is an array of `{ dataKey, name }`
+descriptors. The component renders `Bar`/`Line` by mapping over `series`. This
+makes the duplicate-name fix directly unit-testable on plain objects.
+
+recharts 3.x renders inside a `ResponsiveContainer` that reports zero width in
+jsdom, so `Bar`/`Line` are not emitted as stable DOM nodes and their `dataKey` /
+`name` are React props, not DOM attributes — asserting them on the rendered tree
+is brittle and effectively unimplementable. Testing the builder output instead
+asserts UUID `dataKey`s, independent values, and the `name` per series
+deterministically. The existing crash-free-mount render tests stay.
+
 ### Keep the x-axis `"period"` key as a literal
 
 UUID keys for entity columns cannot collide with `"period"` (a UUID is a
@@ -59,9 +74,10 @@ second-guess the presence of two key types in the same object.
 
 - recharts `name` prop is supported on `Bar` and `Line` in recharts 2.x / 3.x
   (current project dependency). If recharts is upgraded to a hypothetical major
-  that renames the prop, legend labels would silently regress.
-  Mitigation: the regression test asserts `name` attributes on rendered elements
-  rather than visual output, providing an early signal.
+  that renames the prop, legend/tooltip labels would silently regress.
+  Mitigation: the regression test asserts the `name` on each series descriptor
+  returned by the chart's data builder rather than visual output, providing an
+  early signal at the data layer.
 - UUID values as column keys make the raw data object less readable during
   debugging.
   Mitigation: this is a dev-time concern only; `leadNameById` / `row.projectName`

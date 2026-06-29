@@ -11,7 +11,11 @@ payload key and payload snapshot into `queuedKeyRef` / `queuedPayloadRef` and
 let the existing `onSuccess` drain fire the queued save after the in-flight save
 resolves. This mirrors the guard `forceSave` already applies. The hook MUST NOT
 overwrite `inFlightRef` while a save is pending, so `lastSavedRef` is only ever
-stamped from a payload that the mutation actually confirmed.
+stamped from a payload that the mutation actually confirmed. The drain MUST send
+the queued payload to the section it was built for (the queued payload's own
+`reportSectionId`, captured at queue time), and MUST NOT override it with the
+latest `reportSectionIdRef.current`, so that navigating reports or periods while
+a save is in flight can never write a queued payload to a different section.
 
 #### Scenario: debounce fires while a save is in flight
 
@@ -31,6 +35,17 @@ stamped from a payload that the mutation actually confirmed.
   key, never the newer unconfirmed one
 - **AND** the newer payload's queued save still runs, so `dirty` does not flip
   to `false` for a payload that has not been confirmed
+
+#### Scenario: report or period switches while a save is queued
+
+- **GIVEN** a payload for section A is queued behind an in-flight save (the lead
+  kept editing while a save for section A was in flight)
+- **WHEN** the lead navigates to a different report or period before the
+  in-flight save resolves, so `reportSectionIdRef.current` now points at
+  section B
+- **THEN** the `onSuccess` drain fires the queued payload against section A (its
+  own captured `reportSectionId`), never section B
+- **AND** no section-B section ever receives section A's queued content
 
 ### Requirement: Queued-save drain does not leak an unhandled rejection
 

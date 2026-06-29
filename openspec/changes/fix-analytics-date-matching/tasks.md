@@ -25,6 +25,12 @@
       `periodEnd: { lte: new Date(periodTo) }` to `{ lt: nextUtcDay(periodTo) }`
       so the final day is inclusive; apply the same correction to
       `leadVelocity` for parity.
+- [ ] 2.4 Bump the three analytics cache sub-prefixes in
+      `apps/api/src/modules/analytics/analytics.service.ts` (`PREFIX_HISTORY`,
+      `PREFIX_VELOCITY`, `PREFIX_COMPARISON`) by appending a version segment
+      (e.g. `...:v2:`) so pre-fix cached results are orphaned on deploy instead
+      of being served until TTL; keep the bumped prefixes under the
+      `customreport:analytics:` SCAN root used by `invalidateAll`.
 
 ## 3. Repository: aggregate per label
 
@@ -50,6 +56,9 @@
       across two runs.
 - [ ] 4.4 Repository test: risk counts sum across two reports mapped to the same
       `periodComparison` side.
+- [ ] 4.5 Repository test: a report whose `periodEnd` carries a non-midnight time
+      on the `periodTo` day is included by `trafficLightHistory` and
+      `leadVelocity` (the inclusive final-day bound holds).
 
 ## 5. Gates
 

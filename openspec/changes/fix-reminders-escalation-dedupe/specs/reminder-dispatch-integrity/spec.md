@@ -12,13 +12,16 @@ as the report's publisher
 (`apps/api/src/modules/reminders/reminders.prisma-repository.ts::findDueEscalationRules`)
 therefore yields `null` in the normal escalation state and silently drops the
 digest. The recipient MUST instead be the active head of the reporting group
-the late lead belongs to: a `User` whose `role` is `head` referenced by the
-late lead's `ReportingGroup.headUserId` (a `ReportingGroup.head` whose role is
-`head` or `admin` per the application-level invariant). The digest MUST fire
-regardless of the period's `periodStatus` / publish state. A late lead whose
-reporting group has no assigned head (`headUserId = null`) yields no digest for
-that lead and MUST be logged, not silently swallowed without trace; it MUST NOT
-abort digests for late leads in other groups.
+the late lead belongs to: a `User` whose `isActive` is `true` and whose `role`
+is `head`, referenced by the late lead's `ReportingGroup.headUserId` (a
+`ReportingGroup.head` whose role is `head` or `admin` per the application-level
+invariant). Recipient resolution MUST require `head.isActive = true`, so a
+deactivated head (per the repo's soft-deactivation model) is never targeted.
+The digest MUST fire regardless of the period's `periodStatus` / publish state.
+A late lead whose reporting group has no resolvable active head — either no
+assigned head (`headUserId = null`) or a head whose `isActive` is `false` —
+yields no digest for that lead and MUST be logged, not silently swallowed
+without trace; it MUST NOT abort digests for late leads in other groups.
 
 #### Scenario: Escalation fires for an unpublished period
 
@@ -45,6 +48,15 @@ abort digests for late leads in other groups.
 - **THEN** no digest is sent for that lead
 - **AND** the unresolved-head case is logged
 - **AND** digests for late leads in other groups are still dispatched
+
+#### Scenario: A group whose head is deactivated is logged, not targeted
+
+- **WHEN** a late lead belongs to a reporting group whose `head` has
+  `isActive = false`
+- **THEN** no digest is sent to that deactivated head
+- **AND** the unresolved-active-head case is logged
+- **AND** digests for late leads in other groups whose head is active are still
+  dispatched
 
 ### Requirement: Reminder Execution Dedupe Is Atomic Insert-On-Conflict
 

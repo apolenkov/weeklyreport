@@ -44,8 +44,10 @@
       Add a `describe` block (or `it`) that renders `KpiCards` with
       `{ submitted: 0, total: 0, ... }` and asserts:
 
-  - the Submissions `region` aria-label contains `"0 of 0"` and `"(0%)"` (or
-    its exact format from the template string), never `"NaN"`
+  - the Submissions `region` aria-label contains `"0 of 0, 0 pending"`, never
+    `"NaN"`
+  - the conic ring `title` attribute is
+    `"0 of 0 leads submitted this week (0%)"` and contains no `"NaN"`
   - no element's text content includes `"NaN"`
 
 - [ ] **Add label accuracy case to `AlertBar` tests**

@@ -40,7 +40,11 @@ Inside the existing `if (data.NODE_ENV === "production")` block in
 (paths `SMTP_HOST` / `SMTP_FROM`). Raise `PDF_EXPORT_JWT_SECRET` from `.min(16)`
 to `.min(32)` on the field itself (always-on, not prod-scoped). The default dev
 value (`"dev-only-replace-in-production-min-32-chars"`) is already ≥32 chars, so
-the floor does not break dev/test boots.
+the floor does not break dev/test boots. The runtime guards in
+`pdf-export.service.ts` (`signPdfExportToken` / `verifyPdfExportToken`) and the
+`docker-compose.prod.yml` required-env message still say 16; raise all three to
+32 in lockstep so the schema, the runtime guard, and the deployment contract
+agree on one floor.
 
 ### 2. EnvConfig as a DI provider
 
@@ -57,10 +61,13 @@ again inside the factory is safe even though `main.ts` also calls it. The
 provider belongs in `app.module.ts` `providers` (or a tiny `ConfigModule` that
 exports the token) so any provider — `EmailService` first — can inject it.
 
-**Ordering:** `EmailService` is instantiated during `NestFactory.create`, before
-`main.ts` reaches its own `validateEnv()` call. The factory provider validates
-at module-construction time, so the fence fires during `NestFactory.create` —
-earlier than today's `main.ts` check, which is the desired fail-closed point.
+**Ordering:** `main.ts` already calls `validateEnv()` (`main.ts:102`) before
+`NestFactory.create` (`main.ts:121`), so on the normal server boot path the
+production fence still fires first in `main.ts` — that remains the earliest
+fail-closed point, and this change does not move it. The DI provider does not
+make the fence fire earlier; its purpose is to give non-`main` Nest consumers
+(e2e harness, CLI, future entrypoints) the same validated `EnvConfig` from the
+container instead of an unvalidated `process.env`.
 
 ### 3. EmailService consumes EnvConfig
 
@@ -76,8 +83,10 @@ Config flow:
 - **Before:** `main.ts` → `validateEnv()` (result unused by DI). `EmailService`
   → `process.env` (unvalidated, second source of truth).
 - **After:** `ENV_CONFIG` provider → `validateEnv()` → injected into
-  `EmailService` (one validated source). Production boot aborts in
-  `NestFactory.create` if SMTP env is incomplete.
+  `EmailService` (one validated source). Production boot still aborts at
+  `main.ts`'s `validateEnv()` call (before `NestFactory.create`) if SMTP env is
+  incomplete; the provider additionally hands non-`main` Nest consumers the same
+  validated config.
 
 ## Risks / Trade-offs
 

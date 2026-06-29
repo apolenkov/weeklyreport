@@ -2,16 +2,19 @@
 
 ### Requirement: Non-admin modal dialogs trap and restore focus via a shared primitive
 
-Every non-admin `role="dialog"` / `role="alertdialog"` modal MUST trap keyboard
-focus within the dialog while open and restore focus to the control that opened
-it on close, sourced from one shared focus-managed dialog primitive (the Radix
-Dialog in `@customreport/ui`, or a single shared wrapper) rather than per-dialog
-hand-rolled autofocus. This governs the lead risk
+Each of the five governed non-admin modal dialogs MUST trap keyboard focus
+within the dialog while open and restore focus to the control that opened it on
+close, sourced from one shared focus-managed dialog primitive (the Radix Dialog
+in `@customreport/ui`, or a single shared wrapper) rather than per-dialog
+hand-rolled autofocus. The governed dialogs are the lead risk
 (`apps/web/src/components/lead/risk-edit-dialog.tsx`), decision
 (`apps/web/src/components/lead/decision-edit-dialog.tsx`), and reopen
 (`apps/web/src/components/lead/request-reopen-dialog.tsx`) dialogs, the shared
 `apps/web/src/components/ui/confirmation-dialog.tsx`, and the publish lock
-(`apps/web/src/components/weekly-report/publish-lock-button.tsx`). Behavior is
+(`apps/web/src/components/weekly-report/publish-lock-button.tsx`). The remaining
+non-admin dialogs (`item-edit-dialog.tsx`, `confirm-delete-dialog.tsx`,
+`fill-from-button.tsx`, and the `lead-form.tsx` inline modal) are out of scope
+for this change and keep their current hand-rolled focus handling. Behavior is
 otherwise unchanged; this unifies the focus implementation, it does not alter the
 dialogs' content or actions.
 

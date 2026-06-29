@@ -37,14 +37,16 @@ Source findings: `BL-CI-CD-GATES`, `BL-SUPPLY-CHAIN`, `BL-DEPLOY-SEAM-MISC`,
 
 ### 1. Which seed script replaces `db:seed:simple`
 
-The CI E2E job calls `pnpm db:seed:simple`, which does not exist. The defined
-seed scripts are `db:seed:small` (`seed-demo.ts small`), `db:seed:middle`
-(`seed-simple.ts`), and `db:seed:huge` (`seed-demo.ts huge`). The CI step is
-labelled "deterministic fixture"; `prisma/seed-simple.ts` is the deterministic
-fixture, reached via `db:seed:middle`. **Decision: use `pnpm db:seed:middle`.**
-If the E2E suite needs the smaller demo dataset instead, `db:seed:small` is the
-fallback — the implementer confirms against what the E2E specs expect before
-committing.
+The CI **visual-regression** job (`visual-baseline`, not the E2E job — the E2E
+job seeds via `pnpm exec tsx prisma/seed.ts`) calls `pnpm db:seed:simple`, which
+does not exist. The defined seed scripts are `db:seed:small` (`seed-demo.ts
+small`), `db:seed:middle` (`seed-simple.ts`), and `db:seed:huge` (`seed-demo.ts
+huge`). The job's step is labelled "deterministic fixture" and its comment says
+it "seeds with `seed-simple` for byte-stable fixtures"; `prisma/seed-simple.ts`
+is that deterministic fixture, reached via `db:seed:middle`. **Decision: use
+`pnpm db:seed:middle`.** `db:seed:small` is the fallback only if the visual suite
+turns out to need the smaller demo dataset — the implementer confirms against
+what the visual baselines expect before committing.
 
 ### 2. Pre-push scope: cheap deterministic jobs only
 

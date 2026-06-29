@@ -15,17 +15,38 @@ the other, since neither depends on the other's result.
 
 ### Requirement: Archive listing paginates at the database
 
-Archive listing MUST apply database-level pagination (`take`/`skip`) instead of
-fetching the entire archive and slicing in memory, and it MUST load the heavy
+Archive listing MUST paginate at the repository using the existing cursor
+contract — `PaginationInput.cursor` (a `reportId`) in, `PaginatedResult.nextCursor`
+(the last row's `reportId`, or `null`) out — instead of fetching the entire
+archive and slicing in memory. The repository query MUST use a stable ordering of
+`publishedAt desc` plus the unique `id` as a tie-breaker so the cursor resumes
+deterministically when two rows share a `publishedAt`, and it MUST load the heavy
 nested section graph only for rows that need the snapshot-less fallback, not for
-every listed row.
+every listed row. The public `cursor`/`nextCursor` shape MUST NOT change (no
+shared-contract change in this MVP phase).
 
-#### Scenario: A page of archives reads only its rows
+#### Scenario: First page reads only its rows from the database
 
-- **GIVEN** an archive list request for a single page
-- **WHEN** the service queries the archive
-- **THEN** the query applies `take`/`skip` so only the page's rows are read from
-  the database
+- **GIVEN** an archive list request with no cursor and a limit
+- **WHEN** the repository queries the archive
+- **THEN** the query reads at most `limit` rows in `publishedAt desc, id desc`
+  order rather than the whole archive
+- **AND** `nextCursor` is the last row's `reportId` when more rows remain
+
+#### Scenario: A cursor resumes after the prior page
+
+- **GIVEN** an archive list request whose `cursor` is a `reportId` from a prior
+  page
+- **WHEN** the repository queries the archive
+- **THEN** it returns the rows that follow that cursor in the stable
+  `publishedAt desc, id desc` order, without re-reading earlier rows
+
+#### Scenario: Last or missing cursor yields a null next cursor
+
+- **GIVEN** an archive list request that lands on the final page, or whose
+  `cursor` no longer matches any row
+- **WHEN** the repository queries the archive
+- **THEN** `nextCursor` is `null` so infinite scroll terminates cleanly
 
 #### Scenario: Section graph loads only for snapshot-less rows
 

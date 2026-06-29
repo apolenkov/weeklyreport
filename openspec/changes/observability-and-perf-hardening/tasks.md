@@ -20,22 +20,30 @@
 - [ ] 2.1 In `dlq-monitor.service.ts`, parse `DLQ_ALERT_THRESHOLD` with
       `Number.isFinite` fallback to the default (5) and a warn log naming an
       invalid value.
-- [ ] 2.2 Add `telegram-outbound` to `QUEUE_NAMES`.
-- [ ] 2.3 Increment `cr_dlq_failed_total{queue="telegram-outbound"}` from the
-      telegram worker's failed handler; mark the activation point with
-      `TODO(Phase 55)` per the deferred-feature convention.
+- [ ] 2.2 Add `telegram-outbound` to `QUEUE_NAMES` so the existing
+      `QueueEvents` listener counts its terminal failures into
+      `cr_dlq_failed_total` and the threshold poll covers it; mark that
+      entry (the new activation point) with `TODO(Phase 55)` per the
+      deferred-feature convention.
+- [ ] 2.3 Do NOT add a second `cr_dlq_failed_total{queue="telegram-outbound"}`
+      increment from a telegram worker handler — the DLQ monitor is the single
+      owner of the counter, and a worker-side increment would double-count
+      terminal failures.
 - [ ] 2.4 Lifecycle-manage the two Bull Board `Queue` instances so they `close()`
       on application shutdown (DI provider or `onModuleDestroy`).
 - [ ] 2.5 Tests: invalid threshold falls back and warns; a terminal telegram
-      failure increments the counter; Bull Board queues close on shutdown.
+      failure increments the counter exactly once (no double-count); Bull Board
+      queues close on shutdown.
 
 ## 3. Hot-path query performance (hot-path-query-performance)
 
 - [ ] 3.1 `Promise.all` the independent `leadUsers` and `projects` queries in
       `getWeeklyReport` (`weekly-report.prisma-repository.ts`).
-- [ ] 3.2 Add DB `take`/`skip` pagination to archive listing
-      (`archive.service.ts`) and load the nested section graph only for
-      snapshot-less fallback rows.
+- [ ] 3.2 Move archive-listing pagination into the repository
+      (`archive.prisma-repository.ts`) using the existing `reportId` cursor /
+      `nextCursor` contract — Prisma `cursor: { id }` + `skip: 1` with stable
+      `orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }]` — and load the nested
+      section graph only for snapshot-less fallback rows.
 - [ ] 3.3 Replace the per-user count+delete loop in `upsertUsers`
       (`admin-snapshot-write.queries.ts`) with a bulk prefetch plus a single
       `deleteMany`.
@@ -44,8 +52,10 @@
       row is absent (no write-on-read on the anonymous landing path).
 - [ ] 3.5 Gate the logger directory prune (`lib/logger.ts`) behind a rotation
       event or a timer instead of running it per log line.
-- [ ] 3.6 Tests: both report queries dispatch concurrently; archive pagination
-      reads only the page and loads the section graph only for fallback rows;
+- [ ] 3.6 Tests: both report queries dispatch concurrently; archive cursor
+      pagination reads only the page, resumes from the `reportId` cursor, returns
+      `nextCursor: null` on the last/missing-cursor page, and loads the section
+      graph only for fallback rows;
       `upsertUsers` issues one `deleteMany`; organization read performs no write
       when the row exists; the logger does not prune per line.
 

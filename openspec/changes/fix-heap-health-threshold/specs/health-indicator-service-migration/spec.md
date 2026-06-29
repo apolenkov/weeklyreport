@@ -61,6 +61,12 @@ a comment explaining how to calibrate it to the actual container limit.
 than reading `process.env` directly, so the value is always coerced, validated,
 and typed before use.
 
+In production the `api` service in `docker-compose.prod.yml` uses an explicit
+`environment` block with no `env_file`, so the variable MUST be forwarded there
+as `HEAP_HEALTH_THRESHOLD_BYTES: ${HEAP_HEALTH_THRESHOLD_BYTES:-1610612736}`.
+Without that line a deployment `.env` override is silently dropped and the
+threshold cannot be tuned without editing compose.
+
 #### Scenario: Default threshold prevents false positives under normal load
 
 - **GIVEN** `HEAP_HEALTH_THRESHOLD_BYTES` is not set in the environment
@@ -76,3 +82,13 @@ and typed before use.
 - **WHEN** `/health/ready` runs its heap check
 - **THEN** the effective threshold is 512 MiB
 - **AND** the controller does not use the 200 MB or 1 536 MiB values
+
+#### Scenario: Production compose forwards the operator override
+
+- **GIVEN** a deployment sets `HEAP_HEALTH_THRESHOLD_BYTES` in the environment
+  used by `docker-compose.prod.yml`
+- **WHEN** the `api` container starts
+- **THEN** the process receives that value because the `api` `environment`
+  block forwards `HEAP_HEALTH_THRESHOLD_BYTES`
+- **AND** when the deployment leaves it unset the container falls back to the
+  `1610612736` default

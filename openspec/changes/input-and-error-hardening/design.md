@@ -5,8 +5,9 @@ but real defensive gaps across three surfaces:
 
 1. **Auth** — `jwt.verify` in `auth.controller.ts` has no `algorithms` pin.
 2. **Middleware** — `correlation-id.middleware.ts` adopts `x-request-id` verbatim.
-3. **Shared schema** — `search.ts` uses bare `z.string()` for the `q` field, letting
-   null bytes reach `plainto_tsquery`.
+3. **Shared schema** — `search.ts` uses `z.string().min(2).max(200)` for the `q`
+   field (correct min-2 floor) but has no null-byte guard, letting null bytes
+   reach `plainto_tsquery`.
 4. **tRPC router** — `dev.wipeAndReseed` uses `protectedProcedure` instead of
    `adminProcedure`.
 5. **Prisma seeds** — `seed.ts` and `backfill-policy-rules.ts` skip
@@ -54,9 +55,12 @@ approach. If the header fails the check, generate a UUID v4 via the same
 
 ### 3. search-q: use safeText() from the project helper
 
-`safeText({ min: 1, max: 200 })` matches the project convention documented in
+`safeText({ min: 2, max: 200 })` matches the project convention documented in
 `openspec/config.yaml` ("use `safeText()` helper for user-facing text fields").
-The null-byte guard is built into `safeText` by its existing implementation.
+The min-2 floor is preserved (the current schema already enforces `min(2)`,
+and the inline comment documents min-2 as the deliberate floor); switching to
+`safeText` only adds the null-byte and invisible-only refinements. The
+null-byte guard is built into `safeText` by its existing implementation.
 No new helper needed.
 
 ### 4. dev.wipeAndReseed: change one identifier
@@ -72,12 +76,30 @@ Follow the pattern of `seed-simple.ts`, `seed-demo.ts`, and `reset-hard.ts`:
 call `assertNonProdDestructive('seed')` (or `'backfill-policy-rules'`) as the
 very first statement in `main()`. This is additive and non-breaking.
 
-### 6. AuditEvent union: add the literal string
+### 6. AuditEvent union: add the literal string AND type every emit site
 
 Add `| 'period.manual-edit'` to the `AuditEvent` type in `audit-logger-types.ts`.
-Consider additionally typing the `event` field in the audit-log helper's call
-signature as `AuditEvent` to make future omissions a compile error rather than
-a runtime surprise.
+
+Adding the union member alone is NOT sufficient to satisfy the
+`enum-state-hygiene` "undeclared event string is a compile error" scenario:
+every event string is written as a raw object literal passed to
+`logger.info(AUDIT_MESSAGE, { event: '…', … })`, and `AppLogger.info` accepts
+`Record<string, unknown>`, so the `event` field is never checked against
+`AuditEvent`. A typo or undeclared event would compile cleanly.
+
+Decision: introduce a typed local `emit` helper inside `createAuditLogger` and
+route every emit object literal through it, so the compiler checks each `event`
+string against `AuditEvent`. The helper's payload parameter is typed as
+`{ event: AuditEvent } & Record<string, unknown>` — the `event` field is pinned
+to the union while the index signature carries the per-event fields (`periodId`,
+`changes`, `procedure`, etc.) without per-event payload types. A bare
+`satisfies AuditEnvelope` is rejected: it flags the extra per-event keys as
+excess properties and `AuditEnvelope` lacks those fields.
+
+Event strings only ever appear as literals inside `createAuditLogger`; all
+callers use the typed `AuditLogger` interface methods. So routing the ~15 emit
+sites in `audit-logger.ts` through the typed helper fully covers the
+compile-error scenario.
 
 ## Data Flow
 
@@ -87,13 +109,13 @@ layer with no new persistence paths.
 ```
 Before:
   inbound x-request-id   →  CLS correlationId (verbatim, unbounded)
-  search q               →  z.string() → plainto_tsquery (null-byte passes)
+  search q               →  z.string().min(2).max(200) → plainto_tsquery (null-byte passes)
   jwt.verify(token, sec) →  payload (any alg)
   dev.wipeAndReseed      →  protectedProcedure (any role)
 
 After:
   inbound x-request-id   →  /^[\x20-\x7E]{1,128}$/ or fresh UUID → CLS correlationId
-  search q               →  safeText({min:1,max:200}) → plainto_tsquery
+  search q               →  safeText({min:2,max:200}) → plainto_tsquery
   jwt.verify(token, sec, { algorithms:['HS256'] }) →  payload
   dev.wipeAndReseed      →  adminProcedure (admin only)
 ```

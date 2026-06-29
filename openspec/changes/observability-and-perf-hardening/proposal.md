@@ -49,9 +49,10 @@ DLQ / queue monitoring (new `queue-reliability-monitoring`):
 
 - Validate `DLQ_ALERT_THRESHOLD` with a `Number.isFinite` fallback to the
   default and a warn log when the env value is unparseable.
-- Add `telegram-outbound` to the monitored `QUEUE_NAMES` and increment
-  `cr_dlq_failed_total{queue="telegram-outbound"}` from the telegram worker's
-  failed handler so terminal telegram failures count toward the threshold.
+- Add `telegram-outbound` to the monitored `QUEUE_NAMES` so the existing DLQ
+  monitor's `QueueEvents` listener increments
+  `cr_dlq_failed_total{queue="telegram-outbound"}` once per terminal failure and
+  the threshold poll covers it; do not add a second worker-handler increment.
 - Manage the lifecycle of the two Bull Board `Queue` instances so they close
   on application shutdown and do not leak a Redis connection.
 
@@ -59,8 +60,10 @@ Hot-path query performance (new `hot-path-query-performance`):
 
 - `Promise.all` the independent `leadUsers` and `projects` queries in
   `getWeeklyReport`.
-- Add DB-level pagination (`take`/`skip`) to archive listing and load the heavy
-  nested section graph only for snapshot-less fallback rows.
+- Move archive-listing pagination into the repository using the existing
+  `reportId` cursor / `nextCursor` contract with stable `publishedAt desc, id`
+  ordering, and load the heavy nested section graph only for snapshot-less
+  fallback rows.
 - Replace the per-user count+delete loop in `upsertUsers` with a bulk prefetch
   plus a single `deleteMany`.
 - Read the organization with `findUnique`, falling back to `upsert` only when

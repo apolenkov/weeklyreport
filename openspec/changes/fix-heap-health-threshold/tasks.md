@@ -13,14 +13,24 @@
 ## apps/api — health controller
 
 - [ ] `apps/api/src/infrastructure/health/health.controller.ts` — inject
-      `EnvConfig` (via `@Inject(ENV_CONFIG)` or constructor injection consistent with
-      the module's existing pattern); remove `checkHeap` from `liveness()`; update
-      `readiness()` to call
+      `EnvConfig` via `@Inject(ENV_CONFIG)`; remove `checkHeap` from `liveness()`;
+      update `readiness()` to call
       `this.memory.checkHeap("memory_heap", this.env.HEAP_HEALTH_THRESHOLD_BYTES)`.
 
-- [ ] `apps/api/src/infrastructure/health/health.module.ts` — ensure `EnvConfig`
-      / the env config token is available to `HealthController`; verify `ConfigModule`
-      is imported.
+- [ ] `apps/api/src/infrastructure/health/health.module.ts` — create or reuse the
+      `ENV_CONFIG` token + `{ provide: ENV_CONFIG, useFactory: validateEnv }`
+      provider (the parallel `enforce-smtp-config` change introduces the same token —
+      reuse it if it merged first; do NOT declare it twice). Register the provider in
+      `HealthModule` or import a `ConfigModule` that exports it. There is no
+      `ConfigModule` today, so this DI wiring must be created.
+
+## deploy — prod compose wiring
+
+- [ ] `docker-compose.prod.yml` — add
+      `HEAP_HEALTH_THRESHOLD_BYTES: ${HEAP_HEALTH_THRESHOLD_BYTES:-1610612736}` to the
+      `api` service `environment` block so a deployment `.env` override reaches the
+      container. The block is explicit (no `env_file`), so without this line the
+      override is silently ignored.
 
 ## apps/api — tests
 

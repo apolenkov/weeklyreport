@@ -17,11 +17,11 @@ picture whenever the org has name collisions.
   show the human-readable name.
 - `apps/web/src/components/charts/traffic-light-history.chart.tsx`: key the
   per-period data point by `projectId` (UUID) instead of `projectName`; pass
-  `name={row.projectName}` on each `Line` so legend and tooltip still show the
-  project name.
+  `name={row.projectName}` on each `Line` so the tooltip still shows the
+  project name (this chart renders a tooltip but no legend).
 - `apps/web/src/components/charts/charts.test.tsx`: add regression scenarios
   that assert both entities' values survive when two entities share a display
-  name.
+  name, exercised through an extracted pure data builder per chart.
 
 No backend, schema, or API changes — `leadId`/`projectId` are already present
 in the shared `LeadVelocityOutput` and `TrafficLightHistoryOutput` types.
@@ -32,7 +32,8 @@ in the shared `LeadVelocityOutput` and `TrafficLightHistoryOutput` types.
 
 - `analytics-chart-series-identity`: recharts data-series in analytics charts
   are keyed by stable entity id so duplicate display names do not collide; the
-  display name is preserved in legend and tooltip via the recharts `name` prop.
+  display name is preserved in the recharts tooltip (and legend, for the bar
+  chart) via the recharts `name` prop.
 
 ### Modified Capabilities
 

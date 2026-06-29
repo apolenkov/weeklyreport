@@ -2,12 +2,14 @@
 
 - [ ] 1.1 In `reminders.prisma-repository.ts::findDueEscalationRules`, replace the
       `report.publishedBy` include with a join from each late lead's `author` to
-      `reportingGroup.head` (`ReportingGroup.headUserId`, role `head`/`admin`).
+      `reportingGroup.head` (`ReportingGroup.headUserId`, role `head`/`admin`),
+      and require `head.isActive = true` so a deactivated head is not resolved.
 - [ ] 1.2 Group late leads by their reporting group's head and emit one
       `DueEscalationRule`-equivalent per `(rule, group head)` aggregating only
       that group's late leads; drop the publish-state dependency.
-- [ ] 1.3 Log late leads whose reporting group has `headUserId = null` (no digest
-      for them) and continue processing other groups; never throw.
+- [ ] 1.3 Log late leads whose reporting group has no resolvable active head —
+      `headUserId = null` or `head.isActive = false` — (no digest for them) and
+      continue processing other groups; never throw.
 - [ ] 1.4 Update the `DueEscalationRule` interface and `RemindersScheduler.dispatchEscalation`
       to consume the per-group-head shape (iterate group heads).
 
@@ -38,6 +40,9 @@
       leads.
 - [ ] 4.3 Head-less group: no digest for that lead, the case is logged, other
       groups still dispatched.
+- [ ] 4.6 Deactivated head (`head.isActive = false`): no digest to that head, the
+      unresolved-active-head case is logged, other groups whose head is active
+      still dispatched.
 - [ ] 4.4 Two concurrent `requestReminderExecution` calls with the same dedupeKey
       create exactly one row and enqueue exactly one `send` job.
 - [ ] 4.5 A deduplicated call (existing dedupeKey) returns the existing execution

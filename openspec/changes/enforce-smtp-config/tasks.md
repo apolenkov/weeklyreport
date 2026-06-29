@@ -11,6 +11,13 @@
       `SMTP_HOST` fails, prod missing `SMTP_FROM` fails, prod with both set
       passes the SMTP fence, dev/test with neither set passes, and
       `PDF_EXPORT_JWT_SECRET` shorter than 32 chars fails.
+- [ ] 1.4 Raise the runtime guards in
+      `apps/api/src/modules/pdf-export/pdf-export.service.ts`
+      (`signPdfExportToken` and `verifyPdfExportToken`) from `< 16` to `< 32`,
+      update their error messages to state the 32-character minimum, and fix the
+      stale `// Min 16 chars enforced in the service.` comment in `env.schema.ts`
+      to say 32. Add/extend a unit test asserting both guards reject a sub-32
+      secret.
 
 ## 2. EnvConfig DI provider
 
@@ -32,10 +39,18 @@
       to provide `EnvConfig` through the test module provider instead of
       mutating `process.env.SMTP_*`.
 
-## 4. Verification
+## 4. Deployment contract
 
-- [ ] 4.1 Run `pnpm typecheck`.
-- [ ] 4.2 Run `pnpm lint`.
-- [ ] 4.3 Run `pnpm test` (env-schema unit tests + email integration test).
-- [ ] 4.4 Run `pnpm build`.
-- [ ] 4.5 Run `openspec validate "enforce-smtp-config" --strict` (exit 0).
+- [ ] 4.1 Update the `PDF_EXPORT_JWT_SECRET` required-env message in
+      `docker-compose.prod.yml` (line ~160) from `min 16 chars` to
+      `min 32 chars`, keeping the "NOT the dev fallback" note.
+- [ ] 4.2 Sweep any remaining `min 16` / `>= 16` PDF-secret wording in env docs
+      and `.env*` examples so every deployment-facing reference says 32.
+
+## 5. Verification
+
+- [ ] 5.1 Run `pnpm typecheck`.
+- [ ] 5.2 Run `pnpm lint`.
+- [ ] 5.3 Run `pnpm test` (env-schema unit tests + email integration test).
+- [ ] 5.4 Run `pnpm build`.
+- [ ] 5.5 Run `openspec validate "enforce-smtp-config" --strict` (exit 0).

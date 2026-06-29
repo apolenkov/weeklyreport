@@ -15,14 +15,17 @@ the source findings `consolidate-duplicated-derivations`,
 - Extract single-source-of-truth helpers for the four duplicated derivations
   (`allowedGroupIds`, on-time-ratio, `reportHasContent`, worst-status) and reuse
   them at every site; add the missing `priorityRank` to `LeadKanbanItem`.
-- Remove dead, never-wired code (parallel `*.router.ts` + passport-JWT plumbing,
-  unimported components, dead redirect query params) once proven unused, or wire
-  it as the single path.
+- Remove dead, never-wired code once proven unused: the parallel `*.router.ts` +
+  passport-JWT plumbing are deleted (the live `adminProcedure`/`headProcedure`
+  stay the only auth path — the stale routers are not wired in, since their
+  head-gating diverges from the live admin-only gate); the unimported components
+  and dead redirect query params are removed or wired as the single path.
 - Make the test infrastructure honest: the parallel MSW mock layer either fires
   (with a test) or is deleted; spies are restored between tests; misleading
   test-util docstrings are fixed.
-- Adopt one shared focus-trap + focus-restore dialog primitive across the
-  non-admin confirm/edit/publish modals, fix the false "traps focus" JSDoc, and
+- Adopt one shared focus-trap + focus-restore dialog primitive across the five
+  governed non-admin modals (risk / decision / reopen edit, the shared
+  confirmation dialog, publish-lock), fix the false "traps focus" JSDoc, and
   fix `ScopeToggle` roving tabindex / `LockBadge` dead focus handlers.
 - Align `Decision`/`StageStatus` FK `onDelete` to project with `Item`/`Risk`
   (RESTRICT for report content) so no future hard-delete silently drops authored
@@ -65,9 +68,10 @@ the source findings `consolidate-duplicated-derivations`,
 - api: `cross-group-signal.ts`, `telemetry.*`, weekly-report repository,
   `published-report-snapshot.ts`, dead `auth.module`/`jwt.strategy`/`*.router.ts`,
   api test-utils.
-- web: weekly-report page, `lead-form` mappers, dialogs (`risk`/`decision`/
-  `reopen`/`confirmation`/`publish-lock`), `scope-toggle`, `lock-badge`, dead
-  components/redirects, web test-utils (MSW, vitest config/setup).
-- shared: `LeadKanbanItem` type.
+- web: weekly-report page, `lead-form` mappers (incl. the local `LeadKanbanItem`
+  type), dialogs (`risk`/`decision`/`reopen`/`confirmation`/`publish-lock`),
+  `scope-toggle`, `lock-badge`, dead components/redirects, web test-utils (MSW,
+  vitest config/setup).
+- shared: none (the `LeadKanbanItem` type is web-local, not in `packages/shared`).
 - prisma: `schema.prisma` + the single init migration (MVP reshape, not an
   incremental alter-table migration).
