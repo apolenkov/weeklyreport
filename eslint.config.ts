@@ -607,7 +607,6 @@ export default defineConfig([
       // clarity cost — exempt, not churn.
       "apps/api/src/infrastructure/trpc/trpc.middleware.ts", // tRPC instance + all procedure builders share the private `t` binding
       "apps/api/src/modules/admin/period-admin.service.ts", // one Admin period-lifecycle service class
-      "apps/api/src/modules/auth/auth.routes.ts", // one post-auth chain; helpers private to buildUserSession
       "apps/api/src/modules/report-sections/report-sections.prisma-repository.ts", // one Prisma persistence layer; include/type/mapper/class coupled
       "apps/web/src/components/admin/users-tab.tsx", // one CRUD panel; table + dialogs share one state tree
       "apps/web/src/components/admin/groups-tab.tsx", // one CRUD tab; dialogs share one state machine
@@ -645,7 +644,6 @@ export default defineConfig([
   // end-state as the max-lines block; `complexity: 20` still gates new code.
   {
     files: [
-      "apps/api/src/modules/auth/auth.routes.ts", // 3 Express auth handlers; env-conditional mount order (dev before passport) is load-bearing
       "apps/web/src/app/(app)/reports/page.tsx", // role-aware history renderer; 5 roles × distinct query/filter/label paths
       "apps/web/src/components/admin/admin-panel.tsx", // 9-tab dispatch + skeleton/loaded gating; only ~3 pts extractable
       "apps/web/src/components/dashboard/dashboard-page.tsx", // orchestrator: 2 queries + shared state + 4 render branches, hook-coupled

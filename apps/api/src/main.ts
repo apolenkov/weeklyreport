@@ -63,10 +63,8 @@ import { JobsService } from "./modules/admin/jobs.service";
 import { AnalyticsService } from "./modules/analytics/analytics.service";
 import { ArchiveService } from "./modules/archive/archive.service";
 import { createAuthController } from "./modules/auth/auth.controller";
-import {
-  mountAuthRoutes,
-  type ProvisionLeadWorkspace,
-} from "./modules/auth/auth.routes";
+import { mountAuthRoutes } from "./modules/auth/auth.routes";
+import type { ProvisionLeadWorkspace } from "./modules/auth/user-session";
 import {
   createSamlStrategy,
   createSamlStrategyOptions,
