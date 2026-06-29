@@ -51,11 +51,14 @@ can copy.
   materialises reminder rules via `policyApplicator.applyToPeriod`. Both the
   period-creator scheduler and the lazy login-create path call it, so there is
   exactly one period writer formula — same deadline, same lifecycle, same reminders.
-- **Fix the lazy-path reminder asymmetry.** Today admin-create, the cron scheduler,
-  and snapshot-restore all call `applyToPeriod`, but the lazy login-create path
-  never did (a Phase 50-A omission predating the Phase 50-B reminder wiring), so a
+- **Fix the lazy-path reminder asymmetry.** Today the cron scheduler and
+  snapshot-restore call `applyToPeriod`, but the lazy login-create path never did
+  (a Phase 50-A omission predating the Phase 50-B reminder wiring), so a
   login-created period silently gets no deadline reminders. Folding `applyToPeriod`
-  into the one factory closes this as a side effect of the unification.
+  into the one factory closes this as a side effect of the unification — guarded so
+  it only fires when the new period's deadline is still in the future (the
+  reminders scheduler has no elapsed-`fireAt` guard, so a period created after its
+  own deadline must not materialise already-past, stale-firing rules).
 - **Move the lead-section materialisation** (`ReportSection` + `ProjectStatus`
   rows) out of auth into the report-section domain. `period-dual-state` explicitly
   classifies lead-section save as a non-period writer, so it stays exempt.
