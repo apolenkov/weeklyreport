@@ -149,19 +149,24 @@ services:
       DIRECT_URL: postgresql://customreport:${DB_PASSWORD:?DB_PASSWORD must be set}@postgres:5432/customreport
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      PORT: 3001
       NODE_ENV: production
       FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL must be set}
+      # APP_BASE_URL backs reminder email links; required (no localhost fallback).
+      APP_BASE_URL: ${APP_BASE_URL:?APP_BASE_URL must be set}
       # 36-04: optional CSV of additional CORS origins.
       FRONTEND_URLS: ${FRONTEND_URLS:-}
       AUTH_DEV_MODE: "false"
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?AUTH_JWT_SECRET must be set (min 32 chars)}
-      # 36-03: PDF_EXPORT_JWT_SECRET fence — schema rejects the dev fallback
-      # in production, so this MUST be set.
-      PDF_EXPORT_JWT_SECRET: ${PDF_EXPORT_JWT_SECRET:?PDF_EXPORT_JWT_SECRET must be set (min 16 chars, NOT the dev fallback)}
-      PDF_BASE_URL: ${PDF_BASE_URL:-http://web:3000}
+      # env.schema requires PDF_EXPORT_JWT_SECRET (min 16) with no default, so it
+      # MUST be set explicitly here — never the throwaway dev value.
+      PDF_EXPORT_JWT_SECRET: ${PDF_EXPORT_JWT_SECRET:?PDF_EXPORT_JWT_SECRET must be set (min 16 chars, NOT the dev value)}
+      PDF_BASE_URL: ${PDF_BASE_URL:?PDF_BASE_URL must be set}
       PDF_OUTPUT_DIR: /app/data/pdfs
       LOG_LEVEL: ${LOG_LEVEL:-info}
       LOG_DIR: /app/logs
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-false}
+      OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-0.1}
       # 38-01 SMTP — real provider required in prod.
       SMTP_HOST: ${SMTP_HOST:?SMTP_HOST must be set in production}
       SMTP_PORT: ${SMTP_PORT:?SMTP_PORT must be set in production}

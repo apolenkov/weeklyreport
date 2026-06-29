@@ -86,11 +86,20 @@ export default defineConfig({
           process.env.AUTH_JWT_SECRET ??
           "test-secret-must-be-32-chars-or-more!!",
         FRONTEND_URL: WEB_URL,
+        APP_BASE_URL: WEB_URL,
         PDF_BASE_URL: WEB_URL,
         PDF_OUTPUT_DIR: path.join(__dirname, "integration/.results/pdfs"),
+        PDF_EXPORT_JWT_SECRET:
+          process.env.PDF_EXPORT_JWT_SECRET ??
+          "e2e-pdf-export-secret-32-chars-minimum!!",
         BULLMQ_PREFIX,
         NODE_ENV: "test",
         LOG_LEVEL: "warn", // keep test output readable
+        // env.schema requires these (no defaults); the SDK stays off for e2e.
+        REDIS_HOST: process.env.REDIS_HOST ?? "localhost",
+        REDIS_PORT: process.env.REDIS_PORT ?? "6379",
+        OTEL_SDK_DISABLED: "true",
+        OTEL_TRACES_SAMPLER_ARG: "0",
       },
     },
     {

@@ -10,6 +10,7 @@ import {
 import { type Job, Worker } from "bullmq";
 import { chromium } from "playwright";
 
+import { requireEnv } from "../../lib/env.js";
 import { PdfExportService } from "../../modules/pdf-export/pdf-export.service";
 import { getBullMQOptions } from "./bullmq-options";
 
@@ -86,7 +87,7 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
 
   private async processJob(job: Job<PdfExportJobData>): Promise<void> {
     const { reportId, jobId, authToken } = job.data;
-    const baseUrl = process.env.PDF_BASE_URL ?? "http://localhost:3000";
+    const baseUrl = requireEnv(process.env, "PDF_BASE_URL");
     const reportUrl = `${baseUrl}/print/${reportId}`;
 
     const browser = await chromium.launch({ headless: true });

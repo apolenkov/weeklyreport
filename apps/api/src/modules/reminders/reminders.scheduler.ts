@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
+import { requireEnv } from "../../lib/env.js";
 import { OrganizationService } from "../organization/organization.service";
 import type {
   DueDeadlineRule,
@@ -120,6 +121,6 @@ export class RemindersScheduler {
 }
 
 function buildSectionUrl(reportId: string): string {
-  const base = process.env.APP_BASE_URL ?? "http://localhost:3000";
+  const base = requireEnv(process.env, "APP_BASE_URL");
   return `${base}/lead/report?reportId=${reportId}`;
 }

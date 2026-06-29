@@ -11,6 +11,9 @@ import { defineConfig } from "vitest/config";
  */
 export default defineConfig({
   test: {
+    // Provide the product-critical env vars the app reads via requireEnv (the
+    // schema has no defaults and vitest doesn't load .env). See the setup file.
+    setupFiles: ["./src/test-utils/test-env.setup.ts"],
     // Mirrors the `test` script's exclude rule so unit + integration runs
     // diverge cleanly. Integration uses --fileParallelism=false on demand.
     exclude: [

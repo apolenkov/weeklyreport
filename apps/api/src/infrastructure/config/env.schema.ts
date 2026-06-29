@@ -1,47 +1,49 @@
 import { z } from "zod";
 
-// Dev convenience default for FRONTEND_URL — harmless locally, but a silent
-// localhost redirect in production. A production fence (below) rejects it so a
-// prod deploy that forgot to override FRONTEND_URL fails boot cleanly instead.
-const LOCALHOST_FRONTEND_URL = "http://localhost:3000";
-
+// No `.default()` anywhere in this schema by design: every value the API needs
+// to run is REQUIRED and must be supplied explicitly per environment (`.env`
+// for local, the `environment:` block per docker-compose file, the e2e config's
+// webServer env). A silent default hides whether a value is mandatory and lets
+// a misconfigured deploy boot with a wrong (e.g. localhost) value. Boot fails
+// loud on a missing var instead. Genuinely-optional features stay `.optional()`
+// (they have no default — the consumer handles absence).
 export const envSchema = z
   .object({
     DATABASE_URL: z.url().startsWith("postgresql://"),
     DIRECT_URL: z.url().startsWith("postgresql://").optional(),
-    PORT: z.coerce.number().int().positive().default(3001),
-    NODE_ENV: z
-      .enum(["development", "production", "test"])
-      .default("development"),
-    FRONTEND_URL: z.url().default(LOCALHOST_FRONTEND_URL),
+    PORT: z.coerce.number().int().positive(),
+    NODE_ENV: z.enum(["development", "production", "test"]),
+    FRONTEND_URL: z.url(),
+    // Base URL the reminder scheduler embeds in notification email links
+    // (`reminders.scheduler.ts`). Required so prod emails never link to
+    // localhost; in dev/compose it is set to the same web origin as FRONTEND_URL.
+    APP_BASE_URL: z.url(),
     // 36-04: optional CSV of additional allowed origins for CORS. Lets
     // prod accept e.g. customreport.example.com + admin.customreport.
     // example.com from the same API instance. Wildcards (*) are rejected
     // in superRefine when NODE_ENV=production.
     FRONTEND_URLS: z.string().optional(),
-    AUTH_DEV_MODE: z
-      .string()
-      .default("false")
-      .transform((v) => v === "true"),
-    LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+    AUTH_DEV_MODE: z.string().transform((v) => v === "true"),
+    LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]),
     LOG_DIR: z.string().optional(),
 
-    // Auth / JWT. Required unconditionally (min 32): the JWT signer
+    // Auth / JWT. Required (min 32): the JWT signer
     // (`auth.controller.ts::createJwtSigner`) is built at boot in EVERY mode —
     // dev-login still issues a session JWT — so a config without it crashes at
-    // controller construction regardless of AUTH_DEV_MODE. Making it required
-    // here turns that deferred crash into a clean boot-time validation error.
+    // controller construction regardless of AUTH_DEV_MODE.
     AUTH_JWT_SECRET: z.string().min(32),
 
-    // SAML / Keycloak (validated at runtime by saml.strategy.ts requireEnv)
+    // SAML / Keycloak (validated at runtime by saml.strategy.ts requireEnv).
+    // Optional here because dev-login (AUTH_DEV_MODE) needs no IdP; prod boots
+    // SAML and requireEnv enforces these.
     KEYCLOAK_SAML_CALLBACK_URL: z.url().optional(),
     KEYCLOAK_SAML_ENTRY_POINT: z.url().optional(),
     KEYCLOAK_SAML_ISSUER: z.string().optional(),
     KEYCLOAK_SAML_CERT: z.string().optional(),
 
     // Redis (BullMQ)
-    REDIS_HOST: z.string().default("localhost"),
-    REDIS_PORT: z.coerce.number().int().positive().default(6379),
+    REDIS_HOST: z.string(),
+    REDIS_PORT: z.coerce.number().int().positive(),
     BULLMQ_PREFIX: z.string().optional(),
 
     // SMTP (email reminders)
@@ -51,32 +53,26 @@ export const envSchema = z
     SMTP_PASS: z.string().optional(),
     SMTP_FROM: z.string().optional(),
 
-    // OpenTelemetry (37-01). All optional — SDK only starts when
-    // OTEL_EXPORTER_OTLP_ENDPOINT is set AND OTEL_SDK_DISABLED is not
-    // 'true'. See apps/api/src/infrastructure/otel/otel.bootstrap.ts.
+    // OpenTelemetry (37-01). The endpoint stays optional — the SDK only starts
+    // when OTEL_EXPORTER_OTLP_ENDPOINT is set AND OTEL_SDK_DISABLED is not
+    // 'true'. The toggle + sampler are required so the telemetry posture is
+    // always explicit. See otel.bootstrap.ts.
     OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
-    OTEL_SDK_DISABLED: z.string().default("false"),
-    OTEL_TRACES_SAMPLER_ARG: z.coerce.number().min(0).max(1).default(0.1),
+    OTEL_SDK_DISABLED: z.string(),
+    OTEL_TRACES_SAMPLER_ARG: z.coerce.number().min(0).max(1),
     OTEL_SERVICE_NAME: z.string().optional(),
     OTEL_SERVICE_VERSION: z.string().optional(),
 
     // PDF generation
-    PDF_BASE_URL: z.url().default("http://localhost:3000"),
+    PDF_BASE_URL: z.url(),
     // Phase 23-01: directory where the BullMQ worker writes generated PDFs and
     // where /pdfs static mount serves them. Resolved relative to the API's cwd
-    // (apps/api/) at runtime — `./storage/pdfs` lands at `apps/api/storage/pdfs`
-    // regardless of how the dev script is launched. The earlier
-    // `./apps/api/storage/pdfs` default doubled the path when cwd was already
-    // apps/api/, producing a stray `apps/api/apps/api/storage/pdfs`.
-    // Production overrides via .env (e.g. /var/lib/customreport/pdfs).
-    PDF_OUTPUT_DIR: z.string().default("./storage/pdfs"),
+    // (apps/api/) at runtime — `./storage/pdfs` lands at `apps/api/storage/pdfs`.
+    PDF_OUTPUT_DIR: z.string(),
     // CC-1 (Phase 28-02): short-lived JWT signed at /trpc entry and injected
     // as cookie into the headless browser so PDF rendering can authenticate
     // against /weekly-report/* routes. Min 16 chars enforced in the service.
-    PDF_EXPORT_JWT_SECRET: z
-      .string()
-      .min(16)
-      .default("dev-only-replace-in-production-min-32-chars"),
+    PDF_EXPORT_JWT_SECRET: z.string().min(16),
   })
   .superRefine((data, ctx) => {
     // 36-03: production fences. Boot must fail if any of these aren't met.
@@ -86,28 +82,6 @@ export const envSchema = z
           code: "custom",
           message: "AUTH_DEV_MODE=true is forbidden when NODE_ENV=production",
           path: ["AUTH_DEV_MODE"],
-        });
-      }
-      if (
-        data.PDF_EXPORT_JWT_SECRET ===
-        "dev-only-replace-in-production-min-32-chars"
-      ) {
-        ctx.addIssue({
-          code: "custom",
-          message:
-            "PDF_EXPORT_JWT_SECRET must be overridden in production (default dev value detected)",
-          path: ["PDF_EXPORT_JWT_SECRET"],
-        });
-      }
-      // FRONTEND_URL drives the post-login redirect targets. The localhost dev
-      // default must be overridden in production, or users would be redirected
-      // to localhost after SAML login.
-      if (data.FRONTEND_URL === LOCALHOST_FRONTEND_URL) {
-        ctx.addIssue({
-          code: "custom",
-          message:
-            "FRONTEND_URL must be overridden in production (default dev value detected)",
-          path: ["FRONTEND_URL"],
         });
       }
       // FRONTEND_URLS (if set) must not include a wildcard. Wildcards are
