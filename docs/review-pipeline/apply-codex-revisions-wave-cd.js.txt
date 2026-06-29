@@ -1,0 +1,80 @@
+export const meta = {
+  name: "apply-codex-revisions-wave-cd",
+  description:
+    "Apply valid Codex review findings to each Wave C+D OpenSpec change. One agent per change with a REVISE verdict: verify each finding as a candidate against the artifact + code, apply valid ones, reject spurious with a note, re-validate --strict. No product code.",
+  phases: [{ title: "Revise", detail: "one reviser per REVISE change, verify-then-apply, validate --strict" }],
+};
+
+const REVIEW_FILE = "docs/repo-excellence-review-2026-06-28.wave-cd.codex-review.json";
+// Only the changes that came back REVISE are passed here (the cron computes this list
+// from the review file and rewrites CHANGES before launching, OR pass all and skip APPROVED).
+const CHANGES = Array.isArray(globalThis.__WAVE_CD_REVISE__) ? globalThis.__WAVE_CD_REVISE__ : [
+  "fix-analytics-date-matching",
+  "fix-reminders-escalation-dedupe",
+  "harden-web-vitals-endpoint",
+  "protect-metrics-endpoint",
+  "guard-metrics-scrape-db-failure",
+  "fix-period-datetime-tz",
+  "fix-risk-stage-integrity-impl",
+  "key-charts-by-id",
+  "fix-dashboard-nan-pending",
+  "fix-heap-health-threshold",
+  "enforce-smtp-config",
+  "serialize-autosave",
+  "observe-prisma-pool",
+  "ci-deploy-supplychain-hardening",
+  "observability-and-perf-hardening",
+  "code-health-and-test-cleanup",
+  "input-and-error-hardening",
+];
+
+const SCHEMA = {
+  type: "object",
+  required: ["changeId", "validated", "applied", "rejected"],
+  properties: {
+    changeId: { type: "string" },
+    validated: { type: "boolean" },
+    applied: { type: "array", items: { type: "object", required: ["issue", "how"], properties: { issue: { type: "string" }, how: { type: "string" } } } },
+    rejected: { type: "array", items: { type: "object", required: ["issue", "why"], properties: { issue: { type: "string" }, why: { type: "string" } } } },
+    notes: { type: "string" },
+  },
+};
+
+const GUARD = `
+Treat each finding as a CANDIDATE — open the actual artifact + cited code (incl.
+generated Prisma types for any DB/type claim), CONFIRM real and not already handled,
+THEN apply; reject with reason otherwise. Sweep ALL artifacts (proposal/design/spec/
+tasks) for the same stale wording so they agree. Respect repo conventions: Russian
+only a bug in apps/web JSX; ComingSoon intentional; single init migration intentional
+(MVP — reshape schema.prisma + hand-edit init migration, not incremental; never tell
+implementers to run pnpm lint:md); English-only prod UI intentional. Edit OpenSpec
+ARTIFACTS only — no product code, do NOT mark tasks done.`;
+
+phase("Revise");
+const results = await parallel(
+  CHANGES.map((id) => () =>
+    agent(
+      `Revise ONE OpenSpec change by applying the valid Codex findings. Edit only
+openspec/changes/${id}/ artifacts.
+
+CHANGE: ${id}
+STEP 1: Read ${REVIEW_FILE} (JSON array). Find the object with changeId === "${id}".
+If its verdict is APPROVED or it is absent, make NO edits — return validated:true,
+empty applied/rejected, notes "approved/no findings". Otherwise its "issues" array
+holds the findings.
+STEP 2: For each finding, open the cited artifact + product code. If REAL and not
+already handled, apply the fix to the right artifact and sweep siblings for the same
+stale wording. Delta-spec rules: "## ADDED/MODIFIED Requirements", "### Requirement:"
+SHALL on first body line, every requirement has a "#### Scenario:" GIVEN/WHEN/THEN.
+If wrong/already-covered, record in "rejected".
+STEP 3: Run \`openspec validate "${id}" --strict\` until it exits 0.
+Return {changeId, validated, applied, rejected, notes}.
+${GUARD}`,
+      { label: `revise-cd:${id}`, phase: "Revise", model: "opus", effort: "high", schema: SCHEMA },
+    ),
+  ),
+);
+
+const done = results.filter(Boolean);
+log(`Revised ${done.length}; validated ${done.filter((r) => r.validated).length}; applied ${done.reduce((n, r) => n + (r.applied?.length || 0), 0)}, rejected ${done.reduce((n, r) => n + (r.rejected?.length || 0), 0)}.`);
+return { revised: done };
