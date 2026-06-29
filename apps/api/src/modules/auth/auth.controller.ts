@@ -2,6 +2,9 @@ import { type UserSession, userSessionSchema } from "@customreport/shared";
 import { serialize } from "cookie";
 import jwt from "jsonwebtoken";
 
+import { requireEnv } from "../../lib/env.js";
+import { resolveSessionCookieName } from "../../lib/session-cookie.js";
+
 const ONE_HOUR_IN_SECONDS = 60 * 60;
 
 /**
@@ -24,11 +27,9 @@ export interface JwtSigner {
 }
 
 function requireJwtSecret(env: NodeJS.ProcessEnv): string {
-  const secret = env.AUTH_JWT_SECRET;
-
-  if (!secret) {
-    throw new Error("Missing required environment variable: AUTH_JWT_SECRET");
-  }
+  // Layered on the generic presence helper: presence first (same error message
+  // as every other required var), then the symmetric-secret strength floor.
+  const secret = requireEnv(env, "AUTH_JWT_SECRET");
 
   if (secret.length < MIN_JWT_SECRET_LENGTH) {
     throw new Error(
@@ -64,13 +65,16 @@ export function createJwtSigner(env: NodeJS.ProcessEnv): JwtSigner {
 export function createSessionCookie(
   token: string,
   env: NodeJS.ProcessEnv,
+  // Logout reuses this with an empty token and maxAge 0 so the cleared cookie
+  // matches the set cookie's name and attributes exactly.
+  maxAgeSeconds: number = ONE_HOUR_IN_SECONDS,
 ): string {
-  return serialize(env.AUTH_JWT_COOKIE_NAME ?? "customreport_session", token, {
+  return serialize(resolveSessionCookieName(env), token, {
     httpOnly: true,
     secure: env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: ONE_HOUR_IN_SECONDS,
+    maxAge: maxAgeSeconds,
   });
 }
 

@@ -16,8 +16,10 @@ import {
   type AuditLogger,
   createNullAuditLogger,
 } from "../../lib/audit-logger.js";
-import { getCurrentWeekBounds } from "../../lib/business-date.js";
-import type { createAuthController } from "./auth.controller.js";
+import {
+  type createAuthController,
+  createSessionCookie,
+} from "./auth.controller.js";
 
 export interface SamlProfile {
   samlId: string;
@@ -27,104 +29,16 @@ export interface SamlProfile {
 }
 
 /**
- * Auto-create a draft report + sections for the current week if none exists.
- * Returns the created ReportSection for this lead, or null if user is not a lead.
- *
- * UFB-048 / Phase 50-A: reads `AppSettings.periodLengthDays` and
- * `AppSettings.defaultDeadlineDays` from the singleton row so admin
- * UI changes propagate to NEW periods immediately. Existing periods
- * are not recomputed — `findFirst` finds them first, no rewrite.
- *
- * The settings row is read inline via Prisma (no AdminService DI threading)
- * to keep `mountAuthRoutes`' signature surgical — the auth module already
- * holds a `PrismaClient` reference, and the singleton row is upserted on
- * read so callers never see "no settings yet" mid-boot.
+ * refactor-auth-exemplary-layering: the seam through which `buildUserSession`
+ * provisions a lead's workspace at login. The auth module owns authentication,
+ * not report-period or report-section persistence — so it delegates both to
+ * injected functions wired in the composition root (`main.ts`): the period
+ * factory (`period/period-factory.ts`) finds-or-creates the current period, and
+ * `report-sections/ensure-lead-section.ts` materialises the lead's section.
  */
-async function ensureWeeklyReport(
-  prisma: PrismaClient,
+export type ProvisionLeadWorkspace = (
   userId: string,
-): Promise<{ reportId: string; sectionId: string } | null> {
-  // UFB-048: load AppSettings singleton (upsert to materialise defaults on
-  // first read). Falls back to schema defaults: periodLengthDays=7,
-  // defaultDeadlineDays=4 — these match the Prisma defaults so a fresh
-  // DB without UI-touched settings still produces a Mon-Sun week with
-  // a Friday deadline, preserving pre-50-A behaviour.
-  const settings = await prisma.appSettings.upsert({
-    where: { id: "singleton" },
-    create: { id: "singleton" },
-    update: {},
-    select: { periodLengthDays: true, defaultDeadlineDays: true },
-  });
-
-  const { periodStart, periodEnd } = getCurrentWeekBounds(
-    new Date(),
-    settings.periodLengthDays,
-  );
-
-  // Create report for this week if it doesn't exist
-  const existingReport = await prisma.report.findFirst({
-    where: {
-      status: "draft",
-      periodStart: { gte: periodStart },
-      periodEnd: { lte: periodEnd },
-    },
-    select: { id: true },
-  });
-
-  let reportId: string;
-
-  if (existingReport) {
-    reportId = existingReport.id;
-  } else {
-    // UFB-048: deadline = periodStart + defaultDeadlineDays at 18:00 UTC.
-    // The pre-50-A code computed periodEnd-2d=Fri at 15:00 local; the new
-    // formula puts periodStart(Mon)+4d=Fri at 18:00 UTC for the default
-    // value 4, matching the Friday end-of-day deadline shop teams expect.
-    // The 18:00 hour is hardcoded until Phase 51 surfaces a setting for
-    // deadline time-of-day (see plan 50-A AC).
-    const deadline = new Date(periodStart);
-    deadline.setUTCDate(deadline.getUTCDate() + settings.defaultDeadlineDays);
-    deadline.setUTCHours(18, 0, 0, 0);
-
-    const report = await prisma.report.create({
-      data: { periodStart, periodEnd, deadline },
-    });
-    reportId = report.id;
-  }
-
-  // Ensure this lead has a section in the report
-  const existingSection = await prisma.reportSection.findUnique({
-    where: { reportId_authorId: { reportId, authorId: userId } },
-    select: { id: true },
-  });
-
-  if (existingSection) {
-    return { reportId, sectionId: existingSection.id };
-  }
-
-  // Create section + project statuses
-  const projects = await prisma.project.findMany({
-    where: { leadId: userId, archived: false },
-    select: { id: true },
-  });
-
-  const section = await prisma.reportSection.create({
-    data: { reportId, authorId: userId },
-  });
-
-  if (projects.length > 0) {
-    await prisma.projectStatus.createMany({
-      data: projects.map((p) => ({
-        reportSectionId: section.id,
-        projectId: p.id,
-        status: "green" as const,
-      })),
-      skipDuplicates: true,
-    });
-  }
-
-  return { reportId, sectionId: section.id };
-}
+) => Promise<{ reportId: string; sectionId: string }>;
 
 const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
 
@@ -205,6 +119,7 @@ async function writeProvisionedUser(
 export async function buildUserSession(
   prisma: PrismaClient,
   profile: SamlProfile,
+  provisionLeadWorkspace: ProvisionLeadWorkspace,
   options: { resyncExisting?: boolean } = {},
 ): Promise<UserSession> {
   // Prefer email match (seed users may not have samlId), fall back to samlId
@@ -227,19 +142,25 @@ export async function buildUserSession(
       })
     : null;
 
-  // Lead users: find or auto-create their section in the active (draft) report
-  let activeSection = await prisma.reportSection.findFirst({
+  // Lead users: find or auto-create their section in the active (draft) report.
+  const existingSection = await prisma.reportSection.findFirst({
     where: { authorId: user.id, report: { status: "draft" } },
     select: { id: true, reportId: true },
   });
 
-  // Auto-create weekly report if lead has no active section
-  if (!activeSection && user.role === "lead") {
-    const created = await ensureWeeklyReport(prisma, user.id);
-    if (created) {
-      activeSection = { id: created.sectionId, reportId: created.reportId };
-    }
-  }
+  // A lead with no active section gets their workspace provisioned (period +
+  // section) through the injected seam — the auth module does not own that
+  // persistence. Other roles never auto-create a section.
+  const provisioned =
+    !existingSection && user.role === "lead"
+      ? await provisionLeadWorkspace(user.id)
+      : null;
+
+  const activeSection =
+    existingSection ??
+    (provisioned
+      ? { id: provisioned.sectionId, reportId: provisioned.reportId }
+      : null);
 
   // All roles: find the active report (head/viewer have no section but need the reportId)
   const activeReport = activeSection
@@ -271,36 +192,259 @@ export async function buildUserSession(
   };
 }
 
+// --- Dev-login role dictionaries (dev mode only) ---------------------------
+// Typed exhaustively on `Role`, so adding a role to the enum fails to compile
+// here until it is given an entry — no silently-missing role.
+
+const DEV_LOGIN_EMAIL_BY_ROLE: Record<Role, string> = {
+  head: "head@customreport.local",
+  lead: "lead1@customreport.local",
+  admin: "admin@customreport.local",
+  viewer: "viewer@customreport.local",
+};
+
+// Fallback names — only used when there is no DB record for the email (fresh
+// dev DB before seed has run). When a row exists, the seeded name is used so
+// the session reflects the database.
+const DEV_LOGIN_NAME_BY_ROLE: Record<Role, string> = {
+  head: "Антон К.",
+  lead: "Lead 1",
+  admin: "Михаил Б.",
+  viewer: "Дарья В.",
+};
+
+const DEV_LOGIN_SAML_ID_BY_ROLE: Record<Role, string> = {
+  head: "head-1",
+  lead: "lead-1",
+  admin: "admin-1",
+  viewer: "viewer-1",
+};
+
+// UX-16: role-aware default landing. Must stay in sync with DEFAULT_FOR_ROLE
+// in apps/web/src/app/page.tsx.
+const DEV_LOGIN_REDIRECT_BY_ROLE: Record<Role, string> = {
+  head: "/head/dashboard",
+  lead: "/lead/report",
+  admin: "/admin",
+  viewer: "/reports?tab=published",
+};
+
+const VALID_ROLES: readonly Role[] = ["lead", "head", "admin", "viewer"];
+const DEV_LOGIN_DEFAULT_ROLE: Role = "head";
+// The dev SAML-login shortcut signs in as admin (no real Keycloak locally).
+const DEV_SAML_LOGIN_ROLE: Role = "admin";
+
+const DEFAULT_FRONTEND_URL = "http://localhost:3000";
+
+// --- Route handlers --------------------------------------------------------
+// The dependencies each /auth/* handler closes over. `mountAuthRoutes` builds
+// this once and the handler factories below capture it, so the registration
+// function stays a thin wiring map.
+
+interface AuthRouteDeps {
+  prisma: PrismaClient;
+  authController: ReturnType<typeof createAuthController>;
+  auditLogger: AuditLogger;
+  provisionLeadWorkspace: ProvisionLeadWorkspace;
+  frontendUrl: string;
+  env: NodeJS.ProcessEnv;
+}
+
+const readQueryParam = (value: unknown): string | undefined =>
+  typeof value === "string" ? value : undefined;
+
+/**
+ * Dev-mode shortcut for GET /auth/saml/login: redirect to /auth/dev-login as
+ * admin (no real Keycloak running locally), preserving a safe relative `next`.
+ */
+function handleDevSamlLoginRedirect(req: Request, res: Response): void {
+  const params = new URLSearchParams({
+    role: DEV_SAML_LOGIN_ROLE,
+    email: DEV_LOGIN_EMAIL_BY_ROLE[DEV_SAML_LOGIN_ROLE],
+  });
+  const next = readQueryParam(req.query.next);
+  if (next && next.startsWith("/") && !next.includes("://")) {
+    params.set("redirect", next);
+  }
+  res.redirect(`/auth/dev-login?${params.toString()}`);
+}
+
+function createSamlCallbackHandler(deps: AuthRouteDeps): RequestHandler {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const profile = req.user as SamlProfile | undefined;
+
+      if (!profile) {
+        // AUTH-08: SAML callback hit without a passport-attached profile —
+        // treat as login-fail (T2 mitigation: emit even when role/userId are
+        // unknown so the audit trail captures the attempt).
+        deps.auditLogger.loginFail({
+          userId: "anonymous",
+          role: null,
+          ip: req.ip ?? "unknown",
+          reason: "invalid_assertion",
+        });
+        loginAttemptsTotal.inc({ method: "saml", outcome: "fail" });
+        res.redirect(`${deps.frontendUrl}/auth/error?reason=invalid_assertion`);
+        return;
+      }
+
+      const session = await buildUserSession(
+        deps.prisma,
+        profile,
+        deps.provisionLeadWorkspace,
+      );
+      const { setCookieHeader } =
+        deps.authController.issueSessionCookie(session);
+
+      // AUTH-08: structured login-success audit event.
+      deps.auditLogger.loginSuccess({
+        userId: session.userId,
+        role: session.role,
+        ip: req.ip ?? "unknown",
+      });
+      loginAttemptsTotal.inc({ method: "saml", outcome: "success" });
+
+      res.setHeader("Set-Cookie", setCookieHeader);
+      res.redirect(deps.frontendUrl);
+    } catch (error) {
+      // AUTH-08: any post-passport failure (DB write, JWT signing, etc.) is
+      // still a failed login from the user's perspective.
+      deps.auditLogger.loginFail({
+        userId: "anonymous",
+        role: null,
+        ip: req.ip ?? "unknown",
+        reason: error instanceof Error ? error.message : "callback-error",
+      });
+      loginAttemptsTotal.inc({ method: "saml", outcome: "fail" });
+      next(error);
+    }
+  };
+}
+
+function createLogoutHandler(
+  deps: Pick<AuthRouteDeps, "auditLogger" | "env">,
+): RequestHandler {
+  return (request: Request, res: Response) => {
+    // AUTH-08: emit logout audit event using whatever session shape was
+    // attached upstream (passport-strategy or proxy middleware). When no
+    // session is present, fall back to userId='anonymous' / role=null —
+    // Phase 32-M8 (M-08) replaced the previous 'unknown' literal so SIEM rules
+    // tuned to the Role enum (or to null = "no session") see the anonymous
+    // logout case explicitly rather than as a fake "unknown role" entry.
+    const reqUser = (request as Request & { user?: UserSession }).user;
+    deps.auditLogger.logout({
+      userId: reqUser?.userId ?? "anonymous",
+      role: reqUser?.role ?? null,
+      ip: request.ip ?? "unknown",
+    });
+
+    // Reuse the cookie issuer with an empty token + maxAge 0 so the cleared
+    // cookie matches the set cookie's name and attributes exactly.
+    res.setHeader("Set-Cookie", createSessionCookie("", deps.env, 0));
+    res.redirect("/");
+  };
+}
+
+/**
+ * Resolve the dev-login identity for a validated role from the query plus the
+ * live DB row (re-seeds / schema name updates propagate without a code change).
+ */
+async function resolveDevLoginIdentity(
+  prisma: PrismaClient,
+  role: Role,
+  query: Request["query"],
+): Promise<SamlProfile> {
+  const defaultEmail = DEV_LOGIN_EMAIL_BY_ROLE[role];
+  const requestedEmail = readQueryParam(query.email);
+  const email = requestedEmail ?? defaultEmail;
+  const isCustomEmail =
+    requestedEmail !== undefined && requestedEmail !== defaultEmail;
+
+  const dbUser = await prisma.user.findFirst({
+    where: { email },
+    select: { name: true, samlId: true },
+  });
+
+  const samlId =
+    dbUser?.samlId ??
+    (isCustomEmail ? `dev-${email}` : DEV_LOGIN_SAML_ID_BY_ROLE[role]);
+  const displayName = dbUser?.name ?? DEV_LOGIN_NAME_BY_ROLE[role];
+
+  return { samlId, email, displayName, role };
+}
+
+function createDevLoginHandler(deps: AuthRouteDeps): RequestHandler {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const role = readQueryParam(req.query.role) ?? DEV_LOGIN_DEFAULT_ROLE;
+      if (!VALID_ROLES.includes(role as Role)) {
+        loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });
+        res.status(400).json({
+          error: `Invalid role: ${role}. Must be one of: ${VALID_ROLES.join(", ")}`,
+        });
+        return;
+      }
+      const validRole = role as Role;
+
+      const identity = await resolveDevLoginIdentity(
+        deps.prisma,
+        validRole,
+        req.query,
+      );
+
+      // dev-login is the UAT role switcher: re-sync an existing row so a
+      // ?role= switch updates the live user (unlike SAML, which is create-only
+      // and never overwrites an existing record).
+      const session = await buildUserSession(
+        deps.prisma,
+        identity,
+        deps.provisionLeadWorkspace,
+        { resyncExisting: true },
+      );
+
+      const { setCookieHeader } =
+        deps.authController.issueSessionCookie(session);
+      res.setHeader("Set-Cookie", setCookieHeader);
+      loginAttemptsTotal.inc({ method: "dev-login", outcome: "success" });
+
+      const redirectPath =
+        readQueryParam(req.query.redirect) ??
+        DEV_LOGIN_REDIRECT_BY_ROLE[validRole];
+      res.redirect(`${deps.frontendUrl}${redirectPath}`);
+    } catch (error) {
+      loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });
+      next(error);
+    }
+  };
+}
+
 export function mountAuthRoutes(
   expressApp: Express,
   samlStrategy: SamlStrategy,
   authController: ReturnType<typeof createAuthController>,
   prisma: PrismaClient,
   env: NodeJS.ProcessEnv,
+  provisionLeadWorkspace: ProvisionLeadWorkspace,
   auditLogger: AuditLogger = createNullAuditLogger(),
 ): void {
-  const frontendUrl = env.FRONTEND_URL ?? "http://localhost:3000";
+  const frontendUrl = env.FRONTEND_URL ?? DEFAULT_FRONTEND_URL;
+  const deps: AuthRouteDeps = {
+    prisma,
+    authController,
+    auditLogger,
+    provisionLeadWorkspace,
+    frontendUrl,
+    env,
+  };
 
   // passport @types depend on express@4, project uses express@5 — cast required
   passport.use("saml", samlStrategy as unknown as passport.Strategy);
 
-  // --- GET /auth/saml/login ---
-  // In AUTH_DEV_MODE, short-circuit to /auth/dev-login as admin (no real
-  // Keycloak running locally). Production registers the passport SAML
-  // handler unchanged. Express picks the first registered route, so the
-  // dev branch must be mounted BEFORE the passport handler — never both.
+  // GET /auth/saml/login — Express picks the first registered route, so the dev
+  // shortcut must be mounted INSTEAD of the passport handler, never both.
   if (env.AUTH_DEV_MODE === "true") {
-    expressApp.get("/auth/saml/login", (req: Request, res: Response) => {
-      const params = new URLSearchParams({
-        role: "admin",
-        email: "admin@customreport.local",
-      });
-      const next = typeof req.query.next === "string" ? req.query.next : null;
-      if (next && next.startsWith("/") && !next.includes("://")) {
-        params.set("redirect", next);
-      }
-      res.redirect(`/auth/dev-login?${params.toString()}`);
-    });
+    expressApp.get("/auth/saml/login", handleDevSamlLoginRedirect);
   } else {
     expressApp.get(
       "/auth/saml/login",
@@ -310,7 +454,6 @@ export function mountAuthRoutes(
     );
   }
 
-  // --- POST /auth/saml/callback ---
   expressApp.post(
     "/auth/saml/callback",
     express.urlencoded({ extended: false }),
@@ -319,171 +462,12 @@ export function mountAuthRoutes(
       session: false,
       failureRedirect: `${frontendUrl}/auth/error?reason=invalid_assertion`,
     }) as RequestHandler,
-    async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const profile = req.user as SamlProfile | undefined;
-
-        if (!profile) {
-          // AUTH-08: SAML callback hit without a passport-attached profile —
-          // treat as login-fail (T2 mitigation: emit even when role/userId
-          // are unknown so the audit trail captures the attempt).
-          auditLogger.loginFail({
-            userId: "anonymous",
-            role: null,
-            ip: req.ip ?? "unknown",
-            reason: "invalid_assertion",
-          });
-          loginAttemptsTotal.inc({ method: "saml", outcome: "fail" });
-          res.redirect(`${frontendUrl}/auth/error?reason=invalid_assertion`);
-          return;
-        }
-
-        const session = await buildUserSession(prisma, profile);
-        const { setCookieHeader } = authController.issueSessionCookie(session);
-
-        // AUTH-08: structured login-success audit event.
-        auditLogger.loginSuccess({
-          userId: session.userId,
-          role: session.role,
-          ip: req.ip ?? "unknown",
-        });
-        loginAttemptsTotal.inc({ method: "saml", outcome: "success" });
-
-        res.setHeader("Set-Cookie", setCookieHeader);
-        res.redirect(frontendUrl);
-      } catch (error) {
-        // AUTH-08: any post-passport failure (DB write, JWT signing, etc.)
-        // is still a failed login from the user's perspective.
-        auditLogger.loginFail({
-          userId: "anonymous",
-          role: null,
-          ip: req.ip ?? "unknown",
-          reason: error instanceof Error ? error.message : "callback-error",
-        });
-        loginAttemptsTotal.inc({ method: "saml", outcome: "fail" });
-        next(error);
-      }
-    },
+    createSamlCallbackHandler(deps),
   );
 
-  // --- POST /auth/logout ---
-  expressApp.post("/auth/logout", (request: Request, res: Response) => {
-    // AUTH-08: emit logout audit event using whatever session shape was
-    // attached upstream (passport-strategy or proxy middleware). When no
-    // session is present, fall back to userId='anonymous' / role=null —
-    // Phase 32-M8 (M-08) replaced the previous 'unknown' literal so SIEM
-    // rules tuned to the Role enum (or to null = "no session") see the
-    // anonymous logout case explicitly rather than as a fake "unknown
-    // role" entry.
-    const reqUser = (request as Request & { user?: UserSession }).user;
-    auditLogger.logout({
-      userId: reqUser?.userId ?? "anonymous",
-      role: reqUser?.role ?? null,
-      ip: request.ip ?? "unknown",
-    });
+  expressApp.post("/auth/logout", createLogoutHandler(deps));
 
-    const cookieName = env.AUTH_JWT_COOKIE_NAME ?? "customreport_session";
-    res.setHeader(
-      "Set-Cookie",
-      `${cookieName}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`,
-    );
-    res.redirect("/");
-  });
-
-  // --- GET /auth/dev-login (dev mode only) ---
   if (env.AUTH_DEV_MODE === "true") {
-    expressApp.get(
-      "/auth/dev-login",
-      async (req: Request, res: Response, next: NextFunction) => {
-        try {
-          const role = (req.query.role as string | undefined) ?? "head";
-          const validRoles: Role[] = ["lead", "head", "admin", "viewer"];
-          if (!validRoles.includes(role as Role)) {
-            loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });
-            res.status(400).json({
-              error: `Invalid role: ${role}. Must be one of: ${validRoles.join(", ")}`,
-            });
-            return;
-          }
-
-          const emailByRole: Record<string, string> = {
-            head: "head@customreport.local",
-            lead: "lead1@customreport.local",
-            admin: "admin@customreport.local",
-            viewer: "viewer@customreport.local",
-          };
-          // Fallback names — only used when there is no DB record for the
-          // email (fresh dev DB before seed has run). When a row exists, we
-          // always use the seeded name so the session reflects the database.
-          const nameByRole: Record<string, string> = {
-            head: "Антон К.",
-            lead: "Lead 1",
-            admin: "Михаил Б.",
-            viewer: "Дарья В.",
-          };
-          const samlIdByRole: Record<string, string> = {
-            head: "head-1",
-            lead: "lead-1",
-            admin: "admin-1",
-            viewer: "viewer-1",
-          };
-
-          // role was validated against `validRoles` above, so the lookup is
-          // always defined — narrow explicitly to satisfy strict TS.
-          const email =
-            (req.query.email as string | undefined) ?? emailByRole[role];
-          const isCustomEmail =
-            req.query.email && req.query.email !== emailByRole[role];
-
-          // Always look up the live DB row first so re-seeds (or schema name
-          // updates) propagate to the session cookie without a code change.
-          const dbUser = await prisma.user.findFirst({
-            where: { email },
-            select: { name: true, samlId: true },
-          });
-
-          const samlId =
-            dbUser?.samlId ??
-            (isCustomEmail
-              ? `dev-${email}`
-              : (samlIdByRole[role] ?? `dev-${role}`));
-          const displayName = dbUser?.name ?? nameByRole[role];
-
-          // dev-login is the UAT role switcher: re-sync an existing row so a
-          // ?role= switch updates the live user (unlike SAML, which is
-          // create-only and never overwrites an existing record).
-          const session = await buildUserSession(
-            prisma,
-            {
-              samlId,
-              email,
-              displayName,
-              role: role as Role,
-            },
-            { resyncExisting: true },
-          );
-
-          const { setCookieHeader } =
-            authController.issueSessionCookie(session);
-          res.setHeader("Set-Cookie", setCookieHeader);
-          loginAttemptsTotal.inc({ method: "dev-login", outcome: "success" });
-
-          // UX-16: role-aware default landing. Must stay in sync with
-          // DEFAULT_FOR_ROLE in apps/web/src/app/page.tsx.
-          const redirectByRole: Record<string, string> = {
-            head: "/head/dashboard",
-            lead: "/lead/report",
-            admin: "/admin",
-            viewer: "/reports?tab=published",
-          };
-          const redirectPath =
-            (req.query.redirect as string | undefined) ?? redirectByRole[role];
-          res.redirect(`${frontendUrl}${redirectPath}`);
-        } catch (error) {
-          loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });
-          next(error);
-        }
-      },
-    );
+    expressApp.get("/auth/dev-login", createDevLoginHandler(deps));
   }
 }

@@ -1,7 +1,18 @@
 import type { PrismaClient, Role } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
-import { buildUserSession, type SamlProfile } from "./auth.routes";
+import {
+  buildUserSession,
+  type ProvisionLeadWorkspace,
+  type SamlProfile,
+} from "./auth.routes";
+
+// None of these scenarios drive the lead lazy-provision path (admin/viewer/head
+// users, or an existing lead resync), so the injected seam must never fire — a
+// throwing stub turns an accidental call into a visible failure.
+const failIfProvisioned: ProvisionLeadWorkspace = vi.fn(() => {
+  throw new Error("provisionLeadWorkspace must not be called in this scenario");
+});
 
 /**
  * Phase 32-C / H-01 — admin SAML login regression test.
@@ -102,7 +113,7 @@ describe("buildUserSession — admin SAML login (Phase 32-C / H-01)", () => {
       role: "admin",
     };
 
-    const session = await buildUserSession(prisma, profile);
+    const session = await buildUserSession(prisma, profile, failIfProvisioned);
 
     expect(session.role).toBe("admin");
     expect(session.email).toBe("admin@customreport.local");
@@ -132,7 +143,7 @@ describe("buildUserSession — admin SAML login (Phase 32-C / H-01)", () => {
       role: "viewer",
     };
 
-    await buildUserSession(prisma, profile);
+    await buildUserSession(prisma, profile, failIfProvisioned);
 
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     const createMock = prisma.user.create as unknown as ReturnType<
@@ -180,7 +191,7 @@ describe("buildUserSession — admin SAML login (Phase 32-C / H-01)", () => {
       role: "admin",
     };
 
-    const session = await buildUserSession(prisma, profile);
+    const session = await buildUserSession(prisma, profile, failIfProvisioned);
 
     // Session reflects the EXISTING row, not the SAML profile.
     expect(session.role).toBe("admin");
@@ -224,7 +235,7 @@ describe("buildUserSession — admin SAML login (Phase 32-C / H-01)", () => {
       role: "head",
     };
 
-    const session = await buildUserSession(prisma, profile, {
+    const session = await buildUserSession(prisma, profile, failIfProvisioned, {
       resyncExisting: true,
     });
 

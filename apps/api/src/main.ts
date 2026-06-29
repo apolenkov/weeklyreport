@@ -63,7 +63,10 @@ import { JobsService } from "./modules/admin/jobs.service";
 import { AnalyticsService } from "./modules/analytics/analytics.service";
 import { ArchiveService } from "./modules/archive/archive.service";
 import { createAuthController } from "./modules/auth/auth.controller";
-import { mountAuthRoutes } from "./modules/auth/auth.routes";
+import {
+  mountAuthRoutes,
+  type ProvisionLeadWorkspace,
+} from "./modules/auth/auth.routes";
 import {
   createSamlStrategy,
   createSamlStrategyOptions,
@@ -71,9 +74,12 @@ import {
 import { CarryOverService } from "./modules/carry-over/carry-over.service";
 import { OrganizationService } from "./modules/organization/organization.service";
 import { PdfExportService } from "./modules/pdf-export/pdf-export.service";
+import { ensureCurrentPeriod } from "./modules/period/period-factory";
 import { PeriodService } from "./modules/period/period.service";
 import { PublicationService } from "./modules/publication/publication.service";
+import { PolicyApplicatorService } from "./modules/reminders/policy-applicator.service";
 import { RemindersService } from "./modules/reminders/reminders.service";
+import { ensureLeadSection } from "./modules/report-sections/ensure-lead-section";
 import { LeadFormService } from "./modules/report-sections/lead-form.service";
 import { ReportSectionsService } from "./modules/report-sections/report-sections.service";
 import { ReviewService } from "./modules/review/review.service";
@@ -397,12 +403,36 @@ async function bootstrap() {
     }
     return authLimiter(req, res, next);
   }) as RequestHandler);
+  // refactor-auth-exemplary-layering: the auth module delegates lead-workspace
+  // provisioning to the period + report-section domains. Compose them here in
+  // the composition root: settings are read PER CALL so admin changes propagate
+  // to newly-created periods, exactly as the old inline path did.
+  const policyApplicator = app.get(PolicyApplicatorService);
+  const adminService = app.get(AdminService);
+  const provisionLeadWorkspace: ProvisionLeadWorkspace = async (userId) => {
+    const settings = await adminService.getSettings();
+    const now = new Date();
+    const { reportId } = await ensureCurrentPeriod(
+      prismaService,
+      now,
+      now,
+      settings,
+      policyApplicator,
+    );
+    const { sectionId } = await ensureLeadSection(
+      prismaService,
+      reportId,
+      userId,
+    );
+    return { reportId, sectionId };
+  };
   mountAuthRoutes(
     expressApp,
     samlStrategy,
     authCtrl,
     prismaService,
     process.env,
+    provisionLeadWorkspace,
     auditLogger,
   );
 

@@ -7,6 +7,7 @@ import type { CreateExpressContextOptions } from "@trpc/server/adapters/express"
 
 import { type AuditLogger, createAuditLogger } from "../../lib/audit-logger.js";
 import type { AppLogger } from "../../lib/logger.js";
+import { resolveSessionCookieName } from "../../lib/session-cookie.js";
 import { SessionRevocationService } from "../../modules/admin/session-revocation.service.js";
 import { createAuthController } from "../../modules/auth/auth.controller.js";
 import { verifyPdfExportToken } from "../../modules/pdf-export/pdf-export.service.js";
@@ -186,8 +187,15 @@ export function createContextFactory(
     const ip = req.ip ?? "unknown";
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- synthetic/test contexts can omit req.headers despite the Express type
     const correlationId = readRequestId(req.headers?.["x-request-id"]);
+    // refactor-auth-exemplary-layering: read the cookie under the SAME resolved
+    // name the set/clear paths use. Previously this read a hardcoded
+    // "customreport_session" while the writer honoured AUTH_JWT_COOKIE_NAME — a
+    // latent mismatch for any non-default cookie name (a no-op for every real
+    // config, which leaves the name at the default).
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- req.cookies is populated by cookie-parser at runtime; the optional chain guards the unmounted-middleware case
-    const token = req.cookies?.customreport_session as string | undefined;
+    const token = req.cookies?.[resolveSessionCookieName(process.env)] as
+      | string
+      | undefined;
 
     if (token) {
       try {

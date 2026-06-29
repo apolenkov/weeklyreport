@@ -1,0 +1,87 @@
+import type { PrismaClient } from "@prisma/client";
+
+/**
+ * refactor-auth-exemplary-layering: provision a lead's `ReportSection` (and its
+ * seeded `ProjectStatus` rows) for a given period. Moved out of the auth module
+ * — this is report-section domain logic, which `period-dual-state` classifies as
+ * a non-period (child-row) writer, so it is exempt from the period transition
+ * boundary. `buildUserSession` reaches it through an injected seam at login.
+ *
+ * Concurrency: two concurrent first-logins of the SAME lead could both miss the
+ * fast-path find and both create, hitting the `ReportSection_reportId_authorId`
+ * unique index. The fast path stays a cheap `findUnique`; the create is guarded
+ * by a catch-on-unique-violation + re-read so the loser resolves to the winner's
+ * section instead of throwing. `ProjectStatus` rows are seeded only on a fresh
+ * create (the winner does it; `createMany({ skipDuplicates })` is itself safe).
+ */
+
+const DEFAULT_PROJECT_STATUS = "green" as const;
+const SECTION_UNIQUE_INDEX = "ReportSection_reportId_authorId";
+
+function isSectionUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  if ((error as { code?: unknown }).code !== "P2002") return false;
+  const target = (error as { meta?: { target?: unknown } }).meta?.target;
+  const targetText =
+    typeof target === "string"
+      ? target
+      : Array.isArray(target)
+        ? target.join(",")
+        : "";
+  return (
+    targetText.includes(SECTION_UNIQUE_INDEX) ||
+    (targetText.includes("reportId") && targetText.includes("authorId"))
+  );
+}
+
+async function seedProjectStatuses(
+  prisma: {
+    project: PrismaClient["project"];
+    projectStatus: PrismaClient["projectStatus"];
+  },
+  reportSectionId: string,
+  userId: string,
+): Promise<void> {
+  const projects = await prisma.project.findMany({
+    where: { leadId: userId, archived: false },
+    select: { id: true },
+  });
+  if (projects.length === 0) return;
+  await prisma.projectStatus.createMany({
+    data: projects.map((p) => ({
+      reportSectionId,
+      projectId: p.id,
+      status: DEFAULT_PROJECT_STATUS,
+    })),
+    skipDuplicates: true,
+  });
+}
+
+export async function ensureLeadSection(
+  prisma: Pick<PrismaClient, "reportSection" | "project" | "projectStatus">,
+  reportId: string,
+  userId: string,
+): Promise<{ sectionId: string }> {
+  const existing = await prisma.reportSection.findUnique({
+    where: { reportId_authorId: { reportId, authorId: userId } },
+    select: { id: true },
+  });
+  if (existing) return { sectionId: existing.id };
+
+  try {
+    const section = await prisma.reportSection.create({
+      data: { reportId, authorId: userId },
+      select: { id: true },
+    });
+    await seedProjectStatuses(prisma, section.id, userId);
+    return { sectionId: section.id };
+  } catch (error) {
+    if (!isSectionUniqueViolation(error)) throw error;
+    const won = await prisma.reportSection.findUnique({
+      where: { reportId_authorId: { reportId, authorId: userId } },
+      select: { id: true },
+    });
+    if (!won) throw error;
+    return { sectionId: won.id };
+  }
+}

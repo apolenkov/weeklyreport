@@ -5,6 +5,8 @@ import {
   type VerifyWithoutRequest,
 } from "@node-saml/passport-saml";
 
+import { requireEnv } from "../../lib/env.js";
+
 export type SamlStrategyOptions = PassportSamlConfig & {
   devMode: boolean;
 };
@@ -24,16 +26,6 @@ const validateNever = "never" as NonNullable<
 const validateAlways = "always" as NonNullable<
   PassportSamlConfig["validateInResponseTo"]
 >;
-
-function requireEnv(env: NodeJS.ProcessEnv, key: string): string {
-  const value = env[key];
-
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${key}`);
-  }
-
-  return value;
-}
 
 export function createSamlStrategyOptions(
   env: NodeJS.ProcessEnv,
