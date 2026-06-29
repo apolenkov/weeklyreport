@@ -4,13 +4,14 @@ import { Cron } from "@nestjs/schedule";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { AuditLogger } from "../../lib/audit-logger.js";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
-import {
-  computeDeadline,
-  getCurrentWeekBounds,
-} from "../../lib/business-date.js";
 import { AdminService } from "../admin/admin.service";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
-import { buildTransition, initialPeriodState } from "./period-transition.js";
+import { ensureCurrentPeriod } from "./period-factory.js";
+import { buildTransition } from "./period-transition.js";
+
+// One calendar day in milliseconds — the scheduler anchors the next period to
+// the day AFTER the most recent period's end.
+const ONE_DAY_MS = 24 * 3_600_000;
 
 /**
  * UFB-049 / Phase 50-B: daily scheduler that creates the next Period when
@@ -101,82 +102,51 @@ export class PeriodCreatorScheduler {
       return { created: false, reason: "future-period-exists" };
     }
 
-    // Anchor the next period to "next Monday" (or current week's Monday if
-    // we are still inside it — defensive against a no-period DB).
-    const { periodStart, periodEnd } = getCurrentWeekBounds(
-      mostRecent
-        ? new Date(mostRecent.periodEnd.getTime() + 24 * 3_600_000)
-        : now,
-      settings.periodLengthDays,
+    // refactor-auth-exemplary-layering: route the create through the single
+    // period factory so deadline math, the lifecycle field set, and reminder
+    // materialisation match the lazy login-create path exactly. The factory
+    // anchors the next cycle to the day after the most recent period's end
+    // (or `now` when the table is empty — defensive against a no-period DB),
+    // computes the deadline, applies reminder policy on create, and is
+    // race-safe against a concurrent login-create.
+    const anchorDate = mostRecent
+      ? new Date(mostRecent.periodEnd.getTime() + ONE_DAY_MS)
+      : now;
+
+    const result = await ensureCurrentPeriod(
+      this.prisma,
+      anchorDate,
+      now,
+      settings,
+      this.policyApplicator,
     );
 
-    const deadline = computeDeadline(
-      periodStart,
-      settings.defaultDeadlineDays,
-      settings.workingDays,
-      settings.defaultTimezone,
-      18,
-    );
-
-    // UFB-053: choose the initial state based on whether the period's
-    // start has been reached. The 'open' branch matches the pre-51-C
-    // behaviour; the 'scheduled' branch lights up only when the cron
-    // tick mints a period ahead of its start day (a rare-but-possible
-    // path once cadence-aware creation lands in a future plan).
-    const periodState = initialPeriodState(periodStart, now);
-
-    const created = await this.prisma.report.create({
-      // refactor-period-transition-writer: identity envelope + lifecycle field
-      // set from the transition builder. The resolved scheduled|open state
-      // maps to the schedule/open kind (both a draft/false legacy tuple); the
-      // narrow `periodState` local is kept for the audit/log/return below.
-      data: {
-        periodStart,
-        periodEnd,
-        deadline,
-        ...buildTransition(
-          periodState === "scheduled" ? "schedule" : "open",
-          {},
-        ),
-      },
-      select: {
-        id: true,
-        periodStart: true,
-        periodEnd: true,
-        deadline: true,
-        periodState: true,
-      },
-    });
-
-    // TD-06: materialise reminder rules for the new period, mirroring the
-    // admin.prisma-repository path. Optional so tests that don't care about
-    // reminder wiring still pass without a full policyApplicator mock.
-    await this.policyApplicator?.applyToPeriod(created);
+    if (!result.created) {
+      // A concurrent login-create won the boundary; the period now exists, so
+      // this tick has nothing to mint. Same outcome as a pre-existing future
+      // period — no log, no audit (the winning path owns those).
+      return { created: false, reason: "future-period-exists" };
+    }
 
     this.logger.log(
-      `auto-create period=${created.id} state=${created.periodState} (${created.periodStart.toISOString()} → ${created.periodEnd.toISOString()})`,
+      `auto-create period=${result.reportId} state=${result.periodState} (${result.periodStart.toISOString()} → ${result.periodEnd.toISOString()})`,
     );
     this.auditLogger.periodAutoCreate({
-      periodId: created.id,
-      periodStart: created.periodStart.toISOString(),
-      periodEnd: created.periodEnd.toISOString(),
-      deadline: created.deadline.toISOString(),
+      periodId: result.reportId,
+      periodStart: result.periodStart.toISOString(),
+      periodEnd: result.periodEnd.toISOString(),
+      deadline: result.deadline.toISOString(),
       from: null,
-      to: created.periodState,
+      to: result.periodState,
     });
 
     return {
       created: true,
-      periodId: created.id,
-      periodStart: created.periodStart,
-      periodEnd: created.periodEnd,
-      deadline: created.deadline,
-      // The DB column is typed as the wider PeriodState union, but a
-      // freshly-created period can only land in 'scheduled' or 'open'
-      // (the creator never mints a published or archived row). We narrow
-      // back to the original initialPeriodState() value to keep the
-      // public return shape precise.
-      periodState,
+      periodId: result.reportId,
+      periodStart: result.periodStart,
+      periodEnd: result.periodEnd,
+      deadline: result.deadline,
+      periodState: result.periodState,
     };
   }
 }

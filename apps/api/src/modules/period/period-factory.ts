@@ -1,0 +1,201 @@
+import type { AppSettings, PeriodState } from "@customreport/shared";
+import type { PrismaClient } from "@prisma/client";
+
+import {
+  computeDeadline,
+  getCurrentWeekBounds,
+} from "../../lib/business-date.js";
+import type { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
+import { buildTransition, initialPeriodState } from "./period-transition.js";
+
+/**
+ * refactor-auth-exemplary-layering: the single sanctioned period-creation
+ * writer. Both creators — the period-creator cron scheduler and the lazy
+ * login-create path (`buildUserSession`) — route through here, so there is
+ * exactly one formula for the deadline, the lifecycle field set, and the
+ * reminder-rule materialisation.
+ *
+ * It lives INSIDE the `period` module because `period-dual-state` requires
+ * every governed `Report` lifecycle write to go through `buildTransition`, and
+ * the static raw-write CI gate (`__tests__/lifecycle-write-gate.test.ts`) only
+ * accepts the spread form. The factory uses `...buildTransition("create", ...)`,
+ * so the three coupled lifecycle representations can never be written apart.
+ */
+
+// Wall-clock hour (in the configured timezone) the deadline lands on. Matches
+// the period-creator scheduler's hardcoded 18; surfacing it as a setting is
+// deferred to a later phase that broadens the deadline-time-of-day surface.
+const DEADLINE_HOUR = 18;
+
+// The partial unique index `Report_one_open_per_boundary` (schema/init
+// migration) — `ON (periodStart, periodEnd) WHERE periodState='open'` — is the
+// constraint two racing creators collide on. Lives in raw SQL, so Prisma's
+// P2002 `meta.target` may surface either the index name or the field list.
+const OPEN_BOUNDARY_INDEX = "Report_one_open_per_boundary";
+
+/** Settings the factory reads; a structural subset of {@link AppSettings}. */
+export type PeriodFactorySettings = Pick<
+  AppSettings,
+  "periodLengthDays" | "defaultDeadlineDays" | "workingDays" | "defaultTimezone"
+>;
+
+export interface EnsuredPeriod {
+  /** True when this call minted the row; false when it found an existing one. */
+  created: boolean;
+  reportId: string;
+  periodStart: Date;
+  periodEnd: Date;
+  deadline: Date;
+  // A draft period can only be `scheduled` or `open` (the legacy `status:"draft"`
+  // tuple maps to exactly those two states), so the public shape stays narrow.
+  periodState: Extract<PeriodState, "scheduled" | "open">;
+}
+
+/** The Prisma `report` delegate surface the factory needs. */
+type ReportDelegate = Pick<PrismaClient["report"], "findFirst" | "create">;
+
+/** Minimal applicator seam — injected so reminder-free tests need no mock. */
+type ReminderApplicator = Pick<PolicyApplicatorService, "applyToPeriod">;
+
+const SELECT_PERIOD = {
+  id: true,
+  periodStart: true,
+  periodEnd: true,
+  deadline: true,
+  periodState: true,
+} as const;
+
+/**
+ * A `status:"draft"` row is `scheduled` or `open` by the period-dual-state
+ * invariant (a reopened period carries `status:"published"`, so it is excluded
+ * by the find's `status:"draft"` filter). The DB column is typed as the wider
+ * union, so narrow it back at the one place that relies on the invariant.
+ */
+function narrowDraftState(
+  state: PeriodState,
+): Extract<PeriodState, "scheduled" | "open"> {
+  return state === "scheduled" ? "scheduled" : "open";
+}
+
+function isOpenBoundaryConflict(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  if ((error as { code?: unknown }).code !== "P2002") return false;
+  const target = (error as { meta?: { target?: unknown } }).meta?.target;
+  const targetText =
+    typeof target === "string"
+      ? target
+      : Array.isArray(target)
+        ? target.join(",")
+        : "";
+  return (
+    targetText.includes(OPEN_BOUNDARY_INDEX) ||
+    (targetText.includes("periodStart") && targetText.includes("periodEnd"))
+  );
+}
+
+/**
+ * Find-or-create the draft reporting period for the week of `anchorDate`.
+ *
+ * - `anchorDate` is the date whose week the period covers (the lazy login path
+ *   passes `now`; the scheduler passes the day after the most recent period's
+ *   end, so it mints the *next* cycle). Bounds come from `getCurrentWeekBounds`.
+ * - `now` resolves the initial lifecycle state (`scheduled` before the period's
+ *   start day, otherwise `open`) and gates reminder scheduling.
+ * - On create (never on find), reminder rules are materialised via
+ *   `policyApplicator.applyToPeriod` — but ONLY when the deadline is still in
+ *   the future. The reminders scheduler fires any active rule whose `fireAt` is
+ *   already past (it has no elapsed-`fireAt` guard), so a period minted *after*
+ *   its own deadline (a late first-login on the weekend) would otherwise trigger
+ *   a stale "deadline approaching" blast on the next tick. Such a period is past
+ *   its deadline anyway, so skipping reminder materialisation is correct.
+ * - Concurrent creators collide on the `Report_one_open_per_boundary` partial
+ *   unique index; the loser catches that one P2002, re-reads, and returns the
+ *   winner's row. Any other error re-throws.
+ */
+export async function ensureCurrentPeriod(
+  prisma: { report: ReportDelegate },
+  anchorDate: Date,
+  now: Date,
+  settings: PeriodFactorySettings,
+  policyApplicator?: ReminderApplicator,
+): Promise<EnsuredPeriod> {
+  const { periodStart, periodEnd } = getCurrentWeekBounds(
+    anchorDate,
+    settings.periodLengthDays,
+  );
+
+  const existing = await prisma.report.findFirst({
+    where: {
+      status: "draft",
+      periodStart: { gte: periodStart },
+      periodEnd: { lte: periodEnd },
+    },
+    select: SELECT_PERIOD,
+  });
+
+  if (existing) {
+    return {
+      created: false,
+      reportId: existing.id,
+      periodStart: existing.periodStart,
+      periodEnd: existing.periodEnd,
+      deadline: existing.deadline,
+      periodState: narrowDraftState(existing.periodState),
+    };
+  }
+
+  const deadline = computeDeadline(
+    periodStart,
+    settings.defaultDeadlineDays,
+    settings.workingDays,
+    settings.defaultTimezone,
+    DEADLINE_HOUR,
+  );
+  const periodState = initialPeriodState(periodStart, now);
+
+  try {
+    const created = await prisma.report.create({
+      data: {
+        periodStart,
+        periodEnd,
+        deadline,
+        ...buildTransition("create", { periodStart, now }),
+      },
+      select: SELECT_PERIOD,
+    });
+
+    if (policyApplicator && deadline.getTime() > now.getTime()) {
+      await policyApplicator.applyToPeriod({
+        id: created.id,
+        deadline: created.deadline,
+      });
+    }
+
+    return {
+      created: true,
+      reportId: created.id,
+      periodStart: created.periodStart,
+      periodEnd: created.periodEnd,
+      deadline: created.deadline,
+      periodState,
+    };
+  } catch (error) {
+    if (!isOpenBoundaryConflict(error)) throw error;
+
+    // Another creator won the race; the winner's applyToPeriod runs in its own
+    // call, so we only re-read and return the now-existing open row.
+    const won = await prisma.report.findFirst({
+      where: { periodStart, periodEnd, periodState: "open" },
+      select: SELECT_PERIOD,
+    });
+    if (!won) throw error;
+    return {
+      created: false,
+      reportId: won.id,
+      periodStart: won.periodStart,
+      periodEnd: won.periodEnd,
+      deadline: won.deadline,
+      periodState: narrowDraftState(won.periodState),
+    };
+  }
+}
