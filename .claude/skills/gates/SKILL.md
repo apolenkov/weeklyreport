@@ -5,22 +5,34 @@ description: Run the canonical local quality gate for CustomReport — regenerat
 
 # Run the local quality gates
 
-Run the project's gate sequence from the repo root, in order, stopping at the
-first failure and reporting which gate failed with its output.
+This is the same sequence CI and the husky hooks enforce, run locally so problems
+surface before a commit or push rather than after. Run it from the repo root, in
+this exact order, and stop at the first failing gate — a later gate's output is
+noise once an earlier one is red.
 
 ```bash
-pnpm --filter @customreport/api db:generate   # pnpm ops wipe the .prisma client; regenerate first
-pnpm typecheck                                # turbo run typecheck
+pnpm --filter @customreport/api db:generate   # regenerate the Prisma client first (see below)
+pnpm typecheck                                # turbo run typecheck (depends on db:generate)
 pnpm lint                                     # eslint . && stylelint && lint:prisma:typecheck
 pnpm test                                     # turbo run vitest (unit only)
 ```
 
-Notes:
+Why each detail matters:
 
-- Run `db:generate` first: a stale/missing Prisma client surfaces as bogus TS2339
-  errors on known models during `typecheck`.
-- `pnpm lint` is the FULL stack (ESLint + stylelint + Prisma typecheck), not just `eslint`.
-- This is unit-level only. It does NOT run E2E (`pnpm test:e2e:integration`) or
-  `pnpm build` — add `pnpm build` if the user asks for the full pre-release gate.
-- Do NOT wrap `vitest` in `rtk` (it mis-parses TSX → 0 tests). The `pnpm` scripts are fine.
-- Fix failures, don't suppress them. Re-run the failing gate until green before reporting done.
+- **`db:generate` goes first.** Earlier `pnpm` operations in a session can wipe the
+  generated `.prisma` client; a stale or missing client makes `typecheck` report
+  phantom TS2339 errors on real Prisma models. Regenerating first removes that
+  whole class of false failure, so you debug real type errors, not tooling drift.
+- **`pnpm lint` is the full stack** (ESLint + stylelint + Prisma typecheck), not
+  just `eslint`. Running `eslint` alone passes a tree that `pnpm lint` would reject.
+- **Unit scope only.** This deliberately excludes E2E (`pnpm test:e2e:integration`)
+  and `pnpm build` — they are slow and need infra. Append `pnpm build` only when the
+  user asks for the full pre-release gate.
+- **rtk caveat.** Prefixing the `pnpm` scripts with `rtk` for token savings is fine;
+  never call `rtk vitest` directly — rtk mis-parses TSX and reports 0 tests, which
+  reads as a false green.
+- **Fix, don't suppress.** Re-run a failing gate until it is genuinely green before
+  reporting done; never silence a warning to pass.
+
+When everything passes, report a one-line green summary (e.g. "all 4 gates green")
+rather than pasting full output — the value is the verdict, not the logs.
