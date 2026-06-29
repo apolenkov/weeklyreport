@@ -86,8 +86,9 @@ path must respect them and link the relevant `openspec/specs/` spec.
   Small single-purpose units; tighten lint via the repo-wide ratchet, never per-folder.
 - **Hard standard → `docs/exemplary-code-standard.md`.** The target the codebase
   is being rolled out to: files < 250 lines, functions ≤ 50, cognitive complexity
-  < 10, zero `let`/mutation, and the no-fallback rule below. A file is "done" only
-  when it is lint-green with NO `eslint.config.ts` exempt entry.
+  < 10, zero `let`/mutation, and the no-fallback rule below. "Done" = `eslint`
+  clean with `--max-warnings 0` (zero errors AND zero warnings) and NO
+  `eslint.config.ts` exempt entry for the file.
 - **No fallbacks, no silent defaults for product config.** A `?? "localhost"` in
   code or a `.default()` in `env.schema` hides whether a value is mandatory. Make
   it REQUIRED (Zod, no default), read via `requireEnv`, supply explicitly per
