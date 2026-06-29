@@ -152,3 +152,60 @@ export function computeDeadline(
     .set({ hour: deadlineHour, minute: 0, second: 0, millisecond: 0 })
     .toJSDate();
 }
+
+/**
+ * Monday 00:00:00.000 UTC and Sunday 23:59:59.999 UTC for the week containing
+ * `date`. UTC-only arithmetic — independent of host TZ and DST, so the same
+ * call at 23:00 Moscow Sunday and 22:00 UTC Sunday produces identical bounds.
+ * Phase 32-M7 (M-07) — fixes naive `setDate`/`setHours` drift across DST
+ * transitions and TZ-mismatched containers.
+ *
+ * UFB-048 / Phase 50-A: when `periodLengthDays` is provided, `periodEnd` is
+ * anchored to Monday + (length - 1) days at 23:59:59.999 UTC instead of the
+ * hardcoded 7-day Mon-Sun span. Callers that don't pass the argument keep the
+ * original Mon-Sun (length=7) behaviour.
+ *
+ * refactor-auth-exemplary-layering: moved here from `modules/auth/auth.routes.ts`
+ * so it sits next to the rest of the period/deadline date vocabulary and both
+ * the period-creator scheduler and the period factory import it from one place
+ * (the `period → auth` import is gone). Kept as hand-rolled `Date.UTC`
+ * arithmetic rather than rewritten in Luxon — it is correct and tested, and a
+ * rewrite would be unrequested scope that risks a regression in a function the
+ * scheduler depends on.
+ */
+export function getCurrentWeekBounds(
+  date: Date = new Date(),
+  periodLengthDays = 7,
+): {
+  periodStart: Date;
+  periodEnd: Date;
+} {
+  const utcDay = date.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  // Monday is the start-of-week. Sunday (0) maps to "6 days back".
+  const diffToMonday = utcDay === 0 ? -6 : 1 - utcDay;
+
+  const periodStart = new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate() + diffToMonday,
+      0,
+      0,
+      0,
+      0,
+    ),
+  );
+  const periodEnd = new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate() + diffToMonday + (periodLengthDays - 1),
+      23,
+      59,
+      59,
+      999,
+    ),
+  );
+
+  return { periodStart, periodEnd };
+}

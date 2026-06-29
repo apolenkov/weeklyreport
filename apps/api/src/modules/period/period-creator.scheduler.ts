@@ -4,9 +4,11 @@ import { Cron } from "@nestjs/schedule";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { AuditLogger } from "../../lib/audit-logger.js";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
-import { computeDeadline } from "../../lib/business-date.js";
+import {
+  computeDeadline,
+  getCurrentWeekBounds,
+} from "../../lib/business-date.js";
 import { AdminService } from "../admin/admin.service";
-import { getCurrentWeekBounds } from "../auth/auth.routes.js";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
 import { buildTransition, initialPeriodState } from "./period-transition.js";
 

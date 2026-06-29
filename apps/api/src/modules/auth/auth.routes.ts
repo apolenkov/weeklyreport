@@ -16,6 +16,7 @@ import {
   type AuditLogger,
   createNullAuditLogger,
 } from "../../lib/audit-logger.js";
+import { getCurrentWeekBounds } from "../../lib/business-date.js";
 import type { createAuthController } from "./auth.controller.js";
 
 export interface SamlProfile {
@@ -23,55 +24,6 @@ export interface SamlProfile {
   email: string;
   displayName: string;
   role: Role;
-}
-
-/**
- * Get Monday 00:00:00.000 UTC and Sunday 23:59:59.999 UTC for the week
- * containing `date`. UTC-only arithmetic — independent of host TZ and DST,
- * so the same call at 23:00 Moscow Sunday and 22:00 UTC Sunday produces
- * identical bounds. Phase 32-M7 (M-07) — fixes naive `setDate`/`setHours`
- * drift across DST transitions and TZ-mismatched containers.
- *
- * UFB-048 / Phase 50-A: when `periodLengthDays` is provided, `periodEnd`
- * is anchored to Monday + (length - 1) days at 23:59:59.999 UTC instead
- * of the hardcoded 7-day Mon-Sun span. Callers that don't pass the
- * argument keep the original Mon-Sun (length=7) behaviour.
- */
-export function getCurrentWeekBounds(
-  date: Date = new Date(),
-  periodLengthDays = 7,
-): {
-  periodStart: Date;
-  periodEnd: Date;
-} {
-  const utcDay = date.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-  // Monday is the start-of-week. Sunday (0) maps to "6 days back".
-  const diffToMonday = utcDay === 0 ? -6 : 1 - utcDay;
-
-  const periodStart = new Date(
-    Date.UTC(
-      date.getUTCFullYear(),
-      date.getUTCMonth(),
-      date.getUTCDate() + diffToMonday,
-      0,
-      0,
-      0,
-      0,
-    ),
-  );
-  const periodEnd = new Date(
-    Date.UTC(
-      date.getUTCFullYear(),
-      date.getUTCMonth(),
-      date.getUTCDate() + diffToMonday + (periodLengthDays - 1),
-      23,
-      59,
-      59,
-      999,
-    ),
-  );
-
-  return { periodStart, periodEnd };
 }
 
 /**
