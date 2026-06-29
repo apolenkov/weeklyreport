@@ -37,23 +37,6 @@ const DEV_LOGIN_EMAIL_BY_ROLE: Record<Role, string> = {
   viewer: "viewer@customreport.local",
 };
 
-// Fallback names — only used when there is no DB record for the email (fresh
-// dev DB before seed has run). When a row exists, the seeded name is used so
-// the session reflects the database.
-const DEV_LOGIN_NAME_BY_ROLE: Record<Role, string> = {
-  head: "Антон К.",
-  lead: "Lead 1",
-  admin: "Михаил Б.",
-  viewer: "Дарья В.",
-};
-
-const DEV_LOGIN_SAML_ID_BY_ROLE: Record<Role, string> = {
-  head: "head-1",
-  lead: "lead-1",
-  admin: "admin-1",
-  viewer: "viewer-1",
-};
-
 // UX-16: role-aware default landing. Must stay in sync with DEFAULT_FOR_ROLE
 // in apps/web/src/app/page.tsx.
 const DEV_LOGIN_REDIRECT_BY_ROLE: Record<Role, string> = {
@@ -181,31 +164,29 @@ function createLogoutHandler(
 }
 
 /**
- * Resolve the dev-login identity for a validated role from the query plus the
- * live DB row (re-seeds / schema name updates propagate without a code change).
+ * Resolve the dev-login identity for a validated role to an EXISTING user.
+ *
+ * Dev-login is a UAT role switcher among seeded users, NOT a user factory: the
+ * email is the role's canonical seed email (or an explicit `?email=` of another
+ * seeded user), and the name/samlId come straight from the DB row. An unknown
+ * email returns `null` — the caller fails clearly instead of fabricating a
+ * phantom user from hardcoded role defaults. (Provisioning a brand-new user is
+ * the SAML path's job, where the IdP supplies real identity.)
  */
-async function resolveDevLoginIdentity(
+export async function resolveDevLoginIdentity(
   prisma: PrismaClient,
   role: Role,
   query: Request["query"],
-): Promise<SamlProfile> {
-  const defaultEmail = DEV_LOGIN_EMAIL_BY_ROLE[role];
-  const requestedEmail = readQueryParam(query.email);
-  const email = requestedEmail ?? defaultEmail;
-  const isCustomEmail =
-    requestedEmail !== undefined && requestedEmail !== defaultEmail;
+): Promise<SamlProfile | null> {
+  const email = readQueryParam(query.email) ?? DEV_LOGIN_EMAIL_BY_ROLE[role];
 
   const dbUser = await prisma.user.findFirst({
     where: { email },
     select: { name: true, samlId: true },
   });
+  if (!dbUser) return null;
 
-  const samlId =
-    dbUser?.samlId ??
-    (isCustomEmail ? `dev-${email}` : DEV_LOGIN_SAML_ID_BY_ROLE[role]);
-  const displayName = dbUser?.name ?? DEV_LOGIN_NAME_BY_ROLE[role];
-
-  return { samlId, email, displayName, role };
+  return { email, role, displayName: dbUser.name, samlId: dbUser.samlId };
 }
 
 function createDevLoginHandler(deps: AuthRouteDeps): RequestHandler {
@@ -226,6 +207,13 @@ function createDevLoginHandler(deps: AuthRouteDeps): RequestHandler {
         validRole,
         req.query,
       );
+      if (!identity) {
+        loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });
+        res.status(404).json({
+          error: `No dev-login user found (role=${validRole}). Seed the database, or pass ?email= of an existing user.`,
+        });
+        return;
+      }
 
       // dev-login is the UAT role switcher: re-sync an existing row so a
       // ?role= switch updates the live user (unlike SAML, which is create-only
