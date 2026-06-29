@@ -264,9 +264,11 @@ describe("PolicyApplicatorService.applyToPeriod", () => {
     });
   });
 
-  it("without `now`, materialises even an already-past instant (cron path unchanged)", async () => {
-    // The scheduler omits `now` because it mints periods ahead of their
-    // reminders; the elapsed-skip must not apply to it.
+  it("without `now`, materialises even an already-past instant (backfill/snapshot path)", async () => {
+    // Callers that omit `now` — snapshot-restore and the reminder-policy
+    // backfill — reinstate rules verbatim, so the elapsed-skip must not apply.
+    // (The cron scheduler now routes through the period factory, which DOES
+    // pass `now`, so it is not an omit-`now` caller.)
     const deadline = new Date("2026-06-01T18:00:00.000Z");
     const stub = makeStubPrisma([policyA], new Set());
     const svc = new PolicyApplicatorService(stub.prisma);
