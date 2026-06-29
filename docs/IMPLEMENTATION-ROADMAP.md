@@ -67,3 +67,20 @@
 `docs/review-pipeline/*.txt` — скрипты конвейера (каркас / Codex-ревью /
 применение / convergence). Переименуй копию в `.js` и запусти через `Workflow`.
 Codex стоп-гейт сейчас ВЫКЛЮЧЕН — вернуть: `codex-companion.mjs setup --enable-review-gate`.
+
+## Дополнения после ревью (2026-06-29)
+
+- **`tighten-code-quality-ratchet`** (новый change) — затягивает `lint-max-strictness-standard`:
+  max-lines 300→250, `no-magic-numbers` + `sonarjs/no-duplicate-string`→error, ratchet-план.
+  Реализуй в конце Волны D (после прод-готовности).
+- **6 net-new находок** (из таргет-ре-ревью, закрывшего микро-дыру 1/169) **вплетены**
+  в существующие changes (не новые): null/deleted-user fail-open → `enforce-deactivation-pdf-bullboard`;
+  carry-over без guard состояния периода → `fix-carryover-persistence`; updatePeriodManual
+  правит published-даты → `scope-period-lifecycle-authz`; hardcoded cookie-name + destructive-guard
+  docstring → `input-and-error-hardening`; single-group comment drift → `code-health-and-test-cleanup`.
+- **Не учтено (новый сайт):** `bull-board.module.ts:45` — 6-й хардкод имени cookie; пока ничей,
+  стоит завести отдельной мелкой задачей при реализации `input-and-error-hardening`.
+- **Чужие changes (параллельная сессия, НЕ из этого ревью):** `harden-jwt-verify-algorithms`,
+  `refactor-auth-exemplary-layering` — в `openspec/changes/`, но созданы другим агентом; их
+  статус уточняй отдельно.
+- **C/D ревью:** прошли Codex-ревью + convergence round-2 (как A/B). Все changes `validate --strict` зелёные.
