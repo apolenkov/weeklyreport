@@ -484,6 +484,17 @@ CREATE INDEX "Report_archived_periodStart_idx" ON "Report"("archived", "periodSt
 -- CreateIndex
 CREATE INDEX "Report_periodState_periodStart_idx" ON "Report"("periodState", "periodStart" DESC);
 
+-- period-dual-state (C2 / A24/A21): at most ONE open Report per reporting
+-- boundary. Prisma cannot express a partial unique index (the WHERE predicate),
+-- so it is hand-written here (mirrors ReopenRequest_one_pending_per_section).
+-- Published/archived rows for the same boundary are unconstrained. This is the
+-- durable guarantee behind the period factory's concurrent-create race guard:
+-- two simultaneous lead logins (or a login racing the period-creator cron) both
+-- pass the find step, one create wins, the other gets P2002 and re-reads.
+CREATE UNIQUE INDEX "Report_one_open_per_boundary"
+  ON "Report"("periodStart", "periodEnd")
+  WHERE "periodState" = 'open';
+
 -- CreateIndex
 CREATE INDEX "ReportSection_authorId_idx" ON "ReportSection"("authorId");
 
