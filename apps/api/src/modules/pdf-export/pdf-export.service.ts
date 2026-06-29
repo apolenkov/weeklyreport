@@ -7,6 +7,7 @@ import type { Queue } from "bullmq";
 import jwt from "jsonwebtoken";
 
 import { customreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
+import { requireEnv } from "../../lib/env.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger";
 import { resolveSessionCookieName } from "../../lib/session-cookie.js";
 
@@ -270,7 +271,7 @@ export class PdfExportService {
     sameSite: "Lax" | "Strict" | "None";
   }[] {
     const cookieName = resolveSessionCookieName(process.env);
-    const baseUrl = process.env.PDF_BASE_URL ?? "http://localhost:3000";
+    const baseUrl = requireEnv(process.env, "PDF_BASE_URL");
 
     return [
       {

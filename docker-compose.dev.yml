@@ -33,10 +33,12 @@ services:
       REDIS_PORT: 6379
       PORT: 3002
       FRONTEND_URL: http://localhost:3000
+      APP_BASE_URL: http://localhost:3000
       AUTH_DEV_MODE: "true"
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me-in-production-min-32-chars!!}
       PDF_BASE_URL: http://web:3000
       PDF_OUTPUT_DIR: /app/data/pdfs
+      PDF_EXPORT_JWT_SECRET: ${PDF_EXPORT_JWT_SECRET:-dev-only-replace-in-production-min-32-chars}
       SMTP_HOST: mailhog
       LOG_LEVEL: debug
       LOG_DIR: /app/logs
@@ -44,6 +46,7 @@ services:
       # otel-lgtm and bugsink run in a separate compose project (customreport-obs)
       # so they are on a different Docker network and not reachable by service name.
       OTEL_EXPORTER_OTLP_ENDPOINT: http://host.docker.internal:4318
+      OTEL_SDK_DISABLED: "false"
       OTEL_SERVICE_NAME: customreport-api
       OTEL_TRACES_SAMPLER_ARG: "1.0"
       SENTRY_DSN: ${SENTRY_DSN_DOCKER:-}

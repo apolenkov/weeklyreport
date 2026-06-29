@@ -103,16 +103,11 @@ async function bootstrap() {
   // (e2e harness, CLI, this server) is protected uniformly. See
   // app.module.ts.
 
+  // validateEnv() exits the process on any missing/invalid required var, so by
+  // this point every value is present and valid. The schema has no defaults —
+  // values come from the environment verbatim — so no process.env back-sync is
+  // needed for the callers that still read process.env directly.
   const env = validateEnv();
-
-  // Sync Zod-applied defaults back into process.env so legacy callers that
-  // still read process.env directly (e.g. pdf-export.service.signPdfExportToken)
-  // see the validated/defaulted value instead of undefined.
-  process.env.PDF_EXPORT_JWT_SECRET ??= env.PDF_EXPORT_JWT_SECRET;
-  // mountAuthRoutes reads FRONTEND_URL off process.env; sync the validated value
-  // (real URL in prod via the fence, localhost default in dev) so the auth
-  // routes need no hardcoded localhost fallback of their own.
-  process.env.FRONTEND_URL ??= env.FRONTEND_URL;
 
   // Phase 68: pre-bootstrap logger (no CLS yet) routed through NestAppLoggerAdapter
   // so all NestJS Logger(context) calls in services/schedulers land in app.log.

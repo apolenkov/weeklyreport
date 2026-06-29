@@ -341,30 +341,18 @@ describe("PdfExportService — contract tests", () => {
 
   // 13-15. buildAuthCookies
   describe("buildAuthCookies", () => {
-    // 13. buildAuthCookies — returns correct cookie config with default env
-    it("returns correct cookie config with default env", () => {
-      const originalCookieName = process.env.AUTH_JWT_COOKIE_NAME;
+    // 13. buildAuthCookies — PDF_BASE_URL is required (no in-code fallback):
+    // its absence throws rather than silently scoping the cookie to localhost.
+    it("throws when PDF_BASE_URL is absent (no fallback)", () => {
       const originalBaseUrl = process.env.PDF_BASE_URL;
-      delete process.env.AUTH_JWT_COOKIE_NAME;
       delete process.env.PDF_BASE_URL;
 
       try {
         const service = new PdfExportService(createRepository(publishedReport));
-        const cookies = service.buildAuthCookies("jwt-token-value");
-
-        expect(cookies).toHaveLength(1);
-        // Phase 32-B2 (M-01): cookie scope is now url-based.
-        expect(cookies[0]).toEqual({
-          name: "customreport_session",
-          value: "jwt-token-value",
-          url: "http://localhost:3000",
-          httpOnly: true,
-          sameSite: "Lax",
-        });
+        expect(() => service.buildAuthCookies("jwt-token-value")).toThrow(
+          /PDF_BASE_URL/,
+        );
       } finally {
-        if (originalCookieName !== undefined) {
-          process.env.AUTH_JWT_COOKIE_NAME = originalCookieName;
-        }
         if (originalBaseUrl !== undefined) {
           process.env.PDF_BASE_URL = originalBaseUrl;
         }
