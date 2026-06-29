@@ -102,12 +102,12 @@ function isOpenBoundaryConflict(error: unknown): boolean {
  * - `now` resolves the initial lifecycle state (`scheduled` before the period's
  *   start day, otherwise `open`) and gates reminder scheduling.
  * - On create (never on find), reminder rules are materialised via
- *   `policyApplicator.applyToPeriod` — but ONLY when the deadline is still in
- *   the future. The reminders scheduler fires any active rule whose `fireAt` is
- *   already past (it has no elapsed-`fireAt` guard), so a period minted *after*
- *   its own deadline (a late first-login on the weekend) would otherwise trigger
- *   a stale "deadline approaching" blast on the next tick. Such a period is past
- *   its deadline anyway, so skipping reminder materialisation is correct.
+ *   `policyApplicator.applyToPeriod(period, now)`. Passing `now` makes the
+ *   applicator drop only the reminder instants that have already elapsed (a
+ *   period minted *after* some of its reminders' `fireAt` — a late first-login)
+ *   while keeping still-future ones, since the reminders scheduler fires any
+ *   active rule whose `fireAt` is already past (no elapsed-`fireAt` guard) and a
+ *   stale active rule would blast on the next tick.
  * - Concurrent creators collide on the `Report_one_open_per_boundary` partial
  *   unique index; the loser catches that one P2002, re-reads, and returns the
  *   winner's row. Any other error re-throws.
@@ -164,11 +164,15 @@ export async function ensureCurrentPeriod(
       select: SELECT_PERIOD,
     });
 
-    if (policyApplicator && deadline.getTime() > now.getTime()) {
-      await policyApplicator.applyToPeriod({
-        id: created.id,
-        deadline: created.deadline,
-      });
+    // Pass `now` so the applicator drops only already-elapsed reminder instants
+    // (a period created after some of its reminders' fireAt — a late first-login)
+    // while keeping still-future ones; the reminders scheduler has no
+    // elapsed-fireAt guard, so a stale active rule would fire on the next tick.
+    if (policyApplicator) {
+      await policyApplicator.applyToPeriod(
+        { id: created.id, deadline: created.deadline },
+        now,
+      );
     }
 
     return {

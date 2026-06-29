@@ -51,18 +51,20 @@ ensureCurrentPeriod(prisma, anchorDate, now, settings, policyApplicator?)
   `periodState` — because the scheduler needs them for its log/audit payload
   (`period-creator.scheduler.ts:149-164`). A `{reportId, periodStart, periodEnd}`-
   only return would silently drop those.
-- **The factory materialises reminder rules on create, when the deadline is in
-  the future.** When (and only when) it creates a new `Report` whose deadline has
-  not yet passed, the factory calls `policyApplicator.applyToPeriod(created)`
-  (idempotent upsert). This folds reminder-policy materialisation into the single
-  creation point, so every creator gets it and none can forget — see D2b. The
-  `deadline > now` guard is load-bearing: the reminders scheduler fires any active
-  rule whose `fireAt` is already past (verified: `findDueDeadlineRules` filters
-  `fireAt: { lte: now }` with no lower bound), so a period minted AFTER its own
-  deadline (a late weekend first-login) would otherwise blast a stale reminder on
-  the next tick. Such a period is past its deadline anyway, so skipping its
-  reminders is correct. `policyApplicator` is injected into the factory the same
-  optional way the scheduler holds it, so tests without a reminder mock still pass.
+- **The factory materialises reminder rules on create, passing `now`.** When (and
+  only when) it creates a new `Report`, the factory calls
+  `policyApplicator.applyToPeriod(created, now)` (idempotent upsert). This folds
+  reminder-policy materialisation into the single creation point, so every creator
+  gets it and none can forget — see D2b. Passing `now` is load-bearing: the
+  reminders scheduler fires any active rule whose `fireAt` is already past
+  (verified: `findDueDeadlineRules` filters `fireAt: { lte: now }` with no lower
+  bound), so a period minted AFTER some of its reminders' instants (a late weekend
+  first-login) would otherwise blast a stale reminder on the next tick. The
+  applicator therefore skips, PER RULE, any instant with `fireAt <= now` — dropping
+  the elapsed ones while keeping still-future ones (e.g. a T+2h escalation). The
+  cron scheduler mints periods ahead of their reminders, so it omits `now` and is
+  unaffected. `policyApplicator` is injected into the factory the same optional way
+  the scheduler holds it, so tests without a reminder mock still pass.
 - `period-creator.scheduler.ts::runOnce` is refactored to call the factory for the
   create step. The factory now owns `applyToPeriod`, so the scheduler DROPS its own
   `policyApplicator.applyToPeriod(created)` call (the factory did it). The scheduler
@@ -83,10 +85,11 @@ is a latent bug: when a lead login is the FIRST to create the current period
 deadline reminders never fire. `applyToPeriod` was designed to be called by every
 creator (idempotent upsert), so the lazy path is simply a missed call site. Routing
 both creators through the one factory (D2) — which calls `applyToPeriod` on create —
-removes the asymmetry as a side effect of unifying the writer. Edge case to test:
-a created period whose deadline is already in the past must not retroactively
-schedule reminders for elapsed `fireAt` instants beyond what the scheduler already
-guards.
+removes the asymmetry as a side effect of unifying the writer. Edge case (tested):
+a period created after some of its reminder instants have already passed must not
+materialise those elapsed `fireAt` rows as `active` — the reminders scheduler has
+NO elapsed-`fireAt` lower bound, so `applyToPeriod(period, now)` skips per rule any
+`fireAt <= now` while keeping still-future instants.
 
 - The factory is added to the enumerated writer list in the `period-dual-state`
   spec (MODIFIED), making the previously-implicit lazy writer explicit and
