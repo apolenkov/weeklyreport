@@ -41,29 +41,30 @@ const STUB_ORG: OrganizationPublic = {
 };
 
 /** Render the layout RSC and parse the resulting HTML into a document. */
-async function renderLayout(org: OrganizationPublic | null): Promise<Document> {
-  vi.mocked(getOrgPublic).mockResolvedValue(
-    org ?? { shortName: "ORG", fullName: "Organization" },
-  );
+function renderLayout(org: OrganizationPublic): Document {
+  // layout.tsx imports getOrgPublic at module scope (for generateMetadata), so
+  // the mock must resolve for the import; RootLayout itself no longer reads it.
+  vi.mocked(getOrgPublic).mockResolvedValue(org);
 
-  const element = await RootLayout({ children: null });
-  const html = renderToStaticMarkup(element);
+  const html = renderToStaticMarkup(RootLayout({ children: null }));
   return new DOMParser().parseFromString(html, "text/html");
 }
 
-describe("RootLayout — script#__org_data (UFB-070 dangerouslySetInnerHTML)", () => {
-  it("script element has type='application/json' so the payload is never executed as JavaScript", async () => {
-    const doc = await renderLayout(STUB_ORG);
-    const script = doc.getElementById("__org_data");
-    expect(script).not.toBeNull();
-    expect(script?.getAttribute("type")).toBe("application/json");
+describe("RootLayout — inline org-data XSS sink removed", () => {
+  it("emits no inline __org_data script element", () => {
+    const doc = renderLayout(STUB_ORG);
+    expect(doc.getElementById("__org_data")).toBeNull();
   });
 
-  it("script textContent deep-equals the orgPublic value returned by getOrgPublic()", async () => {
-    const doc = await renderLayout(STUB_ORG);
-    const script = doc.getElementById("__org_data");
-    expect(script).not.toBeNull();
-    const parsed: unknown = JSON.parse(script?.textContent ?? "null");
-    expect(parsed).toEqual(STUB_ORG);
+  it("embeds no raw org string in an inline script, even for a breakout fullName", () => {
+    const doc = renderLayout({
+      shortName: "x",
+      fullName: "</script><img src=x onerror=alert(1)>",
+    });
+    // The dead sink is gone: no org markup breaks out into the document.
+    expect(doc.querySelector("img")).toBeNull();
+    for (const script of doc.querySelectorAll("script")) {
+      expect(script.textContent).not.toContain("onerror");
+    }
   });
 });

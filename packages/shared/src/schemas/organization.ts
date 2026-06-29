@@ -25,14 +25,29 @@ export const organizationSchema = z.object({
   updatedAt: z.coerce.date(),
 });
 
+// `<`/`>` are HTML tag delimiters and carry no legitimate brand meaning, so the
+// admin write boundary rejects them as defence-in-depth: a stored org name can
+// never reach an inline-script (or other markup) sink carrying breakout
+// characters. The read/projection schemas below stay unconstrained — they parse
+// values read FROM the database, so a legacy stored value must never make a
+// read throw.
+const orgBrandString = (max: number) =>
+  z
+    .string()
+    .min(1)
+    .max(max)
+    .refine((v) => !v.includes("<") && !v.includes(">"), {
+      message: "must not contain '<' or '>'",
+    });
+
 /**
  * Input shape for `admin.updateOrganization`. The id is implicit
  * (`'singleton'`) on the write path — clients can never address a
  * non-singleton row, so we don't accept an id in the input.
  */
 export const organizationUpdateSchema = z.object({
-  shortName: z.string().min(1).max(16),
-  fullName: z.string().min(1).max(200),
+  shortName: orgBrandString(16),
+  fullName: orgBrandString(200),
 });
 
 /**
