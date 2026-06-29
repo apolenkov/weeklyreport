@@ -4,7 +4,7 @@ import { createAuthController, createSessionCookie } from "./auth.controller";
 import { createRoleGuard } from "./roles.guard";
 
 const env = {
-  AUTH_JWT_SECRET: "phase-01-secret",
+  AUTH_JWT_SECRET: "test-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   AUTH_JWT_COOKIE_NAME: "customreport_session",
   KEYCLOAK_SAML_CALLBACK_URL: "http://localhost:3001/auth/saml/callback",
   KEYCLOAK_SAML_ENTRY_POINT:

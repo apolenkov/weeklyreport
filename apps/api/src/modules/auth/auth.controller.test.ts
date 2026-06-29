@@ -70,7 +70,7 @@ describe("createJwtSigner — contract tests", () => {
 
   it("JWT signed with different secret throws on verify", () => {
     const otherEnv = {
-      AUTH_JWT_SECRET: "different-secret",
+      AUTH_JWT_SECRET: "a-different-but-still-long-enough-secret",
     } as unknown as NodeJS.ProcessEnv;
     const otherSigner = createJwtSigner(otherEnv);
     const tokenFromOtherSecret = otherSigner.signSession(validSession);
@@ -79,10 +79,44 @@ describe("createJwtSigner — contract tests", () => {
     expect(() => signer.verifySession(tokenFromOtherSecret)).toThrow();
   });
 
+  it("rejects a token signed with a non-HS256 algorithm (algorithm pin)", () => {
+    // Same secret, but signed with HS384 — the verify algorithm pin must reject
+    // it even though the secret matches, so the token cannot be coerced into a
+    // different algorithm.
+    const hs384Token = jwt.sign({ ...validSession }, TEST_SECRET, {
+      algorithm: "HS384",
+      expiresIn: 3600,
+    });
+
+    const signer = createJwtSigner(TEST_ENV);
+    expect(() => signer.verifySession(hs384Token)).toThrow();
+
+    // A valid HS256 token still verifies.
+    const hs256Token = signer.signSession(validSession);
+    expect(signer.verifySession(hs256Token).userId).toBe(validSession.userId);
+  });
+
   it("throws when AUTH_JWT_SECRET is missing", () => {
     expect(() => createJwtSigner({})).toThrow(
       "Missing required environment variable: AUTH_JWT_SECRET",
     );
+  });
+
+  it("throws when AUTH_JWT_SECRET is shorter than 32 characters", () => {
+    const shortEnv = {
+      AUTH_JWT_SECRET: "too-short",
+    } as unknown as NodeJS.ProcessEnv;
+
+    expect(() => createJwtSigner(shortEnv)).toThrow(/>= 32 characters/);
+  });
+
+  it("accepts an AUTH_JWT_SECRET of exactly 32 characters", () => {
+    const exact32 = "a".repeat(32);
+    const env32 = {
+      AUTH_JWT_SECRET: exact32,
+    } as unknown as NodeJS.ProcessEnv;
+
+    expect(() => createJwtSigner(env32)).not.toThrow();
   });
 
   it("signed token contains all session fields", () => {

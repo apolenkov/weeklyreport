@@ -43,8 +43,12 @@ Both are cheap and belong together.
 - **Behaviour:** valid HS256 sessions are unaffected; a deployment whose
   `AUTH_JWT_SECRET` is shorter than the floor now fails fast at boot instead of
   running with a weak secret.
-- **Independent** of `refactor-auth-exemplary-layering`: it touches only the
-  verify call and the secret check, needs nothing from the extraction, and can
-  ship first.
+- **Ordering vs `refactor-auth-exemplary-layering`:** both changes touch
+  `auth.controller.ts`. This change can ship first (it needs nothing from the
+  refactor). But the refactor dedups the require-env helpers, so it MUST keep
+  `requireJwtSecret` (with the `>= 32` length check added here) a distinct function
+  rather than collapsing it into a generic `requireEnv`, and MUST preserve the
+  `jwt.verify` `{ algorithms: ["HS256"] }` pin. Whichever lands second carries that
+  obligation.
 - **Out of scope:** rotating to an asymmetric algorithm; any secret-management /
   rotation tooling; the auth layering refactor.
