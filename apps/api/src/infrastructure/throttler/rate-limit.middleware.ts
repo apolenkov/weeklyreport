@@ -29,9 +29,6 @@ export function createRateLimits(options: {
     windowMs: 60_000,
     standardHeaders: "draft-7",
     legacyHeaders: false,
-    // Use the X-Forwarded-For header when behind a reverse proxy (caddy/nginx).
-    // Express's `app.set('trust proxy', 1)` upstream makes this safe.
-    //
     // FIX-02 (Phase 35-08): wrap the IP through `ipKeyGenerator` from
     // express-rate-limit so IPv6 addresses are normalised by /64 prefix.
     // Without it, the library emits the ERR_ERL_KEY_GEN_IPV6 advisory

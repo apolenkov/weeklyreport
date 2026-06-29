@@ -346,6 +346,14 @@ async function bootstrap() {
   // Mount tRPC as Express middleware at /trpc
   const expressApp = app.getHttpAdapter().getInstance() as express.Express;
 
+  // Caddy is the only edge proxy and sets X-Forwarded-For; trusting exactly one
+  // hop makes req.ip the real client IP (for the auth rate-limit key, audit, and
+  // access logs) instead of the Caddy container address. Single hop = `1`, not
+  // `true` (which would trust a forged header from any direct caller). Safe only
+  // while the API is reachable solely through Caddy — the direct API host port
+  // must be closed before this is relied on in production.
+  expressApp.set("trust proxy", 1);
+
   // Phase 23-01: serve generated PDF artefacts.
   // The BullMQ worker writes to `pdfDir/{jobId}.pdf` and stores
   // `artifactUrl='/pdfs/{jobId}.pdf'` on the export job row. The frontend
