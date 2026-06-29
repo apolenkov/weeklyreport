@@ -23,7 +23,17 @@ there is no stage to pick, so the dialog must not submit at all. The dialog
 already documents this in the `stagesForProduct` JSDoc; the fix wires that
 documented behaviour (disabled Save + "no stages assigned — contact admin"
 inline message) ahead of the existing required-stage block, so the unsatisfiable
-"Select at least one stage." error is never reached for a zero-owned product.
+"Select at least one stage." error is never reached for a truly dead-ended row.
+
+The guard is scoped to `availableStages.length === 0 && effectiveStageIds.length
+=== 0`, NOT to `availableStages.length === 0` alone. A cross-stage risk can
+arrive in edit mode already carrying `stageIds` while its product lies outside
+the lead's stage-owned list (so `stagesForProduct` returns `[]`). That row is
+valid and must stay saveable — disabling Save on `availableStages.length === 0`
+alone would regress the shipped cross-stage-product-preservation behaviour
+(`risk-edit-dialog.test.tsx` "keeps the original product on save when its id is
+outside the stage-owned list"). The dead-end only exists when there is no stage
+to pick AND no stage already selected, so both conditions gate the guard.
 
 This mirrors point 3 of the existing "Items and decisions require a concrete
 stage in the edit dialog" requirement ("a product with no owned stages … the
@@ -38,22 +48,32 @@ branch is only wrong when the host requires a stage. So suppress the
 empty-selection banner when `required` is true; the one-stage and many-stage
 banner branches are unchanged, and non-required hosts keep the existing copy.
 
-### 3. Element validation reuses the existing `noNullBytes` predicate
+### 3. Element validation reuses the existing `noNullBytes` and `noInvisibleOnly` predicates
 
-`report-primitives.schema.ts` already defines `noNullBytes` and a `safeText`
-helper. Constrain `requiredStageIdsField` elements with
-`z.string().min(1).refine(noNullBytes)` so `[""]`, `[" "]` (after the dialog
-trims) and null-byte strings are rejected. The looser read-side `stageIdsField`
-stays as-is so stage-less legacy rows still load; only the strict write field is
-tightened. The `MAX_SELECTED_STAGES` cap and `.min(1)` array-length rule remain.
+`report-primitives.schema.ts` already defines both `noNullBytes` and
+`noInvisibleOnly` — the same visible-content pair that `safeText` composes.
+`z.string().min(1).refine(noNullBytes)` alone would still accept `[" "]` (one
+space passes `.min(1)` and carries no null byte), so it does not enforce the
+require-a-real-stage intent. Constrain `requiredStageIdsField` elements with
+`z.string().min(1).refine(noNullBytes).refine(noInvisibleOnly)` so `[""]`,
+`[" "]`, zero-width-only strings, and null-byte strings are all rejected at the
+schema boundary — independent of any dialog trimming. The looser read-side
+`stageIdsField` stays as-is so stage-less legacy rows still load; only the strict
+write field is tightened. The `MAX_SELECTED_STAGES` cap and `.min(1)`
+array-length rule remain.
 
 ## Risks / Trade-offs
 
 - Tightening the element schema could in theory reject a previously-accepted
   payload, but no legitimate client sends empty/null-byte stage strings; the
   loose read field already covers legacy loads.
-- The dialog branch must run BEFORE the required-stage error so a zero-owned
-  product never shows the unsatisfiable "Select at least one stage." message.
+- The dialog branch must run BEFORE the required-stage error so a stage-less
+  zero-owned product never shows the unsatisfiable "Select at least one stage."
+  message.
+- The guard must be gated on both `availableStages.length === 0` AND
+  `effectiveStageIds.length === 0`; gating on the owned-stage count alone would
+  disable Save for a valid cross-stage risk that already carries `stageIds` and
+  regress the shipped cross-stage-product-preservation test.
 
 ## Out of Scope
 

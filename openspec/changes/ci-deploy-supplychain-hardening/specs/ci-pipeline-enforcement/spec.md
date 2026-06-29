@@ -4,14 +4,17 @@
 
 The CI workflow SHALL invoke only `package.json` scripts that are actually
 defined, so a provisioned runner cannot fail a job on a typo. Specifically, the
-E2E job's seed step MUST stop calling the non-existent `pnpm db:seed:simple` and
-MUST call the deterministic-fixture script that exists — `pnpm db:seed:middle`
-(which runs `prisma/seed-simple.ts`).
+visual-regression (`visual-baseline`) job's seed step — the only occurrence of
+the non-existent `pnpm db:seed:simple` — MUST stop calling it and MUST call the
+deterministic-fixture script that exists, `pnpm db:seed:middle` (which runs
+`prisma/seed-simple.ts`). The E2E job seeds via `pnpm exec tsx prisma/seed.ts`
+and is not affected.
 
 #### Scenario: The CI seed step calls a defined script
 
 - **GIVEN** `.github/workflows/ci.yml` after this change
-- **WHEN** the E2E job's "Seed database" step is inspected
+- **WHEN** the visual-regression job's "Seed database (deterministic fixture)"
+  step is inspected
 - **THEN** it runs `pnpm db:seed:middle` (or another script present in
   `package.json`), and the string `db:seed:simple` does not appear anywhere in
   the workflow
@@ -31,7 +34,12 @@ unit tests, so a type- or lint-broken tree is caught before it leaves the
 machine while CI remains dormant. The hook MUST add `pnpm turbo typecheck`,
 `pnpm lint`, and `pnpm format:check` ahead of the existing `pnpm catalog:check`
 and `pnpm test` steps, and MUST preserve the existing `CI=true` / `SKIP_PREPUSH=1`
-skip escape hatches.
+skip escape hatches. The hook MUST also fail the push as soon as any gate fails:
+because the current hook runs its gates as unchained sequential commands with no
+`set -e`, only the last command's exit status reaches `git`, so a failed early
+gate is masked by a later passing one. The hook MUST therefore add `set -e` near
+the top (after the skip block) or chain every gate with `&&`, so a non-zero exit
+from any gate aborts the push.
 
 #### Scenario: A type error is caught at pre-push
 
@@ -55,6 +63,14 @@ skip escape hatches.
 - **THEN** `pnpm catalog:check` and `pnpm test` still run after the added
   typecheck/lint/format steps, and a catalog drift or a failing unit test still
   aborts the push
+
+#### Scenario: A failing early gate is not masked by a later passing gate
+
+- **GIVEN** the updated `.husky/pre-push` with `set -e` (or `&&`-chained gates)
+- **WHEN** an early gate fails — for example `pnpm catalog:check` exits non-zero
+  — while a later gate such as `pnpm test` would pass
+- **THEN** the hook exits non-zero immediately and the push is aborted, rather
+  than the later passing gate's exit status masking the earlier failure
 
 ### Requirement: Server-side CI enforcement is restored once a runner exists
 

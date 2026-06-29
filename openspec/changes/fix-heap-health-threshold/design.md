@@ -69,16 +69,41 @@ Inject `EnvConfig` into `HealthController` and pass the value to `checkHeap`.
   bypasses the validated env schema; the value would be a string and could be
   `undefined`, reintroducing the calibration bug.
 
-**Rationale:** Using the validated, typed `EnvConfig` is the established
-project pattern (see `PDF_OUTPUT_DIR`, `LOG_LEVEL`). The default covers the
-current production container limit without needing an explicit entry in
+**Rationale:** Routing the value through the validated, typed `EnvConfig` keeps
+the threshold coerced and bounded (positive int) instead of a raw, possibly
+`undefined` `process.env` string. `PDF_OUTPUT_DIR` and `LOG_LEVEL` already flow
+through `validateEnv()` this way in `main.ts`; this change extends that
+validated config to a controller via DI (see Decision 3). The default covers
+the current production container limit without needing an explicit entry in
 `.env.example` for existing deploys.
 
-### Decision 3: Inject `EnvConfig` into `HealthController`
+### Decision 3: Provide `EnvConfig` to `HealthController` via an `ENV_CONFIG` token
 
-`HealthController` currently does not depend on `EnvConfig`. The simplest
-injection is `@Inject(ENV_CONFIG) private readonly env: EnvConfig` via
-`HealthModule`, which already imports `ConfigModule`.
+`HealthController` does not depend on `EnvConfig` today, and the repo has **no**
+`ConfigModule`/`ConfigService` and no `ENV_CONFIG` provider — `validateEnv()` is
+called once in `main.ts`, and services that need env values read `process.env`
+directly (e.g. `redis.health.ts`). So the DI plumbing must be created, not
+assumed.
+
+**Chosen:** Expose the validated config under an injection token, following the
+repo's token + `useFactory` idiom:
+
+```ts
+export const ENV_CONFIG = Symbol("ENV_CONFIG");
+// provider: { provide: ENV_CONFIG, useFactory: validateEnv }
+```
+
+Register this provider in `HealthModule` (or import a small `ConfigModule` that
+provides and exports `ENV_CONFIG`), then inject it into `HealthController` with
+`@Inject(ENV_CONFIG) private readonly env: EnvConfig`. `validateEnv()` is
+idempotent (a pure `safeParse` of `process.env`), so the factory re-validating
+alongside `main.ts` is harmless.
+
+**Dependency:** the parallel `enforce-smtp-config` change introduces the same
+`ENV_CONFIG` token + `{ provide: ENV_CONFIG, useFactory: validateEnv }`
+provider. Whichever change lands first owns the token; the other reuses it and
+has `HealthModule` import the module that exports it. Do not declare the
+provider twice.
 
 ## Risks / Trade-offs
 
@@ -92,16 +117,22 @@ injection is `@Inject(ENV_CONFIG) private readonly env: EnvConfig` via
 
 1. Add `HEAP_HEALTH_THRESHOLD_BYTES` to `env.schema.ts` with the 1 536 MiB
    default. Document in `.env.example`.
-2. Inject `EnvConfig` into `HealthController`.
+2. Create or reuse the `ENV_CONFIG` token + `useFactory: validateEnv` provider
+   and wire it into `HealthModule`; inject `EnvConfig` into `HealthController`
+   (see Decision 3).
 3. Remove `checkHeap` from `liveness()`; update `readiness()` to use
    `this.env.HEAP_HEALTH_THRESHOLD_BYTES`.
-4. Update or add controller-level tests to cover liveness (no heap) and
+4. Add `HEAP_HEALTH_THRESHOLD_BYTES: ${HEAP_HEALTH_THRESHOLD_BYTES:-1610612736}`
+   to the `api` service `environment` block in `docker-compose.prod.yml` so a
+   deployment `.env` override reaches the container.
+5. Update or add controller-level tests to cover liveness (no heap) and
    readiness (threshold from env).
-5. Verify gates: `pnpm typecheck && pnpm lint && pnpm test && pnpm build`.
+6. Verify gates: `pnpm typecheck && pnpm lint && pnpm test && pnpm build`.
 
 No deployment sequencing is required; the change is purely additive on the
-env side (new optional var with a sane default) and subtractive on the
-liveness endpoint (removing a check that was causing false positives).
+env side (new var with a sane default, forwarded by the prod compose `api`
+block) and subtractive on the liveness endpoint (removing a check that was
+causing false positives).
 
 ## Open Questions
 

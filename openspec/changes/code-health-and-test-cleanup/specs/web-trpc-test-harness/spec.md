@@ -7,7 +7,7 @@ tests when it never fires; web component tests stub tRPC through `createMockTRPC
 (per this capability), so any second mock layer must fire-or-be-removed. The MSW
 layer in
 `apps/web/src/test-utils/msw-handlers.ts` (wired in
-`apps/web/src/test-utils/vitest.setup.ts`) MUST either fire — its `API_URL`
+`apps/web/vitest.setup.ts`) MUST either fire — its `API_URL`
 points at the jsdom origin, `onUnhandledRequest` no longer silently bypasses, the
 POST handler returns the correct tRPC batch shape, the factories are typed with
 `satisfies` so schema drift surfaces (e.g. the removed `priorities` field), and a

@@ -16,7 +16,10 @@ project convention (e.g. `AUTH_JWT_SECRET`) is `.min(32)`.
 - Add an `SMTP_HOST` + `SMTP_FROM` fence to the production `superRefine` block
   in `apps/api/src/infrastructure/config/env.schema.ts`: boot MUST fail when
   either is absent and `NODE_ENV=production`.
-- Raise the `PDF_EXPORT_JWT_SECRET` floor from `.min(16)` to `.min(32)`.
+- Raise the `PDF_EXPORT_JWT_SECRET` floor from `.min(16)` to `.min(32)` in the
+  env schema, and raise the matching runtime guards in `signPdfExportToken` /
+  `verifyPdfExportToken` from `< 16` to `< 32` so the schema, the runtime
+  signer/verifier, and the deployment contract all enforce one number.
 - Inject the validated `EnvConfig` into `EmailService` via a Nest DI provider
   (`useFactory: validateEnv`), and replace the direct `process.env` reads
   (`SMTP_FROM`, `SMTP_PORT`, `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`) with the
@@ -32,7 +35,8 @@ project convention (e.g. `AUTH_JWT_SECRET`) is `.min(32)`.
 
 - `env-config-validation`: production boot-time fences and field-strength floors
   in the API env schema — production requires `SMTP_HOST` and `SMTP_FROM`, and
-  `PDF_EXPORT_JWT_SECRET` requires at least 32 characters.
+  `PDF_EXPORT_JWT_SECRET` requires at least 32 characters, enforced both in the
+  schema and in the runtime PDF token signer/verifier guards.
 - `email-delivery-config`: `EmailService` resolves all SMTP configuration from
   the injected validated `EnvConfig` (single source of truth) and selects its
   nodemailer transport from that config.
@@ -44,7 +48,12 @@ project convention (e.g. `AUTH_JWT_SECRET`) is `.min(32)`.
 ## Impact
 
 - `apps/api/src/infrastructure/config/env.schema.ts` — production `superRefine`
-  gains the SMTP fence; `PDF_EXPORT_JWT_SECRET` floor raised to `.min(32)`.
+  gains the SMTP fence; `PDF_EXPORT_JWT_SECRET` floor raised to `.min(32)` and
+  the stale "Min 16 chars" comment updated to 32.
+- `apps/api/src/modules/pdf-export/pdf-export.service.ts` — `signPdfExportToken`
+  and `verifyPdfExportToken` length guards and messages raised from 16 to 32.
+- `docker-compose.prod.yml` — `PDF_EXPORT_JWT_SECRET` required-env message
+  updated from `min 16 chars` to `min 32 chars`.
 - `apps/api/src/infrastructure/email/email.service.ts` — constructor takes an
   injected `EnvConfig` instead of reading `process.env`.
 - `apps/api/src/app.module.ts` (or a small config module) — new DI provider that

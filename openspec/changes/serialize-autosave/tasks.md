@@ -14,6 +14,12 @@
       (debounce start branch and the drain), so it is never overwritten while a
       save is pending — preserving the "lastSavedRef stamps only confirmed
       payloads" invariant.
+- [ ] 1.4 In the `onSuccess` drain, send the queued payload to the section it
+      was built for: stop overriding `queued.reportSectionId` with
+      `reportSectionIdRef.current` (use the queued payload's own
+      `reportSectionId`, or capture the section id alongside the queued
+      key/snapshot at queue time). This prevents a payload queued for section A
+      from being written to section B after the lead navigates reports/periods.
 
 ## 2. Tests
 
@@ -24,6 +30,10 @@
 - [ ] 2.2 Add a test that a failing queued save surfaces exactly one error
       (mutation `onError`) and emits no unhandled promise rejection from the
       drain call site.
+- [ ] 2.3 Add a test that switching `reportSectionId` while a save is in flight
+      (a queued payload pending) drains the queued payload to the section it was
+      built for, not the new `reportSectionId` — guarding the cross-section
+      retarget edge.
 
 ## 3. Verification
 

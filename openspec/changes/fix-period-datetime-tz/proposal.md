@@ -6,8 +6,9 @@ create/edit dialog displays the stored UTC deadline in a `datetime-local`
 field using UTC wall-clock (`toISOString().slice(0,16)`), but re-parses the
 same field on submit with `new Date(deadline)`, which the browser interprets
 as **local** time. A UTC+N admin who re-saves an unchanged deadline shifts it
-by -N hours on every round-trip. The skew cascades into late-submission
-gating and reminder scheduling, which key off the deadline.
+by -N hours on every round-trip. The skew corrupts the stored
+`Report.deadline`, which late-submission gating reads directly and from which
+reminder `fireAt` rows are materialized at period creation.
 
 ## What Changes
 
@@ -43,6 +44,16 @@ gating and reminder scheduling, which key off the deadline.
 
 - Affected code: `apps/web/src/components/admin/periods-tab-dialog.tsx`
   (deadline submit parse + deadline range validation + comment).
-- Downstream behavior: deadline-driven late-submission gating and reminder
-  scheduling stop drifting for non-UTC admins.
+- Downstream behavior: the stored `Report.deadline` no longer drifts on
+  re-save, so its live consumers stay correct for non-UTC admins. Concretely,
+  late-submission gating reads `Report.deadline` directly, and reminder
+  `fireAt` rows materialized at period creation are derived from the
+  now-correct deadline through the same dialog parse.
+- Out of scope (separate change): editing an existing period's deadline via
+  `admin.updatePeriodManual` does NOT recompute already-materialized
+  `ReminderRule.fireAt` rows — the scheduler dispatches stored `fireAt`
+  (`reminders.scheduler.ts`), and the manual-update path
+  (`admin-period.queries.ts` `updatePeriodManual`) patches `Report` fields
+  only and never re-applies reminder policy. This fix prevents deadline
+  corruption; it does not retroactively re-schedule existing reminders.
 - No schema, API, or shared-contract change; web-only fix.

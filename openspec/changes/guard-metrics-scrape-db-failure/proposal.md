@@ -16,8 +16,9 @@ item `BL-METRICS-SCRAPE-FAIL` (P1).
   (`apps/api/src/modules/telemetry/telemetry.gauges.ts`).
 - On a caught error: log the failure via NestJS `Logger` and return without
   calling `.set()`, leaving the gauge unset for this scrape cycle.
-- Inject `Logger` into `TelemetryGauges` (currently none is injected); the
-  logger name should identify the service class.
+- Add a NestJS `Logger` instance to `TelemetryGauges` as a class-field
+  initializer (currently none exists); the logger name should identify the
+  service class.
 
 ## Capabilities
 
@@ -33,8 +34,8 @@ item `BL-METRICS-SCRAPE-FAIL` (P1).
 
 ## Impact
 
-- `apps/api/src/modules/telemetry/telemetry.gauges.ts` — try/catch + Logger
-  injection in `TelemetryGauges`
+- `apps/api/src/modules/telemetry/telemetry.gauges.ts` — try/catch + a
+  class-field `Logger` instance in `TelemetryGauges`
 - `apps/api/src/infrastructure/metrics/metrics.controller.ts` — no change
   needed (the fix is in the callbacks, not the controller)
 - No schema change; no migration; no shared-contract change (MVP phase).

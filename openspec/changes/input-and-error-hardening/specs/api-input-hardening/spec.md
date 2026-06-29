@@ -80,9 +80,12 @@ Consumer surface: `apps/api/src/infrastructure/middleware/correlation-id.middlew
 
 The `searchQuerySchema` in `packages/shared/src/schemas/search.ts` MUST
 constrain the `q` field using the project's `safeText()` helper
-(minimum 1 character, maximum 200 characters, no null bytes). A raw
-`z.string()` is insufficient because a null byte reaches
-`plainto_tsquery` and causes an unhandled Postgres 500.
+(minimum 2 characters, maximum 200 characters, no null bytes, no
+invisible-only input). The existing `z.string().min(2).max(200)` keeps
+the correct min-2 floor but lacks a null-byte guard, so a null byte
+reaches `plainto_tsquery` and causes an unhandled Postgres 500. The
+min-2 floor MUST be preserved — switching to `safeText` adds the
+null-byte and invisible-only refinements without lowering the floor.
 
 Consumer surface: every tRPC procedure that accepts a `search` input
 (currently `search.query` in `apps/api/src/infrastructure/trpc/trpc.router.ts`).
@@ -105,6 +108,13 @@ Consumer surface: every tRPC procedure that accepts a `search` input
 - **GIVEN** a search request with `q: ''`
 - **WHEN** the router validates the input
 - **THEN** Zod parsing throws a validation error (minimum length not met)
+
+#### Scenario: Single-character search query is rejected
+
+- **GIVEN** a search request with `q: 'a'`
+- **WHEN** the router validates the input
+- **THEN** Zod parsing throws a validation error because the min-2 floor is
+  not met
 
 ### Requirement: dev.wipeAndReseed is restricted to adminProcedure
 

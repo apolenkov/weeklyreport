@@ -2,18 +2,22 @@
 
 - [ ] 1.1 In `packages/shared/src/schemas/report-primitives.schema.ts`, change
       `requiredStageIdsField` from `z.array(z.string()).min(1).max(MAX_SELECTED_STAGES)`
-      to `z.array(z.string().min(1).refine(noNullBytes, { message: "..." })).min(1).max(MAX_SELECTED_STAGES)`,
-      reusing the existing `noNullBytes` predicate. Leave the loose read field
-      `stageIdsField` untouched.
-- [ ] 1.2 Confirm the message wording matches the existing `noNullBytes` usage in
-      `safeText` ("Text must not contain null bytes" or a stage-specific variant)
-      and stays English (prod schema strings).
+      to `z.array(z.string().min(1).refine(noNullBytes, { message: "..." }).refine(noInvisibleOnly, { message: "..." })).min(1).max(MAX_SELECTED_STAGES)`,
+      reusing BOTH existing predicates `noNullBytes` and `noInvisibleOnly` (the
+      pair `safeText` composes). `.min(1).refine(noNullBytes)` alone still admits
+      `[" "]`, so `noInvisibleOnly` is required to reject whitespace/zero-width
+      elements. Leave the loose read field `stageIdsField` untouched.
+- [ ] 1.2 Confirm the message wording matches the existing `noNullBytes` /
+      `noInvisibleOnly` usage in `safeText` ("Text must not contain null bytes"
+      and "Text must contain visible characters", or stage-specific variants) and
+      stays English (prod schema strings).
 
 ## 2. Web — risk dialog zero-owned-stage guard
 
 - [ ] 2.1 In `apps/web/src/components/lead/risk-edit-dialog.tsx`, add a branch in
-      `handleSave` (and the render) so that when `availableStages.length === 0`
-      the required-stage validation is skipped, Save is disabled, and the inline
+      `handleSave` (and the render) so that when
+      `availableStages.length === 0 && effectiveStageIds.length === 0` the
+      required-stage validation is skipped, Save is disabled, and the inline
       "no stages assigned — contact admin" message documented on the
       `stagesForProduct` prop JSDoc is shown.
 - [ ] 2.2 Ensure the guard runs BEFORE the existing
@@ -21,6 +25,10 @@
       zero-owned-stage product never surfaces the unsatisfiable error.
 - [ ] 2.3 Keep the single-owned-stage auto-apply and the multi-owned required
       behaviour unchanged (`availableStages.length >= 1`).
+- [ ] 2.4 Keep a cross-stage risk that already carries `stageIds` saveable: when
+      `availableStages.length === 0` but `effectiveStageIds.length > 0`, do NOT
+      disable Save and do NOT show the contact-admin message — the row is valid
+      and the existing cross-stage-product-preservation test must stay green.
 
 ## 3. Web — stage selector banner honesty
 
@@ -31,11 +39,15 @@
 
 ## 4. Tests
 
-- [ ] 4.1 Shared schema unit test: `requiredStageIdsField` rejects `[""]` and an
-      element containing a null byte, and accepts `["Design"]`.
-- [ ] 4.2 Risk-dialog component test: rendering on a zero-owned-stage product
-      disables Save, shows the contact-admin message, and never shows
-      "Select at least one stage."; a one-owned-stage product still saves.
+- [ ] 4.1 Shared schema unit test: `requiredStageIdsField` rejects `[""]`, a
+      whitespace-only `[" "]`, a zero-width-only element, and an element containing
+      a null byte; and accepts `["Design"]`.
+- [ ] 4.2 Risk-dialog component test: rendering on a stage-less zero-owned-stage
+      product (create mode or a row with no `stageIds`) disables Save, shows the
+      contact-admin message, and never shows "Select at least one stage."; a
+      one-owned-stage product still saves; AND a cross-stage edit that already
+      carries `stageIds` (its product returns `[]` from `stagesForProduct`) keeps
+      Save enabled and saves with the original product preserved.
 - [ ] 4.3 Stage-multi-select component test: in `required` mode with no selection
       no banner renders; in non-required mode the empty-selection banner still
       renders; selecting a stage renders the per-stage banner.

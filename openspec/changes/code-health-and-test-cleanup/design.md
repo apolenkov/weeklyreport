@@ -97,8 +97,10 @@ Source findings (and their review backlog ids):
 ## Invariants
 
 - **Period dual-state**: untouched (no period writers change).
-- **Role-coverage gate**: preserved — dead routers are removed/rewired, the live
-  inline `adminProcedure`/`headProcedure` routers remain the only production path.
+- **Role-coverage gate**: preserved — the dead auth routers are removed (not
+  rewired; their head-gated semantics diverge from the live admin-only
+  `adminProcedure`), and the live inline `adminProcedure`/`headProcedure` routers
+  remain the only production path.
 - **Destructive-db guard**: respected — the FK reshape runs through `migrate
 reset` on suffixed non-prod DBs; prod stays gated by `ALLOW_PROD_DESTRUCTIVE`.
 - **Deferred-feature pattern**: unaffected (no ComingSoon surfaces touched).

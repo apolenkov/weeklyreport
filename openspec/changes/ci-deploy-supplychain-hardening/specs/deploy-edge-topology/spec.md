@@ -42,13 +42,25 @@ documented ops need.
   `0.0.0.0` host-published `ports:` entry, while Caddy still reverse-proxies to
   `api:3001` over the compose network
 
-#### Scenario: Edge controls cannot be bypassed at the host
+#### Scenario: A remote caller cannot bypass the edge (expose-only)
 
-- **GIVEN** the API running under the updated prod compose
-- **WHEN** a caller attempts to reach the API directly on the host port outside
-  the Caddy hop
-- **THEN** the API socket is not reachable from the host, so the edge TLS and
-  header controls cannot be bypassed
+- **GIVEN** the API running under the updated prod compose with `expose: ["3001"]`
+- **WHEN** any caller attempts to reach the API directly on a host interface
+  outside the Caddy hop
+- **THEN** no host port is published at all, so the API socket is unreachable
+  from the host and from any remote machine, and the edge TLS and header
+  controls cannot be bypassed
+
+#### Scenario: A remote caller cannot bypass the edge (localhost-bound option)
+
+- **GIVEN** the API running under the updated prod compose with a
+  `127.0.0.1`-bound publish, chosen for a documented ops need
+- **WHEN** a remote caller on another machine attempts to reach the API directly
+  on a host interface outside the Caddy hop
+- **THEN** the published port is bound only to loopback, so it is unreachable
+  from any non-loopback interface and the edge controls cannot be bypassed from
+  another machine — host-local processes can still reach loopback, which is the
+  accepted trade-off of this option versus `expose:`
 
 #### Scenario: Trust-proxy prerequisite is satisfied
 

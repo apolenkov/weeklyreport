@@ -39,3 +39,25 @@ reach `GET /metrics` via a network path that bypasses the public Caddy edge
 - **WHEN** the scrape target for `customreport-api` is inspected
 - **THEN** the target URL does NOT use `{CADDY_SITE_ADDRESS}` (the public domain)
 - **AND** the target URL reaches `api:3001` via the internal Docker network or a host-port mapping
+
+### Requirement: Production API host port does not expose /metrics publicly
+
+The production API container port MUST NOT be reachable on the host's public
+network interface; `docker-compose.prod.yml` SHALL NOT publish the API port on
+`0.0.0.0`, so that removing `/metrics` from Caddy cannot be bypassed by a direct
+request to the host-mapped port. This requirement is prod-scoped and does not
+affect the local/dev host-port scrape path.
+
+#### Scenario: Prod compose does not publish the API port on all interfaces
+
+- **GIVEN** `docker-compose.prod.yml` is reviewed
+- **WHEN** the `api` service network configuration is inspected
+- **THEN** the API container port is exposed only to the internal Docker network (`expose`), OR any host `ports` mapping is bound to `127.0.0.1`
+- **AND** there is NO `0.0.0.0` host publish of the API port (no bare `"${API_PORT:-3001}:3001"` mapping)
+
+#### Scenario: Direct host request to /metrics is not publicly reachable in prod
+
+- **GIVEN** the prod stack is deployed with the API port not published on the public interface
+- **WHEN** an external client sends `GET http://<prod-host-public-ip>:{API_PORT}/metrics`
+- **THEN** the connection does not return Prometheus text-format content (refused, filtered, or unreachable)
+- **AND** the only authorized path to `/metrics` is the internal Docker network or a loopback-bound host port plus firewall rule

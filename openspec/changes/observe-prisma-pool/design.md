@@ -46,14 +46,33 @@ Alternatives considered:
 - Wrap pool creation in a try/catch — does not help because `error` is
   an asynchronous event, not a thrown exception.
 
-### D2: Parse env vars with `parseInt` + fallback, no Zod validation
+### D2: Parse env vars with `parseInt` + range-validated fallback, no Zod
 
 The three new vars are internal tunables used only by `PrismaService`.
 They have safe numeric defaults and never flow into shared schemas.
 Using `parseInt` with a fallback constant keeps the constructor zero-dep
 on any validation library and avoids coupling to the env-schema module.
+
+Range validation is part of the fallback, not just an absent/non-numeric
+check: `DB_POOL_MAX` must be a positive integer (`>= 1`); the two timeout
+vars must be non-negative integers (`>= 0`). Any value that fails — absent,
+non-numeric, or out of range — falls back to the default rather than failing
+boot. This matters because `pg` does not defend itself: it coerces `max: 0`
+to `10` (so a logged `0` would lie) and keeps a negative `max`, which makes
+the pool report permanently full and — with the default
+`connectionTimeoutMillis: 0` — hang every queued query forever. Falling back
+(not fail-boot) keeps a misconfigured env from taking the API down, and the
+boot log always reflects the value actually handed to `pg`.
+
+A small named helper (e.g. `parsePositiveInt` / `parseNonNegativeInt`) is
+extracted so the invalid cases are unit-testable. No arbitrary upper cap is
+imposed on `DB_POOL_MAX`; the `.env.example` `max_connections` advisory
+covers the high side.
+
 Alternatives considered:
 
+- Fail boot on an invalid value — louder, but turns a typo into an outage;
+  fallback plus a clear boot log is safer for an internal tunable.
 - Add vars to the existing env Zod schema — would require modifying
   `env.schema.ts` and wiring `EnvConfig` into `PrismaService` via DI;
   disproportionate for three optional ints with obvious defaults.

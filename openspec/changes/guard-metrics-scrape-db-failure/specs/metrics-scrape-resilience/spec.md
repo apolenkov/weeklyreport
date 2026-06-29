@@ -7,8 +7,8 @@ callback (`customreportReportsOnTimeRatio` and `customreportActiveLeadsTotal`,
 wired in `TelemetryGauges.onModuleInit` at
 `apps/api/src/modules/telemetry/telemetry.gauges.ts`) in a `try/catch` block.
 When the query throws, the callback MUST catch the error, log it via the
-injected `Logger`, and return without calling `Gauge.set()`, leaving the gauge
-unset for that scrape cycle. The rejection MUST NOT escape the callback into
+NestJS `Logger` instance held by `TelemetryGauges`, and return without calling
+`Gauge.set()`, leaving the gauge unset for that scrape cycle. The rejection MUST NOT escape the callback into
 `Registry.metrics()`'s `Promise.all`, so the `/metrics` HTTP response MUST
 still be produced even when one or both DB-backed gauges fail.
 
@@ -38,8 +38,8 @@ still be produced even when one or both DB-backed gauges fail.
 
 ### Requirement: Collect callback DB errors MUST be logged at error level
 
-The system SHALL log each caught DB error via the NestJS `Logger` injected
-into `TelemetryGauges`, using `Logger.error`, before the callback returns.
+The system SHALL log each caught DB error via the NestJS `Logger` instance
+held by `TelemetryGauges`, using `Logger.error`, before the callback returns.
 The log message MUST identify which gauge's collect failed so the cause can
 be correlated to the source.
 

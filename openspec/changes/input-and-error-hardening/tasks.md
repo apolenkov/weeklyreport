@@ -1,9 +1,13 @@
 ## 1. Shared Schema — search-q safeText guard
 
-- [ ] 1.1 In `packages/shared/src/schemas/search.ts`, replace the bare `z.string()`
-      on the `q` field with `safeText({ min: 1, max: 200 })`.
-- [ ] 1.2 Add a unit test in `packages/shared` asserting that a `q` value
-      containing a null byte fails Zod validation with a `BAD_REQUEST`-class error.
+- [ ] 1.1 In `packages/shared/src/schemas/search.ts`, replace the
+      `z.string().min(2).max(200)` on the `q` field with
+      `safeText({ min: 2, max: 200 })` — preserve the min-2 floor; the only
+      behavioral change is the added null-byte and invisible-only refinements.
+- [ ] 1.2 Add unit tests in `packages/shared` asserting that (a) a `q` value
+      containing a null byte fails Zod validation with a `BAD_REQUEST`-class
+      error, and (b) a single-character `q` (e.g. `'a'`) is rejected by the
+      min-2 floor.
 
 ## 2. Shared Schema — sparkline bound correction (behavioral)
 
@@ -49,10 +53,15 @@
 
 - [ ] 7.1 In `apps/api/src/lib/audit-logger-types.ts`, add `'period.manual-edit'`
       to the `AuditEvent` string-literal union.
-- [ ] 7.2 In `apps/api/src/lib/audit-logger.ts`, type the emitted `event` field
-      at the `period.manual-edit` call site as `AuditEvent` (or ensure the call site
-      already passes through the typed union) so future undeclared strings are caught
-      by `pnpm typecheck`.
+- [ ] 7.2 In `apps/api/src/lib/audit-logger.ts`, introduce a typed local `emit`
+      helper inside `createAuditLogger` whose payload parameter is typed
+      `{ event: AuditEvent } & Record<string, unknown>`, and route EVERY emit
+      object literal (all ~15 sites) through it (replacing the direct
+      `logger.info/warn(AUDIT_MESSAGE, { event: '…', … })` calls). This makes an
+      undeclared or misspelled `event` string a `pnpm typecheck` error at the
+      call site, satisfying the enum-state-hygiene compile-error scenario.
+      A bare `satisfies AuditEnvelope` does not work — it rejects the per-event
+      fields as excess properties.
 
 ## 8. Comment Corrections
 

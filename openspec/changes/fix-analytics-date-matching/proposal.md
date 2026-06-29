@@ -62,7 +62,11 @@ history return empty or wrong data. This is the P1-5 finding from the
   - `packages/shared/src/schemas/analytics.ts` — `isoDateOnly` real-date refine.
   - `apps/api/src/modules/analytics/analytics.prisma-repository.ts` —
     day-range matching + per-label aggregation in `trafficLightHistory` and
-    `periodComparison`.
+    `periodComparison`, plus the inclusive `periodTo` upper bound in
+    `trafficLightHistory` and `leadVelocity`.
+  - `apps/api/src/modules/analytics/analytics.service.ts` — bump the three
+    analytics cache sub-prefixes so pre-fix cached results are orphaned on
+    deploy instead of being served stale until TTL.
 - Affected tests: analytics repository unit tests gain day-range,
   invalid-date-rejection, and multi-report-per-label aggregation cases.
 - No DB migration: this touches the Zod schema and repository query shape only.

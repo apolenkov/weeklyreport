@@ -5,11 +5,15 @@
 The repository MUST NOT keep a second, never-wired authorization implementation
 that production never exercises. The `AuthModule` + passport-JWT
 `jwt.strategy.ts`, and the module-level `admin.router.ts` /
-`review.router.ts` (imported only by tests, using `assertHeadAccess`), MUST
-either be removed once proven unused, or wired in as the single source of truth
-so the inline `adminProcedure` / `headProcedure`-gated tRPC routers are no longer
-a parallel copy. "Proven unused" means grep over all references plus imports and
-build config, per the repo's surgical-changes rule.
+`review.router.ts` (imported only by tests, using `assertHeadAccess`), MUST be
+removed once proven unused; the inline `adminProcedure` / `headProcedure`-gated
+tRPC routers remain the single source of truth. These stale routers MUST NOT be
+wired in as the production path, because their authorization semantics diverge
+from the live ones: `admin.router.ts` gates with `createRoleGuard("head")` /
+`assertHeadAccess`, whereas the live `adminProcedure` is admin-only, so wiring
+the stale router in would silently re-open admin endpoints to heads. "Proven
+unused" means grep over all references plus imports and build config, per the
+repo's surgical-changes rule.
 
 #### Scenario: a dead auth router is removed with evidence
 
@@ -17,7 +21,8 @@ build config, per the repo's surgical-changes rule.
   are imported only by tests and not by any production wiring
 - **WHEN** the cleanup runs
 - **THEN** grep confirms no production reference, and the dead files are deleted
-  (or wired as the single path) and their tests point at the real procedure path
+  (not wired in, since their head-gated semantics diverge from the live
+  admin-only `adminProcedure`) and their tests point at the real procedure path
 - **AND** production authorization continues to run through the inline
   `adminProcedure` / `headProcedure` routers only
 

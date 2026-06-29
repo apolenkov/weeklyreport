@@ -26,8 +26,10 @@ Non-Goals:
   the two are coordinated at apply time but specified independently.
 - Changing how `periodStart`/`periodEnd`/`deadline` are stored or parsed at
   write time — owned by `fix-period-datetime-tz` (#24).
-- Caching changes — the cache key already hashes the parsed input; a stricter
-  `isoDateOnly` only narrows the accepted key space.
+- Cache architecture changes — the read-through Redis cache, its TTL, and its
+  SCAN-based invalidation stay as-is. This change does require a one-time cache
+  prefix bump (see Migration Plan) because it intentionally returns a different
+  result for an unchanged input, but the caching mechanism itself is untouched.
 
 ## Decision 1: UTC day-range helper, reused across the file
 
@@ -113,6 +115,14 @@ risks are additive across the contributing reports.
 
 ## Migration Plan
 
-No DB migration. Schema (Zod) and repository query-shape change only. Existing
-analytics cache entries remain valid; the stricter `isoDateOnly` only narrows
-which inputs can produce a key.
+No DB migration. Schema (Zod) and repository query-shape change only.
+
+Cache: this change intentionally returns a different (correct) result for an
+unchanged analytics input, so pre-existing entries under the current prefixes
+are now stale and would be served until their 1-hour TTL expires or a
+publish/reopen triggers `invalidateAll`. Bump the three analytics cache
+sub-prefixes in `analytics.service.ts` (`PREFIX_HISTORY`, `PREFIX_VELOCITY`,
+`PREFIX_COMPARISON`) by appending a version segment (e.g. `...:v2:`) so old keys
+are orphaned immediately on deploy. The bumped prefixes MUST stay under the
+`customreport:analytics:` SCAN root so `invalidateAll` still reaches them; the
+orphaned keys then age out via TTL.

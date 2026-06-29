@@ -2,17 +2,25 @@
 
 ## 1. CI pipeline enforcement
 
-- [ ] 1.1 In `.github/workflows/ci.yml`, replace the E2E job's
-      `run: pnpm db:seed:simple` with `run: pnpm db:seed:middle` (confirm against
-      the E2E suite's expected dataset; fall back to `db:seed:small` only if the
-      suite needs the demo dataset).
+- [ ] 1.1 In `.github/workflows/ci.yml`, replace the visual-regression
+      (`visual-baseline`) job's `run: pnpm db:seed:simple` with
+      `run: pnpm db:seed:middle` — this is the only `db:seed:simple` occurrence;
+      the E2E job seeds via `pnpm exec tsx prisma/seed.ts` and is unaffected.
+      Confirm against the visual baselines' expected dataset; fall back to
+      `db:seed:small` only if the suite needs the demo dataset.
 - [ ] 1.2 Grep the whole workflow for any other `pnpm <script>` reference and
       confirm each resolves to a script defined in the root `package.json`.
 - [ ] 1.3 In `.husky/pre-push`, add `pnpm turbo typecheck`, `pnpm lint`, and
       `pnpm format:check` ahead of the existing `pnpm catalog:check` and
       `pnpm test` steps; keep the `CI=true` / `SKIP_PREPUSH=1` skip block intact.
+      Also add `set -e` immediately after the skip block (or chain every gate
+      with `&&`): the current hook runs unchained sequential commands, so only
+      the last command's exit status reaches `git` and a failed early gate is
+      masked by a later passing one — `set -e` makes any non-zero gate abort.
 - [ ] 1.4 Verify pre-push locally: a tree with a type error aborts the push; a
-      clean tree passes; `SKIP_PREPUSH=1 git push` skips.
+      clean tree passes; `SKIP_PREPUSH=1 git push` skips; and a failing early
+      gate (e.g. catalog drift) aborts even when the later `pnpm test` would
+      pass — confirming the failure is not masked.
 - [ ] 1.5 (Follow-up, gated on a runner) Restore `push` and `pull_request`
       triggers in `ci.yml`, remove the `workflow_dispatch`-only stanza and its
       dormant-CI comment, and enable required status checks on `main`.
@@ -47,7 +55,10 @@
       `ports: ["${API_PORT:-3001}:3001"]` with `expose: ["3001"]` (or a
       `127.0.0.1`-bound publish if a documented ops need requires host access).
 - [ ] 3.4 Bring up the prod compose and confirm Caddy still reverse-proxies to
-      `api:3001` over the compose network and the API host port is not reachable.
+      `api:3001` over the compose network and the API is not reachable from a
+      remote machine — with `expose:` no host port is published at all; with the
+      `127.0.0.1`-bound option the port is loopback-only (host-local reach is the
+      accepted trade-off).
 - [ ] 3.5 Note in the `set-express-trust-proxy` change that its
       `BL-DEPLOY-SEAM-MISC` host-port prerequisite is now satisfied.
 
@@ -72,7 +83,7 @@
 - [ ] 5.1 Run `openspec validate "ci-deploy-supplychain-hardening" --strict` and
       confirm it exits 0.
 - [ ] 5.2 Run the repo gate chain `pnpm typecheck && pnpm lint && pnpm test &&
-    pnpm build` to confirm the infra changes did not break the build.
+  pnpm build` to confirm the infra changes did not break the build.
 - [ ] 5.3 Coordinate the Caddyfile edits with `route-pdfs-and-authz` and
       `protect-metrics-endpoint` so the `@api` matcher and CSP header regions do
       not collide on merge.

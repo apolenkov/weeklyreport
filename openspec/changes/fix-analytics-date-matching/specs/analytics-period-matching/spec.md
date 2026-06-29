@@ -21,6 +21,27 @@ The day range MUST be computed in UTC so the match is timezone-stable and aligns
 - **THEN** both sides resolve non-empty
 - **AND** the result is NOT an empty `rows` array
 
+### Requirement: Range Queries Include the Full Final Day of `periodTo`
+
+`trafficLightHistory` and `leadVelocity` (`apps/api/src/modules/analytics/analytics.prisma-repository.ts`) MUST include reports whose `periodEnd` falls anywhere within the `periodTo` calendar day, NOT only those whose `periodEnd` is exactly midnight UTC. The current upper bound `periodEnd: { lte: new Date(periodTo) }` resolves `periodTo` to midnight UTC and silently excludes a report whose `periodEnd` carries a later time component on that same day.
+
+The upper bound MUST become a half-open exclusive bound at the start of the day AFTER `periodTo` (`periodEnd: { lt: startOfDayUTC(periodTo) + 1 day }`), computed in UTC so the final day is fully inclusive and the match stays timezone-stable and consistent with the `isoDateOnly` label. The `published` floor and the `leadId`/`projectId` filters MUST be preserved.
+
+#### Scenario: trafficLightHistory includes a final-day report with a time component
+
+- **GIVEN** a published `Report` whose `periodEnd` is `2026-06-26T17:00:00.000Z`
+- **AND** a `trafficLightHistory` request whose `periodTo` is `2026-06-26`
+- **WHEN** the repository resolves the range
+- **THEN** that report contributes a column label for `2026-06-26`
+- **AND** it is NOT excluded because its time component is after midnight UTC
+
+#### Scenario: leadVelocity includes a final-day report with a time component
+
+- **GIVEN** a published `Report` whose `periodEnd` is `2026-06-26T17:00:00.000Z`
+- **AND** a `leadVelocity` request whose `periodTo` is `2026-06-26`
+- **WHEN** the repository resolves the range
+- **THEN** that report contributes a velocity entry for its period label
+
 ### Requirement: Date-Only Analytics Inputs Are Validated as Real Calendar Dates
 
 The shared `isoDateOnly` schema (`packages/shared/src/schemas/analytics.ts`), used by every analytics input field (`periodFrom`, `periodTo`, `periodA`, `periodB`) and every date-label output field, MUST reject a string that is correctly shaped but is not a real calendar date. A format-only regex (`/^\d{4}-\d{2}-\d{2}$/`) accepts impossible dates such as `2026-13-45` and `2026-02-30`, which then produce a wrong or `Invalid Date` query boundary instead of a clean edge rejection.

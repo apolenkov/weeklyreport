@@ -1,7 +1,9 @@
-## 1. Shared package — type fix
+## 1. Web — type fix
 
-- [ ] 1.1 Add `priorityRank` to the `LeadKanbanItem` type so it declares what
-      `mapLeadItems` emits (verify no `@customreport/shared` consumer breaks).
+- [ ] 1.1 Add `priorityRank` to the local `LeadKanbanItem` interface in
+      `apps/web/src/lib/mappers/lead-form.ts` so it declares what `mapLeadItems`
+      emits (verify no web consumer breaks). The type is web-local; there is no
+      `packages/shared` `LeadKanbanItem`.
 
 ## 2. API — consolidate duplicated derivations
 
@@ -27,8 +29,10 @@
 
 - [ ] 4.1 Grep-prove `auth.module.ts` + `jwt.strategy.ts` and the module-level
       `admin.router.ts` / `review.router.ts` are imported only by tests, then
-      delete them (or wire one as the single path) and point their tests at the
-      live `adminProcedure` / `headProcedure` routers.
+      delete them and point their tests at the live `adminProcedure` /
+      `headProcedure` routers. Do not wire the stale routers in — `admin.router.ts`
+      gates with `createRoleGuard("head")` while the live `adminProcedure` is
+      admin-only, so wiring it would re-open admin endpoints to heads.
 - [ ] 4.2 Remove the activity `lastEdit` dead null branch in
       `activity.prisma-repository.ts`.
 

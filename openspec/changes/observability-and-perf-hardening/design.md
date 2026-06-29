@@ -47,12 +47,16 @@ exact-header restatement of the old requirement is needed.
   to the documented default (5) and a warn log naming the bad value. Keeps the
   alert live under misconfiguration.
 - Telegram queue: add `telegram-outbound` to `QUEUE_NAMES`
-  (`dlq-monitor.service.ts`) and increment
-  `cr_dlq_failed_total{queue="telegram-outbound"}` from the telegram worker's
-  failed handler. Telegram is a Phase 55 deferred feature, so the activation
-  point carries a `TODO(Phase 55)` per the deferred-feature convention; the
-  metric label is declared up front so observability is ready when the feature
-  turns on.
+  (`dlq-monitor.service.ts`). The DLQ monitor already increments
+  `cr_dlq_failed_total{queue}` exactly once per terminal failure via its
+  per-queue `QueueEvents` listener, and `checkThresholds` iterates the same
+  `QUEUE_NAMES`-derived queue map — so a single `QUEUE_NAMES` entry both counts
+  telegram terminal failures and makes them eligible for the alert. Do NOT also
+  increment from a telegram worker handler; that would double-count terminal
+  failures. Telegram is a Phase 55 deferred feature, so the `QUEUE_NAMES` entry
+  (the new activation point) carries a `TODO(Phase 55)` per the deferred-feature
+  convention; the metric label is declared up front so observability is ready
+  when the feature turns on.
 - Bull Board lifecycle: the two `Queue` instances must be owned by a
   lifecycle-aware holder (DI provider or module `onModuleDestroy`) so they
   `close()` on shutdown and release their Redis connection.
@@ -62,8 +66,12 @@ exact-header restatement of the old requirement is needed.
 Each item is a local, behavior-preserving optimization:
 
 - `Promise.all([leadUsers, projects])` in `getWeeklyReport`.
-- Archive listing: DB `take`/`skip`; load the nested section graph only for
-  snapshot-less fallback rows (split the query, or select the graph lazily).
+- Archive listing: push pagination into the repository using the existing
+  `reportId` cursor (`Prisma cursor: { id }` + `skip: 1`) with stable
+  `orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }]`, and emit the last row's
+  `reportId` as `nextCursor` (null on the final/empty page). Load the nested
+  section graph only for snapshot-less fallback rows (split the query, or select
+  the graph lazily).
 - `upsertUsers`: prefetch the removed set in one query, then one `deleteMany`.
 - Organization read: `findUnique`, fall back to create only when absent — removes
   the write lock on the anonymous landing path.
@@ -84,8 +92,9 @@ Each item is a local, behavior-preserving optimization:
 
 - `pnpm typecheck`, `pnpm lint`, `pnpm test`, `pnpm build` green.
 - Unit tests: threshold-fallback warn path; telegram failed-handler increments
-  `cr_dlq_failed_total`; Bull Board queues closed on shutdown; `getWeeklyReport`
-  dispatches both queries concurrently; archive pagination reads only the page;
+  `cr_dlq_failed_total` exactly once; Bull Board queues closed on shutdown;
+  `getWeeklyReport` dispatches both queries concurrently; archive cursor
+  pagination reads only the page and resumes from the `reportId` cursor;
   `upsertUsers` issues one `deleteMany`; organization read performs no write when
   the row exists; logger does not prune per line.
 - (Markdownlint is removed in this repo — do not run `pnpm lint:md`.)

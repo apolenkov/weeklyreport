@@ -21,10 +21,12 @@ Source: repo-excellence review backlog item `fix-reminders-escalation-dedupe`
 
 ## What Changes
 
-- Resolve the escalation recipient by HEAD role — the head of the reporting
-  group whose leads are late (`ReportingGroup.headUserId`, role `head`/`admin`)
-  — instead of `report.publishedBy`. The digest fires regardless of whether the
-  period has been published, which is the normal escalation state.
+- Resolve the escalation recipient by HEAD role — the active head of the
+  reporting group whose leads are late (`ReportingGroup.headUserId`, role
+  `head`/`admin`, `isActive = true`) — instead of `report.publishedBy`. The
+  digest fires regardless of whether the period has been published, which is the
+  normal escalation state; a deactivated head is logged and skipped, not
+  targeted.
 - Make the dedupe atomic: a single insert-on-conflict on the
   `ReminderExecution.dedupeKey` unique index that reports whether THIS caller
   created the row, replacing the check-then-insert race.
