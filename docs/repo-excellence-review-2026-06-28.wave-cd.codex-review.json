@@ -1,0 +1,354 @@
+[
+  {
+    "changeId": "fix-analytics-date-matching",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/fix-analytics-date-matching/design.md:114-118; apps/api/src/modules/analytics/analytics.service.ts:44-46,69,78,89; apps/api/src/modules/analytics/analytics.cache.ts:42-55",
+        "problem": "The design claims existing analytics cache entries remain valid, but the code caches by static endpoint prefix plus parsed input. This change intentionally changes results for the same inputs, so pre-deploy cached empty/wrong periodComparison, history, or velocity results can be served after the fix until TTL/Redis eviction.",
+        "fix": "Version/bump the analytics cache prefixes or add an explicit analytics cache invalidation/deploy task, and update the design/tasks accordingly."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/fix-analytics-date-matching/design.md:44-48; openspec/changes/fix-analytics-date-matching/tasks.md:24-27; openspec/changes/fix-analytics-date-matching/specs/analytics-period-matching/spec.md:3-73",
+        "problem": "The design/tasks require changing trafficLightHistory and leadVelocity periodTo upper-bound semantics, but the added spec only requires periodComparison day-range matching, real-date validation, and aggregation. The leadVelocity/history final-day behavior has no requirement or scenario coverage despite being an observable API change.",
+        "fix": "Add requirements/scenarios covering inclusive periodTo behavior for trafficLightHistory and leadVelocity, or remove those tasks from this change."
+      }
+    ],
+    "notes": "Reviewed the full change directory and spot-checked the cited analytics code, cache code, Report model, and related active specs."
+  },
+  {
+    "changeId": "fix-reminders-escalation-dedupe",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/fix-reminders-escalation-dedupe/specs/reminder-dispatch-integrity/spec.md; openspec/changes/fix-reminders-escalation-dedupe/tasks.md; prisma/schema.prisma:24-33,55-69",
+        "problem": "The requirement says escalation must target the active head, and User has isActive, but the scenarios/tasks only require ReportingGroup.headUserId plus role head/admin. That leaves a deactivated group head eligible for escalation email delivery, bypassing the repo's deactivation model.",
+        "fix": "Require head.isActive=true in recipient resolution and add a scenario/test for a deactivated head being logged/skipped without aborting other groups."
+      }
+    ],
+    "notes": "Read the full change directory, cited reminders code, schema relations, existing admin-reminders-ui spec, and ran openspec validate --strict successfully."
+  },
+  {
+    "changeId": "harden-web-vitals-endpoint",
+    "available": true,
+    "verdict": "APPROVED",
+    "issues": [
+      {
+        "severity": "Low",
+        "where": "openspec/changes/harden-web-vitals-endpoint/specs/web-vitals-ingestion/spec.md",
+        "problem": "The validation requirement says id MUST be a non-empty string, but the scenarios and tasks only exercise missing/non-numeric value and unknown name; an empty id could regress without a spec-backed test.",
+        "fix": "Add a scenario/task asserting empty or missing id returns 400 and records nothing."
+      }
+    ],
+    "notes": "Spot-checked cited endpoint, metrics, limiter wiring, web sender, and touched durable specs; no material contradiction or implementation-blocking flaw found."
+  },
+  {
+    "changeId": "protect-metrics-endpoint",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/protect-metrics-endpoint/design.md:20-23; deploy/prometheus.yml:1-5; deploy/prometheus.yml:21-22; docker-compose.prod.yml:191-199",
+        "problem": "The design says no prod Prometheus config exists in the repo, but deploy/prometheus.yml is explicitly labeled as prod scrape config and targets api:3002 while the prod API listens on 3001. Leaving it untouched contradicts the proposed production scraper scenario and may leave prod observability broken or unverified.",
+        "fix": "Account for deploy/prometheus.yml in proposal/design/tasks and either update its target to the real prod API port/path or explicitly retire it as non-authoritative."
+      },
+      {
+        "severity": "High",
+        "where": "docker-compose.prod.yml:198-199; openspec/changes/protect-metrics-endpoint/specs/metrics-scrape-access-control/spec.md:22-26",
+        "problem": "The change blocks only the Caddy public-domain route, but prod compose still publishes the API port on the host. If that host port is reachable externally, /metrics remains publicly reachable by bypassing Caddy, while the new requirement treats a host-mapped port as an authorized internal path without requiring loopback/firewall binding.",
+        "fix": "Add a requirement/task to make prod direct API metrics access non-public, e.g. bind API_PORT to 127.0.0.1, remove the host port, require firewall proof, or add an application-layer metrics guard."
+      }
+    ],
+    "notes": "openspec validate protect-metrics-endpoint --strict passes, and the current Caddyfiles do expose /metrics through @api as described."
+  },
+  {
+    "changeId": "guard-metrics-scrape-db-failure",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/guard-metrics-scrape-db-failure/specs/metrics-scrape-resilience/spec.md:9-10, openspec/changes/guard-metrics-scrape-db-failure/design.md:39-57, openspec/changes/guard-metrics-scrape-db-failure/tasks.md:3-6",
+        "problem": "The durable requirement says errors must be logged via the injected Logger, but the design and tasks explicitly choose a class-field new Logger(TelemetryGauges.name) with no constructor injection. An implementer cannot satisfy both the spec wording and the design/tasks.",
+        "fix": "Change the spec/proposal wording from injected Logger to NestJS Logger instance, or change the design/tasks to actually inject Logger through the provider factory."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/guard-metrics-scrape-db-failure/tasks.md:21-33 vs specs/metrics-scrape-resilience/spec.md:17-37",
+        "problem": "The required scenarios assert Registry.metrics() resolves and DB-independent metrics remain in the scrape, but the planned tests only exercise collect callbacks and logger calls. That misses the actual failure boundary cited in the proposal: Registry.metrics() Promise.all aggregation through metricsRegistry.",
+        "fix": "Add at least one test that installs throwing TelemetryGauges callbacks, calls metricsRegistry.metrics(), asserts it resolves, and asserts known non-DB metric families still appear."
+      },
+      {
+        "severity": "Low",
+        "where": "openspec/changes/guard-metrics-scrape-db-failure/design.md:70-81",
+        "problem": "The design claims Logger.error creates a Bugsink-correlated signal, but current code routes Nest Logger through the app logger/log files while Bugsink is specified for captured errors/exceptions; a caught-and-logged error is not shown to be sent to Bugsink.",
+        "fix": "Remove the Bugsink claim or add an explicit captured-error path if Bugsink visibility is a requirement."
+      }
+    ],
+    "notes": "Read the full change directory, cited telemetry code, metrics controller/registry/module paths, telemetry tests, and relevant existing metrics/error specs; openspec validate guard-metrics-scrape-db-failure --strict passes, but validation does not catch the spec/design contradictions above."
+  },
+  {
+    "changeId": "fix-period-datetime-tz",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/fix-period-datetime-tz/proposal.md:46; apps/api/src/modules/admin/admin-period.queries.ts:226; apps/api/src/modules/reminders/reminders.scheduler.ts:55",
+        "problem": "The proposal claims reminder scheduling stops drifting, but manual period update only patches Report fields and the reminders scheduler dispatches stored ReminderRule.fireAt rows. Existing rule fireAt values are not recomputed when a deadline is edited, so the stated downstream reminder impact is not guaranteed by this web-only parser fix.",
+        "fix": "Either narrow the impact statement to Report.deadline consumers/future rule materialization, or expand the change to reapply reminder policies/update ReminderRule.fireAt when updatePeriodManual changes deadline."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/fix-period-datetime-tz/tasks.md:22; apps/web/src/components/admin/periods-tab.test.tsx:523",
+        "problem": "The test task can be satisfied by a detached display/parse helper assertion and would not prove the real dialog submit path is fixed. The existing PeriodsTab test harness already captures updatePeriodManual payloads, but its edit-submit test currently asserts only reportId and weekLabel, not deadline; under the default UTC test process the old new Date(deadline) bug would also pass unless non-UTC execution is explicit.",
+        "fix": "Require a component regression using the real CreatePeriodDialog/PeriodsTab submit path, with a non-UTC timezone setup or equivalent parser injection, asserting an unchanged edit deadline submits the original ISO instant and that validation and submit use the same parsed instant."
+      }
+    ],
+    "notes": "(bg codex)"
+  },
+  {
+    "changeId": "fix-risk-stage-integrity-impl",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/fix-risk-stage-integrity-impl/specs/risk-stage-integrity/spec.md:5",
+        "problem": "The zero-owned-stage rule disables Save for any product with no owned stages, but existing code/tests support editing a cross-stage risk that already has stageIds even when stagesForProduct returns []; this would regress apps/web/src/components/lead/risk-edit-dialog.test.tsx:729 by making a valid existing risk unsaveable.",
+        "fix": "Scope the disabled/contact-admin state to create or truly stage-less rows; preserve saving when an existing risk already has stageIds."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/fix-risk-stage-integrity-impl/design.md:43",
+        "problem": "The proposed z.string().min(1).refine(noNullBytes) does not reject whitespace-only or invisible-only stage elements, despite the spec saying whitespace-only elements must be rejected and despite safeText already enforcing visible content.",
+        "fix": "Use an element schema that trims/refines visible content as well as null bytes, and add whitespace/invisible-only test cases."
+      }
+    ],
+    "notes": "Read the full change directory, the touched durable risk-stage-integrity spec, and the cited risk dialog, stage selector, shared schema, and relevant tests."
+  },
+  {
+    "changeId": "key-charts-by-id",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/key-charts-by-id/specs/analytics-chart-series-identity/spec.md:27",
+        "problem": "The display-name requirement says TrafficLightHistoryChart legend entries must show project names, and the proposal/design repeat that legend claim, but the actual component renders ChartTooltip only and no Legend; tasks only add name={row.projectName}, so the requirement either describes a nonexistent UI or silently adds a new visible legend without scoping it.",
+        "fix": "Either add an explicit task/design decision to render a Legend in TrafficLightHistoryChart, or revise the requirement/scenarios to preserve tooltip labels only for that chart."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/key-charts-by-id/tasks.md:21",
+        "problem": "The proposed tests assert submittedSections values and Line dataKey/name props in the rendered tree, but the current chart tests use real Recharts with only a ResizeObserver stub and currently assert crash-free mount; Recharts Bar/Line props are not exposed as stable DOM nodes, so the regression test plan is underspecified and likely brittle/unimplementable as written.",
+        "fix": "Specify a Recharts test mock or a small chart-data builder export so tests can assert UUID dataKeys and independent values deterministically."
+      }
+    ],
+    "notes": "The core code premise checks out: current LeadVelocityChart and TrafficLightHistoryChart pivot by display name, while shared schemas already include leadId/projectId. No existing durable analytics/chart spec was found by scoped search."
+  },
+  {
+    "changeId": "fix-dashboard-nan-pending",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/fix-dashboard-nan-pending/tasks.md:47",
+        "problem": "The KpiCards test task tells the implementer to assert that the Submissions region aria-label contains \"(0%)\", but the current component's region aria-label is only `Submissions: ${data.submitted} of ${data.total}, ${data.pendingCount} pending`; the percentage lives on the ring title attribute instead. This contradicts the delta spec's title-attribute requirement and will either fail as written or push an unnecessary aria-label change.",
+        "fix": "Change the task to assert the region label contains `0 of 0, 0 pending` and separately assert the conic ring title is `0 of 0 leads submitted this week (0%)` and contains no `NaN`."
+      }
+    ],
+    "notes": "Read the full change directory, existing head-dashboard-clarity spec, cited dashboard components/tests, mapper contract for pendingLeads, and ran `openspec validate fix-dashboard-nan-pending --strict` successfully."
+  },
+  {
+    "changeId": "fix-heap-health-threshold",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/fix-heap-health-threshold/proposal.md:15 and docker-compose.prod.yml:137",
+        "problem": "The proposal promises HEAP_HEALTH_THRESHOLD_BYTES is operator-controlled, but docker-compose.prod.yml uses an explicit api environment block and does not pass that variable into the container; a deployment .env override would be ignored, so the 'smaller container' requirement cannot work in prod.",
+        "fix": "Add HEAP_HEALTH_THRESHOLD_BYTES: ${HEAP_HEALTH_THRESHOLD_BYTES:-1610612736} to the api service environment and make that a required task."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/fix-heap-health-threshold/design.md:77",
+        "problem": "The design says to inject @Inject(ENV_CONFIG) via HealthModule and says HealthModule already imports ConfigModule, but current code has no ENV_CONFIG token/provider and HealthModule imports only TerminusModule and BullMQModule; following the design as written will not compile unless new DI infrastructure is created.",
+        "fix": "Amend design/tasks to create or reuse a real EnvConfig provider/token, export/import it where needed, or explicitly use the parallel config-provider change as a dependency."
+      }
+    ],
+    "notes": "Read proposal.md, design.md, tasks.md, the delta spec, durable health-indicator-service-migration spec, and spot-checked the cited health/env/compose files."
+  },
+  {
+    "changeId": "enforce-smtp-config",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/enforce-smtp-config/specs/env-config-validation/spec.md:37; apps/api/src/modules/pdf-export/pdf-export.service.ts:79; apps/api/src/modules/pdf-export/pdf-export.service.ts:126",
+        "problem": "The change requires PDF_EXPORT_JWT_SECRET to be at least 32 characters in every environment, but the task plan only updates env.schema; the actual PDF token signer/verifier still read process.env directly and accept any secret length >=16, so direct tests/callers can keep a weaker floor and stale errors.",
+        "fix": "Add requirements/tasks/tests to raise signPdfExportToken and verifyPdfExportToken guards and messages from 16 to 32, or explicitly scope the new floor to validateEnv only."
+      },
+      {
+        "severity": "Low",
+        "where": "openspec/changes/enforce-smtp-config/design.md:60; apps/api/src/main.ts:102; apps/api/src/main.ts:121",
+        "problem": "The design says EmailService/provider validation happens during NestFactory.create before today's main.ts validateEnv check, but main.ts already calls validateEnv before NestFactory.create, so the ordering rationale is factually wrong.",
+        "fix": "Revise the design to state main.ts remains the first production boot validation path while the DI provider gives non-main Nest consumers the same validated EnvConfig."
+      },
+      {
+        "severity": "Low",
+        "where": "openspec/changes/enforce-smtp-config/tasks.md:1; docker-compose.prod.yml:160",
+        "problem": "Raising PDF_EXPORT_JWT_SECRET to min 32 leaves the production compose required-env message saying min 16, and no task covers updating that deployment-facing contract.",
+        "fix": "Add a task to update docker-compose.prod.yml and any env docs/messages from min 16 to min 32."
+      }
+    ],
+    "notes": "openspec validate enforce-smtp-config --strict passes; review stayed read-only and focused on cited code/specs."
+  },
+  {
+    "changeId": "serialize-autosave",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/serialize-autosave/design.md / tasks.md; apps/web/src/hooks/use-lead-form-autosave.ts:112-127,154-159",
+        "problem": "The proposal says the queue preserves the current payload snapshot, but the existing drain sends that queued payload with reportSectionIdRef.current, which is the latest section id at drain time, not the section id that belonged to the queued payload. If the lead edits report A, queues a newer payload while save A is in flight, then navigates to report B before A resolves, the queued A payload can be written to B's section. Report URLs/period navigation are durable behavior, and lead-form.tsx intentionally changes sectionIdForActions with the loaded report, so this is a real retargeting/data-corruption edge the proposal does not cover.",
+        "fix": "Capture the queued target section id with the queued payload/key and drain with that captured id, or stop overriding queued.reportSectionId; add a route/period-switch scenario test."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/serialize-autosave/design.md; apps/web/src/hooks/use-lead-form-autosave.ts:131-133,162-184",
+        "problem": "The design claims that when onError clears queuedKeyRef, dirty remains true so the debounce re-arms and saves again. In the actual hook, the debounce effect depends on payloadKey/enabled/dirty/reportSectionId/debounceMs; after a queued payload's timer has already fired, an in-flight failure only changes state to error while dirty remains true, so the effect does not schedule a new timer. The queued payload is dropped until another edit or manual save.",
+        "fix": "Either make this an explicit non-goal/user-retry behavior, or require an onError path that schedules/requeues the latest dirty payload and cover it with a scenario/test."
+      }
+    ],
+    "notes": "Read the full serialize-autosave change directory, the cited hook/test/code paths, and the touched durable specs client-error-policy, lead-dialog-lifecycle, lead-report-controls-integrity, report-routing, and period-dual-state; openspec validate serialize-autosave --strict passes."
+  },
+  {
+    "changeId": "observe-prisma-pool",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/observe-prisma-pool/specs/prisma-pool-observability/spec.md:41-46; openspec/changes/observe-prisma-pool/tasks.md:3-6; node_modules/.pnpm/pg-pool@3.14.0_pg@8.22.0/node_modules/pg-pool/index.js:89,119-120,166-167,206-208",
+        "problem": "The parsing contract only falls back when values are absent or non-numeric, so numeric-but-invalid env values are accepted. `DB_POOL_MAX=-1` makes an empty pool report full (`0 >= -1`) and, with the proposed default `connectionTimeoutMillis: 0`, queued DB work can wait forever. `DB_POOL_MAX=0` is also logged/resolved as 0 while pg-pool coerces it to 10 via `max || 10`, so the required boot log can lie about the active config.",
+        "fix": "Define and task explicit range validation: `DB_POOL_MAX` must be a positive integer; timeout values must be non-negative integers. Either fail boot with a clear error or fallback for all invalid values, including negative/zero/out-of-range numerics, and require tests for those cases."
+      },
+      {
+        "severity": "High",
+        "where": "openspec/changes/observe-prisma-pool/proposal.md:13-15,39-42; openspec/changes/observe-prisma-pool/specs/prisma-pool-observability/spec.md:16-17,48-50; apps/api/src/lib/nest-app-logger.adapter.ts:19-23",
+        "problem": "The spec requires structured log payload fields, but the planned sole API edit uses Nest `Logger` from `PrismaService`. The current Nest adapter converts the first argument with `String(message)` and does not spread object metadata into the AppLogger entry, so `this.logger.error({phase:'pg.pool.error',message:...})` becomes `[object Object]`, and `this.logger.error('...', {phase:...})` is treated as `nestContext`, not structured fields. As written, the requirement is not implementable by editing only `prisma.service.ts`.",
+        "fix": "Either revise the design/tasks to update `NestAppLoggerAdapter` to preserve record metadata from Nest Logger optional params, or change the requirement to the repo’s existing string-with-JSON convention and stop claiming top-level structured payload fields."
+      }
+    ],
+    "notes": "`openspec validate observe-prisma-pool --strict` passes, but it does not catch these semantic issues."
+  },
+  {
+    "changeId": "ci-deploy-supplychain-hardening",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "Blocker",
+        "where": ".husky/pre-push:13-17 and openspec/changes/ci-deploy-supplychain-hardening/specs/ci-pipeline-enforcement/spec.md",
+        "problem": "The proposal requires typecheck/lint/format failures to abort a push, but the existing hook has no `set -e` or `&&` chaining, so merely inserting `pnpm turbo typecheck`, `pnpm lint`, and `pnpm format:check` before the existing commands can still let a failed early gate be masked by a later successful `pnpm test`.",
+        "fix": "Require `set -e` at the top of `.husky/pre-push` or chain every gate with `&&`, and add that to the tasks/spec scenarios."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/ci-deploy-supplychain-hardening/tasks.md:1.1 and .github/workflows/ci.yml:329-330",
+        "problem": "The task says to replace the E2E job's `pnpm db:seed:simple`, but the actual dangling script is in the visual-baseline job, not the E2E job; an implementer following the task literally could miss the only broken reference.",
+        "fix": "Change the task/proposal wording to target the visual-regression seed step, while keeping the global grep requirement that `db:seed:simple` disappears from the workflow."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/ci-deploy-supplychain-hardening/specs/deploy-edge-topology/spec.md",
+        "problem": "The requirement allows a localhost-bound API publish as an alternative, but the `Edge controls cannot be bypassed at the host` scenario says the API socket is not reachable from the host; that contradicts the localhost-bound option and leaves acceptance unclear.",
+        "fix": "Split acceptance into expose-only versus localhost-bound cases, or make expose-only mandatory if host-local bypass is unacceptable."
+      }
+    ],
+    "notes": "Read the full change directory, cited repo files, and touched durable specs; `openspec validate \"ci-deploy-supplychain-hardening\" --strict` passes but does not catch these semantic issues."
+  },
+  {
+    "changeId": "observability-and-perf-hardening",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/observability-and-perf-hardening/specs/queue-reliability-monitoring/spec.md:24",
+        "problem": "The proposal requires both adding telegram-outbound to DLQMonitor QUEUE_NAMES and incrementing cr_dlq_failed_total from the telegram worker failed handler, but the existing DLQMonitor already increments that counter exactly once for every monitored queue's terminal failure via QueueEvents; doing both will double-count terminal telegram failures.",
+        "fix": "Make DLQMonitor the single owner: add telegram-outbound to QUEUE_NAMES and remove the worker-handler counter requirement/task, or explicitly choose the worker handler and do not monitor it centrally."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/observability-and-perf-hardening/specs/hot-path-query-performance/spec.md:16",
+        "problem": "Archive pagination is specified as DB take/skip, but the existing public contract is cursor-based with nextCursor=reportId; the spec has no scenario requiring preservation of cursor resume semantics while moving pagination into the repository, so an implementation can satisfy the delta while breaking infinite-scroll pagination.",
+        "fix": "Specify repository-level cursor pagination using the existing reportId cursor/nextCursor contract, with stable ordering and tests for first page, second page, and missing/last cursor behavior."
+      }
+    ],
+    "notes": "Read the full change directory, the existing error-trace-correlation spec, and the cited code; openspec validate observability-and-perf-hardening --strict passes."
+  },
+  {
+    "changeId": "code-health-and-test-cleanup",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/code-health-and-test-cleanup/specs/dead-code-elimination/spec.md",
+        "problem": "The requirement allows the dead module-level admin/review routers to be \"wired in as the single source of truth\", but the actual stale admin router gates with createRoleGuard(\"head\") in apps/api/src/modules/admin/admin.router.ts while the live admin surface is adminProcedure admin-only. Wiring it as allowed could re-open admin endpoints to heads or otherwise change auth semantics.",
+        "fix": "Remove the wire-in option for these stale routers, or require any retained router to be rebuilt on the live adminProcedure/headProcedure semantics before it can replace the inline path."
+      },
+      {
+        "severity": "High",
+        "where": "openspec/changes/code-health-and-test-cleanup/specs/shared-dialog-focus-management/spec.md and tasks.md",
+        "problem": "The spec says every non-admin role=\"dialog\"/\"alertdialog\" modal must use the shared focus primitive, but the task list only migrates risk/decision/reopen/confirmation/publish-lock. Current code has additional non-admin role=\"dialog\" modals in item-edit-dialog.tsx, confirm-delete-dialog.tsx, fill-from-button.tsx, and lead-form.tsx, so the proposal is internally inconsistent and under-scopes the a11y invariant.",
+        "fix": "Either narrow the requirement to the explicitly governed dialog list, or add the omitted non-admin dialogs and corresponding focus-trap/restore tests to tasks.md."
+      },
+      {
+        "severity": "Medium",
+        "where": "openspec/changes/code-health-and-test-cleanup/tasks.md",
+        "problem": "Task 1.1 and the proposal put LeadKanbanItem in the shared package, but the actual LeadKanbanItem interface is local to apps/web/src/lib/mappers/lead-form.ts and no packages/shared LeadKanbanItem exists. The task is aimed at the wrong ownership boundary.",
+        "fix": "Correct the task/spec to update the local web mapper interface, or explicitly add a new shared LeadKanbanItem contract and migrate consumers to it."
+      },
+      {
+        "severity": "Low",
+        "where": "openspec/changes/code-health-and-test-cleanup/specs/web-trpc-test-harness/spec.md and shared-derivation-ssot/spec.md",
+        "problem": "Several cited paths are stale or nonexistent: the MSW setup is apps/web/vitest.setup.ts, not apps/web/src/test-utils/vitest.setup.ts, and computeWorstStatus lives in apps/api/src/modules/published-report-snapshot.ts, not apps/api/src/modules/weekly-report/published-report-snapshot.ts.",
+        "fix": "Update the delta specs and tasks to cite the actual current file paths."
+      }
+    ],
+    "notes": "openspec validate code-health-and-test-cleanup --strict passes, but the proposal still has material scope/auth correctness problems against the cited code."
+  },
+  {
+    "changeId": "input-and-error-hardening",
+    "available": true,
+    "verdict": "REVISE",
+    "issues": [
+      {
+        "severity": "High",
+        "where": "openspec/changes/input-and-error-hardening/specs/api-input-hardening/spec.md:81; openspec/changes/input-and-error-hardening/design.md:57; openspec/changes/input-and-error-hardening/tasks.md:3; packages/shared/src/schemas/search.ts:50",
+        "problem": "The change lowers search q from the existing explicit min-2 contract to safeText({min:1,max:200}). The current schema comment says the spec is explicit about minimum length 2, and the implementation enforces z.string().min(2).max(200), so this proposal introduces unrelated behavior drift while fixing null-byte handling.",
+        "fix": "Use safeText({min:2,max:200}) and add a one-character rejection scenario/test, keeping only the null-byte hardening as the behavioral change."
+      },
+      {
+        "severity": "High",
+        "where": "openspec/changes/input-and-error-hardening/specs/enum-state-hygiene/spec.md:14; openspec/changes/input-and-error-hardening/design.md:77; apps/api/src/lib/logger.ts:18; apps/api/src/lib/audit-logger.ts:164",
+        "problem": "The spec promises undeclared emitted audit event strings become compile errors, but AppLogger accepts Record<string,unknown> and audit-logger.ts writes raw object literals to logger.info, so adding 'period.manual-edit' to AuditEvent does not by itself typecheck emitted event fields or future raw strings.",
+        "fix": "Require a typed audit emit helper or a satisfies/typed payload pattern for every audit logger event object, and make task 7.2 mandatory for all emit sites needed to satisfy the compile-error scenario."
+      }
+    ],
+    "notes": "openspec validate input-and-error-hardening --strict passes, but structural validity does not cover these semantic mismatches."
+  }
+]
