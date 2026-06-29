@@ -221,8 +221,10 @@ model Report {
   publishedBy       User?                @relation("PublishedBy", fields: [publishedById], references: [id])
   sections          ReportSection[]
   // C2 (A24/A21): PARTIAL UNIQUE INDEX "Report_one_open_per_boundary"
-  // ON ("periodStart","periodEnd") WHERE "periodState"='open' — defined via raw migration
-  // (Prisma schema DSL does not support WHERE-clause partial indexes natively).
+  // ON ("periodStart","periodEnd") WHERE "periodState"='open' — hand-written in
+  // the init migration (migrations/20260530162224_init/migration.sql) because the
+  // Prisma schema DSL does not support WHERE-clause partial indexes natively.
+  // It only lands via `prisma migrate reset` (deploy skips the same-named init).
 
   @@index([periodStart(sort: Desc)])
   @@index([status, periodStart(sort: Desc)])
