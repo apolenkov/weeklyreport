@@ -22,7 +22,14 @@ jobs) for the JWT's ~1h TTL. See backlog `BL-DEACTIVATION-BYPASS` (P1) in
   `PrismaService` and `SessionRevocationService` from Nest DI (`_app.get`) in
   `mountBullBoard` and making the guard async.
 - Refactor the regular tRPC session path to call the same helper, so all three
-  sites share one source of truth (a true extraction, not a third copy).
+  sites share one source of truth (an extraction with one intentional fix, not a
+  third copy). The helper additionally treats a missing/null `User` row as
+  barred (fail closed): today's regular-path check `if (userRow &&
+!userRow.isActive)` fails OPEN for a hard-deleted user, and admin
+  snapshot-restore hard-deletes users without adding them to the revoked set, so
+  a deleted user keeps a live session for the JWT TTL. This is the only
+  observable regular-path behavior change; the revoked and `isActive=false`
+  outcomes are unchanged.
 
 ## Non-goals
 

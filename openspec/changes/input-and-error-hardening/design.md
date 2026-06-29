@@ -17,6 +17,14 @@ but real defensive gaps across several surfaces:
 7. **Shared schema** — the `telemetry.summary` sparkline schema bound is
    `.max(8)` while the only producer emits 4 and the doc comment says ≤ 4.
 8. **Comments** — three stale comments mislead future maintainers.
+9. **tRPC context** — `trpc.context.ts` reads the session cookie under the
+   hardcoded name `customreport_session`, ignoring `AUTH_JWT_COOKIE_NAME` that
+   `auth.controller.ts`, `auth.routes.ts`, `jwt.strategy.ts`, and
+   `pdf-export.service.ts` all honor. A non-default knob value 401s every
+   authenticated tRPC call (a fail-closed config defect).
+10. **Destructive guard docstring** — the `_destructive-guard.ts` header lists
+    the Docker `postgres` host as unconditionally allowed, contradicting the
+    `isTrulyLocal` logic that requires an explicit non-prod suffix for it.
 
 Most are confined to `apps/api`, `packages/shared`, and `prisma/`. One has a
 UI follow-on: restricting `dev.wipeAndReseed` to `adminProcedure` (item 4)
@@ -30,9 +38,11 @@ external dependency.
 
 **Goals:**
 
-- Satisfy the five new `api-input-hardening` requirements (including the
-  admin-only `DevRoleSwitcher` reset controls).
-- Extend `destructive-db-guard` spec to cover seed/backfill scripts.
+- Satisfy the six new `api-input-hardening` requirements (including the
+  admin-only `DevRoleSwitcher` reset controls and the env-resolved tRPC-context
+  cookie name).
+- Extend `destructive-db-guard` spec to cover seed/backfill scripts and correct
+  its misleading host-allow docstring.
 - Complete the `AuditEvent` union so it matches runtime behavior.
 - Pin the `telemetry-summary-contract` sparkline bound to ≤ 4.
 - Correct three stale comments that carry false contracts.
@@ -121,6 +131,31 @@ Event strings only ever appear as literals inside `createAuditLogger`; all
 callers use the typed `AuditLogger` interface methods. So routing the ~15 emit
 sites in `audit-logger.ts` through the typed helper fully covers the
 compile-error scenario.
+
+### 7. tRPC context cookie name: reuse the established env-default pattern
+
+Replace the hardcoded `req.cookies?.customreport_session` read in
+`trpc.context.ts` with `env.AUTH_JWT_COOKIE_NAME ?? "customreport_session"`,
+the exact resolution already used by the four other auth sites
+(`auth.controller.ts`, `auth.routes.ts`, `jwt.strategy.ts`,
+`pdf-export.service.ts`). The cookie is _written_ under that resolved name by
+`auth.controller.ts`, so the reader must use the same name or it reads nothing.
+No new abstraction — a single `env` access keeps one source of truth and the
+existing default literal. Note: `bull-board.module.ts` reads the same cookie
+under the same hardcoded name — an identical defect of the same class. It is
+out of scope for _this_ finding (which named only `trpc.context.ts`) and is
+NOT covered by the separate `enforce-deactivation-pdf-bullboard` change, whose
+non-goal is revocation/deactivation, a different concern that does not
+re-resolve the cookie name. The bull-board cookie-name defect is therefore
+currently unowned and should be tracked separately.
+
+### 8. Destructive-guard docstring: docs-only correction
+
+The runtime `isTrulyLocal` logic is already correct — only the header docstring
+is wrong, listing `postgres (docker)` among unconditionally-allowed hosts. Fix
+the docstring text only; do not change the logic. The change is verified by the
+two scenarios: a suffix-less `postgres` host is refused (behavior) and the
+docstring no longer claims `postgres` is unconditionally safe (text).
 
 ## Data Flow
 

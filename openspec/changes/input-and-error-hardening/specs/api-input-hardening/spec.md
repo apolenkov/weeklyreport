@@ -3,12 +3,14 @@
 ## Purpose
 
 Defense-in-depth hardening of the inbound request surface in `apps/api`.
-Covers four related gaps found in the 2026-06-28 security review:
+Covers five related gaps found in the 2026-06-28 security review:
 the JWT verifier accepts any algorithm, the correlation-id header is
 adopted verbatim with no length or charset cap, the full-text search
 query reaches `plainto_tsquery` without a null-byte guard (causing an
-unhandled 500), and the `dev.wipeAndReseed` tRPC procedure is callable
-by any authenticated role rather than admin only.
+unhandled 500), the `dev.wipeAndReseed` tRPC procedure is callable
+by any authenticated role rather than admin only, and the tRPC context
+reads the session cookie under a hardcoded name that ignores the
+`AUTH_JWT_COOKIE_NAME` knob every other auth site honors.
 
 Consumer surfaces:
 
@@ -16,6 +18,7 @@ Consumer surfaces:
 - `apps/api/src/infrastructure/middleware/correlation-id.middleware.ts`
 - `packages/shared/src/schemas/search.ts` — `searchQueryInputSchema`
 - `apps/api/src/infrastructure/trpc/trpc.router.ts` — `dev.wipeAndReseed`
+- `apps/api/src/infrastructure/trpc/trpc.context.ts` — session cookie read
 
 ## ADDED Requirements
 
@@ -167,3 +170,33 @@ Consumer surface: `apps/web/src/components/dev/role-switcher.tsx`
 - **WHEN** the switcher menu is opened
 - **THEN** the four data-reset controls are absent or disabled, so no
   `FORBIDDEN` alert can be triggered
+
+### Requirement: tRPC context resolves the session cookie name from AUTH_JWT_COOKIE_NAME
+
+The tRPC context factory MUST resolve the session-token cookie name from
+`AUTH_JWT_COOKIE_NAME`, falling back to the literal `customreport_session`
+when the environment variable is unset. `trpc.context.ts` currently reads
+`req.cookies?.customreport_session` with a hardcoded name, so when the knob
+is set to a non-default value every authenticated tRPC call fails closed
+with `Unauthorized` even though the cookie is present under the configured
+name. The resolution MUST use the same `env.AUTH_JWT_COOKIE_NAME ?? "customreport_session"`
+single-source-of-truth pattern already used by `auth.controller.ts`,
+`auth.routes.ts`, `jwt.strategy.ts`, and `pdf-export.service.ts`.
+
+Consumer surface: `apps/api/src/infrastructure/trpc/trpc.context.ts`.
+
+#### Scenario: Default cookie name is honored when the knob is unset
+
+- **GIVEN** `AUTH_JWT_COOKIE_NAME` is unset and a request carries a
+  `customreport_session` cookie with a valid token
+- **WHEN** the tRPC context factory reads the request
+- **THEN** the token is taken from the `customreport_session` cookie and the
+  session is verified
+
+#### Scenario: Custom cookie name is honored when the knob is set
+
+- **GIVEN** `AUTH_JWT_COOKIE_NAME=app_session` and a request carries an
+  `app_session` cookie with a valid token (and no `customreport_session` cookie)
+- **WHEN** the tRPC context factory reads the request
+- **THEN** the token is taken from the `app_session` cookie and the session is
+  verified, instead of being treated as unauthenticated

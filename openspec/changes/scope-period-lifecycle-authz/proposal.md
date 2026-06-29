@@ -29,6 +29,12 @@ authorization miss from the 2026-06-28 repo-excellence review
   arbitrary-target caller.
 - Out-of-scope targets fail with a typed domain error mapped to `FORBIDDEN` /
   `NOT_FOUND`, not a generic 500.
+- **Admin manual period edit** (`updatePeriodManual`) rejects date-envelope
+  changes (`periodStart` / `periodEnd` / `deadline`) on a **published** period,
+  mirroring `deleteReport`'s existing published-state guard. This is an
+  admin-path frozen-state integrity guard, distinct from the publish/reopen
+  authz above but part of the same period-lifecycle hardening; `weekLabel` and
+  non-published periods stay editable. Reopen reverts the state and unblocks it.
 
 ## Capabilities
 
@@ -67,6 +73,10 @@ authorization miss from the 2026-06-28 repo-excellence review
 - Two new typed domain errors (`PeriodScopeError` → `FORBIDDEN`,
   `PeriodNotFoundError` → `NOT_FOUND`) + matching branches in
   `apps/api/src/infrastructure/trpc/trpc.error-mapper.ts`.
+- `apps/api/src/modules/admin/period-admin.service.ts` — add a published-state
+  guard to `updatePeriodManual` rejecting date-envelope edits on a published
+  period (reuse the existing `AdminAccessError` → `FORBIDDEN`, as `deleteReport`
+  does; no new error class, no mapper branch).
 - No schema change. No UI string change (admin/head controls keep their copy).
 
 ## Non-goals

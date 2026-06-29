@@ -57,13 +57,32 @@
 - [ ] 4.6 Add a case: a source lead with no matching target section does not
       inflate `carriedItemCount` / `carriedDecisionCount` and emits no dangling
       `CarryOverRecord` (every persisted record resolves to a written row).
+- [ ] 4.7 Add cases for the write-integrity guard: carry-over into a published
+      target report, into an archived target report, and into an editable report
+      with a submitted target section are each rejected and persist no rows.
 
-## 5. Verification
+## 5. API — write-integrity guard
 
-- [ ] 5.1 Run `pnpm typecheck` and fix any errors.
-- [ ] 5.2 Run `pnpm lint` and fix any warnings/errors.
-- [ ] 5.3 Run `pnpm test` (including the carry-over integration suite against the
+- [ ] 5.1 In `carry-over.service.ts`, guard `executeCarryOver` before any write:
+      reject with `CarryOverDomainError` when the target report's period is not
+      editable — `periodStatus` not in `{open, reopened}` OR `Report.archived` is
+      true (treat published and archived as closed), mirroring the canonical
+      `computeReopenEligibility` rule and the `fillFrom` / `saveDraft` published
+      guards.
+- [ ] 5.2 Add a `CarryOverRepository` read for the target report's `periodStatus`
+      and `archived` flag (the section `status` is already on the
+      `ReportSectionReadModel` from `getTargetSections`); implement it in
+      `carry-over.prisma-repository.ts`.
+- [ ] 5.3 Reject the execution when any matched target `ReportSection` has status
+      `submitted` (read-only); abort the whole execution (single `$transaction`),
+      do not skip the section.
+
+## 6. Verification
+
+- [ ] 6.1 Run `pnpm typecheck` and fix any errors.
+- [ ] 6.2 Run `pnpm lint` and fix any warnings/errors.
+- [ ] 6.3 Run `pnpm test` (including the carry-over integration suite against the
       `_test` database) and confirm green.
-- [ ] 5.4 Run `pnpm build` and confirm it succeeds.
-- [ ] 5.5 Run `openspec validate "fix-carryover-persistence" --strict` and
+- [ ] 6.4 Run `pnpm build` and confirm it succeeds.
+- [ ] 6.5 Run `openspec validate "fix-carryover-persistence" --strict` and
       confirm it exits 0.

@@ -1,0 +1,103 @@
+export const meta = {
+  name: "followups-ratchet-reverify",
+  description:
+    "Scaffold the tighten-code-quality-ratchet OpenSpec change (extends lint-max-strictness-standard: max-lines 250 + no-magic-numbers/strings + ratchet plan) AND targeted re-review of the 3 highest-risk modules to surface any finding the first run dropped. No product code.",
+  phases: [
+    { title: "Scaffold", detail: "tighten-code-quality-ratchet change" },
+    { title: "Reverify", detail: "auth / report / prisma re-review for missed findings" },
+  ],
+};
+
+const SCAFFOLD_SCHEMA = {
+  type: "object",
+  required: ["changeId", "created", "validated", "mode"],
+  properties: {
+    changeId: { type: "string" }, created: { type: "boolean" }, validated: { type: "boolean" },
+    capabilities: { type: "array", items: { type: "string" } },
+    mode: { enum: ["new-capability", "modify-existing", "mixed", "failed"] }, notes: { type: "string" },
+  },
+};
+
+const FIND_SCHEMA = {
+  type: "object",
+  required: ["module", "findings"],
+  properties: {
+    module: { type: "string" },
+    findings: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["severity", "file", "claim", "evidence", "alreadyCovered"],
+        properties: {
+          severity: { enum: ["Critical", "High", "Medium", "Low"] },
+          file: { type: "string" }, claim: { type: "string" }, evidence: { type: "string" },
+          suggestion: { type: "string" },
+          alreadyCovered: { type: "boolean", description: "true if an existing openspec/changes/* already covers it" },
+          coveredBy: { type: "string" },
+        },
+      },
+    },
+  },
+};
+
+phase("Scaffold");
+const scaffold = await agent(
+  `Author ONE OpenSpec change "tighten-code-quality-ratchet" in the CustomReport repo
+(OpenSpec CLI 1.4.1). Artifacts only — no product code, do not check tasks.
+
+GOAL: tighten the existing, already-completed code-quality ratchet one notch further,
+per the user's enterprise standard. Read openspec/specs/lint-max-strictness-standard/spec.md
+(esp. "Size and complexity thresholds are pinned with exempt directories") and the live
+eslint.config.ts FIRST — the repo already enforces max-lines:300 (skipBlankLines+Comments),
+complexity:20, sonarjs/cognitive-complexity:15 (error), no-explicit-any:error, and the
+R3a ratchet/grandfather blocks are EMPTY (every file already under budget).
+
+This change adds, as a MODIFIED delta against capability lint-max-strictness-standard
+(extend it, do NOT make a new capability):
+  1. Lower max-lines 300 -> 250 (keep skipBlankLines+skipComments).
+  2. Enable no-magic-numbers (TS-aware: @typescript-eslint/no-magic-numbers) and a
+     magic-string policy (lift literals to named const/enum/config), with the repo's
+     existing exemptions (0/1/-1/2 arithmetic, tests, one-off scripts) per
+     ~/.claude/rules/code-style.md.
+  3. A ratchet execution plan (cost-tiered, per-cluster, fix-first escalation ladder)
+     mirroring the spec's existing ratchet requirements, to bring violations under the
+     new thresholds without a big-bang.
+Respect repo conventions (MVP, English-only UI, etc.). Then run \`openspec new change
+tighten-code-quality-ratchet\`, author proposal/specs(MODIFIED delta)/design/tasks via
+the openspec instructions flow, and run \`openspec validate tighten-code-quality-ratchet
+--strict\` until exit 0. Return {changeId, created, validated, capabilities, mode, notes}.`,
+  { label: "scaffold:ratchet", phase: "Scaffold", model: "opus", effort: "high", schema: SCAFFOLD_SCHEMA },
+);
+
+phase("Reverify");
+const MODULES = [
+  { key: "api-auth", paths: "apps/api/src/infrastructure/trpc (context/middleware), apps/api/src/modules/auth, session/revocation, dev-login", refs: "security-review-guide, nestjs" },
+  { key: "api-report", paths: "apps/api/src/modules/report*, report-sections, weekly-report, publication, period, carry-over", refs: "security-review-guide, common-bugs-checklist" },
+  { key: "prisma", paths: "prisma/schema.prisma, prisma/migrations (init), prisma destructive guard", refs: "architecture-review-guide" },
+];
+const SKILL = "/home/user/.claude/skills/code-review-skill";
+const reverify = await parallel(
+  MODULES.map((m) => () =>
+    agent(
+      `Targeted re-review of ONE high-risk module of the CustomReport monorepo to catch any
+substantive defect the prior whole-repo review may have dropped (one verify verdict was
+lost to a tool failure). Read ${SKILL}/SKILL.md + ${SKILL}/reference/{${m.refs}}.md, then
+Read/Grep the module:
+  ${m.paths}
+
+Report ONLY substantive logic/security/data-integrity/correctness findings with file:line
+and concrete evidence. For EACH, set alreadyCovered=true and coveredBy="<change-name>" if an
+existing openspec/changes/* change already addresses it (run \`openspec list\` and skim change
+names/proposals to check) — we only care about NET-NEW findings. Repo conventions: hardcoded
+Russian only a bug in apps/web JSX; ComingSoon intentional; single init migration intentional;
+English-only prod UI intentional; lint/format/style owned by ESLint (do NOT report those).
+Prefer few high-confidence findings. If clean / all-covered, return an empty or all-covered list.
+Return {module:"${m.key}", findings:[...]}.`,
+      { label: `reverify:${m.key}`, phase: "Reverify", model: "opus", effort: "high", schema: FIND_SCHEMA },
+    ),
+  ),
+);
+
+const netNew = reverify.filter(Boolean).flatMap((r) => (r.findings || []).filter((f) => !f.alreadyCovered));
+log(`Reverify: ${netNew.length} net-new findings (not covered by an existing change).`);
+return { scaffold, reverify, netNew };

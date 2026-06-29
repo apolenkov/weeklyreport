@@ -131,3 +131,51 @@ disposition that the service writes only `completed`.
 
 - **WHEN** the dedupe race is resolved
 - **THEN** no `CarryOverExecution` row is written with status `failed`
+
+### Requirement: Carry-over rejects writes into a closed period or read-only target section
+
+`CarryOverService.executeCarryOver` SHALL reject the execution when the target
+report's period is not editable, writing no `Item`, `Decision`,
+`CarryOverExecution`, or `CarryOverRecord` rows.
+
+A period is editable only when its `periodStatus` is `open` or `reopened` AND the
+`Report.archived` flag is `false`; `published` and `archived` periods are closed.
+This mirrors the published-period guards in `LeadFormService.fillFrom`
+(`lead-form.service.ts:91`) and `ReportSectionsService.saveDraft`
+(`report-sections.service.ts:232`) and the canonical editability rule in
+`computeReopenEligibility` (`lead-form-shared.ts:204-209`). Carry-over is today
+the only report write path with no such guard, so writing into a published period
+diverges the live `Item`/`Decision` rows from the frozen `publishedSnapshot` the
+viewer serves.
+
+The execution MUST also reject when any matched target `ReportSection` has status
+`submitted` (read-only), mirroring the submitted-section guards in `fillFrom`
+(`lead-form.service.ts:76`) and `saveDraft` (`report-sections.service.ts:239`).
+Because the persistence runs in one `$transaction` (design D1), a single
+submitted target section aborts the whole execution rather than skipping that
+section. This is a defensive guard: a freshly opened period has all-draft
+sections, so the normal carry-over path is unaffected.
+
+#### Scenario: Carry-over into a published target report is rejected
+
+- **GIVEN** a target report whose `periodStatus` is `published`
+- **WHEN** `executeCarryOver(sourceReportId, targetReportId)` runs
+- **THEN** the execution is rejected with a `CarryOverDomainError`
+- **AND** no `Item`, `Decision`, `CarryOverExecution`, or `CarryOverRecord` rows
+  are written to the target report
+
+#### Scenario: Carry-over into an archived target report is rejected
+
+- **GIVEN** a target report whose `Report.archived` flag is `true`
+- **WHEN** `executeCarryOver(sourceReportId, targetReportId)` runs
+- **THEN** the execution is rejected
+- **AND** no carried rows are persisted
+
+#### Scenario: Carry-over does not overwrite a submitted target section
+
+- **GIVEN** an editable target report whose matched target section has status
+  `submitted`
+- **WHEN** `executeCarryOver(sourceReportId, targetReportId)` runs
+- **THEN** the execution is rejected
+- **AND** the submitted section's existing `Item` and `Decision` rows are
+  unchanged

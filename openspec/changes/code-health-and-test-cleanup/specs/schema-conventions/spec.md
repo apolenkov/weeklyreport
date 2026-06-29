@@ -30,3 +30,25 @@ flag.
 - **THEN** the report-content FKs to `Project` are uniformly `RESTRICT` and a
   comment states hard product deletion is unsupported (archive instead)
 - **AND** the init migration SQL matches the schema's `ON DELETE` clauses
+
+### Requirement: GroupProduct block comment states the enforced single-group invariant
+
+The `GroupProduct` block comment in `prisma/schema.prisma` MUST correctly state
+the enforced single-group invariant rather than an unenforced multi-group claim.
+The current preamble says "a product can belong to multiple groups
+(cross-departmental)", which contradicts both the `@@unique([productId])`
+constraint and the B1 inline comment that immediately follows it. The corrected
+comment SHALL describe the actual invariant (exactly one group per product,
+enforced by `@@unique([productId])`); it SHALL NOT claim cross-departmental or
+multi-group membership as a current capability. No schema change is required —
+this is a comment-only correction.
+
+#### Scenario: a maintainer reads the GroupProduct block and understands the current invariant
+
+- **GIVEN** a maintainer reads the `GroupProduct` model block in
+  `prisma/schema.prisma`
+- **WHEN** they look for the product-to-group ownership rule
+- **THEN** the block comment states that a product currently belongs to exactly
+  one reporting group, enforced by `@@unique([productId])`
+- **AND** no phrase in the comment implies cross-departmental or multi-group
+  membership as a current capability
