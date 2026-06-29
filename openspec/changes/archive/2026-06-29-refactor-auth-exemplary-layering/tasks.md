@@ -17,11 +17,11 @@
       `buildTransition` boundary): find-or-create the current-week draft `Report`,
       creating via `buildTransition(initialPeriodState(...))`. It must NOT create
       lead sections. It MUST return the full shape `{ reportId, periodStart,
-    periodEnd, deadline, periodState }` (the scheduler needs deadline + periodState
+  periodEnd, deadline, periodState }` (the scheduler needs deadline + periodState
       for its audit/log payload).
 - [x] 2.2 Make the factory race-safe: catch ONLY `P2002` whose target is
       `Report_one_open_per_boundary`, re-read by `(periodStart, periodEnd,
-    periodState='open')`, and return the existing row; re-throw any other error.
+  periodState='open')`, and return the existing row; re-throw any other error.
 - [x] 2.3 In the factory, on create (not on find), call
       `policyApplicator.applyToPeriod(created)` (idempotent) so reminder rules are
       materialised at the one creation point. Inject `policyApplicator` optionally,
@@ -29,7 +29,7 @@
 - [x] 2.3a Refactor `period-creator.scheduler.ts::runOnce` to use the factory; DROP
       its own `policyApplicator.applyToPeriod(created)` (the factory now does it), but
       KEEP its `logger.log` line and `auditLogger.periodAutoCreate({... deadline ...
-    periodState})` event, plus skip-when-future-period and scheduled→open logic.
+  periodState})` event, plus skip-when-future-period and scheduled→open logic.
 - [x] 2.3b Test the lazy-path symmetry: a login-created period gets its
       `ReminderRule` rows (the pre-fix asymmetry is gone); and a created period whose
       deadline is already in the past does not schedule reminders beyond the
@@ -46,7 +46,7 @@
 
 - [x] 3.1 In the factory, compute the deadline via
       `lib/business-date.ts::computeDeadline(periodStart, settings.defaultDeadlineDays,
-  settings.workingDays, settings.defaultTimezone, 18)` — identical to the
+settings.workingDays, settings.defaultTimezone, 18)` — identical to the
       scheduler — replacing the old naive `setUTCDate(+N)` + `setUTCHours(18)` UTC stamp.
 - [x] 3.2 Add a test asserting the lazy-path deadline under a non-UTC
       `defaultTimezone` (e.g. UTC+3): lands on the working-day-correct local 18:00,
