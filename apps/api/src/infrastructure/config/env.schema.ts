@@ -21,8 +21,12 @@ export const envSchema = z
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
     LOG_DIR: z.string().optional(),
 
-    // Auth / JWT
-    AUTH_JWT_SECRET: z.string().min(32).optional(),
+    // Auth / JWT. Required unconditionally (min 32): the JWT signer
+    // (`auth.controller.ts::createJwtSigner`) is built at boot in EVERY mode —
+    // dev-login still issues a session JWT — so a config without it crashes at
+    // controller construction regardless of AUTH_DEV_MODE. Making it required
+    // here turns that deferred crash into a clean boot-time validation error.
+    AUTH_JWT_SECRET: z.string().min(32),
 
     // SAML / Keycloak (validated at runtime by saml.strategy.ts requireEnv)
     KEYCLOAK_SAML_CALLBACK_URL: z.url().optional(),
@@ -70,15 +74,6 @@ export const envSchema = z
       .default("dev-only-replace-in-production-min-32-chars"),
   })
   .superRefine((data, ctx) => {
-    if (!data.AUTH_DEV_MODE && !data.AUTH_JWT_SECRET) {
-      ctx.addIssue({
-        code: "custom",
-        message:
-          "AUTH_JWT_SECRET is required when AUTH_DEV_MODE is not true (min 32 chars)",
-        path: ["AUTH_JWT_SECRET"],
-      });
-    }
-
     // 36-03: production fences. Boot must fail if any of these aren't met.
     if (data.NODE_ENV === "production") {
       if (data.AUTH_DEV_MODE) {
