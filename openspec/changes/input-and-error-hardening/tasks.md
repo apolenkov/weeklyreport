@@ -94,7 +94,7 @@
       name-match ownership invariant; the app replaced that with id-based ownership
       and the comment is now misleading.
 
-## 9. tRPC Context — resolve session cookie name from AUTH_JWT_COOKIE_NAME
+## 9. Server session-cookie reads — resolve name from AUTH_JWT_COOKIE_NAME
 
 - [ ] 9.1 In `apps/api/src/infrastructure/trpc/trpc.context.ts`, replace the
       hardcoded `req.cookies?.customreport_session` read (line ~190) with a
@@ -103,6 +103,10 @@
       `jwt.strategy.ts`, and `pdf-export.service.ts`. Reuse the same `env`
       accessor those auth sites use; keep `"customreport_session"` as the
       single fallback literal.
+- [ ] 9.1b In `apps/api/src/infrastructure/bullmq/bull-board.module.ts` (line
+      ~45), replace the identical hardcoded `req.cookies?.customreport_session`
+      read with the same resolved name. Prefer extracting a single shared
+      cookie-name resolver used by all six sites so no future site can drift.
 - [ ] 9.2 Add a unit test asserting the context reads the token from the cookie
       named by `AUTH_JWT_COOKIE_NAME`: (a) knob unset → a `customreport_session`
       cookie is used; (b) `AUTH_JWT_COOKIE_NAME` set to a non-default value →
