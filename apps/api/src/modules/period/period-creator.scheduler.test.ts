@@ -229,8 +229,11 @@ describe("PeriodCreatorScheduler", () => {
 
     expect(result).toMatchObject({ created: true, periodId: "period-td06" });
     expect(policyApplicator.applyToPeriod).toHaveBeenCalledTimes(1);
+    // The factory delegates with `now` so the applicator can drop elapsed
+    // instants; the scheduler creates future periods, so nothing is dropped.
     expect(policyApplicator.applyToPeriod).toHaveBeenCalledWith(
       expect.objectContaining({ id: "period-td06" }),
+      expect.any(Date),
     );
   });
 

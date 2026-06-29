@@ -238,6 +238,45 @@ describe("PolicyApplicatorService.applyToPeriod", () => {
     expect(stub.upsertCalls).toHaveLength(0);
   });
 
+  it("when `now` is given, skips an elapsed instant but keeps a still-future one", async () => {
+    // Period created late: now sits AFTER the T-24h deadline reminder fired but
+    // BEFORE the T+2h escalation. The elapsed deadline rule must be skipped (it
+    // would fire stale), the future escalation must still be materialised.
+    const deadline = new Date("2026-06-01T18:00:00.000Z");
+    const now = new Date("2026-06-01T19:00:00.000Z");
+    const policyEscalation: StubPolicy = {
+      ...policyA,
+      id: "policy-escalation",
+      offsetMinutes: 120, // T+2h → fireAt 20:00Z, still future at now=19:00Z
+      kind: "escalation",
+    };
+    const stub = makeStubPrisma([policyA, policyEscalation], new Set());
+    const svc = new PolicyApplicatorService(stub.prisma);
+
+    const result = await svc.applyToPeriod({ id: "report-1", deadline }, now);
+
+    // policyA (T-24h, fireAt 2026-05-31) is elapsed → skipped; escalation kept.
+    expect(result.created).toBe(1);
+    expect(result.skipped).toBe(1);
+    expect(stub.upsertCalls).toHaveLength(1);
+    expect(stub.upsertCalls[0]?.create).toMatchObject({
+      policyId: "policy-escalation",
+    });
+  });
+
+  it("without `now`, materialises even an already-past instant (cron path unchanged)", async () => {
+    // The scheduler omits `now` because it mints periods ahead of their
+    // reminders; the elapsed-skip must not apply to it.
+    const deadline = new Date("2026-06-01T18:00:00.000Z");
+    const stub = makeStubPrisma([policyA], new Set());
+    const svc = new PolicyApplicatorService(stub.prisma);
+
+    const result = await svc.applyToPeriod({ id: "report-1", deadline });
+
+    expect(result.created).toBe(1);
+    expect(stub.upsertCalls).toHaveLength(1);
+  });
+
   it("catches P2002 race and continues with the rest of the policies", async () => {
     const period = {
       id: "report-1",

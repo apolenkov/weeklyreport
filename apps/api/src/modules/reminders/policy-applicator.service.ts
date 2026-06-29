@@ -76,11 +76,25 @@ export class PolicyApplicatorService {
    * covers period.deadline. Policies that fail the gate produce zero
    * rules. Idempotent: second call is a no-op (upsert by
    * uq_rule_report_policy).
+   *
+   * When `now` is supplied, a rule whose computed `fireAt` is already in the
+   * past is skipped rather than materialised as `active`. The reminders
+   * scheduler fires any active rule with `fireAt <= now` (no elapsed-fireAt
+   * lower bound), so creating an already-past active rule would dispatch a
+   * stale reminder on the next tick. This matters for the login-time period
+   * factory, which can create a period AFTER some of its reminder instants have
+   * passed (a late first-login): the still-future instants (e.g. a T+2h
+   * escalation) are kept, only the elapsed ones are dropped. Callers that mint
+   * periods strictly ahead of their reminders (the cron scheduler) omit `now`
+   * and are unaffected.
    */
-  async applyToPeriod(period: {
-    id: string;
-    deadline: Date;
-  }): Promise<{ created: number; updated: number; skipped: number }> {
+  async applyToPeriod(
+    period: {
+      id: string;
+      deadline: Date;
+    },
+    now?: Date,
+  ): Promise<{ created: number; updated: number; skipped: number }> {
     const policies = await this.prisma.reminderPolicy.findMany({
       where: { active: true },
     });
@@ -90,16 +104,19 @@ export class PolicyApplicatorService {
     let skipped = 0;
 
     for (const policy of policies) {
-      if (!PolicyApplicatorService.policyAppliesTo(policy, period)) {
-        skipped += 1;
-        continue;
-      }
-
       const fireAt = this.computeFireAt(
         period.deadline,
         policy.offsetMinutes,
         policy.timezone,
       );
+      // Skip a policy outside its validity window, or — when `now` is given —
+      // one whose instant has already elapsed (it would fire stale, since the
+      // scheduler has no elapsed-fireAt lower bound). One gate, one skip path.
+      const elapsed = now !== undefined && fireAt.getTime() <= now.getTime();
+      if (!PolicyApplicatorService.policyAppliesTo(policy, period) || elapsed) {
+        skipped += 1;
+        continue;
+      }
 
       try {
         // Look up existing first so we can report created vs updated;

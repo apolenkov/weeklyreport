@@ -184,42 +184,50 @@ describe("ensureCurrentPeriod", () => {
     ).rejects.toBe(other);
   });
 
-  it("applies reminder policy on create when the deadline is in the future", async () => {
+  it("applies reminder policy on create, passing `now` so the applicator can drop elapsed instants", async () => {
+    const now = ANCHOR_MONDAY; // well before the Friday deadline
     const { client } = makePrisma({ createdId: "period-fut" });
     const policyApplicator = makeApplicator();
 
     await ensureCurrentPeriod(
       client,
       ANCHOR_MONDAY,
-      ANCHOR_MONDAY, // now == anchor, well before the Friday deadline
+      now,
       SETTINGS,
       policyApplicator,
     );
 
     expect(policyApplicator.applyToPeriod).toHaveBeenCalledTimes(1);
+    // The factory delegates the elapsed-fireAt decision to the applicator by
+    // handing it `now` — it no longer blunt-skips the whole call when the
+    // deadline has passed (that would drop still-future instants like a T+2h
+    // escalation). Per-rule elapsed-skip is covered in the applicator's tests.
     expect(policyApplicator.applyToPeriod).toHaveBeenCalledWith(
       expect.objectContaining({ id: "period-fut" }),
+      now,
     );
   });
 
-  it("does NOT apply reminder policy when the period is created after its deadline", async () => {
+  it("still calls applyToPeriod (with now) when the period is created after its deadline", async () => {
+    const lateNow = new Date("2026-05-18T00:00:00.000Z"); // past the Friday deadline
     const { client, create } = makePrisma({ createdId: "period-late" });
     const policyApplicator = makeApplicator();
 
-    // now is past the Friday 2026-05-15 deadline — a late first-login the
-    // following week. Reminder rules would all carry past fireAt instants and
-    // the hourly scheduler fires any active past-due rule, so the factory skips
-    // materialisation to avoid a stale reminder blast.
     await ensureCurrentPeriod(
       client,
       ANCHOR_MONDAY,
-      new Date("2026-05-18T00:00:00.000Z"),
+      lateNow,
       SETTINGS,
       policyApplicator,
     );
 
     expect(create).toHaveBeenCalledTimes(1);
-    expect(policyApplicator.applyToPeriod).not.toHaveBeenCalled();
+    // The applicator is still invoked — it (not the factory) decides per rule
+    // which instants are elapsed, so a still-future escalation is not lost.
+    expect(policyApplicator.applyToPeriod).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "period-late" }),
+      lateNow,
+    );
   });
 
   it("does NOT apply reminder policy on the found (idempotent) branch", async () => {

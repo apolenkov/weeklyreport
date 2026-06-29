@@ -46,14 +46,15 @@ report-section domain, invoked through a narrow injected function.
 
 #### Scenario: Lead login after the deadline does not schedule stale reminders
 
-- **GIVEN** a lead whose first login of the week creates the period AFTER its own
-  deadline has already passed (e.g. a weekend first-login)
+- **GIVEN** a lead whose first login of the week creates the period AFTER some of
+  its reminder instants have already passed (e.g. a weekend first-login)
 - **WHEN** the period factory creates that `Report`
-- **THEN** it does NOT call `applyToPeriod` for that period
-- **AND** so no active `ReminderRule` with an already-elapsed `fireAt` is
-  materialised — the hourly reminders scheduler fires any active past-due rule
-  (it has no elapsed-`fireAt` guard), so this is the guard point that prevents a
-  stale "deadline approaching" dispatch
+- **THEN** it calls `applyToPeriod(period, now)`, passing the current time
+- **AND** the applicator materialises only the reminder rules whose `fireAt` is
+  still in the future and skips the already-elapsed ones — so a stale
+  "deadline approaching" rule is never created active (the hourly scheduler fires
+  any active past-due rule; it has no elapsed-`fireAt` guard), while a
+  still-future instant such as a T+2h escalation is preserved
 
 #### Scenario: Lead login when the current-week period already exists
 
