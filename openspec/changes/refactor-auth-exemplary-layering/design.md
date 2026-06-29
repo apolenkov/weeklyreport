@@ -37,10 +37,13 @@ Shape (illustrative, not binding on the implementer):
 
 ```
 // period/period-factory.ts (inside the sanctioned boundary)
-ensureCurrentPeriod(prisma, now, settings)
-  -> { reportId, periodStart, periodEnd, deadline, periodState }
-  // find draft Report for the week of `now` (getCurrentWeekBounds + length)
-  // if absent: create via buildTransition(initialPeriodState(...)) + computeDeadline(...)
+ensureCurrentPeriod(prisma, anchorDate, now, settings, policyApplicator?)
+  -> { created, reportId, periodStart, periodEnd, deadline, periodState }
+  // bounds = getCurrentWeekBounds(anchorDate, length); the lazy path passes
+  //   anchorDate=now, the scheduler passes the day after the last period's end
+  // find draft Report for those bounds; if found, return it (created:false)
+  // if absent: create via buildTransition("create", {periodStart, now}) +
+  //   computeDeadline(...); apply reminders only when deadline > now
   // on create conflict: catch P2002 on "Report_one_open_per_boundary", re-read, return existing
 ```
 
