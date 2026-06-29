@@ -25,7 +25,12 @@ from the 2026-06-28 repo-excellence review.
 - Rate-limit the endpoint so unauthenticated traffic cannot abuse it: add a
   dedicated `web-vitals` tier to the existing `express-rate-limit` factory and
   apply it to `/api/web-vitals`. The endpoint stays anonymous by design (the
-  browser beacon fires before/without auth), bounded by the limiter.
+  browser beacon fires before/without auth), bounded by the limiter. The
+  limiter's per-IP boundary depends on `set-express-trust-proxy` (without
+  `trust proxy`, `req.ip` is the Caddy container in production, making the
+  limiter a single global bucket); see the design `[Dependency]` note. The
+  validation and bounded-label fixes are the primary heap/`500` defenses and do
+  not depend on it.
 
 ## Capabilities
 

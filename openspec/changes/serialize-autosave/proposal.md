@@ -32,6 +32,15 @@ spurious error report. The review backlog flags this P1
   be written to section B if the lead switches before the in-flight save
   resolves. The drain MUST instead send the queued payload's own
   `reportSectionId` (captured at queue time).
+- The confirmed-save baseline stamp MUST be scoped to the in-flight section.
+  Today `onSuccess` runs `lastSavedRef.current = inFlightRef.current`
+  unconditionally. When a section-A save is in flight and the lead navigates to
+  section B (no further edits, nothing queued), section B's `initialSavedKey`
+  primes `lastSavedRef`; the section-A `onSuccess` then clobbers that baseline
+  with section A's key, so section B falsely reads `dirty` and a spurious
+  autosave is scheduled for section B. The hook MUST capture the in-flight
+  save's section id at mutate time and skip the stamp (and its follow-up save)
+  when the lead has since navigated to a different section.
 - Behavior contract only — no schema, API, or shared-package change.
 
 ## Capabilities
@@ -51,7 +60,7 @@ spurious error report. The review backlog flags this P1
 ## Impact
 
 - `apps/web/src/hooks/use-lead-form-autosave.ts` — debounce-timer guard,
-  queued-drain call site, and queued-drain section targeting (the only
-  behavioral edits).
+  queued-drain call site, queued-drain section targeting, and the
+  section-scoped confirmed-save baseline stamp (the only behavioral edits).
 - Relates to `openspec/specs/client-error-policy/spec.md` (the unhandled
   rejection is the same defect family) but does not change its requirements.

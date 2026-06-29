@@ -59,7 +59,25 @@
       remote machine — with `expose:` no host port is published at all; with the
       `127.0.0.1`-bound option the port is loopback-only (host-local reach is the
       accepted trade-off).
-- [ ] 3.5 Note in the `set-express-trust-proxy` change that its
+- [ ] 3.5 In `Dockerfile.web`, change the builder-stage defaults
+      `ARG API_URL=http://api:3002` → `http://api:3001` and move
+      `ARG NEXT_PUBLIC_API_URL=http://localhost:3002` off the `:3002` host-port
+      path to the Caddy edge (same-origin / public site address). Do this BEFORE
+      (or in the same release as) the 3.3 host-port removal, and rebuild the web
+      image, so no shipped client bundle references the gone `:3002` port.
+      `NEXT_PUBLIC_API_URL` is inlined at build, so it MUST be set at build (this
+      `ARG`/`ENV` default or a `web.build.args` entry), not at runtime.
+- [ ] 3.6 In `docker-compose.prod.yml`, supply `NEXT_PUBLIC_API_URL` to the `web`
+      service via `build.args` (so it reaches the build), and drop or correct the
+      runtime `web.environment: NEXT_PUBLIC_API_URL` line — it is a no-op for the
+      already-inlined client value. Keep the runtime `web.environment: API_URL`
+      override (server-side, read at runtime) pointed at `http://api:3001`.
+- [ ] 3.7 Rebuild the web image and confirm the baked client bundle has no
+      `localhost:3002` reference (grep the standalone output) and that browser
+      API calls still flow same-origin through Caddy (the tRPC client already uses
+      the relative `/trpc` URL, so this is a stale-default hygiene check, not a
+      routing change).
+- [ ] 3.8 Note in the `set-express-trust-proxy` change that its
       `BL-DEPLOY-SEAM-MISC` host-port prerequisite is now satisfied.
 
 ## 4. Production CSP enforcement
@@ -83,7 +101,7 @@
 - [ ] 5.1 Run `openspec validate "ci-deploy-supplychain-hardening" --strict` and
       confirm it exits 0.
 - [ ] 5.2 Run the repo gate chain `pnpm typecheck && pnpm lint && pnpm test &&
-  pnpm build` to confirm the infra changes did not break the build.
+pnpm build` to confirm the infra changes did not break the build.
 - [ ] 5.3 Coordinate the Caddyfile edits with `route-pdfs-and-authz` and
       `protect-metrics-endpoint` so the `@api` matcher and CSP header regions do
       not collide on merge.

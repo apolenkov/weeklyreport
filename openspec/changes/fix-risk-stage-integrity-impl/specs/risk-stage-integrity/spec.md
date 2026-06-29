@@ -15,6 +15,15 @@ The guard MUST run before the required-stage validation in `handleSave`
 the required-stage error path and presents the disabled-Save + contact-admin
 state promised by the `stagesForProduct` prop JSDoc.
 
+When the guard fires, `handleSave` MUST return early as a no-op WITHOUT calling
+`onSave`, so an empty `stageIds` array is never emitted to the caller or the
+server write. Skipping the required-stage error branch alone is insufficient: the
+function MUST NOT fall through to `onSave`. Every save entry point routes through
+`handleSave`, including the Ctrl/Cmd+Enter keyboard shortcut in `handleKeyDown`,
+so the keyboard path MUST respect the same guard and stay a no-op for a
+zero-owned-stage dead-end. The keyboard shortcut MUST NOT bypass the
+disabled-Save state.
+
 The guard MUST NOT fire when the row already carries a stage. A cross-stage risk
 that arrives with existing `stageIds` — its product lies outside the lead's
 stage-owned list, so `stagesForProduct` returns `[]` — stays saveable: Save
@@ -29,6 +38,15 @@ keeps the existing cross-stage-product-preservation behaviour intact.
 - **THEN** the Save button is disabled
 - **AND** an inline "no stages assigned — contact admin" message is shown
 - **AND** the unsatisfiable "Select at least one stage." error is not displayed
+
+#### Scenario: the Ctrl/Cmd+Enter save shortcut is a no-op on a zero-owned-stage dead-end
+
+- **GIVEN** a lead opens the risk dialog on a product where they own zero stages
+- **AND** the risk carries no stage of its own (create mode, or a stage-less row)
+- **WHEN** the lead presses Ctrl/Cmd+Enter to trigger the keyboard save shortcut
+- **THEN** `handleSave` returns early without calling `onSave`
+- **AND** no empty `stageIds` payload is emitted
+- **AND** the "no stages assigned — contact admin" state remains shown
 
 #### Scenario: editing a cross-stage risk that already carries stages stays saveable
 

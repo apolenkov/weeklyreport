@@ -42,23 +42,30 @@ process uncaught-exception handler.
 ### Requirement: Pool size and timeouts are env-configurable with safe defaults
 
 `PrismaService` MUST read three optional env vars at construction time,
-range-validate each, and pass only the resolved values to the `pg.Pool`
-constructor. An env value that is absent, non-numeric, or numeric but outside
-its valid range MUST fall back to the documented default and MUST NOT be
-passed through to `pg`:
+parse each as a full-string integer, range-validate each, and pass only the
+resolved values to the `pg.Pool` constructor. Parsing MUST validate the entire
+trimmed string and MUST reject any value that is not a whole number across its
+full length: `parseInt`-style prefix parsing is forbidden because it silently
+accepts partially-numeric and decimal strings (`'10junk'` → `10`, `'1.5'` →
+`1`), so a malformed env value would be passed to `pg` and logged as if valid.
+A value MUST be accepted only when `Number.isSafeInteger(Number(raw.trim()))`
+holds on the non-empty trimmed string. An env value that is absent, empty,
+non-integral, or numeric but outside its valid range MUST fall back to the
+documented default and MUST NOT be passed through to `pg`:
 
-- `DB_POOL_MAX` — parsed as integer; valid range is a positive integer
-  (`>= 1`); MUST default to `10` when absent, non-numeric, zero, or negative.
+- `DB_POOL_MAX` — parsed as a full-string integer; valid range is a positive
+  integer (`>= 1`); MUST default to `10` when absent, empty, non-integral,
+  zero, or negative.
   A `0` or negative `max` is unsafe: `pg` coerces `0` to `10` (so a logged
   `0` would lie about the active size) and keeps a negative `max`, which
   makes the pool report permanently full and — with the default
   `connectionTimeoutMillis: 0` — hang every queued query forever.
-- `DB_POOL_IDLE_TIMEOUT_MS` — parsed as integer (milliseconds); valid range
-  is a non-negative integer (`>= 0`); MUST default to `10000` when absent,
-  non-numeric, or negative.
-- `DB_POOL_CONNECTION_TIMEOUT_MS` — parsed as integer (milliseconds); valid
-  range is a non-negative integer (`>= 0`); MUST default to `0` (disabled)
-  when absent, non-numeric, or negative.
+- `DB_POOL_IDLE_TIMEOUT_MS` — parsed as a full-string integer (milliseconds);
+  valid range is a non-negative integer (`>= 0`); MUST default to `10000` when
+  absent, empty, non-integral, or negative.
+- `DB_POOL_CONNECTION_TIMEOUT_MS` — parsed as a full-string integer
+  (milliseconds); valid range is a non-negative integer (`>= 0`); MUST default
+  to `0` (disabled) when absent, empty, non-integral, or negative.
 
 No arbitrary upper cap is imposed on `DB_POOL_MAX`; the `.env.example`
 advisory to keep it below the DB server's `max_connections` covers the high
@@ -97,6 +104,16 @@ pool configuration in structured logs.
 - **WHEN** `PrismaService` is constructed
 - **THEN** the `pg.Pool` is created with `max: 10` (not `0`), and the boot
   log records `10`, never the rejected `0` that `pg` would have coerced
+
+#### Scenario: Env var is partially-numeric or decimal
+
+- **GIVEN** `DB_POOL_MAX=10junk` is set, along with
+  `DB_POOL_IDLE_TIMEOUT_MS=1.5`
+- **WHEN** `PrismaService` is constructed
+- **THEN** the `pg.Pool` is created with `max: 10` and
+  `idleTimeoutMillis: 10000` — each malformed value rejected in full and
+  replaced by its default, never the `parseInt` prefixes `10` and `1` — and
+  the value logged at boot equals the value passed to `pg.Pool`
 
 #### Scenario: Resolved pool config is logged at boot
 

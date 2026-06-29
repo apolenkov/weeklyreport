@@ -4,10 +4,16 @@
       `z.string().min(2).max(200)` on the `q` field with
       `safeText({ min: 2, max: 200 })` — preserve the min-2 floor; the only
       behavioral change is the added null-byte and invisible-only refinements.
-- [ ] 1.2 Add unit tests in `packages/shared` asserting that (a) a `q` value
-      containing a null byte fails Zod validation with a `BAD_REQUEST`-class
-      error, and (b) a single-character `q` (e.g. `'a'`) is rejected by the
-      min-2 floor.
+- [ ] 1.2 Add unit tests in `packages/shared` asserting Zod-level rejection:
+      (a) a `q` value containing a null byte fails `safeParse` (`success` is
+      `false`), and (b) a single-character `q` (e.g. `'a'`) is rejected by the
+      min-2 floor. Shared-schema tests can only observe the Zod parse failure,
+      not the tRPC error class.
+- [ ] 1.3 Add an API/tRPC input test (in `apps/api`) asserting that calling
+      `search.query` with a null-byte `q` fails with a `BAD_REQUEST` tRPC error
+      before the repository is invoked. The `BAD_REQUEST` mapping is the tRPC
+      router boundary's translation of the Zod failure, so it must be exercised
+      at that layer, not in `packages/shared`.
 
 ## 2. Shared Schema — sparkline bound correction (behavioral)
 
@@ -15,7 +21,12 @@
       emits more than 4 data points.
 - [ ] 2.2 In `packages/shared/src/schemas/telemetry.ts`, change sparkline array
       bound from `.max(8)` to `.max(4)` to match the documented and produced cap.
-      Update the inline comment accordingly.
+      Update the inline comment accordingly. This satisfies the
+      `telemetry-summary-contract` ADDED requirement (sparkline length ≤ 4).
+- [ ] 2.3 Update the existing `packages/shared/src/schemas/telemetry.test.ts`
+      "caps sparkline length at 8 entries" test to assert the 4-point cap: a
+      5-entry array MUST now fail and a 4-entry array MUST pass. Rename the test
+      and trace it to the `telemetry-summary-contract` requirement.
 
 ## 3. API Middleware — x-request-id cap
 
@@ -40,6 +51,14 @@
       `dev.wipeAndReseed` procedure from `protectedProcedure` to `adminProcedure`.
 - [ ] 5.2 Verify no test helper calls `dev.wipeAndReseed` with a non-admin
       session; update any such helper to use an admin token.
+- [ ] 5.3 In `apps/web/src/components/dev/role-switcher.tsx`, hide (or disable)
+      the four "Wipe + Reseed" / "Wipe reports" data-reset controls unless the
+      current dev session's role is `admin`. The controls render for every dev
+      role today; with `adminProcedure` they would fail with a `FORBIDDEN` alert
+      for lead/head/viewer sessions. Keep the lookup minimal (read the current
+      session role) — do not over-engineer the mechanism.
+- [ ] 5.4 Add a web unit test asserting the reset controls are present for an
+      `admin` dev session and absent (or disabled) for a non-admin dev session.
 
 ## 6. Prisma Seeds — assertNonProdDestructive guard
 
@@ -79,7 +98,9 @@
 
 - [ ] 9.1 Run `pnpm typecheck` — must exit 0 with no new errors.
 - [ ] 9.2 Run `pnpm lint` — must exit 0.
-- [ ] 9.3 Run `pnpm test` — must exit 0; new unit tests for search-q,
-      correlation-id middleware, and JWT alg pin must be green.
+- [ ] 9.3 Run `pnpm test` — must exit 0; new/updated unit tests must be green:
+      search-q (shared Zod + tRPC BAD_REQUEST), correlation-id middleware, JWT
+      alg pin, sparkline 4-point cap, and the DevRoleSwitcher admin-only reset
+      controls.
 - [ ] 9.4 Run `pnpm build` — must exit 0.
 - [ ] 9.5 Run `openspec validate "input-and-error-hardening" --strict` — must exit 0.

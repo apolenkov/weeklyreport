@@ -19,23 +19,32 @@ maintenance debt and will be harder to fix post-production-cutover.
   `plainto_tsquery` (currently causes an unhandled 500).
 - Restrict `dev.wipeAndReseed` tRPC procedure from `protectedProcedure` to
   `adminProcedure` — any authenticated user in a shared dev/UAT environment
-  can currently trigger a full migrate-reset + reseed.
+  can currently trigger a full migrate-reset + reseed. As a direct consequence,
+  gate the dev-only `DevRoleSwitcher` reset controls (`role-switcher.tsx`)
+  behind the admin role so non-admin dev sessions do not hit a `FORBIDDEN`
+  alert.
 - Add `assertNonProdDestructive` at the top of `seed.ts` and
   `backfill-policy-rules.ts` — two scripts that write against `DATABASE_URL`
   without the guard their sibling scripts already carry.
 - Add `'period.manual-edit'` to the `AuditEvent` TypeScript union so the
   canonical type is exhaustive and consumer switches can handle it at compile
   time.
+- Tighten the `telemetry.summary` sparkline bound from `.max(8)` to `.max(4)`
+  — a behavioral shared-contract change matching the only producer
+  (`onTimeRatioPerPeriod(4)`) and the schema doc comment.
 - Fix stale comments: `stageIds` storage description (comma-join → native
-  array), sparkline `.max(8)` vs documented/produced 4-point bound,
-  `sessionRoleSchema` wider-comment, seed ownership invariant.
+  array), `sessionRoleSchema` wider-comment, seed ownership invariant.
 
 ## Capabilities
 
 ### New Capabilities
 
 - `api-input-hardening`: Inbound request sanitization — x-request-id cap,
-  search-q null-byte guard, JWT algorithm pin, and dev-wipe role scope.
+  search-q null-byte guard, JWT algorithm pin, dev-wipe role scope, and the
+  admin-only `DevRoleSwitcher` reset controls that follow from it.
+- `telemetry-summary-contract`: ADDED requirement — the `telemetry.summary`
+  sparkline array MUST be length ≤ 4, tightening the schema bound to match its
+  single producer.
 
 ### Modified Capabilities
 
@@ -56,10 +65,13 @@ maintenance debt and will be harder to fix post-production-cutover.
 - `packages/shared/src/schemas/search.ts` — search-q safeText.
 - `apps/api/src/infrastructure/trpc/trpc.router.ts` — dev.wipeAndReseed
   procedure builder.
+- `apps/web/src/components/dev/role-switcher.tsx` — gate reset controls behind
+  the admin role.
+- `packages/shared/src/schemas/telemetry.ts` — sparkline `.max(8)` → `.max(4)`
+  (behavioral) plus its test `telemetry.test.ts`.
 - `prisma/seed.ts`, `prisma/backfill-policy-rules.ts` — guard call.
 - `apps/api/src/lib/audit-logger-types.ts` — AuditEvent union.
 - `packages/shared/src/schemas/report-primitives.schema.ts`,
-  `packages/shared/src/schemas/telemetry.ts`,
   `packages/shared/src/schemas/auth.ts`,
   `prisma/seed-simple.ts` — comment corrections.
 

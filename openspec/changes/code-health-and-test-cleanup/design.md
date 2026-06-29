@@ -120,7 +120,10 @@ migration is irreversible (non-prod DBs are disposable and reseeded).
 
 ## Open Questions
 
-- On-time-ratio: confirm whether the pooled 4-period gauge and the latest-period
-  card are intentionally different windows (rename both) or the same metric
-  computed twice (collapse to one). Resolve during implementation by reading both
-  consumers; default to renaming if the windows genuinely differ.
+- On-time-ratio: RESOLVED by reading both consumers. The pooled gauge
+  (`onTimeRatioLastNPeriods`, one ratio across the last N published periods) and
+  the dashboard summary (freshest entry of `onTimeRatioPerPeriod`, the latest
+  single period) are genuinely different windows, so they are renamed distinctly
+  rather than collapsed. The duplicated `activeLeadsLastPublishedPeriod` query is
+  a separate active-leads KPI — it does NOT back the on-time ratio — and is
+  shared in its own task.

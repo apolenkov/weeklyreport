@@ -20,24 +20,45 @@ signal in
 - **AND** no second `getAllowedGroupIds` implementation remains in
   `cross-group-signal.ts`
 
-### Requirement: The on-time submission ratio has one canonical definition
+### Requirement: The active-leads-last-published-period query has one shared implementation
 
-The on-time submission ratio KPI MUST have a single canonical definition, and
-the `activeLeadsLastPublishedPeriod` query backing it MUST be shared rather than
-duplicated across repositories. Where the pooled multi-period gauge and the
-latest-period card legitimately measure different windows, the two MUST be named
-distinctly so they are not mistaken for the same metric. The consumers are
+The active-leads-in-the-last-published-period query MUST be defined once and
+reused by both telemetry consumers, not duplicated. The functionally identical
+`activeLeadsLastPublishedPeriod` bodies in
 `apps/api/src/modules/telemetry/telemetry.gauges.ts` and
-`apps/api/src/modules/telemetry/telemetry.prisma-repository.ts`.
+`apps/api/src/modules/telemetry/telemetry.prisma-repository.ts` MUST collapse to
+a single shared query so a change to how an "active lead" is counted lands in one
+place. This query backs the active-leads KPI; it does NOT back the on-time ratio.
 
 #### Scenario: the active-leads query is defined once
 
-- **GIVEN** the gauge and the card both need active leads in the last published
-  period
-- **WHEN** a maintainer reads the telemetry module
-- **THEN** there is one `activeLeadsLastPublishedPeriod` query shared by both
-- **AND** the two ratio surfaces either reuse one definition or carry distinct
-  names that state their differing window
+- **GIVEN** the Prom gauge and the dashboard summary card both need the count of
+  active leads in the last published period
+- **WHEN** a maintainer changes how an active lead is counted
+- **THEN** there is one shared `activeLeadsLastPublishedPeriod` query that both
+  call, so the change applies in a single place
+- **AND** no second copy of the query body remains in either file
+
+### Requirement: The two on-time-ratio windows are named distinctly
+
+The two on-time submission ratios MUST carry distinct names because they are
+computed over genuinely different windows and must not be mistaken for one
+metric. The Prom gauge uses `onTimeRatioLastNPeriods` (a single ratio pooled
+across the last N published periods) while the dashboard summary takes the
+freshest entry of
+`onTimeRatioPerPeriod` (the latest single period's ratio). Both live in
+`apps/api/src/modules/telemetry`. The names MUST state their differing window;
+the active-leads query above does NOT define this ratio.
+
+#### Scenario: the pooled and latest-period ratios are not conflated
+
+- **GIVEN** the pooled multi-period gauge ratio and the latest-period summary
+  ratio measure different windows
+- **WHEN** a maintainer reads the two on-time-ratio surfaces
+- **THEN** each carries a name that states its window (pooled-N-period vs
+  latest-period)
+- **AND** neither is collapsed into the other nor described as backed by the
+  active-leads query
 
 ### Requirement: The "report has content" predicate is a single shared helper
 

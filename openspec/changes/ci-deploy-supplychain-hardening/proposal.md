@@ -67,6 +67,20 @@ review share one root theme — a gate that is declared but not enforced:
   `ports: ["${API_PORT:-3001}:3001"]` to `expose: ["3001"]` (or a localhost
   bind), so all external traffic flows through the Caddy edge, matching the
   expose-only posture already applied to `web`.
+- Align the web image's baked API URL defaults with the edge topology before the
+  API host port is removed. `Dockerfile.web` bakes
+  `ARG API_URL=http://api:3002` and
+  `ARG NEXT_PUBLIC_API_URL=http://localhost:3002`; because `NEXT_PUBLIC_*` is
+  inlined into the client bundle at build time, the runtime
+  `web.environment: NEXT_PUBLIC_API_URL` line in `docker-compose.prod.yml` is a
+  no-op and the stale `:3002` host-port path stays frozen in the shipped bundle.
+  Point the server-side `API_URL` default at `http://api:3001` (the compose
+  network) and the client-facing `NEXT_PUBLIC_API_URL` at the Caddy edge
+  (same-origin), at build time, so no web image references the removed `:3002`
+  host port. The repo's main API data path already uses a relative `/trpc` URL
+  through the edge (the only current client consumer of `NEXT_PUBLIC_API_URL` is
+  the `ApiReadinessPlaceholder` stub's health/metrics links), so this is a
+  stale-bundle hygiene fix, not a broken-routing fix.
 
 ### Enforce CSP (`production-csp-enforcement`)
 
@@ -90,8 +104,10 @@ review share one root theme — a gate that is declared but not enforced:
   their base images and build toolchain so builds are reproducible and
   verifiable.
 - `deploy-edge-topology`: The API container's declared port/healthcheck MUST
-  match its runtime port, and the API MUST be reachable only through the Caddy
-  edge (expose-only), not host-published.
+  match its runtime port, the API MUST be reachable only through the Caddy
+  edge (expose-only), not host-published, and the production web image MUST bake
+  an edge-safe API URL default (no `:3002` host-port path) so closing the API
+  host port leaves no stale direct-to-host API path in the client bundle.
 - `production-csp-enforcement`: The production edge MUST serve an enforcing
   Content-Security-Policy (not Report-Only), validated against the application
   bundle, so the XSS defense-in-depth layer actually blocks.
@@ -114,11 +130,15 @@ but not Docker base-image digests or lockfile-frozen installs;
 - `.husky/pre-push` — add typecheck + lint + format:check ahead of the existing
   catalog/test steps, and add `set -e` so any failing gate aborts the push.
 - `Dockerfile.web` — `--no-frozen-lockfile` → `--frozen-lockfile`; digest-pin
-  `node:25-alpine`; pin `turbo`.
+  `node:25-alpine`; pin `turbo`; align the baked API URL defaults
+  (`ARG API_URL` → `http://api:3001`, `ARG NEXT_PUBLIC_API_URL` off the `:3002`
+  host-port path to the edge/same-origin).
 - `Dockerfile.api` — digest-pin base image; align `EXPOSE`/`HEALTHCHECK` to the
   runtime port (`3001` or `PORT`).
 - `docker-compose.prod.yml` — `api` service `ports:` → `expose:` (or localhost
-  bind).
+  bind); align the `web` service's API URL handling (supply
+  `NEXT_PUBLIC_API_URL` via `web.build.args` since the runtime `web.environment`
+  line for it is a no-op, and drop or correct that misleading runtime line).
 - `deploy/caddy/Caddyfile`, `deploy/caddy/Caddyfile.staging` — CSP header
   Report-Only → enforcing after validation; optional report sink.
 - No schema change, no migration, no application source change.

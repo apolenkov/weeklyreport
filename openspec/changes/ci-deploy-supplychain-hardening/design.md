@@ -95,6 +95,37 @@ directive (likely a nonce-based `script-src`), then flip both Caddyfiles to the
 enforcing `Content-Security-Policy` header.** A report sink is optional and must
 not gate enforcement.
 
+### 7. Web image API URL defaults must align at build, before the host port closes
+
+Closing the `api` host port (decision 5) removes the `localhost:3002` path the
+web image bakes as its API URL default: `Dockerfile.web` sets
+`ARG API_URL=http://api:3002` and `ARG NEXT_PUBLIC_API_URL=http://localhost:3002`.
+Two facts scope this correctly:
+
+- **The main data path is not broken.** The tRPC client uses a relative
+  `url: "/trpc"` (`apps/web/src/lib/trpc.ts`), so browser API calls go same-origin
+  through the Caddy edge and never read `NEXT_PUBLIC_API_URL`. The only current
+  client consumer of `NEXT_PUBLIC_API_URL` is the `ApiReadinessPlaceholder` stub,
+  which renders health/metrics links. Closing the host port therefore does NOT
+  break routing or force operators to reopen the port.
+- **`NEXT_PUBLIC_*` is inlined at build.** The compose
+  `web.environment: NEXT_PUBLIC_API_URL` line cannot change an already-inlined
+  client value — it is a no-op — and the value it sets (`api:3001`) is a
+  compose-internal hostname the browser cannot reach anyway. The server-side
+  `API_URL` is read at runtime and IS correctly overridden by `web.environment`
+  to `http://api:3001`; only the build-time default is stale.
+
+**Decision: align the web image's API URL defaults at build.** Set the
+server-side `API_URL` default to `http://api:3001` and move the client-facing
+`NEXT_PUBLIC_API_URL` off the `:3002` host-port path to the Caddy edge
+(same-origin / public site), via the `Dockerfile.web` `ARG`/`ENV` default or a
+`web.build.args` entry — not via runtime `web.environment`. Rebuild the web image
+with the edge-safe defaults before (or in the same release as) the host-port
+removal so no deployed bundle references the gone `:3002` port. This is
+stale-bundle hygiene, not a routing fix; severity is correspondingly modest.
+`NEXT_PUBLIC_AUTH_STUB` / `NEXT_PUBLIC_DEV_ROLE_SWITCHER` are a separate concern
+and out of scope here.
+
 ## Cross-Change Dependencies
 
 - `set-express-trust-proxy` cites `BL-DEPLOY-SEAM-MISC` (this change's

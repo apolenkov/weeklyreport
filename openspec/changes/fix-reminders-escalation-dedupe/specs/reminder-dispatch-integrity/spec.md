@@ -13,9 +13,13 @@ as the report's publisher
 therefore yields `null` in the normal escalation state and silently drops the
 digest. The recipient MUST instead be the active head of the reporting group
 the late lead belongs to: a `User` whose `isActive` is `true` and whose `role`
-is `head`, referenced by the late lead's `ReportingGroup.headUserId` (a
-`ReportingGroup.head` whose role is `head` or `admin` per the application-level
-invariant). Recipient resolution MUST require `head.isActive = true`, so a
+is either `head` or `admin`, referenced by the late lead's
+`ReportingGroup.headUserId`. The model's application-level invariant allows that
+referenced user's role to be `head` or `admin` (`prisma/schema.prisma`
+`ReportingGroup.headUserId`), so an admin-led reporting group is a valid
+escalation target and MUST NOT be dropped on the grounds that the head user's
+role is `admin` rather than `head`. Recipient resolution MUST require
+`head.isActive = true`, so a
 deactivated head (per the repo's soft-deactivation model) is never targeted.
 The digest MUST fire regardless of the period's `periodStatus` / publish state.
 A late lead whose reporting group has no resolvable active head — either no
@@ -40,6 +44,14 @@ without trace; it MUST NOT abort digests for late leads in other groups.
 - **THEN** each group's head receives a digest aggregating only that group's
   late leads
 - **AND** no head receives late leads from a group they do not head
+
+#### Scenario: An admin-led reporting group receives the escalation digest
+
+- **WHEN** a late lead belongs to a reporting group whose `headUserId`
+  references an active `User` whose `role` is `admin`
+- **THEN** the escalation digest is dispatched to that admin-led head
+- **AND** the digest is not dropped because the head's role is `admin` rather
+  than `head`
 
 #### Scenario: A group with no assigned head is logged, not silently dropped
 

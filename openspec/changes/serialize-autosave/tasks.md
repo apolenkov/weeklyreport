@@ -21,6 +21,17 @@
       key/snapshot at queue time). This prevents a payload queued for section A
       from being written to section B after the lead navigates reports/periods.
 
+- [ ] 1.5 Scope the confirmed-save baseline stamp to the in-flight section.
+      Capture the in-flight save's section id at mutate time (alongside
+      `inFlightRef`) — the section the mutation is actually sent to: the queued
+      payload's own `reportSectionId` in the drain, `reportSectionId` on the
+      debounce / `forceSave` path. In every `onSuccess` (including the drain),
+      stamp `lastSavedRef.current = inFlightRef.current` only when that captured
+      section id still equals `reportSectionIdRef.current`; on a mismatch (the
+      lead navigated reports/periods while the save was in flight) skip the stamp
+      and do not schedule a save for the newly loaded section, so the section's
+      freshly-primed `initialSavedKey` baseline is preserved.
+
 ## 2. Tests
 
 - [ ] 2.1 Add/extend the autosave hook test: continued edits while a save is in
@@ -34,6 +45,11 @@
       (a queued payload pending) drains the queued payload to the section it was
       built for, not the new `reportSectionId` — guarding the cross-section
       retarget edge.
+
+- [ ] 2.4 Add a test that a section-A save in flight, with no queued payload,
+      that resolves after `reportSectionId` switched to section B does NOT stamp
+      section B's baseline with section A's key — section B stays non-dirty and no
+      autosave is scheduled for section B.
 
 ## 3. Verification
 

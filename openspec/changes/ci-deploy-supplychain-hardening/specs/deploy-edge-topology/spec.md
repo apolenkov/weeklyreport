@@ -70,3 +70,46 @@ documented ops need.
 - **WHEN** this change makes the `api` service expose-only
 - **THEN** the prerequisite is satisfied: an attacker can no longer reach the
   Express socket outside the Caddy hop to forge `X-Forwarded-For`
+
+### Requirement: The production web image bakes an edge-safe API URL default
+
+`Dockerfile.web` SHALL NOT bake an API URL default that points at the API host
+port this change removes (`http://localhost:3002`), so the production web image
+does not ship the browser a dead direct-to-host API path once the `api` service
+is expose-only. Because `NEXT_PUBLIC_*` values are inlined into the client bundle
+at build time, the `NEXT_PUBLIC_API_URL` alignment MUST happen at build (the
+`Dockerfile.web` `ARG`/`ENV` default or a `web.build.args` entry in
+`docker-compose.prod.yml`), not via runtime `web.environment`, which cannot
+change an already-inlined client value. The server-side `API_URL` default MUST
+target `http://api:3001` over the compose network (matching the runtime
+`web.environment` override), and the client-facing `NEXT_PUBLIC_API_URL` MUST
+reach the API through the Caddy edge (same-origin / public site address), not the
+removed host port; neither default may remain `:3002`.
+
+#### Scenario: Web build args do not target the removed host port
+
+- **GIVEN** the updated `Dockerfile.web`
+- **WHEN** the builder-stage `ARG`/`ENV` API URL defaults are inspected
+- **THEN** `API_URL` defaults to `http://api:3001` (the compose-network API) and
+  `NEXT_PUBLIC_API_URL` does not default to `http://localhost:3002`, so the baked
+  client bundle has no direct-to-host API path that the expose-only `api` service
+  no longer serves
+
+#### Scenario: Client API URL is aligned at build, not via no-op runtime env
+
+- **GIVEN** the production web image and `docker-compose.prod.yml`
+- **WHEN** `NEXT_PUBLIC_API_URL` is set
+- **THEN** it is supplied at build (the `Dockerfile.web` default or a
+  `web.build.args` entry), because the runtime `web.environment:
+NEXT_PUBLIC_API_URL` line cannot override the already-inlined client value, and
+  the resolved client path reaches the API through the Caddy edge rather than the
+  removed `:3002` host port
+
+#### Scenario: Web build alignment precedes closing the API host port
+
+- **GIVEN** this change both removes the `api` host port and aligns the web
+  image's baked API defaults
+- **WHEN** the changes are sequenced
+- **THEN** the web image is rebuilt with the edge-safe `:3001`/edge defaults
+  before (or in the same release as) the host-port removal, so no deployed web
+  image references the `:3002` host port after that port is gone

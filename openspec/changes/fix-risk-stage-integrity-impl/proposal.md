@@ -35,8 +35,12 @@ gaps. No new capability is introduced.
   `availableStages.length === 0 && effectiveStageIds.length === 0`, the dialog
   MUST NOT block on the required-stage rule; instead it disables Save and shows
   the documented "no stages assigned — contact admin" message, so the lead is
-  never dead-ended. A cross-stage risk that already carries `stageIds` (its
-  product is outside the stage-owned list) stays saveable.
+  never dead-ended. The guard makes `handleSave` an early-return no-op (it MUST
+  NOT fall through to `onSave` with an empty `stageIds`), and the Ctrl/Cmd+Enter
+  keyboard shortcut — which routes through the same `handleSave` — respects it so
+  no empty payload escapes via the keyboard. A cross-stage risk that already
+  carries `stageIds` (its product is outside the stage-owned list) stays
+  saveable.
 - Suppress the empty-selection "All assigned stages…" banner when the stage
   selector is in `required` mode, so the banner never advertises an outcome the
   required rule forbids.
@@ -67,8 +71,10 @@ strengthened, not weakened.
 
 - `apps/web/src/components/lead/risk-edit-dialog.tsx` — add the
   `availableStages.length === 0 && effectiveStageIds.length === 0` branch
-  (disabled Save + contact-admin message) before the required-stage block, while
-  keeping an existing-stageIds cross-stage risk saveable.
+  (disabled Save + contact-admin message) before the required-stage block, as an
+  early-return no-op so `onSave` is never called with empty `stageIds`; the
+  Ctrl/Cmd+Enter keyboard path inherits the guard via `handleSave`. A
+  cross-stage risk that already carries `stageIds` stays saveable.
 - `apps/web/src/components/lead/stage-multi-select.tsx` — suppress the
   empty-selection banner when `required` is true.
 - `packages/shared/src/schemas/report-primitives.schema.ts` — constrain

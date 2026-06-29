@@ -10,11 +10,16 @@
 - [ ] 2.1 Export `computeAllowedGroupIds` (the scope-filter implementation) and
       reuse it in `cross-group-signal.ts`, deleting its local
       `getAllowedGroupIds`.
-- [ ] 2.2 Read both on-time-ratio consumers (`telemetry.gauges.ts`,
-      `telemetry.prisma-repository.ts`); share one `activeLeadsLastPublishedPeriod`
-      query and either collapse to one ratio definition or rename the two so their
-      differing windows are explicit.
-- [ ] 2.3 Make `published-report-snapshot.ts` the single
+- [ ] 2.2 Share the duplicated `activeLeadsLastPublishedPeriod` query: the
+      functionally identical bodies in `telemetry.gauges.ts` and
+      `telemetry.prisma-repository.ts` collapse to one shared implementation
+      called by both. This query backs the active-leads KPI, not the on-time
+      ratio.
+- [ ] 2.3 Name the two on-time-ratio windows distinctly: the pooled
+      `onTimeRatioLastNPeriods` gauge and the latest-period summary ratio derived
+      from `onTimeRatioPerPeriod` measure different windows, so give them names
+      that state their window rather than collapsing them.
+- [ ] 2.4 Make `published-report-snapshot.ts` the single
       `TrafficLightStatus`-typed `computeWorstStatus` (+ `statusSeverity`); import
       it into `weekly-report.prisma-repository.ts` and delete the string-typed
       `?? 0` duplicate.

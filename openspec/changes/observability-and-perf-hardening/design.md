@@ -68,10 +68,13 @@ Each item is a local, behavior-preserving optimization:
 - `Promise.all([leadUsers, projects])` in `getWeeklyReport`.
 - Archive listing: push pagination into the repository using the existing
   `reportId` cursor (`Prisma cursor: { id }` + `skip: 1`) with stable
-  `orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }]`, and emit the last row's
-  `reportId` as `nextCursor` (null on the final/empty page). Load the nested
-  section graph only for snapshot-less fallback rows (split the query, or select
-  the graph lazily).
+  `orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }]`. Fetch `take: limit + 1`
+  so the repo can tell whether a next page exists without re-reading the whole
+  archive: keep the first `limit` rows as the page, and if the `(limit + 1)`th
+  probe row came back, emit the last kept row's `reportId` as `nextCursor` (else
+  `null`, which also covers the final/empty page and a stale cursor). Load the
+  nested section graph only for snapshot-less fallback rows (split the query, or
+  select the graph lazily).
 - `upsertUsers`: prefetch the removed set in one query, then one `deleteMany`.
 - Organization read: `findUnique`, fall back to create only when absent — removes
   the write lock on the anonymous landing path.

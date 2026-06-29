@@ -104,6 +104,23 @@ per-IP/minute budget, bumped in test like the others) and mount it on
 bucket accounting. This reuses the proven limiter, IPv6 key handling, and
 metrics wiring rather than introducing `@nestjs/throttler`.
 
+[Dependency] The per-IP boundary depends on the `set-express-trust-proxy`
+change. The shared limiter keys from `req.ip`
+(`rate-limit.middleware.ts` `keyGenerator`), but Express `trust proxy` is not
+yet set, so in production behind Caddy `req.ip` resolves to the Caddy
+container address, not the real client (see
+`openspec/changes/set-express-trust-proxy/design.md`). Until that change lands,
+the vitals limiter is effectively a **single global bucket** in production: it
+still caps total ingest traffic and removes the unbounded-heap and
+unbounded-`500` vectors, but it does **not** provide a true per-client
+boundary — one noisy client can consume the shared budget for everyone. This
+is an acceptable stopgap because the cardinality and validation fixes are the
+primary heap/`500` defenses; the limiter is defense-in-depth. The per-IP claim
+becomes real only once `set-express-trust-proxy` enables `trust proxy` so
+`req.ip` resolves to the client. Order this change after, or alongside,
+`set-express-trust-proxy`; do not claim per-IP vitals throttling until task
+4.3 confirms `req.ip` is the client.
+
 ## Risks / Trade-offs
 
 - [Histogram type change breaks existing Grafana panels reading the gauge] →
@@ -119,6 +136,12 @@ metrics wiring rather than introducing `@nestjs/throttler`.
 - [Anonymous endpoint still reachable] → Accepted by design; cardinality is now
   bounded and abuse is rate-limited, which removes the unbounded-heap and
   unbounded-500 vectors that made it dangerous.
+- [Limiter is a global bucket without trust proxy] → Until
+  `set-express-trust-proxy` lands, `req.ip` is the Caddy container in
+  production, so the vitals limiter throttles all clients as one bucket rather
+  than per-IP (see the `[Dependency]` note above). Accepted as a stopgap: it
+  still bounds total ingest; the per-IP boundary arrives with that change. Task
+  4.3 verifies `req.ip` resolves to the client before the per-IP claim is made.
 
 ## Migration Plan
 

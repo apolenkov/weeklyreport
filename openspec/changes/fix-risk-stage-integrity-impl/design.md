@@ -25,6 +25,18 @@ documented behaviour (disabled Save + "no stages assigned — contact admin"
 inline message) ahead of the existing required-stage block, so the unsatisfiable
 "Select at least one stage." error is never reached for a truly dead-ended row.
 
+The guard must make `handleSave` an early-return no-op, not merely skip the
+required-stage error branch. If the branch only suppressed the error and let
+execution continue, `handleSave` would call `onSave` with an empty `stageIds`
+array and surface server validation instead of the documented contact-admin
+state. So the zero-owned-stage condition `return`s before `onSave`, emitting
+nothing. Because `handleSave` is the single save entry point — the click handler
+AND the Ctrl/Cmd+Enter shortcut in `handleKeyDown` both call it — guarding inside
+`handleSave` covers the keyboard path automatically; the shortcut never bypasses
+the disabled-Save state. (A belt-and-braces option is to also early-return from
+`handleKeyDown` when the guard is active, but routing both through `handleSave`
+is sufficient and is the contract.)
+
 The guard is scoped to `availableStages.length === 0 && effectiveStageIds.length
 === 0`, NOT to `availableStages.length === 0` alone. A cross-stage risk can
 arrive in edit mode already carrying `stageIds` while its product lies outside
@@ -70,6 +82,12 @@ array-length rule remain.
 - The dialog branch must run BEFORE the required-stage error so a stage-less
   zero-owned product never shows the unsatisfiable "Select at least one stage."
   message.
+- The branch must `return` from `handleSave` before `onSave`, not just skip the
+  error. A skip-only edit would emit an empty `stageIds` array and trip server
+  validation instead of the documented contact-admin state — and because the
+  Ctrl/Cmd+Enter shortcut also calls `handleSave`, the keyboard path would be the
+  silent leak. Guarding inside `handleSave` closes both the click and keyboard
+  entry points.
 - The guard must be gated on both `availableStages.length === 0` AND
   `effectiveStageIds.length === 0`; gating on the owned-stage count alone would
   disable Save for a valid cross-stage risk that already carries `stageIds` and

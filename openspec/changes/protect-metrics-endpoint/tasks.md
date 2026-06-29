@@ -11,11 +11,11 @@
 - [ ] 2.3 In `deploy/caddy/Caddyfile.staging`: apply the same removal from the `@api` matcher `path` directive.
 - [ ] 2.4 In `deploy/caddy/Caddyfile.staging`: update the route comment to reflect the removal.
 
-## 3. Close the prod host-port bypass
+## 3. Confirm the prod host-port closure (DEPENDENCY — owned by `ci-deploy-supplychain-hardening`)
 
-- [ ] 3.1 In `docker-compose.prod.yml`, make the `api` host port non-public so `/metrics` cannot be reached past Caddy via the host-mapped port. Pick by the result of task 1.1: if the scraper is on the internal Docker network, drop the `ports: "${API_PORT:-3001}:3001"` mapping and keep `expose: "3001"` (follows the `web` service precedent in the same file); if the scraper needs host access, bind to loopback (`ports: "127.0.0.1:${API_PORT:-3001}:3001"`).
-- [ ] 3.2 If loopback binding is chosen, add/confirm a firewall rule proving port `3001` is not reachable from outside the host, and document it.
-- [ ] 3.3 Confirm this change is prod-scoped only: the local `docker-compose.observability.yml` scrape via `host.docker.internal:{API_PORT}` must remain intact.
+- [ ] 3.1 Do NOT edit `docker-compose.prod.yml` in this change. Confirm the `api` host-port closure (`ports:` → `expose:`, or a loopback bind) from `ci-deploy-supplychain-hardening`'s `deploy-edge-topology` requirement ("The API is reachable only through the Caddy edge") has landed or is co-deployed; otherwise `/metrics` stays reachable on the public host port and this change is incomplete. See design.md § Dependencies.
+- [ ] 3.2 If that closure used a loopback bind instead of `expose`, confirm the firewall rule proving port `3001` is not reachable from outside the host exists (owned and documented by the dependency change).
+- [ ] 3.3 Confirm this change is prod-scoped only: the dev `docker-compose.observability.yml` scrape via `host.docker.internal:3002` (dev compose maps `3002:3002`) must remain intact.
 
 ## 4. Deployment and verification
 
