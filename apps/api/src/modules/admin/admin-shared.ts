@@ -104,17 +104,22 @@ export interface AdminRepository {
     periodEnd: Date;
     excludeId?: string;
   }): Promise<{ id: string; periodStart: Date; periodEnd: Date } | null>;
-  // UFB-063: mint a Report row with the supplied dates + initial state.
-  // Mirrors PeriodCreatorScheduler.runOnce's bare `report.create` — no
-  // section seeding, no PolicyApplicator (deferred; documented in the
-  // 063 SUMMARY as the same gap that affects auto-create).
-  createPeriodManual?(input: {
-    periodStart: Date;
-    periodEnd: Date;
-    deadline: Date;
-    weekLabel: string | null;
-    periodState: PeriodState;
-  }): Promise<{
+  // UFB-063: mint a Report row with the supplied dates + initial state, then
+  // materialise its reminder rules via the PolicyApplicator (parity with
+  // saveSnapshot and period-factory). `now` is forwarded to the applicator so
+  // a backfilled (past-dated) period does not arm already-elapsed reminders as
+  // `active` — they would fire stale on the next scheduler tick. Optional so
+  // in-memory test repos can opt out (they skip reminder materialisation).
+  createPeriodManual?(
+    input: {
+      periodStart: Date;
+      periodEnd: Date;
+      deadline: Date;
+      weekLabel: string | null;
+      periodState: PeriodState;
+    },
+    now?: Date,
+  ): Promise<{
     id: string;
     periodStart: Date;
     periodEnd: Date;

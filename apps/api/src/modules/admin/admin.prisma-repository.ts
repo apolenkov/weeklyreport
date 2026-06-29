@@ -126,13 +126,16 @@ export class AdminPrismaRepository implements AdminRepository {
     return periodQueries.findOverlappingPeriod(this.prisma, input);
   }
 
-  async createPeriodManual(input: {
-    periodStart: Date;
-    periodEnd: Date;
-    deadline: Date;
-    weekLabel: string | null;
-    periodState: PeriodState;
-  }): Promise<{
+  async createPeriodManual(
+    input: {
+      periodStart: Date;
+      periodEnd: Date;
+      deadline: Date;
+      weekLabel: string | null;
+      periodState: PeriodState;
+    },
+    now?: Date,
+  ): Promise<{
     id: string;
     periodStart: Date;
     periodEnd: Date;
@@ -141,13 +144,15 @@ export class AdminPrismaRepository implements AdminRepository {
   }> {
     const created = await periodQueries.createPeriodManual(this.prisma, input);
     // UFB-036 parity: materialize one ReminderRule per active policy on the
-    // freshly-created period — exactly as `saveSnapshot` does for snapshot-
-    // created periods, so the manual and snapshot creation paths are
-    // symmetric. Runs AFTER the create commits (an applicator failure cannot
-    // roll back the period) and propagates on error like the snapshot path,
-    // so an admin sees a materialisation failure rather than a silent gap.
+    // freshly-created period — like `saveSnapshot` (snapshot periods) and
+    // `period-factory` (scheduler/login periods). `now` is forwarded so a
+    // backfilled period whose deadline is already past does not arm elapsed
+    // reminders as `active` (they would fire stale on the next tick) — the
+    // applicator drops those when `now` is supplied. Runs AFTER the create
+    // commits (an applicator failure cannot roll back the period) and
+    // propagates on error so an admin sees the failure, not a silent gap.
     if (this.policyApplicator) {
-      await this.policyApplicator.applyToPeriod(created);
+      await this.policyApplicator.applyToPeriod(created, now);
     }
     return created;
   }

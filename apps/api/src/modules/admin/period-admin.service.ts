@@ -281,13 +281,18 @@ export class PeriodAdminService {
       periodState,
     });
 
-    const created = await this.repository.createPeriodManual({
-      periodStart: input.periodStart,
-      periodEnd,
-      deadline,
-      weekLabel,
-      periodState,
-    });
+    const created = await this.repository.createPeriodManual(
+      {
+        periodStart: input.periodStart,
+        periodEnd,
+        deadline,
+        weekLabel,
+        periodState,
+      },
+      // Forward `now` so the applicator drops reminders already elapsed for a
+      // backfilled (past-dated) period instead of arming them to fire stale.
+      now,
+    );
 
     return adminCreatePeriodManualResultSchema.parse({
       periodId: created.id,
