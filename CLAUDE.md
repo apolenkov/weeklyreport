@@ -93,6 +93,10 @@ path must respect them and link the relevant `openspec/specs/` spec.
   it REQUIRED (Zod, no default), read via `requireEnv`, supply explicitly per
   environment; boot must fail loud on a missing var. No non-obvious magic literals
   — name+document or remove.
+- **Comment hygiene — no archaeology.** Comments explain the non-obvious WHY of
+  the current code. Delete change-log/ticket/phase refs (`Phase 35-08`, `UFB-036`,
+  `AUTH-08`, `FIX-02`, `R3a-4`, …) — git history holds that. Keep load-bearing
+  rationale, rewritten without the prefix; never narrate what the code already says.
 
 ## Gates
 

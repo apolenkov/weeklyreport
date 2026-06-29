@@ -37,14 +37,24 @@ pnpm test && pnpm build` green, plus a live boot from source where a boot path
    explain at a glance is a smell: name it with a documented constant or remove
    it. Example flagged by the user: `standardHeaders: "draft-7"` — either a named
    constant with a one-line rationale, or gone. Simple and clear beats clever.
-3. **Functional and immutable.** `const` only; no `let`, no reassignment, no
+3. **Comment hygiene — no archaeology.** A comment must explain the non-obvious
+   WHY of the CURRENT code. Delete change-log / ticket / phase archaeology:
+   `Phase 35-08`, `FIX-02`, `UFB-036`, `AUTH-08`, `R3a-4`, `CC-1`, `TD-06`,
+   `NOTIF-01`, `36-03`, "Extracted verbatim in Wave 3", etc. — git history holds
+   that; the code does not need it. (Scale, `apps/api/src` only: ~364 `Phase N`
+   lines across 124 files + ~338 `UFB-/AUTH-/FIX-` refs across 119 files.) KEEP
+   load-bearing rationale (e.g. the `ipKeyGenerator`/IPv6-/64 note in
+   `rate-limit.middleware.ts` is real — it explains WHY), but rewrite it without
+   the ticket prefix and without narrating what the code already says. Default:
+   if removing the comment loses nothing a competent reader couldn't see, remove it.
+4. **Functional and immutable.** `const` only; no `let`, no reassignment, no
    in-place mutation, no parameter mutation. Build new values with
    `map`/`filter`/`reduce`/spread. Pure functions; side effects isolated.
-4. **Small, single-purpose units** (see thresholds below).
-5. **Exemplary WITHOUT exemption.** A file is "done" only when it is lint-green
+5. **Small, single-purpose units** (see thresholds below).
+6. **Exemplary WITHOUT exemption.** A file is "done" only when it is lint-green
    with NO entry in any `eslint.config.ts` exempt/override list. Removing the
    exemption is the done-signal, not silencing the rule.
-6. **Correct architecture.** A module owns only its domain; cross-domain logic is
+7. **Correct architecture.** A module owns only its domain; cross-domain logic is
    delegated via injection (composition root wires it). dev and prod are split by
    explicit env files and dev-only modules, not by in-code branches with
    fallbacks.
