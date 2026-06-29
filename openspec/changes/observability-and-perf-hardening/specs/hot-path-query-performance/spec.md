@@ -22,16 +22,20 @@ archive and slicing in memory. The repository query MUST use a stable ordering o
 `publishedAt desc` plus the unique `id` as a tie-breaker so the cursor resumes
 deterministically when two rows share a `publishedAt`, and it MUST load the heavy
 nested section graph only for rows that need the snapshot-less fallback, not for
-every listed row. The public `cursor`/`nextCursor` shape MUST NOT change (no
+every listed row. To decide `nextCursor` without re-reading the whole archive, the
+query MUST fetch one probe row beyond the page (`take: limit + 1`): it returns at
+most `limit` items, and the presence of the extra `(limit + 1)`th row is what marks
+that more rows remain. The public `cursor`/`nextCursor` shape MUST NOT change (no
 shared-contract change in this MVP phase).
 
 #### Scenario: First page reads only its rows from the database
 
 - **GIVEN** an archive list request with no cursor and a limit
 - **WHEN** the repository queries the archive
-- **THEN** the query reads at most `limit` rows in `publishedAt desc, id desc`
-  order rather than the whole archive
-- **AND** `nextCursor` is the last row's `reportId` when more rows remain
+- **THEN** the query reads at most `limit + 1` rows (one probe row beyond the page)
+  in `publishedAt desc, id desc` order rather than the whole archive
+- **AND** it returns at most `limit` items, and `nextCursor` is the last returned
+  row's `reportId` when the probe row is present, else `null`
 
 #### Scenario: A cursor resumes after the prior page
 

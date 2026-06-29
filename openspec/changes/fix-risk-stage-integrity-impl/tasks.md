@@ -23,6 +23,13 @@
 - [ ] 2.2 Ensure the guard runs BEFORE the existing
       `effectiveStageIds.length === 0` → "Select at least one stage." error, so a
       zero-owned-stage product never surfaces the unsatisfiable error.
+- [ ] 2.2a Make the guarded branch an early-return no-op: `handleSave` MUST
+      `return` before `onSave` when the guard fires, so an empty `stageIds`
+      array is never emitted. Skipping the error branch alone is NOT enough —
+      falling through to `onSave` would surface server validation instead of the
+      contact-admin state. The Ctrl/Cmd+Enter shortcut in `handleKeyDown` calls
+      `handleSave`, so the keyboard path inherits the guard and must not bypass
+      the disabled-Save state.
 - [ ] 2.3 Keep the single-owned-stage auto-apply and the multi-owned required
       behaviour unchanged (`availableStages.length >= 1`).
 - [ ] 2.4 Keep a cross-stage risk that already carries `stageIds` saveable: when
@@ -48,6 +55,9 @@
       one-owned-stage product still saves; AND a cross-stage edit that already
       carries `stageIds` (its product returns `[]` from `stagesForProduct`) keeps
       Save enabled and saves with the original product preserved.
+- [ ] 4.2a Risk-dialog keyboard-path test: on a stage-less zero-owned-stage
+      product, pressing Ctrl/Cmd+Enter does NOT call `onSave` (no empty
+      `stageIds` payload is emitted) and the contact-admin state stays shown.
 - [ ] 4.3 Stage-multi-select component test: in `required` mode with no selection
       no banner renders; in non-required mode the empty-selection banner still
       renders; selecting a stage renders the per-stage banner.

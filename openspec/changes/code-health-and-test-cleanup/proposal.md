@@ -2,8 +2,8 @@
 
 Four reviewed P2 code-health findings share one root cause: parallel copies of
 the same logic that drift silently and tests that look like a safety net but
-guard nothing. Duplicated derivations (scope filter, KPI ratio, "report has
-content", worst-status), dead routers/components/test mocks, hand-rolled dialog
+guard nothing. Duplicated derivations (scope filter, the active-leads KPI query,
+"report has content", worst-status), dead routers/components/test mocks, hand-rolled dialog
 focus handling, and asymmetric Prisma FK delete policy each let a future edit
 introduce a defect the gates would not catch. This is a grouped cleanup bundling
 the source findings `consolidate-duplicated-derivations`,
@@ -12,9 +12,11 @@ the source findings `consolidate-duplicated-derivations`,
 
 ## What Changes
 
-- Extract single-source-of-truth helpers for the four duplicated derivations
-  (`allowedGroupIds`, on-time-ratio, `reportHasContent`, worst-status) and reuse
-  them at every site; add the missing `priorityRank` to `LeadKanbanItem`.
+- Extract single-source-of-truth helpers for the duplicated derivations
+  (`allowedGroupIds`, the `activeLeadsLastPublishedPeriod` query,
+  `reportHasContent`, worst-status) and reuse them at every site; name the two
+  distinct on-time-ratio windows so they are not conflated; add the missing
+  `priorityRank` to `LeadKanbanItem`.
 - Remove dead, never-wired code once proven unused: the parallel `*.router.ts` +
   passport-JWT plumbing are deleted (the live `adminProcedure`/`headProcedure`
   stay the only auth path — the stale routers are not wired in, since their

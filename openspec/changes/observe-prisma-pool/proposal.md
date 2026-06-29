@@ -23,11 +23,17 @@ Finding P1-21 from the 2026-06-28 repo-excellence review.
     (default: `10000`).
   - `DB_POOL_CONNECTION_TIMEOUT_MS` — acquire-from-pool timeout in ms
     (default: `0`, disabled).
-- Parse each var with `parseInt` and range-validate: `DB_POOL_MAX` must be a
-  positive integer (`>= 1`); the two timeout vars must be non-negative
-  integers (`>= 0`). Any value that is absent, non-numeric, or out of range
-  falls back to its default — negative/zero values never reach `pg`. Log the
-  resolved values at boot so operators can confirm the active configuration.
+- Parse each var as a full-string integer and range-validate: `DB_POOL_MAX`
+  must be a positive integer (`>= 1`); the two timeout vars must be
+  non-negative integers (`>= 0`). Parsing MUST reject any value that is not a
+  whole number across its entire trimmed length — `parseInt` is unsafe here
+  because it silently accepts partially-numeric and decimal strings
+  (`parseInt('10junk')` → `10`, `parseInt('1.5')` → `1`); use
+  `Number.isSafeInteger(Number(raw.trim()))` on the non-empty trimmed string
+  instead. Any value that is absent, empty, non-integral, or out of range
+  falls back to its default — malformed/negative/zero values never reach `pg`.
+  Log the resolved values at boot so operators can confirm the active
+  configuration.
 - No schema change, no migration, no tRPC procedure change.
 
 ## Capabilities

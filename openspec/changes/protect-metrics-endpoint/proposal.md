@@ -14,26 +14,34 @@ change; deferring it is risk without cost.
   and `deploy/caddy/Caddyfile.staging`; after this change Caddy returns a
   non-2xx response for any request to `/metrics` on the public domain.
 - Update the route comment at the top of each Caddyfile to reflect the removal.
-- Close the prod host-port bypass: `docker-compose.prod.yml` publishes the API
-  container port to the host (`ports: "${API_PORT:-3001}:3001"`, binds
-  `0.0.0.0`), which serves `/metrics` directly past Caddy. Make this non-public —
-  drop the host `ports` mapping in favour of `expose` (preferred, matches the
-  `web` service precedent), or bind to `127.0.0.1` with firewall proof. Choice
-  follows the prod scrape-path open question.
+- Close the prod host-port bypass — DEPENDENCY, not owned here: removing
+  `/metrics` from Caddy is insufficient while `docker-compose.prod.yml`
+  host-publishes the API port (`ports: "${API_PORT:-3001}:3001"`, binds
+  `0.0.0.0`), which serves `/metrics` directly past Caddy. The host-port closure
+  (`ports:` → `expose:`) and its durable rule are owned by the active
+  `ci-deploy-supplychain-hardening` change (`deploy-edge-topology`). This change
+  does NOT edit `docker-compose.prod.yml`; it depends on that change landing or
+  being co-deployed. See design.md § Dependencies.
 - Reconcile `deploy/prometheus.yml`: it is a prod-labelled scrape template wired
   into no compose file, with a stale `api:3002` target (prod API listens on
   `3001`). Either repoint its target to `api:3001` or mark it explicitly
   non-authoritative, so it does not mislead operators.
 - `MetricsController` itself is unchanged; no NestJS code changes.
-- No changes to `deploy/prometheus-otel-lgtm.yml`; authorized scrapers continue
-  to reach the API via a network path that bypasses Caddy (see design.md for
-  prod scraping open question).
+- No changes to `deploy/prometheus-otel-lgtm.yml` — the local/dev otel-lgtm
+  scrape job. It pins `host.docker.internal:3002`, which matches the DEV api host
+  port (dev compose maps `3002:3002`), not prod (`3001`). Layering
+  `docker-compose.observability.yml` onto `docker-compose.prod.yml` is a local
+  convenience, NOT an authoritative prod scrape path; prod scraping is governed
+  by the managed-stack open question (see design.md).
 
 **Non-goals**
 
 - Adding a scrape-token or BasicAuth guard inside `MetricsController` (valid
   defence-in-depth; tracked separately as a follow-up).
-- Changing the Prometheus scrape target, port, or job configuration.
+- Changing `deploy/prometheus-otel-lgtm.yml`, the local/dev otel-lgtm scrape job
+  (its job names, intervals, or its pinned `host.docker.internal:3002` target).
+  Reconciling `deploy/prometheus.yml` and verifying the managed prod scraper IS
+  in scope (see What Changes and tasks).
 - Restricting `/metrics` at the NestJS application layer.
 
 ## Capabilities
@@ -51,11 +59,11 @@ change; deferring it is risk without cost.
 
 - `deploy/caddy/Caddyfile` — remove `/metrics` from `@api` path list; update comment.
 - `deploy/caddy/Caddyfile.staging` — same change.
-- `docker-compose.prod.yml` — make the host-published API port non-public (drop the
-  `ports` mapping for `api` in favour of `expose`, or bind to `127.0.0.1`), so
-  `/metrics` is not reachable on the host's public interface past Caddy.
+- `docker-compose.prod.yml` — NOT edited by this change. The host-port closure
+  (`ports:` → `expose:`) is owned by `ci-deploy-supplychain-hardening`
+  (`deploy-edge-topology`); this change depends on it. See design.md § Dependencies.
 - `deploy/prometheus.yml` — repoint the `customreport-api` target to `api:3001` or
   mark the file non-authoritative; it is a prod-labelled template wired nowhere.
 - `apps/api/src/infrastructure/metrics/metrics.controller.ts` — no changes.
-- `deploy/prometheus-otel-lgtm.yml` — no changes (local scrape path already bypasses Caddy).
+- `deploy/prometheus-otel-lgtm.yml` — no changes (dev-only otel-lgtm scrape, pinned to `host.docker.internal:3002`; bypasses Caddy).
 - Prod Prometheus scrape config (managed stack, outside repo) — must be verified to target the API via the internal Docker network, not the public domain; see design.md § Open Questions.

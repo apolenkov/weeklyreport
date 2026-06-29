@@ -38,10 +38,12 @@ _(none)_
   `liveness()`; in `readiness()` read the threshold from injected `EnvConfig`
   (the `ENV_CONFIG` provider), not from `process.env` directly. See design
   Decision 3.
-- `apps/api/src/infrastructure/health/health.module.ts` — create or reuse the
-  `ENV_CONFIG` token + `{ provide: ENV_CONFIG, useFactory: validateEnv }`
-  provider so `HealthController` can inject it. No `ConfigModule` exists today,
-  so this DI wiring must be created.
+- `apps/api/src/infrastructure/health/health.module.ts` — import a dedicated
+  exported `ConfigModule` that provides and exports the shared `ENV_CONFIG` token
+  (`{ provide: ENV_CONFIG, useFactory: validateEnv }`) so `HealthController` can
+  inject it. No `ConfigModule` exists today, so create it if absent (reuse it if
+  `enforce-smtp-config` merged it first). An `app.module.ts`-only provider would
+  be unresolvable from the imported `HealthModule`. See design Decision 3.
 - `apps/api/src/infrastructure/config/env.schema.ts` — add
   `HEAP_HEALTH_THRESHOLD_BYTES` (default 1 536 MiB / 1 610 612 736 bytes).
 - `.env.example` — document the new variable.

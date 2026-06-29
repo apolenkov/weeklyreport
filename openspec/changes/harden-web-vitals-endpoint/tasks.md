@@ -19,6 +19,7 @@
 
 - [ ] 4.1 Extend `createRateLimits` in `apps/api/src/infrastructure/throttler/rate-limit.middleware.ts` to also return a `vitalsLimiter` with a moderate per-IP/minute budget, bumped in test like the other tiers, using the existing `rateLimitHitsTotal` bucket accounting
 - [ ] 4.2 Mount the `vitalsLimiter` on `/api/web-vitals` in `apps/api/src/main.ts`
+- [ ] 4.3 Confirm the limiter keys per client before claiming per-IP throttling: verify Express `trust proxy` is set (the `set-express-trust-proxy` change) so `req.ip` resolves to the real client behind Caddy, not the proxy container; if that change has not landed, document in the PR that the vitals limiter is a global bucket stopgap (see design `[Dependency]` note) and do not assert per-IP behavior
 
 ## 5. Tests
 

@@ -48,15 +48,28 @@
     `"NaN"`
   - the conic ring `title` attribute is
     `"0 of 0 leads submitted this week (0%)"` and contains no `"NaN"`
+  - the conic ring's inline `background` style contains the `0%`
+    conic-gradient stops (e.g. `0% 0%`) and contains no `"NaN"`
   - no element's text content includes `"NaN"`
 
 - [ ] **Add label accuracy case to `AlertBar` tests**
       File: `apps/web/src/components/dashboard/alert-bar.test.tsx`
       Add a case that renders `AlertBar` with two entries in `pendingLeads` and
       `reopenCount` mock returning `0`, then asserts:
+
   - both names appear in the document
   - the text "Not started" appears for each entry
   - the text "Draft" does not appear anywhere in the rendered output
+
+- [ ] **Refresh the stale `AlertBar` snapshot**
+      File:
+      `apps/web/src/components/dashboard/__snapshots__/alert-bar.test.tsx.snap`
+      The existing snapshot asserts the first pending lead is labeled `Draft`
+      (the `Draft` token sits in the committed `.snap`). The label change makes
+      that snapshot fail, so the snapshot gate goes red unless it is updated.
+      Re-record it (`pnpm --filter @customreport/web exec vitest run -u
+    alert-bar`) and confirm the regenerated snapshot contains `Not started`
+      for every entry and no `Draft` token before committing.
 
 ## verification
 

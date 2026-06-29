@@ -1,7 +1,7 @@
 ## Context
 
 The 2026-06-28 repo-excellence-review identified a cluster of low-severity
-but real defensive gaps across three surfaces:
+but real defensive gaps across several surfaces:
 
 1. **Auth** — `jwt.verify` in `auth.controller.ts` has no `algorithms` pin.
 2. **Middleware** — `correlation-id.middleware.ts` adopts `x-request-id` verbatim.
@@ -14,26 +14,37 @@ but real defensive gaps across three surfaces:
    `assertNonProdDestructive` that every sibling script carries.
 6. **Audit types** — `'period.manual-edit'` is emitted but absent from the
    `AuditEvent` union in `audit-logger-types.ts`.
-7. **Comments** — four stale comments mislead future maintainers.
+7. **Shared schema** — the `telemetry.summary` sparkline schema bound is
+   `.max(8)` while the only producer emits 4 and the doc comment says ≤ 4.
+8. **Comments** — three stale comments mislead future maintainers.
 
-All are confined to `apps/api`, `packages/shared`, and `prisma/`. No schema
-migration, no new external dependency, no UI change.
+Most are confined to `apps/api`, `packages/shared`, and `prisma/`. One has a
+UI follow-on: restricting `dev.wipeAndReseed` to `adminProcedure` (item 4)
+breaks the `DevRoleSwitcher` data-reset controls, which render for every dev
+role and call that procedure — non-admin dev sessions would now hit a
+`FORBIDDEN` alert. So the dev-only `role-switcher.tsx` reset controls must be
+gated behind the admin role (see Decision 4). No schema migration and no new
+external dependency.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Satisfy the four new `api-input-hardening` requirements.
+- Satisfy the five new `api-input-hardening` requirements (including the
+  admin-only `DevRoleSwitcher` reset controls).
 - Extend `destructive-db-guard` spec to cover seed/backfill scripts.
 - Complete the `AuditEvent` union so it matches runtime behavior.
-- Correct four stale comments that carry false contracts.
+- Pin the `telemetry-summary-contract` sparkline bound to ≤ 4.
+- Correct three stale comments that carry false contracts.
 
 **Non-goals:**
 
 - Revocation/deactivation bypass in PDF export and Bull Board (separate change).
 - Dead-code removal (separate cleanup).
 - Admin/org null-logger replacement (tracked separately).
-- Any UI, migration, or new dependency.
+- Any UI change beyond gating the dev-only `DevRoleSwitcher` reset controls
+  behind the admin role (the direct consequence of the `dev.wipeAndReseed`
+  restriction); no migration; no new dependency.
 
 ## Decisions
 
@@ -63,12 +74,22 @@ and the inline comment documents min-2 as the deliberate floor); switching to
 null-byte guard is built into `safeText` by its existing implementation.
 No new helper needed.
 
-### 4. dev.wipeAndReseed: change one identifier
+### 4. dev.wipeAndReseed: change one identifier + gate the UI controls
 
 Replace `protectedProcedure` with `adminProcedure` at the single call site in
 `trpc.router.ts`. The production fence (`AUTH_DEV_MODE`) is unaffected. The
 role-coverage gate passes because `adminProcedure` is already one of the 9
 canonical builders.
+
+This procedure is consumed by exactly one client: the dev-only
+`DevRoleSwitcher` (`apps/web/src/components/dev/role-switcher.tsx`), whose four
+"Wipe + Reseed" / "Wipe reports" controls render for every dev role. With the
+restriction in place, a lead/head/viewer dev session that triggers a reset
+would get a `FORBIDDEN` error surfaced as an `alert(...)`. To keep the UI
+honest, those reset controls MUST be hidden (or disabled) unless the current
+dev session role is `admin`. The role switcher does not currently read its own
+session role, so the implementer adds that minimal lookup; the mechanism is
+left to implementation. This is the only UI change in the scope.
 
 ### 5. Seed guard: call assertNonProdDestructive at the top of main()
 
@@ -133,7 +154,9 @@ After:
 
 - **`dev.wipeAndReseed` role tightening**: if a CI fixture or test calls wipeAndReseed
   with a non-admin session it will now get `FORBIDDEN`. Check test helpers that call
-  this endpoint and ensure they use an admin token.
+  this endpoint and ensure they use an admin token. The dev-only `DevRoleSwitcher`
+  reset controls are also gated to admin sessions (Decision 4), so a non-admin dev
+  session no longer exposes a control that would fail with a `FORBIDDEN` alert.
 - **x-request-id silent fallback**: invalid headers are silently replaced rather than
   rejected with a 400. This matches the principle of least surprise for
   infrastructure middleware (a malformed correlation id should not crash a legitimate
@@ -146,8 +169,11 @@ After:
 
 All changes are backward-compatible for production. No migration, no feature flag.
 
-Order: shared schemas first, then api middleware/controller, then seed scripts,
-then audit types, then comment fixes. Each change is a single-commit unit.
+Order: shared schemas first (search safeText, telemetry sparkline contract +
+its test), then api middleware/controller, then the `dev.wipeAndReseed`
+restriction together with the `DevRoleSwitcher` admin-only gating, then seed
+scripts, then audit types, then comment fixes. Each change is a single-commit
+unit.
 
 ## Open Questions
 

@@ -42,8 +42,10 @@
 - [ ] 3.2 Move archive-listing pagination into the repository
       (`archive.prisma-repository.ts`) using the existing `reportId` cursor /
       `nextCursor` contract — Prisma `cursor: { id }` + `skip: 1` with stable
-      `orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }]` — and load the nested
-      section graph only for snapshot-less fallback rows.
+      `orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }]` and `take: limit + 1`
+      so a probe row decides `nextCursor` (return only `limit` items; `nextCursor`
+      is the last kept row's `reportId` iff the probe row came back, else `null`)
+      — and load the nested section graph only for snapshot-less fallback rows.
 - [ ] 3.3 Replace the per-user count+delete loop in `upsertUsers`
       (`admin-snapshot-write.queries.ts`) with a bulk prefetch plus a single
       `deleteMany`.
@@ -53,9 +55,10 @@
 - [ ] 3.5 Gate the logger directory prune (`lib/logger.ts`) behind a rotation
       event or a timer instead of running it per log line.
 - [ ] 3.6 Tests: both report queries dispatch concurrently; archive cursor
-      pagination reads only the page, resumes from the `reportId` cursor, returns
-      `nextCursor: null` on the last/missing-cursor page, and loads the section
-      graph only for fallback rows;
+      pagination reads only the page plus one probe row, returns at most `limit`
+      items with `nextCursor` set iff a further page exists, resumes from the
+      `reportId` cursor, returns `nextCursor: null` on the last/missing-cursor
+      page, and loads the section graph only for fallback rows;
       `upsertUsers` issues one `deleteMany`; organization read performs no write
       when the row exists; the logger does not prune per line.
 

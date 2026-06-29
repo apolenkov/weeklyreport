@@ -12,10 +12,14 @@ inside the public virtual host (`{$CADDY_SITE_ADDRESS}`), `/metrics` is reachabl
 from the internet with no credentials.
 
 Local observability: `docker-compose.observability.yml` runs `grafana/otel-lgtm`
-with a Prometheus job (`customreport-api`) targeting
-`host.docker.internal:{API_PORT}/metrics`. That path goes Host → Docker port
-mapping → `api:3001`, bypassing Caddy entirely. Removing `/metrics` from Caddy
-does not affect this local scrape path.
+with a Prometheus job (`customreport-api`) that pins
+`host.docker.internal:3002/metrics` (`deploy/prometheus-otel-lgtm.yml`). That
+matches the DEV api host port (dev compose maps `3002:3002`); the path goes Host
+→ Docker port mapping → `api:3002`, bypassing Caddy entirely. Removing `/metrics`
+from Caddy does not affect this dev scrape path. The pinned `3002` does NOT match
+prod (`3001`), so layering this observability compose onto `docker-compose.prod.yml`
+is a local convenience, NOT an authoritative prod scrape path — prod scraping is
+the managed-stack open question below.
 
 Production observability: the repo ships one prod-labelled scrape template,
 `deploy/prometheus.yml` ("Prometheus scrape config for CustomReport prod
@@ -75,35 +79,41 @@ has no `/metrics` route so it returns 404. This is acceptable: the response is
 non-2xx and leaks no Prometheus data. An explicit Caddy `respond 404` block for
 `/metrics` is cleaner but not required for security correctness.
 
-### Decision: Close the prod host-published API port, not only the Caddy edge
+### Decision: Host-port closure is delegated to ci-deploy-supplychain-hardening
 
 **Choice**: Removing `/metrics` from Caddy is necessary but NOT sufficient.
-`docker-compose.prod.yml` publishes the API container port to the host
-(`ports: "${API_PORT:-3001}:3001"`), which binds `0.0.0.0:3001` by default. That
-host port serves `/metrics` directly, bypassing Caddy entirely — so on a host with
-a public IP and no firewall, `/metrics` stays reachable at `http://<host>:3001/metrics`
-even after the Caddy edit. The change MUST also make prod direct host-port access
-non-public.
+`docker-compose.prod.yml` host-publishes the API container port
+(`ports: "${API_PORT:-3001}:3001"`, binds `0.0.0.0:3001` by default). That host
+port serves `/metrics` directly, bypassing Caddy entirely — so on a host with a
+public IP and no firewall, `/metrics` stays reachable at
+`http://<host>:3001/metrics` even after the Caddy edit. Full protection therefore
+requires the host port to be closed.
 
-**How** (pick by the resolution of the Open Question on the prod scrape path):
+**Ownership**: This change does NOT edit `docker-compose.prod.yml`. The host-port
+closure (`ports:` → `expose:`, or a loopback bind) and its durable spec rule are
+owned by the active `ci-deploy-supplychain-hardening` change — capability
+`deploy-edge-topology`, requirement "The API is reachable only through the Caddy
+edge". `protect-metrics-endpoint` depends on that requirement instead of
+re-specifying it or editing the same file. See § Dependencies.
 
-- **Managed scraper on the internal Docker network** (preferred): drop the `ports`
-  mapping for `api` and keep only `expose: "3001"`. Caddy and the scraper both reach
-  `api:3001` over the Docker network; nothing is host-published. This follows the
-  existing repo precedent — the `web` service in the same compose file already
-  comments out its `ports` with the note "web is no longer published to the host
-  directly — caddy fronts it" and relies on `expose`.
-- **Managed scraper needs host access**: bind the publish to loopback only
-  (`ports: "127.0.0.1:${API_PORT:-3001}:3001"`) and require a firewall rule proving
-  port `3001` is not reachable from outside the host.
+**Reconciliation with the local scrape requirement**: the host-port closure is
+PROD-scoped (`docker-compose.prod.yml`). The local/dev observability scrape in
+`docker-compose.observability.yml` reaches the dev api via the host-mapped port
+(`host.docker.internal:3002`, dev compose `3002:3002`); that dev path stays
+intact and is unaffected by the prod-scoped closure.
 
-Do not hardcode one option; the choice depends on the scrape-path Open Question.
+## Dependencies
 
-**Reconciliation with the local scrape requirement**: this fix is PROD-scoped
-(`docker-compose.prod.yml`). The local/dev observability scrape in
-`docker-compose.observability.yml` deliberately reaches the API via the host-mapped
-port (`host.docker.internal:{API_PORT}`); that path stays intact. The
-non-public-host-port requirement governs prod only.
+- **[Dependency] `ci-deploy-supplychain-hardening` → `deploy-edge-topology`**
+  (requirement "The API is reachable only through the Caddy edge"). That change
+  is authoritative for switching the `api` service in `docker-compose.prod.yml`
+  from host-published `ports:` to `expose:` (or a loopback bind), and owns the
+  durable host-port rule. `protect-metrics-endpoint` removes `/metrics` from the
+  public Caddy matcher; the host-port closure is the prerequisite that makes that
+  removal complete (otherwise `/metrics` is still reachable on the public host
+  port). Ordering: `deploy-edge-topology`'s host-port closure MUST land before or
+  alongside this change for full protection in prod. This change does not edit
+  `docker-compose.prod.yml` or re-specify that rule.
 
 ## Risks / Trade-offs
 

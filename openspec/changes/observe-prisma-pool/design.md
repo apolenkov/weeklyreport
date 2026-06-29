@@ -46,18 +46,25 @@ Alternatives considered:
 - Wrap pool creation in a try/catch — does not help because `error` is
   an asynchronous event, not a thrown exception.
 
-### D2: Parse env vars with `parseInt` + range-validated fallback, no Zod
+### D2: Parse env vars as full-string integers + range-validated fallback, no Zod
 
 The three new vars are internal tunables used only by `PrismaService`.
 They have safe numeric defaults and never flow into shared schemas.
-Using `parseInt` with a fallback constant keeps the constructor zero-dep
+A small inline parse-and-validate helper keeps the constructor zero-dep
 on any validation library and avoids coupling to the env-schema module.
 
-Range validation is part of the fallback, not just an absent/non-numeric
-check: `DB_POOL_MAX` must be a positive integer (`>= 1`); the two timeout
+The parse MUST validate the entire trimmed string, not a numeric prefix.
+`parseInt` is the wrong primitive here: it stops at the first non-digit, so
+`parseInt('10junk')` returns `10` and `parseInt('1.5')` returns `1` — a
+malformed env value would be silently accepted and logged as if valid.
+Instead, on the non-empty trimmed string, accept only when
+`Number.isSafeInteger(Number(raw.trim()))` holds; otherwise fall back.
+
+Range validation is the second gate, applied after the integer check:
+`DB_POOL_MAX` must be a positive integer (`>= 1`); the two timeout
 vars must be non-negative integers (`>= 0`). Any value that fails — absent,
-non-numeric, or out of range — falls back to the default rather than failing
-boot. This matters because `pg` does not defend itself: it coerces `max: 0`
+empty, non-integral, or out of range — falls back to the default rather than
+failing boot. This matters because `pg` does not defend itself: it coerces `max: 0`
 to `10` (so a logged `0` would lie) and keeps a negative `max`, which makes
 the pool report permanently full and — with the default
 `connectionTimeoutMillis: 0` — hang every queued query forever. Falling back

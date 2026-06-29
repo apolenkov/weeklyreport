@@ -47,6 +47,37 @@ a save is in flight can never write a queued payload to a different section.
   own captured `reportSectionId`), never section B
 - **AND** no section-B section ever receives section A's queued content
 
+### Requirement: Confirmed-save baseline stamp is scoped to the in-flight section
+
+The autosave hook MUST stamp `lastSavedRef` from a resolved `saveDraft` only
+when that save's section is still the section the hook currently targets. The
+hook MUST capture the in-flight save's `reportSectionId` at mutate time
+(alongside `inFlightRef`) — this is the section the mutation was actually sent
+to, i.e. the queued payload's own `reportSectionId` on the drain path and
+`reportSectionId` on the debounce/`forceSave` path, never a later
+`reportSectionIdRef.current`. In every `onSuccess` (including a drained queued
+save), the hook MUST compare the captured in-flight section id to the current
+`reportSectionIdRef.current`; when they differ — the lead navigated to another
+report or period before the in-flight save resolved — the hook MUST NOT stamp
+`lastSavedRef` and MUST NOT schedule a save for the newly loaded section, so the
+freshly-primed `initialSavedKey` baseline for the new section is preserved and
+the new section does not falsely read `dirty`. A legitimately queued payload for
+the still-current section MUST still stamp and drain as before; the guard skips
+only the cross-section stamp and its spurious follow-up save, never a same-section
+save.
+
+#### Scenario: an old-section save resolves after navigation
+
+- **GIVEN** a `saveDraft` for section A is in flight and the lead has made no
+  further edits (nothing is queued)
+- **WHEN** the lead navigates to a different report or period (section B),
+  priming `lastSavedRef` from section B's `initialSavedKey`, and only then does
+  the section-A save resolve and run its `onSuccess`
+- **THEN** the hook does not overwrite section B's baseline `lastSavedRef` with
+  section A's confirmed key
+- **AND** section B does not read `dirty` and no spurious autosave is scheduled
+  for section B
+
 ### Requirement: Queued-save drain does not leak an unhandled rejection
 
 The queued-save drain in the autosave hook's `onSuccess` handler MUST fire the queued mutation through the fire-and-forget `mutateRef.current(...)`, never `void mutateAsyncRef.current(...)`, so the

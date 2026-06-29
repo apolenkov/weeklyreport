@@ -85,25 +85,50 @@ called once in `main.ts`, and services that need env values read `process.env`
 directly (e.g. `redis.health.ts`). So the DI plumbing must be created, not
 assumed.
 
-**Chosen:** Expose the validated config under an injection token, following the
-repo's token + `useFactory` idiom:
+**Chosen:** Expose the validated config under an injection token in a dedicated,
+**exported** config module, following the repo's token + `useFactory` idiom:
 
 ```ts
+// one shared file owns BOTH the token const and the module
 export const ENV_CONFIG = Symbol("ENV_CONFIG");
-// provider: { provide: ENV_CONFIG, useFactory: validateEnv }
+
+@Module({
+  providers: [{ provide: ENV_CONFIG, useFactory: validateEnv }],
+  exports: [ENV_CONFIG],
+})
+export class ConfigModule {}
 ```
 
-Register this provider in `HealthModule` (or import a small `ConfigModule` that
-provides and exports `ENV_CONFIG`), then inject it into `HealthController` with
-`@Inject(ENV_CONFIG) private readonly env: EnvConfig`. `validateEnv()` is
-idempotent (a pure `safeParse` of `process.env`), so the factory re-validating
-alongside `main.ts` is harmless.
+`HealthModule` then declares `imports: [ConfigModule]` and `HealthController`
+injects `@Inject(ENV_CONFIG) private readonly env: EnvConfig`. `validateEnv()`
+is idempotent (a pure `safeParse` of `process.env`), so the factory
+re-validating alongside `main.ts` is harmless.
 
-**Dependency:** the parallel `enforce-smtp-config` change introduces the same
-`ENV_CONFIG` token + `{ provide: ENV_CONFIG, useFactory: validateEnv }`
-provider. Whichever change lands first owns the token; the other reuses it and
-has `HealthModule` import the module that exports it. Do not declare the
-provider twice.
+**Why a dedicated exported module is mandatory, not optional:** a provider
+declared only in `app.module.ts`'s `providers` array is private to `AppModule`.
+NestJS module exports flow _up_ from an imported module to its importer — they
+never flow _down_ from the importer into an imported module. `AppModule` imports
+`HealthModule`, so a provider local to `AppModule` is **not** resolvable by
+`HealthController`, which lives inside `HealthModule`; that produces an
+unresolvable Nest dependency at boot. The token must therefore come from a
+module that `HealthModule` imports and that `exports` the token. Registering the
+provider directly in `HealthModule` is also rejected: it spawns a second factory
+instance and a second source of truth once `EmailService` needs the same token,
+so the single exported `ConfigModule` is the only accepted home.
+
+**Token identity:** `ENV_CONFIG` MUST be a single shared `const Symbol` defined
+in one file and imported everywhere. Two separate `Symbol("ENV_CONFIG")` calls
+are distinct tokens and DI resolution still fails.
+
+**[Dependency] enforce-smtp-config:** the parallel `enforce-smtp-config` change
+needs the identical `ENV_CONFIG` token for `EmailService`. The shared outcome
+both changes depend on is the single exported `ConfigModule` above: whichever
+change lands first creates it; the other imports it (`HealthModule` for this
+change; `AppModule` / `EmailService`'s module scope for the SMTP change). The
+app.module-only provider form must NOT be used — it leaves no module for
+`HealthModule` to import and breaks `HealthController` resolution. This note
+records the cross-change requirement only; it does not re-specify
+`enforce-smtp-config`.
 
 ## Risks / Trade-offs
 
@@ -117,9 +142,11 @@ provider twice.
 
 1. Add `HEAP_HEALTH_THRESHOLD_BYTES` to `env.schema.ts` with the 1 536 MiB
    default. Document in `.env.example`.
-2. Create or reuse the `ENV_CONFIG` token + `useFactory: validateEnv` provider
-   and wire it into `HealthModule`; inject `EnvConfig` into `HealthController`
-   (see Decision 3).
+2. Create or reuse the single exported `ConfigModule` that provides and exports
+   the shared `ENV_CONFIG` token (`useFactory: validateEnv`); have `HealthModule`
+   `imports: [ConfigModule]` and inject `EnvConfig` into `HealthController`. Do
+   NOT add the provider to `app.module.ts` only — it would be unresolvable from
+   `HealthModule` (see Decision 3).
 3. Remove `checkHeap` from `liveness()`; update `readiness()` to use
    `this.env.HEAP_HEALTH_THRESHOLD_BYTES`.
 4. Add `HEAP_HEALTH_THRESHOLD_BYTES: ${HEAP_HEALTH_THRESHOLD_BYTES:-1610612736}`

@@ -14,7 +14,7 @@ Consumer surfaces:
 
 - `apps/api/src/modules/auth/auth.controller.ts` — `verifySessionToken`
 - `apps/api/src/infrastructure/middleware/correlation-id.middleware.ts`
-- `packages/shared/src/schemas/search.ts` — `searchQuerySchema`
+- `packages/shared/src/schemas/search.ts` — `searchQueryInputSchema`
 - `apps/api/src/infrastructure/trpc/trpc.router.ts` — `dev.wipeAndReseed`
 
 ## ADDED Requirements
@@ -78,7 +78,7 @@ Consumer surface: `apps/api/src/infrastructure/middleware/correlation-id.middlew
 
 ### Requirement: Search query is validated with safeText
 
-The `searchQuerySchema` in `packages/shared/src/schemas/search.ts` MUST
+The `searchQueryInputSchema` in `packages/shared/src/schemas/search.ts` MUST
 constrain the `q` field using the project's `safeText()` helper
 (minimum 2 characters, maximum 200 characters, no null bytes, no
 invisible-only input). The existing `z.string().min(2).max(200)` keeps
@@ -140,3 +140,30 @@ Consumer surface: `apps/api/src/infrastructure/trpc/trpc.router.ts`
 - **GIVEN** `AUTH_DEV_MODE=true` and an authenticated session with role `lead`
 - **WHEN** `dev.wipeAndReseed` is called
 - **THEN** the procedure returns `FORBIDDEN` without executing the wipe
+
+### Requirement: DevRoleSwitcher reset controls are admin-only
+
+The `DevRoleSwitcher` data-reset controls MUST be hidden or disabled unless the
+current dev session role is `admin`. These controls (`Wipe + Reseed (small)`,
+`(middle)`, `(huge)`, and `Wipe reports (manual UAT)`) call `dev.wipeAndReseed`,
+which is now restricted to `adminProcedure`. Rendering them for non-admin dev
+sessions would surface a `FORBIDDEN` error as an `alert(...)`, so the client
+MUST gate them to match the server-side restriction.
+
+Consumer surface: `apps/web/src/components/dev/role-switcher.tsx`
+(`DevRoleSwitcher`).
+
+#### Scenario: Admin dev session sees the reset controls
+
+- **GIVEN** the dev role switcher is enabled and the current session role is
+  `admin`
+- **WHEN** the switcher menu is opened
+- **THEN** the four data-reset controls are present and actionable
+
+#### Scenario: Non-admin dev session does not see actionable reset controls
+
+- **GIVEN** the dev role switcher is enabled and the current session role is
+  `lead`, `head`, or `viewer`
+- **WHEN** the switcher menu is opened
+- **THEN** the four data-reset controls are absent or disabled, so no
+  `FORBIDDEN` alert can be triggered

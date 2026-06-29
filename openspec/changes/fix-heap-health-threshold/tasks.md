@@ -17,12 +17,16 @@
       update `readiness()` to call
       `this.memory.checkHeap("memory_heap", this.env.HEAP_HEALTH_THRESHOLD_BYTES)`.
 
-- [ ] `apps/api/src/infrastructure/health/health.module.ts` — create or reuse the
-      `ENV_CONFIG` token + `{ provide: ENV_CONFIG, useFactory: validateEnv }`
-      provider (the parallel `enforce-smtp-config` change introduces the same token —
-      reuse it if it merged first; do NOT declare it twice). Register the provider in
-      `HealthModule` or import a `ConfigModule` that exports it. There is no
-      `ConfigModule` today, so this DI wiring must be created.
+- [ ] `apps/api/src/infrastructure/health/health.module.ts` — make `HealthModule`
+      `imports: [ConfigModule]`, where `ConfigModule` is a dedicated module that
+      provides and exports the single shared `ENV_CONFIG` token
+      (`{ provide: ENV_CONFIG, useFactory: validateEnv }`). There is no
+      `ConfigModule` today, so create it if absent (one file owns both the
+      `ENV_CONFIG` const Symbol and the module); reuse it as-is if the parallel
+      `enforce-smtp-config` change merged it first. Do NOT register the provider
+      directly in `HealthModule`, and do NOT rely on an `app.module.ts`-only
+      provider — a provider local to `AppModule` is not resolvable from the
+      imported `HealthModule`, so `HealthController` injection would fail at boot.
 
 ## deploy — prod compose wiring
 

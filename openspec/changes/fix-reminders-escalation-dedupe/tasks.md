@@ -38,6 +38,9 @@
       sections still `draft`) and targets the late lead's group head.
 - [ ] 4.2 Two-group escalation: each group head receives only their group's late
       leads.
+- [ ] 4.7 Admin-led group: a reporting group whose head is an active `User` with
+      `role = admin` receives the escalation digest (not dropped for being
+      `admin` rather than `head`).
 - [ ] 4.3 Head-less group: no digest for that lead, the case is logged, other
       groups still dispatched.
 - [ ] 4.6 Deactivated head (`head.isActive = false`): no digest to that head, the
