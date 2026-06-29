@@ -1,4 +1,4 @@
-import type { UserSession } from "@customreport/shared";
+import { roleSchema, type UserSession } from "@customreport/shared";
 import type { Strategy as SamlStrategy } from "@node-saml/passport-saml";
 import type { PrismaClient, Role } from "@prisma/client";
 import type {
@@ -46,7 +46,6 @@ const DEV_LOGIN_REDIRECT_BY_ROLE: Record<Role, string> = {
   viewer: "/reports?tab=published",
 };
 
-const VALID_ROLES: readonly Role[] = ["lead", "head", "admin", "viewer"];
 const DEV_LOGIN_DEFAULT_ROLE: Role = "head";
 // The dev SAML-login shortcut signs in as admin (no real Keycloak locally).
 const DEV_SAML_LOGIN_ROLE: Role = "admin";
@@ -192,15 +191,19 @@ export async function resolveDevLoginIdentity(
 function createDevLoginHandler(deps: AuthRouteDeps): RequestHandler {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const role = readQueryParam(req.query.role) ?? DEV_LOGIN_DEFAULT_ROLE;
-      if (!VALID_ROLES.includes(role as Role)) {
+      const requestedRole =
+        readQueryParam(req.query.role) ?? DEV_LOGIN_DEFAULT_ROLE;
+      // Validate through the canonical role enum (single source of truth) — no
+      // hand-maintained role list, and `.data` is typed `Role` (no cast).
+      const parsedRole = roleSchema.safeParse(requestedRole);
+      if (!parsedRole.success) {
         loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });
         res.status(400).json({
-          error: `Invalid role: ${role}. Must be one of: ${VALID_ROLES.join(", ")}`,
+          error: `Invalid role: ${requestedRole}. Must be one of: ${roleSchema.options.join(", ")}`,
         });
         return;
       }
-      const validRole = role as Role;
+      const validRole = parsedRole.data;
 
       const identity = await resolveDevLoginIdentity(
         deps.prisma,
