@@ -68,6 +68,10 @@ export interface PdfExportTokenClaims {
 
 const PDF_EXPORT_JWT_TTL = "5m";
 const PDF_EXPORT_KIND = "pdf-export" as const;
+// Symmetric token; pin the verify algorithm so it cannot be coerced (see
+// auth.controller.ts `SESSION_JWT_ALGORITHM`). Sign uses the jsonwebtoken
+// default, which is the same HS256.
+const PDF_EXPORT_JWT_ALGORITHM = "HS256" as const;
 
 /**
  * AUTH-05 / Phase 32-B1 (H-04): verify a token signed by `signPdfExportToken`
@@ -83,7 +87,9 @@ export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
       "PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 16 chars).",
     );
   }
-  const decoded = jwt.verify(token, secret);
+  const decoded = jwt.verify(token, secret, {
+    algorithms: [PDF_EXPORT_JWT_ALGORITHM],
+  });
   if (typeof decoded !== "object") {
     throw new TypeError("Invalid PDF export token payload");
   }
