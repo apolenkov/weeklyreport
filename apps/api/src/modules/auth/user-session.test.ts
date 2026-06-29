@@ -5,7 +5,7 @@ import {
   buildUserSession,
   type ProvisionLeadWorkspace,
   type SamlProfile,
-} from "./auth.routes";
+} from "./user-session";
 
 // None of these scenarios drive the lead lazy-provision path (admin/viewer/head
 // users, or an existing lead resync), so the injected seam must never fire — a
