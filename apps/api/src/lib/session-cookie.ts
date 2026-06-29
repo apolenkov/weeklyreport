@@ -6,7 +6,7 @@
  * `?? "customreport_session"` literal, so the cleared/read cookie can never
  * drift from the cookie that was set.
  */
-export const SESSION_COOKIE_DEFAULT_NAME = "customreport_session";
+const SESSION_COOKIE_DEFAULT_NAME = "customreport_session";
 
 export function resolveSessionCookieName(env: NodeJS.ProcessEnv): string {
   return env.AUTH_JWT_COOKIE_NAME ?? SESSION_COOKIE_DEFAULT_NAME;

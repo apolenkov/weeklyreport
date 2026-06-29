@@ -11,6 +11,7 @@ import type {
   Response,
 } from "express";
 
+import { resolveSessionCookieName } from "../../lib/session-cookie";
 import { createAuthController } from "../../modules/auth/auth.controller";
 import { getBullMQOptions } from "./bullmq-options";
 
@@ -41,8 +42,12 @@ export function mountBullBoard(_app: INestApplication): void {
     res: Response,
     next: NextFunction,
   ): void => {
+    // Read the cookie under the same resolved name the set/clear/read paths use
+    // (honours AUTH_JWT_COOKIE_NAME), finishing the cookie-name dedup.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- req.cookies is populated by cookie-parser at runtime; the optional chain guards the unmounted-middleware case
-    const token = req.cookies?.customreport_session as string | undefined;
+    const token = req.cookies?.[resolveSessionCookieName(process.env)] as
+      | string
+      | undefined;
 
     if (!token) {
       res.status(401).json({ error: "Authentication required" });
