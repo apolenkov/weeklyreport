@@ -171,19 +171,22 @@ Consumer surface: `apps/web/src/components/dev/role-switcher.tsx`
 - **THEN** the four data-reset controls are absent or disabled, so no
   `FORBIDDEN` alert can be triggered
 
-### Requirement: tRPC context resolves the session cookie name from AUTH_JWT_COOKIE_NAME
+### Requirement: Server session-cookie reads resolve the cookie name from AUTH_JWT_COOKIE_NAME
 
-The tRPC context factory MUST resolve the session-token cookie name from
-`AUTH_JWT_COOKIE_NAME`, falling back to the literal `customreport_session`
-when the environment variable is unset. `trpc.context.ts` currently reads
-`req.cookies?.customreport_session` with a hardcoded name, so when the knob
-is set to a non-default value every authenticated tRPC call fails closed
-with `Unauthorized` even though the cookie is present under the configured
-name. The resolution MUST use the same `env.AUTH_JWT_COOKIE_NAME ?? "customreport_session"`
+Every server-side read of the session-token cookie MUST resolve the cookie name
+from `AUTH_JWT_COOKIE_NAME`, falling back to the literal `customreport_session`
+when the environment variable is unset. Two sites currently hardcode the name:
+`trpc.context.ts:190` (`req.cookies?.customreport_session`, hit by every
+authenticated tRPC call) and `bull-board.module.ts:45` (the `/admin/queues`
+guard). When the knob is set to a non-default value both fail closed with
+`Unauthorized` even though the cookie is present under the configured name. The
+resolution MUST use the same `env.AUTH_JWT_COOKIE_NAME ?? "customreport_session"`
 single-source-of-truth pattern already used by `auth.controller.ts`,
-`auth.routes.ts`, `jwt.strategy.ts`, and `pdf-export.service.ts`.
+`auth.routes.ts`, `jwt.strategy.ts`, and `pdf-export.service.ts` — ideally a
+shared helper so no sixth site can drift again.
 
-Consumer surface: `apps/api/src/infrastructure/trpc/trpc.context.ts`.
+Consumer surface: `apps/api/src/infrastructure/trpc/trpc.context.ts` and
+`apps/api/src/infrastructure/bullmq/bull-board.module.ts`.
 
 #### Scenario: Default cookie name is honored when the knob is unset
 
@@ -200,3 +203,11 @@ Consumer surface: `apps/api/src/infrastructure/trpc/trpc.context.ts`.
 - **WHEN** the tRPC context factory reads the request
 - **THEN** the token is taken from the `app_session` cookie and the session is
   verified, instead of being treated as unauthenticated
+
+#### Scenario: Bull Board guard honors the configured cookie name
+
+- **GIVEN** `AUTH_JWT_COOKIE_NAME=app_session` and a head/admin request to
+  `/admin/queues` carrying a valid token in the `app_session` cookie
+- **WHEN** the Bull Board guard (`bull-board.module.ts`) reads the request
+- **THEN** the token is resolved from the `app_session` cookie and access is
+  granted, instead of being rejected for a missing `customreport_session` cookie

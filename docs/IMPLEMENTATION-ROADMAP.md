@@ -78,8 +78,7 @@ Codex стоп-гейт сейчас ВЫКЛЮЧЕН — вернуть: `codex
   carry-over без guard состояния периода → `fix-carryover-persistence`; updatePeriodManual
   правит published-даты → `scope-period-lifecycle-authz`; hardcoded cookie-name + destructive-guard
   docstring → `input-and-error-hardening`; single-group comment drift → `code-health-and-test-cleanup`.
-- **Не учтено (новый сайт):** `bull-board.module.ts:45` — 6-й хардкод имени cookie; пока ничей,
-  стоит завести отдельной мелкой задачей при реализации `input-and-error-hardening`.
+- **`bull-board.module.ts:45`** (6-й сайт хардкода cookie) теперь УЧТЁН в `input-and-error-hardening` (требование расширено на оба сайта + общий резолвер).
 - **Чужие changes (параллельная сессия, НЕ из этого ревью):** `harden-jwt-verify-algorithms`,
   `refactor-auth-exemplary-layering` — в `openspec/changes/`, но созданы другим агентом; их
   статус уточняй отдельно.
