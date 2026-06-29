@@ -196,12 +196,14 @@ export class PeriodAdminService {
    *     a friendly error pointing at the blocking row (admin-visible date
    *     range, not just "already exists").
    *
-   * The initial `periodState` is derived via `initialPeriodState` — same
+   * The initial `periodState` is derived via `initialPeriodState` — the same
    * rule the scheduler uses (`'scheduled'` when start is in the future,
-   * `'open'` otherwise). The scheduler skips PolicyApplicator on create
-   * (pre-existing gap, see SUMMARY); we mirror that exactly so the two
-   * creation paths stay behaviourally identical and a future fix lands
-   * in one place.
+   * `'open'` otherwise). Reminder rules for the new period are materialised by
+   * the repository's post-create applicator hook
+   * (`AdminPrismaRepository.createPeriodManual`), the same way `saveSnapshot`
+   * handles snapshot-created periods — so every admin/scheduler creation path
+   * now produces a period WITH its reminder rules (the scheduler routes
+   * through `period-factory`, which also applies them).
    */
   async createPeriodManual(
     rawInput: AdminCreatePeriodManualInput,
