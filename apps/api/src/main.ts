@@ -109,6 +109,10 @@ async function bootstrap() {
   // still read process.env directly (e.g. pdf-export.service.signPdfExportToken)
   // see the validated/defaulted value instead of undefined.
   process.env.PDF_EXPORT_JWT_SECRET ??= env.PDF_EXPORT_JWT_SECRET;
+  // mountAuthRoutes reads FRONTEND_URL off process.env; sync the validated value
+  // (real URL in prod via the fence, localhost default in dev) so the auth
+  // routes need no hardcoded localhost fallback of their own.
+  process.env.FRONTEND_URL ??= env.FRONTEND_URL;
 
   // Phase 68: pre-bootstrap logger (no CLS yet) routed through NestAppLoggerAdapter
   // so all NestJS Logger(context) calls in services/schedulers land in app.log.

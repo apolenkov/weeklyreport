@@ -1,7 +1,7 @@
 import type { PrismaClient, Role } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
-import { resolveDevLoginIdentity } from "./auth.routes";
+import { resolveDevLoginIdentity } from "./dev-login.routes";
 
 // resolveDevLoginIdentity is the dev-login (UAT role switcher) identity resolver.
 // Contract under test: it switches among EXISTING seeded users and NEVER
