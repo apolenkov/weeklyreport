@@ -230,6 +230,30 @@ describe("ensureCurrentPeriod", () => {
     );
   });
 
+  it("best-effort: a failing applyToPeriod does NOT fail period creation", async () => {
+    const { client } = makePrisma({ createdId: "period-besteffort" });
+    const policyApplicator = {
+      applyToPeriod: vi.fn().mockRejectedValue(new Error("reminders DB down")),
+    };
+
+    // The period is the durable artifact — a reminder-materialisation failure
+    // must not propagate (it would 500 a login). It is logged and left for the
+    // backfill command.
+    const result = await ensureCurrentPeriod(
+      client,
+      ANCHOR_MONDAY,
+      ANCHOR_MONDAY,
+      SETTINGS,
+      policyApplicator,
+    );
+
+    expect(result).toMatchObject({
+      created: true,
+      reportId: "period-besteffort",
+    });
+    expect(policyApplicator.applyToPeriod).toHaveBeenCalledTimes(1);
+  });
+
   it("does NOT apply reminder policy on the found (idempotent) branch", async () => {
     const existing: PeriodRow = {
       id: "period-existing",

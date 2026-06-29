@@ -56,6 +56,16 @@ report-section domain, invoked through a narrow injected function.
   any active past-due rule; it has no elapsed-`fireAt` guard), while a
   still-future instant such as a T+2h escalation is preserved
 
+#### Scenario: A reminder-materialisation failure does not fail login
+
+- **GIVEN** a lead login that creates the current period
+- **WHEN** `applyToPeriod` throws (e.g. a transient DB error materialising the
+  reminder rules)
+- **THEN** the period creation still succeeds and the login completes — reminder
+  materialisation is best-effort, so a secondary write never 500s the login
+- **AND** the failure is logged, and the missing rules are recoverable via the
+  reminder-policy backfill
+
 #### Scenario: Lead login when the current-week period already exists
 
 - **GIVEN** a `Report` already exists for the current week
