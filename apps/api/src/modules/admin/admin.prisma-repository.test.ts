@@ -43,17 +43,22 @@ describe("AdminPrismaRepository.createPeriodManual — reminder parity", () => {
     } as unknown as PolicyApplicatorService;
   }
 
-  it("applies reminder policies to the freshly-created period", async () => {
+  it("applies reminder policies to the freshly-created period, forwarding now", async () => {
     const applicator = fakeApplicator();
     const repo = new AdminPrismaRepository(fakePrisma(), applicator);
+    // A backfill: the new period's deadline is already in the past relative to
+    // `now`. The repository MUST forward `now` so the applicator drops elapsed
+    // reminders (the elapsed-skip logic itself is covered by the applicator's
+    // own tests); dropping `now` would arm them to fire stale on the next tick.
+    const now = new Date("2026-07-20T12:00:00.000Z");
 
-    const result = await repo.createPeriodManual(INPUT);
+    const result = await repo.createPeriodManual(INPUT, now);
 
     expect(result).toEqual(CREATED);
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method
     expect(applicator.applyToPeriod).toHaveBeenCalledTimes(1);
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method
-    expect(applicator.applyToPeriod).toHaveBeenCalledWith(CREATED);
+    expect(applicator.applyToPeriod).toHaveBeenCalledWith(CREATED, now);
   });
 
   it("still mints the period when no applicator is wired", async () => {
