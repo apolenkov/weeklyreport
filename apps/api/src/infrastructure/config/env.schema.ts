@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+// Dev convenience default for FRONTEND_URL — harmless locally, but a silent
+// localhost redirect in production. A production fence (below) rejects it so a
+// prod deploy that forgot to override FRONTEND_URL fails boot cleanly instead.
+const LOCALHOST_FRONTEND_URL = "http://localhost:3000";
+
 export const envSchema = z
   .object({
     DATABASE_URL: z.url().startsWith("postgresql://"),
@@ -8,7 +13,7 @@ export const envSchema = z
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),
-    FRONTEND_URL: z.url().default("http://localhost:3000"),
+    FRONTEND_URL: z.url().default(LOCALHOST_FRONTEND_URL),
     // 36-04: optional CSV of additional allowed origins for CORS. Lets
     // prod accept e.g. customreport.example.com + admin.customreport.
     // example.com from the same API instance. Wildcards (*) are rejected
@@ -92,6 +97,17 @@ export const envSchema = z
           message:
             "PDF_EXPORT_JWT_SECRET must be overridden in production (default dev value detected)",
           path: ["PDF_EXPORT_JWT_SECRET"],
+        });
+      }
+      // FRONTEND_URL drives the post-login redirect targets. The localhost dev
+      // default must be overridden in production, or users would be redirected
+      // to localhost after SAML login.
+      if (data.FRONTEND_URL === LOCALHOST_FRONTEND_URL) {
+        ctx.addIssue({
+          code: "custom",
+          message:
+            "FRONTEND_URL must be overridden in production (default dev value detected)",
+          path: ["FRONTEND_URL"],
         });
       }
       // FRONTEND_URLS (if set) must not include a wildcard. Wildcards are
