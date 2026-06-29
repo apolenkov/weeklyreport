@@ -1,0 +1,114 @@
+import { describe, expect, it, vi } from "vitest";
+
+import { ensureLeadSection } from "./ensure-lead-section.js";
+
+const REPORT_ID = "report-1";
+const USER_ID = "lead-1";
+
+type LeadSectionPrisma = Parameters<typeof ensureLeadSection>[0];
+
+function makePrisma(opts: {
+  existing?: { id: string } | null;
+  raced?: { id: string } | null;
+  createThrows?: unknown;
+  createdId?: string;
+  projects?: { id: string }[];
+}) {
+  const sectionFindUnique = vi
+    .fn()
+    .mockResolvedValueOnce(opts.existing ?? null)
+    // Second call is the post-conflict re-read.
+    .mockResolvedValue(opts.raced ?? null);
+  const sectionCreate = vi.fn().mockImplementation(() => {
+    if (opts.createThrows) throw opts.createThrows;
+    return { id: opts.createdId ?? "section-new" };
+  });
+  const projectFindMany = vi.fn().mockResolvedValue(opts.projects ?? []);
+  const projectStatusCreateMany = vi.fn().mockResolvedValue({ count: 0 });
+
+  const client = {
+    reportSection: { findUnique: sectionFindUnique, create: sectionCreate },
+    project: { findMany: projectFindMany },
+    projectStatus: { createMany: projectStatusCreateMany },
+  } as unknown as LeadSectionPrisma;
+
+  return {
+    client,
+    sectionCreate,
+    projectStatusCreateMany,
+  };
+}
+
+const P2002_SECTION = {
+  code: "P2002",
+  meta: { target: "ReportSection_reportId_authorId_key" },
+};
+
+describe("ensureLeadSection", () => {
+  it("returns the existing section without creating", async () => {
+    const { client, sectionCreate } = makePrisma({
+      existing: { id: "sec-old" },
+    });
+
+    const result = await ensureLeadSection(client, REPORT_ID, USER_ID);
+
+    expect(result).toEqual({ sectionId: "sec-old" });
+    expect(sectionCreate).not.toHaveBeenCalled();
+  });
+
+  it("creates a fresh section and seeds project statuses for the lead's projects", async () => {
+    const { client, projectStatusCreateMany } = makePrisma({
+      createdId: "sec-new",
+      projects: [{ id: "p1" }, { id: "p2" }],
+    });
+
+    const result = await ensureLeadSection(client, REPORT_ID, USER_ID);
+
+    expect(result).toEqual({ sectionId: "sec-new" });
+    expect(projectStatusCreateMany).toHaveBeenCalledTimes(1);
+    const arg = projectStatusCreateMany.mock.calls[0]?.[0] as {
+      data: { reportSectionId: string; projectId: string; status: string }[];
+      skipDuplicates: boolean;
+    };
+    expect(arg.data).toHaveLength(2);
+    expect(arg.data[0]).toMatchObject({
+      reportSectionId: "sec-new",
+      projectId: "p1",
+      status: "green",
+    });
+    expect(arg.skipDuplicates).toBe(true);
+  });
+
+  it("does not seed statuses when the lead has no active projects", async () => {
+    const { client, projectStatusCreateMany } = makePrisma({
+      createdId: "sec-new",
+      projects: [],
+    });
+
+    await ensureLeadSection(client, REPORT_ID, USER_ID);
+
+    expect(projectStatusCreateMany).not.toHaveBeenCalled();
+  });
+
+  it("concurrent same-lead login: create P2002 resolves to the winner's section, no throw", async () => {
+    const { client, projectStatusCreateMany } = makePrisma({
+      createThrows: P2002_SECTION,
+      raced: { id: "sec-winner" },
+    });
+
+    const result = await ensureLeadSection(client, REPORT_ID, USER_ID);
+
+    expect(result).toEqual({ sectionId: "sec-winner" });
+    // The loser must not seed statuses — the winner already did.
+    expect(projectStatusCreateMany).not.toHaveBeenCalled();
+  });
+
+  it("re-throws a non-unique-violation error from create", async () => {
+    const other = { code: "P2003" };
+    const { client } = makePrisma({ createThrows: other });
+
+    await expect(ensureLeadSection(client, REPORT_ID, USER_ID)).rejects.toBe(
+      other,
+    );
+  });
+});

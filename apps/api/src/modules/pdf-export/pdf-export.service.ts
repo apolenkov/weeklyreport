@@ -8,6 +8,7 @@ import jwt from "jsonwebtoken";
 
 import { customreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger";
+import { resolveSessionCookieName } from "../../lib/session-cookie.js";
 
 export class PdfExportDomainError extends Error {
   constructor(message: string) {
@@ -268,8 +269,7 @@ export class PdfExportService {
     httpOnly: boolean;
     sameSite: "Lax" | "Strict" | "None";
   }[] {
-    const cookieName =
-      process.env.AUTH_JWT_COOKIE_NAME ?? "customreport_session";
+    const cookieName = resolveSessionCookieName(process.env);
     const baseUrl = process.env.PDF_BASE_URL ?? "http://localhost:3000";
 
     return [
