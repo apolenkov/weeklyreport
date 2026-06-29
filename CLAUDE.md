@@ -1,279 +1,94 @@
-# CustomReport Repo Overlay
+# CLAUDE.md
 
-This file is intentionally short. The global operating baseline already lives
-in `~/.claude/CLAUDE.md`; keep this repo file limited to CustomReport-specific
-context, exceptions, and current source-of-truth pointers.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-`AGENTS.md` is a symlink to this file, so these instructions are also the
-Codex repo overlay.
+The global operating baseline (style, communication, working rules) lives in
+`~/.claude/CLAUDE.md`. Keep this file limited to CustomReport-specific context.
+`AGENTS.md` is a symlink to this file, so these instructions also drive Codex.
 
-## Exemplary By Default
-
-This codebase is being deliberately raised to an exemplary standard — it is
-meant to read as a reference others copy. So in this repo, default to the
-**exemplary** solution, not the merely-working one. When the quick path and the
-clean path diverge, take the clean path; if it costs materially more, do it
-anyway and say why in one line.
-
-Exemplary here means, concretely:
-
-- **Functional and immutable.** Prefer `const`, pure functions, and
-  `map`/`filter`/`reduce` + spread. Avoid `let`, reassignment, and in-place
-  mutation (including `Date.set*`) unless the alternative is clearly worse.
-- **Small, single-purpose units.** No long-but-flat functions that only pass
-  because there is no per-function lint rule — decompose to named atoms.
-- **Correct layering.** A module owns only its own concern. Don't let one
-  module's logic (or persistence) live in another; delegate across a narrow
-  seam. A lower layer must not import an upper one.
-- **No duplication, no magic literals, no dead code.** Lift repeated literals to
-  a named `const`; dedup helpers; delete code proven unused (per Surgical
-  Changes).
-- **Tighten standards globally, never per-folder.** Raise lint/quality bars
-  through the repo-wide ratchet (`tighten-code-quality-ratchet` stream), not a
-  local override that creates a second standard.
-
-This is a standing bar, not a per-task ask — apply it even when not reminded.
-
-## Load First
-
-Use current files instead of memory:
-
-- `openspec/changes/` - active backlog (run `openspec list`).
-- `openspec/specs/` - durable specs; inspect the dir or run
-  `openspec list --specs` (`openspec list` alone lists active changes).
-- `openspec/config.yaml` - project context + change-lifecycle rules.
-- `.env.example`, `.env.test.example` - runtime switches and port assumptions.
-
-Do not paste generated research dumps here. Active work lives in `openspec/`;
-historical context is recoverable via `git log`.
-
-## Project Snapshot
+## Project
 
 CustomReport automates weekly status reports for a software department.
 Leads fill structured report sections independently; the head reviews,
-publishes, and exports a unified report.
+publishes, and exports a unified report. pnpm + Turbo monorepo:
 
-```text
-customreport
-+-- apps/web        # Next.js 16 / React 19 frontend
-+-- apps/api        # NestJS 11 / tRPC / Prisma backend
-+-- packages/shared # Zod schemas, types, shared contracts
-+-- packages/ui     # shadcn/ui and Tailwind tokens
-+-- prisma          # schema, migrations, seeds, destructive guards
-+-- openspec        # active backlog (changes/) + durable contracts (specs/)
-```
-
-Run `git status --short --branch` and `openspec list` to see current state.
+- `apps/web` — Next.js 16 / React 19 frontend (`@customreport/web`)
+- `apps/api` — NestJS 11 / tRPC 11 / Prisma 7 backend (`@customreport/api`)
+- `packages/shared` — Zod schemas, tRPC contracts (update here before duplicating types)
+- `packages/ui` — shadcn/ui + Tailwind 4 tokens
+- `prisma` — schema, single init migration, seeds, destructive guard
+- `openspec` — active backlog (`changes/`) + durable specs (`specs/`)
 
 ## Commands
 
-Use `pnpm` from the repo root. Avoid `npm`/Yarn.
+Use `pnpm` from the repo root (Node >=24). Never `npm`/Yarn.
 
 ```bash
-pnpm install
-cp .env.example .env
-pnpm dev:watch
+pnpm dev:watch          # docker compose dev with --watch
+pnpm typecheck          # turbo run typecheck (depends on prisma generate)
+pnpm lint               # eslint . && stylelint && lint:prisma:typecheck — NOT just eslint
+pnpm test               # turbo run vitest (unit only)
+pnpm build              # turbo run build
 ```
 
-Primary gates:
+- Run one unit test: `cd apps/web && pnpm exec vitest run src/path/to/file.test.tsx`
+  (same in `apps/api`). Do NOT wrap `vitest` in `rtk` — it mis-parses TSX and reports 0 tests.
+- If TS errors reference a known Prisma model (e.g. TS2339), run
+  `pnpm --filter @customreport/api db:generate` — pnpm ops wipe the `.prisma` client.
+- E2E (Playwright, single-worker shared seed): `pnpm test:e2e:integration`.
+  Needs `E2E_DATABASE_URL` distinct from `DATABASE_URL`.
 
-```bash
-pnpm typecheck
-pnpm lint
-pnpm test
-pnpm build
-```
+## Runtime
 
-Lint stack: ESLint + Prettier + stylelint. `pnpm lint` =
-`eslint . && stylelint "**/*.css" --allow-empty-input && pnpm lint:prisma:typecheck`.
+- Web `http://localhost:3000`, API `http://localhost:3002`, Mailpit UI `http://localhost:8025`.
+- Dev auth: `AUTH_DEV_MODE=true` + `/auth/dev-login`; refused at boot when `NODE_ENV=production`.
+- `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true` shows the dev-only role switcher.
+- The docker `web`/`api` containers serve a STALE built image; to live-verify new
+  code, run the app from source (see `~/.claude/projects/.../memory` recipes) or `pnpm dev`.
 
-- **ESLint** (`eslint.config.ts`) owns the logic lint surface for
-  `*.{ts,tsx,js,jsx,mjs}`. Repo severity overrides: `no-explicit-any: error`,
-  `no-non-null-assertion: warn`, unused vars `error` (via
-  `unused-imports/no-unused-vars`), `no-floating-promises: error`.
-- **Prettier** (`.prettierrc.json`) formats the whole surface — TS/JS/JSON/CSS
-  **and** YAML/Markdown. `pnpm format` / `pnpm format:check`. Markdown is
-  formatted, NOT linted — markdownlint stays removed (no `lint:md`, no CI job).
-- **stylelint** (`.stylelintrc.json`) owns CSS lint; only the two parity rules
-  `no-descending-specificity` and `declaration-no-important` run at `warning`.
+## MVP Phase — current
 
-Useful local operations:
-
-```bash
-pnpm logs
-pnpm logs:errors
-pnpm observability:up
-pnpm db:fresh:manual-uat
-```
-
-## Runtime Notes
-
-- Local web: `http://localhost:3000`.
-- Local API: `http://localhost:3002`.
-- Mailpit UI: `http://localhost:8025`; Compose service name is still
-  `mailhog` for backward-compatible env wiring.
-- Dev auth uses `AUTH_DEV_MODE=true` and `/auth/dev-login`; production must
-  use Keycloak SAML and rejects dev-auth flags.
-- `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true` enables the dev-only role switcher.
-- `.env.test.example` defines the destructive integration-test database.
-
-## Repo Rules
-
-### Deferred Features
-
-When a feature is deliberately deferred, leave physical traces in code:
-
-- `TODO(<ref>)` near the activation point.
-- For deferred **user-facing** features (settings, admin tabs, nav items),
-  prefer a `ComingSoonBadge` tooltip on an inert control over a hidden
-  feature flag. Reference pattern:
-  `apps/web/src/components/navigation/nav-bar.tsx`
-  `LanguageComingSoonControl` / `ThemeComingSoonControl`. Shows the user the
-  feature is acknowledged and roadmapped without exposing half-working UI.
-- For deferred **backend / non-UI** paths use a loud stub instead:
-  `throw new Error('Not implemented -- see TODO(<ref>)')`.
-- Metric name declared up front when the future path affects observability.
-
-This is mandatory for seeds-only or mock-only paths such as Phase 54 AI/RAG and
-Phase 55 Telegram activation.
-
-### UI Strings
-
-Static production UI strings stay English until a real i18n phase exists.
-Russian is allowed as data from DB/seeds/fixtures, comments, and tests; it is
-not allowed as hardcoded JSX/toast/aria-label/placeholder/button copy in
-`apps/web/src/**/*.tsx`.
-
-Quick check for changed production UI files:
-
-```bash
-grep -nE '[а-яА-Я]' <changed-file>
-```
-
-Every match must be data, a comment/JSDoc, or a test/fixture string.
-
-### MVP Phase: Database Is Disposable
-
-No production deployment yet — local/dev/test/UAT databases are disposable.
-Resetting, wiping, and rebuilding from scratch is expected and safe, with no
-fresh approval needed each time.
-
-- **Reshape the schema directly; do not author incremental alter-table
-  migrations.** Edit `prisma/schema.prisma` and rebuild. There is a single
-  init migration — keep it in sync with the schema (hand-edit its SQL when
-  Prisma can't express a construct, e.g. the FTS `GENERATED STORED` columns
-  and CHECK constraints) and `prisma migrate reset` to re-apply it.
-- **`migrate reset` on the non-prod databases is routine, not a last resort.**
-  Use it freely to apply schema changes. The Prisma 7 "invoked by Claude Code"
-  consent guard still fires per run — this rule is the standing authorization
-  to clear it (pass `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`); it is not a
-  license to touch production.
-- The `_uat`/`_dev`/`_test` suffix rules and `prisma/_destructive-guard.ts`
-  still apply — they protect prod, not your freedom in dev. Production stays
-  gated by `ALLOW_PROD_DESTRUCTIVE`; never reset the prod DB.
-
-This freedom ends when the first real production point exists — revisit then.
-
-### MVP Phase: Commit to Main + Prune Freely
-
-Same MVP rationale as the disposable database: there is no production point yet,
-so `main` is not sacred and the repo is allowed to shed weight. This OVERRIDES
-the global "branch first on the default branch / commit only when asked" caution
-for this repo — until the first production point.
+No production point exists yet. This OVERRIDES the global "branch first / commit
+only when asked / append-only migrations" caution. Ends at first production point.
 
 - **Commit and push directly to `main` is pre-authorized.** No feature branch,
-  no per-action confirmation. Still: never push a red/broken tree, and on a
-  shared worktree stage only your own paths (a parallel session may hold
-  unrelated changes).
-- **Prune obsolete files freely.** Removing genuinely no-longer-needed cruft
-  (stale build/screenshot artifacts, dead code, leftover scratch, superseded
-  docs) is pre-authorized — no fresh approval each time.
-- **But still prove "unused" before deleting.** Confirm with evidence
-  (codegraph / grep all references + imports + build config), per Surgical
-  Changes; if you cannot confirm, ask or leave a note. Never delete another
-  session's untracked work.
+  no per-action confirm. Never push a red tree; on a shared worktree stage only your paths.
+- **Databases (`_dev`/`_test`/`_uat`) are disposable.** Reshape `prisma/schema.prisma`
+  directly and `prisma migrate reset` to re-apply — routine, not a last resort.
+  Hand-edit the single init migration's SQL when Prisma can't express a construct.
+- Prisma 7 quirk: `migrate reset` does NOT auto-seed; the per-run AI-consent guard
+  still fires — pass `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`.
+- `prisma/_destructive-guard.ts` still protects prod (gated by `ALLOW_PROD_DESTRUCTIVE`);
+  never reset the prod DB.
 
-This freedom ends when the first real production point exists — revisit then.
+## Load-Bearing Invariants
 
-### Docker Databases
+No DB constraint enforces these — code review and CI do. Any change to a write
+path must respect them and link the relevant `openspec/specs/` spec.
 
-Non-production `POSTGRES_DB` names and the database name inside
-`DATABASE_URL` must include `_uat`, `_dev`, or `_test` when the host is
-not truly local. Keep `DIRECT_URL` on the same suffixed database when it is
-present. `prisma/_destructive-guard.ts` parses `DATABASE_URL` and refuses
-destructive operations without a non-prod suffix.
+- **Period dual-state.** A Report carries both the new period state and the legacy
+  period tuple; concurrent leads must write both atomically.
+- **Role-coverage gate.** tRPC procedures must use one of the 9 canonical
+  middleware-chain builders (matched by reference identity). Don't hand-roll a chain.
 
-Name environments by purpose, not by accident: local dev, automated tests,
-manual UAT/staging, and production must have distinct database names that match
-their real use. Keep compose files, env examples, docs, and destructive guards
-aligned on the same target variable.
+## Conventions
 
-Do not rename the production DB in `docker-compose.prod.yml`; production
-destructive paths are gated separately by `ALLOW_PROD_DESTRUCTIVE`.
+- **OpenSpec is the source of truth.** Read `openspec list` + `openspec/specs/`
+  before changing query semantics or behavior; non-trivial work starts as a change.
+- **Deferred features leave traces.** UI → `ComingSoonBadge` on an inert control;
+  backend → `throw new Error('Not implemented — see TODO(<ref>)')`. Never a hidden flag.
+- **UI strings stay English** in `apps/web/src/**/*.tsx` (JSX/toast/aria/placeholder).
+  Russian allowed only as DB/seed data, comments, and test fixtures.
+  Check changed files: `grep -nE '[а-яА-Я]' <file>` — every hit must be data/comment/test.
+- **Exemplary by default.** This repo is a reference others copy: take the clean
+  path over the quick one. Functional and immutable — prefer `const`, pure functions,
+  `map`/`filter`/`reduce` + spread; avoid `let`, reassignment, in-place mutation.
+  Small single-purpose units; tighten lint via the repo-wide ratchet, never per-folder.
 
-### Visual And Theme Work
+## Gates
 
-Dark mode, background changes, rebrand, and theme switching are research-only
-unless the user explicitly chooses a concrete direction. Screenshots and
-research memos are allowed; CSS token/theme/background implementation is not.
-
-### Director Scope
-
-Do not add a runtime director workflow unless that direction is explicitly
-reopened. Director-facing UAT currently goes through the viewer read-only path.
-
-### Branch Hygiene
-
-No long-lived `stash-*` / `backup-*` / `preserve-*` / `wip-*` branches. They
-are sticky by name — easy to create, easy to forget, dangerous to merge later.
-(A `stash-uat-v7` branch once drifted 384 commits behind `main` and burned a
-session before being dropped.)
-
-If WIP needs to survive a session boundary, use one of:
-
-- `git stash push -u -m "<reason>"` — real stash, 30-day reflog window.
-- draft PR — visible on GitHub, has CI, easy to close without merge.
-- normal commit on the active feature branch — rebase-friendly, no separate
-  branch lifecycle to remember.
-
-Auto-flag stale branches at the start of any session that involves `git push`,
-`git merge`, or other branch ops. Run `git branch -vv` and surface any branch
-where the name matches `^(stash|backup|preserve|wip)-` OR `committerdate` is
-older than 7 days AND it is behind `origin/main` by more than 50 commits. Ask
-the user whether to drop or push-then-drop before continuing. Recovery via
-`git reflog` covers any "oops" within 30 days, so the default is delete.
-
-Worktrees follow the same rule. If a worktree's branch has been merged or is
-obsolete, remove the worktree with `git worktree remove <path>` and delete the
-branch in the same session.
-
-## Code Patterns
-
-- TypeScript strict mode is enforced across packages.
-- Frontend data access goes through the tRPC client and shared contracts.
-- API domain boundaries are Nest modules plus Prisma repositories.
-- Shared schemas and enums live in `packages/shared`; update them before
-  duplicating types in app code.
-- Migrations: during MVP reshape directly (see **MVP Phase: Database Is
-  Disposable**); they become append-only after the first production point.
-  Review destructive ones against `prisma/_destructive-guard.ts`.
-- For product/group/report-period behavior, inspect existing tests before
-  changing query semantics; this area has had regression-heavy UAT work.
-
-## Agent skills
-
-### Issue tracker
-
-Issues live in GitHub Issues for `apolenkov/yourpulse` (via the `gh` CLI).
-See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Canonical vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`,
-`ready-for-human`, `wontfix`); only `wontfix` exists today, the rest are
-created on first use. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root.
-See `docs/agents/domain.md`.
+`.husky/pre-commit` runs lint-staged (eslint + stylelint + prettier on staged files);
+`.husky/pre-push` runs `catalog:check` + the full unit suite (skip with `SKIP_PREPUSH=1`).
+CI (`.github/workflows/ci.yml`) is manual dispatch only — local hooks are the active gate.
+Pushing a new app route trips the catalog-drift gate: add a scenario to
+`e2e/catalog/<role>.yaml` (or `EXCLUDED_ROUTES`) and re-run `pnpm catalog:check`.
