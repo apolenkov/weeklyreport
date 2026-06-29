@@ -41,6 +41,13 @@
     Это <em>планы</em>: продуктовый код НЕ менялся.
   </div>
 
+  <div class="panel" style="border-left:4px solid var(--ok)">
+    <strong>Phase-2 завершён (02:5x MSK, автономно).</strong> Все <strong>35 changes</strong>
+    (A+B+C+D) прошли Codex-ревью + применение правок + <code>validate --strict</code>.
+    Wave C/D: 16 REVISE + 1 APPROVED → <strong>35 правок применено, 0 отклонено</strong>.
+    Бэклог полностью отслеживаем и готов к реализации. Продуктовый код не тронут.
+  </div>
+
   <h2>1. Что это и зачем</h2>
   <p>Репозиторий писался «вайбкодингом» и ни разу не проверялся на уровне кода.
   Задача — довести его до состояния enterprise / open-source: найти все дефекты, перевести в
@@ -55,8 +62,8 @@
     <tr><th>Волна</th><th>Приоритет</th><th>Changes</th><th>Каркас</th><th>Codex-ревью</th><th>Правки</th><th>Convergence</th></tr>
     <tr><td>A</td><td><span class="tag t0">P0</span></td><td>10</td><td><span class="tag tok">✓</span></td><td><span class="tag tok">✓</span></td><td><span class="tag tok">✓ 17</span></td><td><span class="tag tok">✓ r2</span></td></tr>
     <tr><td>B</td><td><span class="tag t1">P1</span></td><td>8</td><td><span class="tag tok">✓</span></td><td><span class="tag tok">✓</span></td><td><span class="tag tok">✓ 20</span></td><td><span class="tag tok">✓ r2</span></td></tr>
-    <tr><td>C</td><td><span class="tag t1">P1</span></td><td>13</td><td class="muted">в работе</td><td class="muted">завтра (Codex)</td><td class="muted">—</td><td class="muted">—</td></tr>
-    <tr><td>D</td><td><span class="tag t2">P2</span>/<span class="tag t3">P3</span></td><td>4 группы</td><td class="muted">в работе</td><td class="muted">завтра (Codex)</td><td class="muted">—</td><td class="muted">—</td></tr>
+    <tr><td>C</td><td><span class="tag t1">P1</span></td><td>13</td><td><span class="tag tok">✓</span></td><td><span class="tag tok">✓</span></td><td><span class="tag tok">✓</span></td><td class="muted">single-pass</td></tr>
+    <tr><td>D</td><td><span class="tag t2">P2</span>/<span class="tag t3">P3</span></td><td>4 группы</td><td><span class="tag tok">✓</span></td><td><span class="tag tok">✓</span></td><td><span class="tag tok">✓</span></td><td class="muted">single-pass</td></tr>
   </table>
   <p class="muted">Волны A+B (18 changes) полностью обработаны и сошлись: round-2 convergence
   дал в основном устранение рассинхрона + пара реальных коррекций; все 18 проходят

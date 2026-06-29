@@ -136,3 +136,23 @@ Workflow({ scriptPath: 'docs/review-pipeline/apply-codex-revisions-wave-cd.js.tx
 Скрипты-конвейера: `docs/review-pipeline/*.txt` (переименуй в `.js` для запуска).
 Принципы применения: находки Codex — КАНДИДАТЫ, сверять с кодом (вкл. сгенерированные
 Prisma-типы), спорные отклонять с причиной; продуктовый код НЕ трогать; tasks не закрывать.
+
+## Phase-2 ВЫПОЛНЕН (02:5x MSK 2026-06-29, автономно через cron)
+
+Codex вернулся (smoke PONG). Прогон по Wave C/D (17 changes):
+
+- **Codex-ревью:** 1 APPROVED (`harden-web-vitals-endpoint`) + 16 REVISE.
+  2 таймаута (`fix-period-datetime-tz`, `observe-prisma-pool`) добиты фоновым codex.
+  Находки: 1 Blocker, 16 High, 14 Medium, 5 Low. Файл:
+  `docs/repo-excellence-review-2026-06-28.wave-cd.codex-review.json` (commit `acbb792`).
+- **Применение:** 35 правок применено, **0 отклонено** (все находки реальны).
+  Commit `064ee31`.
+- **Все 35 changes** (A:10+B:8+C:13+D:4) проходят `openspec validate --strict`.
+
+Итог по всему ревью: 35 OpenSpec-changes, каждый каркас→Codex-ревью→правки→валидация.
+A+B прошли ещё и convergence round-2. C/D — single-pass (можно прогнать convergence
+позже тем же `docs/review-pipeline/`). Гейт оставлен ВЫКЛЮЧЕННЫМ.
+
+**Остаётся пользователю:** реализация по `tasks.md` каждого change (волнами A→B→C→D);
+опц. convergence-round для C/D; включить гейт обратно при желании
+(`codex-companion.mjs setup --enable-review-gate`).
