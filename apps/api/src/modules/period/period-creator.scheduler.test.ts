@@ -52,10 +52,26 @@ function makePrismaStub(opts: {
   createdId?: string;
   // count returned by the SCHEDULED→OPEN updateMany sweep.
   scheduledFlipped?: number;
+  // A pre-existing draft in the factory's target window (defaults to none).
+  // refactor-auth-exemplary-layering: the scheduler now creates via the period
+  // factory, which does a find-by-bounds before creating; the most-recent
+  // lookup (orderBy) and that find share the `report.findFirst` mock, so the
+  // stub branches on whether the call carries an `orderBy`.
+  existingInWindow?: {
+    id: string;
+    periodStart: Date;
+    periodEnd: Date;
+    deadline: Date;
+    periodState: "scheduled" | "open";
+  } | null;
 }): StubPrisma {
   return {
     report: {
-      findFirst: vi.fn().mockResolvedValue(opts.mostRecent),
+      findFirst: vi
+        .fn()
+        .mockImplementation((args?: { orderBy?: unknown }) =>
+          args?.orderBy ? opts.mostRecent : (opts.existingInWindow ?? null),
+        ),
       // The scheduler `await`s create(); a plain object resolves the same, so the
       // stub stays sync (no `async` → no require-await disable to keep in place).
       create: vi
