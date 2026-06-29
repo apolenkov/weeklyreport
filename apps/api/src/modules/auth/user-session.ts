@@ -39,11 +39,33 @@ const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
 // trims, so the placeholder can never be re-saved.
 const SAML_STUB_FIRST_NAME_PLACEHOLDER = " ";
 
+// `User.email` and `User.samlId` are each `@unique`. Prisma's P2002
+// `meta.target` may surface the column name or a field array depending on the
+// driver, so accept either shape (mirrors `ensure-lead-section`'s detector).
+function isUserUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  if ((error as { code?: unknown }).code !== "P2002") return false;
+  const target = (error as { meta?: { target?: unknown } }).meta?.target;
+  const targetText =
+    typeof target === "string"
+      ? target
+      : Array.isArray(target)
+        ? target.join(",")
+        : "";
+  return targetText.includes("email") || targetText.includes("samlId");
+}
+
 /**
  * Write (create or re-sync) a provisioned user. Only reached for a brand-new
  * user or a dev-login resync — the SAML create-only path reuses the existing
  * row untouched, so the reporting-group fallback machinery here never mutates
  * an existing admin-authored record.
+ *
+ * Concurrency: two concurrent first-logins of the SAME new identity both miss
+ * the `buildUserSession` find and both reach the create here, colliding on the
+ * `email` / `samlId` unique index. The create is guarded by a
+ * catch-on-unique-violation + re-read so the loser resolves to the winner's
+ * full row (the caller reads `reportingGroupId`) instead of throwing a 500.
  */
 async function writeProvisionedUser(
   prisma: PrismaClient,
@@ -89,19 +111,31 @@ async function writeProvisionedUser(
     });
   }
 
-  return prisma.user.create({
-    data: {
-      samlId: profile.samlId,
-      email: profile.email,
-      name: profile.displayName,
-      lastName: profile.displayName.trim() || profile.email,
-      firstName: SAML_STUB_FIRST_NAME_PLACEHOLDER,
-      middleName: null,
-      position: null,
-      role: profile.role,
-      reportingGroupId: nextReportingGroupId,
-    },
-  });
+  try {
+    return await prisma.user.create({
+      data: {
+        samlId: profile.samlId,
+        email: profile.email,
+        name: profile.displayName,
+        lastName: profile.displayName.trim() || profile.email,
+        firstName: SAML_STUB_FIRST_NAME_PLACEHOLDER,
+        middleName: null,
+        position: null,
+        role: profile.role,
+        reportingGroupId: nextReportingGroupId,
+      },
+    });
+  } catch (error) {
+    if (!isUserUniqueViolation(error)) throw error;
+    // A concurrent first-login for the same identity won the create race.
+    // Re-read by the same keys the fast path uses (email first, then samlId)
+    // and return that full row; the loser session is identical to the winner's.
+    const won =
+      (await prisma.user.findFirst({ where: { email: profile.email } })) ??
+      (await prisma.user.findFirst({ where: { samlId: profile.samlId } }));
+    if (!won) throw error;
+    return won;
+  }
 }
 
 export async function buildUserSession(

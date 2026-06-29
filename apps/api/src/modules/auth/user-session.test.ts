@@ -247,3 +247,96 @@ describe("buildUserSession — admin SAML login (Phase 32-C / H-01)", () => {
     expect(session.role).toBe("head");
   });
 });
+
+// Concurrency regression: two first-logins of the same NEW identity both miss
+// the fast-path find and both reach `prisma.user.create`, colliding on the
+// `email`/`samlId` unique index. The loser must catch that P2002, re-read the
+// winner's row, and return an identical session — never throw a 500.
+describe("buildUserSession — first-login create race (P2002 reread)", () => {
+  const WINNER = {
+    id: "winner-user-id",
+    email: "racer@customreport.local",
+    name: "Racer",
+    lastName: "Racer",
+    firstName: " ",
+    middleName: null,
+    role: "viewer" as Role,
+    samlId: "saml-racer",
+    reportingGroupId: null,
+  };
+
+  function racingPrisma() {
+    // findFirst call sequence: 1=email (miss), 2=samlId (miss) → existing=null
+    // → create races and throws P2002; 3=catch-branch email re-read → WINNER.
+    let userFindCalls = 0;
+    const findFirst = vi.fn(() => {
+      userFindCalls += 1;
+      return Promise.resolve(userFindCalls >= 3 ? WINNER : null);
+    });
+    const create = vi.fn(() =>
+      Promise.reject(
+        Object.assign(new Error("Unique constraint failed"), {
+          code: "P2002",
+          meta: { target: ["email"] },
+        }),
+      ),
+    );
+    const fake = {
+      user: { findFirst, create, update: vi.fn() },
+      reportSection: {
+        findFirst: vi.fn(() => Promise.resolve(null)),
+        findUnique: vi.fn(() => Promise.resolve(null)),
+        create: vi.fn(),
+      },
+      report: {
+        findFirst: vi.fn(() => Promise.resolve(null)),
+        create: vi.fn(),
+      },
+      project: { findMany: vi.fn(() => Promise.resolve([])) },
+      projectStatus: { createMany: vi.fn() },
+      reportingGroup: {
+        findFirst: vi.fn(() => Promise.resolve(null)),
+        findUnique: vi.fn(() => Promise.resolve(null)),
+        upsert: vi.fn(() => Promise.resolve(null)),
+      },
+    };
+    return { prisma: fake as unknown as PrismaClient, create, findFirst };
+  }
+
+  it("loser catches P2002, re-reads the winner, returns its session", async () => {
+    const { prisma, create, findFirst } = racingPrisma();
+    const profile: SamlProfile = {
+      samlId: "saml-racer",
+      email: "racer@customreport.local",
+      displayName: "Racer",
+      role: "viewer",
+    };
+
+    const session = await buildUserSession(prisma, profile, failIfProvisioned);
+
+    expect(session.userId).toBe("winner-user-id");
+    expect(session.email).toBe("racer@customreport.local");
+    // The losing create was attempted exactly once; the re-read found the winner
+    // (2 fast-path finds + 1 catch-branch re-read).
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(findFirst).toHaveBeenCalledTimes(3);
+  });
+
+  it("re-throws when create fails for a non-unique reason", async () => {
+    const { prisma } = racingPrisma();
+    // Override create to throw a non-P2002 error: it must propagate untouched.
+    (prisma.user.create as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
+      Promise.reject(new Error("connection reset")),
+    );
+    const profile: SamlProfile = {
+      samlId: "saml-racer",
+      email: "racer@customreport.local",
+      displayName: "Racer",
+      role: "viewer",
+    };
+
+    await expect(
+      buildUserSession(prisma, profile, failIfProvisioned),
+    ).rejects.toThrow("connection reset");
+  });
+});
