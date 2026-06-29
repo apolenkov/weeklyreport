@@ -35,8 +35,13 @@ fails on four fronts:
 - Handle the `dedupeKey` uniqueness race idempotently: a concurrent duplicate is
   treated as the already-recorded execution (or a friendly domain conflict),
   never a 500 — without resurrecting a `failed` status write.
+- Guard the write path: reject carry-over into a non-editable target (period
+  `published`/`archived`, or a `submitted` target section), mirroring the
+  `fillFrom` / `saveDraft` guards — carry-over is today the only report write path
+  with no such check, so it can diverge live rows from a published snapshot.
 - Extend integration coverage: unresolved decision, item with
-  `priorityRank` + `stageIds`, and a multi-section (multi-lead) report.
+  `priorityRank` + `stageIds`, a multi-section (multi-lead) report, and the new
+  closed-period / read-only-section rejections.
 
 ## Capabilities
 
@@ -55,7 +60,8 @@ fails on four fronts:
 - `apps/api/src/modules/carry-over/carry-over.prisma-repository.ts` — fix field
   name, persist all sections, add `priorityRank`/`stageNames`, handle P2002.
 - `apps/api/src/modules/carry-over/carry-over.service.ts` — pass all target
-  sections (signature/loop) instead of only the first.
+  sections (signature/loop) instead of only the first; add the write-integrity
+  guard (reject closed period / submitted target section) before persisting.
 - `apps/api/src/modules/carry-over/carry-over.integration.test.ts` — new cases.
 - No schema change: columns already exist; respects enum-state-hygiene
   (no `failed` write introduced).

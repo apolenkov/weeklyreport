@@ -94,13 +94,38 @@
       name-match ownership invariant; the app replaced that with id-based ownership
       and the comment is now misleading.
 
-## 9. Verification
+## 9. tRPC Context — resolve session cookie name from AUTH_JWT_COOKIE_NAME
 
-- [ ] 9.1 Run `pnpm typecheck` — must exit 0 with no new errors.
-- [ ] 9.2 Run `pnpm lint` — must exit 0.
-- [ ] 9.3 Run `pnpm test` — must exit 0; new/updated unit tests must be green:
+- [ ] 9.1 In `apps/api/src/infrastructure/trpc/trpc.context.ts`, replace the
+      hardcoded `req.cookies?.customreport_session` read (line ~190) with a
+      name resolved from `env.AUTH_JWT_COOKIE_NAME ?? "customreport_session"`,
+      matching the existing pattern in `auth.controller.ts`, `auth.routes.ts`,
+      `jwt.strategy.ts`, and `pdf-export.service.ts`. Reuse the same `env`
+      accessor those auth sites use; keep `"customreport_session"` as the
+      single fallback literal.
+- [ ] 9.2 Add a unit test asserting the context reads the token from the cookie
+      named by `AUTH_JWT_COOKIE_NAME`: (a) knob unset → a `customreport_session`
+      cookie is used; (b) `AUTH_JWT_COOKIE_NAME` set to a non-default value →
+      the cookie under that name is used and a `customreport_session` cookie is
+      not required.
+
+## 10. Destructive Guard — correct misleading docstring
+
+- [ ] 10.1 In `prisma/_destructive-guard.ts`, fix the header docstring so the
+      "Allow rules" list no longer presents `postgres (docker)` as a host that
+      is impossible to reach prod through / unconditionally allowed. State that
+      only `localhost`/`127.0.0.1`/`*.local` are truly local and that the
+      `postgres` Docker host requires an explicit non-prod suffix, matching the
+      `isTrulyLocal` check. Docstring-only change; do not alter the runtime
+      logic, which is already correct.
+
+## 11. Verification
+
+- [ ] 11.1 Run `pnpm typecheck` — must exit 0 with no new errors.
+- [ ] 11.2 Run `pnpm lint` — must exit 0.
+- [ ] 11.3 Run `pnpm test` — must exit 0; new/updated unit tests must be green:
       search-q (shared Zod + tRPC BAD_REQUEST), correlation-id middleware, JWT
-      alg pin, sparkline 4-point cap, and the DevRoleSwitcher admin-only reset
-      controls.
-- [ ] 9.4 Run `pnpm build` — must exit 0.
-- [ ] 9.5 Run `openspec validate "input-and-error-hardening" --strict` — must exit 0.
+      alg pin, sparkline 4-point cap, the DevRoleSwitcher admin-only reset
+      controls, and the tRPC-context cookie-name resolution.
+- [ ] 11.4 Run `pnpm build` — must exit 0.
+- [ ] 11.5 Run `openspec validate "input-and-error-hardening" --strict` — must exit 0.

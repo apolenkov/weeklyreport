@@ -126,6 +126,37 @@ source author. Rejected — section creation is owned by the report-sections /
 period-open path, not carry-over; inventing a section here would duplicate that
 ownership and risk a section with no lead assignment.
 
+### D6: Gate the write on period-editability and section read-only state
+
+Carry-over is the only report write path with no period-state or section-status
+guard. The siblings reject these: `fillFrom` throws on a published period
+(`lead-form.service.ts:91`) and a submitted section (`:76`); `saveDraft` rejects
+a published report (`report-sections.service.ts:232`) and a submitted section
+(`:239`). `executeCarryOver` writes carried `Item`/`Decision` rows regardless of
+the target report's state, so a carry-over into a published period would diverge
+the live rows from the frozen `publishedSnapshot` the viewer's published-report
+read serves (the search-vs-snapshot parity invariant).
+
+Add the guard in the service (`executeCarryOver`), where the sibling guards live.
+The editability rule is the canonical one from `computeReopenEligibility`
+(`lead-form-shared.ts:204-209`): editable iff `periodStatus ∈ {open, reopened}`
+AND `Report.archived === false`. Note `archived` is a separate `Report` boolean —
+the archive path does not force `periodStatus`
+(`weekly-report.prisma-repository.ts:69`) — so the guard MUST read both
+`periodStatus` and `archived`, not `periodStatus` alone. Reject with
+`CarryOverDomainError` (mapped to `BAD_REQUEST`); this is a precondition failure,
+not the dedupe conflict that D4 routes to `CarryOverConflictError`.
+
+The section read-only gate rejects when any matched target section is
+`submitted`. Because D1 keeps a single `$transaction`, abort the whole execution
+rather than skip the submitted section — a partial-skip would fight the
+all-or-nothing transaction. The section `status` is already on
+`ReportSectionReadModel` (from `getTargetSections`); the period state needs a new
+repository read of the target `Report`'s `periodStatus` + `archived`.
+
+This guard is defensive: carry-over normally runs into a freshly opened period
+whose sections are all `draft`, so the happy path is untouched.
+
 ## Risks / Trade-offs
 
 - [Widening the `saveCarryOver` signature touches the service and any test

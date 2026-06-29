@@ -11,6 +11,13 @@ archived periods are never a valid target. This complements `period-lifecycle-ui
 (UI rendering and confirmation) and `period-dual-state` (atomic dual-field
 writes); neither governs which period a mutation may target.
 
+It also folds one adjacent admin-path integrity guard: the admin manual period
+edit (`updatePeriodManual`) must reject date-envelope changes on a published
+period, mirroring `deleteReport`'s existing published-state guard. That guard
+lives in `apps/api/src/modules/admin/period-admin.service.ts`, distinct from the
+`period.publish` / `period.reopen` authorization, but is part of the same
+period-lifecycle hardening.
+
 ## ADDED Requirements
 
 ### Requirement: Head Publish Targets the Server-Derived Active Period
@@ -213,3 +220,51 @@ detail MUST NOT leak in the client-facing message.
 - **GIVEN** a `reportId` that does not exist
 - **WHEN** any role calls `period.publish` or `period.reopen` for it
 - **THEN** the tRPC error code is `NOT_FOUND`
+
+### Requirement: Admin Manual Period Edit Rejects Date-Envelope Changes on a Published Period
+
+The admin `updatePeriodManual` mutation SHALL reject a date-envelope change on a published period. Any edit that would alter `periodStart`, `periodEnd`, or `deadline` on a report whose `periodState` is `published` MUST be rejected with a typed domain error mapped to `FORBIDDEN`; the service MUST NOT silently write the new envelope. This mirrors the published-state guard already enforced by `deleteReport` in
+`apps/api/src/modules/admin/period-admin.service.ts` and closes the gap where an
+admin could mutate the frozen date envelope of a published period with no guard.
+
+The remedy is to reopen the period first: `reopenPeriod` reverts `periodState`
+from `published` to `open` (with `periodStatus = reopened`), after which the
+envelope edit is permitted. The guard therefore keys on the live `periodState`
+read up front, so an already-reopened period is editable.
+
+This is an admin-path integrity guard on a frozen lifecycle state. It is
+distinct from the head-vs-admin `period.publish` / `period.reopen` authorization
+defined above: those govern the lifecycle mutations in
+`apps/api/src/modules/period/period.service.ts`, whereas this governs the admin
+manual-edit path in `period-admin.service.ts`.
+
+The guard is scoped to the three date-envelope fields only. A `weekLabel`-only
+edit (a cosmetic label, not frozen content) is NOT blocked by this guard, and
+edits to any field on a non-`published` period (`scheduled`, `open`, or a
+reopened period now in `open`) are unaffected.
+
+#### Scenario: Admin envelope edit on a published period is rejected
+
+- **GIVEN** an admin session and a report `R` whose `periodState` is `published`
+- **WHEN** the admin calls `updatePeriodManual` for `R` with a `periodStart`,
+  `periodEnd`, or `deadline` value that differs from the stored row
+- **THEN** the service rejects the request with a typed domain error mapped to
+  `FORBIDDEN`
+- **AND** no column on `R` is written
+
+#### Scenario: Admin envelope edit succeeds after reopening the period
+
+- **GIVEN** a report `R` whose `periodState` was `published` and has since been
+  reopened, so `periodState` now reads `open`
+- **WHEN** the admin calls `updatePeriodManual` for `R` with a changed
+  date-envelope field
+- **THEN** the service applies the edit, because the live `periodState` is no
+  longer `published`
+
+#### Scenario: weekLabel-only edit on a published period is not blocked
+
+- **GIVEN** an admin session and a report `R` whose `periodState` is `published`
+- **WHEN** the admin calls `updatePeriodManual` for `R` changing only
+  `weekLabel` (no date-envelope field changes)
+- **THEN** the guard does not reject the request and the `weekLabel` edit is
+  applied

@@ -90,12 +90,20 @@
       `ON DELETE` clauses match the schema; `migrate reset` non-prod DBs and
       regenerate the Prisma client (MVP reshape, not an incremental migration).
 
-## 9. Verification
+## 9. Prisma — fix GroupProduct comment drift
 
-- [ ] 9.1 Run `pnpm typecheck`.
-- [ ] 9.2 Run `pnpm lint`.
-- [ ] 9.3 Run `pnpm test`.
-- [ ] 9.4 Run `pnpm build`.
-- [ ] 9.5 Grep-confirm the deleted duplicates/dead code leave zero references
+- [ ] 9.1 In `prisma/schema.prisma`, replace the `GroupProduct` block-comment
+      preamble (currently lines 143–154) so it correctly states the enforced
+      single-group invariant (`@@unique([productId])`) and removes the
+      contradictory claim that a product "can belong to multiple groups
+      (cross-departmental)". No schema or migration change — comment text only.
+
+## 10. Verification
+
+- [ ] 10.1 Run `pnpm typecheck`.
+- [ ] 10.2 Run `pnpm lint`.
+- [ ] 10.3 Run `pnpm test`.
+- [ ] 10.4 Run `pnpm build`.
+- [ ] 10.5 Grep-confirm the deleted duplicates/dead code leave zero references
       (`getAllowedGroupIds`, the string-typed worst-status copy, the inline
       `reportHasContent` predicate, pruned components/redirect queries).

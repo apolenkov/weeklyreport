@@ -32,6 +32,13 @@ maintenance debt and will be harder to fix post-production-cutover.
 - Tighten the `telemetry.summary` sparkline bound from `.max(8)` to `.max(4)`
   — a behavioral shared-contract change matching the only producer
   (`onTimeRatioPerPeriod(4)`) and the schema doc comment.
+- Resolve the tRPC-context session cookie name from `AUTH_JWT_COOKIE_NAME`
+  (default `customreport_session`) instead of a hardcoded name — the only auth
+  site that ignores the knob, so a non-default value 401s every authenticated
+  tRPC call.
+- Correct the `prisma/_destructive-guard.ts` header docstring, which lists the
+  Docker `postgres` host as unconditionally allowed even though the
+  suffix-based `isTrulyLocal` logic requires a non-prod suffix for it.
 - Fix stale comments: `stageIds` storage description (comma-join → native
   array), `sessionRoleSchema` wider-comment, seed ownership invariant.
 
@@ -40,18 +47,21 @@ maintenance debt and will be harder to fix post-production-cutover.
 ### New Capabilities
 
 - `api-input-hardening`: Inbound request sanitization — x-request-id cap,
-  search-q null-byte guard, JWT algorithm pin, dev-wipe role scope, and the
-  admin-only `DevRoleSwitcher` reset controls that follow from it.
+  search-q null-byte guard, JWT algorithm pin, dev-wipe role scope, the
+  admin-only `DevRoleSwitcher` reset controls that follow from it, and the
+  tRPC-context session cookie name resolved from `AUTH_JWT_COOKIE_NAME`.
 - `telemetry-summary-contract`: ADDED requirement — the `telemetry.summary`
   sparkline array MUST be length ≤ 4, tightening the schema bound to match its
   single producer.
 
 ### Modified Capabilities
 
-- `destructive-db-guard`: ADDED requirement — `seed.ts` and
+- `destructive-db-guard`: ADDED requirements — (1) `seed.ts` and
   `backfill-policy-rules.ts` must call `assertNonProdDestructive` at the
   start of their `main()` function for consistency with every sibling
-  script.
+  script; (2) the guard's header docstring must match the suffix-based allow
+  logic and must not list the Docker `postgres` host as unconditionally
+  allowed.
 - `enum-state-hygiene`: ADDED requirement — every audit event string emitted
   at runtime must be a declared member of the `AuditEvent` TypeScript
   string-literal union; the parity converse of the existing "declared value
@@ -70,6 +80,10 @@ maintenance debt and will be harder to fix post-production-cutover.
 - `packages/shared/src/schemas/telemetry.ts` — sparkline `.max(8)` → `.max(4)`
   (behavioral) plus its test `telemetry.test.ts`.
 - `prisma/seed.ts`, `prisma/backfill-policy-rules.ts` — guard call.
+- `apps/api/src/infrastructure/trpc/trpc.context.ts` — cookie name resolved
+  from `AUTH_JWT_COOKIE_NAME`.
+- `prisma/_destructive-guard.ts` — header docstring correction (no logic
+  change).
 - `apps/api/src/lib/audit-logger-types.ts` — AuditEvent union.
 - `packages/shared/src/schemas/report-primitives.schema.ts`,
   `packages/shared/src/schemas/auth.ts`,

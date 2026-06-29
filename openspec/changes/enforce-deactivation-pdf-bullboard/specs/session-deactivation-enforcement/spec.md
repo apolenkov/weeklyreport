@@ -32,6 +32,26 @@ All three authenticated entry paths that admit or rebuild a session from a JWT �
 - **THEN** the helper does not bar the user on the Redis error alone
 - **AND** the authoritative Prisma `isActive` check governs the outcome
 
+### Requirement: Missing user row is treated as access-barred
+
+The shared deactivation helper SHALL treat a missing (null) `User` row — a hard-deleted user that Prisma `findUnique` does not return — as barred from access (fail closed), so a hard-deleted user cannot keep a working session for the JWT TTL.
+
+The regular tRPC session path's deactivation check MUST therefore bar when the row is null OR inactive (`if (!userRow || !userRow.isActive)`), not only when an existing row is inactive (`if (userRow && !userRow.isActive)`). Admin snapshot-restore hard-deletes unreferenced users via `prisma.user.delete` in `admin-snapshot-write.queries.ts` WITHOUT adding them to the Redis revoked set, so the Redis fast-path never fires and the null-row case is the only thing standing between a deleted user and a live ~1h session. The PDF path already fails closed on null (`buildPdfExportSession` returns `null` when the requester no longer exists); this requirement closes the equivalent gap on the regular path, which it inherits once routed through the helper.
+
+#### Scenario: Helper bars a missing user
+
+- **GIVEN** a userId for which `prisma.user.findUnique` returns `null`
+- **AND** that userId is absent from the Redis revoked set
+- **WHEN** the helper is invoked with that userId
+- **THEN** the helper reports the user as barred from access
+
+#### Scenario: Session for a deleted user is rejected
+
+- **GIVEN** a valid-looking session JWT whose user row has been hard-deleted (e.g. by admin snapshot-restore) and was never added to the Redis revoked set
+- **WHEN** the regular tRPC session path evaluates the token via the shared helper
+- **THEN** the helper reports the user as barred
+- **AND** the token is treated as invalid and the request does not gain a regular authenticated session
+
 ### Requirement: PDF-export session rebuild enforces deactivation
 
 The system SHALL reject a PDF-export render session when the requester recorded in the token (`requestedBy`) is revoked or deactivated, by making `buildPdfExportSession` consult the shared helper and return `null` for a barred requester so the auth middleware denies the request.
@@ -77,7 +97,9 @@ The system SHALL reject access to `/admin/queues` when the session's user is rev
 
 ### Requirement: Regular session path uses the shared helper unchanged in behavior
 
-The system SHALL route the regular tRPC session path's revoked/deactivated decision through the shared helper while preserving its existing observable behavior: a revoked or deactivated session token is treated as invalid and does not yield a regular authenticated session.
+The system SHALL route the regular tRPC session path's revoked/deactivated decision through the shared helper while preserving its existing observable behavior for the revoked and deactivated cases: a revoked or deactivated session token is treated as invalid and does not yield a regular authenticated session.
+
+The one intentional behavior change on this path is the null-user-row case, covered by the "Missing user row is treated as access-barred" requirement above: a hard-deleted user goes from fail-open (today) to fail-closed. The revoked-set fast-path and the existing-but-inactive `isActive=false` outcomes are unchanged.
 
 #### Scenario: Deactivated session token is rejected as before
 

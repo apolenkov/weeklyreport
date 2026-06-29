@@ -27,8 +27,9 @@ backlog `BL-DEACTIVATION-BYPASS` (P1).
 - One shared deactivation-enforcement helper as the single source of truth for
   the revoked/deactivated decision across all three JWT-admitting paths.
 - PDF-export and Bull Board fail closed for a deactivated/revoked user.
-- The regular path's observable behavior is unchanged — this is an extraction,
-  not a behavior change there.
+- The regular path's observable behavior is unchanged for the revoked and
+  `isActive=false` cases — this is an extraction there — with one intentional
+  fix: a null/missing user row now fails closed (D4) instead of fail-open.
 
 **Non-Goals:**
 
@@ -65,9 +66,11 @@ A free function, e.g. `isUserAccessBarred(userId, prisma, sessionRevocation)`
 
 The helper performs Redis `isRevoked` first (fail-open: a thrown/failed lookup
 must NOT bar the user), then the Prisma `isActive` read (fail-closed: `isActive
-=== false` bars the user). This reproduces today's regular-path order and
-failure modes verbatim, so the extraction cannot regress the
-"Redis outage must not lock out all users" invariant.
+=== false` bars the user, AND a null/missing row bars the user — see D4). This
+reproduces today's regular-path order and the Redis fail-open mode verbatim, so
+the extraction cannot regress the "Redis outage must not lock out all users"
+invariant. The one deliberate divergence is the null-row case (D4), which moves
+from fail-open to fail-closed.
 
 ### D3: Bull Board gains DI and goes async
 
@@ -84,6 +87,20 @@ the helper call sits after `verifySessionToken` and the `role === "head"`
 check, denying with 401 on a barred user. Express 5 awaits async handlers and
 forwards rejections, so the existing `try/catch` still maps a thrown verify to 401.
 
+### D4: A missing user row fails closed too (not only `isActive === false`)
+
+The helper's Prisma tier bars the user when `findUnique` returns `null` OR returns
+`isActive === false`. Today's regular-path check
+`if (userRow && !userRow.isActive)` fails OPEN on a null row: admin
+snapshot-restore hard-deletes unreferenced users via `prisma.user.delete`
+(`admin-snapshot-write.queries.ts`, the `removedUserIds` loop) WITHOUT adding
+them to the Redis revoked set, so the fast-path never fires and a deleted user
+keeps a working session for the JWT TTL (~1h). The helper treats null as barred
+(`if (!userRow || !userRow.isActive)`), which closes that gap. This is the single
+intentional behavior change on the regular path; the PDF path already fails
+closed on null (`buildPdfExportSession` returns `null` for a vanished requester),
+and the Bull Board path is net-new, so both inherit the correct behavior for free.
+
 ### Before / after data flow
 
 ```text
@@ -96,15 +113,18 @@ Bull Board /admin/queues
   before: verify JWT -> role==head? -> next()
   after:  verify JWT -> role==head? -> await isUserAccessBarred(userId)? 401 : next()
 
-Regular tRPC session (unchanged behavior)
-  before: isRevoked() inline + findUnique(isActive) inline -> reject if barred
-  after:  await isUserAccessBarred(userId) -> reject if barred   (same outcome)
+Regular tRPC session (behavior unchanged EXCEPT null-row case, D4)
+  before: isRevoked() inline + findUnique(isActive) inline
+          -> if (userRow && !userRow.isActive) reject   (null row = FAIL OPEN)
+  after:  await isUserAccessBarred(userId) -> reject if barred
+          (revoked + isActive=false: same outcome; null row now FAILS CLOSED)
 ```
 
 ### Invariants
 
 - Preserves: the deactivation-ejection invariant ("stale JWT cannot bypass
-  deactivation") — now extended to PDF + Bull Board.
+  deactivation") — now extended to PDF + Bull Board, and to hard-deleted
+  users on the regular path (D4: null row fails closed).
 - Preserves: Redis fail-open / Prisma fail-closed two-tier behavior.
 - Untouched: role-coverage gate (no tRPC procedure added), destructive-db
   guard, period dual-state, deferred-feature pattern.

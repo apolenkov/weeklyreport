@@ -24,7 +24,12 @@
 - [ ] 4.4 Service unit test (the archived-latest reopen case): when the newest `published` row is archived and an older `published` row is non-archived, the latest-published-non-archived resolver returns the non-archived id, and a head reopening that non-archived id succeeds (proves the resolver diverges from `getLatestPublishedId` and is not blocked by the archived guard).
 - [ ] 4.5 Weekly-report service test (head default convergence): a `head` with no `reportId` resolves its default report via `getCurrentEditableId() ?? getLatestPublishedNonArchivedId()` (NOT `getActiveReportId`), so the head's default `reportId` equals the lifecycle authz target. Cover the archived-newest-published case (head default lands on the older non-archived published id). Assert `lead` still resolves via `getActiveReportId` and the viewer path is unchanged.
 
-## 5. Verification
+## 5. API: admin manual-edit published guard
 
-- [ ] 5.1 Run `openspec validate "scope-period-lifecycle-authz" --strict` and confirm it exits 0.
-- [ ] 5.2 Run `pnpm typecheck && pnpm lint && pnpm test` and confirm the gates stay green.
+- [ ] 5.1 In `apps/api/src/modules/admin/period-admin.service.ts` `updatePeriodManual`, after the per-field diff is computed and before the overlap gate / write, reject when `existing.periodState === "published"` AND the diff changes any of `periodStart` / `periodEnd` / `deadline`. Throw `AdminAccessError` (reuse the existing class `deleteReport` already uses → `FORBIDDEN`); message mirrors `deleteReport` ("Cannot edit a published period's dates. Reopen it first if needed."). Do NOT block a `weekLabel`-only edit or an edit on a non-`published` period, and do NOT add a new error class or mapper branch.
+- [ ] 5.2 Service unit tests (`period-admin.service.test.ts`): admin envelope edit on a `published` period is rejected (no write); a `weekLabel`-only edit on a `published` period succeeds; an envelope edit on an `open`/reopened period succeeds (boundary). Assert the rejection maps to `FORBIDDEN` via the error mapper, matching `deleteReport`'s published-delete test.
+
+## 6. Verification
+
+- [ ] 6.1 Run `openspec validate "scope-period-lifecycle-authz" --strict` and confirm it exits 0.
+- [ ] 6.2 Run `pnpm typecheck && pnpm lint && pnpm test` and confirm the gates stay green.

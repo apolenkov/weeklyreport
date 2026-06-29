@@ -155,6 +155,38 @@ non-goal (reopen-policy gating unchanged). `PeriodAccessError` therefore stays
 exactly as it is today — unmapped, unchanged. Fixing its pre-existing 500s is out
 of scope here (it belongs to the separate `BL-ERROR-MAPPING` finding).
 
+### D5: Admin manual-edit published guard (admin-path integrity, distinct from D2)
+
+`updatePeriodManual` (`apps/api/src/modules/admin/period-admin.service.ts`)
+reads the existing row, computes a per-field diff, runs the overlap gate, and
+writes — with no published-state guard. `deleteReport` in the same service
+already blocks a published period ("Cannot delete a published period. Reopen it
+first if needed."), so editing a published period's date envelope is the one
+unguarded mutation of frozen state on the admin path.
+
+Add the symmetric guard: after the existing row is read (`readPeriodById`, whose
+projection already returns `periodState`), if `existing.periodState ===
+"published"` and the computed diff would change any of `periodStart`,
+`periodEnd`, or `deadline`, throw a typed domain error mapped to `FORBIDDEN`
+(reuse the admin module's existing `AdminAccessError`, as `deleteReport` does, so
+no new error class or mapper branch is needed). Place the check after the diff is
+computed and before the overlap gate / write, so a no-op edit and a
+`weekLabel`-only edit are unaffected.
+
+Scope and remedy:
+
+- **Three envelope fields only.** `weekLabel` is a cosmetic label, not frozen
+  content; leave it editable on a published period. Do not widen this into a
+  blanket published-lock.
+- **Reopen-first is a real remedy.** `reopenPeriod` reverts `periodState` to
+  `open` (`periodStatus = reopened`); the guard keys on the live `periodState`
+  read up front, so an already-reopened period passes.
+
+This is deliberately the admin manual-edit path, NOT the head/admin
+`period.publish` / `period.reopen` authorization (D2/D4). They live in different
+services and address different trust gaps; this one is a frozen-state integrity
+guard, folded here because it is part of the same period-lifecycle hardening.
+
 ## Data flow: before / after
 
 Before (head): client `reportId` → `period.publish` → `publishPeriod(reportId)`

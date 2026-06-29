@@ -14,6 +14,10 @@ Source findings (and their review backlog ids):
   BL-DEAD-CODE.
 - `shared-dialog-focus-management` — BL-DIALOG-A11Y.
 - `align-fk-ondelete` — BL-FK-ONDELETE-ASYMMETRY.
+- `fix-schema-comment-drift` — BL-SCHEMA-COMMENT-DRIFT: the `GroupProduct`
+  block comment (lines 146–148) states "can belong to multiple groups" while
+  `@@unique([productId])` enforces exactly one; folded into `schema-conventions`
+  as a comment-only correction (no schema change).
 
 ## Goals / Non-Goals
 

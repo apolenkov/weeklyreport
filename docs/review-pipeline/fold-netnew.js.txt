@@ -1,0 +1,62 @@
+export const meta = {
+  name: "fold-netnew-findings",
+  description:
+    "Fold the 6 net-new findings from the targeted re-review into existing OpenSpec changes (add a requirement/scenario + task each). Verify each against real code first. No product code.",
+  phases: [{ title: "Fold", detail: "one agent per target change" }],
+};
+
+const TARGETS = [
+  { id: "enforce-deactivation-pdf-bullboard", model: "opus",
+    finding: "[High] apps/api/src/infrastructure/trpc/trpc.context.ts:206-212 — the regular tRPC session guard `if (userRow && !userRow.isActive) throw` FAILS OPEN when the user row is null (hard-deleted user, reachable via admin snapshot-restore user.delete): null short-circuits the && so no throw, and a deleted user keeps a working session for the JWT TTL (~1h). The PDF path fails closed (if(!user) return null) but the regular path does not. Deletion does not add to the Redis revoked set.",
+    fix: "Extend this change's shared deactivation helper / spec so a MISSING user row is treated as access-barred (fail closed): `if (!userRow || !userRow.isActive) throw`. Add a requirement + GIVEN/WHEN/THEN scenario 'Session for a deleted user is rejected' and a task. This change already refactors this path onto a shared helper, so the helper must treat null-user as revoked." },
+  { id: "fix-carryover-persistence", model: "opus",
+    finding: "[High] carry-over.service.ts:115-238 + carry-over.prisma-repository.ts:124-221 — carry-over is the ONLY report write path with NO period-state or section-status guard: it writes Item/Decision rows into target sections regardless of the target report's periodStatus (published/archived) or the target section's submitted/read-only status. Sibling writes reject these: lead-form fillFrom throws on published (line 91) + submitted section (76); saveDraft rejects published (232) + submitted (239). Writing into a published period diverges live rows from the frozen publishedSnapshot.",
+    fix: "Add a requirement + scenario: executeCarryOver MUST reject when the target report's periodStatus is not open/reopened (treat archived as closed) and when the target section is submitted/read-only, mirroring fillFrom/saveDraft. Add a task. Keep it within this change (carry-over write integrity)." },
+  { id: "scope-period-lifecycle-authz", model: "opus",
+    finding: "[Medium] apps/api/src/modules/admin/period-admin.service.ts:327-474 — updatePeriodManual lets an admin edit periodStart/periodEnd/deadline of ANY report including a PUBLISHED one, with no published-period guard, while deleteReport does guard published state. Editing a published period's date envelope is an unguarded mutation of frozen state.",
+    fix: "Add a requirement + scenario: updatePeriodManual MUST reject (or require reopen first) date-envelope edits on a published period, mirroring deleteReport's published-state guard. Add a task. Fold here as a period-lifecycle integrity guard (note it is admin-path, distinct from the publish/reopen authz already in this change)." },
+  { id: "input-and-error-hardening", model: "opus",
+    finding: "TWO net-new: (1) [Medium] trpc.context.ts:190 reads the session cookie under a HARDCODED name `customreport_session`, ignoring AUTH_JWT_COOKIE_NAME which every other auth site honors (auth.controller:46, auth.routes:433, jwt.strategy:22, pdf-export.service:266) — if the knob is set non-default, all authenticated tRPC calls 401 (fail-closed config defect). (2) [Low] prisma/_destructive-guard.ts:12-15 — the guard's header docstring lists 'postgres (docker)' among hosts 'impossible to reach prod through' / unconditionally allowed, which is misleading vs the actual suffix-based guard logic.",
+    fix: "Add to this hardening change: (1) a requirement that the tRPC context resolve the cookie name from AUTH_JWT_COOKIE_NAME (single source of truth across all 5 sites) with the existing default; (2) a requirement/task to correct the _destructive-guard docstring. Add scenarios + tasks for each." },
+  { id: "code-health-and-test-cleanup", model: "sonnet",
+    finding: "[Low] prisma/schema.prisma:146-148 — contradictory data-model documentation: the Project/GroupProduct block comment says a product 'can belong to multiple groups (cross-departmental)', but the enforced invariant is single-group. Comment drift vs the real model.",
+    fix: "Add a small requirement/task to this cleanup change: correct the Project-block comment to state the enforced single-group invariant (comment-drift fix; no schema change)." },
+];
+
+const SCHEMA = {
+  type: "object",
+  required: ["changeId", "validated", "folded"],
+  properties: {
+    changeId: { type: "string" }, validated: { type: "boolean" },
+    folded: { type: "boolean", description: "true if the finding was added; false if verified already-covered/not-real" },
+    notes: { type: "string" },
+  },
+};
+
+phase("Fold");
+const results = await parallel(
+  TARGETS.map((t) => () =>
+    agent(
+      `Fold a NET-NEW review finding into the EXISTING OpenSpec change openspec/changes/${t.id}/.
+First VERIFY the finding against the real code (it is a candidate, not gospel). If real and not
+already covered by this change's current artifacts, ADD a requirement + GIVEN/WHEN/THEN scenario
+to the appropriate specs/**/spec.md (delta rules: "## ADDED Requirements" or extend a MODIFIED
+one; SHALL on first body line; every requirement has a scenario), a short design note, and a
+task in tasks.md. If already covered or not real, do NOT edit — set folded:false and explain.
+Then \`openspec validate "${t.id}" --strict\` until exit 0.
+
+FINDING: ${t.finding}
+HOW TO FOLD: ${t.fix}
+
+Repo conventions: Russian only a bug in apps/web JSX; ComingSoon intentional; single init
+migration intentional (MVP); English-only prod UI intentional; never tell impl to run pnpm
+lint:md. Edit OpenSpec ARTIFACTS only — no product code, no tasks marked done.
+Return {changeId, validated, folded, notes}.`,
+      { label: `fold:${t.id}`, phase: "Fold", model: t.model, effort: "high", schema: SCHEMA },
+    ),
+  ),
+);
+
+const done = results.filter(Boolean);
+log(`Folded ${done.filter((r) => r.folded).length}/${TARGETS.length}; validated ${done.filter((r) => r.validated).length}.`);
+return { folded: done };
