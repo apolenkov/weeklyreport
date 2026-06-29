@@ -126,7 +126,7 @@ export class AdminPrismaRepository implements AdminRepository {
     return periodQueries.findOverlappingPeriod(this.prisma, input);
   }
 
-  createPeriodManual(input: {
+  async createPeriodManual(input: {
     periodStart: Date;
     periodEnd: Date;
     deadline: Date;
@@ -139,7 +139,17 @@ export class AdminPrismaRepository implements AdminRepository {
     deadline: Date;
     periodState: PeriodState;
   }> {
-    return periodQueries.createPeriodManual(this.prisma, input);
+    const created = await periodQueries.createPeriodManual(this.prisma, input);
+    // UFB-036 parity: materialize one ReminderRule per active policy on the
+    // freshly-created period — exactly as `saveSnapshot` does for snapshot-
+    // created periods, so the manual and snapshot creation paths are
+    // symmetric. Runs AFTER the create commits (an applicator failure cannot
+    // roll back the period) and propagates on error like the snapshot path,
+    // so an admin sees a materialisation failure rather than a silent gap.
+    if (this.policyApplicator) {
+      await this.policyApplicator.applyToPeriod(created);
+    }
+    return created;
   }
 
   readPeriodById(periodId: string): Promise<{
