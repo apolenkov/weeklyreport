@@ -7,6 +7,7 @@ import {
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
 } from "../published-report-snapshot.js";
+import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository.js";
 import type { PeriodRepository } from "./period.service.js";
 import { isOpenBoundaryConflict } from "./period-factory.js";
 import { applyTransition } from "./period-transition.apply.js";
@@ -14,13 +15,20 @@ import { buildTransition } from "./period-transition.js";
 
 @Injectable()
 export class PeriodPrismaRepository implements PeriodRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    // The lifecycle resolvers live once in the weekly-report repository (the
+    // canonical home of getCurrentEditableId). Delegating to it keeps the head's
+    // authz target and the weekly-report default in lock-step — no second copy.
+    private readonly weeklyReportRepository: WeeklyReportPrismaRepository,
+  ) {}
 
   async getReportById(reportId: string): Promise<{
     id: string;
     status: string;
     periodStatus: string;
     publishedAt: Date | null;
+    archived: boolean;
   } | null> {
     const report = await this.prisma.report.findUnique({
       where: { id: reportId },
@@ -29,10 +37,33 @@ export class PeriodPrismaRepository implements PeriodRepository {
         status: true,
         periodStatus: true,
         publishedAt: true,
+        archived: true,
       },
     });
 
     return report;
+  }
+
+  getCurrentEditableId(): Promise<string | null> {
+    return this.weeklyReportRepository.getCurrentEditableId();
+  }
+
+  getLatestPublishedNonArchivedId(): Promise<string | null> {
+    return this.weeklyReportRepository.getLatestPublishedNonArchivedId();
+  }
+
+  async getReopenedNonArchivedId(): Promise<string | null> {
+    // A reopened period keeps the legacy tuple (status='published',
+    // archived=false) but flips periodStatus to 'reopened' (period-transition
+    // `reopen`). Match on that canonical marker. The deterministic ordering is
+    // not load-bearing — the single-active-reopen guard only needs to know one
+    // exists — but mirrors the other resolvers for a stable pick.
+    const reopened = await this.prisma.report.findFirst({
+      where: { periodStatus: "reopened", archived: false },
+      orderBy: [{ periodStart: "desc" }, { id: "desc" }],
+      select: { id: true },
+    });
+    return reopened?.id ?? null;
   }
 
   async publishPeriod(reportId: string, userId: string): Promise<void> {

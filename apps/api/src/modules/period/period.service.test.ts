@@ -7,7 +7,9 @@ import {
 } from "../../infrastructure/metrics/metrics.registry.js";
 import {
   PeriodAccessError,
+  PeriodNotFoundError,
   type PeriodRepository,
+  PeriodScopeError,
   PeriodService,
 } from "./period.service";
 
@@ -27,20 +29,32 @@ const headSession: UserSession = {
   activeReportSectionId: null,
 };
 
+const adminSession: UserSession = {
+  userId: "00000000-0000-4000-8000-000000000009",
+  email: "admin@customreport.local",
+  name: "Administrator",
+  role: "admin",
+  activeReportId: null,
+  activeReportSectionId: null,
+};
+
+const archivedReportId = "44444444-4444-4444-8444-444444444444";
+
 /* ------------------------------------------------------------------ */
 /*  Mock repository with spies                                         */
 /* ------------------------------------------------------------------ */
 
+interface SpyReport {
+  id: string;
+  status: string;
+  periodStatus: string;
+  publishedAt: Date | null;
+  /** Defaults to false in `getReportById` when a fixture omits it. */
+  archived?: boolean;
+}
+
 function createSpyRepository(
-  reports: Map<
-    string,
-    {
-      id: string;
-      status: string;
-      periodStatus: string;
-      publishedAt: Date | null;
-    }
-  >,
+  reports: Map<string, SpyReport>,
 ): PeriodRepository & {
   publishPeriod: ReturnType<typeof vi.fn>;
   reopenPeriod: ReturnType<typeof vi.fn>;
@@ -62,12 +76,35 @@ function createSpyRepository(
     }
   });
 
+  // Resolve the lifecycle targets from the LIVE map on every call (like the real
+  // resolvers) so the publish→reopen→republish cycle stays self-consistent.
+  const resolveFirstId = (match: (r: SpyReport) => boolean): string | null =>
+    [...reports.values()].find(match)?.id ?? null;
+
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
     async getReportById(id: string) {
       const r = reports.get(id);
-      return r ? structuredClone(r) : null;
+      return r
+        ? { ...structuredClone(r), archived: r.archived ?? false }
+        : null;
     },
+    getCurrentEditableId: () =>
+      Promise.resolve(
+        resolveFirstId(
+          (r) =>
+            (r.periodStatus === "open" || r.periodStatus === "reopened") &&
+            !r.archived,
+        ),
+      ),
+    getLatestPublishedNonArchivedId: () =>
+      Promise.resolve(
+        resolveFirstId((r) => r.periodStatus === "published" && !r.archived),
+      ),
+    getReopenedNonArchivedId: () =>
+      Promise.resolve(
+        resolveFirstId((r) => r.periodStatus === "reopened" && !r.archived),
+      ),
     publishPeriod: publishFn,
     reopenPeriod: reopenFn,
   };
@@ -176,7 +213,7 @@ describe("PeriodService — publishPeriod (unit)", () => {
     expect(repo.publishPeriod).toHaveBeenCalledOnce();
 
     // 2. Reopen
-    await service.reopenPeriod(reportId);
+    await service.reopenPeriod(reportId, headSession);
     expect(repo.reopenPeriod).toHaveBeenCalledOnce();
 
     // 3. Re-publish (reopened -> published is allowed)
@@ -286,7 +323,7 @@ describe("PeriodService — reopenPeriod (unit)", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(repo);
 
-    await service.reopenPeriod(reportId);
+    await service.reopenPeriod(reportId, headSession);
 
     expect(repo.reopenPeriod).toHaveBeenCalledOnce();
     expect(repo.reopenPeriod).toHaveBeenCalledWith(reportId);
@@ -307,7 +344,7 @@ describe("PeriodService — reopenPeriod (unit)", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(repo);
 
-    await expect(service.reopenPeriod(reportId)).rejects.toThrow();
+    await expect(service.reopenPeriod(reportId, headSession)).rejects.toThrow();
     expect(repo.reopenPeriod).not.toHaveBeenCalled();
   });
 
@@ -327,7 +364,7 @@ describe("PeriodService — reopenPeriod (unit)", () => {
     const invalidate = vi.fn(async () => undefined);
     const service = new PeriodService(createSpyRepository(reports), invalidate);
 
-    await service.reopenPeriod(reportId);
+    await service.reopenPeriod(reportId, headSession);
 
     expect(invalidate).toHaveBeenCalledOnce();
   });
@@ -347,12 +384,12 @@ describe("PeriodService — reopenPeriod (unit)", () => {
     const service = new PeriodService(createSpyRepository(reports));
 
     // First reopen works
-    await service.reopenPeriod(reportId);
+    await service.reopenPeriod(reportId, headSession);
 
     // Second reopen fails (now status is 'reopened', not 'published')
-    await expect(service.reopenPeriod(reportId)).rejects.toBeInstanceOf(
-      PeriodAccessError,
-    );
+    await expect(
+      service.reopenPeriod(reportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodAccessError);
   });
 });
 
@@ -382,9 +419,9 @@ describe("PeriodService — reopen policy gate (UFB-052)", () => {
       async () => ({ allowReopenAfterPublish: false, reopenWindowHours: 72 }),
     );
 
-    await expect(service.reopenPeriod(reportId)).rejects.toBeInstanceOf(
-      PeriodAccessError,
-    );
+    await expect(
+      service.reopenPeriod(reportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodAccessError);
     expect(repo.reopenPeriod).not.toHaveBeenCalled();
   });
 
@@ -410,9 +447,9 @@ describe("PeriodService — reopen policy gate (UFB-052)", () => {
       async () => ({ allowReopenAfterPublish: true, reopenWindowHours: 72 }),
     );
 
-    await expect(service.reopenPeriod(reportId)).rejects.toBeInstanceOf(
-      PeriodAccessError,
-    );
+    await expect(
+      service.reopenPeriod(reportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodAccessError);
     expect(repo.reopenPeriod).not.toHaveBeenCalled();
   });
 
@@ -438,7 +475,7 @@ describe("PeriodService — reopen policy gate (UFB-052)", () => {
       async () => ({ allowReopenAfterPublish: true, reopenWindowHours: 72 }),
     );
 
-    await service.reopenPeriod(reportId);
+    await service.reopenPeriod(reportId, headSession);
     expect(repo.reopenPeriod).toHaveBeenCalledOnce();
   });
 
@@ -457,7 +494,7 @@ describe("PeriodService — reopen policy gate (UFB-052)", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(repo);
 
-    await service.reopenPeriod(reportId);
+    await service.reopenPeriod(reportId, headSession);
     expect(repo.reopenPeriod).toHaveBeenCalledOnce();
   });
 });
@@ -581,10 +618,14 @@ describe("PeriodService — manual-publish telemetry", () => {
             status: "draft",
             periodStatus: "open",
             publishedAt: null,
+            archived: false,
           };
         }
         return null;
       },
+      getCurrentEditableId: () => Promise.resolve(reportId),
+      getLatestPublishedNonArchivedId: () => Promise.resolve(null),
+      getReopenedNonArchivedId: () => Promise.resolve(null),
       // eslint-disable-next-line @typescript-eslint/require-await -- async stub satisfies the PeriodRepository typed slot; throw is synchronous
       publishPeriod: vi.fn(async () => {
         throw new Error("DB write failed");
@@ -618,5 +659,346 @@ describe("PeriodService — manual-publish telemetry", () => {
         to: "published",
       }),
     ).toBe(transitionsBefore);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  Lifecycle target scope authorization (period-lifecycle-authz)     */
+/* ------------------------------------------------------------------ */
+
+function openReport(id: string, archived = false): SpyReport {
+  return {
+    id,
+    status: "draft",
+    periodStatus: "open",
+    publishedAt: null,
+    archived,
+  };
+}
+
+function publishedReport(id: string, archived = false): SpyReport {
+  return {
+    id,
+    status: "published",
+    periodStatus: "published",
+    publishedAt: new Date(),
+    archived,
+  };
+}
+
+// A reopened period keeps the legacy tuple (status='published') but flips
+// periodStatus to 'reopened' — the marker the single-active-reopen guard reads.
+function reopenedReport(id: string, archived = false): SpyReport {
+  return {
+    id,
+    status: "published",
+    periodStatus: "reopened",
+    publishedAt: new Date(),
+    archived,
+  };
+}
+
+describe("PeriodService — publish target scope", () => {
+  it("head publishes the active editable period", async () => {
+    const repo = createSpyRepository(
+      new Map([[reportId, openReport(reportId)]]),
+    );
+    const service = new PeriodService(repo);
+
+    await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
+      {
+        success: true,
+        reportId,
+      },
+    );
+    expect(repo.publishPeriod).toHaveBeenCalledWith(
+      reportId,
+      headSession.userId,
+    );
+  });
+
+  it("rejects a head publishing a stale/foreign editable id (not the active period)", async () => {
+    // reportId is the resolved active editable id (inserted first); otherReportId
+    // is an older editable period the head must not be able to target.
+    const repo = createSpyRepository(
+      new Map([
+        [reportId, openReport(reportId)],
+        [otherReportId, openReport(otherReportId)],
+      ]),
+    );
+    const service = new PeriodService(repo);
+
+    await expect(
+      service.publishPeriod(otherReportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodScopeError);
+    expect(repo.publishPeriod).not.toHaveBeenCalled();
+  });
+
+  it("lets an admin publish an arbitrary non-archived editable id", async () => {
+    const repo = createSpyRepository(
+      new Map([
+        [reportId, openReport(reportId)],
+        [otherReportId, openReport(otherReportId)],
+      ]),
+    );
+    const service = new PeriodService(repo);
+
+    // reportId is the resolved active id; an admin still publishes the OTHER one.
+    await expect(
+      service.publishPeriod(otherReportId, adminSession),
+    ).resolves.toEqual({ success: true, reportId: otherReportId });
+    expect(repo.publishPeriod).toHaveBeenCalledWith(
+      otherReportId,
+      adminSession.userId,
+    );
+  });
+
+  it("rejects an archived target for a head", async () => {
+    const repo = createSpyRepository(
+      new Map([[archivedReportId, openReport(archivedReportId, true)]]),
+    );
+    const service = new PeriodService(repo);
+
+    await expect(
+      service.publishPeriod(archivedReportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodScopeError);
+    expect(repo.publishPeriod).not.toHaveBeenCalled();
+  });
+
+  it("rejects an archived target for an admin", async () => {
+    const repo = createSpyRepository(
+      new Map([[archivedReportId, openReport(archivedReportId, true)]]),
+    );
+    const service = new PeriodService(repo);
+
+    await expect(
+      service.publishPeriod(archivedReportId, adminSession),
+    ).rejects.toBeInstanceOf(PeriodScopeError);
+    expect(repo.publishPeriod).not.toHaveBeenCalled();
+  });
+
+  it("maps a missing report to PeriodNotFoundError, not a bare Error", async () => {
+    const service = new PeriodService(createSpyRepository(new Map()));
+
+    await expect(
+      service.publishPeriod(reportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodNotFoundError);
+  });
+
+  it("rejects a head publish when no active editable period exists (no write, no telemetry)", async () => {
+    // Fail-closed: the target clears the not-found/archived/already-published
+    // gates but the server resolves NO active editable period (e.g. a future
+    // scheduled target excluded by periodStart<=now). The mock decouples
+    // getReportById from the resolver to model that state directly.
+    const target = openReport(reportId);
+    const publishPeriod = vi.fn(() => Promise.resolve());
+    const repo: PeriodRepository = {
+      getReportById: () => Promise.resolve({ ...target, archived: false }),
+      getCurrentEditableId: () => Promise.resolve(null),
+      getLatestPublishedNonArchivedId: () => Promise.resolve(null),
+      getReopenedNonArchivedId: () => Promise.resolve(null),
+      publishPeriod,
+      reopenPeriod: vi.fn(() => Promise.resolve()),
+    };
+    const before = await getCounterValue(customreportReportsSubmittedTotal, {
+      state: "published",
+    });
+    const service = new PeriodService(repo);
+
+    await expect(
+      service.publishPeriod(reportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodScopeError);
+    expect(publishPeriod).not.toHaveBeenCalled();
+    expect(
+      await getCounterValue(customreportReportsSubmittedTotal, {
+        state: "published",
+      }),
+    ).toBe(before);
+  });
+});
+
+describe("PeriodService — reopen target scope", () => {
+  it("head reopens the latest published non-archived period", async () => {
+    const repo = createSpyRepository(
+      new Map([[reportId, publishedReport(reportId)]]),
+    );
+    const service = new PeriodService(repo);
+
+    await expect(service.reopenPeriod(reportId, headSession)).resolves.toEqual({
+      success: true,
+      reportId,
+    });
+    expect(repo.reopenPeriod).toHaveBeenCalledWith(reportId);
+  });
+
+  it("rejects a head reopening a stale published id (not the latest)", async () => {
+    const repo = createSpyRepository(
+      new Map([
+        [reportId, publishedReport(reportId)],
+        [otherReportId, publishedReport(otherReportId)],
+      ]),
+    );
+    const service = new PeriodService(repo);
+
+    // reportId is the resolved latest published id; otherReportId is stale.
+    await expect(
+      service.reopenPeriod(otherReportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodScopeError);
+    expect(repo.reopenPeriod).not.toHaveBeenCalled();
+  });
+
+  it("lets an admin reopen an arbitrary non-archived published id", async () => {
+    const repo = createSpyRepository(
+      new Map([
+        [reportId, publishedReport(reportId)],
+        [otherReportId, publishedReport(otherReportId)],
+      ]),
+    );
+    const service = new PeriodService(repo);
+
+    await expect(
+      service.reopenPeriod(otherReportId, adminSession),
+    ).resolves.toEqual({ success: true, reportId: otherReportId });
+    expect(repo.reopenPeriod).toHaveBeenCalledWith(otherReportId);
+  });
+
+  it("rejects an archived published target for a head", async () => {
+    const repo = createSpyRepository(
+      new Map([[archivedReportId, publishedReport(archivedReportId, true)]]),
+    );
+    const service = new PeriodService(repo);
+
+    await expect(
+      service.reopenPeriod(archivedReportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodScopeError);
+    expect(repo.reopenPeriod).not.toHaveBeenCalled();
+  });
+
+  it("rejects an archived published target for an admin", async () => {
+    const repo = createSpyRepository(
+      new Map([[archivedReportId, publishedReport(archivedReportId, true)]]),
+    );
+    const service = new PeriodService(repo);
+
+    await expect(
+      service.reopenPeriod(archivedReportId, adminSession),
+    ).rejects.toBeInstanceOf(PeriodScopeError);
+    expect(repo.reopenPeriod).not.toHaveBeenCalled();
+  });
+
+  it("resolves the latest published NON-archived id when the newest published row is archived", async () => {
+    // The newest published row (reportId) is archived; an older published row
+    // (otherReportId) is non-archived. The reopen resolver must skip the
+    // archived newest and return the older non-archived id, and a head reopening
+    // THAT id succeeds — proving the resolver diverges from getLatestPublishedId
+    // and the archived guard does not block the older non-archived period.
+    const repo = createSpyRepository(
+      new Map([
+        [reportId, publishedReport(reportId, true)],
+        [otherReportId, publishedReport(otherReportId, false)],
+      ]),
+    );
+    const service = new PeriodService(repo);
+
+    await expect(
+      service.reopenPeriod(otherReportId, headSession),
+    ).resolves.toEqual({ success: true, reportId: otherReportId });
+    expect(repo.reopenPeriod).toHaveBeenCalledWith(otherReportId);
+
+    // The archived newest is itself rejected by the archived guard.
+    await expect(
+      service.reopenPeriod(reportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodScopeError);
+  });
+
+  it("maps a missing report to PeriodNotFoundError", async () => {
+    const service = new PeriodService(createSpyRepository(new Map()));
+
+    await expect(
+      service.reopenPeriod(reportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodNotFoundError);
+  });
+
+  it("rejects a head reopen when no latest published target exists (no write, no cache invalidation)", async () => {
+    // Fail-closed: the target clears the not-found/archived/published gates but
+    // the server resolves NO latest published non-archived target. Decoupled mock.
+    const target = publishedReport(reportId);
+    const reopenPeriod = vi.fn(() => Promise.resolve());
+    const invalidate = vi.fn(() => Promise.resolve(undefined));
+    const repo: PeriodRepository = {
+      getReportById: () => Promise.resolve({ ...target, archived: false }),
+      getCurrentEditableId: () => Promise.resolve(null),
+      getLatestPublishedNonArchivedId: () => Promise.resolve(null),
+      getReopenedNonArchivedId: () => Promise.resolve(null),
+      publishPeriod: vi.fn(() => Promise.resolve()),
+      reopenPeriod,
+    };
+    const service = new PeriodService(repo, invalidate);
+
+    await expect(
+      service.reopenPeriod(reportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodScopeError);
+    expect(reopenPeriod).not.toHaveBeenCalled();
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+});
+
+describe("PeriodService — reopen → republish & single-active-reopen guard", () => {
+  it("lets a head republish a reopened period even when a newer open period is the current editable", async () => {
+    // Steady state: week N (reportId) is published; week N+1 (otherReportId) is
+    // open and — inserted first — is what getCurrentEditableId resolves. A head
+    // reopens N and must be able to republish it; a strict equality check against
+    // the current editable (N+1) would brick this legitimate reopen→republish flow.
+    const reports = new Map([
+      [otherReportId, openReport(otherReportId)],
+      [reportId, publishedReport(reportId)],
+    ]);
+    const repo = createSpyRepository(reports);
+    const service = new PeriodService(repo);
+
+    await service.reopenPeriod(reportId, headSession);
+    expect(repo.reopenPeriod).toHaveBeenCalledWith(reportId);
+
+    await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
+      {
+        success: true,
+        reportId,
+      },
+    );
+    expect(repo.publishPeriod).toHaveBeenCalledWith(
+      reportId,
+      headSession.userId,
+    );
+  });
+
+  it("rejects a head reopening a second period while another is already reopened (walk-back guard)", async () => {
+    // otherReportId is already reopened; reportId is the latest published
+    // non-archived target. Allowing this reopen would let a head walk back
+    // through history and republish each older period — forbidden for a non-admin.
+    const reports = new Map([
+      [otherReportId, reopenedReport(otherReportId)],
+      [reportId, publishedReport(reportId)],
+    ]);
+    const repo = createSpyRepository(reports);
+    const service = new PeriodService(repo);
+
+    await expect(
+      service.reopenPeriod(reportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodScopeError);
+    expect(repo.reopenPeriod).not.toHaveBeenCalled();
+  });
+
+  it("lets an admin reopen a second period while another is reopened (recovery path)", async () => {
+    const reports = new Map([
+      [otherReportId, reopenedReport(otherReportId)],
+      [reportId, publishedReport(reportId)],
+    ]);
+    const repo = createSpyRepository(reports);
+    const service = new PeriodService(repo);
+
+    await expect(service.reopenPeriod(reportId, adminSession)).resolves.toEqual(
+      { success: true, reportId },
+    );
+    expect(repo.reopenPeriod).toHaveBeenCalledWith(reportId);
   });
 });

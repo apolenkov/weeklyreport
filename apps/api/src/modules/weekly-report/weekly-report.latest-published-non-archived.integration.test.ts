@@ -1,0 +1,135 @@
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
+
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import {
+  cleanDatabase,
+  createTestPrisma,
+  disconnectTestPrisma,
+} from "../../test-utils/prisma-test-helper";
+import { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository";
+
+/**
+ * Real-Prisma coverage for `getLatestPublishedNonArchivedId()` — the head's
+ * `period.reopen` authz target and published-fallback default. The stub
+ * where-shape lives in the unit tests; this one runs the filter against
+ * Postgres and proves the behaviour:
+ *   - the newest non-archived `published` period wins;
+ *   - an archived `published` row is EXCLUDED even when it is the newest — the
+ *     divergence from `getLatestPublishedId`, which DOES return it;
+ *   - a same-`periodStart` tie breaks deterministically by `id desc`;
+ *   - no non-archived published period returns null.
+ */
+describe("WeeklyReportPrismaRepository.getLatestPublishedNonArchivedId (integration)", () => {
+  const prisma = createTestPrisma();
+  const repository = new WeeklyReportPrismaRepository(
+    prisma as unknown as PrismaService,
+  );
+
+  const OLD_PUBLISHED = "e0000000-0000-4000-a000-0000000000a1";
+  const NEW_PUBLISHED = "e0000000-0000-4000-a000-0000000000a2";
+  const ARCHIVED_PUBLISHED = "e0000000-0000-4000-a000-0000000000a3";
+  const OPEN = "e0000000-0000-4000-a000-0000000000a4";
+  const TIE_LOW = "e0000000-0000-4000-a000-0000000000a5";
+  const TIE_HIGH = "e0000000-0000-4000-a000-0000000000a6";
+
+  async function createReport(
+    id: string,
+    periodStatus: "open" | "published",
+    periodStart: string,
+    archived = false,
+  ): Promise<void> {
+    await prisma.report.create({
+      data: {
+        id,
+        periodStart: new Date(periodStart),
+        periodEnd: new Date(periodStart),
+        deadline: new Date(periodStart),
+        status: periodStatus === "published" ? "published" : "draft",
+        periodStatus,
+        // Set periodState to match periodStatus so a published row is NOT subject
+        // to the partial `one_open_per_boundary` index — two published rows may
+        // legitimately share a periodStart (the tie case) without colliding.
+        periodState: archived
+          ? "archived"
+          : periodStatus === "published"
+            ? "published"
+            : "open",
+        archived,
+      },
+    });
+  }
+
+  beforeEach(async () => {
+    await prisma.report.deleteMany();
+  });
+
+  afterAll(async () => {
+    await cleanDatabase(prisma);
+    await disconnectTestPrisma();
+  });
+
+  it("returns the newest non-archived published period", async () => {
+    await createReport(OLD_PUBLISHED, "published", "2026-05-04T00:00:00.000Z");
+    await createReport(NEW_PUBLISHED, "published", "2026-05-18T00:00:00.000Z");
+
+    await expect(repository.getLatestPublishedNonArchivedId()).resolves.toBe(
+      NEW_PUBLISHED,
+    );
+  });
+
+  it("EXCLUDES an archived newest published row and returns the older non-archived one", async () => {
+    // The archived period is NEWER; getLatestPublishedId would return it, but
+    // the archived:false filter must skip it so a head can reopen the older
+    // non-archived published period.
+    await createReport(OLD_PUBLISHED, "published", "2026-05-04T00:00:00.000Z");
+    await createReport(
+      ARCHIVED_PUBLISHED,
+      "published",
+      "2026-05-25T00:00:00.000Z",
+      true,
+    );
+
+    await expect(repository.getLatestPublishedNonArchivedId()).resolves.toBe(
+      OLD_PUBLISHED,
+    );
+    // Teeth: the archived-inclusive resolver DOES return the archived newest,
+    // proving the two resolvers diverge exactly on the archived row.
+    await expect(repository.getLatestPublishedId()).resolves.toBe(
+      ARCHIVED_PUBLISHED,
+    );
+  });
+
+  it("ignores non-published periods", async () => {
+    await createReport(OPEN, "open", "2026-05-25T00:00:00.000Z");
+    await createReport(OLD_PUBLISHED, "published", "2026-05-04T00:00:00.000Z");
+
+    await expect(repository.getLatestPublishedNonArchivedId()).resolves.toBe(
+      OLD_PUBLISHED,
+    );
+  });
+
+  it("returns null when no non-archived published period exists", async () => {
+    await createReport(
+      ARCHIVED_PUBLISHED,
+      "published",
+      "2026-05-18T00:00:00.000Z",
+      true,
+    );
+    await createReport(OPEN, "open", "2026-05-25T00:00:00.000Z");
+
+    await expect(
+      repository.getLatestPublishedNonArchivedId(),
+    ).resolves.toBeNull();
+  });
+
+  it("breaks a same-periodStart tie deterministically by id desc", async () => {
+    await createReport(TIE_LOW, "published", "2026-05-18T00:00:00.000Z");
+    await createReport(TIE_HIGH, "published", "2026-05-18T00:00:00.000Z");
+
+    const first = await repository.getLatestPublishedNonArchivedId();
+    const second = await repository.getLatestPublishedNonArchivedId();
+
+    expect(first).toBe(TIE_HIGH);
+    expect(second).toBe(first);
+  });
+});

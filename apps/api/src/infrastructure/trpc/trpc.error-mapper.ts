@@ -13,6 +13,10 @@ import {
 } from "../../modules/carry-over/carry-over.service.js";
 import { PdfExportDomainError } from "../../modules/pdf-export/pdf-export.service.js";
 import {
+  PeriodNotFoundError,
+  PeriodScopeError,
+} from "../../modules/period/period.service.js";
+import {
   PublicationAccessError,
   PublicationNotFoundError,
 } from "../../modules/publication/publication.service.js";
@@ -80,6 +84,12 @@ const DOMAIN_ERROR_CODES: readonly (readonly [
   // UFB-067: manual period edit on a missing reportId → NOT_FOUND (distinct
   // from the overlap BAD_REQUEST) so the admin UI shows a row-removed state.
   [AdminPeriodNotFoundError, "NOT_FOUND"],
+  // An out-of-scope or archived period-lifecycle target is an authorization
+  // denial → FORBIDDEN; a missing report → NOT_FOUND. Two classes because they
+  // map to different codes. PeriodAccessError stays unmapped on purpose — its
+  // state/policy 500s are a separate, deferred concern.
+  [PeriodScopeError, "FORBIDDEN"],
+  [PeriodNotFoundError, "NOT_FOUND"],
   // map-domain-errors: getAssembledReport on a missing report → NOT_FOUND.
   [PublicationNotFoundError, "NOT_FOUND"],
   // map-domain-errors: product owned by another group, terminal until the admin

@@ -8,6 +8,7 @@ import { AnalyticsModule } from "../analytics/analytics.module.js";
 import { PublicationModule } from "../publication/publication.module.js";
 import { PublicationService } from "../publication/publication.service.js";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
+import { WeeklyReportModule } from "../weekly-report/weekly-report.module.js";
 import { AutoArchiverScheduler } from "./auto-archiver.scheduler.js";
 import { AutoPublisherScheduler } from "./auto-publisher.scheduler.js";
 import { PeriodPrismaRepository } from "./period.prisma-repository.js";
@@ -31,7 +32,12 @@ import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
  * (audit data still goes through the Nest `Logger` debug stream).
  */
 @Module({
-  imports: [AnalyticsModule, AdminModule, PublicationModule],
+  imports: [
+    AnalyticsModule,
+    AdminModule,
+    PublicationModule,
+    WeeklyReportModule,
+  ],
   providers: [
     PeriodPrismaRepository,
     {

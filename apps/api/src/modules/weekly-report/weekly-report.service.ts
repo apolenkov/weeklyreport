@@ -81,6 +81,14 @@ export interface WeeklyReportRepository {
    * from here, so the resolved default is always a period the gate accepts.
    */
   getLatestPublishedId(): Promise<string | null>;
+  /**
+   * The newest non-archived `published` report id (deterministic `periodStart
+   * desc, id desc`), or null. Mirrors `getLatestPublishedId` but adds the
+   * `archived: false` filter, so it is the head's reopen authz target and
+   * published-fallback default — a head can reopen the newest non-archived
+   * published period even when a newer published row has been archived.
+   */
+  getLatestPublishedNonArchivedId(): Promise<string | null>;
 }
 
 export class WeeklyReportService {
@@ -116,14 +124,26 @@ export class WeeklyReportService {
    * the gate then rejects (a self-inflicted 404). `getActiveReportId` is NOT
    * used for viewers: its editable query has no `archived` filter and a
    * published fallback, so it can diverge from `getCurrentEditableId` and pick an
-   * archived-open or different tied period the gate rejects. Non-viewer roles
-   * keep `getActiveReportId` (they can read any period, so no gate divergence).
+   * archived-open or different tied period the gate rejects.
+   *
+   * The head resolves through the SAME lifecycle resolvers the publish/reopen
+   * authz uses (`getCurrentEditableId` else `getLatestPublishedNonArchivedId`),
+   * so the `reportId` the head submits always equals the server-derived
+   * lifecycle target and a legitimate head action is never rejected as
+   * out-of-scope. The lead keeps `getActiveReportId` — it has no lifecycle gate,
+   * so there is no divergence to close.
    */
   private async resolveDefaultReportId(role?: Role): Promise<string | null> {
     if (role === "viewer") {
       return (
         (await this.repository.getCurrentEditableId()) ??
         (await this.repository.getLatestPublishedId())
+      );
+    }
+    if (role === "head") {
+      return (
+        (await this.repository.getCurrentEditableId()) ??
+        (await this.repository.getLatestPublishedNonArchivedId())
       );
     }
     return this.repository.getActiveReportId();

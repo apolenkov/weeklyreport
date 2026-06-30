@@ -111,6 +111,25 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     return publishedReport?.id ?? null;
   }
 
+  /**
+   * The newest non-archived `published` report id. Mirrors
+   * `getLatestPublishedId` but adds `archived: false`, so it is the head's
+   * `period.reopen` authz target and published-fallback default: a head can
+   * reopen the newest non-archived published period even when a newer published
+   * row has since been archived (the archived-rejection guard would otherwise
+   * block it). The `id desc` tiebreak keeps the pick deterministic on a shared
+   * `periodStart`.
+   */
+  async getLatestPublishedNonArchivedId(): Promise<string | null> {
+    const publishedReport = await this.prisma.report.findFirst({
+      where: { periodStatus: "published", archived: false },
+      orderBy: [{ periodStart: "desc" }, { id: "desc" }],
+      select: { id: true },
+    });
+
+    return publishedReport?.id ?? null;
+  }
+
   async getWeeklyReport(
     reportId: string,
     session?: WeeklyReportScopeSession,

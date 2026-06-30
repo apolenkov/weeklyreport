@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { AdminPeriodOverlapError } from "../admin/admin-shared.js";
+import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository.js";
 import { PeriodPrismaRepository } from "./period.prisma-repository.js";
 
 /**
@@ -29,7 +30,10 @@ describe("PeriodPrismaRepository.reopenPeriod — open-boundary P2002 translatio
     const prisma = {
       $transaction: vi.fn(() => Promise.reject(openBoundaryP2002())),
     } as unknown as PrismaService;
-    const repo = new PeriodPrismaRepository(prisma);
+    const repo = new PeriodPrismaRepository(
+      prisma,
+      new WeeklyReportPrismaRepository(prisma),
+    );
 
     await expect(repo.reopenPeriod("report-1")).rejects.toBeInstanceOf(
       AdminPeriodOverlapError,
@@ -40,7 +44,10 @@ describe("PeriodPrismaRepository.reopenPeriod — open-boundary P2002 translatio
     const prisma = {
       $transaction: vi.fn(() => Promise.reject(new Error("deadlock detected"))),
     } as unknown as PrismaService;
-    const repo = new PeriodPrismaRepository(prisma);
+    const repo = new PeriodPrismaRepository(
+      prisma,
+      new WeeklyReportPrismaRepository(prisma),
+    );
 
     await expect(repo.reopenPeriod("report-1")).rejects.toThrow(
       "deadlock detected",

@@ -32,6 +32,8 @@ interface MockReport {
   status: string;
   periodStatus: string;
   publishedAt: Date | null;
+  /** Defaults to false in `getReportById` when a fixture omits it. */
+  archived?: boolean;
 }
 
 function makeReport(overrides: Partial<MockReport> = {}): MockReport {
@@ -53,6 +55,10 @@ function createRepository(report: MockReport | null): PeriodRepository & {
 } {
   let current = report ? structuredClone(report) : null;
 
+  // Resolve the live `current` id when it matches a lifecycle predicate.
+  const matchId = (predicate: (r: MockReport) => boolean): string | null =>
+    current && predicate(current) ? current.id : null;
+
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
     async getReportById(id: string) {
@@ -60,8 +66,30 @@ function createRepository(report: MockReport | null): PeriodRepository & {
         return null;
       }
 
-      return structuredClone(current);
+      return {
+        ...structuredClone(current),
+        archived: current.archived ?? false,
+      };
     },
+
+    getCurrentEditableId: () =>
+      Promise.resolve(
+        matchId(
+          (r) =>
+            (r.periodStatus === "open" || r.periodStatus === "reopened") &&
+            !r.archived,
+        ),
+      ),
+
+    getLatestPublishedNonArchivedId: () =>
+      Promise.resolve(
+        matchId((r) => r.periodStatus === "published" && !r.archived),
+      ),
+
+    getReopenedNonArchivedId: () =>
+      Promise.resolve(
+        matchId((r) => r.periodStatus === "reopened" && !r.archived),
+      ),
 
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
     async publishPeriod(id: string, _userId: string) {
@@ -169,7 +197,7 @@ describe("PeriodService — contract tests", () => {
       });
       const service = new PeriodService(createRepository(report));
 
-      const result = await service.reopenPeriod(reportId);
+      const result = await service.reopenPeriod(reportId, headSession);
 
       expect(result).toEqual({ success: true, reportId });
     });
@@ -178,11 +206,11 @@ describe("PeriodService — contract tests", () => {
       const report = makeReport({ periodStatus: "open" });
       const service = new PeriodService(createRepository(report));
 
-      await expect(service.reopenPeriod(reportId)).rejects.toBeInstanceOf(
-        PeriodAccessError,
-      );
+      await expect(
+        service.reopenPeriod(reportId, headSession),
+      ).rejects.toBeInstanceOf(PeriodAccessError);
 
-      await expect(service.reopenPeriod(reportId)).rejects.toThrow(
+      await expect(service.reopenPeriod(reportId, headSession)).rejects.toThrow(
         "Only published periods can be reopened.",
       );
     });
@@ -191,11 +219,11 @@ describe("PeriodService — contract tests", () => {
       const report = makeReport({ periodStatus: "reopened" });
       const service = new PeriodService(createRepository(report));
 
-      await expect(service.reopenPeriod(reportId)).rejects.toBeInstanceOf(
-        PeriodAccessError,
-      );
+      await expect(
+        service.reopenPeriod(reportId, headSession),
+      ).rejects.toBeInstanceOf(PeriodAccessError);
 
-      await expect(service.reopenPeriod(reportId)).rejects.toThrow(
+      await expect(service.reopenPeriod(reportId, headSession)).rejects.toThrow(
         "Only published periods can be reopened.",
       );
     });
@@ -204,7 +232,10 @@ describe("PeriodService — contract tests", () => {
       const service = new PeriodService(createRepository(null));
 
       await expect(
-        service.reopenPeriod("99999999-9999-4999-8999-999999999999"),
+        service.reopenPeriod(
+          "99999999-9999-4999-8999-999999999999",
+          headSession,
+        ),
       ).rejects.toThrow("not found");
     });
 
@@ -217,7 +248,7 @@ describe("PeriodService — contract tests", () => {
       const repo = createRepository(report);
       const service = new PeriodService(repo);
 
-      await service.reopenPeriod(reportId);
+      await service.reopenPeriod(reportId, headSession);
 
       const updated = repo.getReport();
       expect(updated).not.toBeNull();
