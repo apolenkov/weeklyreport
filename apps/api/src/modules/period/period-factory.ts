@@ -80,20 +80,48 @@ function narrowDraftState(
   return state === "scheduled" ? "scheduled" : "open";
 }
 
-function isOpenBoundaryConflict(error: unknown): boolean {
+/**
+ * True when `error` is the Prisma `P2002` raised by the partial unique index
+ * `Report_one_open_per_boundary`. The violation's identity surfaces in
+ * DIFFERENT places depending on the Prisma engine, verified against the real
+ * `_test` DB:
+ *  - classic engine: `meta.target` carries the colliding field list
+ *    (`["periodStart","periodEnd"]`) — the index name is absent;
+ *  - pg driver adapter (what this app runs): `meta.target` is UNSET; the index
+ *    name lives in `meta.driverAdapterError.cause.originalMessage` and the
+ *    columns in `cause.constraint.fields`, with the field list also echoed in
+ *    the top-level `message`.
+ * So matching only `meta.target` (the obvious shape) silently misses the real
+ * adapter error → a raw 500. We scan the whole serialized `meta` + `message`
+ * for the precise index name, backstopped by the `periodStart`+`periodEnd`
+ * column pair (the classic-engine form where the name is absent). Exported so
+ * every open-writer — admin create/update, reopen, unarchive, the scheduler
+ * flip, AND the login/scheduler create via `ensureCurrentPeriod` — translates
+ * the SAME violation identically; an unrelated unique violation re-throws.
+ */
+export function isOpenBoundaryConflict(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   if ((error as { code?: unknown }).code !== "P2002") return false;
-  const target = (error as { meta?: { target?: unknown } }).meta?.target;
-  const targetText =
-    typeof target === "string"
-      ? target
-      : Array.isArray(target)
-        ? target.join(",")
-        : "";
+
+  const meta = (error as { meta?: unknown }).meta;
+  const message = (error as { message?: unknown }).message;
+  const identity = `${meta === undefined ? "" : safeJson(meta)} ${
+    typeof message === "string" ? message : ""
+  }`;
+
   return (
-    targetText.includes(OPEN_BOUNDARY_INDEX) ||
-    (targetText.includes("periodStart") && targetText.includes("periodEnd"))
+    identity.includes(OPEN_BOUNDARY_INDEX) ||
+    (identity.includes("periodStart") && identity.includes("periodEnd"))
   );
+}
+
+/** JSON.stringify that never throws (a circular/BigInt meta degrades to ""). */
+function safeJson(value: unknown): string {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "";
+  }
 }
 
 /**

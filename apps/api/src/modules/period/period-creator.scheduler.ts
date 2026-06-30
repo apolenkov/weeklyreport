@@ -1,13 +1,75 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
+import type { PrismaClient } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { AuditLogger } from "../../lib/audit-logger.js";
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { AdminService } from "../admin/admin.service";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
-import { ensureCurrentPeriod } from "./period-factory.js";
+import {
+  ensureCurrentPeriod,
+  isOpenBoundaryConflict,
+} from "./period-factory.js";
 import { buildTransition } from "./period-transition.js";
+
+/** The `report` delegate methods the scheduled→open flip needs. */
+type FlipReportDelegate = Pick<
+  PrismaClient["report"],
+  "findMany" | "update" | "findFirst"
+>;
+
+/**
+ * Flip every due `scheduled` row (its `periodStart` has been reached) to
+ * `open`, ONE ROW AT A TIME in a deterministic `(periodStart, id)` order. The
+ * partial unique index `Report_one_open_per_boundary` constrains this UPDATE,
+ * so a row whose boundary another writer already opened — or a sibling
+ * scheduled row that this loop opened a moment earlier — raises `P2002`.
+ * Processing sequentially makes recovery a single rule: the first row on a
+ * boundary commits open, and any later row that collides re-reads, finds the
+ * now-open row, and is left scheduled (never deleted) and logged. So exactly
+ * one row per boundary opens and the boundary is never left without an open
+ * period. A non-`P2002` error aborts the tick (re-thrown unchanged).
+ */
+export async function flipDueScheduledToOpen(
+  report: FlipReportDelegate,
+  now: Date,
+  logger: Pick<Logger, "warn">,
+): Promise<void> {
+  const due = await report.findMany({
+    where: { periodState: "scheduled", periodStart: { lte: now } },
+    orderBy: [{ periodStart: "asc" }, { id: "asc" }],
+    select: { id: true, periodStart: true, periodEnd: true },
+  });
+
+  for (const row of due) {
+    try {
+      // refactor-period-transition-writer: the open transition writes the full
+      // field set (periodState='open' + the draft/false legacy tuple the
+      // scheduled row already carries).
+      await report.update({
+        where: { id: row.id },
+        data: buildTransition("open", {}),
+      });
+    } catch (error) {
+      if (!isOpenBoundaryConflict(error)) throw error;
+
+      const open = await report.findFirst({
+        where: {
+          periodStart: row.periodStart,
+          periodEnd: row.periodEnd,
+          periodState: "open",
+        },
+        select: { id: true },
+      });
+      logger.warn(
+        open
+          ? `scheduled→open: boundary ${row.periodStart.toISOString()}→${row.periodEnd.toISOString()} already open (period=${open.id}); duplicate scheduled row=${row.id} left in place`
+          : `scheduled→open: P2002 on row=${row.id} but no open row found on its boundary; left scheduled for the next tick`,
+      );
+    }
+  }
+}
 
 // One calendar day in milliseconds — the scheduler anchors the next period to
 // the day AFTER the most recent period's end.
@@ -77,19 +139,12 @@ export class PeriodCreatorScheduler {
       return { created: false, reason: "disabled" };
     }
 
-    // UFB-053 / Phase 51-C: before creating, flip any 'scheduled' rows
-    // whose periodStart has been reached to 'open'. This is the
-    // SCHEDULED→OPEN transition for periods minted ahead-of-time on a
-    // previous tick. We keep the write narrow (just `periodState`) — the
-    // legacy `status` tuple was already (`draft`, `archived=false`) at
-    // SCHEDULED-time and stays that way at OPEN-time.
-    await this.prisma.report.updateMany({
-      where: { periodState: "scheduled", periodStart: { lte: now } },
-      // refactor-period-transition-writer: the open transition supplies the
-      // full field set (periodState='open' + the draft/false legacy tuple the
-      // scheduled rows already carry, so it is a no-op on those columns).
-      data: buildTransition("open", {}),
-    });
+    // UFB-053 / Phase 51-C: before creating, flip any 'scheduled' rows whose
+    // periodStart has been reached to 'open' (the SCHEDULED→OPEN transition for
+    // periods minted ahead-of-time on a previous tick). period-uniqueness: the
+    // partial unique index now constrains this UPDATE, so the flip runs
+    // per-boundary with P2002 recovery instead of a single bulk updateMany.
+    await flipDueScheduledToOpen(this.prisma.report, now, this.logger);
 
     // Most recent period across the whole table. If it ends in the future
     // (or right now), nothing to do — the current cycle is still open.

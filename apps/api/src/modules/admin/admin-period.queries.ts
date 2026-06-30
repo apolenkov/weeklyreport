@@ -2,14 +2,37 @@ import type { PeriodState, PeriodStatus } from "@customreport/shared";
 import type { ReportStatus } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { isOpenBoundaryConflict } from "../period/period-factory.js";
 import { buildTransition } from "../period/period-transition.js";
 import type { PeriodRowFromRepo } from "./admin.service";
+import { AdminPeriodOverlapError } from "./admin-shared.js";
 
 /**
  * Period (Report) lifecycle queries for the Admin Periods tab, extracted from
  * `admin.prisma-repository.ts` (R3a-4 max-lines split): list/overlap/create/
  * read/update/archive/unarchive/delete.
  */
+
+/**
+ * Run a period write that moves/keeps a row at `periodState = 'open'`,
+ * translating the `Report_one_open_per_boundary` P2002 into the same friendly
+ * overlap error the `findOverlappingPeriod` pre-check raises (→ BAD_REQUEST),
+ * instead of a raw 500. A race that defeats the pre-check on create, a date
+ * edit onto a contested boundary, or an unarchive into one all land here. Any
+ * other error (including an unrelated unique violation) re-throws unchanged.
+ */
+async function openBoundaryGuarded<T>(write: () => Promise<T>): Promise<T> {
+  try {
+    return await write();
+  } catch (error) {
+    if (isOpenBoundaryConflict(error)) {
+      throw new AdminPeriodOverlapError(
+        "A period already exists for these dates.",
+      );
+    }
+    throw error;
+  }
+}
 
 /**
  * Fetch periods matching the supplied state set, sorted newest-first
@@ -152,30 +175,32 @@ export async function createPeriodManual(
   deadline: Date;
   periodState: PeriodState;
 }> {
-  const created = await prisma.report.create({
-    data: {
-      periodStart: input.periodStart,
-      periodEnd: input.periodEnd,
-      deadline: input.deadline,
-      weekLabel: input.weekLabel,
-      // refactor-period-transition-writer: lifecycle fields (periodState +
-      // legacy status/archived tuple) come from the transition builder, not
-      // hand-assembled. The service resolves the initial state to
-      // 'scheduled' | 'open'; both map to a draft/false legacy tuple, which
-      // the schedule/open transitions produce.
-      ...buildTransition(
-        input.periodState === "scheduled" ? "schedule" : "open",
-        {},
-      ),
-    },
-    select: {
-      id: true,
-      periodStart: true,
-      periodEnd: true,
-      deadline: true,
-      periodState: true,
-    },
-  });
+  const created = await openBoundaryGuarded(() =>
+    prisma.report.create({
+      data: {
+        periodStart: input.periodStart,
+        periodEnd: input.periodEnd,
+        deadline: input.deadline,
+        weekLabel: input.weekLabel,
+        // refactor-period-transition-writer: lifecycle fields (periodState +
+        // legacy status/archived tuple) come from the transition builder, not
+        // hand-assembled. The service resolves the initial state to
+        // 'scheduled' | 'open'; both map to a draft/false legacy tuple, which
+        // the schedule/open transitions produce.
+        ...buildTransition(
+          input.periodState === "scheduled" ? "schedule" : "open",
+          {},
+        ),
+      },
+      select: {
+        id: true,
+        periodStart: true,
+        periodEnd: true,
+        deadline: true,
+        periodState: true,
+      },
+    }),
+  );
   return {
     id: created.id,
     periodStart: created.periodStart,
@@ -253,18 +278,20 @@ export async function updatePeriodManual(
   weekLabel: string | null;
   periodState: PeriodState;
 }> {
-  const updated = await prisma.report.update({
-    where: { id: input.reportId },
-    data: input.data,
-    select: {
-      id: true,
-      periodStart: true,
-      periodEnd: true,
-      deadline: true,
-      weekLabel: true,
-      periodState: true,
-    },
-  });
+  const updated = await openBoundaryGuarded(() =>
+    prisma.report.update({
+      where: { id: input.reportId },
+      data: input.data,
+      select: {
+        id: true,
+        periodStart: true,
+        periodEnd: true,
+        deadline: true,
+        weekLabel: true,
+        periodState: true,
+      },
+    }),
+  );
   return {
     id: updated.id,
     periodStart: updated.periodStart,
@@ -325,13 +352,17 @@ export async function unarchivePeriod(
       ? "published"
       : "open";
   const nextPeriodStatus = row.periodStatus;
-  await prisma.report.update({
-    where: { id: periodId },
-    // refactor-period-transition-writer: the caller-derived next state (read
-    // from the surviving legacy tuple above) flows into the unarchive
-    // transition, which clears `archived` and sets `periodState`.
-    data: buildTransition("unarchive", { nextPeriodState }),
-  });
+  // Unarchiving back to 'open' can collide with an open period that took the
+  // boundary while this one was archived; that update hits the partial index.
+  await openBoundaryGuarded(() =>
+    prisma.report.update({
+      where: { id: periodId },
+      // refactor-period-transition-writer: the caller-derived next state (read
+      // from the surviving legacy tuple above) flows into the unarchive
+      // transition, which clears `archived` and sets `periodState`.
+      data: buildTransition("unarchive", { nextPeriodState }),
+    }),
+  );
   return { nextPeriodState, nextPeriodStatus };
 }
 
