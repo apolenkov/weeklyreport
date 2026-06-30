@@ -58,6 +58,9 @@ const sourceSection: ReportSectionReadModel = {
       deadline: null,
       impact: "Needs follow-up",
       resolvedAt: null,
+      // Decision.productId is a NOT-NULL product FK; a carried decision needs
+      // a product to persist (and therefore to be counted).
+      productId: "44444444-4444-4444-8444-444444444444",
     },
     {
       id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab",
@@ -104,14 +107,18 @@ function createRepository(
       return [structuredClone(targetSection)];
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
+    async getTargetReportState() {
+      return { periodStatus: "open" as const, archived: false };
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
     async saveCarryOver(
       execution: CarryOverExecution,
       nextRecords: CarryOverRecord[],
-      nextSection: ReportSectionReadModel,
+      nextSections: ReportSectionReadModel[],
     ) {
       executions.set(execution.id, structuredClone(execution));
       records = structuredClone(nextRecords);
-      targetSection = structuredClone(nextSection);
+      targetSection = structuredClone(nextSections[0]);
       return {
         execution: structuredClone(execution),
         records: structuredClone(records),
@@ -235,17 +242,21 @@ describe("CarryOverService", () => {
           return targetSections.map((s) => structuredClone(s));
         },
         // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
+        async getTargetReportState() {
+          return { periodStatus: "open" as const, archived: false };
+        },
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
         async saveCarryOver(
           execution: CarryOverExecution,
           nextRecords: CarryOverRecord[],
-          nextSection: ReportSectionReadModel,
+          nextSections: ReportSectionReadModel[],
         ) {
           executions.set(execution.id, structuredClone(execution));
           savedRecords = structuredClone(nextRecords);
           return {
             execution: structuredClone(execution),
             records: structuredClone(savedRecords),
-            targetSection: structuredClone(nextSection),
+            targetSection: structuredClone(nextSections[0]),
           };
         },
       };
@@ -320,8 +331,12 @@ describe("CarryOverService", () => {
           return [structuredClone(sourceSection)];
         },
         // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
-        async saveCarryOver(execution, records, section) {
-          return { execution, records, targetSection: section };
+        async getTargetReportState() {
+          return { periodStatus: "open" as const, archived: false };
+        },
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
+        async saveCarryOver(execution, records, sections) {
+          return { execution, records, targetSection: sections[0] };
         },
       };
 
@@ -347,8 +362,12 @@ describe("CarryOverService", () => {
           return [];
         },
         // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
-        async saveCarryOver(execution, records, section) {
-          return { execution, records, targetSection: section };
+        async getTargetReportState() {
+          return { periodStatus: "open" as const, archived: false };
+        },
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
+        async saveCarryOver(execution, records, sections) {
+          return { execution, records, targetSection: sections[0] };
         },
       };
 
