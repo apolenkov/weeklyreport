@@ -219,6 +219,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.web
+      # NEXT_PUBLIC_* values are inlined into the client bundle at BUILD time and
+      # cannot be overridden at runtime. API_URL here is the fixed internal origin
+      # baked into the next.config.ts rewrites — a literal, NOT the runtime
+      # ${API_URL}, so a stray shell API_URL can't bake a broken rewrite. The base
+      # Dockerfile.web ARGs default to dev values; production overrides them here.
+      args:
+        NEXT_PUBLIC_AUTH_STUB: "false"
+        NEXT_PUBLIC_DEV_ROLE_SWITCHER: "false"
+        API_URL: http://api:3001
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL must be set}
     environment:
       API_URL: ${API_URL:-http://api:3001}
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://api:3001}

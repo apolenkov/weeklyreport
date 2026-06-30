@@ -15,7 +15,9 @@ import { TaglineCycler } from "../components/landing/tagline-cycler";
 import { type LastRoleRecord, readLastRole } from "../lib/last-role";
 import { useTRPC } from "../lib/trpc-context";
 
-const AUTH_STUB = process.env.NEXT_PUBLIC_AUTH_STUB === "true";
+const AUTH_STUB =
+  process.env.NEXT_PUBLIC_AUTH_STUB === "true" &&
+  process.env.NODE_ENV !== "production";
 
 /**
  * UX-16 (Phase 35-08): role-aware default landing.
