@@ -106,7 +106,7 @@ describe("PublicationPrismaRepository (integration)", () => {
     });
   });
 
-  it("saveAssembledReport with { auto: true } writes the full autoPublish set", async () => {
+  it("saveAutoPublishedReport writes the full autoPublish set for a non-archived draft", async () => {
     const assembled = await repo.getAssembledReport(testData.report.id);
     expect(assembled).not.toBeNull();
 
@@ -118,18 +118,48 @@ describe("PublicationPrismaRepository (integration)", () => {
       publishedById: null,
     };
 
-    await repo.saveAssembledReport(published, { auto: true });
+    const result = await repo.saveAutoPublishedReport(published);
 
+    expect(result.published).toBe(true);
     const reloaded = await prisma.report.findUnique({
       where: { id: testData.report.id },
     });
     // The auto path used to leave periodStatus="open" and rely on a SECOND
     // transaction for autoPublished — a torn-write window. autoPublish now
-    // writes the complete set in one update.
+    // writes the complete set in one compare-and-set update.
     expect(expectDefined(reloaded).status).toBe("published");
     expect(expectDefined(reloaded).periodStatus).toBe("published");
     expect(expectDefined(reloaded).periodState).toBe("published");
     expect(expectDefined(reloaded).autoPublished).toBe(true);
     expect(expectDefined(reloaded).publishedById).toBeNull();
+  });
+
+  it("saveAutoPublishedReport skips a row archived after candidate selection", async () => {
+    // Read the candidate as the scheduler would, THEN an admin archives it
+    // (archive leaves status="draft"). The compare-and-set must match zero rows
+    // and leave the period archived — never promoting it to published.
+    const assembled = await repo.getAssembledReport(testData.report.id);
+    const published = {
+      ...expectDefined(assembled),
+      status: "published" as const,
+      publishedAt: new Date("2026-04-12T10:00:00.000Z"),
+      publishedById: null,
+    };
+
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: { archived: true, periodState: "archived" },
+    });
+
+    const result = await repo.saveAutoPublishedReport(published);
+
+    expect(result).toEqual({ published: false });
+    const reloaded = await prisma.report.findUnique({
+      where: { id: testData.report.id },
+    });
+    expect(expectDefined(reloaded).status).toBe("draft");
+    expect(expectDefined(reloaded).archived).toBe(true);
+    expect(expectDefined(reloaded).periodState).toBe("archived");
+    expect(expectDefined(reloaded).periodStatus).not.toBe("published");
   });
 });

@@ -64,9 +64,14 @@ export class AutoPublisherScheduler {
     const cutoff = new Date(now.getTime() - graceMs);
 
     // Candidate set: draft Reports whose deadline + grace is in the past.
+    // `archived:false` excludes admin-archived periods: `archive` leaves
+    // `status="draft"`, so without this guard an archived draft would match and
+    // be promoted to `published` — the invalid `archived=true, periodState=
+    // "published"` dual-state. Mirrors the auto-archiver candidate filter.
     const candidates = await this.prisma.report.findMany({
       where: {
         status: "draft",
+        archived: false,
         deadline: { lt: cutoff },
       },
       orderBy: { deadline: "asc" },
@@ -80,16 +85,23 @@ export class AutoPublisherScheduler {
     const publishedIds: string[] = [];
     for (const candidate of candidates) {
       try {
-        // refactor-period-transition-writer: `publishAuto` now writes the
-        // COMPLETE autoPublish field set (status, periodStatus, periodState,
-        // publishedAt, publishedById=null, autoPublished=true) in a single
-        // update via the transition builder. The previous second
-        // `report.update` here was both redundant (it re-wrote periodState)
-        // and a torn-write hazard: if it failed after publishAuto committed,
-        // the now-`status=published` row was never re-selected by the
-        // `status:"draft"` candidate query, leaving autoPublished=false
-        // forever. Deleting it closes that window.
-        await this.publicationService.publishAuto(candidate.id);
+        // `publishAuto` writes the COMPLETE autoPublish field set (status,
+        // periodStatus, periodState, publishedAt, publishedById=null,
+        // autoPublished=true) in a single guarded update. It is the sole
+        // lifecycle writer here — a second `report.update` would be both
+        // redundant and a torn-write hazard (a failure after the publish
+        // commit would leave the now-`status=published` row never re-selected
+        // by the `status:"draft"` candidate query, stuck at autoPublished=false).
+        const outcome = await this.publicationService.publishAuto(candidate.id);
+
+        if (!outcome.published) {
+          // Skipped: the period was archived (or already published) between
+          // candidate selection and the compare-and-set write, so it matched
+          // zero rows. An expected no-op, distinct from the `catch` failure
+          // branch — emit no audit, count no sections, and keep it out of
+          // `periodIds`.
+          continue;
+        }
 
         // Count sections that never reached `submitted` status; these
         // render as «Не сдал» placeholders downstream. Counted post-

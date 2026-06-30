@@ -3,13 +3,14 @@ import type {
   DraftSavePayload,
   UserSession,
 } from "@customreport/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   customreportPeriodStateTransitionsTotal,
   customreportReportsSubmittedTotal,
 } from "../../infrastructure/metrics/metrics.registry.js";
 import {
+  type AutoPublishResult,
   PublicationAccessError,
   type PublicationRepository,
   PublicationService,
@@ -119,7 +120,27 @@ function createRepository(report: AssembledReport): PublicationRepository {
 
       return structuredClone(currentReport);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
+    async saveAutoPublishedReport(nextReport: AssembledReport) {
+      currentReport = structuredClone(nextReport);
+
+      return {
+        published: true as const,
+        report: structuredClone(currentReport),
+      };
+    },
   };
+}
+
+/**
+ * Narrow an auto-publish outcome to its report, failing the test loudly if the
+ * write was skipped — keeps the published-path assertions free of `if` guards.
+ */
+function expectPublished(result: AutoPublishResult): AssembledReport {
+  if (!result.published) {
+    throw new Error("expected a published auto-publish outcome, got a skip");
+  }
+  return result.report;
 }
 
 const reviewUpdate: DraftSavePayload = {
@@ -202,7 +223,7 @@ describe("PublicationService", () => {
   it("publishAuto stamps system attribution (publishedById=null)", async () => {
     const service = new PublicationService(createRepository(assembledReport));
 
-    const published = await service.publishAuto(reportId);
+    const published = expectPublished(await service.publishAuto(reportId));
 
     expect(published.status).toBe("published");
     expect(published.publishedById).toBeNull();
@@ -213,8 +234,8 @@ describe("PublicationService", () => {
   it("publishAuto is idempotent on already-published reports (no throw, returns current)", async () => {
     const service = new PublicationService(createRepository(assembledReport));
 
-    const first = await service.publishAuto(reportId);
-    const second = await service.publishAuto(reportId);
+    const first = expectPublished(await service.publishAuto(reportId));
+    const second = expectPublished(await service.publishAuto(reportId));
 
     expect(first.status).toBe("published");
     expect(second.status).toBe("published");
@@ -276,6 +297,46 @@ describe("PublicationService", () => {
         to: "published",
       }),
     ).toBe(transitionsBefore + 1);
+  });
+
+  // period-dual-state: when the repository's compare-and-set matches zero rows
+  // (the period was archived after candidate selection), publishAuto returns a
+  // skipped outcome and fires NONE of the publish success side-effects — no KPI
+  // counter bump, no ingestion enqueue.
+  it("publishAuto skip: zero-row compare-and-set → no metrics, no ingestion", async () => {
+    const ingestion = vi.fn(() => Promise.resolve());
+    const repository: PublicationRepository = {
+      ...createRepository(assembledReport),
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
+      async saveAutoPublishedReport() {
+        return { published: false as const };
+      },
+    };
+    const service = new PublicationService(repository, undefined, ingestion);
+    const submittedBefore = await getCounterValue(
+      customreportReportsSubmittedTotal,
+      { state: "published" },
+    );
+    const transitionsBefore = await getCounterValue(
+      customreportPeriodStateTransitionsTotal,
+      { from: "open", to: "published" },
+    );
+
+    const result = await service.publishAuto(reportId);
+
+    expect(result).toEqual({ published: false });
+    expect(ingestion).not.toHaveBeenCalled();
+    expect(
+      await getCounterValue(customreportReportsSubmittedTotal, {
+        state: "published",
+      }),
+    ).toBe(submittedBefore);
+    expect(
+      await getCounterValue(customreportPeriodStateTransitionsTotal, {
+        from: "open",
+        to: "published",
+      }),
+    ).toBe(transitionsBefore);
   });
 });
 

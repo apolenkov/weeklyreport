@@ -8,7 +8,10 @@ import {
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
 } from "../published-report-snapshot";
-import type { PublicationRepository } from "./publication.service";
+import type {
+  AutoPublishResult,
+  PublicationRepository,
+} from "./publication.service";
 
 @Injectable()
 export class PublicationPrismaRepository implements PublicationRepository {
@@ -29,28 +32,21 @@ export class PublicationPrismaRepository implements PublicationRepository {
     return buildAssembledReportFromPrismaRow(row);
   }
 
-  async saveAssembledReport(
-    report: AssembledReport,
-    options: { auto?: boolean } = {},
-  ): Promise<AssembledReport> {
-    // refactor-period-transition-writer: the lifecycle field set comes from
-    // the single transition builder, never hand-assembled here. A draft save
-    // (e.g. a section-update through PublicationService.updateSectionForReview,
-    // which rejects already-published reports) maps to `open`; a publish maps
-    // to `publish` or `autoPublish` per the caller's explicit intent. We do
-    // NOT infer auto-vs-manual from `publishedById` nullness — that is fragile.
+  async saveAssembledReport(report: AssembledReport): Promise<AssembledReport> {
+    // The lifecycle field set comes from the single transition builder, never
+    // hand-assembled here. A draft save (e.g. a section-update through
+    // PublicationService.updateSectionForReview, which rejects already-published
+    // reports) maps to `open`; a manual publish maps to `publish`. The auto path
+    // does not route here — see `saveAutoPublishedReport`.
     //
-    // This is the fix for the long-standing periodStatus drift: the previous
-    // hand-assembled write set `status`/`periodState` but never `periodStatus`,
-    // so every report published through this path (manual `publishReport` AND
-    // scheduler `publishAuto`) stayed at the default `periodStatus="open"` —
-    // invisible to viewers (weekly-report.service rejects non-published
-    // periodStatus) and unable to serve its snapshot. The `publish`/
-    // `autoPublish` transitions write `periodStatus="published"` like the
-    // `publishPeriod` path always did.
+    // The transition builder writes `periodStatus="published"` alongside
+    // `status`/`periodState`. A prior hand-assembled write set `status` and
+    // `periodState` but never `periodStatus`, leaving it at the default
+    // `periodStatus="open"` — invisible to viewers (weekly-report.service
+    // rejects non-published periodStatus) and unable to serve its snapshot.
     const lifecycle =
       report.status === "published"
-        ? this.publishLifecycle(report, options.auto ?? false)
+        ? this.publishLifecycle(report, false)
         : buildTransition("open", {});
 
     await this.prisma.report.update({
@@ -75,6 +71,43 @@ export class PublicationPrismaRepository implements PublicationRepository {
     }
 
     return buildAssembledReportFromPrismaRow(saved);
+  }
+
+  async saveAutoPublishedReport(
+    report: AssembledReport,
+  ): Promise<AutoPublishResult> {
+    // Compare-and-set: the candidate-query `archived:false` filter cannot cover
+    // a period archived BETWEEN selection and this write (the `archive`
+    // transition leaves `status="draft"`, so neither the candidate filter nor a
+    // `status="published"` idempotency check rejects it). Scoping the write to
+    // rows still `status="draft"` and `archived=false` is the only point that
+    // closes the race — a zero-row match means the row was archived or already
+    // published after selection, and is skipped without a write.
+    const { count } = await this.prisma.report.updateMany({
+      where: { id: report.reportId, status: "draft", archived: false },
+      data: {
+        ...this.publishLifecycle(report, true),
+        publishedSnapshot: toPublishedSnapshotJson(report),
+      },
+    });
+
+    if (count === 0) {
+      return { published: false };
+    }
+
+    const saved = await this.prisma.report.findUnique({
+      where: { id: report.reportId },
+      include: reportFullIncludeForSnapshot,
+    });
+
+    if (!saved) {
+      throw new Error(`Report ${report.reportId} was not found after save.`);
+    }
+
+    return {
+      published: true,
+      report: buildAssembledReportFromPrismaRow(saved),
+    };
   }
 
   /**
