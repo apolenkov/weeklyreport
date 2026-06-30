@@ -31,82 +31,60 @@ const STANDARDS = [
 //                   message + diff summary for the orchestrator to review-then-commit.
 const CHANGES = [
   {
-    name: "fix-fillfrom-version-assertion",
-    stakes: "low",
-    // No OpenSpec dir — maintenance fix of one stale assertion. (Same #11 debt class
-    // as fix-integration-fixtures, committed 4a83f6de; this is the 4th red file the
-    // handoff missed.) This run ALSO re-validates the harness fixes: full-integration
-    // gate, git-diff-HEAD review scope, git-derived commit paths, major-blocks-commit.
-    spec: {
-      inline: [
-        "Fix ONE pre-existing RED api integration test, the last of the #11 (add-section-optimistic-lock) debt. Test-only — touch ONLY the test file, no production code.",
-        "",
-        "FILE — apps/api/src/modules/report-sections/fill-from.integration.test.ts",
-        "Failing test: `LeadFormService — fillFrom (integration) > copies items from source section and returns count` (assertion at line ~128).",
-        "GROUND TRUTH (I ran it): the test calls `service.fillFrom(targetSectionId, sourceSectionId, userId, 1)` — the 4th argument (1) is the optimistic-lock expectedVersion that #11 added. LeadFormService forwards it: `repo.fillFromSection(targetSectionId, sourceSectionId, expectedVersion)` (3 args, confirmed at apps/api/src/modules/report-sections/lead-form.service.ts:136). But the assertion `expect(repo.fillFromSection).toHaveBeenCalledWith(targetSectionId, sourceSectionId)` still passes only 2 args, so vitest's recorded actual call `[targetSectionId, sourceSectionId, 1]` fails the matcher.",
-        "FIX: add the forwarded expectedVersion as the third expected argument so the assertion matches AND gains teeth on the OCC-version forwarding. Read lead-form.service.ts around line 136 to confirm EXACTLY what value is forwarded (it is the `expectedVersion` parameter = the literal 1 the test passes as fillFrom's 4th arg). Set the matcher to `toHaveBeenCalledWith(targetSectionId, sourceSectionId, 1)` (or the precise expression the service forwards). Change nothing else; do not touch any production file.",
-        "",
-        "Confirm green by running this file through the api integration runner (apps/api `test:integration`; test DB customreport_test is up). Do NOT run a full monorepo gate and do NOT touch git.",
-      ].join("\n"),
-    },
-    seam: "ONLY apps/api/src/modules/report-sections/fill-from.integration.test.ts. No production code, no schema, no migration, no other test file.",
+    name: "transactional-snapshot-restore",
+    stakes: "high",
+    spec: { dir: true },
+    seam: "admin-snapshot-write.queries.ts (wrap saveSnapshot's writes in ONE interactive prisma.$transaction; add targeted upsert*/remove* queries). admin-group.queries.ts::ensureFallbackReportingGroup (widen to the tx-client type). snapshot-admin.service.ts, project-admin.service.ts, reminder-admin.service.ts, period-admin.service.ts (rewrite add/edit/remove to call targeted repo methods, NOT getSnapshot->saveSnapshot). admin.prisma-repository.ts + the AdminRepository interface in admin-shared.ts (entity-level methods) + the in-memory test repository. Tests: admin.service.test.ts, admin.integration.test.ts, admin.contract.test.ts. Touch ONLY admin module files. (admin.* seam 12/13/14 already committed — #19 next, no conflict.)",
     caveat:
-      "Do not weaken the assertion — strengthen it: the third arg must be the actual forwarded expectedVersion so the test now proves the version reaches the repository (the OCC invariant #11 needs covered). Do not edit lead-form.service.ts or any other file.",
+      "ATOMICITY: wrap every DB write of saveSnapshot — currentRules read, upsertGroups, ensureFallbackReportingGroup (it does reportingGroup.upsert, so it MUST run under tx, not the raw client), upsertUsers, upsertProjects, upsertPeriods, upsertReminderRules — in a SINGLE prisma.$transaction(async (tx) => ...). Widen each upsert* helper AND ensureFallbackReportingGroup from PrismaService to the Prisma transaction-client type (follow the lead-form.prisma-repository.ts pattern). ONLY the post-commit PolicyApplicator loop and the final getSnapshot read stay OUTSIDE the transaction. Preserve the resolveLifecycle non-transition period write inside (do not derive coupled lifecycle fields from one field). " +
+      "TARGETED (non-destructive): replace whole-snapshot destructive reconcile (removedUserIds/removedProjectIds/removedRuleIds branches) with entity-level upsert/delete keyed by id. Removals route ONLY through explicit remove* methods (removeUser honors the existing FK-reference guard + P2003 skip; removeProject archives by id; removeReminderRule deletes by id). The retained saveSnapshot is ADDITIVE-ONLY: it NEVER deletes or archives a row merely for being absent from the payload (design D2). " +
+      "PeriodAdminService.upsertPeriod MUST call the targeted upsertPeriod (NOT getSnapshot->saveSnapshot) so a single-period edit never re-writes stale copies of groups/users/projects/rules; when the upsert CREATES a period, run PolicyApplicatorService.applyToPeriod for it AFTER the write commits (mirror saveSnapshot's newlyCreatedPeriods post-commit step), never inside the period write. " +
+      "Re-express admin.service.test.ts cases that encode destructive reconcile as intended behavior against the targeted mutations — do NOT weaken or delete coverage. No schema change, no migration, no API wire-shape change.",
     mustCover: [
-      "fill-from.integration.test.ts line ~128: toHaveBeenCalledWith now includes the forwarded expectedVersion as the third argument, matching the real 3-arg repo.fillFromSection call; the test passes.",
-      "The assertion has TEETH: it asserts the version value forwarded (1), not a wildcard — it would fail if the service stopped forwarding the version.",
-      "Only the one test file is touched; zero production-code edits in the diff.",
-      "The FULL api integration suite is now green (this was the last red file).",
+      "saveSnapshot: ALL its DB writes (currentRules read, upsertGroups, ensureFallbackReportingGroup, upsertUsers, upsertProjects, upsertPeriods, upsertReminderRules) run inside ONE prisma.$transaction(async (tx) => ...); a mid-write throw rolls the WHOLE restore back (no partial state, no stray default group). Proven by a real-DB partial-restore-rollback test (a later phase throws -> DB unchanged).",
+      "every upsert* helper AND ensureFallbackReportingGroup are widened to the Prisma transaction-client type and run under tx (not the raw client) — follow lead-form.prisma-repository.ts.",
+      "PolicyApplicator.applyToPeriod stays strictly AFTER the transaction returns (asserted by structure that the applicator loop is OUTSIDE the $transaction callback); resolveLifecycle non-transition write preserved inside.",
+      "destructive reconcile branches (removedUserIds/removedProjectIds/removedRuleIds) REMOVED from the per-phase helpers; removals route only through explicit remove* methods; saveSnapshot is ADDITIVE-ONLY (a user/project/rule absent from the supplied snapshot is NOT deleted/archived). Proven by an additive-only test + a concurrent-insert-survives test.",
+      "targeted upsertUser/removeUser (delete honors the FK guard + P2003 skip), upsertProject/removeProject (archive by id), upsertReminderRule/removeReminderRule (delete by id), upsertPeriod (one period by id, preserve resolveLifecycle) implemented in the write queries + wired through admin.prisma-repository.ts.",
+      "the four services (Snapshot/Project/Reminder/Period Admin) call the targeted repo methods instead of getSnapshot->mutate->saveSnapshot; PeriodAdminService.upsertPeriod uses targeted upsertPeriod (no stale re-write of unrelated collections) and runs the post-commit applicator on a CREATE; each service still returns its tRPC procedure's expected response shape.",
+      "AdminRepository interface (admin-shared.ts) extended with the entity-level methods + the additive-only saveSnapshot contract documented; the in-memory test repository implements the SAME surface so contract tests exercise it.",
+      "tests: partial-restore rollback (real-DB), concurrent-insert window closed (a row inserted between read+write survives an unrelated targeted edit), explicit removals touch only the named row, upsertPeriod touches only the named period + triggers post-commit applicator on create, additive-only saveSnapshot; re-expressed destructive-reconcile cases (coverage not weakened).",
     ],
     reachability:
-      "Is the third-argument value the assertion expects the ACTUAL value the service forwards (read lead-form.service.ts), not a guess — so the test passes for the right reason rather than by loosening the matcher?",
+      "After this change, can ANY admin mutation still destroy unrelated data — a user created in the read-write window (SAML JIT login) reconciled away, an absent row deleted/archived for snapshot-absence, or a single-period edit re-writing stale copies of groups/users/projects/rules? Can a mid-write failure leave the org half-restored (a stray default group, users gone but projects untouched) rather than fully rolled back?",
     regression:
-      "Did anything other than the one assertion change? Is any production file in the diff (there must NOT be)? Confirm the whole api integration suite is green against customreport_test.",
+      "Does a legitimate snapshot restore / single-entity edit still persist correctly and return the expected tRPC response shape? Does ensureFallbackReportingGroup still provision the fallback group (now under tx)? Does a newly-created period still get PolicyApplicator applied (post-commit)? Is resolveLifecycle's non-transition write preserved? Does the in-memory test repo match the prisma repo's new contract (no contract-test drift)? Are the re-expressed destructive-reconcile tests still meaningful (teeth), not just deleted?",
     integrationTargets:
-      "fill-from.integration.test.ts (and confirm the previously-fixed weekly-report.* files stay green)",
+      "the new admin real-DB tests (partial-restore rollback, concurrent-insert survival, targeted-removal isolation, upsertPeriod isolation, additive-only) + admin.integration.test.ts + admin.contract.test.ts; the whole api unit + integration suite stays green.",
     commitSubject:
-      "test(report-sections): assert fillFrom forwards expectedVersion to the repo",
-    commitBody: [
-      "fill-from.integration.test.ts asserted repo.fillFromSection was called with",
-      "(target, source) only, but the optimistic-lock change made the service forward",
-      "a third expectedVersion argument, so the actual 3-arg call failed the matcher",
-      "and left the integration suite red. Add the forwarded version as the third",
-      "expected argument — fixing the red AND giving the test teeth on version",
-      "forwarding (the OCC invariant). Last of the #11 integration-fixture debt; the",
-      "full api integration suite is now green.",
-    ].join("\n"),
+      "fix(admin): transactional, targeted snapshot restore (no destructive reconcile)",
+    commitBody: ["(orchestrator commits high-stakes after diff review)"].join(
+      "\n",
+    ),
   },
 ];
 // ---------------------------------------------------------------------------------------
 
+// Single field on purpose: (1) a complex nested schema after a long implement run
+// made the agent fail StructuredOutput 5x and crash the whole workflow; (2) even a
+// 2-field schema, the implement agent twice returned a PLACEHOLDER file list
+// ("a","b","c" / ["a"]), which silently emptied the scoped review diff. So the
+// implement agent reports only a prose summary; the change's files are derived from
+// git (the SCOPE_SCHEMA agent), the single source of truth.
 const IMPL_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: [
-    "summary",
-    "filesTouched",
-    "testFilesAdded",
-    "localChecks",
-    "staleAnchors",
-    "openQuestions",
-  ],
+  required: ["summary"],
+  properties: { summary: { type: "string" } },
+};
+
+const SCOPE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["dirtyPaths"],
   properties: {
-    summary: { type: "string" },
-    filesTouched: { type: "array", items: { type: "string" } },
-    testFilesAdded: { type: "array", items: { type: "string" } },
-    localChecks: {
-      type: "object",
-      additionalProperties: false,
-      required: ["typecheck", "lint", "unitTests", "integrationTests"],
-      properties: {
-        typecheck: { type: "string" },
-        lint: { type: "string" },
-        unitTests: { type: "string" },
-        integrationTests: { type: "string" },
-      },
-    },
-    staleAnchors: { type: "array", items: { type: "string" } },
-    openQuestions: { type: "array", items: { type: "string" } },
+    // Every dirty path from `git status --porcelain` (the path part only), verbatim.
+    dirtyPaths: { type: "array", items: { type: "string" } },
   },
 };
 
@@ -160,11 +138,14 @@ const GATE_SCHEMA = {
 const PREFLIGHT_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["alreadyCommitted", "headSha", "treeClean", "note"],
+  required: ["alreadyCommitted", "headSha", "preexistingDirty", "note"],
   properties: {
     alreadyCommitted: { type: "boolean" },
     headSha: { type: "string" },
-    treeClean: { type: "boolean" },
+    // Non-.claude paths already dirty BEFORE this change runs = concurrent
+    // parallel-session work. Recorded so the change's own files can be isolated
+    // (changedFiles MINUS preexistingDirty) and that parallel work is never staged.
+    preexistingDirty: { type: "array", items: { type: "string" } },
     note: { type: "string" },
   },
 };
@@ -209,7 +190,7 @@ async function processChange(CHANGE, index) {
       `Run, from ${REPO}:`,
       `  git log ${BASE}..HEAD --oneline`,
       `  git status --porcelain`,
-      `Determine: alreadyCommitted = does ANY commit subject in that log mention "${CHANGE.name}" (the change name or its commit subject "${CHANGE.commitSubject || CHANGE.name}")? headSha = current HEAD short sha. treeClean = is git status --porcelain empty AFTER ignoring any path under \`.claude/\` (the harness's own workflow scripts are not part of any change and never block a run)? If the ONLY dirty entries are under .claude/, treeClean is TRUE. Put anything notable (a genuinely dirty tracked path outside .claude/) in note.`,
+      `Determine: alreadyCommitted = does ANY commit subject in that log mention "${CHANGE.name}" (the change name or its commit subject "${CHANGE.commitSubject || CHANGE.name}")? headSha = current HEAD short sha. preexistingDirty = the list of dirty paths from \`git status --porcelain\` EXCLUDING anything under \`.claude/\` (these are concurrent parallel-session edits, NOT this change). A dirty tree is NORMAL here (a parallel session may be editing docs/domain files) — do NOT treat it as an error; just list those paths in preexistingDirty. note = anything genuinely surprising.`,
       `Do NOT edit anything. Report only.`,
     ].join("\n"),
     {
@@ -235,48 +216,58 @@ async function processChange(CHANGE, index) {
       headSha: pre.headSha,
     };
   }
-  if (!pre.treeClean) {
+  // Parallel-session edits (preexistingDirty) are tolerated, never staged. The
+  // change's own files = changedFiles MINUS this set MINUS .claude/.
+  const preexistingDirty = pre.preexistingDirty || [];
+  if (preexistingDirty.length > 0) {
     log(
-      `${tag} tree is DIRTY before start (${pre.note}) — halting for orchestrator.`,
+      `${tag} ${preexistingDirty.length} pre-existing dirty path(s) (parallel work) — will exclude from this change's commit.`,
     );
-    return { change: CHANGE.name, status: "halt-dirty-tree", note: pre.note };
   }
 
   // ---- Implement ----
   phase("Implement");
-  const impl = await agent(
-    [
-      `You are implementing ONE change on a SHARED working tree at ${REPO}`,
-      `(git branch impl/backlog-2026-06-30, MVP phase). DO NOT commit, DO NOT \`git add\`, DO NOT \`prisma migrate reset\`, DO NOT touch git at all — leave edits in the working tree for review.`,
-      ``,
-      `Change: ${CHANGE.name}.`,
-      specBlock(CHANGE),
-      ``,
-      `Seam caveat: ${CHANGE.seam}`,
-      CHANGE.caveat ? `Named caveat: ${CHANGE.caveat}` : ``,
-      ``,
-      `Hard repo standards (violating any fails review):`,
-      ...STANDARDS.map((s, i) => `  ${i + 1}. ${s}`),
-      ``,
-      `Tests: write/repair the unit + real-DB integration tests the task specifies. Test DB is UP (customreport_test). Integration tests self-fixture (Prisma 7 reset does not auto-seed). Mirror existing patterns.`,
-      ``,
-      `Run change-local checks YOURSELF (NEVER the full monorepo suite, NEVER migrate-reset):`,
-      `  pnpm --filter @customreport/api db:generate   # only if Prisma-client TS errors (TS2339 on a known model)`,
-      `  pnpm --filter @customreport/api typecheck`,
-      `  cd ${REPO} && pnpm exec eslint <your changed files> --max-warnings 0   # NEVER \`eslint .\` (OOM)`,
-      `  cd ${REPO}/apps/api && pnpm exec vitest run <your changed test files>   # do NOT wrap vitest in rtk (mis-parses TSX -> 0 tests)`,
-      ``,
-      `Return ONLY the structured object with REAL values (never placeholders like "a","b","c" or "summary placeholder"): a one-paragraph summary of what you actually changed; filesTouched = the EXACT repo-relative paths you edited, taken verbatim from \`git status --porcelain\` (run it before returning); testFilesAdded = only files you newly created; the pass/fail/notrun status of each local check with detail; any stale plan anchors; any open questions. The orchestrator commits the files git reports dirty, so do NOT leave any unrelated edits in the tree.`,
-    ]
-      .filter(Boolean)
-      .join("\n"),
-    {
-      label: `impl:${CHANGE.name}`,
-      phase: "Implement",
-      effort: "high",
-      schema: IMPL_SCHEMA,
-    },
-  );
+  // skipImplement: the change is ALREADY on the working tree (e.g. a prior run
+  // implemented it but crashed before review, or a transient API error parked it).
+  // Skip re-implementing; verify/gate/Codex run on the current uncommitted state.
+  const impl = CHANGE.skipImplement
+    ? {
+        summary:
+          "skipImplement: change already on the working tree; verify/gate/Codex on the current uncommitted state only",
+      }
+    : await agent(
+        [
+          `You are implementing ONE change on a SHARED working tree at ${REPO}`,
+          `(git branch impl/backlog-2026-06-30, MVP phase). DO NOT commit, DO NOT \`git add\`, DO NOT \`prisma migrate reset\`, DO NOT touch git at all — leave edits in the working tree for review.`,
+          ``,
+          `Change: ${CHANGE.name}.`,
+          specBlock(CHANGE),
+          ``,
+          `Seam caveat: ${CHANGE.seam}`,
+          CHANGE.caveat ? `Named caveat: ${CHANGE.caveat}` : ``,
+          ``,
+          `Hard repo standards (violating any fails review):`,
+          ...STANDARDS.map((s, i) => `  ${i + 1}. ${s}`),
+          ``,
+          `Tests: write/repair the unit + real-DB integration tests the task specifies. Test DB is UP (customreport_test). Integration tests self-fixture (Prisma 7 reset does not auto-seed). Mirror existing patterns.`,
+          ``,
+          `Run change-local checks YOURSELF (NEVER the full monorepo suite, NEVER migrate-reset):`,
+          `  pnpm --filter @customreport/api db:generate   # only if Prisma-client TS errors (TS2339 on a known model)`,
+          `  pnpm --filter @customreport/api typecheck`,
+          `  cd ${REPO} && pnpm exec eslint <your changed files> --max-warnings 0   # NEVER \`eslint .\` (OOM)`,
+          `  cd ${REPO}/apps/api && pnpm exec vitest run <your changed test files>   # do NOT wrap vitest in rtk (mis-parses TSX -> 0 tests)`,
+          ``,
+          `Do NOT touch any file unrelated to this change (a parallel session may be editing docs/domain files — leave those alone). When done, return ONLY a prose summary: one paragraph on what you actually changed and the result of your change-local checks. (You do NOT need to list files — the harness derives the changed set from git directly.)`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        {
+          label: `impl:${CHANGE.name}`,
+          phase: "Implement",
+          effort: "high",
+          schema: IMPL_SCHEMA,
+        },
+      );
 
   if (!impl) {
     return {
@@ -286,20 +277,59 @@ async function processChange(CHANGE, index) {
     };
   }
 
+  // Derive the change's files FROM GIT, not from the implement agent — it has
+  // twice returned a placeholder list, which silently empties the scoped review
+  // diff. git status is ground truth.
+  const scope = await agent(
+    [
+      `Run, from ${REPO}: \`git status --porcelain\`.`,
+      `Return dirtyPaths = the path part of EVERY line, verbatim (for a rename "A -> B", return B). Do NOT edit anything; report only.`,
+    ].join("\n"),
+    {
+      label: `scope:${CHANGE.name}`,
+      phase: "Implement",
+      effort: "low",
+      schema: SCOPE_SCHEMA,
+    },
+  );
+
+  // The change's own files = current dirty MINUS the harness's own scripts
+  // (.claude/) MINUS parallel-session work. In normal mode parallel work is
+  // whatever was already dirty before implement (preexistingDirty). In
+  // skipImplement mode the change itself is already dirty (so preexistingDirty
+  // would wrongly exclude it) — fall back to excluding the known parallel globs.
+  const PARALLEL_GLOBS = ["docs/", "CONTEXT.md", "AGENTS.md"];
+  const changedFiles = (scope?.dirtyPaths || []).filter((p) => {
+    if (p.startsWith(".claude/")) return false;
+    return CHANGE.skipImplement
+      ? !PARALLEL_GLOBS.some((g) => p === g || p.startsWith(g))
+      : !preexistingDirty.includes(p);
+  });
+  if (changedFiles.length === 0) {
+    return {
+      change: CHANGE.name,
+      status: "error",
+      reason:
+        "no change files detected from git (after excluding parallel work)",
+      implSummary: impl.summary,
+      scope,
+    };
+  }
+  const scopeArg = changedFiles.map((p) => `'${p}'`).join(" ");
+
   // ---- Verify (2 adversarial lenses) ----
   phase("Verify");
-  // Scope the review to THIS change only: each change is processed from a clean
-  // committed base, so the uncommitted working-tree diff vs HEAD IS exactly this
-  // change. (git diff BASE would show the whole branch — every prior change too —
-  // and make verifiers/Codex flag pre-existing reds as if this change caused them.)
-  const diffCmd = `cd ${REPO} && git --no-pager diff HEAD -- . ':(exclude)openspec'`;
+  // Scope the review to THIS change's files only — `git diff HEAD` on those paths,
+  // not the whole branch (prior changes) and not parallel-session edits elsewhere.
+  const diffCmd = `cd ${REPO} && git --no-pager diff HEAD -- ${scopeArg}`;
   const verifyHead = [
     `Adversarially verify an UNCOMMITTED change on the working tree at ${REPO} for: ${CHANGE.name}.`,
     CHANGE.spec && CHANGE.spec.inline
       ? `Intent (inline task):\n${CHANGE.spec.inline}`
       : `Read the intent: openspec/changes/${CHANGE.name}/proposal.md and design.md.`,
-    `Read the actual change: run \`${diffCmd}\` (this is ONLY the uncommitted work for this change, on top of HEAD — not the whole branch).`,
+    `Read the actual change: run \`${diffCmd}\`. This change's files are: ${changedFiles.join(", ")}. Any of these that is NEWLY CREATED will not appear in the diff — read those in full. IGNORE any other dirty file (CONTEXT.md, docs/, etc.): that is concurrent parallel-session work, not this change.`,
     `Use codegraph_explore to trace call paths around changed symbols. Be skeptical; default to finding a hole, not approving.`,
+    `SCOPE DISCIPLINE (this is the loop-termination rule): before rating a finding "blocker" or "major", check it against THIS change's DECLARED scope (its tasks + design.md Goals/Non-Goals). A Non-Goal, or a pre-existing / cross-cutting concern the change does not claim to fix (a different concurrency pair, a sibling procedure it does not touch, an issue equally present BEFORE this change), is severity "minor" + a FOLLOW-UP — NEVER a blocker. Only the change's OWN new code being wrong, a regression it introduces, or a legitimate flow it breaks is blocker/major.`,
     ``,
   ].join("\n");
 
@@ -390,6 +420,7 @@ async function processChange(CHANGE, index) {
         ? `Intent (inline task):\n${CHANGE.spec.inline}`
         : `Intent: openspec/changes/${CHANGE.name}/{proposal,design,tasks}.md.`,
       `Read the diff: \`${diffCmd}\`. Trace call paths. Hunt for: a real correctness/security/authz hole the diff leaves open; a legitimate flow this change now FALSELY rejects; a test without teeth; a standards violation. Default to finding a problem.`,
+      `SCOPE DISCIPLINE: rate a finding "blocker"/"major" ONLY if it is the change's OWN new code being wrong, a regression it introduces, or a legit flow it breaks. A Non-Goal (per design.md), or a pre-existing / cross-cutting concern this change does not claim to fix (a different concurrency pair, an untouched sibling procedure, an issue equally present before this change), is "minor" + a follow-up — do NOT block on it or keep drilling it.`,
       `Return verdict "clean" ONLY if you found nothing real. Otherwise "issues" with each finding's file, line, concrete scenario, and severity (blocker/major/minor).`,
     ].join("\n"),
     {
@@ -412,13 +443,8 @@ async function processChange(CHANGE, index) {
   const base = {
     change: CHANGE.name,
     stakes: CHANGE.stakes,
-    impl: {
-      summary: impl.summary,
-      filesTouched: impl.filesTouched,
-      testFilesAdded: impl.testFilesAdded,
-      openQuestions: impl.openQuestions,
-      staleAnchors: impl.staleAnchors,
-    },
+    impl: { summary: impl.summary, changedFiles },
+    preexistingDirty,
     verify: {
       completeness: verdicts[0],
       regression: verdicts[1],
@@ -447,9 +473,7 @@ async function processChange(CHANGE, index) {
           ? "await-orchestrator-codex-unavailable"
           : "await-orchestrator-commit",
       commitReady: codexStatus !== "unavailable",
-      // Advisory only — the orchestrator derives the real paths via
-      // `git diff --name-only HEAD` (impl.filesTouched can be unreliable).
-      commitPathsAdvisory: [...impl.filesTouched, ...impl.testFilesAdded],
+      commitPaths: changedFiles,
       commitSubject: CHANGE.commitSubject,
       commitBody: CHANGE.commitBody,
     };
@@ -460,9 +484,10 @@ async function processChange(CHANGE, index) {
   const commit = await agent(
     [
       `Commit the uncommitted change ${CHANGE.name} on branch impl/backlog-2026-06-30 at ${REPO}. The full gate already passed; do NOT re-run it.`,
-      `Determine the paths to stage FROM GIT, not from any provided list: run \`cd ${REPO} && git status --porcelain\`. The tree was clean from a committed base before this change, so every dirty path IS part of this change — EXCEPT anything under \`.claude/\` (the harness's own scripts), which you must NEVER stage.`,
-      `If the ONLY dirty paths are under .claude/ (i.e. there is nothing real to commit), STOP and report committed:false with that in summary.`,
-      `Otherwise stage exactly the non-.claude dirty paths: \`cd ${REPO} && git add <each non-.claude dirty path>\` (do NOT use \`git add .\` or \`git add -A\`), then \`git commit\` with this message:`,
+      `Stage EXACTLY these paths and NOTHING else (a parallel session may have other dirty files — never stage those): \`cd ${REPO} && git add\` followed by each of:`,
+      ...changedFiles.map((p) => `    ${p}`),
+      `Do NOT use \`git add .\` or \`git add -A\`. After staging, run \`git status --porcelain\` and confirm the STAGED set is exactly the paths above; if a path above is somehow not dirty, or staging pulled in anything else, STOP and report committed:false with the surprise in summary.`,
+      `Then \`git commit\` with this message:`,
       ``,
       `  Subject: ${CHANGE.commitSubject}`,
       ``,
@@ -472,7 +497,7 @@ async function processChange(CHANGE, index) {
       `  End the commit message with exactly this trailer line:`,
       `  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`,
       ``,
-      `If a pre-commit hook reformats staged files, re-add them and retry the commit once. After committing, confirm the tree is clean (git status --porcelain shows only .claude/, if anything). Report committed, the new short sha, and a one-line summary listing the committed paths.`,
+      `If a pre-commit hook reformats staged files, re-add them and retry the commit once. After committing, the only remaining dirty paths should be .claude/ and any parallel-session files — that is expected. Report committed, the new short sha, and a one-line summary listing the committed paths.`,
     ].join("\n"),
     {
       label: `commit:${CHANGE.name}`,
