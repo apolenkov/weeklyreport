@@ -96,6 +96,40 @@ function computeInitialStageIds(
 }
 
 /**
+ * Resolves the stage IDs the save will use. When exactly one stage is owned and
+ * nothing is explicitly checked, that single stage is applied automatically so
+ * the single-stage UX stays frictionless; otherwise the explicit selection wins.
+ * @param stageIds - the explicitly selected stage names
+ * @param availableStages - the stages the lead owns on the chosen product
+ * @returns the stage names the save should persist
+ */
+function computeEffectiveStageIds(
+  stageIds: readonly string[],
+  availableStages: readonly string[],
+): readonly string[] {
+  return stageIds.length === 0 && availableStages.length === 1
+    ? [...availableStages]
+    : stageIds;
+}
+
+/**
+ * Detects the dead-end case: the lead owns zero stages on the chosen product
+ * AND the row carries no stage of its own, so there is nothing to pick and the
+ * dialog must not submit. A cross-stage row that already carries stageIds (its
+ * product sits outside the stage-owned list) is NOT a dead end and stays
+ * saveable.
+ * @param availableStages - the stages the lead owns on the chosen product
+ * @param effectiveStageIds - the stage IDs the save would persist
+ * @returns true when the dialog must disable Save and show contact-admin
+ */
+function isDeadEndProduct(
+  availableStages: readonly string[],
+  effectiveStageIds: readonly string[],
+): boolean {
+  return availableStages.length === 0 && effectiveStageIds.length === 0;
+}
+
+/**
  * D12 mount/unmount shell (react-compiler-safe): the outer component returns
  * null when closed and mounts the inner content otherwise. Mount = fresh
  * useState from props; close = unmount. No useEffect reset is needed — the
@@ -199,19 +233,21 @@ function RiskEditDialogContent({
     setStageIds([]);
   }
 
+  const availableStages = stagesForProduct?.(productId) ?? [];
+  const effectiveStageIds = computeEffectiveStageIds(stageIds, availableStages);
+  const isZeroOwnedStageDeadEnd = isDeadEndProduct(
+    availableStages,
+    effectiveStageIds,
+  );
+
   function handleSave() {
+    // Early-return no-op so onSave is never called with an empty stageIds array
+    // and the unsatisfiable "Select at least one stage." error is never reached.
+    // The Ctrl/Cmd+Enter shortcut routes through here, so it inherits the guard.
+    if (isZeroOwnedStageDeadEnd) return;
     const t = text.trim();
     const im = impact.trim();
     const m = mitigation.trim();
-    // When exactly one stage is available and the UI shows it as
-    // "Applied automatically", treat it as implicitly selected so the
-    // lead can save without a manual click. (Phase 3.8: general create
-    // no longer pre-fills stageIds, but the single-stage UX stays frictionless.)
-    const availableStages = stagesForProduct?.(productId) ?? [];
-    const effectiveStageIds =
-      stageIds.length === 0 && availableStages.length === 1
-        ? [...availableStages]
-        : stageIds;
     const next: typeof errors = {};
     if (t.length === 0) next.text = "Risk description is required";
     if (im.length === 0) next.impact = "Impact is required";
@@ -444,9 +480,22 @@ function RiskEditDialogContent({
               stages={stagesForProduct?.(productId) ?? []}
               onChange={handleStageChange}
               previewSeverity={severity}
-              error={errors.stageIds}
+              // Suppress the stale required-stage error in the dead-end branch:
+              // a prior "Select at least one stage." set before switching to a
+              // zero-owned product must not co-render with the contact-admin
+              // message below.
+              error={isZeroOwnedStageDeadEnd ? undefined : errors.stageIds}
               required
             />
+
+            {isZeroOwnedStageDeadEnd && (
+              <p
+                role="status"
+                className="text-xs text-[var(--color-destructive)]"
+              >
+                No stages assigned — contact admin.
+              </p>
+            )}
 
             {/* Severity chips */}
             <div>
@@ -494,6 +543,7 @@ function RiskEditDialogContent({
           <button
             type="button"
             onClick={handleSave}
+            disabled={isZeroOwnedStageDeadEnd}
             className="btn-press inline-flex min-h-[40px] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Save Risk

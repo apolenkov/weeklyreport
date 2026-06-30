@@ -99,6 +99,14 @@ export const stageIdsField = z
 // and decisions too; the READ models re-loosen to `stageIdsField` so stage-less
 // legacy rows still load and render the loud "No stage set" marker.
 export const requiredStageIdsField = z
-  .array(z.string())
+  .array(
+    z
+      .string()
+      .min(1)
+      .refine(noNullBytes, { message: "Stage must not contain null bytes" })
+      .refine(noInvisibleOnly, {
+        message: "Stage must contain visible characters",
+      }),
+  )
   .min(1)
   .max(MAX_SELECTED_STAGES);

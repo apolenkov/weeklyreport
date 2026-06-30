@@ -825,6 +825,197 @@ describe("RiskEditDialog — D12 reopen renders fresh state", () => {
   });
 });
 
+/**
+ * fix-risk-stage-integrity-impl: a lead on a product where they own zero stages
+ * (stagesForProduct returns []) AND the row carries no stage of its own is a
+ * dead end — there is nothing to pick, so Save is disabled and the documented
+ * "no stages assigned — contact admin" message shows instead of the
+ * unsatisfiable "Select at least one stage." error. A cross-stage row that
+ * already carries stageIds stays saveable.
+ */
+describe("RiskEditDialog — zero-owned-stage guard", () => {
+  it("disables Save and shows contact-admin (never the required-stage error) on a stage-less product", () => {
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => []}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /Save Risk/i })).toBeDisabled();
+    expect(
+      screen.getByText(/no stages assigned — contact admin/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Select at least one stage/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does NOT call onSave when the disabled-Save state is bypassed via Ctrl+Enter on a stage-less product", () => {
+    const onSave = vi.fn();
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={onSave}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => []}
+      />,
+    );
+
+    // Fill the prose fields so only the stage guard can block the save.
+    fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
+      target: { value: "Vendor delay" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: "Slips Q3" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
+      target: { value: "Escalate" },
+    });
+
+    const backdrop = document.querySelector<HTMLElement>(
+      '[role="presentation"]',
+    );
+    if (!backdrop) throw new Error("backdrop not found");
+    fireEvent.keyDown(backdrop, { key: "Enter", ctrlKey: true });
+
+    // The keyboard shortcut routes through handleSave, which early-returns on
+    // the dead-end guard — no empty stageIds payload escapes.
+    expect(onSave).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(/no stages assigned — contact admin/i),
+    ).toBeInTheDocument();
+  });
+
+  it("still saves on a one-owned-stage product (single stage auto-applies)", () => {
+    const onSave = vi.fn();
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={onSave}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /Save Risk/i }),
+    ).not.toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
+      target: { value: "Vendor delay" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: "Slips Q3" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
+      target: { value: "Escalate" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps Save enabled for a cross-stage edit that already carries stageIds (product returns [])", () => {
+    const onSave = vi.fn();
+    const crossStageRisk: RiskEntry = {
+      id: "r-cross",
+      productId: "p-foreign",
+      productName: "Payments Gateway",
+      stageIds: ["Integration"],
+      severity: "at-risk",
+      text: "Gateway certification slips",
+      impact: "Payments blocked",
+      mitigation: "Escalate to vendor",
+    };
+
+    render(
+      <RiskEditDialog
+        open
+        risk={crossStageRisk}
+        products={products}
+        onSave={onSave}
+        onCancel={() => undefined}
+        initialImpact="Payments blocked"
+        initialMitigation="Escalate to vendor"
+        stagesForProduct={(productId) => (productId === "p1" ? ["Dev"] : [])}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /Save Risk/i }),
+    ).not.toBeDisabled();
+    expect(
+      screen.queryByText(/no stages assigned — contact admin/i),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      productId: "p-foreign",
+      productName: "Payments Gateway",
+    });
+  });
+
+  it("shows ONLY contact-admin (never the stale required-stage error) after a prior required-stage error then a switch to a zero-owned product", () => {
+    const twoProducts: Product[] = [
+      { id: "p1", name: "CRM", overallStatus: "on-track", stages: [] },
+      { id: "p2", name: "Billing", overallStatus: "on-track", stages: [] },
+    ];
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={twoProducts}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={(id) => (id === "p1" ? ["Dev", "Testing"] : [])}
+      />,
+    );
+
+    // Trigger the required-stage error on the multi-stage product: empty
+    // selection + Save sets errors.stageIds = "Select at least one stage.".
+    fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
+      target: { value: "Vendor delay" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: "Slips Q3" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
+      target: { value: "Escalate" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+    expect(screen.getByText(/Select at least one stage/i)).toBeInTheDocument();
+
+    // Switch to the zero-owned-stage product: the stale required-stage error
+    // must NOT co-render with the contact-admin dead-end message.
+    fireEvent.change(screen.getByRole("combobox"), {
+      target: { value: "p2" },
+    });
+
+    expect(
+      screen.getByText(/no stages assigned — contact admin/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Select at least one stage/i),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Save Risk/i })).toBeDisabled();
+  });
+});
+
 describe("RiskEditDialog — classification field order (unify-record-dialogs)", () => {
   it("orders the classification panel Product → Stages → Severity", () => {
     render(

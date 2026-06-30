@@ -160,3 +160,61 @@ describe("StageMultiSelect", () => {
     expect(screen.queryByTestId("stage-scope-banner")).toBeNull();
   });
 });
+
+/**
+ * fix-risk-stage-integrity-impl: in required mode an empty selection is invalid,
+ * so the "All assigned stages will show as …" banner falsely advertises an
+ * outcome the required rule forbids. Suppress that empty-selection banner when
+ * required is true; the one-stage and many-stage banner branches are unchanged,
+ * and non-required hosts keep the existing copy.
+ */
+describe("StageMultiSelect — required-mode banner honesty", () => {
+  it("suppresses the empty-selection banner when required is true", () => {
+    render(
+      <StageMultiSelect
+        id="stages"
+        value={[]}
+        stages={["Dev", "Testing", "Release"]}
+        onChange={vi.fn()}
+        previewSeverity="blocked"
+        required
+      />,
+    );
+
+    expect(screen.queryByTestId("stage-scope-banner")).toBeNull();
+    expect(screen.queryByText(/All assigned stages will show as/i)).toBeNull();
+  });
+
+  it("still renders the empty-selection banner in non-required mode", () => {
+    render(
+      <StageMultiSelect
+        id="stages"
+        value={[]}
+        stages={["Dev", "Testing", "Release"]}
+        onChange={vi.fn()}
+        previewSeverity="blocked"
+      />,
+    );
+
+    expect(
+      screen.getByText(/All assigned stages will show as Blocked\.?/i),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the per-stage banner in required mode once a stage is selected", () => {
+    render(
+      <StageMultiSelect
+        id="stages"
+        value={["Testing"]}
+        stages={["Dev", "Testing", "Release"]}
+        onChange={vi.fn()}
+        previewSeverity="at-risk"
+        required
+      />,
+    );
+
+    expect(
+      screen.getByText(/Stage Testing will show as At Risk\.?/i),
+    ).toBeInTheDocument();
+  });
+});
