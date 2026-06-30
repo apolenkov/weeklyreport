@@ -6,7 +6,17 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateLeadForm } from "../lib/cache-keys";
+import { isConflictError } from "../lib/trpc";
 import { useTRPC } from "../lib/trpc-context";
+
+/**
+ * The autosave payload WITHOUT the optimistic-lock version. The version is lock
+ * metadata, not user content: keeping it out of the payload the hook hashes
+ * means a version bump never marks the form dirty, never re-seeds, and never
+ * appears in the dirty/queue key. The hook injects the live version at mutate
+ * time instead (so a queued drain rebases onto the freshly-bumped value).
+ */
+export type DraftSaveContent = Omit<DraftSavePayload, "version">;
 
 export type AutosaveState = "idle" | "pending" | "saving" | "saved" | "error";
 
@@ -21,7 +31,7 @@ export interface AutosaveSnapshot {
 
 export interface UseLeadFormAutosaveArgs {
   readonly reportSectionId: string | null;
-  readonly payload: DraftSavePayload | null;
+  readonly payload: DraftSaveContent | null;
   readonly enabled: boolean;
   readonly debounceMs?: number;
   /**
@@ -33,6 +43,24 @@ export interface UseLeadFormAutosaveArgs {
    * payload (legacy behavior).
    */
   readonly initialSavedKey?: string | null;
+  /**
+   * Row revision the next save must compare-and-set against (optimistic lock).
+   * The hook seeds its live version from this and re-syncs whenever it changes
+   * (e.g. a post-fillFrom or post-conflict refetch).
+   */
+  readonly version: number;
+  /**
+   * Called with the server-confirmed NEW version after every successful save.
+   * The owning component is the single source of truth for the version; this
+   * pushes each bump back so submit/fillFrom carry the current value.
+   */
+  readonly onVersionChange: (version: number) => void;
+  /**
+   * Called when a save is rejected as a stale-version CONFLICT (409). The
+   * caller refetches this section and surfaces it; when provided, the hook
+   * suppresses its own generic error toast for that case.
+   */
+  readonly onConflict?: () => void;
 }
 
 const DEFAULT_DEBOUNCE_MS = 5000;
@@ -67,12 +95,19 @@ export function stableStringify(value: unknown): string {
 export function useLeadFormAutosave(
   args: UseLeadFormAutosaveArgs,
 ): AutosaveSnapshot {
-  const { reportSectionId, payload, enabled } = args;
+  const { reportSectionId, payload, enabled, version, onVersionChange } = args;
   const debounceMs = args.debounceMs ?? DEFAULT_DEBOUNCE_MS;
   const initialSavedKey = args.initialSavedKey ?? null;
+  const onConflict = args.onConflict;
 
   const trpc = useTRPC();
   const qc = useQueryClient();
+
+  // Live optimistic-lock version. Seeded from the `version` prop and advanced
+  // SYNCHRONOUSLY inside onSuccess (from the server-confirmed value) BEFORE the
+  // queued drain fires — so a drained save rebases onto the bumped version and
+  // does not self-409 on the writer's own previous save.
+  const versionRef = useRef(version);
 
   const [state, setState] = useState<AutosaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -105,7 +140,14 @@ export function useLeadFormAutosave(
 
   const saveDraftMut = useMutation(
     trpc.reports.saveDraft.mutationOptions({
-      onSuccess: () => {
+      onSuccess: (saved) => {
+        // Advance the live version from the server-confirmed value FIRST, so the
+        // drain below rebases the queued save onto the bumped version (otherwise
+        // it would replay the stale version and self-409). Then push it to the
+        // owning component (single source) for submit/fillFrom.
+        versionRef.current = saved.version;
+        onVersionChange(saved.version);
+
         // Stamp the confirmed baseline ONLY if the lead is still on the section
         // this save targeted. If they navigated away while it was in flight,
         // stamping would clobber the new section's freshly-primed baseline and
@@ -131,14 +173,22 @@ export function useLeadFormAutosave(
             inFlightSectionRef.current = queued.reportSectionId;
             // Fire-and-forget: the mutation's own onSuccess/onError drive the
             // result and the next drain. `mutate` (not `mutateAsync`) so no
-            // unhandled rejection leaks from a discarded promise.
-            mutateRef.current(queued);
+            // unhandled rejection leaks from a discarded promise. Inject the
+            // just-bumped version so the drain compare-and-sets against it.
+            mutateRef.current({ ...queued, version: versionRef.current });
           }
         }
       },
       onError: (err: unknown) => {
         queuedKeyRef.current = null;
+        queuedPayloadRef.current = null;
         setState("error");
+        // A stale-version 409 means another writer advanced the section; hand
+        // off to the caller (refetch + surface) instead of a generic toast.
+        if (onConflict && isConflictError(err)) {
+          onConflict();
+          return;
+        }
         const msg =
           err instanceof Error && err.message ? err.message : "Autosave failed";
         toast.error(msg);
@@ -170,6 +220,10 @@ export function useLeadFormAutosave(
     mutateAsyncRef.current = saveDraftMut.mutateAsync;
     reportSectionIdRef.current = reportSectionId;
     isPendingRef.current = saveDraftMut.isPending;
+    // Re-sync the live version from the prop (e.g. a reseed after fillFrom or a
+    // conflict refetch). A successful save's onSuccess advances it ahead of
+    // this in the same tick; the prop catches up on the next render.
+    versionRef.current = version;
   });
 
   // Debounced save trigger.
@@ -193,7 +247,11 @@ export function useLeadFormAutosave(
       setState("saving");
       inFlightRef.current = payloadKey;
       inFlightSectionRef.current = reportSectionId;
-      mutateRef.current({ ...current, reportSectionId });
+      mutateRef.current({
+        ...current,
+        reportSectionId,
+        version: versionRef.current,
+      });
     }, debounceMs);
 
     debounceTimerRef.current = timer;
@@ -255,7 +313,11 @@ export function useLeadFormAutosave(
     setState("saving");
     inFlightRef.current = currentKey;
     inFlightSectionRef.current = sectionId;
-    await mutateAsyncRef.current({ ...current, reportSectionId: sectionId });
+    await mutateAsyncRef.current({
+      ...current,
+      reportSectionId: sectionId,
+      version: versionRef.current,
+    });
   };
 
   const isInFlight = saveDraftMut.isPending;

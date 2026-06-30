@@ -89,6 +89,9 @@ export const decisionReadModelSchema = decisionInputSchema.extend({
 
 export const draftSaveSchema = z.object({
   reportSectionId: z.uuid(),
+  // Optimistic-concurrency expected version: the row revision the client
+  // loaded. The repository compare-and-sets on it and 409s a stale write.
+  version: z.number().int().min(1),
   status: reportSectionStatusSchema.default("draft"),
   projectStatuses: z.array(projectStatusInputSchema),
   stageStatuses: z.array(stageStatusInputSchema).default([]),
@@ -181,6 +184,10 @@ export const reportSectionReadModelSchema = z.object({
   authorId: z.uuid(),
   authorName: z.string().min(1),
   authorRole: roleSchema.optional(),
+  // Optimistic-concurrency row revision the client must echo back in its next
+  // save (see draftSaveSchema). Mints at 1; the repository increments it on
+  // every successful write and returns the bumped value here.
+  version: z.number().int().min(1),
   // UFB-047 / Phase 49-01: `departmentName` removed. Consumers that
   // need a brand label now read it from the per-request session
   // (`auth.me.organization.shortName` / `.fullName`) — the section
@@ -233,7 +240,10 @@ export type SubmissionDashboardRow = z.infer<
 export type DraftSaveValidationErrorCode =
   | "SECTION_ALREADY_SUBMITTED"
   | "MISSING_TRAFFIC_LIGHT"
-  | "MISSING_CURRENT_ITEM";
+  | "MISSING_CURRENT_ITEM"
+  // A child-row create tripped a unique constraint (P2002) — a malformed
+  // payload (e.g. duplicate projectId). Surfaced as BAD_REQUEST, not a 500.
+  | "DUPLICATE_CHILD_ROW";
 
 export interface DraftSaveValidationError {
   code: DraftSaveValidationErrorCode;

@@ -21,6 +21,7 @@ import {
 import {
   ReportSectionAccessError,
   ReportSectionDomainError,
+  SectionVersionConflictError,
 } from "../../modules/report-sections/report-sections.service.js";
 import { ReviewAccessError } from "../../modules/review/review.service.js";
 import { WeeklyReportDomainError } from "../../modules/weekly-report/weekly-report.service.js";
@@ -28,6 +29,17 @@ import { WeeklyReportDomainError } from "../../modules/weekly-report/weekly-repo
 export function mapDomainError(error: unknown): TRPCError {
   if (error instanceof TRPCError) {
     return error;
+  }
+
+  // A section-write version conflict is a concurrency clash, not a validation
+  // failure — surface it as CONFLICT (409) so the client reloads and retries,
+  // distinct from the BAD_REQUEST below. Its own type keeps the two apart.
+  if (error instanceof SectionVersionConflictError) {
+    return new TRPCError({
+      code: "CONFLICT",
+      message: error.message,
+      cause: error,
+    });
   }
 
   if (error instanceof ReportSectionDomainError) {

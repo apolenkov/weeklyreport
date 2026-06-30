@@ -10,6 +10,7 @@ export function createDemoSection(): ReportSectionReadModel {
     reportId: "22222222-2222-4222-8222-222222222222",
     authorId: "33333333-3333-4333-8333-333333333333",
     authorName: "Lead 1",
+    version: 1,
     status: "draft",
     submittedAt: null,
     projects: [

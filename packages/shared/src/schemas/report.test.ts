@@ -80,6 +80,7 @@ const validDecision = () => ({
 
 const validDraft = () => ({
   reportSectionId: uuid(),
+  version: 1,
   projectStatuses: [{ projectId: PROJECT_UUID, status: "green" as const }],
   items: [validItem()],
   risks: [validRisk()],
@@ -387,6 +388,7 @@ describe("riskInputSchema \u2014 required stageIds (require-risk-stage)", () => 
       reportId: uuid(),
       authorId: uuid(),
       authorName: "Test Lead",
+      version: 1,
       status: "draft",
       submittedAt: null,
       projects: [],
@@ -408,6 +410,7 @@ describe("riskInputSchema \u2014 required stageIds (require-risk-stage)", () => 
       reportId: uuid(),
       authorId: uuid(),
       authorName: "Test Lead",
+      version: 1,
       status: "draft",
       submittedAt: null,
       projects: [],
@@ -843,6 +846,7 @@ describe("validateSubmitInput", () => {
     authorId: uuid(),
     authorName: "Test Lead",
     authorRole: "lead",
+    version: 1,
     status: "draft",
     submittedAt: null,
     projects: [

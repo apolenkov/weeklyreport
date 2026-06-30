@@ -20,6 +20,7 @@ const sourceSection: ReportSectionReadModel = {
   reportId: sourceReportId,
   authorId: "33333333-3333-4333-8333-333333333333",
   authorName: "Lead 1",
+  version: 1,
   status: "submitted",
   submittedAt: new Date("2026-04-09T10:00:00.000Z"),
   projects: [

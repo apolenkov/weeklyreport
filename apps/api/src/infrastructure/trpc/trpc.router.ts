@@ -2149,6 +2149,8 @@ export function createAppRouter(deps: RouterDeps) {
           z.object({
             targetSectionId: z.uuid(),
             sourceSectionId: z.uuid(),
+            // Optimistic-concurrency expected version of the TARGET section.
+            version: z.number().int().min(1),
           }),
         )
         .mutation(async ({ input, ctx }) => {
@@ -2157,6 +2159,7 @@ export function createAppRouter(deps: RouterDeps) {
               input.targetSectionId,
               input.sourceSectionId,
               ctx.session.userId,
+              input.version,
             );
           } catch (error) {
             throw mapDomainError(error);

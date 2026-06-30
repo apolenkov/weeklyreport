@@ -1123,6 +1123,9 @@ export function buildProductScopedSlides(
       reportId: fallbackReportId,
       authorId: acc.projectId,
       authorName: acc.projectName,
+      // Synthetic render-only aggregate — never written back, so the
+      // optimistic-lock version is inert; a constant satisfies the type.
+      version: 1,
       // authorRole intentionally omitted (no "product" role exists); the
       // resulting ownerRole is overridden below to label the slide source.
       status: acc.anySubmitted && acc.allSubmitted ? "submitted" : "draft",

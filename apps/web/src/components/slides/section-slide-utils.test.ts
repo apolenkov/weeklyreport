@@ -32,6 +32,7 @@ function makeSection(
     authorId: AUTHOR_ID,
     authorName: "Alex Lead",
     authorRole: "lead",
+    version: 1,
     status: "draft",
     submittedAt: null,
     projects: [

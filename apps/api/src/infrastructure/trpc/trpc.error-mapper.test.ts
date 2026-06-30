@@ -14,7 +14,10 @@ import {
   LeadFormDomainError,
   ReopenRequestError,
 } from "../../modules/report-sections/lead-form.service.js";
-import { ReportSectionDomainError } from "../../modules/report-sections/report-sections.service.js";
+import {
+  ReportSectionDomainError,
+  SectionVersionConflictError,
+} from "../../modules/report-sections/report-sections.service.js";
 import { ReviewAccessError } from "../../modules/review/review.service.js";
 import { WeeklyReportDomainError } from "../../modules/weekly-report/weekly-report.service.js";
 import { mapDomainError } from "./trpc.error-mapper.js";
@@ -68,6 +71,34 @@ describe("mapDomainError", () => {
       const mapped = mapDomainError(error);
 
       expect(mapped.code).toBe("BAD_REQUEST");
+    });
+
+    it("maps DUPLICATE_CHILD_ROW (a child-write P2002) to BAD_REQUEST", () => {
+      const error = new ReportSectionDomainError(
+        "DUPLICATE_CHILD_ROW",
+        "Could not save the section: a duplicate row was rejected.",
+      );
+      const mapped = mapDomainError(error);
+
+      expect(mapped.code).toBe("BAD_REQUEST");
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // SectionVersionConflictError -> CONFLICT (optimistic-lock 409)
+  // -----------------------------------------------------------------------
+
+  describe("SectionVersionConflictError -> CONFLICT", () => {
+    it("maps a stale-version section write to CONFLICT, distinct from BAD_REQUEST", () => {
+      const error = new SectionVersionConflictError(
+        "This section was changed by another save. Reload and try again.",
+      );
+      const mapped = mapDomainError(error);
+
+      expect(mapped).toBeInstanceOf(TRPCError);
+      expect(mapped.code).toBe("CONFLICT");
+      expect(mapped.message).toContain("changed by another save");
+      expect(mapped.cause).toBe(error);
     });
 
     it("preserves cause reference", () => {

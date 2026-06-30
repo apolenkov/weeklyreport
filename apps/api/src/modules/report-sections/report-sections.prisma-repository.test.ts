@@ -3,12 +3,14 @@
 // referencing a project the section author owns no stage on contribute the
 // project's name so the lead-surface mappers never show "Unknown"/"Group"
 // for a product the system can name.
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   mapPrismaToReportSection,
   type PrismaReportSectionWithRelations,
+  ReportSectionsPrismaRepository,
 } from "./report-sections.prisma-repository";
+import { SectionVersionConflictError } from "./report-sections.service";
 
 const SECTION_ID = "11111111-1111-4111-8111-111111111111";
 const REPORT_ID = "22222222-2222-4222-8222-222222222222";
@@ -33,6 +35,7 @@ type FabricatedRow = Pick<
   status: string;
   submittedAt: Date | null;
   late: boolean;
+  version: number;
 };
 
 function baseRow(overrides: Partial<FabricatedRow> = {}): FabricatedRow {
@@ -43,6 +46,7 @@ function baseRow(overrides: Partial<FabricatedRow> = {}): FabricatedRow {
     status: "draft",
     submittedAt: null,
     late: false,
+    version: 1,
     author: {
       name: "Lead 1",
       role: "lead",
@@ -410,5 +414,81 @@ describe("mapPrismaToReportSection — own-risk product floor", () => {
     expect(project?.trafficLight).toBe("green");
     // The covering risk is still listed (explains any severity without a chip).
     expect(section.risks.map((r) => r.risk)).toContain("Own covering risk");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// saveSection — optimistic-concurrency compare-and-set
+// ---------------------------------------------------------------------------
+
+describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set", () => {
+  function makeTx(updateCount: number) {
+    const noop = vi.fn(() => Promise.resolve({ count: 0 }));
+    return {
+      reportSection: {
+        updateMany: vi.fn(() => Promise.resolve({ count: updateCount })),
+      },
+      projectStatus: { deleteMany: noop, createMany: noop },
+      stageStatus: { deleteMany: noop, createMany: noop },
+      item: {
+        deleteMany: vi.fn(() => Promise.resolve({ count: 0 })),
+        createMany: noop,
+      },
+      risk: { deleteMany: noop, createMany: noop },
+      decision: { deleteMany: noop, createMany: noop },
+    };
+  }
+
+  function buildRepo(updateCount: number, reReadVersion = 1) {
+    const tx = makeTx(updateCount);
+    const prisma = {
+      $transaction: vi.fn((cb: (t: typeof tx) => unknown) =>
+        Promise.resolve(cb(tx)),
+      ),
+      reportSection: {
+        // The post-commit re-read carries the row's NEW version; the returned
+        // read model must reflect this fresh fetch, not the input section.
+        findUnique: vi.fn(() =>
+          Promise.resolve(baseRow({ version: reReadVersion })),
+        ),
+      },
+    };
+    const repo = new ReportSectionsPrismaRepository(prisma as never);
+    return { repo, tx };
+  }
+
+  // A read model to write; saveSection takes the EXPECTED version separately,
+  // so this object's own version is irrelevant to the compare-and-set.
+  const section = mapRow(baseRow());
+
+  it("matching version: updates with {id, version} + increment, then runs the child writes", async () => {
+    // Input section carries version 1; the post-commit re-read yields 4. The
+    // returned model must report 4 (from the fresh fetch), proving the new
+    // version round-trips to the client rather than echoing the stale input.
+    const { repo, tx } = buildRepo(1, 4);
+
+    const saved = await repo.saveSection(section, 3);
+
+    expect(tx.reportSection.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: section.reportSectionId, version: 3 },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- expect.objectContaining() returns any; vitest asymmetric matcher has no precise type
+        data: expect.objectContaining({ version: { increment: 1 } }),
+      }),
+    );
+    // The compare-and-set matched, so the delete-then-recreate ran.
+    expect(tx.item.deleteMany).toHaveBeenCalled();
+    // The returned read model reflects the post-increment re-read.
+    expect(saved.version).toBe(4);
+  });
+
+  it("stale version: zero-row match throws SectionVersionConflictError and deletes nothing", async () => {
+    const { repo, tx } = buildRepo(0);
+
+    await expect(repo.saveSection(section, 3)).rejects.toBeInstanceOf(
+      SectionVersionConflictError,
+    );
+    // Conflict aborts BEFORE any deleteMany — no child rows touched.
+    expect(tx.item.deleteMany).not.toHaveBeenCalled();
   });
 });

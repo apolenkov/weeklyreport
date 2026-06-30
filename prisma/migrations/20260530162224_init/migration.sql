@@ -164,6 +164,7 @@ CREATE TABLE "ReportSection" (
     "submittedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "version" INTEGER NOT NULL DEFAULT 1,
     "revokedAt" TIMESTAMP(3),
     "revokedBy" TEXT,
     "late" BOOLEAN NOT NULL DEFAULT false,

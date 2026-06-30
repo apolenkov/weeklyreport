@@ -41,6 +41,7 @@ function makeSection(
   },
 ): ReportSectionReadModel {
   return {
+    version: 1,
     status: "submitted",
     submittedAt: new Date("2026-04-09T10:00:00.000Z"),
     projects: [

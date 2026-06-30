@@ -34,6 +34,7 @@ function reportRow(severity: "blocked" | "at-risk") {
         status: "submitted",
         submittedAt: null,
         late: false,
+        version: 1,
         author: {
           name: "Alice Lead",
           role: "lead",

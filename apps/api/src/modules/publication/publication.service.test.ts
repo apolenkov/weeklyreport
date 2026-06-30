@@ -48,6 +48,7 @@ const assembledReport: AssembledReport = {
     {
       reportSectionId: "11111111-1111-4111-8111-111111111111",
       reportId,
+      version: 1,
       authorId: "33333333-3333-4333-8333-333333333333",
       authorName: "Lead 1",
       status: "submitted",
@@ -66,6 +67,7 @@ const assembledReport: AssembledReport = {
     {
       reportSectionId: "22222222-2222-4222-8222-222222222223",
       reportId,
+      version: 1,
       authorId: "33333333-3333-4333-8333-333333333334",
       authorName: "Lead 2",
       status: "draft",
@@ -84,6 +86,7 @@ const assembledReport: AssembledReport = {
     {
       reportSectionId: "22222222-2222-4222-8222-222222222224",
       reportId,
+      version: 1,
       authorId: "33333333-3333-4333-8333-333333333335",
       authorName: "Lead 3",
       status: "draft",
@@ -145,6 +148,7 @@ function expectPublished(result: AutoPublishResult): AssembledReport {
 
 const reviewUpdate: DraftSavePayload = {
   reportSectionId: "11111111-1111-4111-8111-111111111111",
+  version: 1,
   status: "draft",
   projectStatuses: [
     {

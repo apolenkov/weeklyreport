@@ -55,6 +55,7 @@ function makeWeeklyReport(
         reportId,
         authorId,
         authorName: "Lead A",
+        version: 1,
         status: "submitted",
         submittedAt: new Date("2026-04-16T10:00:00.000Z"),
         projects: [

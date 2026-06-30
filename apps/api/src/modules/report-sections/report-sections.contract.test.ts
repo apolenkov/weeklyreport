@@ -23,6 +23,7 @@ const baseSection: ReportSectionReadModel = {
   reportId: REPORT_ID,
   authorId: AUTHOR_ID,
   authorName: "Lead 1",
+  version: 1,
   status: "draft",
   submittedAt: null,
   projects: [
@@ -84,6 +85,7 @@ function createRepository(
 function validDraft(overrides: Record<string, unknown> = {}) {
   return {
     reportSectionId: SECTION_ID,
+    version: 1,
     status: "draft" as const,
     projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" as const }],
     items: writeItems,
@@ -577,6 +579,7 @@ describe("ReportSectionsService — multi-project", () => {
     );
     const saved = await service.saveDraft({
       reportSectionId: SECTION_ID,
+      version: 1,
       status: "draft",
       projectStatuses: [
         { projectId: PROJECT_ID_1, status: "green" },
@@ -600,6 +603,7 @@ describe("ReportSectionsService — multi-project", () => {
     await expect(
       service.submitSection({
         reportSectionId: SECTION_ID,
+        version: 1,
         status: "draft",
         confirmed: true,
         projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" }],
@@ -619,6 +623,7 @@ describe("ReportSectionsService — multi-project", () => {
     await expect(
       service.submitSection({
         reportSectionId: SECTION_ID,
+        version: 1,
         status: "draft",
         confirmed: true,
         projectStatuses: [
@@ -648,6 +653,7 @@ describe("ReportSectionsService — multi-project", () => {
     );
     const result = await service.submitSection({
       reportSectionId: SECTION_ID,
+      version: 1,
       status: "draft",
       confirmed: true,
       projectStatuses: [

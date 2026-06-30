@@ -77,6 +77,7 @@ export interface LeadFormRepository {
   fillFromSection(
     targetSectionId: string,
     sourceSectionId: string,
+    expectedVersion: number,
   ): Promise<number>;
   createReopenRequest(
     sectionId: string,
