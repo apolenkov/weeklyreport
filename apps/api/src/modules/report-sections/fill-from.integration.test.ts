@@ -55,6 +55,10 @@ function createMockRepository(
       return sections.get(id) ?? null;
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
+    async getSectionByIdScoped(id: string) {
+      return sections.get(id) ?? null;
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
     async getReportPeriodStatusForSection() {
       return periodStatus;
     },

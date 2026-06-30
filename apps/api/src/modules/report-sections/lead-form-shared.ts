@@ -29,6 +29,18 @@ export class ReopenRequestError extends Error {
 
 export interface LeadFormRepository {
   getSectionById(sectionId: string): Promise<ReportSectionReadModel | null>;
+  /**
+   * scope-leadform-revoke-authz: scoped variant of {@link getSectionById} used
+   * by the revoke write path. `scope` is the `groupScopeFilter(session,
+   * "reportSection")` fragment (a relation filter on `author.reportingGroupId`,
+   * `{}` for admin); a section whose author is outside the caller's groups
+   * resolves to null and is rejected as not-found (no existence oracle). The
+   * shared `getSectionById` stays unscoped for its existing callers.
+   */
+  getSectionByIdScoped(
+    sectionId: string,
+    scope: Record<string, unknown>,
+  ): Promise<ReportSectionReadModel | null>;
   getSectionForPeriod(
     reportId: string,
     userId: string,
@@ -107,8 +119,17 @@ export interface LeadFormRepository {
     reportId: string,
     userId: string,
   ): Promise<{ coOwnsShared: boolean; rows: CrossAuthorSectionRow[] }>;
-  /** SC-165: Revoke every submitted section in a report in one transaction. */
-  revokeAllSubmitted(reportId: string, revokedBy: string): Promise<number>;
+  /**
+   * SC-165: Revoke every submitted section in a report. scope-leadform-revoke-authz:
+   * `scope` is the caller's `reportSection` group-scope fragment spread into the
+   * `updateMany` where, so a head revokes only their own group's submissions
+   * (admin scope is `{}` → global).
+   */
+  revokeAllSubmitted(
+    reportId: string,
+    revokedBy: string,
+    scope: Record<string, unknown>,
+  ): Promise<number>;
 }
 
 /**

@@ -38,15 +38,26 @@ export {
 export class LeadFormService {
   constructor(private readonly repository: LeadFormRepository) {}
 
-  /** API-03: Revoke a lead's submission (head-only). */
+  /**
+   * API-03: Revoke a lead's submission (head-only). The injected
+   * `scope` is the caller's `reportSection` group-scope fragment — the section
+   * is loaded WITH the scope applied, so a head cannot revoke another group's
+   * section by passing its id. An out-of-group (or missing) id resolves to null
+   * and is rejected as `LeadFormDomainError` (mapped to NOT_FOUND — no existence
+   * oracle); admin scope is `{}` (global).
+   */
   async revokeSubmission(
     sectionId: string,
     revokedByUserId: string,
+    scope: Record<string, unknown>,
   ): Promise<{ success: true }> {
-    const section = await this.repository.getSectionById(sectionId);
+    const section = await this.repository.getSectionByIdScoped(
+      sectionId,
+      scope,
+    );
 
     if (!section) {
-      throw new Error(`Section ${sectionId} not found.`);
+      throw new LeadFormDomainError(`Section ${sectionId} not found.`);
     }
 
     if (section.status !== "submitted") {
@@ -280,14 +291,21 @@ export class LeadFormService {
     return rows;
   }
 
-  /** SC-165: Revoke every submitted section in a report in one transaction. */
+  /**
+   * SC-165: Revoke every submitted section in a report. The injected
+   * `scope` (the caller's `reportSection` group-scope fragment) is forwarded to
+   * the repository's scoped `updateMany`, so a head revokes only their own
+   * group's submissions; `revokedCount` reflects only the authorized rows.
+   */
   async revokeAllSubmitted(
     reportId: string,
     revokedByUserId: string,
+    scope: Record<string, unknown>,
   ): Promise<{ success: true; revokedCount: number }> {
     const count = await this.repository.revokeAllSubmitted(
       reportId,
       revokedByUserId,
+      scope,
     );
     return { success: true, revokedCount: count };
   }

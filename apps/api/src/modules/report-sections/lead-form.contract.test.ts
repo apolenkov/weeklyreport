@@ -69,6 +69,7 @@ function createMockRepository(
 ): LeadFormRepository {
   return {
     getSectionById: vi.fn().mockResolvedValue(null),
+    getSectionByIdScoped: vi.fn().mockResolvedValue(null),
     getSectionForPeriod: vi.fn().mockResolvedValue(null),
     getSectionReopenContext: vi.fn().mockResolvedValue(null),
     getReportPeriodStatusForSection: vi.fn().mockResolvedValue("open"),
@@ -92,13 +93,17 @@ function createMockRepository(
 describe("LeadFormService — revokeSubmission", () => {
   it("succeeds for a submitted section", async () => {
     const repo = createMockRepository({
-      getSectionById: vi
+      getSectionByIdScoped: vi
         .fn()
         .mockResolvedValue(structuredClone(submittedSection)),
     });
     const service = new LeadFormService(repo);
 
-    const result = await service.revokeSubmission(SECTION_ID, OTHER_USER_ID);
+    const result = await service.revokeSubmission(
+      SECTION_ID,
+      OTHER_USER_ID,
+      {},
+    );
 
     expect(result).toEqual({ success: true });
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
@@ -110,21 +115,25 @@ describe("LeadFormService — revokeSubmission", () => {
 
   it("fails for a draft section", async () => {
     const repo = createMockRepository({
-      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
+      getSectionByIdScoped: vi
+        .fn()
+        .mockResolvedValue(structuredClone(draftSection)),
     });
     const service = new LeadFormService(repo);
 
     await expect(
-      service.revokeSubmission(SECTION_ID, OTHER_USER_ID),
+      service.revokeSubmission(SECTION_ID, OTHER_USER_ID, {}),
     ).rejects.toThrow("Only submitted sections can be revoked.");
   });
 
-  it("fails when section does not exist", async () => {
+  it("rejects out-of-scope or missing section as not found", async () => {
+    // getSectionByIdScoped returns null for both a genuinely missing id and an
+    // out-of-group id (no existence oracle) → LeadFormDomainError → NOT_FOUND.
     const repo = createMockRepository();
     const service = new LeadFormService(repo);
 
     await expect(
-      service.revokeSubmission(SECTION_ID, OTHER_USER_ID),
+      service.revokeSubmission(SECTION_ID, OTHER_USER_ID, {}),
     ).rejects.toThrow(`Section ${SECTION_ID} not found.`);
   });
 });
@@ -363,13 +372,18 @@ describe("LeadFormService — revokeAllSubmitted", () => {
     });
     const service = new LeadFormService(repo);
 
-    const result = await service.revokeAllSubmitted(REPORT_ID, OTHER_USER_ID);
+    const result = await service.revokeAllSubmitted(REPORT_ID, OTHER_USER_ID, {
+      author: { reportingGroupId: { in: ["group-a"] } },
+    });
 
     expect(result).toEqual({ success: true, revokedCount: 3 });
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
     expect(repo.revokeAllSubmitted).toHaveBeenCalledWith(
       REPORT_ID,
       OTHER_USER_ID,
+      {
+        author: { reportingGroupId: { in: ["group-a"] } },
+      },
     );
   });
 
@@ -379,7 +393,11 @@ describe("LeadFormService — revokeAllSubmitted", () => {
     });
     const service = new LeadFormService(repo);
 
-    const result = await service.revokeAllSubmitted(REPORT_ID, OTHER_USER_ID);
+    const result = await service.revokeAllSubmitted(
+      REPORT_ID,
+      OTHER_USER_ID,
+      {},
+    );
 
     expect(result).toEqual({ success: true, revokedCount: 0 });
   });
