@@ -2172,9 +2172,13 @@ export function createAppRouter(deps: RouterDeps) {
         .input(z.object({ reportSectionId: z.uuid() }))
         .mutation(async ({ input, ctx }) => {
           try {
+            // scope-leadform-revoke-authz: object-level authz — a head may only
+            // revoke a section authored in its own group (admin scope is {}).
+            // Mirrors the respondReopenRequest scoped re-load.
             return await deps.leadFormService.revokeSubmission(
               input.reportSectionId,
               ctx.session.userId,
+              groupScopeFilter(ctx.session, "reportSection"),
             );
           } catch (error) {
             throw mapDomainError(error);
@@ -2185,9 +2189,12 @@ export function createAppRouter(deps: RouterDeps) {
         .input(z.object({ reportId: z.uuid() }))
         .mutation(async ({ input, ctx }) => {
           try {
+            // scope-leadform-revoke-authz: bulk revoke is bounded to the head's
+            // own group inside a multi-group report (admin scope is {} → global).
             return await deps.leadFormService.revokeAllSubmitted(
               input.reportId,
               ctx.session.userId,
+              groupScopeFilter(ctx.session, "reportSection"),
             );
           } catch (error) {
             throw mapDomainError(error);

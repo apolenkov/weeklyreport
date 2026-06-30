@@ -58,6 +58,27 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     );
   }
 
+  async getSectionByIdScoped(
+    sectionId: string,
+    scope: Record<string, unknown>,
+  ): Promise<ReportSectionReadModel | null> {
+    // The `reportSection` scope is a relation filter on `author.reportingGroupId`
+    // (`{}` for admin). Spread last so a zero-row scope can override the id —
+    // an out-of-group id then resolves to null (rejected as not-found upstream).
+    const row = await this.prisma.reportSection.findFirst({
+      where: { id: sectionId, ...scope },
+      include: reportSectionFullInclude,
+    });
+
+    if (!row) {
+      return null;
+    }
+
+    return mapPrismaToReportSection(
+      row as unknown as Parameters<typeof mapPrismaToReportSection>[0],
+    );
+  }
+
   async getReportPeriodStatusForSection(
     sectionId: string,
   ): Promise<string | null> {
@@ -158,8 +179,12 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     sectionId: string,
     revokedBy: string,
   ): Promise<void> {
-    await this.prisma.reportSection.update({
-      where: { id: sectionId },
+    // The caller's scoped read already proved this id is in the caller's group,
+    // so the write is by id only. `updateMany` with the `status: "submitted"`
+    // guard keeps it race-safe (a concurrent revoke that already drafted the
+    // section matches zero rows rather than re-stamping it).
+    await this.prisma.reportSection.updateMany({
+      where: { id: sectionId, status: "submitted" },
       data: {
         status: "draft",
         revokedAt: new Date(),
@@ -169,22 +194,24 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     });
   }
 
-  /** SC-165: Revoke every submitted section in a report atomically. */
+  /** SC-165: Revoke every submitted section in a report. */
   async revokeAllSubmitted(
     reportId: string,
     revokedBy: string,
+    scope: Record<string, unknown>,
   ): Promise<number> {
-    const now = new Date();
-    const result = await this.prisma.$transaction(async (tx) => {
-      return tx.reportSection.updateMany({
-        where: { reportId, status: "submitted" },
-        data: {
-          status: "draft",
-          revokedAt: now,
-          revokedBy,
-          submittedAt: null,
-        },
-      });
+    // One scoped, race-safe write: the `author` group-scope filter spreads into
+    // the `where` so a head flips only their own group's submitted sections
+    // (admin scope is `{}` → every submitted section). A single `updateMany` is
+    // atomic, so no surrounding transaction is needed.
+    const result = await this.prisma.reportSection.updateMany({
+      where: { reportId, status: "submitted", ...scope },
+      data: {
+        status: "draft",
+        revokedAt: new Date(),
+        revokedBy,
+        submittedAt: null,
+      },
     });
     return result.count;
   }
