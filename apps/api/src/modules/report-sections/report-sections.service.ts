@@ -32,6 +32,19 @@ export class ReportSectionAccessError extends Error {
   }
 }
 
+/**
+ * Raised when a section write's expected version no longer matches the stored
+ * row (a concurrent writer advanced it). Distinct from ReportSectionDomainError
+ * (BAD_REQUEST) so the error-mapper can surface it as CONFLICT (409) and the
+ * client can reload-then-retry rather than treat it as a validation failure.
+ */
+export class SectionVersionConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SectionVersionConflictError";
+  }
+}
+
 export interface ReportSectionsRepository {
   getSectionById(
     reportSectionId: string,
@@ -48,7 +61,10 @@ export interface ReportSectionsRepository {
   getReportMeta?(
     reportId: string,
   ): Promise<{ status: string; deadline: Date } | null>;
-  saveSection(section: ReportSectionReadModel): Promise<ReportSectionReadModel>;
+  saveSection(
+    section: ReportSectionReadModel,
+    expectedVersion: number,
+  ): Promise<ReportSectionReadModel>;
 }
 
 /**
@@ -245,6 +261,10 @@ export class ReportSectionsService {
 
     const saved = await this.repository.saveSection(
       mergeSection(section, parsedInput, "draft"),
+      // Expected version is the CLIENT-loaded value, not the freshly-fetched
+      // row's — otherwise the compare-and-set always matches and the lock is a
+      // no-op (design D5).
+      parsedInput.version,
     );
     this.logger.info("section draft saved", {
       reportSectionId: parsedInput.reportSectionId,
@@ -283,6 +303,7 @@ export class ReportSectionsService {
 
     const saved = await this.repository.saveSection(
       mergeSection(section, parsedInput, "submitted", late),
+      parsedInput.version,
     );
 
     // Phase 52-A (UFB-054): product telemetry. We always bump the

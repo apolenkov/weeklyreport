@@ -26,6 +26,7 @@ function makeSection(
     reportId,
     authorId: userId,
     authorName: "Lead A",
+    version: 1,
     status: "draft",
     submittedAt: null,
     projects: [{ projectId, projectName: "CRM Platform", trafficLight: null }],
@@ -119,6 +120,7 @@ describe("LeadFormService — fillFrom (integration)", () => {
       targetSectionId,
       sourceSectionId,
       userId,
+      1,
     );
 
     expect(result.success).toBe(true);
@@ -135,7 +137,7 @@ describe("LeadFormService — fillFrom (integration)", () => {
     const service = new LeadFormService(createMockRepository(sections));
 
     await expect(
-      service.fillFrom(targetSectionId, sourceSectionId, userId),
+      service.fillFrom(targetSectionId, sourceSectionId, userId, 1),
     ).rejects.toThrow("Can only fill your own section");
   });
 
@@ -148,7 +150,7 @@ describe("LeadFormService — fillFrom (integration)", () => {
     const service = new LeadFormService(createMockRepository(sections));
 
     await expect(
-      service.fillFrom(targetSectionId, sourceSectionId, userId),
+      service.fillFrom(targetSectionId, sourceSectionId, userId, 1),
     ).rejects.toThrow("Cannot fill a submitted section");
   });
 
@@ -156,7 +158,7 @@ describe("LeadFormService — fillFrom (integration)", () => {
     const service = new LeadFormService(createMockRepository(new Map()));
 
     await expect(
-      service.fillFrom(targetSectionId, sourceSectionId, userId),
+      service.fillFrom(targetSectionId, sourceSectionId, userId, 1),
     ).rejects.toThrow(`Target section ${targetSectionId} not found`);
   });
 
@@ -171,7 +173,7 @@ describe("LeadFormService — fillFrom (integration)", () => {
     const service = new LeadFormService(repo);
 
     await expect(
-      service.fillFrom(targetSectionId, sourceSectionId, userId),
+      service.fillFrom(targetSectionId, sourceSectionId, userId, 1),
     ).rejects.toThrow("Cannot fill a section of a published report");
     // The live-row mutation must never run.
     expect(repo.fillFromSection).not.toHaveBeenCalled();
@@ -196,7 +198,7 @@ describe("LeadFormService — fillFrom (integration)", () => {
     const service = new LeadFormService(repo);
 
     await expect(
-      service.fillFrom(targetSectionId, sourceSectionId, userId),
+      service.fillFrom(targetSectionId, sourceSectionId, userId, 1),
     ).rejects.toThrow("Can only fill from your own section");
     // The cross-group content copy must never run.
     expect(repo.fillFromSection).not.toHaveBeenCalled();
@@ -209,7 +211,7 @@ describe("LeadFormService — fillFrom (integration)", () => {
     const service = new LeadFormService(repo);
 
     await expect(
-      service.fillFrom(targetSectionId, sourceSectionId, userId),
+      service.fillFrom(targetSectionId, sourceSectionId, userId, 1),
     ).rejects.toThrow(`Source section ${sourceSectionId} not found`);
     expect(repo.fillFromSection).not.toHaveBeenCalled();
   });
@@ -232,6 +234,7 @@ describe("LeadFormService — fillFrom (integration)", () => {
       targetSectionId,
       sourceSectionId,
       userId,
+      1,
     );
 
     expect(result.success).toBe(true);

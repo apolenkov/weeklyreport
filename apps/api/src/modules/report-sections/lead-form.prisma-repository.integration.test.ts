@@ -124,6 +124,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
     const copiedCount = await repo.fillFromSection(
       testData.section.id,
       sourceSection.id,
+      testData.section.version,
     );
 
     const [items, risks, decisions] = await Promise.all([

@@ -18,6 +18,10 @@ import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
 } from "./report-sections.prisma-repository";
+import {
+  ReportSectionDomainError,
+  SectionVersionConflictError,
+} from "./report-sections.service";
 
 /**
  * Mirrors `normalizeStageName` in apps/web/src/lib/mappers/lead-form.ts — the
@@ -219,6 +223,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
   async fillFromSection(
     targetSectionId: string,
     sourceSectionId: string,
+    expectedVersion: number,
   ): Promise<number> {
     const source = await this.prisma.reportSection.findUnique({
       where: { id: sourceSectionId },
@@ -231,75 +236,104 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
 
     let copiedItems = 0;
 
-    await this.prisma.$transaction(
-      async (tx) => {
-        // Replace only the sections that Fill From owns. Priorities stay fresh
-        // for the current week and must not be copied or cleared here.
-        await tx.item.deleteMany({
-          where: { reportSectionId: targetSectionId },
-        });
-        await tx.risk.deleteMany({
-          where: { reportSectionId: targetSectionId },
-        });
-        await tx.decision.deleteMany({
-          where: { reportSectionId: targetSectionId },
-        });
-
-        // Copy items from source. Next Week source items become Current Week
-        // suggestions in the target period.
-        if (source.items.length > 0) {
-          await tx.item.createMany({
-            data: source.items.map((i) => ({
-              reportSectionId: targetSectionId,
-              projectId: i.projectId,
-              type: "current",
-              text: i.text,
-              tag: i.tag,
-              workflowStatus: i.workflowStatus,
-              carriedOver: false,
-              completed: i.completed ?? null,
-              stageNames: i.stageNames,
-            })),
+    try {
+      await this.prisma.$transaction(
+        async (tx) => {
+          // Optimistic-concurrency compare-and-set on the TARGET, first so a
+          // conflict aborts before any deleteMany — Fill From's delete-then-
+          // recreate must not clobber a target a second writer just advanced.
+          const updated = await tx.reportSection.updateMany({
+            where: { id: targetSectionId, version: expectedVersion },
+            data: { version: { increment: 1 } },
           });
-          copiedItems += source.items.length;
-        }
+          if (updated.count === 0) {
+            throw new SectionVersionConflictError(
+              "This section was changed by another save. Reload and try again.",
+            );
+          }
 
-        // Copy risks from source
-        if (source.risks.length > 0) {
-          await tx.risk.createMany({
-            data: source.risks.map((r) => ({
-              reportSectionId: targetSectionId,
-              projectId: r.projectId,
-              risk: r.risk,
-              impact: r.impact,
-              mitigation: r.mitigation,
-              severity: r.severity,
-              stageNames: r.stageNames,
-            })),
+          // Replace only the sections that Fill From owns. Priorities stay fresh
+          // for the current week and must not be copied or cleared here.
+          await tx.item.deleteMany({
+            where: { reportSectionId: targetSectionId },
           });
-          copiedItems += source.risks.length;
-        }
+          await tx.risk.deleteMany({
+            where: { reportSectionId: targetSectionId },
+          });
+          await tx.decision.deleteMany({
+            where: { reportSectionId: targetSectionId },
+          });
 
-        // Copy decisions from source
-        const decisionsToCopy = source.decisions.filter((d) => !!d.productId);
-        if (decisionsToCopy.length > 0) {
-          await tx.decision.createMany({
-            data: decisionsToCopy.map((d) => ({
-              reportSectionId: targetSectionId,
-              text: d.text,
-              owner: d.owner,
-              deadline: d.deadline ?? null,
-              impact: d.impact,
-              resolvedAt: d.resolvedAt ?? null,
-              stageNames: d.stageNames,
-              productId: d.productId,
-            })),
-          });
-          copiedItems += decisionsToCopy.length;
-        }
-      },
-      { timeout: 15_000 },
-    );
+          // Copy items from source. Next Week source items become Current Week
+          // suggestions in the target period.
+          if (source.items.length > 0) {
+            await tx.item.createMany({
+              data: source.items.map((i) => ({
+                reportSectionId: targetSectionId,
+                projectId: i.projectId,
+                type: "current",
+                text: i.text,
+                tag: i.tag,
+                workflowStatus: i.workflowStatus,
+                carriedOver: false,
+                completed: i.completed ?? null,
+                stageNames: i.stageNames,
+              })),
+            });
+            copiedItems += source.items.length;
+          }
+
+          // Copy risks from source
+          if (source.risks.length > 0) {
+            await tx.risk.createMany({
+              data: source.risks.map((r) => ({
+                reportSectionId: targetSectionId,
+                projectId: r.projectId,
+                risk: r.risk,
+                impact: r.impact,
+                mitigation: r.mitigation,
+                severity: r.severity,
+                stageNames: r.stageNames,
+              })),
+            });
+            copiedItems += source.risks.length;
+          }
+
+          // Copy decisions from source
+          const decisionsToCopy = source.decisions.filter((d) => !!d.productId);
+          if (decisionsToCopy.length > 0) {
+            await tx.decision.createMany({
+              data: decisionsToCopy.map((d) => ({
+                reportSectionId: targetSectionId,
+                text: d.text,
+                owner: d.owner,
+                deadline: d.deadline ?? null,
+                impact: d.impact,
+                resolvedAt: d.resolvedAt ?? null,
+                stageNames: d.stageNames,
+                productId: d.productId,
+              })),
+            });
+            copiedItems += decisionsToCopy.length;
+          }
+        },
+        { timeout: 15_000 },
+      );
+    } catch (error) {
+      if (error instanceof SectionVersionConflictError) {
+        throw error;
+      }
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        throw new ReportSectionDomainError(
+          "DUPLICATE_CHILD_ROW",
+          "Could not fill the section: a duplicate row was rejected.",
+        );
+      }
+      throw error;
+    }
 
     return copiedItems;
   }

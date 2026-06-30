@@ -44,6 +44,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
     authorId: AUTHOR_ID,
     authorName: "Test Lead",
     authorRole: "lead" as const,
+    version: 1,
     status: overrides.status ?? ("draft" as const),
     submittedAt: null,
     projects: [
@@ -94,7 +95,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
 }
 
 interface MutationCallbacks {
-  onSuccess?: () => void;
+  onSuccess?: (saved?: unknown) => void;
   onError?: (err: unknown) => void;
 }
 
@@ -223,7 +224,8 @@ describe("LeadForm mutation wiring", () => {
     // Trigger onSuccess deterministically — the mutation wiring is the unit
     // under test (the orchestration of invalidation + toast + lock).
     act(() => {
-      submitOpts.onSuccess?.();
+      // submit returns the persisted read model (carries the bumped version).
+      submitOpts.onSuccess?.(makeSection());
     });
     expect(toast.success).toHaveBeenCalledWith("Report submitted");
     // invalidateLeadForm + invalidateLeadHistory each call invalidateQueries.
@@ -246,6 +248,147 @@ describe("LeadForm mutation wiring", () => {
     // Simulate error path.
     submitOpts.onError?.(new Error("Submit blew up"));
     expect(toast.error).toHaveBeenCalledWith("Submit blew up");
+  });
+
+  it("submit CONFLICT (stale version): surfaces the reload prompt, not the generic error", async () => {
+    const { Wrapper, captured } = buildHarness();
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    await waitFor(() =>
+      expect(captured["reports.submit"].lastOptions).toBeDefined(),
+    );
+
+    const conflict = new TRPCClientError("stale");
+    Object.defineProperty(conflict, "data", {
+      value: { httpStatus: 409, code: "CONFLICT" },
+      configurable: true,
+    });
+
+    const submitOpts = captured["reports.submit"]
+      .lastOptions as MutationCallbacks;
+    submitOpts.onError?.(conflict);
+
+    // Guardrail 5: a cross-writer conflict refetches + surfaces a distinct
+    // reload prompt rather than echoing the raw error message.
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringContaining("changed elsewhere"),
+    );
+    expect(toast.error).not.toHaveBeenCalledWith("stale");
+  });
+
+  it("submit after an autosave version bump carries the bumped version, not a stale closure (guardrail 3)", async () => {
+    const { Wrapper, captured } = buildHarness();
+    // The success path reads `.version`; resolve a versioned read model so it
+    // does not throw. The assertion targets the submit INPUT, not this value.
+    captured["reports.submit"].mutationFn.mockResolvedValue({
+      ...makeSection(),
+      version: 6,
+    });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    expect(await screen.findByText("Autosaved")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(captured["reports.saveDraft"].lastOptions).toBeDefined(),
+    );
+
+    // An autosave succeeds and the server bumps the row to version 5. This
+    // drives the component's version forward through the hook's onVersionChange
+    // exactly as a live save would.
+    const saveDraftOpts = captured["reports.saveDraft"].lastOptions as {
+      onSuccess?: (saved: unknown) => void;
+    };
+    act(() => {
+      saveDraftOpts.onSuccess?.({ version: 5 });
+    });
+
+    // Drive a real submit: toolbar Submit → confirm dialog → confirm.
+    act(() => {
+      screen.getByRole("button", { name: "Submit" }).click();
+    });
+    const dialog = await screen.findByRole("dialog", {
+      name: "Confirm submission",
+    });
+    act(() => {
+      within(dialog).getByRole("button", { name: "Submit" }).click();
+    });
+
+    // Guardrail 3: submit reads the CURRENT version (5) synchronously, not the
+    // initially-loaded 1 captured in a stale closure.
+    await waitFor(() =>
+      expect(
+        captured["reports.submit"].mutationFn.mock.calls.length,
+      ).toBeGreaterThan(0),
+    );
+    const sent = captured["reports.submit"].mutationFn.mock.calls.at(
+      -1,
+    )?.[0] as {
+      version?: number;
+    };
+    expect(sent.version).toBe(5);
+  });
+
+  it("a refetch updates the held version without dirtying the form, and the new version reaches the next write (guardrail 4)", async () => {
+    let serverVersion = 1;
+    const { Wrapper, captured, queryClient } = buildHarness({
+      byPeriodQueryFn: () =>
+        Promise.resolve({
+          section: { ...makeSection(), version: serverVersion },
+          readOnly: false,
+          canRequestReopen: false,
+        }),
+    });
+    captured["reports.submit"].mutationFn.mockResolvedValue({
+      ...makeSection(),
+      version: 6,
+    });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    expect(await screen.findByText("Autosaved")).toBeInTheDocument();
+
+    // A concurrent writer advances only the revision; a refetch brings version
+    // 5 with identical content. `await act(invalidate)` flushes the refetch AND
+    // the re-seed effect, so the held version is deterministically 5 here.
+    serverVersion = 5;
+    await act(async () => {
+      await queryClient.invalidateQueries();
+    });
+
+    // Version is not part of the dirty key → the form stays clean (no spurious
+    // autosave from the bump).
+    expect(screen.getByText("Autosaved")).toBeInTheDocument();
+
+    // And the re-seeded version actually advanced: the next write carries 5,
+    // not the initially-loaded 1 — without this, conflict recovery would 409 in
+    // a loop.
+    act(() => {
+      screen.getByRole("button", { name: "Submit" }).click();
+    });
+    const dialog = await screen.findByRole("dialog", {
+      name: "Confirm submission",
+    });
+    act(() => {
+      within(dialog).getByRole("button", { name: "Submit" }).click();
+    });
+    await waitFor(() =>
+      expect(
+        captured["reports.submit"].mutationFn.mock.calls.length,
+      ).toBeGreaterThan(0),
+    );
+    const sent = captured["reports.submit"].mutationFn.mock.calls.at(
+      -1,
+    )?.[0] as {
+      version?: number;
+    };
+    expect(sent.version).toBe(5);
   });
 
   it("byPeriod load failure: toast shows prefix + requestId reference", async () => {
@@ -359,6 +502,34 @@ describe("LeadForm mutation wiring", () => {
     );
     // invalidateLeadForm covers reports.getActive + leadForm.byPeriod.
     expect(invalidateSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("fillFrom CONFLICT (stale target version): surfaces the reload prompt", async () => {
+    const { Wrapper, captured } = buildHarness();
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    await waitFor(() =>
+      expect(captured["leadForm.fillFrom"].lastOptions).toBeDefined(),
+    );
+
+    const conflict = new TRPCClientError("stale");
+    Object.defineProperty(conflict, "data", {
+      value: { httpStatus: 409, code: "CONFLICT" },
+      configurable: true,
+    });
+
+    const fillFromOpts = captured["leadForm.fillFrom"]
+      .lastOptions as MutationCallbacks;
+    act(() => {
+      fillFromOpts.onError?.(conflict);
+    });
+
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringContaining("changed elsewhere"),
+    );
   });
 
   it("toolbar renders the inert version-history ComingSoon control", async () => {

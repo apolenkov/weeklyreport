@@ -11,6 +11,7 @@
 import type { DraftSavePayload } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
+import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -32,6 +33,9 @@ const PROJECT_ID = "22222222-2222-2222-2222-222222222222";
 function makePayload(text = "first"): DraftSavePayload {
   return {
     reportSectionId: SECTION_ID,
+    // The hook ignores this and injects its live version at mutate time; kept
+    // only so the literal satisfies DraftSavePayload.
+    version: 1,
     status: "draft",
     projectStatuses: [{ projectId: PROJECT_ID, status: "green" }],
     items: [
@@ -65,7 +69,9 @@ function buildHarness(
     opts.mutationFn ??
     // eslint-disable-next-line @typescript-eslint/require-await -- default mock satisfies the async mutationFn contract (no awaitable work in the stub)
     (async () => {
-      return { ok: true };
+      // saveDraft returns the persisted read model; the hook only reads
+      // `.version` off it to advance the optimistic lock.
+      return { version: 2 };
     });
 
   const { proxy, captured } = createMockTRPC([
@@ -124,6 +130,8 @@ describe("useLeadFormAutosave", () => {
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
           debounceMs: 3000,
         }),
       { wrapper, initialProps: { payload: null as DraftSavePayload | null } },
@@ -155,6 +163,8 @@ describe("useLeadFormAutosave", () => {
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
           debounceMs: 3000,
         }),
       { wrapper, initialProps: { payload: makePayload("a") } },
@@ -190,6 +200,8 @@ describe("useLeadFormAutosave", () => {
           reportSectionId: SECTION_ID,
           payload: makePayload("hello"),
           enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
           debounceMs: 3000,
         }),
       { wrapper },
@@ -212,6 +224,8 @@ describe("useLeadFormAutosave", () => {
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
           debounceMs: 3000,
         }),
       { wrapper, initialProps: { payload: initial } },
@@ -245,6 +259,8 @@ describe("useLeadFormAutosave", () => {
           reportSectionId: SECTION_ID,
           payload: makePayload("locked"),
           enabled: false,
+          version: 1,
+          onVersionChange: vi.fn(),
           debounceMs: 3000,
         }),
       { wrapper },
@@ -271,6 +287,8 @@ describe("useLeadFormAutosave", () => {
           reportSectionId: SECTION_ID,
           payload: makePayload("boom"),
           enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
           debounceMs: 3000,
         }),
       { wrapper },
@@ -301,6 +319,8 @@ describe("useLeadFormAutosave", () => {
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
           debounceMs: 3000,
         }),
       { wrapper, initialProps: { payload: makePayload("first-try") } },
@@ -335,6 +355,8 @@ describe("useLeadFormAutosave", () => {
           reportSectionId: SECTION_ID,
           payload: makePayload("guard-me"),
           enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
           debounceMs: 3000,
         }),
       { wrapper },
@@ -367,6 +389,8 @@ describe("useLeadFormAutosave", () => {
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
           debounceMs: 3000,
         }),
       { wrapper, initialProps: { payload: null as DraftSavePayload | null } },
@@ -393,6 +417,8 @@ describe("useLeadFormAutosave", () => {
           reportSectionId: SECTION_ID,
           payload: makePayload("force-me"),
           enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
           debounceMs: 5000,
         }),
       { wrapper },
@@ -429,6 +455,8 @@ describe("useLeadFormAutosave", () => {
           reportSectionId: SECTION_ID,
           payload: makePayload("in-flight"),
           enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
           debounceMs: 3000,
         }),
       { wrapper },
@@ -461,6 +489,8 @@ describe("useLeadFormAutosave", () => {
           reportSectionId: SECTION_ID,
           payload: makePayload("check-saved"),
           enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
           debounceMs: 3000,
         }),
       { wrapper },
@@ -503,6 +533,8 @@ describe("useLeadFormAutosave", () => {
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
           debounceMs: 5000,
         }),
       { wrapper, initialProps: { payload: payloadP1 } },
@@ -550,6 +582,8 @@ describe("useLeadFormAutosave", () => {
           reportSectionId: SECTION_ID,
           payload: makePayload("cross-tab"),
           enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
           debounceMs: 3000,
         }),
       { wrapper },
@@ -587,6 +621,8 @@ describe("useLeadFormAutosave", () => {
           reportSectionId: SECTION_ID,
           payload,
           enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
           debounceMs: 3000,
         }),
       { wrapper, initialProps: { payload: makePayload("a") } },
@@ -647,6 +683,8 @@ describe("useLeadFormAutosave", () => {
             reportSectionId: SECTION_ID,
             payload,
             enabled: true,
+            version: 1,
+            onVersionChange: vi.fn(),
             debounceMs: 3000,
           }),
         { wrapper, initialProps: { payload: makePayload("a") } },
@@ -685,10 +723,12 @@ describe("useLeadFormAutosave", () => {
         n += 1;
         if (n === 1) {
           return new Promise<unknown>((resolve) => {
-            resolveFirst = () => resolve({ ok: true });
+            // First save advances the row to version 2; the queued drain must
+            // rebase onto THIS value, not the stale prop (version 1).
+            resolveFirst = () => resolve({ version: 2 });
           });
         }
-        return Promise.resolve({ ok: true });
+        return Promise.resolve({ version: 3 });
       },
     });
     // Section B is freshly loaded + clean, so it never autosaves on its own —
@@ -710,6 +750,8 @@ describe("useLeadFormAutosave", () => {
           reportSectionId,
           payload,
           enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
           debounceMs: 5000,
           initialSavedKey,
         }),
@@ -758,6 +800,9 @@ describe("useLeadFormAutosave", () => {
     const drained = calls[1] as DraftSavePayload;
     expect(drained.reportSectionId).toBe(SECTION_ID);
     expect(drained.items[0]?.text).toBe("a2");
+    // Guardrail: the drain carries the version the FIRST save bumped to (2),
+    // read from the response — not the stale prop. Otherwise it would self-409.
+    expect(drained.version).toBe(2);
   });
 
   it("a section-A save resolving after navigation to B does not dirty B or schedule a save for it", async () => {
@@ -784,6 +829,8 @@ describe("useLeadFormAutosave", () => {
           reportSectionId,
           payload,
           enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
           debounceMs: 3000,
           initialSavedKey,
         }),
@@ -820,5 +867,103 @@ describe("useLeadFormAutosave", () => {
     });
     expect(result.current.dirty).toBe(false);
     expect(calls).toHaveLength(1);
+  });
+
+  it("injects the current version prop into the save payload (not a hardcoded value)", async () => {
+    const { wrapper, calls } = buildHarness();
+    const { rerender } = renderHook(
+      ({
+        payload,
+        version,
+      }: {
+        payload: DraftSavePayload | null;
+        version: number;
+      }) =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload,
+          enabled: true,
+          version,
+          onVersionChange: vi.fn(),
+          debounceMs: 3000,
+        }),
+      {
+        wrapper,
+        initialProps: {
+          payload: null as DraftSavePayload | null,
+          version: 42,
+        },
+      },
+    );
+
+    rerender({ payload: makePayload("x"), version: 42 });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+
+    // The expected version sent to the server is the prop the owner holds — the
+    // value the re-seed effect sets from the freshly-loaded/refetched row.
+    expect((calls[0] as DraftSavePayload).version).toBe(42);
+  });
+
+  it("reports the server-confirmed version to onVersionChange after a save", async () => {
+    const onVersionChange = vi.fn();
+    const { wrapper } = buildHarness({
+      mutationFn: () => Promise.resolve({ version: 7 }),
+    });
+    const { rerender } = renderHook(
+      ({ payload }: { payload: DraftSavePayload | null }) =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload,
+          enabled: true,
+          version: 1,
+          onVersionChange,
+          debounceMs: 3000,
+        }),
+      { wrapper, initialProps: { payload: null as DraftSavePayload | null } },
+    );
+
+    rerender({ payload: makePayload("first") });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+
+    expect(onVersionChange).toHaveBeenCalledWith(7);
+  });
+
+  it("routes a stale-version CONFLICT to onConflict and suppresses the generic toast", async () => {
+    const onConflict = vi.fn();
+    const conflictError = new TRPCClientError<never>("stale");
+    Object.defineProperty(conflictError, "data", {
+      value: { httpStatus: 409, code: "CONFLICT" },
+      configurable: true,
+    });
+    const { wrapper } = buildHarness({
+      mutationFn: () => Promise.reject(conflictError),
+    });
+    const { rerender } = renderHook(
+      ({ payload }: { payload: DraftSavePayload | null }) =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload,
+          enabled: true,
+          version: 1,
+          onVersionChange: vi.fn(),
+          onConflict,
+          debounceMs: 3000,
+        }),
+      { wrapper, initialProps: { payload: null as DraftSavePayload | null } },
+    );
+
+    rerender({ payload: makePayload("first") });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+
+    expect(onConflict).toHaveBeenCalledTimes(1);
+    // The caller owns the conflict surface (refetch + tailored message), so the
+    // hook must NOT also fire its generic autosave-failed toast.
+    expect(toast.error).not.toHaveBeenCalled();
   });
 });

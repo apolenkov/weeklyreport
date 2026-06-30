@@ -140,6 +140,7 @@ describe("mapWeeklyReport", () => {
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
           authorName: "Тимлид 1",
+          version: 1,
           status: "submitted",
           submittedAt: new Date("2026-04-19T18:00:00Z"),
           projects: [
@@ -186,6 +187,7 @@ describe("mapWeeklyReport", () => {
           reportId: REPORT_ID,
           authorId: AUTHOR_B,
           authorName: "Igor V.",
+          version: 1,
           status: "submitted",
           submittedAt: new Date("2026-04-19T17:00:00Z"),
           projects: [
@@ -258,6 +260,7 @@ describe("mapWeeklyReport", () => {
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
           authorName: "Тимлид 1",
+          version: 1,
           status: "draft",
           submittedAt: null,
           projects: [
@@ -310,6 +313,7 @@ describe("mapWeeklyReport", () => {
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
           authorName: "Тимлид 1",
+          version: 1,
           status: "draft",
           submittedAt: null,
           projects: [
@@ -365,6 +369,7 @@ describe("mapWeeklyReport", () => {
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
           authorName: "Тимлид 1",
+          version: 1,
           status: "submitted",
           submittedAt: new Date("2026-04-19T18:00:00Z"),
           projects: [
@@ -419,6 +424,7 @@ describe("mapWeeklyReport", () => {
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
           authorName: "Тимлид 1",
+          version: 1,
           status: "submitted",
           submittedAt: new Date("2026-04-19T18:00:00Z"),
           projects: [
@@ -482,6 +488,7 @@ describe("mapWeeklyReport", () => {
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
           authorName: "Тимлид 1",
+          version: 1,
           status: "submitted",
           submittedAt: new Date("2026-04-19T18:00:00Z"),
           projects: [
@@ -546,6 +553,7 @@ describe("mapWeeklyReport", () => {
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
           authorName: "Тимлид 1",
+          version: 1,
           status: "submitted",
           submittedAt: new Date("2026-04-19T18:00:00Z"),
           projects: [
@@ -633,6 +641,7 @@ describe("product name resolution (fix-product-name-resolution)", () => {
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
           authorName: "Тимлид 1",
+          version: 1,
           status: "submitted",
           submittedAt: new Date("2026-04-19T18:00:00Z"),
           // The author's own section knows only PROJECT_A…
@@ -691,6 +700,7 @@ describe("mapWeeklyReportLeadGroups (by-lead slice)", () => {
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
           authorName: "Тимлид 1",
+          version: 1,
           status: "draft",
           submittedAt: null,
           projects: [
@@ -740,6 +750,7 @@ describe("mapWeeklyReportLeadGroups (by-lead slice)", () => {
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
           authorName: "Тимлид 1",
+          version: 1,
           status: "draft",
           submittedAt: null,
           projects: [
@@ -764,6 +775,7 @@ describe("mapWeeklyReportLeadGroups (by-lead slice)", () => {
           reportId: REPORT_ID,
           authorId: AUTHOR_B,
           authorName: "Igor V.",
+          version: 1,
           status: "draft",
           submittedAt: null,
           projects: [

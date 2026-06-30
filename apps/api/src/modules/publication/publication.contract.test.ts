@@ -41,6 +41,7 @@ function makeSection(
 ): ReportSectionReadModel {
   return {
     reportId,
+    version: 1,
     status: "submitted",
     submittedAt: new Date("2026-04-09T10:00:00.000Z"),
     projects: [],
@@ -465,6 +466,7 @@ describe("PublicationService — contract tests", () => {
       // Attempt to update a section after publish — should be immutable
       const update = {
         reportSectionId: sectionAlpha.reportSectionId,
+        version: 1,
         status: "draft" as const,
         projectStatuses: [
           {
@@ -523,6 +525,7 @@ describe("PublicationService — contract tests", () => {
 
       const update: DraftSavePayload = {
         reportSectionId: sectionAlpha.reportSectionId,
+        version: 1,
         status: "draft",
         projectStatuses: [
           {
@@ -556,6 +559,7 @@ describe("PublicationService — contract tests", () => {
 
       const update: DraftSavePayload = {
         reportSectionId: sectionAlpha.reportSectionId,
+        version: 1,
         status: "draft",
         projectStatuses: [
           {
@@ -586,6 +590,7 @@ describe("PublicationService — contract tests", () => {
 
       const update: DraftSavePayload = {
         reportSectionId: sectionAlpha.reportSectionId,
+        version: 1,
         status: "draft",
         projectStatuses: [
           {
@@ -633,6 +638,7 @@ describe("PublicationService — contract tests", () => {
       // Update Alpha from green to red
       const update: DraftSavePayload = {
         reportSectionId: sectionAlpha.reportSectionId,
+        version: 1,
         status: "draft",
         projectStatuses: [
           {

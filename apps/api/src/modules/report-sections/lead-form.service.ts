@@ -73,6 +73,10 @@ export class LeadFormService {
     targetSectionId: string,
     sourceSectionId: string,
     userId: string,
+    // Client-loaded version of the TARGET, for the optimistic-concurrency
+    // compare-and-set (not the freshly-fetched row's — that would no-op the
+    // lock). A concurrent edit of the target rejects with CONFLICT.
+    expectedVersion: number,
   ): Promise<{ success: true; copiedItems: number }> {
     const target = await this.repository.getSectionById(targetSectionId);
 
@@ -122,6 +126,7 @@ export class LeadFormService {
     const copiedItems = await this.repository.fillFromSection(
       targetSectionId,
       sourceSectionId,
+      expectedVersion,
     );
 
     return { success: true, copiedItems };

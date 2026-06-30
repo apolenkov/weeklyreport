@@ -1,19 +1,24 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion -- the literal-union cast on severity is required by tsc (without it the ternary widens to string, TS2322), but ESLint's program flags it redundant; wave-6c-ii */
 "use client";
 
-import type {
-  DraftSavePayload,
-  ReportSectionReadModel,
-} from "@customreport/shared";
+import type { ReportSectionReadModel } from "@customreport/shared";
 import { Separator } from "@customreport/ui/components/ui/separator";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { User, Users } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 
 import { useFullscreen } from "../../hooks/use-fullscreen";
 import {
+  type DraftSaveContent,
   stableStringify,
   useLeadFormAutosave,
 } from "../../hooks/use-lead-form-autosave";
@@ -40,6 +45,7 @@ import {
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
 import { stageStatusToTraffic } from "../../lib/mappers/traffic-light";
 import { SessionContext } from "../../lib/session-provider";
+import { isConflictError } from "../../lib/trpc";
 import { useTRPC } from "../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
 import { AccordionSection } from "../report-shell/accordion-section";
@@ -214,7 +220,7 @@ function CollapseIcon() {
  */
 function sectionToDraftPayload(
   section: ReportSectionReadModel,
-): DraftSavePayload {
+): DraftSaveContent {
   // Drop rows whose required text fields are empty or whitespace-only. The
   // server's safeText({min:1}) Zod refinement rejects them, which would
   // otherwise produce "Save failed" toast every time the user clicks
@@ -584,6 +590,18 @@ export function LeadForm({
     useState<ReportSectionReadModel | null>(null);
   const lastServerDraftKeyRef = useRef<string | null>(null);
 
+  // Optimistic-lock row revision of the loaded section. The component is the
+  // single source of truth: `version` (state) drives the autosave prop, while
+  // `versionRef` gives submit/fillFrom a synchronous read that can't go stale
+  // behind a render. Both move together via setVersionSafe. The version is NOT
+  // part of any content key, so a bump never marks the form dirty.
+  const [version, setVersion] = useState(1);
+  const versionRef = useRef(1);
+  const setVersionSafe = useCallback((next: number) => {
+    versionRef.current = next;
+    setVersion(next);
+  }, []);
+
   // Re-seed local state whenever the server-side section changes (initial load
   // or post-mutation invalidation). React Query can hand this component a new
   // object reference for the same server payload while a local autosave is
@@ -593,18 +611,39 @@ export function LeadForm({
     const section = byPeriodQ.data?.section;
     if (!section) return;
 
+    // Sync the optimistic-lock version on every load/refetch — including when
+    // the content key is unchanged (a concurrent writer may have advanced only
+    // the revision). Done before the early return; version is not in the key,
+    // so this never marks the form dirty nor triggers a reseed on its own.
+    setVersionSafe(section.version);
+
     const serverDraftKey = stableStringify(sectionToDraftPayload(section));
     setIsSubmitted(section.status === "submitted");
 
     if (lastServerDraftKeyRef.current === serverDraftKey) return;
     lastServerDraftKeyRef.current = serverDraftKey;
     setDraftSection(section);
-  }, [byPeriodQ.data?.section]);
+  }, [byPeriodQ.data?.section, setVersionSafe]);
+
+  // A concurrent writer advanced this section since it was loaded (stale-version
+  // CONFLICT). Pull the latest revision + content and tell the lead loudly: the
+  // refetch reseeds the form to the server's current state, replacing unsaved
+  // edits — surfaced via toast rather than discarded silently. The lead then
+  // re-applies and saves against the new version.
+  const handleConflict = useCallback(() => {
+    void byPeriodQ.refetch();
+    toast.error(
+      "This section was changed elsewhere. Reloaded the latest version — re-apply your changes and save again.",
+    );
+  }, [byPeriodQ]);
 
   // ---- Mutations ----
   const submitMut = useMutation(
     trpc.reports.submit.mutationOptions({
-      onSuccess: () => {
+      onSuccess: (saved) => {
+        // submit returns the persisted read model; sync the bumped version so a
+        // follow-up write carries it (single source of truth).
+        setVersionSafe(saved.version);
         invalidateLeadForm(qc, trpc);
         invalidateLeadHistory(qc, trpc);
         setIsSubmitted(true);
@@ -612,6 +651,12 @@ export function LeadForm({
         toast.success("Report submitted");
       },
       onError: (err: unknown) => {
+        // A stale-version 409 means another writer advanced the section: refetch
+        // + surface rather than a generic toast.
+        if (isConflictError(err)) {
+          handleConflict();
+          return;
+        }
         // Surface server-side errors as a toast; submitSectionSchema no
         // longer enforces a per-field "needs at least one priority" rule,
         // so we drop the field-targeted scroll/inline-error path that used
@@ -669,10 +714,17 @@ export function LeadForm({
   const fillFromMut = useMutation(
     trpc.leadForm.fillFrom.mutationOptions({
       onSuccess: () => {
+        // fillFrom returns a copy summary, not the read model, so the bumped
+        // target version arrives via this refetch → the re-seed effect's
+        // setVersionSafe, not a response field.
         invalidateLeadForm(qc, trpc);
         toast.success("Form filled from selected period");
       },
       onError: (err: unknown) => {
+        if (isConflictError(err)) {
+          handleConflict();
+          return;
+        }
         const msg = err instanceof Error ? err.message : "Fill from failed";
         toast.error(msg);
       },
@@ -722,8 +774,9 @@ export function LeadForm({
     // operands), so !isReadOnlyEarly implies !isSubmitted.
     enabled: !isReadOnlyEarly && draftSection !== null,
     initialSavedKey,
-    // TODO(versions-v2): the save-success path used to create a version
-    // snapshot here; re-wire the trigger when versioning returns.
+    version,
+    onVersionChange: setVersionSafe,
+    onConflict: handleConflict,
   });
 
   // 35-07: set document.title to surface the addressed week in the browser
@@ -1118,6 +1171,9 @@ export function LeadForm({
     }));
     submitMut.mutate({
       ...draftPayload,
+      // Current revision read synchronously — never a stale closure, so a submit
+      // right after an autosave bump carries the post-bump version (no self-409).
+      version: versionRef.current,
       projectStatuses,
       confirmed: true,
     });
@@ -1152,6 +1208,9 @@ export function LeadForm({
     fillFromMut.mutate({
       targetSectionId: sectionIdForActions,
       sourceSectionId,
+      // Current revision of the TARGET, read synchronously (guardrail: not a
+      // stale closure after an autosave bump).
+      version: versionRef.current,
     });
   }
 

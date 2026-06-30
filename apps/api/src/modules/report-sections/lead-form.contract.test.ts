@@ -32,6 +32,7 @@ const draftSection: ReportSectionReadModel = {
   reportId: REPORT_ID,
   authorId: AUTHOR_ID,
   authorName: "Lead 1",
+  version: 1,
   status: "draft",
   submittedAt: null,
   projects: [
@@ -419,6 +420,7 @@ describe("LeadFormService — fillFrom", () => {
       SECTION_ID,
       SOURCE_SECTION_ID,
       AUTHOR_ID,
+      1,
     );
 
     expect(result).toEqual({ success: true, copiedItems: 7 });
@@ -426,6 +428,7 @@ describe("LeadFormService — fillFrom", () => {
     expect(repo.fillFromSection).toHaveBeenCalledWith(
       SECTION_ID,
       SOURCE_SECTION_ID,
+      1,
     );
   });
 
@@ -436,7 +439,7 @@ describe("LeadFormService — fillFrom", () => {
     const service = new LeadFormService(repo);
 
     await expect(
-      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, OTHER_USER_ID),
+      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, OTHER_USER_ID, 1),
     ).rejects.toThrow("Can only fill your own section.");
   });
 
@@ -453,7 +456,7 @@ describe("LeadFormService — fillFrom", () => {
     const service = new LeadFormService(repo);
 
     await expect(
-      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID),
+      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
     ).rejects.toThrow("Cannot fill a section of a published report.");
     // The mutating repo call must never be reached.
     // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
@@ -472,6 +475,7 @@ describe("LeadFormService — fillFrom", () => {
       SECTION_ID,
       SOURCE_SECTION_ID,
       AUTHOR_ID,
+      1,
     );
 
     expect(result).toEqual({ success: true, copiedItems: 3 });
@@ -486,7 +490,7 @@ describe("LeadFormService — fillFrom", () => {
     const service = new LeadFormService(repo);
 
     await expect(
-      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID),
+      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
     ).rejects.toThrow("Cannot fill a submitted section.");
   });
 
@@ -495,7 +499,7 @@ describe("LeadFormService — fillFrom", () => {
     const service = new LeadFormService(repo);
 
     await expect(
-      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID),
+      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
     ).rejects.toThrow(`Target section ${SECTION_ID} not found.`);
   });
 });

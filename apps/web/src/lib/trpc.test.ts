@@ -2,7 +2,11 @@ import { TRPCClientError } from "@trpc/client";
 import { observable } from "@trpc/server/observable";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createAuthRedirectHandler, createAuthRedirectLink } from "./trpc";
+import {
+  createAuthRedirectHandler,
+  createAuthRedirectLink,
+  isConflictError,
+} from "./trpc";
 
 // ---------------------------------------------------------------------------
 // Helpers — build a fake TRPCClientError with the desired httpStatus.
@@ -195,5 +199,39 @@ describe("createAuthRedirectLink — observable seam", () => {
     expect(spies.next).toHaveBeenCalledWith(envelope);
     expect(spies.complete).toHaveBeenCalledTimes(1);
     expect(spies.error).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isConflictError — optimistic-lock 409 detection
+// ---------------------------------------------------------------------------
+
+function makeConflictError(
+  data: { code?: string; httpStatus?: number } = { code: "CONFLICT" },
+): TRPCClientError<never> {
+  const err = new TRPCClientError<never>("stale");
+  Object.defineProperty(err, "data", { value: data, configurable: true });
+  return err;
+}
+
+describe("isConflictError", () => {
+  it("is true for a tRPC CONFLICT code", () => {
+    expect(isConflictError(makeConflictError({ code: "CONFLICT" }))).toBe(true);
+  });
+
+  it("is true for HTTP 409 even without the code", () => {
+    expect(isConflictError(makeConflictError({ httpStatus: 409 }))).toBe(true);
+  });
+
+  it("is false for other tRPC error codes", () => {
+    expect(isConflictError(makeConflictError({ code: "BAD_REQUEST" }))).toBe(
+      false,
+    );
+  });
+
+  it("is false for plain Errors and non-error values", () => {
+    expect(isConflictError(new Error("conflict"))).toBe(false);
+    expect(isConflictError(null)).toBe(false);
+    expect(isConflictError({ data: { code: "CONFLICT" } })).toBe(false);
   });
 });

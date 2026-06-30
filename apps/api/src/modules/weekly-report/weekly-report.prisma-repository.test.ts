@@ -185,6 +185,7 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
       status: "submitted",
       submittedAt: null,
       late: false,
+      version: 1,
       author: {
         id: AUTHOR_ID,
         name: "Alice Lead",
@@ -288,6 +289,7 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
           status: "submitted",
           submittedAt: null,
           late: false,
+          version: 1,
           author: {
             id: AUTHOR_ID,
             name: "Alice Lead",

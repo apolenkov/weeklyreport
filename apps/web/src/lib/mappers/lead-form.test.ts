@@ -31,6 +31,7 @@ function baseSection(
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
     authorName: "Тимлид 1",
+    version: 1,
     status: "draft",
     submittedAt: null,
     projects: [],

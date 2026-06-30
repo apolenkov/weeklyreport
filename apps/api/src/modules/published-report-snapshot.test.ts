@@ -28,6 +28,7 @@ function makeSection(
     reportId: REPORT_ID,
     authorId: AUTHOR_ID,
     authorName: "Alice Lead",
+    version: 1,
     status: "submitted",
     submittedAt: null,
     projects: [
@@ -559,6 +560,7 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
           status: "submitted",
           submittedAt: null,
           late: false,
+          version: 1,
           author: {
             name: "Alice Lead",
             role: "lead",

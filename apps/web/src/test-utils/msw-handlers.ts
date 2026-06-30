@@ -12,6 +12,7 @@ function createMockSection() {
     reportId: "00000000-0000-0000-0000-000000000010",
     authorId: "00000000-0000-0000-0000-000000000002",
     authorName: "Test Lead",
+    version: 1,
     status: "draft" as const,
     submittedAt: null,
     projects: [

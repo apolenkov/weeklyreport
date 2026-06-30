@@ -17,6 +17,7 @@ const baseSection: ReportSectionReadModel = {
   reportId: "22222222-2222-4222-8222-222222222222",
   authorId: "33333333-3333-4333-8333-333333333333",
   authorName: "Lead 1",
+  version: 1,
   status: "draft",
   submittedAt: null,
   projects: [
@@ -86,6 +87,7 @@ describe("ReportSectionsService", () => {
       service.getActiveSection(baseSection.reportSectionId),
     ).resolves.toMatchObject({
       reportSectionId: baseSection.reportSectionId,
+      version: 1,
       projects: [{ projectName: "Project 1" }],
       items: [{ text: "Current item" }],
     });
@@ -95,6 +97,7 @@ describe("ReportSectionsService", () => {
     const service = new ReportSectionsService(createRepository(baseSection));
     const saved = await service.saveDraft({
       reportSectionId: baseSection.reportSectionId,
+      version: 1,
       status: "draft",
       projectStatuses: [
         {
@@ -119,6 +122,7 @@ describe("ReportSectionsService", () => {
       service.saveDraft(
         {
           reportSectionId: baseSection.reportSectionId,
+          version: 1,
           status: "draft",
           projectStatuses: [
             {
@@ -141,6 +145,7 @@ describe("ReportSectionsService", () => {
     await expect(
       service.submitSection({
         reportSectionId: baseSection.reportSectionId,
+        version: 1,
         status: "draft",
         confirmed: true,
         projectStatuses: [
@@ -165,6 +170,7 @@ describe("ReportSectionsService", () => {
       service.submitSection(
         {
           reportSectionId: baseSection.reportSectionId,
+          version: 1,
           status: "draft",
           confirmed: true,
           projectStatuses: [
@@ -187,6 +193,7 @@ describe("ReportSectionsService", () => {
 
     const saved = await service.submitSection({
       reportSectionId: baseSection.reportSectionId,
+      version: 1,
       status: "draft",
       confirmed: true,
       projectStatuses: [
@@ -219,6 +226,7 @@ describe("ReportSectionsService", () => {
       await expect(
         service.saveDraft({
           reportSectionId: baseSection.reportSectionId,
+          version: 1,
           status: "draft",
           projectStatuses: [
             {
@@ -243,6 +251,7 @@ describe("ReportSectionsService", () => {
 
       const saved = await service.saveDraft({
         reportSectionId: baseSection.reportSectionId,
+        version: 1,
         status: "draft",
         projectStatuses: [
           {
@@ -272,6 +281,7 @@ describe("ReportSectionsService", () => {
 
       await service.saveDraft({
         reportSectionId: baseSection.reportSectionId,
+        version: 1,
         status: "draft",
         projectStatuses: [
           {
@@ -305,6 +315,7 @@ describe("ReportSectionsService", () => {
       await expect(
         service.saveDraft({
           reportSectionId: baseSection.reportSectionId,
+          version: 1,
           status: "draft",
           projectStatuses: [
             {
@@ -338,6 +349,7 @@ describe("ReportSectionsService", () => {
     await expect(
       service.submitSection({
         reportSectionId: baseSection.reportSectionId,
+        version: 1,
         status: "draft",
         confirmed: true,
         projectStatuses: [
@@ -414,6 +426,7 @@ describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
   function validSubmitPayload() {
     return {
       reportSectionId: baseSection.reportSectionId,
+      version: 1,
       status: "draft" as const,
       confirmed: true as const,
       projectStatuses: [
@@ -537,6 +550,7 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
       reportId: "22222222-2222-4222-8222-222222222222",
       authorId: "33333333-3333-4333-8333-333333333333",
       authorName: "Lead 1",
+      version: 1,
       status: "draft",
       submittedAt: null,
       projects: [
@@ -590,6 +604,7 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
     );
     await service.submitSection({
       reportSectionId: "11111111-1111-4111-8111-111111111111",
+      version: 1,
       status: "draft" as const,
       confirmed: true as const,
       projectStatuses: [
@@ -637,6 +652,7 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
     );
     await service.submitSection({
       reportSectionId: "11111111-1111-4111-8111-111111111111",
+      version: 1,
       status: "draft" as const,
       confirmed: true as const,
       projectStatuses: [

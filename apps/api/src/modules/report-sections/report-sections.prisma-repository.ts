@@ -3,9 +3,14 @@ import {
   reportSectionReadModelSchema,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import type { ReportSectionsRepository } from "./report-sections.service";
+import {
+  ReportSectionDomainError,
+  type ReportSectionsRepository,
+  SectionVersionConflictError,
+} from "./report-sections.service";
 
 /**
  * Shared Prisma include constant for the full ReportSection aggregate.
@@ -339,6 +344,9 @@ export function mapPrismaToReportSection(
     // /lead/report chrome can switch between Request Reopen (lead) and
     // Revoke (head/admin viewing this lead's section).
     authorRole: row.author.role,
+    // Optimistic-concurrency row revision the client echoes back on its next
+    // save; every section read carries the current value.
+    version: row.version,
     status: row.status,
     submittedAt: row.submittedAt,
     // UFB-049 / Phase 50-B: late flag stamped by submitSection when
@@ -496,112 +504,141 @@ export class ReportSectionsPrismaRepository
 
   async saveSection(
     section: ReportSectionReadModel,
+    expectedVersion: number,
   ): Promise<ReportSectionReadModel> {
     const sectionId = section.reportSectionId;
 
-    await this.prisma.$transaction(
-      async (tx) => {
-        await tx.reportSection.update({
-          where: { id: sectionId },
-          data: {
-            status: section.status,
-            submittedAt: section.submittedAt,
-            // UFB-049 / Phase 50-B: persist the late flag computed by
-            // ReportSectionsService.submitSection. Default of false in
-            // the schema means existing call sites that don't set it
-            // (e.g. saveDraft, reopen) leave the column unchanged via
-            // the prior value flowing through mergeSection.
-            late: section.late,
-          },
-        });
+    try {
+      await this.prisma.$transaction(
+        async (tx) => {
+          // Optimistic-concurrency compare-and-set, FIRST so a conflict aborts
+          // before any deleteMany runs (no child rows are touched on conflict).
+          // `expectedVersion` is the client-loaded version threaded through the
+          // payload — NOT the freshly-fetched row's — so a stale writer whose
+          // row was advanced concurrently matches zero rows and 409s.
+          const updated = await tx.reportSection.updateMany({
+            where: { id: sectionId, version: expectedVersion },
+            data: {
+              status: section.status,
+              submittedAt: section.submittedAt,
+              // Persist the late flag computed by submitSection; saveDraft /
+              // reopen paths carry the prior value through mergeSection.
+              late: section.late,
+              version: { increment: 1 },
+            },
+          });
+          if (updated.count === 0) {
+            throw new SectionVersionConflictError(
+              "This section was changed by another save. Reload and try again.",
+            );
+          }
 
-        await tx.projectStatus.deleteMany({
-          where: { reportSectionId: sectionId },
-        });
-        await tx.stageStatus.deleteMany({
-          where: { reportSectionId: sectionId },
-        });
-        await tx.item.deleteMany({ where: { reportSectionId: sectionId } });
-        await tx.risk.deleteMany({ where: { reportSectionId: sectionId } });
-        await tx.decision.deleteMany({ where: { reportSectionId: sectionId } });
+          await tx.projectStatus.deleteMany({
+            where: { reportSectionId: sectionId },
+          });
+          await tx.stageStatus.deleteMany({
+            where: { reportSectionId: sectionId },
+          });
+          await tx.item.deleteMany({ where: { reportSectionId: sectionId } });
+          await tx.risk.deleteMany({ where: { reportSectionId: sectionId } });
+          await tx.decision.deleteMany({
+            where: { reportSectionId: sectionId },
+          });
 
-        const projectData = section.projects.map((p) => ({
-          reportSectionId: sectionId,
-          projectId: p.projectId,
-          status: p.trafficLight,
-        }));
-
-        if (projectData.length > 0) {
-          await tx.projectStatus.createMany({ data: projectData });
-        }
-
-        const stageStatusData = section.projects.flatMap((project) =>
-          (project.ownedStages ?? []).map((stage) => ({
+          const projectData = section.projects.map((p) => ({
             reportSectionId: sectionId,
-            projectId: project.projectId,
-            stageId: stage.stageId,
-            status: stage.status ?? null,
-          })),
+            projectId: p.projectId,
+            status: p.trafficLight,
+          }));
+
+          if (projectData.length > 0) {
+            await tx.projectStatus.createMany({ data: projectData });
+          }
+
+          const stageStatusData = section.projects.flatMap((project) =>
+            (project.ownedStages ?? []).map((stage) => ({
+              reportSectionId: sectionId,
+              projectId: project.projectId,
+              stageId: stage.stageId,
+              status: stage.status ?? null,
+            })),
+          );
+
+          if (stageStatusData.length > 0) {
+            await tx.stageStatus.createMany({ data: stageStatusData });
+          }
+
+          if (section.items.length > 0) {
+            await tx.item.createMany({
+              data: section.items.map((i) => ({
+                // The DB mints the id — rows are recreated wholesale, so trusting
+                // a client-supplied PK only risks a cross-section P2002 collision.
+                reportSectionId: sectionId,
+                projectId: i.projectId,
+                type: i.type,
+                text: i.text,
+                tag: i.tag,
+                workflowStatus: i.workflowStatus,
+                carriedOver: i.carriedOver,
+                completed: i.completed ?? null,
+                priorityRank: i.priorityRank ?? null,
+                stageNames: i.stageIds ?? [],
+              })),
+            });
+          }
+
+          if (section.risks.length > 0) {
+            await tx.risk.createMany({
+              data: section.risks.map((r) => ({
+                reportSectionId: sectionId,
+                projectId: r.projectId,
+                risk: r.risk,
+                impact: r.impact,
+                mitigation: r.mitigation,
+                severity: r.severity ?? "at-risk",
+                stageNames: r.stageIds ?? [],
+              })),
+            });
+          }
+
+          const decisionsToSave = section.decisions.filter(
+            (d): d is typeof d & { productId: string } => Boolean(d.productId),
+          );
+          if (decisionsToSave.length > 0) {
+            await tx.decision.createMany({
+              data: decisionsToSave.map((d) => ({
+                reportSectionId: sectionId,
+                text: d.text,
+                owner: d.owner,
+                deadline: d.deadline ?? null,
+                impact: d.impact,
+                resolvedAt: d.resolvedAt ?? null,
+                stageNames: d.stageIds ?? [],
+                productId: d.productId,
+              })),
+            });
+          }
+        },
+        { timeout: 15_000 },
+      );
+    } catch (error) {
+      if (error instanceof SectionVersionConflictError) {
+        throw error;
+      }
+      // The DB mints child ids now, but a duplicate (reportSectionId, projectId)
+      // ProjectStatus (or any other unique violation) in a malformed payload can
+      // still trip P2002 — surface it as a clean 400, never an unhandled 500.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        throw new ReportSectionDomainError(
+          "DUPLICATE_CHILD_ROW",
+          "Could not save the section: a duplicate row was rejected.",
         );
-
-        if (stageStatusData.length > 0) {
-          await tx.stageStatus.createMany({ data: stageStatusData });
-        }
-
-        if (section.items.length > 0) {
-          await tx.item.createMany({
-            data: section.items.map((i) => ({
-              ...(i.id ? { id: i.id } : {}),
-              reportSectionId: sectionId,
-              projectId: i.projectId,
-              type: i.type,
-              text: i.text,
-              tag: i.tag,
-              workflowStatus: i.workflowStatus,
-              carriedOver: i.carriedOver,
-              completed: i.completed ?? null,
-              priorityRank: i.priorityRank ?? null,
-              stageNames: i.stageIds ?? [],
-            })),
-          });
-        }
-
-        if (section.risks.length > 0) {
-          await tx.risk.createMany({
-            data: section.risks.map((r) => ({
-              ...(r.id ? { id: r.id } : {}),
-              reportSectionId: sectionId,
-              projectId: r.projectId,
-              risk: r.risk,
-              impact: r.impact,
-              mitigation: r.mitigation,
-              severity: r.severity ?? "at-risk",
-              stageNames: r.stageIds ?? [],
-            })),
-          });
-        }
-
-        const decisionsToSave = section.decisions.filter(
-          (d): d is typeof d & { productId: string } => Boolean(d.productId),
-        );
-        if (decisionsToSave.length > 0) {
-          await tx.decision.createMany({
-            data: decisionsToSave.map((d) => ({
-              ...(d.id ? { id: d.id } : {}),
-              reportSectionId: sectionId,
-              text: d.text,
-              owner: d.owner,
-              deadline: d.deadline ?? null,
-              impact: d.impact,
-              resolvedAt: d.resolvedAt ?? null,
-              stageNames: d.stageIds ?? [],
-              productId: d.productId,
-            })),
-          });
-        }
-      },
-      { timeout: 15_000 },
-    );
+      }
+      throw error;
+    }
 
     const saved = await this.prisma.reportSection.findUnique({
       where: { id: sectionId },

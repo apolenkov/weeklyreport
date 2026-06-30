@@ -85,6 +85,17 @@ export function createAuthRedirectLink(): TRPCLink<AppRouter> {
       });
 }
 
+/**
+ * True when an error is a tRPC CONFLICT (HTTP 409) — the optimistic-lock
+ * rejection a stale section write produces. Callers use it to react to a
+ * lost-update (refetch + surface) rather than treating it as a generic error.
+ */
+export function isConflictError(err: unknown): boolean {
+  if (!(err instanceof TRPCClientError)) return false;
+  const data = err.data as { httpStatus?: number; code?: string } | undefined;
+  return data?.code === "CONFLICT" || data?.httpStatus === 409;
+}
+
 // ---------------------------------------------------------------------------
 // Client + proxy factories
 // ---------------------------------------------------------------------------

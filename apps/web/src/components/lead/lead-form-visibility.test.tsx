@@ -436,6 +436,9 @@ describe("LeadForm — Record visibility: view-only submit (7d.5 / 7d.8)", () =>
   // submit payload. Foreign records must never reach the payload.
   async function captureSubmitPayload(seedEveryone: boolean): Promise<unknown> {
     const { Wrapper, captured } = buildHarness({ seedEveryone });
+    // submit resolves the persisted read model; the onSuccess handler reads its
+    // `.version`, so give it one (the test asserts on the INPUT payload).
+    captured["reports.submit"].mutationFn.mockResolvedValue({ version: 2 });
     render(
       <Wrapper>
         <LeadForm />

@@ -8,7 +8,10 @@ import {
   seedTestData,
 } from "../../test-utils/prisma-test-helper";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
-import { ReportSectionsService } from "./report-sections.service";
+import {
+  ReportSectionsService,
+  SectionVersionConflictError,
+} from "./report-sections.service";
 
 describe("ReportSectionsPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
@@ -160,6 +163,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     const service = new ReportSectionsService(repo);
     const result = await service.submitSection({
       reportSectionId: testData.section.id,
+      version: 1,
       status: "draft",
       confirmed: true,
       projectStatuses: [{ projectId: testData.project.id, status: "green" }],
@@ -276,7 +280,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
       ],
     };
 
-    const saved = await repo.saveSection(modified);
+    const saved = await repo.saveSection(modified, modified.version);
     expect(expectDefined(saved.items[0]).stageIds).toEqual(["Development"]);
     expect(expectDefined(saved.risks[0]).stageIds).toEqual(["Testing"]);
     expect(expectDefined(saved.risks[0]).severity).toBe("blocked");
@@ -381,7 +385,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
       ],
     };
 
-    const saved = await repo.saveSection(modified);
+    const saved = await repo.saveSection(modified, modified.version);
 
     expect(saved.reportSectionId).toBe(testData.section.id);
     expect(saved.projects).toHaveLength(1);
@@ -419,7 +423,7 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
       ],
     };
 
-    const saved = await repo.saveSection(modified);
+    const saved = await repo.saveSection(modified, modified.version);
     expect(saved.decisions).toHaveLength(1);
     expect(expectDefined(saved.decisions[0]).productId).toBe(
       testData.project.id,
@@ -431,5 +435,56 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
     expect(expectDefined(expectDefined(refetched).decisions[0]).productId).toBe(
       testData.project.id,
     );
+  });
+
+  // Optimistic-lock characterization, driven through the SERVICE (saveDraft)
+  // rather than the repository, so it exercises the full path that decides the
+  // expected version: the lock must compare against the CLIENT-loaded value
+  // carried in the payload, not the row the service just re-fetched. If it ever
+  // regressed to the fetched row, the second save below would silently succeed
+  // (lost update) instead of conflicting.
+  describe("optimistic lock (lost-update guard via saveDraft)", () => {
+    const draftAtVersion = (version: number) => ({
+      reportSectionId: testData.section.id,
+      version,
+      status: "draft" as const,
+      projectStatuses: [],
+      stageStatuses: [],
+      items: [],
+      risks: [],
+      decisions: [],
+    });
+
+    it("bumps the row version and returns it in the saved read model", async () => {
+      const service = new ReportSectionsService(repo);
+
+      // Seed rows are minted at version 1.
+      const saved = await service.saveDraft(draftAtVersion(1));
+
+      expect(saved.version).toBe(2);
+    });
+
+    it("rejects a second writer that carries a stale loaded version", async () => {
+      const service = new ReportSectionsService(repo);
+
+      // First writer loaded version 1, saves, and bumps the row to 2.
+      await service.saveDraft(draftAtVersion(1));
+
+      // Second writer also loaded version 1, edits offline, and saves last.
+      // The row is now at 2, so the compare-and-set finds no match.
+      await expect(service.saveDraft(draftAtVersion(1))).rejects.toThrow(
+        SectionVersionConflictError,
+      );
+    });
+
+    it("lets the second writer succeed after reloading the fresh version", async () => {
+      const service = new ReportSectionsService(repo);
+
+      await service.saveDraft(draftAtVersion(1));
+      // Reload surfaces version 2; round-tripping it clears the conflict.
+      const recovered = await service.saveDraft(draftAtVersion(2));
+
+      expect(recovered.version).toBe(3);
+    });
   });
 });
