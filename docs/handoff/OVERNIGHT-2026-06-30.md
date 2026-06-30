@@ -206,23 +206,54 @@ findings are resolved:
   target directly (strict equality vs `getCurrentEditableId` bricked the
   legitimate flow when a newer open period coexists). To keep that safe, a
   **single-active-reopen guard** (Саша's decision — option A) stops a non-admin
-  head from holding two reopened periods at once, closing the walk-back that
-  would otherwise let "OR reopened" rewrite historical snapshots. Admin exempt.
-  New `getReopenedNonArchivedId` port method. Proven by 3 unit tests (happy-path
+  head from holding two reopened periods at once. Admin exempt. New
+  `getReopenedNonArchivedId` port method. Proven by 3 unit tests (happy-path
   republish, walk-back rejection, admin bypass) + a real-DB integration test
   (`period.single-active-reopen.integration.test.ts`, 4/4). Full monorepo gate
   green (typecheck + lint `--max-warnings 0` + 1352-test unit suite + the #14
   integration tests run against `customreport_test`).
 
+  > **CORRECTION (Codex review of `fb7be80c`, post-commit).** The guard
+  > **NARROWS but does NOT close** the walk-back — the #14 commit message and an
+  > earlier draft of this note overclaimed "closes." Codex found the
+  > **archive-assisted walk-back**: `archiveReport` is a head-accessible,
+  > unguarded mutation (`trpc.router.ts:1791`, `headProcedure`,
+  > `adminService.archivePeriod(any reportId)`), so a head can
+  > `reopen(P3) → republish(P3) → archiveReport(P3)` — which uncovers P2 as the
+  > new `getLatestPublishedNonArchivedId` while leaving ZERO reopened rows — then
+  > `reopen(P2) → republish → archive`, walking back through all history and
+  > rewriting each snapshot. The guard can't see it (one reopened at a time is
+  > respected at every step). This is NOT closeable inside #14's reopen/publish
+  > surface — the root is the unguarded `archiveReport`. **#14 still ships: it is
+  > a net improvement** (pre-#14, reopen had no checks at all → historical reopen
+  > was a trivial one-step exploit; #14 forces the archive chain). The fix lives
+  > in the follow-up below, NOT in #14.
+
 Two follow-ups remain (NOT blockers, NOT in #14's scope):
 
-1. **`scope-review-publish-authz` (new change).** `review.publish`
-   (`trpc.router.ts:707`, `headProcedure`) → `publicationService.publishReport`
-   still guards only `status === "published"` — no archived / active-target
-   guard. It publishes `session.activeReportId` (not arbitrary), no prod web
-   client calls it, but a head can still publish their own stale/archived session
-   report. Fix: fold the same guards into `publishReport`, or route
-   `review.publish` through the hardened `PeriodService.publishPeriod`.
+1. **`harden-head-lifecycle-mutation-authz` (new change — consolidates the
+   head-accessible state mutations that lack an active-target/scope guard).**
+   One class of bug; fix together:
+
+   - **`archiveReport` / `unarchiveReport`** (`trpc.router.ts:1791` / ~`:1807`,
+     `headProcedure`) → `adminService.archivePeriod`/`unarchivePeriod(any
+reportId)` with NO guard. This is the root of the **archive-assisted
+     walk-back** above. A head can archive/unarchive any period. Needs an
+     active-target / non-historical guard (or admin-only for arbitrary targets).
+   - **`review.publish`** (`trpc.router.ts:707`, `headProcedure`) →
+     `publicationService.publishReport` guards only `status === "published"` — no
+     archived / active-target guard. Publishes `session.activeReportId` (not
+     arbitrary), no prod web client calls it, but a head can still publish their
+     own stale/archived session report. Fold the same guards in, or route through
+     the hardened `PeriodService.publishPeriod`.
+   - **MAJOR #2 (Codex):** `publishPeriod` skips the active-target check for ANY
+     `periodStatus==='reopened'` target, so if an admin reopened a historical P2
+     while P3 is current editable, a head can `period.publish(P2)`. Low severity
+     (needs a prior admin reopen) but the same class — tighten here too.
+     The common invariant to design: a non-admin head may only publish / reopen /
+     archive / unarchive at the time-frontier (the current editable period or the
+     single period it just reopened), never reach historical periods by chaining
+     these mutations.
 
 2. **Integration-fixture debt from #11 (`add-section-optimistic-lock`).** Three
    integration test files are red — NOT caused by #14, NOT in the pre-push gate
