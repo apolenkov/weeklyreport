@@ -11,6 +11,7 @@ import {
 import type {
   AutoPublishResult,
   PublicationRepository,
+  PublishReportOutcome,
 } from "./publication.service";
 
 @Injectable()
@@ -33,41 +34,85 @@ export class PublicationPrismaRepository implements PublicationRepository {
   }
 
   async saveAssembledReport(report: AssembledReport): Promise<AssembledReport> {
-    // The lifecycle field set comes from the single transition builder, never
-    // hand-assembled here. A draft save (e.g. a section-update through
+    // Draft-save path only (e.g. a section-update through
     // PublicationService.updateSectionForReview, which rejects already-published
-    // reports) maps to `open`; a manual publish maps to `publish`. The auto path
-    // does not route here — see `saveAutoPublishedReport`.
-    //
-    // The transition builder writes `periodStatus="published"` alongside
-    // `status`/`periodState`. A prior hand-assembled write set `status` and
-    // `periodState` but never `periodStatus`, leaving it at the default
-    // `periodStatus="open"` — invisible to viewers (weekly-report.service
-    // rejects non-published periodStatus) and unable to serve its snapshot.
-    const lifecycle =
-      report.status === "published"
-        ? this.publishLifecycle(report, false)
-        : buildTransition("open", {});
-
+    // reports). The lifecycle field set comes from the single transition builder
+    // via the `open` transition, never hand-assembled here. Manual publish goes
+    // through `publishAssembledReport` and the auto path through
+    // `saveAutoPublishedReport`, so neither publish writer can be reached here
+    // without its compare-and-set guard.
     await this.prisma.report.update({
       where: { id: report.reportId },
-      // Snapshot + lifecycle share one `update`, so they stay atomic (no
-      // separate round-trip can tear them apart).
+      data: { ...buildTransition("open", {}) },
+    });
+
+    return this.readAssembled(report.reportId);
+  }
+
+  async publishAssembledReport(
+    report: AssembledReport,
+  ): Promise<PublishReportOutcome> {
+    const before = await this.prisma.report.findUnique({
+      where: { id: report.reportId },
+      select: { periodStatus: true },
+    });
+    if (!before) {
+      throw new Error(`Report ${report.reportId} was not found.`);
+    }
+
+    // Fast-path: a truly-published period is rejected. Keyed on `periodStatus`,
+    // so a reopened period (periodStatus="reopened") is NOT short-circuited and
+    // stays publishable.
+    if (before.periodStatus === "published") {
+      return {
+        status: "already-published",
+        report: await this.readAssembled(report.reportId),
+      };
+    }
+
+    // Compare-and-set: the guarded predicate lets exactly one of two concurrent
+    // publishes win. Both clear the fast-path read above; this predicate
+    // transitions exactly one and the loser matches zero rows. The lifecycle
+    // field set comes from the transition builder (preserving the single
+    // transition-writer invariant) and the snapshot rides the same statement,
+    // so the state and snapshot stay atomic — the established
+    // `saveAutoPublishedReport` pattern.
+    const { count } = await this.prisma.report.updateMany({
+      where: {
+        id: report.reportId,
+        periodStatus: { not: "published" },
+      },
       data: {
-        ...lifecycle,
-        ...(report.status === "published"
-          ? { publishedSnapshot: toPublishedSnapshotJson(report) }
-          : {}),
+        ...this.publishLifecycle(report, false),
+        publishedSnapshot: toPublishedSnapshotJson(report),
       },
     });
 
+    const saved = await this.readAssembled(report.reportId);
+
+    // count === 0 → the predicate matched no row: a concurrent publish
+    // committed first. The re-read reflects its published snapshot, so
+    // reporting this as idempotent success ("raced") is correct — this call
+    // wrote nothing.
+    if (count === 0) {
+      return { status: "raced", report: saved };
+    }
+
+    return {
+      status: "transitioned",
+      priorPeriodStatus: before.periodStatus,
+      report: saved,
+    };
+  }
+
+  private async readAssembled(reportId: string): Promise<AssembledReport> {
     const saved = await this.prisma.report.findUnique({
-      where: { id: report.reportId },
+      where: { id: reportId },
       include: reportFullIncludeForSnapshot,
     });
 
     if (!saved) {
-      throw new Error(`Report ${report.reportId} was not found after save.`);
+      throw new Error(`Report ${reportId} was not found after save.`);
     }
 
     return buildAssembledReportFromPrismaRow(saved);

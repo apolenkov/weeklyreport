@@ -247,6 +247,38 @@ describe("lifecycle-write-gate (refactor-period-transition-writer)", () => {
     ).toHaveLength(0);
   });
 
+  it("self-test: report.updateMany lifecycle writes are in scope", () => {
+    // The guarded publish compare-and-set is a `report.updateMany`. Prove the
+    // gate covers that write method: an inline lifecycle key on updateMany is
+    // flagged, while a buildTransition spread (the compliant publish shape) is
+    // not.
+    const offending = `
+      async function bad(prisma: any) {
+        await prisma.report.updateMany({
+          where: { id: "x", periodStatus: { not: "published" } },
+          data: { periodStatus: "published", status: "published" },
+        });
+      }
+    `;
+    expect(
+      findLifecycleViolationsInSource(offending, "synthetic.ts")
+        .map((v) => v.field)
+        .sort(),
+    ).toEqual(["periodStatus", "status"]);
+
+    const compliant = `
+      async function good(prisma: any) {
+        await prisma.report.updateMany({
+          where: { id: "x", periodStatus: { not: "published" } },
+          data: { ...buildTransition("publish", { now, userId }), publishedSnapshot },
+        });
+      }
+    `;
+    expect(
+      findLifecycleViolationsInSource(compliant, "synthetic.ts"),
+    ).toHaveLength(0);
+  });
+
   it("self-test: a call-site marker exempts the write", () => {
     const exempted = `
       async function restore(tx: any) {
