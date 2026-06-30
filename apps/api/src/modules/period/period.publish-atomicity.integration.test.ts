@@ -76,12 +76,40 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
     expect(reloaded?.publishedSnapshot).not.toBeNull();
   });
 
-  it("reports no transition for an already-published period", async () => {
+  it("reports no transition (raced) for an already-published period", async () => {
     await repository.publishPeriod(REPORT, USER);
 
     await expect(repository.publishPeriod(REPORT, USER)).resolves.toEqual({
       transitioned: false,
+      reason: "raced",
     });
+  });
+
+  it("fails closed (reason archived) for a period archived inside the window", async () => {
+    // The archive transition leaves periodStatus open and only flips
+    // archived/periodState, so the pre-write archived check the service runs
+    // cannot catch an archive that lands AFTER it. The `archived: false`
+    // predicate is the only point that closes the race: a zero-row match whose
+    // re-read shows a still-unpublished row means the period was archived in the
+    // window, so the repo reports reason "archived" and writes nothing. Before
+    // the fix the predicate matched and the archived row was published.
+    await prisma.report.update({
+      where: { id: REPORT },
+      data: { archived: true, periodState: "archived" },
+    });
+
+    await expect(repository.publishPeriod(REPORT, USER)).resolves.toEqual({
+      transitioned: false,
+      reason: "archived",
+    });
+
+    const reloaded = await prisma.report.findUnique({ where: { id: REPORT } });
+    expect(reloaded?.archived).toBe(true);
+    expect(reloaded?.status).toBe("draft");
+    expect(reloaded?.periodStatus).toBe("open");
+    expect(reloaded?.periodStatus).not.toBe("published");
+    expect(reloaded?.periodState).toBe("archived");
+    expect(reloaded?.publishedSnapshot).toBeNull();
   });
 
   it("transitions exactly once under two concurrent publishes", async () => {

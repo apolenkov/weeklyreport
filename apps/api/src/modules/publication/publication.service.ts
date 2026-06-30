@@ -36,6 +36,22 @@ export class PublicationAccessError extends Error {
 }
 
 /**
+ * Thrown when a manual publish targets a report archived inside its read→write
+ * window: the guarded compare-and-set matched zero rows and the re-read showed
+ * the row archived (not concurrently published). A separate class from
+ * `PublicationAccessError` so it maps to FORBIDDEN (an archived target is an
+ * authorization denial), mirroring `PeriodScopeError` on the period path, and
+ * NOT to the CONFLICT that `PublicationAccessError` ("already published") uses.
+ * Extends `Error` directly so the error-mapper table matches it on its own row.
+ */
+export class PublicationArchivedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PublicationArchivedError";
+  }
+}
+
+/**
  * Thrown by `getAssembledReport` when the requested report row is absent. A
  * missing resource, so the tRPC error-mapper renders it NOT_FOUND (distinct
  * from `PublicationAccessError` → CONFLICT). Its three in-service callers
@@ -65,8 +81,9 @@ export type AutoPublishResult =
  * prior `periodStatus` so the caller labels the transition counter with the
  * actual source state (`open` vs `reopened`). `already-published` is a truly
  * published period (rejected); `raced` is a period a concurrent publish
- * transitioned out from under this call (idempotent success). All three carry
- * the current assembled report.
+ * transitioned out from under this call (idempotent success); `archived` is a
+ * period archived inside the read→write window (rejected, fail closed). All
+ * carry the current assembled report.
  */
 export type PublishReportOutcome =
   | {
@@ -75,6 +92,7 @@ export type PublishReportOutcome =
       readonly report: AssembledReport;
     }
   | { readonly status: "already-published"; readonly report: AssembledReport }
+  | { readonly status: "archived"; readonly report: AssembledReport }
   | { readonly status: "raced"; readonly report: AssembledReport };
 
 export interface PublicationRepository {
@@ -265,6 +283,13 @@ export class PublicationService {
     // truly-published one is rejected.
     if (outcome.status === "already-published") {
       throw new PublicationAccessError("Report has already been published.");
+    }
+    if (outcome.status === "archived") {
+      // The period was archived inside the read→write window — the guarded
+      // compare-and-set excludes archived rows, so the write matched none and
+      // the re-read showed the row archived. Fail closed (FORBIDDEN); never a
+      // silent idempotent success that would hide the contradiction.
+      throw new PublicationArchivedError("Cannot publish an archived report.");
     }
     if (outcome.status === "raced") {
       // A concurrent publish won the compare-and-set: the period is published.

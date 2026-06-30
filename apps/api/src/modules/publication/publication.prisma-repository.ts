@@ -81,6 +81,7 @@ export class PublicationPrismaRepository implements PublicationRepository {
       where: {
         id: report.reportId,
         periodStatus: { not: "published" },
+        archived: false,
       },
       data: {
         ...this.publishLifecycle(report, false),
@@ -90,12 +91,22 @@ export class PublicationPrismaRepository implements PublicationRepository {
 
     const saved = await this.readAssembled(report.reportId);
 
-    // count === 0 → the predicate matched no row: a concurrent publish
-    // committed first. The re-read reflects its published snapshot, so
-    // reporting this as idempotent success ("raced") is correct — this call
-    // wrote nothing.
+    // count === 0 → the predicate matched no row, for one of two reasons. A
+    // direct re-read (this path has no surrounding transaction) disambiguates:
+    // a now-published row means a concurrent publish committed first
+    // (idempotent "raced" success — this call wrote nothing); otherwise the
+    // period was archived inside the read→write window, so fail closed
+    // ("archived"). The contradictory archived-and-published row is never
+    // written — `archived: false` in the predicate guarantees it.
     if (count === 0) {
-      return { status: "raced", report: saved };
+      const current = await this.prisma.report.findUnique({
+        where: { id: report.reportId },
+        select: { periodStatus: true },
+      });
+      if (current?.periodStatus === "published") {
+        return { status: "raced", report: saved };
+      }
+      return { status: "archived", report: saved };
     }
 
     return {

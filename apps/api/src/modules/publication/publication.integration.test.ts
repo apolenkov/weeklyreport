@@ -177,6 +177,34 @@ describe("PublicationPrismaRepository (integration)", () => {
     expect(expectDefined(reloaded).periodStatus).toBe("published");
   });
 
+  it("publishAssembledReport fails closed (archived) for a period archived inside the window", async () => {
+    // Assemble the publish payload as the head would, THEN an admin archives the
+    // period (archive leaves status="draft"/periodStatus="open", flipping only
+    // archived/periodState). The pre-read above cannot catch this; the
+    // `archived: false` predicate is the only point that closes the race. The
+    // compare-and-set must match zero rows, the re-read shows a still-unpublished
+    // row, and the outcome is "archived" — never promoting the archived row to
+    // published. Before the fix the predicate matched and published it.
+    const payload = await publishPayload(testData.head.id);
+
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: { archived: true, periodState: "archived" },
+    });
+
+    const outcome = await repo.publishAssembledReport(payload);
+
+    expect(outcome.status).toBe("archived");
+    const reloaded = await prisma.report.findUnique({
+      where: { id: testData.report.id },
+    });
+    expect(expectDefined(reloaded).status).toBe("draft");
+    expect(expectDefined(reloaded).archived).toBe(true);
+    expect(expectDefined(reloaded).periodState).toBe("archived");
+    expect(expectDefined(reloaded).periodStatus).not.toBe("published");
+    expect(expectDefined(reloaded).publishedSnapshot).toBeNull();
+  });
+
   it("saveAutoPublishedReport writes the full autoPublish set for a non-archived draft", async () => {
     const assembled = await repo.getAssembledReport(testData.report.id);
     expect(assembled).not.toBeNull();
