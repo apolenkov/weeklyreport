@@ -61,18 +61,62 @@ export interface DevLoginDeps {
 const readQueryParam = (value: unknown): string | undefined =>
   typeof value === "string" ? value : undefined;
 
+// Same-origin redirect validation. ONE WHATWG `new URL` parse against the app
+// origin is the gate: it normalizes the `/\evil.com` backslash bypass (which
+// resolves off-origin) that the old `startsWith('/') && !includes('://')` guard
+// missed, and returns ONLY pathname+search+hash so a caller rebuilds the
+// absolute URL from the SAME parse — closing the concatenation hole where
+// `redirect=@evil.com` made `frontendUrl + value` reparse to host evil.com.
+// Returns null when the value is absent, off-origin, or malformed; the leading
+// `//` / `\` rejections are cheap defence-in-depth, not the primary gate.
+export function safeRedirectPath(
+  candidate: string | undefined,
+  frontendUrl: string,
+): string | null {
+  if (candidate === undefined) return null;
+  if (/^[\\/]{2}/.test(candidate) || candidate.startsWith("\\")) return null;
+  try {
+    const { origin } = new URL(frontendUrl);
+    const resolved = new URL(candidate, origin);
+    if (resolved.origin !== origin) return null;
+    return `${resolved.pathname}${resolved.search}${resolved.hash}`;
+  } catch {
+    return null;
+  }
+}
+
+// Build the absolute dev-login redirect URL, validating and constructing with
+// the same parse (see safeRedirectPath) so a value cannot pass validation yet
+// resolve to a foreign host at the sink. Falls back to fallbackPath when the
+// candidate is rejected.
+export function resolveDevLoginRedirectUrl(
+  candidate: string | undefined,
+  fallbackPath: string,
+  frontendUrl: string,
+): string {
+  const safePath = safeRedirectPath(candidate, frontendUrl) ?? fallbackPath;
+  return new URL(safePath, frontendUrl).toString();
+}
+
 /**
  * Dev-mode shortcut for GET /auth/saml/login: redirect to /auth/dev-login as
  * admin (no real Keycloak running locally), preserving a safe relative `next`.
  */
-function handleDevSamlLoginRedirect(req: Request, res: Response): void {
+function handleDevSamlLoginRedirect(
+  req: Request,
+  res: Response,
+  frontendUrl: string,
+): void {
   const params = new URLSearchParams({
     role: DEV_SAML_LOGIN_ROLE,
     email: DEV_LOGIN_EMAIL_BY_ROLE[DEV_SAML_LOGIN_ROLE],
   });
-  const next = readQueryParam(req.query.next);
-  if (next && next.startsWith("/") && !next.includes("://")) {
-    params.set("redirect", next);
+  const safeNext = safeRedirectPath(
+    readQueryParam(req.query.next),
+    frontendUrl,
+  );
+  if (safeNext !== null) {
+    params.set("redirect", safeNext);
   }
   res.redirect(`/auth/dev-login?${params.toString()}`);
 }
@@ -146,10 +190,13 @@ function createDevLoginHandler(deps: DevLoginDeps): RequestHandler {
       res.setHeader("Set-Cookie", setCookieHeader);
       loginAttemptsTotal.inc({ method: "dev-login", outcome: "success" });
 
-      const redirectPath =
-        readQueryParam(req.query.redirect) ??
-        DEV_LOGIN_REDIRECT_BY_ROLE[validRole];
-      res.redirect(`${deps.frontendUrl}${redirectPath}`);
+      res.redirect(
+        resolveDevLoginRedirectUrl(
+          readQueryParam(req.query.redirect),
+          DEV_LOGIN_REDIRECT_BY_ROLE[validRole],
+          deps.frontendUrl,
+        ),
+      );
     } catch (error) {
       loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });
       next(error);
@@ -167,6 +214,8 @@ export function mountDevLoginRoutes(
   expressApp: Express,
   deps: DevLoginDeps,
 ): void {
-  expressApp.get("/auth/saml/login", handleDevSamlLoginRedirect);
+  expressApp.get("/auth/saml/login", (req, res) => {
+    handleDevSamlLoginRedirect(req, res, deps.frontendUrl);
+  });
   expressApp.get("/auth/dev-login", createDevLoginHandler(deps));
 }

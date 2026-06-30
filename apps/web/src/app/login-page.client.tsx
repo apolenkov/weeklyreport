@@ -13,6 +13,7 @@ import { PulseBackground } from "../components/landing/pulse-background";
 import { PulseMark } from "../components/landing/pulse-mark";
 import { TaglineCycler } from "../components/landing/tagline-cycler";
 import { type LastRoleRecord, readLastRole } from "../lib/last-role";
+import { sanitizeNext } from "../lib/safe-next";
 import { useTRPC } from "../lib/trpc-context";
 
 const AUTH_STUB =
@@ -92,19 +93,6 @@ function defaultRedirectFor(role: Role | null | undefined): string {
   if (!role) return FALLBACK_REDIRECT;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- role may be a persisted/retired value absent from DEFAULT_FOR_ROLE at runtime
   return DEFAULT_FOR_ROLE[role] ?? FALLBACK_REDIRECT;
-}
-
-/**
- * Reject open-redirect attempts. The `next` query param must be a
- * same-origin relative path: must start with '/' and must not contain
- * '://' (which would indicate a scheme-relative URL like //evil.com).
- */
-function sanitizeNext(value: string | null, fallback: string): string {
-  if (!value) return fallback;
-  if (!value.startsWith("/")) return fallback;
-  if (value.includes("://")) return fallback;
-  if (value.startsWith("//")) return fallback;
-  return value;
 }
 
 interface LoginPageClientProps {
