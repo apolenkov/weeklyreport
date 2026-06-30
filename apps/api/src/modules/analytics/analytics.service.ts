@@ -11,20 +11,32 @@ import {
   trafficLightHistoryInputSchema,
   type TrafficLightHistoryOutput,
   trafficLightHistoryOutputSchema,
+  type UserSession,
 } from "@customreport/shared";
+
+import { scopeDiscriminator } from "../../lib/group-scope.js";
 
 /**
  * AnalyticsRepository contract — Prisma-free at the service boundary so the
  * domain stays test-friendly. The Prisma implementation lives in
  * analytics.prisma-repository.ts.
+ *
+ * Every read takes the caller `session`: analytics aggregates the contents of a
+ * unified period's sections, which span all groups, so each query MUST be bound
+ * to the caller's group scope (see analytics.prisma-repository.ts).
  */
 export interface AnalyticsRepository {
   trafficLightHistory(
     input: TrafficLightHistoryInput,
+    session: UserSession,
   ): Promise<TrafficLightHistoryOutput>;
-  leadVelocity(input: LeadVelocityInput): Promise<LeadVelocityOutput>;
+  leadVelocity(
+    input: LeadVelocityInput,
+    session: UserSession,
+  ): Promise<LeadVelocityOutput>;
   periodComparison(
     input: PeriodComparisonInput,
+    session: UserSession,
   ): Promise<PeriodComparisonOutput>;
 }
 
@@ -64,31 +76,36 @@ export class AnalyticsService {
 
   async trafficLightHistory(
     input: TrafficLightHistoryInput,
+    session: UserSession,
   ): Promise<TrafficLightHistoryOutput> {
     const parsed = trafficLightHistoryInputSchema.parse(input);
-    const key = `${PREFIX_HISTORY}${stableHash(parsed)}`;
+    const key = `${PREFIX_HISTORY}${scopeDiscriminator(session)}:${stableHash(parsed)}`;
     const result = await this.cache.getOrCompute(key, () =>
-      this.repository.trafficLightHistory(parsed),
+      this.repository.trafficLightHistory(parsed, session),
     );
     return trafficLightHistoryOutputSchema.parse(result);
   }
 
-  async leadVelocity(input: LeadVelocityInput): Promise<LeadVelocityOutput> {
+  async leadVelocity(
+    input: LeadVelocityInput,
+    session: UserSession,
+  ): Promise<LeadVelocityOutput> {
     const parsed = leadVelocityInputSchema.parse(input);
-    const key = `${PREFIX_VELOCITY}${stableHash(parsed)}`;
+    const key = `${PREFIX_VELOCITY}${scopeDiscriminator(session)}:${stableHash(parsed)}`;
     const result = await this.cache.getOrCompute(key, () =>
-      this.repository.leadVelocity(parsed),
+      this.repository.leadVelocity(parsed, session),
     );
     return leadVelocityOutputSchema.parse(result);
   }
 
   async periodComparison(
     input: PeriodComparisonInput,
+    session: UserSession,
   ): Promise<PeriodComparisonOutput> {
     const parsed = periodComparisonInputSchema.parse(input);
-    const key = `${PREFIX_COMPARISON}${stableHash(parsed)}`;
+    const key = `${PREFIX_COMPARISON}${scopeDiscriminator(session)}:${stableHash(parsed)}`;
     const result = await this.cache.getOrCompute(key, () =>
-      this.repository.periodComparison(parsed),
+      this.repository.periodComparison(parsed, session),
     );
     return periodComparisonOutputSchema.parse(result);
   }

@@ -102,6 +102,23 @@ export function guardGroupScope(
   }
 }
 
+/**
+ * Stable cache-partition key for a session's group scope, derived from the SAME
+ * source as {@link groupScopeFilter} so the two can never disagree. `admin` is a
+ * distinct literal (unfiltered); every other session maps to its sorted
+ * authorised group ids joined by `|` (a delimiter that cannot appear in a UUID,
+ * so distinct group sets never collide). A viewer with no access yields `""` —
+ * itself a distinct partition from admin and from any granted set.
+ *
+ * Consumers (e.g. the analytics cache) prepend this to a per-call key so a
+ * result computed for one scope is never served from cache to another.
+ */
+export function scopeDiscriminator(session: UserSession): string {
+  if (session.role === "admin") return "admin";
+  // eslint-disable-next-line sonarjs/no-alphabetical-sort -- UUID ids; default code-unit sort is deterministic across locales (localeCompare is not), which a cache key requires
+  return [...computeAllowedGroupIds(session)].sort().join("|");
+}
+
 function computeAllowedGroupIds(session: UserSession): string[] {
   if (session.role === "head" || session.role === "lead") {
     return session.reportingGroupId ? [session.reportingGroupId] : [];

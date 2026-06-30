@@ -6,10 +6,12 @@ import type {
   TrafficLightCell,
   TrafficLightHistoryInput,
   TrafficLightHistoryOutput,
+  UserSession,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { groupScopeFilter, guardGroupScope } from "../../lib/group-scope.js";
 import type { AnalyticsRepository } from "./analytics.service.js";
 
 /**
@@ -32,18 +34,32 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
 
   async trafficLightHistory(
     input: TrafficLightHistoryInput,
+    session: UserSession,
   ): Promise<TrafficLightHistoryOutput> {
+    guardGroupScope(session);
+    // Load-bearing: a Report is a unified period holding sections from EVERY
+    // group, and this method aggregates over the included sections — so the
+    // scope must filter the nested `include.sections.where`, not only which
+    // reports return. Admin → `{}` → omitted (sees all). Mirrors
+    // weekly-report.prisma-repository.ts.
+    const scope = groupScopeFilter(session, "reportSection");
+    const scoped = Object.keys(scope).length > 0;
+    const leadFilter = input.leadId ? { authorId: input.leadId } : {};
+
     const reports = await this.prisma.report.findMany({
       where: {
         ...PUBLISHED_FLOOR,
         periodStart: { gte: new Date(input.periodFrom) },
         periodEnd: { lte: new Date(input.periodTo) },
-        ...(input.leadId
-          ? { sections: { some: { authorId: input.leadId } } }
+        // Drop periods with no in-scope (and, if filtered, no matching-lead)
+        // section. Omitted only when neither a scope nor a lead filter applies.
+        ...(scoped || input.leadId
+          ? { sections: { some: { ...leadFilter, ...scope } } }
           : {}),
       },
       include: {
         sections: {
+          ...(scoped ? { where: scope } : {}),
           include: {
             projectStatuses: { include: { project: true } },
           },
@@ -88,16 +104,26 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
     return { periods, rows };
   }
 
-  async leadVelocity(input: LeadVelocityInput): Promise<LeadVelocityOutput> {
+  async leadVelocity(
+    input: LeadVelocityInput,
+    session: UserSession,
+  ): Promise<LeadVelocityOutput> {
+    guardGroupScope(session);
+    const scope = groupScopeFilter(session, "reportSection");
+    const scoped = Object.keys(scope).length > 0;
+
     const reports = await this.prisma.report.findMany({
       where: {
         ...PUBLISHED_FLOOR,
         periodStart: { gte: new Date(input.periodFrom) },
         periodEnd: { lte: new Date(input.periodTo) },
+        // Drop periods with no in-scope section (admin → omitted).
+        ...(scoped ? { sections: { some: scope } } : {}),
       },
       include: {
         sections: {
-          where: { status: "submitted" },
+          // Preserve the submitted filter; add the group scope for non-admin.
+          where: { status: "submitted", ...scope },
           include: { author: true },
         },
       },
@@ -116,12 +142,22 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
 
   async periodComparison(
     input: PeriodComparisonInput,
+    session: UserSession,
   ): Promise<PeriodComparisonOutput> {
+    guardGroupScope(session);
+    const scope = groupScopeFilter(session, "reportSection");
+    const scoped = Object.keys(scope).length > 0;
+
     const fetchOne = (periodEnd: string) =>
       this.prisma.report.findFirst({
-        where: { ...PUBLISHED_FLOOR, periodEnd: new Date(periodEnd) },
+        where: {
+          ...PUBLISHED_FLOOR,
+          periodEnd: new Date(periodEnd),
+          ...(scoped ? { sections: { some: scope } } : {}),
+        },
         include: {
           sections: {
+            ...(scoped ? { where: scope } : {}),
             include: {
               projectStatuses: { include: { project: true } },
               risks: true,
