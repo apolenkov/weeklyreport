@@ -9,6 +9,7 @@ import {
 } from "@customreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { AdminGroupProductConflictError } from "./admin-shared.js";
 
 /**
  * UFB-054 (Phase 56-B): Group ↔ Product M:M edge mutations + reads, extracted
@@ -35,7 +36,7 @@ export async function attachProductToGroup(
         where: { id: existing.groupId },
         select: { name: true },
       });
-      throw new Error(
+      throw new AdminGroupProductConflictError(
         `Product is already attached to ${currentGroup?.name ?? "another group"}. Detach it there before attaching it to another group.`,
       );
     }

@@ -36,6 +36,20 @@ export class PublicationAccessError extends Error {
 }
 
 /**
+ * Thrown by `getAssembledReport` when the requested report row is absent. A
+ * missing resource, so the tRPC error-mapper renders it NOT_FOUND (distinct
+ * from `PublicationAccessError` → CONFLICT). Its three in-service callers
+ * (`publishReport`, `publishAuto`, `updateSectionForReview`) propagate it, so a
+ * missing report surfaces as NOT_FOUND instead of a false 500.
+ */
+export class PublicationNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PublicationNotFoundError";
+  }
+}
+
+/**
  * Outcome of an auto-publish attempt. The skip cannot be inferred from a
  * returned report — `AssembledReport` carries `status` but neither `archived`
  * nor `periodState` — so a period archived between candidate selection and the
@@ -144,7 +158,9 @@ export class PublicationService {
     const report = await this.repository.getAssembledReport(activeReportId);
 
     if (!report) {
-      throw new Error(`Report ${activeReportId} was not found.`);
+      throw new PublicationNotFoundError(
+        `Report ${activeReportId} was not found.`,
+      );
     }
 
     const sortedSections = [...report.sections].sort(compareSections);

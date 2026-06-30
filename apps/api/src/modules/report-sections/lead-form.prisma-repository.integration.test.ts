@@ -8,6 +8,7 @@ import {
   seedTestData,
 } from "../../test-utils/prisma-test-helper";
 import { LeadFormPrismaRepository } from "./lead-form.prisma-repository";
+import { LeadFormDomainError } from "./lead-form-shared";
 
 describe("LeadFormPrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
@@ -150,6 +151,23 @@ describe("LeadFormPrismaRepository (integration)", () => {
     expect(expectDefined(risks[0]).stageNames).toEqual(["Dev"]);
     expect(decisions).toHaveLength(1);
     expect(expectDefined(decisions[0]).text).toBe("Source decision");
+  });
+
+  it("fillFromSection throws LeadFormDomainError when the source section is absent on the copy re-read (TOCTOU)", async () => {
+    // The service prechecks source existence, but the repository re-reads the
+    // source inside the copy; if it vanished between the two, the re-read must
+    // surface NOT_FOUND (LeadFormDomainError), not a bare Error (→ 500). A valid
+    // target with its current version passes the compare-and-set, then the
+    // missing source trips the typed throw.
+    const missingSourceId = "99999999-9999-4999-8999-999999999999";
+
+    await expect(
+      repo.fillFromSection(
+        testData.section.id,
+        missingSourceId,
+        testData.section.version,
+      ),
+    ).rejects.toBeInstanceOf(LeadFormDomainError);
   });
 
   // -----------------------------------------------------------------------
