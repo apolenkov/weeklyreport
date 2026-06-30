@@ -35,17 +35,34 @@ export class PublicationAccessError extends Error {
   }
 }
 
+/**
+ * Outcome of an auto-publish attempt. The skip cannot be inferred from a
+ * returned report — `AssembledReport` carries `status` but neither `archived`
+ * nor `periodState` — so a period archived between candidate selection and the
+ * guarded write must be signalled explicitly as `{ published: false }` rather
+ * than derived from the report's shape.
+ */
+export type AutoPublishResult =
+  | { readonly published: true; readonly report: AssembledReport }
+  | { readonly published: false };
+
 export interface PublicationRepository {
   getAssembledReport(activeReportId: string): Promise<AssembledReport | null>;
   /**
-   * Persist the assembled report. `options.auto` selects the `autoPublish`
-   * transition (scheduler-driven, `publishedById=null`, `autoPublished=true`)
-   * over the manual `publish` transition; it is ignored for draft saves.
+   * Persist the assembled report through the manual `publish` (head-driven) or
+   * `open` (draft save) transition. The auto path does NOT route here — it uses
+   * {@link saveAutoPublishedReport} so the compare-and-set write guard cannot be
+   * bypassed.
    */
-  saveAssembledReport(
-    report: AssembledReport,
-    options?: { auto?: boolean },
-  ): Promise<AssembledReport>;
+  saveAssembledReport(report: AssembledReport): Promise<AssembledReport>;
+  /**
+   * Persist a scheduler-driven auto-publish via the `autoPublish` transition,
+   * guarded by a compare-and-set that only writes when the target row is still
+   * `status="draft"` and `archived=false`. A zero-row match (the period was
+   * archived or already published after candidate selection) writes nothing and
+   * returns `{ published: false }`.
+   */
+  saveAutoPublishedReport(report: AssembledReport): Promise<AutoPublishResult>;
 }
 
 function compareSections(
@@ -217,29 +234,36 @@ export class PublicationService {
   }
 
   /**
-   * UFB-049 / Phase 50-B: scheduler-driven auto-publish. Same effect as
-   * {@link publishReport} but no human actor — `publishedById=null` and
-   * `publishedByName='system'`. Idempotent: re-publishing an already-
-   * published report returns the existing AssembledReport without writing
-   * (the autopublish scheduler queries `status='draft'`, so this branch
-   * is defense-in-depth against a race where two ticks dispatch
-   * concurrently).
+   * Scheduler-driven auto-publish. Same effect as {@link publishReport} but no
+   * human actor — `publishedById=null` and `publishedByName='system'`.
    *
-   * Missing sections are NOT auto-stubbed in the DB — they render as
-   * "Не сдал" at read time from the head dashboard. This keeps the
-   * write path narrow and avoids polluting history with empty sections.
+   * Returns a discriminated outcome, not the bare report: the underlying write
+   * is a compare-and-set guarded on the row still being `status="draft"` and
+   * `archived=false`, so a period archived between the scheduler's candidate
+   * selection and this write matches zero rows and is SKIPPED. The skip is
+   * signalled as `{ published: false }` (it cannot be inferred from a re-read —
+   * `AssembledReport` exposes neither `archived` nor `periodState`), and the
+   * publish success side-effects below — KPI metrics and ingestion enqueue —
+   * fire only on the published branch. The scheduler suppresses its own
+   * side-effects (audit, missing-section count, periodIds) on the same signal.
+   *
+   * Idempotent: an already-published report short-circuits to a published
+   * outcome without a second write or a duplicate metric bump (defense-in-depth
+   * against two ticks racing; the scheduler's candidate query is `status='draft'`
+   * so this is rarely reached).
+   *
+   * Missing sections are NOT auto-stubbed in the DB — they render as "Не сдал"
+   * at read time from the head dashboard, keeping the write path narrow.
    */
-  async publishAuto(activeReportId: string): Promise<AssembledReport> {
+  async publishAuto(activeReportId: string): Promise<AutoPublishResult> {
     const report = await this.getAssembledReport(activeReportId);
 
     if (report.status === "published") {
-      // Idempotent: return the existing assembled report so the scheduler
-      // can treat a race as a no-op without ad-hoc try/catch.
-      return report;
+      return { published: true, report };
     }
 
     this.logger.info("auto-publishing report", { activeReportId });
-    const saved = await this.repository.saveAssembledReport(
+    const result = await this.repository.saveAutoPublishedReport(
       assembledReportSchema.parse({
         ...report,
         status: "published",
@@ -247,24 +271,30 @@ export class PublicationService {
         publishedById: null,
         publishedByName: "system",
       }),
-      // Scheduler-driven: routes through the `autoPublish` transition so
-      // `autoPublished=true` and `periodStatus="published"` are written
-      // atomically with `status`/`periodState` — no separate round-trip.
-      { auto: true },
     );
-    // Phase 52-A: same telemetry as publishReport. Same `state` label so
-    // ops can aggregate without `or` predicates — the manual-vs-auto
-    // distinction is recovered by the period_state_transitions_total
-    // panel paired with publishedById nullness.
+
+    if (!result.published) {
+      // Compare-and-set matched zero rows: the period was archived (or already
+      // published) after candidate selection. Expected no-op — emit no metrics
+      // and enqueue no ingestion so a skip is never reported as a publish.
+      this.logger.info("auto-publish skipped: archived after selection", {
+        activeReportId,
+      });
+      return { published: false };
+    }
+
+    // Same telemetry as publishReport, same `state` label so ops aggregate
+    // without `or` predicates — the manual-vs-auto split is recovered from the
+    // period_state_transitions panel paired with publishedById nullness. Emit
+    // only after the write succeeds so a failed save never inflates the counter.
     customreportReportsSubmittedTotal.inc({ state: "published" });
     customreportPeriodStateTransitionsTotal.inc({
       from: "open",
       to: "published",
     });
-    // Phase 54 (UFB-055): mirror of publishReport — fire-and-forget
-    // ingestion enqueue. Scheduler-driven auto-publishes feed the same
-    // queue so the worker sees both manual and scheduled outputs.
-    await this.enqueueIngestion(saved);
-    return saved;
+    // Fire-and-forget ingestion enqueue AFTER metrics — auto-publishes feed the
+    // same queue as manual publishes, and ingestion must never block telemetry.
+    await this.enqueueIngestion(result.report);
+    return { published: true, report: result.report };
   }
 }

@@ -73,7 +73,9 @@ describe("AutoPublisherScheduler", () => {
     const admin = {
       getSettings: vi.fn().mockResolvedValue(makeSettings()),
     };
-    const publication = { publishAuto: vi.fn().mockResolvedValue({}) };
+    const publication = {
+      publishAuto: vi.fn().mockResolvedValue({ published: true, report: {} }),
+    };
     const audit = {
       ...createNullAuditLogger(),
       periodAutoPublish: vi.fn(),
@@ -155,7 +157,7 @@ describe("AutoPublisherScheduler", () => {
           throw new Error("db transient");
         })
         // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async publishAuto contract (no awaitable work in the stub)
-        .mockImplementationOnce(async () => ({})),
+        .mockImplementationOnce(async () => ({ published: true, report: {} })),
     };
     const audit = {
       ...createNullAuditLogger(),
@@ -182,5 +184,120 @@ describe("AutoPublisherScheduler", () => {
     // refactor-period-transition-writer: no scheduler-issued lifecycle write,
     // for the succeeding row or otherwise — publishAuto owns it atomically.
     expect(prisma.report.update).not.toHaveBeenCalled();
+  });
+
+  // period-dual-state: an admin-archived draft (archive leaves status="draft")
+  // must never be a candidate. Asserts on the findMany CALL, not just its
+  // result, so it cannot pass vacuously on an empty mock return.
+  it("excludes archived periods: candidate query carries archived:false", async () => {
+    const prisma = {
+      report: { findMany: vi.fn().mockResolvedValue([]) },
+      reportSection: { count: vi.fn() },
+    };
+    const admin = {
+      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+    };
+    const publication = { publishAuto: vi.fn() };
+    const audit = {
+      ...createNullAuditLogger(),
+      periodAutoPublish: vi.fn(),
+    };
+
+    const scheduler = new AutoPublisherScheduler(
+      asAny(prisma),
+      asAny(admin),
+      asAny(publication),
+      asAny(audit),
+    );
+
+    await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
+
+    expect(prisma.report.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- expect.objectContaining() returns any; vitest asymmetric matcher has no precise type
+        where: expect.objectContaining({ status: "draft", archived: false }),
+      }),
+    );
+    expect(publication.publishAuto).not.toHaveBeenCalled();
+  });
+
+  // period-dual-state: a skipped auto-publish (the period was archived between
+  // selection and the write → compare-and-set matched zero rows) must fire NO
+  // success side-effects — no audit, no missing-section count, id not in
+  // periodIds — and must NOT be logged as an error (a skip is an expected no-op).
+  it("skip outcome: {published:false} emits no audit, no count, no periodIds", async () => {
+    const prisma = {
+      report: { findMany: vi.fn().mockResolvedValue([{ id: "rep-skip" }]) },
+      reportSection: { count: vi.fn() },
+    };
+    const admin = {
+      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+    };
+    const publication = {
+      publishAuto: vi.fn().mockResolvedValue({ published: false }),
+    };
+    const audit = {
+      ...createNullAuditLogger(),
+      periodAutoPublish: vi.fn(),
+    };
+
+    const scheduler = new AutoPublisherScheduler(
+      asAny(prisma),
+      asAny(admin),
+      asAny(publication),
+      asAny(audit),
+    );
+
+    const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
+
+    expect(publication.publishAuto).toHaveBeenCalledWith("rep-skip");
+    expect(result).toEqual({ published: true, periodIds: [] });
+    expect(audit.periodAutoPublish).not.toHaveBeenCalled();
+    expect(prisma.reportSection.count).not.toHaveBeenCalled();
+  });
+
+  // A skipped candidate is dropped while the published ones in the same tick are
+  // kept: only the published id reaches periodIds and the audit log.
+  it("mixed tick: skipped id excluded from periodIds, published id kept", async () => {
+    const prisma = {
+      report: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([{ id: "rep-skip" }, { id: "rep-ok" }]),
+      },
+      reportSection: { count: vi.fn().mockResolvedValue(1) },
+    };
+    const admin = {
+      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+    };
+    const publication = {
+      publishAuto: vi
+        .fn()
+        .mockResolvedValueOnce({ published: false })
+        .mockResolvedValueOnce({ published: true, report: {} }),
+    };
+    const audit = {
+      ...createNullAuditLogger(),
+      periodAutoPublish: vi.fn(),
+    };
+
+    const scheduler = new AutoPublisherScheduler(
+      asAny(prisma),
+      asAny(admin),
+      asAny(publication),
+      asAny(audit),
+    );
+
+    const result = await scheduler.runOnce(new Date("2026-05-12T12:00:00Z"));
+
+    expect(result).toEqual({ published: true, periodIds: ["rep-ok"] });
+    expect(audit.periodAutoPublish).toHaveBeenCalledTimes(1);
+    expect(audit.periodAutoPublish).toHaveBeenCalledWith({
+      periodId: "rep-ok",
+      missingSectionsCount: 1,
+      from: "open",
+      to: "published",
+    });
+    expect(prisma.reportSection.count).toHaveBeenCalledTimes(1);
   });
 });

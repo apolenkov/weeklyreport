@@ -99,6 +99,15 @@ function createRepository(
 
       return structuredClone(currentReport);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
+    async saveAutoPublishedReport(nextReport: AssembledReport) {
+      currentReport = structuredClone(nextReport);
+
+      return {
+        published: true as const,
+        report: structuredClone(currentReport),
+      };
+    },
   };
 }
 
