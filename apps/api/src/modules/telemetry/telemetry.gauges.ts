@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   type OnModuleDestroy,
   type OnModuleInit,
 } from "@nestjs/common";
@@ -95,6 +96,8 @@ export class TelemetryGaugesPrismaRepository implements TelemetryGaugesPort {
  */
 @Injectable()
 export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(TelemetryGauges.name);
+
   constructor(private readonly repo: TelemetryGaugesPort) {}
 
   onModuleInit(): void {
@@ -112,17 +115,32 @@ export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
     };
 
     onTimeRatio.collect = async () => {
-      const value = await this.repo.onTimeRatioLastNPeriods(4);
-      if (value !== null) {
-        customreportReportsOnTimeRatio.set(value);
+      // A rejected query here would fail prom-client's Promise.all over
+      // all collect callbacks, 500-ing the whole scrape during a DB
+      // outage — exactly when the DB-independent metrics matter most.
+      // Catch, log, and leave the gauge unset so the scrape survives.
+      try {
+        const value = await this.repo.onTimeRatioLastNPeriods(4);
+        if (value !== null) {
+          customreportReportsOnTimeRatio.set(value);
+        }
+        // If null → leave gauge unset; prom-client emits the last-set
+        // value or NaN, which the dashboard panel renders as "no data"
+        // rather than a misleading 0.
+      } catch (error) {
+        this.logger.error(
+          "customreportReportsOnTimeRatio collect failed",
+          error,
+        );
       }
-      // If null → leave gauge unset; prom-client emits the last-set
-      // value or NaN, which the dashboard panel renders as "no data"
-      // rather than a misleading 0.
     };
     activeLeads.collect = async () => {
-      const value = await this.repo.activeLeadsLastPublishedPeriod();
-      customreportActiveLeadsTotal.set(value);
+      try {
+        const value = await this.repo.activeLeadsLastPublishedPeriod();
+        customreportActiveLeadsTotal.set(value);
+      } catch (error) {
+        this.logger.error("customreportActiveLeadsTotal collect failed", error);
+      }
     };
   }
 
