@@ -17,7 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TRPCProxyContext } from "../lib/trpc-context";
 import { createMockTRPC } from "../test-utils/mock-trpc";
-import { useLeadFormAutosave } from "./use-lead-form-autosave";
+import { stableStringify, useLeadFormAutosave } from "./use-lead-form-autosave";
 
 vi.mock("sonner", () => ({
   toast: {
@@ -50,6 +50,12 @@ function makePayload(text = "first"): DraftSavePayload {
     decisions: [],
   };
 }
+
+function makePayloadFor(sectionId: string, text: string): DraftSavePayload {
+  return { ...makePayload(text), reportSectionId: sectionId };
+}
+
+const SECTION_B = "33333333-3333-3333-3333-333333333333";
 
 function buildHarness(
   opts: { mutationFn?: (vars: unknown) => Promise<unknown> } = {},
@@ -560,5 +566,259 @@ describe("useLeadFormAutosave", () => {
       JSON.stringify(c[0]),
     );
     expect(invalidatedKeys.some((k) => k.includes("leadForm"))).toBe(true);
+  });
+
+  it("debounce path serializes against an in-flight save and does not stamp the unconfirmed newer key", async () => {
+    let resolveFirst!: () => void;
+    let resolveSecond!: () => void;
+    let n = 0;
+    const { wrapper, calls } = buildHarness({
+      mutationFn: () => {
+        n += 1;
+        return new Promise<unknown>((resolve) => {
+          if (n === 1) resolveFirst = () => resolve({ ok: true });
+          else resolveSecond = () => resolve({ ok: true });
+        });
+      },
+    });
+    const { result, rerender } = renderHook(
+      ({ payload }: { payload: DraftSavePayload }) =>
+        useLeadFormAutosave({
+          reportSectionId: SECTION_ID,
+          payload,
+          enabled: true,
+          debounceMs: 3000,
+        }),
+      { wrapper, initialProps: { payload: makePayload("a") } },
+    );
+
+    // First debounce fires → save A in flight.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(calls).toHaveLength(1);
+    expect(result.current.isInFlight).toBe(true);
+
+    // Edit while A is in flight; the debounce fires but must QUEUE B (one
+    // mutation at a time), not start a second parallel save.
+    rerender({ payload: makePayload("b") });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(calls).toHaveLength(1);
+    expect(result.current.dirty).toBe(true);
+
+    // Resolve A → drains B. A's success must NOT stamp B's (unconfirmed) key,
+    // so dirty stays true until B itself confirms.
+    await act(async () => {
+      resolveFirst();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(calls).toHaveLength(2);
+    expect(result.current.dirty).toBe(true);
+
+    await act(async () => {
+      resolveSecond();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.dirty).toBe(false);
+  });
+
+  it("a failing queued save surfaces exactly one error and leaks no unhandled rejection", async () => {
+    const unhandled = vi.fn();
+    process.on("unhandledRejection", unhandled);
+    try {
+      let resolveFirst!: () => void;
+      let n = 0;
+      const { wrapper, calls } = buildHarness({
+        mutationFn: () => {
+          n += 1;
+          if (n === 1) {
+            return new Promise<unknown>((resolve) => {
+              resolveFirst = () => resolve({ ok: true });
+            });
+          }
+          return Promise.reject(new Error("queued save failed"));
+        },
+      });
+      const { result, rerender } = renderHook(
+        ({ payload }: { payload: DraftSavePayload }) =>
+          useLeadFormAutosave({
+            reportSectionId: SECTION_ID,
+            payload,
+            enabled: true,
+            debounceMs: 3000,
+          }),
+        { wrapper, initialProps: { payload: makePayload("a") } },
+      );
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+      expect(calls).toHaveLength(1);
+
+      rerender({ payload: makePayload("b") });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+
+      // Resolve A → drains B → B rejects. Exactly one error toast, no leak.
+      await act(async () => {
+        resolveFirst();
+        await vi.runAllTimersAsync();
+      });
+
+      expect(result.current.state).toBe("error");
+      expect(toast.error).toHaveBeenCalledTimes(1);
+      expect(toast.error).toHaveBeenCalledWith("queued save failed");
+      expect(unhandled).not.toHaveBeenCalled();
+    } finally {
+      process.off("unhandledRejection", unhandled);
+    }
+  });
+
+  it("drains a queued payload to the section it was built for, not the latest section", async () => {
+    let resolveFirst!: () => void;
+    let n = 0;
+    const { wrapper, calls } = buildHarness({
+      mutationFn: () => {
+        n += 1;
+        if (n === 1) {
+          return new Promise<unknown>((resolve) => {
+            resolveFirst = () => resolve({ ok: true });
+          });
+        }
+        return Promise.resolve({ ok: true });
+      },
+    });
+    // Section B is freshly loaded + clean, so it never autosaves on its own —
+    // isolating this test to the drain TARGET, not B's dirtiness (that is the
+    // next test's concern).
+    const bPayload = makePayloadFor(SECTION_B, "b1");
+    const bKey = stableStringify(bPayload);
+    const { result, rerender } = renderHook(
+      ({
+        reportSectionId,
+        payload,
+        initialSavedKey,
+      }: {
+        reportSectionId: string;
+        payload: DraftSavePayload;
+        initialSavedKey: string | null;
+      }) =>
+        useLeadFormAutosave({
+          reportSectionId,
+          payload,
+          enabled: true,
+          debounceMs: 5000,
+          initialSavedKey,
+        }),
+      {
+        wrapper,
+        initialProps: {
+          reportSectionId: SECTION_ID,
+          payload: makePayloadFor(SECTION_ID, "a1"),
+          initialSavedKey: null as string | null,
+        },
+      },
+    );
+
+    // Section-A save in flight.
+    await act(async () => {
+      void result.current.forceSave();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(calls).toHaveLength(1);
+
+    // Edit A again while in flight → queues the A2 payload (section A).
+    rerender({
+      reportSectionId: SECTION_ID,
+      payload: makePayloadFor(SECTION_ID, "a2"),
+      initialSavedKey: null,
+    });
+    await act(async () => {
+      void result.current.forceSave();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(calls).toHaveLength(1);
+
+    // Navigate to section B (clean) BEFORE the in-flight A save resolves.
+    rerender({
+      reportSectionId: SECTION_B,
+      payload: bPayload,
+      initialSavedKey: bKey,
+    });
+
+    // Resolve A → the queued A2 drains to SECTION_ID (its own section), never B.
+    await act(async () => {
+      resolveFirst();
+      await vi.runAllTimersAsync();
+    });
+    expect(calls).toHaveLength(2);
+    const drained = calls[1] as DraftSavePayload;
+    expect(drained.reportSectionId).toBe(SECTION_ID);
+    expect(drained.items[0]?.text).toBe("a2");
+  });
+
+  it("a section-A save resolving after navigation to B does not dirty B or schedule a save for it", async () => {
+    let resolveFirst!: () => void;
+    const { wrapper, calls } = buildHarness({
+      mutationFn: () =>
+        new Promise<unknown>((resolve) => {
+          resolveFirst = () => resolve({ ok: true });
+        }),
+    });
+    const bPayload = makePayloadFor(SECTION_B, "b-clean");
+    const bKey = stableStringify(bPayload);
+    const { result, rerender } = renderHook(
+      ({
+        reportSectionId,
+        payload,
+        initialSavedKey,
+      }: {
+        reportSectionId: string;
+        payload: DraftSavePayload;
+        initialSavedKey: string | null;
+      }) =>
+        useLeadFormAutosave({
+          reportSectionId,
+          payload,
+          enabled: true,
+          debounceMs: 3000,
+          initialSavedKey,
+        }),
+      {
+        wrapper,
+        initialProps: {
+          reportSectionId: SECTION_ID,
+          payload: makePayloadFor(SECTION_ID, "a1"),
+          initialSavedKey: null as string | null,
+        },
+      },
+    );
+
+    // Section-A save in flight (held).
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(calls).toHaveLength(1);
+    expect(result.current.isInFlight).toBe(true);
+
+    // Navigate to section B, which is freshly loaded + clean (primed baseline).
+    rerender({
+      reportSectionId: SECTION_B,
+      payload: bPayload,
+      initialSavedKey: bKey,
+    });
+    expect(result.current.dirty).toBe(false);
+
+    // Resolve the section-A save: its key must NOT stamp B's baseline, so B
+    // stays non-dirty and no spurious autosave is scheduled for B.
+    await act(async () => {
+      resolveFirst();
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(result.current.dirty).toBe(false);
+    expect(calls).toHaveLength(1);
   });
 });

@@ -79,6 +79,11 @@ export function useLeadFormAutosave(
 
   const lastSavedRef = useRef<string>("");
   const inFlightRef = useRef<string>("");
+  // The section id the in-flight save was actually sent to, captured at mutate
+  // time. `onSuccess` stamps the confirmed baseline only when this still equals
+  // the current section — otherwise the lead navigated away while the save was
+  // in flight and stamping would clobber the new section's primed baseline.
+  const inFlightSectionRef = useRef<string | null>(null);
   // Queued payload key: when forceSave is called while a mutation is in
   // flight, we stash the current key here and fire again after success.
   const queuedKeyRef = useRef<string | null>(null);
@@ -101,30 +106,33 @@ export function useLeadFormAutosave(
   const saveDraftMut = useMutation(
     trpc.reports.saveDraft.mutationOptions({
       onSuccess: () => {
-        // The payload that was sent (captured at mutate time) is now persisted.
-        lastSavedRef.current = inFlightRef.current;
+        // Stamp the confirmed baseline ONLY if the lead is still on the section
+        // this save targeted. If they navigated away while it was in flight,
+        // stamping would clobber the new section's freshly-primed baseline and
+        // make it falsely read dirty (scheduling a spurious save there).
+        if (inFlightSectionRef.current === reportSectionIdRef.current) {
+          lastSavedRef.current = inFlightRef.current;
+        }
         setState("saved");
         setLastSavedAt(new Date());
         invalidateLeadForm(qc, trpc);
 
-        // Fire queued save if one was requested during in-flight.
+        // Drain a queued save (if any) to the section it was BUILT for — never
+        // the latest section. The hook is not remounted on navigation, so the
+        // queued payload's own reportSectionId is the only safe target.
         if (queuedKeyRef.current !== null) {
           const queued = queuedPayloadRef.current;
           const queuedKey = queuedKeyRef.current;
           queuedKeyRef.current = null;
           queuedPayloadRef.current = null;
-          const queuedSectionId = reportSectionIdRef.current;
-          if (
-            queued !== null &&
-            queuedKey !== lastSavedRef.current &&
-            queuedSectionId !== null
-          ) {
+          if (queued !== null && queuedKey !== lastSavedRef.current) {
             setState("saving");
             inFlightRef.current = queuedKey;
-            void mutateAsyncRef.current({
-              ...queued,
-              reportSectionId: queuedSectionId,
-            });
+            inFlightSectionRef.current = queued.reportSectionId;
+            // Fire-and-forget: the mutation's own onSuccess/onError drive the
+            // result and the next drain. `mutate` (not `mutateAsync`) so no
+            // unhandled rejection leaks from a discarded promise.
+            mutateRef.current(queued);
           }
         }
       },
@@ -152,11 +160,16 @@ export function useLeadFormAutosave(
   const mutateRef = useRef(saveDraftMut.mutate);
   const mutateAsyncRef = useRef(saveDraftMut.mutateAsync);
   const reportSectionIdRef = useRef(reportSectionId);
+  // Live `isPending` for the debounce timer: the timer closure captures the
+  // mutation object from its effect's render, so it cannot read a fresh
+  // `saveDraftMut.isPending` (forceSave can — it is reassigned every render).
+  const isPendingRef = useRef(saveDraftMut.isPending);
   useEffect(() => {
     payloadRef.current = payload;
     mutateRef.current = saveDraftMut.mutate;
     mutateAsyncRef.current = saveDraftMut.mutateAsync;
     reportSectionIdRef.current = reportSectionId;
+    isPendingRef.current = saveDraftMut.isPending;
   });
 
   // Debounced save trigger.
@@ -169,8 +182,17 @@ export function useLeadFormAutosave(
     const timer = setTimeout(() => {
       const current = payloadRef.current;
       if (current === null) return;
+      if (isPendingRef.current) {
+        // A save is already in flight — stash this payload for the onSuccess
+        // drain instead of starting a second parallel mutation on the single
+        // in-flight slot (mirrors forceSave's guard). Latest payload wins.
+        queuedKeyRef.current = payloadKey;
+        queuedPayloadRef.current = current;
+        return;
+      }
       setState("saving");
       inFlightRef.current = payloadKey;
+      inFlightSectionRef.current = reportSectionId;
       mutateRef.current({ ...current, reportSectionId });
     }, debounceMs);
 
@@ -232,6 +254,7 @@ export function useLeadFormAutosave(
 
     setState("saving");
     inFlightRef.current = currentKey;
+    inFlightSectionRef.current = sectionId;
     await mutateAsyncRef.current({ ...current, reportSectionId: sectionId });
   };
 
