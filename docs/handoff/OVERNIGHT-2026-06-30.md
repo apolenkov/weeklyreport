@@ -194,3 +194,50 @@ could not see), caught before any commit. Keep the implement→verify→(human g
 
 - integration + commit) shape. Cost note: implement at `effort: 'max'` ran ~40
   min for one change — drop to `'high'` for the lighter Wave B/C authz scans.
+
+---
+
+## Session 3 (2026-06-30, post-demo): #14 LANDED
+
+**#14 `scope-period-lifecycle-authz` is committed: `fb7be80c`.** The two parked
+findings are resolved:
+
+- **Blocker (reopen→republish brick) — FIXED.** publish now accepts a `reopened`
+  target directly (strict equality vs `getCurrentEditableId` bricked the
+  legitimate flow when a newer open period coexists). To keep that safe, a
+  **single-active-reopen guard** (Саша's decision — option A) stops a non-admin
+  head from holding two reopened periods at once, closing the walk-back that
+  would otherwise let "OR reopened" rewrite historical snapshots. Admin exempt.
+  New `getReopenedNonArchivedId` port method. Proven by 3 unit tests (happy-path
+  republish, walk-back rejection, admin bypass) + a real-DB integration test
+  (`period.single-active-reopen.integration.test.ts`, 4/4). Full monorepo gate
+  green (typecheck + lint `--max-warnings 0` + 1352-test unit suite + the #14
+  integration tests run against `customreport_test`).
+
+Two follow-ups remain (NOT blockers, NOT in #14's scope):
+
+1. **`scope-review-publish-authz` (new change).** `review.publish`
+   (`trpc.router.ts:707`, `headProcedure`) → `publicationService.publishReport`
+   still guards only `status === "published"` — no archived / active-target
+   guard. It publishes `session.activeReportId` (not arbitrary), no prod web
+   client calls it, but a head can still publish their own stale/archived session
+   report. Fix: fold the same guards into `publishReport`, or route
+   `review.publish` through the hardened `PeriodService.publishPeriod`.
+
+2. **Integration-fixture debt from #11 (`add-section-optimistic-lock`).** Three
+   integration test files are red — NOT caused by #14, NOT in the pre-push gate
+   (unit only), surfaced only when running the integration suite:
+   - `weekly-report.integration.test.ts` + `weekly-report.scope-filter.integration.test.ts`
+     — section fixtures omit `leadSections[].version`, required since #11
+     (`82f847f7`) → `ZodError: expected number at "version"`. Add `version`.
+   - `weekly-report.current-editable.integration.test.ts` tie test — creates two
+     `open` periods sharing `periodStart`, which #12's
+     `Report_one_open_per_boundary` partial unique index now rejects. Rework the
+     premise. Best as one small `fix-integration-fixtures` change.
+
+Gotcha logged: **integration test files are excluded from the api typecheck**, so
+a new repository-port method compiles green while its integration-test mocks fail
+at RUNTIME — the full integration run (not typecheck) caught
+`period.integration.test.ts`'s mock missing `getReopenedNonArchivedId`.
+
+Next in Wave B: **#15 `scope-reminder-authz`**.
