@@ -235,9 +235,13 @@ Two follow-ups remain (NOT blockers, NOT in #14's scope):
      `Report_one_open_per_boundary` partial unique index now rejects. Rework the
      premise. Best as one small `fix-integration-fixtures` change.
 
-Gotcha logged: **integration test files are excluded from the api typecheck**, so
-a new repository-port method compiles green while its integration-test mocks fail
-at RUNTIME — the full integration run (not typecheck) caught
-`period.integration.test.ts`'s mock missing `getReopenedNonArchivedId`.
+Gotcha logged: after adding a repository-port method, a broken integration-test
+mock surfaces only via the **integration suite** — the unit `pnpm test` excludes
+`*.integration.test.ts`, and `pnpm typecheck` runs through turbo and can serve a
+**cached** "No errors" that masks it (a fresh `tsc -p tsconfig.json` DOES catch
+it — integration files are in the tsconfig). So run
+`pnpm --filter @customreport/api test:integration` for the touched modules after
+any port change; that is what caught `period.integration.test.ts`'s mock missing
+`getReopenedNonArchivedId`.
 
 Next in Wave B: **#15 `scope-reminder-authz`**.
