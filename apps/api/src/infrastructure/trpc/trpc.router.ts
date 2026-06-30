@@ -25,6 +25,7 @@ import {
   searchQueryInputSchema,
   submitSectionSchema,
   trafficLightHistoryInputSchema,
+  type UserSession,
 } from "@customreport/shared";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
@@ -149,6 +150,123 @@ interface RouterDeps {
    * the Redis fast-path (sessions expire naturally via JWT TTL).
    */
   sessionRevocationService?: SessionRevocationService;
+}
+
+/**
+ * A reminder rule's only group link is `rule.report -> section.author group`.
+ * Resolve the rule's report id, rejecting a missing rule or a rule with no
+ * report — a non-admin caller cannot be scoped against it, so it is out of
+ * reach (FORBIDDEN, fail-closed).
+ */
+async function resolveScopedReminderReportId(
+  prisma: PrismaClient,
+  ruleId: string,
+): Promise<string> {
+  const rule = await prisma.reminderRule.findUnique({
+    where: { id: ruleId },
+    select: { reportId: true },
+  });
+  if (!rule?.reportId) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "reminder-rule-out-of-scope",
+    });
+  }
+  return rule.reportId;
+}
+
+/**
+ * The rule is in scope iff its report carries at least one section whose author
+ * is in the caller's group. The scope fragment filters on `author`, so it is
+ * applied via `AND` to avoid clobbering any sibling `author` predicate.
+ */
+async function assertReportHasInScopeSection(
+  prisma: PrismaClient,
+  session: UserSession,
+  reportId: string,
+): Promise<void> {
+  const section = await prisma.reportSection.findFirst({
+    where: { reportId, AND: [groupScopeFilter(session, "reportSection")] },
+    select: { id: true },
+  });
+  if (!section) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "reminder-rule-out-of-scope",
+    });
+  }
+}
+
+/**
+ * The recipient of a manual execution must be an in-scope draft-section author
+ * on the rule's report — not an arbitrary address (closes the open-mailer hole).
+ */
+async function assertDraftRecipientInScope(
+  prisma: PrismaClient,
+  session: UserSession,
+  reportId: string,
+  recipientEmail: string,
+): Promise<void> {
+  const section = await prisma.reportSection.findFirst({
+    where: {
+      reportId,
+      status: "draft",
+      author: { email: recipientEmail },
+      AND: [groupScopeFilter(session, "reportSection")],
+    },
+    select: { id: true },
+  });
+  if (!section) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "reminder-recipient-out-of-scope",
+    });
+  }
+}
+
+/**
+ * The set of recipient emails a non-admin caller may see in a rule's execution
+ * history: every in-scope section author on the rule's report, plus the
+ * caller's own email (escalation digests are addressed to the head themself).
+ * Rejects a rule whose report has no in-scope section (out of reach).
+ */
+async function resolveInScopeRecipientEmails(
+  prisma: PrismaClient,
+  session: UserSession,
+  ruleId: string,
+): Promise<ReadonlySet<string>> {
+  const reportId = await resolveScopedReminderReportId(prisma, ruleId);
+  const sections = await prisma.reportSection.findMany({
+    where: { reportId, AND: [groupScopeFilter(session, "reportSection")] },
+    select: { author: { select: { email: true } } },
+  });
+  if (sections.length === 0) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "reminder-rule-out-of-scope",
+    });
+  }
+  return new Set([...sections.map((s) => s.author.email), session.email]);
+}
+
+/**
+ * A single-lead dispatch is authorized against the `User` row, not a section —
+ * an in-scope lead may have no section yet, which a section check could not
+ * distinguish from an out-of-scope lead. Admin's empty scope fragment matches
+ * any user (god-mode).
+ */
+async function assertLeadInScope(
+  prisma: PrismaClient,
+  session: UserSession,
+  leadId: string,
+): Promise<void> {
+  const lead = await prisma.user.findFirst({
+    where: { id: leadId, ...groupScopeFilter(session, "user") },
+    select: { id: true },
+  });
+  if (!lead) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "lead-out-of-scope" });
+  }
 }
 
 export function createAppRouter(deps: RouterDeps) {
@@ -1825,8 +1943,25 @@ export function createAppRouter(deps: RouterDeps) {
             recipientEmail: z.email(),
           }),
         )
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
           try {
+            if (ctx.session.role !== "admin") {
+              const reportId = await resolveScopedReminderReportId(
+                deps.prisma,
+                input.ruleId,
+              );
+              await assertReportHasInScopeSection(
+                deps.prisma,
+                ctx.session,
+                reportId,
+              );
+              await assertDraftRecipientInScope(
+                deps.prisma,
+                ctx.session,
+                reportId,
+                input.recipientEmail,
+              );
+            }
             return await deps.remindersService.requestReminderExecution(
               input.ruleId,
               input.recipientEmail,
@@ -1842,15 +1977,28 @@ export function createAppRouter(deps: RouterDeps) {
             .object({ ruleId: z.uuid() })
             .extend(paginationInputSchema.partial().shape),
         )
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
           try {
             const { ruleId, cursor, limit } = input;
             const pagination =
               cursor || limit ? { cursor, limit: limit ?? 20 } : undefined;
 
+            // Non-admins see only their group's recipient rows. The allowlist
+            // is resolved here and applied inside the service BEFORE pagination
+            // so out-of-scope rows cannot consume page size or drive nextCursor.
+            const recipientAllowlist =
+              ctx.session.role === "admin"
+                ? null
+                : await resolveInScopeRecipientEmails(
+                    deps.prisma,
+                    ctx.session,
+                    ruleId,
+                  );
+
             return await deps.remindersService.listExecutions(
               ruleId,
               pagination,
+              recipientAllowlist,
             );
           } catch (error) {
             throw mapDomainError(error);
@@ -1891,6 +2039,25 @@ export function createAppRouter(deps: RouterDeps) {
                 message: "report-not-active",
               });
             }
+            // `activeReportId` is the globally-newest draft, NOT group-bounded, so
+            // it alone does not prove the report is in the caller's scope. Require
+            // an in-scope section on the report BEFORE resolving any rule, so an
+            // out-of-scope report fails closed uniformly (with or without a
+            // matching rule) and cannot be used to probe rule existence. Admin
+            // (groupScopeFilter -> {}) is unaffected.
+            if (ctx.session.role !== "admin") {
+              await assertReportHasInScopeSection(
+                deps.prisma,
+                ctx.session,
+                input.reportId,
+              );
+            }
+            // A single-lead dispatch is authorized against the lead's User row
+            // (group scope), not a section — preserving the no-section success
+            // state below for an in-scope lead with no draft yet.
+            if (input.leadId !== undefined) {
+              await assertLeadInScope(deps.prisma, ctx.session, input.leadId);
+            }
             const rule = await deps.prisma.reminderRule.findFirst({
               where: {
                 reportId: input.reportId,
@@ -1912,6 +2079,8 @@ export function createAppRouter(deps: RouterDeps) {
                 reportId: input.reportId,
                 status: "draft",
                 ...(input.leadId ? { authorId: input.leadId } : {}),
+                // Bulk dispatch only reaches the caller's own group's authors.
+                ...groupScopeFilter(ctx.session, "reportSection"),
               },
               include: {
                 author: { select: { email: true, notificationOptOut: true } },
