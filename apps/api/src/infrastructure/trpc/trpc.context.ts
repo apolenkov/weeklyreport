@@ -10,6 +10,7 @@ import type { AppLogger } from "../../lib/logger.js";
 import { resolveSessionCookieName } from "../../lib/session-cookie.js";
 import { SessionRevocationService } from "../../modules/admin/session-revocation.service.js";
 import { createAuthController } from "../../modules/auth/auth.controller.js";
+import { isUserAccessBarred } from "../../modules/auth/session-deactivation.js";
 import { verifyPdfExportToken } from "../../modules/pdf-export/pdf-export.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 
@@ -91,12 +92,19 @@ function buildLegacyPdfExportSession(reportId: string): UserSession {
  * the auth middleware rejects). A token without `requestedBy` falls back to the
  * legacy narrow session.
  */
-async function buildPdfExportSession(
+export async function buildPdfExportSession(
   reportId: string,
   requestedBy: string | undefined,
   prisma: PrismaService,
+  sessionRevocation: Pick<SessionRevocationService, "isRevoked">,
 ): Promise<UserSession | null> {
   if (!requestedBy) return buildLegacyPdfExportSession(reportId);
+
+  // A deactivated/revoked requester must not keep exporting for the token's
+  // ~5-min window; fall through to no session so the auth middleware rejects.
+  if (await isUserAccessBarred(requestedBy, prisma, sessionRevocation)) {
+    return null;
+  }
 
   const user = await prisma.user.findUnique({
     where: { id: requestedBy },
@@ -188,12 +196,12 @@ export interface HumanSessionDeps {
  * synthetic session that the full `createContext` chain falls back to: a caller
  * that needs a real human (the authenticated `/pdfs` download) resolves through
  * this and rejects everything else. `createContext` layers those fallbacks on
- * top of this, never the reverse — so a later deactivation hardening folds into
- * this one function.
+ * top of this, never the reverse.
  *
- * The revocation fast path fails OPEN (a Redis outage falls through to the
- * authoritative Prisma `isActive` check). A user row that no longer exists is
- * treated as still-valid here, matching the existing pipeline.
+ * The revoked/deactivated decision is delegated to `isUserAccessBarred`: a
+ * Redis revocation fast path that fails OPEN, then an authoritative Prisma
+ * `isActive` read that fails CLOSED — including a missing user row (a
+ * hard-deleted account no longer keeps a live session).
  */
 export async function resolveHumanSession(
   token: string,
@@ -201,14 +209,13 @@ export async function resolveHumanSession(
 ): Promise<UserSession | null> {
   try {
     const session = deps.verifySessionToken(token);
-    if (await deps.sessionRevocation.isRevoked(session.userId)) {
-      return null;
-    }
-    const userRow = await deps.prisma.user.findUnique({
-      where: { id: session.userId },
-      select: { isActive: true },
-    });
-    if (userRow && !userRow.isActive) {
+    if (
+      await isUserAccessBarred(
+        session.userId,
+        deps.prisma,
+        deps.sessionRevocation,
+      )
+    ) {
       return null;
     }
     return await hydrateSession(session, deps.prisma);
@@ -281,6 +288,7 @@ export function createContextFactory(
           pdfClaims.reportId,
           pdfClaims.requestedBy,
           prisma,
+          sessionRevocation,
         );
         if (pdfSession) {
           return {
