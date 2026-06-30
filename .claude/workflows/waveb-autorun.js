@@ -31,55 +31,49 @@ const STANDARDS = [
 //                   message + diff summary for the orchestrator to review-then-commit.
 const CHANGES = [
   {
-    name: "fix-integration-fixtures",
+    name: "fix-fillfrom-version-assertion",
     stakes: "low",
-    // No OpenSpec dir for this maintenance change — the task is fully inline.
+    // No OpenSpec dir — maintenance fix of one stale assertion. (Same #11 debt class
+    // as fix-integration-fixtures, committed 4a83f6de; this is the 4th red file the
+    // handoff missed.) This run ALSO re-validates the harness fixes: full-integration
+    // gate, git-diff-HEAD review scope, git-derived commit paths, major-blocks-commit.
     spec: {
       inline: [
-        "Fix THREE pre-existing RED api integration test files. This is test-fixture maintenance debt from prior changes #11 (add-section-optimistic-lock, commit 82f847f7, added ReportSection.version) and #12 (period-uniqueness-db-constraint, added the partial unique index Report_one_open_per_boundary). It is NOT a behavior change — touch ONLY test files, no production code.",
+        "Fix ONE pre-existing RED api integration test, the last of the #11 (add-section-optimistic-lock) debt. Test-only — touch ONLY the test file, no production code.",
         "",
-        "FILE 1 — apps/api/src/modules/weekly-report/weekly-report.integration.test.ts (4 failing: active period / portfolio overview / escalations / historical period)",
-        "FILE 2 — apps/api/src/modules/weekly-report/weekly-report.scope-filter.integration.test.ts (2 failing: published period NO signal / signal present)",
-        "  GROUND TRUTH (I ran them): all 6 fail with `ZodError: expected number, received undefined` at path sections[N].version, thrown by assembledReportSchema.parse(value) in apps/api/src/modules/published-report-snapshot.ts:80 (called from WeeklyReportPrismaRepository.getWeeklyReport). The fixtures build a PUBLISHED SNAPSHOT whose sections[] (the assembled-report section objects — NOT necessarily a leadSections array) omit the now-REQUIRED numeric version. Find EVERY snapshot-section fixture object these tests feed through getWeeklyReport / parsePublishedSnapshot and add `version: 1` (these files already set version:1 on some objects — mirror that). Read assembledReportSchema and its section schema to confirm exactly which object needs version, and add it everywhere it is missing. Change no other field or assertion.",
+        "FILE — apps/api/src/modules/report-sections/fill-from.integration.test.ts",
+        "Failing test: `LeadFormService — fillFrom (integration) > copies items from source section and returns count` (assertion at line ~128).",
+        "GROUND TRUTH (I ran it): the test calls `service.fillFrom(targetSectionId, sourceSectionId, userId, 1)` — the 4th argument (1) is the optimistic-lock expectedVersion that #11 added. LeadFormService forwards it: `repo.fillFromSection(targetSectionId, sourceSectionId, expectedVersion)` (3 args, confirmed at apps/api/src/modules/report-sections/lead-form.service.ts:136). But the assertion `expect(repo.fillFromSection).toHaveBeenCalledWith(targetSectionId, sourceSectionId)` still passes only 2 args, so vitest's recorded actual call `[targetSectionId, sourceSectionId, 1]` fails the matcher.",
+        "FIX: add the forwarded expectedVersion as the third expected argument so the assertion matches AND gains teeth on the OCC-version forwarding. Read lead-form.service.ts around line 136 to confirm EXACTLY what value is forwarded (it is the `expectedVersion` parameter = the literal 1 the test passes as fillFrom's 4th arg). Set the matcher to `toHaveBeenCalledWith(targetSectionId, sourceSectionId, 1)` (or the precise expression the service forwards). Change nothing else; do not touch any production file.",
         "",
-        "FILE 3 — apps/api/src/modules/weekly-report/weekly-report.current-editable.integration.test.ts",
-        "  The test `breaks a same-periodStart tie deterministically (concurrent editable periods)` (~line 100) creates TWO `open` periods sharing periodStart 2026-05-18. The partial unique index `Report_one_open_per_boundary` (ON (periodStart, periodEnd) WHERE periodState = 'open') now REJECTS the second insert with P2002. The test's INTENT is the deterministic `id desc` tiebreak of getCurrentEditableId among periods sharing a periodStart. Rework the PREMISE so two rows still tie on periodStart and are both selected by getCurrentEditableId, but they are NOT both periodState='open' (so the partial index permits them).",
-        "  Read getCurrentEditableId in apps/api/src/modules/weekly-report/weekly-report.prisma-repository.ts to confirm which column(s) it filters on (open/reopened editable set) and the exact ORDER BY (periodStart desc, id desc). Note the local createReport helper does NOT set `periodState` today (it takes the DB default), so to make one row periodState!='open' you must set periodState explicitly — extend createReport to accept/set periodState (keep it dual-state consistent: a `reopened` periodStatus row should carry periodState 'reopened', mirroring how production maps the dual state). The reworked tie should be e.g. one open + one reopened on the same periodStart, asserting the higher `id` wins identically on repeated calls. PRESERVE the test's intent (stable id-desc tiebreak) and its repeated-call stability assertions; do not delete the test or weaken it to a trivial single-row case. Update the stale comment that claims 'two concurrent OPEN editable periods sharing a periodStart is a SUPPORTED state' — it is no longer true after #12.",
-        "",
-        "Confirm green by running these 3 files through the api integration runner (see apps/api package.json `test:integration`; the test DB customreport_test is up). Do NOT run a full monorepo gate and do NOT touch git.",
+        "Confirm green by running this file through the api integration runner (apps/api `test:integration`; test DB customreport_test is up). Do NOT run a full monorepo gate and do NOT touch git.",
       ].join("\n"),
     },
-    seam: "ONLY the 3 named weekly-report integration test files (+ their local helpers). No production code, no schema, no migration.",
+    seam: "ONLY apps/api/src/modules/report-sections/fill-from.integration.test.ts. No production code, no schema, no migration, no other test file.",
     caveat:
-      "Keep dual-state consistency in the reworked fixture (periodState matches periodStatus). Do not regress the existing passing assertions in file 3 (reopened-over-open, newest-open, archived-exclusion, future-exclusion, empty->null).",
+      "Do not weaken the assertion — strengthen it: the third arg must be the actual forwarded expectedVersion so the test now proves the version reaches the repository (the OCC invariant #11 needs covered). Do not edit lead-form.service.ts or any other file.",
     mustCover: [
-      "FILE 1 + FILE 2: every published-snapshot section fixture object (the sections[] parsed by assembledReportSchema) now carries a numeric `version`; no other field/assertion changed; the ZodError 'expected number at sections[N].version' is gone for all 6 tests.",
-      "FILE 3 tie test: the two tied rows share periodStart, are BOTH returned-eligible by getCurrentEditableId, but are NOT both periodState='open' (the partial index Report_one_open_per_boundary no longer rejects the insert).",
-      "FILE 3 tie test still asserts the deterministic id-desc winner AND repeated-call stability (first === second === expected higher-id row).",
-      "FILE 3's other tests (reopened-over-open, newest-open, archived-open exclusion, future exclusion, empty->null) remain unchanged and pass.",
-      "Only test files touched; zero production-code edits in the diff.",
+      "fill-from.integration.test.ts line ~128: toHaveBeenCalledWith now includes the forwarded expectedVersion as the third argument, matching the real 3-arg repo.fillFromSection call; the test passes.",
+      "The assertion has TEETH: it asserts the version value forwarded (1), not a wildcard — it would fail if the service stopped forwarding the version.",
+      "Only the one test file is touched; zero production-code edits in the diff.",
+      "The FULL api integration suite is now green (this was the last red file).",
     ],
     reachability:
-      "Does the reworked tie fixture actually still violate nothing the DB enforces (no two periodState='open' on one boundary), and does it still exercise the id-desc tiebreak rather than accidentally testing periodStart ordering or a single row?",
+      "Is the third-argument value the assertion expects the ACTUAL value the service forwards (read lead-form.service.ts), not a guess — so the test passes for the right reason rather than by loosening the matcher?",
     regression:
-      "Could the added `version` or the createReport periodState extension silently change what another test in these files asserts? Confirm the 3 files are GREEN against customreport_test and no production code was modified.",
-    // What the Gate stage must run green for THIS change (besides the full unit gate).
+      "Did anything other than the one assertion change? Is any production file in the diff (there must NOT be)? Confirm the whole api integration suite is green against customreport_test.",
     integrationTargets:
-      "the 3 weekly-report integration files: weekly-report.integration.test.ts, weekly-report.scope-filter.integration.test.ts, weekly-report.current-editable.integration.test.ts",
+      "fill-from.integration.test.ts (and confirm the previously-fixed weekly-report.* files stay green)",
     commitSubject:
-      "test(weekly-report): restore integration fixtures to #11/#12 schema invariants",
+      "test(report-sections): assert fillFrom forwards expectedVersion to the repo",
     commitBody: [
-      "Three weekly-report integration files were red from accumulated debt:",
-      "- weekly-report.integration.test.ts / weekly-report.scope-filter.integration.test.ts:",
-      "  leadSections[] fixtures omitted ReportSection.version (required since the",
-      "  optimistic-lock change) -> ZodError. Add version to every fixture entry.",
-      "- weekly-report.current-editable.integration.test.ts: the same-periodStart tie",
-      "  test created two periodState='open' rows, which the one-open-per-boundary",
-      "  partial unique index now rejects. Rework the tie to two editable rows that",
-      "  share periodStart without both being periodState='open', preserving the",
-      "  deterministic id-desc tiebreak assertion.",
-      "Test-only; no production code touched. Clears the integration baseline so the",
-      "make-publish-atomic change can verify getCurrentEditableId against green.",
+      "fill-from.integration.test.ts asserted repo.fillFromSection was called with",
+      "(target, source) only, but the optimistic-lock change made the service forward",
+      "a third expectedVersion argument, so the actual 3-arg call failed the matcher",
+      "and left the integration suite red. Add the forwarded version as the third",
+      "expected argument — fixing the red AND giving the test teeth on version",
+      "forwarding (the OCC invariant). Last of the #11 integration-fixture debt; the",
+      "full api integration suite is now green.",
     ].join("\n"),
   },
 ];
@@ -272,7 +266,7 @@ async function processChange(CHANGE, index) {
       `  cd ${REPO} && pnpm exec eslint <your changed files> --max-warnings 0   # NEVER \`eslint .\` (OOM)`,
       `  cd ${REPO}/apps/api && pnpm exec vitest run <your changed test files>   # do NOT wrap vitest in rtk (mis-parses TSX -> 0 tests)`,
       ``,
-      `Return ONLY the structured object: a one-paragraph summary, the EXACT files you touched (repo-relative paths), the test files you added, the pass/fail/notrun status of each local check with detail, any stale plan anchors, and any open questions.`,
+      `Return ONLY the structured object with REAL values (never placeholders like "a","b","c" or "summary placeholder"): a one-paragraph summary of what you actually changed; filesTouched = the EXACT repo-relative paths you edited, taken verbatim from \`git status --porcelain\` (run it before returning); testFilesAdded = only files you newly created; the pass/fail/notrun status of each local check with detail; any stale plan anchors; any open questions. The orchestrator commits the files git reports dirty, so do NOT leave any unrelated edits in the tree.`,
     ]
       .filter(Boolean)
       .join("\n"),
@@ -294,13 +288,17 @@ async function processChange(CHANGE, index) {
 
   // ---- Verify (2 adversarial lenses) ----
   phase("Verify");
-  const diffCmd = `cd ${REPO} && git --no-pager diff ${BASE} -- . ':(exclude)openspec'`;
+  // Scope the review to THIS change only: each change is processed from a clean
+  // committed base, so the uncommitted working-tree diff vs HEAD IS exactly this
+  // change. (git diff BASE would show the whole branch — every prior change too —
+  // and make verifiers/Codex flag pre-existing reds as if this change caused them.)
+  const diffCmd = `cd ${REPO} && git --no-pager diff HEAD -- . ':(exclude)openspec'`;
   const verifyHead = [
     `Adversarially verify an UNCOMMITTED change on the working tree at ${REPO} for: ${CHANGE.name}.`,
     CHANGE.spec && CHANGE.spec.inline
       ? `Intent (inline task):\n${CHANGE.spec.inline}`
       : `Read the intent: openspec/changes/${CHANGE.name}/proposal.md and design.md.`,
-    `Read the actual change: run \`${diffCmd}\` (work is uncommitted, layered on ${BASE}).`,
+    `Read the actual change: run \`${diffCmd}\` (this is ONLY the uncommitted work for this change, on top of HEAD — not the whole branch).`,
     `Use codegraph_explore to trace call paths around changed symbols. Be skeptical; default to finding a hole, not approving.`,
     ``,
   ].join("\n");
@@ -344,7 +342,10 @@ async function processChange(CHANGE, index) {
   const verifyFindings = verdicts
     .filter(Boolean)
     .flatMap((v) => v.findings || []);
-  const verifyBlockers = verifyFindings.filter((f) => f.severity === "blocker");
+  // A "major" finding (e.g. "the tree is red", "this guard bricks a legit flow")
+  // must stop an auto-commit just like a blocker; only "minor" is note-only.
+  const isBlocking = (f) => f.severity === "blocker" || f.severity === "major";
+  const verifyBlockers = verifyFindings.filter(isBlocking);
 
   // ---- Gate (full monorepo gate + this change's integration targets) ----
   phase("Gate");
@@ -356,7 +357,7 @@ async function processChange(CHANGE, index) {
       `2. cd ${REPO} && pnpm typecheck`,
       `3. cd ${REPO} && pnpm lint            # eslint . && stylelint && lint:prisma:typecheck — the full lint, not just eslint`,
       `4. cd ${REPO} && pnpm test            # full unit suite (excludes *.integration.test.ts)`,
-      `5. Integration for THIS change: run ${CHANGE.integrationTargets} via the api integration runner (read apps/api/package.json \`test:integration\`; it needs E2E_DATABASE_URL distinct from DATABASE_URL pointing at customreport_test — reuse whatever that script already sets). Do NOT wrap vitest in rtk.`,
+      `5. cd ${REPO} && pnpm --filter @customreport/api test:integration   # the FULL api real-DB integration suite (vitest --config vitest.integration.config.ts; it loads ../../.env.test which sets DATABASE_URL=customreport_test; postgres container customreport-postgres-1 must be up). Do NOT wrap vitest in rtk. This change is expected to leave the WHOLE suite green; report integrationTests=fail if ANY integration file fails, and list every failing file in redFiles. Sanity-check that this change's target area (${CHANGE.integrationTargets}) is among the green.`,
       CHANGE.runBuild ? `6. cd ${REPO} && pnpm build` : ``,
       ``,
       `For each of typecheck/lint/unitTests/integrationTests/build report pass|fail|skip (build = notrun unless step 6 ran). redFiles = the list of failing test files (empty if none). summary = a short digest; for ANY failure include the precise error excerpt (file, message) so the orchestrator can act without re-running.`,
@@ -402,7 +403,7 @@ async function processChange(CHANGE, index) {
 
   const codexStatus = codex ? codex.verdict : "unavailable";
   const codexFindings = codex ? codex.findings || [] : [];
-  const codexBlockers = codexFindings.filter((f) => f.severity === "blocker");
+  const codexBlockers = codexFindings.filter(isBlocking);
 
   const blockers = [...verifyBlockers, ...codexBlockers];
   const isAuthzClass = CHANGE.stakes === "high";
@@ -446,7 +447,9 @@ async function processChange(CHANGE, index) {
           ? "await-orchestrator-codex-unavailable"
           : "await-orchestrator-commit",
       commitReady: codexStatus !== "unavailable",
-      commitPaths: [...impl.filesTouched, ...impl.testFilesAdded],
+      // Advisory only — the orchestrator derives the real paths via
+      // `git diff --name-only HEAD` (impl.filesTouched can be unreliable).
+      commitPathsAdvisory: [...impl.filesTouched, ...impl.testFilesAdded],
       commitSubject: CHANGE.commitSubject,
       commitBody: CHANGE.commitBody,
     };
@@ -454,14 +457,12 @@ async function processChange(CHANGE, index) {
 
   // Low-stakes: commit in-workflow. Codex "unavailable" is tolerated for low-stakes (noted).
   phase("Commit");
-  const paths = [...new Set([...impl.filesTouched, ...impl.testFilesAdded])];
   const commit = await agent(
     [
       `Commit the uncommitted change ${CHANGE.name} on branch impl/backlog-2026-06-30 at ${REPO}. The full gate already passed; do NOT re-run it.`,
-      `Stage EXACTLY these paths and nothing else (the tree should contain only this change's edits):`,
-      ...paths.map((p) => `  ${p}`),
-      `First run \`cd ${REPO} && git status --porcelain\` and confirm every dirty path is in the list above; if a dirty path is NOT in the list, STOP and report committed:false with the surprise in summary (do not commit).`,
-      `Then: \`cd ${REPO} && git add <those paths> && git commit\` with this message:`,
+      `Determine the paths to stage FROM GIT, not from any provided list: run \`cd ${REPO} && git status --porcelain\`. The tree was clean from a committed base before this change, so every dirty path IS part of this change — EXCEPT anything under \`.claude/\` (the harness's own scripts), which you must NEVER stage.`,
+      `If the ONLY dirty paths are under .claude/ (i.e. there is nothing real to commit), STOP and report committed:false with that in summary.`,
+      `Otherwise stage exactly the non-.claude dirty paths: \`cd ${REPO} && git add <each non-.claude dirty path>\` (do NOT use \`git add .\` or \`git add -A\`), then \`git commit\` with this message:`,
       ``,
       `  Subject: ${CHANGE.commitSubject}`,
       ``,
@@ -471,7 +472,7 @@ async function processChange(CHANGE, index) {
       `  End the commit message with exactly this trailer line:`,
       `  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`,
       ``,
-      `If a pre-commit hook reformats staged files, re-add them and retry the commit once. Report committed, the new short sha, and a one-line summary.`,
+      `If a pre-commit hook reformats staged files, re-add them and retry the commit once. After committing, confirm the tree is clean (git status --porcelain shows only .claude/, if anything). Report committed, the new short sha, and a one-line summary listing the committed paths.`,
     ].join("\n"),
     {
       label: `commit:${CHANGE.name}`,
