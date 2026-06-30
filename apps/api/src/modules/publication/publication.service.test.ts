@@ -12,6 +12,7 @@ import {
 import {
   type AutoPublishResult,
   PublicationAccessError,
+  PublicationArchivedError,
   type PublicationRepository,
   PublicationService,
 } from "./publication.service";
@@ -369,6 +370,39 @@ describe("PublicationService", () => {
         to: "published",
       }),
     ).toBe(transitionsBefore);
+  });
+
+  it("publishReport archived-in-window: throws PublicationArchivedError, no counters, no ingestion", async () => {
+    // The period was archived inside the read→write window: the guarded
+    // compare-and-set matched zero rows and the re-read showed the row archived.
+    // Fail closed (FORBIDDEN), never a silent idempotent success.
+    const ingestion = vi.fn(() => Promise.resolve());
+    const repository: PublicationRepository = {
+      ...createRepository(assembledReport),
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
+      async publishAssembledReport(nextReport: AssembledReport) {
+        return {
+          status: "archived" as const,
+          report: structuredClone(nextReport),
+        };
+      },
+    };
+    const service = new PublicationService(repository, undefined, ingestion);
+    const submittedBefore = await getCounterValue(
+      customreportReportsSubmittedTotal,
+      { state: "published" },
+    );
+
+    await expect(
+      service.publishReport(reportId, headSession),
+    ).rejects.toBeInstanceOf(PublicationArchivedError);
+
+    expect(ingestion).not.toHaveBeenCalled();
+    expect(
+      await getCounterValue(customreportReportsSubmittedTotal, {
+        state: "published",
+      }),
+    ).toBe(submittedBefore);
   });
 
   it("publishAuto increments product KPI counters once on success", async () => {

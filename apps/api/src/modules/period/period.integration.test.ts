@@ -47,10 +47,13 @@ function createSpyRepository(
   // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock implements the async PeriodRepository.publishPeriod contract (no awaitable work in the stub)
   const publishFn = vi.fn(async (id: string) => {
     const r = reports.get(id);
-    // Mirror the guarded compare-and-set: only a not-yet-published row
-    // transitions.
-    if (!r || r.periodStatus === "published") {
-      return { transitioned: false as const };
+    // Mirror the guarded compare-and-set: only a not-yet-published,
+    // non-archived row transitions. A zero-row match splits into "raced" (now
+    // published) vs "archived" (archived inside the window).
+    if (!r || r.periodStatus === "published" || r.archived) {
+      const reason: "raced" | "archived" =
+        r?.periodStatus === "published" ? "raced" : "archived";
+      return { transitioned: false as const, reason };
     }
     r.periodStatus = "published";
     r.publishedAt = new Date();

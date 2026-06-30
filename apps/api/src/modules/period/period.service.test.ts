@@ -59,14 +59,17 @@ function createSpyRepository(
   publishPeriod: ReturnType<typeof vi.fn>;
   reopenPeriod: ReturnType<typeof vi.fn>;
 } {
-  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy satisfies the PeriodRepository.publishPeriod typed slot (must return Promise<{ transitioned: boolean }>)
+  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy satisfies the PeriodRepository.publishPeriod typed slot (must return Promise<PublishPeriodOutcome>)
   const publishFn = vi.fn(async (id: string) => {
     const r = reports.get(id);
-    // Mirror the guarded compare-and-set: only a not-yet-published row
-    // transitions; an already-published row matches zero rows (transitioned
-    // false), so the service emits no counters and runs no ingestion.
-    if (!r || r.periodStatus === "published") {
-      return { transitioned: false as const };
+    // Mirror the guarded compare-and-set: only a not-yet-published,
+    // non-archived row transitions. A zero-row match splits into "raced" (an
+    // already-published row — idempotent no-op) vs "archived" (archived inside
+    // the window — a domain error).
+    if (!r || r.periodStatus === "published" || r.archived) {
+      const reason: "raced" | "archived" =
+        r?.periodStatus === "published" ? "raced" : "archived";
+      return { transitioned: false as const, reason };
     }
     r.periodStatus = "published";
     r.publishedAt = new Date();
@@ -683,7 +686,8 @@ describe("PeriodService — manual-publish telemetry", () => {
       getCurrentEditableId: () => Promise.resolve(reportId),
       getLatestPublishedNonArchivedId: () => Promise.resolve(null),
       getReopenedNonArchivedId: () => Promise.resolve(null),
-      publishPeriod: () => Promise.resolve({ transitioned: false }),
+      publishPeriod: () =>
+        Promise.resolve({ transitioned: false, reason: "raced" }),
       reopenPeriod: () => Promise.resolve(),
       listSectionIds: () => Promise.resolve(["s1"]),
     };
@@ -1059,5 +1063,140 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
       { success: true, reportId },
     );
     expect(repo.reopenPeriod).toHaveBeenCalledWith(reportId);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  Reopened publish-target scope (close the reopened bypass, D3)      */
+/* ------------------------------------------------------------------ */
+
+describe("PeriodService — publish reopened-target scope", () => {
+  it("lets a head publish the single active reopened period (its own)", async () => {
+    const repo = createSpyRepository(
+      new Map([[reportId, reopenedReport(reportId)]]),
+    );
+    const service = new PeriodService(repo);
+
+    await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
+      { success: true, reportId },
+    );
+    expect(repo.publishPeriod).toHaveBeenCalledWith(
+      reportId,
+      headSession.userId,
+    );
+  });
+
+  it("rejects a head publishing a reopened target that is not the single active reopened period", async () => {
+    // reportId (inserted first) is the single active reopened period
+    // getReopenedNonArchivedId resolves; otherReportId is a SECOND reopened row
+    // — only reachable via an admin reopen of a historical period. A head must
+    // not be able to publish it (the closed bypass).
+    const repo = createSpyRepository(
+      new Map([
+        [reportId, reopenedReport(reportId)],
+        [otherReportId, reopenedReport(otherReportId)],
+      ]),
+    );
+    const service = new PeriodService(repo);
+
+    await expect(
+      service.publishPeriod(otherReportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodScopeError);
+    expect(repo.publishPeriod).not.toHaveBeenCalled();
+  });
+
+  it("lets an admin publish any reopened target (reopen→fix→republish preserved)", async () => {
+    const repo = createSpyRepository(
+      new Map([
+        [reportId, reopenedReport(reportId)],
+        [otherReportId, reopenedReport(otherReportId)],
+      ]),
+    );
+    const service = new PeriodService(repo);
+
+    await expect(
+      service.publishPeriod(otherReportId, adminSession),
+    ).resolves.toEqual({ success: true, reportId: otherReportId });
+    expect(repo.publishPeriod).toHaveBeenCalledWith(
+      otherReportId,
+      adminSession.userId,
+    );
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  Archive landing inside the publish read→write window (D2)          */
+/* ------------------------------------------------------------------ */
+
+describe("PeriodService — archive-in-window publish outcome", () => {
+  // The pre-write read sees a non-archived open period (it raced ahead of the
+  // archive's commit), so the service clears its archived gate and calls the
+  // repo; the guarded compare-and-set then reports the archive that landed in
+  // the window. The mock returns the repo outcome directly to model that state.
+  function repoWithOutcome(
+    publish: ReturnType<typeof vi.fn>,
+  ): PeriodRepository {
+    return {
+      getReportById: () =>
+        Promise.resolve({
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+          archived: false,
+        }),
+      getCurrentEditableId: () => Promise.resolve(reportId),
+      getLatestPublishedNonArchivedId: () => Promise.resolve(null),
+      getReopenedNonArchivedId: () => Promise.resolve(null),
+      publishPeriod: publish as PeriodRepository["publishPeriod"],
+      reopenPeriod: () => Promise.resolve(),
+      listSectionIds: () => Promise.resolve(["s1"]),
+    };
+  }
+
+  it("throws PeriodScopeError and emits no telemetry when the period was archived in the window", async () => {
+    const ingestion = vi.fn(() => Promise.resolve());
+    const publish = vi.fn(() =>
+      Promise.resolve({ transitioned: false as const, reason: "archived" }),
+    );
+    const service = new PeriodService(
+      repoWithOutcome(publish),
+      undefined,
+      undefined,
+      ingestion,
+    );
+
+    const before = await getCounterValue(customreportReportsSubmittedTotal, {
+      state: "published",
+    });
+
+    await expect(
+      service.publishPeriod(reportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodScopeError);
+
+    expect(ingestion).not.toHaveBeenCalled();
+    expect(
+      await getCounterValue(customreportReportsSubmittedTotal, {
+        state: "published",
+      }),
+    ).toBe(before);
+  });
+
+  it("returns idempotent success with no side-effects when a concurrent publish won (raced)", async () => {
+    const ingestion = vi.fn(() => Promise.resolve());
+    const publish = vi.fn(() =>
+      Promise.resolve({ transitioned: false as const, reason: "raced" }),
+    );
+    const service = new PeriodService(
+      repoWithOutcome(publish),
+      undefined,
+      undefined,
+      ingestion,
+    );
+
+    await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
+      { success: true, reportId },
+    );
+    expect(ingestion).not.toHaveBeenCalled();
   });
 });

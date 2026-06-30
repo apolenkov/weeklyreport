@@ -37,6 +37,18 @@ export class PeriodNotFoundError extends Error {
   }
 }
 
+/**
+ * Outcome of the guarded manual-publish compare-and-set. A real transition
+ * carries `transitioned: true`; a zero-row match is split by an in-transaction
+ * re-read so the service can tell a concurrent publish (`reason: "raced"` —
+ * idempotent success) from an archive landing inside the read→write window
+ * (`reason: "archived"` — a domain error). The contradictory archived-and-
+ * published row is never written.
+ */
+export type PublishPeriodOutcome =
+  | { readonly transitioned: true }
+  | { readonly transitioned: false; readonly reason: "raced" | "archived" };
+
 export interface PeriodRepository {
   getReportById(reportId: string): Promise<{
     id: string;
@@ -46,15 +58,17 @@ export interface PeriodRepository {
     archived: boolean;
   } | null>;
   /**
-   * Publish a period via a guarded compare-and-set. Reports whether this call
-   * actually transitioned the row (`transitioned: true`) or found it already
-   * published — a concurrent publish having won the race (`false`), so the
-   * caller can emit telemetry and run ingestion at most once per transition.
+   * Publish a period via a guarded compare-and-set keyed on
+   * `periodStatus != "published" AND archived = false`. A zero-row match is
+   * disambiguated by an in-transaction re-read: `reason: "raced"` (a concurrent
+   * publish won) vs `reason: "archived"` (the period was archived inside the
+   * read→write window), so the caller emits telemetry and runs ingestion at
+   * most once per transition and fails closed on an archive race.
    */
   publishPeriod(
     reportId: string,
     userId: string,
-  ): Promise<{ transitioned: boolean }>;
+  ): Promise<PublishPeriodOutcome>;
   reopenPeriod(reportId: string): Promise<void>;
   /**
    * The current active editable period id (the `period.publish` target) and the
@@ -160,38 +174,58 @@ export class PeriodService {
     }
 
     // A head publishes either the current editable period (steady state) or the
-    // period they just reopened. getCurrentEditableId resolves the newest editable
-    // by periodStart — the *open* next period when a reopened older period coexists
-    // — so a strict equality check alone would brick republishing a reopened period
-    // (the reopen → fix → republish flow). A reopened target is accepted directly;
-    // the single-active-reopen guard (assertNoConcurrentReopen) bounds the system to
-    // at most one head-reopened period, so this cannot be abused to republish a
-    // historical snapshot.
-    if (report.periodStatus !== "reopened") {
-      await this.assertHeadTargetMatches(reportId, session, () =>
-        this.repository.getCurrentEditableId(),
-      );
-    }
+    // single active reopened period. getCurrentEditableId resolves the newest
+    // editable by periodStart — the *open* next period when a reopened older
+    // period coexists — so a reopened target is checked against
+    // getReopenedNonArchivedId instead, the one period the single-active-reopen
+    // guard permits. Asserting that equality (rather than skipping the check for
+    // any reopened target) closes the bypass where an admin-reopened historical
+    // period — a second reopened row — could be republished by a head.
+    const resolveActiveId =
+      report.periodStatus === "reopened"
+        ? () => this.repository.getReopenedNonArchivedId()
+        : () => this.repository.getCurrentEditableId();
+    await this.assertHeadTargetMatches(reportId, session, resolveActiveId);
 
     // Capture prior status before the write so the from-label reflects
     // the actual state (open or reopened), not a hardcoded value.
     const priorStatus = report.periodStatus;
 
-    const { transitioned } = await this.repository.publishPeriod(
+    const outcome = await this.repository.publishPeriod(
       reportId,
       session.userId,
     );
 
-    // A concurrent publish already transitioned the period (the guarded
-    // compare-and-set matched zero rows). Idempotent success: emit no counters
-    // and run no post-publish side-effects so a redundant publish never
-    // inflates the on-time-ratio numerator.
-    if (!transitioned) {
+    if (!outcome.transitioned) {
+      // The guarded compare-and-set matched zero rows for one of two reasons.
+      // An archive landed inside the read→write window (the pre-write
+      // `report.archived` check above cannot catch this): fail closed with the
+      // same domain error. Otherwise a concurrent publish won — idempotent
+      // success that emits no counters and runs no post-publish side-effects so
+      // a redundant publish never inflates the on-time-ratio numerator.
+      if (outcome.reason === "archived") {
+        throw new PeriodScopeError("Archived periods cannot be published.");
+      }
       return { success: true, reportId };
     }
 
-    // Emit only after a real transition — a redundant or failed write must not
-    // inflate the counters (mirrors the discipline in publication.service.ts).
+    await this.emitPublishSideEffects(reportId, priorStatus);
+
+    return { success: true, reportId };
+  }
+
+  /**
+   * Post-transition side-effects, emitted only after a real transition so a
+   * redundant or failed write never inflates the counters (mirrors the
+   * discipline in publication.service.ts). The ingestion enqueue reads the
+   * section ids AFTER the publish transaction so sections that raced into the
+   * period before commit are still picked up; its errors never bubble — a
+   * downstream consumer blip must not turn a successful publish into a 5xx.
+   */
+  private async emitPublishSideEffects(
+    reportId: string,
+    priorStatus: string,
+  ): Promise<void> {
     customreportReportsSubmittedTotal.inc({ state: "published" });
     customreportPeriodStateTransitionsTotal.inc({
       from: priorStatus,
@@ -200,11 +234,6 @@ export class PeriodService {
 
     await this.invalidateAnalyticsCache();
 
-    // Fire-and-forget post-publish ingestion enqueue. Read the section
-    // ids AFTER the publish transaction so any sections that raced into
-    // the period before commit are still picked up. Errors never bubble —
-    // a downstream consumer blip must not turn a successful publish into
-    // a 5xx.
     if (this.repository.listSectionIds) {
       try {
         const sectionIds = await this.repository.listSectionIds(reportId);
@@ -213,8 +242,6 @@ export class PeriodService {
         // intentionally swallowed
       }
     }
-
-    return { success: true, reportId };
   }
 
   /**

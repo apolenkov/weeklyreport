@@ -93,9 +93,14 @@ function createRepository(report: MockReport | null): PeriodRepository & {
 
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
     async publishPeriod(id: string, _userId: string) {
-      // Mirror the guarded compare-and-set: only a not-yet-published row
-      // transitions.
-      if (id === current?.id && current.periodStatus !== "published") {
+      // Mirror the guarded compare-and-set: only a not-yet-published,
+      // non-archived row transitions. A zero-row match splits into "raced" (now
+      // published) vs "archived" (archived inside the window).
+      if (
+        id === current?.id &&
+        current.periodStatus !== "published" &&
+        !current.archived
+      ) {
         current = {
           ...current,
           status: "published",
@@ -104,7 +109,9 @@ function createRepository(report: MockReport | null): PeriodRepository & {
         };
         return { transitioned: true as const };
       }
-      return { transitioned: false as const };
+      const reason: "raced" | "archived" =
+        current?.periodStatus === "published" ? "raced" : "archived";
+      return { transitioned: false as const, reason };
     },
 
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)

@@ -18,6 +18,7 @@ import {
 } from "../../modules/period/period.service.js";
 import {
   PublicationAccessError,
+  PublicationArchivedError,
   PublicationNotFoundError,
 } from "../../modules/publication/publication.service.js";
 import { ReminderDomainError } from "../../modules/reminders/reminders.service.js";
@@ -63,6 +64,10 @@ const DOMAIN_ERROR_CODES: readonly (readonly [
   // An "already published / immutable" write is a state conflict, not a missing
   // resource — CONFLICT.
   [PublicationAccessError, "CONFLICT"],
+  // Publishing a report archived inside the read→write window is an
+  // authorization denial on the target, not a state conflict — FORBIDDEN,
+  // mirroring PeriodScopeError on the period publish path.
+  [PublicationArchivedError, "FORBIDDEN"],
   [PdfExportDomainError, "NOT_FOUND"],
   [ArchiveDomainError, "NOT_FOUND"],
   [WeeklyReportDomainError, "NOT_FOUND"],

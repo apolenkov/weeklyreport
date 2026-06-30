@@ -20,6 +20,7 @@ import {
 } from "../../modules/period/period.service.js";
 import {
   PublicationAccessError,
+  PublicationArchivedError,
   PublicationNotFoundError,
 } from "../../modules/publication/publication.service.js";
 import { ReminderDomainError } from "../../modules/reminders/reminders.service.js";
@@ -177,6 +178,21 @@ describe("mapDomainError", () => {
 
       expect(mapped.code).toBe("CONFLICT");
     });
+  });
+
+  // -----------------------------------------------------------------------
+  // PublicationArchivedError -> FORBIDDEN (distinct from the CONFLICT above)
+  // -----------------------------------------------------------------------
+
+  it("maps PublicationArchivedError to FORBIDDEN, not CONFLICT", () => {
+    const error = new PublicationArchivedError(
+      "Cannot publish an archived report.",
+    );
+    const mapped = mapDomainError(error);
+
+    expect(mapped.code).toBe("FORBIDDEN");
+    expect(mapped.code).not.toBe("CONFLICT");
+    expect(mapped.message).toBe("Cannot publish an archived report.");
   });
 
   // -----------------------------------------------------------------------
@@ -410,6 +426,11 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       code: "CONFLICT",
     },
     {
+      name: "PublicationArchivedError",
+      make: () => new PublicationArchivedError("m"),
+      code: "FORBIDDEN",
+    },
+    {
       name: "PdfExportDomainError",
       make: () => new PdfExportDomainError("m"),
       code: "NOT_FOUND",
@@ -498,7 +519,7 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
 
   it("covers every domain error class the mapper imports", () => {
     // Guards against a class being added to the mapper without a row here.
-    expect(cases).toHaveLength(22);
+    expect(cases).toHaveLength(23);
   });
 });
 
