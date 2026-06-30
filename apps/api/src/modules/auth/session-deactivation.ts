@@ -1,0 +1,40 @@
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import type { SessionRevocationService } from "../admin/session-revocation.service.js";
+
+/**
+ * The single source of truth for the revoked/deactivated decision across every
+ * JWT-admitting entry path (regular tRPC session, PDF-export rebuild, Bull
+ * Board admin guard), so a stale JWT cannot outlive a deactivation.
+ *
+ * Two tiers, in order:
+ *  - Redis revoked-set fast path, fail-OPEN: a thrown/failed lookup must NOT
+ *    bar the user, otherwise a Redis outage would lock everyone out. The
+ *    authoritative Prisma read below is the safety net.
+ *  - Prisma `isActive` read, fail-CLOSED: a missing/`null` row OR
+ *    `isActive === false` bars the user. Barring the missing row closes the
+ *    hard-deleted-user gap — admin snapshot-restore deletes unreferenced users
+ *    without touching the revoked set, so the fast path never fires for them.
+ */
+export async function isUserAccessBarred(
+  userId: string,
+  prisma: PrismaService,
+  sessionRevocation: Pick<SessionRevocationService, "isRevoked">,
+): Promise<boolean> {
+  const revoked = await sessionRevocation.isRevoked(userId).catch(() => false);
+  if (revoked) {
+    return true;
+  }
+  const userRow = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isActive: true },
+  });
+  // Bar a missing row (a hard-deleted account no longer keeps a live session)
+  // and an explicitly deactivated one — but a row that EXISTS is active unless
+  // it says otherwise. We compare the nullable `userRow?.isActive` to `false`
+  // (not `!isActive`) so only an explicit deactivation bars; an existing row is
+  // never barred merely because the flag is unselected. The two checks stay
+  // separate so neither over-bars the other.
+  const missing = userRow == null;
+  const deactivated = userRow?.isActive === false;
+  return missing || deactivated;
+}

@@ -28,12 +28,17 @@ const viewerSession: UserSession = {
 interface PrismaStubOptions {
   isActive?: boolean;
   viewerGroups?: string[];
+  /** When true the user row is gone (hard-deleted) — findUnique returns null. */
+  missingUser?: boolean;
 }
 
 function makePrisma(opts: PrismaStubOptions = {}): PrismaService {
   const stub = {
     user: {
-      findUnique: () => Promise.resolve({ isActive: opts.isActive ?? true }),
+      findUnique: () =>
+        Promise.resolve(
+          opts.missingUser ? null : { isActive: opts.isActive ?? true },
+        ),
     },
     viewerGroupAccess: {
       findMany: () =>
@@ -112,6 +117,16 @@ describe("resolveHumanSession", () => {
       verifySessionToken: () => viewerSession,
       sessionRevocation: { isRevoked: () => Promise.resolve(false) },
       prisma: makePrisma({ isActive: false }),
+    });
+
+    expect(result).toBeNull();
+  });
+
+  it("rejects a hard-deleted user absent from the revoked set (null row fails closed)", async () => {
+    const result = await resolveHumanSession("valid-token", {
+      verifySessionToken: () => viewerSession,
+      sessionRevocation: { isRevoked: () => Promise.resolve(false) },
+      prisma: makePrisma({ missingUser: true }),
     });
 
     expect(result).toBeNull();
