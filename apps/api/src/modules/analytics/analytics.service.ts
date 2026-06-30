@@ -53,9 +53,13 @@ export interface AnalyticsCachePort {
 // collide with other applications sharing the Redis instance. The cache's
 // SCAN-based invalidation (analytics.cache.ts) walks the same prefix, so all
 // three sub-prefixes must remain on the `customreport:analytics:` root.
-const PREFIX_HISTORY = "customreport:analytics:traffic-light:";
-const PREFIX_VELOCITY = "customreport:analytics:lead-velocity:";
-const PREFIX_COMPARISON = "customreport:analytics:period-comparison:";
+// `:v2:` segment: the date-matching fix returns a different (correct) result
+// for an unchanged input, so the bump orphans pre-fix cached entries on deploy
+// instead of serving them stale until TTL. The version stays UNDER the
+// `customreport:analytics:` root so SCAN-based invalidateAll still reaches it.
+const PREFIX_HISTORY = "customreport:analytics:traffic-light:v2:";
+const PREFIX_VELOCITY = "customreport:analytics:lead-velocity:v2:";
+const PREFIX_COMPARISON = "customreport:analytics:period-comparison:v2:";
 
 /**
  * Stable JSON.stringify with sorted keys so equivalent inputs hit the same
