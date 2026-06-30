@@ -6,6 +6,7 @@ import {
   type ReportSectionReadModel,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import {
@@ -13,9 +14,11 @@ import {
   type PrismaReportSectionWithRelations,
   reportSectionFullInclude,
 } from "../report-sections/report-sections.prisma-repository";
-import type {
-  CarryOverRepository,
-  CarryOverResult,
+import {
+  CarryOverConflictError,
+  type CarryOverRepository,
+  type CarryOverResult,
+  type TargetReportState,
 } from "./carry-over.service";
 
 /**
@@ -78,17 +81,33 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
   async findExecutionByDedupeKey(
     dedupeKey: string,
   ): Promise<CarryOverExecution | null> {
+    const result = await this.readExecutionByDedupeKey(dedupeKey);
+    return result?.execution ?? null;
+  }
+
+  private async readExecutionByDedupeKey(dedupeKey: string): Promise<{
+    execution: CarryOverExecution;
+    records: CarryOverRecord[];
+  } | null> {
     const row = await this.prisma.carryOverExecution.findUnique({
       where: { dedupeKey },
       include: { records: true },
     });
 
-    if (!row) {
-      return null;
-    }
+    return row ? mapPrismaToExecution(row) : null;
+  }
 
-    const { execution } = mapPrismaToExecution(row);
-    return execution;
+  async getTargetReportState(
+    targetReportId: string,
+  ): Promise<TargetReportState | null> {
+    const row = await this.prisma.report.findUnique({
+      where: { id: targetReportId },
+      select: { periodStatus: true, archived: true },
+    });
+
+    return row
+      ? { periodStatus: row.periodStatus, archived: row.archived }
+      : null;
   }
 
   async getSourceSections(
@@ -124,102 +143,141 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
   async saveCarryOver(
     execution: CarryOverExecution,
     records: CarryOverRecord[],
-    targetSection: ReportSectionReadModel,
+    targetSections: ReportSectionReadModel[],
   ): Promise<CarryOverResult> {
-    await this.prisma.$transaction(
-      async (tx) => {
-        // Idempotency guard: check for existing execution before creating
-        const existing = await tx.carryOverExecution.findFirst({
-          where: {
-            sourceReportId: execution.sourceReportId,
-            targetReportId: execution.targetReportId,
-          },
-        });
-
-        if (!existing) {
-          await tx.carryOverExecution.create({
-            data: {
-              id: execution.id,
+    try {
+      await this.prisma.$transaction(
+        async (tx) => {
+          // Idempotency guard: check for existing execution before creating
+          const existing = await tx.carryOverExecution.findFirst({
+            where: {
               sourceReportId: execution.sourceReportId,
               targetReportId: execution.targetReportId,
-              dedupeKey: execution.dedupeKey,
-              status: execution.status,
             },
           });
-        }
 
-        if (records.length > 0) {
-          await tx.carryOverRecord.createMany({
-            data: records.map((r) => ({
-              id: r.id,
-              executionId: execution.id,
-              sourceItemId: r.sourceItemId,
-              sourceDecisionId: r.sourceDecisionId,
-              targetItemId: r.targetItemId,
-              targetDecisionId: r.targetDecisionId,
-              recordType: r.sourceItemId ? "item" : "decision",
-            })),
-          });
-        }
+          if (!existing) {
+            await tx.carryOverExecution.create({
+              data: {
+                id: execution.id,
+                sourceReportId: execution.sourceReportId,
+                targetReportId: execution.targetReportId,
+                dedupeKey: execution.dedupeKey,
+                status: execution.status,
+              },
+            });
+          }
 
-        // Upsert carried-over items into target section
-        const carriedItems = targetSection.items.filter((i) => i.carriedOver);
-        if (carriedItems.length > 0) {
-          await tx.item.createMany({
-            data: carriedItems.map((i) => ({
-              id: i.id ?? undefined,
-              reportSectionId: targetSection.reportSectionId,
-              projectId: i.projectId,
-              type: i.type,
-              text: i.text,
-              tag: i.tag,
-              workflowStatus: i.workflowStatus,
-              carriedOver: true,
-              completed: i.completed ?? null,
-            })),
-            skipDuplicates: true,
-          });
-        }
+          if (records.length > 0) {
+            await tx.carryOverRecord.createMany({
+              data: records.map((r) => ({
+                id: r.id,
+                executionId: execution.id,
+                sourceItemId: r.sourceItemId,
+                sourceDecisionId: r.sourceDecisionId,
+                targetItemId: r.targetItemId,
+                targetDecisionId: r.targetDecisionId,
+                recordType: r.sourceItemId ? "item" : "decision",
+              })),
+            });
+          }
 
-        // Upsert carried-over decisions into target section
-        const carriedDecisions = targetSection.decisions.filter(
-          (d) => !d.resolvedAt,
+          // Persist carried rows for EVERY target section, not just the first —
+          // the service merges each matched lead's carried items/decisions into
+          // its own section, all written in this single transaction.
+          for (const targetSection of targetSections) {
+            const carriedItems = targetSection.items.filter(
+              (i) => i.carriedOver,
+            );
+            if (carriedItems.length > 0) {
+              await tx.item.createMany({
+                data: carriedItems.map((i) => ({
+                  id: i.id ?? undefined,
+                  reportSectionId: targetSection.reportSectionId,
+                  projectId: i.projectId,
+                  type: i.type,
+                  text: i.text,
+                  tag: i.tag,
+                  workflowStatus: i.workflowStatus,
+                  carriedOver: true,
+                  completed: i.completed ?? null,
+                  priorityRank: i.priorityRank ?? null,
+                  stageNames: i.stageIds ?? [],
+                })),
+                skipDuplicates: true,
+              });
+            }
+
+            const carriedDecisions = targetSection.decisions.filter(
+              (d) => !d.resolvedAt,
+            );
+            const existingDecisionIds = new Set(
+              (
+                await tx.decision.findMany({
+                  where: { reportSectionId: targetSection.reportSectionId },
+                  select: { id: true },
+                })
+              ).map((d) => d.id),
+            );
+
+            const newDecisions = carriedDecisions.filter(
+              (d) => d.id && !existingDecisionIds.has(d.id),
+            );
+
+            // Decision.productId is a NOT-NULL product FK, so a productless
+            // decision cannot persist — skip it here (the service already
+            // excludes it from counts/records).
+            const decisionsWithProduct = newDecisions.filter(
+              (d): d is typeof d & { productId: string } =>
+                Boolean(d.productId),
+            );
+            if (decisionsWithProduct.length > 0) {
+              await tx.decision.createMany({
+                data: decisionsWithProduct.map((d) => ({
+                  id: d.id ?? undefined,
+                  reportSectionId: targetSection.reportSectionId,
+                  text: d.text,
+                  owner: d.owner,
+                  deadline: d.deadline ?? null,
+                  impact: d.impact,
+                  resolvedAt: d.resolvedAt ?? null,
+                  stageNames: d.stageIds ?? [],
+                  productId: d.productId,
+                })),
+              });
+            }
+          }
+        },
+        { timeout: 15_000 },
+      );
+    } catch (error) {
+      // Dedupe race: two carry-overs for the same source/target both pass the
+      // app-level existing-execution check, then the second insert hits the
+      // `dedupeKey` unique constraint (P2002). Resolve to the already-recorded
+      // execution (idempotent success) rather than surfacing a raw 500; only if
+      // it cannot be re-read does this become a distinct conflict. No `failed`
+      // status is ever written.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        const recorded = await this.readExecutionByDedupeKey(
+          execution.dedupeKey,
         );
-        const existingDecisionIds = new Set(
-          (
-            await tx.decision.findMany({
-              where: { reportSectionId: targetSection.reportSectionId },
-              select: { id: true },
-            })
-          ).map((d) => d.id),
-        );
-
-        const newDecisions = carriedDecisions.filter(
-          (d) => d.id && !existingDecisionIds.has(d.id),
-        );
-
-        const decisionsWithProduct = newDecisions.filter(
-          (d): d is typeof d & { productId: string } => Boolean(d.productId),
-        );
-        if (decisionsWithProduct.length > 0) {
-          await tx.decision.createMany({
-            data: decisionsWithProduct.map((d) => ({
-              id: d.id ?? undefined,
-              reportSectionId: targetSection.reportSectionId,
-              text: d.text,
-              owner: d.owner,
-              deadline: d.deadline ?? null,
-              impact: d.impact,
-              resolvedAt: d.resolvedAt ?? null,
-              stageName: d.stageIds?.join(", ") ?? null,
-              productId: d.productId,
-            })),
-          });
+        if (recorded) {
+          return {
+            execution: recorded.execution,
+            records: recorded.records,
+            targetSection: targetSections[0],
+          };
         }
-      },
-      { timeout: 15_000 },
-    );
+        throw new CarryOverConflictError(
+          "Carry-over is already in progress for this source and target report.",
+        );
+      }
+      throw error;
+    }
 
-    return { execution, records, targetSection };
+    return { execution, records, targetSection: targetSections[0] };
   }
 }

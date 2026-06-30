@@ -120,11 +120,9 @@ describe("CarryOverPrismaRepository (integration)", () => {
       priorities: [],
     };
 
-    const result = await repo.saveCarryOver(
-      execution,
-      records,
+    const result = await repo.saveCarryOver(execution, records, [
       targetSectionReadModel,
-    );
+    ]);
 
     expect(result.execution.id).toBe(TEST_IDS.carryExec);
     expect(result.records).toHaveLength(1);
@@ -143,5 +141,358 @@ describe("CarryOverPrismaRepository (integration)", () => {
     expect(targetItems).toHaveLength(1);
     expect(expectDefined(targetItems[0]).carriedOver).toBe(true);
     expect(expectDefined(targetItems[0]).text).toBe("Carry this over");
+  });
+
+  it("carries an unresolved decision with product + stageIds without aborting", async () => {
+    const targetReport = await prisma.report.create({
+      data: {
+        id: TEST_IDS.targetReport,
+        periodStart: new Date("2026-04-14"),
+        periodEnd: new Date("2026-04-20"),
+        deadline: new Date("2026-04-18"),
+        status: "draft",
+      },
+    });
+    const targetSection = await prisma.reportSection.create({
+      data: {
+        reportId: targetReport.id,
+        authorId: testData.lead.id,
+        status: "draft",
+      },
+    });
+
+    const decisionId = crypto.randomUUID();
+    const execution = {
+      id: crypto.randomUUID(),
+      sourceReportId: testData.report.id,
+      targetReportId: targetReport.id,
+      dedupeKey: `${testData.report.id}:${targetReport.id}`,
+      status: "completed" as const,
+      startedAt: new Date(),
+      completedAt: new Date(),
+      carriedItemCount: 0,
+      carriedDecisionCount: 1,
+    };
+    const records = [
+      {
+        id: crypto.randomUUID(),
+        sourceReportId: testData.report.id,
+        targetReportId: targetReport.id,
+        sourceItemId: null,
+        targetItemId: null,
+        sourceDecisionId: crypto.randomUUID(),
+        targetDecisionId: decisionId,
+        status: "completed" as const,
+        carriedAt: new Date(),
+      },
+    ];
+    const targetSectionReadModel = {
+      reportSectionId: targetSection.id,
+      reportId: targetReport.id,
+      authorId: testData.lead.id,
+      authorName: "Test Lead 1",
+      status: "draft" as const,
+      submittedAt: null,
+      projects: [],
+      items: [],
+      risks: [],
+      decisions: [
+        {
+          id: decisionId,
+          text: "Unresolved decision with product",
+          owner: "Test Head",
+          deadline: null,
+          impact: "Needs escalation",
+          resolvedAt: null,
+          stageIds: ["Development", "Design"],
+          productId: testData.project.id,
+        },
+      ],
+    };
+
+    // The old write used a non-existent `stageName` field, aborting the whole
+    // transaction whenever a carried decision had a product. This must commit.
+    await repo.saveCarryOver(execution, records, [targetSectionReadModel]);
+
+    const created = await prisma.decision.findMany({
+      where: { reportSectionId: targetSection.id },
+    });
+    expect(created).toHaveLength(1);
+    expect(expectDefined(created[0]).stageNames).toEqual([
+      "Development",
+      "Design",
+    ]);
+    expect(expectDefined(created[0]).productId).toBe(testData.project.id);
+
+    // Counts never exceed persisted: the decision CarryOverRecord count equals
+    // the number of Decision rows actually written.
+    const decisionRecords = await prisma.carryOverRecord.findMany({
+      where: { executionId: execution.id, recordType: "decision" },
+    });
+    expect(decisionRecords).toHaveLength(created.length);
+  });
+
+  it("carries an item's priorityRank and stageNames across the boundary", async () => {
+    const targetReport = await prisma.report.create({
+      data: {
+        id: TEST_IDS.targetReport,
+        periodStart: new Date("2026-04-14"),
+        periodEnd: new Date("2026-04-20"),
+        deadline: new Date("2026-04-18"),
+        status: "draft",
+      },
+    });
+    const targetSection = await prisma.reportSection.create({
+      data: {
+        reportId: targetReport.id,
+        authorId: testData.lead.id,
+        status: "draft",
+      },
+    });
+
+    const itemId = crypto.randomUUID();
+    const execution = {
+      id: crypto.randomUUID(),
+      sourceReportId: testData.report.id,
+      targetReportId: targetReport.id,
+      dedupeKey: `${testData.report.id}:${targetReport.id}`,
+      status: "completed" as const,
+      startedAt: new Date(),
+      completedAt: new Date(),
+      carriedItemCount: 1,
+      carriedDecisionCount: 0,
+    };
+    const records = [
+      {
+        id: crypto.randomUUID(),
+        sourceReportId: testData.report.id,
+        targetReportId: targetReport.id,
+        sourceItemId: crypto.randomUUID(),
+        targetItemId: itemId,
+        sourceDecisionId: null,
+        targetDecisionId: null,
+        status: "completed" as const,
+        carriedAt: new Date(),
+      },
+    ];
+    const targetSectionReadModel = {
+      reportSectionId: targetSection.id,
+      reportId: targetReport.id,
+      authorId: testData.lead.id,
+      authorName: "Test Lead 1",
+      status: "draft" as const,
+      submittedAt: null,
+      projects: [],
+      items: [
+        {
+          id: itemId,
+          projectId: testData.project.id,
+          type: "current" as const,
+          text: "Ranked, staged carried item",
+          tag: "feature",
+          workflowStatus: "in_progress" as const,
+          carriedOver: true,
+          completed: null,
+          priorityRank: 2,
+          stageIds: ["Design", "Build"],
+        },
+      ],
+      risks: [],
+      decisions: [],
+    };
+
+    await repo.saveCarryOver(execution, records, [targetSectionReadModel]);
+
+    const created = await prisma.item.findMany({
+      where: { reportSectionId: targetSection.id },
+    });
+    expect(created).toHaveLength(1);
+    expect(expectDefined(created[0]).priorityRank).toBe(2);
+    expect(expectDefined(created[0]).stageNames).toEqual(["Design", "Build"]);
+  });
+
+  it("persists carried rows for every target section in a multi-lead report", async () => {
+    const targetReport = await prisma.report.create({
+      data: {
+        id: TEST_IDS.targetReport,
+        periodStart: new Date("2026-04-14"),
+        periodEnd: new Date("2026-04-20"),
+        deadline: new Date("2026-04-18"),
+        status: "draft",
+      },
+    });
+    const sectionLead = await prisma.reportSection.create({
+      data: {
+        reportId: targetReport.id,
+        authorId: testData.lead.id,
+        status: "draft",
+      },
+    });
+    const sectionHead = await prisma.reportSection.create({
+      data: {
+        reportId: targetReport.id,
+        authorId: testData.head.id,
+        status: "draft",
+      },
+    });
+
+    const itemLeadId = crypto.randomUUID();
+    const itemHeadId = crypto.randomUUID();
+    const execution = {
+      id: crypto.randomUUID(),
+      sourceReportId: testData.report.id,
+      targetReportId: targetReport.id,
+      dedupeKey: `${testData.report.id}:${targetReport.id}`,
+      status: "completed" as const,
+      startedAt: new Date(),
+      completedAt: new Date(),
+      carriedItemCount: 2,
+      carriedDecisionCount: 0,
+    };
+    const records = [itemLeadId, itemHeadId].map((targetItemId) => ({
+      id: crypto.randomUUID(),
+      sourceReportId: testData.report.id,
+      targetReportId: targetReport.id,
+      sourceItemId: crypto.randomUUID(),
+      targetItemId,
+      sourceDecisionId: null,
+      targetDecisionId: null,
+      status: "completed" as const,
+      carriedAt: new Date(),
+    }));
+    const sectionLeadReadModel = {
+      reportSectionId: sectionLead.id,
+      reportId: targetReport.id,
+      authorId: testData.lead.id,
+      authorName: "Test Lead 1",
+      status: "draft" as const,
+      submittedAt: null,
+      projects: [],
+      items: [
+        {
+          id: itemLeadId,
+          projectId: testData.project.id,
+          type: "current" as const,
+          text: "Lead carried item",
+          tag: "feature",
+          workflowStatus: "in_progress" as const,
+          carriedOver: true,
+          completed: null,
+        },
+      ],
+      risks: [],
+      decisions: [],
+    };
+    const sectionHeadReadModel = {
+      ...sectionLeadReadModel,
+      reportSectionId: sectionHead.id,
+      authorId: testData.head.id,
+      authorName: "Test Head",
+      items: [
+        {
+          id: itemHeadId,
+          projectId: testData.project.id,
+          type: "current" as const,
+          text: "Head carried item",
+          tag: "feature",
+          workflowStatus: "in_progress" as const,
+          carriedOver: true,
+          completed: null,
+        },
+      ],
+    };
+
+    await repo.saveCarryOver(execution, records, [
+      sectionLeadReadModel,
+      sectionHeadReadModel,
+    ]);
+
+    const leadItems = await prisma.item.findMany({
+      where: { reportSectionId: sectionLead.id },
+    });
+    const headItems = await prisma.item.findMany({
+      where: { reportSectionId: sectionHead.id },
+    });
+    expect(leadItems).toHaveLength(1);
+    expect(headItems).toHaveLength(1);
+    // Persisted item count matches the execution's reported carriedItemCount.
+    const persisted = await prisma.item.count({
+      where: { reportSectionId: { in: [sectionLead.id, sectionHead.id] } },
+    });
+    expect(persisted).toBe(execution.carriedItemCount);
+  });
+
+  it("resolves the dedupeKey unique-constraint race to the existing execution (no 500)", async () => {
+    const targetReport = await prisma.report.create({
+      data: {
+        id: TEST_IDS.targetReport,
+        periodStart: new Date("2026-04-14"),
+        periodEnd: new Date("2026-04-20"),
+        deadline: new Date("2026-04-18"),
+        status: "draft",
+      },
+    });
+    const targetSection = await prisma.reportSection.create({
+      data: {
+        reportId: targetReport.id,
+        authorId: testData.lead.id,
+        status: "draft",
+      },
+    });
+
+    const dedupeKey = `${testData.report.id}:${targetReport.id}`;
+    // Pre-insert the execution that "won" a concurrent race, holding the
+    // dedupeKey. Its source/target are swapped so the in-transaction findFirst
+    // (keyed on source/target, not dedupeKey) misses it and the create reaches
+    // the unique constraint — exactly the race the catch must absorb.
+    const winnerId = crypto.randomUUID();
+    await prisma.carryOverExecution.create({
+      data: {
+        id: winnerId,
+        sourceReportId: targetReport.id,
+        targetReportId: testData.report.id,
+        dedupeKey,
+        status: "completed",
+      },
+    });
+
+    const execution = {
+      id: crypto.randomUUID(),
+      sourceReportId: testData.report.id,
+      targetReportId: targetReport.id,
+      dedupeKey,
+      status: "completed" as const,
+      startedAt: new Date(),
+      completedAt: new Date(),
+      carriedItemCount: 0,
+      carriedDecisionCount: 0,
+    };
+    const targetSectionReadModel = {
+      reportSectionId: targetSection.id,
+      reportId: targetReport.id,
+      authorId: testData.lead.id,
+      authorName: "Test Lead 1",
+      status: "draft" as const,
+      submittedAt: null,
+      projects: [],
+      items: [],
+      risks: [],
+      decisions: [],
+    };
+
+    const result = await repo.saveCarryOver(
+      execution,
+      [],
+      [targetSectionReadModel],
+    );
+
+    // Idempotent: the conflict resolves to the already-recorded execution, and
+    // no duplicate row is created.
+    expect(result.execution.id).toBe(winnerId);
+    const all = await prisma.carryOverExecution.findMany({
+      where: { dedupeKey },
+    });
+    expect(all).toHaveLength(1);
+    expect(expectDefined(all[0]).id).toBe(winnerId);
   });
 });

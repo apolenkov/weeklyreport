@@ -3,7 +3,7 @@ import type {
   CarryOverRecord,
   ReportSectionReadModel,
 } from "@customreport/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
@@ -11,6 +11,7 @@ import {
   type CarryOverRepository,
   type CarryOverResult,
   CarryOverService,
+  type TargetReportState,
 } from "./carry-over.service";
 
 // ---------------------------------------------------------------------------
@@ -102,6 +103,9 @@ const sourceAlpha: ReportSectionReadModel = makeSection({
       deadline: null,
       impact: "Needs escalation",
       resolvedAt: null,
+      // Decision.productId is a NOT-NULL product FK — a carried decision needs
+      // a product to persist (and thus to be counted).
+      productId: projectAlphaId,
     },
     {
       id: "f2f20000-f2f2-4f2f-8f2f-f2f2f2f2f2f2",
@@ -145,6 +149,7 @@ const sourceBeta: ReportSectionReadModel = makeSection({
       deadline: new Date("2026-05-01T00:00:00.000Z"),
       impact: "Blocks deployment",
       resolvedAt: null,
+      productId: projectBetaId,
     },
   ],
 });
@@ -175,8 +180,13 @@ const sourceGamma: ReportSectionReadModel = makeSection({
 function createInMemoryRepository(opts: {
   sourceSections: ReportSectionReadModel[];
   targetSections: ReportSectionReadModel[];
+  targetReportState?: TargetReportState;
 }): CarryOverRepository {
   const executions = new Map<string, CarryOverExecution>();
+  const targetReportState: TargetReportState = opts.targetReportState ?? {
+    periodStatus: "open",
+    archived: false,
+  };
 
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
@@ -202,16 +212,21 @@ function createInMemoryRepository(opts: {
     },
 
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
+    async getTargetReportState(): Promise<TargetReportState | null> {
+      return { ...targetReportState };
+    },
+
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
     async saveCarryOver(
       execution: CarryOverExecution,
       records: CarryOverRecord[],
-      targetSection: ReportSectionReadModel,
+      targetSections: ReportSectionReadModel[],
     ): Promise<CarryOverResult> {
       executions.set(execution.id, structuredClone(execution));
       return {
         execution: structuredClone(execution),
         records: structuredClone(records),
-        targetSection: structuredClone(targetSection),
+        targetSection: structuredClone(targetSections[0]),
       };
     },
   };
@@ -669,5 +684,93 @@ describe("CarryOverService — contract tests", () => {
       expect(r.sourceItemId).toBeNull();
       expect(r.targetItemId).toBeNull();
     }
+  });
+
+  // -----------------------------------------------------------------------
+  // Counts/records exclude unmatched source authors (no dangling references)
+  // -----------------------------------------------------------------------
+
+  it("source lead with no matching target section does not inflate counts or emit dangling records", async () => {
+    // sourceGamma's author has NO section in the target report, so its row
+    // cannot be persisted and must not be counted or recorded.
+    const targetAlpha = makeTargetSection(sourceAlpha);
+    const repo = createInMemoryRepository({
+      sourceSections: [sourceAlpha, sourceGamma],
+      targetSections: [targetAlpha],
+    });
+    const service = new CarryOverService(repo);
+
+    const result = await service.executeCarryOver(
+      sourceReportId,
+      targetReportId,
+    );
+
+    // Only sourceAlpha matches: 1 item + 1 decision.
+    expect(result.execution.carriedItemCount).toBe(1);
+    expect(result.execution.carriedDecisionCount).toBe(1);
+    expect(result.records).toHaveLength(2);
+    // No record references sourceGamma's unmatched item.
+    const gammaItemId = "e5e50000-e5e5-4e5e-8e5e-e5e5e5e5e5e5";
+    expect(result.records.some((r) => r.sourceItemId === gammaItemId)).toBe(
+      false,
+    );
+  });
+
+  // -----------------------------------------------------------------------
+  // Write-integrity guard: closed period / read-only section rejected
+  // -----------------------------------------------------------------------
+
+  it("rejects carry-over into a published target report (no write)", async () => {
+    const repo = createInMemoryRepository({
+      sourceSections: [sourceAlpha],
+      targetSections: [makeTargetSection(sourceAlpha)],
+      targetReportState: { periodStatus: "published", archived: false },
+    });
+    const saveSpy = vi.spyOn(repo, "saveCarryOver");
+    const service = new CarryOverService(repo);
+
+    await expect(
+      service.executeCarryOver(sourceReportId, targetReportId),
+    ).rejects.toThrow(CarryOverDomainError);
+    expect(saveSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects carry-over into an archived target report (no write)", async () => {
+    const repo = createInMemoryRepository({
+      sourceSections: [sourceAlpha],
+      targetSections: [makeTargetSection(sourceAlpha)],
+      targetReportState: { periodStatus: "open", archived: true },
+    });
+    const saveSpy = vi.spyOn(repo, "saveCarryOver");
+    const service = new CarryOverService(repo);
+
+    await expect(
+      service.executeCarryOver(sourceReportId, targetReportId),
+    ).rejects.toThrow(CarryOverDomainError);
+    expect(saveSpy).not.toHaveBeenCalled();
+  });
+
+  it("rejects carry-over when a matched target section is submitted (no write)", async () => {
+    // makeSection defaults status to "submitted"; the period stays editable so
+    // the guard reaches the section-status check.
+    const submittedTarget = makeSection({
+      reportSectionId: crypto.randomUUID(),
+      reportId: targetReportId,
+      authorId: leadAlphaId,
+      authorName: "Lead Alpha",
+      items: [],
+      decisions: [],
+    });
+    const repo = createInMemoryRepository({
+      sourceSections: [sourceAlpha],
+      targetSections: [submittedTarget],
+    });
+    const saveSpy = vi.spyOn(repo, "saveCarryOver");
+    const service = new CarryOverService(repo);
+
+    await expect(
+      service.executeCarryOver(sourceReportId, targetReportId),
+    ).rejects.toThrow(CarryOverDomainError);
+    expect(saveSpy).not.toHaveBeenCalled();
   });
 });

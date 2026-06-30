@@ -6,7 +6,10 @@ import {
   AdminPeriodOverlapError,
 } from "../../modules/admin/admin.service.js";
 import { ArchiveDomainError } from "../../modules/archive/archive.service.js";
-import { CarryOverDomainError } from "../../modules/carry-over/carry-over.service.js";
+import {
+  CarryOverConflictError,
+  CarryOverDomainError,
+} from "../../modules/carry-over/carry-over.service.js";
 import { PdfExportDomainError } from "../../modules/pdf-export/pdf-export.service.js";
 import { PublicationAccessError } from "../../modules/publication/publication.service.js";
 import { ReminderDomainError } from "../../modules/reminders/reminders.service.js";
@@ -88,6 +91,18 @@ export function mapDomainError(error: unknown): TRPCError {
   if (error instanceof ReopenRequestError) {
     return new TRPCError({
       code: "BAD_REQUEST",
+      message: error.message,
+      cause: error,
+    });
+  }
+
+  // The carry-over dedupe race is a concurrency conflict, distinct from the
+  // CarryOverDomainError validation/precondition failures below (which stay
+  // BAD_REQUEST). It travels on its own type so this CONFLICT mapping does not
+  // touch those.
+  if (error instanceof CarryOverConflictError) {
+    return new TRPCError({
+      code: "CONFLICT",
       message: error.message,
       cause: error,
     });

@@ -16,10 +16,34 @@ export class CarryOverDomainError extends Error {
   }
 }
 
+/**
+ * Distinct from CarryOverDomainError so the tRPC error mapper can map it to
+ * CONFLICT. CarryOverDomainError is mapped class-wide to BAD_REQUEST and is
+ * shared by the validation errors, so reusing it for the dedupe race would
+ * either regress those responses or never reach a conflict branch.
+ */
+export class CarryOverConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CarryOverConflictError";
+  }
+}
+
 export interface CarryOverResult {
   execution: CarryOverExecution;
   records: CarryOverRecord[];
   targetSection: ReportSectionReadModel;
+}
+
+/**
+ * Period-editability facts for the carry-over write guard: editable iff the
+ * period is open or reopened AND not archived (the canonical
+ * `computeReopenEligibility` rule). `archived` is a separate Report flag — the
+ * archive path does not force `periodStatus` — so both must be read.
+ */
+export interface TargetReportState {
+  periodStatus: "open" | "published" | "reopened";
+  archived: boolean;
 }
 
 export interface CarryOverRepository {
@@ -28,10 +52,13 @@ export interface CarryOverRepository {
   ): Promise<CarryOverExecution | null>;
   getSourceSections(sourceReportId: string): Promise<ReportSectionReadModel[]>;
   getTargetSections(targetReportId: string): Promise<ReportSectionReadModel[]>;
+  getTargetReportState(
+    targetReportId: string,
+  ): Promise<TargetReportState | null>;
   saveCarryOver(
     execution: CarryOverExecution,
     records: CarryOverRecord[],
-    targetSection: ReportSectionReadModel,
+    targetSections: ReportSectionReadModel[],
   ): Promise<CarryOverResult>;
 }
 
@@ -136,63 +163,79 @@ export class CarryOverService {
       );
     }
 
-    const allCarriedItems: {
-      item: ReportSectionReadModel["items"][number];
-      record: CarryOverRecord;
-    }[] = [];
-    const allCarriedDecisions: {
-      decision: ReportSectionReadModel["decisions"][number];
-      record: CarryOverRecord;
-    }[] = [];
+    // Write-integrity guard: carry-over is the only report write path with no
+    // period/section state check, so without this it could diverge the live
+    // rows from a published snapshot. Editable iff the target period is open or
+    // reopened AND not archived (the canonical computeReopenEligibility rule),
+    // and no matched target section is already submitted (read-only). Mirrors
+    // the fillFrom / saveDraft guards.
+    const targetState =
+      await this.repository.getTargetReportState(targetReportId);
+    if (!targetState || !isTargetEditable(targetState)) {
+      throw new CarryOverDomainError(
+        "Carry-over requires an editable target period (open or reopened, not archived).",
+      );
+    }
+    const matchedTargetSections = targetSections.filter((target) =>
+      sourceSections.some((source) => source.authorId === target.authorId),
+    );
+    if (matchedTargetSections.some((target) => target.status === "submitted")) {
+      throw new CarryOverDomainError(
+        "Carry-over cannot overwrite a submitted target section.",
+      );
+    }
 
-    for (const sourceSection of sourceSections) {
-      const sectionItems = sourceSection.items
+    // Build carried rows ONLY for source sections whose author has a target
+    // section: a source-only author has nowhere to persist, so counting it
+    // would inflate the execution counts and emit dangling CarryOverRecord
+    // rows. Carried decisions also require a productId — the Decision row's
+    // product FK is NOT-NULL, so a productless decision cannot persist and must
+    // not be counted either (it would exceed the rows actually written).
+    const targetByAuthor = new Map(
+      targetSections.map((target) => [target.authorId, target] as const),
+    );
+    const carriedByAuthor = sourceSections.flatMap((sourceSection) => {
+      const targetSection = targetByAuthor.get(sourceSection.authorId);
+      if (!targetSection) {
+        return [];
+      }
+      const items = sourceSection.items
         .filter((item) => item.type === "next" && !item.carriedOver)
         .map((item) => cloneCarriedItem(sourceReportId, targetReportId, item));
-      const sectionDecisions = sourceSection.decisions
-        .filter((decision) => !decision.resolvedAt)
+      const decisions = sourceSection.decisions
+        .filter(
+          (decision) => !decision.resolvedAt && Boolean(decision.productId),
+        )
         .map((decision) =>
           cloneUnresolvedDecision(sourceReportId, targetReportId, decision),
         );
+      return [{ authorId: targetSection.authorId, items, decisions }];
+    });
 
-      allCarriedItems.push(...sectionItems);
-      allCarriedDecisions.push(...sectionDecisions);
-    }
+    const allCarriedItems = carriedByAuthor.flatMap((entry) => entry.items);
+    const allCarriedDecisions = carriedByAuthor.flatMap(
+      (entry) => entry.decisions,
+    );
 
-    // Match carried items/decisions to target sections by authorId
+    // Merge carried rows into every matched target section (not just the
+    // first), so the repository persists each lead's carried items/decisions.
     const nextTargetSections = targetSections.map((targetSection) => {
-      const sourceSection = sourceSections.find(
-        (s) => s.authorId === targetSection.authorId,
+      const carried = carriedByAuthor.find(
+        (entry) => entry.authorId === targetSection.authorId,
       );
-      if (!sourceSection) {
+      if (!carried || existingExecution) {
         return targetSection;
       }
-
-      const sectionCarriedItems = allCarriedItems.filter((entry) =>
-        // eslint-disable-next-line sonarjs/different-types-comparison -- match by string id; the string types overlap, the null/undefined asymmetry is harmless (only a real string id can match)
-        sourceSection.items.some((i) => i.id === entry.record.sourceItemId),
-      );
-      const sectionCarriedDecisions = allCarriedDecisions.filter((entry) =>
-        sourceSection.decisions.some(
-          // eslint-disable-next-line sonarjs/different-types-comparison -- match by string id; the string types overlap, the null/undefined asymmetry is harmless (only a real string id can match)
-          (d) => d.id === entry.record.sourceDecisionId,
-        ),
-      );
-
       return reportSectionReadModelSchema.parse({
         ...targetSection,
-        items: existingExecution
-          ? targetSection.items
-          : [
-              ...targetSection.items,
-              ...sectionCarriedItems.map((entry) => entry.item),
-            ],
-        decisions: existingExecution
-          ? targetSection.decisions
-          : [
-              ...targetSection.decisions,
-              ...sectionCarriedDecisions.map((entry) => entry.decision),
-            ],
+        items: [
+          ...targetSection.items,
+          ...carried.items.map((entry) => entry.item),
+        ],
+        decisions: [
+          ...targetSection.decisions,
+          ...carried.decisions.map((entry) => entry.decision),
+        ],
       });
     });
 
@@ -223,17 +266,17 @@ export class CarryOverService {
       carriedItems: allCarriedItems.length,
       carriedDecisions: allCarriedDecisions.length,
     });
-    // `targetSections.length === 0` was rejected above, so targetSections[0]
-    // is normally defined; nextTargetSections is mapped from targetSections so
-    // its first element is also defined when its length > 0. `.at()` keeps the
-    // type honest (T | undefined) so the guard below stays a real runtime check
-    // (noUncheckedIndexedAccess is off, so `arr[0]` would otherwise lie).
-    const targetSection = nextTargetSections.at(0) ?? targetSections.at(0);
-    if (!targetSection) {
-      throw new CarryOverDomainError(
-        "Carry-over requires both source and target sections.",
-      );
-    }
-    return this.repository.saveCarryOver(execution, records, targetSection);
+    return this.repository.saveCarryOver(
+      execution,
+      records,
+      nextTargetSections,
+    );
   }
+}
+
+function isTargetEditable(state: TargetReportState): boolean {
+  return (
+    !state.archived &&
+    (state.periodStatus === "open" || state.periodStatus === "reopened")
+  );
 }
