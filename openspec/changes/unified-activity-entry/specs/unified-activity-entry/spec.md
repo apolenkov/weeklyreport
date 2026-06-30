@@ -60,21 +60,24 @@ the classic two-section format renders.
 - **WHEN** the unified view buckets it
 - **THEN** it is bucketed by its current workflow state, not as "deferred"
 
-### Requirement: Per-Item Move Actions Mutate the Row In Place
+### Requirement: Per-Item Move Actions Preserve the Record's Stable Identity
 
-The "mark complete" and "move to next week" actions SHALL mutate the existing item row
-in place (same `Item.id`), never cloning it.
+The "mark complete" and "move to next week" actions SHALL preserve the record's stable
+identity (the durable lineage key — see `design.md`), never cloning the record into a new
+one.
 
 "mark complete" sets `workflowStatus`/`completed`; "move to next week" flips `type` from
-`current` to `next`. Keeping the same `Item.id` preserves any C1 `RecordComment` anchors
-by the edit-persist rule and avoids a duplicate row the carry-over engine would later
-re-clone.
+`current` to `next`. Preserving the stable identity keeps any C1 `RecordComment` anchor
+attached and avoids a duplicate row the carry-over engine would later re-clone. Note: the
+current `saveSection` recreates rows with fresh DB-minted ids, so "preserve identity"
+depends on the stable-record-identity prerequisite (`design.md`) — it is NOT satisfied by
+the literal `Item.id` surviving a save, which it does not.
 
-#### Scenario: Move to next week keeps the same item id
+#### Scenario: Move to next week preserves the record's identity and its comment anchor
 
 - **GIVEN** a current-week item carrying a reviewer comment
 - **WHEN** the lead moves it to next week
-- **THEN** the same `Item.id` flips `type` to `next`
+- **THEN** the record's stable identity is preserved as its `type` flips to `next`
 - **AND** the reviewer comment is still anchored to it
 
 ### Requirement: Carry-Over Is Surfaced as a Head One-Click on Period Open
@@ -92,3 +95,88 @@ NOT ship against the un-hardened path.
 - **GIVEN** a head on a newly opened period with unfinished next-week items from the prior period
 - **WHEN** the head clicks "Copy forward unfinished"
 - **THEN** the existing `carryOver.execute` runs (no automatic trigger on period creation)
+
+### Requirement: A Published Record Is Resolved or Carried, Never Silently Removed
+
+A record that has been published SHALL NOT be silently removed — a позиция (item, risk,
+or decision; see CONTEXT.md) that has appeared in a published report can only be marked
+done (resolved) or carried forward. A record that has only ever existed in a
+never-published draft MAY be deleted, since it is an uncommitted mistake (a typo,
+duplicate, or wrong-product entry).
+
+This is the behavioral invariant; the mechanism is an open design problem, not a spec
+clause, because the current write path cannot identify a published-origin row. The
+section save path deletes-and-recreates a section's rows with DB-minted ids
+(`report-sections.prisma-repository.ts`), so a record has no identity that survives a
+save — there is nothing stable to match against the published snapshot. Enforcing this
+invariant therefore depends on first introducing a stable record identity / lineage that
+survives saves and carry-over clones; the same stable identity is a prerequisite for C1
+per-record review-comment anchors (`review-acknowledgement`) and the "move keeps the same
+id" rule below. See `design.md` for the prerequisite and the candidate mechanisms. A
+delete-locked record MUST carry a visible marker explaining that it can be resolved or
+carried, not deleted.
+
+#### Scenario: A never-published draft record is deleted
+
+- **GIVEN** a record created this period in a report that has never been published
+- **WHEN** the lead removes it from the form and saves
+- **THEN** the record is deleted (it was an uncommitted draft)
+
+#### Scenario: A published record cannot be silently removed
+
+- **GIVEN** a record that was part of a published report, now in a reopened editable period
+- **WHEN** the lead attempts to remove it
+- **THEN** the removal is refused and the record is preserved — it can be marked done or carried instead
+
+#### Scenario: A record added after reopen is still deletable until re-published
+
+- **GIVEN** a reopened period where the lead adds a new record that has not yet been re-published
+- **WHEN** the lead removes that new record and saves
+- **THEN** it is deleted (it never reached a published report)
+
+#### Scenario: A delete-locked record explains why
+
+- **GIVEN** a published-origin record shown in an editable period
+- **WHEN** the lead views it
+- **THEN** a visible marker indicates it can be resolved or carried, not deleted
+
+### Requirement: Only Done Closes a Record; Open Work Is Not Lost at the Period Boundary
+
+A record SHALL be treated as closed only when it is done; every other state
+(`in-progress` / `blocked` / `planned-next` / `deferred` for an item, an unresolved
+risk, a pending decision) keeps it open. Open work SHALL NOT be lost silently across the
+period boundary.
+
+Carry-over stays head-manual (the one-click "Copy forward unfinished" above — no
+automatic trigger on period creation); nothing moves automatically. To prevent silent
+loss, the system MUST surface open work that has not been carried forward at the point
+carry-over is available (the newly opened period), so the head can carry or consciously
+close it. `deferred` is a conscious park — still open, still carried — and MAY capture a
+short reason without that reason being required (entry stays fast — the product north
+star).
+
+Implementation reality to resolve in `design.md`, not assumed away here: today
+`carryOver.execute` carries only next-week items and unresolved decisions — **risks do
+not carry at all**, so "an unresolved risk carries" requires either extending carry-over
+to risks (with lineage and tests) or consciously excluding risks from this rule; and the
+publish/period response carries no channel today for an "open work" signal, so surfacing
+it needs an explicit API/UI contract.
+
+#### Scenario: A done record is not flagged as open work
+
+- **GIVEN** a record marked done
+- **WHEN** the period closes
+- **THEN** it is closed and not flagged as open work to carry
+
+#### Scenario: An open record continues into the next period
+
+- **GIVEN** an open (e.g. blocked) record at period close
+- **WHEN** the head copies forward unfinished work into the newly opened period
+- **THEN** the open record continues into the new period
+
+#### Scenario: Uncarried open work is surfaced, not lost
+
+- **GIVEN** open work from the prior period that has not been carried forward
+- **WHEN** the newly opened period is shown to the head
+- **THEN** the uncarried open work is surfaced so the head can carry or consciously close it
+- **AND** nothing has moved automatically

@@ -262,15 +262,19 @@ in code and on screen the term stays **record** (English _position_ is already
 taken — see _Position (должность)_). A позиция is the unit a reviewer acts on
 (per-record _Review comment_ + section _Verdict_, see `review-acknowledgement`)
 and the unit quick-entry creates and moves (see `unified-activity-entry`).
-A created позиция is RESOLVED, never silently deleted: it moves between derived
-states — done / in-progress / blocked / planned-next / deferred (the
-`unified-activity-entry` buckets) — kanban-style, so nothing a lead raised just
-disappears; it is carried forward or closed with a reason. _Future:_ AI-assisted
+A позиция that has appeared in a PUBLISHED report can never be deleted — only
+RESOLVED (marked done) or carried forward; one that has only ever been a
+never-published draft CAN be deleted (an uncommitted mistake — typo, duplicate,
+wrong product). It moves between derived states kanban-style — _done_ closes it;
+_in-progress / blocked / planned-next / deferred_ (the `unified-activity-entry`
+buckets) keep it open — and open work is not lost at the period boundary (the
+exact carry scope is a spec/design detail; carry-over today covers items and
+decisions). A delete-locked позиция shows a marker saying why. See ADR 0015. _Future:_ AI-assisted
 entry — the lead types free text and an agent classifies and structures it into a
 позиция (e.g. "it's broken, doesn't work" → a blocked risk on the Development
 stage); this is the capability the inert _Agent-review_ placeholder foreshadows.
-_Avoid_: English "position" (that is the HR job title); deleting a позиция to make
-it go away (resolve or carry it forward instead).
+_Avoid_: English "position" (that is the HR job title); deleting a published позиция
+to make it go away (resolve or carry it forward instead).
 
 **Decision**:
 A choice a lead needs leadership to make, phrased as a yes/no or short
