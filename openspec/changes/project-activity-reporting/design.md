@@ -33,16 +33,32 @@ cleaner. **ADR-worthy.**
   `saveSection` delete-recreate currently trusts client ids — same gap as C6).
 - Seed `green` (mirror `ProjectStatus`'s `DEFAULT_PROJECT_STATUS`), not null.
 
-## Required MODIFIED follow-ups (author at implementation, exact headers in hand)
+## Cross-capability deltas — disposition (resolved 2026-06-30)
 
-- `period-dual-state` — append `activityStatus` to the scenario enumerating the child
-  rows a lead save writes ("…item / risk / decision / projectStatus / stageStatus
-  rows only"), so the new write is not read as a dual-state violation.
-- `head-report-visibility` — the assembled report + the `publishedSnapshot` builder
-  include activities (snapshot read tolerant of older rows). This is the one non-trivial
-  integration; the `weeklyReportReadModelSchema` gets a `.default([])` activities field.
-- `status-slide-rendering` — a minimal activity status-pill lane (reference
-  `slide-capacity-signals`/`head-slide-density` for many-activities overflow).
+Discriminator applied: author an external MODIFIED delta only where the existing
+capability requirement, read in isolation after this change ships, becomes
+**contradictory** — not merely incomplete. Where this change's OWN spec already owns
+the behavior, the single-home is the more exemplary outcome (two specs asserting the
+same rule is its own drift hazard).
+
+- `period-dual-state` — **AUTHORED** (`specs/period-dual-state/spec.md`). Its
+  "Atomic Dual-State Write" scenario lists the child rows a lead save writes
+  ("…`projectStatus` / `stageStatus` rows **only**") — "only" is exhaustive, so adding
+  `activityStatus` makes that list affirmatively wrong without the delta. The delta
+  appends `activityStatus` to the enumeration.
+- `head-report-visibility` — **SKIPPED (subsumed).** This change's own requirement
+  "Activities Are Visible to the Head/Viewer but Do Not Roll Up" already owns
+  head/viewer visibility + "published snapshot includes activities" + "read path
+  tolerates older snapshots". The existing `head-report-visibility` requirement ("the
+  head sees every section's content") does not become contradictory — activities are
+  section content. A MODIFY of that requirement would also collide with C1
+  (`review-acknowledgement`), which modifies the same requirement for the
+  submitted-only default. Implementation note: wire `weeklyReportReadModelSchema` to a
+  `.default([])` activities field — code change, no spec delta needed.
+- `status-slide-rendering` — **SKIPPED (not locked / out of scope).** A slide
+  activity-pill lane is not in `decisions-locked` and this change's "Out of scope"
+  excludes rich slide layout. Author a minimal lane delta only if Саша locks
+  activity-on-slide rendering as in-scope.
 
 ## ADRs (next free = 0011)
 

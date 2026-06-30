@@ -55,8 +55,12 @@ two or more, the selection MUST clear on a product change and the lead MUST pick
 least one. When the lead owns zero stages on the selected product (reachable only by
 editing a legacy/cross row), Save MUST be disabled with an inline notice ("no stages
 assigned on <product> — contact admin") and the keyboard save shortcut MUST be a
-no-op. This client scoping is convenience over the server guard, not a substitute for
-it.
+no-op — for the **item and decision** dialogs. The risk dialog's zero-owned-stage
+dead-end is owned by `risk-stage-integrity`'s "The risk dialog never dead-ends on a
+zero-owned-stage product" (the in-flight `fix-risk-stage-integrity-impl`); this
+requirement extends that same dead-end pattern to the item and decision dialogs, so the
+two changes never both specify the risk dialog. This client scoping is convenience over
+the server guard, not a substitute for it.
 
 #### Scenario: Single owned stage is pre-selected and locked
 
@@ -70,9 +74,10 @@ it.
 - **WHEN** the lead changes the dialog's product from P to Q
 - **THEN** the stage options re-scope to Q's owned stages (DevOps), and P's Testing is no longer offered
 
-#### Scenario: Zero owned stages disables save
+#### Scenario: Zero owned stages disables save on the item and decision dialogs
 
-- **GIVEN** a lead editing a record whose selected product is one the lead owns no stage on
+- **GIVEN** a lead editing an item or decision whose selected product is one the lead owns no stage on
 - **WHEN** the dialog renders
 - **THEN** Save is disabled with the "no stages assigned" notice
 - **AND** the keyboard save shortcut does nothing
+- **AND** the risk dialog's equivalent dead-end is covered by `risk-stage-integrity`'s "The risk dialog never dead-ends on a zero-owned-stage product" (`fix-risk-stage-integrity-impl`)
