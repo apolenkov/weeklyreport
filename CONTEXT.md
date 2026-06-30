@@ -107,11 +107,15 @@ _Avoid_: deleted (archived data is retained), locked (that maps to
 `published`).
 
 **Status observation (the viewer's relationship to a period)**:
-The viewer role observes the **Current period** live — the same report content
-the head sees, INCLUDING unsubmitted drafts — scoped to the viewer's granted
-groups (`ViewerGroupAccess`), strictly read-only. The viewer is a _status
-observer_, not a consumer of finished reports: visibility is NOT gated on
-`published`. The resolved destination is the **Status target**: the Current period
+The viewer role observes the **Current period** live, scoped to the viewer's
+granted groups (`ViewerGroupAccess`). It is read-only for report **content** — a
+viewer never edits items/risks/decisions — but _Review_ and _Acknowledgement_ are
+a separate, orthogonal write surface layered on top, so "read-only" qualifies the
+content, not every act the viewer can take. On the live Current period the default
+view shows only SUBMITTED sections; a **Submission-state visibility** toggle reveals
+all sections including unsubmitted drafts (the same content the head sees). The
+published snapshot is shown as-is, unfiltered. The viewer is a _status observer_,
+not a consumer of finished reports: visibility is NOT gated on `published`. The resolved destination is the **Status target**: the Current period
 when one exists with viewer-visible content, else the latest viewer-visible
 published report (a published fallback is NOT a Current period — that term stays
 reserved for the editable state). Search remains published-scoped, so a live
@@ -132,12 +136,75 @@ rejecting leaves the section submitted with an optional head note. It is
 lifecycle. A reopen request is only meaningful while the section is editable
 after approval, i.e. the period is `open` or `reopened`; a `published` /
 `archived` period is reached only through a period-level reopen first (see
-_Period management_). Distinct from **Revoke**, the head's proactive un-submit
-of a section without any lead request (`revokeAllSubmitted` / per-section
-revoke).
+_Period management_). Distinct from **Revoke**, a proactive un-submit of a section
+without any lead request — performed by the head / admin directly, or by a
+designated reviewer through a `changes_requested` _Verdict_ (see _Review_;
+`revokeAllSubmitted` / per-section revoke).
 _Avoid_: "reopen the period" (that is the period-level lifecycle reopen in
 _Period management_, not this); "head un-submitted it" (that is _Revoke_, no
 request involved).
+
+## Review & acknowledgement
+
+**Review**:
+An advisory act by which a reviewer judges a lead's submitted section for a
+reporting period and records the judgment — a _Verdict_ plus optional
+record-anchored _Review comments_. A review NEVER changes the **period**
+lifecycle (it never publishes or locks); its strongest effect is to send one
+section back for rework (see _Verdict_). It is a capability several roles hold,
+not a role (see _Reviewer_), and it rides the existing leadership middleware
+chain + group scope, so it adds no new access role.
+_Avoid_: "review the period" (a review is per-section and advisory); sign-off /
+approval gate (a verdict never gates the head's publish).
+
+**Reviewer**:
+The capability to perform a _Review_ on a group — NOT a separate access _Role_.
+It is carried by the **head** (over their own group, implicitly), the **admin**
+(over all, implicitly), and any **viewer designated** for the group
+(`ViewerGroupAccess.canReview`). Because reviewing is a capability multiple roles
+hold — the head reviews too — it is deliberately never a fifth enum role: `Role`
+is single-valued per user, so a `reviewer` role could not coexist with a head who
+also reviews.
+_Avoid_: a `reviewer` access Role; equating reviewer with viewer (every reviewer
+has group access, but not every viewer is a designated reviewer).
+
+**Acknowledgement ("Ознакомлен")**:
+The lightest review signal — a group-level read-receipt by which any access-holder
+(head / admin / viewer) records that they have **seen** a group's report for the
+period. It carries no verdict and no comment; its only purpose is visibility into
+who has looked (the head can see this). Available to a plain viewer, where _Verdict_
+is not.
+_Avoid_: treating acknowledgement as approval (seeing is not approving); a
+per-record ack (acknowledgement is whole-group).
+
+**Verdict**:
+A designated reviewer's **per-section** judgment on a lead's submission —
+`approved` (the section stays submitted; pair with comments for soft feedback) or
+`changes_requested` (the section is AUTOMATICALLY un-submitted, `submitted →
+draft`, and returned to the lead, who is notified in-app). The verdict is the only
+review act that touches state, and only at the section level — never the period.
+_Avoid_: a per-record verdict (the verdict is per-section; only _Review comments_
+are per-record); a verdict that locks the period (that is the head's _Publish &
+Lock_).
+
+**Review comment**:
+A reviewer's note anchored to a CONCRETE record — one Item, Risk, or Decision —
+so the lead sees exactly where something is wrong. Flat, with no reply threads in
+the MVP. A future AI review agent authors these the same way, against the same
+record anchor. Rendered inline at the record, carrying the reviewer's name, never
+repeating the record's own text.
+_Avoid_: a whole-report comment (a review comment anchors to one record);
+duplicating record content into the comment.
+
+**Submission-state visibility (the head / viewer toggle)**:
+On the **live Current period**, the head and viewer default to seeing only
+SUBMITTED sections; a toggle reveals all sections including unsubmitted drafts. A
+per-user view filter on the submitted/all axis — analogous to the lead's _Record
+visibility_ Mine/Everyone toggle, but a different axis. It applies ONLY to the live
+current period; the published snapshot renders as-is.
+_Avoid_: filtering the published snapshot by submission state (the toggle is
+live-period only); conflating it with _Record visibility_ (that is the lead's
+own-vs-everyone axis, not submitted-vs-all).
 
 ## Products, stages, items & scope
 
