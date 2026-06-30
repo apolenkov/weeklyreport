@@ -60,6 +60,7 @@ import { NestAppLoggerAdapter } from "./lib/nest-app-logger.adapter";
 import { ActivityService } from "./modules/activity/activity.service";
 import { AdminService } from "./modules/admin/admin.service";
 import { JobsService } from "./modules/admin/jobs.service";
+import { SessionRevocationService } from "./modules/admin/session-revocation.service";
 import { AnalyticsService } from "./modules/analytics/analytics.service";
 import { ArchiveService } from "./modules/archive/archive.service";
 import { createAuthController } from "./modules/auth/auth.controller";
@@ -71,6 +72,7 @@ import {
 } from "./modules/auth/saml.strategy";
 import { CarryOverService } from "./modules/carry-over/carry-over.service";
 import { OrganizationService } from "./modules/organization/organization.service";
+import { createPdfDownloadHandler } from "./modules/pdf-export/pdf-export.download-handler";
 import { PdfExportService } from "./modules/pdf-export/pdf-export.service";
 import { ensureCurrentPeriod } from "./modules/period/period-factory";
 import { PeriodService } from "./modules/period/period.service";
@@ -354,24 +356,31 @@ async function bootstrap() {
   // must be closed before this is relied on in production.
   expressApp.set("trust proxy", 1);
 
-  // Phase 23-01: serve generated PDF artefacts.
-  // The BullMQ worker writes to `pdfDir/{jobId}.pdf` and stores
-  // `artifactUrl='/pdfs/{jobId}.pdf'` on the export job row. The frontend
-  // calls `window.open(artifactUrl)` once status === 'completed', so this
-  // mount must agree with the worker's output dir on an absolute path.
+  // Serve generated PDF artefacts through an authenticated, authorized handler.
+  // The BullMQ worker writes `pdfDir/{jobId}.pdf` and stores
+  // `filePath='/pdfs/{jobId}.pdf'` on the export job; the frontend opens that
+  // relative URL same-origin, so the ambient `customreport_session` cookie
+  // rides along and the handler authorizes the caller against the bound report.
+  // This replaces the former unauthenticated `express.static('/pdfs')` mount —
+  // removing it closes the artifact-bypass on the direct host port too, since
+  // no unauthenticated path to the bytes remains on any port.
   const pdfDir = resolve(env.PDF_OUTPUT_DIR);
   mkdirSync(pdfDir, { recursive: true });
-  expressApp.use(
-    "/pdfs",
-    express.static(pdfDir, {
-      fallthrough: false,
-      setHeaders: (res) => {
-        res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", "attachment");
-      },
+  const pdfAuthController = createAuthController(process.env);
+  expressApp.get(
+    "/pdfs/:file",
+    createPdfDownloadHandler({
+      prisma: prismaService,
+      pdfDir,
+      verifySessionToken: (token) =>
+        pdfAuthController.verifySessionToken(token),
+      sessionRevocation: new SessionRevocationService(),
     }),
   );
-  logger.info("mounted PDF static serving", { route: "/pdfs", pdfDir });
+  logger.info("mounted authenticated PDF download handler", {
+    route: "/pdfs/:file",
+    pdfDir,
+  });
 
   // 36-01: rate-limit /trpc with the permissive bucket. The /auth limiter
   // is mounted further down with mountAuthRoutes (it needs to wrap the

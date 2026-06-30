@@ -6,8 +6,8 @@
 # internal CA (self-signed cert chain).
 #
 # Routes:
-#   /trpc/*, /auth/*, /health/*, /metrics, /admin/queues* -> api:3001
-#   /                                                     -> web:3000
+#   /trpc/*, /auth/*, /health/*, /metrics, /admin/queues*, /pdfs/* -> api:3001
+#   /                                                              -> web:3000
 #
 # WebSocket upgrade for tRPC subscriptions: caddy v2 forwards Upgrade headers
 # automatically when the client requests it; no extra directive needed.
@@ -28,7 +28,7 @@
 
 	# API surface — order matters: caddy matches the first @block that wins.
 	@api {
-		path /trpc /trpc/* /auth /auth/* /health /health/* /metrics /admin/queues /admin/queues/*
+		path /trpc /trpc/* /auth /auth/* /health /health/* /metrics /admin/queues /admin/queues/* /pdfs /pdfs/*
 	}
 	handle @api {
 		reverse_proxy api:3001 {
