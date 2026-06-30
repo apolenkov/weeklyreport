@@ -312,6 +312,7 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
                 reportId: REPORT_ID,
                 authorId: LEAD_A_ID,
                 authorName: "Lead A",
+                version: 1,
                 status: "submitted",
                 submittedAt: null,
                 projects: surfacedProducts.map((project) => ({
