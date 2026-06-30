@@ -29,6 +29,9 @@ const nextConfig: NextConfig = {
       { source: "/auth/:path*", destination: `${API_URL}/auth/:path*` },
       { source: "/health/:path*", destination: `${API_URL}/health/:path*` },
       { source: "/api/:path*", destination: `${API_URL}/api/:path*` },
+      // Authenticated PDF artifact download — served by the API's authorized
+      // /pdfs handler (the ambient session cookie rides the same-origin GET).
+      { source: "/pdfs/:path*", destination: `${API_URL}/pdfs/:path*` },
     ]),
 };
 

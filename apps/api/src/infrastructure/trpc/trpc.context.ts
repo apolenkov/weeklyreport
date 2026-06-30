@@ -170,6 +170,53 @@ function readRequestId(header: string | string[] | undefined): string {
   return header ?? "no-context";
 }
 
+export interface HumanSessionDeps {
+  verifySessionToken: (token: string) => UserSession;
+  sessionRevocation: Pick<SessionRevocationService, "isRevoked">;
+  prisma: PrismaService;
+}
+
+/**
+ * The single human-session chokepoint: the three steps that turn a session
+ * cookie into a real, currently-valid user session — token verify, the Redis
+ * revocation fast path, and the Prisma `isActive` check — followed by the
+ * per-request hydration the rest of the app relies on (notably
+ * `viewerGroupAccess`, which group-scope authz reads and which is NOT in the
+ * JWT). Returns null for any invalid / revoked / deactivated token.
+ *
+ * Deliberately does NOT accept the PDF-export worker token or the dev-mode
+ * synthetic session that the full `createContext` chain falls back to: a caller
+ * that needs a real human (the authenticated `/pdfs` download) resolves through
+ * this and rejects everything else. `createContext` layers those fallbacks on
+ * top of this, never the reverse — so a later deactivation hardening folds into
+ * this one function.
+ *
+ * The revocation fast path fails OPEN (a Redis outage falls through to the
+ * authoritative Prisma `isActive` check). A user row that no longer exists is
+ * treated as still-valid here, matching the existing pipeline.
+ */
+export async function resolveHumanSession(
+  token: string,
+  deps: HumanSessionDeps,
+): Promise<UserSession | null> {
+  try {
+    const session = deps.verifySessionToken(token);
+    if (await deps.sessionRevocation.isRevoked(session.userId)) {
+      return null;
+    }
+    const userRow = await deps.prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { isActive: true },
+    });
+    if (userRow && !userRow.isActive) {
+      return null;
+    }
+    return await hydrateSession(session, deps.prisma);
+  } catch {
+    return null;
+  }
+}
+
 export function createContextFactory(
   _app: INestApplication,
   logger: AppLogger,
@@ -198,30 +245,18 @@ export function createContextFactory(
       | undefined;
 
     if (token) {
-      try {
-        const session = authController.verifySessionToken(token);
-
-        // A2 (UAT-v7 2026-05-12): revocation check.
-        // 1. Fast path — Redis revoked set (sadd'd on deactivateUser).
-        //    fail-open: a Redis outage returns false and falls to Prisma.
-        // 2. Authoritative path — isActive column in Prisma User row.
-        //    Checked inline here so a stale JWT cannot bypass deactivation.
-        const revoked = await sessionRevocation.isRevoked(session.userId);
-        if (revoked) {
-          // Do NOT fall through to PDF path; treat as invalid token.
-          throw new Error("session revoked");
-        }
-        const userRow = await prisma.user.findUnique({
-          where: { id: session.userId },
-          select: { isActive: true },
-        });
-        if (userRow && !userRow.isActive) {
-          throw new Error("user deactivated");
-        }
-
-        const withOrg = await hydrateSession(session, prisma);
+      // The human-session steps (verify + revocation fast path + isActive +
+      // hydrate) live in the shared `resolveHumanSession` chokepoint; null means
+      // the cookie is not a valid, current human session, so fall through to the
+      // PDF-worker token path and then dev-mode / null.
+      const humanSession = await resolveHumanSession(token, {
+        verifySessionToken: (value) => authController.verifySessionToken(value),
+        sessionRevocation,
+        prisma,
+      });
+      if (humanSession) {
         return {
-          session: withOrg,
+          session: humanSession,
           logger,
           correlationId,
           prisma,
@@ -230,10 +265,6 @@ export function createContextFactory(
           isPdfExport: false,
           pdfReportId: null,
         };
-      } catch {
-        // Regular session token invalid/expired (or revoked/deactivated) --
-        // try the PDF-export verifier path before falling through to
-        // dev-mode / null.
       }
 
       // Phase 32-B1 (H-04) + empty-PDF fix: PDF worker authentication path.

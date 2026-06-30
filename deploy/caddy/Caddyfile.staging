@@ -27,7 +27,7 @@
 	encode zstd gzip
 
 	@api {
-		path /trpc /trpc/* /auth /auth/* /health /health/* /metrics /admin/queues /admin/queues/*
+		path /trpc /trpc/* /auth /auth/* /health /health/* /metrics /admin/queues /admin/queues/* /pdfs /pdfs/*
 	}
 	handle @api {
 		reverse_proxy api:3001 {
