@@ -2253,27 +2253,33 @@ export function createAppRouter(deps: RouterDeps) {
     analytics: router({
       trafficLightHistory: anyRoleProcedure
         .input(trafficLightHistoryInputSchema)
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
           try {
-            return await deps.analyticsService.trafficLightHistory(input);
+            return await deps.analyticsService.trafficLightHistory(
+              input,
+              ctx.session,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }
         }),
       leadVelocity: anyRoleProcedure
         .input(leadVelocityInputSchema)
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
           try {
-            return await deps.analyticsService.leadVelocity(input);
+            return await deps.analyticsService.leadVelocity(input, ctx.session);
           } catch (error) {
             throw mapDomainError(error);
           }
         }),
       periodComparison: anyRoleProcedure
         .input(periodComparisonInputSchema)
-        .query(async ({ input }) => {
+        .query(async ({ input, ctx }) => {
           try {
-            return await deps.analyticsService.periodComparison(input);
+            return await deps.analyticsService.periodComparison(
+              input,
+              ctx.session,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }

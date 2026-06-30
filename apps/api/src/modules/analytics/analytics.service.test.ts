@@ -1,3 +1,4 @@
+import type { UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -38,16 +39,32 @@ function makeRepo(
   };
 }
 
+const headA: UserSession = {
+  userId: "a0000000-0000-4000-8000-0000000000a1",
+  email: "head-a@test.local",
+  name: "Head A",
+  role: "head",
+  activeReportId: null,
+  activeReportSectionId: null,
+  reportingGroupId: "a0000000-0000-4000-8000-0000000group-a",
+};
+const headB: UserSession = {
+  ...headA,
+  userId: "a0000000-0000-4000-8000-0000000000b1",
+  reportingGroupId: "a0000000-0000-4000-8000-0000000group-b",
+};
+const adminSession: UserSession = { ...headA, role: "admin" };
+
 describe("AnalyticsService.trafficLightHistory", () => {
   it("returns empty result when repository is empty", async () => {
     const repo = makeRepo();
     const { cache } = makeCache();
     const svc = new AnalyticsService(repo, cache);
 
-    const out = await svc.trafficLightHistory({
-      periodFrom: "2026-04-01",
-      periodTo: "2026-04-30",
-    });
+    const out = await svc.trafficLightHistory(
+      { periodFrom: "2026-04-01", periodTo: "2026-04-30" },
+      headA,
+    );
 
     expect(out).toEqual({ periods: [], rows: [] });
   });
@@ -74,10 +91,10 @@ describe("AnalyticsService.trafficLightHistory", () => {
     const { cache } = makeCache();
     const svc = new AnalyticsService(repo, cache);
 
-    const out = await svc.trafficLightHistory({
-      periodFrom: "2026-04-01",
-      periodTo: "2026-04-30",
-    });
+    const out = await svc.trafficLightHistory(
+      { periodFrom: "2026-04-01", periodTo: "2026-04-30" },
+      headA,
+    );
 
     expect(out.periods).toHaveLength(2);
     expect(out.rows).toHaveLength(2);
@@ -85,7 +102,7 @@ describe("AnalyticsService.trafficLightHistory", () => {
     expect(out.rows[1]?.statuses).toEqual(["yellow", null]);
   });
 
-  it("cache hit short-circuits the repository on second call", async () => {
+  it("cache hit short-circuits the repository on second call (same scope)", async () => {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
     const trafficLightHistory = vi.fn(async () => ({
       periods: ["2026-04-28"],
@@ -99,8 +116,8 @@ describe("AnalyticsService.trafficLightHistory", () => {
       periodFrom: "2026-04-01" as const,
       periodTo: "2026-04-30" as const,
     };
-    await svc.trafficLightHistory(input);
-    await svc.trafficLightHistory(input);
+    await svc.trafficLightHistory(input, headA);
+    await svc.trafficLightHistory(input, headA);
 
     expect(trafficLightHistory).toHaveBeenCalledTimes(1);
   });
@@ -112,17 +129,78 @@ describe("AnalyticsService.trafficLightHistory", () => {
     const { cache } = makeCache();
     const svc = new AnalyticsService(repo, cache);
 
-    await svc.trafficLightHistory({
-      periodFrom: "2026-04-01",
-      periodTo: "2026-04-30",
-    });
+    await svc.trafficLightHistory(
+      { periodFrom: "2026-04-01", periodTo: "2026-04-30" },
+      headA,
+    );
     // Same logical input, different property order — should hit the same key.
-    await svc.trafficLightHistory({
-      periodTo: "2026-04-30",
-      periodFrom: "2026-04-01",
-    });
+    await svc.trafficLightHistory(
+      { periodTo: "2026-04-30", periodFrom: "2026-04-01" },
+      headA,
+    );
 
     expect(trafficLightHistory).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("AnalyticsService cache scope partitioning", () => {
+  const input = {
+    periodFrom: "2026-04-01" as const,
+    periodTo: "2026-04-30" as const,
+  };
+
+  it("two heads in different groups do not share a cache entry", async () => {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
+    const trafficLightHistory = vi.fn(async () => ({ periods: [], rows: [] }));
+    const svc = new AnalyticsService(
+      makeRepo({ trafficLightHistory }),
+      makeCache().cache,
+    );
+
+    await svc.trafficLightHistory(input, headA);
+    await svc.trafficLightHistory(input, headB);
+
+    // Different scope discriminators → distinct keys → repository computed twice.
+    expect(trafficLightHistory).toHaveBeenCalledTimes(2);
+  });
+
+  it("admin and non-admin do not share a cache entry", async () => {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
+    const leadVelocity = vi.fn(async () => []);
+    const svc = new AnalyticsService(
+      makeRepo({ leadVelocity }),
+      makeCache().cache,
+    );
+
+    await svc.leadVelocity(input, headA);
+    await svc.leadVelocity(input, adminSession);
+
+    expect(leadVelocity).toHaveBeenCalledTimes(2);
+  });
+
+  it("identical scope and input is a cache hit", async () => {
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AnalyticsRepository contract (no awaitable work in the stub)
+    const periodComparison = vi.fn(async () => ({ rows: [] }));
+    const svc = new AnalyticsService(
+      makeRepo({ periodComparison }),
+      makeCache().cache,
+    );
+    const sameGroupOtherUser: UserSession = {
+      ...headA,
+      userId: "a0000000-0000-4000-8000-0000000000a2",
+    };
+
+    await svc.periodComparison(
+      { periodA: "2026-04-21", periodB: "2026-04-28" },
+      headA,
+    );
+    await svc.periodComparison(
+      { periodA: "2026-04-21", periodB: "2026-04-28" },
+      sameGroupOtherUser,
+    );
+
+    // Same authorised group set → same key → computed once.
+    expect(periodComparison).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -131,10 +209,10 @@ describe("AnalyticsService.leadVelocity", () => {
     const repo = makeRepo();
     const { cache } = makeCache();
     const svc = new AnalyticsService(repo, cache);
-    const out = await svc.leadVelocity({
-      periodFrom: "2026-04-01",
-      periodTo: "2026-04-30",
-    });
+    const out = await svc.leadVelocity(
+      { periodFrom: "2026-04-01", periodTo: "2026-04-30" },
+      headA,
+    );
     expect(out).toEqual([]);
   });
 
@@ -145,14 +223,14 @@ describe("AnalyticsService.leadVelocity", () => {
     const { cache } = makeCache();
     const svc = new AnalyticsService(repo, cache);
 
-    await svc.leadVelocity({
-      periodFrom: "2026-04-01",
-      periodTo: "2026-04-30",
-    });
-    await svc.leadVelocity({
-      periodFrom: "2026-04-01",
-      periodTo: "2026-04-30",
-    });
+    await svc.leadVelocity(
+      { periodFrom: "2026-04-01", periodTo: "2026-04-30" },
+      headA,
+    );
+    await svc.leadVelocity(
+      { periodFrom: "2026-04-01", periodTo: "2026-04-30" },
+      headA,
+    );
 
     expect(leadVelocity).toHaveBeenCalledTimes(1);
   });
@@ -163,10 +241,10 @@ describe("AnalyticsService.periodComparison", () => {
     const repo = makeRepo();
     const { cache } = makeCache();
     const svc = new AnalyticsService(repo, cache);
-    const out = await svc.periodComparison({
-      periodA: "2026-04-21",
-      periodB: "2026-04-28",
-    });
+    const out = await svc.periodComparison(
+      { periodA: "2026-04-21", periodB: "2026-04-28" },
+      headA,
+    );
     expect(out).toEqual({ rows: [] });
   });
 
@@ -177,14 +255,14 @@ describe("AnalyticsService.periodComparison", () => {
     const { cache } = makeCache();
     const svc = new AnalyticsService(repo, cache);
 
-    await svc.periodComparison({
-      periodA: "2026-04-21",
-      periodB: "2026-04-28",
-    });
-    await svc.periodComparison({
-      periodA: "2026-04-21",
-      periodB: "2026-04-28",
-    });
+    await svc.periodComparison(
+      { periodA: "2026-04-21", periodB: "2026-04-28" },
+      headA,
+    );
+    await svc.periodComparison(
+      { periodA: "2026-04-21", periodB: "2026-04-28" },
+      headA,
+    );
 
     expect(periodComparison).toHaveBeenCalledTimes(1);
   });

@@ -1,3 +1,4 @@
+import type { UserSession } from "@customreport/shared";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
@@ -5,6 +6,16 @@ import {
   type AnalyticsRepository,
   AnalyticsService,
 } from "./analytics.service.js";
+
+const session: UserSession = {
+  userId: "a0000000-0000-4000-8000-0000000000tz",
+  email: "tz@test.local",
+  name: "TZ Head",
+  role: "head",
+  activeReportId: null,
+  activeReportSectionId: null,
+  reportingGroupId: "a0000000-0000-4000-8000-0000000group-tz",
+};
 
 /**
  * ANAL-02/03 (Phase 30-02) TZ-stability gate.
@@ -85,12 +96,12 @@ describe("Analytics labels are TZ-stable @ANAL-02 @ANAL-03", () => {
     const inputs = { periodFrom: "2026-04-01", periodTo: "2026-04-30" };
 
     process.env.TZ = "Europe/Moscow";
-    const moscowHistory = await svc.trafficLightHistory(inputs);
-    const moscowVelocity = await svc.leadVelocity(inputs);
+    const moscowHistory = await svc.trafficLightHistory(inputs, session);
+    const moscowVelocity = await svc.leadVelocity(inputs, session);
 
     process.env.TZ = "UTC";
-    const utcHistory = await svc.trafficLightHistory(inputs);
-    const utcVelocity = await svc.leadVelocity(inputs);
+    const utcHistory = await svc.trafficLightHistory(inputs, session);
+    const utcVelocity = await svc.leadVelocity(inputs, session);
 
     expect(moscowHistory.periods.join("|")).toBe(utcHistory.periods.join("|"));
     expect(moscowVelocity.map((r) => r.periodLabel)).toEqual(
