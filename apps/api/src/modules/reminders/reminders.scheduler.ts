@@ -3,12 +3,12 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 
 import { requireEnv } from "../../lib/env.js";
 import { OrganizationService } from "../organization/organization.service";
+import { RemindersPrismaRepository } from "./reminders.prisma-repository";
 import type {
   DueDeadlineRule,
   DueEscalationRule,
-} from "./reminders.prisma-repository";
-import { RemindersPrismaRepository } from "./reminders.prisma-repository";
-import type { ReminderOrganization } from "./reminders.service";
+  ReminderOrganization,
+} from "./reminders.service";
 import { RemindersService } from "./reminders.service";
 
 /**
@@ -106,17 +106,19 @@ export class RemindersScheduler {
     rule: DueEscalationRule,
     organization: ReminderOrganization,
   ): Promise<void> {
-    // NOTIF-02 (Phase 29-05): one digest email per (rule, head) per cycle.
-    // Escalation IGNORES recipient.notificationOptOut (NOTIF-05 contract).
+    // One digest email per (rule, group head) per cycle. Escalation always
+    // notifies the head — it ignores notificationOptOut.
     const cycleDate = rule.fireAt.toISOString().slice(0, 10);
-    await this.service.requestReminderExecution(rule.id, rule.head.email, {
-      kind: "escalation",
-      cycleDate,
-      headName: rule.head.name,
-      reportPeriod: rule.reportPeriodLabel,
-      lateLeads: rule.lateLeads,
-      organization,
-    });
+    for (const group of rule.groups) {
+      await this.service.requestReminderExecution(rule.id, group.head.email, {
+        kind: "escalation",
+        cycleDate,
+        headName: group.head.name,
+        reportPeriod: rule.reportPeriodLabel,
+        lateLeads: group.lateLeads,
+        organization,
+      });
+    }
   }
 }
 

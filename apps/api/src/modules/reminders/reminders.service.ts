@@ -24,8 +24,143 @@ export interface RemindersRepository {
   saveExecution(
     execution: AdminReminderExecution,
   ): Promise<AdminReminderExecution>;
+  /**
+   * Atomic insert-on-conflict against the `ReminderExecution.dedupeKey` unique
+   * index. `inserted` is true only when THIS call created the row; a caller
+   * that loses the race gets the existing row with `inserted: false`. The
+   * service uses that flag to enqueue the email exactly once, even when two
+   * scheduler ticks fire concurrently.
+   *
+   * Optional on the port because the in-memory test doubles predate it; the
+   * production `RemindersPrismaRepository` always provides it, so the dispatch
+   * path is atomic in production.
+   */
+  insertExecutionOnConflict?(
+    execution: AdminReminderExecution,
+  ): Promise<{ execution: AdminReminderExecution; inserted: boolean }>;
   getExecution(executionId: string): Promise<AdminReminderExecution | null>;
   listExecutions(ruleId: string): Promise<AdminReminderExecution[]>;
+}
+
+/**
+ * One due deadline rule, pre-resolved with the recipient leads whose
+ * `ReportSection` for the rule's report is still in `draft`. The scheduler
+ * fans out one `kind='deadline'` reminder per recipient; `notificationOptOut`
+ * flows through so opted-out leads are skipped (escalation digests ignore it).
+ */
+export interface DueDeadlineRule {
+  id: string;
+  reportId: string;
+  fireAt: Date;
+  reportPeriodLabel: string;
+  recipients: {
+    userId: string;
+    email: string;
+    name: string;
+    notificationOptOut: boolean;
+  }[];
+}
+
+/**
+ * One reporting group's escalation digest: the active group head and the late
+ * leads from that head's group. A late lead with no resolvable active head is
+ * excluded upstream (logged, not represented here).
+ */
+export interface EscalationGroupDigest {
+  head: { userId: string; email: string; name: string };
+  lateLeads: {
+    leadName: string;
+    sectionTitle: string;
+    deadlineIso: string;
+  }[];
+}
+
+/**
+ * One due escalation rule, fanned out per reporting-group head. Each entry in
+ * `groups` becomes exactly one digest email to that head, aggregating only
+ * that group's late leads. Resolution is independent of `Report.publishedBy`:
+ * escalation fires while leads are still in `draft`, before any publish.
+ */
+export interface DueEscalationRule {
+  id: string;
+  reportId: string;
+  fireAt: Date;
+  reportPeriodLabel: string;
+  groups: EscalationGroupDigest[];
+}
+
+interface EscalationHead {
+  id: string;
+  email: string;
+  name: string;
+  isActive: boolean;
+  role: string;
+}
+
+/**
+ * The repository's escalation query result shape consumed by
+ * `buildEscalationGroups` — only the fields the digest grouping reads.
+ */
+export interface EscalationReport {
+  id: string;
+  deadline: Date;
+  sections: {
+    author: {
+      name: string;
+      reportingGroup: { head: EscalationHead | null } | null;
+    };
+  }[];
+}
+
+/**
+ * The active head (role head/admin, `isActive`) of a lead's reporting group,
+ * or null when the group is absent, head-less, deactivated, or pointed at a
+ * user who is neither head nor admin.
+ */
+function resolveActiveHead(
+  group: { head: EscalationHead | null } | null,
+): { userId: string; email: string; name: string } | null {
+  const head = group?.head;
+  if (!head) return null;
+  if (!head.isActive) return null;
+  if (head.role !== "head" && head.role !== "admin") return null;
+  return { userId: head.id, email: head.email, name: head.name };
+}
+
+/**
+ * Group a report's late leads by their reporting group's active head. One
+ * digest per head, aggregating that head's late leads across every group it
+ * leads (a head leading two late groups still gets a single digest, matching
+ * the per-head dedupe key). `unresolved` carries the names of leads with no
+ * resolvable active head for the caller to log.
+ */
+export function buildEscalationGroups(report: EscalationReport): {
+  groups: EscalationGroupDigest[];
+  unresolved: string[];
+} {
+  const byHead = new Map<string, EscalationGroupDigest>();
+  const unresolved: string[] = [];
+
+  for (const { author } of report.sections) {
+    const head = resolveActiveHead(author.reportingGroup);
+    if (!head) {
+      unresolved.push(author.name);
+      continue;
+    }
+    const lateLead = {
+      leadName: author.name,
+      sectionTitle: `Report ${report.id} section`,
+      deadlineIso: report.deadline.toISOString(),
+    };
+    const existing = byHead.get(head.userId);
+    if (existing) {
+      existing.lateLeads.push(lateLead);
+    } else {
+      byHead.set(head.userId, { head, lateLeads: [lateLead] });
+    }
+  }
+
+  return { groups: [...byHead.values()], unresolved };
 }
 
 /**
@@ -91,12 +226,12 @@ export class RemindersService {
   }
 
   /**
-   * NOTIF-01 / NOTIF-04 (Phase 28-03): requestReminderExecution accepts an
-   * optional richer payload. When omitted, falls back to the legacy v2.0
-   * dedupe-key shape — preserves backward compatibility for the existing
-   * follow-up code path. When provided (the new scheduler path),
-   * dedupe-key uses `${rule.id}:${kind}:${cycleDate}:${recipientEmail}` so
-   * hourly @Cron ticks within one UTC cycle produce exactly one email.
+   * Record (idempotently) and enqueue one reminder execution. With a `payload`
+   * the dedupe key is `${rule.id}:${kind}:${cycleDate}:${recipientEmail}`, so
+   * hourly ticks within one UTC cycle collapse to a single execution; without
+   * one it keeps the legacy ISO-suffixed shape. The email job is enqueued only
+   * when this call actually inserted the row, so a concurrent duplicate tick
+   * enqueues nothing.
    */
   async requestReminderExecution(
     ruleId: string,
@@ -115,85 +250,73 @@ export class RemindersService {
       );
     }
 
-    // NOTIF-02 (Phase 29-05): both 'deadline' and 'escalation' use the same
-    // dedupeKey shape so two scheduler ticks within one UTC day collapse to
-    // a single execution.
+    // Both kinds share the dedupeKey shape so two scheduler ticks within one
+    // UTC day collapse to a single execution; the legacy (no-payload) caller
+    // keeps its own ISO-suffixed shape.
     const dedupeKey = payload
       ? `${rule.id}:${payload.kind}:${payload.cycleDate}:${recipientEmail}`
       : `${rule.id}:${rule.fireAt.toISOString()}:${recipientEmail}`;
 
-    const existingExecution =
-      await this.repository.findExecutionByDedupeKey(dedupeKey);
+    const candidate = adminReminderExecutionSchema.parse({
+      id: crypto.randomUUID(),
+      ruleId: rule.id,
+      reportId: rule.reportId,
+      dedupeKey,
+      status: "queued",
+      scheduledFor: rule.fireAt,
+      sentAt: null,
+      recipientEmail,
+      errorMessage: null,
+    });
 
-    if (existingExecution) {
+    const { execution, inserted } = await this.recordExecution(candidate);
+
+    if (!inserted) {
       this.logger.debug("deduplicated reminder execution", {
         dedupeKey,
         ruleId,
       });
-      return adminReminderExecutionSchema.parse(existingExecution);
+      return adminReminderExecutionSchema.parse(execution);
     }
 
     this.logger.info("creating reminder execution", { ruleId, recipientEmail });
-    const execution = await this.repository.saveExecution(
-      adminReminderExecutionSchema.parse({
-        id: crypto.randomUUID(),
-        ruleId: rule.id,
-        reportId: rule.reportId,
-        dedupeKey,
-        status: "queued",
-        scheduledFor: rule.fireAt,
-        sentAt: null,
-        recipientEmail,
-        errorMessage: null,
-      }),
-    );
 
+    // Enqueue only after the insert has committed AND only for the caller that
+    // inserted the row, so a redundant concurrent tick enqueues nothing.
     if (this.emailQueue) {
-      let queuePayload: Record<string, unknown>;
-      if (payload?.kind === "deadline") {
-        queuePayload = {
-          executionId: execution.id,
-          recipientEmail,
-          kind: "deadline",
-          leadName: payload.leadName,
-          reportPeriod: payload.reportPeriod,
-          deadlineIso: payload.deadlineIso,
-          sectionUrl: payload.sectionUrl,
-          // UFB-047 / Phase 49-01: brand snapshot — see ReminderOrganization.
-          organization: payload.organization,
-        };
-      } else if (payload?.kind === "escalation") {
-        queuePayload = {
-          executionId: execution.id,
-          recipientEmail,
-          kind: "escalation",
-          headName: payload.headName,
-          cycleDate: payload.cycleDate,
-          reportPeriod: payload.reportPeriod,
-          lateLeads: payload.lateLeads,
-          organization: payload.organization,
-        };
-      } else {
-        // Legacy v2.0 path — no template rendering, plain text body. The
-        // worker's legacy branch hardcodes the brand and is scheduled for
-        // removal once all Phase 28+ kinds dominate the queue.
-        queuePayload = {
-          executionId: execution.id,
-          recipientEmail,
-          reportPeriod: rule.reportId ?? "",
-        };
-      }
-
-      await this.emailQueue.add("send", queuePayload, {
-        attempts: 3,
-        backoff: { type: "exponential", delay: 5000 },
-      });
+      await this.emailQueue.add(
+        "send",
+        buildQueuePayload(execution, recipientEmail, rule, payload),
+        { attempts: 3, backoff: { type: "exponential", delay: 5000 } },
+      );
       this.logger.info("enqueued email reminder job", {
         executionId: execution.id,
       });
     }
 
     return execution;
+  }
+
+  /**
+   * Record the execution row, preferring the repository's atomic
+   * insert-on-conflict. Repositories without it (in-memory test doubles) fall
+   * back to check-then-insert — safe there because nothing races them;
+   * production takes the atomic path.
+   */
+  private async recordExecution(
+    candidate: AdminReminderExecution,
+  ): Promise<{ execution: AdminReminderExecution; inserted: boolean }> {
+    if (this.repository.insertExecutionOnConflict) {
+      return this.repository.insertExecutionOnConflict(candidate);
+    }
+    const existing = await this.repository.findExecutionByDedupeKey(
+      candidate.dedupeKey,
+    );
+    if (existing) {
+      return { execution: existing, inserted: false };
+    }
+    const saved = await this.repository.saveExecution(candidate);
+    return { execution: saved, inserted: true };
   }
 
   async markReminderSent(executionId: string): Promise<AdminReminderExecution> {
@@ -252,4 +375,47 @@ export class RemindersService {
 
     return { items: page, nextCursor };
   }
+}
+
+/**
+ * Build the BullMQ `send` payload for an execution. The deadline and escalation
+ * payloads carry the rich template fields plus the brand snapshot; the legacy
+ * (no-payload) path emits the plain-text shape the worker's legacy branch
+ * renders.
+ */
+function buildQueuePayload(
+  execution: AdminReminderExecution,
+  recipientEmail: string,
+  rule: AdminReminderRule,
+  payload?: ReminderExecutionPayload,
+): Record<string, unknown> {
+  if (payload?.kind === "deadline") {
+    return {
+      executionId: execution.id,
+      recipientEmail,
+      kind: "deadline",
+      leadName: payload.leadName,
+      reportPeriod: payload.reportPeriod,
+      deadlineIso: payload.deadlineIso,
+      sectionUrl: payload.sectionUrl,
+      organization: payload.organization,
+    };
+  }
+  if (payload?.kind === "escalation") {
+    return {
+      executionId: execution.id,
+      recipientEmail,
+      kind: "escalation",
+      headName: payload.headName,
+      cycleDate: payload.cycleDate,
+      reportPeriod: payload.reportPeriod,
+      lateLeads: payload.lateLeads,
+      organization: payload.organization,
+    };
+  }
+  return {
+    executionId: execution.id,
+    recipientEmail,
+    reportPeriod: rule.reportId ?? "",
+  };
 }
