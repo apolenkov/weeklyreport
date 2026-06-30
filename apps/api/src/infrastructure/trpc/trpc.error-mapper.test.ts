@@ -14,6 +14,11 @@ import {
 } from "../../modules/carry-over/carry-over.service.js";
 import { PdfExportDomainError } from "../../modules/pdf-export/pdf-export.service.js";
 import {
+  PeriodAccessError,
+  PeriodNotFoundError,
+  PeriodScopeError,
+} from "../../modules/period/period.service.js";
+import {
   PublicationAccessError,
   PublicationNotFoundError,
 } from "../../modules/publication/publication.service.js";
@@ -469,6 +474,16 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       make: () => new AdminGroupProductConflictError("m"),
       code: "CONFLICT",
     },
+    {
+      name: "PeriodScopeError",
+      make: () => new PeriodScopeError("m"),
+      code: "FORBIDDEN",
+    },
+    {
+      name: "PeriodNotFoundError",
+      make: () => new PeriodNotFoundError("m"),
+      code: "NOT_FOUND",
+    },
   ] as const;
 
   it.each(cases)("maps $name → $code", ({ make, code }) => {
@@ -483,6 +498,35 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
 
   it("covers every domain error class the mapper imports", () => {
     // Guards against a class being added to the mapper without a row here.
-    expect(cases).toHaveLength(20);
+    expect(cases).toHaveLength(22);
+  });
+});
+
+// ---------------------------------------------------------------------------
+//  period-lifecycle-authz: out-of-scope/archived → FORBIDDEN, missing →
+//  NOT_FOUND, and neither leaks as INTERNAL_SERVER_ERROR. PeriodAccessError
+//  stays UNMAPPED by design (its state/policy 500s are a separate concern), so
+//  it must still fall through to INTERNAL_SERVER_ERROR.
+// ---------------------------------------------------------------------------
+
+describe("mapDomainError — period lifecycle authz", () => {
+  it("maps PeriodScopeError to FORBIDDEN, not INTERNAL_SERVER_ERROR", () => {
+    const mapped = mapDomainError(new PeriodScopeError("out of scope"));
+
+    expect(mapped.code).toBe("FORBIDDEN");
+    expect(mapped.code).not.toBe("INTERNAL_SERVER_ERROR");
+  });
+
+  it("maps PeriodNotFoundError to NOT_FOUND, not INTERNAL_SERVER_ERROR", () => {
+    const mapped = mapDomainError(new PeriodNotFoundError("missing"));
+
+    expect(mapped.code).toBe("NOT_FOUND");
+    expect(mapped.code).not.toBe("INTERNAL_SERVER_ERROR");
+  });
+
+  it("leaves PeriodAccessError UNMAPPED (still INTERNAL_SERVER_ERROR) — its state/policy 500s stay a separate concern", () => {
+    const mapped = mapDomainError(new PeriodAccessError("already published"));
+
+    expect(mapped.code).toBe("INTERNAL_SERVER_ERROR");
   });
 });

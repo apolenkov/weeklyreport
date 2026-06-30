@@ -304,6 +304,27 @@ export class PeriodAdminService {
   }
 
   /**
+   * A published period's date envelope is frozen content — reject envelope edits
+   * the same way `deleteReport` rejects deleting a published period. `weekLabel`
+   * (a cosmetic label) stays editable, and a non-published period is unaffected;
+   * reopening reverts `periodState` to open and unblocks the edit.
+   */
+  private assertEnvelopeEditable(
+    periodState: PeriodState,
+    data: { periodStart?: Date; periodEnd?: Date; deadline?: Date },
+  ): void {
+    const envelopeEdit =
+      data.periodStart !== undefined ||
+      data.periodEnd !== undefined ||
+      data.deadline !== undefined;
+    if (periodState === "published" && envelopeEdit) {
+      throw new AdminAccessError(
+        "Cannot edit a published period's dates. Reopen it first if needed.",
+      );
+    }
+  }
+
+  /**
    * UFB-067: patch an existing Report's date envelope + weekLabel. Mirror
    * of `createPeriodManual` for the in-place edit flow exposed in the
    * Admin → Periods table (each row now carries an inline Edit icon that
@@ -429,6 +450,8 @@ export class PeriodAdminService {
         diff,
       };
     }
+
+    this.assertEnvelopeEditable(existing.periodState, data);
 
     // -- Overlap gate (only when an envelope key changed) --------------
     const envelopeChanged =

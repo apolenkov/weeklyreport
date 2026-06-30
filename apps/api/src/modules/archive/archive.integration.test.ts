@@ -8,6 +8,7 @@ import {
   seedTestData,
 } from "../../test-utils/prisma-test-helper";
 import { PeriodPrismaRepository } from "../period/period.prisma-repository.js";
+import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository.js";
 import { ArchivePrismaRepository } from "./archive.prisma-repository";
 
 describe("ArchivePrismaRepository (integration)", () => {
@@ -18,7 +19,10 @@ describe("ArchivePrismaRepository (integration)", () => {
 
   beforeAll(() => {
     repo = new ArchivePrismaRepository(prisma as never);
-    periodRepo = new PeriodPrismaRepository(prisma as never);
+    periodRepo = new PeriodPrismaRepository(
+      prisma as never,
+      new WeeklyReportPrismaRepository(prisma as never),
+    );
   });
 
   beforeEach(async () => {

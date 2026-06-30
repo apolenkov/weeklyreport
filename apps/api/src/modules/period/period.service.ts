@@ -12,15 +12,56 @@ export class PeriodAccessError extends Error {
   }
 }
 
+/**
+ * A period-lifecycle target is out of scope for the caller: a head acting on a
+ * report that is not the server-derived active period, or any role acting on an
+ * archived period. Mapped to FORBIDDEN. Distinct from `PeriodAccessError`, which
+ * keeps carrying the (unmapped) state/policy failures — already-published,
+ * non-published reopen, and the reopen-window gates.
+ */
+export class PeriodScopeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PeriodScopeError";
+  }
+}
+
+/**
+ * The target `reportId` does not resolve to a report. Mapped to NOT_FOUND; a
+ * bare `Error` would otherwise surface as INTERNAL_SERVER_ERROR.
+ */
+export class PeriodNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PeriodNotFoundError";
+  }
+}
+
 export interface PeriodRepository {
   getReportById(reportId: string): Promise<{
     id: string;
     status: string;
     periodStatus: string;
     publishedAt: Date | null;
+    archived: boolean;
   } | null>;
   publishPeriod(reportId: string, userId: string): Promise<void>;
   reopenPeriod(reportId: string): Promise<void>;
+  /**
+   * The current active editable period id (the `period.publish` target) and the
+   * latest non-archived published period id (the `period.reopen` target). Both
+   * delegate to the weekly-report repository's resolver queries so the head's
+   * lifecycle target matches the `reportId` its weekly-report page resolves —
+   * one query definition, no second copy.
+   */
+  getCurrentEditableId(): Promise<string | null>;
+  getLatestPublishedNonArchivedId(): Promise<string | null>;
+  /**
+   * The id of an existing reopened, non-archived period, or null. Read by the
+   * single-active-reopen guard so a non-admin head cannot hold two reopened
+   * periods at once (which would let them walk back through history).
+   */
+  getReopenedNonArchivedId(): Promise<string | null>;
   /**
    * List of section ids tied to a report — read by the post-publish
    * ingestion seam (see {@link IngestionPublishHook}) so a future async
@@ -98,11 +139,29 @@ export class PeriodService {
     const report = await this.repository.getReportById(reportId);
 
     if (!report) {
-      throw new Error(`Report ${reportId} not found.`);
+      throw new PeriodNotFoundError(`Report ${reportId} not found.`);
+    }
+
+    if (report.archived) {
+      throw new PeriodScopeError("Archived periods cannot be published.");
     }
 
     if (report.periodStatus === "published") {
       throw new PeriodAccessError("Period is already published.");
+    }
+
+    // A head publishes either the current editable period (steady state) or the
+    // period they just reopened. getCurrentEditableId resolves the newest editable
+    // by periodStart — the *open* next period when a reopened older period coexists
+    // — so a strict equality check alone would brick republishing a reopened period
+    // (the reopen → fix → republish flow). A reopened target is accepted directly;
+    // the single-active-reopen guard (assertNoConcurrentReopen) bounds the system to
+    // at most one head-reopened period, so this cannot be abused to republish a
+    // historical snapshot.
+    if (report.periodStatus !== "reopened") {
+      await this.assertHeadTargetMatches(reportId, session, () =>
+        this.repository.getCurrentEditableId(),
+      );
     }
 
     // Capture prior status before the write so the from-label reflects
@@ -138,18 +197,71 @@ export class PeriodService {
     return { success: true, reportId };
   }
 
+  /**
+   * For a non-admin head the lifecycle target MUST be the server-derived active
+   * period; a stale or hand-crafted `reportId` fails closed. Admin may target
+   * any non-archived report (the period-management UI legitimately acts on
+   * historical/scheduled ids), so it skips the equality check.
+   */
+  private async assertHeadTargetMatches(
+    reportId: string,
+    session: UserSession,
+    resolveActiveId: () => Promise<string | null>,
+  ): Promise<void> {
+    if (session.role === "admin") {
+      return;
+    }
+    const activeId = await resolveActiveId();
+    if (reportId !== activeId) {
+      throw new PeriodScopeError(
+        "Only the active period can be published or reopened.",
+      );
+    }
+  }
+
+  /**
+   * A non-admin head may hold at most one reopened period at a time. Without
+   * this, a head could walk back through history: reopening the latest published
+   * period uncovers the next as the new latest-published, which is then
+   * reopenable, and each could be republished — rewriting historical snapshots
+   * and on-time telemetry, the exact threat this change closes. Admin (the
+   * recovery path) is exempt and may reopen arbitrarily.
+   */
+  private async assertNoConcurrentReopen(session: UserSession): Promise<void> {
+    if (session.role === "admin") {
+      return;
+    }
+    const existingReopenedId = await this.repository.getReopenedNonArchivedId();
+    if (existingReopenedId) {
+      throw new PeriodScopeError(
+        "Another period is already reopened. Publish it before reopening another.",
+      );
+    }
+  }
+
   async reopenPeriod(
     reportId: string,
+    session: UserSession,
   ): Promise<{ success: true; reportId: string }> {
     const report = await this.repository.getReportById(reportId);
 
     if (!report) {
-      throw new Error(`Report ${reportId} not found.`);
+      throw new PeriodNotFoundError(`Report ${reportId} not found.`);
+    }
+
+    if (report.archived) {
+      throw new PeriodScopeError("Archived periods cannot be reopened.");
     }
 
     if (report.periodStatus !== "published") {
       throw new PeriodAccessError("Only published periods can be reopened.");
     }
+
+    await this.assertHeadTargetMatches(reportId, session, () =>
+      this.repository.getLatestPublishedNonArchivedId(),
+    );
+
+    await this.assertNoConcurrentReopen(session);
 
     // UFB-052 (Phase 51-B): reopen-policy enforcement. Two gates:
     //   1. `allowReopenAfterPublish` master switch — if false, no reopen

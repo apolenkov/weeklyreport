@@ -2005,9 +2005,12 @@ export function createAppRouter(deps: RouterDeps) {
 
       reopen: headProcedure
         .input(z.object({ reportId: z.uuid() }))
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
           try {
-            return await deps.periodService.reopenPeriod(input.reportId);
+            return await deps.periodService.reopenPeriod(
+              input.reportId,
+              ctx.session,
+            );
           } catch (error) {
             throw mapDomainError(error);
           }

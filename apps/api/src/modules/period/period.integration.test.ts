@@ -29,16 +29,17 @@ const headSession: UserSession = {
 /*  Mock repository                                                    */
 /* ------------------------------------------------------------------ */
 
+interface SpyReport {
+  id: string;
+  status: string;
+  periodStatus: string;
+  publishedAt: Date | null;
+  /** Defaults to false in `getReportById` when a fixture omits it. */
+  archived?: boolean;
+}
+
 function createSpyRepository(
-  reports: Map<
-    string,
-    {
-      id: string;
-      status: string;
-      periodStatus: string;
-      publishedAt: Date | null;
-    }
-  >,
+  reports: Map<string, SpyReport>,
 ): PeriodRepository & {
   publishPeriod: ReturnType<typeof vi.fn>;
   reopenPeriod: ReturnType<typeof vi.fn>;
@@ -60,12 +61,33 @@ function createSpyRepository(
     }
   });
 
+  const resolveFirstId = (match: (r: SpyReport) => boolean): string | null =>
+    [...reports.values()].find(match)?.id ?? null;
+
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
     async getReportById(id: string) {
       const r = reports.get(id);
-      return r ? structuredClone(r) : null;
+      return r
+        ? { ...structuredClone(r), archived: r.archived ?? false }
+        : null;
     },
+    getCurrentEditableId: () =>
+      Promise.resolve(
+        resolveFirstId(
+          (r) =>
+            (r.periodStatus === "open" || r.periodStatus === "reopened") &&
+            !r.archived,
+        ),
+      ),
+    getLatestPublishedNonArchivedId: () =>
+      Promise.resolve(
+        resolveFirstId((r) => r.periodStatus === "published" && !r.archived),
+      ),
+    getReopenedNonArchivedId: () =>
+      Promise.resolve(
+        resolveFirstId((r) => r.periodStatus === "reopened" && !r.archived),
+      ),
     publishPeriod: publishFn,
     reopenPeriod: reopenFn,
   };
@@ -135,7 +157,7 @@ describe("PeriodService — integration (publish lifecycle)", () => {
     const repo = createSpyRepository(reports);
     const service = new PeriodService(repo);
 
-    const result = await service.reopenPeriod(reportId);
+    const result = await service.reopenPeriod(reportId, headSession);
 
     expect(result.success).toBe(true);
     expect(reports.get(reportId)?.periodStatus).toBe("reopened");
@@ -155,9 +177,9 @@ describe("PeriodService — integration (publish lifecycle)", () => {
     ]);
     const service = new PeriodService(createSpyRepository(reports));
 
-    await expect(service.reopenPeriod(reportId)).rejects.toBeInstanceOf(
-      PeriodAccessError,
-    );
+    await expect(
+      service.reopenPeriod(reportId, headSession),
+    ).rejects.toBeInstanceOf(PeriodAccessError);
   });
 
   it("publish after reopen succeeds (reopened -> published)", async () => {
@@ -176,7 +198,7 @@ describe("PeriodService — integration (publish lifecycle)", () => {
 
     // Publish -> Reopen -> Re-publish
     await service.publishPeriod(reportId, headSession);
-    await service.reopenPeriod(reportId);
+    await service.reopenPeriod(reportId, headSession);
     const result = await service.publishPeriod(reportId, headSession);
 
     expect(result.success).toBe(true);
@@ -197,7 +219,7 @@ describe("PeriodService — integration (publish lifecycle)", () => {
     const service = new PeriodService(createSpyRepository(new Map()));
 
     const error = await service
-      .reopenPeriod(reportId)
+      .reopenPeriod(reportId, headSession)
       .catch((error_: unknown) => error_);
 
     expect(error).toBeInstanceOf(Error);
