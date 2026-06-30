@@ -66,44 +66,115 @@ describe("PublicationPrismaRepository (integration)", () => {
     ).toHaveLength(1);
   });
 
-  it("saveAssembledReport updates report status to published", async () => {
+  /** Build the publish payload from the seeded draft report. */
+  async function publishPayload(publishedById: string | null) {
     const assembled = await repo.getAssembledReport(testData.report.id);
     expect(assembled).not.toBeNull();
-
-    const publishedAt = new Date("2026-04-12T10:00:00.000Z");
-    const published = {
+    return {
       ...expectDefined(assembled),
       status: "published" as const,
-      publishedAt,
-      publishedById: testData.head.id,
+      publishedAt: new Date("2026-04-12T10:00:00.000Z"),
+      publishedById,
     };
+  }
 
-    const saved = await repo.saveAssembledReport(published);
+  it("publishAssembledReport transitions an open period to published", async () => {
+    const outcome = await repo.publishAssembledReport(
+      await publishPayload(testData.head.id),
+    );
 
-    expect(saved.status).toBe("published");
-    expect(saved.publishedAt).toEqual(publishedAt);
-    expect(saved.publishedById).toBe(testData.head.id);
-    expect(saved.publishedByName).toBe("Test Head");
+    expect(outcome.status).toBe("transitioned");
+    if (outcome.status === "transitioned") {
+      expect(outcome.priorPeriodStatus).toBe("open");
+    }
+    expect(outcome.report.status).toBe("published");
+    expect(outcome.report.publishedById).toBe(testData.head.id);
+    expect(outcome.report.publishedByName).toBe("Test Head");
 
-    // Verify persistence by re-reading
     const reloaded = await prisma.report.findUnique({
       where: { id: testData.report.id },
     });
+    // A manual publish MUST move all three lifecycle machines to published and
+    // write the snapshot in the same compare-and-set statement.
     expect(expectDefined(reloaded).status).toBe("published");
-    expect(expectDefined(reloaded).publishedById).toBe(testData.head.id);
-    // refactor-period-transition-writer regression: a manual assemble-publish
-    // MUST move all three lifecycle machines to published. The old
-    // hand-assembled write never set periodStatus, leaving it at the default
-    // "open" — which made the report invisible to viewers. The transition
-    // builder fixes this.
     expect(expectDefined(reloaded).periodStatus).toBe("published");
     expect(expectDefined(reloaded).periodState).toBe("published");
-    expect(expectDefined(reloaded).publishedSnapshot).not.toBeNull();
+    expect(expectDefined(reloaded).publishedById).toBe(testData.head.id);
     expect(expectDefined(reloaded).publishedSnapshot).toMatchObject({
       reportId: testData.report.id,
       status: "published",
       publishedById: testData.head.id,
     });
+  });
+
+  it("publishAssembledReport republishes a reopened period (prior status reopened)", async () => {
+    // A reopened period keeps the legacy tuple (status="published") but flips
+    // periodStatus to "reopened". The guard keys on periodStatus, so it stays
+    // publishable and the prior status is surfaced as "reopened".
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        status: "published",
+        periodStatus: "reopened",
+        periodState: "open",
+      },
+    });
+
+    const outcome = await repo.publishAssembledReport(
+      await publishPayload(testData.head.id),
+    );
+
+    expect(outcome.status).toBe("transitioned");
+    if (outcome.status === "transitioned") {
+      expect(outcome.priorPeriodStatus).toBe("reopened");
+    }
+    const reloaded = await prisma.report.findUnique({
+      where: { id: testData.report.id },
+    });
+    expect(expectDefined(reloaded).periodStatus).toBe("published");
+    expect(expectDefined(reloaded).periodState).toBe("published");
+  });
+
+  it("publishAssembledReport reports already-published for a truly-published period", async () => {
+    await prisma.report.update({
+      where: { id: testData.report.id },
+      data: {
+        status: "published",
+        periodStatus: "published",
+        periodState: "published",
+      },
+    });
+
+    const outcome = await repo.publishAssembledReport(
+      await publishPayload(testData.head.id),
+    );
+
+    expect(outcome.status).toBe("already-published");
+  });
+
+  it("two concurrent publishes transition the period exactly once", async () => {
+    const payload = await publishPayload(testData.head.id);
+
+    const [first, second] = await Promise.all([
+      repo.publishAssembledReport(payload),
+      repo.publishAssembledReport(payload),
+    ]);
+
+    // Exactly one call transitions the row; the other observes the row already
+    // published (fast-path) or a zero-row compare-and-set (raced). Either way
+    // it is NOT a second transition.
+    const transitions = [first, second].filter(
+      (o) => o.status === "transitioned",
+    );
+    expect(transitions).toHaveLength(1);
+    expect([first, second].every((o) => o.report.status === "published")).toBe(
+      true,
+    );
+
+    const reloaded = await prisma.report.findUnique({
+      where: { id: testData.report.id },
+    });
+    expect(expectDefined(reloaded).periodStatus).toBe("published");
   });
 
   it("saveAutoPublishedReport writes the full autoPublish set for a non-archived draft", async () => {

@@ -773,29 +773,22 @@ export function createAppRouter(deps: RouterDeps) {
       // headProcedure.
       dashboard: headProcedure.query(async ({ ctx }) => {
         try {
-          // A28 (UAT-v7 2026-05-12): resolve the current open/reopened period
-          // from DB instead of ctx.session.activeReportId (which is baked into
-          // the JWT at login and can be stale). This aligns the dashboard with
-          // activity.live, which also queries DB for periodStatus 'open'.
-          // periodStart <= now excludes scheduled-future periods (periodStatus
-          // defaults to "open" — the enum has no "scheduled" value), which
-          // would otherwise win the periodStart-desc ordering and surface an
-          // empty future report. Mirrors getActiveReportId / getLiveActivity.
-          const openReport = await ctx.prisma?.report.findFirst({
-            where: {
-              periodStatus: { in: ["open", "reopened"] },
-              periodStart: { lte: new Date() },
-            },
-            orderBy: { periodStart: "desc" },
-            select: { id: true },
-          });
+          // Resolve the current editable period from the DB through the shared
+          // current-editable resolver (newest non-archived open/reopened period,
+          // periodStart <= now, ordered periodStart desc then id desc) instead
+          // of ctx.session.activeReportId (baked into the JWT at login, can be
+          // stale). assembledReport and publish resolve through the same method,
+          // so all three agree on the target period; the archived:false filter
+          // and id-desc tiebreak keep the pick non-arbitrary.
+          const reportId =
+            await deps.weeklyReportService.getCurrentEditableId();
 
-          if (!openReport) {
+          if (!reportId) {
             return [];
           }
 
           return await deps.reviewService.getSubmissionDashboard(
-            openReport.id,
+            reportId,
             ctx.session,
           );
         } catch (error) {
@@ -803,20 +796,19 @@ export function createAppRouter(deps: RouterDeps) {
         }
       }),
 
-      assembledReport: headProcedure.query(async ({ ctx }) => {
+      assembledReport: headProcedure.query(async () => {
         try {
-          const activeReportId = ctx.session.activeReportId;
+          const reportId =
+            await deps.weeklyReportService.getCurrentEditableId();
 
-          if (!activeReportId) {
+          if (!reportId) {
             throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "No active report in session.",
+              code: "NOT_FOUND",
+              message: "No active period.",
             });
           }
 
-          return await deps.publicationService.getAssembledReport(
-            activeReportId,
-          );
+          return await deps.publicationService.getAssembledReport(reportId);
         } catch (error) {
           throw mapDomainError(error);
         }
@@ -824,17 +816,18 @@ export function createAppRouter(deps: RouterDeps) {
 
       publish: headProcedure.mutation(async ({ ctx }) => {
         try {
-          const activeReportId = ctx.session.activeReportId;
+          const reportId =
+            await deps.weeklyReportService.getCurrentEditableId();
 
-          if (!activeReportId) {
+          if (!reportId) {
             throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "No active report in session.",
+              code: "NOT_FOUND",
+              message: "No active period to publish.",
             });
           }
 
           return await deps.publicationService.publishReport(
-            activeReportId,
+            reportId,
             ctx.session,
           );
         } catch (error) {

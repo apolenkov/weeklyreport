@@ -107,6 +107,11 @@ const assembledReport: AssembledReport = {
 
 function createRepository(report: AssembledReport): PublicationRepository {
   let currentReport = structuredClone(report);
+  // The assembled read model exposes only legacy `status`; the publish guard
+  // keys on `periodStatus`, so the fake tracks it separately (a reopened period
+  // carries legacy status="published" with periodStatus="reopened").
+  let currentPeriodStatus: "open" | "published" | "reopened" =
+    report.status === "published" ? "published" : "open";
 
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
@@ -122,6 +127,23 @@ function createRepository(report: AssembledReport): PublicationRepository {
       currentReport = structuredClone(nextReport);
 
       return structuredClone(currentReport);
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
+    async publishAssembledReport(nextReport: AssembledReport) {
+      if (currentPeriodStatus === "published") {
+        return {
+          status: "already-published" as const,
+          report: structuredClone(currentReport),
+        };
+      }
+      const priorPeriodStatus = currentPeriodStatus;
+      currentReport = structuredClone(nextReport);
+      currentPeriodStatus = "published";
+      return {
+        status: "transitioned" as const,
+        priorPeriodStatus,
+        report: structuredClone(currentReport),
+      };
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
     async saveAutoPublishedReport(nextReport: AssembledReport) {
@@ -275,6 +297,78 @@ describe("PublicationService", () => {
         to: "published",
       }),
     ).toBe(transitionsBefore + 1);
+  });
+
+  it("publishReport labels the transition counter with the prior status (reopened, not a hardcoded open)", async () => {
+    // A reopened period carries legacy status="published" with
+    // periodStatus="reopened"; the from label must reflect that, never "open".
+    const repository: PublicationRepository = {
+      ...createRepository(assembledReport),
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
+      async publishAssembledReport(nextReport: AssembledReport) {
+        return {
+          status: "transitioned" as const,
+          priorPeriodStatus: "reopened" as const,
+          report: structuredClone(nextReport),
+        };
+      },
+    };
+    const service = new PublicationService(repository);
+    const before = await getCounterValue(
+      customreportPeriodStateTransitionsTotal,
+      { from: "reopened", to: "published" },
+    );
+
+    await service.publishReport(reportId, headSession);
+
+    expect(
+      await getCounterValue(customreportPeriodStateTransitionsTotal, {
+        from: "reopened",
+        to: "published",
+      }),
+    ).toBe(before + 1);
+  });
+
+  it("publishReport raced (zero-transition): returns the published report, no counters, no ingestion", async () => {
+    // A concurrent publish won the compare-and-set. Idempotent success: the
+    // report comes back published, but this call emits no counters and enqueues
+    // no ingestion, so a redundant publish never inflates the ratio.
+    const ingestion = vi.fn(() => Promise.resolve());
+    const repository: PublicationRepository = {
+      ...createRepository(assembledReport),
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements async PublicationRepository contract (no awaitable work in the stub)
+      async publishAssembledReport(nextReport: AssembledReport) {
+        return {
+          status: "raced" as const,
+          report: { ...structuredClone(nextReport), status: "published" },
+        };
+      },
+    };
+    const service = new PublicationService(repository, undefined, ingestion);
+    const submittedBefore = await getCounterValue(
+      customreportReportsSubmittedTotal,
+      { state: "published" },
+    );
+    const transitionsBefore = await getCounterValue(
+      customreportPeriodStateTransitionsTotal,
+      { from: "open", to: "published" },
+    );
+
+    const published = await service.publishReport(reportId, headSession);
+
+    expect(published.status).toBe("published");
+    expect(ingestion).not.toHaveBeenCalled();
+    expect(
+      await getCounterValue(customreportReportsSubmittedTotal, {
+        state: "published",
+      }),
+    ).toBe(submittedBefore);
+    expect(
+      await getCounterValue(customreportPeriodStateTransitionsTotal, {
+        from: "open",
+        to: "published",
+      }),
+    ).toBe(transitionsBefore);
   });
 
   it("publishAuto increments product KPI counters once on success", async () => {

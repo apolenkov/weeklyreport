@@ -59,13 +59,18 @@ function createSpyRepository(
   publishPeriod: ReturnType<typeof vi.fn>;
   reopenPeriod: ReturnType<typeof vi.fn>;
 } {
-  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy satisfies the PeriodRepository.publishPeriod typed slot (must return Promise<void>)
+  // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy satisfies the PeriodRepository.publishPeriod typed slot (must return Promise<{ transitioned: boolean }>)
   const publishFn = vi.fn(async (id: string) => {
     const r = reports.get(id);
-    if (r) {
-      r.periodStatus = "published";
-      r.publishedAt = new Date();
+    // Mirror the guarded compare-and-set: only a not-yet-published row
+    // transitions; an already-published row matches zero rows (transitioned
+    // false), so the service emits no counters and runs no ingestion.
+    if (!r || r.periodStatus === "published") {
+      return { transitioned: false as const };
     }
+    r.periodStatus = "published";
+    r.publishedAt = new Date();
+    return { transitioned: true as const };
   });
 
   // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy satisfies the PeriodRepository.reopenPeriod typed slot (must return Promise<void>)
@@ -660,6 +665,56 @@ describe("PeriodService — manual-publish telemetry", () => {
       }),
     ).toBe(transitionsBefore);
   });
+
+  it("emits no counters and runs no ingestion when the compare-and-set did not transition", async () => {
+    // A concurrent publish already transitioned the period: getReportById still
+    // reads "open" (it raced ahead of the winner's commit), the service clears
+    // its fast-path, but the guarded write reports transitioned:false.
+    const ingestion = vi.fn(() => Promise.resolve());
+    const repo: PeriodRepository = {
+      getReportById: () =>
+        Promise.resolve({
+          id: reportId,
+          status: "draft",
+          periodStatus: "open",
+          publishedAt: null,
+          archived: false,
+        }),
+      getCurrentEditableId: () => Promise.resolve(reportId),
+      getLatestPublishedNonArchivedId: () => Promise.resolve(null),
+      getReopenedNonArchivedId: () => Promise.resolve(null),
+      publishPeriod: () => Promise.resolve({ transitioned: false }),
+      reopenPeriod: () => Promise.resolve(),
+      listSectionIds: () => Promise.resolve(["s1"]),
+    };
+    const service = new PeriodService(repo, undefined, undefined, ingestion);
+
+    const submittedBefore = await getCounterValue(
+      customreportReportsSubmittedTotal,
+      { state: "published" },
+    );
+    const transitionsBefore = await getCounterValue(
+      customreportPeriodStateTransitionsTotal,
+      { from: "open", to: "published" },
+    );
+
+    await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
+      { success: true, reportId },
+    );
+
+    expect(ingestion).not.toHaveBeenCalled();
+    expect(
+      await getCounterValue(customreportReportsSubmittedTotal, {
+        state: "published",
+      }),
+    ).toBe(submittedBefore);
+    expect(
+      await getCounterValue(customreportPeriodStateTransitionsTotal, {
+        from: "open",
+        to: "published",
+      }),
+    ).toBe(transitionsBefore);
+  });
 });
 
 /* ------------------------------------------------------------------ */
@@ -791,7 +846,9 @@ describe("PeriodService — publish target scope", () => {
     // scheduled target excluded by periodStart<=now). The mock decouples
     // getReportById from the resolver to model that state directly.
     const target = openReport(reportId);
-    const publishPeriod = vi.fn(() => Promise.resolve());
+    const publishPeriod = vi.fn(() =>
+      Promise.resolve({ transitioned: true as const }),
+    );
     const repo: PeriodRepository = {
       getReportById: () => Promise.resolve({ ...target, archived: false }),
       getCurrentEditableId: () => Promise.resolve(null),
@@ -930,7 +987,9 @@ describe("PeriodService — reopen target scope", () => {
       getCurrentEditableId: () => Promise.resolve(null),
       getLatestPublishedNonArchivedId: () => Promise.resolve(null),
       getReopenedNonArchivedId: () => Promise.resolve(null),
-      publishPeriod: vi.fn(() => Promise.resolve()),
+      publishPeriod: vi.fn(() =>
+        Promise.resolve({ transitioned: true as const }),
+      ),
       reopenPeriod,
     };
     const service = new PeriodService(repo, invalidate);

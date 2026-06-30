@@ -60,15 +60,43 @@ export type AutoPublishResult =
   | { readonly published: true; readonly report: AssembledReport }
   | { readonly published: false };
 
+/**
+ * Outcome of a manual publish compare-and-set. `transitioned` carries the row's
+ * prior `periodStatus` so the caller labels the transition counter with the
+ * actual source state (`open` vs `reopened`). `already-published` is a truly
+ * published period (rejected); `raced` is a period a concurrent publish
+ * transitioned out from under this call (idempotent success). All three carry
+ * the current assembled report.
+ */
+export type PublishReportOutcome =
+  | {
+      readonly status: "transitioned";
+      readonly priorPeriodStatus: "open" | "reopened";
+      readonly report: AssembledReport;
+    }
+  | { readonly status: "already-published"; readonly report: AssembledReport }
+  | { readonly status: "raced"; readonly report: AssembledReport };
+
 export interface PublicationRepository {
   getAssembledReport(activeReportId: string): Promise<AssembledReport | null>;
   /**
-   * Persist the assembled report through the manual `publish` (head-driven) or
-   * `open` (draft save) transition. The auto path does NOT route here — it uses
-   * {@link saveAutoPublishedReport} so the compare-and-set write guard cannot be
-   * bypassed.
+   * Persist the assembled report through the `open` (draft save) transition.
+   * The manual publish path uses {@link publishAssembledReport} and the auto
+   * path uses {@link saveAutoPublishedReport}, so neither publish writer can be
+   * reached without its compare-and-set guard.
    */
   saveAssembledReport(report: AssembledReport): Promise<AssembledReport>;
+  /**
+   * Publish the assembled report through a guarded `periodStatus != "published"`
+   * compare-and-set. Keys on `periodStatus` (NOT legacy `status`), so a reopened
+   * period (legacy `status="published"`, `periodStatus="reopened"`) stays
+   * publishable. Returns whether it transitioned, the row's prior
+   * `periodStatus`, and the current assembled report — see {@link
+   * PublishReportOutcome}.
+   */
+  publishAssembledReport(
+    report: AssembledReport,
+  ): Promise<PublishReportOutcome>;
   /**
    * Persist a scheduler-driven auto-publish via the `autoPublish` transition,
    * guarded by a compare-and-set that only writes when the target row is still
@@ -218,15 +246,11 @@ export class PublicationService {
   ): Promise<AssembledReport> {
     const report = await this.getAssembledReport(activeReportId);
 
-    if (report.status === "published") {
-      throw new PublicationAccessError("Report has already been published.");
-    }
-
     this.logger.info("publishing report", {
       activeReportId,
       userId: session.userId,
     });
-    const saved = await this.repository.saveAssembledReport(
+    const outcome = await this.repository.publishAssembledReport(
       assembledReportSchema.parse({
         ...report,
         status: "published",
@@ -235,18 +259,33 @@ export class PublicationService {
         publishedByName: session.name,
       }),
     );
-    // Phase 52-A: product telemetry. Emit only after the write succeeds —
-    // a failed save would otherwise inflate the counter and corrupt the
-    // on-time ratio numerator at the next gauge scrape.
+
+    // The fast-path rejection keys on `periodStatus`, not legacy `status`, so a
+    // reopened period (legacy `status="published"`) stays publishable while a
+    // truly-published one is rejected.
+    if (outcome.status === "already-published") {
+      throw new PublicationAccessError("Report has already been published.");
+    }
+    if (outcome.status === "raced") {
+      // A concurrent publish won the compare-and-set: the period is published.
+      // Idempotent success — return it without re-emitting counters or
+      // re-enqueuing ingestion so a redundant publish never inflates the ratio.
+      return outcome.report;
+    }
+
+    // Product telemetry. Emit only after a real transition — a redundant or
+    // failed write would otherwise inflate the counter and corrupt the on-time
+    // ratio numerator at the next gauge scrape. The `from` label carries the
+    // actual prior state (`open` or `reopened`), never a hardcoded value.
     customreportReportsSubmittedTotal.inc({ state: "published" });
     customreportPeriodStateTransitionsTotal.inc({
-      from: "open",
+      from: outcome.priorPeriodStatus,
       to: "published",
     });
-    // Phase 54 (UFB-055): enqueue ingestion AFTER metrics are emitted —
-    // an ingestion failure must never block telemetry or the response.
-    await this.enqueueIngestion(saved);
-    return saved;
+    // Enqueue ingestion AFTER metrics are emitted — an ingestion failure must
+    // never block telemetry or the response.
+    await this.enqueueIngestion(outcome.report);
+    return outcome.report;
   }
 
   /**

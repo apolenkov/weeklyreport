@@ -45,7 +45,16 @@ export interface PeriodRepository {
     publishedAt: Date | null;
     archived: boolean;
   } | null>;
-  publishPeriod(reportId: string, userId: string): Promise<void>;
+  /**
+   * Publish a period via a guarded compare-and-set. Reports whether this call
+   * actually transitioned the row (`transitioned: true`) or found it already
+   * published — a concurrent publish having won the race (`false`), so the
+   * caller can emit telemetry and run ingestion at most once per transition.
+   */
+  publishPeriod(
+    reportId: string,
+    userId: string,
+  ): Promise<{ transitioned: boolean }>;
   reopenPeriod(reportId: string): Promise<void>;
   /**
    * The current active editable period id (the `period.publish` target) and the
@@ -168,9 +177,20 @@ export class PeriodService {
     // the actual state (open or reopened), not a hardcoded value.
     const priorStatus = report.periodStatus;
 
-    await this.repository.publishPeriod(reportId, session.userId);
+    const { transitioned } = await this.repository.publishPeriod(
+      reportId,
+      session.userId,
+    );
 
-    // Emit only after the write succeeds — a failed write must not
+    // A concurrent publish already transitioned the period (the guarded
+    // compare-and-set matched zero rows). Idempotent success: emit no counters
+    // and run no post-publish side-effects so a redundant publish never
+    // inflates the on-time-ratio numerator.
+    if (!transitioned) {
+      return { success: true, reportId };
+    }
+
+    // Emit only after a real transition — a redundant or failed write must not
     // inflate the counters (mirrors the discipline in publication.service.ts).
     customreportReportsSubmittedTotal.inc({ state: "published" });
     customreportPeriodStateTransitionsTotal.inc({

@@ -66,21 +66,36 @@ export class PeriodPrismaRepository implements PeriodRepository {
     return reopened?.id ?? null;
   }
 
-  async publishPeriod(reportId: string, userId: string): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      // refactor-period-transition-writer: the complete publish field set
-      // (status, periodStatus, periodState, publishedAt, publishedById) comes
-      // from the transition builder. We call `tx.report.update` directly here
-      // rather than `applyTransition` because we need the snapshot `include`
-      // on the same call — still sourcing every lifecycle value from the
-      // module. The snapshot write stays in this same transaction so the
-      // state and snapshot remain atomic.
-      const published = await tx.report.update({
-        where: { id: reportId },
+  async publishPeriod(
+    reportId: string,
+    userId: string,
+  ): Promise<{ transitioned: boolean }> {
+    return this.prisma.$transaction(async (tx) => {
+      // Compare-and-set: only a not-yet-published period transitions. count===0
+      // means a concurrent publish already won — two publishes clear the
+      // service-level already-published check, this predicate lets exactly one
+      // through and the loser observes a zero-row match, an idempotent no-op. On
+      // a real transition the complete publish field set comes from the
+      // transition builder (preserving the single transition-writer invariant).
+      // updateMany cannot carry an `include`, so the row is read back to build
+      // the snapshot — both stay in this transaction, so the state and the
+      // snapshot remain atomic.
+      const { count } = await tx.report.updateMany({
+        where: {
+          id: reportId,
+          periodStatus: { not: "published" },
+        },
         data: buildTransition("publish", { now: new Date(), userId }),
-        include: reportFullIncludeForSnapshot,
       });
 
+      if (count === 0) {
+        return { transitioned: false };
+      }
+
+      const published = await tx.report.findUniqueOrThrow({
+        where: { id: reportId },
+        include: reportFullIncludeForSnapshot,
+      });
       const snapshot = buildAssembledReportFromPrismaRow(published);
       await tx.report.update({
         where: { id: reportId },
@@ -88,6 +103,8 @@ export class PeriodPrismaRepository implements PeriodRepository {
           publishedSnapshot: toPublishedSnapshotJson(snapshot),
         },
       });
+
+      return { transitioned: true };
     });
   }
 

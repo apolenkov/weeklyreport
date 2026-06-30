@@ -93,14 +93,18 @@ function createRepository(report: MockReport | null): PeriodRepository & {
 
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
     async publishPeriod(id: string, _userId: string) {
-      if (id === current?.id) {
+      // Mirror the guarded compare-and-set: only a not-yet-published row
+      // transitions.
+      if (id === current?.id && current.periodStatus !== "published") {
         current = {
           ...current,
           status: "published",
           periodStatus: "published",
           publishedAt: new Date(),
         };
+        return { transitioned: true as const };
       }
+      return { transitioned: false as const };
     },
 
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
