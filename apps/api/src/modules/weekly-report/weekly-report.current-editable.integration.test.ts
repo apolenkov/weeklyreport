@@ -38,15 +38,28 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId (integration)", () =
     periodStatus: "open" | "published" | "reopened",
     periodStart: string,
     archived = false,
+    periodEnd: string = periodStart,
   ): Promise<void> {
+    // Dual-state consistency: `status`/`periodStatus` form the legacy tuple,
+    // `periodState` the archive lifecycle. A reopened period keeps the published
+    // legacy status while `periodState` reverts to 'open' (it is editable
+    // again); an archived row's `periodState` is 'archived' even though its
+    // legacy `periodStatus` is left untouched (the mutation sentinel below).
+    const status = periodStatus === "open" ? "draft" : "published";
+    const periodState = archived
+      ? "archived"
+      : periodStatus === "published"
+        ? "published"
+        : "open";
     await prisma.report.create({
       data: {
         id,
         periodStart: new Date(periodStart),
-        periodEnd: new Date(periodStart),
+        periodEnd: new Date(periodEnd),
         deadline: new Date(periodStart),
-        status: periodStatus === "published" ? "published" : "draft",
+        status,
         periodStatus,
+        periodState,
         archived,
       },
     });
@@ -98,14 +111,31 @@ describe("WeeklyReportPrismaRepository.getCurrentEditableId (integration)", () =
   });
 
   it("breaks a same-periodStart tie deterministically (concurrent editable periods)", async () => {
-    // Two concurrent editable periods sharing a periodStart is a SUPPORTED state
-    // (no period-creation lock). Without a total-order tiebreak the DB could
-    // return either row, and because the gate and the resolver call this helper
-    // separately they could pick DIFFERENT periods. The `id desc` tiebreak makes
-    // the pick stable: OLD_OPEN (…f1) and NEW_OPEN (…f2) share a periodStart, so
-    // the higher id wins, identically on every call.
-    await createReport(OLD_OPEN, "open", "2026-05-18T00:00:00.000Z");
-    await createReport(NEW_OPEN, "open", "2026-05-18T00:00:00.000Z");
+    // The partial unique index `Report_one_open_per_boundary` forbids two
+    // periodState='open' rows on the same (periodStart, periodEnd) boundary, so
+    // two editable periods can no longer share a FULL boundary. They can still
+    // tie on periodStart while differing on periodEnd — e.g. an open period and
+    // a reopened one of a different length, both periodState='open'.
+    // getCurrentEditableId orders by periodStart desc then id desc, so the tie
+    // on periodStart is broken by the id-desc key. The gate and the
+    // latestForViewer resolver call this helper SEPARATELY, so the tiebreak must
+    // resolve the same id on every call — otherwise one could authorize a
+    // different period than the other targets. OLD_OPEN (…f1) and NEW_OPEN
+    // (…f2) share a periodStart, so the higher id wins, identically every call.
+    await createReport(
+      OLD_OPEN,
+      "open",
+      "2026-05-18T00:00:00.000Z",
+      false,
+      "2026-05-24T00:00:00.000Z",
+    );
+    await createReport(
+      NEW_OPEN,
+      "reopened",
+      "2026-05-18T00:00:00.000Z",
+      false,
+      "2026-05-25T00:00:00.000Z",
+    );
 
     const first = await repository.getCurrentEditableId();
     const second = await repository.getCurrentEditableId();
