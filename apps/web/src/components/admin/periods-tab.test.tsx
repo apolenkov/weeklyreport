@@ -4,7 +4,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { TRPCProxyContext } from "../../lib/trpc-context";
 import { createMockTRPC } from "../../test-utils/mock-trpc";
@@ -758,5 +766,107 @@ describe("PeriodsTab — focus management (autofocus-admin-dialogs)", () => {
       screen.queryByTestId("periods-create-dialog"),
     ).not.toBeInTheDocument();
     expect(document.activeElement).toBe(newBtn);
+  });
+});
+
+// ---------------------------------------------------------------------
+// The deadline datetime-local field must round-trip as UTC wall-clock in
+// every timezone. Under a non-UTC process timezone a `new Date(deadline)`
+// local parse would drift the stored deadline by the offset on every
+// re-save; these tests drive the REAL edit-submit path under Europe/Moscow
+// (UTC+3) so reverting to the local parse fails them.
+// ---------------------------------------------------------------------
+
+describe("PeriodsTab — deadline UTC round-trip under a non-UTC timezone", () => {
+  const originalTz = process.env.TZ;
+
+  beforeAll(() => {
+    process.env.TZ = "Europe/Moscow";
+  });
+
+  afterAll(() => {
+    if (originalTz === undefined) {
+      delete process.env.TZ;
+    } else {
+      process.env.TZ = originalTz;
+    }
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // Encodes the assumption the round-trip teeth rest on: if the non-UTC TZ
+  // did not take effect in the worker, a bare `new Date(deadline)` local
+  // parse would resolve to the same UTC instant as the fix, and the tests
+  // below would pass even against the reverted bug. This fails loud instead.
+  it("guard: the non-UTC process timezone is active in the worker", () => {
+    expect(new Date("2026-05-09T18:00").toISOString()).toBe(
+      "2026-05-09T15:00:00.000Z",
+    );
+  });
+
+  // publishedFresh.deadline is 2026-05-09T18:00:00Z — a non-midnight UTC
+  // instant. Editing the row without touching the deadline must submit the
+  // identical instant. Under UTC+3 the old local parse would yield
+  // 2026-05-09T15:00:00.000Z (-3h drift).
+  it("no-op edit submits the stored deadline unchanged (no -N-hour drift)", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab();
+
+    await user.click(
+      await screen.findByTestId(`action-edit-${publishedFresh.id}`),
+    );
+
+    // Confirm the field prefilled with the UTC wall-clock display.
+    const deadlineInput = screen.getByTestId(
+      "periods-create-deadline",
+    ) as HTMLInputElement;
+    expect(deadlineInput.value).toBe("2026-05-09T18:00");
+
+    await user.click(screen.getByTestId("periods-create-submit"));
+
+    await waitFor(() => {
+      expect(
+        captured["admin.updatePeriodManual"].mutationFn,
+      ).toHaveBeenCalledTimes(1);
+    });
+    const payload = captured["admin.updatePeriodManual"].mutationFn.mock
+      .calls[0]?.[0] as { deadline?: Date };
+    expect(payload.deadline?.toISOString()).toBe("2026-05-09T18:00:00.000Z");
+  });
+
+  // An early-in-day deadline (01:00) is inside [periodStart, periodEnd] only
+  // when parsed as UTC. The old UTC+3 local parse would resolve it to
+  // 2026-05-03T22:00:00.000Z — before the 2026-05-04T00:00:00.000Z start —
+  // tripping the range-validation error and blocking submit. The fix keeps
+  // the validation and the submit on the same UTC instant, so no error
+  // appears and the deadline reaches the payload as the UTC-parsed instant.
+  it("range validation and submit agree on the UTC instant for an in-range early deadline", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab();
+
+    await user.click(
+      await screen.findByTestId(`action-edit-${publishedFresh.id}`),
+    );
+
+    const deadlineInput = screen.getByTestId("periods-create-deadline");
+    fireEvent.change(deadlineInput, { target: { value: "2026-05-04T01:00" } });
+
+    // No "Deadline cannot be before period start" error under the UTC parse.
+    expect(
+      screen.queryByTestId("periods-deadline-error"),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId("periods-create-submit"));
+
+    await waitFor(() => {
+      expect(
+        captured["admin.updatePeriodManual"].mutationFn,
+      ).toHaveBeenCalledTimes(1);
+    });
+    const payload = captured["admin.updatePeriodManual"].mutationFn.mock
+      .calls[0]?.[0] as { deadline?: Date };
+    expect(payload.deadline?.toISOString()).toBe("2026-05-04T01:00:00.000Z");
   });
 });
