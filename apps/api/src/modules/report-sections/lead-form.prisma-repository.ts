@@ -380,19 +380,38 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     }
   }
 
-  async hasSharedProduct(userId1: string, userId2: string): Promise<boolean> {
-    const row = await this.prisma.stageAssignment.findFirst({
-      where: {
-        userId: userId1,
-        project: {
-          stageAssignments: {
-            some: { userId: userId2 },
-          },
-        },
-      },
-      select: { id: true },
+  /**
+   * The product ids the viewer and author BOTH hold a stage assignment on,
+   * restricted to non-archived products. Mirrors step 1 of
+   * {@link getCrossAuthorContent}: the viewer's assigned products intersected
+   * with the author's assignments on those products, filtered by
+   * `project.archived=false`. Report-independent (assignments are report-wide);
+   * report access is proven separately by the caller's own-section read.
+   */
+  async getSharedNonArchivedProductIds(
+    viewerId: string,
+    authorId: string,
+  ): Promise<string[]> {
+    const viewerAssignments = await this.prisma.stageAssignment.findMany({
+      where: { userId: viewerId },
+      select: { projectId: true },
     });
-    return row !== null;
+    const viewerProjectIds = [
+      ...new Set(viewerAssignments.map((r) => r.projectId)),
+    ];
+    if (viewerProjectIds.length === 0) {
+      return [];
+    }
+
+    const shared = await this.prisma.stageAssignment.findMany({
+      where: {
+        projectId: { in: viewerProjectIds },
+        userId: authorId,
+        project: { archived: false },
+      },
+      select: { projectId: true },
+    });
+    return [...new Set(shared.map((r) => r.projectId))];
   }
 
   async getCrossAuthors(

@@ -98,8 +98,17 @@ export interface LeadFormRepository {
     userId: string,
     reason?: string,
   ): Promise<void>;
-  /** Returns true when both users share at least one assigned project. */
-  hasSharedProduct(userId1: string, userId2: string): Promise<boolean>;
+  /**
+   * The product ids both users hold a stage assignment on, restricted to
+   * non-archived products. Drives BOTH the lead cross-author authorization gate
+   * and the per-product content filter in `getByPeriod`, so the gate can never
+   * admit a reader the filter then empties. Report-independent: report access is
+   * proven separately by the caller's own-section read.
+   */
+  getSharedNonArchivedProductIds(
+    viewerId: string,
+    authorId: string,
+  ): Promise<string[]>;
   /** Returns other authors who share at least one project with userId, with per-project stats. */
   getCrossAuthors(
     reportId: string,
