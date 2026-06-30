@@ -12,3 +12,4 @@ export * from "./schemas/report";
 export * from "./schemas/search";
 export * from "./schemas/stage-names";
 export * from "./schemas/telemetry";
+export * from "./schemas/web-vitals";

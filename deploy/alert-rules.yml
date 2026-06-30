@@ -21,12 +21,14 @@ groups:
           summary: "CustomReport API is unreachable"
           description: "Prometheus cannot scrape /metrics — API may be down."
 
-      # Fire when p95 CLS reported via web_vital_cls exceeds 0.25 (poor threshold).
+      # Fire when p95 CLS exceeds 0.25 (poor threshold). web_vital_cls is a
+      # histogram, so the bare series no longer exists — derive the quantile
+      # from its _bucket series instead of comparing a gauge value directly.
       - alert: ClsPoor
-        expr: web_vital_cls > 0.25
+        expr: histogram_quantile(0.95, sum by (le) (rate(web_vital_cls_bucket[5m]))) > 0.25
         for: 5m
         labels:
           severity: warning
         annotations:
           summary: "CLS above poor threshold"
-          description: "web_vital_cls={{ $value | humanize }} — Cumulative Layout Shift is in the 'poor' range (>0.25)."
+          description: "p95 CLS={{ $value | humanize }} — Cumulative Layout Shift is in the 'poor' range (>0.25)."
