@@ -212,6 +212,19 @@ describe("AlertBar — Phase 48-C role gating", () => {
   });
 });
 
+describe("AlertBar — pending label accuracy", () => {
+  it("labels every pending lead 'Not started' and never 'Draft'", () => {
+    useQueryMock.mockReturnValue({ data: { count: 0 } });
+
+    render(<AlertBar {...baseProps} pendingLeads={["Alice", "Bob"]} />);
+
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+    expect(screen.getByText("Bob")).toBeInTheDocument();
+    expect(screen.getAllByText(/Not started/)).toHaveLength(2);
+    expect(screen.queryByText(/Draft/)).not.toBeInTheDocument();
+  });
+});
+
 // ---------------------------------------------------------------------------
 // reopen-request-lifecycle (D3): pending-reopen indicator
 // ---------------------------------------------------------------------------

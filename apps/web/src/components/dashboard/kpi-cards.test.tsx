@@ -118,6 +118,41 @@ describe("KpiCards — a11y regression (verify-a11y-recommended-flip)", () => {
     });
   });
 
+  describe("zero total — no NaN", () => {
+    const zeroData: KpiData = {
+      ...baseData,
+      submitted: 0,
+      total: 0,
+      pendingCount: 0,
+    };
+
+    it("exposes the Submissions region without NaN", () => {
+      render(<KpiCards data={zeroData} />);
+      const section = screen.getByRole("region", {
+        name: /^Submissions: 0 of 0, 0 pending$/,
+      });
+      expect(section).toBeInTheDocument();
+      expect(section.getAttribute("aria-label")).not.toContain("NaN");
+    });
+
+    it("renders the conic ring title at 0% with a finite gradient and no NaN", () => {
+      const { container } = render(<KpiCards data={zeroData} />);
+      const ring = container.querySelector<HTMLElement>("[title]");
+      expect(ring).not.toBeNull();
+      if (ring === null) throw new Error("conic ring not found");
+      expect(ring.getAttribute("title")).toBe(
+        "0 of 0 leads submitted this week (0%)",
+      );
+      expect(ring.style.background).toContain("0% 0%");
+      expect(ring.style.background).not.toContain("NaN");
+    });
+
+    it("renders no NaN anywhere in the card text", () => {
+      const { container } = render(<KpiCards data={zeroData} />);
+      expect(container.textContent).not.toContain("NaN");
+    });
+  });
+
   describe("Snapshots — visual layout and CSS preservation", () => {
     it("KPI cards visual layout: section elements inherit grid container", () => {
       const { container } = render(<KpiCards data={baseData} />);

@@ -7,7 +7,8 @@ interface KpiCardsProps {
 }
 
 export function KpiCards({ data }: KpiCardsProps) {
-  const submissionPercent = Math.round((data.submitted / data.total) * 100);
+  const submissionPercent =
+    data.total > 0 ? Math.round((data.submitted / data.total) * 100) : 0;
 
   return (
     <div className="grid gap-4 sm:grid-cols-3">
