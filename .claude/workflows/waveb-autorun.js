@@ -31,36 +31,48 @@ const STANDARDS = [
 //                   message + diff summary for the orchestrator to review-then-commit.
 const CHANGES = [
   {
-    name: "transactional-snapshot-restore",
+    name: "fix-manual-publish-archive-race",
     stakes: "high",
     spec: { dir: true },
-    seam: "admin-snapshot-write.queries.ts (wrap saveSnapshot's writes in ONE interactive prisma.$transaction; add targeted upsert*/remove* queries). admin-group.queries.ts::ensureFallbackReportingGroup (widen to the tx-client type). snapshot-admin.service.ts, project-admin.service.ts, reminder-admin.service.ts, period-admin.service.ts (rewrite add/edit/remove to call targeted repo methods, NOT getSnapshot->saveSnapshot). admin.prisma-repository.ts + the AdminRepository interface in admin-shared.ts (entity-level methods) + the in-memory test repository. Tests: admin.service.test.ts, admin.integration.test.ts, admin.contract.test.ts. Touch ONLY admin module files. (admin.* seam 12/13/14 already committed — #19 next, no conflict.)",
+    seam: "period.prisma-repository.ts::publishPeriod (add archived:false to the updateMany WHERE; on count===0 re-read the row INSIDE the same $transaction and return a discriminated outcome: reason 'raced' if periodStatus now 'published', reason 'archived' if archived now true). period.service.ts::publishPeriod (map reason 'archived' -> throw PeriodScopeError; reason 'raced' -> existing idempotent {success:true,reportId} with NO side effects; AND replace the blanket `if (report.periodStatus !== 'reopened')` skip with a branch asserting reportId === getReopenedNonArchivedId() for a non-admin head on a reopened target, admin exempt). publication.prisma-repository.ts::publishAssembledReport (add archived:false to the updateMany WHERE; on count===0 re-read and return a new 'archived' status alongside 'raced'/'already-published'/'transitioned'). publication.service.ts::publishReport (map 'archived' -> a PublicationAccessError-class domain error 'Cannot publish an archived report.', distinct from the idempotent 'raced' branch). Widen the PeriodRepository.publishPeriod return type and the PublishReportOutcome type, and update the in-memory/contract test repositories to the SAME contract. Touch ONLY period + publication module files (+ map-domain-errors only if an archived->FORBIDDEN case is missing). The parallel session works on docs/openspec/web — do not touch those.",
     caveat:
-      "ATOMICITY: wrap every DB write of saveSnapshot — currentRules read, upsertGroups, ensureFallbackReportingGroup (it does reportingGroup.upsert, so it MUST run under tx, not the raw client), upsertUsers, upsertProjects, upsertPeriods, upsertReminderRules — in a SINGLE prisma.$transaction(async (tx) => ...). Widen each upsert* helper AND ensureFallbackReportingGroup from PrismaService to the Prisma transaction-client type (follow the lead-form.prisma-repository.ts pattern). ONLY the post-commit PolicyApplicator loop and the final getSnapshot read stay OUTSIDE the transaction. Preserve the resolveLifecycle non-transition period write inside (do not derive coupled lifecycle fields from one field). " +
-      "TARGETED (non-destructive): replace whole-snapshot destructive reconcile (removedUserIds/removedProjectIds/removedRuleIds branches) with entity-level upsert/delete keyed by id. Removals route ONLY through explicit remove* methods (removeUser honors the existing FK-reference guard + P2003 skip; removeProject archives by id; removeReminderRule deletes by id). The retained saveSnapshot is ADDITIVE-ONLY: it NEVER deletes or archives a row merely for being absent from the payload (design D2). " +
-      "PeriodAdminService.upsertPeriod MUST call the targeted upsertPeriod (NOT getSnapshot->saveSnapshot) so a single-period edit never re-writes stale copies of groups/users/projects/rules; when the upsert CREATES a period, run PolicyApplicatorService.applyToPeriod for it AFTER the write commits (mirror saveSnapshot's newlyCreatedPeriods post-commit step), never inside the period write. " +
-      "Re-express admin.service.test.ts cases that encode destructive reconcile as intended behavior against the targeted mutations — do NOT weaken or delete coverage. No schema change, no migration, no API wire-shape change.",
+      "RACE CLOSE (D1+D2): the SINGLE point that closes the TOCTOU is `archived:false` in BOTH manual compare-and-set predicates — a pre-write report.archived check (period.service already has one) cannot, because the archive can land after it. The scheduler path saveAutoPublishedReport ALREADY has archived:false; do NOT touch it. After adding archived:false a zero-row match has TWO causes and MUST be split by an in-transaction (period path) / direct (publication path) re-read: now-'published' => idempotent 'raced' success (rebuild NO snapshot, enqueue NO ingestion, emit NO counters); now-archived => a domain error (NOT silent success). The contradictory archived=true + periodStatus='published' row must NEVER be written. " +
+      "REOPENED BYPASS (D3): do NOT add any NEW head restriction beyond making scope-period-lifecycle-authz's existing guard hold — the reopened-target branch asserts reportId === getReopenedNonArchivedId() (admin exempt), which the legit reopen->fix->republish flow already satisfies (a head holds at most one reopened period via assertNoConcurrentReopen, so its own reopened target IS that single active one). Reuse the EXISTING getReopenedNonArchivedId port method; add no new port surface for D3. " +
+      "NON-GOALS (product-owner decision, enforce as scope discipline): NO new archive/unarchive authz; archiveReport/unarchiveReport stay head-accessible and unbounded by period; NO time-frontier guard for the archive-assisted history walk-back (accepted risk); do NOT weaken or alter scope-period-lifecycle-authz. NO schema/migration change.",
     mustCover: [
-      "saveSnapshot: ALL its DB writes (currentRules read, upsertGroups, ensureFallbackReportingGroup, upsertUsers, upsertProjects, upsertPeriods, upsertReminderRules) run inside ONE prisma.$transaction(async (tx) => ...); a mid-write throw rolls the WHOLE restore back (no partial state, no stray default group). Proven by a real-DB partial-restore-rollback test (a later phase throws -> DB unchanged).",
-      "every upsert* helper AND ensureFallbackReportingGroup are widened to the Prisma transaction-client type and run under tx (not the raw client) — follow lead-form.prisma-repository.ts.",
-      "PolicyApplicator.applyToPeriod stays strictly AFTER the transaction returns (asserted by structure that the applicator loop is OUTSIDE the $transaction callback); resolveLifecycle non-transition write preserved inside.",
-      "destructive reconcile branches (removedUserIds/removedProjectIds/removedRuleIds) REMOVED from the per-phase helpers; removals route only through explicit remove* methods; saveSnapshot is ADDITIVE-ONLY (a user/project/rule absent from the supplied snapshot is NOT deleted/archived). Proven by an additive-only test + a concurrent-insert-survives test.",
-      "targeted upsertUser/removeUser (delete honors the FK guard + P2003 skip), upsertProject/removeProject (archive by id), upsertReminderRule/removeReminderRule (delete by id), upsertPeriod (one period by id, preserve resolveLifecycle) implemented in the write queries + wired through admin.prisma-repository.ts.",
-      "the four services (Snapshot/Project/Reminder/Period Admin) call the targeted repo methods instead of getSnapshot->mutate->saveSnapshot; PeriodAdminService.upsertPeriod uses targeted upsertPeriod (no stale re-write of unrelated collections) and runs the post-commit applicator on a CREATE; each service still returns its tRPC procedure's expected response shape.",
-      "AdminRepository interface (admin-shared.ts) extended with the entity-level methods + the additive-only saveSnapshot contract documented; the in-memory test repository implements the SAME surface so contract tests exercise it.",
-      "tests: partial-restore rollback (real-DB), concurrent-insert window closed (a row inserted between read+write survives an unrelated targeted edit), explicit removals touch only the named row, upsertPeriod touches only the named period + triggers post-commit applicator on create, additive-only saveSnapshot; re-expressed destructive-reconcile cases (coverage not weakened).",
+      "period.prisma-repository.ts::publishPeriod updateMany WHERE now includes `archived: false` (in addition to `periodStatus: { not: 'published' }`); on count===0 the row is re-read IN THE SAME $transaction and the method returns a discriminated outcome that distinguishes a now-published row (raced) from a now-archived row (archived).",
+      "publication.prisma-repository.ts::publishAssembledReport updateMany WHERE now includes `archived: false`; on count===0 it re-reads and returns a new 'archived' status distinct from 'raced'/'already-published'/'transitioned'.",
+      "period.service.ts::publishPeriod maps the archived outcome to a thrown PeriodScopeError ('Archived periods cannot be published.') and the raced outcome to the existing idempotent { success:true, reportId } that runs NO side effects (no counters, no invalidate, no ingestion).",
+      "publication.service.ts::publishReport maps the 'archived' status to a domain error (PublicationAccessError-class, 'Cannot publish an archived report.'), distinct from the 'raced' idempotent-success branch; map-domain-errors maps both archived errors to FORBIDDEN (a mapper case/test added only if not already covered).",
+      "period.service.ts::publishPeriod no longer blanket-skips the frontier check for a reopened target: for a non-admin head a reopened target is accepted only if reportId === getReopenedNonArchivedId(); admin remains exempt; non-reopened targets keep the existing getCurrentEditableId equality check. The reopen->fix->republish flow is preserved.",
+      "PeriodRepository.publishPeriod return type and PublishReportOutcome type are widened, and the in-memory / contract test repositories implement the SAME new contract (no contract-test drift; the integration suite must compile and pass).",
+      "real-DB integration tests: an open period archived BEFORE publishPeriod's write is NOT published (row stays archived=true, periodStatus unchanged, PeriodScopeError raised) — and the equivalent for review.publish->publishAssembledReport; PLUS a concurrent-publish regression proving the raced branch is still idempotent success (one transition, one counter set). Each new test FAILS on a revert of its fix.",
+      "unit tests for D3: a non-admin head publishing a reopened target that is NOT getReopenedNonArchivedId() is rejected with PeriodScopeError (FAILS before D3); a non-admin head publishing the single active reopened period succeeds AND an admin publishing any reopened target succeeds (legit flow preserved).",
     ],
     reachability:
-      "After this change, can ANY admin mutation still destroy unrelated data — a user created in the read-write window (SAML JIT login) reconciled away, an absent row deleted/archived for snapshot-absence, or a single-period edit re-writing stale copies of groups/users/projects/rules? Can a mid-write failure leave the org half-restored (a stray default group, users gone but projects untouched) rather than fully rolled back?",
+      "After this change, can a manual publish (period.publish OR review.publish) still write a row that is simultaneously archived=true and periodStatus='published' when an archive lands inside its read->write window? Can a zero-row match caused by an archive-in-window still be reported as idempotent success rather than a domain error? Can a non-admin head still publish an admin-reopened historical period via the reopened skip (reportId not equal to getReopenedNonArchivedId())?",
     regression:
-      "Does a legitimate snapshot restore / single-entity edit still persist correctly and return the expected tRPC response shape? Does ensureFallbackReportingGroup still provision the fallback group (now under tx)? Does a newly-created period still get PolicyApplicator applied (post-commit)? Is resolveLifecycle's non-transition write preserved? Does the in-memory test repo match the prisma repo's new contract (no contract-test drift)? Are the re-expressed destructive-reconcile tests still meaningful (teeth), not just deleted?",
+      "Does the legitimate reopen->fix->republish flow still succeed (a head republishing the single period it just reopened)? Does an admin still publish any reopened target? Do two concurrent publishes on one OPEN (non-archived) period still transition exactly once with the loser an idempotent success (D2 did NOT turn the raced branch into an error)? Does an ordinary non-archived open-period publish still succeed and emit its counters exactly once? Did the in-memory/contract test repos stay in lockstep with the widened repo contract (no integration-only mock drift)? Did the change avoid touching saveAutoPublishedReport, scope-period-lifecycle-authz, archiveReport/unarchiveReport, and any schema?",
     integrationTargets:
-      "the new admin real-DB tests (partial-restore rollback, concurrent-insert survival, targeted-removal isolation, upsertPeriod isolation, additive-only) + admin.integration.test.ts + admin.contract.test.ts; the whole api unit + integration suite stays green.",
+      "the new archive-in-window real-DB tests for both manual publish paths + the concurrent-publish idempotency regression + the existing period.*.integration.test.ts and publication/review publish integration tests; the WHOLE api unit + integration suite stays green.",
     commitSubject:
-      "fix(admin): transactional, targeted snapshot restore (no destructive reconcile)",
-    commitBody: ["(orchestrator commits high-stakes after diff review)"].join(
-      "\n",
-    ),
+      "fix(publish): fail closed on a period archived inside the manual-publish window",
+    commitBody: [
+      "Add `archived: false` to both manual publish compare-and-set predicates",
+      "(period.publish, review.publish) so a period archived inside the",
+      "read->write window matches zero rows and is never written as a",
+      "contradictory archived+published row. Split the zero-row outcome into an",
+      "idempotent concurrent-publish success vs an archived-in-window domain",
+      "error (FORBIDDEN). Also close the reopened-target bypass of",
+      "scope-period-lifecycle-authz: a non-admin head's reopened publish target",
+      "must be the single active reopened period, without affecting the",
+      "reopen->fix->republish flow.",
+      "",
+      "No new archive/unarchive authz and no schema change (product-owner",
+      "decision: the head is trusted and may act on any period).",
+      "",
+      "(orchestrator commits high-stakes after diff review)",
+    ].join("\n"),
   },
 ];
 // ---------------------------------------------------------------------------------------
@@ -431,6 +443,10 @@ async function processChange(CHANGE, index) {
       phase: "Codex",
       effort: "high",
       agentType: "codex:codex-rescue",
+      // Use the current Sonnet (Sonnet 5 on the updated client) for the
+      // adversarial reviewer; the codex-rescue agentType otherwise runs its
+      // wrapper on Sonnet 4.6. The "sonnet" alias tracks the latest version.
+      model: "sonnet",
       schema: VERIFY_SCHEMA,
     },
   );
