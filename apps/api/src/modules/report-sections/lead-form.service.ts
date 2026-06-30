@@ -33,6 +33,47 @@ export {
 } from "./lead-form-shared";
 
 /**
+ * Scope a foreign section's product-keyed collections to the products the
+ * viewer co-owns. Every product-scoped collection the read model exposes is
+ * filtered: items (current and next week), risks, decisions, and the `projects`
+ * array — whose entries carry the per-stage statuses, traffic light, owned
+ * stages, and stage set, so dropping an unshared entry removes its whole card
+ * and stage grid. `referencedProjects` is recomputed from the surviving rows so
+ * a dropped unshared product can never re-leak its name. A decision may carry a
+ * null/undefined `productId` — a cross-cutting, non-product-scoped decision; it
+ * is NOT a record on an unshared product, so the scoping has no reason to hide
+ * it and it is kept. Only the nullable `decisions.productId` gets the keep-null
+ * branch; items/risks/projects always carry a concrete id. Section-identity
+ * fields (status, version, author, submittedAt) are preserved unchanged.
+ */
+function filterSectionToSharedProducts(
+  section: ReportSectionReadModel,
+  sharedProductIds: ReadonlySet<string>,
+): ReportSectionReadModel {
+  const items = section.items.filter((i) => sharedProductIds.has(i.projectId));
+  const risks = section.risks.filter((r) => sharedProductIds.has(r.projectId));
+  // Mirror getCrossAuthorContent's `sharedIds.has(d.productId)`: a cross-author
+  // co-lead view drops every decision not on a shared product — INCLUDING a
+  // null-productId (cross-cutting/group) decision — so this byPeriod lens
+  // discloses exactly what the curated Everyone lens does, never more.
+  const decisions = section.decisions.filter(
+    (d) => d.productId != null && sharedProductIds.has(d.productId),
+  );
+  const projects = section.projects.filter((p) =>
+    sharedProductIds.has(p.projectId),
+  );
+  const referencedIds = new Set<string>([
+    ...items.map((i) => i.projectId),
+    ...risks.map((r) => r.projectId),
+    ...decisions.flatMap((d) => (d.productId != null ? [d.productId] : [])),
+  ]);
+  const referencedProjects = section.referencedProjects?.filter((rp) =>
+    referencedIds.has(rp.projectId),
+  );
+  return { ...section, items, risks, decisions, projects, referencedProjects };
+}
+
+/**
  * Lead-form facade: reopen / cross-author / revoke / by-period / fill-from.
  * The version-history and snapshot surfaces were removed entirely
  * (defer-versions-coming-soon); TODO(versions-v2) marks the re-entry points.
@@ -179,6 +220,47 @@ export class LeadFormService {
     return { success: true };
   }
 
+  /**
+   * Resolve the lead cross-author read's product scope. Returns the shared
+   * non-archived product-id set ONLY when the caller is a lead requesting
+   * another author AND holds their own section in the report (report access is
+   * report-independent co-ownership's missing half) AND co-owns at least one
+   * non-archived product with that author. Every other case — head/admin,
+   * own-section, no report access, or archived-only co-ownership — returns null,
+   * so `getByPeriod` reads the caller's own section and exposes no foreign
+   * status, metadata, or records.
+   */
+  private async resolveCrossAuthorScope(
+    reportId: string,
+    userId: string,
+    role: Role | undefined,
+    requestedAuthorId: string | undefined,
+  ): Promise<ReadonlySet<string> | null> {
+    if (
+      role !== "lead" ||
+      requestedAuthorId === undefined ||
+      requestedAuthorId === userId
+    ) {
+      return null;
+    }
+    // Prove report access first: own a section in this report. Co-ownership
+    // alone is report-wide and must not authorize reading a foreign section in
+    // a report the caller does not belong to.
+    const ownSection = await this.repository.getSectionForPeriod(
+      reportId,
+      userId,
+    );
+    if (!ownSection) {
+      return null;
+    }
+    const sharedProductIds =
+      await this.repository.getSharedNonArchivedProductIds(
+        userId,
+        requestedAuthorId,
+      );
+    return sharedProductIds.length > 0 ? new Set(sharedProductIds) : null;
+  }
+
   /** API-10: Get lead form for a specific period. */
   async getByPeriod(
     reportId: string,
@@ -192,13 +274,19 @@ export class LeadFormService {
     reopenBlockedReason: string | null;
   }> {
     const isHeadLike = role === "head" || role === "admin";
-    const canViewOtherAuthor =
-      isHeadLike ||
-      (role === "lead" &&
-        requestedAuthorId !== undefined &&
-        (await this.repository.hasSharedProduct(userId, requestedAuthorId)));
+    // One shared non-archived set gates AND scopes the lead cross-author read
+    // (null = not a granted cross-author read, including archived-only sharing
+    // or no report access). The head/admin branch is group-scoped elsewhere.
+    const sharedScope = await this.resolveCrossAuthorScope(
+      reportId,
+      userId,
+      role,
+      requestedAuthorId,
+    );
     const sectionAuthorId =
-      requestedAuthorId && canViewOtherAuthor ? requestedAuthorId : userId;
+      requestedAuthorId !== undefined && (isHeadLike || sharedScope !== null)
+        ? requestedAuthorId
+        : userId;
     const result = await this.repository.getSectionForPeriod(
       reportId,
       sectionAuthorId,
@@ -210,18 +298,25 @@ export class LeadFormService {
       );
     }
 
-    // reopen-request-lifecycle (D4): the lead-only Request-Reopen affordance.
-    // Same `computeReopenEligibility` the write guard uses, so the button shows
-    // exactly when `requestReopen` would succeed. A head/admin or cross-author
-    // viewer never files a reopen request, so it is false when viewing a
-    // section that is not the caller's own. `reopenFacts` never leaves the API.
+    // A lead cross-author read returns only the records on products the two
+    // leads share; the own-section and head/admin reads return the full section.
+    const section =
+      sharedScope !== null
+        ? filterSectionToSharedProducts(result.section, sharedScope)
+        : result.section;
+
+    // The lead-only Request-Reopen affordance uses the SAME
+    // `computeReopenEligibility` as the write guard, so the button shows exactly
+    // when `requestReopen` would succeed. A head/admin or cross-author viewer
+    // never files a reopen request — it is false when the section is not the
+    // caller's own. `reopenFacts` never leaves the API.
     const isOwnSection = sectionAuthorId === userId;
     const { canRequestReopen, reason } = computeReopenEligibility(
       result.reopenFacts,
     );
 
     return {
-      section: result.section,
+      section,
       readOnly: result.readOnly || !isOwnSection,
       canRequestReopen: isOwnSection && canRequestReopen,
       reopenBlockedReason: isOwnSection ? reason : null,

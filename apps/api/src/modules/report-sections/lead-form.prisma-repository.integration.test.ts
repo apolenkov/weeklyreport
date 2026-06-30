@@ -705,4 +705,103 @@ describe("LeadFormPrismaRepository (integration)", () => {
       expect(rows).toEqual([]);
     });
   });
+
+  describe("getSharedNonArchivedProductIds — pair-scoped, non-archived only", () => {
+    const ARCHIVED_PROJECT_ID = "a0000000-0000-4000-a000-000000000210";
+    const AUTHOR_ONLY_PROJECT_ID = "a0000000-0000-4000-a000-000000000220";
+    const SHARE_AUTHOR_ID = "c0000000-0000-4000-c000-000000000002";
+    const BUILD_STAGE_ID = "b0000000-0000-4000-b000-000000000011";
+    const QA_STAGE_ID = "b0000000-0000-4000-b000-000000000012";
+
+    // testData.project is shared + non-archived: the viewer (testData.lead)
+    // owns Build, the author owns QA. The same pair also co-owns an ARCHIVED
+    // project; the author additionally owns a non-archived project alone.
+    async function seedSharing() {
+      const author = await prisma.user.create({
+        data: {
+          id: SHARE_AUTHOR_ID,
+          email: "author@test.local",
+          name: "Boris Author",
+          lastName: "Boris",
+          firstName: "Author",
+          role: "lead",
+          samlId: "author-test",
+          reportingGroupId: testData.head.reportingGroupId,
+        },
+      });
+      await prisma.stage.createMany({
+        data: [
+          { id: BUILD_STAGE_ID, name: "Build", sortOrder: 1 },
+          { id: QA_STAGE_ID, name: "QA", sortOrder: 2 },
+        ],
+      });
+      await prisma.project.create({
+        data: {
+          id: ARCHIVED_PROJECT_ID,
+          name: "Archived Shared",
+          leadId: author.id,
+          archived: true,
+        },
+      });
+      await prisma.project.create({
+        data: {
+          id: AUTHOR_ONLY_PROJECT_ID,
+          name: "Author Only",
+          leadId: author.id,
+        },
+      });
+      await prisma.stageAssignment.createMany({
+        data: [
+          {
+            userId: testData.lead.id,
+            stageId: BUILD_STAGE_ID,
+            projectId: testData.project.id,
+          },
+          {
+            userId: author.id,
+            stageId: QA_STAGE_ID,
+            projectId: testData.project.id,
+          },
+          {
+            userId: testData.lead.id,
+            stageId: BUILD_STAGE_ID,
+            projectId: ARCHIVED_PROJECT_ID,
+          },
+          {
+            userId: author.id,
+            stageId: QA_STAGE_ID,
+            projectId: ARCHIVED_PROJECT_ID,
+          },
+          {
+            userId: author.id,
+            stageId: BUILD_STAGE_ID,
+            projectId: AUTHOR_ONLY_PROJECT_ID,
+          },
+        ],
+      });
+      return author;
+    }
+
+    it("returns only the shared non-archived product (archived + author-only excluded)", async () => {
+      const author = await seedSharing();
+
+      const shared = await repo.getSharedNonArchivedProductIds(
+        testData.lead.id,
+        author.id,
+      );
+
+      expect(shared).toEqual([testData.project.id]);
+    });
+
+    it("returns [] when the viewer holds no stage assignments", async () => {
+      const author = await seedSharing();
+
+      const shared = await repo.getSharedNonArchivedProductIds(
+        testData.head.id,
+        author.id,
+      );
+
+      expect(shared).toEqual([]);
+    });
+  });
 });
