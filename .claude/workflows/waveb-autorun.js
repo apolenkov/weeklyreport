@@ -298,12 +298,15 @@ async function processChange(CHANGE, index) {
   // whatever was already dirty before implement (preexistingDirty). In
   // skipImplement mode the change itself is already dirty (so preexistingDirty
   // would wrongly exclude it) — fall back to excluding the known parallel globs.
-  const PARALLEL_GLOBS = ["docs/", "CONTEXT.md", "AGENTS.md"];
+  // Parallel-session globs are excluded in BOTH modes: a code change does not
+  // touch docs/CONTEXT/openspec, and the parallel session writes there DURING a
+  // run (so they are absent from the preflight preexistingDirty snapshot and
+  // would otherwise leak into a normal-mode changedFiles, as #19's run showed).
+  const PARALLEL_GLOBS = ["docs/", "CONTEXT.md", "AGENTS.md", "openspec/"];
   const changedFiles = (scope?.dirtyPaths || []).filter((p) => {
     if (p.startsWith(".claude/")) return false;
-    return CHANGE.skipImplement
-      ? !PARALLEL_GLOBS.some((g) => p === g || p.startsWith(g))
-      : !preexistingDirty.includes(p);
+    if (PARALLEL_GLOBS.some((g) => p === g || p.startsWith(g))) return false;
+    return CHANGE.skipImplement ? true : !preexistingDirty.includes(p);
   });
   if (changedFiles.length === 0) {
     return {
