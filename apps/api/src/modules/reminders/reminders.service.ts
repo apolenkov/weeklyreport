@@ -218,10 +218,22 @@ export class RemindersService {
   async listExecutions(
     ruleId: string,
     pagination?: PaginationInput,
+    recipientAllowlist?: ReadonlySet<string> | null,
   ): Promise<PaginatedResult<AdminReminderExecution>> {
-    const all = adminReminderExecutionSchema
+    const fetched = adminReminderExecutionSchema
       .array()
       .parse(await this.repository.listExecutions(ruleId));
+
+    // Recipient-level scope: a shared report's rule can carry executions for
+    // several groups' draft authors. Drop out-of-scope recipients here, over
+    // the full slice, so pagination below runs on the already-scoped set and
+    // out-of-scope rows can neither consume page size nor surface as
+    // nextCursor. A null/undefined allowlist (admin) keeps every row.
+    const all = recipientAllowlist
+      ? fetched.filter((execution) =>
+          recipientAllowlist.has(execution.recipientEmail),
+        )
+      : fetched;
 
     if (!pagination) {
       return { items: all, nextCursor: null };
