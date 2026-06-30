@@ -28,6 +28,95 @@ function isoDateOnly(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Start of the UTC calendar day for a `YYYY-MM-DD` label. A date-only input
+ * must match a full-timestamp `periodEnd` column, so periods are matched over a
+ * half-open `[startOfUtcDay, nextUtcDay)` range — the DST-free, TZ-stable way to
+ * match a calendar day against a timestamp, consistent with `isoDateOnly`.
+ */
+function startOfUtcDay(dateOnly: string): Date {
+  return new Date(`${dateOnly}T00:00:00.000Z`);
+}
+
+/** Start of the UTC calendar day AFTER `dateOnly` (the half-open upper bound). */
+function nextUtcDay(dateOnly: string): Date {
+  return new Date(startOfUtcDay(dateOnly).getTime() + MS_PER_DAY);
+}
+
+interface PeriodStamped {
+  id: string;
+  periodEnd: Date;
+  createdAt: Date;
+}
+
+/**
+ * Total ascending order over reports: periodEnd, then createdAt, then id. The
+ * id is the final tie-break so two reports sharing an identical periodEnd AND
+ * an identical millisecond createdAt still order deterministically instead of
+ * falling back to DB row order (non-deterministic across query plans). Default
+ * code-unit string compare, locale-stable like the cache key.
+ */
+function comparePeriodThenCreated(a: PeriodStamped, b: PeriodStamped): number {
+  const byPeriod = a.periodEnd.getTime() - b.periodEnd.getTime();
+  if (byPeriod !== 0) return byPeriod;
+  const byCreated = a.createdAt.getTime() - b.createdAt.getTime();
+  if (byCreated !== 0) return byCreated;
+  if (a.id < b.id) return -1;
+  if (a.id > b.id) return 1;
+  return 0;
+}
+
+/**
+ * Deterministic tie-break across reports sharing a date-label: the latest
+ * `periodEnd`, then the latest `createdAt`, then the greater `id`. The most
+ * recent (republished) period is authoritative for a project's status.
+ */
+function laterReport<T extends PeriodStamped>(a: T, b: T): T {
+  return comparePeriodThenCreated(a, b) >= 0 ? a : b;
+}
+
+interface ProjectStatusRow {
+  projectId: string;
+  status: TrafficLightCell;
+}
+interface SectionStatusRow {
+  projectStatuses: ProjectStatusRow[];
+}
+type LabelReport = PeriodStamped & { sections: SectionStatusRow[] };
+
+/** First project-status entry for `projectId` in a report, or undefined. */
+function findProjectStatus(
+  report: LabelReport,
+  projectId: string,
+): ProjectStatusRow | undefined {
+  for (const section of report.sections) {
+    const hit = section.projectStatuses.find(
+      (ps) => ps.projectId === projectId,
+    );
+    if (hit) return hit;
+  }
+  return undefined;
+}
+
+/**
+ * Status a project carries in a date-label: scan every report under the label
+ * that has an entry for the project and pick the winner via {@link laterReport}.
+ */
+function statusForProject(
+  reportsForLabel: LabelReport[],
+  projectId: string,
+): TrafficLightCell {
+  const winner = reportsForLabel
+    .filter((r) => findProjectStatus(r, projectId) !== undefined)
+    .reduce<LabelReport | null>(
+      (best, r) => (best === null ? r : laterReport(best, r)),
+      null,
+    );
+  return winner ? (findProjectStatus(winner, projectId)?.status ?? null) : null;
+}
+
 @Injectable()
 export class AnalyticsPrismaRepository implements AnalyticsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -50,7 +139,9 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       where: {
         ...PUBLISHED_FLOOR,
         periodStart: { gte: new Date(input.periodFrom) },
-        periodEnd: { lte: new Date(input.periodTo) },
+        // Half-open upper bound so a periodEnd later in the periodTo day is
+        // still included (a bare `lte: midnight(periodTo)` drops it).
+        periodEnd: { lt: nextUtcDay(input.periodTo) },
         // Drop periods with no in-scope (and, if filtered, no matching-lead)
         // section. Omitted only when neither a scope nor a lead filter applies.
         ...(scoped || input.leadId
@@ -72,6 +163,14 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       new Set(reports.map((r) => isoDateOnly(r.periodEnd))),
     );
 
+    // Multiple reports can map to one date-label (a republished period, or two
+    // periods differing only by periodStart), so aggregate per label instead of
+    // reading the first match and dropping the rest.
+    const reportsByLabel = reports.reduce((acc, r) => {
+      const label = isoDateOnly(r.periodEnd);
+      return acc.set(label, [...(acc.get(label) ?? []), r]);
+    }, new Map<string, (typeof reports)[number][]>());
+
     const projectMap = new Map<string, string>();
     for (const r of reports) {
       for (const s of r.sections) {
@@ -86,17 +185,9 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
 
     const rows = Array.from(projectMap.entries()).map(
       ([projectId, projectName]) => {
-        const statuses: TrafficLightCell[] = periods.map((label) => {
-          const r = reports.find((rr) => isoDateOnly(rr.periodEnd) === label);
-          if (!r) return null;
-          for (const s of r.sections) {
-            const hit = s.projectStatuses.find(
-              (ps) => ps.projectId === projectId,
-            );
-            if (hit) return hit.status;
-          }
-          return null;
-        });
+        const statuses: TrafficLightCell[] = periods.map((label) =>
+          statusForProject(reportsByLabel.get(label) ?? [], projectId),
+        );
         return { projectId, projectName, statuses };
       },
     );
@@ -116,7 +207,9 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       where: {
         ...PUBLISHED_FLOOR,
         periodStart: { gte: new Date(input.periodFrom) },
-        periodEnd: { lte: new Date(input.periodTo) },
+        // Half-open upper bound (parity with trafficLightHistory): include a
+        // periodEnd later in the periodTo day.
+        periodEnd: { lt: nextUtcDay(input.periodTo) },
         // Drop periods with no in-scope section (admin → omitted).
         ...(scoped ? { sections: { some: scope } } : {}),
       },
@@ -148,11 +241,13 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
     const scope = groupScopeFilter(session, "reportSection");
     const scoped = Object.keys(scope).length > 0;
 
-    const fetchOne = (periodEnd: string) =>
-      this.prisma.report.findFirst({
+    const fetchAll = (date: string) =>
+      this.prisma.report.findMany({
         where: {
           ...PUBLISHED_FLOOR,
-          periodEnd: new Date(periodEnd),
+          // Day-range match: a date-only label must match a full-timestamp
+          // periodEnd regardless of its time component.
+          periodEnd: { gte: startOfUtcDay(date), lt: nextUtcDay(date) },
           ...(scoped ? { sections: { some: scope } } : {}),
         },
         include: {
@@ -167,8 +262,8 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       });
 
     const [a, b] = await Promise.all([
-      fetchOne(input.periodA),
-      fetchOne(input.periodB),
+      fetchAll(input.periodA),
+      fetchAll(input.periodB),
     ]);
 
     interface Cell {
@@ -176,27 +271,32 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
       risks: number;
       name: string;
     }
+    // Several reports can fall under one side's day range; process them oldest
+    // first so the latest report's status wins (deterministic tie-break) while
+    // risks accumulate across every contributing report.
     const collect = (
-      report: NonNullable<Awaited<ReturnType<typeof fetchOne>>> | null,
+      reports: Awaited<ReturnType<typeof fetchAll>>,
     ): Map<string, Cell> => {
       const map = new Map<string, Cell>();
-      if (!report) return map;
-      for (const section of report.sections) {
-        for (const ps of section.projectStatuses) {
-          const existing = map.get(ps.projectId);
-          map.set(ps.projectId, {
-            status: ps.status,
-            risks: existing?.risks ?? 0,
-            name: ps.project.name,
-          });
-        }
-        for (const risk of section.risks) {
-          const existing = map.get(risk.projectId) ?? {
-            status: null,
-            risks: 0,
-            name: "Unknown",
-          };
-          map.set(risk.projectId, { ...existing, risks: existing.risks + 1 });
+      const ordered = [...reports].sort(comparePeriodThenCreated);
+      for (const report of ordered) {
+        for (const section of report.sections) {
+          for (const ps of section.projectStatuses) {
+            const existing = map.get(ps.projectId);
+            map.set(ps.projectId, {
+              status: ps.status,
+              risks: existing?.risks ?? 0,
+              name: ps.project.name,
+            });
+          }
+          for (const risk of section.risks) {
+            const existing = map.get(risk.projectId) ?? {
+              status: null,
+              risks: 0,
+              name: "Unknown",
+            };
+            map.set(risk.projectId, { ...existing, risks: existing.risks + 1 });
+          }
         }
       }
       return map;

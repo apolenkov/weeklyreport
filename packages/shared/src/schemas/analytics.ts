@@ -1,6 +1,21 @@
 import { z } from "zod";
 
-const isoDateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+// A format regex alone accepts impossible dates (2026-02-30, 2026-13-45) that
+// then flow into `new Date(...)` and produce a wrong or Invalid Date query
+// boundary. The refine parses the value as a UTC instant and rejects anything
+// that does not round-trip back to the same YYYY-MM-DD. The regex stays as the
+// cheap first gate so the refine only runs on well-shaped input; the
+// `Number.isNaN` guard keeps `toISOString()` from throwing on Invalid Date.
+const isoDateOnly = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine(
+    (s) => {
+      const d = new Date(`${s}T00:00:00.000Z`);
+      return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+    },
+    { message: "Not a real calendar date" },
+  );
 
 export const trafficLightHistoryInputSchema = z.object({
   projectId: z.uuid().optional(),

@@ -1,4 +1,4 @@
-import type { UserSession } from "@customreport/shared";
+import type { TrafficLightCell, UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
@@ -42,12 +42,13 @@ interface ReportQueryArg {
 function makeRepo() {
   // Typed param so vi records a one-element call-args tuple (a no-arg mock
   // infers `[]`, making `.mock.calls[0][0]` an out-of-bounds tuple access).
+  // periodComparison fetches each side via findMany (day-range match), so all
+  // three read paths exercise the same mock.
   const findMany = vi.fn((_query: unknown) => Promise.resolve([]));
-  const findFirst = vi.fn((_query: unknown) => Promise.resolve(null));
   const prisma = {
-    report: { findMany, findFirst },
+    report: { findMany },
   } as unknown as PrismaService;
-  return { repo: new AnalyticsPrismaRepository(prisma), findMany, findFirst };
+  return { repo: new AnalyticsPrismaRepository(prisma), findMany };
 }
 
 describe("AnalyticsPrismaRepository group scoping", () => {
@@ -100,25 +101,25 @@ describe("AnalyticsPrismaRepository group scoping", () => {
   });
 
   it("periodComparison scopes the included sections for a non-admin", async () => {
-    const { repo, findFirst } = makeRepo();
+    const { repo, findMany } = makeRepo();
     await repo.periodComparison(
       { periodA: "2026-04-21", periodB: "2026-04-28" },
       headG,
     );
 
-    const arg = findFirst.mock.calls[0]?.[0] as ReportQueryArg;
+    const arg = findMany.mock.calls[0]?.[0] as ReportQueryArg;
     expect(arg.include.sections.where).toEqual(SCOPE);
     expect(arg.where.sections).toEqual({ some: SCOPE });
   });
 
   it("periodComparison leaves sections unfiltered for admin", async () => {
-    const { repo, findFirst } = makeRepo();
+    const { repo, findMany } = makeRepo();
     await repo.periodComparison(
       { periodA: "2026-04-21", periodB: "2026-04-28" },
       adminSession,
     );
 
-    const arg = findFirst.mock.calls[0]?.[0] as ReportQueryArg;
+    const arg = findMany.mock.calls[0]?.[0] as ReportQueryArg;
     expect(arg.include.sections.where).toBeUndefined();
     expect(arg.where.sections).toBeUndefined();
   });
@@ -133,5 +134,81 @@ describe("AnalyticsPrismaRepository group scoping", () => {
       ),
     ).rejects.toThrow();
     expect(findMany).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * When two published reports share an IDENTICAL `periodEnd` AND an identical
+ * `createdAt`, the period/createdAt tie-break alone resolves to 0, so the chosen
+ * status would fall back to non-deterministic DB row order. The `id` is the
+ * final tie-break that makes the order total. These tests prove selection is
+ * stable regardless of the order the rows arrive in.
+ */
+const TIE_PROJECT = "22222222-2222-4222-8222-222222222222";
+
+interface FakeReport {
+  id: string;
+  periodEnd: Date;
+  createdAt: Date;
+  sections: {
+    projectStatuses: {
+      projectId: string;
+      status: TrafficLightCell;
+      project: { name: string };
+    }[];
+    risks: { projectId: string }[];
+  }[];
+}
+
+function reportWithStatus(
+  id: string,
+  status: TrafficLightCell,
+  stamp: Date,
+): FakeReport {
+  return {
+    id,
+    periodEnd: stamp,
+    createdAt: stamp,
+    sections: [
+      {
+        projectStatuses: [
+          { projectId: TIE_PROJECT, status, project: { name: "P" } },
+        ],
+        risks: [],
+      },
+    ],
+  };
+}
+
+async function statusAFor(sideA: FakeReport[]): Promise<TrafficLightCell> {
+  const findMany = vi.fn();
+  // periodComparison fetches periodA first, then periodB (empty here).
+  findMany.mockResolvedValueOnce(sideA).mockResolvedValue([]);
+  const prisma = { report: { findMany } } as unknown as PrismaService;
+  const repo = new AnalyticsPrismaRepository(prisma);
+
+  const out = await repo.periodComparison(
+    { periodA: "2026-04-21", periodB: "2026-04-28" },
+    adminSession,
+  );
+  return out.rows.find((r) => r.projectId === TIE_PROJECT)?.statusA ?? null;
+}
+
+describe("AnalyticsPrismaRepository deterministic tie-break", () => {
+  it("selects an id-ordered status when two reports share periodEnd+createdAt", async () => {
+    const stamp = new Date("2026-04-21T12:00:00.000Z");
+    const low = reportWithStatus("report-aaaa", "green", stamp);
+    const high = reportWithStatus("report-bbbb", "red", stamp);
+
+    const forward = await statusAFor([low, high]);
+    const reversed = await statusAFor([high, low]);
+
+    // Identical periodEnd AND createdAt: the id is the only remaining tie-break,
+    // so the winner must not depend on the order the rows arrive in. Reverting
+    // the id tie-break leaves the comparator returning 0 — stable sort then
+    // preserves arrival order and the two runs disagree (green vs red).
+    expect(forward).toBe(reversed);
+    // The greater id wins the final tie-break.
+    expect(forward).toBe("red");
   });
 });
