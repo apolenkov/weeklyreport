@@ -52,6 +52,16 @@ function createRepository(initialRule: AdminReminderRule): RemindersRepository {
       return null;
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
+    async insertExecutionOnConflict(execution: AdminReminderExecution) {
+      for (const existing of executions.values()) {
+        if (existing.dedupeKey === execution.dedupeKey) {
+          return { execution: structuredClone(existing), inserted: false };
+        }
+      }
+      executions.set(execution.id, structuredClone(execution));
+      return { execution: structuredClone(execution), inserted: true };
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async getExecution(executionId: string) {
       const execution = executions.get(executionId);
       return execution ? structuredClone(execution) : null;
@@ -358,5 +368,90 @@ describe("remindersRouter", () => {
 
     expect(result.items).toHaveLength(1);
     expect(result.nextCursor).toBeNull();
+  });
+});
+
+// -----------------------------------------------------------------------
+// Enqueue is gated on the atomic insert's `inserted` flag: a caller that did
+// NOT create the row (a concurrent duplicate tick) must enqueue nothing.
+// -----------------------------------------------------------------------
+
+describe("requestReminderExecution — enqueue gated on insert", () => {
+  function buildRepo(inserted: boolean): RemindersRepository {
+    const existing: AdminReminderExecution = {
+      id: "99999999-9999-4999-8999-999999999999",
+      ruleId: activeRule.id,
+      reportId: activeRule.reportId,
+      dedupeKey: `${activeRule.id}:${activeRule.fireAt.toISOString()}:lead@test.local`,
+      status: "queued",
+      scheduledFor: activeRule.fireAt,
+      sentAt: null,
+      recipientEmail: "lead@test.local",
+      errorMessage: null,
+    };
+    const repository = {
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async getRule(ruleId: string) {
+        return ruleId === activeRule.id ? structuredClone(activeRule) : null;
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async findExecutionByDedupeKey() {
+        return null;
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async insertExecutionOnConflict(candidate: AdminReminderExecution) {
+        return {
+          execution: inserted ? candidate : structuredClone(existing),
+          inserted,
+        };
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async saveExecution(execution: AdminReminderExecution) {
+        return structuredClone(execution);
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async getExecution() {
+        return null;
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      async listExecutions() {
+        return [];
+      },
+    } satisfies RemindersRepository;
+    return repository;
+  }
+
+  it("enqueues exactly one job when this caller inserted the row", async () => {
+    const repository = buildRepo(true);
+    const addCalls: unknown[] = [];
+    const queue = {
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      add: async (...args: unknown[]) => {
+        addCalls.push(args);
+        return { id: "job" };
+      },
+    };
+    const service = new RemindersService(repository, undefined, queue as never);
+
+    await service.requestReminderExecution(activeRule.id, "lead@test.local");
+
+    expect(addCalls).toHaveLength(1);
+  });
+
+  it("enqueues nothing when the row already existed (inserted=false)", async () => {
+    const repository = buildRepo(false);
+    const addCalls: unknown[] = [];
+    const queue = {
+      // eslint-disable-next-line @typescript-eslint/require-await -- stub
+      add: async (...args: unknown[]) => {
+        addCalls.push(args);
+        return { id: "job" };
+      },
+    };
+    const service = new RemindersService(repository, undefined, queue as never);
+
+    await service.requestReminderExecution(activeRule.id, "lead@test.local");
+
+    expect(addCalls).toHaveLength(0);
   });
 });

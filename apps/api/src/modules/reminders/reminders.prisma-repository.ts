@@ -4,10 +4,16 @@ import {
   type AdminReminderRule,
   adminReminderRuleSchema,
 } from "@customreport/shared";
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
-import type { RemindersRepository } from "./reminders.service.js";
+import {
+  buildEscalationGroups,
+  type DueDeadlineRule,
+  type DueEscalationRule,
+  type RemindersRepository,
+} from "./reminders.service.js";
 
 const execStatusToDb: Record<string, string> = {
   queued: "pending",
@@ -21,55 +27,24 @@ const dbExecStatusToDomain: Record<string, AdminReminderExecution["status"]> = {
   failed: "failed",
 };
 
-/**
- * NOTIF-04 (Phase 28-03), NOTIF-05 (Phase 29-05): row shape for the hourly
- * @Cron tick.
- *
- * Each due rule resolves to one or more recipients — leads whose section is
- * still in 'draft' status for the rule's reportId. The scheduler iterates
- * recipients and calls `requestReminderExecution` with the kind='deadline'
- * payload. Idempotent dedupe by `${rule.id}:deadline:${cycleDate}:${email}`
- * collapses two ticks within a single UTC day into exactly one email.
- *
- * `notificationOptOut` flows through from `User.notificationOptOut` so the
- * scheduler can skip leads who have opted out — escalation digests do NOT
- * read this flag.
- */
-export interface DueDeadlineRule {
-  id: string;
-  reportId: string;
-  fireAt: Date;
-  reportPeriodLabel: string;
-  recipients: {
-    userId: string;
-    email: string;
-    name: string;
-    notificationOptOut: boolean;
-  }[];
-}
-
-/**
- * NOTIF-02 (Phase 29-05): row shape for the T+2h escalation tick.
- *
- * One due escalation rule maps to ONE digest email per (rule, head). The
- * digest body aggregates ALL late leads for the rule's reportId — the head
- * never receives one email per lead.
- */
-export interface DueEscalationRule {
-  id: string;
-  reportId: string;
-  fireAt: Date;
-  reportPeriodLabel: string;
-  head: { userId: string; email: string; name: string };
-  lateLeads: {
-    leadName: string;
-    sectionTitle: string;
-    deadlineIso: string;
-  }[];
+/** Map a domain execution to the Prisma row written on create/insert. */
+function toExecutionCreateData(
+  execution: AdminReminderExecution,
+): Prisma.ReminderExecutionUncheckedCreateInput {
+  return {
+    id: execution.id,
+    ruleId: execution.ruleId,
+    dedupeKey: execution.dedupeKey,
+    status: (execStatusToDb[execution.status] ?? "pending") as "pending",
+    sentAt: execution.sentAt,
+    error: execution.errorMessage,
+  };
 }
 
 @Injectable()
 export class RemindersPrismaRepository implements RemindersRepository {
+  private readonly logger = new Logger(RemindersPrismaRepository.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
@@ -111,44 +86,39 @@ export class RemindersPrismaRepository implements RemindersRepository {
       },
     });
 
-    const due: DueDeadlineRule[] = [];
-    for (const rule of rules) {
-      if (!rule.report) continue;
-      const recipients = rule.report.sections.flatMap((s) => {
-        // (s.author is a required relation, always present.)
-        return [
-          {
-            userId: s.author.id,
-            email: s.author.email,
-            name: s.author.name,
-            notificationOptOut: s.author.notificationOptOut,
-          },
-        ];
-      });
-      if (recipients.length === 0) continue;
-      due.push({
-        id: rule.id,
-        reportId: rule.report.id,
-        fireAt: rule.fireAt,
-        reportPeriodLabel: formatPeriodLabel(
-          rule.report.periodStart,
-          rule.report.periodEnd,
-        ),
-        recipients,
-      });
-    }
-    return due;
+    return rules.flatMap((rule) => {
+      const report = rule.report;
+      if (!report) return [];
+      // author is a required section relation, always present.
+      const recipients = report.sections.map((s) => ({
+        userId: s.author.id,
+        email: s.author.email,
+        name: s.author.name,
+        notificationOptOut: s.author.notificationOptOut,
+      }));
+      if (recipients.length === 0) return [];
+      return [
+        {
+          id: rule.id,
+          reportId: report.id,
+          fireAt: rule.fireAt,
+          reportPeriodLabel: formatPeriodLabel(
+            report.periodStart,
+            report.periodEnd,
+          ),
+          recipients,
+        },
+      ];
+    });
   }
 
   /**
-   * NOTIF-02 (Phase 29-05): returns active escalation rules whose fireAt is
-   * in the past, pre-resolved with the recipient head + the aggregated late
-   * leads (those whose ReportSection for the rule's reportId is still in
-   * 'draft' at T+2h). One row per (rule, head); the digest body is built by
-   * the scheduler from the `lateLeads` array.
-   *
-   * The head is resolved as the most recent publisher of the report; if no
-   * publisher exists yet, the rule is skipped (no escalation target).
+   * Active escalation rules whose fireAt has passed, fanned out per reporting-
+   * group head. Each late lead (a section still in `draft` for the rule's
+   * report at T+2h) is routed to its group's active head (role head/admin,
+   * `isActive`); leads whose group has no resolvable active head are logged and
+   * dropped. Resolution is independent of `Report.publishedBy` — escalation
+   * fires while leads are still in `draft`, before any publish.
    */
   async findDueEscalationRules(now: Date): Promise<DueEscalationRule[]> {
     const rules = await this.prisma.reminderRule.findMany({
@@ -165,14 +135,26 @@ export class RemindersPrismaRepository implements RemindersRepository {
             periodStart: true,
             periodEnd: true,
             deadline: true,
-            publishedBy: {
-              select: { id: true, email: true, name: true },
-            },
             sections: {
               where: { status: "draft" },
               select: {
                 author: {
-                  select: { id: true, email: true, name: true },
+                  select: {
+                    name: true,
+                    reportingGroup: {
+                      select: {
+                        head: {
+                          select: {
+                            id: true,
+                            email: true,
+                            name: true,
+                            isActive: true,
+                            role: true,
+                          },
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -181,36 +163,29 @@ export class RemindersPrismaRepository implements RemindersRepository {
       },
     });
 
-    const due: DueEscalationRule[] = [];
-    for (const rule of rules) {
-      if (!rule.report) continue;
+    return rules.flatMap((rule) => {
       const report = rule.report;
-      const head = report.publishedBy;
-      if (!head) continue;
-      const lateLeads = report.sections.flatMap((s) => {
-        // (s.author is a required relation, always present.)
-        return [
-          {
-            leadName: s.author.name,
-            sectionTitle: `Report ${report.id} section`,
-            deadlineIso: report.deadline.toISOString(),
-          },
-        ];
-      });
-      if (lateLeads.length === 0) continue;
-      due.push({
-        id: rule.id,
-        reportId: rule.report.id,
-        fireAt: rule.fireAt,
-        reportPeriodLabel: formatPeriodLabel(
-          rule.report.periodStart,
-          rule.report.periodEnd,
-        ),
-        head: { userId: head.id, email: head.email, name: head.name },
-        lateLeads,
-      });
-    }
-    return due;
+      if (!report) return [];
+      const { groups, unresolved } = buildEscalationGroups(report);
+      for (const leadName of unresolved) {
+        this.logger.warn(
+          `escalation: no active group head for late lead "${leadName}" on report ${report.id}; digest skipped`,
+        );
+      }
+      if (groups.length === 0) return [];
+      return [
+        {
+          id: rule.id,
+          reportId: report.id,
+          fireAt: rule.fireAt,
+          reportPeriodLabel: formatPeriodLabel(
+            report.periodStart,
+            report.periodEnd,
+          ),
+          groups,
+        },
+      ];
+    });
   }
 
   async getRule(ruleId: string): Promise<AdminReminderRule | null> {
@@ -232,12 +207,7 @@ export class RemindersPrismaRepository implements RemindersRepository {
       where: { dedupeKey },
       include: { rule: true },
     });
-
-    if (!execution) {
-      return null;
-    }
-
-    return toExecutionDomain(execution);
+    return execution ? toExecutionDomain(execution) : null;
   }
 
   async saveExecution(
@@ -245,14 +215,7 @@ export class RemindersPrismaRepository implements RemindersRepository {
   ): Promise<AdminReminderExecution> {
     const saved = await this.prisma.reminderExecution.upsert({
       where: { dedupeKey: execution.dedupeKey },
-      create: {
-        id: execution.id,
-        ruleId: execution.ruleId,
-        dedupeKey: execution.dedupeKey,
-        status: (execStatusToDb[execution.status] ?? "pending") as "pending",
-        sentAt: execution.sentAt,
-        error: execution.errorMessage,
-      },
+      create: toExecutionCreateData(execution),
       update: {
         status: (execStatusToDb[execution.status] ?? "pending") as "pending",
         sentAt: execution.sentAt,
@@ -262,6 +225,27 @@ export class RemindersPrismaRepository implements RemindersRepository {
     });
 
     return toExecutionDomain(saved);
+  }
+
+  async insertExecutionOnConflict(
+    execution: AdminReminderExecution,
+  ): Promise<{ execution: AdminReminderExecution; inserted: boolean }> {
+    try {
+      const created = await this.prisma.reminderExecution.create({
+        data: toExecutionCreateData(execution),
+        include: { rule: true },
+      });
+      return { execution: toExecutionDomain(created), inserted: true };
+    } catch (error: unknown) {
+      // A concurrent tick won the dedupeKey insert: re-read its committed row
+      // and report `inserted: false` so the caller enqueues nothing. The losing
+      // INSERT blocks until the winner commits, so the re-read always sees it.
+      // Any other failure re-throws.
+      if (!isDedupeKeyConflict(error)) throw error;
+      const existing = await this.findExecutionByDedupeKey(execution.dedupeKey);
+      if (!existing) throw error;
+      return { execution: existing, inserted: false };
+    }
   }
 
   async getExecution(
@@ -301,6 +285,28 @@ export class RemindersPrismaRepository implements RemindersRepository {
 function formatPeriodLabel(start: Date, end: Date): string {
   // Compact UTC-formatted label, e.g. "2026-04-13 → 2026-04-19"
   return `${start.toISOString().slice(0, 10)} → ${end.toISOString().slice(0, 10)}`;
+}
+
+/**
+ * True when `error` is the Prisma P2002 raised by the `dedupeKey` unique index
+ * (`ReminderExecution_dedupeKey_key`). Under the pg driver adapter `meta.target`
+ * is unset, so the index identity lives in `message` /
+ * `meta.driverAdapterError.cause.originalMessage`; both — and the classic
+ * engine's column-name form — contain the `dedupeKey` substring. Since the
+ * caller only inserts a `ReminderExecution`, that substring uniquely
+ * identifies this conflict; any other violation returns false (and re-throws).
+ */
+function isDedupeKeyConflict(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as {
+    code?: unknown;
+    message?: unknown;
+    meta?: { driverAdapterError?: { cause?: { originalMessage?: unknown } } };
+  };
+  if (candidate.code !== "P2002") return false;
+  const original = candidate.meta?.driverAdapterError?.cause?.originalMessage;
+  const identity = `${typeof candidate.message === "string" ? candidate.message : ""} ${typeof original === "string" ? original : ""}`;
+  return identity.includes("dedupeKey");
 }
 
 function toRuleDomain(rule: {

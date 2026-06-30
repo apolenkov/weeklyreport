@@ -5,12 +5,10 @@ import type {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { OrganizationService } from "../organization/organization.service";
-import type {
-  DueDeadlineRule,
-  DueEscalationRule,
-} from "./reminders.prisma-repository";
 import { RemindersScheduler } from "./reminders.scheduler";
 import {
+  type DueDeadlineRule,
+  type DueEscalationRule,
   type RemindersRepository,
   RemindersService,
 } from "./reminders.service";
@@ -85,6 +83,16 @@ function createServiceRepo(): RemindersRepository {
         }
       }
       return null;
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
+    async insertExecutionOnConflict(execution) {
+      for (const exec of executions.values()) {
+        if (exec.dedupeKey === execution.dedupeKey) {
+          return { execution: structuredClone(exec), inserted: false };
+        }
+      }
+      executions.set(execution.id, structuredClone(execution));
+      return { execution: structuredClone(execution), inserted: true };
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
     async saveExecution(execution) {
@@ -333,8 +341,16 @@ describe("RemindersScheduler — NOTIF-02 escalation dispatch (Phase 29-05)", ()
       reportId,
       fireAt: escalationActiveRule.fireAt,
       reportPeriodLabel: "2026-04-13 → 2026-04-19",
-      head: { userId: "h1", email: "head@test.local", name: "Department Head" },
-      lateLeads: leads,
+      groups: [
+        {
+          head: {
+            userId: "h1",
+            email: "head@test.local",
+            name: "Department Head",
+          },
+          lateLeads: leads,
+        },
+      ],
     };
   }
 
@@ -353,6 +369,16 @@ describe("RemindersScheduler — NOTIF-02 escalation dispatch (Phase 29-05)", ()
           if (exec.dedupeKey === dedupeKey) return structuredClone(exec);
         }
         return null;
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
+      async insertExecutionOnConflict(execution) {
+        for (const exec of executions.values()) {
+          if (exec.dedupeKey === execution.dedupeKey) {
+            return { execution: structuredClone(exec), inserted: false };
+          }
+        }
+        executions.set(execution.id, structuredClone(execution));
+        return { execution: structuredClone(execution), inserted: true };
       },
       // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
       async saveExecution(execution) {
@@ -477,6 +503,68 @@ describe("RemindersScheduler — NOTIF-02 escalation dispatch (Phase 29-05)", ()
     expect(data.cycleDate).toBe("2026-04-19");
     expect(data.reportPeriod).toBe("2026-04-13 → 2026-04-19");
   });
+
+  it("fans out one digest per group head, each carrying only its group's leads", async () => {
+    const twoGroupRule: DueEscalationRule = {
+      id: escalationRuleId,
+      reportId,
+      fireAt: escalationActiveRule.fireAt,
+      reportPeriodLabel: "2026-04-13 → 2026-04-19",
+      groups: [
+        {
+          head: { userId: "h1", email: "head-a@test.local", name: "Head A" },
+          lateLeads: [
+            {
+              leadName: "Alpha",
+              sectionTitle: "Backend",
+              deadlineIso: "2026-04-19T15:00:00.000Z",
+            },
+          ],
+        },
+        {
+          head: { userId: "h2", email: "head-b@test.local", name: "Head B" },
+          lateLeads: [
+            {
+              leadName: "Beta",
+              sectionTitle: "Frontend",
+              deadlineIso: "2026-04-19T15:00:00.000Z",
+            },
+          ],
+        },
+      ],
+    };
+    const fakeRepository = {
+      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
+      findDueDeadlineRules: vi.fn(async () => []),
+      // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn mock of async repository method (no awaitable work in the stub)
+      findDueEscalationRules: vi.fn(async () => [twoGroupRule]),
+    };
+    const service = new RemindersService(
+      makeEscalationServiceRepo(),
+      undefined,
+      fakeQueue as never,
+    );
+    const scheduler = new RemindersScheduler(
+      service,
+      fakeRepository as never,
+      fakeOrganizationService,
+    );
+
+    await scheduler.runOnce(new Date("2026-04-19T17:30:00.000Z"));
+
+    expect(queueAdds).toHaveLength(2);
+    const byRecipient = new Map(
+      queueAdds.map((q) => [q.data.recipientEmail, q.data]),
+    );
+    const digestA = byRecipient.get("head-a@test.local");
+    const digestB = byRecipient.get("head-b@test.local");
+    expect(
+      (digestA?.lateLeads as { leadName: string }[]).map((l) => l.leadName),
+    ).toEqual(["Alpha"]);
+    expect(
+      (digestB?.lateLeads as { leadName: string }[]).map((l) => l.leadName),
+    ).toEqual(["Beta"]);
+  });
 });
 
 // -----------------------------------------------------------------------
@@ -553,12 +641,20 @@ describe("RemindersScheduler — NOTIF-05 opt-out (Phase 29-05)", () => {
       reportId,
       fireAt: new Date("2026-04-19T17:00:00.000Z"),
       reportPeriodLabel: "2026-04-13 → 2026-04-19",
-      head: { userId: "h1", email: "head@test.local", name: "Department Head" },
-      lateLeads: [
+      groups: [
         {
-          leadName: "Alpha",
-          sectionTitle: "Backend",
-          deadlineIso: "2026-04-19T15:00:00.000Z",
+          head: {
+            userId: "h1",
+            email: "head@test.local",
+            name: "Department Head",
+          },
+          lateLeads: [
+            {
+              leadName: "Alpha",
+              sectionTitle: "Backend",
+              deadlineIso: "2026-04-19T15:00:00.000Z",
+            },
+          ],
         },
       ],
     };
@@ -586,6 +682,10 @@ describe("RemindersScheduler — NOTIF-05 opt-out (Phase 29-05)", () => {
       // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
       async findExecutionByDedupeKey() {
         return null;
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
+      async insertExecutionOnConflict(execution) {
+        return { execution: structuredClone(execution), inserted: true };
       },
       // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async RemindersRepository contract (no awaitable work in the stub)
       async saveExecution(execution) {
