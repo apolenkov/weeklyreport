@@ -170,6 +170,75 @@ function createRepository(
         .filter((a) => a.projectId === projectId)
         .map((a) => structuredClone(a));
     },
+    // Targeted single-entity writes — each touches only the named row, mirroring
+    // the prisma repository. Users/projects stay name-sorted so the read shape
+    // matches getSnapshot's `orderBy name asc`.
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
+    async upsertUser(user) {
+      const exists = currentSnapshot.users.some((row) => row.id === user.id);
+      const nextUsers = exists
+        ? currentSnapshot.users.map((row) =>
+            row.id === user.id ? structuredClone(user) : row,
+          )
+        : [...currentSnapshot.users, structuredClone(user)];
+      currentSnapshot.users = [...nextUsers].sort((left, right) =>
+        left.name.localeCompare(right.name, "ru"),
+      );
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
+    async removeUser(userId) {
+      currentSnapshot.users = currentSnapshot.users.filter(
+        (row) => row.id !== userId,
+      );
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
+    async upsertProject(project) {
+      const exists = currentSnapshot.projects.some(
+        (row) => row.id === project.id,
+      );
+      const nextProjects = exists
+        ? currentSnapshot.projects.map((row) =>
+            row.id === project.id ? structuredClone(project) : row,
+          )
+        : [...currentSnapshot.projects, structuredClone(project)];
+      currentSnapshot.projects = [...nextProjects].sort((left, right) =>
+        left.name.localeCompare(right.name, "ru"),
+      );
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
+    async removeProject(projectId) {
+      currentSnapshot.projects = currentSnapshot.projects.map((row) =>
+        row.id === projectId ? { ...row, archived: true } : row,
+      );
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
+    async upsertReminderRule(rule) {
+      const exists = currentSnapshot.reminderRules.some(
+        (row) => row.id === rule.id,
+      );
+      currentSnapshot.reminderRules = exists
+        ? currentSnapshot.reminderRules.map((row) =>
+            row.id === rule.id ? structuredClone(rule) : row,
+          )
+        : [...currentSnapshot.reminderRules, structuredClone(rule)];
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
+    async removeReminderRule(ruleId) {
+      currentSnapshot.reminderRules = currentSnapshot.reminderRules.filter(
+        (row) => row.id !== ruleId,
+      );
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async repository contract (no awaitable work in the stub)
+    async upsertPeriod(period) {
+      const exists = currentSnapshot.periods.some(
+        (row) => row.id === period.id,
+      );
+      currentSnapshot.periods = exists
+        ? currentSnapshot.periods.map((row) =>
+            row.id === period.id ? structuredClone(period) : row,
+          )
+        : [...currentSnapshot.periods, structuredClone(period)];
+    },
   };
 }
 

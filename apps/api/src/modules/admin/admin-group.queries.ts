@@ -4,6 +4,7 @@ import {
   type StageAssignment,
   stageAssignmentSchema,
 } from "@customreport/shared";
+import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 
@@ -16,8 +17,14 @@ import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
 const DEFAULT_REPORTING_GROUP_NAME = "Software Development";
 
+/**
+ * Accepts the transaction client so it can run under `saveSnapshot`'s
+ * `$transaction` (its `reportingGroup.upsert` must not commit ahead of a
+ * later-phase failure). The full PrismaService is structurally assignable, so
+ * the targeted per-entity callers can still pass `this.prisma` directly.
+ */
 export async function ensureFallbackReportingGroup(
-  prisma: PrismaService,
+  prisma: Prisma.TransactionClient,
 ): Promise<string> {
   const existing = await prisma.reportingGroup.findFirst({
     where: { archived: false },

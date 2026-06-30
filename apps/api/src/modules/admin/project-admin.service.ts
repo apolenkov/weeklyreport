@@ -13,7 +13,7 @@ import {
 } from "@customreport/shared";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger";
-import { type AdminRepository, sortByName } from "./admin-shared";
+import type { AdminRepository } from "./admin-shared";
 
 /**
  * Owns projects, reporting groups, stage assignments, and the
@@ -51,29 +51,14 @@ export class ProjectAdminService {
 
   async upsertProject(project: AdminProject): Promise<AdminSnapshot> {
     const parsedProject = adminProjectSchema.parse(project);
-    const snapshot = await this.getSnapshot();
-    const nextProjects = sortByName(
-      snapshot.projects.some((row) => row.id === parsedProject.id)
-        ? snapshot.projects.map((row) =>
-            row.id === parsedProject.id ? parsedProject : row,
-          )
-        : [...snapshot.projects, parsedProject],
-    );
-
-    return this.repository.saveSnapshot(
-      adminSnapshotSchema.parse({ ...snapshot, projects: nextProjects }),
-    );
+    this.logger.info("upserted project", { projectId: parsedProject.id });
+    await this.repository.upsertProject(parsedProject);
+    return this.getSnapshot();
   }
 
   async removeProject(projectId: string): Promise<AdminSnapshot> {
-    const snapshot = await this.getSnapshot();
-    const nextProjects = snapshot.projects.map((row) =>
-      row.id === projectId ? { ...row, archived: true } : row,
-    );
-
-    return this.repository.saveSnapshot(
-      adminSnapshotSchema.parse({ ...snapshot, projects: nextProjects }),
-    );
+    await this.repository.removeProject(projectId);
+    return this.getSnapshot();
   }
 
   /** API-12: Upsert a stage assignment (unique on stageId+projectId). */

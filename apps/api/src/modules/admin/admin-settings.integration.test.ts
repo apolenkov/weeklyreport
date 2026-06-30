@@ -101,6 +101,10 @@ function createRepository(
   let currentSettings = structuredClone(settings);
   const assignments = new Map<string, StageAssignment>();
 
+  const notExercised = (): never => {
+    throw new Error("not exercised by the settings integration suite");
+  };
+
   return {
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async AdminRepository contract (no awaitable work in the stub)
     async getSnapshot() {
@@ -172,6 +176,14 @@ function createRepository(
         .filter((a) => a.projectId === projectId)
         .map((a) => structuredClone(a));
     },
+    // Targeted entity writes — not exercised by the settings suite.
+    upsertUser: notExercised,
+    removeUser: notExercised,
+    upsertProject: notExercised,
+    removeProject: notExercised,
+    upsertReminderRule: notExercised,
+    removeReminderRule: notExercised,
+    upsertPeriod: notExercised,
   };
 }
 
