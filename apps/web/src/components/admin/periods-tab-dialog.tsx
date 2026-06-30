@@ -43,12 +43,13 @@ function dateInputValue(d: Date): string {
 }
 
 /**
- * UFB-067: render a UTC Date as the `YYYY-MM-DDTHH:MM` value that
- * `<input type="datetime-local">` expects. Matches the inverse of the
- * existing `new Date(deadline)` parse in handleSubmit — both sides treat
- * the dialog's value as a wall-clock-in-UTC string. The existing
- * create-path comment acknowledges the timezone-shaped edge but keeps
- * the round-trip stable for the typical European admin case.
+ * Render a UTC Date as the `YYYY-MM-DDTHH:MM` value that
+ * `<input type="datetime-local">` expects. The field is UTC wall-clock on
+ * both read and write: this slice produces the UTC wall-clock string, and
+ * handleSubmit parses it back with an explicit `:00.000Z` suffix. Treating
+ * the value as UTC on both sides keeps the round-trip stable in every
+ * timezone — a bare `new Date(value)` parse would read it as local time and
+ * drift the stored deadline for any non-UTC admin.
  */
 function dateTimeInputValue(d: Date): string {
   return d.toISOString().slice(0, 16);
@@ -107,7 +108,7 @@ export function CreatePeriodDialog({
     const endDate = periodEnd
       ? new Date(`${periodEnd}T23:59:59.999Z`)
       : undefined;
-    const deadlineDate = deadline ? new Date(deadline) : undefined;
+    const deadlineDate = deadline ? new Date(`${deadline}:00.000Z`) : undefined;
 
     // UFB-067: weekLabel clear semantics differ by mode.
     // - create: empty → `undefined` (omit from payload).
@@ -132,7 +133,9 @@ export function CreatePeriodDialog({
   // Deadline must fall within [periodStart, periodEnd] when both are set.
   const deadlineError: string | null = (() => {
     if (!deadline) return null;
-    const dl = new Date(deadline);
+    // Parse the datetime-local value as UTC wall-clock to match the submit
+    // parse and the UTC-parsed start/end bounds below.
+    const dl = new Date(`${deadline}:00.000Z`);
     if (periodStart) {
       const start = new Date(`${periodStart}T00:00:00.000Z`);
       if (dl < start) return "Deadline cannot be before period start.";
