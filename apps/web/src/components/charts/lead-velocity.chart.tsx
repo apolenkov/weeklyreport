@@ -8,7 +8,7 @@ import {
 import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis } from "recharts";
 
 /**
- * ANAL-04 (Phase 30-03): stacked-bar of submitted-section counts per lead per period.
+ * Stacked-bar of submitted-section counts per lead per period.
  */
 
 const COLORS = [
@@ -19,6 +19,48 @@ const COLORS = [
   "#c2410c",
   "#a21caf",
 ];
+
+interface ChartSeries {
+  readonly dataKey: string;
+  readonly name: string;
+}
+type ChartData = Record<string, number | string>;
+
+/**
+ * Pivot velocity rows into recharts data points keyed by the stable `leadId`
+ * (a UUID) rather than the display name, so two leads that share a name keep
+ * separate columns instead of silently overwriting each other. The series
+ * descriptor carries the human-readable name for recharts' legend/tooltip.
+ */
+export function buildLeadVelocityChartData(rows: LeadVelocityOutput): {
+  readonly data: readonly ChartData[];
+  readonly series: readonly ChartSeries[];
+} {
+  const leadIds = Array.from(
+    new Set(rows.flatMap((r) => r.leads.map((l) => l.leadId))),
+  );
+  const leadNameById = new Map(
+    rows.flatMap((r) => r.leads.map((l) => [l.leadId, l.leadName] as const)),
+  );
+
+  const series = leadIds.map((id) => ({
+    dataKey: id,
+    name: leadNameById.get(id) ?? id,
+  }));
+
+  const data = rows.map(
+    (r): ChartData =>
+      leadIds.reduce<ChartData>(
+        (point, id) => ({
+          ...point,
+          [id]: r.leads.find((l) => l.leadId === id)?.submittedSections ?? 0,
+        }),
+        { period: r.periodLabel },
+      ),
+  );
+
+  return { data, series };
+}
 
 export function LeadVelocityChart({
   rows,
@@ -33,24 +75,7 @@ export function LeadVelocityChart({
     );
   }
 
-  const leadIds = Array.from(
-    new Set(rows.flatMap((r) => r.leads.map((l) => l.leadId))),
-  );
-  const leadNameById = new Map<string, string>();
-  for (const r of rows) {
-    for (const l of r.leads) {
-      if (!leadNameById.has(l.leadId)) leadNameById.set(l.leadId, l.leadName);
-    }
-  }
-
-  const data = rows.map((r) => {
-    const point: Record<string, number | string> = { period: r.periodLabel };
-    for (const id of leadIds) {
-      const found = r.leads.find((l) => l.leadId === id);
-      point[leadNameById.get(id) ?? id] = found?.submittedSections ?? 0;
-    }
-    return point;
-  });
+  const { data, series } = buildLeadVelocityChartData(rows);
 
   return (
     <ChartContainer>
@@ -60,10 +85,11 @@ export function LeadVelocityChart({
         <YAxis allowDecimals={false} />
         <ChartTooltip />
         <Legend />
-        {leadIds.map((id, idx) => (
+        {series.map((s, idx) => (
           <Bar
-            key={id}
-            dataKey={leadNameById.get(id) ?? id}
+            key={s.dataKey}
+            dataKey={s.dataKey}
+            name={s.name}
             stackId="leads"
             fill={COLORS[idx % COLORS.length]}
           />

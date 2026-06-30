@@ -1,9 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { LeadVelocityChart } from "./lead-velocity.chart";
+import {
+  buildLeadVelocityChartData,
+  LeadVelocityChart,
+} from "./lead-velocity.chart";
 import { PeriodComparisonChart } from "./period-comparison.chart";
-import { TrafficLightHistoryChart } from "./traffic-light-history.chart";
+import {
+  buildTrafficLightHistoryChartData,
+  TrafficLightHistoryChart,
+} from "./traffic-light-history.chart";
 
 describe("TrafficLightHistoryChart", () => {
   it("renders the empty-state message when no periods", () => {
@@ -53,6 +59,60 @@ describe("LeadVelocityChart", () => {
       />,
     );
     expect(document.body.querySelector("div")).toBeTruthy();
+  });
+});
+
+describe("buildLeadVelocityChartData", () => {
+  it("keeps both leads' values when they share a display name", () => {
+    const idA = "00000000-0000-4000-8000-00000000000a";
+    const idB = "00000000-0000-4000-8000-00000000000b";
+
+    const { data, series } = buildLeadVelocityChartData([
+      {
+        periodLabel: "2026-04-21",
+        leads: [
+          { leadId: idA, leadName: "Alex", submittedSections: 3 },
+          { leadId: idB, leadName: "Alex", submittedSections: 5 },
+        ],
+      },
+    ]);
+
+    expect(data).toHaveLength(1);
+    const point = data[0];
+    expect(point.period).toBe("2026-04-21");
+    // Keyed by UUID, the colliding name does not overwrite the first value.
+    expect(point[idA]).toBe(3);
+    expect(point[idB]).toBe(5);
+    expect(series).toEqual([
+      { dataKey: idA, name: "Alex" },
+      { dataKey: idB, name: "Alex" },
+    ]);
+  });
+});
+
+describe("buildTrafficLightHistoryChartData", () => {
+  it("keeps both projects' statuses when they share a display name", () => {
+    const idA = "11111111-1111-4111-8111-11111111111a";
+    const idB = "11111111-1111-4111-8111-11111111111b";
+
+    const { data, series } = buildTrafficLightHistoryChartData(
+      ["2026-04-21"],
+      [
+        { projectId: idA, projectName: "Alpha", statuses: ["green"] },
+        { projectId: idB, projectName: "Alpha", statuses: ["red"] },
+      ],
+    );
+
+    expect(data).toHaveLength(1);
+    const point = data[0];
+    expect(point.period).toBe("2026-04-21");
+    // Keyed by UUID, the colliding name keeps each project's status distinct.
+    expect(point[idA]).toBe(3);
+    expect(point[idB]).toBe(1);
+    expect(series).toEqual([
+      { dataKey: idA, name: "Alpha" },
+      { dataKey: idB, name: "Alpha" },
+    ]);
   });
 });
 
