@@ -55,18 +55,12 @@ export class PeriodAdminService {
 
   async upsertPeriod(period: ReportPeriod): Promise<AdminSnapshot> {
     const parsedPeriod = reportPeriodSchema.parse(period);
-    const snapshot = await this.getSnapshot();
-    const nextPeriods = snapshot.periods.some(
-      (row) => row.id === parsedPeriod.id,
-    )
-      ? snapshot.periods.map((row) =>
-          row.id === parsedPeriod.id ? parsedPeriod : row,
-        )
-      : [...snapshot.periods, parsedPeriod];
-
-    return this.repository.saveSnapshot(
-      adminSnapshotSchema.parse({ ...snapshot, periods: nextPeriods }),
-    );
+    // Targeted write: a single-period edit touches only this Report and never
+    // re-writes stale T0 copies of groups/users/projects/rules. A newly-created
+    // period still triggers the post-commit applicator inside the repository.
+    this.logger.info("upserted period", { periodId: parsedPeriod.id });
+    await this.repository.upsertPeriod(parsedPeriod);
+    return this.getSnapshot();
   }
 
   // -----------------------------------------------------------------

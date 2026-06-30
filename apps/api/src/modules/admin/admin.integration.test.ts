@@ -1,5 +1,13 @@
 import { composeName, type ReminderPolicy } from "@customreport/shared";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
@@ -430,6 +438,283 @@ describe("AdminPrismaRepository (integration)", () => {
           where: { id: executionId },
         }),
       ).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------
+  // transactional-snapshot-restore: the multi-entity restore is atomic
+  // (all-or-nothing) and per-entity admin mutations are targeted by id
+  // (never reconcile an unrelated, concurrently-inserted row away).
+  // -------------------------------------------------------------------
+
+  const NONEXISTENT_REPORT_ID = "a0000000-0000-4000-a000-0000000009ff";
+  const SECOND_PROJECT_ID = "a0000000-0000-4000-a000-000000000200";
+  const SECOND_RULE_ID = "a0000000-0000-4000-a000-000000000620";
+  const JIT_USER_ID = "a0000000-0000-4000-a000-0000000000aa";
+
+  const jitUserData = {
+    id: JIT_USER_ID,
+    email: "jit@test.local",
+    name: "JIT User",
+    lastName: "Jit",
+    firstName: "User",
+    role: "lead" as const,
+    samlId: "jit-test",
+  };
+
+  it("saveSnapshot is additive-only: rows absent from the payload survive (5.7)", async () => {
+    // Capture the snapshot, then insert rows that are NOT part of it.
+    const snapshot = await repo.getSnapshot();
+    const extraUser = await prisma.user.create({
+      data: {
+        ...jitUserData,
+        reportingGroupId: testData.lead.reportingGroupId,
+      },
+    });
+    const extraProject = await prisma.project.create({
+      data: { id: SECOND_PROJECT_ID, name: "Extra", leadId: testData.lead.id },
+    });
+    const extraRule = await prisma.reminderRule.create({
+      data: {
+        id: SECOND_RULE_ID,
+        kind: "deadline",
+        fireAt: new Date("2026-04-11T09:00:00.000Z"),
+        timezone: "Europe/Moscow",
+        status: "active",
+        version: 1,
+        reportId: testData.report.id,
+      },
+    });
+
+    // Restoring the older snapshot must NOT delete/archive the absent rows.
+    await repo.saveSnapshot(snapshot);
+
+    expect(
+      await prisma.user.findUnique({ where: { id: extraUser.id } }),
+    ).not.toBeNull();
+    const proj = expectDefined(
+      await prisma.project.findUnique({ where: { id: extraProject.id } }),
+    );
+    expect(proj.archived).toBe(false);
+    expect(
+      await prisma.reminderRule.findUnique({ where: { id: extraRule.id } }),
+    ).not.toBeNull();
+  });
+
+  it("targeted upsertUser recomputes a drifted name from the structured parts", async () => {
+    // The admin UI's user edit now routes through the targeted upsertUser, so
+    // the `name === composeName(parts)` invariant must hold on THIS path too,
+    // not only the whole-snapshot restore.
+    await repo.upsertUser({
+      id: testData.lead.id,
+      email: "lead1@test.local",
+      name: "TOTALLY WRONG DISPLAY NAME",
+      lastName: "Иванов",
+      firstName: "Пётр",
+      middleName: "Сергеевич",
+      position: null,
+      role: "lead",
+      reportingGroupId: testData.lead.reportingGroupId,
+      isActive: true,
+    });
+
+    const expected = composeName({
+      lastName: "Иванов",
+      firstName: "Пётр",
+      middleName: "Сергеевич",
+    });
+    const row = expectDefined(
+      await prisma.user.findUnique({ where: { id: testData.lead.id } }),
+    );
+    expect(row.name).toBe(expected);
+    expect(row.name).not.toBe("TOTALLY WRONG DISPLAY NAME");
+  });
+
+  it("a concurrently-inserted user survives an unrelated targeted edit (5.4)", async () => {
+    // A SAML just-in-time user lands while the admin holds a stale read; a
+    // targeted project edit must not reconcile it away (it never reads users).
+    const jit = await prisma.user.create({
+      data: {
+        ...jitUserData,
+        reportingGroupId: testData.lead.reportingGroupId,
+      },
+    });
+
+    await repo.upsertProject({
+      id: testData.project.id,
+      name: "Renamed Project",
+      archived: false,
+      leadId: testData.lead.id,
+      leadName: "Test Lead 1",
+    });
+
+    expect(
+      await prisma.user.findUnique({ where: { id: jit.id } }),
+    ).not.toBeNull();
+    const proj = expectDefined(
+      await prisma.project.findUnique({ where: { id: testData.project.id } }),
+    );
+    expect(proj.name).toBe("Renamed Project");
+  });
+
+  it("a mid-restore failure rolls the whole saveSnapshot back (5.3)", async () => {
+    const snapshot = await repo.getSnapshot();
+    // Rename the lead in an earlier phase, and add a reminder rule whose
+    // reportId does not resolve so the LAST phase throws (FK P2003). The whole
+    // transaction must roll back, leaving the rename unpersisted.
+    const corrupted = {
+      ...snapshot,
+      users: snapshot.users.map((u) =>
+        u.id === testData.lead.id
+          ? {
+              ...u,
+              lastName: "ShouldNotPersist",
+              firstName: "Lead",
+              middleName: null,
+            }
+          : u,
+      ),
+      reminderRules: [
+        {
+          id: SECOND_RULE_ID,
+          reportId: NONEXISTENT_REPORT_ID,
+          policyId: null,
+          kind: "deadline" as const,
+          fireAt: new Date("2026-04-11T09:00:00.000Z"),
+          timezone: "Europe/Moscow",
+          status: "active" as const,
+          version: 1,
+        },
+      ],
+    };
+
+    await expect(repo.saveSnapshot(corrupted)).rejects.toThrow();
+
+    const lead = expectDefined(
+      await prisma.user.findUnique({ where: { id: testData.lead.id } }),
+    );
+    // Untouched: a committed earlier phase would have set lastName.
+    expect(lead.lastName).toBe("Test");
+    expect(lead.name).toBe("Test Lead 1");
+  });
+
+  it("removeUser honors the FK-reference guard (5.5)", async () => {
+    // The seeded lead leads a project and authored a section → not deletable.
+    await repo.removeUser(testData.lead.id);
+    expect(
+      await prisma.user.findUnique({ where: { id: testData.lead.id } }),
+    ).not.toBeNull();
+
+    // A reference-free user IS deleted by the same call.
+    const free = await prisma.user.create({
+      data: {
+        ...jitUserData,
+        reportingGroupId: testData.lead.reportingGroupId,
+      },
+    });
+    await repo.removeUser(free.id);
+    expect(await prisma.user.findUnique({ where: { id: free.id } })).toBeNull();
+  });
+
+  it("removeProject archives only the named row (5.5)", async () => {
+    const second = await prisma.project.create({
+      data: { id: SECOND_PROJECT_ID, name: "Second", leadId: testData.lead.id },
+    });
+
+    await repo.removeProject(testData.project.id);
+
+    const archived = expectDefined(
+      await prisma.project.findUnique({ where: { id: testData.project.id } }),
+    );
+    expect(archived.archived).toBe(true);
+    const untouched = expectDefined(
+      await prisma.project.findUnique({ where: { id: second.id } }),
+    );
+    expect(untouched.archived).toBe(false);
+  });
+
+  it("removeReminderRule deletes only the named row (5.5)", async () => {
+    const ruleData = {
+      kind: "deadline" as const,
+      fireAt: new Date("2026-04-11T09:00:00.000Z"),
+      timezone: "Europe/Moscow",
+      status: "active" as const,
+      version: 1,
+      reportId: testData.report.id,
+    };
+    await prisma.reminderRule.create({
+      data: { id: TEST_IDS.reminderRule, ...ruleData },
+    });
+    await prisma.reminderRule.create({
+      data: { id: SECOND_RULE_ID, ...ruleData },
+    });
+
+    await repo.removeReminderRule(TEST_IDS.reminderRule);
+
+    expect(
+      await prisma.reminderRule.findUnique({
+        where: { id: TEST_IDS.reminderRule },
+      }),
+    ).toBeNull();
+    expect(
+      await prisma.reminderRule.findUnique({ where: { id: SECOND_RULE_ID } }),
+    ).not.toBeNull();
+  });
+
+  it("upsertPeriod touches only the named period; a concurrent user survives (5.6)", async () => {
+    const jit = await prisma.user.create({
+      data: {
+        ...jitUserData,
+        reportingGroupId: testData.lead.reportingGroupId,
+      },
+    });
+
+    // Edit the seeded period (update branch) — no whole-snapshot rewrite.
+    await repo.upsertPeriod({
+      id: testData.report.id,
+      periodStart: new Date("2026-04-07"),
+      periodEnd: new Date("2026-04-13"),
+      deadline: new Date("2026-04-12"),
+      status: "draft",
+    });
+
+    expect(
+      await prisma.user.findUnique({ where: { id: jit.id } }),
+    ).not.toBeNull();
+    const period = expectDefined(
+      await prisma.report.findUnique({ where: { id: testData.report.id } }),
+    );
+    expect(period.deadline.toISOString()).toBe(
+      new Date("2026-04-12").toISOString(),
+    );
+  });
+
+  it("upsertPeriod that CREATES a period runs the post-commit applicator (5.6)", async () => {
+    const applyToPeriod = vi.fn(() =>
+      Promise.resolve({ created: 0, updated: 0, skipped: 0 }),
+    );
+    const repoWithApplicator = new AdminPrismaRepository(
+      prisma as never,
+      {
+        applyToPeriod,
+      } as never,
+    );
+
+    const deadline = new Date("2026-05-05T15:00:00.000Z");
+    await repoWithApplicator.upsertPeriod({
+      id: TEST_IDS.targetReport,
+      periodStart: new Date("2026-05-01"),
+      periodEnd: new Date("2026-05-07"),
+      deadline,
+      status: "draft",
+    });
+
+    expect(
+      await prisma.report.findUnique({ where: { id: TEST_IDS.targetReport } }),
+    ).not.toBeNull();
+    expect(applyToPeriod).toHaveBeenCalledWith({
+      id: TEST_IDS.targetReport,
+      deadline,
     });
   });
 });

@@ -1,6 +1,8 @@
 import type {
   AdminProject,
+  AdminReminderRule,
   AdminSnapshot,
+  AdminUser,
   AppSettings,
   GroupProduct,
   GroupProductEdgeInput,
@@ -8,6 +10,7 @@ import type {
   PeriodStatus,
   ReminderPolicy,
   ReportingGroup,
+  ReportPeriod,
   StageAssignment,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
@@ -16,6 +19,7 @@ import type { ReportStatus } from "@prisma/client";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service";
 import type { AdminRepository, PeriodRowFromRepo } from "./admin.service";
+import * as entityWriteQueries from "./admin-entity-write.queries";
 import * as groupQueries from "./admin-group.queries";
 import * as groupProductQueries from "./admin-group-product.queries";
 import * as periodQueries from "./admin-period.queries";
@@ -106,6 +110,40 @@ export class AdminPrismaRepository implements AdminRepository {
       this.prisma,
       this.policyApplicator,
       snapshot,
+    );
+  }
+
+  // ---- Targeted single-entity writes ----
+
+  upsertUser(user: AdminUser): Promise<void> {
+    return entityWriteQueries.upsertUser(this.prisma, user);
+  }
+
+  removeUser(userId: string): Promise<void> {
+    return entityWriteQueries.removeUser(this.prisma, userId);
+  }
+
+  upsertProject(project: AdminProject): Promise<void> {
+    return entityWriteQueries.upsertProject(this.prisma, project);
+  }
+
+  removeProject(projectId: string): Promise<void> {
+    return entityWriteQueries.removeProject(this.prisma, projectId);
+  }
+
+  upsertReminderRule(rule: AdminReminderRule): Promise<void> {
+    return entityWriteQueries.upsertReminderRule(this.prisma, rule);
+  }
+
+  removeReminderRule(ruleId: string): Promise<void> {
+    return entityWriteQueries.removeReminderRule(this.prisma, ruleId);
+  }
+
+  upsertPeriod(period: ReportPeriod): Promise<void> {
+    return entityWriteQueries.upsertPeriod(
+      this.prisma,
+      this.policyApplicator,
+      period,
     );
   }
 

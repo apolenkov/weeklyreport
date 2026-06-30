@@ -1,6 +1,8 @@
 import type {
   AdminProject,
+  AdminReminderRule,
   AdminSnapshot,
+  AdminUser,
   AppSettings,
   GroupProduct,
   GroupProductEdgeInput,
@@ -8,6 +10,7 @@ import type {
   PeriodStatus,
   ReminderPolicy,
   ReportingGroup,
+  ReportPeriod,
   StageAssignment,
 } from "@customreport/shared";
 import type { ReportStatus } from "@prisma/client";
@@ -61,7 +64,27 @@ export class AdminGroupProductConflictError extends Error {
 
 export interface AdminRepository {
   getSnapshot(): Promise<AdminSnapshot>;
+  /**
+   * Whole-snapshot restore (e.g. importing an AdminSnapshot), run atomically.
+   *
+   * Additive-only: it upserts every supplied row and NEVER deletes or archives
+   * a row merely for being absent from the payload. Removals go exclusively
+   * through the targeted `removeUser` / `removeProject` / `removeReminderRule`
+   * methods below; snapshot absence never implies deletion. A future import
+   * that needs removals adds an explicit deletion id-set then.
+   */
   saveSnapshot(snapshot: AdminSnapshot): Promise<AdminSnapshot>;
+  // Targeted single-entity writes — each touches ONLY the named row (upsert by
+  // id; delete/archive by id), so an edit to one entity never reconciles an
+  // unrelated, concurrently-inserted row away. Callers re-read `getSnapshot`
+  // for the response shape their tRPC procedure returns.
+  upsertUser(user: AdminUser): Promise<void>;
+  removeUser(userId: string): Promise<void>;
+  upsertProject(project: AdminProject): Promise<void>;
+  removeProject(projectId: string): Promise<void>;
+  upsertReminderRule(rule: AdminReminderRule): Promise<void>;
+  removeReminderRule(ruleId: string): Promise<void>;
+  upsertPeriod(period: ReportPeriod): Promise<void>;
   getSettings(): Promise<AppSettings>;
   updateSettings(data: Partial<AppSettings>): Promise<AppSettings>;
   saveReportingGroup(group: ReportingGroup): Promise<ReportingGroup>;

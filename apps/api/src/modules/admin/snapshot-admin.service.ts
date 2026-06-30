@@ -9,7 +9,7 @@ import {
 } from "@customreport/shared";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger";
-import { type AdminRepository, sortByName } from "./admin-shared";
+import type { AdminRepository } from "./admin-shared";
 
 /**
  * Owns the AppSettings singleton and the snapshot read path plus the
@@ -45,27 +45,13 @@ export class SnapshotAdminService {
 
   async upsertUser(user: AdminUser): Promise<AdminSnapshot> {
     const parsedUser = adminUserSchema.parse(user);
-    const snapshot = await this.getSnapshot();
-    const nextUsers = sortByName(
-      snapshot.users.some((row) => row.id === parsedUser.id)
-        ? snapshot.users.map((row) =>
-            row.id === parsedUser.id ? parsedUser : row,
-          )
-        : [...snapshot.users, parsedUser],
-    );
-
     this.logger.info("upserted user", { userId: parsedUser.id });
-    return this.repository.saveSnapshot(
-      adminSnapshotSchema.parse({ ...snapshot, users: nextUsers }),
-    );
+    await this.repository.upsertUser(parsedUser);
+    return this.getSnapshot();
   }
 
   async removeUser(userId: string): Promise<AdminSnapshot> {
-    const snapshot = await this.getSnapshot();
-    const nextUsers = snapshot.users.filter((row) => row.id !== userId);
-
-    return this.repository.saveSnapshot(
-      adminSnapshotSchema.parse({ ...snapshot, users: nextUsers }),
-    );
+    await this.repository.removeUser(userId);
+    return this.getSnapshot();
   }
 }

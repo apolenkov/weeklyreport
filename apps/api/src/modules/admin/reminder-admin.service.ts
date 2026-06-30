@@ -31,27 +31,14 @@ export class ReminderAdminService {
 
   async upsertReminderRule(rule: AdminReminderRule): Promise<AdminSnapshot> {
     const parsedRule = adminReminderRuleSchema.parse(rule);
-    const snapshot = await this.getSnapshot();
-    const nextRules = snapshot.reminderRules.some(
-      (row) => row.id === parsedRule.id,
-    )
-      ? snapshot.reminderRules.map((row) =>
-          row.id === parsedRule.id ? parsedRule : row,
-        )
-      : [...snapshot.reminderRules, parsedRule];
-
-    return this.repository.saveSnapshot(
-      adminSnapshotSchema.parse({ ...snapshot, reminderRules: nextRules }),
-    );
+    this.logger.info("upserted reminder rule", { ruleId: parsedRule.id });
+    await this.repository.upsertReminderRule(parsedRule);
+    return this.getSnapshot();
   }
 
   async removeReminderRule(ruleId: string): Promise<AdminSnapshot> {
-    const snapshot = await this.getSnapshot();
-    const nextRules = snapshot.reminderRules.filter((row) => row.id !== ruleId);
-
-    return this.repository.saveSnapshot(
-      adminSnapshotSchema.parse({ ...snapshot, reminderRules: nextRules }),
-    );
+    await this.repository.removeReminderRule(ruleId);
+    return this.getSnapshot();
   }
 
   // -----------------------------------------------------------------
