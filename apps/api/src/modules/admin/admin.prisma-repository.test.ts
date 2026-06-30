@@ -1,9 +1,11 @@
 import type { PeriodState } from "@customreport/shared";
+import { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { PolicyApplicatorService } from "../reminders/policy-applicator.service";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
+import { AdminPeriodOverlapError } from "./admin-shared";
 
 /**
  * Reminder-parity regression: the admin manual create path
@@ -79,6 +81,91 @@ describe("AdminPrismaRepository.createPeriodManual — reminder parity", () => {
 
     await expect(repo.createPeriodManual(INPUT)).rejects.toThrow(
       "reminders DB down",
+    );
+  });
+});
+
+/**
+ * period-uniqueness (D3/D5): a race that defeats the `findOverlappingPeriod`
+ * pre-check, a date edit onto a contested boundary, or an unarchive into one
+ * lands on the `Report_one_open_per_boundary` partial unique index as a Prisma
+ * P2002. The repository writers translate it into `AdminPeriodOverlapError`
+ * (→ BAD_REQUEST), never a raw 500. Teeth: drop the catch and the raw P2002
+ * surfaces, failing each assertion below.
+ */
+describe("AdminPrismaRepository period writers — open-boundary P2002 translation", () => {
+  function openBoundaryP2002(): Prisma.PrismaClientKnownRequestError {
+    return new Prisma.PrismaClientKnownRequestError(
+      "Unique constraint failed",
+      {
+        code: "P2002",
+        clientVersion: "test",
+        meta: { target: "Report_one_open_per_boundary" },
+      },
+    );
+  }
+
+  const INPUT = {
+    periodStart: new Date("2026-07-06T00:00:00.000Z"),
+    periodEnd: new Date("2026-07-12T23:59:59.999Z"),
+    deadline: new Date("2026-07-10T15:00:00.000Z"),
+    weekLabel: null,
+    periodState: "open" as PeriodState,
+  };
+
+  it("createPeriodManual: P2002 → AdminPeriodOverlapError", async () => {
+    const prisma = {
+      report: { create: vi.fn(() => Promise.reject(openBoundaryP2002())) },
+    } as unknown as PrismaService;
+    const repo = new AdminPrismaRepository(prisma);
+
+    await expect(repo.createPeriodManual(INPUT)).rejects.toBeInstanceOf(
+      AdminPeriodOverlapError,
+    );
+  });
+
+  it("updatePeriodManual: P2002 on the date-envelope edit → AdminPeriodOverlapError", async () => {
+    const prisma = {
+      report: { update: vi.fn(() => Promise.reject(openBoundaryP2002())) },
+    } as unknown as PrismaService;
+    const repo = new AdminPrismaRepository(prisma);
+
+    await expect(
+      repo.updatePeriodManual({
+        reportId: "report-1",
+        data: { periodStart: INPUT.periodStart, periodEnd: INPUT.periodEnd },
+      }),
+    ).rejects.toBeInstanceOf(AdminPeriodOverlapError);
+  });
+
+  it("unarchivePeriod: P2002 when unarchiving into a held boundary → AdminPeriodOverlapError", async () => {
+    const prisma = {
+      report: {
+        // The unarchive reads the surviving legacy tuple, then updates into
+        // periodState='open' — which is the write that can collide.
+        findUnique: vi.fn(() =>
+          Promise.resolve({ status: "draft", periodStatus: "open" }),
+        ),
+        update: vi.fn(() => Promise.reject(openBoundaryP2002())),
+      },
+    } as unknown as PrismaService;
+    const repo = new AdminPrismaRepository(prisma);
+
+    await expect(repo.unarchivePeriod("report-1")).rejects.toBeInstanceOf(
+      AdminPeriodOverlapError,
+    );
+  });
+
+  it("re-throws a non-P2002 error unchanged (an unrelated failure is not masked)", async () => {
+    const prisma = {
+      report: {
+        create: vi.fn(() => Promise.reject(new Error("connection reset"))),
+      },
+    } as unknown as PrismaService;
+    const repo = new AdminPrismaRepository(prisma);
+
+    await expect(repo.createPeriodManual(INPUT)).rejects.toThrow(
+      "connection reset",
     );
   });
 });

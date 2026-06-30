@@ -1,12 +1,14 @@
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { AdminPeriodOverlapError } from "../admin/admin-shared.js";
 import {
   buildAssembledReportFromPrismaRow,
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
 } from "../published-report-snapshot.js";
 import type { PeriodRepository } from "./period.service.js";
+import { isOpenBoundaryConflict } from "./period-factory.js";
 import { applyTransition } from "./period-transition.apply.js";
 import { buildTransition } from "./period-transition.js";
 
@@ -74,22 +76,35 @@ export class PeriodPrismaRepository implements PeriodRepository {
   }
 
   async reopenPeriod(reportId: string): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      // refactor-period-transition-writer: the reopen transition encodes the
-      // intentional asymmetry (periodState→'open', periodStatus→'reopened',
-      // legacy tuple untouched) and stamps reopenedAt. See period-transition.ts.
-      await applyTransition(tx, reportId, "reopen", { now: new Date() });
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        // refactor-period-transition-writer: the reopen transition encodes the
+        // intentional asymmetry (periodState→'open', periodStatus→'reopened',
+        // legacy tuple untouched) and stamps reopenedAt. See period-transition.ts.
+        await applyTransition(tx, reportId, "reopen", { now: new Date() });
 
-      await tx.reportSection.updateMany({
-        where: {
-          reportId,
-          status: "submitted",
-        },
-        data: {
-          status: "draft",
-          submittedAt: null,
-        },
+        await tx.reportSection.updateMany({
+          where: {
+            reportId,
+            status: "submitted",
+          },
+          data: {
+            status: "draft",
+            submittedAt: null,
+          },
+        });
       });
-    });
+    } catch (error) {
+      // Reopen moves the row to periodState='open'; if another open period
+      // already holds this boundary the partial unique index rejects it.
+      // Surface the same friendly overlap error as the admin create/update
+      // paths (→ BAD_REQUEST), never a 500. Any other error re-throws.
+      if (isOpenBoundaryConflict(error)) {
+        throw new AdminPeriodOverlapError(
+          "A period already exists for these dates.",
+        );
+      }
+      throw error;
+    }
   }
 }

@@ -1,8 +1,12 @@
 import type { AppSettings } from "@customreport/shared";
+import { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../lib/audit-logger.js";
-import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
+import {
+  flipDueScheduledToOpen,
+  PeriodCreatorScheduler,
+} from "./period-creator.scheduler.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -41,17 +45,16 @@ interface StubPrisma {
   report: {
     findFirst: ReturnType<typeof vi.fn>;
     create: ReturnType<typeof vi.fn>;
-    // UFB-053: updateMany used by the SCHEDULED→OPEN sweep at the top of
-    // each tick.
-    updateMany: ReturnType<typeof vi.fn>;
+    // period-uniqueness: the SCHEDULED→OPEN flip now reads the due scheduled
+    // rows and flips them one at a time (was a single bulk updateMany).
+    findMany: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
   };
 }
 
 function makePrismaStub(opts: {
   mostRecent: { id: string; periodEnd: Date } | null;
   createdId?: string;
-  // count returned by the SCHEDULED→OPEN updateMany sweep.
-  scheduledFlipped?: number;
   // A pre-existing draft in the factory's target window (defaults to none).
   // refactor-auth-exemplary-layering: the scheduler now creates via the period
   // factory, which does a find-by-bounds before creating; the most-recent
@@ -85,9 +88,12 @@ function makePrismaStub(opts: {
           // returned shape matches the real prisma client surface.
           periodState: data.periodState,
         })),
-      updateMany: vi
-        .fn()
-        .mockResolvedValue({ count: opts.scheduledFlipped ?? 0 }),
+      // period-uniqueness: the flip reads due scheduled rows then updates each.
+      // The runOnce-level tests exercise the create/skip paths, so the default
+      // is "no due scheduled rows" — the flip is a no-op. The flip's own
+      // recovery is covered by the focused flipDueScheduledToOpen tests below.
+      findMany: vi.fn().mockResolvedValue([]),
+      update: vi.fn().mockResolvedValue(undefined),
     },
   };
 }
@@ -168,15 +174,14 @@ describe("PeriodCreatorScheduler", () => {
     );
   });
 
-  it("UFB-053: SCHEDULED→OPEN sweep flips any past-due scheduled rows at top of tick", async () => {
+  it("UFB-053: runs the SCHEDULED→OPEN flip (reads due scheduled rows) at the top of the tick", async () => {
     const prisma = makePrismaStub({
       mostRecent: {
         id: "period-future",
         // The most-recent period ends in the future, so no create happens.
-        // The sweep still runs first.
+        // The flip still runs first.
         periodEnd: new Date("2026-05-30T23:59:59.999Z"),
       },
-      scheduledFlipped: 2,
     });
     const admin = {
       getSettings: vi.fn().mockResolvedValue(makeSettings()),
@@ -193,16 +198,16 @@ describe("PeriodCreatorScheduler", () => {
 
     await scheduler.runOnce(new Date("2026-05-12T00:05:00Z"));
 
-    expect(prisma.report.updateMany).toHaveBeenCalledWith({
+    // The flip queries the due scheduled rows in a deterministic order; the
+    // per-row update behaviour is covered by the focused tests below.
+    expect(prisma.report.findMany).toHaveBeenCalledWith({
       where: {
         periodState: "scheduled",
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- expect.any() returns any; vitest asymmetric matcher has no precise type
         periodStart: { lte: expect.any(Date) },
       },
-      // refactor-period-transition-writer: the open transition writes the full
-      // field set (periodState + the draft/false legacy tuple already on the
-      // scheduled rows).
-      data: { periodState: "open", status: "draft", archived: false },
+      orderBy: [{ periodStart: "asc" }, { id: "asc" }],
+      select: { id: true, periodStart: true, periodEnd: true },
     });
   });
 
@@ -265,5 +270,104 @@ describe("PeriodCreatorScheduler", () => {
     });
     expect(prisma.report.create).not.toHaveBeenCalled();
     expect(audit.periodAutoCreate).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// flipDueScheduledToOpen — per-boundary SCHEDULED→OPEN recovery (D5)
+// ---------------------------------------------------------------------------
+
+const W = new Date("2026-05-11T00:00:00.000Z");
+const W_END = new Date("2026-05-17T23:59:59.999Z");
+
+/** A Prisma P2002 carrying the open-boundary index name in `meta.target`. */
+function openBoundaryP2002(): Prisma.PrismaClientKnownRequestError {
+  return new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+    code: "P2002",
+    clientVersion: "test",
+    meta: { target: "Report_one_open_per_boundary" },
+  });
+}
+
+interface FlipReportStub {
+  findMany: ReturnType<typeof vi.fn>;
+  update: ReturnType<typeof vi.fn>;
+  findFirst: ReturnType<typeof vi.fn>;
+}
+
+describe("flipDueScheduledToOpen", () => {
+  const now = new Date("2026-05-12T00:05:00.000Z");
+
+  it("(a) a boundary another writer already opened is skipped, the duplicate scheduled row is left + logged", async () => {
+    const report: FlipReportStub = {
+      findMany: vi
+        .fn()
+        .mockResolvedValue([{ id: "s1", periodStart: W, periodEnd: W_END }]),
+      update: vi.fn().mockRejectedValue(openBoundaryP2002()),
+      findFirst: vi.fn().mockResolvedValue({ id: "open-existing" }),
+    };
+    const warn = vi.fn();
+
+    await flipDueScheduledToOpen(asAny(report), now, { warn });
+
+    expect(report.update).toHaveBeenCalledTimes(1);
+    // recovery re-read keys on the boundary + periodState='open'
+    expect(report.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { periodStart: W, periodEnd: W_END, periodState: "open" },
+        select: { id: true },
+      }),
+    );
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("already open"));
+  });
+
+  it("(b) two scheduled rows on one boundary → exactly one opens, the other is left scheduled + logged", async () => {
+    const report: FlipReportStub = {
+      findMany: vi.fn().mockResolvedValue([
+        { id: "s1", periodStart: W, periodEnd: W_END },
+        { id: "s2", periodStart: W, periodEnd: W_END },
+      ]),
+      // s1 flips first (commits); s2 then collides on the now-open boundary.
+      update: vi
+        .fn()
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(openBoundaryP2002()),
+      // the re-read after s2's P2002 finds s1, now open.
+      findFirst: vi.fn().mockResolvedValue({ id: "s1" }),
+    };
+    const warn = vi.fn();
+
+    await flipDueScheduledToOpen(asAny(report), now, { warn });
+
+    // Deterministic order: s1 then s2; exactly one update committed.
+    expect(report.update).toHaveBeenCalledTimes(2);
+    expect(report.update).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ where: { id: "s1" } }),
+    );
+    expect(report.update).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ where: { id: "s2" } }),
+    );
+    // The duplicate (s2) is reported, never deleted.
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("s2"));
+  });
+
+  it("re-throws a non-P2002 error (the tick aborts rather than silently swallowing)", async () => {
+    const report: FlipReportStub = {
+      findMany: vi
+        .fn()
+        .mockResolvedValue([{ id: "s1", periodStart: W, periodEnd: W_END }]),
+      update: vi.fn().mockRejectedValue(new Error("db down")),
+      findFirst: vi.fn(),
+    };
+
+    await expect(
+      flipDueScheduledToOpen(asAny(report), now, { warn: vi.fn() }),
+    ).rejects.toThrow("db down");
+    // No recovery re-read on an unrelated error.
+    expect(report.findFirst).not.toHaveBeenCalled();
   });
 });
