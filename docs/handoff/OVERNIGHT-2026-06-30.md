@@ -275,4 +275,32 @@ it — integration files are in the tsconfig). So run
 any port change; that is what caught `period.integration.test.ts`'s mock missing
 `getReopenedNonArchivedId`.
 
-Next in Wave B: **#15 `scope-reminder-authz`**.
+## Session 3 cont.: #15 LANDED
+
+**#15 `scope-reminder-authz` is committed: `facead76`.** The three reminder tRPC
+procedures (`execute` / `listExecutions` / `dispatchPending`) now bound a
+non-admin head to their own group via `groupScopeFilter` (admin keeps god-mode);
+all thread `ctx.session`, all stay `headProcedure`. listExecutions filters
+out-of-scope recipients over the full slice BEFORE pagination; execute closes the
+open-mailer; dispatchPending scopes bulk + single-lead and preserves the
+no-matching-section success state.
+
+Reviewed three ways before commit: my diff review (matches design), the
+per-change workflow's adversarial verify (completeness clean; one minor
+test-coverage gap → added an admin-dispatchPending test), and a **Codex review**
+that found one **major**: `dispatchPending` let an out-of-scope _active_ report
+(activeReportId is the globally-newest draft, not group-bounded) reach rule
+resolution and return `dispatched:0` instead of FORBIDDEN — a rule-existence
+oracle. FIXED in the same commit (a report-scope guard before rule resolution) +
+a regression test. Full gate green (typecheck + lint + 1191 api / 1352 web unit +
+13-case real-DB integration).
+
+Process note: **run Codex review on each authz change before commit** — it caught
+real holes on both #14 (archive walk-back) and #15 (dispatchPending oracle) that
+the workflow verify missed. Codex agentType for the Agent tool: `codex:codex-rescue`.
+
+Next in Wave B: **#16 `make-publish-atomic`** (caveat: MUST extend the
+period-dual-state CI matcher to `updateMany` — task 5.1), then #17
+`enforce-deactivation-pdf-bullboard` (fold null→fail-closed INTO
+`resolveHumanSession`), #18 `scope-leadform-getbyperiod`, #19
+`transactional-snapshot-restore` (land before observability #33).
