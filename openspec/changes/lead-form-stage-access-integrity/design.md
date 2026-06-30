@@ -53,8 +53,38 @@ The only gaps are a spec home (`report-toolbar-parity`) and keeping the existing
 `role-coverage-gate` intact — validation runs inside the existing lead write procedure;
 no new procedure/chain/Role.
 
-## Coordination
+## Coordination (verified 2026-06-30)
 
-Touches `risk-stage-integrity`, adjacent to the in-flight `fix-risk-stage-integrity-impl`.
-Use the DISTINCT requirement headers above (no header collision on archive); do not edit
-the same `report-sections` service hunks a parallel session may hold concurrently.
+Touches `risk-stage-integrity`, adjacent to the in-flight `fix-risk-stage-integrity-impl`
+(the parallel session owns it). Status of the overlap, checked against both change dirs:
+
+- **No requirement-header collision (confirmed).** C6 adds `Lead-Authored Records Carry
+Only Stages the Author Owns` + `The Record Dialogs Scope Stage Options to the Author's
+Owned Stages`. The neighbor adds `The risk dialog never dead-ends on a zero-owned-stage
+product` + `The required-mode stage banner does not promise "all stages"` + `Stage id
+array elements are non-empty, visible, and null-byte-free`. All five headers are
+  distinct, so both archive into `specs/risk-stage-integrity` without overwriting.
+- **Semantic overlap — resolved by narrowing C6, not by a note alone.** The neighbor's
+  `never dead-ends` requirement specs the zero-owned-stage Save-disable + `Ctrl/Cmd+Enter`
+  no-op for the **risk** dialog. C6's `Record Dialogs Scope…` requirement now **defers the
+  risk dialog to the neighbor** and extends the same dead-end pattern only to the **item
+  and decision** dialogs (the net-new). So neither change re-specs the risk dialog's
+  dead-end. The re-scope-on-product-change and single-owned-stage pre-select/lock in C6
+  apply to all three dialogs and do not overlap the neighbor (it never specs those).
+- **C6's net-new vs the neighbor:** (1) the shared **server** guard
+  `validateStageOwnership` on both write paths — the neighbor is client-dialog only; (2)
+  extending the zero-owned-stage dead-end to item + decision dialogs.
+
+### Implementation ordering (Саша implements C6 AFTER the neighbor ships)
+
+1. Neighbor lands `fix-risk-stage-integrity-impl` (risk-dialog dead-end + stage-id
+   validation + banner) and ideally archives it first, so `specs/risk-stage-integrity`
+   carries `never dead-ends` before C6 builds on it.
+2. C6 then implements the server guard + the item/decision dialog dead-end, reusing the
+   neighbor's risk-dialog dead-end component/pattern rather than re-deriving it.
+3. Do not edit the same `report-sections` service hunks the parallel session may hold
+   concurrently; stage only C6's own paths.
+
+The stage-id-element validation (neighbor) and the ownership guard (C6) are complementary
+layers on the same write path — element well-formedness vs. element ownership — not
+duplicates; both should end up calling into the section save validation in sequence.
