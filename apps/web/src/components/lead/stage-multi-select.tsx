@@ -19,6 +19,32 @@ interface StageMultiSelectProps {
   readonly required?: boolean;
 }
 
+/**
+ * Builds the consequence-preview banner copy: a generic line for many selected
+ * stages, the named stage for exactly one, and the "all assigned stages"
+ * default only when nothing is selected AND the host does not require a stage.
+ * In required mode an empty selection is invalid, so the "all stages" outcome
+ * can never happen and the banner is suppressed (empty string).
+ * @param selected - the currently selected stage names
+ * @param previewSeverity - the severity the preview describes
+ * @param required - whether the host dialog requires at least one stage
+ * @returns the banner text, or an empty string when no banner should show
+ */
+function computeBannerText(
+  selected: readonly string[],
+  previewSeverity: "at-risk" | "blocked",
+  required: boolean,
+): string {
+  const severityLabel = previewSeverity === "blocked" ? "Blocked" : "At Risk";
+  if (selected.length === 0) {
+    return required ? "" : `All assigned stages will show as ${severityLabel}.`;
+  }
+  if (selected.length === 1) {
+    return `Stage ${selected[0]} will show as ${severityLabel}.`;
+  }
+  return `Selected stages will show as ${severityLabel}.`;
+}
+
 export function StageMultiSelect({
   id,
   value,
@@ -50,21 +76,11 @@ export function StageMultiSelect({
 
   const singleStage = stages.length === 1 ? stages[0] : undefined;
   const isMultiChoice = stages.length >= 2;
-  const severityLabel = previewSeverity === "blocked" ? "Blocked" : "At Risk";
 
-  // Banner copy: collapse to a generic line when more than one stage is
-  // selected; name the stage when exactly one is selected; default copy when
-  // nothing is selected.
-  let bannerText = "";
-  if (isMultiChoice && previewSeverity) {
-    if (selected.length === 0) {
-      bannerText = `All assigned stages will show as ${severityLabel}.`;
-    } else if (selected.length === 1) {
-      bannerText = `Stage ${selected[0]} will show as ${severityLabel}.`;
-    } else {
-      bannerText = `Selected stages will show as ${severityLabel}.`;
-    }
-  }
+  const bannerText =
+    isMultiChoice && previewSeverity
+      ? computeBannerText(selected, previewSeverity, required)
+      : "";
 
   return (
     <fieldset
