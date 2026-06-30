@@ -385,7 +385,7 @@ async function bootstrap() {
   // 36-01: rate-limit /trpc with the permissive bucket. The /auth limiter
   // is mounted further down with mountAuthRoutes (it needs to wrap the
   // /auth/* routes the auth module registers).
-  const { authLimiter, trpcLimiter } = createRateLimits({
+  const { authLimiter, trpcLimiter, vitalsLimiter } = createRateLimits({
     logger,
     isTest: env.NODE_ENV === "test" || env.AUTH_DEV_MODE,
   });
@@ -397,6 +397,12 @@ async function bootstrap() {
       createContext: createContextFactory(app, logger),
     }),
   );
+
+  // Bound the public, unauthenticated web-vitals beacon. `trust proxy: 1` is set
+  // above, so req.ip resolves to the real client behind Caddy and this limiter
+  // keys per client, not per proxy hop. Registered before app.listen so it runs
+  // ahead of the Nest controller handling POST /api/web-vitals.
+  expressApp.use("/api/web-vitals", vitalsLimiter);
 
   // Mount SAML auth routes (login, callback, logout, dev-login)
   const samlOptions = createSamlStrategyOptions(process.env);

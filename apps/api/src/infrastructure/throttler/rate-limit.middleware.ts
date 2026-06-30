@@ -5,16 +5,17 @@ import type { AppLogger } from "../../lib/logger";
 import { rateLimitHitsTotal } from "../metrics/metrics.registry.js";
 
 /**
- * 36-01 rate-limit middleware factory.
+ * Rate-limit middleware factory.
  *
- * Three tiers based on URL prefix:
- *   - /auth/*  → strict (login brute-force protection)
- *   - /trpc/*  → permissive (legitimate query traffic shouldn't trip)
- *   - else     → not limited here (already covered by upstream/edge proxy)
+ * Tiers based on URL prefix:
+ *   - /auth/*           → strict (login brute-force protection)
+ *   - /trpc/*           → permissive (legitimate query traffic shouldn't trip)
+ *   - /api/web-vitals   → moderate (bounds the public, unauthenticated beacon)
+ *   - else              → not limited here (already covered by upstream/edge proxy)
  *
  * Test-mode bumps every bucket to 1000/min so E2E suites that fire
  * 10+ rapid logins in one spec don't flake. Production keeps the
- * documented values (5 / 200 per minute per IP).
+ * documented values (5 / 200 / 60 per minute per IP).
  */
 export function createRateLimits(options: {
   logger: AppLogger;
@@ -22,6 +23,7 @@ export function createRateLimits(options: {
 }): {
   authLimiter: RequestHandler;
   trpcLimiter: RequestHandler;
+  vitalsLimiter: RequestHandler;
 } {
   const { logger, isTest } = options;
 
@@ -69,5 +71,14 @@ export function createRateLimits(options: {
     message: "trpc",
   });
 
-  return { authLimiter, trpcLimiter };
+  // A real page emits a handful of vitals per navigation; 60/min/IP comfortably
+  // covers legitimate beacons while capping anonymous abuse. Shares the
+  // rateLimitHitsTotal accounting via the "vitals" bucket message.
+  const vitalsLimiter = rateLimit({
+    ...baseConfig,
+    limit: isTest ? 1000 : 60,
+    message: "vitals",
+  });
+
+  return { authLimiter, trpcLimiter, vitalsLimiter };
 }
