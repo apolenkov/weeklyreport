@@ -128,6 +128,7 @@ describe("LeadFormService — fillFrom (integration)", () => {
     expect(repo.fillFromSection).toHaveBeenCalledWith(
       targetSectionId,
       sourceSectionId,
+      1,
     );
   });
 
