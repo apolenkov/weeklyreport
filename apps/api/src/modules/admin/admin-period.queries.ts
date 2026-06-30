@@ -5,7 +5,10 @@ import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { isOpenBoundaryConflict } from "../period/period-factory.js";
 import { buildTransition } from "../period/period-transition.js";
 import type { PeriodRowFromRepo } from "./admin.service";
-import { AdminPeriodOverlapError } from "./admin-shared.js";
+import {
+  AdminPeriodNotFoundError,
+  AdminPeriodOverlapError,
+} from "./admin-shared.js";
 
 /**
  * Period (Report) lifecycle queries for the Admin Periods tab, extracted from
@@ -345,7 +348,7 @@ export async function unarchivePeriod(
     select: { status: true, periodStatus: true },
   });
   if (!row) {
-    throw new Error(`Report ${periodId} not found.`);
+    throw new AdminPeriodNotFoundError(`Report ${periodId} not found.`);
   }
   const nextPeriodState: PeriodState =
     row.status === "published" || row.periodStatus !== "open"

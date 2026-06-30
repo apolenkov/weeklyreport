@@ -11,6 +11,7 @@ import type {
 import type { ReopenEligibilityFacts } from "./lead-form-shared";
 import {
   initialsFromName,
+  LeadFormDomainError,
   reopenBlockedMessage,
   ReopenRequestError,
 } from "./lead-form-shared";
@@ -231,7 +232,11 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     });
 
     if (!source) {
-      throw new Error(`Source section ${sourceSectionId} not found.`);
+      // TOCTOU: the service prechecks the source, but it can be deleted before
+      // this copy re-read. Keep NOT_FOUND (not a false 500) on that race.
+      throw new LeadFormDomainError(
+        `Source section ${sourceSectionId} not found.`,
+      );
     }
 
     let copiedItems = 0;

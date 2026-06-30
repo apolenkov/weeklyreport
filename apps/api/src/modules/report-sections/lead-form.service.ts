@@ -8,6 +8,7 @@ import {
   computeReopenEligibility,
   type CrossAuthorSectionRow,
   LeadFormAccessError,
+  LeadFormConstraintError,
   LeadFormDomainError,
   type LeadFormRepository,
   reopenBlockedMessage,
@@ -26,6 +27,7 @@ export type {
 export {
   computeReopenEligibility,
   LeadFormAccessError,
+  LeadFormConstraintError,
   LeadFormDomainError,
   ReopenRequestError,
 } from "./lead-form-shared";
@@ -61,7 +63,9 @@ export class LeadFormService {
     }
 
     if (section.status !== "submitted") {
-      throw new Error("Only submitted sections can be revoked.");
+      throw new LeadFormConstraintError(
+        "Only submitted sections can be revoked.",
+      );
     }
 
     await this.repository.revokeSectionSubmission(sectionId, revokedByUserId);
@@ -81,15 +85,17 @@ export class LeadFormService {
     const target = await this.repository.getSectionById(targetSectionId);
 
     if (!target) {
-      throw new Error(`Target section ${targetSectionId} not found.`);
+      throw new LeadFormDomainError(
+        `Target section ${targetSectionId} not found.`,
+      );
     }
 
     if (target.authorId !== userId) {
-      throw new Error("Can only fill your own section.");
+      throw new LeadFormAccessError("Can only fill your own section.");
     }
 
     if (target.status === "submitted") {
-      throw new Error("Cannot fill a submitted section.");
+      throw new LeadFormConstraintError("Cannot fill a submitted section.");
     }
 
     // viewer-report-surface-parity (review P1): refuse to mutate the live rows
@@ -104,7 +110,9 @@ export class LeadFormService {
     const periodStatus =
       await this.repository.getReportPeriodStatusForSection(targetSectionId);
     if (periodStatus === "published") {
-      throw new Error("Cannot fill a section of a published report.");
+      throw new LeadFormConstraintError(
+        "Cannot fill a section of a published report.",
+      );
     }
 
     // Authorize the SOURCE section too. The fill-from picker only ever offers
@@ -115,10 +123,12 @@ export class LeadFormService {
     // report. fillFrom copies your own history; it is never cross-author.
     const source = await this.repository.getSectionById(sourceSectionId);
     if (!source) {
-      throw new Error(`Source section ${sourceSectionId} not found.`);
+      throw new LeadFormDomainError(
+        `Source section ${sourceSectionId} not found.`,
+      );
     }
     if (source.authorId !== userId) {
-      throw new Error("Can only fill from your own section.");
+      throw new LeadFormAccessError("Can only fill from your own section.");
     }
 
     // TODO(versions-v2): a pre-overwrite safety snapshot was taken here

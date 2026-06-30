@@ -46,6 +46,19 @@ export class AdminPeriodNotFoundError extends Error {
   }
 }
 
+/**
+ * Thrown by `attachProductToGroup` when the product already belongs to a
+ * DIFFERENT reporting group. A state conflict (the product exists and is owned
+ * elsewhere), so the tRPC error-mapper renders it CONFLICT; the message names
+ * the current owner group so the admin can detach before re-attaching.
+ */
+export class AdminGroupProductConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminGroupProductConflictError";
+  }
+}
+
 export interface AdminRepository {
   getSnapshot(): Promise<AdminSnapshot>;
   saveSnapshot(snapshot: AdminSnapshot): Promise<AdminSnapshot>;

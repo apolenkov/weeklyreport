@@ -9,6 +9,7 @@ import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   computeReopenEligibility,
   LeadFormAccessError,
+  LeadFormConstraintError,
   LeadFormDomainError,
   type LeadFormRepository,
   LeadFormService,
@@ -122,6 +123,11 @@ describe("LeadFormService — revokeSubmission", () => {
     });
     const service = new LeadFormService(repo);
 
+    // map-domain-errors: a state conflict on an existing section → typed
+    // LeadFormConstraintError (→ BAD_REQUEST), not a bare Error (→ 500).
+    await expect(
+      service.revokeSubmission(SECTION_ID, OTHER_USER_ID, {}),
+    ).rejects.toBeInstanceOf(LeadFormConstraintError);
     await expect(
       service.revokeSubmission(SECTION_ID, OTHER_USER_ID, {}),
     ).rejects.toThrow("Only submitted sections can be revoked.");
@@ -136,6 +142,49 @@ describe("LeadFormService — revokeSubmission", () => {
     await expect(
       service.revokeSubmission(SECTION_ID, OTHER_USER_ID, {}),
     ).rejects.toThrow(`Section ${SECTION_ID} not found.`);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// fillFrom — ownership guards (map-domain-errors)
+// ---------------------------------------------------------------------------
+
+describe("LeadFormService — fillFrom authorization", () => {
+  it("rejects a target section owned by another user with LeadFormAccessError (FORBIDDEN)", async () => {
+    const foreignTarget: ReportSectionReadModel = {
+      ...structuredClone(draftSection),
+      authorId: OTHER_USER_ID,
+    };
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(foreignTarget),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
+    ).rejects.toBeInstanceOf(LeadFormAccessError);
+  });
+
+  it("rejects a forged cross-author source section with LeadFormAccessError (FORBIDDEN)", async () => {
+    // Target owned by the caller (passes owner/submitted/published guards), but
+    // the forged source belongs to someone else — the security-relevant guard.
+    const ownTarget = structuredClone(draftSection);
+    const foreignSource: ReportSectionReadModel = {
+      ...structuredClone(draftSection),
+      reportSectionId: SOURCE_SECTION_ID,
+      authorId: OTHER_USER_ID,
+    };
+    const repo = createMockRepository({
+      getSectionById: vi.fn((id: string) =>
+        Promise.resolve(id === SECTION_ID ? ownTarget : foreignSource),
+      ),
+      getReportPeriodStatusForSection: vi.fn().mockResolvedValue("open"),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
+    ).rejects.toBeInstanceOf(LeadFormAccessError);
   });
 });
 

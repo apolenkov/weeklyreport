@@ -3,18 +3,29 @@ import { describe, expect, it } from "vitest";
 
 import {
   AdminAccessError,
+  AdminGroupProductConflictError,
+  AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
 } from "../../modules/admin/admin.service.js";
 import { ArchiveDomainError } from "../../modules/archive/archive.service.js";
-import { CarryOverDomainError } from "../../modules/carry-over/carry-over.service.js";
+import {
+  CarryOverConflictError,
+  CarryOverDomainError,
+} from "../../modules/carry-over/carry-over.service.js";
 import { PdfExportDomainError } from "../../modules/pdf-export/pdf-export.service.js";
-import { PublicationAccessError } from "../../modules/publication/publication.service.js";
+import {
+  PublicationAccessError,
+  PublicationNotFoundError,
+} from "../../modules/publication/publication.service.js";
 import { ReminderDomainError } from "../../modules/reminders/reminders.service.js";
 import {
+  LeadFormAccessError,
+  LeadFormConstraintError,
   LeadFormDomainError,
   ReopenRequestError,
 } from "../../modules/report-sections/lead-form.service.js";
 import {
+  ReportSectionAccessError,
   ReportSectionDomainError,
   SectionVersionConflictError,
 } from "../../modules/report-sections/report-sections.service.js";
@@ -339,5 +350,139 @@ describe("mapDomainError", () => {
       expect(mapped.message).toBe("Unexpected error");
       expect(mapped.message).not.toContain("postgres");
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Exhaustive domain-error → tRPC-code coverage.
+//
+// map-domain-errors refactored mapDomainError from a per-class if-chain to a
+// declarative table (the complexity ceiling forbids 20 instanceof branches).
+// The table can silently mis-code ANY class, so every domain error is asserted
+// here. These [class, code] pairs are hand-written INDEPENDENTLY of the
+// production DOMAIN_ERROR_CODES table — importing and iterating it would assert
+// the table against itself. This block also satisfies the spec's per-class
+// coverage requirement for the classes this change added or newly routes
+// (LeadFormConstraintError, AdminGroupProductConflictError,
+// PublicationNotFoundError, LeadFormAccessError, AdminPeriodNotFoundError).
+// ---------------------------------------------------------------------------
+
+describe("mapDomainError — exhaustive domain-error → code coverage", () => {
+  const cases = [
+    {
+      name: "SectionVersionConflictError",
+      make: () => new SectionVersionConflictError("m"),
+      code: "CONFLICT",
+    },
+    {
+      name: "ReportSectionDomainError",
+      make: () => new ReportSectionDomainError("MISSING_CURRENT_ITEM", "m"),
+      code: "BAD_REQUEST",
+    },
+    {
+      name: "ReviewAccessError",
+      make: () => new ReviewAccessError("m"),
+      code: "FORBIDDEN",
+    },
+    {
+      name: "AdminAccessError",
+      make: () => new AdminAccessError("m"),
+      code: "FORBIDDEN",
+    },
+    {
+      name: "ReportSectionAccessError",
+      make: () => new ReportSectionAccessError("m"),
+      code: "FORBIDDEN",
+    },
+    {
+      name: "LeadFormAccessError",
+      make: () => new LeadFormAccessError("m"),
+      code: "FORBIDDEN",
+    },
+    {
+      name: "PublicationAccessError",
+      make: () => new PublicationAccessError("m"),
+      code: "CONFLICT",
+    },
+    {
+      name: "PdfExportDomainError",
+      make: () => new PdfExportDomainError("m"),
+      code: "NOT_FOUND",
+    },
+    {
+      name: "ArchiveDomainError",
+      make: () => new ArchiveDomainError("m"),
+      code: "NOT_FOUND",
+    },
+    {
+      name: "WeeklyReportDomainError",
+      make: () => new WeeklyReportDomainError("m"),
+      code: "NOT_FOUND",
+    },
+    {
+      name: "LeadFormDomainError",
+      make: () => new LeadFormDomainError("m"),
+      code: "NOT_FOUND",
+    },
+    {
+      name: "ReopenRequestError",
+      make: () => new ReopenRequestError("m"),
+      code: "BAD_REQUEST",
+    },
+    {
+      name: "LeadFormConstraintError",
+      make: () => new LeadFormConstraintError("m"),
+      code: "BAD_REQUEST",
+    },
+    {
+      name: "CarryOverConflictError",
+      make: () => new CarryOverConflictError("m"),
+      code: "CONFLICT",
+    },
+    {
+      name: "ReminderDomainError",
+      make: () => new ReminderDomainError("m"),
+      code: "BAD_REQUEST",
+    },
+    {
+      name: "CarryOverDomainError",
+      make: () => new CarryOverDomainError("m"),
+      code: "BAD_REQUEST",
+    },
+    {
+      name: "AdminPeriodOverlapError",
+      make: () => new AdminPeriodOverlapError("m"),
+      code: "BAD_REQUEST",
+    },
+    {
+      name: "AdminPeriodNotFoundError",
+      make: () => new AdminPeriodNotFoundError("m"),
+      code: "NOT_FOUND",
+    },
+    {
+      name: "PublicationNotFoundError",
+      make: () => new PublicationNotFoundError("m"),
+      code: "NOT_FOUND",
+    },
+    {
+      name: "AdminGroupProductConflictError",
+      make: () => new AdminGroupProductConflictError("m"),
+      code: "CONFLICT",
+    },
+  ] as const;
+
+  it.each(cases)("maps $name → $code", ({ make, code }) => {
+    const error = make();
+    const mapped = mapDomainError(error);
+
+    expect(mapped).toBeInstanceOf(TRPCError);
+    expect(mapped.code).toBe(code);
+    expect(mapped.message).toBe("m");
+    expect(mapped.cause).toBe(error);
+  });
+
+  it("covers every domain error class the mapper imports", () => {
+    // Guards against a class being added to the mapper without a row here.
+    expect(cases).toHaveLength(20);
   });
 });

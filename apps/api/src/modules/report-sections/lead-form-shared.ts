@@ -27,6 +27,20 @@ export class ReopenRequestError extends Error {
   }
 }
 
+/**
+ * A lead-form state-constraint violation on a resource that EXISTS — filling a
+ * submitted section, filling a published period's section, or revoking a
+ * non-submitted section. A state conflict, not a missing resource, so the tRPC
+ * error-mapper renders it BAD_REQUEST (distinct from `LeadFormDomainError` →
+ * NOT_FOUND). The state-conflict twin of `ReopenRequestError`.
+ */
+export class LeadFormConstraintError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "LeadFormConstraintError";
+  }
+}
+
 export interface LeadFormRepository {
   getSectionById(sectionId: string): Promise<ReportSectionReadModel | null>;
   /**

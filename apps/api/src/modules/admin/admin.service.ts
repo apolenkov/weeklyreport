@@ -34,6 +34,7 @@ import { SnapshotAdminService } from "./snapshot-admin.service";
 export type { AdminRepository, PeriodRowFromRepo } from "./admin-shared";
 export {
   AdminAccessError,
+  AdminGroupProductConflictError,
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
 } from "./admin-shared";
