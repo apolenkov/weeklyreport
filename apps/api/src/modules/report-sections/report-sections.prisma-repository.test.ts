@@ -436,6 +436,13 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
       },
       risk: { deleteMany: noop, createMany: noop },
       decision: { deleteMany: noop, createMany: noop },
+      // review-acknowledgement (comment-aware save): capture reads existing
+      // comments before the child delete-recreate. No comments here → the
+      // re-insert step is skipped, so record findMany stubs are not needed.
+      recordComment: {
+        findMany: vi.fn(() => Promise.resolve([])),
+        createMany: noop,
+      },
     };
   }
 

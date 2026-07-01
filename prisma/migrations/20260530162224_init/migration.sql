@@ -770,3 +770,78 @@ ALTER TABLE "Risk"
 CREATE UNIQUE INDEX "ReopenRequest_one_pending_per_section"
   ON "ReopenRequest"("reportSectionId")
   WHERE "status" = 'pending';
+
+-- review-acknowledgement: reviewer designation flag on the viewer↔group access
+-- row. Per-row, so a canReview grant never crosses groups.
+ALTER TABLE "ViewerGroupAccess" ADD COLUMN "canReview" BOOLEAN NOT NULL DEFAULT false;
+
+-- review-acknowledgement: per-section verdict enum.
+CREATE TYPE "ReviewVerdict" AS ENUM ('approved', 'changes_requested');
+
+-- CreateTable: group-level "seen" receipt, one per (acknowledger, group, period).
+CREATE TABLE "ReviewAcknowledgement" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "reportId" TEXT NOT NULL,
+    "groupId" TEXT NOT NULL,
+    "seenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "ReviewAcknowledgement_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable: per-section verdict (approved | changes_requested), bound to the
+-- ReportSection.version it judged so re-submission auto-stales it.
+CREATE TABLE "SectionReview" (
+    "id" TEXT NOT NULL,
+    "reportSectionId" TEXT NOT NULL,
+    "reviewerId" TEXT NOT NULL,
+    "verdict" "ReviewVerdict" NOT NULL,
+    "judgedVersion" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "SectionReview_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable: reviewer comment anchored to exactly one concrete record.
+CREATE TABLE "RecordComment" (
+    "id" TEXT NOT NULL,
+    "reviewerId" TEXT NOT NULL,
+    "text" TEXT NOT NULL,
+    "itemId" TEXT,
+    "riskId" TEXT,
+    "decisionId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "RecordComment_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ReviewAcknowledgement_userId_reportId_groupId_key" ON "ReviewAcknowledgement"("userId", "reportId", "groupId");
+CREATE INDEX "ReviewAcknowledgement_reportId_groupId_idx" ON "ReviewAcknowledgement"("reportId", "groupId");
+CREATE UNIQUE INDEX "SectionReview_reportSectionId_reviewerId_key" ON "SectionReview"("reportSectionId", "reviewerId");
+CREATE INDEX "SectionReview_reportSectionId_idx" ON "SectionReview"("reportSectionId");
+CREATE INDEX "RecordComment_itemId_idx" ON "RecordComment"("itemId");
+CREATE INDEX "RecordComment_riskId_idx" ON "RecordComment"("riskId");
+CREATE INDEX "RecordComment_decisionId_idx" ON "RecordComment"("decisionId");
+CREATE INDEX "RecordComment_reviewerId_idx" ON "RecordComment"("reviewerId");
+
+-- AddForeignKey
+ALTER TABLE "ReviewAcknowledgement" ADD CONSTRAINT "ReviewAcknowledgement_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ReviewAcknowledgement" ADD CONSTRAINT "ReviewAcknowledgement_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES "Report"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ReviewAcknowledgement" ADD CONSTRAINT "ReviewAcknowledgement_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "ReportingGroup"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "SectionReview" ADD CONSTRAINT "SectionReview_reportSectionId_fkey" FOREIGN KEY ("reportSectionId") REFERENCES "ReportSection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "SectionReview" ADD CONSTRAINT "SectionReview_reviewerId_fkey" FOREIGN KEY ("reviewerId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "RecordComment" ADD CONSTRAINT "RecordComment_reviewerId_fkey" FOREIGN KEY ("reviewerId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "RecordComment" ADD CONSTRAINT "RecordComment_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "Item"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "RecordComment" ADD CONSTRAINT "RecordComment_riskId_fkey" FOREIGN KEY ("riskId") REFERENCES "Risk"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "RecordComment" ADD CONSTRAINT "RecordComment_decisionId_fkey" FOREIGN KEY ("decisionId") REFERENCES "Decision"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- review-acknowledgement: a RecordComment anchors to EXACTLY ONE record. Prisma
+-- cannot express a CHECK, so it is hand-written here as defence-in-depth behind
+-- the Zod input guard: exactly one of itemId / riskId / decisionId is non-null.
+ALTER TABLE "RecordComment"
+  ADD CONSTRAINT "RecordComment_exactly_one_anchor_check"
+  CHECK (
+    (("itemId" IS NOT NULL)::int
+      + ("riskId" IS NOT NULL)::int
+      + ("decisionId" IS NOT NULL)::int) = 1
+  );

@@ -23,6 +23,7 @@ import {
   ReportSectionDomainError,
   SectionVersionConflictError,
 } from "./report-sections.service";
+import { applyRevokeTransition } from "./revoke-transition";
 
 /**
  * Mirrors `normalizeStageName` in apps/web/src/lib/mappers/lead-form.ts — the
@@ -185,18 +186,11 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     revokedBy: string,
   ): Promise<void> {
     // The caller's scoped read already proved this id is in the caller's group,
-    // so the write is by id only. `updateMany` with the `status: "submitted"`
+    // so the write is by id only. The shared transition's `status: "submitted"`
     // guard keeps it race-safe (a concurrent revoke that already drafted the
-    // section matches zero rows rather than re-stamping it).
-    await this.prisma.reportSection.updateMany({
-      where: { id: sectionId, status: "submitted" },
-      data: {
-        status: "draft",
-        revokedAt: new Date(),
-        revokedBy,
-        submittedAt: null,
-      },
-    });
+    // section matches zero rows rather than re-stamping it). A reviewer's
+    // `changes_requested` verdict reuses this exact transition.
+    await applyRevokeTransition(this.prisma, sectionId, revokedBy);
   }
 
   /** SC-165: Revoke every submitted section in a report. */

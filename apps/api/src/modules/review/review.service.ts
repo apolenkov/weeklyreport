@@ -13,6 +13,24 @@ export class ReviewAccessError extends Error {
   }
 }
 
+// review-acknowledgement: a targeted record / section / comment does not exist
+// (or is out of the caller's reach — no existence oracle) → NOT_FOUND.
+export class ReviewNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ReviewNotFoundError";
+  }
+}
+
+// review-acknowledgement: a state constraint (e.g. a verdict on a non-editable
+// period) → BAD_REQUEST.
+export class ReviewConstraintError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ReviewConstraintError";
+  }
+}
+
 /**
  * UFB-040 / Phase 46-02: dashboard reads honour group-scope visibility.
  * The repository receives the requester's session so it can spread

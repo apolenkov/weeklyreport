@@ -7,8 +7,8 @@ datasource db {
 }
 
 model User {
-  id                      String              @id @default(uuid())
-  email                   String              @unique
+  id                      String                  @id @default(uuid())
+  email                   String                  @unique
   name                    String
   // Structured ФИО parts (surname-first). `name` stays the stored,
   // denormalized display value recomputed from these on admin write.
@@ -22,25 +22,30 @@ model User {
   // `role`. Free-text, nullable, never sourced from the IdP.
   position                String?
   role                    Role
-  samlId                  String              @unique
+  samlId                  String                  @unique
   reportingGroupId        String?
-  createdAt               DateTime            @default(now())
-  updatedAt               DateTime            @updatedAt
-  notificationOptOut      Boolean             @default(false)
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  notificationOptOut      Boolean                 @default(false)
   // A2 (UAT-v7 2026-05-12): soft-deactivation flag. false = deactivated.
   // Sessions are immediately revoked in Redis; Prisma is the authoritative
   // source for the isActive state.
-  isActive                Boolean             @default(true)
-  reportingGroup          ReportingGroup?     @relation(fields: [reportingGroupId], references: [id])
+  isActive                Boolean                 @default(true)
+  reportingGroup          ReportingGroup?         @relation(fields: [reportingGroupId], references: [id])
   ledProjects             Project[]
-  reopenRequestsRequested ReopenRequest[]     @relation("ReopenRequester")
-  reopenRequestsReviewed  ReopenRequest[]     @relation("ReopenReviewer")
-  publishedReports        Report[]            @relation("PublishedBy")
-  authoredReportSections  ReportSection[]     @relation("ReportSectionAuthor")
+  reopenRequestsRequested ReopenRequest[]         @relation("ReopenRequester")
+  reopenRequestsReviewed  ReopenRequest[]         @relation("ReopenReviewer")
+  publishedReports        Report[]                @relation("PublishedBy")
+  authoredReportSections  ReportSection[]         @relation("ReportSectionAuthor")
   stageAssignments        StageAssignment[]
   // UFB-039 back-relations
-  ledGroups               ReportingGroup[]    @relation("GroupHead")
-  viewerGroupAccess       ViewerGroupAccess[] @relation("ViewerGroupAccessViewer")
+  ledGroups               ReportingGroup[]        @relation("GroupHead")
+  viewerGroupAccess       ViewerGroupAccess[]     @relation("ViewerGroupAccessViewer")
+  // review-acknowledgement back-relations. A user authors acknowledgement
+  // receipts, section verdicts, and record comments as a reviewer.
+  reviewAcknowledgements  ReviewAcknowledgement[] @relation("ReviewAckUser")
+  sectionReviews          SectionReview[]         @relation("SectionReviewReviewer")
+  recordComments          RecordComment[]         @relation("RecordCommentReviewer")
   // UFB-056 / Phase 55-1: optional 1:1 inverse to the Telegram binding
   // row. Nullable because Telegram is opt-in — most users never bind a
   // chat. Cascade is intentional on the binding side (drop the row when
@@ -53,24 +58,26 @@ model User {
 }
 
 model ReportingGroup {
-  id            String              @id @default(uuid())
-  name          String
-  description   String?
-  archived      Boolean             @default(false)
+  id                     String                  @id @default(uuid())
+  name                   String
+  description            String?
+  archived               Boolean                 @default(false)
   // UFB-039: optional FK to the User (role=head or role=admin) who runs
   // this reporting group. Nullable because freshly-created groups may not
   // have a leader assigned yet; a UI guard nudges admins to set one.
   // Application-level invariant (not DB CHECK): the referenced User's role
   // must be 'head' or 'admin'.
-  headUserId    String?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  users         User[]
-  head          User?               @relation("GroupHead", fields: [headUserId], references: [id], onDelete: SetNull)
-  viewerAccess  ViewerGroupAccess[]
+  headUserId             String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  users                  User[]
+  head                   User?                   @relation("GroupHead", fields: [headUserId], references: [id], onDelete: SetNull)
+  viewerAccess           ViewerGroupAccess[]
+  // review-acknowledgement: group-level seen receipts for this group's report.
+  reviewAcknowledgements ReviewAcknowledgement[]
   // UFB-054 / Phase 56-A: explicit M:M edge to Project (products owned by
   // this group). Inverse of GroupProduct.group. See `GroupProduct` model.
-  groupProducts GroupProduct[]
+  groupProducts          GroupProduct[]
 
   @@index([archived])
   @@index([headUserId])
@@ -85,6 +92,12 @@ model ViewerGroupAccess {
   id           String         @id @default(uuid())
   viewerUserId String
   groupId      String
+  // review-acknowledgement: per-row reviewer designation. When true, this
+  // viewer may post per-section verdicts and per-record comments on THIS
+  // group's sections (head/admin are reviewers implicitly). Designation never
+  // crosses groups — it lives on the (viewer, group) row, so a viewer granted
+  // canReview for group A cannot review group B.
+  canReview    Boolean        @default(false)
   createdAt    DateTime       @default(now())
   viewer       User           @relation("ViewerGroupAccessViewer", fields: [viewerUserId], references: [id], onDelete: Cascade)
   group        ReportingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
@@ -167,24 +180,24 @@ model GroupProduct {
 }
 
 model Report {
-  id                String               @id @default(uuid())
-  periodStart       DateTime
-  periodEnd         DateTime
-  deadline          DateTime
-  status            ReportStatus         @default(draft)
-  publishedAt       DateTime?
-  publishedById     String?
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  periodStatus      PeriodStatus         @default(open)
-  reopenedAt        DateTime?
-  weekLabel         String?
+  id                     String                  @id @default(uuid())
+  periodStart            DateTime
+  periodEnd              DateTime
+  deadline               DateTime
+  status                 ReportStatus            @default(draft)
+  publishedAt            DateTime?
+  publishedById          String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  periodStatus           PeriodStatus            @default(open)
+  reopenedAt             DateTime?
+  weekLabel              String?
   // UFB-049 / Phase 50-B: lifecycle flag set by the auto-archiver scheduler
   // when `AppSettings.autoArchiveWeeksAfterPublish > 0` AND
   // `publishedAt + weeks * 7d < now`. Existing rows backfill to false via
   // the migration default. Indexed alongside periodStart so the archive
   // dashboard's "last N un-archived" query stays cheap.
-  archived          Boolean              @default(false)
+  archived               Boolean                 @default(false)
   // UFB-051 / Phase 51-A: lifecycle audit flags surfaced by the period
   // state-machine. `autoPublished` is set true when AutoPublisher (50-B
   // cron) flips status=draft→published at deadline+grace (vs an explicit
@@ -192,8 +205,8 @@ model Report {
   // ship as nullable-friendly defaults (`false`) so existing rows
   // backfill cleanly via the migration default. Consumers (state-machine
   // dashboard, admin audit feed) arrive in 51-B / 51-C.
-  autoPublished     Boolean              @default(false)
-  autoArchived      Boolean              @default(false)
+  autoPublished          Boolean                 @default(false)
+  autoArchived           Boolean                 @default(false)
   // UFB-053 / Phase 51-C: explicit lifecycle state column. The legacy
   // `status` + `archived` + `periodStatus` tuple is preserved (one-release
   // compatibility window) and writers update both the new column and the
@@ -208,18 +221,20 @@ model Report {
   // archive lifecycle (scheduled/open/published/archived, no reopened).
   // On reopen we revert `periodState` to `open` while flipping
   // `periodStatus` to `reopened` (Open Question — documented in SUMMARY).
-  periodState       PeriodState          @default(open)
+  periodState            PeriodState             @default(open)
   // Phase 65 / D-6: immutable publish-time read model for archive and
   // director-facing published views. Reopen/draft edits after publication
   // must not mutate the published output until the next publish writes a
   // replacement snapshot.
-  publishedSnapshot Json?
-  carryOverSources  CarryOverExecution[] @relation("CarryOverSource")
-  carryOverTargets  CarryOverExecution[] @relation("CarryOverTarget")
-  pdfExportJobs     PdfExportJob[]
-  reminderRules     ReminderRule[]
-  publishedBy       User?                @relation("PublishedBy", fields: [publishedById], references: [id])
-  sections          ReportSection[]
+  publishedSnapshot      Json?
+  carryOverSources       CarryOverExecution[]    @relation("CarryOverSource")
+  carryOverTargets       CarryOverExecution[]    @relation("CarryOverTarget")
+  pdfExportJobs          PdfExportJob[]
+  reminderRules          ReminderRule[]
+  publishedBy            User?                   @relation("PublishedBy", fields: [publishedById], references: [id])
+  sections               ReportSection[]
+  // review-acknowledgement: group-level seen receipts pinned to this period.
+  reviewAcknowledgements ReviewAcknowledgement[]
   // C2 (A24/A21): PARTIAL UNIQUE INDEX "Report_one_open_per_boundary"
   // ON ("periodStart","periodEnd") WHERE "periodState"='open' — hand-written in
   // the init migration (migrations/20260530162224_init/migration.sql) because the
@@ -233,33 +248,35 @@ model Report {
 }
 
 model ReportSection {
-  id               String              @id @default(uuid())
-  reportId         String
-  authorId         String
-  status           ReportSectionStatus @default(draft)
-  submittedAt      DateTime?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+  id              String              @id @default(uuid())
+  reportId        String
+  authorId        String
+  status          ReportSectionStatus @default(draft)
+  submittedAt     DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
   // Optimistic-concurrency row revision: every section write does a
   // compare-and-set on this column and increments it, so a stale writer's
   // delete-then-recreate cannot silently clobber a newer save (a conflict
   // surfaces as 409). Distinct from the published-snapshot version.
-  version          Int                 @default(1)
-  revokedAt        DateTime?
-  revokedBy        String?
+  version         Int                 @default(1)
+  revokedAt       DateTime?
+  revokedBy       String?
   // UFB-049 / Phase 50-B: stamped true by submitSection when
   // `now > Report.deadline` (regardless of grace-period). Used by head
   // dashboard + lead form to render a "late" badge. Existing rows
   // backfill to false via the migration default.
-  late             Boolean             @default(false)
-  decisions        Decision[]
-  items            Item[]
-  projectStatuses  ProjectStatus[]
-  reopenRequests   ReopenRequest[]
-  author           User                @relation("ReportSectionAuthor", fields: [authorId], references: [id])
-  report           Report              @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  risks            Risk[]
-  stageStatuses    StageStatus[]
+  late            Boolean             @default(false)
+  decisions       Decision[]
+  items           Item[]
+  projectStatuses ProjectStatus[]
+  reopenRequests  ReopenRequest[]
+  author          User                @relation("ReportSectionAuthor", fields: [authorId], references: [id])
+  report          Report              @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  risks           Risk[]
+  stageStatuses   StageStatus[]
+  // review-acknowledgement: per-section verdicts (one per reviewer).
+  sectionReviews  SectionReview[]
 
   @@unique([reportId, authorId])
   @@index([authorId])
@@ -323,6 +340,10 @@ model Item {
   stageNames      String[]
   project         Project                  @relation(fields: [projectId], references: [id])
   reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  // review-acknowledgement: reviewer comments anchored to this item (cascade
+  // on delete; saveSection preserves them across its recreate — see the
+  // comment-transfer step in report-sections.prisma-repository).
+  recordComments  RecordComment[]
 
   @@unique([reportSectionId, stableId])
   @@index([reportSectionId])
@@ -350,6 +371,8 @@ model Risk {
   stageNames      String[]
   project         Project                  @relation(fields: [projectId], references: [id])
   reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  // review-acknowledgement: reviewer comments anchored to this risk (cascade).
+  recordComments  RecordComment[]
 
   @@unique([reportSectionId, stableId])
   @@index([reportSectionId])
@@ -379,6 +402,8 @@ model Decision {
   // Restrict on project delete (matching Item/Risk/ProjectStatus): hard product
   // deletion is unsupported; retire a product via the `archived` flag instead.
   project         Project                  @relation(fields: [productId], references: [id])
+  // review-acknowledgement: reviewer comments anchored to this decision (cascade).
+  recordComments  RecordComment[]
 
   @@unique([reportSectionId, stableId])
   @@index([reportSectionId])
@@ -527,11 +552,6 @@ model ReopenRequest {
   reportSection   ReportSection       @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
   requestedBy     User                @relation("ReopenRequester", fields: [requestedById], references: [id])
   reviewedBy      User?               @relation("ReopenReviewer", fields: [reviewedById], references: [id])
-
-  @@index([status, createdAt])
-  @@index([reportSectionId])
-  @@index([requestedById])
-  @@index([reviewedById])
   // reopen-request-lifecycle (D5): at most ONE pending request per section.
   // Enforced by a PARTIAL unique index `ReopenRequest_one_pending_per_section`
   // ON ("reportSectionId") WHERE "status" = 'pending'. Prisma cannot express a
@@ -539,6 +559,11 @@ model ReopenRequest {
   // (prisma/migrations/20260530162224_init/migration.sql). Approved/rejected
   // rows are unconstrained, so a section can be reopened, re-submitted, and
   // requested again.
+
+  @@index([status, createdAt])
+  @@index([reportSectionId])
+  @@index([requestedById])
+  @@index([reviewedById])
 }
 
 // UFB-048 (Phase 48-B): AppSettings expansion. Nine new org-wide knobs that
@@ -605,6 +630,78 @@ model Organization {
   fullName  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// review-acknowledgement: a group-level "seen" receipt. One row per
+// (acknowledger, group, period): reportId pins the period, groupId makes it
+// per-group so a viewer with access to two groups in one period can
+// acknowledge one without the other. Re-acknowledging is an idempotent upsert
+// that refreshes seenAt. Requires only group access — never the reviewer flag.
+model ReviewAcknowledgement {
+  id       String         @id @default(uuid())
+  userId   String
+  reportId String
+  groupId  String
+  // Refreshed on every idempotent re-acknowledge (@default on create,
+  // @updatedAt on upsert-update).
+  seenAt   DateTime       @default(now()) @updatedAt
+  user     User           @relation("ReviewAckUser", fields: [userId], references: [id], onDelete: Cascade)
+  report   Report         @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  group    ReportingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, reportId, groupId])
+  @@index([reportId, groupId])
+}
+
+// review-acknowledgement: a per-section verdict by a designated reviewer.
+// One row per (section, reviewer); posting again upserts. `judgedVersion`
+// records the ReportSection.version at verdict time — a verdict is CURRENT
+// only while judgedVersion equals the section's version, so a re-submission
+// (which bumps version) makes a prior verdict stale with no clearing step.
+model SectionReview {
+  id              String        @id @default(uuid())
+  reportSectionId String
+  reviewerId      String
+  verdict         ReviewVerdict
+  judgedVersion   Int
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  reviewer        User          @relation("SectionReviewReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@unique([reportSectionId, reviewerId])
+  @@index([reportSectionId])
+}
+
+// review-acknowledgement: a reviewer comment anchored to exactly one concrete
+// record — an Item, Risk, or Decision (the discriminated FK trio; exactly one
+// non-null, enforced by a hand-written CHECK in the init migration and the Zod
+// input). Each anchor cascades so a comment dies with its record. Flat, no
+// reply threads. `reviewerId` is the human author today; the column set leaves
+// room for a future non-human (AI) reviewer without a breaking change.
+model RecordComment {
+  id         String    @id @default(uuid())
+  reviewerId String
+  text       String
+  itemId     String?
+  riskId     String?
+  decisionId String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  reviewer   User      @relation("RecordCommentReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  item       Item?     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  risk       Risk?     @relation(fields: [riskId], references: [id], onDelete: Cascade)
+  decision   Decision? @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@index([riskId])
+  @@index([decisionId])
+  @@index([reviewerId])
+}
+
+enum ReviewVerdict {
+  approved
+  changes_requested
 }
 
 enum Role {
