@@ -26,6 +26,8 @@ import { PrismaClient } from "@prisma/client";
 import { config as loadEnv } from "dotenv";
 import pg from "pg";
 
+import { assertNonProdDestructive } from "./_destructive-guard.js";
+
 // Load .env from repo root regardless of cwd.
 const REPO_ROOT = resolve(__dirname, "..");
 loadEnv({ path: resolve(REPO_ROOT, ".env") });
@@ -62,6 +64,7 @@ function policyAppliesTo(
 }
 
 async function main(): Promise<void> {
+  assertNonProdDestructive("backfill-policy-rules");
   const pool = new pg.Pool({ connectionString: DATABASE_URL });
   const adapter = new PrismaPg(pool);
   const prisma = new PrismaClient({ adapter });

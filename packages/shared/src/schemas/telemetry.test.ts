@@ -71,18 +71,28 @@ describe("telemetrySummarySchema (Phase 52 / UFB-054)", () => {
     ).toBe(false);
   });
 
-  it("caps sparkline length at 8 entries", () => {
-    const tooLong = Array.from({ length: 9 }, () => 0.9);
+  // telemetry-summary-contract: the sparkline is the 4-week on-time window;
+  // the only producer emits at most 4 points, so the schema bound is ≤ 4.
+  it("caps sparkline length at 4 entries (rejects 5, accepts 4)", () => {
+    const base = {
+      reportsThisPeriod: 0,
+      onTimeRatio: null,
+      activeLeads: 0,
+      lateSections: 0,
+      pendingReopens: 0,
+      pdfExportsLast7d: 0,
+    };
     expect(
       telemetrySummarySchema.safeParse({
-        reportsThisPeriod: 0,
-        onTimeRatio: null,
-        activeLeads: 0,
-        lateSections: 0,
-        pendingReopens: 0,
-        pdfExportsLast7d: 0,
-        sparkline: tooLong,
+        ...base,
+        sparkline: Array.from({ length: 5 }, () => 0.9),
       }).success,
     ).toBe(false);
+    expect(
+      telemetrySummarySchema.safeParse({
+        ...base,
+        sparkline: Array.from({ length: 4 }, () => 0.9),
+      }).success,
+    ).toBe(true);
   });
 });

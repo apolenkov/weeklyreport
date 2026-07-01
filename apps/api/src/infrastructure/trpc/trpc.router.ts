@@ -347,7 +347,7 @@ export function createAppRouter(deps: RouterDeps) {
         return users;
       }),
 
-      wipeAndReseed: protectedProcedure
+      wipeAndReseed: adminProcedure
         .input(
           z.object({
             variant: z

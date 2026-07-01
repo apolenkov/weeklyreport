@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { safeText } from "./report-primitives.schema.js";
+
 /**
  * 39-05 (PERF-05): full-text search.
  *
@@ -49,7 +51,8 @@ export type SearchHit = z.infer<typeof searchHitSchema>;
  *
  * - `q` minimum length 2 — the spec is explicit about that floor (Russian
  *   compounds, English abbreviations like "PR" / "QA" benefit from a low
- *   threshold). 3-char floor was rejected.
+ *   threshold). 3-char floor was rejected. `safeText` additionally rejects
+ *   null bytes (incompatible with `plainto_tsquery`) and invisible-only input.
  * - `scope='mine'` filters to rows the caller authored (item/risk/decision)
  *   or leads (project). `scope='all'` is admin/head-only and is rejected
  *   server-side for `lead` sessions with FORBIDDEN.
@@ -60,7 +63,7 @@ export type SearchHit = z.infer<typeof searchHitSchema>;
  *   the published, in-group content the viewer can already read.
  */
 export const searchQueryInputSchema = z.object({
-  q: z.string().min(2).max(200),
+  q: safeText({ min: 2, max: 200 }),
   scope: z.enum(["mine", "all", "published"]).default("mine"),
   limit: z.number().int().min(1).max(50).default(20),
 });

@@ -9,10 +9,14 @@
  *   4. host non-local AND name lacks non-prod suffix → refuse
  *
  * Allow rules:
- *   - host is localhost / 127.0.0.1 / postgres (docker) / *.local
- *     (impossible to reach prod through these)
- *   - OR db name explicitly suffixed _uat / _dev / _test / _local /
- *     _staging
+ *   - host is truly local — localhost / 127.0.0.1 / *.local — which cannot
+ *     physically reach prod, so it is allowed unconditionally
+ *   - OR db name explicitly suffixed _uat / _dev / _test / _local / _staging
+ *
+ * The Docker Compose `postgres` service host is NOT truly local: a staging
+ * stack can reuse that service name while pointing at production data, so it
+ * is allowed ONLY when the db name carries one of the non-prod suffixes above
+ * (matching the `isTrulyLocal` check below).
  *
  * Override (e.g. prod data migration with backup):
  *   ALLOW_PROD_DESTRUCTIVE=yes pnpm db:reset:hard

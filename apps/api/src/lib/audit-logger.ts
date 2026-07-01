@@ -1,4 +1,4 @@
-import type { AuditLogger } from "./audit-logger-types.js";
+import type { AuditEvent, AuditLogger } from "./audit-logger-types.js";
 import type { AppLogger } from "./logger.js";
 
 // AUTH-08 audit envelope + event types live in ./audit-logger-types (R3a-4
@@ -16,9 +16,21 @@ const AUDIT_MESSAGE = "audit";
  * appropriate level without any extra setup.
  */
 export function createAuditLogger(logger: AppLogger): AuditLogger {
+  // Every audit line flows through here so the compiler checks each `event`
+  // string against the AuditEvent union — an undeclared or misspelled event is
+  // a typecheck error at the call site. A bare `satisfies AuditEnvelope` cannot
+  // do this: it rejects the per-event fields (periodId, changes, …) as excess
+  // properties. The index signature carries those fields untyped instead.
+  const emit = (
+    level: "info" | "warn",
+    payload: { event: AuditEvent } & Record<string, unknown>,
+  ): void => {
+    logger[level](AUDIT_MESSAGE, payload);
+  };
+
   return {
     loginSuccess(input) {
-      logger.info(AUDIT_MESSAGE, {
+      emit("info", {
         event: "login-success",
         userId: input.userId,
         role: input.role,
@@ -26,7 +38,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
       });
     },
     loginFail(input) {
-      logger.warn(AUDIT_MESSAGE, {
+      emit("warn", {
         event: "login-fail",
         userId: input.userId,
         role: input.role,
@@ -35,7 +47,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
       });
     },
     logout(input) {
-      logger.info(AUDIT_MESSAGE, {
+      emit("info", {
         event: "logout",
         userId: input.userId,
         role: input.role,
@@ -43,7 +55,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
       });
     },
     roleDenied(input) {
-      logger.warn(AUDIT_MESSAGE, {
+      emit("warn", {
         event: "role-denied",
         userId: input.userId,
         role: input.role,
@@ -52,7 +64,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
       });
     },
     scopeDenied(input) {
-      logger.warn(AUDIT_MESSAGE, {
+      emit("warn", {
         event: "scope-denied",
         userId: input.userId,
         role: input.role,
@@ -64,8 +76,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
     mutation(input) {
       // Successes flow at info; failures flow at warn so the default logger
       // surface escalates appropriately without extra config.
-      const level = input.status === "success" ? "info" : "warn";
-      logger[level](AUDIT_MESSAGE, {
+      emit(input.status === "success" ? "info" : "warn", {
         event: "mutation",
         userId: input.userId,
         role: input.role,
@@ -78,7 +89,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
       });
     },
     policySave(input) {
-      logger.info(AUDIT_MESSAGE, {
+      emit("info", {
         event: "admin.policy.save",
         userId: input.userId,
         role: input.role,
@@ -89,7 +100,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
       });
     },
     policyRemove(input) {
-      logger.info(AUDIT_MESSAGE, {
+      emit("info", {
         event: "admin.policy.remove",
         userId: input.userId,
         role: input.role,
@@ -98,7 +109,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
       });
     },
     organizationUpdate(input) {
-      logger.info(AUDIT_MESSAGE, {
+      emit("info", {
         event: "admin.organization.update",
         userId: input.userId,
         role: input.role,
@@ -110,7 +121,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
       });
     },
     periodAutoCreate(input) {
-      logger.info(AUDIT_MESSAGE, {
+      emit("info", {
         event: "period.auto-create",
         userId: "system",
         role: null,
@@ -124,7 +135,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
       });
     },
     periodAutoPublish(input) {
-      logger.info(AUDIT_MESSAGE, {
+      emit("info", {
         event: "period.auto-publish",
         userId: "system",
         role: null,
@@ -136,7 +147,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
       });
     },
     periodAutoArchive(input) {
-      logger.info(AUDIT_MESSAGE, {
+      emit("info", {
         event: "period.auto-archive",
         userId: "system",
         role: null,
@@ -147,7 +158,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
       });
     },
     periodManualCreate(input) {
-      logger.info(AUDIT_MESSAGE, {
+      emit("info", {
         event: "period.manual-create",
         userId: input.userId,
         role: input.role,
@@ -161,7 +172,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
       });
     },
     periodManualEdit(input) {
-      logger.info(AUDIT_MESSAGE, {
+      emit("info", {
         event: "period.manual-edit",
         userId: input.userId,
         role: input.role,
@@ -171,7 +182,7 @@ export function createAuditLogger(logger: AppLogger): AuditLogger {
       });
     },
     scopeAccessed(input) {
-      logger.info(AUDIT_MESSAGE, {
+      emit("info", {
         event: "scope-accessed",
         userId: input.userId,
         role: input.role,

@@ -38,6 +38,7 @@ import {
   ADMIN_USER_ID,
   DEFAULT_REPORTING_GROUP_ID,
 } from "./seed-constants.js";
+import { assertNonProdDestructive } from "./_destructive-guard.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -132,6 +133,7 @@ function stageAssignmentId(prodSeq: number, stageSeq: number): string {
 }
 
 async function main() {
+  assertNonProdDestructive("seed");
   // --- 0. Reporting groups ---
   for (const group of SEED_REPORTING_GROUPS) {
     await prisma.reportingGroup.upsert({
