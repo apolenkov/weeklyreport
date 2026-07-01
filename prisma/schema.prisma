@@ -131,8 +131,8 @@ model Project {
   // GroupProduct.product. Left untouched on backfill; existing read paths
   // that derive group via `lead.reportingGroupId` continue to work.
   groupProducts    GroupProduct[]
-  // R4-C: required 1:N edge to Decision. productId is NOT NULL after R4-C migration.
-  // Cascade on project delete removes orphaned artefacts.
+  // Required 1:N edge to Decision (productId is NOT NULL). The FK is Restrict on
+  // project delete, so authored decisions cannot be silently dropped.
   decisions        Decision[]
 
   @@index([leadId])
@@ -140,18 +140,18 @@ model Project {
   @@index([searchTsv], type: Gin)
 }
 
-// UFB-054 / Phase 56-A: explicit Group ↔ Product M:M edge.
+// Explicit Group → Product edge.
 //
 // Today products belong to a group implicitly through `Project.lead.reportingGroupId`.
-// This model represents the explicit edge so:
-//   - a product can belong to multiple groups (cross-departmental);
+// This model makes the ownership explicit so:
+//   - a product belongs to exactly one reporting group, enforced by
+//     `@@unique([productId])`; a group can contain many products;
 //   - lead rotation does not change product ownership at the group level;
 //   - head dashboards can read «my group's products» without joining through User.
 //
-// Backfill (in the same migration) seeds one row per existing Project mapping
-// to `Project.lead.reportingGroupId`. Existing scope-filter consumers continue
-// to derive group from `Project.lead.reportingGroupId` until they opt in via
-// the Phase 56-D flag.
+// Backfill seeds one row per existing Project mapping to
+// `Project.lead.reportingGroupId`. Existing scope-filter consumers continue to
+// derive group from `Project.lead.reportingGroupId` until they opt in.
 model GroupProduct {
   id        String         @id @default(uuid())
   groupId   String
@@ -288,7 +288,9 @@ model StageStatus {
   status          TrafficLightStatus?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
-  project         Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  // Restrict on project delete (matching Item/Risk/ProjectStatus): hard product
+  // deletion is unsupported; retire a product via the `archived` flag instead.
+  project         Project             @relation(fields: [projectId], references: [id])
   reportSection   ReportSection       @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
   stage           Stage               @relation(fields: [stageId], references: [id], onDelete: Cascade)
 
@@ -355,7 +357,9 @@ model Decision {
   searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, COALESCE(text, ''::text))"))
   stageNames      String[]
   reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  project         Project                  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // Restrict on project delete (matching Item/Risk/ProjectStatus): hard product
+  // deletion is unsupported; retire a product via the `archived` flag instead.
+  project         Project                  @relation(fields: [productId], references: [id])
 
   @@index([reportSectionId])
   @@index([productId])

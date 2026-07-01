@@ -2,8 +2,8 @@
  * Minimal Mailpit HTTP API helper for integration tests.
  *
  * Mailpit exposes a REST API at http://localhost:8025/api/v1/messages.
- * These helpers are intentionally thin — no retry loop; call-sites that
- * need polling import `pollMailpit` instead of the direct `listMessages`.
+ * `listMessages` is intentionally thin — no retry loop; call-sites that
+ * need to wait for a message import `pollForMessage` instead.
  */
 
 const MAILPIT_BASE = "http://localhost:8025";

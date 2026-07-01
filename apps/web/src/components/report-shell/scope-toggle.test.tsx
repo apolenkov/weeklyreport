@@ -33,6 +33,54 @@ describe("ScopeToggle", () => {
     expect(onChange).toHaveBeenCalledWith("product");
   });
 
+  it("only the checked radio is in the tab order (roving tabindex)", () => {
+    render(
+      <ScopeToggle
+        value="product"
+        onChange={vi.fn()}
+        allowedScopes={["own", "product", "lead"]}
+      />,
+    );
+    expect(screen.getByRole("radio", { name: "Product" })).toHaveAttribute(
+      "tabindex",
+      "0",
+    );
+    expect(screen.getByRole("radio", { name: "Summary" })).toHaveAttribute(
+      "tabindex",
+      "-1",
+    );
+  });
+
+  it("ArrowRight selects and wraps to the next scope", () => {
+    const onChange = vi.fn();
+    render(
+      <ScopeToggle
+        value="lead"
+        onChange={onChange}
+        allowedScopes={["own", "product", "lead"]}
+      />,
+    );
+    fireEvent.keyDown(screen.getByRole("radio", { name: "Leads" }), {
+      key: "ArrowRight",
+    });
+    expect(onChange).toHaveBeenCalledWith("own");
+  });
+
+  it("ArrowLeft selects the previous scope", () => {
+    const onChange = vi.fn();
+    render(
+      <ScopeToggle
+        value="product"
+        onChange={onChange}
+        allowedScopes={["own", "product", "lead"]}
+      />,
+    );
+    fireEvent.keyDown(screen.getByRole("radio", { name: "Product" }), {
+      key: "ArrowLeft",
+    });
+    expect(onChange).toHaveBeenCalledWith("own");
+  });
+
   it("marks the active scope as aria-checked", () => {
     render(
       <ScopeToggle

@@ -1,7 +1,7 @@
 import { type UserSession, userSessionSchema } from "@customreport/shared";
 import { parse } from "cookie";
 
-const AUTH_COOKIE_NAME = "customreport_session";
+export const AUTH_COOKIE_NAME = "customreport_session";
 
 export function extractSessionToken(
   cookieHeader: string | null | undefined,

@@ -6,15 +6,45 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { createAppRouter } from "../../infrastructure/trpc/trpc.router.js";
+import { createNullAuditLogger } from "../../lib/audit-logger.js";
+import { createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
-import { adminRouter } from "./admin.router";
 import {
-  AdminAccessError,
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
   type AdminRepository,
   AdminService,
 } from "./admin.service";
+
+const adminSession: UserSession = {
+  userId: "00000000-0000-4000-8000-0000000000ad",
+  email: "admin@customreport.local",
+  name: "Platform Admin",
+  role: "admin",
+  activeReportId: "22222222-2222-4222-8222-222222222222",
+  activeReportSectionId: null,
+};
+
+/**
+ * Drive the live `admin.snapshot` procedure (adminProcedure, admin-only) so the
+ * gate is asserted against the wired path, not a parallel router copy. Heads get
+ * FORBIDDEN here — the admin panel is admin-only.
+ */
+function buildAdminCaller(service: AdminService, session: UserSession) {
+  const deps = { adminService: service } as unknown as Parameters<
+    typeof createAppRouter
+  >[0];
+
+  return createAppRouter(deps).createCaller({
+    session,
+    logger: createNullLogger(),
+    auditLogger: createNullAuditLogger(),
+    ip: "test-ip",
+    isPdfExport: false,
+    pdfReportId: null,
+  });
+}
 
 const headSession: UserSession = {
   userId: "00000000-0000-4000-8000-000000000001",
@@ -347,12 +377,16 @@ describe("AdminService", () => {
     expect(withRule.reminderRules).toHaveLength(1);
   });
 
-  it("rejects non-head access in the router layer", async () => {
+  it("rejects non-admin access at the live procedure gate", async () => {
     const service = new AdminService(createRepository(initialSnapshot));
 
+    // Both lead and head are non-admin: the panel is admin-only.
     await expect(
-      adminRouter.getSnapshot({ adminService: service, session: leadSession }),
-    ).rejects.toBeInstanceOf(AdminAccessError);
+      buildAdminCaller(service, leadSession).admin.snapshot(),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      buildAdminCaller(service, headSession).admin.snapshot(),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
   // -----------------------------------------------------------------------
@@ -812,12 +846,12 @@ describe("removeReminderRule — deletion", () => {
   });
 });
 
-describe("adminRouter", () => {
-  it("returns the admin snapshot for head users", async () => {
+describe("admin.snapshot (live adminProcedure)", () => {
+  it("returns the admin snapshot for admin users", async () => {
     const service = new AdminService(createRepository(initialSnapshot));
 
     await expect(
-      adminRouter.getSnapshot({ adminService: service, session: headSession }),
+      buildAdminCaller(service, adminSession).admin.snapshot(),
     ).resolves.toMatchObject({ users: [{ role: "head" }] });
   });
 });

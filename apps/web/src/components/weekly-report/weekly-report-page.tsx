@@ -20,6 +20,7 @@ import {
   mapWeeklyReportLeadOverview,
 } from "../../lib/mappers";
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
+import { reportHasContent } from "../../lib/mappers/report-content";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
@@ -435,13 +436,6 @@ export function WeeklyReportPage({
   // groups the body renders, so the summary band and the body agree 1:1.
   const leadOverviewRows = mapWeeklyReportLeadOverview(rawLeadGroups);
 
-  const hasReportContent = (report: ProductReport) =>
-    Boolean(report.needsAttention) ||
-    report.currentWeek.length > 0 ||
-    report.nextWeek.length > 0 ||
-    report.risks.length > 0 ||
-    report.decisions.length > 0 ||
-    report.priorities.length > 0;
   const authoredProductIds = focusedAuthorId
     ? products
         .filter((report) => report.authorIds?.includes(focusedAuthorId))
@@ -451,10 +445,10 @@ export function WeeklyReportPage({
     ? products.find(
         (report) =>
           report.authorIds?.includes(focusedAuthorId) &&
-          hasReportContent(report),
+          reportHasContent(report),
       )?.id
     : undefined;
-  const hasExpandableProducts = products.some(hasReportContent);
+  const hasExpandableProducts = products.some(reportHasContent);
   const canPublishReport = submitted > 0 && hasExpandableProducts;
   // head-toolbar-semantics: the publish precondition hint sits on the status
   // row, shown only to publish-capable roles while the period is unpublished

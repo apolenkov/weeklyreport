@@ -48,8 +48,6 @@ export function createAuthRedirectHandler(): (err: unknown) => boolean {
     const { pathname, search } = window.location;
     if (AUTH_REDIRECT_EXEMPT.test(pathname)) return false;
 
-    const target = new URL("/", window.location.href);
-    target.searchParams.set("next", pathname + search);
     // Use just pathname+search for assign — keeps the host and scheme
     // implicit (some tests stub window.location and don't include origin).
     window.location.assign(`/?next=${encodeURIComponent(pathname + search)}`);

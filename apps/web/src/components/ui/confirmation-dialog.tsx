@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
+
+import { useDialogFocus } from "../../lib/use-dialog-focus";
 
 type ConfirmationDialogVariant =
   | "submit"
@@ -42,7 +44,8 @@ const DESTRUCTIVE_VARIANTS = new Set<ConfirmationDialogVariant>([
  * Reusable confirmation dialog for all confirmation actions:
  * Submit, Publish, Reopen, Revoke, Fill From, Version Restore, Delete
  *
- * - Traps focus inside dialog
+ * - Traps focus inside the dialog and restores it to the trigger on close
+ *   (via the shared `useDialogFocus` primitive)
  * - Closes on Escape
  * - Closes on backdrop click
  * - Supports destructive (red) and standard (green) confirm buttons
@@ -62,27 +65,7 @@ export function ConfirmationDialog({
 
   const isDestructive = DESTRUCTIVE_VARIANTS.has(variant);
 
-  // Focus trap: focus the dialog when opened
-  useEffect(() => {
-    if (open && dialogRef.current) {
-      const firstButton = dialogRef.current.querySelector("button");
-      firstButton?.focus();
-    }
-  }, [open]);
-
-  // Escape key handler
-  useEffect(() => {
-    if (!open) return;
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+  useDialogFocus({ open, onClose, containerRef: dialogRef });
 
   if (!open) return null;
 

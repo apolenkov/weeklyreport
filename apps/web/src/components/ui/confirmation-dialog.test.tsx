@@ -162,4 +162,53 @@ describe("ConfirmationDialog", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it("Tab from the last focusable wraps to the first (focus trap)", () => {
+    render(
+      <ConfirmationDialog
+        open={true}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+        title="Delete Item?"
+        description="Are you sure?"
+      />,
+    );
+
+    const cancelBtn = screen.getByRole("button", { name: /cancel/i });
+    const confirmBtn = screen.getByRole("button", { name: /confirm/i });
+    confirmBtn.focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(cancelBtn).toHaveFocus();
+  });
+
+  it("restores focus to the trigger when the dialog closes", () => {
+    function Harness({ open }: { readonly open: boolean }) {
+      return (
+        <>
+          <button type="button" data-testid="trigger">
+            Open
+          </button>
+          <ConfirmationDialog
+            open={open}
+            onClose={vi.fn()}
+            onConfirm={vi.fn()}
+            title="Delete Item?"
+            description="Are you sure?"
+          />
+        </>
+      );
+    }
+
+    const { rerender } = render(<Harness open={false} />);
+    const trigger = screen.getByTestId("trigger");
+    trigger.focus();
+    expect(trigger).toHaveFocus();
+
+    rerender(<Harness open={true} />);
+    // Focus moved into the dialog (Cancel button), off the trigger.
+    expect(trigger).not.toHaveFocus();
+
+    rerender(<Harness open={false} />);
+    expect(trigger).toHaveFocus();
+  });
 });

@@ -3,6 +3,8 @@ import "server-only";
 import type { UserSession } from "@customreport/shared";
 import { cookies } from "next/headers";
 
+import { AUTH_COOKIE_NAME } from "../../server/auth/session";
+
 /**
  * fix-report-surface-integrity W2 (task 3.3): server-only helper for the
  * `/print/[reportId]` route gate. Reads the session cookie via Next.js
@@ -18,7 +20,7 @@ import { cookies } from "next/headers";
  * Mirrors `get-server-session.ts`: single batched GET to the API, superjson
  * decode, fail-closed on any network/parse error.
  */
-const COOKIE_NAME = "customreport_session";
+const COOKIE_NAME = AUTH_COOKIE_NAME;
 
 export interface PrintRouteContext {
   readonly session: UserSession | null;

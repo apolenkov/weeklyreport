@@ -116,6 +116,8 @@ export interface LeadKanbanItem {
   status: ItemStatus;
   text: string;
   author: string;
+  /** Priority rank carried through so the edit dialog can bind it (null = unranked). */
+  priorityRank: number | null;
 }
 
 export interface LeadRiskEntry {

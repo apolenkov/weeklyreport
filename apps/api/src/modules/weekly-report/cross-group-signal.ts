@@ -1,3 +1,4 @@
+import { computeAllowedGroupIds } from "../../lib/group-scope.js";
 import type {
   WeeklyReportRepositoryResult,
   WeeklyReportScopeSession,
@@ -25,7 +26,7 @@ export function computeCrossGroupSignal(
 ): WeeklyReportRepositoryResult["crossGroup"] {
   if (!session || session.role === "admin") return null;
 
-  const allowedGroupIds = getAllowedGroupIds(session);
+  const allowedGroupIds = computeAllowedGroupIds(session);
   if (allowedGroupIds.length === 0) return null;
 
   const allowedSet = new Set(allowedGroupIds);
@@ -46,15 +47,4 @@ export function computeCrossGroupSignal(
     productIds: crossGroupProductIds,
     groupIds: [...crossGroupGroupIdSet],
   };
-}
-
-/** Extract allowed group ids from a scoped (non-admin) session. */
-function getAllowedGroupIds(session: WeeklyReportScopeSession): string[] {
-  if (session.role === "head" || session.role === "lead") {
-    return session.reportingGroupId ? [session.reportingGroupId] : [];
-  }
-  if (session.role === "viewer") {
-    return session.viewerGroupAccess ?? [];
-  }
-  return [];
 }

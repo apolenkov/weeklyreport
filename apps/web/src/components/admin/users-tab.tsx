@@ -2,12 +2,13 @@
 
 import { shortName } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../lib/cache-keys";
 import { toAdminUserInput } from "../../lib/mappers";
 import { useTRPC } from "../../lib/trpc-context";
+import { useDialogFocus } from "../../lib/use-dialog-focus";
 import type { MockGroup, MockUser, UserRole } from "./mock-data";
 import { TabFilter, TabHeader, TabSearch } from "./tab-header";
 
@@ -71,18 +72,10 @@ export function UsersTab({ users, groups }: UsersTabProps) {
   // B3: status quick-filter (default "active" — hides deactivated on load)
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("active");
 
-  // admin-dialog-focus-management: save the trigger element so focus can be
-  // restored when the dialog closes (Escape, Cancel, backdrop, save success).
+  // Save the trigger element so the shared focus primitive can restore focus
+  // to it when the dialog closes (Escape, Cancel, backdrop, save success).
   const dialogTriggerRef = useRef<HTMLElement | null>(null);
-
-  // Restore focus to the trigger whenever the dialog closes (all close paths
-  // set showDialog→false: Escape listener, Cancel, backdrop, save success).
-  useEffect(() => {
-    if (!showDialog && dialogTriggerRef.current) {
-      dialogTriggerRef.current.focus();
-      dialogTriggerRef.current = null;
-    }
-  }, [showDialog]);
+  const dialogSurfaceRef = useRef<HTMLDivElement>(null);
 
   const activeGroups = useMemo(
     () => groups.filter((group) => !group.archived),
@@ -110,19 +103,13 @@ export function UsersTab({ users, groups }: UsersTabProps) {
     [groups],
   );
 
-  // Escape closes the Add/Edit dialog. The dialog is rendered inline (not
-  // through a Radix wrapper) so we wire the listener manually.
-  useEffect(() => {
-    if (!showDialog) return;
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        setShowDialog(false);
-      }
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [showDialog]);
+  // Focus trap + Escape-to-close + restore-to-trigger via the shared primitive.
+  useDialogFocus({
+    open: showDialog,
+    onClose: () => setShowDialog(false),
+    containerRef: dialogSurfaceRef,
+    triggerRef: dialogTriggerRef,
+  });
 
   const saveUserMut = useMutation(
     trpc.admin.saveUser.mutationOptions({
@@ -417,6 +404,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
         >
           {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops mouse-click propagation to the backdrop; the dialog is keyboard-closable via Escape + Cancel button */}
           <div
+            ref={dialogSurfaceRef}
             className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
             role="dialog"
             aria-modal="true"

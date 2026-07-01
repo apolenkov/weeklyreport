@@ -301,7 +301,6 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
 
     return {
       id: row.leadId,
-      reportId: weeklyReport.reportId,
       initials: initialsFromName(row.leadName),
       // ADR 0006: the leads table shows the short form; the avatar stays 2-letter.
       name: shortNameFromName(row.leadName),

@@ -63,11 +63,14 @@ export class TelemetryService {
   async getSummary(): Promise<TelemetrySummary> {
     return this.cache.getOrCompute<TelemetrySummary>("summary:v1", async () => {
       const sparkline = await this.repository.onTimeRatioPerPeriod(4);
-      const onTimeRatio =
+      // Headline ratio = the freshest single period only (the last sparkline
+      // entry). This is a DIFFERENT window from the Prometheus
+      // `onTimeRatioLastNPeriods` gauge, which pools across the last N periods;
+      // the two are intentionally not collapsed.
+      const latestPeriodOnTimeRatio =
         sparkline.length === 0
           ? null
-          : // The freshest entry is the headline on-time ratio.
-            (sparkline[sparkline.length - 1] ?? null);
+          : (sparkline[sparkline.length - 1] ?? null);
 
       const [
         reportsThisPeriod,
@@ -85,7 +88,7 @@ export class TelemetryService {
 
       return telemetrySummarySchema.parse({
         reportsThisPeriod,
-        onTimeRatio,
+        onTimeRatio: latestPeriodOnTimeRatio,
         activeLeads,
         lateSections,
         pendingReopens,

@@ -139,7 +139,7 @@ export function computePortfolioOverviewFromReadSections(
   return { status, totals };
 }
 
-type TrafficLightStatus = "green" | "yellow" | "red";
+export type TrafficLightStatus = "green" | "yellow" | "red";
 
 export function buildPortfolioProductsFromSnapshotSections(
   sections: readonly ReportSectionReadModel[],
@@ -309,7 +309,7 @@ const statusSeverity: Record<TrafficLightStatus, number> = {
   red: 2,
 };
 
-function computeWorstStatus(
+export function computeWorstStatus(
   statuses: readonly TrafficLightStatus[],
 ): TrafficLightStatus | null {
   if (statuses.length === 0) return null;

@@ -3,6 +3,8 @@ import "server-only";
 import type { UserSession } from "@customreport/shared";
 import { cookies } from "next/headers";
 
+import { AUTH_COOKIE_NAME } from "../../server/auth/session";
+
 /**
  * AUTH-07 (Phase 29-03): server-only helper that reads the session cookie
  * via Next.js `cookies()` and resolves to a verified UserSession by calling
@@ -26,7 +28,7 @@ import { cookies } from "next/headers";
  * fresh, otherwise role downgrades would be invisible until the Next.js
  * data cache invalidates.
  */
-const COOKIE_NAME = "customreport_session";
+const COOKIE_NAME = AUTH_COOKIE_NAME;
 
 function resolveApiUrl(): string {
   // In production, NEXT_PUBLIC_API_URL points at the API hostname inside

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { queryActiveLeadsLastPublishedPeriod } from "./telemetry.queries.js";
 import type { TelemetryRepository } from "./telemetry.service.js";
 
 /**
@@ -28,19 +29,8 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
     });
   }
 
-  async activeLeadsLastPublishedPeriod(): Promise<number> {
-    const report = await this.prisma.report.findFirst({
-      where: { status: "published" },
-      orderBy: { periodStart: "desc" },
-      select: { id: true },
-    });
-    if (!report) return 0;
-    const rows = await this.prisma.reportSection.findMany({
-      where: { reportId: report.id, status: "submitted" },
-      distinct: ["authorId"],
-      select: { authorId: true },
-    });
-    return rows.length;
+  activeLeadsLastPublishedPeriod(): Promise<number> {
+    return queryActiveLeadsLastPublishedPeriod(this.prisma);
   }
 
   async lateSectionsLastPublishedPeriod(): Promise<number> {

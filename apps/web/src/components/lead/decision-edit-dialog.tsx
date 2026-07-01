@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { useDialogFocus } from "../../lib/use-dialog-focus";
 import type { DecisionEntry, Product } from "./mock-data";
 import { ProductPicker } from "./product-picker";
 import { StageMultiSelect } from "./stage-multi-select";
@@ -56,6 +57,15 @@ function DecisionEditDialogContent({
   onCancel,
 }: DecisionEditDialogProps) {
   const isCreate = decision === null;
+
+  // Escape + focus trap via the shared primitive; the surface autofocuses its
+  // first field, and the primitive restores focus to the opener on close.
+  const dialogSurfaceRef = useRef<HTMLDivElement>(null);
+  useDialogFocus({
+    open: true,
+    onClose: onCancel,
+    containerRef: dialogSurfaceRef,
+  });
 
   const [text, setText] = useState(decision?.text ?? "");
   // Owner is not user-editable: a decision is always owned by its author — the
@@ -127,10 +137,6 @@ function DecisionEditDialogContent({
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      onCancel();
-    }
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       handleSave();
@@ -146,6 +152,7 @@ function DecisionEditDialogContent({
     >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops propagation to the backdrop; Escape is handled by the backdrop's onKeyDown which bubbles up */}
       <div
+        ref={dialogSurfaceRef}
         className="w-full max-w-3xl rounded-[var(--radius)] bg-white p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
         role="dialog"

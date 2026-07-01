@@ -1,12 +1,13 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../lib/cache-keys";
 import { toReportingGroupInput } from "../../lib/mappers";
 import { useTRPC } from "../../lib/trpc-context";
+import { useDialogFocus } from "../../lib/use-dialog-focus";
 import { TabFilter, TabHeader, TabSearch } from "./tab-header";
 
 // B4: archive quick-filter — default "active" hides archived groups on load
@@ -67,30 +68,18 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
   const [archiveFilter, setArchiveFilter] =
     useState<ArchiveFilterValue>("active");
 
-  // admin-dialog-focus-management: save the trigger element so focus can be
-  // restored when the dialog closes (Escape, Cancel, backdrop, save success).
+  // Save the trigger element so the shared focus primitive can restore focus
+  // to it when the dialog closes (Escape, Cancel, backdrop, save success).
   const dialogTriggerRef = useRef<HTMLElement | null>(null);
+  const dialogSurfaceRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!showDialog) return;
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        setShowDialog(false);
-      }
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [showDialog]);
-
-  // Restore focus to the trigger whenever the dialog closes (all close paths
-  // set showDialog→false: Escape listener, Cancel, backdrop, save success).
-  useEffect(() => {
-    if (!showDialog && dialogTriggerRef.current) {
-      dialogTriggerRef.current.focus();
-      dialogTriggerRef.current = null;
-    }
-  }, [showDialog]);
+  // Focus trap + Escape-to-close + restore-to-trigger via the shared primitive.
+  useDialogFocus({
+    open: showDialog,
+    onClose: () => setShowDialog(false),
+    containerRef: dialogSurfaceRef,
+    triggerRef: dialogTriggerRef,
+  });
 
   const saveGroupMut = useMutation(
     trpc.admin.saveReportingGroup.mutationOptions({
@@ -304,6 +293,7 @@ export function GroupsTab({ groups, users, products = [] }: GroupsTabProps) {
         >
           {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop close-propagation; no keyboard equivalent needed (dialog closes via Escape + Cancel button) */}
           <div
+            ref={dialogSurfaceRef}
             className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
             role="dialog"
             aria-modal="true"

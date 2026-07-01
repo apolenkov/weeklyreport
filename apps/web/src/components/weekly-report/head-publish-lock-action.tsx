@@ -10,6 +10,7 @@ import {
   invalidateLeadHistory,
 } from "../../lib/cache-keys";
 import { mapWeeklyReport } from "../../lib/mappers";
+import { reportHasContent } from "../../lib/mappers/report-content";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
 import { PublishLockButton } from "./publish-lock-button";
@@ -79,15 +80,7 @@ export function HeadPublishLockAction({
   const total = view.totalLeads;
   // pendingCount mirrors WeeklyReportPage: total - submitted, clamped >= 0.
   const pendingCount = Math.max(0, total - submitted);
-  const hasExpandableProducts = view.products.some(
-    (report) =>
-      Boolean(report.needsAttention) ||
-      report.currentWeek.length > 0 ||
-      report.nextWeek.length > 0 ||
-      report.risks.length > 0 ||
-      report.decisions.length > 0 ||
-      report.priorities.length > 0,
-  );
+  const hasExpandableProducts = view.products.some(reportHasContent);
   const canPublishReport = submitted > 0 && hasExpandableProducts;
 
   return (

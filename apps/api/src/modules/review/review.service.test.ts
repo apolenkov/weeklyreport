@@ -1,12 +1,10 @@
 import type { SubmissionDashboardRow, UserSession } from "@customreport/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { reviewRouter } from "./review.router";
-import {
-  ReviewAccessError,
-  type ReviewRepository,
-  ReviewService,
-} from "./review.service";
+import { createAppRouter } from "../../infrastructure/trpc/trpc.router.js";
+import { createNullAuditLogger } from "../../lib/audit-logger.js";
+import { createNullLogger } from "../../lib/logger.js";
+import { type ReviewRepository, ReviewService } from "./review.service";
 
 const reportId = "22222222-2222-4222-8222-222222222222";
 
@@ -122,13 +120,11 @@ describe("ReviewService", () => {
 
   it("rejects non-head access before returning dashboard data", async () => {
     const service = new ReviewService(createRepository(unsortedRows));
+    const caller = buildReviewCaller(service, leadSession);
 
-    await expect(
-      reviewRouter.getSubmissionDashboard({
-        reviewService: service,
-        session: leadSession,
-      }),
-    ).rejects.toBeInstanceOf(ReviewAccessError);
+    await expect(caller.review.dashboard()).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
   });
 
   it("UFB-040 / 46-02: passes the session through to the repository so scope filter applies", async () => {
@@ -170,15 +166,35 @@ describe("ReviewService", () => {
   });
 });
 
-describe("reviewRouter", () => {
+/**
+ * Drive the live `review.dashboard` procedure (headProcedure) so the gating is
+ * asserted against the wired path, not a parallel router copy. The procedure
+ * resolves its target period from `getCurrentEditableId`, then delegates to the
+ * `ReviewService`.
+ */
+function buildReviewCaller(service: ReviewService, session: UserSession) {
+  const deps = {
+    weeklyReportService: {
+      getCurrentEditableId: vi.fn(() => Promise.resolve(reportId)),
+    },
+    reviewService: service,
+  } as unknown as Parameters<typeof createAppRouter>[0];
+
+  return createAppRouter(deps).createCaller({
+    session,
+    logger: createNullLogger(),
+    auditLogger: createNullAuditLogger(),
+    ip: "test-ip",
+    isPdfExport: false,
+    pdfReportId: null,
+  });
+}
+
+describe("review.dashboard (live headProcedure)", () => {
   it("allows a head session to read the active report dashboard", async () => {
     const service = new ReviewService(createRepository(unsortedRows));
+    const caller = buildReviewCaller(service, headSession);
 
-    await expect(
-      reviewRouter.getSubmissionDashboard({
-        reviewService: service,
-        session: headSession,
-      }),
-    ).resolves.toHaveLength(3);
+    await expect(caller.review.dashboard()).resolves.toHaveLength(3);
   });
 });

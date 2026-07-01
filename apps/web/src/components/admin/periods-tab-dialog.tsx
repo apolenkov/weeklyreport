@@ -1,7 +1,9 @@
 "use client";
 
 import type { PeriodListItem } from "@customreport/shared";
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
+
+import { useDialogFocus } from "../../lib/use-dialog-focus";
 
 /**
  * Compute the scheduler-aligned default start date. Manual periods are not
@@ -89,18 +91,16 @@ export function CreatePeriodDialog({
   const [weekLabel, setWeekLabel] = useState(
     isEdit ? (initialValues.weekLabel ?? "") : "",
   );
+  const dialogSurfaceRef = useRef<HTMLDivElement>(null);
 
-  // Esc-to-close + click-outside (matches the groups-tab dialog pattern).
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onCancel();
-      }
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [onCancel]);
+  // Focus trap + Escape-to-close via the shared primitive. The dialog mounts on
+  // open and `autoFocus`es the first field; the primitive captures the opener
+  // at render, so it still restores focus to the trigger on close.
+  useDialogFocus({
+    open: true,
+    onClose: onCancel,
+    containerRef: dialogSurfaceRef,
+  });
 
   function handleSubmit() {
     if (!periodStart) return;
@@ -170,6 +170,7 @@ export function CreatePeriodDialog({
     >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops propagation to the backdrop; not a user interaction, no keyboard equivalent applies */}
       <div
+        ref={dialogSurfaceRef}
         className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"

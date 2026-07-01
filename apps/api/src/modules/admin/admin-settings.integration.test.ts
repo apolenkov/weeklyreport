@@ -6,12 +6,10 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { adminRouter } from "./admin.router";
-import {
-  AdminAccessError,
-  type AdminRepository,
-  AdminService,
-} from "./admin.service";
+import { createAppRouter } from "../../infrastructure/trpc/trpc.router.js";
+import { createNullAuditLogger } from "../../lib/audit-logger.js";
+import { createNullLogger } from "../../lib/logger.js";
+import { type AdminRepository, AdminService } from "./admin.service";
 
 /* ------------------------------------------------------------------ */
 /*  Sessions & defaults                                                */
@@ -277,11 +275,22 @@ describe("AdminService — settings (integration)", () => {
     expect(result.reopenWindowHours).toBe(72);
   });
 
-  it("admin router rejects non-head access to settings", async () => {
+  it("admin.snapshot rejects non-admin access at the live procedure gate", async () => {
     const service = new AdminService(createRepository(initialSnapshot));
+    const deps = { adminService: service } as unknown as Parameters<
+      typeof createAppRouter
+    >[0];
+    const caller = createAppRouter(deps).createCaller({
+      session: leadSession,
+      logger: createNullLogger(),
+      auditLogger: createNullAuditLogger(),
+      ip: "test-ip",
+      isPdfExport: false,
+      pdfReportId: null,
+    });
 
-    await expect(
-      adminRouter.getSnapshot({ adminService: service, session: leadSession }),
-    ).rejects.toBeInstanceOf(AdminAccessError);
+    await expect(caller.admin.snapshot()).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
   });
 });
