@@ -299,6 +299,9 @@ describe("ItemEditDialog — P-RANK-01 unique rank picker", () => {
         week="current"
         defaultProductId="p1"
         ownPeriodRanks={[1, 2]}
+        // lead-form-stage-access-integrity: a single owned stage auto-applies so
+        // the save is not blocked by the zero-owned-stage dead-end guard.
+        stagesForProduct={() => ["Dev"]}
         onSave={onSave}
         onCancel={() => undefined}
       />,
@@ -542,6 +545,10 @@ describe("ItemEditDialog — cross-stage product preservation", () => {
       id: "item-cross",
       productId: "p-foreign",
       productName: "Payments Gateway",
+      // lead-form-stage-access-integrity: a cross-stage row already CARRIES a
+      // stage, so it is not a zero-owned-stage dead end and stays saveable even
+      // though the lead owns nothing on p-foreign.
+      stageIds: ["Integration"],
       text: "Integrate payment provider",
       status: "in-progress",
       author: "Test Lead",
@@ -568,6 +575,122 @@ describe("ItemEditDialog — cross-stage product preservation", () => {
       productId: "p-foreign",
       productName: "Payments Gateway",
     });
+  });
+});
+
+// lead-form-stage-access-integrity (4.4): the item dialog scopes stage options
+// to the author's owned stages, visibly locks a single owned stage, re-scopes on
+// product change, and dead-ends (Save disabled) on a zero-owned-stage product.
+describe("ItemEditDialog — stage-ownership scoping", () => {
+  it("visibly pre-selects and locks a single owned stage (no checkbox to deselect)", () => {
+    render(
+      <ItemEditDialog
+        open
+        item={null}
+        products={products}
+        week="current"
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+      />,
+    );
+
+    const lockedPill = screen.getByText("Applied automatically").parentElement;
+    expect(lockedPill).toHaveTextContent("Dev");
+    // Locked: no checkbox exists, so the single stage cannot be deselected.
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Save Item/i }),
+    ).not.toBeDisabled();
+  });
+
+  it("re-scopes the stage options when the product changes", () => {
+    const twoProducts: Product[] = [
+      { id: "p1", name: "CRM", overallStatus: "on-track", stages: [] },
+      { id: "p2", name: "Billing", overallStatus: "on-track", stages: [] },
+    ];
+    render(
+      <ItemEditDialog
+        open
+        item={null}
+        products={twoProducts}
+        week="current"
+        defaultProductId="p1"
+        stagesForProduct={(id) =>
+          id === "p1" ? ["Dev", "Testing"] : ["Analysis"]
+        }
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+      />,
+    );
+
+    expect(
+      screen.getByRole("checkbox", { name: "Testing" }),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/^Product/i), {
+      target: { value: "p2" },
+    });
+
+    expect(screen.queryByRole("checkbox", { name: "Testing" })).toBeNull();
+    expect(screen.getByText("Analysis")).toBeInTheDocument();
+  });
+
+  const foreignItem: KanbanItem = {
+    id: "i-foreign",
+    productId: "p-foreign",
+    productName: "Payments Gateway",
+    text: "Legacy cross item",
+    status: "in-progress",
+    author: "Test Lead",
+  };
+
+  it("disables Save and shows contact-admin on a zero-owned-stage product", () => {
+    render(
+      <ItemEditDialog
+        open
+        item={foreignItem}
+        products={products}
+        week="current"
+        stagesForProduct={() => []}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /Save Item/i })).toBeDisabled();
+    expect(
+      screen.getByText(
+        /no stages assigned on Payments Gateway — contact admin/i,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Select at least one stage/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("makes the keyboard save shortcut a no-op on a zero-owned-stage product", () => {
+    const onSave = vi.fn();
+    render(
+      <ItemEditDialog
+        open
+        item={foreignItem}
+        products={products}
+        week="current"
+        stagesForProduct={() => []}
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+
+    const backdrop = document.querySelector<HTMLElement>(
+      '[role="presentation"]',
+    );
+    if (!backdrop) throw new Error("backdrop not found");
+    fireEvent.keyDown(backdrop, { key: "Enter", ctrlKey: true });
+
+    expect(onSave).not.toHaveBeenCalled();
   });
 });
 

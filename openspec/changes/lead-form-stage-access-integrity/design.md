@@ -88,3 +88,24 @@ array elements are non-empty, visible, and null-byte-free`. All five headers are
 The stage-id-element validation (neighbor) and the ownership guard (C6) are complementary
 layers on the same write path — element well-formedness vs. element ownership — not
 duplicates; both should end up calling into the section save validation in sequence.
+
+## Known limitation (recorded, out of scope)
+
+`fillFrom` and `carry-over` write repository-direct (they do not route through
+`saveDraft` / `submitSection`), so they do not run `validateStageOwnership`. They only
+replay the AUTHOR's own previously-persisted rows — source access is enforced and the
+client cannot choose stages — so no unowned stage can be injected through them. The one
+edge: if a stage assignment is revoked BETWEEN periods, these bulk-copy paths can carry a
+now-unowned row forward, the same grandfather tolerance this change already grants legacy
+rows. Closing it would mean running the guard inside those two paths; deferred as
+defense-in-depth, not an exploitable injection.
+
+## Grandfather binds stableId to product + stage set (security note)
+
+`stableId` is client-authoritative, so a row is grandfathered only when a server row shares
+its stableId AND its `projectId`/`productId` AND its exact canonical stage set. Editing a
+grandfathered row's non-stage content (text, tag, status) while keeping the same tolerated
+stage is allowed by design and introduces no new stage — it cannot escalate, because the
+`@@unique([reportSectionId, stableId])` constraint forbids a second row on the same lineage
+key, and any change to the stage set or product re-validates against the author's owned
+stages.

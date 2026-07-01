@@ -15,7 +15,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { DecisionEditDialog } from "./decision-edit-dialog";
-import type { Product } from "./mock-data";
+import type { DecisionEntry, Product } from "./mock-data";
 
 const products: Product[] = [
   { id: "p1", name: "CRM", overallStatus: "on-track", stages: [] },
@@ -460,5 +460,91 @@ describe("DecisionEditDialog — product switch re-scopes + clears stages", () =
       screen.getByRole("checkbox", { name: "Analysis" }),
     ).not.toBeChecked();
     expect(screen.getByRole("checkbox", { name: "Design" })).not.toBeChecked();
+  });
+});
+
+// lead-form-stage-access-integrity (4.4): the decision dialog visibly locks a
+// single owned stage and dead-ends (Save disabled) on a zero-owned-stage product,
+// mirroring the risk/item dialogs.
+describe("DecisionEditDialog — stage-ownership scoping", () => {
+  it("visibly pre-selects and locks a single owned stage (no checkbox to deselect)", () => {
+    render(
+      <DecisionEditDialog
+        open
+        decision={null}
+        defaultOwner="Test Lead"
+        stagesForProduct={() => ["Dev"]}
+        products={products}
+        defaultProductId="p1"
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+      />,
+    );
+
+    const lockedPill = screen.getByText("Applied automatically").parentElement;
+    expect(lockedPill).toHaveTextContent("Dev");
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Save Decision/i }),
+    ).not.toBeDisabled();
+  });
+
+  const foreignDecision: DecisionEntry = {
+    id: "d-foreign",
+    productId: "p-foreign",
+    productName: "Payments Gateway",
+    text: "Legacy cross decision",
+    owner: "Test Lead",
+    impact: "Some impact",
+    deadline: null,
+  };
+
+  it("disables Save and shows contact-admin on a zero-owned-stage product", () => {
+    render(
+      <DecisionEditDialog
+        open
+        decision={foreignDecision}
+        defaultOwner="Test Lead"
+        stagesForProduct={() => []}
+        products={products}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /Save Decision/i }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText(
+        /no stages assigned on Payments Gateway — contact admin/i,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Select at least one stage/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("makes the keyboard save shortcut a no-op on a zero-owned-stage product", () => {
+    const onSave = vi.fn();
+    render(
+      <DecisionEditDialog
+        open
+        decision={foreignDecision}
+        defaultOwner="Test Lead"
+        stagesForProduct={() => []}
+        products={products}
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+
+    const backdrop = document.querySelector<HTMLElement>(
+      '[role="presentation"]',
+    );
+    if (!backdrop) throw new Error("backdrop not found");
+    fireEvent.keyDown(backdrop, { key: "Enter", ctrlKey: true });
+
+    expect(onSave).not.toHaveBeenCalled();
   });
 });

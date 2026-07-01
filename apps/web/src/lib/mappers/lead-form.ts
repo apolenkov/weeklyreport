@@ -52,8 +52,10 @@ import type {
 } from "@customreport/shared";
 import {
   initialsFromName as sharedInitialsFromName,
+  normalizeStageName,
   shortNameFromName,
   STAGE_NAMES,
+  stageNamesMatch,
 } from "@customreport/shared";
 
 import { riskCoversStage } from "../../components/lead/stage-tags";
@@ -321,15 +323,12 @@ export function ownedStagesForProject(
 
 // ---- Mappers ----
 
-export function normalizeStageName(stageName: string): string {
-  const lower = stageName.toLowerCase();
-  return lower === "development" ? "dev" : lower;
-}
-
-/** True when two stage names refer to the same pipeline slot (handles "Development" ↔ "Dev" alias). */
-export function stageNamesMatch(a: string, b: string): boolean {
-  return normalizeStageName(a) === normalizeStageName(b);
-}
+// The Dev↔Development stage-name canonicalization is single-homed in
+// @customreport/shared so the server ownership guard and this client mapper
+// never disagree on whether two names refer to the same pipeline slot. Imported
+// above for local use and re-exported for the web modules that pull it from
+// this barrel.
+export { normalizeStageName, stageNamesMatch };
 
 /**
  * Build the stage grid for one project from the product's assigned-stage set.

@@ -1,11 +1,14 @@
 import {
+  type DraftSaveInput,
   type DraftSavePayload,
   draftSaveSchema,
   type DraftSaveValidationError,
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
+  type SubmitSectionInput,
   type SubmitSectionPayload,
   submitSectionSchema,
+  validateStageOwnership,
   validateSubmitInput,
 } from "@customreport/shared";
 
@@ -190,6 +193,23 @@ export class ReportSectionsService {
   }
 
   /**
+   * lead-form-stage-access-integrity: hard-reject a write whose new/changed
+   * item / risk / decision row carries a stage the section AUTHOR does not own
+   * on that row's product. Runs on both write paths before persistence; the
+   * author's server-loaded `ownedStages` is the reference, so a head/admin
+   * on-behalf edit cannot inject an unowned stage either.
+   */
+  private assertStageOwnership(
+    section: ReportSectionReadModel,
+    input: DraftSaveInput | SubmitSectionInput,
+  ): void {
+    const violation = validateStageOwnership(section, input).at(0);
+    if (violation) {
+      throw new ReportSectionDomainError(violation.code, violation.message);
+    }
+  }
+
+  /**
    * UFB-049 / Phase 50-B: deadline gate for submitSection. Returns the
    * `late` flag to stamp on the section. Throws ReportSectionAccessError
    * (→ 403 in the tRPC layer) when the deadline has passed beyond the
@@ -259,6 +279,8 @@ export class ReportSectionsService {
       );
     }
 
+    this.assertStageOwnership(section, parsedInput);
+
     const saved = await this.repository.saveSection(
       mergeSection(section, parsedInput, "draft"),
       // Expected version is the CLIENT-loaded value, not the freshly-fetched
@@ -289,6 +311,10 @@ export class ReportSectionsService {
     // error, and "you forgot a traffic light" beats "you're late" when
     // both are true.
     const late = await this.evaluateDeadlineGate(section.reportId);
+
+    // Integrity before completeness: a stage the author does not own is a hard
+    // authz reject, checked before the traffic-light / current-item nags.
+    this.assertStageOwnership(section, parsedInput);
 
     const errors = validateSubmitInput(section, parsedInput);
 
