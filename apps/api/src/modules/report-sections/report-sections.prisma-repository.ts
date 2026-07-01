@@ -61,9 +61,32 @@ export const reportSectionFullInclude = {
   stageStatuses: {
     include: { stage: true },
   },
-  items: { include: { project: { select: { name: true } } } },
-  risks: { include: { project: { select: { name: true } } } },
-  decisions: { include: { project: { select: { name: true } } } },
+  // review-acknowledgement: per-record reviewer comments and per-section
+  // verdicts ride the full aggregate so the lead / reviewer read surfaces them
+  // (mapped into `comments` / `reviews`). `reviewer.name` rides along for
+  // display; verdict staleness (`isCurrent`) is derived in the mapper from
+  // `judgedVersion` vs the section `version`.
+  items: {
+    include: {
+      project: { select: { name: true } },
+      recordComments: { include: { reviewer: { select: { name: true } } } },
+    },
+  },
+  risks: {
+    include: {
+      project: { select: { name: true } },
+      recordComments: { include: { reviewer: { select: { name: true } } } },
+    },
+  },
+  decisions: {
+    include: {
+      project: { select: { name: true } },
+      recordComments: { include: { reviewer: { select: { name: true } } } },
+    },
+  },
+  sectionReviews: {
+    include: { reviewer: { select: { name: true } } },
+  },
 } as const;
 
 export type PrismaReportSectionWithRelations = NonNullable<
@@ -109,6 +132,12 @@ export type PrismaReportSectionWithRelations = NonNullable<
     status: string | null;
     stage: { id: string; name: string; sortOrder: number };
   }[];
+  // review-acknowledgement: per-section verdicts, hand-written to mirror the
+  // `sectionReviews` include (memory: the generated client include AND this
+  // type must both change). Optional so unit fixtures cast via `as unknown as`
+  // that predate the include still map (the mapper falls back to `[]`); a real
+  // DB row always carries the array.
+  sectionReviews?: SectionReviewRow[];
   items: {
     id: string;
     // Durable lineage key. Optional on this hand-written row type so unit-test
@@ -128,6 +157,8 @@ export type PrismaReportSectionWithRelations = NonNullable<
     // `reportSectionFullInclude`; optional so legacy fixtures that
     // pre-date the include widening still map (name then unresolvable).
     project?: { name: string };
+    // review-acknowledgement: reviewer comments anchored to this item.
+    recordComments?: RecordCommentRow[];
   }[];
   risks: {
     id: string;
@@ -139,6 +170,7 @@ export type PrismaReportSectionWithRelations = NonNullable<
     severity: string;
     stageNames: string[];
     project?: { name: string };
+    recordComments?: RecordCommentRow[];
   }[];
   decisions: {
     id: string;
@@ -151,8 +183,29 @@ export type PrismaReportSectionWithRelations = NonNullable<
     stageNames: string[];
     productId: string | null;
     project?: { name: string };
+    recordComments?: RecordCommentRow[];
   }[];
 };
+
+// review-acknowledgement: the shape of a RecordComment row as loaded by
+// `reportSectionFullInclude` (with the author's display name joined).
+interface RecordCommentRow {
+  id: string;
+  reviewerId: string;
+  text: string;
+  createdAt: Date;
+  reviewer: { name: string };
+}
+
+// review-acknowledgement: a SectionReview row as loaded by the `sectionReviews`
+// include (author's display name joined).
+interface SectionReviewRow {
+  reviewerId: string;
+  verdict: string;
+  judgedVersion: number;
+  createdAt: Date;
+  reviewer: { name: string };
+}
 
 function aggregateStageTraffic(
   stages: { status?: string | null }[],
@@ -275,6 +328,35 @@ export function deriveEffectiveProductStatus(project: {
     effective = worseTraffic(effective, stageEffective);
   }
   return effective;
+}
+
+// review-acknowledgement: project the joined RecordComment rows onto the
+// read-model comment view (flat; reviewer display name rides along).
+function toCommentViews(comments: readonly RecordCommentRow[]) {
+  return comments.map((comment) => ({
+    id: comment.id,
+    reviewerId: comment.reviewerId,
+    reviewerName: comment.reviewer.name,
+    text: comment.text,
+    createdAt: comment.createdAt,
+  }));
+}
+
+// review-acknowledgement: project section verdicts onto the read-model view.
+// A verdict is CURRENT only while it judged the section's current version — a
+// re-submission bumps `version` and auto-stales any prior verdict, no clearing.
+function toReviewViews(
+  reviews: readonly SectionReviewRow[],
+  sectionVersion: number,
+) {
+  return reviews.map((review) => ({
+    reviewerId: review.reviewerId,
+    reviewerName: review.reviewer.name,
+    verdict: review.verdict === "approved" ? "approved" : "changes_requested",
+    judgedVersion: review.judgedVersion,
+    isCurrent: review.judgedVersion === sectionVersion,
+    createdAt: review.createdAt,
+  }));
 }
 
 /**
@@ -439,6 +521,7 @@ export function mapPrismaToReportSection(
       completed: i.completed,
       priorityRank: i.priorityRank ?? null,
       stageIds: i.stageNames.length > 0 ? i.stageNames : undefined,
+      comments: toCommentViews(i.recordComments ?? []),
     })),
     risks: row.risks.map((r) => ({
       id: r.id,
@@ -449,6 +532,7 @@ export function mapPrismaToReportSection(
       mitigation: r.mitigation,
       severity: r.severity === "blocked" ? "blocked" : "at-risk",
       stageIds: r.stageNames.length > 0 ? r.stageNames : undefined,
+      comments: toCommentViews(r.recordComments ?? []),
     })),
     decisions: row.decisions.map((d) => ({
       id: d.id,
@@ -460,8 +544,134 @@ export function mapPrismaToReportSection(
       resolvedAt: d.resolvedAt,
       stageIds: d.stageNames.length > 0 ? d.stageNames : undefined,
       productId: d.productId ?? undefined,
+      comments: toCommentViews(d.recordComments ?? []),
     })),
+    reviews: toReviewViews(row.sectionReviews ?? [], row.version),
   });
+}
+
+// review-acknowledgement: a reviewer comment lifted out of the DB just before
+// saveSection delete-recreates its anchor record, keyed by the record's DURABLE
+// lineage (stableId + kind) rather than the volatile PK that the recreate
+// re-mints. Re-inserted against the new PK for every lineage that survives the
+// save — see the comment-transfer note on saveSection.
+type RecordKind = "item" | "risk" | "decision";
+interface CapturedComment {
+  stableId: string;
+  kind: RecordKind;
+  reviewerId: string;
+  text: string;
+  createdAt: Date;
+}
+
+const lineageKey = (kind: RecordKind, stableId: string): string =>
+  `${kind}::${stableId}`;
+
+/**
+ * Read every RecordComment anchored to a record in this section, tagged with
+ * its anchor's `stableId` + kind, BEFORE the child rows are deleted (the
+ * delete cascades the comments away). One join per anchor kind; exactly one
+ * relation is set per comment.
+ */
+async function captureRecordComments(
+  tx: Prisma.TransactionClient,
+  sectionId: string,
+): Promise<CapturedComment[]> {
+  const comments = await tx.recordComment.findMany({
+    where: {
+      OR: [
+        { item: { reportSectionId: sectionId } },
+        { risk: { reportSectionId: sectionId } },
+        { decision: { reportSectionId: sectionId } },
+      ],
+    },
+    select: {
+      reviewerId: true,
+      text: true,
+      createdAt: true,
+      item: { select: { stableId: true } },
+      risk: { select: { stableId: true } },
+      decision: { select: { stableId: true } },
+    },
+  });
+
+  return comments.flatMap((comment) => {
+    const anchor = comment.item
+      ? ({ kind: "item", stableId: comment.item.stableId } as const)
+      : comment.risk
+        ? ({ kind: "risk", stableId: comment.risk.stableId } as const)
+        : comment.decision
+          ? ({ kind: "decision", stableId: comment.decision.stableId } as const)
+          : null;
+    if (!anchor) return [];
+    return [
+      {
+        stableId: anchor.stableId,
+        kind: anchor.kind,
+        reviewerId: comment.reviewerId,
+        text: comment.text,
+        createdAt: comment.createdAt,
+      },
+    ];
+  });
+}
+
+/**
+ * Re-anchor captured comments onto the freshly recreated records. Records are
+ * matched by lineage (stableId + kind); a comment whose lineage is gone (its
+ * record was dropped from the payload this save) is NOT re-inserted, so it
+ * hard-dies exactly when the record it flagged is genuinely removed. Runs
+ * inside saveSection's transaction, so it is atomic with the version bump.
+ */
+async function reinsertRecordComments(
+  tx: Prisma.TransactionClient,
+  sectionId: string,
+  captured: readonly CapturedComment[],
+): Promise<void> {
+  if (captured.length === 0) return;
+
+  const [items, risks, decisions] = await Promise.all([
+    tx.item.findMany({
+      where: { reportSectionId: sectionId },
+      select: { id: true, stableId: true },
+    }),
+    tx.risk.findMany({
+      where: { reportSectionId: sectionId },
+      select: { id: true, stableId: true },
+    }),
+    tx.decision.findMany({
+      where: { reportSectionId: sectionId },
+      select: { id: true, stableId: true },
+    }),
+  ]);
+
+  const idByLineage = new Map<string, string>();
+  for (const row of items)
+    idByLineage.set(lineageKey("item", row.stableId), row.id);
+  for (const row of risks)
+    idByLineage.set(lineageKey("risk", row.stableId), row.id);
+  for (const row of decisions)
+    idByLineage.set(lineageKey("decision", row.stableId), row.id);
+
+  const data = captured.flatMap((comment) => {
+    const newRecordId = idByLineage.get(
+      lineageKey(comment.kind, comment.stableId),
+    );
+    if (newRecordId === undefined) return [];
+    return [
+      {
+        reviewerId: comment.reviewerId,
+        text: comment.text,
+        // Preserve the original authoring timestamp across the recreate.
+        createdAt: comment.createdAt,
+        itemId: comment.kind === "item" ? newRecordId : null,
+        riskId: comment.kind === "risk" ? newRecordId : null,
+        decisionId: comment.kind === "decision" ? newRecordId : null,
+      },
+    ];
+  });
+
+  if (data.length > 0) await tx.recordComment.createMany({ data });
 }
 
 @Injectable()
@@ -543,6 +753,13 @@ export class ReportSectionsPrismaRepository
               "This section was changed by another save. Reload and try again.",
             );
           }
+
+          // review-acknowledgement (comment-aware save): lift reviewer comments
+          // out before the child delete-recreate cascades them away, keyed by
+          // the record's durable lineage (stableId + kind), then re-anchor the
+          // survivors below. A comment whose record is dropped from this payload
+          // is NOT re-inserted → it hard-dies with the record it flagged.
+          const capturedComments = await captureRecordComments(tx, sectionId);
 
           await tx.projectStatus.deleteMany({
             where: { reportSectionId: sectionId },
@@ -637,6 +854,10 @@ export class ReportSectionsPrismaRepository
               })),
             });
           }
+
+          // Re-anchor the captured comments onto the recreated records (matched
+          // by lineage). Atomic with the version bump above.
+          await reinsertRecordComments(tx, sectionId, capturedComments);
         },
         { timeout: 15_000 },
       );

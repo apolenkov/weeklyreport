@@ -33,7 +33,11 @@ import {
   ReportSectionDomainError,
   SectionVersionConflictError,
 } from "../../modules/report-sections/report-sections.service.js";
-import { ReviewAccessError } from "../../modules/review/review.service.js";
+import {
+  ReviewAccessError,
+  ReviewConstraintError,
+  ReviewNotFoundError,
+} from "../../modules/review/review.service.js";
 import { WeeklyReportDomainError } from "../../modules/weekly-report/weekly-report.service.js";
 
 /** A domain error class, matched against the thrown error via `instanceof`. */
@@ -58,6 +62,8 @@ const DOMAIN_ERROR_CODES: readonly (readonly [
   [SectionVersionConflictError, "CONFLICT"],
   [ReportSectionDomainError, "BAD_REQUEST"],
   [ReviewAccessError, "FORBIDDEN"],
+  [ReviewNotFoundError, "NOT_FOUND"],
+  [ReviewConstraintError, "BAD_REQUEST"],
   [AdminAccessError, "FORBIDDEN"],
   [ReportSectionAccessError, "FORBIDDEN"],
   [LeadFormAccessError, "FORBIDDEN"],

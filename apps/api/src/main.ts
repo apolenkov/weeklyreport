@@ -82,6 +82,7 @@ import { RemindersService } from "./modules/reminders/reminders.service";
 import { ensureLeadSection } from "./modules/report-sections/ensure-lead-section";
 import { LeadFormService } from "./modules/report-sections/lead-form.service";
 import { ReportSectionsService } from "./modules/report-sections/report-sections.service";
+import { ReviewActionsService } from "./modules/review/review-actions.service";
 import { ReviewService } from "./modules/review/review.service";
 import { SearchService } from "./modules/search/search.service";
 import { TelemetryService } from "./modules/telemetry/telemetry.service";
@@ -325,6 +326,7 @@ async function bootstrap() {
     prisma: prismaService,
     reportSectionsService: app.get(ReportSectionsService),
     reviewService: app.get(ReviewService),
+    reviewActionsService: app.get(ReviewActionsService),
     publicationService: app.get(PublicationService),
     pdfExportService: app.get(PdfExportService),
     adminService: app.get(AdminService),

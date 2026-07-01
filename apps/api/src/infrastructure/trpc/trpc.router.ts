@@ -22,6 +22,11 @@ import {
   reminderPolicySchema,
   reportingGroupSchema,
   reportPeriodSchema,
+  reviewAcknowledgeInputSchema,
+  reviewCommentInputSchema,
+  reviewDeleteCommentInputSchema,
+  reviewListAcknowledgementsInputSchema,
+  reviewVerdictInputSchema,
   searchQueryInputSchema,
   submitSectionSchema,
   trafficLightHistoryInputSchema,
@@ -48,6 +53,7 @@ import { RemindersService } from "../../modules/reminders/reminders.service.js";
 import type { LeadFormService } from "../../modules/report-sections/lead-form.service.js";
 import type { ReportSectionsService } from "../../modules/report-sections/report-sections.service.js";
 import type { ReviewService } from "../../modules/review/review.service.js";
+import type { ReviewActionsService } from "../../modules/review/review-actions.service.js";
 import {
   SearchAuthorizationError,
   type SearchService,
@@ -72,6 +78,15 @@ interface RouterDeps {
   prisma: PrismaClient;
   reportSectionsService: ReportSectionsService;
   reviewService: ReviewService;
+  /**
+   * review-acknowledgement: the review capability's write surface —
+   * `review.acknowledge` / `review.comment` / `review.deleteComment` /
+   * `review.verdict` / `review.acknowledgements`. All ride `leadershipProcedure`
+   * (head + admin + viewer; lead excluded); the per-group scope + reviewer
+   * designation are enforced inside the service. Optional so role-coverage test
+   * fixtures that build the router with `{}` deps keep compiling.
+   */
+  reviewActionsService?: ReviewActionsService;
   publicationService: PublicationService;
   pdfExportService: PdfExportService;
   adminService: AdminService;
@@ -151,6 +166,22 @@ interface RouterDeps {
    * the Redis fast-path (sessions expire naturally via JWT TTL).
    */
   sessionRevocationService?: SessionRevocationService;
+}
+
+/**
+ * review-acknowledgement: resolve the review-actions service or fail loudly.
+ * Optional on `RouterDeps` only so role-coverage fixtures build with `{}` deps;
+ * a real boot always wires it, so `undefined` here is a config bug, not a
+ * user-reachable state.
+ */
+function requireReviewActions(deps: RouterDeps): ReviewActionsService {
+  if (!deps.reviewActionsService) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Review actions service is not configured.",
+    });
+  }
+  return deps.reviewActionsService;
 }
 
 /**
@@ -835,6 +866,73 @@ export function createAppRouter(deps: RouterDeps) {
           throw mapDomainError(error);
         }
       }),
+
+      // review-acknowledgement: all on `leadershipProcedure` (head + admin +
+      // viewer; lead excluded) so `role-coverage-gate` stays green; the
+      // per-group scope + reviewer designation are enforced in the service.
+
+      // Group-level "seen" receipt — any access-holder (scope check only).
+      acknowledge: leadershipProcedure
+        .input(reviewAcknowledgeInputSchema)
+        .mutation(async ({ input, ctx }) => {
+          try {
+            return await requireReviewActions(deps).acknowledge(
+              ctx.session,
+              input,
+            );
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      // Who has acknowledged the group's report this period (head surface).
+      acknowledgements: leadershipProcedure
+        .input(reviewListAcknowledgementsInputSchema)
+        .query(async ({ input, ctx }) => {
+          try {
+            return await requireReviewActions(deps).listAcknowledgements(
+              ctx.session,
+              input,
+            );
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      // Per-record comment — designated reviewer for the record's group.
+      comment: leadershipProcedure
+        .input(reviewCommentInputSchema)
+        .mutation(async ({ input, ctx }) => {
+          try {
+            return await requireReviewActions(deps).comment(ctx.session, input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      deleteComment: leadershipProcedure
+        .input(reviewDeleteCommentInputSchema)
+        .mutation(async ({ input, ctx }) => {
+          try {
+            return await requireReviewActions(deps).deleteComment(
+              ctx.session,
+              input,
+            );
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
+
+      // Per-section verdict; `changes_requested` auto-un-submits, race-safe.
+      verdict: leadershipProcedure
+        .input(reviewVerdictInputSchema)
+        .mutation(async ({ input, ctx }) => {
+          try {
+            return await requireReviewActions(deps).verdict(ctx.session, input);
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
     }),
 
     // === PDF Export namespace ===
