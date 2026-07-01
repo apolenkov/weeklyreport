@@ -135,3 +135,31 @@ Harness recipe: cp `.claude/workflows/waveb-autorun.js` to scratchpad, splice a 
 (python: replace `const CHANGES = [` .. first `\n];\n`), `node --check`, launch by scriptPath. High-stakes
 returns commitReady -> orchestrator reviews the diff + commits by exact paths (subject <=100 chars for commitlint).
 Codex review fires for real (node codex-companion.mjs) on the Sonnet-5 wrapper — it has caught ~7 real defects; trust it.
+
+## MARATHON COMPLETE (~08:30) — supersedes all progress above
+
+All committable implementation work landed on impl/backlog-2026-06-30. 15 change commits this
+session, each multi-layer verified (2 adversarial verifiers + real Codex + full green gate/integration)
+before commit; ZERO red commits.
+
+- **Batch C (8):** b67fdfcb 7a813ee3 4e20ea72 d419701a 2fdc4b8e 39151880 120f0642 7d028027
+- **strict-env (3):** ba8ab3bb (#29) 6dfbdfa1 (#30) e37241b0 (#31) — one shared ENV_CONFIG token.
+- **Wave D (4/5):** 0e62e92d (#33) cac6720e (#35) 44f8ac54 (#34, schema FK Cascade->RESTRICT; migrate
+  reset applied to \_test + \_dev, FK verified, integration 226 green) b98b0e6b (#32 deploy).
+
+DEFERRED — NOT done, with reasons:
+
+- **#36 tighten-code-quality-ratchet:** PLAN-ONLY spec commit; openspec/ mutation is the parallel
+  author session's domain — do as a COORDINATED openspec step (validate --strict + sync + commit).
+- **Tail-archive (19, docs/handoff/marathon-configs/tail-triage-plan.md):** all already committed by
+  earlier waves; archiving is openspec bookkeeping (mutates specs) — coordinate + `openspec archive`
+  (--skip-specs if spec debt blocks). Low value, safe to leave.
+- **Feature specs C1-C7:** BLOCKED on the durable-record-id prerequisite (bigger than the features;
+  saveSection delete-recreates ids) + C7 on two Саша decisions. Do NOT start without those.
+- **#32 needs Саша:** docker-build + curl-prod acceptance; the CSP Report-Only->enforce flip (in-browser
+  validation across 4 role surfaces); base-image sha256 digest pins (registry access). All have on-disk TODO markers.
+
+Codex earned its keep: ~9 real defects caught + fixed this session (whitespace SMTP bypass, negative
+web-vital value, #31 web-tsconfig param-decorator TS1206, #33 keyset-cursor throw + silent-fallback +
+worker-failure trace + org race, #34 autofocus focus-restore, #32 prod-observability scrape). New memory:
+`web-tsconfig-typechecks-api-di-es-decorators`.
