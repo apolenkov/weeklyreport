@@ -21,6 +21,8 @@ const COMPLETE = {
   PDF_BASE_URL: "https://app.example.com",
   PDF_OUTPUT_DIR: "/var/lib/customreport/pdfs",
   PDF_EXPORT_JWT_SECRET: "a-production-pdf-secret-at-least-32-chars",
+  SMTP_HOST: "smtp.example.com",
+  SMTP_FROM: "noreply@example.com",
 } as const;
 
 describe("envSchema — no defaults, every product var required", () => {
@@ -57,6 +59,16 @@ describe("envSchema — no defaults, every product var required", () => {
     ).toBe(false);
   });
 
+  it("rejects a PDF_EXPORT_JWT_SECRET shorter than 32 chars", () => {
+    // 17 chars: clears the old 16-char floor, fails the raised 32-char one.
+    expect(
+      envSchema.safeParse({
+        ...COMPLETE,
+        PDF_EXPORT_JWT_SECRET: "seventeen-chars-x",
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects a non-URL FRONTEND_URL / APP_BASE_URL", () => {
     expect(
       envSchema.safeParse({ ...COMPLETE, APP_BASE_URL: "not-a-url" }).success,
@@ -85,5 +97,37 @@ describe("envSchema — production fences", () => {
       FRONTEND_URLS: "https://a.example.com,*",
     });
     expect(result.success).toBe(false);
+  });
+
+  it("requires SMTP_HOST in production", () => {
+    const { SMTP_HOST: _omit, ...without } = COMPLETE;
+    expect(envSchema.safeParse(without).success).toBe(false);
+  });
+
+  it("requires SMTP_FROM in production", () => {
+    const { SMTP_FROM: _omit, ...without } = COMPLETE;
+    expect(envSchema.safeParse(without).success).toBe(false);
+  });
+
+  it("rejects whitespace-only SMTP_HOST/SMTP_FROM in production", () => {
+    const result = envSchema.safeParse({
+      ...COMPLETE,
+      SMTP_HOST: " ".repeat(3),
+      SMTP_FROM: " ".repeat(3),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts production with both SMTP_HOST and SMTP_FROM set", () => {
+    expect(envSchema.safeParse(COMPLETE).success).toBe(true);
+  });
+
+  it("allows absent SMTP_HOST/SMTP_FROM outside production", () => {
+    const { SMTP_HOST: _host, SMTP_FROM: _from, ...without } = COMPLETE;
+    const result = envSchema.safeParse({
+      ...without,
+      NODE_ENV: "development",
+    });
+    expect(result.success).toBe(true);
   });
 });

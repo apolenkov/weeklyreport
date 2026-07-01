@@ -84,9 +84,9 @@ const PDF_EXPORT_JWT_ALGORITHM = "HS256" as const;
  */
 export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
   const secret = process.env.PDF_EXPORT_JWT_SECRET;
-  if (!secret || secret.length < 16) {
+  if (!secret || secret.length < 32) {
     throw new Error(
-      "PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 16 chars).",
+      "PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 32 chars).",
     );
   }
   const decoded = jwt.verify(token, secret, {
@@ -128,14 +128,14 @@ export class PdfExportService {
    * AUTH-05: sign a 5-min scoped JWT with `{reportId}` claim.
    *
    * Throws `PdfExportDomainError` (mapped by tRPC error mapper to 500) if the
-   * signing secret is missing or shorter than 16 chars — fail loud at request
+   * signing secret is missing or shorter than 32 chars — fail loud at request
    * time instead of silently producing a token nobody can verify.
    */
   signPdfExportToken(reportId: string, requestedBy?: string): string {
     const secret = process.env.PDF_EXPORT_JWT_SECRET;
-    if (!secret || secret.length < 16) {
+    if (!secret || secret.length < 32) {
       throw new PdfExportDomainError(
-        "PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 16 chars).",
+        "PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 32 chars).",
       );
     }
     const claims: PdfExportTokenClaims = {

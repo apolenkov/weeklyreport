@@ -1,13 +1,24 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import type { Transporter } from "nodemailer";
 import nodemailer from "nodemailer";
+
+import { ENV_CONFIG } from "../config/config.module";
+import type { EnvConfig } from "../config/env.schema";
+
+// Dev/test jsonTransport has no configured SMTP_FROM; this placeholder only
+// labels the envelope in the logged dev payload (jsonTransport never sends).
+const DEV_JSON_TRANSPORT_FROM = "noreply@example.com";
+// nodemailer's conventional submission port when SMTP_PORT is left unset.
+const DEFAULT_SMTP_PORT = 587;
 
 /**
  * SMTP email service wrapping nodemailer.
  *
  * When SMTP_HOST is configured, sends real emails via the corporate SMTP server.
  * When SMTP_HOST is absent (local dev), uses jsonTransport and logs the message
- * payload to stdout instead of sending.
+ * payload to stdout instead of sending. All SMTP coordinates come from the
+ * injected validated config — a production boot without SMTP fails closed in
+ * env.schema, so jsonTransport can never be selected in production.
  */
 @Injectable()
 export class EmailService {
@@ -15,18 +26,18 @@ export class EmailService {
   private readonly fromAddress: string;
   private readonly isDev: boolean;
 
-  constructor() {
-    this.fromAddress = process.env.SMTP_FROM ?? "noreply@example.com";
-    const host = process.env.SMTP_HOST;
+  constructor(@Inject(ENV_CONFIG) env: EnvConfig) {
+    this.fromAddress = env.SMTP_FROM ?? DEV_JSON_TRANSPORT_FROM;
+    const host = env.SMTP_HOST;
 
     if (host) {
       this.isDev = false;
       this.transporter = nodemailer.createTransport({
         host,
-        port: Number(process.env.SMTP_PORT ?? 587),
+        port: env.SMTP_PORT ?? DEFAULT_SMTP_PORT,
         secure: false,
-        auth: process.env.SMTP_USER
-          ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+        auth: env.SMTP_USER
+          ? { user: env.SMTP_USER, pass: env.SMTP_PASS }
           : undefined,
       });
     } else {

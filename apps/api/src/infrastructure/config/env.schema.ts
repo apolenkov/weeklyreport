@@ -69,10 +69,10 @@ export const envSchema = z
     // where /pdfs static mount serves them. Resolved relative to the API's cwd
     // (apps/api/) at runtime — `./storage/pdfs` lands at `apps/api/storage/pdfs`.
     PDF_OUTPUT_DIR: z.string(),
-    // CC-1 (Phase 28-02): short-lived JWT signed at /trpc entry and injected
-    // as cookie into the headless browser so PDF rendering can authenticate
-    // against /weekly-report/* routes. Min 16 chars enforced in the service.
-    PDF_EXPORT_JWT_SECRET: z.string().min(16),
+    // Short-lived JWT signed at /trpc entry and injected as cookie into the
+    // headless browser so PDF rendering can authenticate against
+    // /weekly-report/* routes. Min 32 chars also enforced in the service.
+    PDF_EXPORT_JWT_SECRET: z.string().min(32),
   })
   .superRefine((data, ctx) => {
     // 36-03: production fences. Boot must fail if any of these aren't met.
@@ -98,6 +98,24 @@ export const envSchema = z
             path: ["FRONTEND_URLS"],
           });
         }
+      }
+      // SMTP must be configured in production. Without a host EmailService
+      // silently selects jsonTransport and drops every reminder; without a
+      // from-address it cannot address an envelope. Fail boot loud instead.
+      // A whitespace-only value is unusable, so it counts as absent here.
+      if (!data.SMTP_HOST?.trim()) {
+        ctx.addIssue({
+          code: "custom",
+          message: "SMTP_HOST is required when NODE_ENV=production",
+          path: ["SMTP_HOST"],
+        });
+      }
+      if (!data.SMTP_FROM?.trim()) {
+        ctx.addIssue({
+          code: "custom",
+          message: "SMTP_FROM is required when NODE_ENV=production",
+          path: ["SMTP_FROM"],
+        });
       }
     }
   });
