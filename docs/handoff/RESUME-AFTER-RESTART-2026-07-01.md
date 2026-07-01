@@ -94,4 +94,44 @@ client may or may not affect the neighbor session — git is the durable substra
 `head-lifecycle-authz-expansion-declined`, `feature-specs-c1-c7-implementation-order`,
 `records-have-no-stable-id-saveSection-recreates`, `parallel-author-session-coordination`,
 `autonomous-backlog-workflow-harness`, `prisma-pg-adapter-p2002-shape`,
-`integration-mock-port-drift-gate`, `customreport-strict-lint-gotchas`.
+`integration-mock-port-drift-gate`, `customreport-strict-lint-gotchas`,
+`web-tsconfig-typechecks-api-di-es-decorators` (a web-reachable api service must
+inject Symbol tokens via a module useFactory, NEVER a constructor `@Inject` param
+decorator — the web tsconfig rejects it TS1206), `openspec-list-overstates-committed-backlog`.
+
+## LIVE PROGRESS (~06:00, mid-marathon — supersedes "State at pause")
+
+COMMITTED on `impl/backlog-2026-06-30` since #1:
+
+- **Batch C — all 8** (fix-reminders-escalation-dedupe, guard-metrics-scrape-db-failure,
+  fix-period-datetime-tz, key-charts-by-id, fix-risk-stage-integrity-impl,
+  fix-dashboard-nan-pending, fix-analytics-date-matching, harden-web-vitals-endpoint).
+- **strict-env trio** — #29 enforce-smtp-config `ba8ab3bb`, #30 fix-heap-health-threshold
+  `6dfbdfa1`, #31 observe-prisma-pool `e37241b0`. (ENV_CONFIG token now lives in
+  apps/api/src/infrastructure/config/config.module.ts — exactly ONE Symbol.)
+- **Wave D #33** observability-and-perf-hardening `0e62e92d` (took 2 Codex fix passes:
+  keyset archive pagination, worker-failure traceId, race-safe org upsert, reject-malformed-cursor).
+
+IN FLIGHT: **#35 input-and-error-hardening** (workflow `w32yfnblw`).
+
+NEXT (Wave D remainder), configs pre-built in the session scratchpad
+`.../scratchpad/waveb-autorun-<N>.js` (embed the change as CHANGES; launch by scriptPath):
+
+- **#34 code-health-and-test-cleanup** = `waveb-autorun-34.js`. SCHEMA change (Decision +
+  StageStatus project FK onDelete Cascade->RESTRICT in schema.prisma + the init migration.sql).
+  The workflow only EDITS schema/migration text; AFTER its commitReady the ORCHESTRATOR runs
+  `prisma migrate reset` on customreport_test AND customreport_dev
+  (PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION), reseeds, db:generate, re-runs integration, THEN commits.
+- **#32 ci-deploy-supplychain-hardening** — deploy-only, gate can't verify; TWO commits A->B
+  (folds protect-metrics /metrics removal). DEFER the CSP Report-Only->enforce flip (needs
+  in-browser validation across 4 role surfaces — cannot be done blind autonomously; leave a note for Саша).
+- **#36 tighten-code-quality-ratchet** — PLAN-ONLY/codeless: openspec validate --strict + commit the spec delta; no impl/gate.
+
+THEN: verify+archive the 19 already-committed tail changes (docs/handoff/marathon-configs/tail-triage-plan.md
+— all 19 have landing commits; it is an archive sweep, NOT re-implementation). Feature specs C1-C7 last
+(blocked on the durable-record-id prerequisite; C7 blocked on Саша).
+
+Harness recipe: cp `.claude/workflows/waveb-autorun.js` to scratchpad, splice a new `const CHANGES = [...]`
+(python: replace `const CHANGES = [` .. first `\n];\n`), `node --check`, launch by scriptPath. High-stakes
+returns commitReady -> orchestrator reviews the diff + commits by exact paths (subject <=100 chars for commitlint).
+Codex review fires for real (node codex-companion.mjs) on the Sonnet-5 wrapper — it has caught ~7 real defects; trust it.
