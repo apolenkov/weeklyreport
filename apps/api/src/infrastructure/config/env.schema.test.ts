@@ -83,6 +83,44 @@ describe("envSchema — no defaults, every product var required", () => {
     },
   );
 
+  // DB_POOL_* are genuinely optional (absent → PrismaService applies its own
+  // named defaults), so an omitted value must still parse — but a PRESENT
+  // malformed value must fail boot rather than reach pg.
+  it("accepts a config with the DB_POOL_* vars absent", () => {
+    expect(envSchema.safeParse(COMPLETE).success).toBe(true);
+  });
+
+  it.each(["10junk", "1.5", "0", "-1", ""] as const)(
+    "rejects a malformed DB_POOL_MAX (%s)",
+    (value) => {
+      expect(
+        envSchema.safeParse({ ...COMPLETE, DB_POOL_MAX: value }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each(["1.5", "-1", "notnum"] as const)(
+    "rejects a malformed DB_POOL_IDLE_TIMEOUT_MS (%s)",
+    (value) => {
+      expect(
+        envSchema.safeParse({ ...COMPLETE, DB_POOL_IDLE_TIMEOUT_MS: value })
+          .success,
+      ).toBe(false);
+    },
+  );
+
+  it("accepts a zero timeout but rejects a zero DB_POOL_MAX", () => {
+    expect(
+      envSchema.safeParse({
+        ...COMPLETE,
+        DB_POOL_CONNECTION_TIMEOUT_MS: "0",
+      }).success,
+    ).toBe(true);
+    expect(envSchema.safeParse({ ...COMPLETE, DB_POOL_MAX: "0" }).success).toBe(
+      false,
+    );
+  });
+
   it("rejects a non-URL FRONTEND_URL / APP_BASE_URL", () => {
     expect(
       envSchema.safeParse({ ...COMPLETE, APP_BASE_URL: "not-a-url" }).success,

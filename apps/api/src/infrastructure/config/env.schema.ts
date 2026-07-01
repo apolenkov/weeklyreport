@@ -81,6 +81,22 @@ export const envSchema = z
     // decouple the probe from the real limit and reintroduce spurious DOWN
     // responses.
     HEAP_HEALTH_THRESHOLD_BYTES: z.coerce.number().int().positive(),
+
+    // pg.Pool tunables consumed only by PrismaService. Genuinely optional: when
+    // absent the service applies its own named default consts, so no `.default()`
+    // belongs here. A PRESENT value must be a whole number in range — a typo
+    // (`10junk`, `1.5`, `0`, `-1`) fails boot loud via `z.coerce` rather than
+    // silently reaching pg, which coerces `max: 0` back to 10 (a logged 0 would
+    // lie) and keeps a negative max (the pool reports permanently full and hangs
+    // every queued query). `DB_POOL_MAX` must be positive; the timeouts allow 0
+    // (0 disables the acquire timeout in pg).
+    DB_POOL_MAX: z.coerce.number().int().positive().optional(),
+    DB_POOL_IDLE_TIMEOUT_MS: z.coerce.number().int().nonnegative().optional(),
+    DB_POOL_CONNECTION_TIMEOUT_MS: z.coerce
+      .number()
+      .int()
+      .nonnegative()
+      .optional(),
   })
   .superRefine((data, ctx) => {
     // 36-03: production fences. Boot must fail if any of these aren't met.

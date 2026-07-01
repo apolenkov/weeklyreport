@@ -8,7 +8,23 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
+import type { EnvConfig } from "../config/env.schema.js";
+
 const SLOW_QUERY_MS = 100;
+
+// pg's own defaults, named so an absent env tunable resolves to an explicit,
+// greppable value rather than an implicit library constant. Applied only when
+// the corresponding `DB_POOL_*` env var is unset; a malformed PRESENT value
+// fails boot in `env.schema.ts` and never reaches here.
+const DEFAULT_DB_POOL_MAX = 10;
+const DEFAULT_DB_POOL_IDLE_TIMEOUT_MS = 10_000;
+const DEFAULT_DB_POOL_CONNECTION_TIMEOUT_MS = 0;
+
+interface ResolvedPoolConfig {
+  readonly max: number;
+  readonly idleTimeoutMillis: number;
+  readonly connectionTimeoutMillis: number;
+}
 
 // Prisma 7's PrismaClient type narrows `$on` differently depending on the
 // constructor's `log` shape, and TypeScript cannot always reconcile the two
@@ -37,10 +53,21 @@ export class PrismaService
 {
   private readonly logger = new Logger(PrismaService.name);
   private readonly pool: pg.Pool;
+  private readonly poolConfig: ResolvedPoolConfig;
 
-  constructor() {
-    const connectionString = process.env.DATABASE_URL;
-    const pool = new pg.Pool({ connectionString });
+  constructor(env: EnvConfig) {
+    const poolConfig: ResolvedPoolConfig = {
+      max: env.DB_POOL_MAX ?? DEFAULT_DB_POOL_MAX,
+      idleTimeoutMillis:
+        env.DB_POOL_IDLE_TIMEOUT_MS ?? DEFAULT_DB_POOL_IDLE_TIMEOUT_MS,
+      connectionTimeoutMillis:
+        env.DB_POOL_CONNECTION_TIMEOUT_MS ??
+        DEFAULT_DB_POOL_CONNECTION_TIMEOUT_MS,
+    };
+    const pool = new pg.Pool({
+      connectionString: env.DATABASE_URL,
+      ...poolConfig,
+    });
     const adapter = new PrismaPg(pool);
 
     // log:'query' emits a runtime event per SQL; gated to debug-level
@@ -55,6 +82,19 @@ export class PrismaService
       ],
     });
     this.pool = pool;
+    this.poolConfig = poolConfig;
+
+    // Without a listener an idle pool client that loses its backend connection
+    // emits an unhandled `error` event, which crashes the process. Route it to
+    // the logger instead. The active NestAppLoggerAdapter `String(...)`-coerces
+    // the first arg and treats a second arg as the Nest log context, so the
+    // structured fields must be embedded in ONE string (matching the
+    // `slow query ${JSON.stringify(...)}` convention above).
+    pool.on("error", (err: Error) => {
+      this.logger.error(
+        `pg pool error ${JSON.stringify({ phase: "pg.pool.error", message: err.message })}`,
+      );
+    });
   }
 
   async onModuleInit(): Promise<void> {
@@ -95,7 +135,11 @@ export class PrismaService
     });
 
     await this.$connect();
-    this.logger.log("Database connection established");
+    // Emit the resolved pool config on one line so operators can grep a single
+    // entry to confirm the size/timeouts pg actually received at boot.
+    this.logger.log(
+      `Database connection established ${JSON.stringify({ phase: "pg.pool.config", ...this.poolConfig })}`,
+    );
   }
 
   beforeApplicationShutdown(): void {
