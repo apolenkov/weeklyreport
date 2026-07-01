@@ -111,6 +111,10 @@ export type PrismaReportSectionWithRelations = NonNullable<
   }[];
   items: {
     id: string;
+    // Durable lineage key. Optional on this hand-written row type so unit-test
+    // fixtures predating the column still satisfy it; a real DB row (NOT NULL
+    // column) always carries it, and the read model treats it as optional too.
+    stableId?: string;
     projectId: string;
     type: string;
     text: string;
@@ -127,6 +131,7 @@ export type PrismaReportSectionWithRelations = NonNullable<
   }[];
   risks: {
     id: string;
+    stableId?: string;
     projectId: string;
     risk: string;
     impact: string;
@@ -137,6 +142,7 @@ export type PrismaReportSectionWithRelations = NonNullable<
   }[];
   decisions: {
     id: string;
+    stableId?: string;
     text: string;
     owner: string;
     deadline: Date | null;
@@ -421,6 +427,9 @@ export function mapPrismaToReportSection(
     referencedProjects,
     items: row.items.map((i) => ({
       id: i.id,
+      // Durable lineage key — surfaced so the client round-trips it back and
+      // saveSection's recreate preserves it instead of re-minting.
+      stableId: i.stableId,
       projectId: i.projectId,
       type: i.type,
       text: i.text,
@@ -433,6 +442,7 @@ export function mapPrismaToReportSection(
     })),
     risks: row.risks.map((r) => ({
       id: r.id,
+      stableId: r.stableId,
       projectId: r.projectId,
       risk: r.risk,
       impact: r.impact,
@@ -442,6 +452,7 @@ export function mapPrismaToReportSection(
     })),
     decisions: row.decisions.map((d) => ({
       id: d.id,
+      stableId: d.stableId,
       text: d.text,
       owner: d.owner,
       deadline: d.deadline,
@@ -574,6 +585,10 @@ export class ReportSectionsPrismaRepository
                 // The DB mints the id — rows are recreated wholesale, so trusting
                 // a client-supplied PK only risks a cross-section P2002 collision.
                 reportSectionId: sectionId,
+                // Preserve the durable lineage key through the recreate. Undefined
+                // for a brand-new record → omitted so the `@default(uuid())` mints
+                // one; never `?? null` (the column is NOT NULL).
+                stableId: i.stableId,
                 projectId: i.projectId,
                 type: i.type,
                 text: i.text,
@@ -591,6 +606,8 @@ export class ReportSectionsPrismaRepository
             await tx.risk.createMany({
               data: section.risks.map((r) => ({
                 reportSectionId: sectionId,
+                // Preserve the durable lineage key (see items above).
+                stableId: r.stableId,
                 projectId: r.projectId,
                 risk: r.risk,
                 impact: r.impact,
@@ -608,6 +625,8 @@ export class ReportSectionsPrismaRepository
             await tx.decision.createMany({
               data: decisionsToSave.map((d) => ({
                 reportSectionId: sectionId,
+                // Preserve the durable lineage key (see items above).
+                stableId: d.stableId,
                 text: d.text,
                 owner: d.owner,
                 deadline: d.deadline ?? null,

@@ -199,12 +199,42 @@ export class CarryOverService {
       if (!targetSection) {
         return [];
       }
+      // introduce-durable-record-identity: never carry a lineage the target
+      // section already holds. The new `@@unique([reportSectionId, stableId])`
+      // would otherwise make the item insert silently skip (leaving an orphan
+      // CarryOverRecord) or trip P2002 on the decision insert (misread as a
+      // dedupe-key race). Filtering here keeps carry-over idempotent by lineage,
+      // not only by the execution dedupeKey, and counts/records stay accurate.
+      const targetItemLineage = new Set(
+        targetSection.items
+          .map((i) => i.stableId)
+          .filter((s): s is string => Boolean(s)),
+      );
+      const targetDecisionLineage = new Set(
+        targetSection.decisions
+          .map((d) => d.stableId)
+          .filter((s): s is string => Boolean(s)),
+      );
       const items = sourceSection.items
-        .filter((item) => item.type === "next" && !item.carriedOver)
+        .filter(
+          (item) =>
+            item.type === "next" &&
+            !item.carriedOver &&
+            !(
+              item.stableId !== undefined &&
+              targetItemLineage.has(item.stableId)
+            ),
+        )
         .map((item) => cloneCarriedItem(sourceReportId, targetReportId, item));
       const decisions = sourceSection.decisions
         .filter(
-          (decision) => !decision.resolvedAt && Boolean(decision.productId),
+          (decision) =>
+            !decision.resolvedAt &&
+            Boolean(decision.productId) &&
+            !(
+              decision.stableId !== undefined &&
+              targetDecisionLineage.has(decision.stableId)
+            ),
         )
         .map((decision) =>
           cloneUnresolvedDecision(sourceReportId, targetReportId, decision),

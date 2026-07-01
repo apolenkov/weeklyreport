@@ -5,6 +5,7 @@
  * hook test harness.
  */
 
+import type { ReportSectionReadModel } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { TRPCClientError } from "@trpc/client";
@@ -15,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TRPCProxyContext } from "../../lib/trpc-context";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../test-utils/mock-trpc";
-import { LeadForm } from "./lead-form";
+import { LeadForm, sectionToDraftPayload } from "./lead-form";
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -67,6 +68,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
     items: [
       {
         id: "55555555-5555-5555-5555-555555555555",
+        stableId: "5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a5a",
         projectId: PROJECT_ID,
         type: "current" as const,
         text: "Existing item",
@@ -79,6 +81,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
     decisions: [
       {
         id: "66666666-6666-6666-6666-666666666666",
+        stableId: "6a6a6a6a-6a6a-4a6a-8a6a-6a6a6a6a6a6a",
         text: "Existing decision",
         owner: "Owner",
         impact: "Impact",
@@ -906,5 +909,41 @@ describe("LeadForm mode-adaptive trailing control", () => {
       screen.queryByRole("button", { name: "Expand all sections" }),
     ).toBeNull();
     expect(screen.queryByText("Toggle All")).toBeNull();
+  });
+});
+
+describe("sectionToDraftPayload — durable stableId round-trip", () => {
+  // Make-or-break for introduce-durable-record-identity: the save payload must
+  // carry each existing record's stableId so saveSection preserves identity
+  // instead of re-minting it every write. A brand-new row has none yet (the
+  // server mints it), which must serialize as an absent/undefined key, not fail.
+  it("carries stableId for existing item + decision rows", () => {
+    const payload = sectionToDraftPayload(makeSection());
+    expect(expectDefined(payload.items[0]).stableId).toBe(
+      "5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a5a",
+    );
+    expect(expectDefined(payload.decisions[0]).stableId).toBe(
+      "6a6a6a6a-6a6a-4a6a-8a6a-6a6a6a6a6a6a",
+    );
+  });
+
+  it("emits undefined stableId for a brand-new row (server mints it)", () => {
+    const base = makeSection() as unknown as ReportSectionReadModel;
+    const withNewItem: ReportSectionReadModel = {
+      ...base,
+      items: [
+        {
+          id: "99999999-9999-4999-8999-999999999999",
+          projectId: base.projects[0]?.projectId ?? "",
+          type: "current",
+          text: "Fresh item",
+          tag: "tag",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+        },
+      ],
+    };
+    const payload = sectionToDraftPayload(withNewItem);
+    expect(expectDefined(payload.items[0]).stableId).toBeUndefined();
   });
 });

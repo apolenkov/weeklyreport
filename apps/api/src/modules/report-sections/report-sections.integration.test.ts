@@ -487,4 +487,150 @@ describe("ReportSectionsPrismaRepository (integration)", () => {
       expect(recovered.version).toBe(3);
     });
   });
+
+  // introduce-durable-record-identity: a record's stableId must outlive
+  // saveSection's delete-recreate (the PK id is re-minted every write) and be
+  // minted once for a brand-new record. These go through the real DB so the
+  // `@default(uuid())` mint and the (reportSectionId, stableId) guard are
+  // exercised, not mocked.
+  describe("durable record identity (stableId)", () => {
+    beforeEach(async () => {
+      await assignLeadToProject();
+      await prisma.projectStatus.create({
+        data: {
+          reportSectionId: testData.section.id,
+          projectId: testData.project.id,
+          status: "green",
+        },
+      });
+    });
+
+    async function saveOneItem(text: string, stableId?: string) {
+      const original = expectDefined(
+        await repo.getSectionById(testData.section.id),
+      );
+      const modified = {
+        ...original,
+        items: [
+          {
+            stableId,
+            projectId: testData.project.id,
+            type: "current" as const,
+            text,
+            tag: "feature",
+            workflowStatus: "in_progress" as const,
+            carriedOver: false,
+            stageIds: ["Development"],
+          },
+        ],
+      };
+      return repo.saveSection(modified, modified.version);
+    }
+
+    it("preserves stableId across a save while the PK id is re-minted", async () => {
+      const first = await saveOneItem("original text");
+      const item1 = expectDefined(first.items[0]);
+      const stableId = expectDefined(item1.stableId);
+      // Lineage key is distinct from the volatile PK.
+      expect(stableId).not.toBe(item1.id);
+
+      // Edit unrelated text, round-tripping the stableId the client loaded.
+      const second = await saveOneItem("edited text", stableId);
+      const item2 = expectDefined(second.items[0]);
+
+      expect(item2.stableId).toBe(stableId); // survived the recreate
+      expect(item2.text).toBe("edited text");
+      expect(item2.id).not.toBe(item1.id); // PK re-minted by the delete-recreate
+    });
+
+    it("mints a stableId for a brand-new record and keeps it on the next save", async () => {
+      const first = await saveOneItem("new item"); // no stableId supplied
+      const minted = expectDefined(expectDefined(first.items[0]).stableId);
+      expect(minted).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
+
+      const second = await saveOneItem("new item edited", minted);
+      expect(expectDefined(second.items[0]).stableId).toBe(minted);
+    });
+
+    it("gives two records in one section distinct stableIds that survive a re-save", async () => {
+      const original = expectDefined(
+        await repo.getSectionById(testData.section.id),
+      );
+      const twoItems = {
+        ...original,
+        items: ["one", "two"].map((text) => ({
+          projectId: testData.project.id,
+          type: "current" as const,
+          text,
+          tag: "feature",
+          workflowStatus: "in_progress" as const,
+          carriedOver: false,
+          stageIds: ["Development"],
+        })),
+      };
+      const saved = await repo.saveSection(twoItems, twoItems.version);
+      const ids = saved.items.map((i) => expectDefined(i.stableId));
+      expect(new Set(ids).size).toBe(2);
+
+      // Re-save round-tripping both stableIds: the delete-recreate happens inside
+      // one transaction, so the @@unique([reportSectionId, stableId]) guard must
+      // not trip on the reinserted rows.
+      const roundTrip = expectDefined(
+        await repo.getSectionById(testData.section.id),
+      );
+      await expect(
+        repo.saveSection(roundTrip, roundTrip.version),
+      ).resolves.toBeDefined();
+      const reread = expectDefined(
+        await repo.getSectionById(testData.section.id),
+      );
+      expect(
+        new Set(reread.items.map((i) => expectDefined(i.stableId))).size,
+      ).toBe(2);
+    });
+
+    it("round-trips stableId through the saveDraft service path (input optional, read model preserved)", async () => {
+      // This is the make-or-break for the OPTIONAL read model: the FIRST save
+      // carries a new item with NO stableId, so mergeSection (which parses the
+      // raw input items against the read-model schema) must not reject it.
+      const service = new ReportSectionsService(repo);
+      const itemInput = (text: string, stableId?: string) => ({
+        ...(stableId ? { stableId } : {}),
+        projectId: testData.project.id,
+        type: "current" as const,
+        text,
+        tag: "feature",
+        workflowStatus: "in_progress" as const,
+        carriedOver: false,
+        stageIds: ["Development"],
+      });
+
+      const created = await service.saveDraft({
+        reportSectionId: testData.section.id,
+        version: 1,
+        status: "draft",
+        projectStatuses: [{ projectId: testData.project.id, status: "green" }],
+        stageStatuses: [],
+        items: [itemInput("svc item")],
+        risks: [],
+        decisions: [],
+      });
+      const stableId = expectDefined(expectDefined(created.items[0]).stableId);
+
+      const updated = await service.saveDraft({
+        reportSectionId: testData.section.id,
+        version: created.version,
+        status: "draft",
+        projectStatuses: [{ projectId: testData.project.id, status: "green" }],
+        stageStatuses: [],
+        items: [itemInput("svc item edited", stableId)],
+        risks: [],
+        decisions: [],
+      });
+      expect(expectDefined(updated.items[0]).stableId).toBe(stableId);
+      expect(expectDefined(updated.items[0]).text).toBe("svc item edited");
+    });
+  });
 });

@@ -88,9 +88,15 @@ no carry path to extend until a change adds risk carry-over.
 - `prisma/schema.prisma` (`stableId` on `Item` / `Risk` / `Decision` + index) and
   the single init migration SQL (MVP disposable DB).
 - `packages/shared/src/schemas/section.schema.ts` — `stableId` on the item / risk /
-  decision read models (required) and inputs (optional).
+  decision inputs (optional); the read models inherit it (also optional — see the
+  design "Optional read model" note: `mergeSection` parses save inputs against the
+  read-model schema, so a required field would reject a brand-new record).
 - `apps/api/src/modules/report-sections/report-sections.prisma-repository.ts` —
-  `saveSection` `createMany` persists `stableId`; `mapPrismaToReportSection` /
-  `reportSectionFullInclude` surface it.
+  `saveSection` `createMany` persists `stableId`; `mapPrismaToReportSection` surfaces
+  it (the hand-written `PrismaReportSectionWithRelations` row type declares it too).
 - `apps/api/src/modules/carry-over/carry-over.service.ts` — clones keep the source
   `stableId`; `carry-over.prisma-repository.ts` `saveCarryOver` persists it.
+- `apps/web/src/components/lead/lead-form.tsx` — `sectionToDraftPayload` round-trips
+  `stableId` in the save payload (the original Impact list missed the web link; the
+  merge handlers already preserve it via `...existing`). Without this, the round-trip
+  breaks and identity re-mints on every save.

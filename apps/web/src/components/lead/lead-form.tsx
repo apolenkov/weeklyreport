@@ -217,8 +217,11 @@ function CollapseIcon() {
  * Build a `draftSaveSchema`-compatible payload from the raw API section. The
  * raw shape carries every field the schema requires (owner/impact on
  * decisions, tag/workflowStatus on items, etc.) so this round-trips cleanly.
+ *
+ * Exported for a focused unit test: the durable `stableId` round-trip is
+ * load-bearing — drop it here and every save re-mints record identity.
  */
-function sectionToDraftPayload(
+export function sectionToDraftPayload(
   section: ReportSectionReadModel,
 ): DraftSaveContent {
   // Drop rows whose required text fields are empty or whitespace-only. The
@@ -247,6 +250,10 @@ function sectionToDraftPayload(
       .filter((it) => hasText(it.text))
       .map((it) => ({
         id: it.id,
+        // Round-trip the durable lineage key so saveSection preserves identity
+        // instead of re-minting. Undefined for a brand-new row (the server mints
+        // it); the merge handlers keep it via `...existing` for edited rows.
+        stableId: it.stableId,
         projectId: it.projectId,
         type: it.type,
         text: it.text,
@@ -267,6 +274,7 @@ function sectionToDraftPayload(
       .filter((r) => hasText(r.risk) && hasText(r.mitigation))
       .map((r) => ({
         id: r.id,
+        stableId: r.stableId,
         projectId: r.projectId,
         risk: r.risk,
         impact: r.impact,
@@ -282,6 +290,7 @@ function sectionToDraftPayload(
       .filter((d) => hasText(d.text) && hasText(d.owner) && hasText(d.impact))
       .map((d) => ({
         id: d.id,
+        stableId: d.stableId,
         text: d.text,
         owner: d.owner,
         deadline: d.deadline ?? null,

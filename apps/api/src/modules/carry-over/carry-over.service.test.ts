@@ -170,6 +170,73 @@ describe("CarryOverService", () => {
     ).rejects.toBeInstanceOf(CarryOverDomainError);
   });
 
+  // introduce-durable-record-identity: a lineage the target section already
+  // holds must NOT be carried again — the new (reportSectionId, stableId)
+  // uniqueness would otherwise skip the item insert (orphaning its
+  // CarryOverRecord) or trip P2002 on the decision insert.
+  it("skips carrying a lineage the target section already holds", async () => {
+    const LINEAGE = "a0000000-0000-4000-8000-0000000000ab";
+    const projectId = "44444444-4444-4444-8444-444444444444";
+    const src: ReportSectionReadModel = {
+      ...sourceSection,
+      items: [
+        {
+          id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          stableId: LINEAGE,
+          projectId,
+          type: "next",
+          text: "Same lineage as target",
+          tag: "feature",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+        },
+      ],
+      decisions: [],
+    };
+    // The target already contains the same lineage (e.g. an earlier carry).
+    const target: ReportSectionReadModel = {
+      ...src,
+      reportSectionId: "22222222-2222-4222-8222-222222222223",
+      reportId: targetReportId,
+      status: "draft",
+      submittedAt: null,
+      items: [
+        {
+          id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+          stableId: LINEAGE,
+          projectId,
+          type: "current",
+          text: "Same lineage as target",
+          tag: "feature",
+          workflowStatus: "in_progress",
+          carriedOver: true,
+        },
+      ],
+    };
+    const repo: CarryOverRepository = {
+      findExecutionByDedupeKey: () => Promise.resolve(null),
+      getSourceSections: () => Promise.resolve([structuredClone(src)]),
+      getTargetSections: () => Promise.resolve([structuredClone(target)]),
+      getTargetReportState: () =>
+        Promise.resolve({ periodStatus: "open" as const, archived: false }),
+      saveCarryOver: (execution, records, sections) =>
+        Promise.resolve({ execution, records, targetSection: sections[0] }),
+    };
+    const service = new CarryOverService(repo);
+    const result = await service.executeCarryOver(
+      sourceReportId,
+      targetReportId,
+    );
+
+    // The lineage is already present → not carried again: no records, no count.
+    expect(result.execution.carriedItemCount).toBe(0);
+    expect(result.records).toHaveLength(0);
+    // And the target still holds exactly one row for that lineage (no duplicate).
+    expect(
+      result.targetSection.items.filter((i) => i.stableId === LINEAGE),
+    ).toHaveLength(1);
+  });
+
   describe("carry-over — findMany and idempotency", () => {
     const secondSourceSection: ReportSectionReadModel = {
       ...sourceSection,
