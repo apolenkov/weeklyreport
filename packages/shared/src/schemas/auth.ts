@@ -13,10 +13,9 @@ export const roleSchema = z.enum(["lead", "head", "admin", "viewer"]);
 /**
  * Role attached to an authenticated session (JWT / SAML claim).
  *
- * Wider than `roleSchema` because the session layer recognises 'admin' for
- * buildRoleMiddleware (D-AUTH-03). adminProcedure ===
- * headProcedure for v6.0; the alias is preserved so Phase 29 can split them
- * without breaking call sites.
+ * Identical to `roleSchema` today — both enumerate lead/head/admin/viewer. The
+ * two names are kept as separate aliases so the session axis and the DB Role
+ * column can diverge later without touching every call site.
  */
 export const sessionRoleSchema = z.enum(["lead", "head", "admin", "viewer"]);
 
@@ -82,9 +81,9 @@ export const userSessionSchema = z.object({
 
 /**
  * `Role` is the session-level role used by `assertRole` / `buildRoleMiddleware`
- * (api). It is wider than the DB Role enum (use `DbRole` for admin user
- * writes) — this matches the v6.0 contract where admin sessions exist but
- * admin User rows do not yet.
+ * (api). It enumerates the same members as the DB Role enum today (use `DbRole`
+ * for admin user writes); the alias stays separate so the session and
+ * persistence axes can diverge without a wide refactor.
  */
 export type Role = z.infer<typeof sessionRoleSchema>;
 export type DbRole = z.infer<typeof roleSchema>;

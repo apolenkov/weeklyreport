@@ -861,10 +861,11 @@ async function main() {
   );
   // Active report — 6 sections, one per lead. Mix of statuses + traffic lights
   // so the dashboard has visible variety. `name` is the user's FULL display
-  // name; it seeds each decision's `owner` so the value stays equal to
-  // `data.currentUser.name` once the form loads — otherwise `isMine` fails and
-  // the lead loses Edit/Delete on their own decisions. `label` is the short
-  // chip form, used only in demo prose strings.
+  // name; it seeds each decision's `owner` purely as the displayed author label.
+  // Edit/Delete rights are decided id-based from the section's authorId (the
+  // `foreign` flag), NOT by matching this name — so the value need not equal
+  // `data.currentUser.name`. `label` is the short chip form, used only in demo
+  // prose strings.
   type LeadCfg = {
     id: string;
     productId: string;

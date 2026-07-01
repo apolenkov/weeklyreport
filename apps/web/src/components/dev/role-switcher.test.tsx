@@ -1,0 +1,92 @@
+/**
+ * @vitest-environment jsdom
+ */
+import "@testing-library/jest-dom/vitest";
+
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const useQueryMock = vi.fn();
+const useMutationMock = vi.fn();
+
+vi.mock("@tanstack/react-query", () => ({
+  useQuery: (opts: unknown): unknown => useQueryMock(opts),
+  useMutation: (opts: unknown): unknown => useMutationMock(opts),
+}));
+
+vi.mock("../../lib/trpc-context", () => ({
+  useTRPC: () => ({
+    dev: {
+      listUsers: { queryOptions: () => ({ queryKey: ["dev.listUsers"] }) },
+      wipeAndReseed: {
+        mutationOptions: (o: object) => ({ mutationKey: ["wipe"], ...o }),
+      },
+    },
+    auth: { me: { queryOptions: () => ({ queryKey: ["auth.me"] }) } },
+  }),
+}));
+
+import { DevRoleSwitcher } from "./role-switcher";
+
+const SEED_USER = {
+  id: "00000000-0000-4000-8000-000000000001",
+  email: "admin@customreport.local",
+  name: "Admin User",
+  role: "admin" as const,
+};
+
+function primeHooks(sessionRole: string): void {
+  useMutationMock.mockReturnValue({ mutate: vi.fn() });
+  useQueryMock.mockImplementation((opts: { queryKey?: string[] }) => {
+    const key = opts.queryKey?.[0];
+    if (key === "auth.me") {
+      return { data: { ...SEED_USER, role: sessionRole } };
+    }
+    return { data: [SEED_USER], isLoading: false, error: null };
+  });
+}
+
+describe("DevRoleSwitcher — admin-only data-reset controls", () => {
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER = "true";
+    useQueryMock.mockReset();
+    useMutationMock.mockReset();
+  });
+
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER;
+  });
+
+  it("renders the reset controls for an admin dev session", async () => {
+    primeHooks("admin");
+    const user = userEvent.setup();
+
+    render(<DevRoleSwitcher />);
+    await user.click(screen.getByTestId("dev-role-switcher-trigger"));
+
+    expect(
+      screen.getByTestId("dev-role-switcher-reseed-small"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("dev-role-switcher-wipe-manual-uat"),
+    ).toBeInTheDocument();
+  });
+
+  it("hides the reset controls for a non-admin (lead) dev session", async () => {
+    primeHooks("lead");
+    const user = userEvent.setup();
+
+    render(<DevRoleSwitcher />);
+    await user.click(screen.getByTestId("dev-role-switcher-trigger"));
+
+    expect(
+      screen.queryByTestId("dev-role-switcher-reseed-small"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("dev-role-switcher-wipe-manual-uat"),
+    ).not.toBeInTheDocument();
+    // The role picker itself still renders — only the Data reset block is gated.
+    expect(screen.getByTestId("dev-role-switcher-logout")).toBeInTheDocument();
+  });
+});

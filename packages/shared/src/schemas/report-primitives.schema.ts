@@ -84,9 +84,10 @@ export const periodStateSchema = z.enum([
 // Payload guard against pathological stage selections; normal is 1–7 stages.
 const MAX_SELECTED_STAGES = 20;
 
-// UFB-073 (R1): SDLC stage selection stored as array of stage NAMES (split from
-// the comma-joined Risk.stageName / KanbanItem.stageName DB column on read in the
-// prisma repo). Field is misnamed `stageIds` for legacy reasons — see TODO below.
+// SDLC stage selection persisted as a native String[] array (the Postgres
+// text[] `stageNames` column on Item / Risk / Decision) — one stage name per
+// element. Any comma-joined rendering is display-only (chip labels) and is NOT
+// the storage format. Field is misnamed `stageIds` for legacy reasons.
 // TODO(STAGE-NAMING-01): rename stageIds→stageNames (~125 sites, 28 files — deferred)
 export const stageIdsField = z
   .array(z.string())

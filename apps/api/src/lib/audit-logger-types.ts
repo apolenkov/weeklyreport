@@ -43,6 +43,7 @@ export type AuditEvent =
   | "period.auto-publish"
   | "period.auto-archive"
   | "period.manual-create"
+  | "period.manual-edit"
   | "scope-accessed";
 
 export interface AuditEnvelope {

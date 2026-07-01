@@ -55,6 +55,38 @@ describe("CorrelationIdMiddleware", () => {
     expect(next).toHaveBeenCalledOnce();
   });
 
+  const UUID_RE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+  it("replaces an oversized (>128 char) x-request-id with a fresh UUID", () => {
+    const { cls, set } = buildClsMock();
+    const middleware = new CorrelationIdMiddleware(cls);
+    const oversized = "a".repeat(129);
+    const { req, res, next, setHeader } = buildMocks(oversized);
+
+    middleware.use(req, res, next);
+
+    const adopted = req.headers["x-request-id"] as string;
+    expect(adopted).not.toBe(oversized);
+    expect(adopted).toMatch(UUID_RE);
+    expect(setHeader).toHaveBeenCalledWith("x-request-id", adopted);
+    expect(set).toHaveBeenCalledWith("correlationId", adopted);
+  });
+
+  it("replaces an x-request-id with a control character with a fresh UUID", () => {
+    const { cls, set } = buildClsMock();
+    const middleware = new CorrelationIdMiddleware(cls);
+    const withControl = `abc${String.fromCharCode(10)}def`;
+    const { req, res, next } = buildMocks(withControl);
+
+    middleware.use(req, res, next);
+
+    const adopted = req.headers["x-request-id"] as string;
+    expect(adopted).not.toBe(withControl);
+    expect(adopted).toMatch(UUID_RE);
+    expect(set).toHaveBeenCalledWith("correlationId", adopted);
+  });
+
   it("isolates correlationId per request (no cross-request bleed)", () => {
     const { cls, set } = buildClsMock();
     const middleware = new CorrelationIdMiddleware(cls);

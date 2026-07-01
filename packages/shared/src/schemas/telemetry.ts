@@ -30,7 +30,7 @@ export const telemetrySummarySchema = z.object({
   lateSections: z.number().int().nonnegative(),
   pendingReopens: z.number().int().nonnegative(),
   pdfExportsLast7d: z.number().int().nonnegative(),
-  sparkline: z.array(z.number().min(0).max(1)).max(8),
+  sparkline: z.array(z.number().min(0).max(1)).max(4),
 });
 
 export type TelemetrySummary = z.infer<typeof telemetrySummarySchema>;
