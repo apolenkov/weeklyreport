@@ -100,6 +100,7 @@ export default defineConfig({
         REDIS_PORT: process.env.REDIS_PORT ?? "6379",
         OTEL_SDK_DISABLED: "true",
         OTEL_TRACES_SAMPLER_ARG: "0",
+        HEAP_HEALTH_THRESHOLD_BYTES: "1610612736",
       },
     },
     {

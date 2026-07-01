@@ -23,6 +23,7 @@ const COMPLETE = {
   PDF_EXPORT_JWT_SECRET: "a-production-pdf-secret-at-least-32-chars",
   SMTP_HOST: "smtp.example.com",
   SMTP_FROM: "noreply@example.com",
+  HEAP_HEALTH_THRESHOLD_BYTES: "1610612736",
 } as const;
 
 describe("envSchema — no defaults, every product var required", () => {
@@ -47,6 +48,7 @@ describe("envSchema — no defaults, every product var required", () => {
     "PDF_BASE_URL",
     "PDF_OUTPUT_DIR",
     "PDF_EXPORT_JWT_SECRET",
+    "HEAP_HEALTH_THRESHOLD_BYTES",
   ] as const)("rejects a config missing %s", (key) => {
     const { [key]: _omit, ...without } = COMPLETE;
     expect(envSchema.safeParse(without).success).toBe(false);
@@ -68,6 +70,18 @@ describe("envSchema — no defaults, every product var required", () => {
       }).success,
     ).toBe(false);
   });
+
+  it.each(["0", "-1", "1.5", "not-a-number"] as const)(
+    "rejects a non-positive-integer HEAP_HEALTH_THRESHOLD_BYTES (%s)",
+    (value) => {
+      expect(
+        envSchema.safeParse({
+          ...COMPLETE,
+          HEAP_HEALTH_THRESHOLD_BYTES: value,
+        }).success,
+      ).toBe(false);
+    },
+  );
 
   it("rejects a non-URL FRONTEND_URL / APP_BASE_URL", () => {
     expect(

@@ -1,11 +1,76 @@
+import type {
+  HealthCheckService,
+  HealthIndicatorResult,
+  MemoryHealthIndicator,
+} from "@nestjs/terminus";
 import { HealthIndicatorService } from "@nestjs/terminus";
 import type { Queue } from "bullmq";
 import { describe, expect, it, vi } from "vitest";
 
+import type { EnvConfig } from "../config/env.schema.js";
 import type { PrismaService } from "../prisma/prisma.service.js";
 import { BullMQHealthIndicator } from "./bullmq.health.js";
+import { HealthController } from "./health.controller.js";
 import { PrismaHealthIndicator } from "./prisma.health.js";
 import { RedisHealthIndicator } from "./redis.health.js";
+
+// ---------------------------------------------------------------------------
+// HealthController
+// ---------------------------------------------------------------------------
+
+describe("HealthController", () => {
+  const threshold = 1_610_612_736;
+
+  function makeController() {
+    const check = vi.fn(
+      async (indicators: (() => Promise<HealthIndicatorResult>)[]) => {
+        const results = await Promise.all(indicators.map((run) => run()));
+        return results.reduce<Record<string, unknown>>(
+          (acc, result) => ({ ...acc, ...result }),
+          {},
+        );
+      },
+    );
+    const health = { check } as unknown as HealthCheckService;
+    const memory = {
+      checkHeap: vi.fn().mockResolvedValue({ memory_heap: { status: "up" } }),
+    };
+    const up = (key: string): HealthIndicatorResult => ({
+      [key]: { status: "up" },
+    });
+    const prismaHealth = { isHealthy: vi.fn((key: string) => up(key)) };
+    const redisHealth = { isHealthy: vi.fn((key: string) => up(key)) };
+    const bullmqHealth = { isHealthy: vi.fn((key: string) => up(key)) };
+    const env = { HEAP_HEALTH_THRESHOLD_BYTES: threshold } as EnvConfig;
+    const controller = new HealthController(
+      health,
+      memory as unknown as MemoryHealthIndicator,
+      prismaHealth as unknown as PrismaHealthIndicator,
+      redisHealth as unknown as RedisHealthIndicator,
+      bullmqHealth as unknown as BullMQHealthIndicator,
+      env,
+    );
+    return { controller, memory };
+  }
+
+  it("liveness response carries no memory_heap result", async () => {
+    const { controller, memory } = makeController();
+
+    const result = await controller.liveness();
+
+    expect(result).not.toHaveProperty("memory_heap");
+    expect(memory.checkHeap).not.toHaveBeenCalled();
+  });
+
+  it("readiness calls checkHeap with the threshold from EnvConfig", async () => {
+    const { controller, memory } = makeController();
+
+    const result = await controller.readiness();
+
+    expect(memory.checkHeap).toHaveBeenCalledWith("memory_heap", threshold);
+    expect(result).toMatchObject({ memory_heap: { status: "up" } });
+  });
+});
 
 // ---------------------------------------------------------------------------
 // PrismaHealthIndicator

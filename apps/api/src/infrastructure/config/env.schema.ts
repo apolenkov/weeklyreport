@@ -73,6 +73,14 @@ export const envSchema = z
     // headless browser so PDF rendering can authenticate against
     // /weekly-report/* routes. Min 32 chars also enforced in the service.
     PDF_EXPORT_JWT_SECRET: z.string().min(32),
+
+    // Heap threshold (bytes) for the /health/ready memory check. Required with
+    // no default: readiness sheds traffic as the process nears the container
+    // memory cap, so the value must track that cap explicitly per environment
+    // (~75% of the api container's memory limit). A silent default would
+    // decouple the probe from the real limit and reintroduce spurious DOWN
+    // responses.
+    HEAP_HEALTH_THRESHOLD_BYTES: z.coerce.number().int().positive(),
   })
   .superRefine((data, ctx) => {
     // 36-03: production fences. Boot must fail if any of these aren't met.

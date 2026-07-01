@@ -49,6 +49,7 @@ services:
       OTEL_SDK_DISABLED: "false"
       OTEL_SERVICE_NAME: customreport-api
       OTEL_TRACES_SAMPLER_ARG: "1.0"
+      HEAP_HEALTH_THRESHOLD_BYTES: ${HEAP_HEALTH_THRESHOLD_BYTES:-1610612736}
       SENTRY_DSN: ${SENTRY_DSN_DOCKER:-}
     depends_on:
       postgres:
