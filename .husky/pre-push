@@ -1,14 +1,30 @@
 #!/usr/bin/env sh
 
-# 34-01: pre-push hook — runs the full unit-test suite before letting a
-# push leave the machine. Skipped automatically in CI (the workflow
-# already runs the same suite without this guard). Skip locally with
-# `SKIP_PREPUSH=1 git push` if you have to.
+# pre-push hook — mirrors the cheap, deterministic, no-services CI jobs
+# before a push leaves the machine: typecheck + lint + format:check +
+# catalog drift + unit tests. Heavier jobs (E2E, migrate-reset, docker
+# build) stay for the server-side gate. Skipped automatically in CI (the
+# workflow runs the same suite). Skip locally with `SKIP_PREPUSH=1 git push`.
+#
+# set -e aborts on the first failing gate: the commands are unchained, so
+# without it only the last command's exit status reaches git and a failing
+# early gate would be masked by a later passing one.
 
 if [ "$CI" = "true" ] || [ "$SKIP_PREPUSH" = "1" ]; then
   echo "[pre-push] skipped (CI=$CI, SKIP_PREPUSH=$SKIP_PREPUSH)"
   exit 0
 fi
+
+set -e
+
+echo "[pre-push] typecheck…"
+pnpm turbo typecheck
+
+echo "[pre-push] lint…"
+pnpm lint
+
+echo "[pre-push] format:check…"
+pnpm format:check
 
 echo "[pre-push] catalog drift gate…"
 pnpm catalog:check

@@ -1,9 +1,10 @@
 # Phase 37-03: Prometheus scrape config for CustomReport prod stack.
 #
 # Brings up alongside docker-compose.observability.yml. The api service
-# exposes /metrics on its container port (3002 by default); Prometheus
-# scrapes every 15s. Adjust the targets list if your prod compose maps
-# different ports.
+# exposes /metrics on its container bind port (3001); Prometheus scrapes it
+# over the internal compose network every 15s — NOT through the public Caddy
+# edge, which deliberately does not route /metrics. Adjust the targets list if
+# your prod compose maps different ports.
 
 global:
   scrape_interval: 15s
@@ -19,7 +20,7 @@ scrape_configs:
     scrape_interval: 15s
     static_configs:
       - targets:
-          - api:3002
+          - api:3001
         labels:
           service: api
 

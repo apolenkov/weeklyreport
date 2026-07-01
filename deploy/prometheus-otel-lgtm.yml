@@ -33,8 +33,12 @@ scrape_configs:
     scrape_interval: 15s
     static_configs:
       # host.docker.internal: api is in customreport_default network,
-      # otel-lgtm is in customreport-obs_default (different compose projects).
-      # host.docker.internal resolves to the Docker host on Mac/Windows.
+      # otel-lgtm is in customreport-obs_default (different compose projects), so
+      # it scrapes via the Docker host, not the service DNS. This targets the DEV
+      # host port (docker-compose.yml publishes 3002). Prod closes the API host
+      # port (docker-compose.prod.yml is expose-only), so a prod-layered
+      # observability run must use a managed scrape or attach otel-lgtm to the api
+      # network and target api:3001.
       - targets: [host.docker.internal:3002]
         labels:
           service: api

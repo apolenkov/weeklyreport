@@ -1,7 +1,9 @@
 # Stage 1: Base with pnpm and turbo
+# TODO: pin @sha256:<digest> — resolve via `docker buildx imagetools inspect node:25-alpine`
+# at build/deploy (no registry access here). Deferred with the CSP flip.
 FROM node:25-alpine AS base
 RUN apk add --no-cache libc6-compat
-RUN npm install -g pnpm@10.11.0 turbo@2
+RUN npm install -g pnpm@10.11.0 turbo@2.9.18
 
 # Stage 2: Prune monorepo for web workspace
 FROM base AS pruner
@@ -16,14 +18,19 @@ COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .
 COPY prisma ./prisma
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --frozen-lockfile
 COPY --from=pruner /app/out/full/ .
 COPY tsconfig.base.json ./tsconfig.base.json
 
 # Stage 4: Build for production
 FROM installer AS builder
-ARG API_URL=http://api:3002
-ARG NEXT_PUBLIC_API_URL=http://localhost:3002
+# API_URL is the server-side origin (compose network); NEXT_PUBLIC_API_URL is
+# inlined into the client bundle at build. Both defaults are edge-safe — no
+# ':3002' host-port path, which the prod compose closes. Prod build.args
+# override NEXT_PUBLIC_API_URL with the real edge address; this same-origin
+# default is only the local build fallback.
+ARG API_URL=http://api:3001
+ARG NEXT_PUBLIC_API_URL=http://localhost:3000
 ARG NEXT_PUBLIC_AUTH_STUB=true
 ARG NEXT_PUBLIC_DEV_ROLE_SWITCHER=true
 ENV API_URL=${API_URL}
@@ -34,6 +41,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm turbo build --filter=@customreport/web
 
 # Stage 5: Production runner with Next.js standalone
+# TODO: pin @sha256:<digest> — resolve via `docker buildx imagetools inspect node:25-alpine`
+# at build/deploy (no registry access here). Deferred with the CSP flip.
 FROM node:25-alpine AS runner
 RUN apk add --no-cache libc6-compat
 RUN addgroup --system --gid 1001 nodejs && \

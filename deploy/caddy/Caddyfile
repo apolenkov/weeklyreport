@@ -6,7 +6,8 @@
 # internal CA (self-signed cert chain).
 #
 # Routes:
-#   /trpc/*, /auth/*, /health/*, /metrics, /admin/queues*, /pdfs/* -> api:3001
+#   /trpc/*, /auth/*, /health/*, /admin/queues*, /pdfs/* -> api:3001
+#   (/metrics is deliberately NOT routed at the public edge — see @api below)
 #   /                                                              -> web:3000
 #
 # WebSocket upgrade for tRPC subscriptions: caddy v2 forwards Upgrade headers
@@ -27,8 +28,10 @@
 	encode zstd gzip
 
 	# API surface — order matters: caddy matches the first @block that wins.
+	# /metrics is intentionally absent: it must not be reachable from the public
+	# edge. Prometheus scrapes it over the internal compose network (api:3001).
 	@api {
-		path /trpc /trpc/* /auth /auth/* /health /health/* /metrics /admin/queues /admin/queues/* /pdfs /pdfs/*
+		path /trpc /trpc/* /auth /auth/* /health /health/* /admin/queues /admin/queues/* /pdfs /pdfs/*
 	}
 	handle @api {
 		reverse_proxy api:3001 {
@@ -63,6 +66,7 @@
 		Referrer-Policy strict-origin-when-cross-origin
 		# Lock down where browsers may load resources from (relax if /reports
 		# embeds external imagery — currently same-origin only).
+		# TODO: flip Report-Only -> enforcing after in-browser CSP validation across all role surfaces
 		Content-Security-Policy-Report-Only "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self'"
 		-Server
 	}

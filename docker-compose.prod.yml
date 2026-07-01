@@ -203,8 +203,14 @@ services:
       retries: 3
       start_period: 60s
     restart: unless-stopped
-    ports:
-      - "${API_PORT:-3001}:3001"
+    # api is no longer host-published — all external traffic flows through the
+    # Caddy edge over the compose network, mirroring the expose-only posture
+    # applied to web. Closing the host port also removes the direct-to-host API
+    # path that could bypass edge controls / forge X-Forwarded-For once trust
+    # proxy is enabled. Use a 127.0.0.1-bound publish only if a documented ops
+    # need requires host access.
+    expose:
+      - "3001"
     volumes:
       - pdfdata:/app/data/pdfs
       - apilogs:/app/logs
@@ -233,8 +239,11 @@ services:
         API_URL: http://api:3001
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL must be set}
     environment:
+      # NEXT_PUBLIC_* is inlined into the client bundle at BUILD time (supplied
+      # via build.args above), so a runtime env line for it is a no-op and has
+      # been dropped. Only the server-side API_URL (read at runtime) belongs
+      # here — kept pointed at the compose-internal origin.
       API_URL: ${API_URL:-http://api:3001}
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://api:3001}
     depends_on:
       api:
         condition: service_healthy
