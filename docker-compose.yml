@@ -107,6 +107,7 @@ services:
       PDF_EXPORT_JWT_SECRET: ${PDF_EXPORT_JWT_SECRET:-dev-only-replace-in-production-min-32-chars}
       OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-true}
       OTEL_TRACES_SAMPLER_ARG: ${OTEL_TRACES_SAMPLER_ARG:-0.1}
+      HEAP_HEALTH_THRESHOLD_BYTES: ${HEAP_HEALTH_THRESHOLD_BYTES:-1610612736}
       SMTP_HOST: mailhog
       SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_FROM: ${SMTP_FROM:-noreply@example.com}
