@@ -193,6 +193,11 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
               await tx.item.createMany({
                 data: carriedItems.map((i) => ({
                   id: i.id ?? undefined,
+                  // Carry the source record's durable lineage key onto the clone
+                  // (it rides the `...item` spread in cloneCarriedItem) so the
+                  // carried позиция shares one identity with its origin. A fresh
+                  // PK `id` still comes from the clone above.
+                  stableId: i.stableId,
                   reportSectionId: targetSection.reportSectionId,
                   projectId: i.projectId,
                   type: i.type,
@@ -235,6 +240,10 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
               await tx.decision.createMany({
                 data: decisionsWithProduct.map((d) => ({
                   id: d.id ?? undefined,
+                  // Carry the source decision's durable lineage key onto the
+                  // clone (rides the `...decision` spread in
+                  // cloneUnresolvedDecision).
+                  stableId: d.stableId,
                   reportSectionId: targetSection.reportSectionId,
                   text: d.text,
                   owner: d.owner,
@@ -244,6 +253,12 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
                   stageNames: d.stageIds ?? [],
                   productId: d.productId,
                 })),
+                // Parity with the item insert above: a carried decision whose
+                // lineage already exists in the target section (the new
+                // `@@unique([reportSectionId, stableId])`) is skipped, not a
+                // P2002 misread as a dedupe-key race. The service also filters
+                // such lineages upstream; this is defense-in-depth against a race.
+                skipDuplicates: true,
               });
             }
           }

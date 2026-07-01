@@ -8,8 +8,13 @@ once at record creation (`stableId String @default(uuid())`) and identifies the
 record's lineage; the primary key `id` remains database-minted and volatile, and no
 client-supplied primary key is trusted on create (the `add-section-optimistic-lock`
 rule is preserved). The key is surfaced on the item / risk / decision read models
-(required) and accepted on their save inputs (optional, because a brand-new
-client-side record has none yet). A `@@unique([reportSectionId, stableId])`
+and accepted on their save inputs. It is **optional** on both — mirroring `id` —
+because a brand-new client-side record has none yet AND `mergeSection` parses the
+raw save inputs against the read-model schema, so a required read-model field would
+reject a new record on its first save. Presence is guaranteed at the data layer
+instead: the `NOT NULL` column plus `@default(uuid())` mean every persisted row
+carries one, so consumers reading a saved row always see it. A
+`@@unique([reportSectionId, stableId])`
 constraint makes `(reportSectionId, stableId)` a trustworthy per-section key, and a
 `@@index([stableId])` supports lineage-wide lookups.
 
@@ -48,11 +53,13 @@ stable across saves and is the anchor period-scoped record-level features attach
 
 #### Scenario: A dropped key would reset identity — every link must carry it
 
-- **GIVEN** the read model, the save payload input schema, and the `createMany`
-- **WHEN** any one of them omits `stableId`
+- **GIVEN** the read model, the web save-payload builder (`sectionToDraftPayload`),
+  the save payload input schema, and the `createMany`
+- **WHEN** any one of them omits `stableId` for an existing record
 - **THEN** the record would receive a fresh default on the next save and its identity
   would silently reset
-- **AND** therefore all three SHALL carry the `stableId`
+- **AND** therefore all of them SHALL carry the `stableId` end-to-end (the web
+  builder is the link the original design's Impact list omitted)
 
 ### Requirement: Carry-over copies the lineage key onto the cloned record
 

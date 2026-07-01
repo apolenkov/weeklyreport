@@ -301,6 +301,13 @@ model StageStatus {
 
 model Item {
   id              String                   @id @default(uuid())
+  // Durable lineage key, distinct from the volatile PK `id`. saveSection
+  // delete-recreates child rows on every write (the DB re-mints `id`), so
+  // record-level features (comment anchors, move-in-place, the published
+  // lifecycle lock) key on `stableId` — minted once, preserved through the
+  // recreate, and copied onto a carried clone so a позиция keeps one identity
+  // across periods.
+  stableId        String                   @default(uuid())
   reportSectionId String
   projectId       String
   type            ItemType
@@ -317,14 +324,20 @@ model Item {
   project         Project                  @relation(fields: [projectId], references: [id])
   reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
 
+  @@unique([reportSectionId, stableId])
   @@index([reportSectionId])
   @@index([projectId])
   @@index([reportSectionId, priorityRank])
+  @@index([stableId])
   @@index([searchTsv], type: Gin)
 }
 
 model Risk {
   id              String                   @id @default(uuid())
+  // Durable lineage key, distinct from the volatile PK `id` (see Item.stableId).
+  // Risks get mint + preserve-through-save only — carry-over does not clone
+  // risks today, so there is no cross-period copy path to extend yet.
+  stableId        String                   @default(uuid())
   reportSectionId String
   projectId       String
   risk            String
@@ -338,13 +351,19 @@ model Risk {
   project         Project                  @relation(fields: [projectId], references: [id])
   reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
 
+  @@unique([reportSectionId, stableId])
   @@index([reportSectionId])
   @@index([projectId])
+  @@index([stableId])
   @@index([searchTsv], type: Gin)
 }
 
 model Decision {
   id              String                   @id @default(uuid())
+  // Durable lineage key, distinct from the volatile PK `id` (see Item.stableId).
+  // Copied onto a carried clone by carry-over so an unresolved decision keeps
+  // one identity across periods.
+  stableId        String                   @default(uuid())
   reportSectionId String
   productId       String
   text            String
@@ -361,8 +380,10 @@ model Decision {
   // deletion is unsupported; retire a product via the `archived` flag instead.
   project         Project                  @relation(fields: [productId], references: [id])
 
+  @@unique([reportSectionId, stableId])
   @@index([reportSectionId])
   @@index([productId])
+  @@index([stableId])
   @@index([searchTsv], type: Gin)
 }
 

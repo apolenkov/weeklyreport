@@ -200,6 +200,7 @@ CREATE TABLE "StageStatus" (
 -- CreateTable
 CREATE TABLE "Item" (
     "id" TEXT NOT NULL,
+    "stableId" TEXT NOT NULL,
     "reportSectionId" TEXT NOT NULL,
     "projectId" TEXT NOT NULL,
     "type" "ItemType" NOT NULL,
@@ -220,6 +221,7 @@ CREATE TABLE "Item" (
 -- CreateTable
 CREATE TABLE "Risk" (
     "id" TEXT NOT NULL,
+    "stableId" TEXT NOT NULL,
     "reportSectionId" TEXT NOT NULL,
     "projectId" TEXT NOT NULL,
     "risk" TEXT NOT NULL,
@@ -237,6 +239,7 @@ CREATE TABLE "Risk" (
 -- CreateTable
 CREATE TABLE "Decision" (
     "id" TEXT NOT NULL,
+    "stableId" TEXT NOT NULL,
     "reportSectionId" TEXT NOT NULL,
     "productId" TEXT NOT NULL,
     "text" TEXT NOT NULL,
@@ -533,6 +536,12 @@ CREATE INDEX "Item_reportSectionId_priorityRank_idx" ON "Item"("reportSectionId"
 CREATE INDEX "Item_searchTsv_idx" ON "Item" USING GIN ("searchTsv");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Item_reportSectionId_stableId_key" ON "Item"("reportSectionId", "stableId");
+
+-- CreateIndex
+CREATE INDEX "Item_stableId_idx" ON "Item"("stableId");
+
+-- CreateIndex
 CREATE INDEX "Risk_reportSectionId_idx" ON "Risk"("reportSectionId");
 
 -- CreateIndex
@@ -542,6 +551,12 @@ CREATE INDEX "Risk_projectId_idx" ON "Risk"("projectId");
 CREATE INDEX "Risk_searchTsv_idx" ON "Risk" USING GIN ("searchTsv");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Risk_reportSectionId_stableId_key" ON "Risk"("reportSectionId", "stableId");
+
+-- CreateIndex
+CREATE INDEX "Risk_stableId_idx" ON "Risk"("stableId");
+
+-- CreateIndex
 CREATE INDEX "Decision_reportSectionId_idx" ON "Decision"("reportSectionId");
 
 -- CreateIndex
@@ -549,6 +564,12 @@ CREATE INDEX "Decision_productId_idx" ON "Decision"("productId");
 
 -- CreateIndex
 CREATE INDEX "Decision_searchTsv_idx" ON "Decision" USING GIN ("searchTsv");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Decision_reportSectionId_stableId_key" ON "Decision"("reportSectionId", "stableId");
+
+-- CreateIndex
+CREATE INDEX "Decision_stableId_idx" ON "Decision"("stableId");
 
 -- CreateIndex
 CREATE INDEX "PdfExportJob_reportId_idx" ON "PdfExportJob"("reportId");

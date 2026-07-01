@@ -25,6 +25,12 @@ export const stageStatusInputSchema = z.object({
 
 export const itemInputSchema = z.object({
   id: z.uuid().optional(),
+  // Durable lineage key round-tripped from the read model so identity survives
+  // saveSection's delete-recreate. Optional: a brand-new client record has none
+  // yet (the DB mints it on first persist); the read model inherits this
+  // optionality, mirroring `id`, because mergeSection parses the raw input
+  // items against the read-model schema.
+  stableId: z.uuid().optional(),
   projectId: z.uuid(),
   type: itemTypeSchema,
   text: safeText({ max: 500 }),
@@ -48,6 +54,8 @@ export const itemReadModelSchema = itemInputSchema.extend({
 
 export const riskInputSchema = z.object({
   id: z.uuid().optional(),
+  // Durable lineage key round-tripped from the read model (see itemInputSchema).
+  stableId: z.uuid().optional(),
   projectId: z.uuid(),
   risk: safeText({ max: 500 }),
   impact: safeText({ max: 500 }),
@@ -68,6 +76,8 @@ const riskReadModelSchema = riskInputSchema.extend({
 
 export const decisionInputSchema = z.object({
   id: z.uuid().optional(),
+  // Durable lineage key round-tripped from the read model (see itemInputSchema).
+  stableId: z.uuid().optional(),
   text: safeText({ max: 500 }),
   owner: safeText({ max: 200 }),
   deadline: z.coerce.date().nullable().optional(),

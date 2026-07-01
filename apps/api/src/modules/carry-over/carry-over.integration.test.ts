@@ -144,6 +144,84 @@ describe("CarryOverPrismaRepository (integration)", () => {
     expect(expectDefined(targetItems[0]).text).toBe("Carry this over");
   });
 
+  // introduce-durable-record-identity (task 5.2): saveCarryOver must persist the
+  // source record's stableId onto the clone so a carried позиция shares one
+  // lineage key with its origin, while the clone still gets its own PK id.
+  it("saveCarryOver persists the carried clone's stableId, distinct from its fresh PK", async () => {
+    const targetReport = await prisma.report.create({
+      data: {
+        id: TEST_IDS.targetReport,
+        periodStart: new Date("2026-04-14"),
+        periodEnd: new Date("2026-04-20"),
+        deadline: new Date("2026-04-18"),
+        status: "draft",
+      },
+    });
+    const targetSection = await prisma.reportSection.create({
+      data: {
+        reportId: targetReport.id,
+        authorId: testData.lead.id,
+        status: "draft",
+      },
+    });
+
+    // The lineage key the clone inherits from its source (cloneCarriedItem
+    // copies it via the `...item` spread; here we assert the repo persists it).
+    const sourceStableId = "a0000000-0000-4000-a000-0000000005aa";
+    const execution = {
+      id: TEST_IDS.carryExec,
+      sourceReportId: testData.report.id,
+      targetReportId: targetReport.id,
+      dedupeKey: `${testData.report.id}:${targetReport.id}`,
+      status: "completed" as const,
+      startedAt: new Date(),
+      completedAt: new Date(),
+      carriedItemCount: 1,
+      carriedDecisionCount: 0,
+    };
+    const targetSectionReadModel = {
+      reportSectionId: targetSection.id,
+      reportId: targetReport.id,
+      authorId: testData.lead.id,
+      authorName: "Test Lead 1",
+      version: 1,
+      status: "draft" as const,
+      submittedAt: null,
+      projects: [],
+      items: [
+        {
+          id: TEST_IDS.carryTargetItem, // fresh PK minted by the clone
+          stableId: sourceStableId, // lineage key copied from the source
+          projectId: testData.project.id,
+          type: "current" as const,
+          text: "Carried with lineage",
+          tag: "feature",
+          workflowStatus: "in_progress" as const,
+          carriedOver: true,
+          completed: null,
+        },
+      ],
+      risks: [],
+      decisions: [],
+      priorities: [],
+    };
+
+    await repo.saveCarryOver(execution, [], [targetSectionReadModel]);
+
+    const persisted = expectDefined(
+      (
+        await prisma.item.findMany({
+          where: { reportSectionId: targetSection.id },
+        })
+      )[0],
+    );
+    // The clone shares the source lineage key...
+    expect(persisted.stableId).toBe(sourceStableId);
+    // ...but carries its own PK, distinct from the lineage key.
+    expect(persisted.id).toBe(TEST_IDS.carryTargetItem);
+    expect(persisted.stableId).not.toBe(persisted.id);
+  });
+
   it("carries an unresolved decision with product + stageIds without aborting", async () => {
     const targetReport = await prisma.report.create({
       data: {

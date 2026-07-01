@@ -56,6 +56,24 @@ wrong and the foundation misleads.
   survive) is a far larger change to a hot, concurrency-guarded write path and is
   out of scope. The lineage-key approach is the smaller, additive foundation.
 
+**Trust boundary — `stableId` is client-authoritative, by design (flag for the
+lifecycle-lock consumer).** Adversarial review surfaced the asymmetry: the PK `id` is
+server-reminted and distrusted, yet `stableId` is round-tripped and written back
+verbatim (`mergeSection` sets `items: input.items`; `saveSection` persists
+`i.stableId`). The section author could therefore swap two of their own records'
+`stableId`s or reset an existing record's key. The server **structurally cannot**
+reconcile this: `saveSection` is a delete-recreate that does not match input rows to
+prior rows (that positional match is exactly the diff-and-upsert rejected above), so
+the client is the only source of "which `stableId` this row has." Within-section
+duplicates are still rejected (the `@@unique` → `DUPLICATE_CHILD_ROW` 400); what is
+not defended is a well-formed reassignment. For the FOUNDATION this has no observable
+effect (no feature consumes the key yet), and it is confined to the author's own
+section. The **published-record lifecycle lock** — the consumer that needs
+tamper-resistance — MUST enforce immutability itself: load the frozen published
+snapshot's `stableId`s and reject a save that drops or reassigns a published record's
+key. That belongs to the lock change, not this foundation. Recorded here so the lock
+does not naively trust the key.
+
 ## Minting and the round-trip — the make-or-break invariant
 
 `stableId String @default(uuid())` gives both halves in one construct:
@@ -72,16 +90,33 @@ carry it, mirroring how `version` was threaded end-to-end:
 ```
 Prisma row.stableId
   → reportSectionFullInclude (already selects all scalar columns)
-  → mapPrismaToReportSection  (map into the read model)
-  → itemReadModelSchema / risk / decision  (stableId REQUIRED on read model)
-  → client holds it, sends it back
+  → mapPrismaToReportSection  (map into the read model; the hand-written
+       PrismaReportSectionWithRelations row type must also declare stableId)
+  → itemReadModelSchema / risk / decision  (stableId OPTIONAL on read model)
+  → client holds it in draftSection; merge handlers keep it via `...existing`
+  → sectionToDraftPayload (WEB)  (must include stableId in the picked fields)
   → draftSaveSchema item/risk/decision inputs  (stableId OPTIONAL on input)
-  → saveSection createMany  (persist i.stableId)
+  → saveSection createMany  (persist i.stableId; undefined omitted → DB default)
   → back to the DB row
 ```
 
-Input is optional (a brand-new client record has none yet → DB default); read model
-is required (the server always returns one).
+**Optional read model (grounding correction).** The original plan made the read
+model `stableId` _required_. The code disproves that: `mergeSection` does
+`reportSectionReadModelSchema.parse({ ...section, items: input.items })`, so a
+brand-new item — which legitimately has no `stableId` yet — would fail the parse and
+break the very first save. So `stableId` is **optional on both input and read
+model**, exactly mirroring how `id` already works. Presence is guaranteed at the
+data layer (`NOT NULL` + `@default(uuid())`), not by the Zod type, so a saved row
+always carries one and downstream features that query Prisma directly get a non-null
+column.
+
+**The web link the Impact list missed.** `sectionToDraftPayload` picks payload fields
+one by one, so it silently dropped `stableId` until fixed. The merge handlers
+(`handleRisksChange` / `handleDecisionsChange` / `makeItemsChangeHandler`) already
+preserve it for edited rows via `{ ...existing }` keyed on `id`; `draftSection`
+re-seeds from each refetch through the same `sectionToDraftPayload`, so the minted
+key converges into the baseline without a spurious dirty loop — the same mechanism
+`id` (client tmp-id → DB id) already relies on.
 
 ## Two write paths, not one
 
@@ -93,6 +128,19 @@ Both must persist `stableId`, or carried records reset on their first real save:
    added. `cloneCarriedItem` / `cloneUnresolvedDecision` already spread `...item`, so
    the read-model value flows into the clone once the read model carries it — but the
    clone must keep the source `stableId` and mint only a fresh PK `id`.
+
+**Carry-over must not re-carry a lineage the target already holds.** The new
+`@@unique([reportSectionId, stableId])` turns a duplicate-lineage carry into a hazard:
+the item insert (`skipDuplicates: true`) would silently skip, orphaning the
+`CarryOverRecord` already written for it, and the decision insert (no `skipDuplicates`)
+would trip `P2002`, which `saveCarryOver`'s catch misreads as a `dedupeKey` race →
+wrong `CarryOverConflictError` + rollback. Both are real regressions the constraint
+introduces (low-reachability — needs the same lineage carried into one target from two
+sources, which the execution-`dedupeKey` guard does not cover). Fixed at the root in
+`CarryOverService.executeCarryOver`: skip source items/decisions whose `stableId`
+already exists in the matched target section (carry-over becomes idempotent by
+lineage, not only by `dedupeKey`, and counts/records stay accurate). `skipDuplicates:
+true` was also added to the decision insert for defense-in-depth against a race.
 
 ## Uniqueness — index required, composite-unique chosen
 
@@ -127,6 +175,15 @@ also get a value. Prefer the DB-level default for robustness.
 - **Risks: mint + preserve, no carry.** `carryOver.execute` clones items + decisions
   only; there is no risk carry path today. Risk carry-over stays with whatever change
   adds it (see `unified-activity-entry` design, "risks do not carry today").
+- **`fillFrom` mints, does not preserve.** `LeadFormPrismaRepository.fillFrom`
+  (`lead-form.prisma-repository.ts`) is a THIRD write path that delete-recreates the
+  target section's rows by copying a prior section as a template — it resets
+  `carriedOver: false` and turns next-week items into current-week suggestions. It is
+  a fresh-template copy, NOT a lineage continuation, so it deliberately MINTS new
+  `stableId`s (its `createMany` omits the field → `@default(uuid())`). It does not
+  crash on the NOT NULL column (Prisma applies the app-side default). Only
+  `saveSection` (preserve) and carry-over (copy) thread the key; a future change can
+  revisit fillFrom if a filled row should share its source's lineage.
 - **No feature built.** The lifecycle lock, move-in-place, and comment anchors are
   explicitly NOT implemented here; this change only makes the key they need exist.
 
