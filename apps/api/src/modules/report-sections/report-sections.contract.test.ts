@@ -31,6 +31,16 @@ const baseSection: ReportSectionReadModel = {
       projectId: PROJECT_ID_1,
       projectName: "Project Alpha",
       trafficLight: null,
+      // lead-form-stage-access-integrity: the author owns the Development stage
+      // on this project, so the write payloads (stageIds: ["Development"]) pass
+      // the stage-ownership guard.
+      ownedStages: [
+        {
+          stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          stageName: "Development",
+          sortOrder: 0,
+        },
+      ],
     },
   ],
   items: [
@@ -538,11 +548,27 @@ describe("ReportSectionsService — multi-project", () => {
         projectId: PROJECT_ID_1,
         projectName: "Project Alpha",
         trafficLight: null,
+        // lead-form-stage-access-integrity: author owns Development on both
+        // projects so the Development-staged items pass the ownership guard.
+        ownedStages: [
+          {
+            stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            stageName: "Development",
+            sortOrder: 0,
+          },
+        ],
       },
       {
         projectId: PROJECT_ID_2,
         projectName: "Project Beta",
         trafficLight: null,
+        ownedStages: [
+          {
+            stageId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            stageName: "Development",
+            sortOrder: 0,
+          },
+        ],
       },
     ],
     items: [

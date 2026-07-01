@@ -7,6 +7,10 @@ import { useDialogFocus } from "../../lib/use-dialog-focus";
 import type { DecisionEntry, Product } from "./mock-data";
 import { ProductPicker } from "./product-picker";
 import { StageMultiSelect } from "./stage-multi-select";
+import {
+  computeEffectiveStageIds,
+  isZeroOwnedStageDeadEnd,
+} from "./stage-ownership";
 import { canonicalStageIds } from "./stage-tags";
 
 interface DecisionEditDialogProps {
@@ -101,20 +105,30 @@ function DecisionEditDialogContent({
 
   const headerVerb = isCreate ? "Add Decision" : "Edit Decision";
 
+  // require-stage-on-items-and-decisions: a decision must carry a concrete stage
+  // when the lead owns stages — mirrors the risk/item dialogs. A single owned
+  // stage is implicitly selected so the lead can save without a click; zero owned
+  // stages with nothing to carry is a dead end (Save disabled).
+  const availableStages = stagesForProduct?.(productId) ?? [];
+  const effectiveStageIds = computeEffectiveStageIds(stageIds, availableStages);
+  const isDeadEnd = isZeroOwnedStageDeadEnd(availableStages, effectiveStageIds);
+  const headerProductName =
+    products?.find((p) => p.id === productId)?.name ??
+    decision?.productName ??
+    "";
+
   function handleSave() {
+    // Dead-end no-op: never call onSave with an empty stageIds array, and never
+    // surface the unsatisfiable "Select at least one stage." error. The
+    // Ctrl/Cmd+Enter shortcut routes through here, so it inherits the guard.
+    if (isDeadEnd) return;
     const t = text.trim();
     const o = owner.trim();
     const im = impact.trim();
-    // require-stage-on-items-and-decisions: a decision must carry a concrete
-    // stage when the lead owns stages — mirrors the risk/item dialogs. A single
-    // owned stage is implicitly selected so the lead can save without a click.
-    const stages = stagesForProduct?.(productId) ?? [];
-    const effectiveStageIds =
-      stageIds.length === 0 && stages.length === 1 ? [...stages] : stageIds;
     const next: typeof errors = {};
     if (t.length === 0) next.text = "Decision text is required";
     if (im.length === 0) next.impact = "Impact is required";
-    if (stages.length > 0 && effectiveStageIds.length === 0)
+    if (availableStages.length > 0 && effectiveStageIds.length === 0)
       next.stageIds = "Select at least one stage.";
     if (Object.keys(next).length > 0) {
       setErrors(next);
@@ -283,15 +297,26 @@ function DecisionEditDialogContent({
             <StageMultiSelect
               id="dec-stage"
               value={stageIds}
-              stages={stagesForProduct?.(productId) ?? []}
+              stages={availableStages}
               required
-              error={errors.stageIds}
+              // Suppress the stale required-stage error in the dead-end branch so
+              // it never co-renders with the contact-admin notice below.
+              error={isDeadEnd ? undefined : errors.stageIds}
               onChange={(next) => {
                 setStageIds(next);
                 if (errors.stageIds)
                   setErrors((prev) => ({ ...prev, stageIds: undefined }));
               }}
             />
+
+            {isDeadEnd && (
+              <p
+                role="status"
+                className="text-xs text-[var(--color-destructive)]"
+              >
+                No stages assigned on {headerProductName} — contact admin.
+              </p>
+            )}
           </div>
         </div>
 
@@ -306,7 +331,8 @@ function DecisionEditDialogContent({
           <button
             type="button"
             onClick={handleSave}
-            className="btn-press inline-flex min-h-[40px] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-accent)]"
+            disabled={isDeadEnd}
+            className="btn-press inline-flex min-h-[40px] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Save Decision
           </button>

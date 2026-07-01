@@ -31,3 +31,19 @@ export const STAGE_NAMES: readonly StageName[] = [
   STAGE.DEVOPS,
   STAGE.SUPPORT,
 ] as const;
+
+// Folds a stage name to a comparison key: lower-cased, with the historical
+// "Development" ↔ "Dev" alias collapsed onto a single slot. The single source of
+// the alias rule — the server ownership guard and the client dialog scoping both
+// canonicalize through here so they never disagree on whether two names refer to
+// the same pipeline stage.
+export function normalizeStageName(stageName: string): string {
+  const lower = stageName.toLowerCase();
+  return lower === "development" ? "dev" : lower;
+}
+
+// True when two stage names refer to the same pipeline slot (handles the
+// "Development" ↔ "Dev" alias).
+export function stageNamesMatch(a: string, b: string): boolean {
+  return normalizeStageName(a) === normalizeStageName(b);
+}

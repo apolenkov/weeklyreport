@@ -5,6 +5,10 @@ import { useState } from "react";
 import type { ItemStatus, KanbanItem, Product } from "./mock-data";
 import { ProductPicker } from "./product-picker";
 import { StageMultiSelect } from "./stage-multi-select";
+import {
+  computeEffectiveStageIds,
+  isZeroOwnedStageDeadEnd,
+} from "./stage-ownership";
 import { canonicalStageIds } from "./stage-tags";
 
 interface ItemEditDialogProps {
@@ -181,6 +185,14 @@ function ItemEditDialogContent({
   const headerProductName = selectedProduct?.name ?? initial.productName;
   const headerVerb = isCreate ? "Add Item" : "Edit Item";
 
+  // require-stage-on-items-and-decisions: an item must carry a concrete stage
+  // when the product has owned stages — mirrors the risk dialog. A single owned
+  // stage is implicitly selected so the lead can save without a click; zero
+  // owned stages with nothing to carry is a dead end (Save disabled).
+  const availableStages = stagesForProduct?.(productId) ?? [];
+  const effectiveStageIds = computeEffectiveStageIds(stageIds, availableStages);
+  const isDeadEnd = isZeroOwnedStageDeadEnd(availableStages, effectiveStageIds);
+
   function setProductAndStages(nextProductId: string) {
     setProductId(nextProductId);
     // unify-record-dialogs: clear the stage selection on a product switch —
@@ -190,15 +202,11 @@ function ItemEditDialogContent({
   }
 
   function handleSave() {
+    // Dead-end no-op: never call onSave with an empty stageIds array, and never
+    // surface the unsatisfiable "Select at least one stage." error. The
+    // Ctrl/Cmd+Enter shortcut routes through here, so it inherits the guard.
+    if (isDeadEnd) return;
     const trimmed = text.trim();
-    // require-stage-on-items-and-decisions: an item must carry a concrete stage
-    // when the product has owned stages — mirrors the risk dialog. A single
-    // owned stage is implicitly selected so the lead can save without a click.
-    const availableStages = stagesForProduct?.(productId) ?? [];
-    const effectiveStageIds =
-      stageIds.length === 0 && availableStages.length === 1
-        ? [...availableStages]
-        : stageIds;
     const next: typeof errors = {};
     if (trimmed.length === 0) next.text = "Description is required";
     if (availableStages.length > 0 && effectiveStageIds.length === 0)
@@ -370,15 +378,26 @@ function ItemEditDialogContent({
             <StageMultiSelect
               id="item-stage"
               value={stageIds}
-              stages={stagesForProduct?.(productId) ?? []}
+              stages={availableStages}
               required
-              error={errors.stageIds}
+              // Suppress the stale required-stage error in the dead-end branch so
+              // it never co-renders with the contact-admin notice below.
+              error={isDeadEnd ? undefined : errors.stageIds}
               onChange={(next) => {
                 setStageIds(next);
                 if (errors.stageIds)
                   setErrors((prev) => ({ ...prev, stageIds: undefined }));
               }}
             />
+
+            {isDeadEnd && (
+              <p
+                role="status"
+                className="text-xs text-[var(--color-destructive)]"
+              >
+                No stages assigned on {headerProductName} — contact admin.
+              </p>
+            )}
 
             {/* Status chips */}
             <div>
@@ -422,7 +441,8 @@ function ItemEditDialogContent({
           <button
             type="button"
             onClick={handleSave}
-            className="btn-press inline-flex min-h-[40px] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-accent)]"
+            disabled={isDeadEnd}
+            className="btn-press inline-flex min-h-[40px] items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Save Item
           </button>

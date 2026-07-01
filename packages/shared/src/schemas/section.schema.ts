@@ -11,6 +11,7 @@ import {
   stageIdsField,
   trafficLightStatusSchema,
 } from "./report-primitives.schema";
+import { normalizeStageName, stageNamesMatch } from "./stage-names";
 
 export const projectStatusInputSchema = z.object({
   projectId: z.uuid(),
@@ -253,7 +254,10 @@ export type DraftSaveValidationErrorCode =
   | "MISSING_CURRENT_ITEM"
   // A child-row create tripped a unique constraint (P2002) — a malformed
   // payload (e.g. duplicate projectId). Surfaced as BAD_REQUEST, not a 500.
-  | "DUPLICATE_CHILD_ROW";
+  | "DUPLICATE_CHILD_ROW"
+  // lead-form-stage-access-integrity: a new or changed item/risk/decision row
+  // carries a stage the section author does not own on that row's product.
+  | "STAGE_NOT_OWNED";
 
 export interface DraftSaveValidationError {
   code: DraftSaveValidationErrorCode;
@@ -300,4 +304,138 @@ export function validateSubmitInput(
   }
 
   return errors;
+}
+
+// lead-form-stage-access-integrity: a normalized view of one stage-bearing
+// child row (item / risk / decision) used by the ownership guard. `projectId`
+// is a decision's `productId` (undefined when department-scoped).
+interface StageOwnershipRow {
+  readonly stableId?: string;
+  readonly projectId: string | undefined;
+  readonly stageIds: readonly string[];
+}
+
+const toRow = (
+  stableId: string | undefined,
+  projectId: string | undefined,
+  stageIds: readonly string[] | undefined,
+): StageOwnershipRow => ({ stableId, projectId, stageIds: stageIds ?? [] });
+
+// The stage names the SECTION AUTHOR owns on a row's product. `ownedStages` is
+// server-authoritative (StageAssignment-derived); an undefined projectId (a
+// department-scoped decision) unions the owned stages across every project.
+function authorOwnedStages(
+  section: ReportSectionReadModel,
+  projectId: string | undefined,
+): string[] {
+  const scoped =
+    projectId === undefined
+      ? section.projects
+      : section.projects.filter((project) => project.projectId === projectId);
+  return scoped.flatMap((project) =>
+    (project.ownedStages ?? []).map((stage) => stage.stageName),
+  );
+}
+
+// Order-independent canonical key for a row's stage set (Dev↔Development folded),
+// so a grandfather match compares stage CONTENT, not element order.
+const canonicalStageKey = (stageIds: readonly string[]): string =>
+  [...stageIds]
+    .map(normalizeStageName)
+    .sort((a, b) => a.localeCompare(b))
+    .join("|");
+
+// A row is grandfathered — skipped by the guard — only when an existing server
+// row shares its stableId AND its product AND its exact stage set. stableId is
+// client-authoritative, so an id match alone is NOT enough: a payload that keeps
+// a stableId but swaps in an unowned stage (or moves the row to another product)
+// changes the key and is re-validated.
+function isGrandfathered(
+  row: StageOwnershipRow,
+  serverByStableId: Map<string, StageOwnershipRow>,
+): boolean {
+  if (row.stableId === undefined) return false;
+  const serverRow = serverByStableId.get(row.stableId);
+  return (
+    serverRow !== undefined &&
+    serverRow.projectId === row.projectId &&
+    canonicalStageKey(serverRow.stageIds) === canonicalStageKey(row.stageIds)
+  );
+}
+
+function stageNotOwnedMessage(
+  stage: string,
+  section: ReportSectionReadModel,
+  projectId: string | undefined,
+): string {
+  const productName =
+    section.projects.find((project) => project.projectId === projectId)
+      ?.projectName ??
+    section.referencedProjects?.find(
+      (project) => project.projectId === projectId,
+    )?.projectName;
+  const where = productName ? ` on ${productName}` : "";
+  return `Stage "${stage}" is not one you own${where}. Contact an admin to change your stage assignments.`;
+}
+
+function validateStageRows(
+  payloadRows: readonly StageOwnershipRow[],
+  serverRows: readonly StageOwnershipRow[],
+  section: ReportSectionReadModel,
+): DraftSaveValidationError[] {
+  const serverByStableId = new Map(
+    serverRows.flatMap((row) =>
+      row.stableId === undefined ? [] : [[row.stableId, row] as const],
+    ),
+  );
+  return payloadRows.flatMap((row) => {
+    if (isGrandfathered(row, serverByStableId)) return [];
+    const owned = authorOwnedStages(section, row.projectId);
+    const offending = row.stageIds.find(
+      (stage) => !owned.some((own) => stageNamesMatch(own, stage)),
+    );
+    return offending === undefined
+      ? []
+      : [
+          {
+            code: "STAGE_NOT_OWNED" as const,
+            message: stageNotOwnedMessage(offending, section, row.projectId),
+          },
+        ];
+  });
+}
+
+// lead-form-stage-access-integrity: the server-side stage-ownership guard,
+// shared by BOTH `saveDraft` and `submitSection`. For every new/changed item /
+// risk / decision row it confirms each stage name is one the SECTION AUTHOR owns
+// on that row's product (canonical compare against the server-loaded
+// `ownedStages`). Unchanged legacy/cross rows (identical stableId, product, and
+// stage set) are grandfathered so `fix-lead-surface-name-resolution` rows
+// survive. Returns one error per offending row; the caller hard-rejects on the
+// first — never clamps.
+export function validateStageOwnership(
+  section: ReportSectionReadModel,
+  input: DraftSaveInput | SubmitSectionInput,
+): DraftSaveValidationError[] {
+  return [
+    ...validateStageRows(
+      input.items.map((r) => toRow(r.stableId, r.projectId, r.stageIds)),
+      section.items.map((r) => toRow(r.stableId, r.projectId, r.stageIds)),
+      section,
+    ),
+    ...validateStageRows(
+      input.risks.map((r) => toRow(r.stableId, r.projectId, r.stageIds)),
+      section.risks.map((r) => toRow(r.stableId, r.projectId, r.stageIds)),
+      section,
+    ),
+    ...validateStageRows(
+      input.decisions.map((r) =>
+        toRow(r.stableId, r.productId ?? undefined, r.stageIds),
+      ),
+      section.decisions.map((r) =>
+        toRow(r.stableId, r.productId ?? undefined, r.stageIds),
+      ),
+      section,
+    ),
+  ];
 }
