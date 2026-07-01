@@ -10,6 +10,7 @@ import {
   type PdfExportJobRecord,
   type PdfExportRepository,
   PdfExportService,
+  verifyPdfExportToken,
 } from "./pdf-export.service";
 
 const reportId = "22222222-2222-4222-8222-222222222222";
@@ -252,12 +253,22 @@ describe("AUTH-05 PDF export JWT signing", () => {
     );
   });
 
-  it("signPdfExportToken throws PdfExportDomainError when secret is too short (<16 chars)", () => {
-    vi.stubEnv("PDF_EXPORT_JWT_SECRET", "short");
+  it("signPdfExportToken throws PdfExportDomainError when secret is too short (<32 chars)", () => {
+    // 17 chars: clears the old 16-char floor, fails the raised 32-char one.
+    vi.stubEnv("PDF_EXPORT_JWT_SECRET", "seventeen-chars-x");
     const service = new PdfExportService(createRepository(publishedReport));
 
     expect(() => service.signPdfExportToken(reportId)).toThrow(
       PdfExportDomainError,
+    );
+  });
+
+  it("verifyPdfExportToken throws when secret is too short (<32 chars)", () => {
+    // 17 chars: clears the old 16-char floor, fails the raised 32-char one.
+    vi.stubEnv("PDF_EXPORT_JWT_SECRET", "seventeen-chars-x");
+
+    expect(() => verifyPdfExportToken("any.signed.token")).toThrow(
+      />= 32 chars/,
     );
   });
 

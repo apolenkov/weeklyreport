@@ -158,9 +158,9 @@ services:
       FRONTEND_URLS: ${FRONTEND_URLS:-}
       AUTH_DEV_MODE: "false"
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?AUTH_JWT_SECRET must be set (min 32 chars)}
-      # env.schema requires PDF_EXPORT_JWT_SECRET (min 16) with no default, so it
+      # env.schema requires PDF_EXPORT_JWT_SECRET (min 32) with no default, so it
       # MUST be set explicitly here — never the throwaway dev value.
-      PDF_EXPORT_JWT_SECRET: ${PDF_EXPORT_JWT_SECRET:?PDF_EXPORT_JWT_SECRET must be set (min 16 chars, NOT the dev value)}
+      PDF_EXPORT_JWT_SECRET: ${PDF_EXPORT_JWT_SECRET:?PDF_EXPORT_JWT_SECRET must be set (min 32 chars, NOT the dev value)}
       PDF_BASE_URL: ${PDF_BASE_URL:?PDF_BASE_URL must be set}
       PDF_OUTPUT_DIR: /app/data/pdfs
       LOG_LEVEL: ${LOG_LEVEL:-info}

@@ -12,9 +12,10 @@
  * probe has not yet run, so the flag is always `false`. The self-skip
  * pattern below is the safe alternative.
  *
- * Transport: EmailService constructs the nodemailer transporter from
- * SMTP_HOST at instantiation time. Env vars are set before any import of
- * EmailService so the constructor picks up the real SMTP path.
+ * Transport: EmailService constructs the nodemailer transporter from the
+ * injected EnvConfig at instantiation time. A test EnvConfig carrying the
+ * real SMTP coordinates is passed to the constructor so it picks the real
+ * SMTP path (the non-Nest equivalent of overriding the ENV_CONFIG provider).
  *
  * Worker bypass: EmailReminderProcessor.onModuleInit() opens a BullMQ
  * Worker which requires Redis. We skip onModuleInit and call the private
@@ -29,6 +30,10 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 // ---------------------------------------------------------------------------
 vi.mock("@nestjs/common", () => ({
   Injectable: () => (target: unknown) => target,
+  // ConfigModule (imported transitively via email.service.ts → config.module.ts)
+  // uses @Module; EmailService's constructor uses @Inject. Both are inert here.
+  Module: () => (target: unknown) => target,
+  Inject: () => () => undefined,
   // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- test mock: inert stub for the type-only NestJS lifecycle interface (vi.mock factory is hoisted, so it cannot reference an external class)
   OnModuleInit: class {},
   // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- test mock: inert stub for the type-only NestJS lifecycle interface (vi.mock factory is hoisted, so it cannot reference an external class)
@@ -46,24 +51,26 @@ vi.mock("bullmq", () => ({
   },
 }));
 
-// ---------------------------------------------------------------------------
-// Env — must happen before EmailService is imported so the constructor reads
-// the real SMTP coordinates rather than falling back to jsonTransport.
-// ---------------------------------------------------------------------------
-process.env.SMTP_HOST = "localhost";
-process.env.SMTP_PORT = "1025";
-process.env.SMTP_FROM = "test-integration@customreport.local";
-
 import {
   clearMessages,
   isMailpitUp,
   pollForMessage,
 } from "../../test-utils/mailpit.js";
 // ---------------------------------------------------------------------------
-// Subject-under-test (imported after env + mocks are in place)
+// Subject-under-test (imported after mocks are in place)
 // ---------------------------------------------------------------------------
 import { EmailReminderProcessor } from "../bullmq/email-reminder.processor.js";
+import type { EnvConfig } from "../config/env.schema.js";
 import { EmailService } from "./email.service.js";
+
+// Injected EnvConfig carrying the real SMTP coordinates so EmailService picks
+// the Mailpit-backed transport rather than jsonTransport. Only the SMTP fields
+// are read by the constructor.
+const SMTP_ENV = {
+  SMTP_HOST: "localhost",
+  SMTP_PORT: 1025,
+  SMTP_FROM: "test-integration@customreport.local",
+} as unknown as EnvConfig;
 
 // ---------------------------------------------------------------------------
 // Availability probe — resolved once before any test body runs.
@@ -117,7 +124,7 @@ describe("email-dispatch integration (P8)", () => {
     // Purge inbox before dispatching so we can assert on a clean slate.
     await clearMessages();
 
-    const emailService = new EmailService();
+    const emailService = new EmailService(SMTP_ENV);
     const processor = new EmailReminderProcessor(
       remindersStub as never,
       emailService,
@@ -171,7 +178,7 @@ describe("email-dispatch integration (P8)", () => {
 
     await clearMessages();
 
-    const emailService = new EmailService();
+    const emailService = new EmailService(SMTP_ENV);
     const processor = new EmailReminderProcessor(
       remindersStub as never,
       emailService,

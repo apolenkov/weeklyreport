@@ -6,6 +6,7 @@ import { ClsModule } from "nestjs-cls";
 import { BullMQModule } from "./infrastructure/bullmq/bullmq.module";
 import { EmailReminderProcessor } from "./infrastructure/bullmq/email-reminder.processor";
 import { PdfExportProcessor } from "./infrastructure/bullmq/pdf-export.processor";
+import { ConfigModule } from "./infrastructure/config/config.module";
 import { EmailService } from "./infrastructure/email/email.service";
 import { HealthModule } from "./infrastructure/health/health.module";
 import { MetricsModule } from "./infrastructure/metrics/metrics.module";
@@ -46,6 +47,7 @@ import { WeeklyReportModule } from "./modules/weekly-report/weekly-report.module
     // ScheduleModule.forRoot() must be present for `@Cron(...)` decorators on
     // any provider in the module graph (e.g. RemindersScheduler) to fire.
     ScheduleModule.forRoot(),
+    ConfigModule,
     PrismaModule,
     BullMQModule,
     HealthModule,
