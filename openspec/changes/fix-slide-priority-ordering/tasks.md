@@ -1,21 +1,22 @@
 ## 0. Decision (confirm before coding)
 
-- [ ] 0.1 Ordering scope within a quadrant: **per-product-block** (default — consistent with the product-grouped idiom across accordion + slides) vs global-within-quadrant (cleaner P1→Pn column). Confirm with Саша; default per-product-block.
+- [x] 0.1 Ordering scope within a quadrant: **per-product-block** (consistent with the product-grouped idiom across accordion + slides) vs global-within-quadrant. Confirmed per-product-block (decisions-locked-2026-06-30 §C4).
 
 ## 1. Fix
 
-- [ ] 1.1 In `buildUnifiedSlideModel` (`apps/web/src/components/slides/section-slide-utils.ts:656`), sort the Current and Next rows by `priorityRank` ascending, nulls-last, stable — reusing the `product-accordion.tsx:101` `sortByPriority` comparator (extract/share it).
-- [ ] 1.2 Apply within the chosen scope (§0.1); do not reorder across `paginateSectionSlides` chunks.
-- [ ] 1.3 Delete the dead `priorities[]` array and the three pre-filtered `?? 0` sorts (`:188/:261/:292`) — unrendered and misleading.
+- [x] 1.1 In `buildUnifiedSlideModel` (`apps/web/src/components/slides/section-slide-utils.ts`), sort the Current and Next rows by `priorityRank` ascending, nulls-last, stable — reusing the `sortByPriority` comparator, extracted to the shared `apps/web/src/lib/priority-sort.ts` (`sortByPriorityRank`) and adopted by both `product-accordion.tsx` and the slide builder.
+- [x] 1.2 Applied within the per-product block (each product's rows are mapped, sorted, then pushed contiguously); no reorder across `paginateSectionSlides` chunks or across products.
+- [x] 1.3 Deleted the three pre-filtered `?? 0` sorts on the `priorities` arrays (the misleading part — they imply an ordering that is never rendered). **Deviation from "delete priorities[]":** the `priorities` arrays are KEPT — they feed `priorityCount` → readiness (order-independent `.length`), so removing them breaks the readiness checklist. The built-but-unrendered `UnifiedSlideModel.priorities` quadrant is left inert (a separate order-neutral cleanup; removing it churns the model interface + two test constructors for zero behavior change).
 
 ## 2. Tests
 
-- [ ] 2.1 Add a unit/snapshot test over `buildUnifiedSlideModel`: ranked items lead in ascending rank, unranked follow in source order, on both lead and head model paths.
-- [ ] 2.2 Add a duplicate-rank case (two items rank 2) — they render adjacently, ranks unchanged.
-- [ ] 2.3 Update any existing slide snapshots that locked the old insertion order.
+- [x] 2.1 Added unit tests over `buildUnifiedSlideModel`: ranked items lead in ascending rank, unranked follow in source order, on both the lead (`buildSectionSlideModel`) and head (`buildProductScopedSlides`) model paths.
+- [x] 2.2 Added a duplicate-rank case (two items rank 2) — they render adjacently, stable.
+- [x] 2.3 Added a per-product-block regression test (a name-later product's P1 stays behind a name-earlier product's rows — a global sort would fail it). No existing snapshot locked the old insertion order (full slide suite green unchanged).
+- [x] 2.4 `apps/web/src/lib/priority-sort.test.ts` covers the shared comparator (ascending, nulls-last, stable, non-mutating).
 
 ## 3. Verification
 
-- [ ] 3.1 `pnpm typecheck` and `pnpm lint` until green.
-- [ ] 3.2 `cd apps/web && pnpm exec vitest run` for the slide-model tests until green.
-- [ ] 3.3 `openspec validate "fix-slide-priority-ordering" --strict` until it exits 0.
+- [x] 3.1 `pnpm typecheck` and `pnpm lint` green.
+- [x] 3.2 `pnpm exec vitest run` for the slide-model + priority-sort tests green (full web unit suite 1381 pass).
+- [x] 3.3 `openspec validate "fix-slide-priority-ordering" --strict` exits 0.

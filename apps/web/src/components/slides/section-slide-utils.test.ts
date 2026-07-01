@@ -868,6 +868,209 @@ describe("buildUnifiedSlideModel — cross-product rows (lead-slide-quadrants)",
   });
 });
 
+describe("buildUnifiedSlideModel — priority ordering", () => {
+  const rankedCurrentItems: ReportSectionReadModel["items"] = [
+    {
+      id: "d0000000-0000-4000-8000-000000000003",
+      projectId: PRODUCT_ID,
+      type: "current",
+      text: "Gamma (rank 3)",
+      tag: "delivery",
+      workflowStatus: "in_progress",
+      carriedOver: false,
+      completed: null,
+      priorityRank: 3,
+    },
+    {
+      id: "d0000000-0000-4000-8000-00000000000a",
+      projectId: PRODUCT_ID,
+      type: "current",
+      text: "Unranked first",
+      tag: "delivery",
+      workflowStatus: "in_progress",
+      carriedOver: false,
+      completed: null,
+    },
+    {
+      id: "d0000000-0000-4000-8000-000000000001",
+      projectId: PRODUCT_ID,
+      type: "current",
+      text: "Alpha (rank 1)",
+      tag: "delivery",
+      workflowStatus: "in_progress",
+      carriedOver: false,
+      completed: null,
+      priorityRank: 1,
+    },
+    {
+      id: "d0000000-0000-4000-8000-000000000002",
+      projectId: PRODUCT_ID,
+      type: "current",
+      text: "Beta (rank 2)",
+      tag: "delivery",
+      workflowStatus: "in_progress",
+      carriedOver: false,
+      completed: null,
+      priorityRank: 2,
+    },
+    {
+      id: "d0000000-0000-4000-8000-00000000000b",
+      projectId: PRODUCT_ID,
+      type: "current",
+      text: "Unranked second",
+      tag: "delivery",
+      workflowStatus: "in_progress",
+      carriedOver: false,
+      completed: null,
+    },
+  ];
+
+  it("floats ranked Current rows above unranked, ascending, on the lead path", () => {
+    const slide = buildSectionSlideModel(
+      makeSection({ items: rankedCurrentItems }),
+    );
+
+    const model = buildUnifiedSlideModel(slide);
+
+    expect(model.current.map((row) => row.text)).toEqual([
+      "Alpha (rank 1)",
+      "Beta (rank 2)",
+      "Gamma (rank 3)",
+      "Unranked first",
+      "Unranked second",
+    ]);
+    // the P{N} chip data rides along on the sorted row
+    expect(model.current.slice(0, 3).map((row) => row.priorityRank)).toEqual([
+      1, 2, 3,
+    ]);
+  });
+
+  it("keeps duplicate-rank Current rows adjacent in source order (stable)", () => {
+    const slide = buildSectionSlideModel(
+      makeSection({
+        items: [
+          {
+            id: "d0000000-0000-4000-8000-000000000021",
+            projectId: PRODUCT_ID,
+            type: "current",
+            text: "First rank two",
+            tag: "delivery",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            completed: null,
+            priorityRank: 2,
+          },
+          {
+            id: "d0000000-0000-4000-8000-000000000011",
+            projectId: PRODUCT_ID,
+            type: "current",
+            text: "Rank one",
+            tag: "delivery",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            completed: null,
+            priorityRank: 1,
+          },
+          {
+            id: "d0000000-0000-4000-8000-000000000022",
+            projectId: PRODUCT_ID,
+            type: "current",
+            text: "Second rank two",
+            tag: "delivery",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            completed: null,
+            priorityRank: 2,
+          },
+        ],
+      }),
+    );
+
+    const model = buildUnifiedSlideModel(slide);
+
+    expect(model.current.map((row) => row.text)).toEqual([
+      "Rank one",
+      "First rank two",
+      "Second rank two",
+    ]);
+  });
+
+  it("orders ranked Current rows on the head product-scoped path too", () => {
+    const byName = Object.fromEntries(
+      buildProductScopedSlides([
+        makeSection({ items: rankedCurrentItems }),
+      ]).map((s) => [s.ownerName, s]),
+    );
+
+    const model = buildUnifiedSlideModel(byName["Core Product"]);
+
+    expect(model.current.map((row) => row.text)).toEqual([
+      "Alpha (rank 1)",
+      "Beta (rank 2)",
+      "Gamma (rank 3)",
+      "Unranked first",
+      "Unranked second",
+    ]);
+  });
+
+  it("scopes the sort per product block, not globally across products", () => {
+    const slide = buildSectionSlideModel(
+      makeSection({
+        projects: [
+          {
+            projectId: PRODUCT_ID,
+            projectName: "Alpha Product",
+            trafficLight: "green",
+            ownedStages: [],
+          },
+          {
+            projectId: PRODUCT_TWO_ID,
+            projectName: "Zeta Product",
+            trafficLight: "green",
+            ownedStages: [],
+          },
+        ],
+        items: [
+          {
+            id: "d0000000-0000-4000-8000-0000000000f1",
+            projectId: PRODUCT_TWO_ID,
+            type: "current",
+            text: "Zeta P1",
+            tag: "delivery",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            completed: null,
+            priorityRank: 1,
+          },
+          {
+            id: "d0000000-0000-4000-8000-0000000000f2",
+            projectId: PRODUCT_ID,
+            type: "current",
+            text: "Alpha unranked",
+            tag: "delivery",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            completed: null,
+          },
+        ],
+      }),
+    );
+
+    const model = buildUnifiedSlideModel(slide);
+
+    // Alpha (name-earlier) block stays ahead of Zeta (name-later) even though
+    // Zeta holds the only P1 — a global cross-product sort would float it first.
+    expect(model.current.map((row) => row.productName)).toEqual([
+      "Alpha Product",
+      "Zeta Product",
+    ]);
+    expect(model.current.map((row) => row.text)).toEqual([
+      "Alpha unranked",
+      "Zeta P1",
+    ]);
+  });
+});
+
 // scope-lead-report-to-own-contribution: slides keep honest, status-only
 // product health for co-owned products without rendering any foreign record.
 describe("applyForeignProductHealth", () => {
