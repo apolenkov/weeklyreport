@@ -2,129 +2,145 @@
 
 exports[`KpiCards — a11y regression (verify-a11y-recommended-flip) > Snapshots — visual layout and CSS preservation > snapshot: full DOM snapshot of KpiCards (layout preservation) 1`] = `
 <div
-  class="grid gap-4 sm:grid-cols-3"
+  class="grid gap-3 sm:grid-cols-3"
 >
   <section
     aria-label="Submissions: 5 of 8, 3 pending"
-    class="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
+    class="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
     style="border-left: 3px solid var(--color-starbucks-accent);"
   >
-    <p
-      class="mb-2 text-sm font-medium text-[var(--color-muted-foreground)]"
-    >
-      Submissions
-    </p>
     <div
-      class="flex items-center gap-4"
+      class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full"
+      style="background: conic-gradient(var(--color-starbucks-accent) 0% 63%, var(--color-border) 63% 100%);"
+      title="5 of 8 leads submitted this week (63%)"
     >
       <div
-        class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full"
-        style="background: conic-gradient(var(--color-starbucks-accent) 0% 63%, var(--color-border) 63% 100%);"
-        title="5 of 8 leads submitted this week (63%)"
+        class="flex h-7 w-7 items-center justify-center rounded-full bg-white"
       >
-        <div
-          class="flex h-10 w-10 items-center justify-center rounded-full bg-white"
+        <span
+          class="font-[family-name:var(--font-sans)] text-[11px] font-bold leading-none text-[var(--color-primary)]"
         >
-          <span
-            class="font-[family-name:var(--font-sans)] text-[15px] font-bold leading-none text-[var(--color-primary)]"
-          >
-            5
-            /
-            8
-          </span>
-        </div>
+          5
+          /
+          8
+        </span>
       </div>
-      <div>
-        <div
+    </div>
+    <div
+      class="min-w-0"
+    >
+      <p
+        class="text-xs font-medium text-[var(--color-muted-foreground)]"
+      >
+        Submissions
+      </p>
+      <div
+        class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5"
+      >
+        <span
           class="text-[13px] tabular-nums text-[var(--color-muted-foreground)]"
         >
-          Last week: 
+          Last week 
           4
           /
           8
-        </div>
-        <div
-          class="mt-1"
+        </span>
+        <span
+          class="inline-flex items-center rounded-[var(--radius-pill)] bg-[#fef3c7] px-2 py-0.5 text-[10px] font-semibold text-[#8a6d1b]"
         >
-          <span
-            class="inline-flex items-center rounded-[var(--radius-pill)] bg-[#fef3c7] px-2 py-0.5 text-[10px] font-semibold text-[#8a6d1b]"
-          >
-            3
-             pending
-          </span>
-        </div>
+          3
+           pending
+        </span>
       </div>
     </div>
   </section>
   <section
     aria-label="Deadline: Thu, 5:00 PM"
-    class="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
+    class="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
     style="border-left: 3px solid var(--color-warning);"
   >
-    <p
-      class="mb-2 text-sm font-medium text-[var(--color-muted-foreground)]"
-    >
-      Deadline
-    </p>
     <div
-      class="font-[family-name:var(--font-sans)] text-[32px] font-bold leading-none text-[var(--color-starbucks-gold)]"
+      class="min-w-0"
     >
-      Thu
+      <p
+        class="text-xs font-medium text-[var(--color-muted-foreground)]"
+      >
+        Deadline
+      </p>
+      <div
+        class="flex flex-wrap items-baseline gap-x-2"
+      >
+        <span
+          class="font-[family-name:var(--font-sans)] text-xl font-bold leading-none text-[var(--color-starbucks-gold)]"
+        >
+          Thu
+        </span>
+        <span
+          class="text-[13px] text-[var(--color-muted-foreground)]"
+        >
+          5:00 PM
+        </span>
+      </div>
     </div>
-    <p
-      class="mt-2 text-[13px] text-[var(--color-muted-foreground)]"
-    >
-      5:00 PM
-    </p>
   </section>
   <section
     aria-label="Risks: 2 blocked, 1 at risk, 4 decisions"
-    class="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
+    class="flex items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
     style="border-left: 3px solid var(--color-destructive);"
   >
-    <p
-      class="mb-2 text-sm font-medium text-[var(--color-muted-foreground)]"
-    >
-      Risks & Blockers
-    </p>
     <div
-      class="flex gap-4"
+      class="min-w-0"
     >
-      <div>
+      <p
+        class="text-xs font-medium text-[var(--color-muted-foreground)]"
+      >
+        Risks & Blockers
+      </p>
+      <div
+        class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5"
+      >
         <span
-          class="font-[family-name:var(--font-sans)] text-[28px] font-bold text-[var(--color-destructive)]"
+          class="whitespace-nowrap"
         >
-          2
+          <span
+            class="text-lg font-bold tabular-nums text-[var(--color-destructive)]"
+          >
+            2
+          </span>
+          <span
+            class="ml-1 text-[11px] text-[var(--color-muted-foreground)]"
+          >
+            blocked
+          </span>
         </span>
-        <div
-          class="text-[11px] text-[var(--color-muted-foreground)]"
-        >
-          Blocked
-        </div>
-      </div>
-      <div>
         <span
-          class="font-[family-name:var(--font-sans)] text-[28px] font-bold text-[var(--color-starbucks-gold)]"
+          class="whitespace-nowrap"
         >
-          1
+          <span
+            class="text-lg font-bold tabular-nums text-[var(--color-starbucks-gold)]"
+          >
+            1
+          </span>
+          <span
+            class="ml-1 text-[11px] text-[var(--color-muted-foreground)]"
+          >
+            at risk
+          </span>
         </span>
-        <div
-          class="text-[11px] text-[var(--color-muted-foreground)]"
-        >
-          At Risk
-        </div>
-      </div>
-      <div>
         <span
-          class="font-[family-name:var(--font-sans)] text-[28px] font-bold text-[var(--color-primary)]"
+          class="whitespace-nowrap"
         >
-          4
+          <span
+            class="text-lg font-bold tabular-nums text-[var(--color-primary)]"
+          >
+            4
+          </span>
+          <span
+            class="ml-1 text-[11px] text-[var(--color-muted-foreground)]"
+          >
+            decisions
+          </span>
         </span>
-        <div
-          class="text-[11px] text-[var(--color-muted-foreground)]"
-        >
-          Decisions
-        </div>
       </div>
     </div>
   </section>
