@@ -395,4 +395,35 @@ describe("WeeklyReportPrismaRepository.getWeeklyReport live portfolio floor", ()
     expect(untouched).toBeDefined();
     expect(untouched?.worstStatus).toBeNull();
   });
+
+  it("dispatches the leadUsers and projects queries concurrently", async () => {
+    let releaseUsers: (rows: { id: string }[]) => void = () => {
+      /* set below */
+    };
+    const usersPending = new Promise<{ id: string }[]>((resolve) => {
+      releaseUsers = resolve;
+    });
+    const userFindMany = vi.fn().mockReturnValue(usersPending);
+    const projectFindMany = vi.fn().mockResolvedValue([]);
+    const prisma = {
+      report: { findUnique: vi.fn().mockResolvedValue(makeReportRow()) },
+      user: { findMany: userFindMany },
+      project: { findMany: projectFindMany },
+      reminderPolicy: { count: vi.fn().mockResolvedValue(0) },
+    } as unknown as PrismaService;
+    const repository = new WeeklyReportPrismaRepository(prisma);
+
+    const pending = repository.getWeeklyReport(REPORT_ID);
+    // Flush pending microtasks so the findUnique await resolves and the
+    // Promise.all dispatch runs, without resolving the leadUsers query.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Projects were dispatched even though leadUsers is still unresolved —
+    // proving Promise.all, not a sequential await chain.
+    expect(userFindMany).toHaveBeenCalledOnce();
+    expect(projectFindMany).toHaveBeenCalledOnce();
+
+    releaseUsers([{ id: AUTHOR_ID }]);
+    await pending;
+  });
 });

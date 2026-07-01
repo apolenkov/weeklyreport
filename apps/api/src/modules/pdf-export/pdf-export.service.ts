@@ -5,7 +5,12 @@ import {
 } from "@customreport/shared";
 import type { Queue } from "bullmq";
 import jwt from "jsonwebtoken";
+import type { ClsService } from "nestjs-cls";
 
+import {
+  captureJobTraceContext,
+  resolveCorrelationId,
+} from "../../infrastructure/bullmq/worker-observability.js";
 import { customreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import { requireEnv } from "../../lib/env.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger";
@@ -119,6 +124,7 @@ export class PdfExportService {
     private readonly repository: PdfExportRepository,
     logger?: AppLogger,
     pdfQueue?: Queue,
+    private readonly cls?: ClsService,
   ) {
     this.logger = logger ?? createNullLogger();
     this.pdfQueue = pdfQueue ?? null;
@@ -197,7 +203,12 @@ export class PdfExportService {
         authToken ?? this.signPdfExportToken(reportId, requestedBy);
       await this.pdfQueue.add(
         "generate",
-        { reportId, jobId: job.jobId, authToken: cookieToken },
+        {
+          reportId,
+          jobId: job.jobId,
+          authToken: cookieToken,
+          ...captureJobTraceContext(resolveCorrelationId(this.cls)),
+        },
         {
           attempts: 3,
           backoff: { type: "exponential", delay: 5000 },

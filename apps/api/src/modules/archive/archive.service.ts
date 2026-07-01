@@ -46,9 +46,10 @@ export type ArchiveScopeSession = Pick<
 
 export interface ArchiveRepository {
   listArchiveReports(
+    pagination?: PaginationInput,
     filter?: ArchiveReadFilter,
     session?: ArchiveScopeSession,
-  ): Promise<ArchiveReportSummary[]>;
+  ): Promise<PaginatedResult<ArchiveReportSummary>>;
   getArchiveReport(
     reportId: string,
     filter?: ArchiveReadFilter,
@@ -82,32 +83,18 @@ export class ArchiveService {
     session?: ArchiveScopeSession,
   ): Promise<PaginatedResult<ArchiveReportSummary>> {
     const filter = buildArchiveReadFilter(role);
-    const reports = archiveReportSummarySchema
-      .array()
-      .parse(await this.repository.listArchiveReports(filter, session));
-
-    const sorted = [...reports].sort(
-      (left, right) => right.publishedAt.getTime() - left.publishedAt.getTime(),
+    // Pagination lives in the repository now: it pages at the database with a
+    // stable `publishedAt desc, id desc` cursor and only reads the page plus
+    // one probe row, instead of loading the whole archive to slice in memory.
+    const page = await this.repository.listArchiveReports(
+      pagination,
+      filter,
+      session,
     );
-
-    if (!pagination) {
-      return { items: sorted, nextCursor: null };
-    }
-
-    const limit = pagination.limit;
-    const startIndex = pagination.cursor
-      ? sorted.findIndex((r) => r.reportId === pagination.cursor) + 1
-      : 0;
-    const page = sorted.slice(startIndex, startIndex + limit);
-    // The if-condition guarantees `sorted[startIndex + limit - 1]` exists, but
-    // TS only sees `T | undefined` after subscript access — narrow explicitly.
-    const lastInPage = sorted.at(startIndex + limit - 1);
-    const nextCursor =
-      startIndex + limit < sorted.length && lastInPage
-        ? lastInPage.reportId
-        : null;
-
-    return { items: page, nextCursor };
+    return {
+      items: archiveReportSummarySchema.array().parse(page.items),
+      nextCursor: page.nextCursor,
+    };
   }
 
   async getArchiveReport(

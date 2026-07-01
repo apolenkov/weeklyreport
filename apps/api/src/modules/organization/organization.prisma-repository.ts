@@ -27,15 +27,24 @@ export class OrganizationPrismaRepository implements OrganizationRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async getOrganization(): Promise<Organization> {
-    const row = await this.prisma.organization.upsert({
+    // Read-only on the happy path: the singleton row is seeded at migration, so
+    // this anonymous landing-page read must never write. The fallback is an
+    // upsert (not a create) so two concurrent first-reads on a cold/truncated
+    // DB collapse to a no-op update instead of racing into a P2002.
+    const existing = await this.prisma.organization.findUnique({
       where: { id: "singleton" },
-      create: {
-        id: "singleton",
-        shortName: DEFAULT_ORGANIZATION_IDENTITY.shortName,
-        fullName: DEFAULT_ORGANIZATION_IDENTITY.fullName,
-      },
-      update: {},
     });
+    const row =
+      existing ??
+      (await this.prisma.organization.upsert({
+        where: { id: "singleton" },
+        create: {
+          id: "singleton",
+          shortName: DEFAULT_ORGANIZATION_IDENTITY.shortName,
+          fullName: DEFAULT_ORGANIZATION_IDENTITY.fullName,
+        },
+        update: {},
+      }));
     return organizationSchema.parse({
       id: row.id,
       shortName: row.shortName,

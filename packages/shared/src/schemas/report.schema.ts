@@ -447,7 +447,10 @@ export type MyHistoryEntry = z.infer<typeof myHistoryEntrySchema>;
 // ---------------------------------------------------------------------------
 
 export const paginationInputSchema = z.object({
-  cursor: z.uuid().optional(),
+  // Opaque pagination token: a row id for the log / reminder lists, an encoded
+  // keyset coordinate for the archive. Validated only as a non-empty string so
+  // no single consumer's cursor shape is baked into the shared contract.
+  cursor: z.string().min(1).optional(),
   limit: z.number().int().min(1).max(100).default(20),
 });
 

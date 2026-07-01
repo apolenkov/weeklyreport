@@ -1,6 +1,7 @@
 import { BullModule } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
 
+import { BullBoardQueues } from "./bull-board.module.js";
 import { getBullMQOptions } from "./bullmq-options";
 import { DLQMonitorService } from "./dlq-monitor.service.js";
 
@@ -28,7 +29,7 @@ import { DLQMonitorService } from "./dlq-monitor.service.js";
     // queue itself, so the test surface can stay synchronous).
     BullModule.registerQueue({ name: "telegram-outbound" }),
   ],
-  providers: [DLQMonitorService],
-  exports: [BullModule],
+  providers: [DLQMonitorService, BullBoardQueues],
+  exports: [BullModule, BullBoardQueues],
 })
 export class BullMQModule {}

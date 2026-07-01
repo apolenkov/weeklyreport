@@ -54,6 +54,7 @@ import {
 } from "../../modules/search/search.service.js";
 import type { TelemetryService } from "../../modules/telemetry/telemetry.service.js";
 import type { WeeklyReportService } from "../../modules/weekly-report/weekly-report.service.js";
+import { captureJobTraceContext } from "../bullmq/worker-observability.js";
 import { customreportReopenRequestsTotal } from "../metrics/metrics.registry.js";
 import { clearOrgCache } from "./trpc.context.js";
 import { mapDomainError } from "./trpc.error-mapper.js";
@@ -950,7 +951,7 @@ export function createAppRouter(deps: RouterDeps) {
        */
       testTelegramSend: adminProcedure
         .input(adminTestTelegramSendSchema)
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
           try {
             if (!deps.telegramOutboundQueue) {
               throw new TRPCError({
@@ -961,7 +962,11 @@ export function createAppRouter(deps: RouterDeps) {
             }
             const job = await deps.telegramOutboundQueue.add(
               "telegram-test",
-              { chatId: input.chatId, text: input.text },
+              {
+                chatId: input.chatId,
+                text: input.text,
+                ...captureJobTraceContext(ctx.correlationId),
+              },
               {
                 attempts: 3,
                 backoff: { type: "exponential", delay: 5000 },

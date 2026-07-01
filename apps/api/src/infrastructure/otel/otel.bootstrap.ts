@@ -18,6 +18,7 @@
  * collector is unreachable, just without traces.
  */
 
+import { propagation } from "@opentelemetry/api";
 import { logs } from "@opentelemetry/api-logs";
 import {
   CompositePropagator,
@@ -89,6 +90,13 @@ let loggerProvider: LoggerProvider | null = null;
 export function startOtel(
   env: NodeJS.ProcessEnv = process.env,
 ): OtelBootstrapResult {
+  // Register the W3C trace-context propagator globally and unconditionally —
+  // even when the exporter is disabled — so the manual inject/extract on the
+  // BullMQ enqueue->worker boundary always speaks W3C `traceparent`, not the
+  // default no-op propagator. When the SDK starts it re-registers the same
+  // composite via NodeSDK's `textMapPropagator`.
+  propagation.setGlobalPropagator(createTraceContextPropagator());
+
   const decision = decideOtelBootstrap(env);
   if (!decision.started) {
     return decision;

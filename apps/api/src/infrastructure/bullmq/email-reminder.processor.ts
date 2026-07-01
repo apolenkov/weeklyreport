@@ -4,12 +4,19 @@ import {
   type OnModuleInit,
 } from "@nestjs/common";
 import { type Job, Worker } from "bullmq";
+import type { ClsService } from "nestjs-cls";
 
+import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { AdminService } from "../../modules/admin/admin.service";
 import { renderEmail } from "../../modules/email/render-template";
 import { RemindersService } from "../../modules/reminders/reminders.service";
 import { EmailService } from "../email/email.service";
 import { getBullMQOptions } from "./bullmq-options";
+import {
+  extractTraceId,
+  type JobTraceContext,
+  runInJobTraceContext,
+} from "./worker-observability.js";
 
 /**
  * NOTIF-01 (Phase 28-03): job-data shape for the email-reminder queue.
@@ -32,36 +39,38 @@ interface ReminderOrganizationJob {
   fullName: string;
 }
 
-type EmailReminderJobData =
-  | {
-      executionId: string;
-      recipientEmail: string;
-      reportPeriod: string;
-    }
-  | {
-      executionId: string;
-      recipientEmail: string;
-      kind: "deadline";
-      leadName: string;
-      reportPeriod: string;
-      deadlineIso: string;
-      sectionUrl: string;
-      organization: ReminderOrganizationJob;
-    }
-  | {
-      executionId: string;
-      recipientEmail: string;
-      kind: "escalation";
-      headName: string;
-      cycleDate: string;
-      reportPeriod: string;
-      lateLeads: readonly {
+type EmailReminderJobData = JobTraceContext &
+  (
+    | {
+        executionId: string;
+        recipientEmail: string;
+        reportPeriod: string;
+      }
+    | {
+        executionId: string;
+        recipientEmail: string;
+        kind: "deadline";
         leadName: string;
-        sectionTitle: string;
+        reportPeriod: string;
         deadlineIso: string;
-      }[];
-      organization: ReminderOrganizationJob;
-    };
+        sectionUrl: string;
+        organization: ReminderOrganizationJob;
+      }
+    | {
+        executionId: string;
+        recipientEmail: string;
+        kind: "escalation";
+        headName: string;
+        cycleDate: string;
+        reportPeriod: string;
+        lateLeads: readonly {
+          leadName: string;
+          sectionTitle: string;
+          deadlineIso: string;
+        }[];
+        organization: ReminderOrganizationJob;
+      }
+  );
 
 /**
  * BullMQ worker for the email-reminder queue.
@@ -72,25 +81,34 @@ type EmailReminderJobData =
 @Injectable()
 export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
   private worker: Worker<EmailReminderJobData> | undefined;
+  private readonly logger: AppLogger;
 
   constructor(
     private readonly remindersService: RemindersService,
     private readonly emailService: EmailService,
-    // UFB-048 / Phase 50-A: AdminService surfaces the AppSettings
-    // singleton. We read `notificationFromEmail` once per job and pass
-    // it through to EmailService so admin can swap the From-address
-    // without redeploying. `null` (default) → EmailService falls back to
-    // SMTP_FROM env. Marked optional to keep the test-time constructor
-    // call sites (which instantiate the processor without DI) compiling
-    // unchanged — the processor degrades gracefully if not wired.
+    // AdminService surfaces the AppSettings singleton. We read
+    // `notificationFromEmail` once per job and pass it through to EmailService
+    // so admin can swap the From-address without redeploying. `null` (default)
+    // → EmailService falls back to SMTP_FROM env. Marked optional to keep the
+    // test-time constructor call sites (which instantiate the processor without
+    // DI) compiling unchanged — the processor degrades gracefully if not wired.
     private readonly adminService?: AdminService,
-  ) {}
+    logger?: AppLogger,
+    private readonly cls?: ClsService,
+  ) {
+    this.logger = logger ?? createNullLogger();
+  }
 
   onModuleInit(): void {
     this.worker = new Worker<EmailReminderJobData>(
       "email-reminder",
       async (job: Job<EmailReminderJobData>) => {
-        await this.processJob(job);
+        await runInJobTraceContext(
+          job.data,
+          "email-reminder.process",
+          this.cls,
+          () => this.processJob(job),
+        );
       },
       {
         ...getBullMQOptions(),
@@ -106,17 +124,16 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
     );
 
     this.worker.on("failed", (job, error) => {
-      process.stderr.write(
-        `${JSON.stringify({
-          timestamp: new Date().toISOString(),
-          level: "error",
-          message: "email-reminder job failed",
-          executionId: job?.data.executionId,
-          recipientEmail: job?.data.recipientEmail,
-          attempt: job?.attemptsMade,
-          error: error.message,
-        })}\n`,
-      );
+      const correlationId = job?.data.correlationId;
+      const traceId = job ? extractTraceId(job.data) : undefined;
+      this.logger.error("email-reminder job failed", {
+        executionId: job?.data.executionId,
+        recipientEmail: job?.data.recipientEmail,
+        attempt: job?.attemptsMade,
+        ...(correlationId ? { correlationId } : {}),
+        ...(traceId ? { traceId } : {}),
+        error: error.message,
+      });
     });
   }
 

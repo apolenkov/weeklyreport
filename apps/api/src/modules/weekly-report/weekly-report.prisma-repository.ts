@@ -173,21 +173,24 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       return null;
     }
 
-    const leadUsers = await this.prisma.user.findMany({
-      where: { role: "lead", ...userScope },
-      select: { id: true },
-    });
-
-    // D1: add lead.reportingGroupId to detect cross-group products.
-    // The thin extra select adds one column to an already-fetched row —
-    // no extra round-trip.
-    const projects = await this.prisma.project.findMany({
-      where: { archived: false, ...projectScope },
-      include: {
-        stageAssignments: true,
-        lead: { select: { reportingGroupId: true } },
-      },
-    });
+    // The lead roster and the project portfolio are independent reads; dispatch
+    // them concurrently so the hot report path pays one round-trip, not two.
+    const [leadUsers, projects] = await Promise.all([
+      this.prisma.user.findMany({
+        where: { role: "lead", ...userScope },
+        select: { id: true },
+      }),
+      // D1: add lead.reportingGroupId to detect cross-group products.
+      // The thin extra select adds one column to an already-fetched row —
+      // no extra round-trip.
+      this.prisma.project.findMany({
+        where: { archived: false, ...projectScope },
+        include: {
+          stageAssignments: true,
+          lead: { select: { reportingGroupId: true } },
+        },
+      }),
+    ]);
 
     const submissionCount = report.sections.filter(
       (s) => s.status === "submitted",

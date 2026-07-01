@@ -21,8 +21,15 @@ import {
   type OnModuleInit,
 } from "@nestjs/common";
 import { type Job, Worker } from "bullmq";
+import type { ClsService } from "nestjs-cls";
 
 import { getBullMQOptions } from "../../infrastructure/bullmq/bullmq-options";
+import {
+  extractTraceId,
+  type JobTraceContext,
+  runInJobTraceContext,
+} from "../../infrastructure/bullmq/worker-observability.js";
+import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { TELEGRAM_ADAPTER, type TelegramAdapter } from "./telegram.adapter.js";
 
 /**
@@ -30,7 +37,7 @@ import { TELEGRAM_ADAPTER, type TelegramAdapter } from "./telegram.adapter.js";
  * adapter is the only consumer, and the queue does not carry rendering
  * concerns (a future producer that wants templating renders before enqueue).
  */
-export interface TelegramOutboundJobData {
+export interface TelegramOutboundJobData extends JobTraceContext {
   chatId: string;
   text: string;
 }
@@ -53,16 +60,26 @@ export const TELEGRAM_OUTBOUND_JOB_OPTS = {
 @Injectable()
 export class TelegramProcessor implements OnModuleInit, OnModuleDestroy {
   private worker: Worker<TelegramOutboundJobData> | undefined;
+  private readonly logger: AppLogger;
 
   constructor(
     @Inject(TELEGRAM_ADAPTER) private readonly adapter: TelegramAdapter,
-  ) {}
+    logger?: AppLogger,
+    private readonly cls?: ClsService,
+  ) {
+    this.logger = logger ?? createNullLogger();
+  }
 
   onModuleInit(): void {
     this.worker = new Worker<TelegramOutboundJobData>(
       TELEGRAM_OUTBOUND_QUEUE_NAME,
       async (job: Job<TelegramOutboundJobData>) => {
-        await this.processJob(job);
+        await runInJobTraceContext(
+          job.data,
+          "telegram-outbound.process",
+          this.cls,
+          () => this.processJob(job),
+        );
       },
       {
         ...getBullMQOptions(),
@@ -74,16 +91,24 @@ export class TelegramProcessor implements OnModuleInit, OnModuleDestroy {
     );
 
     this.worker.on("failed", (job, error) => {
-      process.stderr.write(
-        `${JSON.stringify({
-          timestamp: new Date().toISOString(),
-          level: "error",
-          message: "telegram-outbound job failed",
-          chatId: job?.data.chatId,
-          attempt: job?.attemptsMade,
-          error: error.message,
-        })}\n`,
-      );
+      this.logFailure(job, error);
+    });
+  }
+
+  private logFailure(
+    job: Job<TelegramOutboundJobData> | undefined,
+    error: Error,
+  ): void {
+    const correlationId = job?.data.correlationId;
+    const traceId = job ? extractTraceId(job.data) : undefined;
+    // The DLQ monitor is the sole owner of cr_dlq_failed_total; this handler
+    // only logs, so a terminal failure is counted exactly once.
+    this.logger.error("telegram-outbound job failed", {
+      chatId: job?.data.chatId,
+      attempt: job?.attemptsMade,
+      ...(correlationId ? { correlationId } : {}),
+      ...(traceId ? { traceId } : {}),
+      error: error.message,
     });
   }
 

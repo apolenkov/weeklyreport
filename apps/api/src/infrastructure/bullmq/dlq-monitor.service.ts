@@ -5,7 +5,16 @@ import { Queue, QueueEvents } from "bullmq";
 import { dlqFailedTotal } from "../metrics/metrics.registry.js";
 import { getBullMQOptions } from "./bullmq-options";
 
-const QUEUE_NAMES = ["email-reminder", "pdf-export"] as const;
+const QUEUE_NAMES = [
+  "email-reminder",
+  "pdf-export",
+  // TODO(Phase 55): telegram-outbound is seeds-only until the bot activates.
+  // Monitoring it here now means its terminal failures count into
+  // cr_dlq_failed_total{queue="telegram-outbound"} the moment the feature
+  // turns on — the DLQ monitor is the counter's single owner, so no telegram
+  // worker handler must increment it (that would double-count).
+  "telegram-outbound",
+] as const;
 type QueueName = (typeof QUEUE_NAMES)[number];
 
 const DEFAULT_THRESHOLD = 5;
@@ -42,42 +51,18 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
       const events = new QueueEvents(name, bullOptions);
       const queue = new Queue(name, bullOptions);
 
-      events.on("failed", ({ jobId, failedReason, prev }) => {
+      events.on("failed", ({ jobId, failedReason }) => {
         // The QueueEvents emitter expects a void-returning listener and ignores
-        // any returned promise, so the async work is fire-and-forget inside a
-        // void IIFE. Every await lives in the try/catch below, so the IIFE
-        // never rejects; the arrow preserves `this` for the logger.
-        void (async () => {
-          // BullMQ emits 'failed' for every retry too. Only count terminal
-          // failures (the job has moved into the failed-set, i.e. attemptsMade
-          // has reached the configured `attempts` limit). The cleanest signal:
-          // load the job and check it's actually been moved.
-          try {
-            const job = await queue.getJob(jobId);
-            if (!job) return;
-            const attemptsConfigured = job.opts.attempts ?? 1;
-            if (job.attemptsMade >= attemptsConfigured) {
-              dlqFailedTotal.inc({ queue: name });
-              this.logger.error(
-                `[dlq] job ${jobId} on ${name} exhausted ${attemptsConfigured} attempts: ${failedReason}`,
-              );
-            }
-          } catch (error) {
-            // Don't let metrics-side bookkeeping crash the queue listener.
-            this.logger.warn(
-              `[dlq] failed to inspect terminal failure for ${name}/${jobId}: ${error instanceof Error ? error.message : String(error)} (prev=${prev ?? "n/a"})`,
-            );
-          }
-        })();
+        // any returned promise, so the async work is fire-and-forget. The
+        // handler never rejects (all awaits are guarded inside the method).
+        void this.recordTerminalFailure(name, queue, jobId, failedReason);
       });
 
       this.queueEvents.set(name, events);
       this.queues.set(name, queue);
     }
 
-    const threshold = Number(
-      process.env.DLQ_ALERT_THRESHOLD ?? DEFAULT_THRESHOLD,
-    );
+    const threshold = this.parseThreshold();
     this.pollTimer = setInterval(() => {
       void this.checkThresholds(threshold);
     }, POLL_INTERVAL_MS);
@@ -99,6 +84,54 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
     }
     for (const queue of this.queues.values()) {
       await queue.close();
+    }
+  }
+
+  /**
+   * Parse `DLQ_ALERT_THRESHOLD`, falling back to the default and warning on an
+   * unparseable value so a typo cannot silently disable the alert.
+   */
+  private parseThreshold(): number {
+    const raw = process.env.DLQ_ALERT_THRESHOLD;
+    if (raw === undefined) return DEFAULT_THRESHOLD;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) {
+      this.logger.warn(
+        `[dlq] invalid DLQ_ALERT_THRESHOLD='${raw}', falling back to default ${DEFAULT_THRESHOLD}`,
+      );
+      return DEFAULT_THRESHOLD;
+    }
+    return parsed;
+  }
+
+  /**
+   * Increment `cr_dlq_failed_total{queue}` exactly once per terminal failure.
+   * BullMQ emits 'failed' for every retry too, so only a job whose
+   * `attemptsMade` has reached its configured `attempts` counts as terminal.
+   * This monitor is the sole owner of the counter — no worker handler must
+   * also increment it, or terminal failures would be double-counted.
+   */
+  private async recordTerminalFailure(
+    name: QueueName,
+    queue: Queue,
+    jobId: string,
+    failedReason: string,
+  ): Promise<void> {
+    try {
+      const job = await queue.getJob(jobId);
+      if (!job) return;
+      const attemptsConfigured = job.opts.attempts ?? 1;
+      if (job.attemptsMade >= attemptsConfigured) {
+        dlqFailedTotal.inc({ queue: name });
+        this.logger.error(
+          `[dlq] job ${jobId} on ${name} exhausted ${attemptsConfigured} attempts: ${failedReason}`,
+        );
+      }
+    } catch (error) {
+      // Don't let metrics-side bookkeeping crash the queue listener.
+      this.logger.warn(
+        `[dlq] failed to inspect terminal failure for ${name}/${jobId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 

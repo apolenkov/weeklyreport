@@ -10,6 +10,7 @@ import {
 import { PeriodPrismaRepository } from "../period/period.prisma-repository.js";
 import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository.js";
 import { ArchivePrismaRepository } from "./archive.prisma-repository";
+import { encodeArchiveCursor } from "./archive-cursor.js";
 
 describe("ArchivePrismaRepository (integration)", () => {
   const prisma = createTestPrisma();
@@ -38,7 +39,7 @@ describe("ArchivePrismaRepository (integration)", () => {
   it("listArchiveReports returns only published reports", async () => {
     // The seeded report is draft, so archive should be empty
     const emptyList = await repo.listArchiveReports();
-    expect(emptyList).toHaveLength(0);
+    expect(emptyList.items).toHaveLength(0);
 
     // Publish the report AND set archived=true (A22: both flags required)
     await prisma.report.update({
@@ -60,7 +61,7 @@ describe("ArchivePrismaRepository (integration)", () => {
       },
     });
 
-    const list = await repo.listArchiveReports();
+    const list = (await repo.listArchiveReports()).items;
     expect(list).toHaveLength(1);
     expect(expectDefined(list[0]).reportId).toBe(testData.report.id);
     expect(expectDefined(list[0]).publishedByName).toBe("Test Head");
@@ -88,7 +89,7 @@ describe("ArchivePrismaRepository (integration)", () => {
     });
 
     // A22: archive must be empty — published but not explicitly archived
-    const list = await repo.listArchiveReports();
+    const list = (await repo.listArchiveReports()).items;
     expect(list).toHaveLength(0);
   });
 
@@ -112,7 +113,7 @@ describe("ArchivePrismaRepository (integration)", () => {
       },
     });
 
-    const list = await repo.listArchiveReports();
+    const list = (await repo.listArchiveReports()).items;
     expect(list).toHaveLength(1);
     expect(expectDefined(list[0]).reportId).toBe(testData.report.id);
   });
@@ -293,5 +294,116 @@ describe("ArchivePrismaRepository (integration)", () => {
         expectDefined(expectDefined(detail).report.sections[0]).items[0],
       ).text,
     ).toBe("Published snapshot item");
+  });
+
+  async function createArchivedReport(
+    publishedAt: Date,
+    periodEnd: Date = publishedAt,
+  ): Promise<{ id: string; publishedAt: Date }> {
+    const report = await prisma.report.create({
+      data: {
+        // Distinct period window per row — Report has a unique
+        // (periodStart, periodEnd) constraint.
+        periodStart: new Date(periodEnd.getTime() - 6 * 86_400_000),
+        periodEnd,
+        deadline: periodEnd,
+        status: "published",
+        publishedAt,
+        publishedById: testData.head.id,
+        archived: true,
+      },
+    });
+    const section = await prisma.reportSection.create({
+      data: {
+        reportId: report.id,
+        authorId: testData.lead.id,
+        status: "submitted",
+      },
+    });
+    await prisma.projectStatus.create({
+      data: {
+        reportSectionId: section.id,
+        projectId: testData.project.id,
+        status: "green",
+      },
+    });
+    return { id: report.id, publishedAt };
+  }
+
+  it("paginates the archive with a keyset cursor (page + probe row)", async () => {
+    // The seeded report stays draft, so only these three archived rows appear.
+    const older = await createArchivedReport(
+      new Date("2026-04-01T10:00:00.000Z"),
+    );
+    const middle = await createArchivedReport(
+      new Date("2026-04-08T10:00:00.000Z"),
+    );
+    const newest = await createArchivedReport(
+      new Date("2026-04-15T10:00:00.000Z"),
+    );
+
+    const page1 = await repo.listArchiveReports({ limit: 2 });
+    expect(page1.items.map((r) => r.reportId)).toEqual([newest.id, middle.id]);
+    // A probe row (older) exists beyond the page, so nextCursor is the last
+    // kept row's encoded (publishedAt, id) keyset coordinate.
+    expect(page1.nextCursor).toBe(
+      encodeArchiveCursor(middle.publishedAt, middle.id),
+    );
+
+    const page2 = await repo.listArchiveReports({
+      limit: 2,
+      cursor: expectDefined(page1.nextCursor),
+    });
+    expect(page2.items.map((r) => r.reportId)).toEqual([older.id]);
+    // Last page: no probe row, so nextCursor is null.
+    expect(page2.nextCursor).toBeNull();
+
+    // A page that covers everything also returns a null cursor.
+    const whole = await repo.listArchiveReports({ limit: 10 });
+    expect(whole.items).toHaveLength(3);
+    expect(whole.nextCursor).toBeNull();
+  });
+
+  it("keyset cursor pages across rows that share a publishedAt (id tiebreaker)", async () => {
+    // Two rows with the SAME publishedAt exercise the tiebreaker branch of the
+    // keyset predicate (`publishedAt = cursor AND id < cursorId`). Distinct
+    // period windows keep the unique (periodStart, periodEnd) constraint happy.
+    const sharedPublishedAt = new Date("2026-05-01T10:00:00.000Z");
+    const first = await createArchivedReport(
+      sharedPublishedAt,
+      new Date("2026-05-01T00:00:00.000Z"),
+    );
+    const second = await createArchivedReport(
+      sharedPublishedAt,
+      new Date("2026-05-08T00:00:00.000Z"),
+    );
+
+    const page1 = await repo.listArchiveReports({ limit: 1 });
+    const firstPageId = expectDefined(page1.items[0]).reportId;
+    expect([first.id, second.id]).toContain(firstPageId);
+
+    const page2 = await repo.listArchiveReports({
+      limit: 1,
+      cursor: expectDefined(page1.nextCursor),
+    });
+    const secondPageId = expectDefined(page2.items[0]).reportId;
+
+    // Both tie rows come back exactly once across the two pages: a wrong or
+    // missing `id` tiebreaker would empty, skip, or repeat the second page.
+    expect(new Set([firstPageId, secondPageId])).toEqual(
+      new Set([first.id, second.id]),
+    );
+    expect(page2.nextCursor).toBeNull();
+  });
+
+  it("rejects a malformed pagination cursor instead of silently restarting", async () => {
+    // A present-but-undecodable cursor must fail loud (400), not degrade to a
+    // first-page read that could loop a client resending the bad token.
+    const malformed = Buffer.from("not-a-keyset-token", "utf8").toString(
+      "base64",
+    );
+    await expect(
+      repo.listArchiveReports({ limit: 2, cursor: malformed }),
+    ).rejects.toThrow("Malformed archive pagination cursor");
   });
 });
