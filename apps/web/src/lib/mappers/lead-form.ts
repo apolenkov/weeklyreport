@@ -48,6 +48,7 @@
 
 import type {
   MyHistoryEntry,
+  RecordCommentView,
   ReportSectionReadModel,
 } from "@customreport/shared";
 import {
@@ -610,6 +611,66 @@ export function mapLeadPeriods(
       riskCount: e.riskCount,
       productCount: e.productCount,
     }));
+}
+
+/**
+ * review-acknowledgement (§8): one of the lead's OWN records that carries
+ * reviewer comments. Surfaced read-only when a returned (draft) section comes
+ * back, so the feedback is not silent. `text` is the record's OWN text — context
+ * for the lead, NEVER re-rendered as a comment.
+ */
+export interface LeadReviewFeedbackRecord {
+  readonly id: string;
+  readonly kind: "item" | "risk" | "decision";
+  readonly productName: string;
+  readonly text: string;
+  readonly comments: readonly RecordCommentView[];
+}
+
+/**
+ * Collect every item/risk/decision on the section that carries ≥1 reviewer
+ * comment, keyed to the record's own text + resolved product name. Records with
+ * no comments are dropped (nothing to surface). The comment payload rides the
+ * read model (the repo joins `RecordComment` into the section read); this mapper
+ * only reshapes it for the lead's feedback panel.
+ */
+export function mapLeadReviewFeedback(
+  section: ReportSectionReadModel,
+): LeadReviewFeedbackRecord[] {
+  const projectIndex = buildProjectIndex(section);
+  const nameFor = (projectId: string | undefined): string =>
+    (projectId ? projectIndex.get(projectId)?.name : undefined) ?? "Unknown";
+  const hasComments = (comments: readonly RecordCommentView[] | undefined) =>
+    (comments?.length ?? 0) > 0;
+
+  const items: LeadReviewFeedbackRecord[] = section.items
+    .filter((item) => hasComments(item.comments))
+    .map((item) => ({
+      id: item.id ?? "",
+      kind: "item",
+      productName: nameFor(item.projectId),
+      text: item.text,
+      comments: item.comments ?? [],
+    }));
+  const risks: LeadReviewFeedbackRecord[] = section.risks
+    .filter((risk) => hasComments(risk.comments))
+    .map((risk) => ({
+      id: risk.id ?? "",
+      kind: "risk",
+      productName: nameFor(risk.projectId),
+      text: risk.risk,
+      comments: risk.comments ?? [],
+    }));
+  const decisions: LeadReviewFeedbackRecord[] = section.decisions
+    .filter((decision) => hasComments(decision.comments))
+    .map((decision) => ({
+      id: decision.id ?? "",
+      kind: "decision",
+      productName: nameFor(decision.productId ?? undefined),
+      text: decision.text,
+      comments: decision.comments ?? [],
+    }));
+  return [...items, ...risks, ...decisions];
 }
 
 // ---- Composer ----

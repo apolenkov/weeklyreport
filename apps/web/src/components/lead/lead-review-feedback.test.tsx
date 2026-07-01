@@ -1,0 +1,149 @@
+/**
+ * review-acknowledgement (§8): the lead's read-only reviewer-feedback surface.
+ * Covers the mapper (which of the lead's OWN records carry reviewer comments)
+ * and the panel (marker + comments inline on each anchor record, never a
+ * composer — the lead has no review capability).
+ */
+
+import type { ReportSectionReadModel } from "@customreport/shared";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+
+import {
+  type LeadReviewFeedbackRecord,
+  mapLeadReviewFeedback,
+} from "../../lib/mappers";
+import { LeadReviewFeedback } from "./lead-review-feedback";
+
+const REVIEWER_ID = "99999999-9999-4999-8999-999999999999";
+
+function comment(id: string, text: string) {
+  return {
+    id,
+    reviewerId: REVIEWER_ID,
+    reviewerName: "Head",
+    text,
+    createdAt: new Date("2026-07-01T00:00:00Z"),
+  };
+}
+
+// mapLeadReviewFeedback reads only projects/items/risks/decisions, so a partial
+// section is a faithful fixture (cast keeps the test free of unrelated fields).
+function sectionWith(
+  overrides: Partial<
+    Pick<ReportSectionReadModel, "projects" | "items" | "risks" | "decisions">
+  >,
+): ReportSectionReadModel {
+  return {
+    projects: [
+      { projectId: "p1", projectName: "Product Alpha", trafficLight: null },
+    ],
+    items: [],
+    risks: [],
+    decisions: [],
+    ...overrides,
+  } as unknown as ReportSectionReadModel;
+}
+
+describe("mapLeadReviewFeedback", () => {
+  it("keeps only records that carry reviewer comments, resolving the product name", () => {
+    const section = sectionWith({
+      items: [
+        {
+          id: "i1",
+          projectId: "p1",
+          type: "current",
+          text: "Ship the API",
+          tag: "Dev",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+          stageIds: ["Development"],
+          comments: [comment("c1", "Add error handling")],
+        },
+        {
+          id: "i2",
+          projectId: "p1",
+          type: "current",
+          text: "No feedback here",
+          tag: "Dev",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+          stageIds: ["Development"],
+          comments: [],
+        },
+      ] as unknown as ReportSectionReadModel["items"],
+    });
+
+    const result = mapLeadReviewFeedback(section);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      id: "i1",
+      kind: "item",
+      productName: "Product Alpha",
+      text: "Ship the API",
+    });
+    expect(result[0]?.comments).toHaveLength(1);
+  });
+
+  it("returns an empty list when no record carries a comment", () => {
+    const section = sectionWith({
+      risks: [
+        {
+          id: "r1",
+          projectId: "p1",
+          risk: "Vendor delay",
+          impact: "x",
+          mitigation: "y",
+          severity: "at-risk",
+          stageIds: ["Development"],
+          comments: [],
+        },
+      ] as unknown as ReportSectionReadModel["risks"],
+    });
+
+    expect(mapLeadReviewFeedback(section)).toEqual([]);
+  });
+});
+
+describe("LeadReviewFeedback", () => {
+  const records: LeadReviewFeedbackRecord[] = [
+    {
+      id: "i1",
+      kind: "item",
+      productName: "Product Alpha",
+      text: "Ship the API",
+      comments: [
+        comment("c1", "Add error handling"),
+        comment("c2", "And tests"),
+      ],
+    },
+  ];
+
+  it("renders the section-level marker and each comment inline on its record", () => {
+    render(<LeadReviewFeedback records={records} />);
+
+    expect(screen.getByTestId("lead-review-feedback")).toBeInTheDocument();
+    // Section-level count marker so the return is not silent. Verdict-neutral
+    // copy: comments can predate any verdict, so the marker must not assert a
+    // resubmission was requested.
+    expect(
+      screen.getByText(/2 reviewer notes on your records/i),
+    ).toBeInTheDocument();
+    // The record's own text is shown as context (not re-rendered as a comment).
+    expect(screen.getByText("Ship the API")).toBeInTheDocument();
+    // The reviewer comments render via the shared list.
+    expect(screen.getByText("Add error handling")).toBeInTheDocument();
+    expect(screen.getByText("And tests")).toBeInTheDocument();
+    expect(screen.getAllByText("Head").length).toBeGreaterThan(0);
+    // Strictly read-only: no composer for the lead.
+    expect(
+      screen.queryByRole("textbox", { name: /review comment/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders nothing when there is no feedback", () => {
+    const { container } = render(<LeadReviewFeedback records={[]} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+});

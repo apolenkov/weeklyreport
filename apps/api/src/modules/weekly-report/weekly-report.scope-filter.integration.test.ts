@@ -44,7 +44,11 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
     role: "head" | "lead",
     reportingGroupId: string,
   ): WeeklyReportScopeSession {
-    return { role, reportingGroupId };
+    return {
+      userId: "00000000-0000-4000-a000-0000000000e1",
+      role,
+      reportingGroupId,
+    };
   }
 
   beforeAll(() => {
@@ -229,7 +233,10 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
       },
     });
 
-    const adminSession: WeeklyReportScopeSession = { role: "admin" };
+    const adminSession: WeeklyReportScopeSession = {
+      userId: "00000000-0000-4000-a000-0000000000e2",
+      role: "admin",
+    };
     const result = expectDefined(
       await repo.getWeeklyReport(REPORT_ID, adminSession),
     );
@@ -353,7 +360,10 @@ describe("WeeklyReportPrismaRepository — GroupProduct scope filter (integratio
     it("admin read yields no signal even when a cross-group edge exists", async () => {
       await createCrossGroupProduct();
 
-      const adminSession: WeeklyReportScopeSession = { role: "admin" };
+      const adminSession: WeeklyReportScopeSession = {
+        userId: "00000000-0000-4000-a000-0000000000e2",
+        role: "admin",
+      };
       const result = expectDefined(
         await repo.getWeeklyReport(REPORT_ID, adminSession),
       );

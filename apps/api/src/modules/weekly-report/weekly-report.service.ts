@@ -44,7 +44,7 @@ export class WeeklyReportDomainError extends Error {
  */
 export type WeeklyReportScopeSession = Pick<
   UserSession,
-  "role" | "reportingGroupId" | "viewerGroupAccess"
+  "userId" | "role" | "reportingGroupId" | "viewerGroupAccess"
 >;
 
 /**

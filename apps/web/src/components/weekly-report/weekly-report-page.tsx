@@ -1,15 +1,23 @@
 "use client";
 
+import type { WeeklyReportReadModel } from "@customreport/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type ReactNode, useContext, useEffect, useMemo } from "react";
+import {
+  type ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { toast } from "sonner";
 
 import {
   invalidateDashboard,
   invalidateLeadForm,
   invalidateLeadHistory,
+  invalidateReview,
 } from "../../lib/cache-keys";
 import { getClientErrorDetails } from "../../lib/client-error-reporting";
 import { joinPeriodLabel } from "../../lib/format-date";
@@ -34,8 +42,21 @@ import {
 } from "../report-shell/report-toolbar";
 import { ExportPdfButton } from "./export-pdf-button";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
-import { ProductAccordion } from "./product-accordion";
+import {
+  type AccordionReviewContext,
+  ProductAccordion,
+} from "./product-accordion";
 import { PublishLockButton } from "./publish-lock-button";
+import { ReviewAcknowledgeBar } from "./review/review-acknowledge-bar";
+import {
+  type SectionReviewRow,
+  SectionReviewStrip,
+} from "./review/section-review-strip";
+import {
+  DraftHiddenSignal,
+  type SubmissionFilter,
+  SubmissionFilterToggle,
+} from "./review/submission-filter";
 import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
 
 interface WeeklyReportPageProps {
@@ -135,6 +156,7 @@ function ReportAccordionBody({
   leadGroups,
   focusedProductId,
   scrollTargetProductId,
+  review,
 }: {
   readonly scope: "product" | "lead";
   readonly products: ProductReport[];
@@ -145,6 +167,7 @@ function ReportAccordionBody({
   }[];
   readonly focusedProductId: string | undefined;
   readonly scrollTargetProductId: string | undefined;
+  readonly review: AccordionReviewContext | undefined;
 }) {
   const renderAccordion = (report: ProductReport) => (
     <ProductAccordion
@@ -153,6 +176,7 @@ function ReportAccordionBody({
       defaultOpen={focusedProductId === report.id}
       highlighted={focusedProductId === report.id}
       scrollIntoViewOnHighlight={scrollTargetProductId === report.id}
+      review={review}
     />
   );
 
@@ -258,6 +282,319 @@ function ToolbarExportControl({
   return null;
 }
 
+type CurrentRole = "lead" | "head" | "viewer" | "admin" | null;
+type LivePeriodStatus = "open" | "published" | "reopened";
+
+interface ReviewModel {
+  readonly context: AccordionReviewContext | undefined;
+  readonly groups: { readonly groupId: string }[];
+  readonly sections: SectionReviewRow[];
+  readonly isHeadOrAdmin: boolean;
+}
+
+const EMPTY_REVIEW_MODEL: ReviewModel = {
+  context: undefined,
+  groups: [],
+  sections: [],
+  isHeadOrAdmin: false,
+};
+
+/**
+ * The reviewer surface is live-only and never for a lead: any access-holder
+ * (head/admin/viewer) on an `open`/`reopened` period, never on a published
+ * snapshot.
+ */
+function isReviewEnabled(
+  role: CurrentRole,
+  periodStatus: LivePeriodStatus,
+): boolean {
+  if (role === null || role === "lead") return false;
+  return periodStatus !== "published";
+}
+
+/** Distinct non-null author groups in the report (the Acknowledge group set). */
+function distinctReviewGroups(
+  sections: WeeklyReportReadModel["leadSections"],
+): { groupId: string }[] {
+  const ids = sections
+    .map((section) => section.groupId)
+    .filter((groupId): groupId is string => Boolean(groupId));
+  return [...new Set(ids)].map((groupId) => ({ groupId }));
+}
+
+/**
+ * review-acknowledgement (§6): derive the in-app reviewer surface from the live
+ * read model. Returns an empty model when review is disabled — a lead, an
+ * anonymous caller, or a published period — so the page renders zero review
+ * affordances there. `canReview` is server-stamped; this only shapes the
+ * affordances, never the security boundary.
+ */
+function buildReviewModel(
+  reportData: WeeklyReportReadModel,
+  params: {
+    readonly currentRole: CurrentRole;
+    readonly periodStatus: "open" | "published" | "reopened";
+    readonly currentUserId: string | null;
+    readonly onMutated: () => void;
+  },
+): ReviewModel {
+  if (
+    !isReviewEnabled(params.currentRole, params.periodStatus) ||
+    !params.currentUserId
+  ) {
+    return EMPTY_REVIEW_MODEL;
+  }
+  const context: AccordionReviewContext = {
+    currentUserId: params.currentUserId,
+    isAdmin: params.currentRole === "admin",
+    onMutated: params.onMutated,
+  };
+  const sections: SectionReviewRow[] = reportData.leadSections.map(
+    (section) => ({
+      reportSectionId: section.reportSectionId,
+      version: section.version,
+      authorName: section.authorName,
+      status: section.status,
+      reviews: section.reviews ?? [],
+      canReview: section.canReview ?? false,
+      groupId: section.groupId ?? null,
+    }),
+  );
+  return {
+    context,
+    groups: distinctReviewGroups(reportData.leadSections),
+    sections,
+    isHeadOrAdmin:
+      params.currentRole === "head" || params.currentRole === "admin",
+  };
+}
+
+interface LeadGroup {
+  id: string;
+  name: string;
+  products: ProductReport[];
+}
+
+interface AccordionModel {
+  readonly products: ProductReport[];
+  readonly leadGroups: LeadGroup[];
+  /** Any section (submitted OR draft) carries content — the "truly empty period" gate. */
+  readonly hasAnyContent: boolean;
+  /** Draft sections that DO carry content (empty drafts hide nothing → excluded). */
+  readonly draftCount: number;
+}
+
+/**
+ * review-acknowledgement (§7): shape the accordion BODY for the submitted/all
+ * filter. `fullProducts` / `fullLeadGroups` are the truth source (header counts,
+ * portfolio band, and period nav read them). When submitted-only is active we
+ * re-map the submitted-only sections into a filtered view and count the draft
+ * sections that still carry content, so an all-draft period surfaces a "N in
+ * draft — Show all" signal instead of a misleading empty accordion. Filtering
+ * happens at the render layer only — never the server query, read gate, or group
+ * scope.
+ */
+function buildAccordionModel(params: {
+  readonly reportData: WeeklyReportReadModel;
+  readonly scope: "product" | "lead";
+  readonly submittedOnly: boolean;
+  readonly fullProducts: ProductReport[];
+  readonly fullLeadGroups: LeadGroup[];
+}): AccordionModel {
+  const { reportData, scope, submittedOnly, fullProducts, fullLeadGroups } =
+    params;
+  const hasAnyContent = fullProducts.some(reportHasContent);
+  if (!submittedOnly) {
+    return {
+      products: fullProducts,
+      leadGroups: fullLeadGroups,
+      hasAnyContent,
+      draftCount: 0,
+    };
+  }
+  const submittedData: WeeklyReportReadModel = {
+    ...reportData,
+    leadSections: reportData.leadSections.filter(
+      (section) => section.status === "submitted",
+    ),
+  };
+  const draftData: WeeklyReportReadModel = {
+    ...reportData,
+    leadSections: reportData.leadSections.filter(
+      (section) => section.status !== "submitted",
+    ),
+  };
+  const products =
+    mapWeeklyReport(submittedData).products.filter(reportHasContent);
+  const leadGroups =
+    scope === "lead"
+      ? (mapWeeklyReportLeadGroups(submittedData) as LeadGroup[])
+      : [];
+  // mapWeeklyReportLeadGroups drops authors whose products carry no content, so
+  // its length is exactly the count of draft sections that would show something.
+  const draftCount = mapWeeklyReportLeadGroups(draftData).length;
+  return {
+    products,
+    leadGroups,
+    hasAnyContent,
+    draftCount,
+  };
+}
+
+/**
+ * review-acknowledgement (§6.1): self-gating Acknowledge band. Renders nothing
+ * when review is disabled, so the page body stays free of a nested ternary.
+ */
+function AcknowledgeSurface({
+  reviewModel,
+  reportId,
+}: {
+  readonly reviewModel: ReviewModel;
+  readonly reportId: string;
+}) {
+  if (!reviewModel.context) return null;
+  return (
+    <ReviewAcknowledgeBar
+      reportId={reportId}
+      groups={reviewModel.groups}
+      currentUserId={reviewModel.context.currentUserId}
+      isHeadOrAdmin={reviewModel.isHeadOrAdmin}
+    />
+  );
+}
+
+/** review-acknowledgement (§6.3): self-gating per-section verdict band. */
+function VerdictSurface({
+  reviewModel,
+}: {
+  readonly reviewModel: ReviewModel;
+}) {
+  if (!reviewModel.context) return null;
+  return (
+    <SectionReviewStrip
+      sections={reviewModel.sections}
+      onMutated={reviewModel.context.onMutated}
+    />
+  );
+}
+
+interface ReportContentProps {
+  readonly hasAnyContent: boolean;
+  readonly periodStatus: LivePeriodStatus;
+  readonly periodLabel: string;
+  readonly scope: "product" | "lead";
+  readonly portfolio: PortfolioProduct[];
+  readonly leadOverviewRows: LeadOverviewRow[];
+  readonly reviewModel: ReviewModel;
+  readonly reportId: string;
+  readonly accordion: AccordionModel;
+  readonly reviewEnabled: boolean;
+  readonly submittedOnly: boolean;
+  readonly submissionFilter: SubmissionFilter;
+  readonly onFilterChange: (next: SubmissionFilter) => void;
+  readonly focusedProductId: string | undefined;
+  readonly scrollTargetProductId: string | undefined;
+}
+
+/**
+ * The report body below the toolbar: the true empty-state when the period has no
+ * section content at all (A32 + head-report-visibility — keyed off FULL content,
+ * never the submitted count), otherwise the review surfaces + the §7-filtered
+ * accordion. Extracted so WeeklyReportPage stays under the complexity budget.
+ */
+function ReportContent({
+  hasAnyContent,
+  periodStatus,
+  periodLabel,
+  scope,
+  portfolio,
+  leadOverviewRows,
+  reviewModel,
+  reportId,
+  accordion,
+  reviewEnabled,
+  submittedOnly,
+  submissionFilter,
+  onFilterChange,
+  focusedProductId,
+  scrollTargetProductId,
+}: ReportContentProps) {
+  if (!hasAnyContent && periodStatus !== "published") {
+    return (
+      <div
+        className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] py-16 text-center"
+        data-testid="empty-submissions-state"
+      >
+        <p className="text-base font-semibold text-[var(--color-foreground)]">
+          No submissions yet for {periodLabel}
+        </p>
+        <p className="mt-1.5 text-sm text-[var(--color-muted-foreground)]">
+          Leads have not filed their sections for this period.
+        </p>
+        <Link
+          href="/reports?tab=published"
+          className="mt-4 text-sm font-medium text-[var(--color-primary)] underline-offset-4 hover:underline"
+        >
+          View archived reports in Archive &rarr;
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* review-acknowledgement (§6.1): Acknowledge control for any
+          access-holder on the live current-period report. */}
+      <AcknowledgeSurface reviewModel={reviewModel} reportId={reportId} />
+
+      {/* Report overview — scope-adaptive (report-overview-scope-parity). It
+          reads the FULL truth, so it never narrows with the §7 filter. */}
+      <ReportOverviewBand
+        scope={scope}
+        portfolio={portfolio}
+        leadOverviewRows={leadOverviewRows}
+      />
+
+      {/* review-acknowledgement (§6.3): per-section verdict band above the
+          accordion, present in both by-product and by-lead scope. */}
+      <VerdictSurface reviewModel={reviewModel} />
+
+      {/* review-acknowledgement (§7): the per-user Submitted|All accordion filter,
+          shown only to an access-holder on a live period. */}
+      {reviewEnabled ? (
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
+            Sections
+          </span>
+          <SubmissionFilterToggle
+            value={submissionFilter}
+            onChange={onFilterChange}
+          />
+        </div>
+      ) : null}
+
+      {/* §7 anti-empty-state: submitted-only is hiding draft content — reveal it
+          rather than let the accordion read as empty. */}
+      {submittedOnly && accordion.draftCount > 0 ? (
+        <DraftHiddenSignal
+          count={accordion.draftCount}
+          onShowAll={() => onFilterChange("all")}
+        />
+      ) : null}
+
+      {/* Accordion sections — by product (default) or grouped by lead */}
+      <ReportAccordionBody
+        scope={scope}
+        products={accordion.products}
+        leadGroups={accordion.leadGroups}
+        focusedProductId={focusedProductId}
+        scrollTargetProductId={scrollTargetProductId}
+        review={reviewModel.context}
+      />
+    </>
+  );
+}
+
 export function WeeklyReportPage({
   reportId,
   redirectToCanonical,
@@ -282,6 +619,13 @@ export function WeeklyReportPage({
   // would 403. The viewer's export is requester-scoped (their own published slice).
   const canExportPdf = currentRole !== null && currentRole !== "lead";
   const showLeadExportComingSoon = currentRole === "lead";
+
+  // review-acknowledgement (§7): per-user, client-only accordion filter. Default
+  // submitted-only; rendered (and effective) only when review is enabled — a
+  // head/admin/viewer on a live open|reopened period, never a lead or a
+  // published snapshot.
+  const [submissionFilter, setSubmissionFilter] =
+    useState<SubmissionFilter>("submitted");
 
   // weeklyReport.get input: { reportId?: string } | undefined.
   // When reportId is given, scope to that report; otherwise fall back to the
@@ -410,6 +754,15 @@ export function WeeklyReportPage({
   }
 
   const view = mapWeeklyReport(reportData);
+  // review-acknowledgement (§6): the reviewer surface renders only for an
+  // access-holder (head/admin/viewer, never a lead) on a live (non-published)
+  // period. `buildReviewModel` returns an empty model otherwise.
+  const reviewModel = buildReviewModel(reportData, {
+    currentRole,
+    periodStatus: view.period.periodStatus,
+    currentUserId: sessionState?.user?.id ?? null,
+    onMutated: () => invalidateReview(qc, trpc),
+  });
   const submitted = view.submissionCount;
   const total = view.totalLeads;
   // pendingCount mirrors mock semantics: total - submitted, clamped >= 0.
@@ -427,14 +780,25 @@ export function WeeklyReportPage({
   // whole merged card under every author of a multi-author product.
   const rawLeadGroups =
     scope === "lead" ? mapWeeklyReportLeadGroups(reportData) : [];
-  const leadGroups = rawLeadGroups as {
-    id: string;
-    name: string;
-    products: ProductReport[];
-  }[];
+  const fullLeadGroups = rawLeadGroups as LeadGroup[];
   // report-overview-scope-parity: per-lead overview rows derived from the SAME
-  // groups the body renders, so the summary band and the body agree 1:1.
+  // FULL groups (truth) — the overview band always shows every section, even
+  // while the §7 filter narrows the accordion body below.
   const leadOverviewRows = mapWeeklyReportLeadOverview(rawLeadGroups);
+
+  // review-acknowledgement (§7): the toggle is effective only when review is
+  // enabled (head/admin/viewer on a live period). `buildAccordionModel` narrows
+  // the accordion products/leadGroups to submitted-only when active, leaving the
+  // header count, portfolio band, and period nav on the full truth above.
+  const reviewEnabled = isReviewEnabled(currentRole, view.period.periodStatus);
+  const submittedOnly = reviewEnabled && submissionFilter === "submitted";
+  const accordion = buildAccordionModel({
+    reportData,
+    scope,
+    submittedOnly,
+    fullProducts: products,
+    fullLeadGroups,
+  });
 
   const authoredProductIds = focusedAuthorId
     ? products
@@ -448,8 +812,10 @@ export function WeeklyReportPage({
           reportHasContent(report),
       )?.id
     : undefined;
-  const hasExpandableProducts = products.some(reportHasContent);
-  const canPublishReport = submitted > 0 && hasExpandableProducts;
+  // Empty-state + publish gate key off the FULL content (head sees live draft
+  // content when showing all), never the filtered accordion.
+  const hasAnyContent = accordion.hasAnyContent;
+  const canPublishReport = submitted > 0 && hasAnyContent;
   // head-toolbar-semantics: the publish precondition hint sits on the status
   // row, shown only to publish-capable roles while the period is unpublished
   // and has no submitted content to publish yet.
@@ -571,49 +937,27 @@ export function WeeklyReportPage({
         }
       />
 
-      {/* A32 + head-report-visibility: empty-state — only when the report has
-          NO section content at all (not merely zero submissions). The head sees
-          live draft content regardless of submission, so the gate keys off
-          `hasExpandableProducts` (any item/risk/decision/priority across
-          sections), never `submitted === 0`. Keeps header + period nav intact so
-          the head retains context. */}
-      {!hasExpandableProducts && view.period.periodStatus !== "published" ? (
-        <div
-          className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] py-16 text-center"
-          data-testid="empty-submissions-state"
-        >
-          <p className="text-base font-semibold text-[var(--color-foreground)]">
-            No submissions yet for {periodLabel}
-          </p>
-          <p className="mt-1.5 text-sm text-[var(--color-muted-foreground)]">
-            Leads have not filed their sections for this period.
-          </p>
-          <Link
-            href="/reports?tab=published"
-            className="mt-4 text-sm font-medium text-[var(--color-primary)] underline-offset-4 hover:underline"
-          >
-            View archived reports in Archive &rarr;
-          </Link>
-        </div>
-      ) : (
-        <>
-          {/* Report overview — scope-adaptive (report-overview-scope-parity). */}
-          <ReportOverviewBand
-            scope={scope}
-            portfolio={portfolio}
-            leadOverviewRows={leadOverviewRows}
-          />
-
-          {/* Accordion sections — by product (default) or grouped by lead */}
-          <ReportAccordionBody
-            scope={scope}
-            products={products}
-            leadGroups={leadGroups}
-            focusedProductId={focusedProductId}
-            scrollTargetProductId={scrollTargetProductId}
-          />
-        </>
-      )}
+      {/* Report body: true empty-state OR the review surfaces + §7-filtered
+          accordion. Extracted so this page function stays under the complexity
+          budget; the empty-state gate keys off FULL content (head-report-
+          visibility), never the submitted count or the filtered accordion. */}
+      <ReportContent
+        hasAnyContent={hasAnyContent}
+        periodStatus={view.period.periodStatus}
+        periodLabel={periodLabel}
+        scope={scope}
+        portfolio={portfolio}
+        leadOverviewRows={leadOverviewRows}
+        reviewModel={reviewModel}
+        reportId={view.period.reportId}
+        accordion={accordion}
+        reviewEnabled={reviewEnabled}
+        submittedOnly={submittedOnly}
+        submissionFilter={submissionFilter}
+        onFilterChange={setSubmissionFilter}
+        focusedProductId={focusedProductId}
+        scrollTargetProductId={scrollTargetProductId}
+      />
     </div>
   );
 }

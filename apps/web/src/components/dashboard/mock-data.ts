@@ -2,6 +2,7 @@
  * Mock data and type definitions for Dashboard and Weekly Report pages.
  * Real data will come from tRPC endpoints in a later phase.
  */
+import type { RecordCommentView } from "@customreport/shared";
 
 // ---- Shared Types ----
 
@@ -88,6 +89,10 @@ export interface ReportItem {
   status: "in-progress" | "completed" | "blocked" | "planned";
   /** Priority rank (1 = top) when the item is a flagged priority; null otherwise. */
   priorityRank?: number | null;
+  /** review-acknowledgement: reviewer comments anchored to this item's DB id. */
+  comments?: RecordCommentView[];
+  /** review-acknowledgement: true when the current caller may review this row's group. */
+  canReview?: boolean;
 }
 
 export interface ReportRisk {
@@ -103,6 +108,10 @@ export interface ReportRisk {
   problem?: string;
   impact?: string;
   mitigation?: string;
+  /** review-acknowledgement: reviewer comments anchored to this risk's DB id. */
+  comments?: RecordCommentView[];
+  /** review-acknowledgement: true when the current caller may review this row's group. */
+  canReview?: boolean;
 }
 
 export interface ReportDecision {
@@ -111,6 +120,10 @@ export interface ReportDecision {
   /** Contributing lead's initials for the gutter; live data always sets it. */
   owner?: string;
   text: string;
+  /** review-acknowledgement: reviewer comments anchored to this decision's DB id. */
+  comments?: RecordCommentView[];
+  /** review-acknowledgement: true when the current caller may review this row's group. */
+  canReview?: boolean;
 }
 
 export interface ReportPriority {

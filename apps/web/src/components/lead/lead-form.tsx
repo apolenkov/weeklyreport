@@ -30,7 +30,7 @@ import {
   invalidateLeadHistory,
 } from "../../lib/cache-keys";
 import { crossAuthorContentFetchEnabled } from "../../lib/cross-author-content-gate";
-import { mapLeadFormData } from "../../lib/mappers";
+import { mapLeadFormData, mapLeadReviewFeedback } from "../../lib/mappers";
 import {
   applyCrossAuthorStageOverrides,
   buildCrossAuthorStageMap,
@@ -70,6 +70,7 @@ import { DecisionsSection } from "./decisions-section";
 import { FillFromButton } from "./fill-from-button";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
 import { LeadFormSyncBridge } from "./lead-form-sync-bridge";
+import { LeadReviewFeedback } from "./lead-review-feedback";
 import type {
   DecisionEntry,
   KanbanItem,
@@ -849,6 +850,12 @@ export function LeadForm({
     history: historyQ.data,
   });
 
+  // review-acknowledgement (§8): reviewer comments on this lead's OWN records,
+  // read from the authoritative SERVER section (not the editable `draftSection`,
+  // whose in-place edits could drop the joined comments). Surfaced read-only so a
+  // returned (draft) section's feedback is never silent.
+  const reviewFeedback = mapLeadReviewFeedback(byPeriodQ.data.section);
+
   // F8 / unassigned-stage-reporting-exclusion: enrich foreign-owned (locked)
   // stages with cross-author initials + risk-derived status. crossAuthorsQ.data
   // has { projectId, stageNames, authorInitials, stages } per shared product. A
@@ -1471,6 +1478,11 @@ export function LeadForm({
           // extra fetch. Below xl it stays single-column; ?mode=slides handles
           // the standalone deck.
           <div className="min-w-0 space-y-6">
+            {/* review-acknowledgement (§8): reviewer feedback on a returned
+                section surfaces read-only above the editable content, so the
+                lead sees what to fix before resubmitting. Self-suppresses when
+                there is none. */}
+            <LeadReviewFeedback records={reviewFeedback} />
             <LeadFormSyncBridge.Provider
               products={products}
               risks={ownRisks}

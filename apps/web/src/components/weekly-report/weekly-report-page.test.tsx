@@ -374,11 +374,12 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
     ).not.toBeInTheDocument();
   });
 
-  it("head-report-visibility: shows live draft content (no empty-state) with 0 submissions", async () => {
-    // The API returns draft sections regardless of submission; the head must
-    // see them. Empty-state keys off content presence, not the submitted count.
-    // authorId focuses Product Alpha, which auto-expands its accordion so the
-    // draft row text is rendered (not just counted).
+  it("head-report-visibility (C1): draft content is hidden by the submitted-only default, revealed via Show all — never the empty-state", async () => {
+    // C1 locks the head default to submitted-only + anti-empty-state. With 0
+    // submissions but live draft content, the accordion is empty BUT the period
+    // is not content-less, so the "N in draft — Show all" signal stands in for
+    // the misleading empty-state. Flipping to All reveals the focused product's
+    // draft row (authorId auto-expands it once shown).
     renderPage(
       {
         ...makeWeeklyReportData("open", {
@@ -427,13 +428,23 @@ describe("WeeklyReportPage — Publish & Lock / Reopen wiring (Phase 22 plan 22-
 
     await screen.findByRole("heading", { name: /status report/i });
 
-    // Draft content renders: the focused product's draft row text is visible
-    // even though zero sections are submitted.
-    expect(screen.getByText("Draft task in progress")).toBeInTheDocument();
-    // The empty-state is NOT shown — there is content to display.
+    // Submitted-only default: the draft row is hidden, and the anti-empty-state
+    // signal (not the "No submissions yet" empty-state) explains why.
+    expect(
+      screen.queryByText("Draft task in progress"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("draft-hidden-signal")).toBeInTheDocument();
     expect(
       screen.queryByTestId("empty-submissions-state"),
     ).not.toBeInTheDocument();
+
+    // Flipping to All (via the signal's Show all) reveals the draft content —
+    // the head-report-visibility invariant holds when showing all.
+    await userEvent.click(screen.getByRole("button", { name: /show all/i }));
+    expect(
+      await screen.findByText("Draft task in progress"),
+    ).toBeInTheDocument();
+
     // Publish stays gated on submission, not on content presence.
     expect(
       screen.getByRole("button", { name: /nothing to publish/i }),
@@ -915,5 +926,216 @@ describe("WeeklyReportPage — load-failure state (driver finding 1)", () => {
     expect(
       screen.queryByText(/no active reporting period/i),
     ).not.toBeInTheDocument();
+  });
+});
+
+// review-acknowledgement (§7): the per-user Submitted|All accordion filter +
+// anti-empty-state. The toggle filters the RENDERED accordion only — the header
+// count, portfolio band, and period nav stay on the truth. Default submitted-
+// only, shown only for an access-holder on a live (non-published) period.
+const AUTHOR_ID_B = "11111111-1111-4111-8111-bbbbbbbbbbbb";
+
+function submittedSection() {
+  return {
+    reportSectionId: "22222222-2222-4222-8222-aaaaaaaaaaa1",
+    reportId: REPORT_ID,
+    authorId: AUTHOR_ID_A,
+    authorName: "Alice",
+    status: "submitted" as const,
+    submittedAt: new Date("2026-04-14T09:00:00Z"),
+    projects: [{ projectId: PRODUCT_ID_A, projectName: "Product Alpha" }],
+    items: [
+      {
+        id: "33333333-3333-4333-8333-aaaaaaaaaa01",
+        projectId: PRODUCT_ID_A,
+        type: "current" as const,
+        text: "Alice submitted work",
+        tag: "Dev",
+        workflowStatus: "done" as const,
+        carriedOver: false,
+        completed: true,
+      },
+    ],
+    risks: [] as never[],
+    decisions: [] as never[],
+    priorities: [] as never[],
+  };
+}
+
+function draftSection() {
+  return {
+    reportSectionId: "44444444-4444-4444-8444-bbbbbbbbbbb1",
+    reportId: REPORT_ID,
+    authorId: AUTHOR_ID_B,
+    authorName: "Bob",
+    status: "draft" as const,
+    submittedAt: null,
+    projects: [{ projectId: PRODUCT_ID_B, projectName: "Product Beta" }],
+    items: [
+      {
+        id: "55555555-5555-4555-8555-bbbbbbbbbbb1",
+        projectId: PRODUCT_ID_B,
+        type: "current" as const,
+        text: "Bob draft work",
+        tag: "Dev",
+        workflowStatus: "in_progress" as const,
+        carriedOver: false,
+        completed: false,
+      },
+    ],
+    risks: [] as never[],
+    decisions: [] as never[],
+    priorities: [] as never[],
+  };
+}
+
+const TWO_PRODUCT_OVERVIEW = [
+  {
+    productId: PRODUCT_ID_A,
+    productName: "Product Alpha",
+    worstStatus: "green" as const,
+    stageCount: 1,
+    leadNames: ["Alice"],
+  },
+  {
+    productId: PRODUCT_ID_B,
+    productName: "Product Beta",
+    worstStatus: "yellow" as const,
+    stageCount: 1,
+    leadNames: ["Bob"],
+  },
+];
+
+describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
+  function accordionCard(productId: string): HTMLElement | null {
+    return document.getElementById(`report-product-${productId}`);
+  }
+
+  it("defaults to submitted-only: a draft-only product is hidden until Show all reveals it", async () => {
+    renderPage(
+      makeWeeklyReportData("open", {
+        portfolioOverview: TWO_PRODUCT_OVERVIEW,
+        leadSections: [submittedSection(), draftSection()],
+      }),
+    );
+
+    await screen.findByRole("heading", { name: /status report/i });
+
+    // Submitted product's accordion renders; the draft-only one does not.
+    expect(accordionCard(PRODUCT_ID_A)).not.toBeNull();
+    expect(accordionCard(PRODUCT_ID_B)).toBeNull();
+
+    // TRUTH invariant: the filter narrows the ACCORDION only. The header
+    // submission count and the portfolio overview band keep reporting all
+    // sections — the hidden draft product still shows as an overview card
+    // (a button; its accordion counterpart above is asserted null).
+    expect(screen.getByText(/4\/6 Submitted/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Product Beta/ }),
+    ).toBeInTheDocument();
+
+    // The filter toggle is present (live period, head) and the draft-hidden
+    // signal names the one hidden section.
+    const toggle = screen.getByRole("group", { name: "Section filter" });
+    expect(toggle).toBeInTheDocument();
+    expect(screen.getByTestId("draft-hidden-signal")).toHaveTextContent(
+      /1 section in draft/i,
+    );
+
+    // Flip to All → the draft product's accordion appears.
+    await userEvent.click(within(toggle).getByRole("button", { name: "All" }));
+    await waitFor(() => {
+      expect(accordionCard(PRODUCT_ID_B)).not.toBeNull();
+    });
+  });
+
+  it("all-draft live period shows the 'N in draft — Show all' signal, not the empty-state", async () => {
+    renderPage({
+      ...makeWeeklyReportData("open", {
+        portfolioOverview: [TWO_PRODUCT_OVERVIEW[1]],
+        leadSections: [draftSection()],
+      }),
+      submissionCount: 0,
+    });
+
+    await screen.findByRole("heading", { name: /status report/i });
+
+    // The accordion is empty under submitted-only, but the period is NOT
+    // content-less — so the signal shows, never the misleading empty-state.
+    expect(screen.getByTestId("draft-hidden-signal")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("empty-submissions-state"),
+    ).not.toBeInTheDocument();
+    expect(accordionCard(PRODUCT_ID_B)).toBeNull();
+
+    // Show all reveals the draft accordion.
+    await userEvent.click(screen.getByRole("button", { name: /show all/i }));
+    await waitFor(() => {
+      expect(accordionCard(PRODUCT_ID_B)).not.toBeNull();
+    });
+  });
+
+  it("a genuinely content-less period shows the true empty-state and no filter", async () => {
+    renderPage({
+      ...makeWeeklyReportData("open", {
+        portfolioOverview: [],
+        leadSections: [],
+      }),
+      submissionCount: 0,
+    });
+
+    expect(
+      await screen.findByTestId("empty-submissions-state"),
+    ).toBeInTheDocument();
+    // No draft is hidden and the toggle lives in the (unrendered) body branch.
+    expect(screen.queryByTestId("draft-hidden-signal")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("group", { name: "Section filter" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("published snapshot renders unfiltered with no filter toggle", async () => {
+    renderPage(
+      makeWeeklyReportData("published", {
+        portfolioOverview: TWO_PRODUCT_OVERVIEW,
+        leadSections: [submittedSection(), draftSection()],
+      }),
+      undefined,
+      "head",
+    );
+
+    await screen.findByRole("heading", { name: /status report/i });
+
+    // Published is never filtered: BOTH products' accordions render and the
+    // toggle is absent.
+    expect(accordionCard(PRODUCT_ID_A)).not.toBeNull();
+    expect(accordionCard(PRODUCT_ID_B)).not.toBeNull();
+    expect(
+      screen.queryByRole("group", { name: "Section filter" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("draft-hidden-signal")).not.toBeInTheDocument();
+  });
+
+  it("does not offer the filter to a lead on a live period", async () => {
+    renderPage(
+      makeWeeklyReportData("open", {
+        portfolioOverview: TWO_PRODUCT_OVERVIEW,
+        leadSections: [submittedSection(), draftSection()],
+      }),
+      undefined,
+      "lead",
+    );
+
+    await screen.findByRole("heading", { name: /status report/i });
+    expect(
+      screen.queryByRole("group", { name: "Section filter" }),
+    ).not.toBeInTheDocument();
+    // A lead sees content unfiltered (no submitted-only narrowing).
+    expect(accordionCard(PRODUCT_ID_B)).not.toBeNull();
   });
 });

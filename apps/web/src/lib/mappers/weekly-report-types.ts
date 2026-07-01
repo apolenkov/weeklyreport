@@ -4,7 +4,10 @@
  * module (R3a-4 max-lines split); re-exported from `./weekly-report` so existing
  * importers (and the `./index` barrel) are unaffected.
  */
-import type { WeeklyReportReadModel } from "@customreport/shared";
+import type {
+  RecordCommentView,
+  WeeklyReportReadModel,
+} from "@customreport/shared";
 
 import type { ItemStatus } from "./item-status";
 
@@ -33,6 +36,10 @@ export interface WeeklyReportItem {
   status: ItemStatus;
   /** Priority rank (1 = top) when the item is a flagged priority; null otherwise. */
   priorityRank?: number | null;
+  /** review-acknowledgement: reviewer comments anchored to this item's DB id. */
+  comments?: RecordCommentView[];
+  /** review-acknowledgement: true when the current caller may review this row's group. */
+  canReview?: boolean;
 }
 
 export interface WeeklyReportRisk {
@@ -49,6 +56,10 @@ export interface WeeklyReportRisk {
   problem: string;
   impact: string;
   mitigation: string;
+  /** review-acknowledgement: reviewer comments anchored to this risk's DB id. */
+  comments?: RecordCommentView[];
+  /** review-acknowledgement: true when the current caller may review this row's group. */
+  canReview?: boolean;
 }
 
 export interface WeeklyReportDecision {
@@ -57,6 +68,10 @@ export interface WeeklyReportDecision {
   /** Contributing lead's initials for the gutter. */
   owner: string;
   text: string;
+  /** review-acknowledgement: reviewer comments anchored to this decision's DB id. */
+  comments?: RecordCommentView[];
+  /** review-acknowledgement: true when the current caller may review this row's group. */
+  canReview?: boolean;
 }
 
 export interface WeeklyReportPriority {

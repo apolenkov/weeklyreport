@@ -241,6 +241,17 @@ export const reportSectionReadModelSchema = z.object({
   // reads as awaiting review, not "needs changes". Optional so legacy fixtures
   // and the write path never carry it.
   reviews: z.array(sectionReviewViewSchema).optional(),
+  // review-acknowledgement: the section author's reporting group and whether the
+  // CURRENT caller is a designated reviewer for it. Stamped ONLY on the live
+  // head/viewer weekly-report read (never the write path nor the published
+  // snapshot). The client gates the per-record comment composer and the
+  // per-section verdict control on `canReview`, and derives the Acknowledge
+  // control's group set from the distinct `groupId`s; every mutation still
+  // re-derives the group server-side, so these are UI-affordance hints, never
+  // the security boundary. Both optional so the write path and legacy fixtures
+  // never carry them.
+  groupId: z.uuid().nullable().optional(),
+  canReview: z.boolean().optional(),
 });
 
 export const submissionDashboardRowSchema = z.object({
