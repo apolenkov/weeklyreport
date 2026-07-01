@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { reportHasContent } from "../../lib/mappers/report-content";
 import { pluralize } from "../../lib/pluralize";
+import { sortByPriorityRank } from "../../lib/priority-sort";
 import type {
   ProductReport,
   ReportDecision,
@@ -96,17 +97,6 @@ function itemRailTone(status: string): string {
   return status === "blocked"
     ? "var(--color-destructive)"
     : "var(--color-border)";
-}
-
-// Prioritized items first (rank 1, 2, …), the rest keep their order.
-function sortByPriority<T extends { priorityRank?: number | null }>(
-  items: readonly T[],
-): T[] {
-  return [...items].sort(
-    (a, b) =>
-      (a.priorityRank ?? Number.MAX_SAFE_INTEGER) -
-      (b.priorityRank ?? Number.MAX_SAFE_INTEGER),
-  );
 }
 
 function ChevronDown({ expanded }: { readonly expanded: boolean }) {
@@ -476,7 +466,7 @@ export function ProductAccordion({
                     )}`}
                   />
                   <div className="space-y-px">
-                    {sortByPriority(report.currentWeek).map((item) => (
+                    {sortByPriorityRank(report.currentWeek).map((item) => (
                       <ItemRow key={item.id} item={item} />
                     ))}
                   </div>

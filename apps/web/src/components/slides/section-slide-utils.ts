@@ -9,6 +9,7 @@ import {
   stageStatusToTraffic,
   trafficToStageStatus,
 } from "../../lib/mappers/traffic-light";
+import { sortByPriorityRank } from "../../lib/priority-sort";
 import { deriveEffectiveStageStatus } from "../../lib/stage-status";
 import { riskCoversStage } from "../lead/stage-tags";
 
@@ -185,7 +186,6 @@ export function buildSectionSlideModel(
     .map((decision) => decision.text.trim());
   const priorities = section.items
     .filter((item) => item.priorityRank != null && nonEmpty(item.text))
-    .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
     .map((item) => item.text.trim());
 
   const projectIds = new Set(projectRows.map((project) => project.projectId));
@@ -258,7 +258,6 @@ export function buildSectionSlideModel(
             item.priorityRank != null &&
             nonEmpty(item.text),
         )
-        .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
         .map((item) => item.text.trim()),
       // T-G3: capture per-text rank so the unified slide can render P{N}
       // chips on whichever bullet bucket the item lands in.
@@ -289,7 +288,6 @@ export function buildSectionSlideModel(
         (!item.projectId || !projectIds.has(item.projectId)) &&
         nonEmpty(item.text),
     )
-    .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0))
     .map((item) => item.text.trim());
   // Items / risks referencing a project outside section.projects (the
   // schema-anticipated referencedProjects case, section.schema.ts) must not
@@ -688,15 +686,17 @@ export function buildUnifiedSlideModel(
         : { text, productName: name };
     };
     if (product.currentItems.length > 0) {
-      product.currentItems.forEach((text) => {
-        current.push(withRank(text));
+      // Float ranked bullets to the top within this product block (ascending,
+      // unranked last, stable) so a P1 chip never renders below a P3 chip.
+      sortByPriorityRank(product.currentItems.map(withRank)).forEach((row) => {
+        current.push(row);
       });
     } else {
       emptyProducts.current.push(name);
     }
     if (product.nextItems.length > 0) {
-      product.nextItems.forEach((text) => {
-        next.push(withRank(text));
+      sortByPriorityRank(product.nextItems.map(withRank)).forEach((row) => {
+        next.push(row);
       });
     } else {
       emptyProducts.next.push(name);
