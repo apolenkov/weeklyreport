@@ -161,7 +161,7 @@ describe("KpiCards — a11y regression (verify-a11y-recommended-flip)", () => {
       expect(grid).not.toBeNull();
       expect(grid.tagName.toLowerCase()).toBe("div");
       expect(grid.className).toContain("grid");
-      expect(grid.className).toContain("gap-4");
+      expect(grid.className).toContain("gap-3");
     });
 
     it("snapshot: full DOM snapshot of KpiCards (layout preservation)", () => {
@@ -175,7 +175,7 @@ describe("KpiCards — a11y regression (verify-a11y-recommended-flip)", () => {
       const submissionsCard = regions[0];
       expect(submissionsCard.className).toContain("rounded-");
       expect(submissionsCard.className).toContain("border");
-      expect(submissionsCard.className).toContain("p-5");
+      expect(submissionsCard.className).toContain("p-3");
     });
 
     it("CSS classes on Deadline card are untouched", () => {
@@ -184,7 +184,7 @@ describe("KpiCards — a11y regression (verify-a11y-recommended-flip)", () => {
       const deadlineCard = regions[1];
       expect(deadlineCard.className).toContain("rounded-");
       expect(deadlineCard.className).toContain("border");
-      expect(deadlineCard.className).toContain("p-5");
+      expect(deadlineCard.className).toContain("p-3");
     });
 
     it("CSS classes on Risks & Blockers card are untouched", () => {
@@ -193,7 +193,7 @@ describe("KpiCards — a11y regression (verify-a11y-recommended-flip)", () => {
       const risksCard = regions[2];
       expect(risksCard.className).toContain("rounded-");
       expect(risksCard.className).toContain("border");
-      expect(risksCard.className).toContain("p-5");
+      expect(risksCard.className).toContain("p-3");
     });
 
     it("Submissions card has borderLeft inline style", () => {
