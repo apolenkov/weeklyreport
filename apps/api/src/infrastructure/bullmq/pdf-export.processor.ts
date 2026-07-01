@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { performance } from "node:perf_hooks";
 
 import {
   Injectable,
@@ -8,19 +9,29 @@ import {
   type OnModuleInit,
 } from "@nestjs/common";
 import { type Job, Worker } from "bullmq";
+import type { ClsService } from "nestjs-cls";
 import { chromium } from "playwright";
 
 import { requireEnv } from "../../lib/env.js";
+import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { PdfExportService } from "../../modules/pdf-export/pdf-export.service";
 import { getBullMQOptions } from "./bullmq-options";
+import {
+  extractTraceId,
+  type JobTraceContext,
+  runInJobTraceContext,
+} from "./worker-observability.js";
 
-interface PdfExportJobData {
+// Cap the render navigation so a hung print page fails the job instead of
+// pinning a Chromium tab (and its Redis lock) indefinitely.
+const PAGE_GOTO_TIMEOUT_MS = 60_000;
+
+interface PdfExportJobData extends JobTraceContext {
   reportId: string;
   jobId: string;
-  // AUTH-05 (Phase 28-02): short-lived (5min) JWT injected into the
-  // Playwright browser context as the AUTH_JWT_COOKIE_NAME cookie before
-  // page.goto. Required so the print page's tRPC fetch carries an
-  // authenticated session — closes the cookie seam left open in Phase 24.
+  // Short-lived (5min) JWT injected into the Playwright browser context as the
+  // session cookie before page.goto, so the print page's tRPC fetch carries an
+  // authenticated session.
   authToken: string;
 }
 
@@ -33,56 +44,74 @@ interface PdfExportJobData {
 @Injectable()
 export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
   private worker: Worker<PdfExportJobData> | undefined;
+  private readonly logger: AppLogger;
 
-  constructor(private readonly pdfExportService: PdfExportService) {}
+  constructor(
+    private readonly pdfExportService: PdfExportService,
+    logger?: AppLogger,
+    private readonly cls?: ClsService,
+  ) {
+    this.logger = logger ?? createNullLogger();
+  }
 
   onModuleInit(): void {
     this.worker = new Worker<PdfExportJobData>(
       "pdf-export",
       async (job: Job<PdfExportJobData>) => {
-        await this.processJob(job);
+        await runInJobTraceContext(
+          job.data,
+          "pdf-export.process",
+          this.cls,
+          () => this.processJob(job),
+        );
       },
       getBullMQOptions(),
     );
 
     this.worker.on("failed", (job, error) => {
-      if (job?.data.jobId) {
-        void this.pdfExportService
-          .markExportFailed(job.data.jobId, error.message)
-          .catch((markError: unknown) => {
-            process.stderr.write(
-              `${JSON.stringify({
-                timestamp: new Date().toISOString(),
-                level: "error",
-                message: "pdf-export failed-state update failed",
-                jobId: job.data.jobId,
-                error:
-                  markError instanceof Error
-                    ? markError.message
-                    : String(markError),
-              })}\n`,
-            );
-          });
-      }
-
-      process.stderr.write(
-        `${JSON.stringify({
-          timestamp: new Date().toISOString(),
-          level: "error",
-          message: "pdf-export job failed",
-          jobId: job?.data.jobId,
-          reportId: job?.data.reportId,
-          attempt: job?.attemptsMade,
-          // AUTH-05: never log the actual token; only its presence.
-          authToken: job?.data.authToken ? "<redacted>" : "MISSING",
-          error: error.message,
-        })}\n`,
-      );
+      this.handleFailure(job, error);
     });
   }
 
   async onModuleDestroy(): Promise<void> {
     await this.worker?.close();
+  }
+
+  private handleFailure(
+    job: Job<PdfExportJobData> | undefined,
+    error: Error,
+  ): void {
+    const correlationId = job?.data.correlationId;
+    const traceId = job ? extractTraceId(job.data) : undefined;
+    const correlation = {
+      ...(correlationId ? { correlationId } : {}),
+      ...(traceId ? { traceId } : {}),
+    };
+
+    if (job?.data.jobId) {
+      void this.pdfExportService
+        .markExportFailed(job.data.jobId, error.message)
+        .catch((markError: unknown) => {
+          this.logger.error("pdf-export failed-state update failed", {
+            jobId: job.data.jobId,
+            ...correlation,
+            error:
+              markError instanceof Error
+                ? markError.message
+                : String(markError),
+          });
+        });
+    }
+
+    this.logger.error("pdf-export job failed", {
+      jobId: job?.data.jobId,
+      reportId: job?.data.reportId,
+      attempt: job?.attemptsMade,
+      // Never log the actual token; only its presence.
+      authToken: job?.data.authToken ? "<redacted>" : "MISSING",
+      ...correlation,
+      error: error.message,
+    });
   }
 
   private async processJob(job: Job<PdfExportJobData>): Promise<void> {
@@ -92,25 +121,25 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
 
     const browser = await chromium.launch({ headless: true });
     try {
-      // AUTH-05 (Phase 28-02): the auth cookie MUST be set before page.goto so
-      // the print page's tRPC fetch carries customreport_session out of the
-      // gate. Build via PdfExportService.buildAuthCookies which derives
-      // domain/secure from PDF_BASE_URL — the contract Phase 27 left for us.
+      // The auth cookie MUST be set before page.goto so the print page's tRPC
+      // fetch carries the session out of the gate. buildAuthCookies derives
+      // domain/secure from PDF_BASE_URL.
       const context = await browser.newContext();
       const cookies = this.pdfExportService.buildAuthCookies(authToken);
       await context.addCookies(cookies);
       const page = await context.newPage();
-      await page.goto(reportUrl, { waitUntil: "networkidle" });
-      const pdfBuffer = await page.pdf({
-        format: "A4",
-        printBackground: true,
-      });
+      await this.timed(jobId, "page.goto", () =>
+        page.goto(reportUrl, {
+          waitUntil: "networkidle",
+          timeout: PAGE_GOTO_TIMEOUT_MS,
+        }),
+      );
+      const pdfBuffer = await this.timed(jobId, "page.pdf", () =>
+        page.pdf({ format: "A4", printBackground: true }),
+      );
 
-      // Phase 23-01: resolve to an absolute path so the API's express.static
-      // mount on /pdfs (apps/api/src/main.ts) and this worker write to the
-      // same directory regardless of the process cwd. Default is relative to
-      // the API package cwd (apps/api/) — see env.schema.ts for the same
-      // anti-double-path rationale.
+      // Resolve to an absolute path so the API's static /pdfs mount and this
+      // worker write to the same directory regardless of the process cwd.
       const outputDir = resolve(process.env.PDF_OUTPUT_DIR ?? "./storage/pdfs");
       mkdirSync(outputDir, { recursive: true });
 
@@ -128,5 +157,20 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
     } finally {
       await browser.close();
     }
+  }
+
+  private async timed<T>(
+    jobId: string,
+    step: string,
+    run: () => Promise<T>,
+  ): Promise<T> {
+    const start = performance.now();
+    const result = await run();
+    this.logger.info("pdf-export step complete", {
+      jobId,
+      step,
+      durationMs: Math.round(performance.now() - start),
+    });
+    return result;
   }
 }

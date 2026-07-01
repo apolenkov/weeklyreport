@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
+import { ClsService } from "nestjs-cls";
 
+import { createWorkerLogger } from "../../infrastructure/bullmq/worker-observability.js";
 import { MockTelegramAdapter } from "./mock-telegram.adapter.js";
 import { TELEGRAM_ADAPTER, type TelegramAdapter } from "./telegram.adapter.js";
 import { TelegramProcessor } from "./telegram.queue.js";
@@ -53,7 +55,16 @@ export function selectTelegramAdapter(): TelegramAdapter {
       provide: TELEGRAM_ADAPTER,
       useFactory: () => selectTelegramAdapter(),
     },
-    TelegramProcessor,
+    {
+      provide: TelegramProcessor,
+      useFactory: (adapter: TelegramAdapter, cls: ClsService) =>
+        new TelegramProcessor(
+          adapter,
+          createWorkerLogger("telegram-outbound-worker", cls),
+          cls,
+        ),
+      inject: [TELEGRAM_ADAPTER, ClsService],
+    },
   ],
   exports: [TELEGRAM_ADAPTER],
 })

@@ -2,7 +2,8 @@ import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
 import type { UserSession } from "@customreport/shared";
-import type { INestApplication } from "@nestjs/common";
+import type { INestApplication, OnModuleDestroy } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { Queue } from "bullmq";
 import type {
   Express,
@@ -18,6 +19,23 @@ import { createAuthController } from "../../modules/auth/auth.controller";
 import { isUserAccessBarred } from "../../modules/auth/session-deactivation";
 import { PrismaService } from "../prisma/prisma.service";
 import { getBullMQOptions } from "./bullmq-options";
+
+/**
+ * Owns the two `Queue` instances Bull Board reads from. Created directly
+ * (bypassing @nestjs/bullmq DI) to avoid the DiscoveryService bug in
+ * @nestjs/bullmq 11 + NestJS 11, but registered as a Nest provider so its
+ * `onModuleDestroy` closes both handles on shutdown instead of leaking their
+ * Redis connections.
+ */
+@Injectable()
+export class BullBoardQueues implements OnModuleDestroy {
+  readonly pdfQueue = new Queue("pdf-export", getBullMQOptions());
+  readonly emailQueue = new Queue("email-reminder", getBullMQOptions());
+
+  async onModuleDestroy(): Promise<void> {
+    await Promise.all([this.pdfQueue.close(), this.emailQueue.close()]);
+  }
+}
 
 interface RequireHeadDeps {
   verifySessionToken: (token: string) => UserSession;
@@ -86,9 +104,7 @@ export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
  * Protected by JWT auth — only an active (non-revoked) head can access.
  */
 export function mountBullBoard(_app: INestApplication): void {
-  const bullOptions = getBullMQOptions();
-  const pdfQueue = new Queue("pdf-export", bullOptions);
-  const emailQueue = new Queue("email-reminder", bullOptions);
+  const { pdfQueue, emailQueue } = _app.get(BullBoardQueues);
 
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath("/admin/queues");

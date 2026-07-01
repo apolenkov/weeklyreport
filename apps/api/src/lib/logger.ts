@@ -49,6 +49,9 @@ const LEVEL_SEVERITY: Record<LogLevel, SeverityNumber> = {
 
 const DEFAULT_MAX_BYTES = 50 * 1024 * 1024; // 50 MB
 const DEFAULT_MAX_AGE_DAYS = 30;
+// Prune stale archives at most once per interval instead of on every log line —
+// a readdir+stat per emit dominated the file sink on a busy process.
+const PRUNE_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 const ACTIVE_LOG_FILENAME = "app.log";
 const ARCHIVE_PREFIX = "app.log.";
 const ARCHIVE_SUFFIX = ".gz";
@@ -89,6 +92,17 @@ interface FileSink {
   logDir: string;
   opts: ResolvedFileOpts;
   queue: Promise<void>;
+  // Epoch ms of the last archive prune; gates prune to once per interval so it
+  // does not run on every emitted line. 0 = never pruned (prune on first write).
+  lastPruneAt: number;
+}
+
+/** Prune stale archives at most once per {@link PRUNE_INTERVAL_MS}. */
+async function maybePruneArchives(sink: FileSink): Promise<void> {
+  const now = Date.now();
+  if (now - sink.lastPruneAt < PRUNE_INTERVAL_MS) return;
+  sink.lastPruneAt = now;
+  await pruneOldArchives(sink.logDir, sink.opts.maxAgeDays);
 }
 
 async function pruneOldArchives(
@@ -113,22 +127,21 @@ async function pruneOldArchives(
 }
 
 async function rotateIfNeeded(
+  sink: FileSink,
   activePath: string,
-  logDir: string,
-  opts: ResolvedFileOpts,
 ): Promise<void> {
   const stats = await fs.stat(activePath).catch(() => null);
   if (!stats) return;
-  if (stats.size < opts.maxBytes) {
-    // Even when not rotating, take the chance to prune stale archives so a
-    // long-lived process eventually drops old files.
-    await pruneOldArchives(logDir, opts.maxAgeDays);
+  if (stats.size < sink.opts.maxBytes) {
+    // Not rotating: prune only once per interval so a long-lived process still
+    // drops old files without a readdir+stat on every emitted line.
+    await maybePruneArchives(sink);
     return;
   }
 
   const stamp = new Date().toISOString().replaceAll(/[:.]/g, "-");
   const archivePath = join(
-    logDir,
+    sink.logDir,
     `${ARCHIVE_PREFIX}${stamp}${ARCHIVE_SUFFIX}`,
   );
 
@@ -141,13 +154,16 @@ async function rotateIfNeeded(
   // than unlink + recreate.
   await fs.truncate(activePath, 0);
 
-  await pruneOldArchives(logDir, opts.maxAgeDays);
+  // A rotation just created a new archive — prune immediately regardless of the
+  // interval gate.
+  sink.lastPruneAt = Date.now();
+  await pruneOldArchives(sink.logDir, sink.opts.maxAgeDays);
 }
 
 function enqueueWrite(sink: FileSink, entry: LogEntry): void {
   const activePath = join(sink.logDir, ACTIVE_LOG_FILENAME);
   sink.queue = sink.queue
-    .then(() => rotateIfNeeded(activePath, sink.logDir, sink.opts))
+    .then(() => rotateIfNeeded(sink, activePath))
     .then(() => fs.appendFile(activePath, `${JSON.stringify(entry)}\n`))
     .catch((error: unknown) => {
       process.stderr.write(`[logger] file write failed: ${String(error)}\n`);
@@ -193,6 +209,7 @@ class AppLoggerImpl implements AppLogger {
         logDir: this.logDir,
         opts: { maxBytes: this.maxBytes, maxAgeDays: this.maxAgeDays },
         queue: Promise.resolve(),
+        lastPruneAt: 0,
       };
     }
   }

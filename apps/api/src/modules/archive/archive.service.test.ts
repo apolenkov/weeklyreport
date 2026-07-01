@@ -55,10 +55,13 @@ function createRepository(): ArchiveRepository {
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this in-memory stub)
     async listArchiveReports() {
-      return [
-        structuredClone(latestDetail.summary),
-        structuredClone(olderSummary),
-      ];
+      return {
+        items: [
+          structuredClone(latestDetail.summary),
+          structuredClone(olderSummary),
+        ],
+        nextCursor: null,
+      };
     },
   };
 }
@@ -104,8 +107,13 @@ describe("AUTH-04 viewer scoping", () => {
     listSpy: ReturnType<typeof vi.fn>;
     getSpy: ReturnType<typeof vi.fn>;
   } {
-    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this stub)
-    const listSpy = vi.fn(async () => [structuredClone(latestDetail.summary)]);
+    const listSpy = vi.fn(
+      // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this stub)
+      async () => ({
+        items: [structuredClone(latestDetail.summary)],
+        nextCursor: null,
+      }),
+    );
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this stub)
     const getSpy = vi.fn(async () => structuredClone(latestDetail));
     const repo: ArchiveRepository = {
@@ -122,7 +130,11 @@ describe("AUTH-04 viewer scoping", () => {
     await service.listArchiveReports(undefined, "viewer");
 
     expect(listSpy).toHaveBeenCalledOnce();
-    expect(listSpy).toHaveBeenCalledWith({ status: "published" }, undefined);
+    expect(listSpy).toHaveBeenCalledWith(
+      undefined,
+      { status: "published" },
+      undefined,
+    );
   });
 
   it("viewer role injects status:published into getArchiveReport filter", async () => {
@@ -142,7 +154,7 @@ describe("AUTH-04 viewer scoping", () => {
   it("viewer requesting a non-published row through repository null receives ArchiveDomainError", async () => {
     const repo: ArchiveRepository = {
       // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this stub)
-      listArchiveReports: vi.fn(async () => []),
+      listArchiveReports: vi.fn(async () => ({ items: [], nextCursor: null })),
       // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async ArchiveRepository contract (no awaitable work in this stub)
       getArchiveReport: vi.fn(async () => null),
     };
@@ -163,7 +175,7 @@ describe("AUTH-04 viewer scoping", () => {
     await service.listArchiveReports(undefined, "head");
 
     expect(listSpy).toHaveBeenCalledOnce();
-    expect(listSpy).toHaveBeenCalledWith({}, undefined);
+    expect(listSpy).toHaveBeenCalledWith(undefined, {}, undefined);
   });
 
   it("lead and admin roles also receive an empty filter (head-equivalent for archive read)", async () => {
@@ -171,10 +183,10 @@ describe("AUTH-04 viewer scoping", () => {
     const service = new ArchiveService(repo);
 
     await service.listArchiveReports(undefined, "lead");
-    expect(listSpy).toHaveBeenLastCalledWith({}, undefined);
+    expect(listSpy).toHaveBeenLastCalledWith(undefined, {}, undefined);
 
     await service.listArchiveReports(undefined, "admin");
-    expect(listSpy).toHaveBeenLastCalledWith({}, undefined);
+    expect(listSpy).toHaveBeenLastCalledWith(undefined, {}, undefined);
   });
 
   it("undefined role passes empty filter (legacy contract — repo floor still applies)", async () => {
@@ -183,6 +195,6 @@ describe("AUTH-04 viewer scoping", () => {
 
     await service.listArchiveReports(undefined, undefined);
 
-    expect(listSpy).toHaveBeenCalledWith({}, undefined);
+    expect(listSpy).toHaveBeenCalledWith(undefined, {}, undefined);
   });
 });

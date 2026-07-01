@@ -1,11 +1,12 @@
 import type { OnApplicationBootstrap } from "@nestjs/common";
 import { Module } from "@nestjs/common";
 import { ScheduleModule } from "@nestjs/schedule";
-import { ClsModule } from "nestjs-cls";
+import { ClsModule, ClsService } from "nestjs-cls";
 
 import { BullMQModule } from "./infrastructure/bullmq/bullmq.module";
 import { EmailReminderProcessor } from "./infrastructure/bullmq/email-reminder.processor";
 import { PdfExportProcessor } from "./infrastructure/bullmq/pdf-export.processor";
+import { createWorkerLogger } from "./infrastructure/bullmq/worker-observability.js";
 import { ConfigModule } from "./infrastructure/config/config.module";
 import { EmailService } from "./infrastructure/email/email.service";
 import { HealthModule } from "./infrastructure/health/health.module";
@@ -15,15 +16,18 @@ import { PrismaModule } from "./infrastructure/prisma/prisma.module";
 import { assertNoDevAuthInProduction } from "./lib/dev-auth-fence";
 import { ActivityModule } from "./modules/activity/activity.module";
 import { AdminModule } from "./modules/admin/admin.module";
+import { AdminService } from "./modules/admin/admin.service";
 import { AnalyticsModule } from "./modules/analytics/analytics.module";
 import { ArchiveModule } from "./modules/archive/archive.module";
 import { CarryOverModule } from "./modules/carry-over/carry-over.module";
 import { ObservabilityModule } from "./modules/observability/observability.module.js";
 import { OrganizationModule } from "./modules/organization/organization.module";
 import { PdfExportModule } from "./modules/pdf-export/pdf-export.module";
+import { PdfExportService } from "./modules/pdf-export/pdf-export.service";
 import { PeriodModule } from "./modules/period/period.module";
 import { PublicationModule } from "./modules/publication/publication.module";
 import { RemindersModule } from "./modules/reminders/reminders.module";
+import { RemindersService } from "./modules/reminders/reminders.service";
 import { ReportSectionsModule } from "./modules/report-sections/report-sections.module";
 import { ReviewModule } from "./modules/review/review.module";
 import { SearchModule } from "./modules/search/search.module";
@@ -74,8 +78,33 @@ import { WeeklyReportModule } from "./modules/weekly-report/weekly-report.module
     ObservabilityModule,
   ],
   providers: [
-    PdfExportProcessor,
-    EmailReminderProcessor,
+    {
+      provide: PdfExportProcessor,
+      useFactory: (pdfExportService: PdfExportService, cls: ClsService) =>
+        new PdfExportProcessor(
+          pdfExportService,
+          createWorkerLogger("pdf-export-worker", cls),
+          cls,
+        ),
+      inject: [PdfExportService, ClsService],
+    },
+    {
+      provide: EmailReminderProcessor,
+      useFactory: (
+        remindersService: RemindersService,
+        emailService: EmailService,
+        adminService: AdminService,
+        cls: ClsService,
+      ) =>
+        new EmailReminderProcessor(
+          remindersService,
+          emailService,
+          adminService,
+          createWorkerLogger("email-reminder-worker", cls),
+          cls,
+        ),
+      inject: [RemindersService, EmailService, AdminService, ClsService],
+    },
     EmailService,
     CorrelationIdMiddleware,
   ],

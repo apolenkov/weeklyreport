@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
+import type { Job } from "bullmq";
+import { describe, expect, it, vi } from "vitest";
 
+import { dlqFailedTotal } from "../../infrastructure/metrics/metrics.registry.js";
+import type { AppLogger } from "../../lib/logger.js";
 import { MockTelegramAdapter } from "./mock-telegram.adapter";
 import type { TelegramAdapter, TelegramSendResult } from "./telegram.adapter";
 import {
@@ -23,6 +26,31 @@ class TestProcessor extends TelegramProcessor {
       }
     ).processJob({ data });
   }
+
+  public logFailureForTest(
+    job: Job<TelegramOutboundJobData> | undefined,
+    error: Error,
+  ): void {
+    (
+      this as unknown as {
+        logFailure(
+          job: Job<TelegramOutboundJobData> | undefined,
+          error: Error,
+        ): void;
+      }
+    ).logFailure(job, error);
+  }
+}
+
+function createSpyLogger(): AppLogger {
+  const logger: AppLogger = {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    child: () => logger,
+  };
+  return logger;
 }
 
 describe("TelegramProcessor (Phase 55 / UFB-056)", () => {
@@ -57,6 +85,46 @@ describe("TelegramProcessor (Phase 55 / UFB-056)", () => {
     await expect(
       proc.invoke({ chatId: "chat-y", text: "body" }),
     ).rejects.toThrow("ENETDOWN");
+  });
+});
+
+describe("TelegramProcessor failure logging", () => {
+  it("logs a terminal failure through AppLogger with the job correlationId", () => {
+    const logger = createSpyLogger();
+    const proc = new TestProcessor(new MockTelegramAdapter(), logger);
+
+    proc.logFailureForTest(
+      {
+        data: { chatId: "chat-1", text: "hi", correlationId: "corr-9" },
+        attemptsMade: 3,
+      } as Job<TelegramOutboundJobData>,
+      new Error("boom"),
+    );
+
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(logger.error).toHaveBeenCalledWith(
+      "telegram-outbound job failed",
+      expect.objectContaining({ correlationId: "corr-9", error: "boom" }),
+    );
+  });
+
+  it("does not increment cr_dlq_failed_total (DLQ monitor is the sole owner)", () => {
+    const inc = vi.spyOn(dlqFailedTotal, "inc");
+    const proc = new TestProcessor(
+      new MockTelegramAdapter(),
+      createSpyLogger(),
+    );
+
+    proc.logFailureForTest(
+      {
+        data: { chatId: "chat-1", text: "hi" },
+        attemptsMade: 3,
+      } as Job<TelegramOutboundJobData>,
+      new Error("boom"),
+    );
+
+    expect(inc).not.toHaveBeenCalled();
+    inc.mockRestore();
   });
 });
 

@@ -6,7 +6,12 @@ import {
   type PaginationInput,
 } from "@customreport/shared";
 import type { Queue } from "bullmq";
+import type { ClsService } from "nestjs-cls";
 
+import {
+  captureJobTraceContext,
+  resolveCorrelationId,
+} from "../../infrastructure/bullmq/worker-observability.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger";
 
 export class ReminderDomainError extends Error {
@@ -220,6 +225,7 @@ export class RemindersService {
     private readonly repository: RemindersRepository,
     logger?: AppLogger,
     emailQueue?: Queue,
+    private readonly cls?: ClsService,
   ) {
     this.logger = logger ?? createNullLogger();
     this.emailQueue = emailQueue ?? null;
@@ -286,7 +292,10 @@ export class RemindersService {
     if (this.emailQueue) {
       await this.emailQueue.add(
         "send",
-        buildQueuePayload(execution, recipientEmail, rule, payload),
+        {
+          ...buildQueuePayload(execution, recipientEmail, rule, payload),
+          ...captureJobTraceContext(resolveCorrelationId(this.cls)),
+        },
         { attempts: 3, backoff: { type: "exponential", delay: 5000 } },
       );
       this.logger.info("enqueued email reminder job", {

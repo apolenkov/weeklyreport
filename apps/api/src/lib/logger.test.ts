@@ -1,5 +1,6 @@
 import {
   mkdtempSync,
+  promises as fsp,
   readdirSync,
   readFileSync,
   rmSync,
@@ -170,6 +171,22 @@ describe("createAppLogger", () => {
     // It must be strictly smaller than the un-rotated total (~840B).
     const activeSize = statSync(join(logDir, "app.log")).size;
     expect(activeSize).toBeLessThan(840);
+  });
+
+  it("does not prune (readdir) the log directory on every log line", async () => {
+    vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const readdirSpy = vi.spyOn(fsp, "readdir");
+
+    // Large maxBytes so no rotation fires: only the interval-gated prune can
+    // touch the directory, and it must run at most once across many lines.
+    const logger = createAppLogger({ logDir, maxBytes: 50 * 1024 * 1024 });
+
+    for (let i = 0; i < 12; i++) {
+      logger.info(`line-${i}`);
+    }
+    await flush(8);
+
+    expect(readdirSpy.mock.calls.length).toBeLessThanOrEqual(1);
   });
 
   it("prunes archives older than maxAgeDays during rotation", async () => {

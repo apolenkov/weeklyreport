@@ -1,6 +1,7 @@
 import type { Job } from "bullmq";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { AppLogger } from "../../lib/logger.js";
 import { silenceStderr } from "../../test-utils/silence-logs";
 
 // ---------------------------------------------------------------------------
@@ -199,7 +200,7 @@ describe("PdfExportProcessor.processJob", () => {
     // switcher chrome — see commit d45e5b2.
     expect(mockPage.goto).toHaveBeenCalledWith(
       "http://localhost:3000/print/report-1",
-      { waitUntil: "networkidle" },
+      { waitUntil: "networkidle", timeout: 60_000 },
     );
   });
 
@@ -237,6 +238,41 @@ describe("PdfExportProcessor.processJob", () => {
       "job-1",
       "/pdfs/job-1.pdf",
       "abc123hash",
+    );
+  });
+
+  it("emits per-step duration logs for page.goto and page.pdf", async () => {
+    setupMocks();
+    const infoSpy = vi.fn();
+    const logger: AppLogger = {
+      debug: vi.fn(),
+      info: infoSpy,
+      warn: vi.fn(),
+      error: vi.fn(),
+      child: () => logger,
+    };
+    const mockService = createMockPdfExportService();
+    const processor = new PdfExportProcessor(mockService as never, logger);
+    const job = createMockJob({
+      reportId: "report-1",
+      jobId: "job-1",
+      authToken: "fake-jwt",
+    });
+
+    await (processor as unknown as ProcessorTestSeam).processJob(job);
+
+    expect(infoSpy).toHaveBeenCalledWith(
+      "pdf-export step complete",
+      expect.objectContaining({
+        jobId: "job-1",
+        step: "page.goto",
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- expect.any() returns any; vitest asymmetric matcher has no precise type
+        durationMs: expect.any(Number),
+      }),
+    );
+    expect(infoSpy).toHaveBeenCalledWith(
+      "pdf-export step complete",
+      expect.objectContaining({ step: "page.pdf" }),
     );
   });
 
