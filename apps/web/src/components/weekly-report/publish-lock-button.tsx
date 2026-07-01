@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
+import { useDialogFocus } from "../../lib/use-dialog-focus";
 import { ConfirmDeleteDialog } from "../lead/confirm-delete-dialog";
 
 interface PublishLockButtonProps {
@@ -38,6 +39,13 @@ export function PublishLockButton({
 }: PublishLockButtonProps) {
   const [showDialog, setShowDialog] = useState(false);
   const [showReopenDialog, setShowReopenDialog] = useState(false);
+  const publishDialogRef = useRef<HTMLDivElement>(null);
+
+  useDialogFocus({
+    open: showDialog && canPublish,
+    onClose: () => setShowDialog(false),
+    containerRef: publishDialogRef,
+  });
 
   function handleConfirm() {
     if (!canPublish) return;
@@ -111,6 +119,7 @@ export function PublishLockButton({
       {showDialog && canPublish && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40">
           <div
+            ref={publishDialogRef}
             className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
             role="dialog"
             aria-modal="true"
@@ -118,9 +127,6 @@ export function PublishLockButton({
             tabIndex={-1}
             // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
             autoFocus
-            onKeyDown={(e) => {
-              if (e.key === "Escape") setShowDialog(false);
-            }}
           >
             <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
               Publish & Lock Report?

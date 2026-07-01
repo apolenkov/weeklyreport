@@ -98,17 +98,17 @@ export class ActivityPrismaRepository implements ActivityRepository {
       }
 
       // lastEditAt = max(section.updatedAt, item/risk/decision.updatedAt).
-      // submittedAt acts as a stronger floor when present.
+      // section.updatedAt is always present, so the timestamp list is never
+      // empty and the max always resolves to a real Date.
       const childTimestamps: Date[] = [
         section.updatedAt,
         ...section.items.map((x) => x.updatedAt),
         ...section.risks.map((x) => x.updatedAt),
         ...section.decisions.map((x) => x.updatedAt),
       ];
-      const lastEditAt =
-        childTimestamps.length > 0
-          ? new Date(Math.max(...childTimestamps.map((d) => d.getTime())))
-          : null;
+      const lastEditAt = new Date(
+        Math.max(...childTimestamps.map((d) => d.getTime())),
+      );
 
       return {
         reportId: report.id,

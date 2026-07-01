@@ -228,6 +228,8 @@ export function mapForeignItems(
           status: coerceWorkflowToItemStatus(i.workflowStatus),
           text: i.text,
           author: shortNameFromName(ca.authorName),
+          // Foreign (read-only) items never surface a priority control.
+          priorityRank: null,
           authorId: ca.authorId,
           foreign: true,
         }),

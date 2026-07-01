@@ -1,9 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll } from "vitest";
-
-import { server } from "./src/test-utils/msw-handlers";
+import { afterEach } from "vitest";
 
 // Radix UI primitives (the shared Tooltip the SDLC pipeline now uses) open a
 // Popper layer that calls ResizeObserver + pointer-capture/scroll APIs jsdom omits.
@@ -31,9 +29,6 @@ if (globalForStubs.Element) {
   elementProto.scrollIntoView = noop;
 }
 
-beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
 afterEach(() => {
-  server.resetHandlers();
   cleanup();
 });
-afterAll(() => server.close());

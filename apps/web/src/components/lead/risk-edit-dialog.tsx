@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { useDialogFocus } from "../../lib/use-dialog-focus";
 import type { Product, RiskEntry } from "./mock-data";
 import { ProductPicker } from "./product-picker";
 import { StageMultiSelect } from "./stage-multi-select";
@@ -282,11 +283,16 @@ function RiskEditDialogContent({
     });
   }
 
+  // Escape + focus trap via the shared primitive; the surface autofocuses its
+  // first field, and the primitive restores focus to the opener on close.
+  const dialogSurfaceRef = useRef<HTMLDivElement>(null);
+  useDialogFocus({
+    open: true,
+    onClose: onCancel,
+    containerRef: dialogSurfaceRef,
+  });
+
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      onCancel();
-    }
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       handleSave();
@@ -302,6 +308,7 @@ function RiskEditDialogContent({
     >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop click-through; not an interactive action, so no keyboard equivalent applies */}
       <div
+        ref={dialogSurfaceRef}
         className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[var(--radius)] bg-white p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"

@@ -12,8 +12,10 @@ import {
 import {
   buildEscalationsFromReadSections,
   buildPortfolioProductsFromSnapshotSections,
+  computeWorstStatus,
   filterSnapshotSections,
   parsePublishedSnapshot,
+  type TrafficLightStatus,
 } from "../published-report-snapshot.js";
 import {
   mapPrismaToReportSection,
@@ -335,7 +337,7 @@ function buildPortfolioOverview(
   }[],
 ): PortfolioProductOverview[] {
   return projects.map((project) => {
-    const statuses: string[] = [];
+    const statuses: TrafficLightStatus[] = [];
     const leadNameSet = new Set<string>();
 
     for (const section of sections) {
@@ -347,7 +349,7 @@ function buildPortfolioOverview(
           sectionProject.projectId === project.id &&
           sectionProject.trafficLight !== null
         ) {
-          statuses.push(sectionProject.trafficLight);
+          statuses.push(sectionProject.trafficLight as TrafficLightStatus);
           leadNameSet.add(section.authorName);
         }
       }
@@ -363,30 +365,6 @@ function buildPortfolioOverview(
       leadNames: [...leadNameSet].sort((a, b) => a.localeCompare(b, "ru")),
     };
   });
-}
-
-const statusSeverity: Record<string, number> = {
-  green: 0,
-  yellow: 1,
-  red: 2,
-};
-
-function computeWorstStatus(
-  statuses: string[],
-): "green" | "yellow" | "red" | null {
-  if (statuses.length === 0) {
-    return null;
-  }
-
-  let worst = "green";
-
-  for (const s of statuses) {
-    if ((statusSeverity[s] ?? 0) > (statusSeverity[worst] ?? 0)) {
-      worst = s;
-    }
-  }
-
-  return worst as "green" | "yellow" | "red";
 }
 
 /**

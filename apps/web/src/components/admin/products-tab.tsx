@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { invalidateAdmin } from "../../lib/cache-keys";
 import { toAdminProjectInput } from "../../lib/mappers";
 import { useTRPC } from "../../lib/trpc-context";
+import { useDialogFocus } from "../../lib/use-dialog-focus";
 import { ConfirmDeleteDialog } from "../lead/confirm-delete-dialog";
 import { SearchInput } from "../search/search-input";
 import type { MockProduct, MockUser } from "./mock-data";
@@ -42,32 +43,18 @@ export function ProductsTab({
   // B5: local name filter (distinct from the global SearchInput deep-link)
   const [localSearch, setLocalSearch] = useState("");
 
-  // admin-dialog-focus-management: save the trigger element so focus can be
-  // restored when the dialog closes (Escape, Cancel, backdrop, save success).
+  // Save the trigger element so the shared focus primitive can restore focus
+  // to it when the dialog closes (Escape, Cancel, backdrop, save success).
   const dialogTriggerRef = useRef<HTMLElement | null>(null);
+  const dialogSurfaceRef = useRef<HTMLDivElement>(null);
 
-  // Escape closes the Add/Edit dialog (mirrors users-tab — the inline
-  // dialog has no Radix wrapper so we attach the listener manually).
-  useEffect(() => {
-    if (!showDialog) return;
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        setShowDialog(false);
-      }
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [showDialog]);
-
-  // Restore focus to the trigger whenever the dialog closes (all close paths
-  // set showDialog→false: Escape listener, Cancel, backdrop, save success).
-  useEffect(() => {
-    if (!showDialog && dialogTriggerRef.current) {
-      dialogTriggerRef.current.focus();
-      dialogTriggerRef.current = null;
-    }
-  }, [showDialog]);
+  // Focus trap + Escape-to-close + restore-to-trigger via the shared primitive.
+  useDialogFocus({
+    open: showDialog,
+    onClose: () => setShowDialog(false),
+    containerRef: dialogSurfaceRef,
+    triggerRef: dialogTriggerRef,
+  });
 
   useEffect(() => {
     if (!productFilter) return;
@@ -390,6 +377,7 @@ export function ProductsTab({
         >
           {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops backdrop close-propagation; no keyboard equivalent needed (dialog closes via Escape + Cancel button) */}
           <div
+            ref={dialogSurfaceRef}
             className="animate-scale-in mx-4 w-full max-w-md rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
             role="dialog"
             aria-modal="true"

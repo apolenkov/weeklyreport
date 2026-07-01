@@ -119,7 +119,15 @@ export function scopeDiscriminator(session: UserSession): string {
   return [...computeAllowedGroupIds(session)].sort().join("|");
 }
 
-function computeAllowedGroupIds(session: UserSession): string[] {
+/**
+ * Allowed group ids for a session, the single source both {@link groupScopeFilter}
+ * and {@link scopeDiscriminator} derive from. Typed on the narrow session slice
+ * it actually reads so scope-restricted callers (e.g. the cross-group signal) can
+ * reuse it without widening to the full session.
+ */
+export function computeAllowedGroupIds(
+  session: Pick<UserSession, "role" | "reportingGroupId" | "viewerGroupAccess">,
+): string[] {
   if (session.role === "head" || session.role === "lead") {
     return session.reportingGroupId ? [session.reportingGroupId] : [];
   }

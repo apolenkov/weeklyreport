@@ -41,8 +41,6 @@ export function LockBadge({ authorName, variant = "default" }: LockBadgeProps) {
       aria-label={`Read-only — authored by ${authorName ?? "another lead"}`}
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
-      onFocus={handleEnter}
-      onBlur={handleLeave}
     >
       <Lock className={iconSize} aria-hidden="true" />
     </div>

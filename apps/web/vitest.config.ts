@@ -14,6 +14,9 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
     globals: false,
+    // Restore every spy/mock to its original after each test so an installed
+    // spy (e.g. a stderr silencer) never leaks into an unrelated test.
+    restoreMocks: true,
     exclude: ["e2e/**", "node_modules/**"],
     // 34-02: coverage floors. Web has more UI code than tests can drive
     // without a full E2E layer, so the bar is lower than api. Threshold

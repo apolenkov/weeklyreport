@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { reportHasContent } from "../../lib/mappers/report-content";
 import { pluralize } from "../../lib/pluralize";
 import type {
   ProductReport,
@@ -340,13 +341,7 @@ export function ProductAccordion({
   scrollIntoViewOnHighlight = false,
 }: ProductAccordionProps) {
   const [expanded, setExpanded] = useState(defaultOpen);
-  const hasContent =
-    Boolean(report.needsAttention) ||
-    report.currentWeek.length > 0 ||
-    report.nextWeek.length > 0 ||
-    report.risks.length > 0 ||
-    report.decisions.length > 0 ||
-    report.priorities.length > 0;
+  const hasContent = reportHasContent(report);
   const isEmpty = !hasContent;
   const config = isEmpty
     ? {

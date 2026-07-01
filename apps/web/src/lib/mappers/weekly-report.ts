@@ -21,6 +21,7 @@
  */
 import type { WeeklyReportReadModel } from "@customreport/shared";
 
+import { reportHasContent } from "./report-content";
 import {
   buildProductToAuthorMap,
   buildProjectNameMap,
@@ -221,15 +222,7 @@ export function mapWeeklyReportLeadGroups(
             priorities,
           } satisfies WeeklyProductReport;
         })
-        .filter(
-          (p) =>
-            Boolean(p.needsAttention) ||
-            p.currentWeek.length > 0 ||
-            p.nextWeek.length > 0 ||
-            p.risks.length > 0 ||
-            p.decisions.length > 0 ||
-            p.priorities.length > 0,
-        );
+        .filter(reportHasContent);
 
       return { id: section.authorId, name: section.authorName, products };
     })

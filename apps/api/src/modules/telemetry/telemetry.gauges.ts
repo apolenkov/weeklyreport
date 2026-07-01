@@ -10,6 +10,7 @@ import {
   customreportReportsOnTimeRatio,
 } from "../../infrastructure/metrics/metrics.registry.js";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { queryActiveLeadsLastPublishedPeriod } from "./telemetry.queries.js";
 
 /**
  * Port shape used by the gauges service. Declared as an interface so unit
@@ -68,19 +69,8 @@ export class TelemetryGaugesPrismaRepository implements TelemetryGaugesPort {
     return onTime / total;
   }
 
-  async activeLeadsLastPublishedPeriod(): Promise<number> {
-    const report = await this.prisma.report.findFirst({
-      where: { status: "published" },
-      orderBy: { periodStart: "desc" },
-      select: { id: true },
-    });
-    if (!report) return 0;
-    const distinct = await this.prisma.reportSection.findMany({
-      where: { reportId: report.id, status: "submitted" },
-      distinct: ["authorId"],
-      select: { authorId: true },
-    });
-    return distinct.length;
+  activeLeadsLastPublishedPeriod(): Promise<number> {
+    return queryActiveLeadsLastPublishedPeriod(this.prisma);
   }
 }
 

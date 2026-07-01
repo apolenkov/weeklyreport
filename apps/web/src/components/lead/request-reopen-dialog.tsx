@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { useDialogFocus } from "../../lib/use-dialog-focus";
+
 interface RequestReopenDialogProps {
   readonly open: boolean;
   /**
@@ -45,11 +47,21 @@ export function RequestReopenDialog({
 }: RequestReopenDialogProps) {
   const [reason, setReason] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const dialogSurfaceRef = useRef<HTMLDivElement>(null);
+
+  // Escape + focus trap + restore-to-trigger via the shared primitive.
+  useDialogFocus({
+    open,
+    onClose: onCancel,
+    containerRef: dialogSurfaceRef,
+  });
 
   useEffect(() => {
     if (!open) return;
     setReason("");
-    // Defer focus so the portal mounts first.
+    // Defer focus to the textarea so the portal mounts first (the shared
+    // primitive's generic focus-in lands on the first focusable; this pins it
+    // to the note field, matching the reopen dialog's intent).
     const id = requestAnimationFrame(() => {
       textareaRef.current?.focus();
     });
@@ -62,10 +74,7 @@ export function RequestReopenDialog({
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      onCancel();
-    } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       handleConfirm();
     }
@@ -82,6 +91,7 @@ export function RequestReopenDialog({
     >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops propagation so inner clicks don't reach the backdrop close handler; there is no keyboard analog and Escape close is handled on the backdrop */}
       <div
+        ref={dialogSurfaceRef}
         className="w-full max-w-lg rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"

@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef } from "react";
+
 import { segmentClassName, SegmentedToggle } from "./segmented-toggle";
 
 export type ScopeValue = "own" | "product" | "lead";
@@ -39,15 +41,41 @@ export function ScopeToggle({
   allowedScopes = DEFAULT_SCOPES,
   size = "sm",
 }: ScopeToggleProps) {
+  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // WAI-ARIA radiogroup keyboard model: arrow keys move focus to the adjacent
+  // radio AND select it (wrapping at the ends). Roving tabindex keeps only the
+  // checked radio in the tab order.
+  function handleKeyDown(
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ): void {
+    const isNext = event.key === "ArrowRight" || event.key === "ArrowDown";
+    const isPrev = event.key === "ArrowLeft" || event.key === "ArrowUp";
+    if (!isNext && !isPrev) return;
+
+    event.preventDefault();
+    const delta = isNext ? 1 : -1;
+    const nextIndex =
+      (index + delta + allowedScopes.length) % allowedScopes.length;
+    onChange(allowedScopes[nextIndex]);
+    buttonRefs.current[nextIndex]?.focus();
+  }
+
   return (
     <SegmentedToggle role="radiogroup" ariaLabel="Slide scope" size={size}>
-      {allowedScopes.map((s) => (
+      {allowedScopes.map((s, index) => (
         <button
           key={s}
+          ref={(el) => {
+            buttonRefs.current[index] = el;
+          }}
           type="button"
           role="radio"
           aria-checked={value === s}
+          tabIndex={value === s ? 0 : -1}
           onClick={() => onChange(s)}
+          onKeyDown={(event) => handleKeyDown(event, index)}
           className={segmentClassName(value === s)}
         >
           {LABELS[s]}
