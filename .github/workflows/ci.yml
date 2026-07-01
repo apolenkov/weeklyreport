@@ -39,7 +39,7 @@ jobs:
           corepack prepare "pnpm@${PNPM_VERSION}" --activate
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma Client
         run: pnpm exec prisma generate
@@ -152,7 +152,7 @@ jobs:
           corepack prepare "pnpm@${PNPM_VERSION}" --activate
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma Client
         run: pnpm exec prisma generate
@@ -238,7 +238,7 @@ jobs:
           corepack prepare "pnpm@${PNPM_VERSION}" --activate
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: prisma migrate reset (fresh DB, no seed)
         run: pnpm exec prisma migrate reset --force --skip-seed
@@ -318,7 +318,7 @@ jobs:
           corepack prepare "pnpm@${PNPM_VERSION}" --activate
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma Client
         run: pnpm exec prisma generate
@@ -327,7 +327,7 @@ jobs:
         run: pnpm exec prisma migrate deploy
 
       - name: Seed database (deterministic fixture)
-        run: pnpm db:seed:simple
+        run: pnpm db:seed:middle
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium

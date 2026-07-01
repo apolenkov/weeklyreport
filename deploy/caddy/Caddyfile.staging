@@ -26,8 +26,10 @@
 
 	encode zstd gzip
 
+	# /metrics is intentionally absent: it must not be reachable from the public
+	# edge. Prometheus scrapes it over the internal compose network (api:3001).
 	@api {
-		path /trpc /trpc/* /auth /auth/* /health /health/* /metrics /admin/queues /admin/queues/* /pdfs /pdfs/*
+		path /trpc /trpc/* /auth /auth/* /health /health/* /admin/queues /admin/queues/* /pdfs /pdfs/*
 	}
 	handle @api {
 		reverse_proxy api:3001 {

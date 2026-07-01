@@ -1,11 +1,14 @@
 # Stage 1: Base with pnpm, turbo, and Playwright browsers.
 # Keep all API stages on the same glibc-based image so dev/prod PDF export
 # can launch Chromium and native node modules are built for the runner OS.
+# TODO: pin @sha256:<digest> — resolve via
+# `docker buildx imagetools inspect mcr.microsoft.com/playwright:v1.59.1-noble`
+# at build/deploy (no registry access here). Deferred with the CSP flip.
 FROM mcr.microsoft.com/playwright:v1.59.1-noble AS base
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 RUN corepack enable && corepack prepare pnpm@10.11.0 --activate
-RUN npm install -g turbo@2
+RUN npm install -g turbo@2.9.18
 
 # Stage 2: Prune monorepo for api workspace
 FROM base AS pruner
@@ -64,7 +67,10 @@ RUN mkdir -p /app/data/pdfs && chown pwuser:pwuser /app/data/pdfs
 USER pwuser
 WORKDIR /app/apps/api
 ENV NODE_ENV=production
-EXPOSE 3002
+# EXPOSE/HEALTHCHECK must match the runtime bind port (PORT=3001); a plain
+# `docker run` with the baked healthcheck would otherwise report permanently
+# unhealthy.
+EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-  CMD wget -qO- http://localhost:3002/health/live || exit 1
+  CMD wget -qO- http://localhost:3001/health/live || exit 1
 CMD ["node", "dist/apps/api/src/main.js"]
