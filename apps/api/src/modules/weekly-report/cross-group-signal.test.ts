@@ -17,6 +17,7 @@ const PRODUCT_1 = "a0000000-0000-4000-a000-0000000000d1";
 const PRODUCT_2 = "a0000000-0000-4000-a000-0000000000d2";
 
 const headA: WeeklyReportScopeSession = {
+  userId: "00000000-0000-4000-a000-0000000000f1",
   role: "head",
   reportingGroupId: GROUP_A,
 };
@@ -57,7 +58,10 @@ describe("computeCrossGroupSignal", () => {
   });
 
   it("returns null for admin sessions even when foreign products surface", () => {
-    const admin: WeeklyReportScopeSession = { role: "admin" };
+    const admin: WeeklyReportScopeSession = {
+      userId: "00000000-0000-4000-a000-0000000000f2",
+      role: "admin",
+    };
 
     const signal = computeCrossGroupSignal(admin, [
       project(PRODUCT_1, GROUP_B),
@@ -85,6 +89,7 @@ describe("computeCrossGroupSignal", () => {
 
   it("uses viewerGroupAccess as the allowed set for viewer sessions", () => {
     const viewer: WeeklyReportScopeSession = {
+      userId: "00000000-0000-4000-a000-0000000000f3",
       role: "viewer",
       viewerGroupAccess: [GROUP_A],
     };
@@ -98,7 +103,10 @@ describe("computeCrossGroupSignal", () => {
   });
 
   it("returns null when the session carries no allowed groups at all", () => {
-    const groupless: WeeklyReportScopeSession = { role: "head" };
+    const groupless: WeeklyReportScopeSession = {
+      userId: "00000000-0000-4000-a000-0000000000f4",
+      role: "head",
+    };
 
     expect(
       computeCrossGroupSignal(groupless, [project(PRODUCT_1, GROUP_B)]),

@@ -77,6 +77,7 @@ export {
   type LeadPriorityEntry,
   type LeadProduct,
   type LeadReportPeriod,
+  type LeadReviewFeedbackRecord,
   type LeadRiskEntry,
   type LeadStageAssignment,
   type LeadStageOwnership,
@@ -87,6 +88,7 @@ export {
   mapLeadPeriods,
   mapLeadPriorities,
   mapLeadProducts,
+  mapLeadReviewFeedback,
   mapLeadRisks,
   type MappedLeadForm,
 } from "./lead-form";

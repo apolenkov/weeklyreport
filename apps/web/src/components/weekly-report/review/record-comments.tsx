@@ -1,0 +1,151 @@
+"use client";
+
+import type { RecordCommentView } from "@customreport/shared";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
+
+import { invalidateReview } from "../../../lib/cache-keys";
+import { useTRPC } from "../../../lib/trpc-context";
+import { ReviewCommentList } from "../../review/review-comment-list";
+
+/** A comment anchors to exactly one concrete record. */
+export interface RecordCommentAnchor {
+  readonly itemId?: string;
+  readonly riskId?: string;
+  readonly decisionId?: string;
+}
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function anchorId(anchor: RecordCommentAnchor): string | undefined {
+  return anchor.itemId ?? anchor.riskId ?? anchor.decisionId;
+}
+
+/**
+ * review-acknowledgement (§6.2): head/viewer accordion wrapper around
+ * {@link ReviewCommentList}. Renders existing reviewer comments inline on their
+ * anchor record and, only for a DESIGNATED reviewer, an add-comment composer and
+ * a delete control on comments the caller authored (or any comment when admin).
+ * Never duplicates the record's own text. The mutation always re-derives the
+ * group server-side; `canReview` is the affordance gate, never the boundary.
+ */
+export function RecordComments({
+  anchor,
+  comments,
+  canReview,
+  currentUserId,
+  isAdmin,
+  onMutated,
+}: {
+  readonly anchor: RecordCommentAnchor;
+  readonly comments: readonly RecordCommentView[];
+  readonly canReview: boolean;
+  readonly currentUserId: string;
+  readonly isAdmin: boolean;
+  readonly onMutated: () => void;
+}) {
+  const trpc = useTRPC();
+  const qc = useQueryClient();
+  const [draft, setDraft] = useState("");
+
+  const commentMut = useMutation(
+    trpc.review.comment.mutationOptions({
+      onSuccess: () => {
+        setDraft("");
+        invalidateReview(qc, trpc);
+        onMutated();
+      },
+      onError: (err: unknown) => {
+        toast.error(reviewErrorMessage(err, "Failed to add comment"));
+      },
+    }),
+  );
+
+  const deleteMut = useMutation(
+    trpc.review.deleteComment.mutationOptions({
+      onSuccess: () => {
+        invalidateReview(qc, trpc);
+        onMutated();
+      },
+      onError: (err: unknown) => {
+        toast.error(reviewErrorMessage(err, "Failed to delete comment"));
+      },
+    }),
+  );
+
+  const id = anchorId(anchor);
+  // A synthetic (non-persisted) record has no real UUID — the composer stays
+  // hidden so a synthetic id can never reach the uuid-validated mutation.
+  const canCompose = canReview && id !== undefined && UUID_RE.test(id);
+  const hasComments = comments.length > 0;
+  if (!hasComments && !canCompose) return null;
+
+  const trimmed = draft.trim();
+  const submitDisabled = trimmed.length === 0 || commentMut.isPending;
+
+  return (
+    <div className="mt-1.5 flex flex-col gap-2 pl-[calc(20px+3px+124px+3.5rem)]">
+      {hasComments ? (
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
+            {comments.length} review {comments.length === 1 ? "note" : "notes"}
+          </span>
+          <ReviewCommentList
+            comments={comments}
+            renderAction={(comment) =>
+              // Self-delete requires CURRENT review capability (a viewer whose
+              // canReview was revoked keeps read access to their old comments —
+              // the server would 403 the delete, so no dead affordance). Admin
+              // deletes everywhere.
+              isAdmin || (canReview && comment.reviewerId === currentUserId) ? (
+                <button
+                  type="button"
+                  className="text-[10px] font-semibold text-[var(--color-destructive)] underline-offset-2 hover:underline disabled:opacity-50"
+                  onClick={() => deleteMut.mutate({ commentId: comment.id })}
+                  disabled={deleteMut.isPending}
+                  aria-label="Delete comment"
+                >
+                  Delete
+                </button>
+              ) : null
+            }
+          />
+        </div>
+      ) : null}
+
+      {canCompose ? (
+        <form
+          className="flex flex-col gap-1.5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (submitDisabled) return;
+            commentMut.mutate({ ...anchor, text: trimmed });
+          }}
+        >
+          <textarea
+            className="min-h-[52px] w-full resize-y rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] px-2.5 py-1.5 text-[12.5px] text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)]"
+            placeholder="Add a review comment…"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            aria-label="Add a review comment"
+          />
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              className="btn-press inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-3 py-1 text-[12px] font-semibold text-[var(--color-primary-foreground)] transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={submitDisabled}
+            >
+              {commentMut.isPending ? "Adding…" : "Comment"}
+            </button>
+          </div>
+        </form>
+      ) : null}
+    </div>
+  );
+}
+
+function reviewErrorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback;
+}

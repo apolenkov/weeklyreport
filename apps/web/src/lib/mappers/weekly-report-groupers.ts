@@ -126,6 +126,11 @@ export function groupItemsByProject(
           completed: item.completed ?? null,
         }),
         priorityRank: item.priorityRank ?? null,
+        // review-acknowledgement: carry the reviewer comments + this caller's
+        // review capability for the section so the accordion row can surface
+        // them (comments anchor to the DB `id`, threaded above).
+        comments: item.comments ?? [],
+        canReview: section.canReview ?? false,
       };
       bucket[item.type].push(mapped);
       map.set(item.projectId, bucket);
@@ -175,6 +180,8 @@ export function groupRisksByProject(
         problem: risk.risk,
         impact: risk.impact,
         mitigation: risk.mitigation,
+        comments: risk.comments ?? [],
+        canReview: section.canReview ?? false,
       });
       map.set(risk.projectId, list);
     }
@@ -217,6 +224,8 @@ export function groupDecisionsByProject(
         badge: targetProduct.projectName,
         owner: initialsFromName(section.authorName),
         text: d.text,
+        comments: d.comments ?? [],
+        canReview: section.canReview ?? false,
       });
       decisions.set(targetProduct.projectId, decisionList);
     });

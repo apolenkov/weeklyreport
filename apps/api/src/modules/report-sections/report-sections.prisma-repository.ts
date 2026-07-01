@@ -33,6 +33,10 @@ export const reportSectionFullInclude = {
       name: true,
       role: true,
       id: true,
+      // review-acknowledgement: the section author's reporting group. The
+      // weekly-report live read stamps it onto the read model so the client can
+      // gate reviewer affordances and the Acknowledge control per group.
+      reportingGroupId: true,
       stageAssignments: {
         include: {
           // unassigned-stage-reporting-exclusion: include the product's FULL

@@ -1,5 +1,6 @@
 import {
   type PortfolioProductOverview,
+  type ReportSectionReadModel,
   weeklyReportReadModelSchema,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
@@ -21,6 +22,7 @@ import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
 } from "../report-sections/report-sections.prisma-repository.js";
+import { isDesignatedReviewer } from "../review/review-authz.js";
 import { computeCrossGroupSignal } from "./cross-group-signal.js";
 import type {
   WeeklyReportRepository,
@@ -277,10 +279,45 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     // so the signal is computed from the full scoped project list.
     const crossGroup = computeCrossGroupSignal(session, projects);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
-    const leadSections = (report.sections as any[]).map(
-      mapPrismaToReportSection,
+    // review-acknowledgement: stamp each live section with its author's group
+    // and whether THIS caller is a designated reviewer for it. Batched — one
+    // viewerGroupAccess query over the distinct groups (never N per section).
+    const sectionGroupIds = new Map<string, string | null>(
+      report.sections.map((section) => [
+        section.id,
+        section.author.reportingGroupId,
+      ]),
     );
+    const distinctGroupIds = [
+      ...new Set(
+        [...sectionGroupIds.values()].filter(
+          (groupId): groupId is string => groupId !== null,
+        ),
+      ),
+    ];
+    const viewerReviewGroupIds = await this.resolveViewerReviewGroupIds(
+      session,
+      distinctGroupIds,
+    );
+
+    const mappedSections: ReportSectionReadModel[] =
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional any for test/runtime escape hatch (migrated from eslint-disable)
+      (report.sections as any[]).map(mapPrismaToReportSection);
+    const leadSections = mappedSections.map((section) => {
+      const groupId = sectionGroupIds.get(section.reportSectionId) ?? null;
+      return {
+        ...section,
+        groupId,
+        canReview:
+          groupId !== null && session
+            ? isDesignatedReviewer(
+                session,
+                groupId,
+                viewerReviewGroupIds.has(groupId),
+              )
+            : false,
+      };
+    });
 
     // fix-published-empty-stage-risk-floor: source product-card statuses from
     // the floored read-model sections (`leadSections`), not the raw
@@ -315,6 +352,31 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
       }),
       crossGroup,
     };
+  }
+
+  /**
+   * review-acknowledgement: the subset of `distinctGroupIds` for which a VIEWER
+   * caller carries `canReview = true` on their `ViewerGroupAccess` row. Head and
+   * admin designation is decided by `isDesignatedReviewer` without a query, so
+   * this only fires for the viewer role — one batched read over the report's
+   * distinct groups, never one query per section.
+   */
+  private async resolveViewerReviewGroupIds(
+    session: WeeklyReportScopeSession | undefined,
+    distinctGroupIds: readonly string[],
+  ): Promise<Set<string>> {
+    if (session?.role !== "viewer" || distinctGroupIds.length === 0) {
+      return new Set();
+    }
+    const rows = await this.prisma.viewerGroupAccess.findMany({
+      where: {
+        viewerUserId: session.userId,
+        groupId: { in: [...distinctGroupIds] },
+        canReview: true,
+      },
+      select: { groupId: true },
+    });
+    return new Set(rows.map((row) => row.groupId));
   }
 }
 

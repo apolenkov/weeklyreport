@@ -34,3 +34,12 @@ export function invalidateAdmin(qc: QueryClient, trpc: TRPCProxy): void {
 export function invalidateLeadHistory(qc: QueryClient, trpc: TRPCProxy): void {
   void qc.invalidateQueries(trpc.reports.myHistory.pathFilter());
 }
+
+// review-acknowledgement: a reviewer action (comment, delete, verdict) mutates
+// the section read model. A `changes_requested` verdict auto-un-submits, so the
+// head report AND the lead's own form must both refetch to reflect the return.
+export function invalidateReview(qc: QueryClient, trpc: TRPCProxy): void {
+  void qc.invalidateQueries(trpc.weeklyReport.get.pathFilter());
+  void qc.invalidateQueries(trpc.leadForm.byPeriod.pathFilter());
+  void qc.invalidateQueries(trpc.reports.getActive.pathFilter());
+}
