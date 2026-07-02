@@ -72,7 +72,7 @@ export function ActivityStatusSection({
                     onStatusChange(activity.activityId, option.value)
                   }
                   className={[
-                    "inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                    "inline-flex min-h-[var(--touch-target-min)] md:min-h-[34px] items-center gap-1.5 rounded-[var(--radius-pill)] border px-3 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
                     isActive
                       ? "border-[var(--color-primary)] bg-[var(--color-success)] text-[var(--color-primary)]"
                       : "border-[rgba(0,0,0,0.10)] bg-white/70 text-[var(--color-muted-foreground)] hover:border-[var(--color-border)] hover:bg-white",

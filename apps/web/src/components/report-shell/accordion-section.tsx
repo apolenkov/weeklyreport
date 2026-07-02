@@ -117,7 +117,11 @@ export function AccordionSection({
         className="grid transition-[grid-template-rows] duration-300"
         style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
       >
-        <div className="min-h-0 overflow-hidden">
+        <div
+          className="min-h-0 overflow-hidden"
+          inert={expanded ? undefined : true}
+          aria-hidden={!expanded}
+        >
           <div className="px-5 pb-5 pt-2">{children}</div>
         </div>
       </div>

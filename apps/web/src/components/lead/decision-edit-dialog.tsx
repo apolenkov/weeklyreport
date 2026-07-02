@@ -70,6 +70,10 @@ function DecisionEditDialogContent({
     onClose: onCancel,
     containerRef: dialogSurfaceRef,
   });
+  // Validation-focus targets: on a failed save, focus moves to the first
+  // invalid control instead of sitting on the Save button.
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const impactRef = useRef<HTMLTextAreaElement>(null);
 
   const [text, setText] = useState(decision?.text ?? "");
   // Owner is not user-editable: a decision is always owned by its author — the
@@ -117,6 +121,26 @@ function DecisionEditDialogContent({
     decision?.productName ??
     "";
 
+  // Moves focus to the first invalid field on a failed save, in the same
+  // top-to-bottom order handleSave validates them, so keyboard/AT users land
+  // on the problem instead of staying parked on the Save button. Stage
+  // errors only ever occur with the multi-choice checkbox group rendered
+  // (a single owned stage auto-applies before validation runs), so the
+  // checkbox-group query always has a target when reached.
+  function focusFirstInvalidField(fieldErrors: typeof errors) {
+    if (fieldErrors.text) {
+      textRef.current?.focus();
+    } else if (fieldErrors.impact) {
+      impactRef.current?.focus();
+    } else if (fieldErrors.stageIds) {
+      dialogSurfaceRef.current
+        ?.querySelector<HTMLInputElement>(
+          '[data-testid="stage-checkbox-group"] input[type="checkbox"]',
+        )
+        ?.focus();
+    }
+  }
+
   function handleSave() {
     // Dead-end no-op: never call onSave with an empty stageIds array, and never
     // surface the unsatisfiable "Select at least one stage." error. The
@@ -132,6 +156,7 @@ function DecisionEditDialogContent({
       next.stageIds = "Select at least one stage.";
     if (Object.keys(next).length > 0) {
       setErrors(next);
+      focusFirstInvalidField(next);
       return;
     }
     const selectedProduct = products?.find((p) => p.id === productId);
@@ -197,6 +222,7 @@ function DecisionEditDialogContent({
               </p>
               <textarea
                 id="dec-text"
+                ref={textRef}
                 // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
                 autoFocus
                 aria-invalid={errors.text ? "true" : "false"}
@@ -217,6 +243,7 @@ function DecisionEditDialogContent({
               {errors.text && (
                 <p
                   id="dec-text-error"
+                  role="alert"
                   className="mt-1 text-xs text-[var(--color-destructive)]"
                 >
                   {errors.text}
@@ -252,6 +279,7 @@ function DecisionEditDialogContent({
               </label>
               <textarea
                 id="dec-impact"
+                ref={impactRef}
                 aria-invalid={errors.impact ? "true" : "false"}
                 aria-describedby={
                   errors.impact ? "dec-impact-error" : undefined
@@ -272,6 +300,7 @@ function DecisionEditDialogContent({
               {errors.impact && (
                 <p
                   id="dec-impact-error"
+                  role="alert"
                   className="mt-1 text-xs text-[var(--color-destructive)]"
                 >
                   {errors.impact}
