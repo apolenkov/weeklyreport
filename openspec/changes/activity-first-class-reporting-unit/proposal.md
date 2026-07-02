@@ -36,11 +36,20 @@ risks and blockers, never from SDLC stages (it has none).
   delete-recreate — rather than duplicated into parallel activity tables.
 - **Activity↔product is many-to-many.** A new `ProjectActivityProduct` join
   replaces `ProjectActivity.projectId`; an activity links to 0..N products and
-  each activity row shows its linked product(s). The link stays label-only.
-- **Activity-parented records carry no SDLC stage.** The stage-required write
-  schemas (`riskInputSchema`, `itemInputSchema`, `decisionInputSchema` via
-  `requiredStageIdsField`) accept an empty/absent `stageIds` when the parent is
-  an activity; an activity record never renders the "No stage set" warning.
+  each activity row shows its linked product(s). The link stays label-only. The
+  admin activity contract switches from the scalar `projectId` to
+  `linkedProductIds` (write) / `linkedProducts` (read).
+- **Activity-parented records carry no SDLC stage — enforced both ways.** The
+  stage-required write schemas (`riskInputSchema`, `itemInputSchema`,
+  `decisionInputSchema` via `requiredStageIdsField`) accept an empty/absent
+  `stageIds` when the parent is an activity AND reject a non-empty `stageIds` on
+  an activity parent (an activity owns no stage); an activity record never
+  renders the "No stage set" warning.
+- **The write path validates `activityId` server-side.** Every `activityId` on
+  an item/risk/decision payload row is checked against the section author's
+  seeded `section.activities` before `saveSection`, mirroring the existing
+  stage-ownership and activity-status guards; a spoofed `activityId` is rejected
+  with `ACTIVITY_NOT_ATTACHED`.
 - **The record dialog gains a parent picker.** `item-edit-dialog.tsx`'s
   `ProductPicker` becomes a parent picker offering products AND activities; when
   the parent is an activity the SDLC Stages selector is hidden and the
@@ -59,20 +68,26 @@ risks and blockers, never from SDLC stages (it has none).
   blocker floors only the ACTIVITY's own status; it never changes a linked
   product's traffic light, `worstStatus`, or the product-level flagged-red
   escalation roll-up.
-- **A section attached only to activities can submit.** `submitSectionSchema`'s
-  `projectStatuses.min(1)` no longer blocks a lead who owns activities but no
-  products.
+- **A section attached only to activities can submit — but every activity needs a
+  status.** `submitSectionSchema`'s `projectStatuses.min(1)` no longer blocks a
+  lead who owns activities but no products; in exchange, submit validation
+  requires every attached activity to carry a non-null traffic-light status
+  (mirroring the per-product status loop), so `activityStatusInputSchema.status`
+  is tightened from nullable to non-null at submit.
 - **Migration + backfill.** Additive-then-drop: create the join, backfill one
   row per existing activity with a non-null `projectId`, then drop the column;
   existing `ActivityStatus` rows are preserved. Under the MVP disposable-DB rule
   the init migration is reshaped and reseeded; the backfill logic is specified
   for the eventual production path.
 
-Out of scope (Phase 1): activity risks/blockers do NOT feed the head-dashboard
-Blocked-&-At-Risk escalation table or the portfolio KPI roll-up. Activities are
-first-class in the report SURFACES and carry their own derived status; wiring
-their risks into the department escalation feed is deferred (see the top open
-question in `design.md`).
+Out of scope (Phase 1, LOCKED decision — see `design.md` "Locked decisions"):
+activity risks/blockers do NOT feed the head-dashboard Blocked-&-At-Risk
+escalation table or the portfolio KPI roll-up. This is enforced by the
+`status-risk-unification` MODIFIED delta (per-record escalations narrowed to
+product-parented rows) and the `buildEscalationsFromReadSections` null-`projectId`
+skip. Activities are first-class in the report SURFACES and carry their own
+derived status; wiring their risks into the department escalation feed is a
+deferred, separately-tracked change.
 
 ## Capabilities
 
@@ -91,6 +106,10 @@ question in `design.md`).
 - `record-dialog-layout`: the CLASSIFICATION panel's Product picker becomes a
   parent picker (product OR activity), and the SDLC Stages selector is hidden
   when the parent is an activity. One requirement header modified verbatim.
+- `status-risk-unification`: the per-item `blocked` and per-risk
+  `unresolved_risk` escalations are narrowed to PRODUCT-parented records;
+  activity-parented records (null `projectId`) do not feed the escalation table
+  in Phase 1. One requirement header modified verbatim.
 
 ## Impact
 
@@ -102,9 +121,15 @@ question in `design.md`).
 - `packages/shared/src/schemas/section.schema.ts` — `itemInputSchema`,
   `riskInputSchema`, `decisionInputSchema`, `sectionActivitySchema`,
   `submitSectionSchema`, and the read models (nullable parent, linked products,
-  activity records).
-- `apps/api` — the section read-model builder, `saveSection` write path, the
-  activity-status derived floor, and carry-over (preserve `activityId`).
+  activity records); `section-validation.schema.ts` (new `activityId` write
+  guard + activity-status-required-at-submit); `project-activity.schema.ts`
+  (admin contract: `projectId` → `linkedProductIds` / `linkedProducts`).
+- `apps/api` — the section read-model builder, `saveSection` write path
+  (including the `decisionsToSave` `productId` filter, which must persist
+  activity-parented decisions), the `activityId` write guard, the activity-status
+  derived floor, carry-over (preserve `activityId`), the `project-activity`
+  admin service/repository (join reconcile), and the escalation builder
+  null-`projectId` skip.
 - `apps/web/src/components/lead/item-edit-dialog.tsx`,
   `product-picker.tsx` (→ parent picker), `activity-status-section.tsx`,
   `unified-activity-section.tsx`, `item-card.tsx`.
@@ -113,5 +138,5 @@ question in `design.md`).
 - `apps/web/src/components/weekly-report/activity-status-strip.tsx`,
   `weekly-report-page.tsx`, `product-accordion.tsx`.
 - Specs: new `activity-reporting-unit`; modified `risk-stage-integrity`,
-  `record-dialog-layout`. Cross-references `status-risk-unification`,
+  `record-dialog-layout`, `status-risk-unification`. Cross-references
   `status-color-semantics`, `period-dual-state`, `role-coverage-gate`.

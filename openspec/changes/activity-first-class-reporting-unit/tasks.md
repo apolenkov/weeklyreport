@@ -1,5 +1,26 @@
 # Tasks — activity-first-class-reporting-unit
 
+## 0. Decisions to lock (BLOCKS tasks 1–8 — resolve first)
+
+These four resolutions are hard-coded in the specs and `design.md` "Locked
+decisions"; they are listed here as an explicit gate so no implementation task
+proceeds on an unresolved answer.
+
+- [x] 0.1 Escalation / KPI parity — LOCKED **no, Phase 1**: activity
+      risks/blockers do NOT feed the head-dashboard escalation table or portfolio
+      KPI roll-up. Enforced by the `status-risk-unification` MODIFIED delta +
+      the `buildEscalationsFromReadSections` null-`projectId` skip (task 3.4).
+- [x] 0.2 Activity-only reachability — LOCKED **yes, seeded**: seed a lead
+      attached to activities with zero products so the submit relaxation is a live
+      path (task 7.1).
+- [x] 0.3 Carry-over on archive — LOCKED **skip the clone when not re-attached**:
+      preserve `activityId`, re-parent only when the activity is re-attached; an
+      archived/not-re-attached activity's records are not carried forward
+      (task 3.5).
+- [x] 0.4 Decision parent — LOCKED **activities own decisions too (full parity)**:
+      XOR covers `Item`/`Risk`/`Decision`; forces the `decisionsToSave` filter fix
+      (task 3.8).
+
 ## 1. Schema + migration
 
 - [ ] 1.1 Add `ProjectActivityProduct` join model (`activityId`, `productId`,
@@ -27,18 +48,31 @@
       nullable/optional and add `activityId` to `itemInputSchema`,
       `riskInputSchema`, `decisionInputSchema`.
 - [ ] 2.2 Add a `.superRefine` enforcing XOR parent AND conditional
-      `requiredStageIdsField` (required for a product parent, accepted empty for an
-      activity parent).
+      `requiredStageIdsField` in BOTH directions: required/non-empty for a product
+      parent, and REJECTED when non-empty on an activity parent (an activity owns
+      no stage; empty/absent is accepted).
 - [ ] 2.3 Relax `submitSectionSchema.projectStatuses.min(1)` so an activity-only
-      section submits; keep the per-product status requirement for present products.
+      section submits; keep the per-product status requirement for present
+      products; AND add its activity analogue. Enforce it SERVER-side by extending
+      `validateSubmitInput` to loop `section.activities` (the way it already loops
+      `section.projects`) and require each attached activity to carry a non-null
+      status — schema tightening alone can't catch an OMITTED attached activity, so
+      the schema change (`activityStatusInputSchema.status` non-null at submit) is a
+      complement, not the whole enforcement.
 - [ ] 2.4 Extend `sectionActivitySchema` with `linkedProducts` (id + name) and the
       derived status; keep new fields `.optional()`/`.default([])` for snapshot +
       fixture compatibility. Export any new inferred types.
+- [ ] 2.5 Admin activity contract (`project-activity.schema.ts`): replace the
+      scalar `projectId` with `linkedProductIds` (create/update) and
+      `linkedProducts` id+name (read/list); update the inferred types.
 
 ## 3. Backend (read model, write path, derived status)
 
-- [ ] 3.1 Section read-model builder: derive each record's parentType, group
-      activity records under their activity, join `linkedProducts`.
+- [ ] 3.1 Section read-model builder: keep records in the FLAT top-level
+      `items`/`risks`/`decisions` arrays discriminated by `activityId` (product FK
+      null), the same as product-parented rows; derive each record's parentType;
+      join `linkedProducts`. Grouping-under-activity is a presentation-mapper
+      concern (task 5.x), NOT a read-model reshape.
 - [ ] 3.2 Apply the activity-level derived-status floor at read time (blocked item →
       red; risk severity floor; else stored/default). Never rewrite the stored
       `ActivityStatus.status`.
@@ -51,6 +85,18 @@
       when the activity is not re-attached in the new period (dup-lineage skip).
 - [ ] 3.6 Any new/changed tRPC procedure uses a canonical middleware-chain builder
       by reference identity (role-coverage gate).
+- [ ] 3.7 Add `validateRecordActivityIds` (`section-validation.schema.ts`),
+      mirroring `validateActivityStatuses`: reject any `items`/`risks`/`decisions`
+      row whose `activityId` is not in the section author's seeded
+      `section.activities` with `ACTIVITY_NOT_ATTACHED`; wire it into BOTH
+      `saveDraft` and `submitSection` before the delete-recreate.
+- [ ] 3.8 Fix the `decisionsToSave` filter in
+      `report-sections.prisma-repository.ts`: persist a decision when it carries a
+      `productId` OR an `activityId` (write `productId` null / `activityId` set for
+      the activity case), instead of dropping every `productId`-less decision.
+- [ ] 3.9 Admin `project-activity` service/repository: reconcile the
+      `ProjectActivityProduct` join rows to the submitted `linkedProductIds` on
+      create/update; return `linkedProducts` (id + name) on read/list.
 
 ## 4. Lead dialog — parent picker
 
@@ -62,6 +108,9 @@
       selection on a product→activity switch; re-show it on activity→product.
 - [ ] 4.3 Wire the same parent picker into the risk and blocker entry paths (a
       blocker is an item with `workflowStatus=blocked`).
+- [ ] 4.4 Admin activity form: swap the single product select for a multi-select
+      bound to `linkedProductIds`; render the activity's `linkedProducts` in the
+      admin list. UI strings stay English.
 
 ## 5. Lead form + slides rendering
 
@@ -88,12 +137,18 @@
 
 ## 8. Tests
 
-- [ ] 8.1 Shared: XOR refine, conditional stage rule, activity-only submit
+- [ ] 8.1 Shared: XOR refine, conditional stage rule (accept empty AND reject
+      non-empty on an activity parent), activity-only submit + activity-status
+      required-at-submit, admin contract `linkedProductIds`/`linkedProducts`
       (`packages/shared` vitest).
-- [ ] 8.2 API: read-model grouping + derived-status floor + escalation skip +
-      carry-over parent preservation (unit + integration).
+- [ ] 8.2 API: read-model flat-array discrimination by `activityId` +
+      derived-status floor + escalation null-`projectId` skip + carry-over parent
+      preservation + `activityId` write guard rejects a spoofed id + activity
+      decision survives `saveSection` (`decisionsToSave` fix) + admin join
+      reconcile (unit + integration).
 - [ ] 8.3 Web: parent picker hides stages on an activity; activity pill floor
-      refuses manual lower; head report renders an activity card
+      refuses manual lower; head report renders an activity card; admin activity
+      form multi-selects linked products
       (`item-edit-dialog`, `activity-status-section`, `activity-status-strip`).
 
 ## 9. Specs + docs
@@ -101,9 +156,9 @@
 - [ ] 9.1 Confirm the new `activity-reporting-unit` capability and the modified
       `risk-stage-integrity` / `record-dialog-layout` requirements match the
       shipped behaviour; update the deltas if implementation diverges.
-- [ ] 9.2 Resolve the four open questions in `design.md` with the stakeholder
-      (escalation parity, activity-only reachability, carry-over-on-archive,
-      decision parent) before implementation locks.
+- [x] 9.2 The four decisions are LOCKED up front in task group 0 and hard-coded in
+      the specs (`design.md` "Locked decisions"); no separate stakeholder gate
+      remains. Re-confirm only if a stakeholder reopens escalation parity (Phase 2).
 
 ## 10. Verification
 

@@ -1,25 +1,43 @@
 # Design — activity-first-class-reporting-unit
 
-## Top open question (decide before implementation locks)
+## Locked decisions (resolved BEFORE implementation — tasks 1–8 depend on these)
 
-**Do activity risks/blockers feed the head-dashboard escalation roll-up and KPIs,
-or only the activity's own pill?** HF2 frames product and activity as the SAME
-positions model ("the only differences: no SDLC stage, and M:N link"), which
-hints at full escalation parity. But `buildEscalationsFromReadSections`
-(`apps/api/src/modules/published-report-snapshot.ts`) is keyed on `projectId`
-with product-level dedup, and the current activity invariant is explicitly
-"activity status never feeds portfolio totals, escalations, or product health"
-(`activity-status-strip.tsx`).
+The four questions the walkthroughs left open are RESOLVED here and hard-coded in
+the specs; task group `0. Decisions to lock` in `tasks.md` gates the
+implementation tasks on them. No implementation task may proceed on an unresolved
+answer.
 
-**Phase-1 default taken here (conservative, bounded):** activities are
-first-class in the report SURFACES (lead form, slides, head report body) and
-carry their own derived status, but activity risks/blockers do NOT enter the
-head-dashboard Blocked-&-At-Risk escalation table or the portfolio KPI roll-up.
-The escalation builder simply skips null-`projectId` records — a one-line guard,
-zero product-health blast radius. This preserves the durable half of the old
-invariant (product health independent of activities) while delivering the
-render-parity both walkthroughs asked for. Escalation parity for activities is
-deferred; the stakeholder should confirm whether Phase 2 wires it in.
+1. **Escalation / KPI parity — LOCKED: no, Phase 1.** Activity risks/blockers do
+   NOT enter the head-dashboard Blocked-&-At-Risk escalation table or the
+   portfolio KPI roll-up. HF2 frames product and activity as the SAME positions
+   model, which hints at full parity, but `buildEscalationsFromReadSections`
+   (`apps/api/src/modules/published-report-snapshot.ts`) is keyed on `projectId`
+   with product-level dedup, and the durable invariant is "activity status never
+   feeds portfolio totals, escalations, or product health"
+   (`activity-status-strip.tsx`). Phase-1 keeps activities first-class on the
+   report SURFACES with their own derived status while the escalation builder
+   skips null-`projectId` records — a one-line guard, zero product-health blast
+   radius. Enforced by the `status-risk-unification` MODIFIED delta (per-item
+   `blocked` / per-risk `unresolved_risk` escalations narrowed to
+   product-parented rows). Escalation parity is a deferred, separately-tracked
+   change.
+
+2. **Activity-only reachability — LOCKED: yes, and it must be seeded.** A lead may
+   be attached to activities with zero products; seed/real data MUST include such
+   a lead so the activity-only-submit relaxation is an exercised path, not dead
+   code (task 7.1).
+
+3. **Carry-over on archive — LOCKED: skip the clone when the activity is not
+   re-attached.** The carry-over clone preserves `activityId` and re-parents the
+   record only when the activity is re-attached in the new period. When an
+   activity is archived (or otherwise not re-attached) between periods, its
+   records are NOT carried forward — the dup-lineage skip, the activity analogue
+   of the existing product skip (task 3.5).
+
+4. **Decision parent — LOCKED: activities own decisions too (full parity).** The
+   XOR parent applies to `Item`, `Risk`, AND `Decision`; an activity-parented
+   decision persists with `productId` null and `activityId` set (which forces the
+   `decisionsToSave` filter fix, Decision 6).
 
 ## Decision 1 — Polymorphic XOR parent, not parallel activity tables
 
@@ -82,6 +100,15 @@ the product side (a product is retired via `archived`, matching
 `StageStatus`/`Decision`), Cascade on the activity side (mirrors
 `ProjectActivityLead`).
 
+**Admin contract switch (finding 4).** Dropping the scalar `projectId` forces the
+admin activity CRUD contract off it: `projectActivityCreateSchema` /
+`projectActivityUpdateSchema` replace the single `projectId` with a
+`linkedProductIds: string[]` (0..N), and the read/list `projectActivitySchema`
+replaces `projectId` with `linkedProducts` (id + name per link). The
+`project-activity` admin service/repository reconciles the
+`ProjectActivityProduct` join rows to the submitted `linkedProductIds` on
+create/update. The admin UI product picker becomes multi-select.
+
 ## Decision 3 — Migration + backfill
 
 Production-safe order (documented for the eventual prod path; under the MVP
@@ -110,18 +137,37 @@ C3 activity seed noted in recent commits).
 - product FK field (`projectId` / `productId`) becomes nullable/optional; add
   `activityId: z.uuid().nullable().optional()`.
 - a `.superRefine` enforces the XOR (exactly one parent) AND makes
-  `requiredStageIdsField` conditional: required when the parent is a product,
-  accepted empty when the parent is an activity. The READ models stay tolerant
-  (they already accept empty `stageIds` for the "No stage set" legacy path).
+  `requiredStageIdsField` conditional in BOTH directions: `stageIds` is required
+  and non-empty when the parent is a product, and MUST be empty/absent when the
+  parent is an activity — a non-empty `stageIds` on an activity parent is
+  REJECTED (an activity owns no stage; a stage name there can only be spoofed or
+  stale). The READ models stay tolerant on the product side (they already accept
+  empty `stageIds` for the "No stage set" legacy path).
+- **Read-model shape stays FLAT (finding 6).** Activity-parented records ride the
+  existing top-level `items`/`risks`/`decisions` arrays on
+  `reportSectionReadModelSchema`, discriminated by `activityId` (product FK
+  null) — exactly as product-parented records ride those same flat arrays
+  discriminated by their product FK. The shared read model does NOT nest records
+  under `activities[]`; product records are not nested under `projects[]` either.
+  The presentation mappers (`mapLeadProducts` and the activity analogue) do the
+  grouping-under-parent for rendering. This keeps read/write symmetry: the write
+  payload (`draftSaveSchema`) is flat, the `activityId` write guard (Decision 7)
+  and the `decisionsToSave` filter (Decision 6) iterate the flat arrays, and a
+  grouped read model would create an asymmetry products never had.
 - `submitSectionSchema.projectStatuses.min(1)` is relaxed: a section with
   activities but no products submits (validation ranges over product statuses ∪
   activity statuses). Keep the per-product status requirement for products that
-  ARE present.
+  ARE present, AND add its activity analogue. Enforce it in `validateSubmitInput`
+  (the server-authoritative check that already loops `section.projects`) by
+  looping `section.activities` and requiring each attached activity to carry a
+  non-null status — schema tightening alone cannot catch an OMITTED attached
+  activity. The schema tightening of `activityStatusInputSchema.status`
+  (nullable/optional on draft → non-null at submit, mirroring how
+  `submitSectionSchema` tightens `projectStatuses.status`) is a complement, not
+  the whole enforcement.
 - `sectionActivitySchema` grows: `linkedProducts` (id + name array) and the
-  activity's derived status; the activity's records ride the existing
-  `items`/`risks`/`decisions` arrays on the section read model, discriminated by
-  `activityId`. `.default([])` / `.optional()` on every new field so frozen
-  published snapshots and legacy fixtures keep parsing.
+  activity's derived status. `.default([])` / `.optional()` on every new field so
+  frozen published snapshots and legacy fixtures keep parsing.
 
 ## Decision 5 — Activity-level derived-status floor
 
@@ -135,6 +181,31 @@ lower with a "remove the risk/blocker first" message — the pill analogue of th
 chip-click interception. The stored `ActivityStatus.status` is preserved; the
 floor is a render/derive layer, never a rewrite (so lowering the floor by
 removing the risk restores the lead's stored choice).
+
+## Decision 6 — `saveSection` must persist activity-parented decisions
+
+`saveSection` today drops any decision without a `productId`: the `decisionsToSave`
+filter is `section.decisions.filter((d): d is typeof d & { productId: string } =>
+Boolean(d.productId))` (`report-sections.prisma-repository.ts`). Since Decision 4
+(locked) gives activities their own decisions, an activity-parented decision
+(`productId` null, `activityId` set) would be SILENTLY DROPPED by that filter. The
+filter MUST be adjusted to persist a decision when it carries EITHER a `productId`
+OR an `activityId` (the XOR guarantees exactly one), writing `productId` null and
+`activityId` set for the activity case. A regression test MUST cover an
+activity-parented decision surviving `saveSection`.
+
+## Decision 7 — Server-side `activityId` write guard
+
+The record write path validates a client-supplied `projectId`/`stageIds` against
+the section author's owned data (`validateStageOwnership`) and validates
+`activityStatuses` against seeded activities (`validateActivityStatuses`), but a
+record's `activityId` is currently unchecked. A new guard —
+`validateRecordActivityIds` in `section-validation.schema.ts`, mirroring
+`validateActivityStatuses` — MUST reject any `items`/`risks`/`decisions` payload
+row whose `activityId` is not in the section author's seeded `section.activities`,
+returning `ACTIVITY_NOT_ATTACHED`. It runs in BOTH `saveDraft` and `submitSection`
+before the delete-recreate, closing the same client-trust gap the stage guard
+closes.
 
 ## Load-bearing invariants (no DB constraint enforces these — code review + CI)
 
@@ -158,20 +229,22 @@ removing the risk restores the lead's stored choice).
   parentType once and filtering product-only logic up front.
 - Phase-1 escalation asymmetry (product blockers escalate, activity blockers do
   not) is a real gap versus "same positions model" — accepted as the conservative
-  default, surfaced as the top open question.
+  default (Locked decision 1); parity is a deferred, separately-tracked change.
 - Reusing the product record tables couples activity records to product-record
   migrations forever — accepted; the alternative (parallel tables) is worse.
 
-## Open questions for a human
+## Resolved questions (were open; now LOCKED — see "Locked decisions" above)
 
-1. **Escalation/KPI parity** (top question above) — Phase 2 or never?
-2. **Can a lead be attached to activities with zero products today?** The schema
-   allows it; confirm the config is reachable in seed/real data so the
-   activity-only-submit relaxation is exercised, not dead code.
-3. **Carry-over of activity records** — the carry-over clone must preserve
-   `activityId` and skip when the activity is not re-attached in the new period
-   (mirrors the product dup-lineage skip). Confirm the desired behaviour when an
-   activity is archived between periods.
-4. **Decision parent** — a decision can currently only be product-parented
-   (`productId`). Confirm activities should own decisions too (this change assumes
-   yes, for full parity); if not, restrict the XOR to items and risks.
+All four questions that gated implementation are resolved and hard-coded in the
+specs:
+
+1. **Escalation/KPI parity** — resolved: no, Phase 1 (`status-risk-unification`
+   MODIFIED delta + null-`projectId` escalation skip). Parity is a deferred,
+   separately-tracked change.
+2. **Activity-only reachability** — resolved: yes; seed a lead attached to
+   activities with zero products (task 7.1) so the submit relaxation is exercised.
+3. **Carry-over on archive** — resolved: preserve `activityId`; skip the clone
+   when the activity is not re-attached in the new period (task 3.5).
+4. **Decision parent** — resolved: activities own decisions too (full parity); the
+   XOR covers `Item`/`Risk`/`Decision` and forces the `decisionsToSave` filter fix
+   (Decision 6).
