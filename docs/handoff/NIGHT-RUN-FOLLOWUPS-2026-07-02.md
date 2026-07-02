@@ -1,5 +1,21 @@
 # Night run 2026-07-02 — done + follow-ups for Саша
 
+> **UPDATE 2026-07-02 (continue session):**
+>
+> - **§1 Zod 12-field reset — FIXED** (`ddc4a033`). `appSettingsUpdateSchema` now
+>   strips every field default before `.partial()` (typed `withoutDefaults`
+>   helper); regression tests proven to fail against the old schema. Full gate
+>   green. Checked all other `.partial()` schemas — no other harmful case
+>   (pagination's kept default is desired).
+> - **Bulk archive — DONE** (`c923fff6`). 38 changes verified landed in HEAD
+>   (per-change landing check + skeptic refute + git-commit cross-check) and
+>   archived. Backlog 44→5 active. Left: 3 genuine PARTIALs
+>   (ci-deploy-supplychain-hardening, head-surface-parity-declutter,
+>   observability-and-perf-hardening §3.3) + tighten-comment-policy (parallel) +
+>   tighten-code-quality-ratchet (plan-only). Spec-debt: `--skip-specs` means
+>   `openspec/specs/` lags the 38 deltas (tracked follow-up).
+> - Still open below: C2 minors §2–6, and the human-gated / live-check items.
+
 ## Закоммичено (все три волны roadmap)
 
 | Change                        | SHA        | Проверка                                                       |
