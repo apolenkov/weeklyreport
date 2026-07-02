@@ -303,6 +303,12 @@ async function main() {
   await prisma.item.deleteMany({});
   await prisma.stageStatus.deleteMany({});
   await prisma.projectStatus.deleteMany({});
+  // C3 (project-activity-reporting): delete before ReportingGroup/User/Project.
+  // ActivityStatus.activityId and ProjectActivity.groupId are RESTRICT, so
+  // statuses drop before their activities and activities before their group.
+  await prisma.activityStatus.deleteMany({});
+  await prisma.projectActivityLead.deleteMany({});
+  await prisma.projectActivity.deleteMany({});
   await prisma.reopenRequest.deleteMany({});
   await prisma.reportSection.deleteMany({});
   await prisma.pdfExportJob.deleteMany({});
@@ -1779,6 +1785,149 @@ async function main() {
       stageNames: ["Design"],
     },
   });
+
+  // C3 (project-activity-reporting): stage-less Project Activities beside the
+  // products, so the assembled report's "Project Activities" band renders out
+  // of the box. Mirrors the per-section ProjectStatus seeding above — 2..4
+  // activities per product (groupId from the product's group, projectId = the
+  // product), the product's own lead attached (M:M), and one ActivityStatus
+  // per activity on the ACTIVE section that lead authored (authorId ===
+  // Project.leadId, sections ...0401..0404 from the leads loop). Statuses carry
+  // a deliberate green/yellow/red mix; both SUBMITTED sections (402, 404) get a
+  // full spread so the band stays meaningful under the §7 submitted-only filter.
+  console.log(
+    "[seed-simple] Creating project activities + weekly statuses (C3)...",
+  );
+  type ActivitySeed = {
+    productId: string;
+    groupId: string;
+    leadId: string;
+    sectionId: string;
+    activities: readonly {
+      name: string;
+      status: TrafficLightStatus;
+      note?: string;
+    }[];
+  };
+  const activitySeeds: readonly ActivitySeed[] = [
+    {
+      productId: PROD_CRM,
+      groupId: DEFAULT_REPORTING_GROUP_ID,
+      leadId: LEAD_1,
+      sectionId: "a0000000-0000-4000-8000-000000000401",
+      activities: [
+        { name: "Поддержка и сопровождение", status: TrafficLightStatus.green },
+        {
+          name: "Технический долг и рефакторинг",
+          status: TrafficLightStatus.yellow,
+        },
+        {
+          name: "Исследование новых интеграций",
+          status: TrafficLightStatus.red,
+          note: "Партнёр задерживает доступ к API",
+        },
+      ],
+    },
+    {
+      productId: PROD_MOBILE,
+      groupId: DEFAULT_REPORTING_GROUP_ID,
+      leadId: LEAD_MARIA,
+      sectionId: "a0000000-0000-4000-8000-000000000402",
+      activities: [
+        { name: "Дежурство по инцидентам", status: TrafficLightStatus.green },
+        {
+          name: "Миграция на новый API-шлюз",
+          status: TrafficLightStatus.red,
+          note: "Ждём подтверждения от инфраструктурной команды",
+        },
+        {
+          name: "Нагрузочное тестирование",
+          status: TrafficLightStatus.yellow,
+        },
+      ],
+    },
+    {
+      productId: PROD_CLOUD,
+      groupId: DEFAULT_REPORTING_GROUP_ID,
+      leadId: LEAD_IGOR,
+      sectionId: "a0000000-0000-4000-8000-000000000403",
+      activities: [
+        { name: "Мониторинг и алертинг", status: TrafficLightStatus.green },
+        {
+          name: "Оптимизация затрат на облако",
+          status: TrafficLightStatus.yellow,
+        },
+      ],
+    },
+    {
+      productId: PROD_DEVOPS,
+      groupId: DEFAULT_REPORTING_GROUP_ID,
+      leadId: LEAD_DMITRY,
+      sectionId: "a0000000-0000-4000-8000-000000000404",
+      activities: [
+        { name: "Сопровождение CI/CD", status: TrafficLightStatus.green },
+        {
+          name: "Ротация секретов и аудит доступа",
+          status: TrafficLightStatus.yellow,
+        },
+        {
+          name: "Обновление базового образа",
+          status: TrafficLightStatus.red,
+          note: "Уязвимость в текущем образе, нужен срочный патч",
+        },
+      ],
+    },
+  ];
+
+  // Deterministic ids (idempotent re-run): 00000000c{a|b|c}{product}{activity}
+  // — a=activity, b=lead-link, c=status; the position-9 'c' slot is unused by
+  // other seed anchors. product/activity indices stay single hex digits.
+  const activityRows = activitySeeds.flatMap((seed, pIdx) =>
+    seed.activities.map((activity, aIdx) => {
+      const suffix = `${pIdx}${aIdx}`;
+      return {
+        activityId: `a0000000-0000-4000-8000-00000000ca${suffix}`,
+        leadLinkId: `a0000000-0000-4000-8000-00000000cb${suffix}`,
+        statusId: `a0000000-0000-4000-8000-00000000cc${suffix}`,
+        productId: seed.productId,
+        groupId: seed.groupId,
+        leadId: seed.leadId,
+        sectionId: seed.sectionId,
+        name: activity.name,
+        status: activity.status,
+        note: activity.note ?? null,
+      };
+    }),
+  );
+
+  await prisma.projectActivity.createMany({
+    data: activityRows.map((row) => ({
+      id: row.activityId,
+      name: row.name,
+      groupId: row.groupId,
+      projectId: row.productId,
+    })),
+  });
+  await prisma.projectActivityLead.createMany({
+    data: activityRows.map((row) => ({
+      id: row.leadLinkId,
+      activityId: row.activityId,
+      leadId: row.leadId,
+    })),
+  });
+  // One ActivityStatus per attached activity on the lead's own section —
+  // mirrors seedProjectStatuses; UNIQUE(reportSectionId, activityId) holds
+  // since each activity binds to exactly one product → one section.
+  await prisma.activityStatus.createMany({
+    data: activityRows.map((row) => ({
+      id: row.statusId,
+      reportSectionId: row.sectionId,
+      activityId: row.activityId,
+      status: row.status,
+      note: row.note,
+    })),
+  });
+
   console.log(
     '[seed-simple] Creating published-week sections (RU "Fill from Previous" content)...',
   );
@@ -2035,6 +2184,8 @@ async function main() {
     sections: await prisma.reportSection.count(),
     items: await prisma.item.count(),
     statuses: await prisma.projectStatus.count(),
+    activities: await prisma.projectActivity.count(),
+    activityStatuses: await prisma.activityStatus.count(),
     risks: await prisma.risk.count(),
     decisions: await prisma.decision.count(),
     priorityItems: await prisma.item.count({ where: { priorityRank: { not: null } } }),
