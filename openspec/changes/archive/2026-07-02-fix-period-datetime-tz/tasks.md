@@ -3,8 +3,8 @@
 - [ ] 1.1 In `apps/web/src/components/admin/periods-tab-dialog.tsx`, fix the
       submit parse in `handleSubmit`: replace `new Date(deadline)` with
       `new Date(\`${deadline}:00.000Z\`)`so the`datetime-local`value is read
-  as UTC wall-clock, the exact inverse of the`dateTimeInputValue` display
-  (`toISOString().slice(0,16)`).
+as UTC wall-clock, the exact inverse of the`dateTimeInputValue` display
+(`toISOString().slice(0,16)`).
 - [ ] 1.2 In the same file, fix the in-dialog deadline range validation
       (`deadlineError`): parse the deadline with the same `:00.000Z` UTC suffix
       before comparing it against the UTC-parsed `periodStart`
