@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { safeText } from "./report-primitives.schema.js";
+import { safeText } from "./report-primitives.schema";
 
 /**
  * 39-05 (PERF-05): full-text search.
