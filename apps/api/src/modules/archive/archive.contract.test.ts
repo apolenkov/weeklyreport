@@ -68,6 +68,7 @@ const sectionLead1: ReportSectionReadModel = {
       resolvedAt: null,
     },
   ],
+  activities: [],
 };
 
 function makeSummary(

@@ -54,6 +54,13 @@ export interface SlideProduct {
   readonly itemRanks?: Readonly<Record<string, number>>;
 }
 
+/** One activity status pill on a section slide (name + traffic light). */
+export interface SlideActivityPill {
+  readonly id: string;
+  readonly name: string;
+  readonly status: SlideStageStatus;
+}
+
 export interface SectionSlideModel {
   readonly id: string;
   readonly ownerId: string;
@@ -83,6 +90,12 @@ export interface SectionSlideModel {
   readonly pageIndex?: number;
   /** Pagination: total number of pages for this section. Undefined = no pagination. */
   readonly pageTotal?: number;
+  /**
+   * The author's attached Project Activities as a minimal status-pill lane.
+   * Optional so the activity-feed slide model (no section) omits it; copied
+   * to every page by pagination (section-global, like the KPI counts).
+   */
+  readonly activities?: readonly SlideActivityPill[];
 }
 
 function nonEmpty(text: string | null | undefined): boolean {
@@ -472,6 +485,11 @@ export function buildSectionSlideModel(
     risks,
     decisions,
     priorities,
+    activities: section.activities.map((activity) => ({
+      id: activity.activityId,
+      name: activity.activityName,
+      status: activity.status,
+    })),
   };
 }
 
@@ -1141,6 +1159,9 @@ export function buildProductScopedSlides(
       items: acc.items,
       risks: acc.risks,
       decisions: acc.decisions,
+      // Product-scoped pseudo-section: activities are author-scoped, not
+      // product-scoped, so the aggregate carries none.
+      activities: [],
     };
     const model = buildSectionSlideModel(pseudoSection);
     return {

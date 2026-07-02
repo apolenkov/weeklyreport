@@ -275,6 +275,7 @@ describe("WeeklyReportService — integration (data shape)", () => {
               impact: "Performance",
             },
           ],
+          activities: [],
         },
       ],
     });

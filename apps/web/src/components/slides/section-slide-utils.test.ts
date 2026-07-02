@@ -81,11 +81,34 @@ function makeSection(
     ],
     risks: [],
     decisions: [],
+    activities: [],
     ...overrides,
   };
 }
 
 describe("section slide utilities", () => {
+  it("carries the section's activities as a status-pill lane", () => {
+    const slide = buildSectionSlideModel(
+      makeSection({
+        activities: [
+          {
+            activityId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            activityName: "Jira triage duty",
+            status: "red",
+          },
+        ],
+      }),
+    );
+
+    expect(slide.activities).toEqual([
+      {
+        id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        name: "Jira triage duty",
+        status: "red",
+      },
+    ]);
+  });
+
   it("builds a ready owner slide from a complete section", () => {
     const slide = buildSectionSlideModel(makeSection());
 

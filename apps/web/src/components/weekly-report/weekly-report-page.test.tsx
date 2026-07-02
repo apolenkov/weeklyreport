@@ -102,6 +102,12 @@ function makeWeeklyReportData(
       readonly risks: never[];
       readonly decisions: never[];
       readonly priorities: never[];
+      readonly activities?: {
+        readonly activityId: string;
+        readonly activityName: string;
+        readonly status: "green" | "yellow" | "red" | null;
+        readonly note?: string | null;
+      }[];
     }[];
   },
 ) {
@@ -1119,6 +1125,48 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
       screen.queryByRole("group", { name: "Section filter" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByTestId("draft-hidden-signal")).not.toBeInTheDocument();
+  });
+
+  it("hides a draft section's activity statuses under submitted-only, reveals them via Show all", async () => {
+    renderPage(
+      makeWeeklyReportData("open", {
+        portfolioOverview: TWO_PRODUCT_OVERVIEW,
+        leadSections: [
+          submittedSection(),
+          {
+            ...draftSection(),
+            activities: [
+              {
+                activityId: "66666666-6666-4666-8666-666666666666",
+                activityName: "Jira triage duty",
+                status: "red" as const,
+                note: "Draft-only vendor note",
+              },
+            ],
+          },
+        ],
+      }),
+    );
+
+    await screen.findByRole("heading", { name: /status report/i });
+
+    // Only the draft carries activities, so under the submitted-only default
+    // the strip self-suppresses — no draft status or note leaks.
+    expect(
+      screen.queryByTestId("activity-status-strip"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Draft-only vendor note"),
+    ).not.toBeInTheDocument();
+
+    // Show all reveals the draft author's activity row.
+    const toggle = screen.getByRole("group", { name: "Section filter" });
+    await userEvent.click(within(toggle).getByRole("button", { name: "All" }));
+    expect(
+      await screen.findByTestId("activity-status-strip"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Jira triage duty")).toBeInTheDocument();
+    expect(screen.getByText("Draft-only vendor note")).toBeInTheDocument();
   });
 
   it("does not offer the filter to a lead on a live period", async () => {

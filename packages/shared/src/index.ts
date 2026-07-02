@@ -8,6 +8,7 @@ export * from "./schemas/analytics";
 export * from "./schemas/auth";
 export * from "./schemas/integrations";
 export * from "./schemas/organization";
+export * from "./schemas/project-activity.schema";
 export * from "./schemas/report";
 export * from "./schemas/search";
 export * from "./schemas/stage-names";

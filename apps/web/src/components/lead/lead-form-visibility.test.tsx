@@ -152,6 +152,7 @@ function makeSection() {
       },
     ],
     priorities: [],
+    activities: [],
   };
 }
 

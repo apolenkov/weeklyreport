@@ -8,6 +8,7 @@ import {
   type SubmitSectionInput,
   type SubmitSectionPayload,
   submitSectionSchema,
+  validateActivityStatuses,
   validateStageOwnership,
   validateSubmitInput,
 } from "@customreport/shared";
@@ -128,6 +129,14 @@ function mergeSection(
     owner: section.authorName,
   }));
 
+  // Fold the client's activity-status slice onto the SEEDED server-side set.
+  // The seeded rows are the identity source — an entry the payload omits keeps
+  // its current status, and an id outside the seeded set never enters the
+  // merged model (the write guard has already rejected it).
+  const activityStatusById = new Map(
+    (input.activityStatuses ?? []).map((status) => [status.activityId, status]),
+  );
+
   return reportSectionReadModelSchema.parse({
     ...section,
     status: nextStatus,
@@ -155,6 +164,15 @@ function mergeSection(
     items: input.items,
     risks: input.risks,
     decisions: leadOwnedDecisions,
+    activities: section.activities.map((activity) => {
+      const written = activityStatusById.get(activity.activityId);
+      if (!written) return activity;
+      return {
+        ...activity,
+        status: written.status ?? null,
+        note: written.note ?? null,
+      };
+    }),
   });
 }
 
@@ -204,6 +222,23 @@ export class ReportSectionsService {
     input: DraftSaveInput | SubmitSectionInput,
   ): void {
     const violation = validateStageOwnership(section, input).at(0);
+    if (violation) {
+      throw new ReportSectionDomainError(violation.code, violation.message);
+    }
+  }
+
+  /**
+   * Hard-reject a write whose activity-status slice carries an activityId not
+   * attached/seeded for the section author. The server-loaded seeded set is
+   * the reference — the delete-recreate never trusts client-supplied ids
+   * (same gap class the stage-ownership guard closes). Runs on both write
+   * paths before persistence.
+   */
+  private assertActivityAttachment(
+    section: ReportSectionReadModel,
+    input: DraftSaveInput | SubmitSectionInput,
+  ): void {
+    const violation = validateActivityStatuses(section, input).at(0);
     if (violation) {
       throw new ReportSectionDomainError(violation.code, violation.message);
     }
@@ -280,6 +315,7 @@ export class ReportSectionsService {
     }
 
     this.assertStageOwnership(section, parsedInput);
+    this.assertActivityAttachment(section, parsedInput);
 
     const saved = await this.repository.saveSection(
       mergeSection(section, parsedInput, "draft"),
@@ -315,6 +351,7 @@ export class ReportSectionsService {
     // Integrity before completeness: a stage the author does not own is a hard
     // authz reject, checked before the traffic-light / current-item nags.
     this.assertStageOwnership(section, parsedInput);
+    this.assertActivityAttachment(section, parsedInput);
 
     const errors = validateSubmitInput(section, parsedInput);
 

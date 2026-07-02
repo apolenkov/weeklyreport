@@ -52,6 +52,7 @@ const baseSection: ReportSectionReadModel = {
   ],
   risks: [],
   decisions: [],
+  activities: [],
 };
 
 // enforce-item-decision-stage-schema: the read-model item types stageIds as
@@ -848,6 +849,7 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
       items: [],
       risks: [],
       decisions: [],
+      activities: [],
     };
     let current = section;
     return {

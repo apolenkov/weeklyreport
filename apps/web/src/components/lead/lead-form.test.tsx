@@ -94,6 +94,7 @@ function makeSection(overrides: { status?: "draft" | "submitted" } = {}) {
         text: "Priority text",
       },
     ],
+    activities: [],
   };
 }
 
@@ -845,6 +846,7 @@ describe("LeadForm mode-adaptive trailing control", () => {
             risks: [],
             decisions: [],
             priorities: [],
+            activities: [],
           },
           readOnly: false,
         }),
@@ -909,6 +911,43 @@ describe("LeadForm mode-adaptive trailing control", () => {
       screen.queryByRole("button", { name: "Expand all sections" }),
     ).toBeNull();
     expect(screen.queryByText("Toggle All")).toBeNull();
+  });
+});
+
+describe("sectionToDraftPayload — activity-status slice", () => {
+  it("round-trips every seeded activity into activityStatuses", () => {
+    const base = makeSection() as unknown as ReportSectionReadModel;
+    const withActivities: ReportSectionReadModel = {
+      ...base,
+      activities: [
+        {
+          activityId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          activityName: "Jira triage duty",
+          status: "red",
+          note: "Blocked on vendor",
+        },
+        {
+          activityId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          activityName: "Ops rotation",
+          status: null,
+        },
+      ],
+    };
+
+    const payload = sectionToDraftPayload(withActivities);
+
+    expect(payload.activityStatuses).toEqual([
+      {
+        activityId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        status: "red",
+        note: "Blocked on vendor",
+      },
+      {
+        activityId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        status: null,
+        note: null,
+      },
+    ]);
   });
 });
 

@@ -64,6 +64,7 @@ const assembledReport: AssembledReport = {
       items: [],
       risks: [],
       decisions: [],
+      activities: [],
     },
     {
       reportSectionId: "22222222-2222-4222-8222-222222222223",
@@ -83,6 +84,7 @@ const assembledReport: AssembledReport = {
       items: [],
       risks: [],
       decisions: [],
+      activities: [],
     },
     {
       reportSectionId: "22222222-2222-4222-8222-222222222224",
@@ -102,6 +104,7 @@ const assembledReport: AssembledReport = {
       items: [],
       risks: [],
       decisions: [],
+      activities: [],
     },
   ],
 };

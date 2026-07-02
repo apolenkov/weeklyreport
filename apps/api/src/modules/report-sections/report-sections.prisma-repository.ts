@@ -65,6 +65,14 @@ export const reportSectionFullInclude = {
   stageStatuses: {
     include: { stage: true },
   },
+  // Project Activity weekly statuses — seeded section child rows with the
+  // activity's display name joined so the read model can emit `activities`
+  // without a second query.
+  activityStatuses: {
+    include: {
+      activity: { select: { name: true } },
+    },
+  },
   // review-acknowledgement: per-record reviewer comments and per-section
   // verdicts ride the full aggregate so the lead / reviewer read surfaces them
   // (mapped into `comments` / `reviews`). `reviewer.name` rides along for
@@ -135,6 +143,16 @@ export type PrismaReportSectionWithRelations = NonNullable<
     stageId: string;
     status: string | null;
     stage: { id: string; name: string; sortOrder: number };
+  }[];
+  // Project Activity statuses, hand-written to mirror the `activityStatuses`
+  // include (the generated client AND this type must both change). Optional so
+  // unit fixtures cast via `as unknown as` that predate the include still map
+  // (the mapper falls back to `[]`); a real DB row always carries the array.
+  activityStatuses?: {
+    activityId: string;
+    status: string | null;
+    note: string | null;
+    activity: { name: string };
   }[];
   // review-acknowledgement: per-section verdicts, hand-written to mirror the
   // `sectionReviews` include (memory: the generated client include AND this
@@ -550,6 +568,17 @@ export function mapPrismaToReportSection(
       productId: d.productId ?? undefined,
       comments: toCommentViews(d.recordComments ?? []),
     })),
+    // Every seeded activity status, name joined, name-sorted. Seeding already
+    // excludes archived activities; a row seeded before a mid-period archive
+    // stays listed so the delete-recreate save never silently drops it.
+    activities: (row.activityStatuses ?? [])
+      .map((status) => ({
+        activityId: status.activityId,
+        activityName: status.activity.name,
+        status: asTraffic(status.status),
+        note: status.note,
+      }))
+      .sort((a, b) => a.activityName.localeCompare(b.activityName, "ru")),
     reviews: toReviewViews(row.sectionReviews ?? [], row.version),
   });
 }
@@ -771,6 +800,9 @@ export class ReportSectionsPrismaRepository
           await tx.stageStatus.deleteMany({
             where: { reportSectionId: sectionId },
           });
+          await tx.activityStatus.deleteMany({
+            where: { reportSectionId: sectionId },
+          });
           await tx.item.deleteMany({ where: { reportSectionId: sectionId } });
           await tx.risk.deleteMany({ where: { reportSectionId: sectionId } });
           await tx.decision.deleteMany({
@@ -798,6 +830,21 @@ export class ReportSectionsPrismaRepository
 
           if (stageStatusData.length > 0) {
             await tx.stageStatus.createMany({ data: stageStatusData });
+          }
+
+          // Mirror ProjectStatus: recreate the activity slice from the merged
+          // read model. Every id here came from the seeded server-side set —
+          // mergeSection folds client statuses onto section.activities and the
+          // service rejects any unattached activityId before this runs.
+          const activityStatusData = section.activities.map((activity) => ({
+            reportSectionId: sectionId,
+            activityId: activity.activityId,
+            status: activity.status,
+            note: activity.note ?? null,
+          }));
+
+          if (activityStatusData.length > 0) {
+            await tx.activityStatus.createMany({ data: activityStatusData });
           }
 
           if (section.items.length > 0) {

@@ -76,6 +76,7 @@ import { createPdfDownloadHandler } from "./modules/pdf-export/pdf-export.downlo
 import { PdfExportService } from "./modules/pdf-export/pdf-export.service";
 import { ensureCurrentPeriod } from "./modules/period/period-factory";
 import { PeriodService } from "./modules/period/period.service";
+import { ProjectActivityService } from "./modules/project-activity/project-activity.service";
 import { PublicationService } from "./modules/publication/publication.service";
 import { PolicyApplicatorService } from "./modules/reminders/policy-applicator.service";
 import { RemindersService } from "./modules/reminders/reminders.service";
@@ -340,6 +341,7 @@ async function bootstrap() {
     analyticsService: app.get(AnalyticsService),
     searchService: app.get(SearchService),
     activityService: app.get(ActivityService),
+    projectActivityService: app.get(ProjectActivityService),
     emailReminderQueue,
     telegramOutboundQueue,
     jobsService,

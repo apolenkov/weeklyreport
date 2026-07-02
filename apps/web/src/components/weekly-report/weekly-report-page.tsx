@@ -1,6 +1,9 @@
 "use client";
 
-import type { WeeklyReportReadModel } from "@customreport/shared";
+import type {
+  ReportSectionReadModel,
+  WeeklyReportReadModel,
+} from "@customreport/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -40,6 +43,7 @@ import {
   DocumentActionGroup,
   ReportToolbar,
 } from "../report-shell/report-toolbar";
+import { ActivityStatusStrip } from "./activity-status-strip";
 import { ExportPdfButton } from "./export-pdf-button";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
 import {
@@ -385,6 +389,15 @@ interface AccordionModel {
 }
 
 /**
+ * review-acknowledgement (§7): THE submitted-only predicate. Every render
+ * surface that narrows with the filter (accordion body, Project Activities
+ * strip) must share it so no draft content leaks through one of them.
+ */
+const isSubmittedSection = (section: {
+  readonly status: "draft" | "submitted";
+}): boolean => section.status === "submitted";
+
+/**
  * review-acknowledgement (§7): shape the accordion BODY for the submitted/all
  * filter. `fullProducts` / `fullLeadGroups` are the truth source (header counts,
  * portfolio band, and period nav read them). When submitted-only is active we
@@ -414,14 +427,12 @@ function buildAccordionModel(params: {
   }
   const submittedData: WeeklyReportReadModel = {
     ...reportData,
-    leadSections: reportData.leadSections.filter(
-      (section) => section.status === "submitted",
-    ),
+    leadSections: reportData.leadSections.filter(isSubmittedSection),
   };
   const draftData: WeeklyReportReadModel = {
     ...reportData,
     leadSections: reportData.leadSections.filter(
-      (section) => section.status !== "submitted",
+      (section) => !isSubmittedSection(section),
     ),
   };
   const products =
@@ -483,6 +494,12 @@ interface ReportContentProps {
   readonly periodStatus: LivePeriodStatus;
   readonly periodLabel: string;
   readonly scope: "product" | "lead";
+  /**
+   * Lead sections feeding the Project Activities band. Narrowed by the same
+   * §7 submitted-only filter as the accordion — a draft section's activity
+   * status/note is unreviewed content and must not leak to head/viewer.
+   */
+  readonly activitySections: readonly ReportSectionReadModel[];
   readonly portfolio: PortfolioProduct[];
   readonly leadOverviewRows: LeadOverviewRow[];
   readonly reviewModel: ReviewModel;
@@ -507,6 +524,7 @@ function ReportContent({
   periodStatus,
   periodLabel,
   scope,
+  activitySections,
   portfolio,
   leadOverviewRows,
   reviewModel,
@@ -553,6 +571,18 @@ function ReportContent({
         scope={scope}
         portfolio={portfolio}
         leadOverviewRows={leadOverviewRows}
+      />
+
+      {/* Project Activities beside the product surfaces — display-only, never
+          part of portfolio totals or escalations. Self-suppresses when no
+          section carries an activity. Narrows with the §7 filter like the
+          accordion body. */}
+      <ActivityStatusStrip
+        sections={
+          submittedOnly
+            ? activitySections.filter(isSubmittedSection)
+            : activitySections
+        }
       />
 
       {/* review-acknowledgement (§6.3): per-section verdict band above the
@@ -946,6 +976,7 @@ export function WeeklyReportPage({
         periodStatus={view.period.periodStatus}
         periodLabel={periodLabel}
         scope={scope}
+        activitySections={reportData.leadSections}
         portfolio={portfolio}
         leadOverviewRows={leadOverviewRows}
         reviewModel={reviewModel}

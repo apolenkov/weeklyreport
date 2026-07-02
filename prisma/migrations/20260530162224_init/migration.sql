@@ -845,3 +845,61 @@ ALTER TABLE "RecordComment"
       + ("riskId" IS NOT NULL)::int
       + ("decisionId" IS NOT NULL)::int) = 1
   );
+
+-- Project Activity: a stage-less, admin-provisioned, group-scoped reporting
+-- unit beside Products, with M:M lead attachment and a per-period weekly
+-- status as a ReportSection child row (mirrors ProjectStatus).
+
+-- CreateTable
+CREATE TABLE "ProjectActivity" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "groupId" TEXT NOT NULL,
+    "projectId" TEXT,
+    "jiraAccounts" TEXT[],
+    "archived" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ProjectActivity_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ProjectActivityLead" (
+    "id" TEXT NOT NULL,
+    "activityId" TEXT NOT NULL,
+    "leadId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ProjectActivityLead_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ActivityStatus" (
+    "id" TEXT NOT NULL,
+    "reportSectionId" TEXT NOT NULL,
+    "activityId" TEXT NOT NULL,
+    "status" "TrafficLightStatus",
+    "note" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ActivityStatus_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "ProjectActivity_groupId_idx" ON "ProjectActivity"("groupId");
+CREATE INDEX "ProjectActivity_projectId_idx" ON "ProjectActivity"("projectId");
+CREATE INDEX "ProjectActivity_archived_idx" ON "ProjectActivity"("archived");
+CREATE INDEX "ProjectActivityLead_leadId_idx" ON "ProjectActivityLead"("leadId");
+CREATE UNIQUE INDEX "ProjectActivityLead_activityId_leadId_key" ON "ProjectActivityLead"("activityId", "leadId");
+CREATE INDEX "ActivityStatus_activityId_idx" ON "ActivityStatus"("activityId");
+CREATE UNIQUE INDEX "ActivityStatus_reportSectionId_activityId_key" ON "ActivityStatus"("reportSectionId", "activityId");
+
+-- AddForeignKey
+ALTER TABLE "ProjectActivity" ADD CONSTRAINT "ProjectActivity_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "ReportingGroup"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ProjectActivity" ADD CONSTRAINT "ProjectActivity_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "ProjectActivityLead" ADD CONSTRAINT "ProjectActivityLead_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "ProjectActivity"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ProjectActivityLead" ADD CONSTRAINT "ProjectActivityLead_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ActivityStatus" ADD CONSTRAINT "ActivityStatus_reportSectionId_fkey" FOREIGN KEY ("reportSectionId") REFERENCES "ReportSection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ActivityStatus" ADD CONSTRAINT "ActivityStatus_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "ProjectActivity"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

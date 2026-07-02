@@ -57,6 +57,7 @@ const baseSection: ReportSectionReadModel = {
   ],
   risks: [],
   decisions: [],
+  activities: [],
 };
 
 // enforce-item-decision-stage-schema: read-model item types stageIds optional;

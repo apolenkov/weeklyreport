@@ -860,6 +860,7 @@ describe("validateSubmitInput", () => {
     items: [],
     risks: [],
     decisions: [],
+    activities: [],
     ...overrides,
   });
 
