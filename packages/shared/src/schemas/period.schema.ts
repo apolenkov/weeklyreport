@@ -261,17 +261,32 @@ export const appSettingsSchema = z.object({
   unifiedActivityView: z.boolean().default(false),
 });
 
-// Zod 4's `.partial()` makes every key optional but does NOT strip a field's
-// `.default()`: parsing an update payload that omits `unifiedActivityView`
-// still materializes `false`, and the admin write path (which persists any
-// non-`undefined` key) would then silently reset a department that had turned
-// the view on. Re-declare it as a bare optional so an omitted key stays absent
-// on the parsed output; an explicit `true`/`false` still writes through. The
-// other defaulted fields share this hazard but are pre-existing and out of
-// this change's scope.
-export const appSettingsUpdateSchema = appSettingsSchema.partial().extend({
-  unifiedActivityView: z.boolean().optional(),
-});
+// Zod's `.partial()` makes every key optional but does NOT strip a field's
+// `.default()`: parsing an update payload that omits a defaulted key still
+// materializes that default, and the admin write path (which persists any
+// non-`undefined` key) would then silently reset a setting the caller never
+// mentioned. Strip every field's default before making the shape partial, so an
+// omitted key parses to `undefined` (and is left untouched), while an explicit
+// value still writes through and every field constraint still applies.
+type WithoutDefaults<Shape extends z.ZodRawShape> = {
+  [K in keyof Shape]: Shape[K] extends z.ZodDefault<infer Inner>
+    ? Inner
+    : Shape[K];
+};
+
+const withoutDefaults = <Shape extends z.ZodRawShape>(
+  shape: Shape,
+): WithoutDefaults<Shape> =>
+  Object.fromEntries(
+    Object.entries(shape).map(([key, field]) => [
+      key,
+      field instanceof z.ZodDefault ? field.unwrap() : field,
+    ]),
+  ) as WithoutDefaults<Shape>;
+
+export const appSettingsUpdateSchema = z
+  .object(withoutDefaults(appSettingsSchema.shape))
+  .partial();
 
 // ---------------------------------------------------------------------------
 // v4.0: Period read model (extended)

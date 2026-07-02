@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import {
   appSettingsSchema,
@@ -1506,6 +1507,58 @@ describe("appSettingsUpdateSchema", () => {
       appSettingsUpdateSchema.parse({ unifiedActivityView: true })
         .unifiedActivityView,
     ).toBe(true);
+  });
+
+  // Every field carrying a Zod `.default()` must be ABSENT from a partial parse
+  // that omits it — otherwise the write path (persists any non-undefined key)
+  // silently resets an unspecified setting. Hardcoded (not derived from
+  // `.shape`) so this guard shares no logic with the schema's strip helper and
+  // stays a real oracle rather than a tautology.
+  const DEFAULTED_FIELDS = [
+    "periodLengthDays",
+    "workingDays",
+    "gracePeriodHours",
+    "allowLateSubmissions",
+    "autoPublishAfterDeadline",
+    "autoArchiveWeeksAfterPublish",
+    "defaultTimezone",
+    "defaultReminderAudience",
+    "notificationFromEmail",
+    "deadlineTime",
+    "allowReopenAfterPublish",
+    "reopenWindowHours",
+    "unifiedActivityView",
+  ] as const;
+
+  it("omits every defaulted field from a partial parse that does not mention it", () => {
+    const parsed = appSettingsUpdateSchema.parse({ defaultDeadlineDays: 7 });
+    for (const field of DEFAULTED_FIELDS) {
+      expect(field in parsed).toBe(false);
+    }
+  });
+
+  it("tripwire: the hardcoded defaulted-field list matches the schema", () => {
+    const actual = Object.entries(appSettingsSchema.shape)
+      .filter(([, field]) => field instanceof z.ZodDefault)
+      .map(([key]) => key)
+      .sort();
+    expect(actual).toEqual([...DEFAULTED_FIELDS].sort());
+  });
+
+  it("keeps explicit values for defaulted fields and still enforces constraints", () => {
+    expect(
+      appSettingsUpdateSchema.parse({ periodLengthDays: 14 }).periodLengthDays,
+    ).toBe(14);
+    expect(
+      appSettingsUpdateSchema.parse({ notificationFromEmail: null })
+        .notificationFromEmail,
+    ).toBeNull();
+    expect(
+      appSettingsUpdateSchema.safeParse({ periodLengthDays: 0 }).success,
+    ).toBe(false);
+    expect(
+      appSettingsUpdateSchema.safeParse({ deadlineTime: "25:00" }).success,
+    ).toBe(false);
   });
 });
 
