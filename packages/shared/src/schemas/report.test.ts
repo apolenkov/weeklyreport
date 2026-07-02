@@ -1487,6 +1487,26 @@ describe("appSettingsUpdateSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("omits unifiedActivityView from the parsed output when the key is absent", () => {
+    // Guards the Zod-4 `.partial()`-keeps-defaults hazard: an update that does
+    // not mention the flag must not materialize `false`, or the write path
+    // (persists any non-undefined key) would reset a department that enabled it.
+    const parsed = appSettingsUpdateSchema.parse({ defaultDeadlineDays: 7 });
+    expect("unifiedActivityView" in parsed).toBe(false);
+    expect(parsed.unifiedActivityView).toBeUndefined();
+  });
+
+  it("keeps an explicit unifiedActivityView value", () => {
+    expect(
+      appSettingsUpdateSchema.parse({ unifiedActivityView: false })
+        .unifiedActivityView,
+    ).toBe(false);
+    expect(
+      appSettingsUpdateSchema.parse({ unifiedActivityView: true })
+        .unifiedActivityView,
+    ).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------

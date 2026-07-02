@@ -18,7 +18,11 @@ export type DraftSaveValidationErrorCode =
   | "STAGE_NOT_OWNED"
   // The activity-status slice carries an activityId that is not attached/seeded
   // for the section author — the client payload is never trusted for ids.
-  | "ACTIVITY_NOT_ATTACHED";
+  | "ACTIVITY_NOT_ATTACHED"
+  // Resolve-not-delete: the payload drops (or rewrites the stableId of) an
+  // item/decision whose lineage appeared in a published report. A published
+  // позиция can be resolved (done) or carried forward, never deleted.
+  | "PUBLISHED_RECORD_LOCKED";
 
 export interface DraftSaveValidationError {
   code: DraftSaveValidationErrorCode;

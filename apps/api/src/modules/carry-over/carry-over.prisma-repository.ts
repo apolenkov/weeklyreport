@@ -97,6 +97,29 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
     return row ? mapPrismaToExecution(row) : null;
   }
 
+  /**
+   * The "prior period" for the uncarried-open-work signal: the latest report
+   * whose periodEnd is on/before the target's periodStart. Deterministic
+   * total order (periodEnd, createdAt, id — all desc) so two candidates
+   * sharing a boundary never flip between reads.
+   */
+  async findPreviousReportId(targetReportId: string): Promise<string | null> {
+    const target = await this.prisma.report.findUnique({
+      where: { id: targetReportId },
+      select: { periodStart: true },
+    });
+    if (!target) return null;
+    const previous = await this.prisma.report.findFirst({
+      where: {
+        id: { not: targetReportId },
+        periodEnd: { lte: target.periodStart },
+      },
+      orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+      select: { id: true },
+    });
+    return previous?.id ?? null;
+  }
+
   async getTargetReportState(
     targetReportId: string,
   ): Promise<TargetReportState | null> {

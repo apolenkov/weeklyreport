@@ -38,6 +38,7 @@ export function PeriodsSubTab({
       deadlineTime: draft.deadlineTime,
       allowReopenAfterPublish: draft.allowReopenAfterPublish,
       reopenWindowHours: draft.reopenWindowHours,
+      unifiedActivityView: draft.unifiedActivityView,
     });
   }
 
@@ -56,6 +57,29 @@ export function PeriodsSubTab({
           gating). All have live consumers; see PeriodCycleFields.
           ───────────────────────────────────────────────────────────── */}
       <PeriodCycleFields draft={draft} setDraft={setDraft} />
+
+      {/* Unified by-state lead-form view — an org-wide presentation flag
+          (ADR 0011): the lead form folds Current/Next week into one section
+          grouped by derived state. Off = the classic two-section format. */}
+      <label className="flex items-start gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-white p-3 text-sm text-[var(--color-foreground)]">
+        <input
+          name="unified-activity-view"
+          type="checkbox"
+          checked={draft.unifiedActivityView}
+          onChange={(e) =>
+            setDraft({ ...draft, unifiedActivityView: e.target.checked })
+          }
+          className="mt-1 h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-starbucks-accent)]"
+        />
+        <span>
+          <span className="block font-medium">Unified activity view</span>
+          <span className="block text-xs text-[var(--color-muted-foreground)]">
+            Leads see one section grouped by state (done, in progress, blocked,
+            planned next, deferred) instead of the classic Current week / Next
+            week split. Display only — stored records are unchanged.
+          </span>
+        </span>
+      </label>
 
       <div className="flex items-center gap-3 pt-2">
         <button

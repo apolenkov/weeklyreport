@@ -22,6 +22,7 @@ function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
     deadlineTime: "18:00",
     allowReopenAfterPublish: true,
     reopenWindowHours: 72,
+    unifiedActivityView: false,
     ...overrides,
   };
 }

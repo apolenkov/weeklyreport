@@ -255,9 +255,23 @@ export const appSettingsSchema = z.object({
   // convention. Default `72` (3 days) chosen as a practical floor for
   // "noticed the bug on Monday, reopen Friday's report" use cases.
   reopenWindowHours: z.number().int().min(0).max(168).default(72),
+  // Opt-in unified by-state lead-form view (a pure presentation projection —
+  // ADR 0011). Off keeps the classic two-section format. The default mirrors
+  // the DB column default; the DB row is the source of truth (no env knob).
+  unifiedActivityView: z.boolean().default(false),
 });
 
-export const appSettingsUpdateSchema = appSettingsSchema.partial();
+// Zod 4's `.partial()` makes every key optional but does NOT strip a field's
+// `.default()`: parsing an update payload that omits `unifiedActivityView`
+// still materializes `false`, and the admin write path (which persists any
+// non-`undefined` key) would then silently reset a department that had turned
+// the view on. Re-declare it as a bare optional so an omitted key stays absent
+// on the parsed output; an explicit `true`/`false` still writes through. The
+// other defaulted fields share this hazard but are pre-existing and out of
+// this change's scope.
+export const appSettingsUpdateSchema = appSettingsSchema.partial().extend({
+  unifiedActivityView: z.boolean().optional(),
+});
 
 // ---------------------------------------------------------------------------
 // v4.0: Period read model (extended)

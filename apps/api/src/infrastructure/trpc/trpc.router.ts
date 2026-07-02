@@ -2263,6 +2263,21 @@ export function createAppRouter(deps: RouterDeps) {
             throw mapDomainError(error);
           }
         }),
+
+      // Read-only head-view signal: the prior period's open records the
+      // one-click "Copy forward unfinished" would carry but has not. Nothing
+      // moves automatically; the publish response stays {success, reportId}.
+      uncarried: headProcedure
+        .input(z.object({ targetReportId: z.uuid() }))
+        .query(async ({ input }) => {
+          try {
+            return await deps.carryOverService.listUncarriedOpenWork(
+              input.targetReportId,
+            );
+          } catch (error) {
+            throw mapDomainError(error);
+          }
+        }),
     }),
 
     // === Period lifecycle namespace (v4.0) ===
@@ -2376,6 +2391,19 @@ export function createAppRouter(deps: RouterDeps) {
 
     // === Lead Form namespace (v4.0) ===
     leadForm: router({
+      // Org-wide lead-form presentation flags. Read-only slice of AppSettings
+      // (admin-managed via admin.updateSettings, like every other setting);
+      // exposed to every authenticated role so the lead form can pick classic
+      // vs unified view.
+      viewSettings: protectedProcedure.query(async () => {
+        try {
+          const settings = await deps.adminService.getSettings();
+          return { unifiedActivityView: settings.unifiedActivityView };
+        } catch (error) {
+          throw mapDomainError(error);
+        }
+      }),
+
       byPeriod: protectedProcedure
         .input(
           z.object({

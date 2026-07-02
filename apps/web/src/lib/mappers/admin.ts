@@ -270,6 +270,7 @@ export function mapAdminSettings(api: AppSettings): MockSettings {
     deadlineTime: api.deadlineTime,
     allowReopenAfterPublish: api.allowReopenAfterPublish,
     reopenWindowHours: api.reopenWindowHours,
+    unifiedActivityView: api.unifiedActivityView,
     defaultTimezone: api.defaultTimezone,
     defaultReminderAudience: api.defaultReminderAudience,
     notificationFromEmail: api.notificationFromEmail,

@@ -34,6 +34,11 @@ interface NextWeekSectionProps {
    */
   readonly ownPeriodRanks?: readonly number[];
   readonly addSignal?: number;
+  /**
+   * Resolve-not-delete (ADR 0015): item ids whose lineage appeared in a
+   * published report — the card shows the marker and withholds Delete.
+   */
+  readonly publishedLockedIds?: ReadonlySet<string>;
 }
 
 function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
@@ -64,6 +69,7 @@ export function NextWeekSection({
   stagesForProduct,
   ownPeriodRanks,
   addSignal = 0,
+  publishedLockedIds,
 }: NextWeekSectionProps) {
   const grouped = groupByProduct(items);
   const isEmpty = grouped.size === 0 && (!products || products.length === 0);
@@ -246,6 +252,7 @@ export function NextWeekSection({
                     item={item}
                     readOnly={readOnly}
                     isEditing={false}
+                    publishedLocked={publishedLockedIds?.has(item.id)}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                   />

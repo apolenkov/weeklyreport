@@ -53,7 +53,16 @@ unresolved risk stays open and carries" is therefore not free. Two honest option
 2. Consciously exclude risks from carry-over (a risk is re-raised, not carried) and narrow
    the requirement to items + decisions.
 
-Pick at implementation; do not assume risk carry-over exists.
+**DECIDED (implementation, product decision locked): option 2 — risks do NOT carry.**
+A risk is re-raised in the new period, not carried; the carry-over write path is
+untouched. Consequences applied consistently across the change:
+
+- The resolve-not-delete lock covers **items + decisions only** — the published-lineage
+  set (`published-lineage.ts`, `getPublishedLineage`) never includes risks, so a
+  published risk stays freely deletable/re-raisable.
+- The uncarried-open-work signal (`carry-over-uncarried.ts`, `carryOver.uncarried`)
+  surfaces only what `carryOver.execute` can actually carry — next-week items and
+  unresolved decisions — so every surfaced record has a one-click remedy.
 
 ## Surfacing uncarried open work — needs a response channel
 
@@ -74,6 +83,16 @@ view. No silent computation buried in publish.
 - **Stable lineage key + a "first published in period" stamp** — the chosen direction
   (see the prerequisite above): a record carries a durable key; "has been published" is a
   property of that key, checked at save.
+
+## Flag ownership — admin-managed (resolved at implementation)
+
+The proposal's phrasing ("the head sets the unified view for the department") is
+superseded: the flag is a plain `AppSettings` field, written through the existing
+admin settings surface (`admin.updateSettings`, adminProcedure) like every other
+setting. No head write path is added — that would be an authz expansion with no
+requirement behind it. `leadForm.viewSettings` exposes the flag read-only to every
+authenticated role so the lead form can pick classic vs unified. If the product
+owner wants a head to toggle it, that is a separate, deliberate authz change.
 
 ## Out of scope (unchanged from proposal)
 

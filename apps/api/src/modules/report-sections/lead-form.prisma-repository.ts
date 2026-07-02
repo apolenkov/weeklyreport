@@ -15,6 +15,7 @@ import {
   reopenBlockedMessage,
   ReopenRequestError,
 } from "./lead-form-shared";
+import { queryPublishedLineage } from "./published-lineage";
 import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
@@ -93,6 +94,27 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       select: { report: { select: { periodStatus: true } } },
     });
     return row?.report.periodStatus ?? null;
+  }
+
+  /**
+   * Published lineage for the byPeriod read — the same resolve-not-delete
+   * reference set the report-sections save guard uses, surfaced so the form
+   * can mark locked records. One shared query definition, no second copy.
+   */
+  getPublishedLineage(section: ReportSectionReadModel): Promise<{
+    itemStableIds: readonly string[];
+    decisionStableIds: readonly string[];
+  }> {
+    return queryPublishedLineage(this.prisma, {
+      reportId: section.reportId,
+      reportSectionId: section.reportSectionId,
+      itemStableIds: section.items.flatMap((item) =>
+        item.stableId ? [item.stableId] : [],
+      ),
+      decisionStableIds: section.decisions.flatMap((decision) =>
+        decision.stableId ? [decision.stableId] : [],
+      ),
+    });
   }
 
   async getSectionForPeriod(

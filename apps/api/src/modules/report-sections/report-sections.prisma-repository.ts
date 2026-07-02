@@ -6,6 +6,7 @@ import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { queryPublishedLineage } from "./published-lineage";
 import {
   ReportSectionDomainError,
   type ReportSectionsRepository,
@@ -754,6 +755,29 @@ export class ReportSectionsPrismaRepository
     return mapPrismaToReportSection(
       row as unknown as PrismaReportSectionWithRelations,
     );
+  }
+
+  /**
+   * Published lineage of the section's CURRENT rows (items + decisions) — the
+   * resolve-not-delete lock's reference set. Delegates to
+   * `queryPublishedLineage`, which unions the own report's frozen
+   * `publishedSnapshot` (the reopened-period case) with live rows in other
+   * frozen published/archived reports (the carried-clone case).
+   */
+  getPublishedLineage(section: ReportSectionReadModel): Promise<{
+    itemStableIds: readonly string[];
+    decisionStableIds: readonly string[];
+  }> {
+    return queryPublishedLineage(this.prisma, {
+      reportId: section.reportId,
+      reportSectionId: section.reportSectionId,
+      itemStableIds: section.items.flatMap((item) =>
+        item.stableId ? [item.stableId] : [],
+      ),
+      decisionStableIds: section.decisions.flatMap((decision) =>
+        decision.stableId ? [decision.stableId] : [],
+      ),
+    });
   }
 
   async saveSection(

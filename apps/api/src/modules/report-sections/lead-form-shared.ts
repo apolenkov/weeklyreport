@@ -87,6 +87,18 @@ export interface LeadFormRepository {
    * from the viewer's published search, so fillFrom stays allowed there.
    */
   getReportPeriodStatusForSection(sectionId: string): Promise<string | null>;
+  /**
+   * Published lineage of the section's current item/decision rows (their
+   * durable `stableId`s that appeared in a published report). Surfaced on
+   * `getByPeriod` so the lead form can render the "in the published report"
+   * marker and hide Delete on locked records — the server-side save guard
+   * (report-sections service) stays the enforcement point. Optional so
+   * in-memory test repositories keep compiling; absent → empty lineage.
+   */
+  getPublishedLineage?(section: ReportSectionReadModel): Promise<{
+    itemStableIds: readonly string[];
+    decisionStableIds: readonly string[];
+  }>;
   revokeSectionSubmission(sectionId: string, revokedBy: string): Promise<void>;
   fillFromSection(
     targetSectionId: string,
