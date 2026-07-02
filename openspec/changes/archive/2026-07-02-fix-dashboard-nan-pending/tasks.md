@@ -68,7 +68,7 @@
       (the `Draft` token sits in the committed `.snap`). The label change makes
       that snapshot fail, so the snapshot gate goes red unless it is updated.
       Re-record it (`pnpm --filter @customreport/web exec vitest run -u
-    alert-bar`) and confirm the regenerated snapshot contains `Not started`
+  alert-bar`) and confirm the regenerated snapshot contains `Not started`
       for every entry and no `Draft` token before committing.
 
 ## verification
