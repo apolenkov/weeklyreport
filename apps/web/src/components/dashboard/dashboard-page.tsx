@@ -356,7 +356,7 @@ function DashboardLoadIssue({
         </h1>
       </header>
       <section
-        className="flex max-w-2xl flex-col gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-sm"
+        className="flex max-w-2xl flex-col gap-4 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-sm"
         role="alert"
       >
         <div className="flex items-start gap-3">

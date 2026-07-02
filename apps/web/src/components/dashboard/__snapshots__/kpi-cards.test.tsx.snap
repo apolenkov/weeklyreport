@@ -46,7 +46,7 @@ exports[`KpiCards — a11y regression (verify-a11y-recommended-flip) > Snapshots
           8
         </span>
         <span
-          class="inline-flex items-center rounded-[var(--radius-pill)] bg-[#fef3c7] px-2 py-0.5 text-[10px] font-semibold text-[#8a6d1b]"
+          class="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-status-at-risk-fg)]"
         >
           3
            pending
@@ -71,7 +71,7 @@ exports[`KpiCards — a11y regression (verify-a11y-recommended-flip) > Snapshots
         class="flex flex-wrap items-baseline gap-x-2"
       >
         <span
-          class="font-[family-name:var(--font-sans)] text-xl font-bold leading-none text-[var(--color-starbucks-gold)]"
+          class="font-[family-name:var(--font-sans)] text-xl font-bold leading-none text-[var(--color-foreground)]"
         >
           Thu
         </span>
@@ -117,7 +117,7 @@ exports[`KpiCards — a11y regression (verify-a11y-recommended-flip) > Snapshots
           class="whitespace-nowrap"
         >
           <span
-            class="text-lg font-bold tabular-nums text-[var(--color-starbucks-gold)]"
+            class="text-lg font-bold tabular-nums text-[var(--color-status-at-risk-fg)]"
           >
             1
           </span>

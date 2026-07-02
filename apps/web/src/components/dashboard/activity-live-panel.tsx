@@ -42,7 +42,7 @@ export function ActivityLivePanel() {
       <header className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h2
           id="activity-live-heading"
-          className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]"
+          className="font-[family-name:var(--font-sans)] text-base font-semibold text-[var(--color-foreground)]"
         >
           Submission Activity
         </h2>
@@ -216,7 +216,7 @@ function StatusPill({
     );
   }
   return (
-    <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[#fef3c7] px-2 py-0.5 text-[10px] font-semibold text-[#8a6d1b]">
+    <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-status-at-risk-fg)]">
       Draft
     </span>
   );

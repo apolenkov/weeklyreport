@@ -40,7 +40,8 @@ const STATUS_LABELS: Record<LeadInfo["status"], string> = {
 const STATUS_CLASSES: Record<LeadInfo["status"], string> = {
   submitted:
     "border-[var(--color-starbucks-accent)] bg-[var(--color-success)] text-[var(--color-primary)]",
-  draft: "border-[#d4a017] bg-[#fef3c7] text-[#8a6d1b]",
+  draft:
+    "border-[var(--color-status-dot-at-risk)] bg-[var(--color-status-at-risk-bg)] text-[var(--color-status-at-risk-fg)]",
   pending:
     "border-[rgba(0,0,0,0.16)] bg-[var(--color-muted)] text-[var(--color-muted-foreground)]",
 };
@@ -116,7 +117,7 @@ export function LeadSummaryTable({
   if (leads.length === 0) {
     return (
       <section
-        className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-5"
+        className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-5"
         aria-labelledby="lead-summary-heading"
       >
         <h2

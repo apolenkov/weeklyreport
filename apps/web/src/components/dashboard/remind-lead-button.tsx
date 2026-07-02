@@ -120,7 +120,7 @@ export function RemindLeadButton({
         aria-label={`Send reminder to ${leadName}`}
         title={`Send reminder to ${leadName}`}
         data-testid="remind-lead-button"
-        className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-2 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-default disabled:opacity-60"
+        className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-white px-2 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-default disabled:opacity-60 max-md:min-h-[var(--touch-target-min)]"
       >
         {confirm === "sent" || confirm === "already" ? (
           <Check size={12} strokeWidth={2.5} aria-hidden="true" />

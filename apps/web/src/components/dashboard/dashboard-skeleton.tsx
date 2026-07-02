@@ -46,7 +46,7 @@ export function DashboardSkeleton() {
       </div>
 
       {/* LeadSummaryTable — header + table rows */}
-      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
+      <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-4">
           <Skeleton className="h-5 w-48" />
           <Skeleton className="h-5 w-24 rounded-[var(--radius-pill)]" />

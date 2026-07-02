@@ -37,6 +37,14 @@ const STATUS_DOT_CLASS: Record<ProductStatus, string> = {
   empty: "bg-[var(--color-muted-foreground)] opacity-50",
 };
 
+/** Human-readable status label, exposed to assistive tech via an sr-only span. */
+const STATUS_LABEL: Record<ProductStatus, string> = {
+  blocked: "Blocked",
+  "at-risk": "At risk",
+  "on-track": "On track",
+  empty: "No status",
+};
+
 function statusDot(status: ProductStatus) {
   const colorClass = STATUS_DOT_CLASS[status];
 
@@ -60,7 +68,7 @@ export function SlideProductChips({
 
   return (
     <div
-      role="tablist"
+      role="group"
       aria-label="Products"
       className="grid grid-flow-col auto-cols-fr gap-2"
     >
@@ -69,10 +77,8 @@ export function SlideProductChips({
         return (
           <button
             key={product.productId}
-            role="tab"
             type="button"
-            aria-selected={isActive}
-            aria-controls={`product-card-${product.productId}`}
+            aria-pressed={isActive}
             title={product.productName}
             onClick={(event) => {
               // The lead slide article exits fullscreen on any click; picking
@@ -88,6 +94,7 @@ export function SlideProductChips({
             ].join(" ")}
           >
             {statusDot(product.worstStatus)}
+            <span className="sr-only">{STATUS_LABEL[product.worstStatus]}</span>
             <span className="line-clamp-2 break-words">
               {product.productName}
             </span>
