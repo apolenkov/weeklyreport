@@ -20,6 +20,14 @@ an empty or absent `stageIds`, and the stage-required rule MUST NOT be applied t
 it. The parent XOR is what discriminates: a product FK present means the stage
 rule applies; an `activityId` present means it does not.
 
+An activity-parented record carrying NO stage is not merely tolerated, it is
+REQUIRED: the write schemas MUST REJECT a risk, item, or decision whose
+`activityId` is set and whose `stageIds` is NON-empty. An activity owns no
+stages, so a stage name on an activity-parented row can only be a spoofed or
+stale owned-stage name and MUST fail validation. The `.superRefine` enforces
+both directions: stage-required for a product parent, stage-forbidden for an
+activity parent.
+
 #### Scenario: saving a risk without a stage in the dialog
 
 - **WHEN** the lead fills the risk text, impact, and mitigation but
@@ -51,6 +59,14 @@ rule applies; an `activityId` present means it does not.
   `stageIds` is empty or absent
 - **THEN** validation ACCEPTS the record — the stage-required rule does not apply
   to an activity parent
+
+#### Scenario: an activity-parented record with a stage is rejected
+
+- **WHEN** a draft-save or submit payload contains a risk, item, or decision
+  whose parent is an activity (`activityId` set, product FK null) and whose
+  `stageIds` is NON-empty
+- **THEN** validation REJECTS the record — an activity owns no stage, so a
+  stage-bearing activity row is not allowed
 
 ### Requirement: Stage-less legacy rows are loud, never disguised
 

@@ -12,9 +12,13 @@ project activity (a new nullable `activityId`). A hand-written XOR CHECK
 constraint (`(productFk IS NOT NULL) <> (activityId IS NOT NULL)`) MUST enforce
 that exactly one parent is set on every row. Activity-parented records reuse the
 existing positions machinery unchanged — `stableId` lineage, carry-over,
-`RecordComment` anchors, `searchTsv`, and the `saveSection` delete-recreate. The
-section read model MUST group an activity's records under that activity, the way
-it groups a product's records under the product.
+`RecordComment` anchors, `searchTsv`, and the `saveSection` delete-recreate.
+Activity-parented records MUST live in the section read model's top-level
+`items`/`risks`/`decisions` arrays discriminated by `activityId` (product FK
+null), exactly as product-parented records live in those same arrays
+discriminated by their product FK. The presentation mapper groups each activity's
+records under that activity for rendering — the same mapper behaviour that groups
+a product's records under the product; the shared read model itself stays flat.
 
 #### Scenario: a lead adds a current-week item to an activity
 
@@ -22,7 +26,8 @@ it groups a product's records under the product.
 - **WHEN** the lead adds a current-week item and scopes it to that activity
 - **THEN** the item persists with `activityId` set, its product FK null, and an
   empty `stageIds`
-- **AND** the section read model returns that item grouped under the activity
+- **AND** the section read model returns that item in the top-level `items` array
+  with `activityId` set, and the presentation mapper groups it under the activity
 
 #### Scenario: a record references exactly one parent
 
@@ -180,21 +185,84 @@ from product-parented records.
 - **THEN** no product-level flagged-red escalation is emitted for that product on
   account of the activity's blocker
 
+### Requirement: The write path validates a record's activityId against the section's activities
+
+The write path MUST validate every `activityId` carried on an
+`items`/`risks`/`decisions` payload row against the section author's
+server-loaded `section.activities` before `saveSection` persists — the same client-trust boundary the
+stage-ownership guard (`validateStageOwnership`) and the activity-status guard
+(`validateActivityStatuses`) already enforce for `projectId`/`stageIds` and for
+`activityStatuses`. A payload row whose `activityId` is not one of the section's
+attached activities MUST be hard-rejected with an `ACTIVITY_NOT_ATTACHED` error;
+the delete-recreate MUST NOT trust a client-supplied `activityId`.
+
+#### Scenario: a spoofed activityId on a record is rejected
+
+- **GIVEN** a draft-save or submit payload whose item carries an `activityId`
+  that is NOT attached to the section author
+- **WHEN** the shared write guard runs before `saveSection`
+- **THEN** the write is rejected with an `ACTIVITY_NOT_ATTACHED` error and no row
+  is persisted
+
+#### Scenario: a record on an attached activity passes the guard
+
+- **GIVEN** a payload item whose `activityId` is one of the section's attached
+  activities and whose product FK is null
+- **WHEN** the shared write guard runs
+- **THEN** the record passes the guard and persists with its `activityId`
+
+### Requirement: Admin activity create/update/list uses linked product ids, not a scalar projectId
+
+Dropping `ProjectActivity.projectId` means the admin activity contract MUST
+express the product link as a set, not a scalar. `projectActivityCreateSchema`
+and `projectActivityUpdateSchema` MUST replace the single `projectId` field with
+a `linkedProductIds` array (0..N product ids), and the read/list contract
+(`projectActivitySchema`) MUST replace `projectId` with a `linkedProducts` array
+(id + name per link). The admin create/update handlers MUST reconcile the
+`ProjectActivityProduct` join rows to match the submitted `linkedProductIds`.
+
+#### Scenario: admin creates an activity linked to two products
+
+- **WHEN** an admin creates an activity with `linkedProductIds` naming two
+  products
+- **THEN** two `ProjectActivityProduct` rows are written and the list contract
+  returns both products under `linkedProducts`
+
+#### Scenario: admin clears an activity's product links
+
+- **GIVEN** an activity linked to one product
+- **WHEN** an admin updates it with an empty `linkedProductIds`
+- **THEN** the join rows are removed and the activity lists with an empty
+  `linkedProducts`
+
 ### Requirement: A section attached only to activities can be submitted
 
 A lead whose section is attached to activities but NO products MUST be able to
 submit the section. The submit write schema (`submitSectionSchema`) MUST NOT
 require at least one product status when the section carries only activities;
 submit validation ranges over the union of product statuses and activity
-statuses.
+statuses. Submit validation MUST mirror the per-product status loop for
+activities: every activity attached to the section MUST carry a non-null
+traffic-light status at submit — in the activity-only case AND the mixed case —
+and a submitted activity with a null or absent status MUST be rejected, the
+activity-level analogue of the missing-product-status rule. This tightens
+`activityStatusInputSchema.status` (nullable/optional on draft) to non-null at
+submit, the way `submitSectionSchema` already tightens `projectStatuses.status`.
 
 #### Scenario: an activity-only section submits
 
 - **GIVEN** a lead attached to one or more activities and zero products, each
-  activity carrying a status
+  activity carrying a non-null status
 - **WHEN** the lead submits the section
 - **THEN** submission is accepted (the "at least one product status" rule does
   not block it)
+
+#### Scenario: an activity with no status blocks submit
+
+- **GIVEN** a lead attached to an activity that carries a null or absent status
+- **WHEN** the lead submits the section
+- **THEN** submission is rejected until that activity carries a traffic-light
+  status
 
 #### Scenario: a mixed section still requires each product's status
 
