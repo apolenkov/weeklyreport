@@ -41,6 +41,7 @@ export function QuickAddButton({
 }: QuickAddButtonProps) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -48,7 +49,10 @@ export function QuickAddButton({
       if (!wrapRef.current?.contains(event.target as Node)) setOpen(false);
     }
     function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
@@ -66,6 +70,7 @@ export function QuickAddButton({
   return (
     <div ref={wrapRef} className="relative inline-flex">
       <button
+        ref={triggerRef}
         type="button"
         className="btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-starbucks-accent)] transition-colors hover:bg-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
         onClick={() => setOpen((prev) => !prev)}
@@ -78,7 +83,7 @@ export function QuickAddButton({
       </button>
       {open && (
         <div
-          role="menu"
+          role="group"
           aria-label="Quick-add record type"
           className="absolute right-0 top-full z-50 mt-1 w-48 rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-1 shadow-lg"
         >
@@ -86,7 +91,6 @@ export function QuickAddButton({
             <button
               key={option.kind}
               type="button"
-              role="menuitem"
               className="block w-full rounded-md px-3 py-2 text-left text-sm text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
               onClick={() => handlePick(option.kind)}
             >

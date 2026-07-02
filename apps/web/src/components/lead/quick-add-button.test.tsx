@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ItemEditDialog } from "./item-edit-dialog";
@@ -8,9 +8,9 @@ describe("QuickAddButton", () => {
   it("opens a five-option type picker", () => {
     render(<QuickAddButton onPick={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "+ Add" }));
-    const menu = screen.getByRole("menu", { name: "Quick-add record type" });
+    const menu = screen.getByRole("group", { name: "Quick-add record type" });
     expect(menu).toBeInTheDocument();
-    const options = screen.getAllByRole("menuitem");
+    const options = within(menu).getAllByRole("button");
     expect(options.map((option) => option.textContent)).toEqual([
       "Current week item",
       "Next week item",
@@ -24,9 +24,11 @@ describe("QuickAddButton", () => {
     const onPick = vi.fn();
     render(<QuickAddButton onPick={onPick} />);
     fireEvent.click(screen.getByRole("button", { name: "+ Add" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Blocker" }));
+    fireEvent.click(screen.getByRole("button", { name: "Blocker" }));
     expect(onPick).toHaveBeenCalledWith("blocker");
-    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("group", { name: "Quick-add record type" }),
+    ).not.toBeInTheDocument();
   });
 
   it("is inert while disabled (no products)", () => {
@@ -34,7 +36,9 @@ describe("QuickAddButton", () => {
     const trigger = screen.getByRole("button", { name: "+ Add" });
     expect(trigger).toBeDisabled();
     fireEvent.click(trigger);
-    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("group", { name: "Quick-add record type" }),
+    ).not.toBeInTheDocument();
   });
 
   it("report-toolbar-layout: stays neutral/outline — no resting solid brand-accent fill", () => {

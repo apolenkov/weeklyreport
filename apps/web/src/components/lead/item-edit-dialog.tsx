@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
+import { useDialogFocus } from "../../lib/use-dialog-focus";
 import type { ItemStatus, KanbanItem, Product } from "./mock-data";
 import { ProductPicker } from "./product-picker";
 import { StageMultiSelect } from "./stage-multi-select";
@@ -140,6 +142,15 @@ function ItemEditDialogContent({
 }: ItemEditDialogProps) {
   const isCreate = item === null;
 
+  // Escape + focus trap via the shared primitive; the surface autofocuses its
+  // first field, and the primitive restores focus to the opener on close.
+  const dialogSurfaceRef = useRef<HTMLDivElement>(null);
+  useDialogFocus({
+    open: true,
+    onClose: onCancel,
+    containerRef: dialogSurfaceRef,
+  });
+
   // Local form state — initialised once at mount from the bound item (or
   // create-mode defaults). The parent unmounts this component on close and
   // mounts a fresh instance on reopen, so state is always in sync with the
@@ -221,6 +232,17 @@ function ItemEditDialogContent({
       next.stageIds = "Select at least one stage.";
     if (Object.keys(next).length > 0) {
       setErrors(next);
+      // Move focus to the first invalid control so the error is discoverable by
+      // keyboard/screen-reader users instead of leaving focus on Save. The
+      // description is the first field; the stage group (rendered only when the
+      // product has ≥2 owned stages, which is exactly when this error fires) is
+      // next.
+      const firstInvalid = next.text
+        ? document.getElementById("item-text")
+        : dialogSurfaceRef.current?.querySelector<HTMLElement>(
+            'fieldset input[type="checkbox"]',
+          );
+      firstInvalid?.focus();
       return;
     }
     // Cross-stage rows (fix-lead-surface-name-resolution): an edited item may
@@ -252,17 +274,13 @@ function ItemEditDialogContent({
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      onCancel();
-    }
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       handleSave();
     }
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
       onClick={onCancel}
@@ -271,6 +289,7 @@ function ItemEditDialogContent({
     >
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops propagation to keep clicks inside the dialog from closing it; there is no keyboard action to mirror */}
       <div
+        ref={dialogSurfaceRef}
         className="w-full max-w-3xl rounded-[var(--radius)] bg-white p-4 md:p-6 shadow-2xl max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
@@ -328,6 +347,7 @@ function ItemEditDialogContent({
               {errors.text && (
                 <p
                   id="item-text-error"
+                  role="alert"
                   className="mt-1 text-xs text-[var(--color-destructive)]"
                 >
                   {errors.text}
@@ -456,6 +476,7 @@ function ItemEditDialogContent({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -62,6 +62,7 @@ exports[`AccordionSection > snapshot: AccordionSection with actions (two Chevron
     style="grid-template-rows: 1fr;"
   >
     <div
+      aria-hidden="false"
       class="min-h-0 overflow-hidden"
     >
       <div
@@ -122,6 +123,7 @@ exports[`AccordionSection > snapshot: AccordionSection with no actions 1`] = `
     style="grid-template-rows: 1fr;"
   >
     <div
+      aria-hidden="false"
       class="min-h-0 overflow-hidden"
     >
       <div

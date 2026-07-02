@@ -194,6 +194,13 @@ function RiskEditDialogContent({
     stageIds?: string;
   }>({});
 
+  // a11y (validation-focus): refs for the three local textareas so a failed
+  // save can move focus to the first invalid field instead of stranding it
+  // on Save.
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const impactRef = useRef<HTMLTextAreaElement>(null);
+  const mitigationRef = useRef<HTMLTextAreaElement>(null);
+
   // Context strip: pipeline stages already flagged that are owned by this lead.
   const preCheckedStages = useMemo(() => {
     const ownedStages = stagesForProduct?.(seedProduct?.id ?? "") ?? [];
@@ -241,6 +248,34 @@ function RiskEditDialogContent({
     effectiveStageIds,
   );
 
+  /**
+   * a11y (validation-focus): moves focus to the first invalid field after a
+   * failed save, in the same order the fields are validated, so a keyboard
+   * or screen-reader user lands on what needs fixing instead of being left
+   * on Save. The stage checkbox group has no local ref of its own — the
+   * dialog surface's only `<fieldset>` is StageMultiSelect's, so its first
+   * checkbox is reached via a scoped query instead of a wrapper ref.
+   */
+  function focusFirstInvalidField(fieldErrors: typeof errors) {
+    if (fieldErrors.text) {
+      textRef.current?.focus();
+      return;
+    }
+    if (fieldErrors.impact) {
+      impactRef.current?.focus();
+      return;
+    }
+    if (fieldErrors.mitigation) {
+      mitigationRef.current?.focus();
+      return;
+    }
+    if (fieldErrors.stageIds) {
+      dialogSurfaceRef.current
+        ?.querySelector<HTMLInputElement>("fieldset input")
+        ?.focus();
+    }
+  }
+
   function handleSave() {
     // Early-return no-op so onSave is never called with an empty stageIds array
     // and the unsatisfiable "Select at least one stage." error is never reached.
@@ -257,6 +292,7 @@ function RiskEditDialogContent({
       next.stageIds = "Select at least one stage.";
     if (Object.keys(next).length > 0) {
       setErrors(next);
+      focusFirstInvalidField(next);
       return;
     }
     // Cross-stage rows (fix-lead-surface-name-resolution): an edited risk may
@@ -268,7 +304,9 @@ function RiskEditDialogContent({
         ? { id: risk.productId, name: risk.productName }
         : products.at(0));
     if (!product) {
-      setErrors({ text: "No product available" });
+      const noProductError = { text: "No product available" };
+      setErrors(noProductError);
+      focusFirstInvalidField(noProductError);
       return;
     }
     onSave({
@@ -363,6 +401,7 @@ function RiskEditDialogContent({
               </label>
               <textarea
                 id="risk-text"
+                ref={textRef}
                 // eslint-disable-next-line jsx-a11y/no-autofocus -- intentional initial focus for this modal dialog
                 autoFocus
                 aria-invalid={errors.text ? "true" : "false"}
@@ -383,6 +422,7 @@ function RiskEditDialogContent({
               {errors.text && (
                 <p
                   id="risk-text-error"
+                  role="alert"
                   className="mt-1 text-xs text-[var(--color-destructive)]"
                 >
                   {errors.text}
@@ -399,6 +439,7 @@ function RiskEditDialogContent({
               </label>
               <textarea
                 id="risk-impact"
+                ref={impactRef}
                 aria-invalid={errors.impact ? "true" : "false"}
                 aria-describedby={
                   errors.impact ? "risk-impact-error" : undefined
@@ -419,6 +460,7 @@ function RiskEditDialogContent({
               {errors.impact && (
                 <p
                   id="risk-impact-error"
+                  role="alert"
                   className="mt-1 text-xs text-[var(--color-destructive)]"
                 >
                   {errors.impact}
@@ -435,6 +477,7 @@ function RiskEditDialogContent({
               </label>
               <textarea
                 id="risk-mitigation"
+                ref={mitigationRef}
                 aria-invalid={errors.mitigation ? "true" : "false"}
                 aria-describedby={
                   errors.mitigation ? "risk-mitigation-error" : undefined
@@ -455,6 +498,7 @@ function RiskEditDialogContent({
               {errors.mitigation && (
                 <p
                   id="risk-mitigation-error"
+                  role="alert"
                   className="mt-1 text-xs text-[var(--color-destructive)]"
                 >
                   {errors.mitigation}
