@@ -987,6 +987,15 @@ export function LeadForm({
     ),
   );
 
+  // A reopened period's section still carries published-lineage records, so the
+  // server's fillFrom guard rejects every source (PUBLISHED_RECORD_LOCKED).
+  // Mirror the RAW lineage check here to disable the control instead of
+  // offering an action that always fails; the server guard stays the
+  // enforcement point.
+  const fillFromLocked =
+    publishedLineage.itemStableIds.length > 0 ||
+    publishedLineage.decisionStableIds.length > 0;
+
   // Unified by-state entries: each displayed item plus its derived bucket
   // (deriveActivityBucket over the RAW persisted fields — a pure projection;
   // Item.type storage is untouched). Foreign read-only rows have no raw row
@@ -1494,6 +1503,11 @@ export function LeadForm({
               <FillFromButton
                 periods={visiblePeriods}
                 disabled={fillFromMut.isPending}
+                lockedReason={
+                  fillFromLocked
+                    ? "Fill from previous cannot replace records that are part of the published report."
+                    : undefined
+                }
                 onFillFrom={handleFillFrom}
               />
             )}

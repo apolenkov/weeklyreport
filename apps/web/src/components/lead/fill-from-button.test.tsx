@@ -273,6 +273,54 @@ describe("FillFromButton — compact touch floor (responsive-compact-layout)", (
   });
 });
 
+describe("FillFromButton — locked on a reopened period", () => {
+  // On a reopened period the section carries published-lineage records, so the
+  // server's fillFrom guard rejects every source. Disable both segments and
+  // surface the reason as the tooltip instead of offering a doomed action.
+  const lockedReason =
+    "Fill from previous cannot replace records that are part of the published report.";
+
+  it("disables both segments and surfaces the reason as the tooltip", () => {
+    render(
+      <FillFromButton periods={[pastPeriod]} lockedReason={lockedReason} />,
+    );
+
+    const main = screen.getByRole("button", {
+      name: "Fill from most recent submitted period",
+    });
+    const chevron = screen.getByRole("button", {
+      name: "Choose past report to fill from",
+    });
+
+    expect(main).toBeDisabled();
+    expect(chevron).toBeDisabled();
+    expect(main).toHaveAttribute("title", lockedReason);
+    expect(chevron).toHaveAttribute("title", lockedReason);
+  });
+
+  it("does not open the confirm dialog when the locked main segment is clicked", () => {
+    const onFillFrom = vi.fn();
+    render(
+      <FillFromButton
+        periods={[pastPeriod]}
+        lockedReason={lockedReason}
+        onFillFrom={onFillFrom}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Fill from most recent submitted period",
+      }),
+    );
+
+    expect(
+      screen.queryByRole("dialog", { name: "Confirm fill from previous" }),
+    ).not.toBeInTheDocument();
+    expect(onFillFrom).not.toHaveBeenCalled();
+  });
+});
+
 describe("FillFromButton — icon triggers keep the fill flow (head-toolbar-parity D5)", () => {
   it("copy trigger opens the confirm dialog and confirming fires onFillFrom with the section id", () => {
     const onFillFrom = vi.fn();
