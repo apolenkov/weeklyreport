@@ -1,11 +1,10 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { useTRPC } from "../../lib/trpc-context";
 import { IfRole } from "../auth/if-role";
-import { REOPEN_REQUESTS_CARD_ID } from "./reopen-requests-card";
 
 interface AlertBarProps {
   readonly pendingLeads: string[];
@@ -39,10 +38,6 @@ export function AlertBar({
   canSendReminder,
 }: AlertBarProps) {
   const trpc = useTRPC();
-  // reopen-request-lifecycle (D3): the pending reopen count feeds an indicator
-  // here. It is group-scoped server-side (head → own group, admin → global).
-  const reopenCountQ = useQuery(trpc.admin.pendingReopenCount.queryOptions());
-  const reopenCount = reopenCountQ.data?.count ?? 0;
   const dispatchMut = useMutation(
     trpc.reminders.dispatchPending.mutationOptions({
       onSuccess: ({ dispatched, alreadySent, skipped, reason }) => {
@@ -79,13 +74,7 @@ export function AlertBar({
     }),
   );
 
-  const hasPendingLeads = pendingLeads.length > 0;
-
-  // reopen-request-lifecycle (D3): the bar renders when EITHER there are
-  // missing leads OR pending reopen requests. It suppresses itself only when
-  // both signals are zero (the prior `pendingLeads.length === 0` early return
-  // hid the reopen indicator when every lead had submitted).
-  if (!hasPendingLeads && reopenCount === 0) return null;
+  if (pendingLeads.length === 0) return null;
 
   const pendingNames = pendingLeads.map((name, i) => {
     const isLast = i === pendingLeads.length - 1;
@@ -104,32 +93,22 @@ export function AlertBar({
     >
       <AlertIcon />
       <div className="flex flex-1 flex-col gap-1 text-sm">
-        {hasPendingLeads && <span>{pendingNames} haven&apos;t submitted</span>}
-        {reopenCount > 0 && (
-          <a
-            href={`#${REOPEN_REQUESTS_CARD_ID}`}
-            className="font-semibold text-[var(--color-starbucks-accent)] underline-offset-4 hover:underline"
-          >
-            {reopenCount} reopen request{reopenCount === 1 ? "" : "s"} pending
-          </a>
-        )}
+        <span>{pendingNames} haven&apos;t submitted</span>
       </div>
-      {hasPendingLeads && (
-        <button
-          type="button"
-          onClick={() => dispatchMut.mutate({ reportId })}
-          disabled={dispatchMut.isPending || !canSendReminder}
-          className="btn-press ml-auto inline-flex min-h-[36px] items-center rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-3.5 py-1.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-          title={
-            canSendReminder
-              ? undefined
-              : "Active reminder policy required — ask your admin"
-          }
-        >
-          {dispatchMut.isPending ? "Sending…" : "Send Reminder"}
-        </button>
-      )}
-      {hasPendingLeads && !canSendReminder && (
+      <button
+        type="button"
+        onClick={() => dispatchMut.mutate({ reportId })}
+        disabled={dispatchMut.isPending || !canSendReminder}
+        className="btn-press ml-auto inline-flex min-h-[36px] items-center rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-3.5 py-1.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+        title={
+          canSendReminder
+            ? undefined
+            : "Active reminder policy required — ask your admin"
+        }
+      >
+        {dispatchMut.isPending ? "Sending…" : "Send Reminder"}
+      </button>
+      {!canSendReminder && (
         // eslint-disable-next-line jsx-a11y/aria-role -- role is a custom prop on IfRole component, not an HTML aria role
         <IfRole role="admin">
           <a

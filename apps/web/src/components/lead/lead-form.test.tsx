@@ -669,7 +669,47 @@ describe("LeadForm mutation wiring", () => {
     ).toBeInTheDocument();
   });
 
-  it("read-only past period: hides Save/Submit/Fill-From but keeps the inert Coming-soon stubs", async () => {
+  it("report-toolbar-layout: + Add renders after Save and Fill-From, immediately before Submit", async () => {
+    const { Wrapper } = buildHarness();
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    await screen.findByText("Autosaved");
+
+    const documentActions = screen.getByRole("group", {
+      name: "Document actions",
+    });
+    const fillFromButton = within(documentActions).getByRole("button", {
+      name: "Fill from most recent submitted period",
+    });
+    const saveButton = within(documentActions).getByRole("button", {
+      name: "Save draft now",
+    });
+    const quickAddButton = within(documentActions).getByRole("button", {
+      name: "+ Add",
+    });
+    const submitButton = within(documentActions).getByRole("button", {
+      name: "Submit",
+    });
+
+    const orderedButtons = within(documentActions).getAllByRole("button");
+    const indexOf = (button: HTMLElement) => orderedButtons.indexOf(button);
+
+    expect(indexOf(fillFromButton)).toBeLessThan(indexOf(quickAddButton));
+    expect(indexOf(saveButton)).toBeLessThan(indexOf(quickAddButton));
+    expect(indexOf(quickAddButton)).toBeLessThan(indexOf(submitButton));
+
+    // Neutral/outline treatment: "+ Add" never carries the resting solid
+    // brand-accent fill reserved for Submit.
+    expect(quickAddButton.className).toContain("bg-transparent");
+    expect(quickAddButton.className).not.toContain(
+      "bg-[var(--color-starbucks-accent)]",
+    );
+  });
+
+  it("read-only past period: hides Save/Submit/Fill-From/+ Add but keeps the inert Coming-soon stubs", async () => {
     // report-toolbar-layout: a read-only past period hides the real mutating
     // document actions, while the deferred-feature inert stubs stay visible
     // (deferred-feature-pattern) and the context row remains.
@@ -694,6 +734,11 @@ describe("LeadForm mutation wiring", () => {
       within(documentActions).queryByRole("button", { name: /fill from/i }),
     ).toBeNull();
     expect(within(documentActions).queryByTestId("save-now-disc")).toBeNull();
+    // report-toolbar-layout: + Add is hidden alongside the other mutating
+    // document actions on a read-only past period.
+    expect(
+      within(documentActions).queryByRole("button", { name: "+ Add" }),
+    ).toBeNull();
     // Inert Coming-soon stubs remain visible.
     expect(
       within(documentActions).getByTestId("version-coming-soon"),
@@ -919,6 +964,40 @@ describe("LeadForm mode-adaptive trailing control", () => {
       screen.queryByRole("button", { name: "Expand all sections" }),
     ).toBeNull();
     expect(screen.queryByText("Toggle All")).toBeNull();
+  });
+
+  it("report-toolbar-layout: + Add stays present (and enabled) when the lead switches to slides mode", async () => {
+    // C2: + Add used to be gated `!isSlidesMode` and vanished on the switch —
+    // it must now stay in the document-action group in slides too.
+    mockPathname = `/lead/report/${REPORT_ID}`;
+    const { Wrapper } = buildHarness({
+      myHistory: [
+        {
+          sectionId: SECTION_ID,
+          reportId: REPORT_ID,
+          periodStart: new Date("2026-06-15T00:00:00Z"),
+          periodEnd: new Date("2026-06-21T00:00:00Z"),
+          reportStatus: "open",
+          sectionStatus: "draft",
+          submittedAt: null,
+          publishedAt: null,
+        },
+      ],
+    });
+    render(
+      <Wrapper>
+        <LeadForm reportId={REPORT_ID} mode="slides" />
+      </Wrapper>,
+    );
+
+    const documentActions = await screen.findByRole("group", {
+      name: "Document actions",
+    });
+    const quickAddButton = within(documentActions).getByRole("button", {
+      name: "+ Add",
+    });
+    expect(quickAddButton).toBeInTheDocument();
+    expect(quickAddButton).toBeEnabled();
   });
 });
 

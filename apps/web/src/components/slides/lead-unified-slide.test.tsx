@@ -60,43 +60,71 @@ describe("LeadUnifiedSlide — quadrant empty states", () => {
   });
 });
 
-describe("LeadUnifiedSlide — product attribution (neutral badges)", () => {
+describe("LeadUnifiedSlide — product grouping (neutral headings)", () => {
   const multiProduct = makeModel({
     current: [makeRow("Ship auth flow", "Atlas"), makeRow("QA pass", "Vega")],
     risks: [makeRow("Vendor SLA slip", "Atlas")],
   });
 
-  it("multi-product rows lead with a neutral badge naming the product", () => {
+  it("multi-product rows group under one neutral heading per product block", () => {
     render(<LeadUnifiedSlide model={multiProduct} />);
 
-    const badges = screen.getAllByTestId("row-product-badge");
-    expect(badges).toHaveLength(3);
-    expect(badges[0]).toHaveAttribute("title", "Atlas");
-    expect(badges[0]?.textContent).toBe("Atlas");
-    // Feedback round 3: identity only — no status color classes on the badge.
-    for (const badge of badges) {
-      expect(badge.className).not.toMatch(/destructive|status-dot|primary/);
+    // One heading per (quadrant, product) group — Current: Atlas + Vega,
+    // Risks: Atlas — NOT one badge per row.
+    const headings = screen.getAllByTestId("product-heading");
+    expect(headings).toHaveLength(3);
+    const names = headings.map((h) => h.textContent);
+    expect(names.filter((n) => n === "Atlas")).toHaveLength(2);
+    expect(names).toContain("Vega");
+    // Full name carried on `title`; identity only — no status color classes.
+    for (const heading of headings) {
+      expect(heading).toHaveAttribute("title", heading.textContent);
+      expect(heading.className).not.toMatch(/destructive|status-dot|primary/);
     }
+    // The old per-row badge is gone.
+    expect(screen.queryByTestId("row-product-badge")).not.toBeInTheDocument();
   });
 
-  it("single-product slides render rows without badges", () => {
+  it("single-product slides render flat with no product heading", () => {
     const model = makeModel({
       current: [makeRow("Ship feature", "Atlas")],
       next: [makeRow("Draft RFC", "Atlas")],
     });
     render(<LeadUnifiedSlide model={model} />);
 
-    expect(screen.queryByTestId("row-product-badge")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("product-heading")).not.toBeInTheDocument();
+    expect(screen.getByText("Ship feature")).toBeInTheDocument();
   });
 
-  it("cross-product rows do not flip a single-product slide into badge mode", () => {
+  it("cross-product rows do not add a heading on a single-product slide", () => {
     const model = makeModel({
       current: [makeRow("Ship feature", "Atlas")],
       decisions: [makeRow("Align analytics API", "Shared context")],
     });
     render(<LeadUnifiedSlide model={model} />);
 
-    expect(screen.queryByTestId("row-product-badge")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("product-heading")).not.toBeInTheDocument();
+  });
+
+  it("cross-product rows group under a single Shared context heading on a multi-product slide", () => {
+    const model = makeModel({
+      current: [makeRow("Ship auth flow", "Atlas"), makeRow("QA pass", "Vega")],
+      decisions: [
+        makeRow("Align analytics API", "Shared context"),
+        makeRow("Retire v1 API", "Shared context"),
+      ],
+    });
+    const { container } = render(<LeadUnifiedSlide model={model} />);
+
+    const shared = screen
+      .getAllByTestId("product-heading")
+      .filter((h) => h.textContent === "Shared context");
+    expect(shared).toHaveLength(1);
+    // Both cross-product rows render under it — grouping introduces no
+    // count-based "+N more" truncation.
+    expect(screen.getByText("Align analytics API")).toBeInTheDocument();
+    expect(screen.getByText("Retire v1 API")).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/\+\d+ more/);
   });
 });
 

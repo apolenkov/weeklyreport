@@ -27,19 +27,64 @@ function priorityChip(rank: number): ReactNode {
   );
 }
 
-/* Feedback round 3 (2026-06-10): rows carry a NEUTRAL product badge, not a
-   status-colored dot — a colored dot next to a decision read as "this
-   decision is red". Identity lives in the badge text; status stays in the
-   product chip strip above. */
-function productBadge(row: UnifiedSectionRow): ReactNode {
+interface ProductGroup {
+  readonly productName: string;
+  readonly rows: readonly UnifiedSectionRow[];
+}
+
+/* Rows are grouped by product so identity is stated ONCE per block. Group by
+   product name (first-occurrence order) rather than by adjacency so a future
+   re-sort of the model can never split one product into two headings. */
+function groupRowsByProduct(
+  rows: readonly UnifiedSectionRow[],
+): readonly ProductGroup[] {
+  return rows.reduce<readonly ProductGroup[]>((groups, row) => {
+    const existing = groups.find((g) => g.productName === row.productName);
+    if (existing) {
+      return groups.map((g) =>
+        g === existing
+          ? { productName: g.productName, rows: [...g.rows, row] }
+          : g,
+      );
+    }
+    return [...groups, { productName: row.productName, rows: [row] }];
+  }, []);
+}
+
+/* Identity is a NEUTRAL, status-free heading per product block, not a
+   status-colored marker — a colored marker beside a record reads as that
+   record's own severity. Status stays on the hero chip strip. Truncated with a
+   `title` carrying the full name; never the old fixed-width per-row column. */
+function productHeading(name: string): ReactNode {
   return (
     <span
-      className="inline-flex w-[110px] shrink-0 items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-muted)] px-1.5 text-[9px] font-semibold uppercase leading-4 tracking-wide text-[var(--color-muted-foreground)]"
-      title={row.productName}
-      data-testid="row-product-badge"
+      className="inline-flex max-w-full items-center rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold uppercase leading-4 tracking-wide text-[var(--color-muted-foreground)]"
+      title={name}
+      data-testid="product-heading"
     >
-      <span className="truncate">{row.productName}</span>
+      <span className="truncate">{name}</span>
     </span>
+  );
+}
+
+function RowList({ rows }: { readonly rows: readonly UnifiedSectionRow[] }) {
+  return (
+    <ul className="space-y-1.5">
+      {rows.map((row, idx) => (
+        <li
+          key={`${row.text}-${String(idx)}`}
+          className="flex min-w-0 items-baseline gap-2"
+        >
+          {/* Fixed-width slot so all item texts start at the same X. */}
+          <span className="inline-flex w-[28px] shrink-0 justify-center">
+            {row.priorityRank != null ? priorityChip(row.priorityRank) : null}
+          </span>
+          <span className="min-w-0 line-clamp-3 text-[13px] leading-snug text-[var(--color-foreground)]">
+            {row.text}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -49,7 +94,7 @@ function QuadrantCard({
   items,
   emptyText,
   stripeClass,
-  showBadges,
+  showHeadings,
   dashedFrame = false,
 }: {
   readonly icon: LucideIcon;
@@ -57,7 +102,7 @@ function QuadrantCard({
   readonly items: readonly UnifiedSectionRow[];
   readonly emptyText: string;
   readonly stripeClass: string;
-  readonly showBadges: boolean;
+  readonly showHeadings: boolean;
   /** Feedback round 2: plans (Next focus) read as a dashed "not yet" frame. */
   readonly dashedFrame?: boolean;
 }) {
@@ -80,27 +125,18 @@ function QuadrantCard({
           {label}
         </div>
         {items.length > 0 ? (
-          /* Feedback round 2 (2026-06-10): no count-based truncation — every
-             row always renders; the card grows with its content. */
-          <ul className="mt-2 space-y-1.5">
-            {items.map((row, idx) => (
-              <li
-                key={`${row.text}-${String(idx)}`}
-                className="flex min-w-0 items-baseline gap-2"
-              >
-                {/* Fixed-width slot so all item texts start at the same X. */}
-                <span className="inline-flex w-[28px] shrink-0 justify-center">
-                  {row.priorityRank != null
-                    ? priorityChip(row.priorityRank)
-                    : null}
-                </span>
-                {showBadges ? productBadge(row) : null}
-                <span className="min-w-0 line-clamp-3 text-[13px] leading-snug text-[var(--color-foreground)]">
-                  {row.text}
-                </span>
-              </li>
+          /* No count-based truncation — every row always renders and the card
+             grows with its content; overflow scrolls in the container above.
+             Rows group by product under one neutral heading when the slide spans
+             more than one real product; a single-product slide renders flat. */
+          <div className="mt-2 space-y-2">
+            {groupRowsByProduct(items).map((group) => (
+              <div key={group.productName} className="space-y-1">
+                {showHeadings ? productHeading(group.productName) : null}
+                <RowList rows={group.rows} />
+              </div>
             ))}
-          </ul>
+          </div>
         ) : (
           <p className="mt-2 rounded-[var(--radius)] border border-dashed border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted-foreground)]">
             {emptyText}
@@ -118,7 +154,7 @@ function QuadrantCard({
   );
 }
 
-/* D7: row badges and the chip strip only disambiguate when the slide
+/* Product headings and the chip strip only disambiguate when the slide
    aggregates more than one real product; the cross-product pseudo-entry
    never counts. Mirrors the chip-strip gate (productSlides minus
    cross-product, >1): the builder pushes every product into rows OR
@@ -143,7 +179,7 @@ function countRealProducts(model: UnifiedSlideModel): number {
 }
 
 export function LeadUnifiedSlide({ model }: Props) {
-  const showBadges = countRealProducts(model) > 1;
+  const showHeadings = countRealProducts(model) > 1;
   return (
     /* slides-product-autofit D3: inside the fixed-aspect .slide-frame the
        grid sizes from the frame, not the viewport — flex-1/min-h-0 under the
@@ -164,7 +200,7 @@ export function LeadUnifiedSlide({ model }: Props) {
         items={model.current}
         emptyText="Nothing in flight"
         stripeClass="border-l-[var(--color-chip-on-track-border)]"
-        showBadges={showBadges}
+        showHeadings={showHeadings}
       />
       <QuadrantCard
         icon={ArrowRight}
@@ -172,7 +208,7 @@ export function LeadUnifiedSlide({ model }: Props) {
         items={model.next}
         emptyText="Nothing queued"
         stripeClass="border-l-[var(--color-primary)]"
-        showBadges={showBadges}
+        showHeadings={showHeadings}
         dashedFrame
       />
       <QuadrantCard
@@ -181,7 +217,7 @@ export function LeadUnifiedSlide({ model }: Props) {
         items={model.risks}
         emptyText="No risks raised"
         stripeClass="border-l-[var(--color-chip-at-risk-border)]"
-        showBadges={showBadges}
+        showHeadings={showHeadings}
       />
       <QuadrantCard
         icon={FileText}
@@ -189,7 +225,7 @@ export function LeadUnifiedSlide({ model }: Props) {
         items={model.decisions}
         emptyText="No decisions recorded"
         stripeClass="border-l-[var(--color-decisions-accent)]"
-        showBadges={showBadges}
+        showHeadings={showHeadings}
       />
     </div>
   );

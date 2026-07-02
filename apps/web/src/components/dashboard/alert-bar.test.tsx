@@ -34,11 +34,6 @@ vi.mock("../../lib/trpc-context", () => ({
         queryOptions: () => ({ queryKey: ["auth.me"] }),
       },
     },
-    admin: {
-      pendingReopenCount: {
-        queryOptions: () => ({ queryKey: ["admin.pendingReopenCount"] }),
-      },
-    },
     reminders: {
       dispatchPending: {
         mutationOptions: (opts: unknown) => opts,
@@ -214,7 +209,7 @@ describe("AlertBar — Phase 48-C role gating", () => {
 
 describe("AlertBar — pending label accuracy", () => {
   it("labels every pending lead 'Not started' and never 'Draft'", () => {
-    useQueryMock.mockReturnValue({ data: { count: 0 } });
+    mockRole(null);
 
     render(<AlertBar {...baseProps} pendingLeads={["Alice", "Bob"]} />);
 
@@ -226,32 +221,13 @@ describe("AlertBar — pending label accuracy", () => {
 });
 
 // ---------------------------------------------------------------------------
-// reopen-request-lifecycle (D3): pending-reopen indicator
+// reopen-requests (D3 reversal): the alert bar carries lead-submission
+// signals only — the Reopen Requests card is the single reopen surface.
 // ---------------------------------------------------------------------------
 
-describe("AlertBar — reopen indicator", () => {
-  it("renders the indicator when reopen count > 0 even with zero missing leads", () => {
-    useQueryMock.mockReturnValue({ data: { count: 2 } });
-
-    render(<AlertBar {...baseProps} pendingLeads={[]} canSendReminder />);
-
-    expect(screen.getByText(/2 reopen requests pending/i)).toBeInTheDocument();
-    // No missing leads → no reminder affordance.
-    expect(
-      screen.queryByRole("button", { name: /send reminder/i }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("singularizes the count", () => {
-    useQueryMock.mockReturnValue({ data: { count: 1 } });
-
-    render(<AlertBar {...baseProps} pendingLeads={[]} canSendReminder />);
-
-    expect(screen.getByText(/1 reopen request pending/i)).toBeInTheDocument();
-  });
-
-  it("renders nothing when both missing leads and reopen count are zero", () => {
-    useQueryMock.mockReturnValue({ data: { count: 0 } });
+describe("AlertBar — no reopen surface", () => {
+  it("renders nothing when there are no missing leads, regardless of reopen state", () => {
+    mockRole(null);
 
     const { container } = render(
       <AlertBar {...baseProps} pendingLeads={[]} canSendReminder />,
@@ -260,17 +236,14 @@ describe("AlertBar — reopen indicator", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("shows missing leads AND the reopen indicator together", () => {
-    useQueryMock.mockReturnValue({ data: { count: 3 } });
+  it("never renders a reopen-count line even with missing leads present", () => {
+    mockRole(null);
 
     render(
       <AlertBar {...baseProps} pendingLeads={["Alice"]} canSendReminder />,
     );
 
     expect(screen.getByText(/haven't submitted/i)).toBeInTheDocument();
-    expect(screen.getByText(/3 reopen requests pending/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /send reminder/i }),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/reopen request/i)).not.toBeInTheDocument();
   });
 });
