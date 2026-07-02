@@ -30,6 +30,14 @@ interface FillFromButtonProps {
    */
   readonly onFillFrom?: (sourceSectionId: string) => void;
   readonly disabled?: boolean;
+  /**
+   * Set when the target section carries published-lineage records (a reopened
+   * period): the server's fillFrom guard rejects every source
+   * (PUBLISHED_RECORD_LOCKED), so both segments are disabled and this string
+   * is surfaced as the tooltip. UI-only — the server guard stays the
+   * enforcement point.
+   */
+  readonly lockedReason?: string;
 }
 
 function CopyIcon() {
@@ -83,7 +91,9 @@ export function FillFromButton({
   periods,
   onFillFrom,
   disabled = false,
+  lockedReason,
 }: FillFromButtonProps) {
+  const locked = lockedReason !== undefined;
   const [showDropdown, setShowDropdown] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<ReportPeriod | null>(
@@ -178,9 +188,9 @@ export function FillFromButton({
           <button
             type="button"
             aria-label="Fill from most recent submitted period"
-            title="Fill from most recent submitted period"
+            title={lockedReason ?? "Fill from most recent submitted period"}
             onClick={handleFillPrevious}
-            disabled={disabled || !previousPeriod}
+            disabled={disabled || locked || !previousPeriod}
             className={SPLIT_BUTTON_MAIN_CLASS}
           >
             <CopyIcon />
@@ -190,9 +200,9 @@ export function FillFromButton({
             ref={dropdownTriggerRef}
             type="button"
             aria-label="Choose past report to fill from"
-            title="Choose past report to fill from"
+            title={lockedReason ?? "Choose past report to fill from"}
             onClick={() => setShowDropdown(!showDropdown)}
-            disabled={disabled}
+            disabled={disabled || locked}
             className={SPLIT_BUTTON_CHEVRON_CLASS}
           >
             <ChevronDown />
