@@ -41,6 +41,18 @@ describe("RequestReopenDialog — a11y regression (VA-0a)", () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
+  it("both dialog actions floor at the touch target below md (responsive-compact-layout)", () => {
+    // jsdom cannot evaluate media queries; the class assertions are the teeth.
+    renderDialog();
+
+    const cancel = screen.getByRole("button", { name: /cancel/i });
+    const confirm = screen.getByRole("button", { name: /send request/i });
+    for (const button of [cancel, confirm]) {
+      expect(button.className).toContain("min-h-[var(--touch-target-min)]");
+      expect(button.className).toContain("md:min-h-[40px]");
+    }
+  });
+
   it("calls onCancel when the Cancel button is clicked", () => {
     const onCancel = vi.fn();
     renderDialog({ onCancel });

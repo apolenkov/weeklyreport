@@ -117,7 +117,7 @@ export function SectionVerdictControl({
         <span className="flex items-center gap-1.5">
           <button
             type="button"
-            className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-success-foreground)] transition-colors hover:border-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-success-foreground)] transition-colors hover:border-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => submit("approved")}
             disabled={verdictMut.isPending}
           >
@@ -125,7 +125,7 @@ export function SectionVerdictControl({
           </button>
           <button
             type="button"
-            className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)] transition-colors hover:border-[var(--color-destructive)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-destructive)] transition-colors hover:border-[var(--color-destructive)] disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => submit("changes_requested")}
             disabled={verdictMut.isPending}
           >

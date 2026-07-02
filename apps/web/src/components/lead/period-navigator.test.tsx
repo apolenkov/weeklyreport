@@ -134,7 +134,16 @@ describe("PeriodNavigator (lead)", () => {
       fireEvent.click(getTrigger());
       expect(getTrigger()).toHaveAttribute("aria-expanded", "true");
       expect(screen.getByRole("listbox")).toBeInTheDocument();
-      expect(screen.getAllByRole("option")).toHaveLength(PERIODS.length);
+      const options = screen.getAllByRole("option");
+      expect(options).toHaveLength(PERIODS.length);
+      // responsive-compact-layout: each option row floors at the touch target
+      // below `md`; jsdom cannot evaluate media queries, so the class
+      // assertion is the teeth.
+      for (const option of options) {
+        expect(option.className).toContain(
+          "max-md:min-h-[var(--touch-target-min)]",
+        );
+      }
     });
 
     it("opens on ArrowDown from the keyboard", () => {

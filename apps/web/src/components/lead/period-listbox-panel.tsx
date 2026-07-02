@@ -106,7 +106,7 @@ export function PeriodListboxPanel({
             tabIndex={-1}
             aria-selected={isSelected}
             className={[
-              "flex cursor-pointer items-center gap-2 px-3 py-2 text-[13px]",
+              "flex max-md:min-h-[var(--touch-target-min)] cursor-pointer items-center gap-2 px-3 py-2 text-[13px]",
               isSelected
                 ? "font-semibold text-[var(--color-starbucks-accent)]"
                 : "text-[var(--color-foreground)]",

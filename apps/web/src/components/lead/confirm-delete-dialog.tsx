@@ -153,7 +153,7 @@ export function ConfirmDeleteDialog({
         <div className="mt-5 flex justify-end gap-2">
           <button
             type="button"
-            className="btn-press inline-flex min-h-[36px] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-muted)] bg-transparent px-4 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+            className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[36px] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-muted)] bg-transparent px-4 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
             onClick={onCancel}
           >
             Cancel
@@ -161,7 +161,7 @@ export function ConfirmDeleteDialog({
           <button
             ref={confirmRef}
             type="button"
-            className="btn-press inline-flex min-h-[36px] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-destructive)] bg-[var(--color-destructive)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#a02020]"
+            className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[36px] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-destructive)] bg-[var(--color-destructive)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#a02020]"
             onClick={onConfirm}
           >
             {confirmLabel}

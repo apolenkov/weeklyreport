@@ -86,6 +86,35 @@ describe("CurrentWeekSection — addSignal snapshot regression (D1)", () => {
   });
 });
 
+describe("CurrentWeekSection — compact touch floor (responsive-compact-layout)", () => {
+  it("the per-product '+ Add' button floors at the touch target below md", () => {
+    // jsdom cannot evaluate media queries; the class assertions are the teeth.
+    // Two products are required — the "+ Add" affordance only renders when a
+    // lead owns multiple products.
+    const twoProducts = MOCK_PRODUCTS.slice(0, 2);
+    render(<CurrentWeekSection items={[]} products={twoProducts} />);
+
+    const firstName = twoProducts[0]?.name ?? "";
+    const addButton = screen.getByRole("button", {
+      name: `Add item to ${firstName}`,
+    });
+    expect(addButton.className).toContain("min-h-[var(--touch-target-min)]");
+    expect(addButton.className).toContain("md:min-h-[28px]");
+  });
+
+  it("the empty-state '+ Add Item' CTA floors at the touch target below md", () => {
+    // No items AND no products → the stand-alone empty-state CTA renders
+    // (disabled, since there is no seed product). It must carry the same
+    // compact floor as every other interactive control on the lead form.
+    render(<CurrentWeekSection items={[]} products={[]} />);
+
+    const cta = screen.getByRole("button", { name: "+ Add Item" });
+    expect(cta).toBeDisabled();
+    expect(cta.className).toContain("min-h-[var(--touch-target-min)]");
+    expect(cta.className).toContain("md:min-h-[40px]");
+  });
+});
+
 describe("CurrentWeekSection — slide-capacity advisory (add-slide-capacity-signals)", () => {
   it("shows a slide-fit advisory in a product column that exceeds the soft cap", () => {
     render(<CurrentWeekSection items={manyItems(6)} products={products} />);

@@ -93,6 +93,22 @@ describe("ItemCard — SVG icon aria-hidden (snapshot)", () => {
   });
 });
 
+describe("ItemCard — compact touch floor (responsive-compact-layout)", () => {
+  // jsdom cannot evaluate media queries, so the accepted teeth are class
+  // assertions: the icon buttons must derive their size from the shared
+  // toolbar token (32px on desktop, the 44px touch floor below `md`), never
+  // a hard-coded h-8/w-8.
+  it.each(["Edit", "Delete"])(
+    "%s icon button sizes from the toolbar control token",
+    (name) => {
+      render(<ItemCard item={BASE_ITEM} />);
+      const button = screen.getByRole("button", { name });
+      expect(button.className).toContain("h-[var(--toolbar-control-h)]");
+      expect(button.className).toContain("w-[var(--toolbar-control-h)]");
+    },
+  );
+});
+
 describe("ItemCard — card DOM structure (snapshot)", () => {
   it("renders card with aria-hidden icons and accessible button labels", () => {
     const { container } = render(

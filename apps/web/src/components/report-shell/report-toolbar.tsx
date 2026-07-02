@@ -21,7 +21,9 @@ const REPORT_TOOLBAR_FRAME_STICKY_CLASS =
 /**
  * One toolbar row. `overflow-x-auto` (not `-clip`) keeps every control
  * reachable via horizontal scroll at narrow widths
- * (report-toolbar-layout: narrow-width reachability).
+ * (report-toolbar-layout: narrow-width reachability). This strip is the ONE
+ * surface permitted to scroll horizontally below `md`
+ * (responsive-compact-layout: no-horizontal-overflow exception).
  */
 const REPORT_TOOLBAR_ROW_CLASS =
   "flex min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto whitespace-nowrap";

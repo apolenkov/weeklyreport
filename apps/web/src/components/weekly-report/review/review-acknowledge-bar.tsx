@@ -88,7 +88,7 @@ function AcknowledgeGroupControl({
     <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
-        className="btn-press inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-3 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-60"
+        className="btn-press inline-flex items-center gap-1.5 max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-3 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-60"
         onClick={() => ackMut.mutate({ reportId, groupId: group.groupId })}
         disabled={ackMut.isPending || acknowledged}
         aria-pressed={acknowledged}

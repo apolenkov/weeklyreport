@@ -65,6 +65,40 @@ describe("ItemEditDialog — A13 form-race regression", () => {
   });
 });
 
+describe("ItemEditDialog — compact touch floor (responsive-compact-layout)", () => {
+  it("footer actions, status chips and the priority select floor below md", () => {
+    // jsdom cannot evaluate media queries; the class assertions are the teeth.
+    // Desktop density is untouched (md:min-h restores the 40px/34px values).
+    render(
+      <ItemEditDialog
+        open={true}
+        item={null}
+        products={products}
+        week="current"
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"] as const}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    for (const name of [/^Cancel$/, /Save Item/]) {
+      const button = screen.getByRole("button", { name });
+      expect(button.className).toContain("min-h-[var(--touch-target-min)]");
+      expect(button.className).toContain("md:min-h-[40px]");
+    }
+
+    const statusChip = screen.getByRole("button", { name: /In Progress/i });
+    expect(statusChip.className).toContain("min-h-[var(--touch-target-min)]");
+    expect(statusChip.className).toContain("md:min-h-[34px]");
+
+    const prioritySelect = document.querySelector("#item-priority-rank");
+    expect(prioritySelect?.className).toContain(
+      "max-md:min-h-[var(--touch-target-min)]",
+    );
+  });
+});
+
 describe("ItemEditDialog — D-12 reopen reset", () => {
   it("resets draft text, status, stageIds and errors when reopened", () => {
     const onSave = vi.fn();

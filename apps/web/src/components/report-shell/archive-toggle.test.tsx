@@ -20,7 +20,7 @@ describe("ArchiveToggle", () => {
     expect(screen.queryByText(/^\d+$/)).not.toBeInTheDocument();
   });
 
-  it("is a 32px icon button with aria-label and matching tooltip", () => {
+  it("is a token-sized icon button with aria-label and matching tooltip", () => {
     render(<ArchiveToggle checked={false} onChange={vi.fn()} />);
     const btn = screen.getByRole("switch", {
       name: "Show closed (archived) report periods",
@@ -29,8 +29,8 @@ describe("ArchiveToggle", () => {
       "title",
       "Show closed (archived) report periods",
     );
-    expect(btn.className).toContain("h-8");
-    expect(btn.className).toContain("w-8");
+    expect(btn.className).toContain("h-[var(--toolbar-control-h)]");
+    expect(btn.className).toContain("w-[var(--toolbar-control-h)]");
   });
 
   it("is a switch with aria-checked reflecting the checked prop", () => {

@@ -24,12 +24,15 @@ describe("VersionComingSoonControl", () => {
     expect(control).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("is a fully rounded 32x32 control matching its toolbar siblings", () => {
+  it("derives its circle size from the shared toolbar token like its siblings", () => {
+    // responsive-compact-layout: the token is 32px on desktop and rises to the
+    // touch-target floor below `md` — a hard-coded h-8/w-8 would stay 32px on
+    // phones while every sibling circle grows.
     render(<VersionComingSoonControl />);
     const control = screen.getByTestId("version-coming-soon");
 
-    expect(control.className).toContain("h-8");
-    expect(control.className).toContain("w-8");
+    expect(control.className).toContain("h-[var(--toolbar-control-h)]");
+    expect(control.className).toContain("w-[var(--toolbar-control-h)]");
     expect(control.className).toContain("rounded-full");
   });
 

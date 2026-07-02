@@ -107,7 +107,7 @@ export function StageChip({
   }, [showPopover]);
 
   const chipClasses = [
-    "relative w-full p-2 rounded-lg inline-flex items-center justify-center text-xs font-semibold transition-[background-color,border-color,box-shadow,opacity,filter] duration-150",
+    "relative w-full max-md:min-h-[var(--touch-target-min)] p-2 rounded-lg inline-flex items-center justify-center text-xs font-semibold transition-[background-color,border-color,box-shadow,opacity,filter] duration-150",
     isEditable && !isEmpty
       ? "cursor-pointer hover:opacity-80 hover:saturate-50 hover:shadow-[0_0_0_2.5px_rgba(0,0,0,0.12)]"
       : "",
@@ -261,7 +261,7 @@ export function StageChip({
                   type="button"
                   role="menuitem"
                   onClick={() => applyStatus(opt.value)}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-hover)]"
+                  className="flex w-full max-md:min-h-[var(--touch-target-min)] items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-hover)]"
                   style={{
                     background: isCurrent ? cfg.bg : "transparent",
                     color: isCurrent ? cfg.text : "var(--color-foreground)",

@@ -26,6 +26,13 @@ describe("StageMultiSelect", () => {
       true,
     );
 
+    // responsive-compact-layout: each stage chip (the checkbox's label) floors
+    // at the touch target below `md`; jsdom cannot evaluate media queries, so
+    // the class assertion is the teeth.
+    const chipLabel = checkboxes[0]?.closest("label");
+    expect(chipLabel?.className).toContain("min-h-[var(--touch-target-min)]");
+    expect(chipLabel?.className).toContain("md:min-h-[34px]");
+
     // No "Scope:" duplicate summary — the commit removed it when stages are selected.
     expect(screen.queryByText("Scope:")).not.toBeInTheDocument();
     // No "all assigned stages" footer when at least one stage is selected.

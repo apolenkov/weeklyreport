@@ -19,7 +19,7 @@ export function PdfExportComingSoonControl() {
         aria-disabled="true"
         aria-label="PDF export is coming soon"
         data-testid="lead-pdf-export-coming-soon"
-        className="inline-flex h-8 w-8 shrink-0 cursor-default items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-empty)] text-[12px] font-semibold text-[var(--color-muted-foreground)]"
+        className="inline-flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] shrink-0 cursor-default items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-empty)] text-[12px] font-semibold text-[var(--color-muted-foreground)]"
       >
         <FileDown size={14} strokeWidth={2} aria-hidden="true" />
       </button>

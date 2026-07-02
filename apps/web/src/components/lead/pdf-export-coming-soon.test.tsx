@@ -29,6 +29,16 @@ describe("PdfExportComingSoonControl", () => {
     expect(control).toHaveAttribute("type", "button");
   });
 
+  it("derives its circle size from the shared toolbar token like its siblings", () => {
+    // responsive-compact-layout: the token is 32px on desktop and rises to the
+    // touch-target floor below `md` — a hard-coded h-8/w-8 would stay 32px on
+    // phones while every sibling circle grows.
+    render(<PdfExportComingSoonControl />);
+    const control = screen.getByTestId("lead-pdf-export-coming-soon");
+    expect(control.className).toContain("h-[var(--toolbar-control-h)]");
+    expect(control.className).toContain("w-[var(--toolbar-control-h)]");
+  });
+
   it("opens the coming-soon tooltip on focus, via the Radix portal", async () => {
     render(<PdfExportComingSoonControl />);
 

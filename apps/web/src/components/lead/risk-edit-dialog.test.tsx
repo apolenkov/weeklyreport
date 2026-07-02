@@ -26,6 +26,30 @@ const products: Product[] = [
   },
 ];
 
+describe("RiskEditDialog — compact touch floor (responsive-compact-layout)", () => {
+  it("footer actions and severity chips floor at the touch target below md", () => {
+    // jsdom cannot evaluate media queries; the class assertions are the teeth.
+    // Desktop density is untouched (md:min-h restores the 40px/34px values).
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={products}
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+      />,
+    );
+
+    for (const name of [/^Cancel$/, /Save Risk/]) {
+      const button = screen.getByRole("button", { name });
+      expect(button.className).toContain("min-h-[var(--touch-target-min)]");
+      expect(button.className).toContain("md:min-h-[40px]");
+    }
+  });
+});
+
 describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
   it("starts with empty stage selection when no stages are flagged in create mode", () => {
     const onSave = vi.fn();

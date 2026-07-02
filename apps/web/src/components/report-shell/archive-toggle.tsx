@@ -20,7 +20,7 @@ interface ArchiveToggleProps {
 
 /**
  * Toolbar switch that folds archived (closed) report periods into the period
- * list. Rendered as a shared 32px ToolbarIconButton (head-toolbar-parity D4)
+ * list. Rendered as a shared token-sized ToolbarIconButton
  * while keeping `role="switch"` + `aria-checked`. The control is a quiet inert
  * state indicator only — it carries no numeric count badge, which read as a
  * "press me" call-to-action rather than a switch.
