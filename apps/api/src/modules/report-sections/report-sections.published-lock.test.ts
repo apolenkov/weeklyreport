@@ -168,15 +168,4 @@ describe("resolve-not-delete save guard", () => {
         ?.workflowStatus,
     ).toBe("done");
   });
-
-  it("skips the lock when the repository has no lineage read (legacy fixture seam)", async () => {
-    const repository = createRepository([PUBLISHED_ITEM_LINEAGE]);
-    delete (repository as { getPublishedLineage?: unknown })
-      .getPublishedLineage;
-    const service = new ReportSectionsService(repository);
-    const payload = basePayload();
-    await expect(
-      service.saveDraft({ ...payload, items: [] }),
-    ).resolves.toMatchObject({ items: [] });
-  });
 });

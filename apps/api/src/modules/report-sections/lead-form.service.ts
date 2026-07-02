@@ -163,19 +163,16 @@ export class LeadFormService {
     // periodStatus gate above only blocks a still-published one). Fail closed —
     // reject the whole fill if the target holds any published-lineage record;
     // a never-published draft has none and is unaffected. The same lineage
-    // query the save guard uses. Skipped when the repository exposes no lineage
-    // read (legacy in-memory fixtures), where the save guard stays the backstop.
-    if (this.repository.getPublishedLineage) {
-      const published = await this.repository.getPublishedLineage(target);
-      if (
-        published.itemStableIds.length > 0 ||
-        published.decisionStableIds.length > 0
-      ) {
-        throw new ReportSectionDomainError(
-          "PUBLISHED_RECORD_LOCKED",
-          "Fill from previous cannot replace records that are part of the published report.",
-        );
-      }
+    // query the save guard uses.
+    const published = await this.repository.getPublishedLineage(target);
+    if (
+      published.itemStableIds.length > 0 ||
+      published.decisionStableIds.length > 0
+    ) {
+      throw new ReportSectionDomainError(
+        "PUBLISHED_RECORD_LOCKED",
+        "Fill from previous cannot replace records that are part of the published report.",
+      );
     }
 
     // Authorize the SOURCE section too. The fill-from picker only ever offers
@@ -348,9 +345,7 @@ export class LeadFormService {
 
     // Computed over the (possibly product-filtered) section actually returned,
     // so a cross-author read never leaks lineage of records it does not show.
-    const publishedLineage = (await this.repository.getPublishedLineage?.(
-      section,
-    )) ?? { itemStableIds: [], decisionStableIds: [] };
+    const publishedLineage = await this.repository.getPublishedLineage(section);
 
     return {
       section,

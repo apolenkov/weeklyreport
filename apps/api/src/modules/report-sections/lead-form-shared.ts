@@ -92,10 +92,12 @@ export interface LeadFormRepository {
    * durable `stableId`s that appeared in a published report). Surfaced on
    * `getByPeriod` so the lead form can render the "in the published report"
    * marker and hide Delete on locked records — the server-side save guard
-   * (report-sections service) stays the enforcement point. Optional so
-   * in-memory test repositories keep compiling; absent → empty lineage.
+   * (report-sections service) stays the enforcement point. Required so a
+   * repository omitting it fails to compile rather than silently disabling
+   * the Fill From published-lineage lock; a never-published draft yields
+   * empty lineage.
    */
-  getPublishedLineage?(section: ReportSectionReadModel): Promise<{
+  getPublishedLineage(section: ReportSectionReadModel): Promise<{
     itemStableIds: readonly string[];
     decisionStableIds: readonly string[];
   }>;

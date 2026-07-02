@@ -59,10 +59,11 @@ export interface CarryOverRepository {
   getTargetSections(targetReportId: string): Promise<ReportSectionReadModel[]>;
   /**
    * The latest report ending on/before the target's start — the "prior
-   * period" the uncarried-open-work signal reads. Optional so existing test
-   * doubles keep compiling; when absent the signal resolves empty.
+   * period" the uncarried-open-work signal reads. Required so a repository
+   * omitting it fails to compile rather than silently resolving the signal
+   * empty. Null when no prior period exists.
    */
-  findPreviousReportId?(targetReportId: string): Promise<string | null>;
+  findPreviousReportId(targetReportId: string): Promise<string | null>;
   getTargetReportState(
     targetReportId: string,
   ): Promise<TargetReportState | null>;
@@ -158,7 +159,6 @@ export class CarryOverService {
   async listUncarriedOpenWork(
     targetReportId: string,
   ): Promise<UncarriedOpenWork> {
-    if (!this.repository.findPreviousReportId) return EMPTY_UNCARRIED;
     const sourceReportId =
       await this.repository.findPreviousReportId(targetReportId);
     if (!sourceReportId) return EMPTY_UNCARRIED;

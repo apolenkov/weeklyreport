@@ -69,12 +69,11 @@ export interface ReportSectionsRepository {
   /**
    * Resolve which of the section's CURRENT item/decision lineages (stableIds)
    * have appeared in a published report — the delete-lock reference set
-   * (resolve-not-delete, ADR 0015). Optional so legacy in-memory test
-   * repositories keep compiling; when absent the service skips the lock (the
-   * production repository always implements it). Risks are excluded by
-   * design: a risk is re-raised, not carried.
+   * (resolve-not-delete, ADR 0015). Required so a repository omitting it fails
+   * to compile rather than silently disabling the save-path delete lock. Risks
+   * are excluded by design: a risk is re-raised, not carried.
    */
-  getPublishedLineage?(section: ReportSectionReadModel): Promise<{
+  getPublishedLineage(section: ReportSectionReadModel): Promise<{
     itemStableIds: readonly string[];
     decisionStableIds: readonly string[];
   }>;
@@ -260,15 +259,13 @@ export class ReportSectionsService {
   /**
    * Resolve-not-delete (ADR 0015): a published-lineage item/decision cannot be
    * dropped from the section — `stableId` is CLIENT-authoritative on the save
-   * payload, so preservation is verified server-side. Skipped when the
-   * repository does not expose the lineage read (legacy in-memory fixtures);
-   * the pure comparison lives in `published-record-guard.ts`.
+   * payload, so preservation is verified server-side. The pure comparison lives
+   * in `published-record-guard.ts`.
    */
   private async assertPublishedRecordsPreserved(
     section: ReportSectionReadModel,
     input: DraftSaveInput | SubmitSectionInput,
   ): Promise<void> {
-    if (!this.repository.getPublishedLineage) return;
     const published = await this.repository.getPublishedLineage(section);
     const violation = findPublishedRecordViolation(published, input);
     if (violation) {

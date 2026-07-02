@@ -76,6 +76,9 @@ function createMockRepository(
     getSectionForPeriod: vi.fn().mockResolvedValue(null),
     getSectionReopenContext: vi.fn().mockResolvedValue(null),
     getReportPeriodStatusForSection: vi.fn().mockResolvedValue("open"),
+    getPublishedLineage: vi
+      .fn()
+      .mockResolvedValue({ itemStableIds: [], decisionStableIds: [] }),
     revokeSectionSubmission: vi.fn().mockResolvedValue(undefined),
     fillFromSection: vi.fn().mockResolvedValue(5),
     createReopenRequest: vi.fn().mockResolvedValue(undefined),

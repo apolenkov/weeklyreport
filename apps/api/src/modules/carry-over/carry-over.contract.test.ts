@@ -214,6 +214,11 @@ function createInMemoryRepository(opts: {
     },
 
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
+    async findPreviousReportId(): Promise<string | null> {
+      return null;
+    },
+
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
     async getTargetReportState(): Promise<TargetReportState | null> {
       return { ...targetReportState };
     },

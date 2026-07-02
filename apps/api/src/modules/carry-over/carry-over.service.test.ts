@@ -101,6 +101,10 @@ function createRepository(
       return null;
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
+    async findPreviousReportId() {
+      return null;
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
     async getSourceSections() {
       return [structuredClone(section)];
     },
@@ -216,6 +220,7 @@ describe("CarryOverService", () => {
     };
     const repo: CarryOverRepository = {
       findExecutionByDedupeKey: () => Promise.resolve(null),
+      findPreviousReportId: () => Promise.resolve(null),
       getSourceSections: () => Promise.resolve([structuredClone(src)]),
       getTargetSections: () => Promise.resolve([structuredClone(target)]),
       getTargetReportState: () =>
@@ -300,6 +305,10 @@ describe("CarryOverService", () => {
               return structuredClone(execution);
             }
           }
+          return null;
+        },
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
+        async findPreviousReportId() {
           return null;
         },
         // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
@@ -392,6 +401,10 @@ describe("CarryOverService", () => {
           return null;
         },
         // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
+        async findPreviousReportId() {
+          return null;
+        },
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
         async getSourceSections() {
           return [];
         },
@@ -420,6 +433,10 @@ describe("CarryOverService", () => {
       const repo: CarryOverRepository = {
         // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
         async findExecutionByDedupeKey() {
+          return null;
+        },
+        // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)
+        async findPreviousReportId() {
           return null;
         },
         // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async CarryOverRepository contract (no awaitable work in the stub)

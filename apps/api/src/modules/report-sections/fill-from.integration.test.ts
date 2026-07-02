@@ -65,6 +65,10 @@ function createMockRepository(
       return periodStatus;
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
+    async getPublishedLineage() {
+      return { itemStableIds: [], decisionStableIds: [] };
+    },
+    // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async LeadFormRepository contract (no awaitable work in the stub)
     async getSectionForPeriod() {
       return null;
     },

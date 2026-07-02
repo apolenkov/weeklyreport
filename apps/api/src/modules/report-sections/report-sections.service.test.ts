@@ -81,6 +81,10 @@ function createRepository(
     async getReportStatus() {
       return "draft";
     },
+    // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
+    async getPublishedLineage() {
+      return { itemStableIds: [], decisionStableIds: [] };
+    },
     // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<ReportSectionReadModel>); no awaitable work in stub
     async saveSection(nextSection) {
       currentSection = structuredClone(nextSection);
@@ -692,6 +696,10 @@ describe("ReportSectionsService — deadline gate (UFB-049 / 50-B)", () => {
       async getReportMeta() {
         return { status: "draft", deadline: opts.deadline };
       },
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
+      async getPublishedLineage() {
+        return { itemStableIds: [], decisionStableIds: [] };
+      },
       // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<ReportSectionReadModel>); no awaitable work in stub
       async saveSection(next) {
         currentSection = structuredClone(next);
@@ -865,6 +873,10 @@ describe("ReportSectionsService — product telemetry (Phase 52-A)", () => {
       // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
       async getReportMeta() {
         return { status: "draft", deadline };
+      },
+      // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<...>); no awaitable work in stub
+      async getPublishedLineage() {
+        return { itemStableIds: [], decisionStableIds: [] };
       },
       // eslint-disable-next-line @typescript-eslint/require-await -- implements ReportSectionsRepository contract (Promise<ReportSectionReadModel>); no awaitable work in stub
       async saveSection(next) {
