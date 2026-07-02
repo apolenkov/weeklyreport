@@ -12,7 +12,7 @@
  */
 import "@testing-library/jest-dom/vitest";
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { ItemCard } from "./item-card";
@@ -116,5 +116,71 @@ describe("ItemCard — card DOM structure (snapshot)", () => {
     );
     const card = container.querySelector('[data-testid="item-card"]');
     expect(card).toMatchSnapshot();
+  });
+});
+
+describe("ItemCard — uniform height (lead-item-card-uniformity, B1)", () => {
+  // Same fixed height as the section-level empty-state placeholder ("No
+  // items yet" in current-week-section.tsx / next-week-section.tsx) — the
+  // reference every populated card must match.
+  const EMPTY_STATE_REFERENCE_HEIGHT = "110px";
+
+  it("a short card and a long card render at the empty-state reference height", () => {
+    const shortItem: KanbanItem = { ...BASE_ITEM, text: "Ship it." };
+    const longItem: KanbanItem = {
+      ...BASE_ITEM,
+      id: "item-2",
+      text: "This description runs on for several lines of body copy, the kind of text that, under the old min-height growing-column layout, would push this card taller than a short sibling sitting next to it in the same section.",
+    };
+
+    const { container: shortContainer } = render(<ItemCard item={shortItem} />);
+    const { container: longContainer } = render(<ItemCard item={longItem} />);
+
+    const shortCard = within(shortContainer).getByTestId("item-card");
+    const longCard = within(longContainer).getByTestId("item-card");
+
+    expect(shortCard.style.height).toBe(EMPTY_STATE_REFERENCE_HEIGHT);
+    expect(longCard.style.height).toBe(EMPTY_STATE_REFERENCE_HEIGHT);
+    expect(shortCard.style.height).toBe(longCard.style.height);
+    // The old layout floored on min-height, which a long card could outgrow;
+    // the static render is fixed via `height`, never `min-height`.
+    expect(shortCard.style.minHeight).toBe("");
+    expect(longCard.style.minHeight).toBe("");
+  });
+
+  it("the fixed chrome (status pill row, author, stage tags) is never clipped by the reference height", () => {
+    const { container } = render(
+      <ItemCard
+        item={{ ...BASE_ITEM, priorityRank: 1, stageIds: ["S1", "S2"] }}
+      />,
+    );
+    const card = within(container).getByTestId("item-card");
+    // Top row (status pill + actions) and footer row (author + stage tags)
+    // opt out of the flex column's shrink pressure via `shrink-0`, so the
+    // fixed card height never compresses them below their natural size;
+    // only the body text region in between (line-clamp-3) is flexible.
+    const rows = Array.from(card.children);
+    expect(rows[0]).toHaveClass("shrink-0");
+    expect(rows[2]).toHaveClass("shrink-0");
+    expect(screen.getByText("In Progress")).toBeInTheDocument();
+    expect(screen.getByText("Alice Lead")).toBeInTheDocument();
+  });
+});
+
+describe("ItemCard — body text truncation + tooltip (lead-item-card-uniformity, B2)", () => {
+  const LONG_TEXT =
+    "A very long piece of item text that keeps going and going and going well past what three clamped lines can comfortably show in the card.";
+
+  it("static render clamps the body text and exposes the full text via a title tooltip", () => {
+    render(<ItemCard item={{ ...BASE_ITEM, text: LONG_TEXT }} />);
+    const body = screen.getByTitle(LONG_TEXT);
+    expect(body).toHaveClass("line-clamp-3");
+    expect(body).toHaveTextContent(LONG_TEXT);
+  });
+
+  it("inline edit shows the full, untruncated text in the textarea", () => {
+    render(<ItemCard item={{ ...BASE_ITEM, text: LONG_TEXT }} isEditing />);
+    const textarea = screen.getByRole("textbox", { name: "Edit item text" });
+    expect(textarea).toHaveValue(LONG_TEXT);
   });
 });

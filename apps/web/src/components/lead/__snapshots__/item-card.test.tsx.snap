@@ -37,10 +37,10 @@ exports[`ItemCard — card DOM structure (snapshot) > renders card with aria-hid
 <div
   class="group relative flex flex-col rounded-[10px] border bg-[var(--color-background)] p-2.5 transition-[border-color,box-shadow,background-color] hover:border-[rgba(0,0,0,0.25)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.10)]"
   data-testid="item-card"
-  style="min-height: 110px; border-top: 1px solid var(--color-muted); border-right: 1px solid var(--color-muted); border-bottom: 1px solid var(--color-muted); border-left: 3px solid var(--color-starbucks-accent); background: var(--color-background); opacity: 1;"
+  style="height: 110px; border-top: 1px solid var(--color-muted); border-right: 1px solid var(--color-muted); border-bottom: 1px solid var(--color-muted); border-left: 3px solid var(--color-starbucks-accent); background: var(--color-background); opacity: 1;"
 >
   <div
-    class="mb-2 flex items-start justify-between gap-2"
+    class="mb-2 flex shrink-0 items-start justify-between gap-2"
   >
     <div
       class="flex shrink-0 flex-wrap items-center gap-1.5"
@@ -107,13 +107,13 @@ exports[`ItemCard — card DOM structure (snapshot) > renders card with aria-hid
     </div>
   </div>
   <div
-    class="line-clamp-3 text-sm text-[var(--color-foreground)]"
+    class="line-clamp-3 min-h-0 flex-1 text-sm text-[var(--color-foreground)]"
     title="Implement CI pipeline"
   >
     Implement CI pipeline
   </div>
   <div
-    class="mt-auto flex items-end justify-between gap-2 pt-2"
+    class="mt-auto flex shrink-0 items-end justify-between gap-2 pt-2"
   >
     <div
       class="min-w-0 flex-1 truncate text-[11px] text-[var(--color-muted-foreground)]"

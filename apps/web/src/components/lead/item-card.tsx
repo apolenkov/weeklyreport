@@ -66,12 +66,24 @@ const STATUS_BADGE = {
   },
 } as const satisfies Record<string, StatusBadge>;
 
+/**
+ * Fixed card height for the static render, matching the section-level
+ * empty-state placeholder ("No items yet" in current-week-section.tsx /
+ * next-week-section.tsx) so a populated card can never grow past — or fall
+ * short of — its empty sibling (B1). The status-pill row, author, and stage
+ * tags keep their natural size (`shrink-0`); the body text region is the
+ * only flexible slot and absorbs the difference, truncating via
+ * `line-clamp-3` rather than growing the card.
+ */
+const ITEM_CARD_REFERENCE_HEIGHT = 110;
+
 function cardContainerStyle(opts: {
   isPlanned: boolean;
   isBlocked: boolean;
   foreign: boolean;
+  isEditing: boolean;
 }): CSSProperties {
-  const { isPlanned, isBlocked, foreign } = opts;
+  const { isPlanned, isBlocked, foreign, isEditing } = opts;
   const borderStyle = isPlanned ? "dashed" : "solid";
   // Faint blocked border = the destructive token at 20% (token-derived, no
   // hardcoded status literal — status-color-semantics).
@@ -79,7 +91,12 @@ function cardContainerStyle(opts: {
     ? "color-mix(in srgb, var(--color-destructive) 20%, transparent)"
     : "var(--color-muted)";
   return {
-    minHeight: 110,
+    // The reference height is fixed for the static render; inline edit
+    // relaxes it to a floor so the textarea can grow past it to show the
+    // full untruncated text (never clipped while editing).
+    ...(isEditing
+      ? { minHeight: ITEM_CARD_REFERENCE_HEIGHT }
+      : { height: ITEM_CARD_REFERENCE_HEIGHT }),
     borderTop: `1px ${borderStyle} ${borderColor}`,
     borderRight: `1px ${borderStyle} ${borderColor}`,
     borderBottom: `1px ${borderStyle} ${borderColor}`,
@@ -110,6 +127,10 @@ export function ItemCard({
   const isBlocked = item.status === "blocked";
   const isPlanned = item.status === "planned";
   const locked = readOnly || item.foreign === true;
+  // Same gate as the render branch below — the style must track whichever
+  // branch actually renders so an editable-but-locked card still gets the
+  // fixed reference height instead of the edit-mode floor.
+  const showEditor = isEditing && !locked;
   const stageTags = (
     item.stageIds && item.stageIds.length > 0
       ? item.stageIds
@@ -170,10 +191,13 @@ export function ItemCard({
         isPlanned,
         isBlocked,
         foreign: item.foreign === true,
+        isEditing: showEditor,
       })}
     >
-      {/* Card top line: status on the left, item actions on the right. */}
-      <div className="mb-2 flex items-start justify-between gap-2">
+      {/* Card top line: status on the left, item actions on the right.
+          shrink-0 keeps this row at its natural height so the fixed card
+          height never clips it — only the body text region below flexes. */}
+      <div className="mb-2 flex shrink-0 items-start justify-between gap-2">
         <div className="flex shrink-0 flex-wrap items-center gap-1.5">
           <span
             className="inline-flex w-fit shrink-0 items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[10px] font-semibold"
@@ -210,8 +234,10 @@ export function ItemCard({
         />
       </div>
 
-      {/* Item text — editable when in edit mode, static otherwise */}
-      {isEditing && !locked ? (
+      {/* Item text — editable when in edit mode, static otherwise. The
+          textarea always shows the full, untruncated `item.text` (seeded
+          into `draft`); only the static render below clamps. */}
+      {showEditor ? (
         <textarea
           ref={textareaRef}
           className="w-full resize-y rounded-md border border-[var(--color-starbucks-accent)] bg-white px-2 py-1.5 text-sm text-[var(--color-foreground)] focus:outline-none focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
@@ -223,20 +249,23 @@ export function ItemCard({
           aria-label="Edit item text"
         />
       ) : (
-        // line-clamp-3 keeps every card baseline-aligned: long text overflows
-        // gracefully into ellipsis instead of pushing the row's height past
-        // siblings. Native title attribute gives the full text on hover
-        // without pulling in a Tooltip dependency.
+        // flex-1 min-h-0 lets this region absorb whatever space is left
+        // inside the card's fixed height once the shrink-0 chrome rows take
+        // theirs, instead of growing the card. line-clamp-3 then clips
+        // within that space with an ellipsis; native title gives the full
+        // text on hover without pulling in a Tooltip dependency.
         <div
-          className="line-clamp-3 text-sm text-[var(--color-foreground)]"
+          className="line-clamp-3 min-h-0 flex-1 text-sm text-[var(--color-foreground)]"
           title={item.text}
         >
           {item.text}
         </div>
       )}
 
-      {/* Footer: author on the left, compact stage tags on the right. */}
-      <div className="mt-auto flex items-end justify-between gap-2 pt-2">
+      {/* Footer: author on the left, compact stage tags on the right.
+          shrink-0 mirrors the top row — never compressed by the fixed
+          height. */}
+      <div className="mt-auto flex shrink-0 items-end justify-between gap-2 pt-2">
         <div className="min-w-0 flex-1 truncate text-[11px] text-[var(--color-muted-foreground)]">
           {item.author}
         </div>

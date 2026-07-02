@@ -1491,14 +1491,6 @@ export function LeadForm({
                 (role-coverage-gate); this inert ComingSoon control never
                 reaches a backend call. */}
             <PdfExportComingSoonControl />
-            {/* Quick-add: one picker button routing to the existing per-type
-                dialogs (current-item / next-item / decision / risk / blocker). */}
-            {!isReadOnly && !isSlidesMode && (
-              <QuickAddButton
-                onPick={handleQuickAdd}
-                disabled={products.length === 0}
-              />
-            )}
             {!isReadOnly && (
               <FillFromButton
                 periods={visiblePeriods}
@@ -1542,6 +1534,17 @@ export function LeadForm({
               >
                 Revoke
               </button>
+            )}
+            {/* Quick-add: one picker button routing to the existing per-type
+                dialogs (current-item / next-item / decision / risk /
+                blocker). report-toolbar-layout: sits immediately before the
+                Submit commit — after Save and Fill-From — and stays visible
+                in both edit and slides mode so it never disappears. */}
+            {!isReadOnly && (
+              <QuickAddButton
+                onPick={handleQuickAdd}
+                disabled={products.length === 0}
+              />
             )}
             {!isSubmitted && !isReadOnly && (
               <button

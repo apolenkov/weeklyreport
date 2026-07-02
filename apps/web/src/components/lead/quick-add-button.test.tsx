@@ -36,6 +36,17 @@ describe("QuickAddButton", () => {
     fireEvent.click(trigger);
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
+
+  it("report-toolbar-layout: stays neutral/outline — no resting solid brand-accent fill", () => {
+    // Submit Section keeps the single resting brand-accent fill; + Add must
+    // never compete with it, so its background stays transparent.
+    render(<QuickAddButton onPick={vi.fn()} />);
+    const trigger = screen.getByRole("button", { name: "+ Add" });
+    expect(trigger.className).toContain("bg-transparent");
+    expect(trigger.className).not.toContain(
+      "bg-[var(--color-starbucks-accent)]",
+    );
+  });
 });
 
 describe("quick-add blocker preset on the existing item dialog", () => {

@@ -173,6 +173,28 @@ describe("DashboardPage loading guard", () => {
     expect(screen.getByText("Lead summary")).toBeInTheDocument();
   });
 
+  it("renders the alert bar and the Reopen Requests card as independent surfaces (lead-report-surface-polish HF6: single reopen surface)", () => {
+    setQueryState("review.dashboard", { data: [] });
+    setQueryState("weeklyReport.get", {
+      data: {
+        status: "ok",
+        reportId: "report-1",
+        weekLabel: "Week 20",
+        periodStatus: "open",
+        hasActiveReminderRule: true,
+      },
+    });
+
+    render(<DashboardPage />);
+
+    // The alert bar covers lead-submission signals only; the Reopen
+    // Requests card is the sole surface for pending reopen requests. Each
+    // self-suppresses independently — this asserts the page still composes
+    // both as siblings, with neither standing in for the other.
+    expect(screen.getByText("Alerts")).toBeInTheDocument();
+    expect(screen.getByText("Reopen requests")).toBeInTheDocument();
+  });
+
   it("does not keep the dashboard on the skeleton after a query error", () => {
     setQueryState("review.dashboard", {
       error: new Error("review failed"),
