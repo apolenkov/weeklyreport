@@ -91,6 +91,18 @@ describe("ConfirmDeleteDialog — a11y regression (VA-0a)", () => {
     );
   });
 
+  it("both dialog actions floor at the touch target below md (responsive-compact-layout)", () => {
+    // jsdom cannot evaluate media queries; the class assertions are the teeth.
+    renderDialog();
+
+    const cancel = screen.getByRole("button", { name: /cancel/i });
+    const confirm = screen.getByRole("button", { name: /delete/i });
+    for (const button of [cancel, confirm]) {
+      expect(button.className).toContain("min-h-[var(--touch-target-min)]");
+      expect(button.className).toContain("md:min-h-[36px]");
+    }
+  });
+
   it("destructive confirm button receives focus on open (rAF-deferred autoFocus)", async () => {
     renderDialog({ confirmLabel: "Delete" });
 

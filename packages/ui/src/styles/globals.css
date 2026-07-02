@@ -158,6 +158,18 @@
   --color-decisions-accent: #4a7494;
 }
 
+/* ---- Compact-tier control height (responsive-compact-layout) ----
+   Below Tailwind's `md` boundary (48rem — the single compact↔full boundary)
+   every control that derives its height from --toolbar-control-h rises to the
+   --touch-target-min floor, so compact-tier toolbars stay comfortably tappable
+   while desktop keeps the dense 2rem. One override here floors every consumer
+   of the shared token; no per-callsite max-md classes. */
+@media (width < 48rem) {
+  :root {
+    --toolbar-control-h: var(--touch-target-min);
+  }
+}
+
 /* ---- Skeleton animation (shimmer) ---- */
 .skeleton {
   background: linear-gradient(

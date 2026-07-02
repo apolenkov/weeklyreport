@@ -102,6 +102,17 @@ describe("StageChip — chip box height token (align-pipeline-arrows D1)", () =>
     const button = screen.getByRole("button");
     expect(button.style.height).toBe(STAGE_CHIP_BOX_HEIGHT);
   });
+
+  it("chip button floors at the touch target below md (responsive-compact-layout)", () => {
+    // jsdom cannot evaluate media queries; the class assertion is the teeth.
+    // min-height beats the 36px inline height below `md`, so the chip grows to
+    // the touch floor on phones while desktop keeps the aligned 36px box.
+    render(<StageChip stage={{ ...BASE_LOCKED, status: "on-track" }} />);
+    const button = screen.getByRole("button");
+    expect(button.className).toContain(
+      "max-md:min-h-[var(--touch-target-min)]",
+    );
+  });
 });
 
 // ---- W11 (fix-report-surface-integrity 3.9): risk-covered vs status-set ----

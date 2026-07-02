@@ -21,6 +21,36 @@ const products: Product[] = [
   { id: "p1", name: "CRM", overallStatus: "on-track", stages: [] },
 ];
 
+describe("DecisionEditDialog — compact touch floor (responsive-compact-layout)", () => {
+  it("footer actions and the deadline input floor at the touch target below md", () => {
+    // jsdom cannot evaluate media queries; the class assertions are the teeth.
+    // Desktop density is untouched (md:min-h restores the 40px value).
+    render(
+      <DecisionEditDialog
+        open={true}
+        decision={null}
+        defaultOwner="Test Lead"
+        stagesForProduct={() => ["Dev"] as const}
+        products={products}
+        defaultProductId="p1"
+        onSave={vi.fn()}
+        onCancel={() => undefined}
+      />,
+    );
+
+    for (const name of [/^Cancel$/, /Save Decision/]) {
+      const button = screen.getByRole("button", { name });
+      expect(button.className).toContain("min-h-[var(--touch-target-min)]");
+      expect(button.className).toContain("md:min-h-[40px]");
+    }
+
+    const deadline = document.querySelector("#dec-deadline");
+    expect(deadline?.className).toContain(
+      "max-md:min-h-[var(--touch-target-min)]",
+    );
+  });
+});
+
 describe("DecisionEditDialog — A13 form-race regression", () => {
   it("preserves typed text when parent re-renders with a new stagesForProduct ref", () => {
     const stagesV1 = ["Planning", "Dev"] as const;

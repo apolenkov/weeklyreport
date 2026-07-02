@@ -145,7 +145,7 @@ export function LeadSummaryTable({
       className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]"
       aria-labelledby="lead-summary-heading"
     >
-      <div className="border-b border-[rgba(0,0,0,0.08)] px-4 py-4">
+      <div className="border-b border-[rgba(0,0,0,0.08)] px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
           <h2
             id="lead-summary-heading"
@@ -162,7 +162,10 @@ export function LeadSummaryTable({
         </p>
       </div>
 
-      <ul className="grid grid-cols-[minmax(10rem,1fr)_auto_repeat(6,4.5rem)_auto_auto] gap-x-4 gap-y-2 p-4">
+      {/* responsive-compact-layout: below `md` the subgrid rails give way to
+          stacked cards whose counts wrap as a labeled-value list, so the
+          summary keeps its no-horizontal-scroll guarantee at phone width. */}
+      <ul className="grid gap-y-2 p-3 md:grid-cols-[minmax(10rem,1fr)_auto_repeat(6,4.5rem)_auto_auto] md:gap-x-4 md:p-4">
         {leads.map((lead) => {
           // A submitted lead is done, not "gone quiet" — the 24h-inactive
           // nudge styling only makes sense for leads with open work
@@ -178,7 +181,7 @@ export function LeadSummaryTable({
               data-testid={
                 inactive ? "lead-row-inactive-24h" : "lead-summary-row"
               }
-              className={`col-span-full grid grid-cols-subgrid items-center rounded-lg border border-[rgba(0,0,0,0.06)] bg-[rgba(0,0,0,0.02)] p-3${
+              className={`flex flex-col gap-2 rounded-lg border border-[rgba(0,0,0,0.06)] bg-[rgba(0,0,0,0.02)] p-3 md:col-span-full md:grid md:grid-cols-subgrid md:items-center${
                 inactive ? " opacity-60" : ""
               }`}
             >
@@ -204,7 +207,7 @@ export function LeadSummaryTable({
                 {STATUS_LABELS[lead.status]}
               </span>
 
-              <dl className="col-span-6 grid grid-cols-subgrid items-center">
+              <dl className="flex flex-wrap gap-x-4 gap-y-1.5 md:col-span-6 md:grid md:grid-cols-subgrid md:items-center">
                 {COUNT_FIELDS.map((field) => (
                   <div
                     key={field.label}
@@ -223,7 +226,7 @@ export function LeadSummaryTable({
                 ))}
               </dl>
 
-              <span className="justify-self-end text-right text-xs text-[var(--color-muted-foreground)]">
+              <span className="text-xs text-[var(--color-muted-foreground)] md:justify-self-end md:text-right">
                 <span className="sr-only">Submitted: </span>
                 {lead.submittedAtLabel ?? "-"}
               </span>

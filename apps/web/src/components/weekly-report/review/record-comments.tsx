@@ -86,7 +86,13 @@ export function RecordComments({
   const submitDisabled = trimmed.length === 0 || commentMut.isPending;
 
   return (
-    <div className="mt-1.5 flex flex-col gap-2 pl-[calc(20px+3px+124px+3.5rem)]">
+    // The md+ indent left-aligns the comment block with its anchor row's
+    // content column: priority (20px) + rail (3px) + gutter (124px) + 3.5rem —
+    // the three ROW_GRID gaps that precede the content column (3 × 0.875rem)
+    // plus one extra gap-width of inset. Below `md` that indent would eat half
+    // a phone viewport, so the block keeps a minimal inset and simply stacks
+    // beneath the record (one responsive layout, no side rail).
+    <div className="mt-1.5 flex flex-col gap-2 pl-2 md:pl-[calc(20px+3px+124px+3.5rem)]">
       {hasComments ? (
         <div className="flex flex-col gap-1">
           <span className="text-[10px] font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
@@ -102,7 +108,7 @@ export function RecordComments({
               isAdmin || (canReview && comment.reviewerId === currentUserId) ? (
                 <button
                   type="button"
-                  className="text-[10px] font-semibold text-[var(--color-destructive)] underline-offset-2 hover:underline disabled:opacity-50"
+                  className="inline-flex items-center justify-center max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] text-[10px] font-semibold text-[var(--color-destructive)] underline-offset-2 hover:underline disabled:opacity-50"
                   onClick={() => deleteMut.mutate({ commentId: comment.id })}
                   disabled={deleteMut.isPending}
                   aria-label="Delete comment"
@@ -134,7 +140,7 @@ export function RecordComments({
           <div className="flex justify-end">
             <button
               type="submit"
-              className="btn-press inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-3 py-1 text-[12px] font-semibold text-[var(--color-primary-foreground)] transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-3 py-1 text-[12px] font-semibold text-[var(--color-primary-foreground)] transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
               disabled={submitDisabled}
             >
               {commentMut.isPending ? "Adding…" : "Comment"}

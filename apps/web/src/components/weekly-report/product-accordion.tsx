@@ -111,8 +111,11 @@ const STATUS_CONFIG = {
 // — item, risk, decision — shares ONE column grid so all stage labels share one
 // left edge and all content shares one left edge (the text no longer jumps).
 // Columns: priority | status rail | gutter (stage+owner) | content | status badge.
+// Below `md` the fixed gutter/badge rails narrow (gutter 84px, badge auto,
+// tighter gaps) so the content column keeps a usable width on a phone; every
+// column — and every status signal — remains present.
 const ROW_GRID =
-  "grid grid-cols-[20px_3px_minmax(0,124px)_minmax(0,1fr)_104px] items-start gap-x-3.5";
+  "grid grid-cols-[20px_3px_minmax(0,84px)_minmax(0,1fr)_auto] items-start gap-x-2 md:grid-cols-[20px_3px_minmax(0,124px)_minmax(0,1fr)_104px] md:gap-x-3.5";
 
 // report-card-clarity: the product-status dot in the header reads its hue from a
 // named token (red=blocked alarm, amber=at-risk, green=on-track).

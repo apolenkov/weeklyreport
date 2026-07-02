@@ -166,11 +166,12 @@ describe("FillFromButton — a11y regression (VA-0a): aria-hidden decorative SVG
       "title",
       "Fill from most recent submitted period",
     );
-    // polish-lead-toolbar-and-risk-dialog 1.3: the main segment and chevron
-    // share ONE rounded-full container that owns the 32px height; the segments
-    // themselves are full-height (no per-button w-8 circle anymore).
+    // The main segment and chevron share ONE rounded-full container that owns
+    // the control height (the shared toolbar token — 32px on desktop, the
+    // touch floor below `md`); the segments themselves are full-height (no
+    // per-button w-8 circle).
     const container = fillButton.parentElement;
-    expect(container?.className).toContain("h-8");
+    expect(container?.className).toContain("h-[var(--toolbar-control-h)]");
     expect(container?.className).toContain("rounded-full");
     const svg = fillButton.querySelector("svg");
     expect(svg).not.toBeNull();
@@ -203,7 +204,7 @@ describe("FillFromButton — a11y regression (VA-0a): aria-hidden decorative SVG
     // segment of the split-button, divided by a left hairline border.
     expect(triggerButton.className).toContain("border-l");
     const container = triggerButton.parentElement;
-    expect(container?.className).toContain("h-8");
+    expect(container?.className).toContain("h-[var(--toolbar-control-h)]");
     expect(container?.className).toContain("rounded-full");
     const svg = triggerButton.querySelector("svg");
     expect(svg).not.toBeNull();
@@ -222,6 +223,53 @@ describe("FillFromButton — a11y regression (VA-0a): aria-hidden decorative SVG
     // Both segments live inside the same rounded-full container element.
     expect(main.parentElement).toBe(chevron.parentElement);
     expect(main.parentElement?.className).toContain("overflow-hidden");
+  });
+});
+
+describe("FillFromButton — compact touch floor (responsive-compact-layout)", () => {
+  // jsdom cannot evaluate media queries; the class assertions are the teeth.
+  // The shared container floors the HEIGHT via --toolbar-control-h, but each
+  // segment must also floor its WIDTH below `md` (the chevron is ~26px wide
+  // on desktop).
+  it("both split-button segments carry the compact min-width floor", () => {
+    render(<FillFromButton periods={[pastPeriod]} />);
+
+    const main = screen.getByRole("button", {
+      name: "Fill from most recent submitted period",
+    });
+    const chevron = screen.getByRole("button", {
+      name: "Choose past report to fill from",
+    });
+    expect(main.className).toContain("max-md:min-w-[var(--touch-target-min)]");
+    expect(chevron.className).toContain(
+      "max-md:min-w-[var(--touch-target-min)]",
+    );
+  });
+
+  it("confirm-dialog actions and the picker search input carry the compact min-height floor", () => {
+    render(<FillFromButton periods={[pastPeriod]} />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Choose past report to fill from" }),
+    );
+    const search = screen.getByPlaceholderText("Search reports…");
+    expect(search.className).toContain(
+      "max-md:min-h-[var(--touch-target-min)]",
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Fill from most recent submitted period",
+      }),
+    );
+    const confirm = screen.getByRole("button", { name: /Replace & Fill/ });
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+    expect(confirm.className).toContain(
+      "max-md:min-h-[var(--touch-target-min)]",
+    );
+    expect(cancel.className).toContain(
+      "max-md:min-h-[var(--touch-target-min)]",
+    );
   });
 });
 

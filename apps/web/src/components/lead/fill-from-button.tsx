@@ -12,13 +12,15 @@ import type { ReportPeriod } from "./mock-data";
 // accessible split-button pattern holds; the chevron keeps dropdownTriggerRef
 // for portal positioning.
 const SPLIT_BUTTON_CONTAINER_CLASS =
-  "inline-flex h-8 shrink-0 items-center overflow-hidden rounded-full border border-[var(--color-border)] bg-white/70 text-[var(--color-foreground)]";
+  "inline-flex h-[var(--toolbar-control-h)] shrink-0 items-center overflow-hidden rounded-full border border-[var(--color-border)] bg-white/70 text-[var(--color-foreground)]";
 const SPLIT_BUTTON_SEGMENT_CLASS =
   "btn-press inline-flex h-full items-center justify-center transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50";
 // Main segment is wider (copy icon); chevron segment is a slim attached caret
 // separated by a hairline divider.
-const SPLIT_BUTTON_MAIN_CLASS = `${SPLIT_BUTTON_SEGMENT_CLASS} px-2.5`;
-const SPLIT_BUTTON_CHEVRON_CLASS = `${SPLIT_BUTTON_SEGMENT_CLASS} border-l border-[var(--color-border)] px-1.5`;
+// Below `md` both segments floor their WIDTH at the touch target (the shared
+// container already floors the height via --toolbar-control-h).
+const SPLIT_BUTTON_MAIN_CLASS = `${SPLIT_BUTTON_SEGMENT_CLASS} px-2.5 max-md:min-w-[var(--touch-target-min)]`;
+const SPLIT_BUTTON_CHEVRON_CLASS = `${SPLIT_BUTTON_SEGMENT_CLASS} border-l border-[var(--color-border)] px-1.5 max-md:min-w-[var(--touch-target-min)]`;
 
 interface FillFromButtonProps {
   readonly periods: ReportPeriod[];
@@ -215,7 +217,7 @@ export function FillFromButton({
                 <SearchIcon />
                 <input
                   type="text"
-                  className="w-full rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-1.5 pl-8 text-[13px] text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
+                  className="w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[rgba(0,0,0,0.2)] bg-white px-3 py-1.5 pl-8 text-[13px] text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)] focus:outline-none"
                   placeholder="Search reports…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -301,14 +303,14 @@ export function FillFromButton({
               <div className="mt-6 flex justify-end gap-3">
                 <button
                   type="button"
-                  className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
+                  className="btn-press inline-flex items-center justify-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
                   onClick={handleCancel}
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
-                  className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
+                  className="btn-press inline-flex items-center justify-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-white transition-colors hover:bg-[var(--color-primary)]"
                   onClick={handleConfirm}
                 >
                   Replace &amp; Fill

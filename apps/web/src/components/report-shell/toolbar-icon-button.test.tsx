@@ -26,19 +26,22 @@ describe("ToolbarIconButton (head-toolbar-parity D3)", () => {
     expect(btn).toHaveAttribute("title", "Tooltip wording");
   });
 
-  it("carries the shared 32px circle classes and type=button", () => {
+  it("derives the shared circle size from the toolbar height token and sets type=button", () => {
+    // responsive-compact-layout: the token is 32px on desktop and rises to the
+    // touch-target floor below `md`, so the size must come from the token, not
+    // a hard-coded h-8/w-8.
     render(<ToolbarIconButton aria-label="Sized" />);
     const btn = screen.getByRole("button", { name: "Sized" });
     expect(btn).toHaveAttribute("type", "button");
-    expect(btn.className).toContain("h-8");
-    expect(btn.className).toContain("w-8");
+    expect(btn.className).toContain("h-[var(--toolbar-control-h)]");
+    expect(btn.className).toContain("w-[var(--toolbar-control-h)]");
     expect(btn.className).toContain("rounded-full");
   });
 
   it("appends variant classes after the base classes", () => {
     render(<ToolbarIconButton aria-label="Variant" className="bg-pink-500" />);
     const btn = screen.getByRole("button", { name: "Variant" });
-    expect(btn.className).toContain("h-8");
+    expect(btn.className).toContain("h-[var(--toolbar-control-h)]");
     expect(btn.className).toContain("bg-pink-500");
   });
 

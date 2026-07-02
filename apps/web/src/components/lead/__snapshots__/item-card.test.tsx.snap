@@ -67,7 +67,7 @@ exports[`ItemCard — card DOM structure (snapshot) > renders card with aria-hid
     >
       <button
         aria-label="Edit"
-        class="flex h-8 w-8 items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+        class="flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
         type="button"
       >
         <svg
@@ -88,7 +88,7 @@ exports[`ItemCard — card DOM structure (snapshot) > renders card with aria-hid
       </button>
       <button
         aria-label="Delete"
-        class="flex h-8 w-8 items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:border-[color-mix(in_srgb,var(--color-destructive)_20%,transparent)] hover:bg-[var(--color-status-blocked-bg)] hover:text-[var(--color-destructive)]"
+        class="flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:border-[color-mix(in_srgb,var(--color-destructive)_20%,transparent)] hover:bg-[var(--color-status-blocked-bg)] hover:text-[var(--color-destructive)]"
         type="button"
       >
         <svg
