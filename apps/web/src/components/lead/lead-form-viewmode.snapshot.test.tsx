@@ -70,7 +70,15 @@ function buildTRPC() {
     },
     {
       path: ["leadForm", "byPeriod"],
-      query: { section: makeSection(), readOnly: false },
+      query: {
+        section: makeSection(),
+        readOnly: false,
+        publishedLineage: { itemStableIds: [], decisionStableIds: [] },
+      },
+    },
+    {
+      path: ["leadForm", "viewSettings"],
+      query: { unifiedActivityView: false },
     },
     {
       path: ["leadForm", "revoke"],

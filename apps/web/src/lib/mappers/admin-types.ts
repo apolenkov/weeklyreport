@@ -126,6 +126,8 @@ export interface MockSettings {
   deadlineTime: string; // HH:MM (24h)
   allowReopenAfterPublish: boolean;
   reopenWindowHours: number;
+  // Opt-in unified by-state lead-form view (presentation projection).
+  unifiedActivityView: boolean;
   // Reminders tab
   defaultTimezone: string;
   defaultReminderAudience: "lead-with-draft" | "head-of-late";

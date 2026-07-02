@@ -14,6 +14,7 @@ import {
   reopenBlockedMessage,
   ReopenRequestError,
 } from "./lead-form-shared";
+import { ReportSectionDomainError } from "./report-sections.service.js";
 
 // Re-export the error classes and shared types from their original module
 // path so every existing importer (`./lead-form.service`) resolves unchanged.
@@ -156,6 +157,27 @@ export class LeadFormService {
       );
     }
 
+    // Resolve-not-delete (ADR 0015) also binds Fill From: it delete-recreates
+    // the target's items/decisions with fresh identity, which would silently
+    // destroy any published-lineage record on a REOPENED period (the
+    // periodStatus gate above only blocks a still-published one). Fail closed —
+    // reject the whole fill if the target holds any published-lineage record;
+    // a never-published draft has none and is unaffected. The same lineage
+    // query the save guard uses. Skipped when the repository exposes no lineage
+    // read (legacy in-memory fixtures), where the save guard stays the backstop.
+    if (this.repository.getPublishedLineage) {
+      const published = await this.repository.getPublishedLineage(target);
+      if (
+        published.itemStableIds.length > 0 ||
+        published.decisionStableIds.length > 0
+      ) {
+        throw new ReportSectionDomainError(
+          "PUBLISHED_RECORD_LOCKED",
+          "Fill from previous cannot replace records that are part of the published report.",
+        );
+      }
+    }
+
     // Authorize the SOURCE section too. The fill-from picker only ever offers
     // the lead's OWN past sections (`LeadReportPeriod.sourceSectionId` is sourced
     // from `MyHistoryEntry.sectionId`), so any sourceSectionId authored by
@@ -272,6 +294,15 @@ export class LeadFormService {
     readOnly: boolean;
     canRequestReopen: boolean;
     reopenBlockedReason: string | null;
+    /**
+     * Resolve-not-delete (ADR 0015): the section's published item/decision
+     * lineages, so the form can mark locked records and hide Delete. Advisory
+     * for the UI only — the save-path guard enforces the lock.
+     */
+    publishedLineage: {
+      itemStableIds: readonly string[];
+      decisionStableIds: readonly string[];
+    };
   }> {
     const isHeadLike = role === "head" || role === "admin";
     // One shared non-archived set gates AND scopes the lead cross-author read
@@ -315,11 +346,18 @@ export class LeadFormService {
       result.reopenFacts,
     );
 
+    // Computed over the (possibly product-filtered) section actually returned,
+    // so a cross-author read never leaks lineage of records it does not show.
+    const publishedLineage = (await this.repository.getPublishedLineage?.(
+      section,
+    )) ?? { itemStableIds: [], decisionStableIds: [] };
+
     return {
       section,
       readOnly: result.readOnly || !isOwnSection,
       canRequestReopen: isOwnSection && canRequestReopen,
       reopenBlockedReason: isOwnSection ? reason : null,
+      publishedLineage,
     };
   }
 

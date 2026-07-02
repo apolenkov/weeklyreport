@@ -110,6 +110,7 @@ function buildHarness(
     canRequestReopen?: boolean;
     byPeriodQueryFn?: () => Promise<unknown>;
     myHistory?: readonly unknown[];
+    unifiedActivityView?: boolean;
   } = {},
 ) {
   const { proxy, captured } = createMockTRPC([
@@ -145,7 +146,12 @@ function buildHarness(
           // keeps its precondition; tests override it to assert the hidden case.
           canRequestReopen:
             opts.canRequestReopen ?? opts.sectionStatus === "submitted",
+          publishedLineage: { itemStableIds: [], decisionStableIds: [] },
         })),
+    },
+    {
+      path: ["leadForm", "viewSettings"],
+      query: { unifiedActivityView: opts.unifiedActivityView ?? false },
     },
     {
       path: ["leadForm", "revoke"],
@@ -345,6 +351,7 @@ describe("LeadForm mutation wiring", () => {
           section: { ...makeSection(), version: serverVersion },
           readOnly: false,
           canRequestReopen: false,
+          publishedLineage: { itemStableIds: [], decisionStableIds: [] },
         }),
     });
     captured["reports.submit"].mutationFn.mockResolvedValue({
@@ -849,6 +856,7 @@ describe("LeadForm mode-adaptive trailing control", () => {
             activities: [],
           },
           readOnly: false,
+          publishedLineage: { itemStableIds: [], decisionStableIds: [] },
         }),
     });
     render(
@@ -984,5 +992,46 @@ describe("sectionToDraftPayload — durable stableId round-trip", () => {
     };
     const payload = sectionToDraftPayload(withNewItem);
     expect(expectDefined(payload.items[0]).stableId).toBeUndefined();
+  });
+});
+
+// unified-activity-entry: the by-state view is opt-in behind the org
+// AppSettings flag. Off (the default in every harness above) keeps the
+// classic two-section format; on swaps the Current/Next sections for the
+// single unified section. Physical Item.type storage never changes — the
+// draft payload derives from the same raw section either way.
+describe("unified by-state view flag", () => {
+  it("flag off: classic Current Week / Next Week sections render", async () => {
+    const { Wrapper } = buildHarness();
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    expect(
+      await screen.findByTestId("lead-section-current-week"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("lead-section-next-week")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("lead-section-unified"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("flag on: one unified section replaces the two week sections", async () => {
+    const { Wrapper } = buildHarness({ unifiedActivityView: true });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    expect(
+      await screen.findByTestId("lead-section-unified"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("lead-section-current-week"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("lead-section-next-week"),
+    ).not.toBeInTheDocument();
   });
 });

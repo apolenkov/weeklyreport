@@ -24,12 +24,17 @@ import {
 } from "../../hooks/use-lead-form-autosave";
 import { useRecordVisibility } from "../../hooks/use-record-visibility";
 import { computeCoupling, validateCoupling } from "../../hooks/use-status-risk";
+import { deriveActivityBucket } from "../../lib/activity-buckets";
 import {
   invalidateDashboard,
   invalidateLeadForm,
   invalidateLeadHistory,
 } from "../../lib/cache-keys";
 import { crossAuthorContentFetchEnabled } from "../../lib/cross-author-content-gate";
+import {
+  markCompletePatch,
+  moveToNextWeekPatch,
+} from "../../lib/lead-item-actions";
 import { mapLeadFormData, mapLeadReviewFeedback } from "../../lib/mappers";
 import {
   applyCrossAuthorStageOverrides,
@@ -69,6 +74,7 @@ import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { CurrentWeekSection } from "./current-week-section";
 import { DecisionsSection } from "./decisions-section";
 import { FillFromButton } from "./fill-from-button";
+import { ItemEditDialog } from "./item-edit-dialog";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
 import { LeadFormSyncBridge } from "./lead-form-sync-bridge";
 import { LeadReviewFeedback } from "./lead-review-feedback";
@@ -82,7 +88,12 @@ import type {
 import { NextWeekSection } from "./next-week-section";
 import { PdfExportComingSoonControl } from "./pdf-export-coming-soon";
 import { PeriodNavigator } from "./period-navigator";
+import { QuickAddButton, type QuickAddKind } from "./quick-add-button";
 import { RequestReopenDialog } from "./request-reopen-dialog";
+import {
+  type UnifiedActivityEntry,
+  UnifiedActivitySection,
+} from "./unified-activity-section";
 import { VersionComingSoonControl } from "./version-coming-soon";
 
 interface LeadFormProps {
@@ -455,6 +466,12 @@ export function LeadForm({
 
   const historyQ = useQuery(trpc.reports.myHistory.queryOptions());
 
+  // Org-level presentation flag for the opt-in unified by-state view (ADR
+  // 0011). Classic two-section format is the default until the flag loads —
+  // and stays the default when it is off.
+  const viewSettingsQ = useQuery(trpc.leadForm.viewSettings.queryOptions());
+  const unifiedView = viewSettingsQ.data?.unifiedActivityView === true;
+
   // F1: load other authors who share a product with the current user.
   // Only relevant when viewing your own section (not a foreign-author view).
   const crossAuthorsQ = useQuery({
@@ -772,6 +789,14 @@ export function LeadForm({
   const [nextWeekAddSignal, setNextWeekAddSignal] = useState(0);
   const [risksAddSignal, setRisksAddSignal] = useState(0);
   const [decisionsAddSignal, setDecisionsAddSignal] = useState(0);
+  // Quick-add item dialog host (current-item / next-item / blocker). Risk and
+  // decision quick-adds ride the existing section add-signals instead; `seq`
+  // remounts the dialog per open so its state re-seeds.
+  const [quickAddItem, setQuickAddItem] = useState<{
+    week: "current" | "next";
+    status?: "blocked";
+    seq: number;
+  } | null>(null);
 
   // Compute readOnly early (before hook; the autosave hook needs it). When
   // data isn't ready, treat as readOnly (autosave disabled).
@@ -937,6 +962,73 @@ export function LeadForm({
   ]
     .map((i) => i.priorityRank)
     .filter((r): r is number => r != null);
+
+  // Resolve-not-delete (ADR 0015): translate the server's published lineage
+  // (durable stableIds) into the presentation row ids currently on screen, so
+  // the cards can mark locked records and withhold Delete. Advisory only —
+  // the save-path guard on the server is the enforcement point.
+  const publishedLineage = byPeriodQ.data.publishedLineage;
+  const lockedItemLineage = new Set(publishedLineage.itemStableIds);
+  const lockedDecisionLineage = new Set(publishedLineage.decisionStableIds);
+  const publishedLockedItemIds: ReadonlySet<string> = new Set(
+    draftSection.items.flatMap((item) =>
+      item.id && item.stableId && lockedItemLineage.has(item.stableId)
+        ? [item.id]
+        : [],
+    ),
+  );
+  const publishedLockedDecisionIds: ReadonlySet<string> = new Set(
+    draftSection.decisions.flatMap((decision) =>
+      decision.id &&
+      decision.stableId &&
+      lockedDecisionLineage.has(decision.stableId)
+        ? [decision.id]
+        : [],
+    ),
+  );
+
+  // Unified by-state entries: each displayed item plus its derived bucket
+  // (deriveActivityBucket over the RAW persisted fields — a pure projection;
+  // Item.type storage is untouched). Foreign read-only rows have no raw row
+  // in the draft, so their bucket derives from the presentation status.
+  const rawItemById = new Map(
+    draftSection.items.flatMap((item) =>
+      item.id ? [[item.id, item] as const] : [],
+    ),
+  );
+  const toUnifiedEntry = (
+    item: KanbanItem,
+    week: "current" | "next",
+  ): UnifiedActivityEntry => {
+    const raw = item.foreign === true ? undefined : rawItemById.get(item.id);
+    if (raw) {
+      return {
+        item,
+        week,
+        bucket: deriveActivityBucket({
+          type: raw.type,
+          workflowStatus: raw.workflowStatus,
+          completed: raw.completed ?? null,
+          carriedOver: raw.carriedOver,
+        }),
+      };
+    }
+    const bucket =
+      item.status === "completed"
+        ? "done"
+        : item.status === "blocked"
+          ? "blocked"
+          : item.status === "planned"
+            ? "planned-next"
+            : week === "next"
+              ? "deferred"
+              : "in-progress";
+    return { item, week, bucket };
+  };
+  const unifiedEntries: UnifiedActivityEntry[] = [
+    ...currentWeekItems.map((item) => toUnifiedEntry(item, "current")),
+    ...nextWeekItems.map((item) => toUnifiedEntry(item, "next")),
+  ];
 
   const periods: ReportPeriod[] = data.periods as ReportPeriod[];
   const currentUser = data.currentUser;
@@ -1263,6 +1355,64 @@ export function LeadForm({
     setGroupExpanded((prev) => !prev);
   }
 
+  // ---- Per-item move actions ----
+  // Both mutate the EXISTING draft row in place — same object id, same
+  // durable stableId (`...item` spread) — never a delete-recreate that mints
+  // a new identity, so C1 comment anchors survive the move (ADR 0015 /
+  // stable-record-identity). Autosave picks the change up like any edit.
+  function updateDraftItemInPlace(
+    itemId: string,
+    patch: Partial<ReportSectionReadModel["items"][number]>,
+  ) {
+    setDraftSection((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        items: prev.items.map((item) =>
+          item.id === itemId ? { ...item, ...patch } : item,
+        ),
+      };
+    });
+  }
+
+  function handleMarkComplete(itemId: string) {
+    updateDraftItemInPlace(itemId, markCompletePatch());
+  }
+
+  function handleMoveToNextWeek(itemId: string) {
+    updateDraftItemInPlace(itemId, moveToNextWeekPatch());
+  }
+
+  // ---- Quick-add ----
+  // One picker, five entries, all routed to the EXISTING per-type dialogs:
+  // risk/decision bump the section add-signals; the item kinds open the
+  // form-level dialog host below ("blocker" = current item pre-set blocked).
+  function handleQuickAdd(kind: QuickAddKind) {
+    if (kind === "risk") {
+      setRisksAddSignal((value) => value + 1);
+      return;
+    }
+    if (kind === "decision") {
+      setDecisionsAddSignal((value) => value + 1);
+      return;
+    }
+    setQuickAddItem((prev) => ({
+      week: kind === "next-item" ? "next" : "current",
+      ...(kind === "blocker" ? { status: "blocked" as const } : {}),
+      seq: (prev?.seq ?? 0) + 1,
+    }));
+  }
+
+  function handleQuickAddSave(next: KanbanItem) {
+    if (!quickAddItem) return;
+    if (quickAddItem.week === "next") {
+      handleNextWeekItemsChange([...nextWeekItems, next]);
+    } else {
+      handleCurrentWeekItemsChange([...currentWeekItems, next]);
+    }
+    setQuickAddItem(null);
+  }
+
   // Autosave indicator label — 4-state badge.
   const autosaveLabel =
     autosave.state === "saving"
@@ -1332,6 +1482,14 @@ export function LeadForm({
                 (role-coverage-gate); this inert ComingSoon control never
                 reaches a backend call. */}
             <PdfExportComingSoonControl />
+            {/* Quick-add: one picker button routing to the existing per-type
+                dialogs (current-item / next-item / decision / risk / blocker). */}
+            {!isReadOnly && !isSlidesMode && (
+              <QuickAddButton
+                onPick={handleQuickAdd}
+                disabled={products.length === 0}
+              />
+            )}
             {!isReadOnly && (
               <FillFromButton
                 periods={visiblePeriods}
@@ -1564,83 +1722,122 @@ export function LeadForm({
                 </AccordionSection>
               )}
 
-              {/* Current Week */}
-              <AccordionSection
-                groupExpanded={groupExpanded}
-                testId="lead-section-current-week"
-                icon={<CalendarIcon />}
-                title="Current Week"
-                badge={`${currentWeekItems.length} items`}
-                subtitle="Work completed or still in progress this week, grouped by product and SDLC stage."
-                actions={
-                  !isReadOnly ? (
-                    <button
-                      type="button"
-                      className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                      onClick={() =>
-                        setCurrentWeekAddSignal((value) => value + 1)
-                      }
-                      disabled={products.length === 0}
-                      title={
-                        products.length > 0
-                          ? `Add item to ${products[0]?.name}`
-                          : "No products assigned — contact admin"
-                      }
-                    >
-                      + Add Item
-                    </button>
-                  ) : null
-                }
-              >
-                <CurrentWeekSection
-                  items={currentWeekItems}
-                  readOnly={isReadOnly}
-                  onItemsChange={handleCurrentWeekItemsChange}
-                  currentUserName={currentUser.name}
-                  products={products}
-                  stagesForProduct={stagesForProduct}
-                  ownPeriodRanks={ownPeriodRanks}
-                  addSignal={currentWeekAddSignal}
-                />
-              </AccordionSection>
+              {/* Items: classic Current/Next two-section format by default;
+                  the opt-in unified by-state view when the org flag is on
+                  (a pure projection — physical Item.type is untouched). */}
+              {unifiedView ? (
+                <AccordionSection
+                  groupExpanded={groupExpanded}
+                  testId="lead-section-unified"
+                  icon={<CalendarIcon />}
+                  title="Activity"
+                  badge={`${currentWeekItems.length + nextWeekItems.length} items`}
+                  subtitle="Current and next week items in one list, grouped by state. Use + Add to create records."
+                >
+                  <UnifiedActivitySection
+                    entries={unifiedEntries}
+                    readOnly={isReadOnly}
+                    onWeekItemsChange={(week, items) =>
+                      week === "current"
+                        ? handleCurrentWeekItemsChange(items)
+                        : handleNextWeekItemsChange(items)
+                    }
+                    currentUserName={currentUser.name}
+                    products={products}
+                    stagesForProduct={stagesForProduct}
+                    ownPeriodRanks={ownPeriodRanks}
+                    publishedLockedIds={publishedLockedItemIds}
+                    onMarkComplete={handleMarkComplete}
+                    onMoveToNextWeek={handleMoveToNextWeek}
+                  />
+                </AccordionSection>
+              ) : (
+                <>
+                  {/* Current Week */}
+                  <AccordionSection
+                    groupExpanded={groupExpanded}
+                    testId="lead-section-current-week"
+                    icon={<CalendarIcon />}
+                    title="Current Week"
+                    badge={`${currentWeekItems.length} items`}
+                    subtitle="Work completed or still in progress this week, grouped by product and SDLC stage."
+                    actions={
+                      !isReadOnly ? (
+                        <button
+                          type="button"
+                          className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                          onClick={() =>
+                            setCurrentWeekAddSignal((value) => value + 1)
+                          }
+                          disabled={products.length === 0}
+                          title={
+                            products.length > 0
+                              ? `Add item to ${products[0]?.name}`
+                              : "No products assigned — contact admin"
+                          }
+                        >
+                          + Add Item
+                        </button>
+                      ) : null
+                    }
+                  >
+                    <CurrentWeekSection
+                      items={currentWeekItems}
+                      readOnly={isReadOnly}
+                      onItemsChange={handleCurrentWeekItemsChange}
+                      currentUserName={currentUser.name}
+                      products={products}
+                      stagesForProduct={stagesForProduct}
+                      ownPeriodRanks={ownPeriodRanks}
+                      addSignal={currentWeekAddSignal}
+                      publishedLockedIds={publishedLockedItemIds}
+                      onMarkComplete={handleMarkComplete}
+                      onMoveToNextWeek={handleMoveToNextWeek}
+                    />
+                  </AccordionSection>
 
-              {/* Next Week */}
-              <AccordionSection
-                groupExpanded={groupExpanded}
-                testId="lead-section-next-week"
-                icon={<NextWeekIcon />}
-                title="Next Week"
-                badge={`${nextWeekItems.length} items`}
-                subtitle="Planned work for the next reporting week, scoped to product and SDLC stage."
-                actions={
-                  !isReadOnly ? (
-                    <button
-                      type="button"
-                      className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
-                      onClick={() => setNextWeekAddSignal((value) => value + 1)}
-                      disabled={products.length === 0}
-                      title={
-                        products.length > 0
-                          ? `Add item to ${products[0]?.name}`
-                          : "No products assigned — contact admin"
-                      }
-                    >
-                      + Add Item
-                    </button>
-                  ) : null
-                }
-              >
-                <NextWeekSection
-                  items={nextWeekItems}
-                  readOnly={isReadOnly}
-                  onItemsChange={handleNextWeekItemsChange}
-                  currentUserName={currentUser.name}
-                  products={products}
-                  stagesForProduct={stagesForProduct}
-                  ownPeriodRanks={ownPeriodRanks}
-                  addSignal={nextWeekAddSignal}
-                />
-              </AccordionSection>
+                  {/* Next Week */}
+                  <AccordionSection
+                    groupExpanded={groupExpanded}
+                    testId="lead-section-next-week"
+                    icon={<NextWeekIcon />}
+                    title="Next Week"
+                    badge={`${nextWeekItems.length} items`}
+                    subtitle="Planned work for the next reporting week, scoped to product and SDLC stage."
+                    actions={
+                      !isReadOnly ? (
+                        <button
+                          type="button"
+                          className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-10 min-w-[136px] items-center justify-center gap-2 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                          onClick={() =>
+                            setNextWeekAddSignal((value) => value + 1)
+                          }
+                          disabled={products.length === 0}
+                          title={
+                            products.length > 0
+                              ? `Add item to ${products[0]?.name}`
+                              : "No products assigned — contact admin"
+                          }
+                        >
+                          + Add Item
+                        </button>
+                      ) : null
+                    }
+                  >
+                    <NextWeekSection
+                      items={nextWeekItems}
+                      readOnly={isReadOnly}
+                      onItemsChange={handleNextWeekItemsChange}
+                      currentUserName={currentUser.name}
+                      products={products}
+                      stagesForProduct={stagesForProduct}
+                      ownPeriodRanks={ownPeriodRanks}
+                      addSignal={nextWeekAddSignal}
+                      publishedLockedIds={publishedLockedItemIds}
+                    />
+                  </AccordionSection>
+                </>
+              )}
 
               {/* Risks & Blockers */}
               <AccordionSection
@@ -1711,6 +1908,7 @@ export function LeadForm({
                 products={products}
                 defaultProductId={products[0]?.id}
                 addSignal={decisionsAddSignal}
+                publishedLockedIds={publishedLockedDecisionIds}
               />
             </AccordionSection>
           </div>
@@ -1784,6 +1982,25 @@ export function LeadForm({
           </div>
         </div>
       )}
+
+      {/* Quick-add item dialog host — the EXISTING item dialog opened by the
+          picker for current-item / next-item / blocker (blocker = current
+          item pre-set to Blocked). Risk/decision quick-adds open the dialogs
+          the sections already host, via their add-signals. */}
+      <ItemEditDialog
+        key={`quick-add-${quickAddItem?.seq ?? 0}`}
+        open={quickAddItem !== null}
+        item={null}
+        products={products}
+        week={quickAddItem?.week ?? "current"}
+        currentUserName={currentUser.name}
+        defaultProductId={products[0]?.id}
+        stagesForProduct={stagesForProduct}
+        ownPeriodRanks={ownPeriodRanks}
+        defaultStatus={quickAddItem?.status}
+        onSave={handleQuickAddSave}
+        onCancel={() => setQuickAddItem(null)}
+      />
 
       <RequestReopenDialog
         open={showReopenDialog}

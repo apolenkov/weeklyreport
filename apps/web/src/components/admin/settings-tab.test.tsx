@@ -120,6 +120,7 @@ const baseSettings: MockSettings = {
   deadlineTime: "18:00",
   allowReopenAfterPublish: true,
   reopenWindowHours: 72,
+  unifiedActivityView: false,
   defaultTimezone: "Europe/Moscow",
   defaultReminderAudience: "lead-with-draft",
   notificationFromEmail: null,

@@ -8,6 +8,11 @@ import {
 } from "@customreport/shared";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger";
+import {
+  computeUncarriedOpenWork,
+  EMPTY_UNCARRIED,
+  type UncarriedOpenWork,
+} from "./carry-over-uncarried";
 
 export class CarryOverDomainError extends Error {
   constructor(message: string) {
@@ -52,6 +57,12 @@ export interface CarryOverRepository {
   ): Promise<CarryOverExecution | null>;
   getSourceSections(sourceReportId: string): Promise<ReportSectionReadModel[]>;
   getTargetSections(targetReportId: string): Promise<ReportSectionReadModel[]>;
+  /**
+   * The latest report ending on/before the target's start — the "prior
+   * period" the uncarried-open-work signal reads. Optional so existing test
+   * doubles keep compiling; when absent the signal resolves empty.
+   */
+  findPreviousReportId?(targetReportId: string): Promise<string | null>;
   getTargetReportState(
     targetReportId: string,
   ): Promise<TargetReportState | null>;
@@ -139,6 +150,37 @@ export class CarryOverService {
     this.logger = logger ?? createNullLogger();
   }
 
+  /**
+   * Read-only head-view signal: the prior period's open records that
+   * `carryOver.execute` could carry but has not. Surfaces silent loss at the
+   * point carry-over is available (the newly opened period); never mutates.
+   */
+  async listUncarriedOpenWork(
+    targetReportId: string,
+  ): Promise<UncarriedOpenWork> {
+    if (!this.repository.findPreviousReportId) return EMPTY_UNCARRIED;
+    const sourceReportId =
+      await this.repository.findPreviousReportId(targetReportId);
+    if (!sourceReportId) return EMPTY_UNCARRIED;
+    // `execute` is one-shot per (source, target): once it has run, a second
+    // click is a no-op. Go silent after that — the head made the conscious
+    // carry decision, and re-surfacing records the button can no longer move
+    // would promise a remedy that no longer exists.
+    const existingExecution = await this.repository.findExecutionByDedupeKey(
+      `${sourceReportId}:${targetReportId}`,
+    );
+    if (existingExecution) return EMPTY_UNCARRIED;
+    const [sourceSections, targetSections] = await Promise.all([
+      this.repository.getSourceSections(sourceReportId),
+      this.repository.getTargetSections(targetReportId),
+    ]);
+    return computeUncarriedOpenWork(
+      sourceReportId,
+      sourceSections,
+      targetSections,
+    );
+  }
+
   async executeCarryOver(
     sourceReportId: string,
     targetReportId: string,
@@ -220,6 +262,11 @@ export class CarryOverService {
           (item) =>
             item.type === "next" &&
             !item.carriedOver &&
+            // Finished work is closed — a done next-week item is not carried,
+            // matching the uncarried signal so the banner never lists a record
+            // the click would carry (or vice versa).
+            item.workflowStatus !== "done" &&
+            item.completed !== true &&
             !(
               item.stableId !== undefined &&
               targetItemLineage.has(item.stableId)

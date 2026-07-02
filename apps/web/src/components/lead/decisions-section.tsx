@@ -7,6 +7,7 @@ import { LockBadge } from "../report-shell/lock-badge";
 import { MetaRow } from "../report-shell/meta-row";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { DecisionEditDialog } from "./decision-edit-dialog";
+import { PublishedRecordMarker } from "./item-card-actions";
 import type { DecisionEntry, Product } from "./mock-data";
 import { firstOverCapRowIds, SlideFitAdvisory } from "./slide-fit-advisory";
 import { canonicalStageName, splitStageNames } from "./stage-tags";
@@ -36,6 +37,12 @@ interface DecisionsSectionProps {
   readonly products?: readonly Product[];
   readonly defaultProductId?: string;
   readonly addSignal?: number;
+  /**
+   * Resolve-not-delete (ADR 0015): decision ids whose lineage appeared in a
+   * published report. Locked rows show the "In published report" marker and
+   * withhold Delete (the server rejects the drop anyway).
+   */
+  readonly publishedLockedIds?: ReadonlySet<string>;
 }
 
 function EditIcon() {
@@ -96,6 +103,7 @@ export function DecisionsSection({
   products,
   defaultProductId,
   addSignal = 0,
+  publishedLockedIds,
 }: DecisionsSectionProps) {
   // Shared dialog lifecycle (DialogState union, D1 readOnly-ref add-signal
   // effect, D13 openSeq remount key, pending-delete). Create mode has no
@@ -202,6 +210,9 @@ export function DecisionsSection({
                       Due {formatDeadline(decision.deadline)}
                     </span>
                   )}
+                  {publishedLockedIds?.has(decision.id) === true && (
+                    <PublishedRecordMarker />
+                  )}
                   {!readOnly && !decision.foreign ? (
                     <div className="ml-auto flex gap-1">
                       <button
@@ -212,14 +223,16 @@ export function DecisionsSection({
                       >
                         <EditIcon />
                       </button>
-                      <button
-                        type="button"
-                        className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
-                        onClick={() => handleDelete(decision.id)}
-                        aria-label={`Delete decision for ${decision.productName}`}
-                      >
-                        <DeleteIcon />
-                      </button>
+                      {publishedLockedIds?.has(decision.id) !== true && (
+                        <button
+                          type="button"
+                          className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[rgba(0,0,0,0.4)] transition-colors hover:border-[rgba(200,32,20,0.2)] hover:bg-[rgba(200,32,20,0.1)] hover:text-[var(--color-destructive)]"
+                          onClick={() => handleDelete(decision.id)}
+                          aria-label={`Delete decision for ${decision.productName}`}
+                        >
+                          <DeleteIcon />
+                        </button>
+                      )}
                     </div>
                   ) : decision.foreign === true ? (
                     <div className="ml-auto flex gap-1">

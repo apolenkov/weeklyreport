@@ -682,6 +682,11 @@ model AppSettings {
   deadlineTime                 String           @default("18:00")
   allowReopenAfterPublish      Boolean          @default(true)
   reopenWindowHours            Int              @default(72)
+  // Org-wide opt-in for the lead form's unified by-state view (a presentation
+  // projection over Item.type/workflowStatus/completed — ADR 0011). Off =
+  // classic Current-week / Next-week two-section format. No record-shape
+  // change rides this flag; physical Item.type storage is untouched.
+  unifiedActivityView          Boolean          @default(false)
   updatedAt                    DateTime         @updatedAt
 }
 

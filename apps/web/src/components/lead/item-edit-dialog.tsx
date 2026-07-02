@@ -51,6 +51,13 @@ interface ItemEditDialogProps {
    * gracefully — the collision set is visible but the dialog never crashes.
    */
   readonly ownPeriodRanks?: readonly number[];
+  /**
+   * Create-mode initial status chip. The quick-add "blocker" entry opens this
+   * SAME dialog with "blocked" pre-selected — a blocker is a current item
+   * with `workflowStatus=blocked`, not a new record type. Ignored in edit
+   * mode (the bound item's status wins).
+   */
+  readonly defaultStatus?: ItemStatus;
   readonly onSave: (next: KanbanItem) => void;
   readonly onCancel: () => void;
 }
@@ -127,6 +134,7 @@ function ItemEditDialogContent({
   defaultProductId,
   stagesForProduct,
   ownPeriodRanks,
+  defaultStatus,
   onSave,
   onCancel,
 }: ItemEditDialogProps) {
@@ -143,7 +151,7 @@ function ItemEditDialogContent({
     id: "",
     productId: seedProduct?.id ?? "",
     productName: seedProduct?.name ?? "",
-    status: week === "current" ? "in-progress" : "planned",
+    status: defaultStatus ?? (week === "current" ? "in-progress" : "planned"),
     text: "",
     author: currentUserName ?? "You",
   };

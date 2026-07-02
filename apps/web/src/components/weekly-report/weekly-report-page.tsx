@@ -44,6 +44,7 @@ import {
   ReportToolbar,
 } from "../report-shell/report-toolbar";
 import { ActivityStatusStrip } from "./activity-status-strip";
+import { CarryOverBanner } from "./carry-over-banner";
 import { ExportPdfButton } from "./export-pdf-button";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
 import {
@@ -966,6 +967,13 @@ export function WeeklyReportPage({
           )
         }
       />
+
+      {/* Uncarried-open-work signal + one-click "Copy forward unfinished":
+          head/admin on an OPEN period only (the point where carry-over is
+          available). Self-suppresses when nothing is uncarried. */}
+      {canMutatePeriod && view.period.periodStatus === "open" && (
+        <CarryOverBanner reportId={view.period.reportId} />
+      )}
 
       {/* Report body: true empty-state OR the review surfaces + §7-filtered
           accordion. Extracted so this page function stays under the complexity

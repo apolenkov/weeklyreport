@@ -18,6 +18,7 @@ import {
   customreportSectionSubmissionLatencySeconds,
 } from "../../infrastructure/metrics/metrics.registry.js";
 import { createAppLogger } from "../../lib/logger.js";
+import { findPublishedRecordViolation } from "./published-record-guard.js";
 
 export class ReportSectionDomainError extends Error {
   constructor(
@@ -65,6 +66,18 @@ export interface ReportSectionsRepository {
   getReportMeta?(
     reportId: string,
   ): Promise<{ status: string; deadline: Date } | null>;
+  /**
+   * Resolve which of the section's CURRENT item/decision lineages (stableIds)
+   * have appeared in a published report — the delete-lock reference set
+   * (resolve-not-delete, ADR 0015). Optional so legacy in-memory test
+   * repositories keep compiling; when absent the service skips the lock (the
+   * production repository always implements it). Risks are excluded by
+   * design: a risk is re-raised, not carried.
+   */
+  getPublishedLineage?(section: ReportSectionReadModel): Promise<{
+    itemStableIds: readonly string[];
+    decisionStableIds: readonly string[];
+  }>;
   saveSection(
     section: ReportSectionReadModel,
     expectedVersion: number,
@@ -245,6 +258,25 @@ export class ReportSectionsService {
   }
 
   /**
+   * Resolve-not-delete (ADR 0015): a published-lineage item/decision cannot be
+   * dropped from the section — `stableId` is CLIENT-authoritative on the save
+   * payload, so preservation is verified server-side. Skipped when the
+   * repository does not expose the lineage read (legacy in-memory fixtures);
+   * the pure comparison lives in `published-record-guard.ts`.
+   */
+  private async assertPublishedRecordsPreserved(
+    section: ReportSectionReadModel,
+    input: DraftSaveInput | SubmitSectionInput,
+  ): Promise<void> {
+    if (!this.repository.getPublishedLineage) return;
+    const published = await this.repository.getPublishedLineage(section);
+    const violation = findPublishedRecordViolation(published, input);
+    if (violation) {
+      throw new ReportSectionDomainError(violation.code, violation.message);
+    }
+  }
+
+  /**
    * UFB-049 / Phase 50-B: deadline gate for submitSection. Returns the
    * `late` flag to stamp on the section. Throws ReportSectionAccessError
    * (→ 403 in the tRPC layer) when the deadline has passed beyond the
@@ -316,6 +348,7 @@ export class ReportSectionsService {
 
     this.assertStageOwnership(section, parsedInput);
     this.assertActivityAttachment(section, parsedInput);
+    await this.assertPublishedRecordsPreserved(section, parsedInput);
 
     const saved = await this.repository.saveSection(
       mergeSection(section, parsedInput, "draft"),
@@ -352,6 +385,7 @@ export class ReportSectionsService {
     // authz reject, checked before the traffic-light / current-item nags.
     this.assertStageOwnership(section, parsedInput);
     this.assertActivityAttachment(section, parsedInput);
+    await this.assertPublishedRecordsPreserved(section, parsedInput);
 
     const errors = validateSubmitInput(section, parsedInput);
 

@@ -259,6 +259,9 @@ describe("mapAdminSettings", () => {
     const api: AppSettings = appSettingsSchema.parse({
       autoCreatePeriods: false,
       defaultDeadlineDays: 3,
+      // Non-default so the round-trip proves the mapper carries the flag, not
+      // just its default.
+      unifiedActivityView: true,
     });
     const mapped = mapAdminSettings(api);
     // UFB-048 (Phase 48-B): the wire schema applies defaults for the 9 new
@@ -279,6 +282,7 @@ describe("mapAdminSettings", () => {
       deadlineTime: "18:00",
       allowReopenAfterPublish: true,
       reopenWindowHours: 72,
+      unifiedActivityView: true,
       defaultTimezone: "Europe/Moscow",
       defaultReminderAudience: "lead-with-draft",
       notificationFromEmail: null,

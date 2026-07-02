@@ -190,6 +190,57 @@ describe("LeadFormService — fillFrom authorization", () => {
 });
 
 // ---------------------------------------------------------------------------
+// fillFrom — published-lineage lock (resolve-not-delete, ADR 0015)
+// ---------------------------------------------------------------------------
+
+describe("LeadFormService — fillFrom published-lineage lock", () => {
+  it("rejects when the target holds a published-lineage record, before any copy", async () => {
+    const ownTarget = structuredClone(draftSection);
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(ownTarget),
+      // A reopened period is editable, so it passes the published-period gate;
+      // its frozen snapshot still pins the published lineage.
+      getReportPeriodStatusForSection: vi.fn().mockResolvedValue("reopened"),
+      getPublishedLineage: vi.fn().mockResolvedValue({
+        itemStableIds: ["11111111-1111-4111-8111-aaaaaaaaaaaa"],
+        decisionStableIds: [],
+      }),
+    });
+    const service = new LeadFormService(repo);
+
+    await expect(
+      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
+    ).rejects.toMatchObject({ code: "PUBLISHED_RECORD_LOCKED" });
+    // The reject happens before the delete-recreate — no copy is attempted.
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.fillFromSection).not.toHaveBeenCalled();
+  });
+
+  it("allows filling a never-published draft target (empty lineage)", async () => {
+    const ownTarget = structuredClone(draftSection);
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(ownTarget),
+      getReportPeriodStatusForSection: vi.fn().mockResolvedValue("open"),
+      getPublishedLineage: vi.fn().mockResolvedValue({
+        itemStableIds: [],
+        decisionStableIds: [],
+      }),
+    });
+    const service = new LeadFormService(repo);
+
+    const result = await service.fillFrom(
+      SECTION_ID,
+      SOURCE_SECTION_ID,
+      AUTHOR_ID,
+      1,
+    );
+    expect(result).toEqual({ success: true, copiedItems: 5 });
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- vitest spy assertion: reference to a vi.fn mock method, never invoked with a lost `this`
+    expect(repo.fillFromSection).toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // getCrossAuthors — authorization guard
 // (scope-lead-report-to-own-contribution, task 4.2 — D6 privacy bound)
 // ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 
-import { LockBadge } from "../report-shell/lock-badge";
+import { ItemCardActions, PublishedRecordMarker } from "./item-card-actions";
 import type { KanbanItem } from "./mock-data";
 import { canonicalStageName, splitStageNames } from "./stage-tags";
 
@@ -10,6 +10,16 @@ interface ItemCardProps {
   readonly item: KanbanItem;
   readonly onEdit?: (id: string) => void;
   readonly onDelete?: (id: string) => void;
+  /**
+   * Resolve-not-delete (ADR 0015): the record's lineage appeared in a
+   * published report. Renders the visible marker and withholds Delete —
+   * the record can be marked done or carried forward instead.
+   */
+  readonly publishedLocked?: boolean;
+  /** In-place move action; see ItemCardActions. */
+  readonly onMarkComplete?: (id: string) => void;
+  /** In-place move action; see ItemCardActions. */
+  readonly onMoveToNextWeek?: (id: string) => void;
   readonly readOnly?: boolean;
   /**
    * When true, the card renders an inline textarea seeded with `item.text`
@@ -83,41 +93,13 @@ function cardContainerStyle(opts: {
   };
 }
 
-function EditIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3 w-3"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      aria-hidden="true"
-    >
-      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-      <path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-    </svg>
-  );
-}
-
-function DeleteIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3 w-3"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      aria-hidden="true"
-    >
-      <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
-    </svg>
-  );
-}
-
 export function ItemCard({
   item,
   onEdit,
   onDelete,
+  publishedLocked = false,
+  onMarkComplete,
+  onMoveToNextWeek,
   readOnly = false,
   isEditing = false,
   onTextSave,
@@ -213,32 +195,19 @@ export function ItemCard({
               P{item.priorityRank}
             </span>
           )}
+          {publishedLocked && <PublishedRecordMarker />}
         </div>
 
-        {!locked && !isEditing ? (
-          <div className="flex shrink-0 gap-1">
-            <button
-              type="button"
-              className="flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
-              onClick={() => onEdit?.(item.id)}
-              aria-label="Edit"
-            >
-              <EditIcon />
-            </button>
-            <button
-              type="button"
-              className="flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:border-[color-mix(in_srgb,var(--color-destructive)_20%,transparent)] hover:bg-[var(--color-status-blocked-bg)] hover:text-[var(--color-destructive)]"
-              onClick={() => onDelete?.(item.id)}
-              aria-label="Delete"
-            >
-              <DeleteIcon />
-            </button>
-          </div>
-        ) : item.foreign === true ? (
-          <div className="flex shrink-0 gap-1">
-            <LockBadge authorName={item.author} variant="slim" />
-          </div>
-        ) : null}
+        <ItemCardActions
+          item={item}
+          locked={locked}
+          isEditing={isEditing}
+          publishedLocked={publishedLocked}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onMarkComplete={onMarkComplete}
+          onMoveToNextWeek={onMoveToNextWeek}
+        />
       </div>
 
       {/* Item text — editable when in edit mode, static otherwise */}

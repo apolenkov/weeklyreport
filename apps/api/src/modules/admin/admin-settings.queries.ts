@@ -39,6 +39,7 @@ function rowToAppSettings(row: {
   deadlineTime: string;
   allowReopenAfterPublish: boolean;
   reopenWindowHours: number;
+  unifiedActivityView: boolean;
 }): AppSettings {
   // UFB-047 / Phase 49-01: `departmentName` no longer flows through this
   // mapper — the column is being dropped in the same migration that
@@ -60,6 +61,7 @@ function rowToAppSettings(row: {
     deadlineTime: row.deadlineTime,
     allowReopenAfterPublish: row.allowReopenAfterPublish,
     reopenWindowHours: row.reopenWindowHours,
+    unifiedActivityView: row.unifiedActivityView,
   });
 }
 
@@ -110,6 +112,8 @@ export async function updateSettings(
     dbData.allowReopenAfterPublish = data.allowReopenAfterPublish;
   if (data.reopenWindowHours !== undefined)
     dbData.reopenWindowHours = data.reopenWindowHours;
+  if (data.unifiedActivityView !== undefined)
+    dbData.unifiedActivityView = data.unifiedActivityView;
 
   const row = await prisma.appSettings.upsert({
     where: { id: "singleton" },

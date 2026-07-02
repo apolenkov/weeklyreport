@@ -236,12 +236,20 @@ function buildHarness(opts: BuildOpts = {}) {
     { path: ["reports", "submit"], mutation: true },
     {
       path: ["leadForm", "byPeriod"],
-      query: () => ({ section: makeSection(), readOnly: false }),
+      query: () => ({
+        section: makeSection(),
+        readOnly: false,
+        publishedLineage: { itemStableIds: [], decisionStableIds: [] },
+      }),
     },
     { path: ["leadForm", "revoke"], mutation: true },
     { path: ["leadForm", "fillFrom"], mutation: true },
     { path: ["leadForm", "requestReopen"], mutation: true },
     { path: ["leadForm", "crossAuthors"], query: () => [STATUS_ONLY_ROW] },
+    {
+      path: ["leadForm", "viewSettings"],
+      query: { unifiedActivityView: false },
+    },
     {
       path: ["leadForm", "crossAuthorContent"],
       query: () => {
@@ -552,12 +560,20 @@ describe("LeadForm — Record visibility: purge on toggle/identity/report (7d.7)
       { path: ["reports", "submit"], mutation: true },
       {
         path: ["leadForm", "byPeriod"],
-        query: () => ({ section: makeSection(), readOnly: false }),
+        query: () => ({
+          section: makeSection(),
+          readOnly: false,
+          publishedLineage: { itemStableIds: [], decisionStableIds: [] },
+        }),
       },
       { path: ["leadForm", "revoke"], mutation: true },
       { path: ["leadForm", "fillFrom"], mutation: true },
       { path: ["leadForm", "requestReopen"], mutation: true },
       { path: ["leadForm", "crossAuthors"], query: () => [STATUS_ONLY_ROW] },
+      {
+        path: ["leadForm", "viewSettings"],
+        query: { unifiedActivityView: false },
+      },
       {
         path: ["leadForm", "crossAuthorContent"],
         query: () => [FULL_CONTENT_ROW],

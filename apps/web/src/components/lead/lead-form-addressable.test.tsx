@@ -141,8 +141,13 @@ function buildHarness(opts: {
         return {
           section: opts.byPeriodSection ?? makeSection(),
           readOnly: opts.byPeriodReadOnly ?? false,
+          publishedLineage: { itemStableIds: [], decisionStableIds: [] },
         };
       },
+    },
+    {
+      path: ["leadForm", "viewSettings"],
+      query: { unifiedActivityView: false },
     },
     {
       path: ["leadForm", "revoke"],

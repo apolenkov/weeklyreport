@@ -45,6 +45,15 @@ interface CurrentWeekSectionProps {
    */
   readonly ownPeriodRanks?: readonly number[];
   readonly addSignal?: number;
+  /**
+   * Resolve-not-delete (ADR 0015): item ids whose lineage appeared in a
+   * published report — the card shows the marker and withholds Delete.
+   */
+  readonly publishedLockedIds?: ReadonlySet<string>;
+  /** In-place move action (same durable identity; see ItemCardActions). */
+  readonly onMarkComplete?: (id: string) => void;
+  /** In-place move action (same durable identity; see ItemCardActions). */
+  readonly onMoveToNextWeek?: (id: string) => void;
 }
 
 function deriveDialogProps(dialogState: EditableListDialogState<KanbanItem>): {
@@ -87,6 +96,9 @@ export function CurrentWeekSection({
   stagesForProduct,
   ownPeriodRanks,
   addSignal = 0,
+  publishedLockedIds,
+  onMarkComplete,
+  onMoveToNextWeek,
 }: CurrentWeekSectionProps) {
   const grouped = groupByProduct(items);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -299,8 +311,11 @@ export function CurrentWeekSection({
                       item={item}
                       readOnly={readOnly}
                       isEditing={false}
+                      publishedLocked={publishedLockedIds?.has(item.id)}
                       onEdit={handleEdit}
                       onDelete={handleDelete}
+                      onMarkComplete={onMarkComplete}
+                      onMoveToNextWeek={onMoveToNextWeek}
                     />
                   ))}
                 </div>

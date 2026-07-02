@@ -397,6 +397,7 @@ CREATE TABLE "AppSettings" (
     "deadlineTime" TEXT NOT NULL DEFAULT '18:00',
     "allowReopenAfterPublish" BOOLEAN NOT NULL DEFAULT true,
     "reopenWindowHours" INTEGER NOT NULL DEFAULT 72,
+    "unifiedActivityView" BOOLEAN NOT NULL DEFAULT false,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "AppSettings_pkey" PRIMARY KEY ("id")

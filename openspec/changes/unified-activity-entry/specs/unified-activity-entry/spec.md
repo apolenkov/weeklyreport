@@ -144,8 +144,10 @@ carried, not deleted.
 
 A record SHALL be treated as closed only when it is done; every other state
 (`in-progress` / `blocked` / `planned-next` / `deferred` for an item, an unresolved
-risk, a pending decision) keeps it open. Open work SHALL NOT be lost silently across the
-period boundary.
+risk, a pending decision) keeps it open. Carryable open work — next-week items and
+unresolved decisions — SHALL NOT be lost silently across the period boundary. Risks are
+re-raised each period rather than carried (restating a risk is a conscious act), so they
+sit outside this carry guarantee by design.
 
 Carry-over stays head-manual (the one-click "Copy forward unfinished" above — no
 automatic trigger on period creation); nothing moves automatically. To prevent silent
@@ -155,12 +157,12 @@ close it. `deferred` is a conscious park — still open, still carried — and M
 short reason without that reason being required (entry stays fast — the product north
 star).
 
-Implementation reality to resolve in `design.md`, not assumed away here: today
-`carryOver.execute` carries only next-week items and unresolved decisions — **risks do
-not carry at all**, so "an unresolved risk carries" requires either extending carry-over
-to risks (with lineage and tests) or consciously excluding risks from this rule; and the
-publish/period response carries no channel today for an "open work" signal, so surfacing
-it needs an explicit API/UI contract.
+Implementation reality (resolved in `design.md`): `carryOver.execute` carries only
+next-week items and unresolved decisions — **risks do not carry**, and that is the
+conscious choice here (a risk is re-raised, not carried), so this rule is narrowed to
+items + decisions. The publish/period response has no channel for an "open work" signal,
+so surfacing it is a separate read-only contract: the `carryOver.uncarried` query plus
+the head-only "Copy forward unfinished" banner on the newly opened period.
 
 #### Scenario: A done record is not flagged as open work
 
