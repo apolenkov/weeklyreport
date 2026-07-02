@@ -60,6 +60,36 @@
 - Дерево: мои пути закоммичены (9 коммитов ночного прогона); работа параллельных сессий не тронута.
 - `openspec list`: 4 change по фидбеку (`lead-report-surface-polish` 4/24 — §1-4 done; остальные 0/N) + observability/ci-deploy/ratchet/tighten-comment (не мои).
 
+## Консилиум по 7 открытым вопросам (см. `docs/feedback/council-decisions-2026-07-02.md`)
+
+Собрал консилиум + advisor. **Caveat:** 2 из 3 членов упали (API stall) → это 1 линза + синтез + advisor, не полный 3-линзовый совет. Поэтому:
+
+- **Resolved-ready (no nod, additive/parity):** Q3 активность владеет decision (XOR-паритет); Q4 activity-only лид поддержан+seed (+ submit требует статус на каждую активность); Q5 carry-over триггерит per-lead в `ensureLeadSection`; Q6 acknowledge — раздельно (publish-кластер для head/admin, per-group для viewer/lead-reviewer).
+- **Pending твой кивок (разворачивают локи/отгруженное):** Q1 сигнал активности на дашборде (совет: изоляцию от product-health держать, но добавить отдельную activity-полосу); Q2 derive-only статус, phased (реверс локов 2026-06-30); Q7 ярус приоритетов на слайдах (реверс сегодняшнего within-group float `2e5fb45e`).
+
+**Схемный эпик держу:** `activity-first-class` требует `migrate reset` на ОБЩЕЙ dev-БД — деструктивно для живых параллельных сессий, вслепую не запускал.
+
 ## Первый шаг новой сессии
 
-Реши 4 открытых вопроса по активностям → тогда реализуемо: `record-status-derived-from-risk`, затем `activity-first-class` (схема — `migrate reset` на dev), `agent-review` (уточни authz). Полиш §5-6 — после ответов на их 2 вопроса. Плюс на твой глаз: высота карточек 150px и ярус приоритетов на слайдах.
+1. Кивни/поправь по Q1/Q2/Q7 (детали + рекомендации в council-doc).
+2. Когда дерево твоё: реализуй `activity-first-class` (Q3/Q4 готовы) — reshape schema → `migrate reset` → backfill → XOR-guards+submit-validation → cross-surface UI → integration-гейт. Затем `record-status` (Q2 phased), `agent-review`, полиш §5-6 (Q5/Q6 готовы).
+3. Forms-design-review: ранжированные рекомендации по формам лида — см. секцию ниже.
+
+## Forms-design-review — 16 verified рекомендаций (3 линзы: эстетика / a11y / рефактор)
+
+**Реализую этой ночью** (изолированный a11y-bug-класс, разные файлы, отдельный коммит):
+
+- #3 `item-edit-dialog` — единственный record-диалог БЕЗ focus-trap/portal (Tab уходит за модалку) → `createPortal`+`useDialogFocus` как risk/decision.
+- #5 `accordion-section` — свёрнутая секция клипается 0fr, но дети в DOM/Tab-order (Toggle-All-collapse = невидимый tab-trap) → `inert`+`aria-hidden`.
+- #6 диалоги (item/decision/risk) — при ошибке валидации фокус остаётся на Save → фокус на первое невалидное поле + `role="alert"`.
+- #7 `activity-status-section` — три traffic-light-кнопки без touch-floor (~24px) → `min-h-[--touch-target-min]`.
+- #12 `quick-add-button` — `role=menu` без клавиатурного контракта → `role=group`+plain buttons + Escape-restore.
+
+**Отложено на твою сессию** (трогают только что закоммиченный `lead-form.tsx` или рефактор-стиль — не громозжу поверх полиша):
+
+- #1 Decisions в edit-форме ЗЕЛЁНЫЕ, а везде (слайды/published) СИНИЕ `--color-decisions-accent` → токенизировать. **high/small — быстрый визуальный фикс.**
+- #2 autosave «Save failed» рендерится в success-ЗЕЛЁНОМ пилюле → ветвить фон на error (destructive). **high/small — реальный UX-баг.**
+- #4 хардкод статус-хексов (blocked `#fee2e2`, at-risk `#8a6d1b`/`#fef3c7`) мимо токенов + контраст 4.40:1 (<4.5) → токены + затемнить. **high/small.**
+- #8 `aggregateTrafficLight` let/for/break → functional reduce. #9 реассайн параметров → const. #10 6 инлайн-SVG (~107 строк) → lucide. #11 emoji-глифы статуса → lucide. #13 **мёртвый inline-edit путь в `item-card`** (isEditing/onTextSave нигде не монтируются — подтверждает мою находку с начала: удалить или доделать — твоё решение). #14 дубль `+Add`-класса 6×. #15 дубль error-textarea 6× по диалогам. #16 рефактор draft-merge пайплайна (large).
+
+Полный JSON — в выводе воркфлоу; здесь суть.
