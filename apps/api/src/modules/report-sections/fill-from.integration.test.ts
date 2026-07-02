@@ -33,6 +33,7 @@ function makeSection(
     items: [],
     risks: [],
     decisions: [],
+    activities: [],
     ...overrides,
   };
 }

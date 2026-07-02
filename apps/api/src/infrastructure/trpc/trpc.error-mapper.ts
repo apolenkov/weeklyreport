@@ -17,6 +17,10 @@ import {
   PeriodScopeError,
 } from "../../modules/period/period.service.js";
 import {
+  ProjectActivityDomainError,
+  ProjectActivityNotFoundError,
+} from "../../modules/project-activity/project-activity.service.js";
+import {
   PublicationAccessError,
   PublicationArchivedError,
   PublicationNotFoundError,
@@ -106,6 +110,11 @@ const DOMAIN_ERROR_CODES: readonly (readonly [
   // map-domain-errors: product owned by another group, terminal until the admin
   // detaches it → CONFLICT.
   [AdminGroupProductConflictError, "CONFLICT"],
+  // Project Activity admin writes: a missing activity/group/product/lead is
+  // NOT_FOUND; a business-rule violation (group mismatch, non-lead attach,
+  // archived target) is BAD_REQUEST.
+  [ProjectActivityNotFoundError, "NOT_FOUND"],
+  [ProjectActivityDomainError, "BAD_REQUEST"],
 ];
 
 export function mapDomainError(error: unknown): TRPCError {

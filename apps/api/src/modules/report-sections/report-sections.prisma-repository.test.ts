@@ -430,6 +430,7 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
       },
       projectStatus: { deleteMany: noop, createMany: noop },
       stageStatus: { deleteMany: noop, createMany: noop },
+      activityStatus: { deleteMany: noop, createMany: noop },
       item: {
         deleteMany: vi.fn(() => Promise.resolve({ count: 0 })),
         createMany: noop,

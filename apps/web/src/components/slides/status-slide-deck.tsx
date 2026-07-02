@@ -25,6 +25,7 @@ import {
   buildUnifiedSlideModel,
   scopeSlideToProduct,
 } from "./section-slide-utils";
+import { SlideActivityPills } from "./slide-activity-pills";
 import {
   mapTrafficLightToStatus,
   type ProductChipEntry,
@@ -225,6 +226,10 @@ function LeadSlideArticle({
             }}
           />
         ) : null}
+        {/* Minimal Project Activities status-pill lane — display-only,
+            self-suppressing, no quadrant layout rework. */}
+        <SlideActivityPills activities={slide.activities} />
+
         <LeadUnifiedSlide
           model={buildUnifiedSlideModel(
             scopeSlideToProduct(slide, activeProductId),
@@ -283,6 +288,10 @@ function HeadSlideArticle({ slide }: { readonly slide: SectionSlideModel }) {
                 ? slide.products.join(" / ")
                 : "No products assigned"}
             </p>
+            {/* Minimal Project Activities status-pill lane (display-only). */}
+            <div className="mt-2">
+              <SlideActivityPills activities={slide.activities} />
+            </div>
           </div>
           <div className="flex flex-col items-end gap-2">
             {/* Decision 1.1 #5: portfolio metrics align to the lead hero's

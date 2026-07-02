@@ -57,8 +57,44 @@ async function seedProjectStatuses(
   });
 }
 
+// Mirrors seedProjectStatuses for Project Activities: one ActivityStatus row
+// (default green, never null) per non-archived activity the lead is attached
+// to. The seeded set is the server-authoritative reference the save path
+// validates written activityIds against.
+// Seed-once-at-provisioning, same as seedProjectStatuses above: a mid-period
+// attach surfaces at the next period's provisioning, not retroactively.
+async function seedActivityStatuses(
+  prisma: {
+    projectActivityLead: PrismaClient["projectActivityLead"];
+    activityStatus: PrismaClient["activityStatus"];
+  },
+  reportSectionId: string,
+  userId: string,
+): Promise<void> {
+  const attachments = await prisma.projectActivityLead.findMany({
+    where: { leadId: userId, activity: { archived: false } },
+    select: { activityId: true },
+  });
+  if (attachments.length === 0) return;
+  await prisma.activityStatus.createMany({
+    data: attachments.map((attachment) => ({
+      reportSectionId,
+      activityId: attachment.activityId,
+      status: DEFAULT_PROJECT_STATUS,
+    })),
+    skipDuplicates: true,
+  });
+}
+
 export async function ensureLeadSection(
-  prisma: Pick<PrismaClient, "reportSection" | "project" | "projectStatus">,
+  prisma: Pick<
+    PrismaClient,
+    | "reportSection"
+    | "project"
+    | "projectStatus"
+    | "projectActivityLead"
+    | "activityStatus"
+  >,
   reportId: string,
   userId: string,
 ): Promise<{ sectionId: string }> {
@@ -74,6 +110,7 @@ export async function ensureLeadSection(
       select: { id: true },
     });
     await seedProjectStatuses(prisma, section.id, userId);
+    await seedActivityStatuses(prisma, section.id, userId);
     return { sectionId: section.id };
   } catch (error) {
     if (!isSectionUniqueViolation(error)) throw error;

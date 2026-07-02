@@ -64,6 +64,7 @@ import { ViewModeToggle } from "../report-shell/view-mode-toggle";
 import { LeadSlidesClient } from "../slides/lead-slides-client";
 import { SlideFullscreenButton } from "../slides/slide-fullscreen-button";
 import { SdlcTooltipProvider } from "../ui/sdlc-tooltip";
+import { ActivityStatusSection } from "./activity-status-section";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { CurrentWeekSection } from "./current-week-section";
 import { DecisionsSection } from "./decisions-section";
@@ -247,6 +248,14 @@ export function sectionToDraftPayload(
         status: stage.status ?? null,
       })),
     ),
+    // Activity-status slice: round-trip every seeded activity so the server's
+    // delete-recreate rewrites the full set (ids come from the seeded read
+    // model, never minted client-side).
+    activityStatuses: section.activities.map((activity) => ({
+      activityId: activity.activityId,
+      status: activity.status,
+      note: activity.note ?? null,
+    })),
     items: section.items
       .filter((it) => hasText(it.text))
       .map((it) => ({
@@ -1032,6 +1041,26 @@ export function LeadForm({
     });
   }
 
+  // Activity weekly status: the seeded activities are identity-stable (no
+  // add/remove in the form), so the change handler is a pure per-id status
+  // update on the draft mirror — autosave picks it up via sectionToDraftPayload.
+  function handleActivityStatusChange(
+    activityId: string,
+    status: "green" | "yellow" | "red",
+  ) {
+    setDraftSection((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        activities: prev.activities.map((activity) =>
+          activity.activityId === activityId
+            ? { ...activity, status }
+            : activity,
+        ),
+      };
+    });
+  }
+
   function handleRisksChange(next: RiskEntry[]) {
     setDraftSection((prev) => {
       if (!prev) return prev;
@@ -1514,6 +1543,26 @@ export function LeadForm({
               >
                 <LeadFormSyncBridge.Pipeline />
               </AccordionSection>
+
+              {/* Project Activities — stage-less units beside products.
+                  Self-suppresses when the author has no attached activities
+                  (attachment is admin-provisioned, so there is no add here). */}
+              {draftSection.activities.length > 0 && (
+                <AccordionSection
+                  groupExpanded={groupExpanded}
+                  testId="lead-section-activities"
+                  icon={<GridIcon />}
+                  title="Project Activities"
+                  badge={`${draftSection.activities.length} attached activities`}
+                  subtitle="Weekly status for activities you are attached to. Activities carry no SDLC stage and never affect product health."
+                >
+                  <ActivityStatusSection
+                    activities={draftSection.activities}
+                    readOnly={isReadOnly}
+                    onStatusChange={handleActivityStatusChange}
+                  />
+                </AccordionSection>
+              )}
 
               {/* Current Week */}
               <AccordionSection

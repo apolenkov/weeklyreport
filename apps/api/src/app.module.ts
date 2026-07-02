@@ -25,6 +25,7 @@ import { OrganizationModule } from "./modules/organization/organization.module";
 import { PdfExportModule } from "./modules/pdf-export/pdf-export.module";
 import { PdfExportService } from "./modules/pdf-export/pdf-export.service";
 import { PeriodModule } from "./modules/period/period.module";
+import { ProjectActivityModule } from "./modules/project-activity/project-activity.module";
 import { PublicationModule } from "./modules/publication/publication.module";
 import { RemindersModule } from "./modules/reminders/reminders.module";
 import { RemindersService } from "./modules/reminders/reminders.service";
@@ -68,6 +69,7 @@ import { WeeklyReportModule } from "./modules/weekly-report/weekly-report.module
     AnalyticsModule,
     SearchModule,
     ActivityModule,
+    ProjectActivityModule,
     TelemetryModule,
     PeriodModule,
     WeeklyReportModule,

@@ -72,6 +72,7 @@ const sourceSection: ReportSectionReadModel = {
       resolvedAt: new Date("2026-04-08T12:00:00.000Z"),
     },
   ],
+  activities: [],
 };
 
 function createRepository(

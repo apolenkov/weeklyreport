@@ -15,7 +15,10 @@ export type DraftSaveValidationErrorCode =
   | "DUPLICATE_CHILD_ROW"
   // lead-form-stage-access-integrity: a new or changed item/risk/decision row
   // carries a stage the section author does not own on that row's product.
-  | "STAGE_NOT_OWNED";
+  | "STAGE_NOT_OWNED"
+  // The activity-status slice carries an activityId that is not attached/seeded
+  // for the section author — the client payload is never trusted for ids.
+  | "ACTIVITY_NOT_ATTACHED";
 
 export interface DraftSaveValidationError {
   code: DraftSaveValidationErrorCode;
@@ -62,6 +65,36 @@ export function validateSubmitInput(
   }
 
   return errors;
+}
+
+/**
+ * The activity-status write guard, shared by BOTH `saveDraft` and
+ * `submitSection`. Every written `activityId` must be one already seeded on the
+ * section for its author (the server-loaded `section.activities` is the
+ * reference) — the delete-recreate never trusts client-supplied ids, closing
+ * the same client-trust gap the stage-ownership guard closes for stages.
+ * @param section - the server-loaded section read model (seeded activities)
+ * @param input - the parsed draft-save / submit payload being validated
+ * @returns one error per offending entry; the caller hard-rejects on the first
+ */
+export function validateActivityStatuses(
+  section: ReportSectionReadModel,
+  input: DraftSaveInput | SubmitSectionInput,
+): DraftSaveValidationError[] {
+  const seededIds = new Set(
+    section.activities.map((activity) => activity.activityId),
+  );
+  return input.activityStatuses.flatMap((status) =>
+    seededIds.has(status.activityId)
+      ? []
+      : [
+          {
+            code: "ACTIVITY_NOT_ATTACHED" as const,
+            message:
+              "Activity is not attached to you for this section. Contact an admin to change activity attachments.",
+          },
+        ],
+  );
 }
 
 // lead-form-stage-access-integrity: a normalized view of one stage-bearing

@@ -21,6 +21,25 @@ export const projectStatusInputSchema = z.object({
   status: trafficLightStatusSchema.optional(),
 });
 
+// One activity-status slice entry in the section-save payload. Mirrors
+// projectStatusInputSchema; `note` is optional free text. The server accepts
+// only activityIds already attached/seeded for the section author.
+export const activityStatusInputSchema = z.object({
+  activityId: z.uuid(),
+  status: trafficLightStatusSchema.nullable().optional(),
+  note: safeText({ max: 500 }).nullable().optional(),
+});
+
+// Read-model view of one seeded ActivityStatus row (activity name joined for
+// display). `status` is nullable to tolerate legacy rows, though seeding
+// defaults it to green.
+export const sectionActivitySchema = z.object({
+  activityId: z.uuid(),
+  activityName: z.string().min(1),
+  status: trafficLightStatusSchema.nullable(),
+  note: z.string().nullable().optional(),
+});
+
 export const stageStatusInputSchema = z.object({
   projectId: z.uuid(),
   stageId: z.uuid(),
@@ -120,6 +139,10 @@ export const draftSaveSchema = z.object({
   status: reportSectionStatusSchema.default("draft"),
   projectStatuses: z.array(projectStatusInputSchema),
   stageStatuses: z.array(stageStatusInputSchema).default([]),
+  // Activity-status slice beside projectStatuses. Defaulted so pre-existing
+  // clients (and fixtures) that omit it keep saving; the server then keeps
+  // the seeded statuses unchanged.
+  activityStatuses: z.array(activityStatusInputSchema).max(100).default([]),
   items: z.array(itemInputSchema).max(100),
   risks: z.array(riskInputSchema).max(100),
   decisions: z.array(decisionInputSchema).max(100),
@@ -236,6 +259,10 @@ export const reportSectionReadModelSchema = z.object({
   items: z.array(itemReadModelSchema),
   risks: z.array(riskReadModelSchema),
   decisions: z.array(decisionReadModelSchema),
+  // The author's attached Project Activities with their per-period status.
+  // `.default([])` keeps older published snapshots (frozen before activities
+  // existed) and legacy fixtures parsing.
+  activities: z.array(sectionActivitySchema).default([]),
   // review-acknowledgement: per-section verdicts, surfaced read-only. Each
   // carries `isCurrent` (judgedVersion === version) so a re-submitted section
   // reads as awaiting review, not "needs changes". Optional so legacy fixtures
@@ -271,6 +298,8 @@ export type ReportSectionReadModel = z.infer<
   typeof reportSectionReadModelSchema
 >;
 export type ProjectReadModel = z.infer<typeof projectReadModelSchema>;
+export type SectionActivity = z.infer<typeof sectionActivitySchema>;
+export type ActivityStatusInput = z.infer<typeof activityStatusInputSchema>;
 export type ReferencedProject = z.infer<typeof referencedProjectSchema>;
 export type OwnedStage = z.infer<typeof ownedStageSchema>;
 export type StageSetEntry = z.infer<typeof stageSetEntrySchema>;

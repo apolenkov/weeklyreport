@@ -119,6 +119,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
       risks: [],
       decisions: [],
       priorities: [],
+      activities: [],
     };
 
     const result = await repo.saveCarryOver(execution, records, [
@@ -204,6 +205,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
       risks: [],
       decisions: [],
       priorities: [],
+      activities: [],
     };
 
     await repo.saveCarryOver(execution, [], [targetSectionReadModel]);
@@ -288,6 +290,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
           productId: testData.project.id,
         },
       ],
+      activities: [],
     };
 
     // The old write used a non-existent `stageName` field, aborting the whole
@@ -380,6 +383,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
       ],
       risks: [],
       decisions: [],
+      activities: [],
     };
 
     await repo.saveCarryOver(execution, records, [targetSectionReadModel]);
@@ -464,6 +468,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
       ],
       risks: [],
       decisions: [],
+      activities: [],
     };
     const sectionHeadReadModel = {
       ...sectionLeadReadModel,
@@ -561,6 +566,7 @@ describe("CarryOverPrismaRepository (integration)", () => {
       items: [],
       risks: [],
       decisions: [],
+      activities: [],
     };
 
     const result = await repo.saveCarryOver(

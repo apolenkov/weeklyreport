@@ -38,6 +38,7 @@ function baseSection(
     items: [],
     risks: [],
     decisions: [],
+    activities: [],
     ...overrides,
   };
 }

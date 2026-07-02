@@ -51,6 +51,7 @@ const draftSection: ReportSectionReadModel = {
   ],
   risks: [],
   decisions: [],
+  activities: [],
 };
 
 const submittedSection: ReportSectionReadModel = {

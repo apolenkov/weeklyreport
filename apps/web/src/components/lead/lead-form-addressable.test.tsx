@@ -83,6 +83,7 @@ function makeSection(
     risks: [],
     decisions: [],
     priorities: [],
+    activities: [],
   };
 }
 

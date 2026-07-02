@@ -53,6 +53,8 @@ model User {
   // back-relation with no `onDelete` because Users don't need to know
   // about the binding's existence to be deleted.
   telegramBinding         TelegramBinding?
+  // Project Activities this lead is attached to (M:M via the join below).
+  projectActivityLeads    ProjectActivityLead[] @relation("ProjectActivityLeadUser")
 
   @@index([reportingGroupId])
 }
@@ -78,6 +80,8 @@ model ReportingGroup {
   // UFB-054 / Phase 56-A: explicit M:M edge to Project (products owned by
   // this group). Inverse of GroupProduct.group. See `GroupProduct` model.
   groupProducts          GroupProduct[]
+  // Project Activities owned by this group (authoritative `groupId`).
+  projectActivities      ProjectActivity[]
 
   @@index([archived])
   @@index([headUserId])
@@ -147,6 +151,9 @@ model Project {
   // Required 1:N edge to Decision (productId is NOT NULL). The FK is Restrict on
   // project delete, so authored decisions cannot be silently dropped.
   decisions        Decision[]
+  // Project Activities that carry a label-only link to this product. The link
+  // never feeds product health — it is display metadata on the activity.
+  projectActivities ProjectActivity[]
 
   @@index([leadId])
   @@index([archived])
@@ -277,6 +284,10 @@ model ReportSection {
   stageStatuses   StageStatus[]
   // review-acknowledgement: per-section verdicts (one per reviewer).
   sectionReviews  SectionReview[]
+  // Per-period weekly statuses for the author's attached Project Activities
+  // (stage-less units beside products). Seeded at section provisioning and
+  // delete-recreated by saveSection like ProjectStatus.
+  activityStatuses ActivityStatus[]
 
   @@unique([reportId, authorId])
   @@index([authorId])
@@ -295,6 +306,63 @@ model ProjectStatus {
 
   @@unique([reportSectionId, projectId])
   @@index([projectId])
+}
+
+// A stage-less reporting unit beside Products. Admin-provisioned; belongs to
+// exactly one reporting group via the required authoritative `groupId` (never
+// re-derived from a lead's group, so lead rotation does not move it). The
+// optional `projectId` is a LABEL-ONLY link to a product — it never entangles
+// product health. `jiraAccounts` is plain text; Jira is not integrated.
+model ProjectActivity {
+  id               String                @id @default(uuid())
+  name             String
+  groupId          String
+  projectId        String?
+  jiraAccounts     String[]
+  archived         Boolean               @default(false)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  group            ReportingGroup        @relation(fields: [groupId], references: [id])
+  project          Project?              @relation(fields: [projectId], references: [id])
+  leads            ProjectActivityLead[]
+  activityStatuses ActivityStatus[]
+
+  @@index([groupId])
+  @@index([projectId])
+  @@index([archived])
+}
+
+// M:M attachment: many leads report one activity; each attached lead reports
+// their own weekly status through their own section.
+model ProjectActivityLead {
+  id         String          @id @default(uuid())
+  activityId String
+  leadId     String
+  createdAt  DateTime        @default(now())
+  activity   ProjectActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  lead       User            @relation("ProjectActivityLeadUser", fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, leadId])
+  @@index([leadId])
+}
+
+// Per-period weekly status of one activity on one lead's section. Mirrors
+// ProjectStatus: a ReportSection child row, seeded default-green at section
+// provisioning and delete-recreated by saveSection under the section's
+// optimistic lock. Restrict on activity delete (retire via `archived`).
+model ActivityStatus {
+  id              String              @id @default(uuid())
+  reportSectionId String
+  activityId      String
+  status          TrafficLightStatus?
+  note            String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  reportSection   ReportSection       @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
+  activity        ProjectActivity     @relation(fields: [activityId], references: [id])
+
+  @@unique([reportSectionId, activityId])
+  @@index([activityId])
 }
 
 model StageStatus {

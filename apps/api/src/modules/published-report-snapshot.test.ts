@@ -8,6 +8,7 @@ import {
   buildAssembledReportFromPrismaRow,
   buildEscalationsFromReadSections,
   buildPortfolioProductsFromSnapshotSections,
+  computePortfolioOverviewFromReadSections,
 } from "./published-report-snapshot";
 
 const REPORT_ID = "659b2767-0f86-41e2-b025-49730ca010e4";
@@ -627,5 +628,34 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
       yellow: 1,
       green: 0,
     });
+  });
+});
+
+describe("activity statuses do not roll up (stage-less, independent of product health)", () => {
+  const RED_ACTIVITY = {
+    activityId: "0e2f75a2-6f2f-4d51-8f5f-1b2c3d4e5f60",
+    activityName: "Jira triage duty",
+    status: "red" as const,
+  };
+
+  it("a blocked activity changes neither portfolio totals nor product health", () => {
+    const withoutActivity = makeSection();
+    const withBlockedActivity = makeSection({ activities: [RED_ACTIVITY] });
+
+    expect(
+      computePortfolioOverviewFromReadSections([withBlockedActivity]),
+    ).toEqual(computePortfolioOverviewFromReadSections([withoutActivity]));
+
+    const products = buildPortfolioProductsFromSnapshotSections([
+      withBlockedActivity,
+    ]);
+    expect(products[0]?.worstStatus).toBe("green");
+  });
+
+  it("a blocked activity contributes no escalation", () => {
+    const escalations = buildEscalationsFromReadSections([
+      makeSection({ activities: [RED_ACTIVITY] }),
+    ]);
+    expect(escalations).toEqual([]);
   });
 });

@@ -136,6 +136,7 @@ describe("mapWeeklyReport", () => {
       ],
       leadSections: [
         {
+          activities: [],
           reportSectionId: SECTION_A,
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
@@ -183,6 +184,7 @@ describe("mapWeeklyReport", () => {
           decisions: [],
         },
         {
+          activities: [],
           reportSectionId: SECTION_B,
           reportId: REPORT_ID,
           authorId: AUTHOR_B,
@@ -256,6 +258,7 @@ describe("mapWeeklyReport", () => {
       ],
       leadSections: [
         {
+          activities: [],
           reportSectionId: SECTION_A,
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
@@ -309,6 +312,7 @@ describe("mapWeeklyReport", () => {
       ],
       leadSections: [
         {
+          activities: [],
           reportSectionId: SECTION_A,
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
@@ -365,6 +369,7 @@ describe("mapWeeklyReport", () => {
       ],
       leadSections: [
         {
+          activities: [],
           reportSectionId: SECTION_A,
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
@@ -420,6 +425,7 @@ describe("mapWeeklyReport", () => {
       ],
       leadSections: [
         {
+          activities: [],
           reportSectionId: SECTION_A,
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
@@ -484,6 +490,7 @@ describe("mapWeeklyReport", () => {
       ],
       leadSections: [
         {
+          activities: [],
           reportSectionId: SECTION_A,
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
@@ -549,6 +556,7 @@ describe("mapWeeklyReport", () => {
       ],
       leadSections: [
         {
+          activities: [],
           reportSectionId: SECTION_A,
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
@@ -637,6 +645,7 @@ describe("product name resolution (fix-product-name-resolution)", () => {
       ],
       leadSections: [
         {
+          activities: [],
           reportSectionId: SECTION_A,
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
@@ -696,6 +705,7 @@ describe("mapWeeklyReportLeadGroups (by-lead slice)", () => {
     const report = baseReport({
       leadSections: [
         {
+          activities: [],
           reportSectionId: SECTION_A,
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
@@ -746,6 +756,7 @@ describe("mapWeeklyReportLeadGroups (by-lead slice)", () => {
     const report = baseReport({
       leadSections: [
         {
+          activities: [],
           reportSectionId: SECTION_A,
           reportId: REPORT_ID,
           authorId: AUTHOR_A,
@@ -771,6 +782,7 @@ describe("mapWeeklyReportLeadGroups (by-lead slice)", () => {
           decisions: [],
         },
         {
+          activities: [],
           reportSectionId: SECTION_B,
           reportId: REPORT_ID,
           authorId: AUTHOR_B,

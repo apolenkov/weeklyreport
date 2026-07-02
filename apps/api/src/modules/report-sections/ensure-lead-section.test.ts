@@ -13,6 +13,7 @@ function makePrisma(opts: {
   createThrows?: unknown;
   createdId?: string;
   projects?: { id: string }[];
+  activityAttachments?: { activityId: string }[];
 }) {
   const sectionFindUnique = vi
     .fn()
@@ -25,17 +26,25 @@ function makePrisma(opts: {
   });
   const projectFindMany = vi.fn().mockResolvedValue(opts.projects ?? []);
   const projectStatusCreateMany = vi.fn().mockResolvedValue({ count: 0 });
+  const activityLeadFindMany = vi
+    .fn()
+    .mockResolvedValue(opts.activityAttachments ?? []);
+  const activityStatusCreateMany = vi.fn().mockResolvedValue({ count: 0 });
 
   const client = {
     reportSection: { findUnique: sectionFindUnique, create: sectionCreate },
     project: { findMany: projectFindMany },
     projectStatus: { createMany: projectStatusCreateMany },
+    projectActivityLead: { findMany: activityLeadFindMany },
+    activityStatus: { createMany: activityStatusCreateMany },
   } as unknown as LeadSectionPrisma;
 
   return {
     client,
     sectionCreate,
     projectStatusCreateMany,
+    activityLeadFindMany,
+    activityStatusCreateMany,
   };
 }
 
@@ -77,6 +86,43 @@ describe("ensureLeadSection", () => {
       status: "green",
     });
     expect(arg.skipDuplicates).toBe(true);
+  });
+
+  it("seeds one default-green ActivityStatus per attached activity on a fresh create", async () => {
+    const { client, activityLeadFindMany, activityStatusCreateMany } =
+      makePrisma({
+        createdId: "sec-new",
+        activityAttachments: [{ activityId: "act-1" }, { activityId: "act-2" }],
+      });
+
+    await ensureLeadSection(client, REPORT_ID, USER_ID);
+
+    // Only non-archived activities the lead is attached to are considered.
+    expect(activityLeadFindMany).toHaveBeenCalledWith({
+      where: { leadId: USER_ID, activity: { archived: false } },
+      select: { activityId: true },
+    });
+    expect(activityStatusCreateMany).toHaveBeenCalledTimes(1);
+    const arg = activityStatusCreateMany.mock.calls[0]?.[0] as {
+      data: { reportSectionId: string; activityId: string; status: string }[];
+      skipDuplicates: boolean;
+    };
+    expect(arg.data).toEqual([
+      { reportSectionId: "sec-new", activityId: "act-1", status: "green" },
+      { reportSectionId: "sec-new", activityId: "act-2", status: "green" },
+    ]);
+    expect(arg.skipDuplicates).toBe(true);
+  });
+
+  it("does not seed activity statuses when the lead has no attachments", async () => {
+    const { client, activityStatusCreateMany } = makePrisma({
+      createdId: "sec-new",
+      activityAttachments: [],
+    });
+
+    await ensureLeadSection(client, REPORT_ID, USER_ID);
+
+    expect(activityStatusCreateMany).not.toHaveBeenCalled();
   });
 
   it("does not seed statuses when the lead has no active projects", async () => {
