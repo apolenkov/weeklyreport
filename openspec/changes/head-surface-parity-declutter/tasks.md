@@ -1,29 +1,29 @@
 ## 0. Verify-first
 
-- [ ] 0.1 On a fresh build, check whether the duplicate slides header / Edit↔Slides reflow (`mqqe419t`/`mqqe3llq`) still reproduces. If not → close as shipped. If yes → add a whole-header positional-stability requirement (homed where header composition is governed, not toolbar-semantics).
+- [x] 0.1 On a fresh (non-docker, from-source) build the duplicate slides header / Edit↔Slides reflow (`mqqe419t`/`mqqe3llq`) does NOT reproduce — toolbar holds top=139/left=176 across a client-side Slides→Edit→Slides round-trip, exactly one "Status Report" heading, one Context-controls + one Document-actions group. Closed as shipped (was a stale-docker-build artifact).
 
 ## 1. Slides
 
-- [ ] 1.1 Remove the "Group Status Slides" redundant header line; move toolbar controls to the top (lead parity).
-- [ ] 1.2 Move Agent-review into the period-navigation row; clarify or cut the `ReadinessStrip`. Keep the carousel placement.
+- [x] 1.1 Verified shipped: no standalone "Group Status Slides" header band; toolbar controls sit at the top (lead parity).
+- [x] 1.2 `ReadinessStrip` already cut (readiness reads from carousel thumbnails). Agent-review placement: Саша chose to KEEP it leading the toolbar context-controls group (not the period-nav row) — the specced/tested state; no code change. Carousel placement unchanged.
 
 ## 2. Dashboard
 
-- [ ] 2.1 Slim `ProductKpiCard` to a compact single-row strip (Submissions / Deadline / Risks & Blockers) — do NOT delete.
-- [ ] 2.2 Fix `LeadSummaryTable` styling / unexpected horizontal scroll.
-- [ ] 2.3 Trim the low-value `Activity24hCard`; verify `BlockedAtRiskTable` against the escalation/`at_risk` roll-up (don't redesign).
+- [x] 2.1 Verified shipped (`09a3baa4`): `ProductKpiCard` renders as a compact single-row strip (Submissions / Deadline / Risks & Blockers), not deleted.
+- [x] 2.2 Fixed `LeadSummaryTable` horizontal scroll: the six fixed `4.5rem` count columns need ~970px, so the multi-column grid engaged at `md` (768px) overflowed the page by 189px in the 768–1023px band. Raised the grid-activation breakpoint `md`→`lg`; below `lg` the rows stack as per-lead cards. Verified page-overflow 0 at 375/768/900/1023/1024/1440.
+- [x] 2.3 `Activity24hCard` already trimmed (no duplicate activity card on the dashboard). `BlockedAtRiskTable` verified against the roll-up: section "8 issues" = 1 `blocked` + 7 `unresolved_risk` deduped rows; KPI "1 blocked · 8 at risk" derives the same escalation set (`atRiskCount` = `at_risk` + `unresolved_risk`). Consistent — not redesigned.
 
 ## 3. Report toolbar
 
-- [ ] 3.1 Place publish / request-all-reopen / Agent-review / Edit like the lead's status row (top-left of the logo); remove the "Present" button.
-- [ ] 3.2 Leave `ScopeToggle` unchanged (shared `SegmentedToggle`).
+- [x] 3.1 Verified shipped: "Present" button removed (slides view-mode supersedes it); document actions (Export-PDF, Publish) split from the context controls; Agent-review leads the context-controls group.
+- [x] 3.2 `ScopeToggle` unchanged (shared `SegmentedToggle`).
 
-## 4. Spec follow-ups (MODIFIED — exact headers)
+## 4. Spec follow-ups
 
-- [ ] 4.1 Author MODIFIED deltas to `report-toolbar-parity`, `head-toolbar-semantics`, `head-slide-density`, `head-dashboard-clarity`, `toolbar-polish` as the implementation lands.
+- [x] 4.1 No cross-capability MODIFIED deltas needed: every existing-spec touch is either shipped+specced (moot) or the declined Agent-review reversal. Re-scoped this change's `head-surface-parity` ADDED spec from "introduce the demo asks" to "lock the verified/shipped contract" — including the concrete `LeadSummaryTable` `lg`-breakpoint no-scroll requirement (tablet-band + desktop scenarios) and Саша's Agent-review decision.
 
 ## 5. Verification
 
-- [ ] 5.1 `pnpm typecheck` + `pnpm lint` until green.
-- [ ] 5.2 `pnpm test` (head dashboard/slides/toolbar component tests) until green.
-- [ ] 5.3 `openspec validate "head-surface-parity-declutter" --strict` until it exits 0.
+- [x] 5.1 `@customreport/web` typecheck clean; `eslint --max-warnings 0` clean on the changed component (repo-wide gate skipped — the working tree carries a parallel session's uncommitted `apps/api/**` edits that would pollute it; the change under review is web-only and isolated).
+- [x] 5.2 74 head dashboard/slides/toolbar component tests green (lead-summary-table, dashboard-page, kpi-cards, blocked-at-risk-table, status-slide-deck, head-report-shell).
+- [x] 5.3 `openspec validate "head-surface-parity-declutter" --strict` → valid.
