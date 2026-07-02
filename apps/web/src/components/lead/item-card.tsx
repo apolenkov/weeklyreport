@@ -69,13 +69,15 @@ const STATUS_BADGE = {
 /**
  * Fixed card height for the static render, matching the section-level
  * empty-state placeholder ("No items yet" in current-week-section.tsx /
- * next-week-section.tsx) so a populated card can never grow past — or fall
- * short of — its empty sibling (B1). The status-pill row, author, and stage
- * tags keep their natural size (`shrink-0`); the body text region is the
- * only flexible slot and absorbs the difference, truncating via
- * `line-clamp-3` rather than growing the card.
+ * next-week-section.tsx) so every card in a column is uniform (B1). The height
+ * is sized to the CONTENT, not the empty placeholder: it fits the status-pill /
+ * action row + three body lines (the `line-clamp-3` the body keeps) + the
+ * author / stage-tag footer + padding. A short card fills the slack with
+ * whitespace; a long one truncates at three lines with an ellipsis (its full
+ * text stays available via the `title` hover tooltip). The chrome rows keep
+ * their natural size (`shrink-0`); the body is the only flexible slot.
  */
-const ITEM_CARD_REFERENCE_HEIGHT = 110;
+const ITEM_CARD_REFERENCE_HEIGHT = 150;
 
 function cardContainerStyle(opts: {
   isPlanned: boolean;

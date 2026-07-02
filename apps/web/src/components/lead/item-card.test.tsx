@@ -123,7 +123,7 @@ describe("ItemCard — uniform height (lead-item-card-uniformity, B1)", () => {
   // Same fixed height as the section-level empty-state placeholder ("No
   // items yet" in current-week-section.tsx / next-week-section.tsx) — the
   // reference every populated card must match.
-  const EMPTY_STATE_REFERENCE_HEIGHT = "110px";
+  const EMPTY_STATE_REFERENCE_HEIGHT = "150px";
 
   it("a short card and a long card render at the empty-state reference height", () => {
     const shortItem: KanbanItem = { ...BASE_ITEM, text: "Ship it." };

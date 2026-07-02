@@ -240,7 +240,7 @@ export function NextWeekSection({
             {col.items.length === 0 ? (
               <div
                 className="flex items-center justify-center rounded-lg border border-dashed border-[rgba(0,0,0,0.12)] bg-[var(--color-surface-hover)] p-3 text-center text-xs text-[var(--color-muted-foreground)]"
-                style={{ minHeight: 110 }}
+                style={{ minHeight: 150 }}
               >
                 No items yet
               </div>
