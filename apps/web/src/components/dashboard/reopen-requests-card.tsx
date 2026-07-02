@@ -87,7 +87,7 @@ export function ReopenRequestsCard() {
   return (
     <section
       id={REOPEN_REQUESTS_CARD_ID}
-      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[0_0_0.5px_0_rgba(0,0,0,0.14),0_1px_1px_0_rgba(0,0,0,0.24)]"
       aria-label="Pending reopen requests"
     >
       <header className="mb-3 flex items-center justify-between">

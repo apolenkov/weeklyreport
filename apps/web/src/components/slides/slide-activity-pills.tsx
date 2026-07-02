@@ -9,6 +9,14 @@ const PILL_DOT_CLASS: Record<"green" | "yellow" | "red" | "empty", string> = {
   empty: "bg-[var(--color-muted-foreground)] opacity-50",
 };
 
+const PILL_STATUS_LABEL: Record<"green" | "yellow" | "red" | "empty", string> =
+  {
+    green: "On track",
+    yellow: "At risk",
+    red: "Blocked",
+    empty: "No status",
+  };
+
 /**
  * Minimal activity status-pill lane on a section slide — one neutral pill per
  * attached Project Activity with a traffic-light dot. Display-only, no layout
@@ -44,6 +52,9 @@ export function SlideActivityPills({
             ].join(" ")}
           />
           <span className="truncate">{activity.name}</span>
+          <span className="sr-only">
+            {PILL_STATUS_LABEL[activity.status ?? "empty"]}
+          </span>
         </span>
       ))}
     </div>

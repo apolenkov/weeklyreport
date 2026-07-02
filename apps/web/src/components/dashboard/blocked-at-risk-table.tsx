@@ -266,7 +266,7 @@ export function BlockedAtRiskTable({ items }: BlockedAtRiskTableProps) {
           <span
             className={`inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[13px] font-semibold tabular-nums ${
               hasItems
-                ? "bg-[#fee2e2] text-[var(--color-destructive)]"
+                ? "bg-[var(--color-status-blocked-bg)] text-[var(--color-destructive)]"
                 : "bg-[var(--color-muted)] text-[var(--color-muted-foreground)]"
             }`}
           >

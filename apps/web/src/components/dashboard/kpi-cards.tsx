@@ -46,7 +46,7 @@ export function KpiCards({ data }: KpiCardsProps) {
               Last week {data.lastWeekSubmitted}/{data.lastWeekTotal}
             </span>
             {data.pendingCount > 0 && (
-              <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[#fef3c7] px-2 py-0.5 text-[10px] font-semibold text-[#8a6d1b]">
+              <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-status-at-risk-fg)]">
                 {data.pendingCount} pending
               </span>
             )}
@@ -65,7 +65,7 @@ export function KpiCards({ data }: KpiCardsProps) {
             Deadline
           </p>
           <div className="flex flex-wrap items-baseline gap-x-2">
-            <span className="font-[family-name:var(--font-sans)] text-xl font-bold leading-none text-[var(--color-starbucks-gold)]">
+            <span className="font-[family-name:var(--font-sans)] text-xl font-bold leading-none text-[var(--color-foreground)]">
               {data.deadlineLabel}
             </span>
             <span className="text-[13px] text-[var(--color-muted-foreground)]">
@@ -95,7 +95,7 @@ export function KpiCards({ data }: KpiCardsProps) {
               </span>
             </span>
             <span className="whitespace-nowrap">
-              <span className="text-lg font-bold tabular-nums text-[var(--color-starbucks-gold)]">
+              <span className="text-lg font-bold tabular-nums text-[var(--color-status-at-risk-fg)]">
                 {data.atRiskCount}
               </span>
               <span className="ml-1 text-[11px] text-[var(--color-muted-foreground)]">

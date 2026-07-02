@@ -220,7 +220,7 @@ describe("StatusSlideDeck lead — product chip filter (slides-product-autofit)"
   it("clicking a chip scopes the quadrants to that product and marks it selected", () => {
     renderLeadDeck([slide(twoProducts())]);
 
-    fireEvent.click(screen.getByRole("tab", { name: "Data Portal" }));
+    fireEvent.click(screen.getByRole("button", { name: /Data Portal/ }));
 
     // Only the picked product's rows remain in the quadrants.
     expect(screen.getByText("Close API parity")).toBeInTheDocument();
@@ -228,19 +228,19 @@ describe("StatusSlideDeck lead — product chip filter (slides-product-autofit)"
       screen.queryByText("Completed authentication module refactor"),
     ).not.toBeInTheDocument();
     // The strip still lists every product, with a truthful selection state.
-    expect(screen.getByRole("tab", { name: "Data Portal" })).toHaveAttribute(
-      "aria-selected",
+    expect(screen.getByRole("button", { name: /Data Portal/ })).toHaveAttribute(
+      "aria-pressed",
       "true",
     );
     expect(
-      screen.getByRole("tab", { name: "Marketing Portal" }),
-    ).toHaveAttribute("aria-selected", "false");
+      screen.getByRole("button", { name: /Marketing Portal/ }),
+    ).toHaveAttribute("aria-pressed", "false");
   });
 
   it("clicking the active chip again restores the all-products view", () => {
     renderLeadDeck([slide(twoProducts())]);
 
-    const chip = screen.getByRole("tab", { name: "Data Portal" });
+    const chip = screen.getByRole("button", { name: /Data Portal/ });
     fireEvent.click(chip);
     fireEvent.click(chip);
 
@@ -248,7 +248,7 @@ describe("StatusSlideDeck lead — product chip filter (slides-product-autofit)"
     expect(
       screen.getByText("Completed authentication module refactor"),
     ).toBeInTheDocument();
-    expect(screen.queryAllByRole("tab", { selected: true })).toHaveLength(0);
+    expect(screen.queryAllByRole("button", { pressed: true })).toHaveLength(0);
   });
 
   it("keeps fullscreen active when a chip is clicked during a presentation", () => {
@@ -261,7 +261,7 @@ describe("StatusSlideDeck lead — product chip filter (slides-product-autofit)"
     try {
       renderLeadDeck([slide(twoProducts())]);
 
-      fireEvent.click(screen.getByRole("tab", { name: "Data Portal" }));
+      fireEvent.click(screen.getByRole("button", { name: /Data Portal/ }));
 
       // The chip applies the filter without ending the presentation...
       expect(exitFullscreen).not.toHaveBeenCalled();
@@ -300,7 +300,7 @@ describe("StatusSlideDeck lead — product chip filter (slides-product-autofit)"
 
     expect(screen.getByText("Shared platform decision")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Data Portal" }));
+    fireEvent.click(screen.getByRole("button", { name: /Data Portal/ }));
 
     expect(
       screen.queryByText("Shared platform decision"),
@@ -322,7 +322,7 @@ describe("StatusSlideDeck lead — product chip filter (slides-product-autofit)"
     );
     const { rerender } = render(deck(0));
 
-    fireEvent.click(screen.getByRole("tab", { name: "Data Portal" }));
+    fireEvent.click(screen.getByRole("button", { name: /Data Portal/ }));
     expect(
       screen.queryByText("Completed authentication module refactor"),
     ).not.toBeInTheDocument();
@@ -334,7 +334,7 @@ describe("StatusSlideDeck lead — product chip filter (slides-product-autofit)"
       screen.getByText("Completed authentication module refactor"),
     ).toBeInTheDocument();
     expect(screen.getByText("Close API parity")).toBeInTheDocument();
-    expect(screen.queryAllByRole("tab", { selected: true })).toHaveLength(0);
+    expect(screen.queryAllByRole("button", { pressed: true })).toHaveLength(0);
   });
 });
 
