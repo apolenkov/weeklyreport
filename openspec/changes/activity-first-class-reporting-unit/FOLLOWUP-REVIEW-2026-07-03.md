@@ -43,9 +43,11 @@ Workflows (backend + UI, each finding verified) surfaced 9 findings. Fixed:
   `fullProducts.some(reportHasContent) || leadSections.some(sectionHasActivityContent)`
   (`weekly-report-page.tsx`). `sectionHasActivityContent` mirrors
   `reportHasContent`'s strictness — a section has activity content only when a
-  lead TOUCHED an attached activity (non-null derived-or-stored status, or ≥1
-  owned record), never a merely-attached, untouched activity (that would make
-  the empty-state dead in production). This fixes the reported bug — an
+  lead TOUCHED an attached activity: a deliberately-raised alarm (yellow/red), an
+  authored note, or ≥1 owned record. A GREEN status does NOT count —
+  `seedActivityStatuses` defaults every attached activity to green (never null)
+  on section create, so a non-null status is not evidence of lead input (post-
+  review correction, see below). This fixes the reported bug — an
   all-activity SUBMITTED period ("cannot publish" ⇒ submitted) now renders the
   activity strip and unblocks Publish & Lock (`canPublishReport = submitted > 0
 && hasAnyContent`). New regression test asserts: no empty-state, strip renders,
@@ -62,3 +64,33 @@ Workflows (backend + UI, each finding verified) surfaced 9 findings. Fixed:
   `draftCount` coupling is exactly where the 23-test break lived. Left as a
   documented follow-up: fold activity content into the draft-signal branch with
   its own §7 fixture/test, separately from the archive.
+
+## Post-completion adversarial review (2026-07-03)
+
+A 5-lens Workflow review (4 Claude dimensions + Codex) over the whole
+activity-completion diff surfaced 4 confirmed findings — 3 HIGH fixed, 1 MEDIUM
+= the already-documented Gate 2:
+
+- **HIGH — `handleDecisionsChange` dropped `activityId`.** Wiring activity
+  authoring into the decision dialog (#1) was not matched in the lead-form merge
+  handler: it hardcoded `productId: d.productId || null` and never carried
+  `activityId`, so a decision the lead scoped to an activity saved parent-less
+  and failed the server XOR rule — rejecting the WHOLE section save. FIXED:
+  `handleDecisionsChange` now derives `parentFields` from `activityId`, parity
+  with the item/risk handlers.
+- **HIGH — `sectionHasActivityContent` counted seeded-green as content.** The
+  first cut gated on `(derivedStatus ?? status) != null`, but seeding defaults
+  status to green (never null), so it collapsed to `activities.length > 0` and a
+  merely-logged-in lead defeated the empty-state. FIXED: gate on a real touch
+  signal (alarm yellow/red, note, or owned record); added a negative regression
+  test (seeded-green untouched → empty-state stands).
+- **HIGH — `mapLeadReviewFeedback` red tree.** The #7 activity-name index
+  dereferenced `section.activities` (required in the read model, so no `?? []`
+  guard is lint-legal) while the existing `lead-review-feedback.test.tsx` fixture
+  cast a partial section that omitted it → `undefined.map` → 2 tests failed.
+  FIXED: the fixture now provides `activities: []` (mirrors the schema default);
+  added an activity-label test.
+- **MEDIUM — draft-signal for activity-only DRAFT.** = the Gate 2 edge above,
+  already documented as a deferred non-blocking follow-up.
+
+Full web unit suite (1483) + web typecheck green after the fixes.
