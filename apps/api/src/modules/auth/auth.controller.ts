@@ -62,13 +62,17 @@ export function createJwtSigner(env: NodeJS.ProcessEnv): JwtSigner {
   };
 }
 
-export function createSessionCookie(
-  token: string,
-  env: NodeJS.ProcessEnv,
-  // Logout reuses this with an empty token and maxAge 0 so the cleared cookie
-  // matches the set cookie's name and attributes exactly.
-  maxAgeSeconds: number = ONE_HOUR_IN_SECONDS,
-): string {
+export function createSessionCookie({
+  token,
+  env,
+  // Logout reuses this with an empty token and maxAgeSeconds 0 so the cleared
+  // cookie matches the set cookie's name and attributes exactly.
+  maxAgeSeconds = ONE_HOUR_IN_SECONDS,
+}: {
+  token: string;
+  env: NodeJS.ProcessEnv;
+  maxAgeSeconds?: number;
+}): string {
   return serialize(resolveSessionCookieName(env), token, {
     httpOnly: true,
     secure: env.NODE_ENV === "production",
@@ -87,7 +91,7 @@ export function createAuthController(env: NodeJS.ProcessEnv) {
 
       return {
         token,
-        setCookieHeader: createSessionCookie(token, env),
+        setCookieHeader: createSessionCookie({ token, env }),
       };
     },
     verifySessionToken(token: string) {
