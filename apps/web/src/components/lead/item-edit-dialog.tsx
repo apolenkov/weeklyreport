@@ -10,7 +10,8 @@ import {
   ParentPicker,
   type RecordParent,
 } from "./product-picker";
-import { StageMultiSelect } from "./stage-multi-select";
+import { resolveRecordParent } from "./record-parent";
+import { RecordStageStep } from "./record-stage-step";
 import {
   computeEffectiveStageIds,
   isZeroOwnedStageDeadEnd,
@@ -124,22 +125,6 @@ const NEXT_WEEK_CHOICES: readonly Choice[] = [
 ];
 
 /**
- * activity-first-class: derive the record's initial parent — the bound row's
- * activity or product on edit, else the create-mode default product, falling
- * back to the first attached activity for an activity-only lead (no products).
- */
-function resolveInitialParent(
-  initial: KanbanItem,
-  activities: readonly ParentActivityOption[],
-): RecordParent {
-  if (initial.activityId) return { kind: "activity", id: initial.activityId };
-  if (initial.productId) return { kind: "product", id: initial.productId };
-  return activities[0]
-    ? { kind: "activity", id: activities[0].id }
-    : { kind: "product", id: "" };
-}
-
-/**
  * Per-field validation for the item save. A stage is required only for a
  * product parent with owned stages; an activity owns no stage, so it is never
  * demanded there.
@@ -176,47 +161,6 @@ function resolveSaveProduct(
     (item?.productId === parentId
       ? { id: item.productId, name: item.productName }
       : products.at(0))
-  );
-}
-
-/**
- * The product-only stage step: the multi-select plus the zero-owned-stage
- * "contact admin" notice. Rendered only for a product parent (an activity owns
- * no stage), so the whole block lives in one place off the main render.
- */
-function ItemStageStep({
-  stageIds,
-  availableStages,
-  isDeadEnd,
-  error,
-  parentName,
-  onChange,
-}: {
-  readonly stageIds: string[];
-  readonly availableStages: readonly string[];
-  readonly isDeadEnd: boolean;
-  readonly error: string | undefined;
-  readonly parentName: string;
-  readonly onChange: (next: string[]) => void;
-}) {
-  return (
-    <>
-      <StageMultiSelect
-        id="item-stage"
-        value={stageIds}
-        stages={availableStages}
-        required
-        // Suppress the stale required-stage error in the dead-end branch so it
-        // never co-renders with the contact-admin notice below.
-        error={isDeadEnd ? undefined : error}
-        onChange={onChange}
-      />
-      {isDeadEnd && (
-        <p role="status" className="text-xs text-[var(--color-destructive)]">
-          No stages assigned on {parentName} — contact admin.
-        </p>
-      )}
-    </>
   );
 }
 
@@ -331,7 +275,7 @@ function ItemEditDialogContent({
   // default product (falling back to the first activity for an activity-only
   // lead with no products).
   const [parent, setParent] = useState<RecordParent>(() =>
-    resolveInitialParent(initial, activities),
+    resolveRecordParent(initial, undefined, activities),
   );
   const isActivityParent = parent.kind === "activity";
   const [priorityRank, setPriorityRank] = useState<number | null>(
@@ -587,7 +531,8 @@ function ItemEditDialogContent({
             {/* activity-first-class: the stage step is product-only. An activity
                 owns no SDLC stage, so it is omitted for an activity parent. */}
             {!isActivityParent && (
-              <ItemStageStep
+              <RecordStageStep
+                id="item-stage"
                 stageIds={stageIds}
                 availableStages={availableStages}
                 isDeadEnd={isDeadEnd}

@@ -10,6 +10,7 @@ import {
   ParentPicker,
   type RecordParent,
 } from "./product-picker";
+import { resolveRecordParent } from "./record-parent";
 import { StageMultiSelect } from "./stage-multi-select";
 import { canonicalStageIds, canonicalStageName } from "./stage-tags";
 
@@ -223,24 +224,6 @@ function resolveRiskSaveProduct(
 }
 
 /**
- * activity-first-class: derive the risk's initial parent — the bound risk's
- * activity or product on edit, else the create-mode default product, falling
- * back to the first attached activity for an activity-only lead (no products).
- */
-function resolveRiskParent(
-  risk: RiskEntry | null,
-  seedProductId: string | undefined,
-  activities: readonly ParentActivityOption[],
-): RecordParent {
-  if (risk?.activityId) return { kind: "activity", id: risk.activityId };
-  if (risk?.productId) return { kind: "product", id: risk.productId };
-  if (seedProductId) return { kind: "product", id: seedProductId };
-  return activities[0]
-    ? { kind: "activity", id: activities[0].id }
-    : { kind: "product", id: "" };
-}
-
-/**
  * The product-only stage step: the multi-select (with severity preview) plus
  * the zero-owned-stage "contact admin" notice. Rendered only for a product
  * parent; an activity owns no stage.
@@ -330,7 +313,7 @@ function RiskEditDialogContent({
   // default product (falling back to the first activity for an activity-only
   // lead with no products).
   const [parent, setParent] = useState<RecordParent>(() =>
-    resolveRiskParent(risk, seedProduct?.id, activities),
+    resolveRecordParent(risk ?? {}, seedProduct?.id, activities),
   );
   const isActivityParent = parent.kind === "activity";
   const [impact, setImpact] = useState(initialImpact ?? "");

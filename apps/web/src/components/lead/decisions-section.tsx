@@ -9,6 +9,7 @@ import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { DecisionEditDialog } from "./decision-edit-dialog";
 import { PublishedRecordMarker } from "./item-card-actions";
 import type { DecisionEntry, Product } from "./mock-data";
+import type { ParentActivityOption } from "./product-picker";
 import { firstOverCapRowIds, SlideFitAdvisory } from "./slide-fit-advisory";
 import { canonicalStageName, splitStageNames } from "./stage-tags";
 
@@ -35,6 +36,12 @@ interface DecisionsSectionProps {
   readonly stagesForProduct?: (productId: string) => readonly string[];
   /** R4-B: products the lead is assigned to, passed through to the dialog. */
   readonly products?: readonly Product[];
+  /**
+   * activity-first-class: the author's attached activities, forwarded to the
+   * dialog so a decision can be scoped to an activity (Decision 0.4 — parity
+   * with the item/risk sections).
+   */
+  readonly activities?: readonly ParentActivityOption[];
   readonly defaultProductId?: string;
   readonly addSignal?: number;
   /**
@@ -101,6 +108,7 @@ export function DecisionsSection({
   currentUserName,
   stagesForProduct,
   products,
+  activities,
   defaultProductId,
   addSignal = 0,
   publishedLockedIds,
@@ -290,6 +298,7 @@ export function DecisionsSection({
         defaultOwner={currentUserName}
         stagesForProduct={stagesForProduct}
         products={products}
+        activities={activities}
         defaultProductId={defaultProductId}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}

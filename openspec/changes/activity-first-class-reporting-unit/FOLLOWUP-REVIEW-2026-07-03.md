@@ -15,17 +15,28 @@ Workflows (backend + UI, each finding verified) surfaced 9 findings. Fixed:
   showed the seed product's stages, mislabelled with the activity name, after
   switching the parent to an activity. Fixed (commit `bb9219d`).
 
-## Deferred to a follow-up (documented so they are not lost)
+## Fixed in the follow-up (2026-07-03, commit — see git log)
 
-- **#1 (HIGH) — decision authoring parity.** The Decision edit dialog
-  (`decision-edit-dialog.tsx`) still offers only product parents, so a lead
-  cannot scope a NEW decision to an activity. The capability exists end-to-end
-  otherwise (backend persists activity-parented decisions via the widened
-  `decisionsToSave`; the seed creates them; the head report renders them). Only
-  the lead-authoring UI is missing. FIX: wire the same `ParentPicker` +
-  activity-parent handling that `item-edit-dialog.tsx` / `risk-edit-dialog.tsx`
-  already use (thread the section's `activities`, hide stages + emit `activityId`
-  for an activity parent). This completes Decision 0.4 (full parity).
+- **#1 (HIGH) — decision authoring parity.** DONE. The Decision dialog now
+  threads the section's `activities` and offers them in the `ParentPicker`;
+  choosing an activity hides the stage step and emits an activity-parented
+  payload (empty `productId`, `activityId` set, no stage). Shared helpers
+  extracted to remove the three-way duplication the review would flag:
+  `resolveRecordParent` (record-parent.ts, used by item/risk/decision) and
+  `RecordStageStep` (record-stage-step.tsx, used by item/decision). Covered by
+  a new activity-parent test mirroring the item dialog's. `decision-edit-dialog`
+  joined the justified-permanent max-lines exempt (parity with item/risk — all
+  three are one cohesive create/edit dialog; a single-use split would fragment
+  it). Completes Decision 0.4.
+- **#6 (LOW) — slide-pill ARIA.** DONE. Each status cluster in
+  `slide-activity-pills.tsx` is now its own `role="list"` (aria-labelled by
+  status); the outer wrapper is `role="group"`. `role="listitem"` pills are
+  again direct children of a list (fixes aria-required-children).
+- **#7 (LOW) — feedback label.** DONE. `mapLeadReviewFeedback` builds an
+  activity-name index and resolves an activity-parented record's label from it
+  (product name wins when present, else activity name, else "Unknown").
+
+## Still deferred (documented so they are not lost)
 
 - **#5 (HIGH, rare) — activity-only-period empty-state.** A reporting period with
   activity content but ZERO product content anywhere is swallowed by the head
@@ -39,12 +50,4 @@ Workflows (backend + UI, each finding verified) surfaced 9 findings. Fixed:
   sections' attached activities), fold it into `hasAnyContent` AND the
   draft-signal branch, and update the §7 fixtures/tests. Only triggers on an
   all-activity report, so low practical urgency but a real gap in Decision 0.2.
-
-- **#6 (LOW) — slide-pill ARIA.** `slide-activity-pills.tsx` groups pills under a
-  role-less `<div>`, so `role="listitem"` pills are no longer direct children of
-  `role="list"` (trips aria-required-children). FIX: give each status group its
-  own `role="list"` + aria-label, or flatten.
-
-- **#7 (LOW) — feedback label.** `mapLeadReviewFeedback` (`lib/mappers/lead-form.ts`)
-  labels an activity-parented record "Unknown" (resolves via product name only).
-  FIX: branch on the activity parent and use the activity name.
+  This is the LAST finding blocking the epic's archive.

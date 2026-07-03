@@ -1989,6 +1989,7 @@ export function LeadForm({
                 currentUserName={currentUser.name}
                 stagesForProduct={stagesForProduct}
                 products={products}
+                activities={activityOptions}
                 defaultProductId={products[0]?.id}
                 addSignal={decisionsAddSignal}
                 publishedLockedIds={publishedLockedDecisionIds}

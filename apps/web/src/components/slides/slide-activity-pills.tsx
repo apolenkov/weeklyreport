@@ -70,8 +70,11 @@ export function SlideActivityPills({
   })).filter((group) => group.pills.length > 0);
 
   return (
+    // A group of per-status lists. Each status cluster is its own `role="list"`
+    // so its `role="listitem"` pills stay direct children of a list (a single
+    // outer list wrapping the status <div>s trips aria-required-children).
     <div
-      role="list"
+      role="group"
       aria-label="Project activities"
       data-testid="slide-activity-pills"
       className="flex shrink-0 flex-wrap items-center gap-2"
@@ -79,6 +82,8 @@ export function SlideActivityPills({
       {groups.map((group) => (
         <div
           key={group.status}
+          role="list"
+          aria-label={`${PILL_STATUS_LABEL[group.status]} activities`}
           data-testid={`slide-activity-group-${group.status}`}
           className="flex flex-wrap items-center gap-1.5"
         >
