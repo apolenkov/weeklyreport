@@ -4,12 +4,18 @@ import { useEditableListDialog } from "../../hooks/use-editable-list-dialog";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { ItemCard } from "./item-card";
 import { ItemEditDialog } from "./item-edit-dialog";
-import type { KanbanItem, Product } from "./mock-data";
+import type { KanbanItem, Product, RiskEntry } from "./mock-data";
 import { SlideFitAdvisory } from "./slide-fit-advisory";
 import { splitStageNames } from "./stage-tags";
 
 interface NextWeekSectionProps {
   readonly items: KanbanItem[];
+  /**
+   * record-status-derived-from-risk: own risks forwarded to each ItemCard so an
+   * in-progress next-week item's alarm derives from covering risks, not a free
+   * status. Planned items never floor (the derivation's in-progress gate).
+   */
+  readonly risks?: readonly RiskEntry[];
   readonly readOnly?: boolean;
   /**
    * Controlled-component callback fired with the next items array on add /
@@ -64,6 +70,7 @@ function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
 
 export function NextWeekSection({
   items,
+  risks,
   readOnly = false,
   onItemsChange,
   currentUserName,
@@ -253,6 +260,7 @@ export function NextWeekSection({
                   <ItemCard
                     key={item.id}
                     item={item}
+                    risks={risks}
                     readOnly={readOnly}
                     isEditing={false}
                     publishedLocked={publishedLockedIds?.has(item.id)}

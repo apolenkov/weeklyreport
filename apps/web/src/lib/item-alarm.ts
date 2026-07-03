@@ -14,7 +14,7 @@ import {
 export type ItemAlarm = "at-risk" | "blocked" | null;
 
 /** Minimal item shape the derivation reads (product parent + stage + status). */
-interface AlarmItem {
+export interface AlarmItem {
   readonly productId: string;
   readonly stageIds?: readonly string[];
   /** @deprecated legacy single-stage label; read only to heal old rows. */
@@ -23,7 +23,7 @@ interface AlarmItem {
 }
 
 /** Minimal risk shape the derivation reads. */
-interface AlarmRisk {
+export interface AlarmRisk {
   readonly productId: string;
   readonly stageIds?: readonly string[];
   readonly stageName?: string;

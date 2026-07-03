@@ -7,12 +7,18 @@ import { useEditableListDialog } from "../../hooks/use-editable-list-dialog";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { ItemCard } from "./item-card";
 import { ItemEditDialog } from "./item-edit-dialog";
-import type { KanbanItem, Product } from "./mock-data";
+import type { KanbanItem, Product, RiskEntry } from "./mock-data";
 import { SlideFitAdvisory } from "./slide-fit-advisory";
 import { splitStageNames } from "./stage-tags";
 
 interface CurrentWeekSectionProps {
   readonly items: KanbanItem[];
+  /**
+   * record-status-derived-from-risk: own risks forwarded to each ItemCard so
+   * its at-risk/blocked pill derives from the covering risks, never a free item
+   * status.
+   */
+  readonly risks?: readonly RiskEntry[];
   readonly readOnly?: boolean;
   /**
    * Controlled-component callback fired with the next items array on add /
@@ -94,6 +100,7 @@ function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
 
 export function CurrentWeekSection({
   items,
+  risks,
   readOnly = false,
   onItemsChange,
   currentUserName,
@@ -132,10 +139,8 @@ export function CurrentWeekSection({
   // Only fall back to the standalone empty-state when there are neither
   // items nor products to drive a column layout.
   const isEmpty = grouped.size === 0 && (!products || products.length === 0);
-  const hasProducts = products && products.length > 0;
-  const hasMultipleProducts = hasProducts && products.length > 1;
+  const hasMultipleProducts = products != null && products.length > 1;
   const defaultProduct = products?.[0];
-  const defaultProductId = defaultProduct?.id;
 
   // Shared dialog lifecycle (DialogState union, D1 readOnly-ref add-signal
   // effect, D13 openSeq remount key, pending-delete). requireSeed: this
@@ -152,7 +157,7 @@ export function CurrentWeekSection({
   } = useEditableListDialog<KanbanItem>({
     readOnly,
     addSignal,
-    seedProductId: defaultProductId,
+    seedProductId: defaultProduct?.id,
     requireSeed: true,
   });
 
@@ -261,7 +266,6 @@ export function CurrentWeekSection({
             },
           ];
         });
-  const visibleColumnCount = Math.min(Math.max(columns.length, 1), 3);
   const dlg = deriveDialogProps(dialogState);
 
   return (
@@ -278,7 +282,7 @@ export function CurrentWeekSection({
         <div
           className="grid gap-4"
           style={{
-            gridTemplateColumns: `repeat(${visibleColumnCount}, minmax(0, 1fr))`,
+            gridTemplateColumns: `repeat(${Math.min(Math.max(columns.length, 1), 3)}, minmax(0, 1fr))`,
           }}
         >
           {columns.map((col) => (
@@ -315,6 +319,7 @@ export function CurrentWeekSection({
                     <ItemCard
                       key={item.id}
                       item={item}
+                      risks={risks}
                       readOnly={readOnly}
                       isEditing={false}
                       publishedLocked={publishedLockedIds?.has(item.id)}

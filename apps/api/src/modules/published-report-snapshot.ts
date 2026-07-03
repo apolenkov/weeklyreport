@@ -249,34 +249,42 @@ function flaggedRedEscalation(
   };
 }
 
-// activity-first-class (Phase-1, LOCKED decision 0.1): the per-record escalation
-// loops skip activity-parented rows (null product FK) so an activity's
-// blockers/risks floor only its own pill, never the product-level roll-up.
-// Extracted so `buildEscalationsFromReadSections` stays under the complexity gate.
-function blockedItemEscalations(
+// record-status-derived-from-risk: a blocker is a blocked-severity RISK, not a
+// free-blocked item, so the `blocked` escalation is sourced from blocked-severity
+// risks — REPLACING the former `item.workflowStatus === "blocked"` source. A
+// blocked-severity risk yields ONE `blocked` escalation (never also an
+// `unresolved_risk`, see below), so the roll-up count never inflates.
+// activity-first-class (Phase-1, LOCKED decision 0.1): the null-projectId
+// (activity-parented) skip stays so an activity's blockers never reach the
+// product-level roll-up. Extracted so `buildEscalationsFromReadSections` stays
+// under the complexity gate.
+function blockedRiskEscalations(
   section: ReportSectionReadModel,
   productNames: ReadonlyMap<string, string>,
 ): Escalation[] {
-  return section.items.flatMap((item) => {
-    if (item.workflowStatus !== "blocked" || !item.projectId) return [];
+  return section.risks.flatMap((risk) => {
+    if (risk.severity !== "blocked" || !risk.projectId) return [];
     return [
       {
         type: "blocked" as const,
-        productName: productNames.get(item.projectId) ?? UNKNOWN_PRODUCT_NAME,
-        stageName: resolveStageName(item.stageIds),
+        productName: productNames.get(risk.projectId) ?? UNKNOWN_PRODUCT_NAME,
+        stageName: resolveStageName(risk.stageIds),
         leadName: section.authorName,
-        description: item.text,
+        description: risk.risk,
       },
     ];
   });
 }
 
+// A blocked-severity risk already escalates as `blocked` (above), so this emits
+// `unresolved_risk` only for the remaining (at-risk) severities — a single risk
+// never produces both escalation types.
 function unresolvedRiskEscalations(
   section: ReportSectionReadModel,
   productNames: ReadonlyMap<string, string>,
 ): Escalation[] {
   return section.risks.flatMap((risk) => {
-    if (!risk.projectId) return [];
+    if (risk.severity === "blocked" || !risk.projectId) return [];
     return [
       {
         type: "unresolved_risk" as const,
@@ -309,7 +317,7 @@ export function buildEscalationsFromReadSections(
       ),
     );
 
-    escalations.push(...blockedItemEscalations(section, productNames));
+    escalations.push(...blockedRiskEscalations(section, productNames));
 
     for (const project of section.projects) {
       const flaggedRed = flaggedRedEscalation(
