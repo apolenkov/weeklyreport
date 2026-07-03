@@ -37,6 +37,8 @@
       vetoes belong to the follow-up change, not here.
 - [x] 3.2 `openspec validate "tighten-comment-policy" --strict` clean
       (re-run after every review round; last: post-round-4).
-- [ ] 3.3 Re-audit one already-swept file with the updated
+- [x] 3.3 Re-audit one already-swept file with the updated
       `exemplary-rollout` recon to confirm the new dimension fires (a planted
-      narration comment is reported).
+      narration comment is reported): confirmed 2026-07-03 — a planted narration
+      comment on an otherwise-exemplary auth snippet fires `comment-over-budget`
+      while the load-bearing "Logout reuses" WHY is correctly left unflagged.
