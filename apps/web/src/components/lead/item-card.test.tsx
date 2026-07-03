@@ -16,7 +16,7 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { ItemCard } from "./item-card";
-import type { KanbanItem } from "./mock-data";
+import type { KanbanItem, RiskEntry } from "./mock-data";
 
 const BASE_ITEM: KanbanItem = {
   id: "item-1",
@@ -182,5 +182,86 @@ describe("ItemCard — body text truncation + tooltip (lead-item-card-uniformity
     render(<ItemCard item={{ ...BASE_ITEM, text: LONG_TEXT }} isEditing />);
     const textarea = screen.getByRole("textbox", { name: "Edit item text" });
     expect(textarea).toHaveValue(LONG_TEXT);
+  });
+});
+
+describe("ItemCard — record-status-derived-from-risk (risk-derived alarm)", () => {
+  const inProgress: KanbanItem = {
+    ...BASE_ITEM,
+    stageIds: ["Development"],
+    status: "in-progress",
+  };
+  const risk = (severity: "at-risk" | "blocked"): RiskEntry => ({
+    id: `risk-${severity}`,
+    productId: "p1",
+    productName: "DevOps Tools",
+    stageIds: ["Development"],
+    severity,
+    text: "A real covering risk",
+    impact: "impact",
+    mitigation: "mitigation",
+  });
+
+  it("floors an in-progress item to Blocked when a covering blocked risk exists", () => {
+    render(<ItemCard item={inProgress} risks={[risk("blocked")]} />);
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
+    expect(screen.queryByText("In Progress")).not.toBeInTheDocument();
+  });
+
+  it("floors an in-progress item to At Risk when a covering at-risk risk exists", () => {
+    render(<ItemCard item={inProgress} risks={[risk("at-risk")]} />);
+    expect(screen.getByText("At Risk")).toBeInTheDocument();
+  });
+
+  it("shows the covered-lock message on a derived alarm pill", () => {
+    render(<ItemCard item={inProgress} risks={[risk("blocked")]} />);
+    expect(screen.getByText("Blocked")).toHaveAttribute(
+      "title",
+      "Status is set by the covering risk/blocker — resolve it to change.",
+    );
+  });
+
+  it("shows the progress status when no risk covers the item", () => {
+    render(<ItemCard item={inProgress} risks={[]} />);
+    expect(screen.getByText("In Progress")).toBeInTheDocument();
+    expect(screen.queryByText("Blocked")).not.toBeInTheDocument();
+  });
+
+  it("never floors a completed item under a covering risk (eligibility)", () => {
+    render(
+      <ItemCard
+        item={{ ...inProgress, status: "completed" }}
+        risks={[risk("blocked")]}
+      />,
+    );
+    expect(screen.getByText("Completed")).toBeInTheDocument();
+    expect(screen.queryByText("Blocked")).not.toBeInTheDocument();
+  });
+
+  it("never floors an activity-parented item (Q1 Phase-1 severity isolation)", () => {
+    render(
+      <ItemCard
+        item={{
+          ...inProgress,
+          productId: "",
+          activityId: "act-1",
+          activityName: "Jira triage",
+        }}
+        risks={[{ ...risk("blocked"), productId: "" }]}
+      />,
+    );
+    expect(screen.getByText("In Progress")).toBeInTheDocument();
+    expect(screen.queryByText("Blocked")).not.toBeInTheDocument();
+  });
+
+  it("coerces a legacy stored-blocked item to In Progress when uncovered", () => {
+    render(<ItemCard item={{ ...inProgress, status: "blocked" }} risks={[]} />);
+    expect(screen.getByText("In Progress")).toBeInTheDocument();
+    expect(screen.queryByText("Blocked")).not.toBeInTheDocument();
+  });
+
+  it("trusts item.status when no risk set is threaded in (foreign/legacy path)", () => {
+    render(<ItemCard item={{ ...inProgress, status: "blocked" }} />);
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
   });
 });

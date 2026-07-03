@@ -214,9 +214,9 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
           id: "eeb16c80-2f85-48a0-b838-d8096981ddba",
           projectId: OWNED_PRODUCT,
           type: "current",
-          text: "ETL pipeline blocked",
+          text: "ETL pipeline work",
           tag: "infra",
-          workflowStatus: "blocked",
+          workflowStatus: "in_progress",
           carriedOver: false,
           completed: null,
           priorityRank: null,
@@ -225,6 +225,18 @@ describe("live escalation pipeline (mapPrismaToReportSection -> builder)", () =>
         },
       ],
       risks: [
+        // record-status-derived-from-risk: the blocked escalation is sourced from
+        // a blocked-severity risk (multi-stage), not the item's workflowStatus.
+        {
+          id: "c1a1b2c3-d4e5-4f60-9a71-0b1c2d3e4f50",
+          projectId: OWNED_PRODUCT,
+          risk: "ETL pipeline blocked",
+          impact: "High",
+          mitigation: "Await fix",
+          severity: "blocked",
+          stageNames: ["Development", "Testing"],
+          project: { name: "CRM Portal" },
+        },
         {
           id: "5b2fe575-86c3-422e-b7ed-5fe858cab7f7",
           projectId: REFERENCED_PRODUCT,
