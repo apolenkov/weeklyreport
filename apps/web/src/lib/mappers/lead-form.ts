@@ -779,8 +779,21 @@ export function mapLeadReviewFeedback(
   section: ReportSectionReadModel,
 ): LeadReviewFeedbackRecord[] {
   const projectIndex = buildProjectIndex(section);
-  const nameFor = (projectId: string | null | undefined): string =>
-    (projectId ? projectIndex.get(projectId)?.name : undefined) ?? "Unknown";
+  // activity-first-class: an activity-parented record has a null projectId, so
+  // resolve its label from the section's activities instead of falling through
+  // to "Unknown". The product name wins when present (XOR — a record parents to
+  // exactly one), else the activity name, else "Unknown" for orphaned legacy.
+  const activityIndex = new Map(
+    section.activities.map((a) => [a.activityId, a.activityName]),
+  );
+  const labelFor = (
+    projectId: string | null | undefined,
+    activityId: string | null | undefined,
+  ): string => {
+    if (projectId) return projectIndex.get(projectId)?.name ?? "Unknown";
+    if (activityId) return activityIndex.get(activityId) ?? "Unknown";
+    return "Unknown";
+  };
   const hasComments = (comments: readonly RecordCommentView[] | undefined) =>
     (comments?.length ?? 0) > 0;
 
@@ -789,7 +802,7 @@ export function mapLeadReviewFeedback(
     .map((item) => ({
       id: item.id ?? "",
       kind: "item",
-      productName: nameFor(item.projectId),
+      productName: labelFor(item.projectId, item.activityId),
       text: item.text,
       comments: item.comments ?? [],
     }));
@@ -798,7 +811,7 @@ export function mapLeadReviewFeedback(
     .map((risk) => ({
       id: risk.id ?? "",
       kind: "risk",
-      productName: nameFor(risk.projectId),
+      productName: labelFor(risk.projectId, risk.activityId),
       text: risk.risk,
       comments: risk.comments ?? [],
     }));
@@ -807,7 +820,10 @@ export function mapLeadReviewFeedback(
     .map((decision) => ({
       id: decision.id ?? "",
       kind: "decision",
-      productName: nameFor(decision.productId ?? undefined),
+      productName: labelFor(
+        decision.productId ?? undefined,
+        decision.activityId,
+      ),
       text: decision.text,
       comments: decision.comments ?? [],
     }));

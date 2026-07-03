@@ -5,8 +5,13 @@ import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../lib/use-dialog-focus";
 import type { DecisionEntry, Product } from "./mock-data";
-import { ParentPicker } from "./product-picker";
-import { StageMultiSelect } from "./stage-multi-select";
+import {
+  type ParentActivityOption,
+  ParentPicker,
+  type RecordParent,
+} from "./product-picker";
+import { resolveRecordParent } from "./record-parent";
+import { RecordStageStep } from "./record-stage-step";
 import {
   computeEffectiveStageIds,
   isZeroOwnedStageDeadEnd,
@@ -33,6 +38,13 @@ interface DecisionEditDialogProps {
    * shows a product picker so the lead can scope the decision to a product.
    */
   readonly products?: readonly Product[];
+  /**
+   * activity-first-class: the section author's attached activities. When
+   * non-empty the parent picker offers them; choosing an activity hides the
+   * stage step and parents the decision to the activity instead of a product
+   * (Decision 0.4 — parity with the item/risk dialogs).
+   */
+  readonly activities?: readonly ParentActivityOption[];
   readonly defaultProductId?: string;
   readonly onSave: (next: DecisionEntry) => void;
   readonly onCancel: () => void;
@@ -56,6 +68,7 @@ function DecisionEditDialogContent({
   defaultOwner,
   stagesForProduct,
   products,
+  activities = [],
   defaultProductId,
   onSave,
   onCancel,
@@ -84,9 +97,18 @@ function DecisionEditDialogContent({
   const owner = decision?.owner ?? defaultOwner ?? "";
   const [impact, setImpact] = useState(decision?.impact ?? "");
   const [deadline, setDeadline] = useState(decision?.deadline ?? "");
-  const [productId, setProductId] = useState(
-    decision?.productId || defaultProductId || products?.[0]?.id || "",
+  // activity-first-class: the decision's parent — a product OR an attached
+  // activity (XOR). Seeded from the bound row on edit, or the create-mode
+  // default product (falling back to the first activity for an activity-only
+  // lead with no products). Shared seed rule with the item/risk dialogs.
+  const [parent, setParent] = useState<RecordParent>(() =>
+    resolveRecordParent(
+      decision ?? {},
+      defaultProductId || products?.[0]?.id,
+      activities,
+    ),
   );
+  const isActivityParent = parent.kind === "activity";
   // unify-record-dialogs: no stage pre-selected on create (mirrors item/risk);
   // edit restores the saved stages. Required + single-owned-stage auto-apply
   // live in handleSave.
@@ -94,11 +116,12 @@ function DecisionEditDialogContent({
     decision?.stageIds ? [...decision.stageIds] : [],
   );
 
-  // unify-record-dialogs: changing the product re-scopes the stage options and
+  // unify-record-dialogs: switching the parent re-scopes the stage options and
   // clears the prior selection, exactly like the item/risk dialogs (never
-  // default to all owned stages — W11 3.10).
-  function setProductAndStages(nextProductId: string) {
-    setProductId(nextProductId);
+  // default to all owned stages — W11 3.10). Switching to an activity hides the
+  // stage step; switching back to a product re-shows it empty.
+  function setParentAndStages(nextParent: RecordParent) {
+    setParent(nextParent);
     setStageIds([]);
   }
   const [errors, setErrors] = useState<{
@@ -109,15 +132,22 @@ function DecisionEditDialogContent({
 
   const headerVerb = isCreate ? "Add Decision" : "Edit Decision";
 
-  // require-stage-on-items-and-decisions: a decision must carry a concrete stage
-  // when the lead owns stages — mirrors the risk/item dialogs. A single owned
-  // stage is implicitly selected so the lead can save without a click; zero owned
-  // stages with nothing to carry is a dead end (Save disabled).
-  const availableStages = stagesForProduct?.(productId) ?? [];
+  // require-stage-on-items-and-decisions: a PRODUCT-parented decision must carry
+  // a concrete stage when the lead owns stages — mirrors the risk/item dialogs. A
+  // single owned stage is implicitly selected so the lead can save without a
+  // click; zero owned stages with nothing to carry is a dead end (Save disabled).
+  // An ACTIVITY-parented decision owns no stage (Decision 5), so the stage step
+  // is hidden and never validated.
+  const availableStages = isActivityParent
+    ? []
+    : (stagesForProduct?.(parent.id) ?? []);
   const effectiveStageIds = computeEffectiveStageIds(stageIds, availableStages);
-  const isDeadEnd = isZeroOwnedStageDeadEnd(availableStages, effectiveStageIds);
+  const isDeadEnd =
+    !isActivityParent &&
+    isZeroOwnedStageDeadEnd(availableStages, effectiveStageIds);
+  const selectedActivity = activities.find((a) => a.id === parent.id);
   const headerProductName =
-    products?.find((p) => p.id === productId)?.name ??
+    products?.find((p) => p.id === parent.id)?.name ??
     decision?.productName ??
     "";
 
@@ -159,15 +189,34 @@ function DecisionEditDialogContent({
       focusFirstInvalidField(next);
       return;
     }
-    const selectedProduct = products?.find((p) => p.id === productId);
-    onSave({
+    const base = {
       id: decision?.id ?? crypto.randomUUID(),
-      productId: productId || "",
-      productName: selectedProduct?.name ?? decision?.productName ?? "Group",
       text: t,
       owner: o,
       impact: im,
       deadline: deadline ? deadline : null,
+    };
+    // activity-first-class: an activity parent yields an activity-parented
+    // decision (empty productId, no stage); a product parent keeps today's
+    // output. XOR is enforced by the write schema server-side.
+    if (isActivityParent) {
+      const name = selectedActivity?.name ?? decision?.activityName ?? "";
+      onSave({
+        ...base,
+        productId: "",
+        productName: name,
+        activityId: parent.id,
+        activityName: name,
+        stageIds: undefined,
+      });
+      return;
+    }
+    const selectedProduct = products?.find((p) => p.id === parent.id);
+    onSave({
+      ...base,
+      productId: parent.id || "",
+      productName: selectedProduct?.name ?? decision?.productName ?? "Group",
+      activityId: null,
       stageIds:
         effectiveStageIds.length > 0
           ? canonicalStageIds(effectiveStageIds)
@@ -315,37 +364,31 @@ function DecisionEditDialogContent({
               Classification
             </span>
 
-            {/* Product picker — shared component, always rendered. Decisions
-                stay product-only in this dialog (no activities passed). */}
+            {/* Parent picker — shared component. Offers products and the
+                author's attached activities; choosing an activity hides the
+                stage step below (an activity owns no SDLC stage). */}
             <ParentPicker
               id="dec-product"
-              value={{ kind: "product", id: productId }}
+              value={parent}
               products={products ?? []}
-              onChange={(parent) => setProductAndStages(parent.id)}
+              activities={activities}
+              onChange={setParentAndStages}
             />
 
-            <StageMultiSelect
-              id="dec-stage"
-              value={stageIds}
-              stages={availableStages}
-              required
-              // Suppress the stale required-stage error in the dead-end branch so
-              // it never co-renders with the contact-admin notice below.
-              error={isDeadEnd ? undefined : errors.stageIds}
-              onChange={(next) => {
-                setStageIds(next);
-                if (errors.stageIds)
+            {/* activity-first-class: the stage step is product-only. */}
+            {!isActivityParent && (
+              <RecordStageStep
+                id="dec-stage"
+                stageIds={stageIds}
+                availableStages={availableStages}
+                isDeadEnd={isDeadEnd}
+                error={errors.stageIds}
+                parentName={headerProductName}
+                onChange={(nextStages) => {
+                  setStageIds(nextStages);
                   setErrors((prev) => ({ ...prev, stageIds: undefined }));
-              }}
-            />
-
-            {isDeadEnd && (
-              <p
-                role="status"
-                className="text-xs text-[var(--color-destructive)]"
-              >
-                No stages assigned on {headerProductName} — contact admin.
-              </p>
+                }}
+              />
             )}
           </div>
         </div>

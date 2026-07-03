@@ -613,6 +613,7 @@ export default defineConfig([
       "apps/web/src/components/admin/products-tab.tsx", // one CRUD screen; private icon helpers only
       "apps/web/src/components/lead/risk-edit-dialog.tsx", // one dialog: state + validation + render
       "apps/web/src/components/lead/item-edit-dialog.tsx", // one create/edit dialog; shell + content coupled
+      "apps/web/src/components/lead/decision-edit-dialog.tsx", // one create/edit dialog; XOR parent picker + per-field validation + conditional stage step — parity with item/risk-edit-dialog (shared helpers already extracted)
       "apps/web/src/components/lead/lead-form-sync-bridge.tsx", // one context bridge wiring sync to two consumers
       "apps/web/src/components/slides/status-slide-deck.tsx", // one navigable slide-deck widget
       "apps/web/src/components/navigation/nav-bar.tsx", // one role-aware nav widget; MobileNav/coming-soon have no external consumers

@@ -578,3 +578,55 @@ describe("DecisionEditDialog — stage-ownership scoping", () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 });
+
+// activity-first-class (Decision 0.4): a lead can scope a NEW decision to an
+// attached activity. Choosing an activity parent hides the stage step (an
+// activity owns no SDLC stage) and emits an activity-parented payload — parity
+// with the item/risk dialogs.
+describe("DecisionEditDialog — activity parenting (activity-first-class)", () => {
+  const activities = [{ id: "act1", name: "Jira triage duty" }];
+
+  it("hides the stage step and saves an activity-parented decision with no stage", () => {
+    const onSave = vi.fn();
+    render(
+      <DecisionEditDialog
+        open
+        decision={null}
+        defaultOwner="Test Lead"
+        stagesForProduct={() => ["Planning", "Dev"]}
+        products={products}
+        activities={activities}
+        defaultProductId="p1"
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+
+    // A product parent shows the stage step (its checkboxes).
+    expect(
+      screen.getByRole("checkbox", { name: "Planning" }),
+    ).toBeInTheDocument();
+
+    // Switch the parent to the activity — the stage step disappears.
+    fireEvent.change(screen.getByLabelText("Parent"), {
+      target: { value: "activity:act1" },
+    });
+    expect(screen.queryByRole("checkbox", { name: "Planning" })).toBeNull();
+
+    fireEvent.change(screen.getByLabelText(/^Decision \*/i), {
+      target: { value: "Escalate triage backlog" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: "Backlog cleared next sprint" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save Decision/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    const saved = onSave.mock.calls[0]?.[0] as DecisionEntry;
+    expect(saved.activityId).toBe("act1");
+    expect(saved.productId).toBe("");
+    expect(saved.stageIds).toBeUndefined();
+    expect(saved.activityName).toBe("Jira triage duty");
+    expect(saved.text).toBe("Escalate triage backlog");
+  });
+});
