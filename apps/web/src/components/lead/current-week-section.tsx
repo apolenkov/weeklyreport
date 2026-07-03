@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 
 import type { EditableListDialogState } from "../../hooks/use-editable-list-dialog";
 import { useEditableListDialog } from "../../hooks/use-editable-list-dialog";
+import { useScrollFade } from "../../hooks/use-scroll-fade";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { ItemCard } from "./item-card";
-import { ItemEditDialog } from "./item-edit-dialog";
+import { type BlockerPrefill, ItemEditDialog } from "./item-edit-dialog";
 import type { KanbanItem, Product, RiskEntry } from "./mock-data";
 import { SlideFitAdvisory } from "./slide-fit-advisory";
 import { splitStageNames } from "./stage-tags";
@@ -65,6 +66,11 @@ interface CurrentWeekSectionProps {
   readonly onMarkComplete?: (id: string) => void;
   /** In-place move action (same durable identity; see ItemCardActions). */
   readonly onMoveToNextWeek?: (id: string) => void;
+  /**
+   * Route an uncovered item's alarm gesture to blocker (risk) creation.
+   * Forwarded to the item dialog.
+   */
+  readonly onRouteToBlocker?: (prefill: BlockerPrefill) => void;
 }
 
 function deriveDialogProps(dialogState: EditableListDialogState<KanbanItem>): {
@@ -112,29 +118,11 @@ export function CurrentWeekSection({
   publishedLockedIds,
   onMarkComplete,
   onMoveToNextWeek,
+  onRouteToBlocker,
 }: CurrentWeekSectionProps) {
   const grouped = groupByProduct(items);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollDown, setCanScrollDown] = useState(false);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    function check() {
-      if (!el) return;
-      setCanScrollDown(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
-    }
-    check();
-    el.addEventListener("scroll", check, { passive: true });
-    // ResizeObserver may be absent in SSR / test (jsdom) environments.
-    const ro =
-      typeof ResizeObserver !== "undefined" ? new ResizeObserver(check) : null;
-    ro?.observe(el);
-    return () => {
-      el.removeEventListener("scroll", check);
-      ro?.disconnect();
-    };
-  }, []);
+  const canScrollDown = useScrollFade(scrollRef);
 
   // Only fall back to the standalone empty-state when there are neither
   // items nor products to drive a column layout.
@@ -347,6 +335,8 @@ export function CurrentWeekSection({
           defaultProductId={dlg.createSeedProductId}
           stagesForProduct={stagesForProduct}
           ownPeriodRanks={ownPeriodRanks}
+          risks={risks}
+          onRouteToBlocker={onRouteToBlocker}
           onSave={handleDialogSave}
           onCancel={handleDialogCancel}
         />

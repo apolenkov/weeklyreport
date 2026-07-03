@@ -293,6 +293,7 @@ export function NextWeekSection({
         }
         stagesForProduct={stagesForProduct}
         ownPeriodRanks={ownPeriodRanks}
+        risks={risks}
         onSave={handleDialogSave}
         onCancel={handleDialogCancel}
       />

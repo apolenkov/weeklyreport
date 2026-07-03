@@ -290,3 +290,52 @@ describe("ItemCard — record-status-derived-from-risk (risk-derived alarm)", ()
     expect(screen.getByText("Blocked")).toBeInTheDocument();
   });
 });
+
+describe("ItemCard — foreign covering-risk attribution (record-status-ux-polish §3)", () => {
+  const inProgress: KanbanItem = {
+    ...BASE_ITEM,
+    stageIds: ["Development"],
+    status: "in-progress",
+  };
+  const risk = (
+    overrides: Partial<RiskEntry> & { severity: "at-risk" | "blocked" },
+  ): RiskEntry => ({
+    id: `risk-${overrides.severity}`,
+    productId: "p1",
+    productName: "DevOps Tools",
+    stageIds: ["Development"],
+    text: "A real covering risk",
+    impact: "impact",
+    mitigation: "mitigation",
+    ...overrides,
+  });
+
+  it("names the other author when their covering risk floors an own item", () => {
+    const foreign = risk({
+      severity: "blocked",
+      id: "r-foreign",
+      foreign: true,
+      authorName: "Bob Lead",
+    });
+    render(<ItemCard item={inProgress} risks={[foreign]} />);
+    expect(screen.getByText("Blocked")).toHaveAttribute(
+      "title",
+      "Status is set by Bob Lead's covering risk/blocker — resolve it with them to change.",
+    );
+  });
+
+  it("keeps the generic lock when an OWN risk also produces the floor", () => {
+    const own = risk({ severity: "blocked" });
+    const foreign = risk({
+      severity: "blocked",
+      id: "r-foreign",
+      foreign: true,
+      authorName: "Bob Lead",
+    });
+    render(<ItemCard item={inProgress} risks={[own, foreign]} />);
+    expect(screen.getByText("Blocked")).toHaveAttribute(
+      "title",
+      "Status is set by the covering risk/blocker — resolve it to change.",
+    );
+  });
+});

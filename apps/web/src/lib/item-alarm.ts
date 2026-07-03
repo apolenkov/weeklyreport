@@ -40,9 +40,9 @@ function itemStageNames(item: AlarmItem): readonly string[] {
 }
 
 /**
- * Derive an item's at-risk/blocked alarm from the section's covering risks —
- * the highest covering severity wins (`blocked` > `at-risk`), or `null` when no
- * risk covers it.
+ * The risks that cover an item — the same coverage rule the alarm derivation
+ * applies, exposed so a caller can also read WHICH risk floors the item (e.g.
+ * to attribute a foreign author's covering risk).
  *
  * Coverage (design Decision 1): a risk covers the item when it shares the
  * product AND overlaps a stage — the item's stage set intersects the risk's, OR
@@ -58,22 +58,40 @@ function itemStageNames(item: AlarmItem): readonly string[] {
  * product — the wildcard would otherwise floor them).
  *
  * The caller passes the SECTION's own risks; cross-section coverage never
- * applies (same `reportSectionId` is implicit in the risk list handed in).
+ * applies (same `reportSectionId` is implicit in the risk list handed in). The
+ * generic preserves the caller's richer row type (e.g. `RiskEntry` with author
+ * metadata) so the covering rows carry their author back to the caller.
+ */
+export function coveringRisksForItem<T extends AlarmRisk>(
+  item: AlarmItem,
+  risks: readonly T[],
+): T[] {
+  if (item.status !== "in-progress") return [];
+  const stages = itemStageNames(item);
+  return risks.filter((risk) => {
+    if (risk.productId !== item.productId) return false;
+    if (risk.text.trim().length === 0) return false;
+    if (stages.length === 0) return true;
+    return stages.some((stage) => riskCoversStage(risk, stage));
+  });
+}
+
+/** The highest alarm among a set of covering risks (`blocked` > `at-risk`). */
+export function highestAlarmSeverity(risks: readonly AlarmRisk[]): ItemAlarm {
+  if (risks.some((risk) => risk.severity === "blocked")) return "blocked";
+  if (risks.some((risk) => risk.severity === "at-risk")) return "at-risk";
+  return null;
+}
+
+/**
+ * Derive an item's at-risk/blocked alarm from the section's covering risks —
+ * the highest covering severity wins (`blocked` > `at-risk`), or `null` when no
+ * risk covers it. See {@link coveringRisksForItem} for the coverage +
+ * eligibility rules.
  */
 export function deriveItemAlarmFromRisks(
   item: AlarmItem,
   risks: readonly AlarmRisk[],
 ): ItemAlarm {
-  if (item.status !== "in-progress") return null;
-  const stages = itemStageNames(item);
-  const covers = (risk: AlarmRisk): boolean => {
-    if (risk.productId !== item.productId) return false;
-    if (risk.text.trim().length === 0) return false;
-    if (stages.length === 0) return true;
-    return stages.some((stage) => riskCoversStage(risk, stage));
-  };
-  const covering = risks.filter(covers);
-  if (covering.some((risk) => risk.severity === "blocked")) return "blocked";
-  if (covering.some((risk) => risk.severity === "at-risk")) return "at-risk";
-  return null;
+  return highestAlarmSeverity(coveringRisksForItem(item, risks));
 }

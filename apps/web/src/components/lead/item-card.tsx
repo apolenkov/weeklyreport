@@ -2,7 +2,10 @@
 
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 
-import { deriveItemAlarmFromRisks } from "../../lib/item-alarm";
+import {
+  coveringRisksForItem,
+  highestAlarmSeverity,
+} from "../../lib/item-alarm";
 import { ItemCardActions, PublishedRecordMarker } from "./item-card-actions";
 import type { ItemStatus, KanbanItem, RiskEntry } from "./mock-data";
 import { canonicalStageName, splitStageNames } from "./stage-tags";
@@ -133,17 +136,36 @@ interface DerivedCardStatus {
   isBlocked: boolean;
   isPlanned: boolean;
   alarmLocked: boolean;
+  /**
+   * Set when the flooring covering risk belongs to ANOTHER author — the current
+   * lead cannot resolve it alone, so the lock affordance names that author.
+   */
+  lockAuthorName?: string;
 }
 
 /**
- * record-status-derived-from-risk: resolve the pill the card shows. The
- * at-risk/blocked alarm is the roll-up of the covering risks (the item-card
- * analogue of the stage-chip floor), never a free item status. Product-parented
- * items only — an activity item's severity stays deferred (Q1 Phase-1
- * isolation); the derivation's in-progress gate leaves completed/planned items
- * on their progress pill. When an alarm is derived the pill is locked (resolve
- * the covering risk/blocker to change it). A legacy stored `blocked` with no
- * covering risk shows as in-progress — `blocked` is display-derived only now.
+ * The author whose foreign covering risk floors the item, or undefined — only
+ * when an own risk does NOT already produce the same floor (that one the lead
+ * could resolve themselves, so the generic lock copy applies).
+ */
+function foreignLockAuthor(
+  covering: readonly RiskEntry[],
+  alarm: "at-risk" | "blocked" | null,
+): string | undefined {
+  const own = highestAlarmSeverity(covering.filter((r) => r.foreign !== true));
+  if (alarm === null || own === alarm) return undefined;
+  return covering.find((r) => r.foreign === true && r.severity === alarm)
+    ?.authorName;
+}
+
+/**
+ * Resolve the pill the card shows. The at-risk/blocked alarm is the roll-up of
+ * the covering risks (the item-card analogue of the stage-chip floor), never a
+ * free item status. Product-parented items only — an activity item's severity
+ * stays isolated; the in-progress gate leaves completed/planned on their
+ * progress pill. A derived alarm locks the pill (resolve the covering
+ * risk/blocker to change it); a co-owner's flooring risk names its author. A
+ * legacy stored `blocked` with no covering risk shows as in-progress.
  */
 function deriveCardStatus(
   item: KanbanItem,
@@ -152,8 +174,7 @@ function deriveCardStatus(
   // No risk set threaded in, OR a foreign (cross-author) item: trust item.status
   // as-is. Foreign items are mixed into the own-item arrays but carry their
   // author's already-overlaid status (mapForeignItems) — deriving them against
-  // the VIEWER's own risks would floor them against the wrong risk set. The
-  // covering-risk overlay applies only to own items with the section's risks.
+  // the merged risk set would floor them against the wrong risks.
   if (risks === undefined || item.foreign === true) {
     return {
       displayStatus: item.status,
@@ -169,16 +190,19 @@ function deriveCardStatus(
   // lead card and the head report disagree for identical data.
   const eligibleStatus: ItemStatus =
     item.status === "blocked" ? "in-progress" : item.status;
-  const derivedAlarm =
+  const covering =
     item.activityId == null && item.productId !== ""
-      ? deriveItemAlarmFromRisks({ ...item, status: eligibleStatus }, risks)
-      : null;
+      ? coveringRisksForItem({ ...item, status: eligibleStatus }, risks)
+      : [];
+  const derivedAlarm = highestAlarmSeverity(covering);
   const displayStatus: ItemStatus | "at-risk" = derivedAlarm ?? eligibleStatus;
+  const lockAuthorName = foreignLockAuthor(covering, derivedAlarm);
   return {
     displayStatus,
     isBlocked: displayStatus === "blocked",
     isPlanned: displayStatus === "planned",
     alarmLocked: derivedAlarm !== null,
+    ...(lockAuthorName ? { lockAuthorName } : {}),
   };
 }
 
@@ -194,10 +218,8 @@ export function ItemCard({
   isEditing = false,
   onTextSave,
 }: ItemCardProps) {
-  const { displayStatus, isBlocked, isPlanned, alarmLocked } = deriveCardStatus(
-    item,
-    risks,
-  );
+  const { displayStatus, isBlocked, isPlanned, alarmLocked, lockAuthorName } =
+    deriveCardStatus(item, risks);
   const badge =
     (STATUS_BADGE as Record<string, StatusBadge>)[displayStatus] ??
     STATUS_BADGE["in-progress"];
@@ -279,7 +301,9 @@ export function ItemCard({
             style={{ background: badge.bg, color: badge.text }}
             title={
               alarmLocked
-                ? "Status is set by the covering risk/blocker — resolve it to change."
+                ? lockAuthorName
+                  ? `Status is set by ${lockAuthorName}'s covering risk/blocker — resolve it with them to change.`
+                  : "Status is set by the covering risk/blocker — resolve it to change."
                 : undefined
             }
           >
