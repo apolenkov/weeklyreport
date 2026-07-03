@@ -431,7 +431,7 @@ export default defineConfig([
       // ratcheted down one batch at a time.
       "max-lines": [
         "error",
-        { max: 300, skipBlankLines: true, skipComments: true },
+        { max: 250, skipBlankLines: true, skipComments: true },
       ],
       complexity: ["error", 20],
     },
@@ -631,10 +631,48 @@ export default defineConfig([
     ],
     rules: { "max-lines": "off" },
   },
-  // R3a-4 GRANDFATHER (max-lines) — EMPTY. The ratchet is complete: every
-  // pre-existing violator was either split below 300 or moved to the
-  // justified-permanent exempt block above with a reason. No file is
-  // size-grandfathered any longer.
+  // R3a-4 GRANDFATHER (max-lines) — R1b cohort. The ratchet dropped 300 -> 250
+  // (2026-07-04); these files are 250-300 real lines (skipBlankLines +
+  // skipComments) and are grandfathered so the notch lands GREEN with zero
+  // churn. R1c drains this block one wave at a time — split each file below 250
+  // (prefer many small single-purpose units) or move it to the
+  // justified-permanent exempt block above with a one-line reason; never raise
+  // the threshold back. New code is gated at 250 repo-wide.
+  {
+    files: [
+      "apps/api/src/infrastructure/trpc/trpc.context.ts",
+      "apps/api/src/lib/logger.ts",
+      "apps/api/src/modules/admin/admin-period.queries.ts",
+      "apps/api/src/modules/analytics/analytics.prisma-repository.ts",
+      "apps/api/src/modules/carry-over/carry-over.prisma-repository.ts",
+      "apps/api/src/modules/carry-over/carry-over.service.ts",
+      "apps/api/src/modules/published-report-snapshot.ts",
+      "apps/api/src/modules/reminders/reminders.prisma-repository.ts",
+      "apps/api/src/modules/reminders/reminders.service.ts",
+      "apps/api/src/modules/report-sections/lead-form.service.ts",
+      "apps/api/src/modules/report-sections/report-sections.service.ts",
+      "apps/api/src/modules/weekly-report/weekly-report.prisma-repository.ts",
+      "apps/web/src/app/login-page.client.tsx",
+      "apps/web/src/components/admin/action-log-tab.tsx",
+      "apps/web/src/components/admin/periods-tab-table.tsx",
+      "apps/web/src/components/admin/periods-tab.tsx",
+      "apps/web/src/components/admin/policy-form.tsx",
+      "apps/web/src/components/admin/reminders-tab.tsx",
+      "apps/web/src/components/admin/reopen-tab.tsx",
+      "apps/web/src/components/dashboard/blocked-at-risk-table.tsx",
+      "apps/web/src/components/lead/current-week-section.tsx",
+      "apps/web/src/components/lead/decisions-section.tsx",
+      "apps/web/src/components/lead/fill-from-button.tsx",
+      "apps/web/src/components/lead/item-card.tsx",
+      "apps/web/src/components/lead/next-week-section.tsx",
+      "apps/web/src/components/lead/period-navigator.tsx",
+      "apps/web/src/components/lead/risks-section.tsx",
+      "apps/web/src/components/lead/sdlc-pipeline.tsx",
+      "apps/web/src/components/slides/lead-slides-client.tsx",
+      "apps/web/src/lib/mappers/dashboard.ts",
+    ],
+    rules: { "max-lines": "off" },
+  },
   //
   // R3a-3-fixup WAVE 3 (2026-06-09) — JUSTIFIED PERMANENT complexity exempts
   // (cyclomatic > 20). Each file was assessed read-only, one agent per file

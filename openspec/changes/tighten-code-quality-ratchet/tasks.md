@@ -8,22 +8,33 @@ threshold-raise-back to force green.
 Model split: Sonnet (manual literal/size fixes) · Opus (review of clusters whose
 fix changes structure). Budget per cluster; no global ceiling.
 
+> **STATUS 2026-07-04 — scaffolding landed, drain + rules deferred.** R1a
+> (`max-lines` 300 → 250) and R1b (repopulate the grandfather block with the
+> 30-file 250–300 cohort) are DONE and green with ZERO churn — the notch is
+> landed and new code is gated at 250 repo-wide. DEFERRED to a supervised
+> session (taste-dependent module surgery / mass manual literal-lift that must
+> be vetted on before/after): R1c–R1d (drain the grandfather one wave at a
+> time), §2 `no-magic-numbers`, §3 `no-duplicate-string`, §4 close-out. These
+> two rules are autofix-free — enabling either forces a mass manual literal
+> churn across the repo (not green-via-exemption), so they were NOT enabled
+> tonight.
+
 ## 0. Preconditions
 
 - [ ] R0a The ratchet is complete: `eslint.config.ts` enforces `max-lines: 300`,
       `complexity: 20`, `sonarjs/cognitive-complexity: 15`, `no-explicit-any:
-    error`, and the R3a grandfather blocks are EMPTY (verified at authoring).
+error`, and the R3a grandfather blocks are EMPTY (verified at authoring).
 - [ ] R0b This change's spec delta validates (`openspec validate
-    tighten-code-quality-ratchet --strict`).
+tighten-code-quality-ratchet --strict`).
 
 ## 1. max-lines 300 → 250 (structural, autofix-free)
 
-- [ ] R1a Lower `max-lines` to 250 in `eslint.config.ts` (keep `skipBlankLines:
-    true`, `skipComments: true`). Do NOT touch `complexity` or
+- [x] R1a Lower `max-lines` to 250 in `eslint.config.ts` (keep `skipBlankLines:
+true`, `skipComments: true`). Do NOT touch `complexity` or
       `cognitive-complexity`.
-- [ ] R1b Measure the real (skipBlankLines + skipComments) 250–300 cohort with the
+- [x] R1b Measure the real (skipBlankLines + skipComments) 250–300 cohort with the
       new threshold; repopulate the now-EMPTY `max-lines` grandfather block with
-      exactly those files so the gate lands green.
+      exactly those files so the gate lands green. (30 files grandfathered.)
 - [ ] R1c Drain the grandfather block one wave at a time: per file, either split
       below 250 (prefer many small single-purpose units) OR move to the
       justified-permanent exempt block with a one-line reason (split would hurt
@@ -34,7 +45,7 @@ fix changes structure). Budget per cluster; no global ceiling.
 ## 2. no-magic-numbers (TS-aware, manual — no autofix)
 
 - [ ] R2a Enable `@typescript-eslint/no-magic-numbers` as `error` with: `ignore:
-    [-1, 0, 1, 2]`, `enforceConst: true`, `ignoreArrayIndexes: true`,
+[-1, 0, 1, 2]`, `enforceConst: true`, `ignoreArrayIndexes: true`,
       `ignoreEnums: true`, `ignoreReadonlyClassProperties: true`,
       `ignoreTypeIndexes: true`, `ignoreNumericLiteralTypes: true`. Reuse the
       standard's exempt set (tests, e2e, `prisma/generated`, `prisma/seed*.ts`,
