@@ -5,11 +5,11 @@ import {
   itemTypeSchema,
   itemWorkflowStatusSchema,
   reportSectionStatusSchema,
-  requiredStageIdsField,
   riskSeveritySchema,
   safeText,
   stageIdsField,
   trafficLightStatusSchema,
+  writeStageIdsField,
 } from "./report-primitives.schema";
 import {
   recordCommentViewSchema,
@@ -30,14 +30,27 @@ export const activityStatusInputSchema = z.object({
   note: safeText({ max: 500 }).nullable().optional(),
 });
 
+// activity-first-class: one product an activity reports against (label-only).
+export const linkedProductSchema = z.object({
+  productId: z.uuid(),
+  productName: z.string().min(1),
+});
+
 // Read-model view of one seeded ActivityStatus row (activity name joined for
-// display). `status` is nullable to tolerate legacy rows, though seeding
-// defaults it to green.
+// display). `status` is the stored lead-chosen light (nullable to tolerate
+// legacy rows, though seeding defaults it green); `derivedStatus` is the
+// risk/blocker floor the pill actually renders.
 export const sectionActivitySchema = z.object({
   activityId: z.uuid(),
   activityName: z.string().min(1),
   status: trafficLightStatusSchema.nullable(),
   note: z.string().nullable().optional(),
+  // activity-first-class: products this activity reports against (M:N, label-
+  // only). `.default([])` keeps frozen snapshots + legacy fixtures parsing.
+  linkedProducts: z.array(linkedProductSchema).default([]),
+  // Risk/blocker-derived status floor (design decision 5): the pill renders this
+  // when set, else falls back to `status`. `.default(null)` for snapshot compat.
+  derivedStatus: trafficLightStatusSchema.nullable().default(null),
 });
 
 export const stageStatusInputSchema = z.object({
@@ -54,7 +67,11 @@ export const itemInputSchema = z.object({
   // optionality, mirroring `id`, because mergeSection parses the raw input
   // items against the read-model schema.
   stableId: z.uuid().optional(),
-  projectId: z.uuid(),
+  // XOR parent: exactly one of projectId / activityId. Both nullable/optional at
+  // the field level; the itemWriteSchema superRefine enforces the XOR + the
+  // conditional stage rule. The DB CHECK is the defence-in-depth backstop.
+  projectId: z.uuid().nullable().optional(),
+  activityId: z.uuid().nullable().optional(),
   type: itemTypeSchema,
   text: safeText({ max: 500 }),
   tag: safeText({ max: 50 }),
@@ -62,10 +79,9 @@ export const itemInputSchema = z.object({
   carriedOver: z.boolean().default(false),
   completed: z.boolean().nullable().optional(),
   priorityRank: z.number().int().min(1).nullable().optional(),
-  // enforce-item-decision-stage-schema: an item must always carry ≥1 concrete
-  // SDLC stage, mirroring riskInputSchema. BREAKING for API callers (or stale
-  // clients) that submit stage-less items.
-  stageIds: requiredStageIdsField,
+  // Length-tolerant here; the itemWriteSchema superRefine requires ≥1 stage for a
+  // product parent and rejects any stage on an activity parent.
+  stageIds: writeStageIdsField,
 });
 
 // enforce-item-decision-stage-schema (mirrors riskReadModelSchema): the READ
@@ -84,14 +100,16 @@ export const riskInputSchema = z.object({
   id: z.uuid().optional(),
   // Durable lineage key round-tripped from the read model (see itemInputSchema).
   stableId: z.uuid().optional(),
-  projectId: z.uuid(),
+  // XOR parent (see itemInputSchema): the riskWriteSchema superRefine enforces it.
+  projectId: z.uuid().nullable().optional(),
+  activityId: z.uuid().nullable().optional(),
   risk: safeText({ max: 500 }),
   impact: safeText({ max: 500 }),
   mitigation: safeText({ max: 500 }),
   severity: riskSeveritySchema.optional(),
-  // require-risk-stage (D1): a risk must always carry ≥1 concrete SDLC
-  // stage. BREAKING for API callers that submit risks without stages.
-  stageIds: requiredStageIdsField,
+  // Length-tolerant; the riskWriteSchema superRefine enforces the conditional
+  // stage rule (≥1 for a product parent, none for an activity parent).
+  stageIds: writeStageIdsField,
 });
 
 // require-risk-stage (D2): the READ model stays tolerant of stage-less
@@ -114,11 +132,13 @@ export const decisionInputSchema = z.object({
   deadline: z.coerce.date().nullable().optional(),
   impact: safeText({ max: 500 }),
   resolvedAt: z.coerce.date().nullable().optional(),
-  // enforce-item-decision-stage-schema: a decision must always carry ≥1
-  // concrete SDLC stage, mirroring riskInputSchema. BREAKING for API callers
-  // (or stale clients) that submit stage-less decisions.
-  stageIds: requiredStageIdsField,
+  // Length-tolerant; the decisionWriteSchema superRefine enforces the conditional
+  // stage rule (≥1 for a product parent, none for an activity parent).
+  stageIds: writeStageIdsField,
+  // XOR parent (full parity — an activity owns decisions too). The
+  // decisionWriteSchema superRefine enforces exactly-one-parent.
   productId: z.uuid().nullable().optional(),
+  activityId: z.uuid().nullable().optional(),
 });
 
 // enforce-item-decision-stage-schema (mirrors riskReadModelSchema): the READ
@@ -130,6 +150,76 @@ export const decisionReadModelSchema = decisionInputSchema.extend({
   // itemReadModelSchema).
   comments: z.array(recordCommentViewSchema).optional(),
 });
+
+// activity-first-class: exactly one parent (product XOR activity) plus the
+// conditional stage rule, enforced per record on the write path. Kept off the
+// base input objects so the read models keep `.extend`ing them and the submit
+// schema keeps `.extend`ing draftSaveSchema (a superRefine yields a ZodEffects,
+// which is not `.extend`able). The DB CHECK is the defence-in-depth backstop.
+const addParentXorIssues = (
+  productId: string | null | undefined,
+  activityId: string | null | undefined,
+  stageIds: readonly string[] | undefined,
+  productPath: "projectId" | "productId",
+  ctx: z.RefinementCtx,
+): void => {
+  const hasProduct = productId != null;
+  const hasActivity = activityId != null;
+  if (hasProduct === hasActivity) {
+    ctx.addIssue({
+      code: "custom",
+      path: [hasActivity ? "activityId" : productPath],
+      message:
+        "A record must have exactly one parent — a product or an activity.",
+    });
+  }
+  const stageCount = stageIds?.length ?? 0;
+  if (hasProduct && stageCount === 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["stageIds"],
+      message: "A product-parented record requires at least one stage.",
+    });
+  }
+  if (hasActivity && stageCount > 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["stageIds"],
+      message: "An activity-parented record must not carry a stage.",
+    });
+  }
+};
+
+export const itemWriteSchema = itemInputSchema.superRefine((value, ctx) =>
+  addParentXorIssues(
+    value.projectId,
+    value.activityId,
+    value.stageIds,
+    "projectId",
+    ctx,
+  ),
+);
+
+export const riskWriteSchema = riskInputSchema.superRefine((value, ctx) =>
+  addParentXorIssues(
+    value.projectId,
+    value.activityId,
+    value.stageIds,
+    "projectId",
+    ctx,
+  ),
+);
+
+export const decisionWriteSchema = decisionInputSchema.superRefine(
+  (value, ctx) =>
+    addParentXorIssues(
+      value.productId,
+      value.activityId,
+      value.stageIds,
+      "productId",
+      ctx,
+    ),
+);
 
 export const draftSaveSchema = z.object({
   reportSectionId: z.uuid(),
@@ -143,20 +233,30 @@ export const draftSaveSchema = z.object({
   // clients (and fixtures) that omit it keep saving; the server then keeps
   // the seeded statuses unchanged.
   activityStatuses: z.array(activityStatusInputSchema).max(100).default([]),
-  items: z.array(itemInputSchema).max(100),
-  risks: z.array(riskInputSchema).max(100),
-  decisions: z.array(decisionInputSchema).max(100),
+  items: z.array(itemWriteSchema).max(100),
+  risks: z.array(riskWriteSchema).max(100),
+  decisions: z.array(decisionWriteSchema).max(100),
 });
 
 export const submitSectionSchema = draftSaveSchema.extend({
   confirmed: z.literal(true),
-  projectStatuses: z
+  // activity-first-class: relaxed from `.min(1)` — an activity-only section (0
+  // products) submits. Present product statuses stay required non-null; the
+  // "at least one product OR activity" and "every attached activity has a status"
+  // checks are server-authoritative in validateSubmitInput (schema tightening
+  // alone cannot catch an OMITTED attached activity).
+  projectStatuses: z.array(
+    projectStatusInputSchema.extend({
+      status: trafficLightStatusSchema,
+    }),
+  ),
+  activityStatuses: z
     .array(
-      projectStatusInputSchema.extend({
+      activityStatusInputSchema.extend({
         status: trafficLightStatusSchema,
       }),
     )
-    .min(1),
+    .default([]),
 });
 
 // 35-04: per-project list of stages owned by the section author on this
@@ -299,6 +399,7 @@ export type ReportSectionReadModel = z.infer<
 >;
 export type ProjectReadModel = z.infer<typeof projectReadModelSchema>;
 export type SectionActivity = z.infer<typeof sectionActivitySchema>;
+export type LinkedProduct = z.infer<typeof linkedProductSchema>;
 export type ActivityStatusInput = z.infer<typeof activityStatusInputSchema>;
 export type ReferencedProject = z.infer<typeof referencedProjectSchema>;
 export type OwnedStage = z.infer<typeof ownedStageSchema>;

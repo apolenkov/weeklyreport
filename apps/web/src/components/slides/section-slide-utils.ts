@@ -58,7 +58,10 @@ export interface SlideProduct {
 export interface SlideActivityPill {
   readonly id: string;
   readonly name: string;
+  /** The risk/blocker-floored status (`derivedStatus ?? status`). */
   readonly status: SlideStageStatus;
+  /** Label-only names of the products this activity reports against. */
+  readonly linkedProducts: readonly string[];
 }
 
 export interface SectionSlideModel {
@@ -185,20 +188,40 @@ export function buildSectionSlideModel(
     projectRows.push(project);
   }
   const products = unique(projectRows.map((project) => project.projectName));
+  // activity-first-class: these product-slide aggregates (and the counts / score
+  // / tone derived from them) exclude activity-parented records — those ride the
+  // pills lane only. Items/risks are product-parented iff their product FK is
+  // set; a decision is excluded only when parented to an activity (legacy
+  // parentless "Group" decisions still count).
   const currentItems = section.items
-    .filter((item) => item.type === "current" && nonEmpty(item.text))
+    .filter(
+      (item) =>
+        item.type === "current" &&
+        item.projectId != null &&
+        nonEmpty(item.text),
+    )
     .map((item) => item.text.trim());
   const nextItems = section.items
-    .filter((item) => item.type === "next" && nonEmpty(item.text))
+    .filter(
+      (item) =>
+        item.type === "next" && item.projectId != null && nonEmpty(item.text),
+    )
     .map((item) => item.text.trim());
   const risks = section.risks
-    .filter((risk) => nonEmpty(risk.risk))
+    .filter((risk) => risk.projectId != null && nonEmpty(risk.risk))
     .map((risk) => risk.risk.trim());
   const decisions = section.decisions
-    .filter((decision) => nonEmpty(decision.text))
+    .filter(
+      (decision) => decision.activityId == null && nonEmpty(decision.text),
+    )
     .map((decision) => decision.text.trim());
   const priorities = section.items
-    .filter((item) => item.priorityRank != null && nonEmpty(item.text))
+    .filter(
+      (item) =>
+        item.priorityRank != null &&
+        item.projectId != null &&
+        nonEmpty(item.text),
+    )
     .map((item) => item.text.trim());
 
   const projectIds = new Set(projectRows.map((project) => project.projectId));
@@ -287,9 +310,13 @@ export function buildSectionSlideModel(
     };
   });
 
+  // activity-first-class: a cross-product row references a project outside
+  // section.projects; an activity-parented row is NOT one of those — exclude it
+  // so it never leaks into the cross-product bucket.
   const crossProductDecisions = section.decisions
     .filter(
       (decision) =>
+        decision.activityId == null &&
         (!decision.productId || !projectIds.has(decision.productId)) &&
         nonEmpty(decision.text),
     )
@@ -298,6 +325,7 @@ export function buildSectionSlideModel(
     .filter(
       (item) =>
         item.priorityRank != null &&
+        item.activityId == null &&
         (!item.projectId || !projectIds.has(item.projectId)) &&
         nonEmpty(item.text),
     )
@@ -306,10 +334,13 @@ export function buildSectionSlideModel(
   // schema-anticipated referencedProjects case, section.schema.ts) must not
   // vanish from the slide while the section-level counts still include them:
   // route them into the cross-product pseudo-entry like decisions/priorities.
+  // activity-first-class: exclude activity-parented rows from the cross-product
+  // pseudo-entry — they render in the pills lane, not a product surface.
   const crossProductCurrentItems = section.items
     .filter(
       (item) =>
         item.type === "current" &&
+        item.activityId == null &&
         (!item.projectId || !projectIds.has(item.projectId)) &&
         nonEmpty(item.text),
     )
@@ -318,6 +349,7 @@ export function buildSectionSlideModel(
     .filter(
       (item) =>
         item.type === "next" &&
+        item.activityId == null &&
         (!item.projectId || !projectIds.has(item.projectId)) &&
         nonEmpty(item.text),
     )
@@ -325,6 +357,7 @@ export function buildSectionSlideModel(
   const crossProductRisks = section.risks
     .filter(
       (risk) =>
+        risk.activityId == null &&
         (!risk.projectId || !projectIds.has(risk.projectId)) &&
         nonEmpty(risk.risk),
     )
@@ -355,14 +388,17 @@ export function buildSectionSlideModel(
   const atRiskProjectCount = section.projects.filter(
     (project) => project.trafficLight === "yellow",
   ).length;
+  // activity-first-class (Decision 1): activity risks/blockers never feed product
+  // health, so the slide's blocked/at-risk counts (which drive tone) count only
+  // product-parented rows.
   const blockedItemCount = section.items.filter(
-    (item) => item.workflowStatus === "blocked",
+    (item) => item.workflowStatus === "blocked" && item.projectId != null,
   ).length;
   const atRiskRiskCount = section.risks.filter(
-    (risk) => risk.severity === "at-risk",
+    (risk) => risk.severity === "at-risk" && risk.projectId != null,
   ).length;
   const blockedRiskCount = section.risks.filter(
-    (risk) => risk.severity === "blocked",
+    (risk) => risk.severity === "blocked" && risk.projectId != null,
   ).length;
 
   const blockedCount =
@@ -488,7 +524,9 @@ export function buildSectionSlideModel(
     activities: section.activities.map((activity) => ({
       id: activity.activityId,
       name: activity.activityName,
-      status: activity.status,
+      // Render the risk/blocker-derived floor, falling back to the stored status.
+      status: activity.derivedStatus ?? activity.status,
+      linkedProducts: activity.linkedProducts.map((p) => p.productName),
     })),
   };
 }

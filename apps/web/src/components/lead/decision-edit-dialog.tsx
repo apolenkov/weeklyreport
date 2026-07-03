@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../lib/use-dialog-focus";
 import type { DecisionEntry, Product } from "./mock-data";
-import { ProductPicker } from "./product-picker";
+import { ParentPicker } from "./product-picker";
 import { StageMultiSelect } from "./stage-multi-select";
 import {
   computeEffectiveStageIds,
@@ -315,12 +315,13 @@ function DecisionEditDialogContent({
               Classification
             </span>
 
-            {/* Product picker — shared component, always rendered. */}
-            <ProductPicker
+            {/* Product picker — shared component, always rendered. Decisions
+                stay product-only in this dialog (no activities passed). */}
+            <ParentPicker
               id="dec-product"
-              value={productId}
+              value={{ kind: "product", id: productId }}
               products={products ?? []}
-              onChange={setProductAndStages}
+              onChange={(parent) => setProductAndStages(parent.id)}
             />
 
             <StageMultiSelect

@@ -54,7 +54,7 @@ model User {
   // about the binding's existence to be deleted.
   telegramBinding         TelegramBinding?
   // Project Activities this lead is attached to (M:M via the join below).
-  projectActivityLeads    ProjectActivityLead[] @relation("ProjectActivityLeadUser")
+  projectActivityLeads    ProjectActivityLead[]   @relation("ProjectActivityLeadUser")
 
   @@index([reportingGroupId])
 }
@@ -148,12 +148,12 @@ model Project {
   // GroupProduct.product. Left untouched on backfill; existing read paths
   // that derive group via `lead.reportingGroupId` continue to work.
   groupProducts    GroupProduct[]
-  // Required 1:N edge to Decision (productId is NOT NULL). The FK is Restrict on
-  // project delete, so authored decisions cannot be silently dropped.
+  // Product-parented decisions. The parent FK is now nullable (a decision may be
+  // activity-parented instead — XOR); Restrict on delete keeps authored rows.
   decisions        Decision[]
-  // Project Activities that carry a label-only link to this product. The link
-  // never feeds product health — it is display metadata on the activity.
-  projectActivities ProjectActivity[]
+  // Activities linked to this product via the M:N ProjectActivityProduct join.
+  // The link is label-only display metadata; it never feeds product health.
+  activityProducts ProjectActivityProduct[]
 
   @@index([leadId])
   @@index([archived])
@@ -255,35 +255,35 @@ model Report {
 }
 
 model ReportSection {
-  id              String              @id @default(uuid())
-  reportId        String
-  authorId        String
-  status          ReportSectionStatus @default(draft)
-  submittedAt     DateTime?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  id               String              @id @default(uuid())
+  reportId         String
+  authorId         String
+  status           ReportSectionStatus @default(draft)
+  submittedAt      DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
   // Optimistic-concurrency row revision: every section write does a
   // compare-and-set on this column and increments it, so a stale writer's
   // delete-then-recreate cannot silently clobber a newer save (a conflict
   // surfaces as 409). Distinct from the published-snapshot version.
-  version         Int                 @default(1)
-  revokedAt       DateTime?
-  revokedBy       String?
+  version          Int                 @default(1)
+  revokedAt        DateTime?
+  revokedBy        String?
   // UFB-049 / Phase 50-B: stamped true by submitSection when
   // `now > Report.deadline` (regardless of grace-period). Used by head
   // dashboard + lead form to render a "late" badge. Existing rows
   // backfill to false via the migration default.
-  late            Boolean             @default(false)
-  decisions       Decision[]
-  items           Item[]
-  projectStatuses ProjectStatus[]
-  reopenRequests  ReopenRequest[]
-  author          User                @relation("ReportSectionAuthor", fields: [authorId], references: [id])
-  report          Report              @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  risks           Risk[]
-  stageStatuses   StageStatus[]
+  late             Boolean             @default(false)
+  decisions        Decision[]
+  items            Item[]
+  projectStatuses  ProjectStatus[]
+  reopenRequests   ReopenRequest[]
+  author           User                @relation("ReportSectionAuthor", fields: [authorId], references: [id])
+  report           Report              @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  risks            Risk[]
+  stageStatuses    StageStatus[]
   // review-acknowledgement: per-section verdicts (one per reviewer).
-  sectionReviews  SectionReview[]
+  sectionReviews   SectionReview[]
   // Per-period weekly statuses for the author's attached Project Activities
   // (stage-less units beside products). Seeded at section provisioning and
   // delete-recreated by saveSection like ProjectStatus.
@@ -308,27 +308,33 @@ model ProjectStatus {
   @@index([projectId])
 }
 
-// A stage-less reporting unit beside Products. Admin-provisioned; belongs to
-// exactly one reporting group via the required authoritative `groupId` (never
-// re-derived from a lead's group, so lead rotation does not move it). The
-// optional `projectId` is a LABEL-ONLY link to a product — it never entangles
-// product health. `jiraAccounts` is plain text; Jira is not integrated.
+// A first-class, stage-less reporting unit beside Products. Admin-provisioned;
+// belongs to exactly one reporting group via the required authoritative
+// `groupId` (never re-derived from a lead's group, so lead rotation does not
+// move it). Links to product(s) M:N via ProjectActivityProduct — a LABEL-ONLY
+// link that never entangles product health. Owns its own items/risks/decisions
+// (XOR parent); its status is derived from those, never from an SDLC stage.
+// `jiraAccounts` is plain text; Jira is not integrated.
 model ProjectActivity {
-  id               String                @id @default(uuid())
+  id               String                   @id @default(uuid())
   name             String
   groupId          String
-  projectId        String?
   jiraAccounts     String[]
-  archived         Boolean               @default(false)
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
-  group            ReportingGroup        @relation(fields: [groupId], references: [id])
-  project          Project?              @relation(fields: [projectId], references: [id])
+  archived         Boolean                  @default(false)
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  group            ReportingGroup           @relation(fields: [groupId], references: [id])
   leads            ProjectActivityLead[]
   activityStatuses ActivityStatus[]
+  // M:N label-only links to products; reconciled by the admin activity CRUD.
+  activityProducts ProjectActivityProduct[]
+  // Activity-parented records (XOR with a product parent). Restrict on delete —
+  // retire an activity via `archived`, never hard-delete its owned records.
+  items            Item[]
+  risks            Risk[]
+  decisions        Decision[]
 
   @@index([groupId])
-  @@index([projectId])
   @@index([archived])
 }
 
@@ -344,6 +350,22 @@ model ProjectActivityLead {
 
   @@unique([activityId, leadId])
   @@index([leadId])
+}
+
+// M:N label-only link between an activity and the product(s) it reports against.
+// Cascade on the activity side (mirrors ProjectActivityLead); label-only on the
+// product side (a product is retired via `archived`, never hard-deleted), so no
+// Cascade there. Reconciled by the admin activity CRUD to `linkedProductIds`.
+model ProjectActivityProduct {
+  id         String          @id @default(uuid())
+  activityId String
+  productId  String
+  createdAt  DateTime        @default(now())
+  activity   ProjectActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  product    Project         @relation(fields: [productId], references: [id])
+
+  @@unique([activityId, productId])
+  @@index([productId])
 }
 
 // Per-period weekly status of one activity on one lead's section. Mirrors
@@ -394,7 +416,10 @@ model Item {
   // across periods.
   stableId        String                   @default(uuid())
   reportSectionId String
-  projectId       String
+  // XOR parent: exactly one of projectId / activityId is non-null (hand-written
+  // CHECK in the init migration). An activity-parented item carries no stage.
+  projectId       String?
+  activityId      String?
   type            ItemType
   text            String
   tag             String
@@ -406,7 +431,8 @@ model Item {
   updatedAt       DateTime                 @updatedAt
   searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, COALESCE(text, ''::text))"))
   stageNames      String[]
-  project         Project                  @relation(fields: [projectId], references: [id])
+  project         Project?                 @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  activity        ProjectActivity?         @relation(fields: [activityId], references: [id], onDelete: Restrict)
   reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
   // review-acknowledgement: reviewer comments anchored to this item (cascade
   // on delete; saveSection preserves them across its recreate — see the
@@ -416,6 +442,7 @@ model Item {
   @@unique([reportSectionId, stableId])
   @@index([reportSectionId])
   @@index([projectId])
+  @@index([activityId])
   @@index([reportSectionId, priorityRank])
   @@index([stableId])
   @@index([searchTsv], type: Gin)
@@ -428,7 +455,10 @@ model Risk {
   // risks today, so there is no cross-period copy path to extend yet.
   stableId        String                   @default(uuid())
   reportSectionId String
-  projectId       String
+  // XOR parent: exactly one of projectId / activityId is non-null (hand-written
+  // CHECK in the init migration).
+  projectId       String?
+  activityId      String?
   risk            String
   impact          String
   mitigation      String
@@ -437,7 +467,8 @@ model Risk {
   updatedAt       DateTime                 @updatedAt
   searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, ((((COALESCE(risk, ''::text) || ' '::text) || COALESCE(impact, ''::text)) || ' '::text) || COALESCE(mitigation, ''::text)))"))
   stageNames      String[]
-  project         Project                  @relation(fields: [projectId], references: [id])
+  project         Project?                 @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  activity        ProjectActivity?         @relation(fields: [activityId], references: [id], onDelete: Restrict)
   reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
   // review-acknowledgement: reviewer comments anchored to this risk (cascade).
   recordComments  RecordComment[]
@@ -445,6 +476,7 @@ model Risk {
   @@unique([reportSectionId, stableId])
   @@index([reportSectionId])
   @@index([projectId])
+  @@index([activityId])
   @@index([stableId])
   @@index([searchTsv], type: Gin)
 }
@@ -456,7 +488,10 @@ model Decision {
   // one identity across periods.
   stableId        String                   @default(uuid())
   reportSectionId String
-  productId       String
+  // XOR parent: exactly one of productId / activityId is non-null (hand-written
+  // CHECK in the init migration). Full parity — an activity owns decisions too.
+  productId       String?
+  activityId      String?
   text            String
   owner           String
   deadline        DateTime?
@@ -467,15 +502,17 @@ model Decision {
   searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, COALESCE(text, ''::text))"))
   stageNames      String[]
   reportSection   ReportSection            @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  // Restrict on project delete (matching Item/Risk/ProjectStatus): hard product
-  // deletion is unsupported; retire a product via the `archived` flag instead.
-  project         Project                  @relation(fields: [productId], references: [id])
+  // Restrict on parent delete (matching Item/Risk/ProjectStatus): hard product
+  // or activity deletion is unsupported; retire via the `archived` flag instead.
+  project         Project?                 @relation(fields: [productId], references: [id], onDelete: Restrict)
+  activity        ProjectActivity?         @relation(fields: [activityId], references: [id], onDelete: Restrict)
   // review-acknowledgement: reviewer comments anchored to this decision (cascade).
   recordComments  RecordComment[]
 
   @@unique([reportSectionId, stableId])
   @@index([reportSectionId])
   @@index([productId])
+  @@index([activityId])
   @@index([stableId])
   @@index([searchTsv], type: Gin)
 }

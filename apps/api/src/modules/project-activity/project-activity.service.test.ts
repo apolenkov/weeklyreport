@@ -29,13 +29,18 @@ function makeActivity(
     id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     name: "Jira triage duty",
     groupId: GROUP_A,
-    projectId: null,
+    linkedProducts: [],
     jiraAccounts: [],
     archived: false,
     leadIds: [],
     ...overrides,
   };
 }
+
+// The admin CRUD reconciles `linkedProductIds` into join rows; the in-memory
+// fake mirrors that by projecting each id onto a label-only linkedProducts entry.
+const toLinkedProducts = (linkedProductIds: readonly string[]) =>
+  linkedProductIds.map((productId) => ({ productId, productName: productId }));
 
 // In-memory repository: the service owns reference/group validation, so the
 // fake only answers lookups and records the attach/detach calls.
@@ -56,14 +61,22 @@ function createRepository(fixture: Fixture = {}) {
       return activities.get(id) ?? null;
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- implements the async repository contract; no awaitable work in the stub
-    async create(input) {
-      const created = makeActivity({ ...input, id: "created-id" });
+    async create({ linkedProductIds, ...rest }) {
+      const created = makeActivity({
+        ...rest,
+        linkedProducts: toLinkedProducts(linkedProductIds),
+        id: "created-id",
+      });
       activities.set(created.id, created);
       return created;
     },
     // eslint-disable-next-line @typescript-eslint/require-await -- implements the async repository contract; no awaitable work in the stub
-    async update(input) {
-      const next = makeActivity({ ...activities.get(input.id), ...input });
+    async update({ linkedProductIds, ...rest }) {
+      const next = makeActivity({
+        ...activities.get(rest.id),
+        ...rest,
+        linkedProducts: toLinkedProducts(linkedProductIds),
+      });
       activities.set(next.id, next);
       return next;
     },
@@ -104,19 +117,21 @@ function createRepository(fixture: Fixture = {}) {
 }
 
 describe("ProjectActivityService — create/update/archive", () => {
-  it("creates an activity with the authoritative group and optional product link", async () => {
+  it("creates an activity with the authoritative group and linked products", async () => {
     const { repository } = createRepository();
     const service = new ProjectActivityService(repository);
 
     const created = await service.create({
       name: "Ops rotation",
       groupId: GROUP_A,
-      projectId: PRODUCT_ID,
+      linkedProductIds: [PRODUCT_ID],
       jiraAccounts: ["OPS"],
     });
 
     expect(created.groupId).toBe(GROUP_A);
-    expect(created.projectId).toBe(PRODUCT_ID);
+    expect(created.linkedProducts.map((link) => link.productId)).toEqual([
+      PRODUCT_ID,
+    ]);
     expect(created.jiraAccounts).toEqual(["OPS"]);
   });
 
@@ -125,7 +140,12 @@ describe("ProjectActivityService — create/update/archive", () => {
     const service = new ProjectActivityService(repository);
 
     await expect(
-      service.create({ name: "X", groupId: GROUP_A, jiraAccounts: [] }),
+      service.create({
+        name: "X",
+        groupId: GROUP_A,
+        linkedProductIds: [],
+        jiraAccounts: [],
+      }),
     ).rejects.toBeInstanceOf(ProjectActivityNotFoundError);
   });
 
@@ -137,7 +157,7 @@ describe("ProjectActivityService — create/update/archive", () => {
       service.create({
         name: "X",
         groupId: GROUP_A,
-        projectId: PRODUCT_ID,
+        linkedProductIds: [PRODUCT_ID],
         jiraAccounts: [],
       }),
     ).rejects.toBeInstanceOf(ProjectActivityNotFoundError);
@@ -152,6 +172,7 @@ describe("ProjectActivityService — create/update/archive", () => {
         id: "99999999-9999-4999-8999-999999999999",
         name: "X",
         groupId: GROUP_A,
+        linkedProductIds: [],
         jiraAccounts: [],
       }),
     ).rejects.toBeInstanceOf(ProjectActivityNotFoundError);
@@ -178,6 +199,7 @@ describe("ProjectActivityService — create/update/archive", () => {
         id: activity.id,
         name: activity.name,
         groupId: GROUP_B,
+        linkedProductIds: [],
         jiraAccounts: [],
       }),
     ).rejects.toBeInstanceOf(ProjectActivityDomainError);
@@ -192,6 +214,7 @@ describe("ProjectActivityService — create/update/archive", () => {
       id: activity.id,
       name: activity.name,
       groupId: GROUP_B,
+      linkedProductIds: [],
       jiraAccounts: [],
     });
 
@@ -207,6 +230,7 @@ describe("ProjectActivityService — create/update/archive", () => {
       id: activity.id,
       name: "Ops rotation (renamed)",
       groupId: GROUP_A,
+      linkedProductIds: [],
       jiraAccounts: ["OPS"],
     });
 

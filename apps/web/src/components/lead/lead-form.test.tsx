@@ -1012,11 +1012,15 @@ describe("sectionToDraftPayload — activity-status slice", () => {
           activityName: "Jira triage duty",
           status: "red",
           note: "Blocked on vendor",
+          linkedProducts: [],
+          derivedStatus: null,
         },
         {
           activityId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
           activityName: "Ops rotation",
           status: null,
+          linkedProducts: [],
+          derivedStatus: null,
         },
       ],
     };

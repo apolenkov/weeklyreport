@@ -103,6 +103,9 @@ export function groupItemsByProject(
   for (const section of sections) {
     const initials = initialsFromName(section.authorName);
     for (const item of section.items) {
+      // activity-first-class: activity-parented items (projectId null) render
+      // under their activity, not a product column — skip them here.
+      if (item.projectId == null) continue;
       const bucket = map.get(item.projectId) ?? { current: [], next: [] };
       // The badge shows the item's REAL stage tags (stageIds carries stage
       // names); the previous hardcoded "Dev ·" label mislabelled every item.
@@ -161,6 +164,9 @@ export function groupRisksByProject(
         .map((item) => item.projectId),
     );
     for (const risk of section.risks) {
+      // activity-first-class: activity-parented risks (projectId null) render
+      // under their activity, not a product column — skip them here.
+      if (risk.projectId == null) continue;
       const productName = projectNames.get(risk.projectId) ?? "Unknown";
       const severity: "blocked" | "at-risk" =
         risk.severity ??
@@ -216,6 +222,9 @@ export function groupDecisionsByProject(
     };
 
     section.decisions.forEach((d, idx) => {
+      // activity-first-class: activity-parented decisions render under their
+      // activity, not a product — skip so they never fall back to firstProject.
+      if (d.activityId != null) return;
       const targetProduct = resolveProduct(d.productId);
       if (!targetProduct) return;
       const decisionList = decisions.get(targetProduct.projectId) ?? [];
@@ -249,6 +258,9 @@ export function groupPrioritiesByProject(
       .sort((a, b) => (a.priorityRank ?? 0) - (b.priorityRank ?? 0));
 
     for (const item of priorityItems) {
+      // activity-first-class: a product priority is product-parented; skip
+      // activity items (projectId null).
+      if (item.projectId == null) continue;
       const list = map.get(item.projectId) ?? [];
       list.push({ rank: item.priorityRank ?? 1, text: item.text });
       map.set(item.projectId, list);

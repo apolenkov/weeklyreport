@@ -68,7 +68,62 @@ export function validateSubmitInput(
     }
   }
 
+  // activity-first-class: an activity has no SDLC stage and no current-item
+  // requirement, but every attached activity must carry a traffic-light status at
+  // submit. Server-authoritative — schema tightening alone cannot catch an
+  // OMITTED attached activity (a payload that simply drops the status entry).
+  for (const activity of section.activities) {
+    const matchingStatus = (input.activityStatuses ?? []).find(
+      (status) => status.activityId === activity.activityId,
+    );
+
+    if (!matchingStatus?.status) {
+      errors.push({
+        code: "MISSING_TRAFFIC_LIGHT",
+        message: `Activity ${activity.activityName} must have a traffic light status.`,
+      });
+    }
+  }
+
   return errors;
+}
+
+/**
+ * The record-parent activity write guard (activity-first-class, Decision 7),
+ * shared by BOTH `saveDraft` and `submitSection`. Every item/risk/decision row
+ * whose parent is an activity must reference an `activityId` already seeded on
+ * the section for its author (`section.activities` is the reference) — the
+ * delete-recreate never trusts a client-supplied id. Product-parented rows
+ * (null `activityId`) are ignored here; their product is checked by the stage
+ * guard. Mirrors `validateActivityStatuses` for record parents.
+ * @param section - the server-loaded section read model (seeded activities)
+ * @param input - the parsed draft-save / submit payload being validated
+ * @returns one error per offending row; the caller hard-rejects on the first
+ */
+export function validateRecordActivityIds(
+  section: ReportSectionReadModel,
+  input: DraftSaveInput | SubmitSectionInput,
+): DraftSaveValidationError[] {
+  const seededIds = new Set(
+    section.activities.map((activity) => activity.activityId),
+  );
+  const check = (
+    activityId: string | null | undefined,
+  ): DraftSaveValidationError[] =>
+    activityId == null || seededIds.has(activityId)
+      ? []
+      : [
+          {
+            code: "ACTIVITY_NOT_ATTACHED" as const,
+            message:
+              "Activity is not attached to you for this section. Contact an admin to change activity attachments.",
+          },
+        ];
+  return [
+    ...input.items.flatMap((row) => check(row.activityId)),
+    ...input.risks.flatMap((row) => check(row.activityId)),
+    ...input.decisions.flatMap((row) => check(row.activityId)),
+  ];
 }
 
 /**
@@ -214,13 +269,21 @@ export function validateStageOwnership(
 ): DraftSaveValidationError[] {
   return [
     ...validateStageRows(
-      input.items.map((r) => toRow(r.stableId, r.projectId, r.stageIds)),
-      section.items.map((r) => toRow(r.stableId, r.projectId, r.stageIds)),
+      input.items.map((r) =>
+        toRow(r.stableId, r.projectId ?? undefined, r.stageIds),
+      ),
+      section.items.map((r) =>
+        toRow(r.stableId, r.projectId ?? undefined, r.stageIds),
+      ),
       section,
     ),
     ...validateStageRows(
-      input.risks.map((r) => toRow(r.stableId, r.projectId, r.stageIds)),
-      section.risks.map((r) => toRow(r.stableId, r.projectId, r.stageIds)),
+      input.risks.map((r) =>
+        toRow(r.stableId, r.projectId ?? undefined, r.stageIds),
+      ),
+      section.risks.map((r) =>
+        toRow(r.stableId, r.projectId ?? undefined, r.stageIds),
+      ),
       section,
     ),
     ...validateStageRows(

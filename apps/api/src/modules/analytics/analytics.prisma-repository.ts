@@ -290,6 +290,9 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
             });
           }
           for (const risk of section.risks) {
+            // activity-first-class: an activity-parented risk (null product FK)
+            // counts toward no product's risk tally.
+            if (!risk.projectId) continue;
             const existing = map.get(risk.projectId) ?? {
               status: null,
               risks: 0,

@@ -39,14 +39,14 @@ describe("projectActivitySchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("accepts an optional label-only product link and Jira accounts", () => {
+  it("accepts label-only product links and Jira accounts", () => {
     const parsed = projectActivityCreateSchema.parse({
       name: "Ops rotation",
       groupId: GROUP_ID,
-      projectId: PRODUCT_ID,
+      linkedProductIds: [PRODUCT_ID],
       jiraAccounts: ["OPS", "SUP-billing"],
     });
-    expect(parsed.projectId).toBe(PRODUCT_ID);
+    expect(parsed.linkedProductIds).toEqual([PRODUCT_ID]);
     expect(parsed.jiraAccounts).toEqual(["OPS", "SUP-billing"]);
   });
 

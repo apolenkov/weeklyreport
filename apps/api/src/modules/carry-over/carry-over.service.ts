@@ -74,6 +74,20 @@ export interface CarryOverRepository {
   ): Promise<CarryOverResult>;
 }
 
+/**
+ * activity-first-class (Decision 0.3): a carried record needs a live parent in
+ * the target period. A product-parented record (no `activityId` — the XOR then
+ * guarantees a product FK) always qualifies, the product survives. An
+ * activity-parented record carries only when its activity is re-attached to the
+ * author's target section; an archived/detached activity's records are dropped.
+ */
+function isActivityCarryable(
+  activityId: string | null | undefined,
+  targetActivityIds: ReadonlySet<string>,
+): boolean {
+  return activityId == null || targetActivityIds.has(activityId);
+}
+
 function cloneCarriedItem(
   sourceReportId: string,
   targetReportId: string,
@@ -230,9 +244,11 @@ export class CarryOverService {
     // Build carried rows ONLY for source sections whose author has a target
     // section: a source-only author has nowhere to persist, so counting it
     // would inflate the execution counts and emit dangling CarryOverRecord
-    // rows. Carried decisions also require a productId — the Decision row's
-    // product FK is NOT-NULL, so a productless decision cannot persist and must
-    // not be counted either (it would exceed the rows actually written).
+    // rows. A carried record must also have a live parent in the target period:
+    // a product-parented record always does (the product survives), but an
+    // activity-parented record is carried ONLY when its activity is re-attached
+    // to the author's target section (design decision 0.3) — an
+    // archived/detached activity's records are not carried forward.
     const targetByAuthor = new Map(
       targetSections.map((target) => [target.authorId, target] as const),
     );
@@ -241,6 +257,11 @@ export class CarryOverService {
       if (!targetSection) {
         return [];
       }
+      // Activities re-attached to this author's target section — an
+      // activity-parented source record carries only when its parent is here.
+      const targetActivityIds = new Set(
+        targetSection.activities.map((activity) => activity.activityId),
+      );
       // introduce-durable-record-identity: never carry a lineage the target
       // section already holds. The new `@@unique([reportSectionId, stableId])`
       // would otherwise make the item insert silently skip (leaving an orphan
@@ -267,6 +288,7 @@ export class CarryOverService {
             // the click would carry (or vice versa).
             item.workflowStatus !== "done" &&
             item.completed !== true &&
+            isActivityCarryable(item.activityId, targetActivityIds) &&
             !(
               item.stableId !== undefined &&
               targetItemLineage.has(item.stableId)
@@ -277,7 +299,7 @@ export class CarryOverService {
         .filter(
           (decision) =>
             !decision.resolvedAt &&
-            Boolean(decision.productId) &&
+            isActivityCarryable(decision.activityId, targetActivityIds) &&
             !(
               decision.stableId !== undefined &&
               targetDecisionLineage.has(decision.stableId)

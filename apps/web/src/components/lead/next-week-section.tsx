@@ -25,6 +25,8 @@ interface NextWeekSectionProps {
   readonly currentUserName?: string;
   /** Used to seed empty-state `+ Add` button when no items exist. */
   readonly products?: readonly Product[];
+  /** activity-first-class: attached activities forwarded to the parent picker. */
+  readonly activities?: readonly { id: string; name: string }[];
   /** 35-04: forwarded to ItemEditDialog for the SDLC stage selector. */
   readonly stagesForProduct?: (productId: string) => readonly string[];
   /**
@@ -66,6 +68,7 @@ export function NextWeekSection({
   onItemsChange,
   currentUserName,
   products,
+  activities,
   stagesForProduct,
   ownPeriodRanks,
   addSignal = 0,
@@ -272,6 +275,7 @@ export function NextWeekSection({
             : null
         }
         products={products ?? []}
+        activities={activities}
         week="next"
         currentUserName={currentUserName}
         defaultProductId={

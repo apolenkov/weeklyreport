@@ -39,6 +39,12 @@ import {
 } from "@customreport/shared";
 
 import { formatPeriodRangeWithYear, formatWeekLabel } from "../format-date";
+import {
+  countActivityRecords,
+  countProductContent,
+  countSectionContent,
+  productColumnCounts,
+} from "./dashboard-counts";
 import { deriveLeadStatus, type LeadStatus } from "./lead-status";
 import { trafficToStageStatus } from "./traffic-light";
 
@@ -67,6 +73,8 @@ export interface LeadInfo {
   riskCount?: number;
   decisionCount?: number;
   priorityCount?: number;
+  /** activity-first-class (Q1): count of activity-parented records (work units). */
+  activityCount?: number;
   submittedAtLabel?: string | null;
   /** SC-160: The section UUID needed for the per-lead Revoke button. */
   reportSectionId?: string;
@@ -137,15 +145,6 @@ export function formatRelativeDeadline(deadline: Date, now: Date): string {
   const hours = totalHours - days * 24;
   if (days > 0) return `${days}d ${hours}h`;
   return `${hours}h`;
-}
-
-function countSectionContent(section: ReportSectionReadModel): number {
-  return (
-    section.items.length +
-    section.risks.length +
-    section.decisions.length +
-    section.items.filter((i) => i.priorityRank != null).length
-  );
 }
 
 function isoSubmittedLabel(date: Date | null): string | null {
@@ -279,11 +278,14 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
   // -------- Leads --------
   const leads: LeadInfo[] = review.map((row) => {
     const section = sectionByAuthor.get(row.leadId);
-    const reportContentCount = section ? countSectionContent(section) : 0;
+    // "Has the lead started" reads TOTAL content (product + activity); the
+    // displayed product column reads only product-parented rows (Q1).
+    const totalContentCount = section ? countSectionContent(section) : 0;
+    const reportContentCount = section ? countProductContent(section) : 0;
     const status: LeadStatus = section
       ? deriveLeadStatus({
           sectionStatus: section.status,
-          contentCount: reportContentCount,
+          contentCount: totalContentCount,
         })
       : "pending";
 
@@ -312,14 +314,8 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
         currentUserId !== undefined && row.leadId === currentUserId,
       productCount: row.projectNames.length,
       reportContentCount,
-      currentItemCount:
-        section?.items.filter((item) => item.type === "current").length ?? 0,
-      nextItemCount:
-        section?.items.filter((item) => item.type === "next").length ?? 0,
-      riskCount: section?.risks.length ?? 0,
-      decisionCount: section?.decisions.length ?? 0,
-      priorityCount:
-        section?.items.filter((i) => i.priorityRank != null).length ?? 0,
+      ...productColumnCounts(section),
+      activityCount: section ? countActivityRecords(section) : 0,
       submittedAtLabel: isoSubmittedLabel(section?.submittedAt ?? null),
       reportSectionId: section?.reportSectionId,
     };
@@ -341,8 +337,11 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
   const atRiskCount = weeklyReport.escalations.filter(
     (e) => e.type === "at_risk" || e.type === "unresolved_risk",
   ).length;
+  // activity-first-class (Q1): the portfolio KPI stays product-only — count
+  // product-parented decisions so activity decisions never inflate the KPI.
   const decisionCount = weeklyReport.leadSections.reduce(
-    (sum, section) => sum + section.decisions.length,
+    (sum, section) =>
+      sum + section.decisions.filter((d) => d.productId != null).length,
     0,
   );
 

@@ -35,11 +35,15 @@ const baseSection: ReportSectionReadModel = {
       activityId: ACTIVITY_A,
       activityName: "Jira triage duty",
       status: "green",
+      linkedProducts: [],
+      derivedStatus: "green",
     },
     {
       activityId: ACTIVITY_B,
       activityName: "Ops rotation",
       status: "green",
+      linkedProducts: [],
+      derivedStatus: "green",
     },
   ],
 };
@@ -102,18 +106,25 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
       ]),
     );
 
+    // mergeSection folds status/note onto the seeded slice; the read-only
+    // `linkedProducts` / `derivedStatus` ride through unchanged (they are
+    // re-derived on the next DB read, never persisted).
     expect(saved.activities).toEqual([
       {
         activityId: ACTIVITY_A,
         activityName: "Jira triage duty",
         status: "red",
         note: "Blocked on vendor",
+        linkedProducts: [],
+        derivedStatus: "green",
       },
       // Not in the payload → seeded value survives untouched.
       {
         activityId: ACTIVITY_B,
         activityName: "Ops rotation",
         status: "green",
+        linkedProducts: [],
+        derivedStatus: "green",
       },
     ]);
   });

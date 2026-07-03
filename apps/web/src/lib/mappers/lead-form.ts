@@ -112,6 +112,14 @@ export interface LeadKanbanItem {
   id: string;
   productId: string;
   productName: string;
+  /**
+   * activity-first-class: parent activity id (XOR with productId). Set only for
+   * activity-parented rows, which render under the activity card, never a
+   * product column. `productId` is empty for these rows.
+   */
+  activityId?: string | null;
+  /** Display name of the parent activity when `activityId` is set. */
+  activityName?: string;
   /** @deprecated Use stageIds. Kept for display back-compat via splitStageNames. */
   stageName?: string;
   /** UFB-073 (R1): stage selection as array of stage names. */
@@ -324,6 +332,13 @@ export function ownedStagesForProject(
 
 // ---- Mappers ----
 
+// activity-first-class: element-type aliases for the flat section arrays, used
+// by the product-parented type-predicate filters below (narrowing the nullable
+// product FK to a concrete string once, at the mapper boundary).
+type SectionItem = ReportSectionReadModel["items"][number];
+type SectionRisk = ReportSectionReadModel["risks"][number];
+type SectionDecision = ReportSectionReadModel["decisions"][number];
+
 // The Dev↔Development stage-name canonicalization is single-homed in
 // @customreport/shared so the server ownership guard and this client mapper
 // never disagree on whether two names refer to the same pipeline slot. Imported
@@ -488,8 +503,15 @@ export function mapLeadItems(
   itemType: "current" | "next",
 ): LeadKanbanItem[] {
   const projectIndex = buildProjectIndex(section);
+  // activity-first-class (Decision 1): the product columns render only
+  // product-parented rows. Activity-parented items (projectId null, activityId
+  // set) ride the same flat array but render under the activity card
+  // (mapLeadActivityCards), so filter them out up front here.
   return section.items
-    .filter((item) => item.type === itemType)
+    .filter(
+      (item): item is SectionItem & { projectId: string } =>
+        item.type === itemType && item.projectId != null,
+    )
     .map((item) => {
       const project = projectIndex.get(item.projectId);
       const status = deriveItemStatus({
@@ -528,27 +550,39 @@ export function mapLeadItems(
  */
 export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
   const projectIndex = buildProjectIndex(section);
-  return section.risks.map((r, idx) => {
-    const project = projectIndex.get(r.projectId);
-    return {
-      id: r.id ?? `risk-${idx}`,
-      productId: r.projectId,
-      productName: project?.name ?? "Unknown",
-      // UFB-073 (R1): stage array from DB; legacy rows fall back to undefined.
-      stageIds: r.stageIds,
-      severity: r.severity ?? "at-risk",
-      text: r.risk,
-      impact: r.impact,
-      mitigation: r.mitigation,
-    };
-  });
+  // activity-first-class: product view renders product-parented risks only;
+  // activity risks render under the activity card (mapLeadActivityCards).
+  return section.risks
+    .filter(
+      (r): r is SectionRisk & { projectId: string } => r.projectId != null,
+    )
+    .map((r, idx) => {
+      const project = projectIndex.get(r.projectId);
+      return {
+        id: r.id ?? `risk-${idx}`,
+        productId: r.projectId,
+        productName: project?.name ?? "Unknown",
+        // UFB-073 (R1): stage array from DB; legacy rows fall back to undefined.
+        stageIds: r.stageIds,
+        severity: r.severity ?? "at-risk",
+        text: r.risk,
+        impact: r.impact,
+        mitigation: r.mitigation,
+      };
+    });
 }
 
 export function mapLeadDecisions(
   section: ReportSectionReadModel,
 ): LeadDecisionEntry[] {
   const projectIndex = buildProjectIndex(section);
-  return section.decisions.map((d, idx) => ({
+  // activity-first-class: the product decisions view keeps product-parented and
+  // legacy parentless ("Group") decisions; activity-parented decisions
+  // (activityId set) render under the activity card instead.
+  const productDecisions: SectionDecision[] = section.decisions.filter(
+    (d) => d.activityId == null,
+  );
+  return productDecisions.map((d, idx) => ({
     id: d.id ?? `decision-${idx}`,
     productId: d.productId ?? "",
     productName:
@@ -564,12 +598,112 @@ export function mapLeadDecisions(
   }));
 }
 
+// activity-first-class (Decision 5): one activity rendered as a full card — its
+// own records grouped from the flat section arrays by `activityId`, plus the
+// stored + risk/blocker-derived status and the label-only linked products. The
+// presentation rows carry `activityId`/`activityName` so the record card renders
+// the parent and the edit dialog reopens with the activity pre-selected.
+export interface LeadActivityCard {
+  readonly activityId: string;
+  readonly activityName: string;
+  /** Stored lead-chosen status (nullable legacy). */
+  readonly status: TrafficLightStatus | null;
+  /**
+   * Risk/blocker-derived floor — the pill renders `derivedStatus ?? status` and
+   * refuses a manual lower below it. Server-computed; never re-derived client-side.
+   */
+  readonly derivedStatus: TrafficLightStatus | null;
+  readonly linkedProducts: readonly {
+    productId: string;
+    productName: string;
+  }[];
+  readonly currentItems: LeadKanbanItem[];
+  readonly nextItems: LeadKanbanItem[];
+  readonly risks: LeadRiskEntry[];
+  readonly decisions: LeadDecisionEntry[];
+}
+
+export function mapLeadActivityCards(
+  section: ReportSectionReadModel,
+): LeadActivityCard[] {
+  return section.activities.map((activity) => {
+    const ownsRow = (parentId: string | null | undefined): boolean =>
+      parentId === activity.activityId;
+
+    const toItem = (item: SectionItem): LeadKanbanItem => ({
+      id: item.id ?? `activity-${activity.activityId}-${item.text.slice(0, 8)}`,
+      productId: "",
+      productName: activity.activityName,
+      activityId: activity.activityId,
+      activityName: activity.activityName,
+      ...(item.stageIds ? { stageIds: item.stageIds } : {}),
+      status: deriveItemStatus({
+        workflowStatus: item.workflowStatus,
+        type: item.type,
+        completed: item.completed ?? null,
+      }),
+      text: item.text,
+      author: section.authorName,
+      priorityRank: item.priorityRank ?? null,
+    });
+
+    const items = section.items.filter((item) => ownsRow(item.activityId));
+    const risks: LeadRiskEntry[] = section.risks
+      .filter((risk) => ownsRow(risk.activityId))
+      .map((risk, idx) => ({
+        id: risk.id ?? `activity-risk-${activity.activityId}-${idx}`,
+        productId: "",
+        productName: activity.activityName,
+        activityId: activity.activityId,
+        activityName: activity.activityName,
+        stageIds: risk.stageIds,
+        severity: risk.severity ?? "at-risk",
+        text: risk.risk,
+        impact: risk.impact,
+        mitigation: risk.mitigation,
+      }));
+    const decisions: LeadDecisionEntry[] = section.decisions
+      .filter((decision) => ownsRow(decision.activityId))
+      .map((decision, idx) => ({
+        id: decision.id ?? `activity-decision-${activity.activityId}-${idx}`,
+        productId: "",
+        productName: activity.activityName,
+        activityId: activity.activityId,
+        activityName: activity.activityName,
+        text: decision.text,
+        owner: decision.owner,
+        impact: decision.impact,
+        deadline: decision.deadline
+          ? new Date(decision.deadline).toISOString().slice(0, 10)
+          : null,
+        stageIds: decision.stageIds,
+      }));
+
+    return {
+      activityId: activity.activityId,
+      activityName: activity.activityName,
+      status: activity.status,
+      derivedStatus: activity.derivedStatus,
+      linkedProducts: activity.linkedProducts,
+      currentItems: items.filter((item) => item.type === "current").map(toItem),
+      nextItems: items.filter((item) => item.type === "next").map(toItem),
+      risks,
+      decisions,
+    };
+  });
+}
+
 export function mapLeadPriorities(
   section: ReportSectionReadModel,
 ): LeadPriorityEntry[] {
   const projectIndex = buildProjectIndex(section);
+  // activity-first-class: priorities are a product-side surface. An activity
+  // item is never a product priority, so keep only product-parented items here.
   return section.items
-    .filter((i) => i.priorityRank != null)
+    .filter(
+      (i): i is SectionItem & { projectId: string } =>
+        i.priorityRank != null && i.projectId != null,
+    )
     .sort((a, b) => {
       const ra = (a.priorityRank ?? 0) >= 1 ? (a.priorityRank ?? 0) : Infinity;
       const rb = (b.priorityRank ?? 0) >= 1 ? (b.priorityRank ?? 0) : Infinity;
@@ -638,7 +772,7 @@ export function mapLeadReviewFeedback(
   section: ReportSectionReadModel,
 ): LeadReviewFeedbackRecord[] {
   const projectIndex = buildProjectIndex(section);
-  const nameFor = (projectId: string | undefined): string =>
+  const nameFor = (projectId: string | null | undefined): string =>
     (projectId ? projectIndex.get(projectId)?.name : undefined) ?? "Unknown";
   const hasComments = (comments: readonly RecordCommentView[] | undefined) =>
     (comments?.length ?? 0) > 0;
@@ -708,6 +842,8 @@ export interface MappedLeadForm {
   risks: LeadRiskEntry[];
   decisions: LeadDecisionEntry[];
   priorities: LeadPriorityEntry[];
+  /** activity-first-class: the author's attached activities as full record cards. */
+  activityCards: LeadActivityCard[];
   periods: LeadReportPeriod[];
   currentUser: LeadCurrentUser;
   /** Whether the section is locked for the current user (submitted or period published). */
@@ -752,6 +888,7 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
     risks: mapLeadRisks(section),
     decisions: mapLeadDecisions(section),
     priorities: mapLeadPriorities(section),
+    activityCards: mapLeadActivityCards(section),
     periods: mapLeadPeriods(args.history, args.active.reportId),
     currentUser: {
       name: args.active.authorName,

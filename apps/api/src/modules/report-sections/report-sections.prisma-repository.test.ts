@@ -500,3 +500,104 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
     expect(tx.item.deleteMany).not.toHaveBeenCalled();
   });
 });
+
+// activity-first-class: the mapper keeps activity-parented records in the FLAT
+// top-level arrays (discriminated by activityId, product FK null), joins each
+// activity's label-only linkedProducts, and floors the pill by its OWN records
+// (design decision 5) without ever rewriting the stored ActivityStatus.status.
+describe("mapPrismaToReportSection — activity derived-status floor", () => {
+  const ACTIVITY_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const LINKED_PRODUCT = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+
+  const activityItem = (workflowStatus: string) => ({
+    id: "99999999-9999-4999-8999-999999999999",
+    projectId: null,
+    activityId: ACTIVITY_ID,
+    type: "current",
+    text: "Activity item",
+    tag: "feature",
+    workflowStatus,
+    carriedOver: false,
+    completed: null,
+    priorityRank: null,
+    stageNames: [],
+  });
+
+  const activityRisk = (severity: string) => ({
+    id: "77777777-7777-4777-8777-777777777777",
+    projectId: null,
+    activityId: ACTIVITY_ID,
+    risk: "Activity risk",
+    impact: "Impact",
+    mitigation: "Mitigation",
+    severity,
+    stageNames: [],
+  });
+
+  const activityRow = (over: {
+    items?: unknown[];
+    risks?: unknown[];
+    storedStatus?: string | null;
+  }) =>
+    ({
+      ...baseRow({}),
+      items: over.items ?? [],
+      risks: over.risks ?? [],
+      activityStatuses: [
+        {
+          activityId: ACTIVITY_ID,
+          status: over.storedStatus ?? "green",
+          note: null,
+          activity: {
+            name: "Jira triage duty",
+            activityProducts: [
+              { product: { id: LINKED_PRODUCT, name: "CRM Portal" } },
+            ],
+          },
+        },
+      ],
+    }) as unknown as FabricatedRow;
+
+  it("keeps an activity-parented item in the flat items array, product FK null", () => {
+    const section = mapRow(
+      activityRow({ items: [activityItem("in_progress")] }),
+    );
+    expect(section.items).toHaveLength(1);
+    expect(section.items[0]?.activityId).toBe(ACTIVITY_ID);
+    expect(section.items[0]?.projectId ?? null).toBeNull();
+  });
+
+  it("joins linkedProducts (id + name) onto the activity", () => {
+    const section = mapRow(activityRow({}));
+    expect(section.activities[0]?.linkedProducts).toEqual([
+      { productId: LINKED_PRODUCT, productName: "CRM Portal" },
+    ]);
+  });
+
+  it("floors the pill red for a blocked own item, leaving the stored status", () => {
+    const section = mapRow(
+      activityRow({ storedStatus: "green", items: [activityItem("blocked")] }),
+    );
+    expect(section.activities[0]?.status).toBe("green");
+    expect(section.activities[0]?.derivedStatus).toBe("red");
+  });
+
+  it("floors at least yellow for a covering at-risk own risk", () => {
+    const section = mapRow(
+      activityRow({ storedStatus: "green", risks: [activityRisk("at-risk")] }),
+    );
+    expect(section.activities[0]?.derivedStatus).toBe("yellow");
+  });
+
+  it("floors red for a blocked own risk on a green pill", () => {
+    const section = mapRow(
+      activityRow({ storedStatus: "green", risks: [activityRisk("blocked")] }),
+    );
+    expect(section.activities[0]?.derivedStatus).toBe("red");
+  });
+
+  it("passes the stored status through when no own record floors it", () => {
+    const section = mapRow(activityRow({ storedStatus: "green" }));
+    expect(section.activities[0]?.derivedStatus).toBe("green");
+  });
+});

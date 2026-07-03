@@ -13,6 +13,8 @@ import {
   compiledHistoryInputSchema,
   compiledHistoryResultSchema,
   decisionInputSchema,
+  decisionWriteSchema,
+  type DraftSaveInput,
   draftSaveSchema,
   escalationSchema,
   groupProductEdgeInputSchema,
@@ -20,6 +22,7 @@ import {
   itemInputSchema,
   itemTypeSchema,
   itemWorkflowStatusSchema,
+  itemWriteSchema,
   myHistoryEntrySchema,
   periodListBucketSchema,
   periodListItemSchema,
@@ -35,12 +38,14 @@ import {
   reportStatusSchema,
   riskInputSchema,
   riskSeveritySchema,
+  riskWriteSchema,
   safeText,
   stageAssignmentSchema,
   stageSchema,
   type SubmitSectionPayload,
   submitSectionSchema,
   trafficLightStatusSchema,
+  validateRecordActivityIds,
   validateSubmitInput,
   weeklyReportReadModelSchema,
 } from "./report";
@@ -72,6 +77,10 @@ const validRisk = () => ({
 });
 
 const validDecision = () => ({
+  // activity-first-class XOR parent: a decision is product- or activity-parented.
+  // The DB has always required a parent (productId was NOT NULL); the fixture now
+  // sets one so the write-path XOR superRefine accepts it.
+  productId: uuid(),
   text: "Upgrade to PostgreSQL 16",
   owner: "Alice",
   impact: "Better performance",
@@ -312,12 +321,12 @@ describe("riskInputSchema — safeText", () => {
 describe("riskInputSchema \u2014 required stageIds (require-risk-stage)", () => {
   it("rejects a risk with missing stageIds", () => {
     const { stageIds: _stageIds, ...riskWithoutStages } = validRisk();
-    const result = riskInputSchema.safeParse(riskWithoutStages);
+    const result = riskWriteSchema.safeParse(riskWithoutStages);
     expect(result.success).toBe(false);
   });
 
   it("rejects a risk with empty stageIds", () => {
-    const result = riskInputSchema.safeParse({ ...validRisk(), stageIds: [] });
+    const result = riskWriteSchema.safeParse({ ...validRisk(), stageIds: [] });
     expect(result.success).toBe(false);
   });
 
@@ -342,23 +351,23 @@ describe("riskInputSchema \u2014 required stageIds (require-risk-stage)", () => 
   // a stage-less write is rejected; only the read model stays tolerant.
   it("rejects an item with missing stageIds", () => {
     const { stageIds: _stageIds, ...itemWithoutStages } = validItem();
-    const result = itemInputSchema.safeParse(itemWithoutStages);
+    const result = itemWriteSchema.safeParse(itemWithoutStages);
     expect(result.success).toBe(false);
   });
 
   it("rejects an item with empty stageIds", () => {
-    const result = itemInputSchema.safeParse({ ...validItem(), stageIds: [] });
+    const result = itemWriteSchema.safeParse({ ...validItem(), stageIds: [] });
     expect(result.success).toBe(false);
   });
 
   it("rejects a decision with missing stageIds", () => {
     const { stageIds: _stageIds, ...decisionWithoutStages } = validDecision();
-    const result = decisionInputSchema.safeParse(decisionWithoutStages);
+    const result = decisionWriteSchema.safeParse(decisionWithoutStages);
     expect(result.success).toBe(false);
   });
 
   it("rejects a decision with empty stageIds", () => {
-    const result = decisionInputSchema.safeParse({
+    const result = decisionWriteSchema.safeParse({
       ...validDecision(),
       stageIds: [],
     });
@@ -519,10 +528,14 @@ describe("submitSectionSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("requires at least 1 projectStatus", () => {
+  it("accepts an activity-only submit with 0 projectStatuses (relaxation)", () => {
+    // activity-first-class: submit no longer requires >=1 product status at the
+    // schema level — an activity-only section (0 products) submits. The
+    // per-product / per-activity status requirement is server-authoritative
+    // (validateSubmitInput), not a schema `.min`.
     const submit = { ...validSubmit(), projectStatuses: [] };
     const result = submitSectionSchema.safeParse(submit);
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 });
 
@@ -907,6 +920,182 @@ describe("validateSubmitInput", () => {
       ],
     };
     const errors = validateSubmitInput(section, input);
+    expect(errors).toHaveLength(0);
+  });
+
+  // activity-first-class: every attached activity must carry a traffic light at
+  // submit — server-authoritative (a schema `.min` can't catch an OMITTED entry).
+  it("requires a status for every attached activity", () => {
+    const activityId = uuid();
+    const section = makeSection({
+      projects: [],
+      activities: [
+        {
+          activityId,
+          activityName: "Ops rotation",
+          status: null,
+          linkedProducts: [],
+          derivedStatus: null,
+        },
+      ],
+    });
+    const input = {
+      ...validSubmit(),
+      projectStatuses: [],
+      activityStatuses: [],
+      items: [],
+      risks: [],
+      decisions: [],
+    };
+    const errors = validateSubmitInput(section, input);
+    expect(errors.some((e) => e.code === "MISSING_TRAFFIC_LIGHT")).toBe(true);
+  });
+
+  it("passes an activity-only section (0 products) with a status on its activity", () => {
+    const activityId = uuid();
+    const section = makeSection({
+      projects: [],
+      activities: [
+        {
+          activityId,
+          activityName: "Ops rotation",
+          status: "green",
+          linkedProducts: [],
+          derivedStatus: "green",
+        },
+      ],
+    });
+    const input = {
+      ...validSubmit(),
+      projectStatuses: [],
+      activityStatuses: [{ activityId, status: "green" as const }],
+      items: [],
+      risks: [],
+      decisions: [],
+    };
+    const errors = validateSubmitInput(section, input);
+    expect(errors).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Group 13b: activity-first-class — XOR parent + conditional stage + activityId
+// write guard (validateRecordActivityIds)
+// ---------------------------------------------------------------------------
+
+describe("record write schema — XOR parent + conditional stage", () => {
+  const activityItem = () => ({
+    activityId: uuid(),
+    type: "current" as const,
+    text: "Rotate on-call",
+    tag: "ops",
+    workflowStatus: "in_progress" as const,
+    stageIds: [] as string[],
+  });
+
+  it("accepts a product-parented item (product + >=1 stage)", () => {
+    expect(itemWriteSchema.safeParse(validItem()).success).toBe(true);
+  });
+
+  it("accepts an activity-parented item (activity + no stage)", () => {
+    expect(itemWriteSchema.safeParse(activityItem()).success).toBe(true);
+  });
+
+  it("rejects an item with BOTH a product and an activity parent", () => {
+    const both = { ...validItem(), activityId: uuid() };
+    expect(itemWriteSchema.safeParse(both).success).toBe(false);
+  });
+
+  it("rejects an item with NEITHER parent", () => {
+    const { projectId: _projectId, ...noParent } = validItem();
+    expect(itemWriteSchema.safeParse(noParent).success).toBe(false);
+  });
+
+  it("rejects an activity-parented item that carries a stage", () => {
+    const withStage = { ...activityItem(), stageIds: ["Development"] };
+    expect(itemWriteSchema.safeParse(withStage).success).toBe(false);
+  });
+
+  it("applies the same XOR + activity-no-stage rule to risks", () => {
+    const activityRisk = {
+      activityId: uuid(),
+      risk: "On-call fatigue",
+      impact: "Slower response",
+      mitigation: "Rotate weekly",
+      stageIds: [] as string[],
+    };
+    expect(riskWriteSchema.safeParse(activityRisk).success).toBe(true);
+    expect(
+      riskWriteSchema.safeParse({ ...activityRisk, stageIds: ["Dev"] }).success,
+    ).toBe(false);
+  });
+
+  it("gives activities full decision parity (XOR covers Decision)", () => {
+    const activityDecision = {
+      activityId: uuid(),
+      text: "Adopt weekly rotation",
+      owner: "Alice",
+      impact: "Fairer load",
+      stageIds: [] as string[],
+    };
+    expect(decisionWriteSchema.safeParse(activityDecision).success).toBe(true);
+    expect(
+      decisionWriteSchema.safeParse({
+        ...activityDecision,
+        productId: uuid(),
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("validateRecordActivityIds", () => {
+  const attachedId = uuid();
+  const section = {
+    activities: [
+      {
+        activityId: attachedId,
+        activityName: "Ops rotation",
+        status: null,
+        linkedProducts: [],
+        derivedStatus: null,
+      },
+    ],
+    items: [],
+    risks: [],
+    decisions: [],
+  } as unknown as ReportSectionReadModel;
+
+  const withActivityItem = (activityId: string): DraftSaveInput =>
+    ({
+      ...validDraft(),
+      items: [
+        {
+          ...validItem(),
+          projectId: undefined,
+          activityId,
+          stageIds: [],
+        },
+      ],
+    }) as unknown as DraftSaveInput;
+
+  it("rejects a record whose activityId is not attached to the section", () => {
+    const errors = validateRecordActivityIds(section, withActivityItem(uuid()));
+    expect(errors.some((e) => e.code === "ACTIVITY_NOT_ATTACHED")).toBe(true);
+  });
+
+  it("accepts a record parented to an attached activity", () => {
+    const errors = validateRecordActivityIds(
+      section,
+      withActivityItem(attachedId),
+    );
+    expect(errors).toHaveLength(0);
+  });
+
+  it("ignores product-parented records (null activityId)", () => {
+    const errors = validateRecordActivityIds(
+      section,
+      validDraft() as unknown as DraftSaveInput,
+    );
     expect(errors).toHaveLength(0);
   });
 });

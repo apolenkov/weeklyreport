@@ -94,20 +94,29 @@ export const stageIdsField = z
   .max(MAX_SELECTED_STAGES)
   .optional();
 
+const stageNameElement = z
+  .string()
+  .min(1)
+  .refine(noNullBytes, { message: "Stage must not contain null bytes" })
+  .refine(noInvisibleOnly, {
+    message: "Stage must contain visible characters",
+  });
+
 // require-risk-stage (D1): the strict write variant — a row must always carry
 // at least one concrete SDLC stage, so missing/empty selections are rejected
 // on the write path. enforce-item-decision-stage-schema extended this to items
 // and decisions too; the READ models re-loosen to `stageIdsField` so stage-less
 // legacy rows still load and render the loud "No stage set" marker.
 export const requiredStageIdsField = z
-  .array(
-    z
-      .string()
-      .min(1)
-      .refine(noNullBytes, { message: "Stage must not contain null bytes" })
-      .refine(noInvisibleOnly, {
-        message: "Stage must contain visible characters",
-      }),
-  )
+  .array(stageNameElement)
   .min(1)
   .max(MAX_SELECTED_STAGES);
+
+// activity-first-class: element-quality-validated like requiredStageIdsField but
+// length-tolerant, for the XOR-parented record write field. The conditional rule
+// (≥1 stage for a product parent, none for an activity parent) is enforced by the
+// record superRefine in section.schema.ts, since it depends on the parent kind.
+export const writeStageIdsField = z
+  .array(stageNameElement)
+  .max(MAX_SELECTED_STAGES)
+  .optional();

@@ -71,7 +71,16 @@ export const reportSectionFullInclude = {
   // without a second query.
   activityStatuses: {
     include: {
-      activity: { select: { name: true } },
+      activity: {
+        select: {
+          name: true,
+          // activity-first-class: the activity's label-only product links, so
+          // the read model can emit `linkedProducts` (id + name) inline.
+          activityProducts: {
+            select: { product: { select: { id: true, name: true } } },
+          },
+        },
+      },
     },
   },
   // review-acknowledgement: per-record reviewer comments and per-section
@@ -153,7 +162,13 @@ export type PrismaReportSectionWithRelations = NonNullable<
     activityId: string;
     status: string | null;
     note: string | null;
-    activity: { name: string };
+    // activity-first-class: `activityProducts` mirrors the join include (the
+    // generated client AND this type must both change). Optional so legacy
+    // fixtures that predate the include still map (mapper falls back to `[]`).
+    activity: {
+      name: string;
+      activityProducts?: { product: { id: string; name: string } }[];
+    };
   }[];
   // review-acknowledgement: per-section verdicts, hand-written to mirror the
   // `sectionReviews` include (memory: the generated client include AND this
@@ -167,7 +182,11 @@ export type PrismaReportSectionWithRelations = NonNullable<
     // fixtures predating the column still satisfy it; a real DB row (NOT NULL
     // column) always carries it, and the read model treats it as optional too.
     stableId?: string;
-    projectId: string;
+    // XOR parent: exactly one of projectId / activityId is non-null (the product
+    // FK is now nullable; an activity-parented row carries `activityId` instead).
+    // `activityId` optional so unit fixtures predating the column still map.
+    projectId: string | null;
+    activityId?: string | null;
     type: string;
     text: string;
     tag: string;
@@ -186,7 +205,9 @@ export type PrismaReportSectionWithRelations = NonNullable<
   risks: {
     id: string;
     stableId?: string;
-    projectId: string;
+    // XOR parent (see items above).
+    projectId: string | null;
+    activityId?: string | null;
     risk: string;
     impact: string;
     mitigation: string;
@@ -204,7 +225,9 @@ export type PrismaReportSectionWithRelations = NonNullable<
     impact: string;
     resolvedAt: Date | null;
     stageNames: string[];
+    // XOR parent (full parity — an activity owns decisions too).
     productId: string | null;
+    activityId?: string | null;
     project?: { name: string };
     recordComments?: RecordCommentRow[];
   }[];
@@ -327,7 +350,10 @@ export function deriveEffectiveProductStatus(project: {
     status?: string | null;
   }[];
   risks?: readonly {
-    projectId: string;
+    // Nullable/optional: an activity-parented risk carries no product FK — it
+    // never matches a product's projectId below, so it cannot floor product
+    // health. `undefined` tolerated for read-model risks (optional field).
+    projectId?: string | null;
     severity?: string;
     stageIds?: readonly string[];
   }[];
@@ -351,6 +377,32 @@ export function deriveEffectiveProductStatus(project: {
     effective = worseTraffic(effective, stageEffective);
   }
   return effective;
+}
+
+/**
+ * activity-first-class (design decision 5): the activity pill's render-time
+ * status floor. An activity has no SDLC stage, so it is floored by its OWN
+ * records only — a blocked item or a `blocked` risk forces red, an `at-risk`
+ * risk forces at least yellow, else the stored/lead-chosen status passes
+ * through. NEVER rewrites the stored `ActivityStatus.status`; removing the
+ * risk/blocker restores the lead's choice. Returns null only when nothing
+ * floors AND the stored status is null (the pill then falls back to `status`).
+ */
+function deriveActivityStatus(
+  stored: TrafficLight | null,
+  ownItemBlocked: boolean,
+  ownRisks: readonly { severity: string }[],
+): TrafficLight | null {
+  const itemFloor: TrafficLight | null = ownItemBlocked ? "red" : null;
+  const riskFloor = ownRisks.reduce<TrafficLight | null>(
+    (acc, risk) =>
+      worseTraffic(
+        acc,
+        severityToTraffic(risk.severity === "blocked" ? "blocked" : "at-risk"),
+      ),
+    null,
+  );
+  return worseTraffic(stored, worseTraffic(itemFloor, riskFloor));
 }
 
 // review-acknowledgement: project the joined RecordComment rows onto the
@@ -535,7 +587,10 @@ export function mapPrismaToReportSection(
       // Durable lineage key — surfaced so the client round-trips it back and
       // saveSection's recreate preserves it instead of re-minting.
       stableId: i.stableId,
+      // XOR parent — exactly one is non-null; both flat on the top-level array,
+      // discriminated by which FK is set (activity rows carry `activityId`).
       projectId: i.projectId,
+      activityId: i.activityId,
       type: i.type,
       text: i.text,
       tag: i.tag,
@@ -549,7 +604,9 @@ export function mapPrismaToReportSection(
     risks: row.risks.map((r) => ({
       id: r.id,
       stableId: r.stableId,
+      // XOR parent (see items above).
       projectId: r.projectId,
+      activityId: r.activityId,
       risk: r.risk,
       impact: r.impact,
       mitigation: r.mitigation,
@@ -566,18 +623,37 @@ export function mapPrismaToReportSection(
       impact: d.impact,
       resolvedAt: d.resolvedAt,
       stageIds: d.stageNames.length > 0 ? d.stageNames : undefined,
+      // XOR parent (full parity — an activity owns decisions too).
       productId: d.productId ?? undefined,
+      activityId: d.activityId ?? undefined,
       comments: toCommentViews(d.recordComments ?? []),
     })),
     // Every seeded activity status, name joined, name-sorted. Seeding already
     // excludes archived activities; a row seeded before a mid-period archive
     // stays listed so the delete-recreate save never silently drops it.
+    // activity-first-class: each row carries its label-only `linkedProducts` and
+    // the risk/blocker-derived status floor (design decision 5).
     activities: (row.activityStatuses ?? [])
       .map((status) => ({
         activityId: status.activityId,
         activityName: status.activity.name,
         status: asTraffic(status.status),
         note: status.note,
+        linkedProducts: (status.activity.activityProducts ?? [])
+          .map((link) => ({
+            productId: link.product.id,
+            productName: link.product.name,
+          }))
+          .sort((a, b) => a.productName.localeCompare(b.productName, "ru")),
+        derivedStatus: deriveActivityStatus(
+          asTraffic(status.status),
+          row.items.some(
+            (i) =>
+              i.activityId === status.activityId &&
+              i.workflowStatus === "blocked",
+          ),
+          row.risks.filter((r) => r.activityId === status.activityId),
+        ),
       }))
       .sort((a, b) => a.activityName.localeCompare(b.activityName, "ru")),
     reviews: toReviewViews(row.sectionReviews ?? [], row.version),
@@ -881,7 +957,11 @@ export class ReportSectionsPrismaRepository
                 // for a brand-new record → omitted so the `@default(uuid())` mints
                 // one; never `?? null` (the column is NOT NULL).
                 stableId: i.stableId,
-                projectId: i.projectId,
+                // XOR parent: product-parented rows write projectId; activity-
+                // parented rows write activityId (product FK null). The hand-written
+                // CHECK is the backstop; the write schema already enforced XOR.
+                projectId: i.projectId ?? null,
+                activityId: i.activityId ?? null,
                 type: i.type,
                 text: i.text,
                 tag: i.tag,
@@ -900,7 +980,9 @@ export class ReportSectionsPrismaRepository
                 reportSectionId: sectionId,
                 // Preserve the durable lineage key (see items above).
                 stableId: r.stableId,
-                projectId: r.projectId,
+                // XOR parent (see items above).
+                projectId: r.projectId ?? null,
+                activityId: r.activityId ?? null,
                 risk: r.risk,
                 impact: r.impact,
                 mitigation: r.mitigation,
@@ -910,8 +992,12 @@ export class ReportSectionsPrismaRepository
             });
           }
 
+          // activity-first-class (Decision 6): persist a decision parented by
+          // EITHER a product OR an activity (the write schema's XOR guarantees
+          // exactly one). The old productId-only filter silently dropped every
+          // activity-parented decision.
           const decisionsToSave = section.decisions.filter(
-            (d): d is typeof d & { productId: string } => Boolean(d.productId),
+            (d) => d.productId != null || d.activityId != null,
           );
           if (decisionsToSave.length > 0) {
             await tx.decision.createMany({
@@ -925,7 +1011,9 @@ export class ReportSectionsPrismaRepository
                 impact: d.impact,
                 resolvedAt: d.resolvedAt ?? null,
                 stageNames: d.stageIds ?? [],
-                productId: d.productId,
+                // XOR parent (product FK null for the activity case).
+                productId: d.productId ?? null,
+                activityId: d.activityId ?? null,
               })),
             });
           }

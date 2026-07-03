@@ -275,17 +275,22 @@ export function sectionToDraftPayload(
         // instead of re-minting. Undefined for a brand-new row (the server mints
         // it); the merge handlers keep it via `...existing` for edited rows.
         stableId: it.stableId,
-        projectId: it.projectId,
+        // activity-first-class: XOR parent — exactly one of projectId /
+        // activityId is set. The write schema superRefine enforces it and the
+        // conditional stage rule (≥1 stage for a product, none for an activity).
+        projectId: it.projectId ?? null,
+        activityId: it.activityId ?? null,
         type: it.type,
         text: it.text,
         tag: it.tag,
         workflowStatus: it.workflowStatus,
         carriedOver: it.carriedOver,
         completed: it.completed ?? null,
-        // enforce-item-decision-stage-schema: the write schema now demands ≥1
-        // stage (mirrors risks). The read model stays tolerant of stage-less
-        // legacy rows; sending [] for such a row fails server-side validation
-        // loudly until the lead sets a stage.
+        // enforce-item-decision-stage-schema: the write schema demands ≥1 stage
+        // for a PRODUCT parent (mirrors risks); an activity-parented row carries
+        // an empty stage set. The read model stays tolerant of stage-less legacy
+        // rows; sending [] for a product row fails server-side validation loudly
+        // until the lead sets a stage.
         stageIds: it.stageIds ?? [],
         // F1: include priorityRank in the autosave payload (was omitted, so the
         // dialog's rank never reached the backend → "doesn't save").
@@ -296,15 +301,17 @@ export function sectionToDraftPayload(
       .map((r) => ({
         id: r.id,
         stableId: r.stableId,
-        projectId: r.projectId,
+        // activity-first-class: XOR parent (see items above).
+        projectId: r.projectId ?? null,
+        activityId: r.activityId ?? null,
         risk: r.risk,
         impact: r.impact,
         mitigation: r.mitigation,
         severity: r.severity,
-        // require-risk-stage: the write schema now demands ≥1 stage. The
-        // read model stays tolerant of stage-less legacy rows; sending []
-        // for such a row fails server-side validation loudly until the
-        // data is backfilled/reseeded (design D3 trade-off).
+        // require-risk-stage: the write schema demands ≥1 stage for a PRODUCT
+        // parent; an activity-parented risk carries an empty stage set. The read
+        // model stays tolerant of stage-less legacy rows; sending [] for a
+        // product row fails server-side validation loudly until reseeded.
         stageIds: r.stageIds ?? [],
       })),
     decisions: section.decisions
@@ -318,10 +325,13 @@ export function sectionToDraftPayload(
         impact: d.impact,
         resolvedAt: d.resolvedAt ?? null,
         // enforce-item-decision-stage-schema: mirror risks/items — the write
-        // schema demands ≥1 stage; [] for a stage-less legacy row fails
-        // server-side validation loudly until the lead sets a stage.
+        // schema demands ≥1 stage for a PRODUCT parent; an activity-parented
+        // decision carries an empty stage set. [] for a stage-less legacy
+        // product row fails server-side validation loudly until reseeded.
         stageIds: d.stageIds ?? [],
+        // activity-first-class: XOR parent — productId OR activityId (Decision 6).
         productId: d.productId ?? null,
+        activityId: d.activityId ?? null,
       })),
   };
 }
@@ -912,6 +922,14 @@ export function LeadForm({
       : data.products
   ) as Product[];
 
+  // activity-first-class: the author's attached activities offered as record
+  // parents in the item/risk dialogs (id + display name only).
+  const activityOptions: readonly { id: string; name: string }[] =
+    draftSection.activities.map((a) => ({
+      id: a.activityId,
+      name: a.activityName,
+    }));
+
   const ownCurrentWeekItems: KanbanItem[] =
     data.currentWeekItems as KanbanItem[];
   const ownNextWeekItems: KanbanItem[] = data.nextWeekItems as KanbanItem[];
@@ -1106,7 +1124,13 @@ export function LeadForm({
           productId: d.productId || null,
         };
       });
-      return { ...prev, decisions: merged };
+      // activity-first-class: preserve activity-parented decisions — the product
+      // decisions view excludes them, so replacing the whole array would
+      // otherwise drop seeded activity decisions on any decision edit.
+      const activityDecisions = prev.decisions.filter(
+        (d) => d.activityId != null,
+      );
+      return { ...prev, decisions: [...activityDecisions, ...merged] };
     });
   }
 
@@ -1175,31 +1199,46 @@ export function LeadForm({
       );
       const merged = next.map((r) => {
         const existing = r.id ? existingById.get(r.id) : undefined;
+        // activity-first-class: XOR parent — an activity-parented row clears
+        // projectId and carries no stage; a product row keeps today's shape.
+        const parentFields = r.activityId
+          ? {
+              projectId: null,
+              activityId: r.activityId,
+              stageIds: [] as string[],
+            }
+          : {
+              projectId: r.productId,
+              activityId: null,
+              stageIds: r.stageIds,
+            };
         if (existing) {
           return {
             ...existing,
-            projectId: r.productId,
+            ...parentFields,
             risk: r.text,
             impact: r.impact,
             mitigation: r.mitigation,
             severity: r.severity,
             stageName: null,
-            stageIds: r.stageIds,
           };
         }
         return {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- draft rows lack a persisted id at runtime despite the non-null form-row type
           id: r.id ?? `tmp-${crypto.randomUUID()}`,
-          projectId: r.productId,
+          ...parentFields,
           risk: r.text,
           impact: r.impact,
           mitigation: r.mitigation,
           severity: r.severity,
           stageName: null,
-          stageIds: r.stageIds,
         };
       });
-      return { ...prev, risks: merged };
+      // activity-first-class: preserve activity-parented risks — they never
+      // appear in the product-scoped section list, so replacing the whole risks
+      // array would otherwise drop them on any product-risk edit.
+      const activityRisks = prev.risks.filter((r) => r.activityId != null);
+      return { ...prev, risks: [...activityRisks, ...merged] };
     });
   }
 
@@ -1245,15 +1284,27 @@ export function LeadForm({
         const mergedTyped = next.map((kb) => {
           const raw = statusToRawFields(kb.status);
           const existing = existingById.get(kb.id);
+          // activity-first-class: XOR parent — an activity-parented row clears
+          // projectId and carries no stage; a product row keeps today's shape.
+          const parentFields = kb.activityId
+            ? {
+                projectId: null,
+                activityId: kb.activityId,
+                stageIds: [] as string[],
+              }
+            : {
+                projectId: kb.productId,
+                activityId: null,
+                stageIds: kb.stageIds,
+              };
           if (existing) {
             return {
               ...existing,
+              ...parentFields,
               text: kb.text,
-              projectId: kb.productId,
               workflowStatus: raw.workflowStatus,
               completed: raw.completed,
               stageName: null,
-              stageIds: kb.stageIds,
               // F1: carry the priority rank from the dialog into the draft so
               // autosave persists it (was silently dropped here).
               priorityRank: kb.priorityRank ?? null,
@@ -1261,7 +1312,7 @@ export function LeadForm({
           }
           return {
             id: kb.id,
-            projectId: kb.productId,
+            ...parentFields,
             type: itemType,
             text: kb.text,
             // Schema requires safeText({min:1}) on tag; UI doesn't expose a
@@ -1271,13 +1322,16 @@ export function LeadForm({
             carriedOver: false,
             completed: raw.completed,
             stageName: null,
-            stageIds: kb.stageIds,
             priorityRank: kb.priorityRank ?? null,
           };
         });
         // Keep all items of the OTHER type unchanged; replace this type with
-        // the merged set.
-        const others = prev.items.filter((it) => it.type !== itemType);
+        // the merged set. activity-first-class: also keep activity-parented
+        // items of THIS type — they never appear in the product-scoped section
+        // list, so replacing the whole type would otherwise drop them.
+        const others = prev.items.filter(
+          (it) => it.type !== itemType || it.activityId != null,
+        );
         return { ...prev, items: [...others, ...mergedTyped] };
       });
     };
@@ -1315,12 +1369,21 @@ export function LeadForm({
       projectId: p.projectId,
       status: p.status ?? ("green" as const),
     }));
+    // activity-first-class: submitSectionSchema tightens activityStatuses[].status
+    // to non-null too. Coerce an untouched status to green (seeding default);
+    // the server floors it by the activity's own risks/blockers on read.
+    const activityStatuses = (draftPayload.activityStatuses ?? []).map((a) => ({
+      activityId: a.activityId,
+      status: a.status ?? ("green" as const),
+      note: a.note ?? null,
+    }));
     submitMut.mutate({
       ...draftPayload,
       // Current revision read synchronously — never a stale closure, so a submit
       // right after an autosave bump carries the post-bump version (no self-409).
       version: versionRef.current,
       projectStatuses,
+      activityStatuses,
       confirmed: true,
     });
   }
@@ -1689,6 +1752,7 @@ export function LeadForm({
             <LeadReviewFeedback records={reviewFeedback} />
             <LeadFormSyncBridge.Provider
               products={products}
+              activities={activityOptions}
               risks={ownRisks}
               onProductsChange={handleProductsChange}
               onRisksChange={handleRisksChange}
@@ -1732,7 +1796,7 @@ export function LeadForm({
                   subtitle="Weekly status for activities you are attached to. Activities carry no SDLC stage and never affect product health."
                 >
                   <ActivityStatusSection
-                    activities={draftSection.activities}
+                    activities={data.activityCards}
                     readOnly={isReadOnly}
                     onStatusChange={handleActivityStatusChange}
                   />
@@ -1804,6 +1868,7 @@ export function LeadForm({
                       onItemsChange={handleCurrentWeekItemsChange}
                       currentUserName={currentUser.name}
                       products={products}
+                      activities={activityOptions}
                       stagesForProduct={stagesForProduct}
                       ownPeriodRanks={ownPeriodRanks}
                       addSignal={currentWeekAddSignal}
@@ -1847,6 +1912,7 @@ export function LeadForm({
                       onItemsChange={handleNextWeekItemsChange}
                       currentUserName={currentUser.name}
                       products={products}
+                      activities={activityOptions}
                       stagesForProduct={stagesForProduct}
                       ownPeriodRanks={ownPeriodRanks}
                       addSignal={nextWeekAddSignal}
@@ -2009,6 +2075,7 @@ export function LeadForm({
         open={quickAddItem !== null}
         item={null}
         products={products}
+        activities={activityOptions}
         week={quickAddItem?.week ?? "current"}
         currentUserName={currentUser.name}
         defaultProductId={products[0]?.id}

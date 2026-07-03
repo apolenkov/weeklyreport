@@ -50,10 +50,11 @@ function isDoneItem(item: {
  * Pure difference between the prior period's carryable open records and the
  * target period's lineage. Scoped to exactly what `carryOver.execute` can
  * carry — open next-week items (any state incl. blocked, but NOT done) and
- * unresolved product-scoped decisions — so every surfaced record has a
- * one-click remedy. Risks are absent by design: a risk is re-raised, not
- * carried. A record whose lineage already exists in ANY target section counts
- * as carried; everything is read-only — nothing moves automatically.
+ * unresolved decisions, product- OR activity-parented (an activity-parented
+ * record only when its activity is re-attached to the target section) — so
+ * every surfaced record has a one-click remedy. Risks are absent by design: a
+ * risk is re-raised, not carried. A record whose lineage already exists in ANY
+ * target section counts as carried; everything is read-only — nothing moves.
  */
 export function computeUncarriedOpenWork(
   sourceReportId: string,
@@ -74,12 +75,18 @@ export function computeUncarriedOpenWork(
     const target = targetByAuthor.get(section.authorId);
     if (!target) return [];
     const carriedLineage = lineageSet(target.items);
+    // Mirror executeCarryOver's activity gate: an activity-parented record is
+    // carryable only when its activity is re-attached to the target section.
+    const targetActivityIds = new Set(
+      target.activities.map((activity) => activity.activityId),
+    );
     return section.items
       .filter(
         (item) =>
           item.type === "next" &&
           !item.carriedOver &&
           !isDoneItem(item) &&
+          (item.activityId == null || targetActivityIds.has(item.activityId)) &&
           !(item.stableId !== undefined && carriedLineage.has(item.stableId)),
       )
       .map((item) => ({
@@ -94,11 +101,18 @@ export function computeUncarriedOpenWork(
     const target = targetByAuthor.get(section.authorId);
     if (!target) return [];
     const carriedLineage = lineageSet(target.decisions);
+    const targetActivityIds = new Set(
+      target.activities.map((activity) => activity.activityId),
+    );
     return section.decisions
       .filter(
         (decision) =>
           !decision.resolvedAt &&
-          Boolean(decision.productId) &&
+          // Mirror executeCarryOver: a product decision (no activityId — XOR
+          // guarantees a product FK) always qualifies; an activity decision only
+          // when its activity is re-attached to the target section.
+          (decision.activityId == null ||
+            targetActivityIds.has(decision.activityId)) &&
           !(
             decision.stableId !== undefined &&
             carriedLineage.has(decision.stableId)

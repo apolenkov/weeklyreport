@@ -5,7 +5,11 @@ import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../lib/use-dialog-focus";
 import type { Product, RiskEntry } from "./mock-data";
-import { ProductPicker } from "./product-picker";
+import {
+  type ParentActivityOption,
+  ParentPicker,
+  type RecordParent,
+} from "./product-picker";
 import { StageMultiSelect } from "./stage-multi-select";
 import { canonicalStageIds, canonicalStageName } from "./stage-tags";
 
@@ -14,6 +18,12 @@ interface RiskEditDialogProps {
   /** null = create mode, RiskEntry = edit mode. */
   readonly risk: RiskEntry | null;
   readonly products: readonly Product[];
+  /**
+   * activity-first-class: the section author's attached activities. When
+   * non-empty the parent picker offers them; choosing an activity hides the
+   * stage step and parents the risk to the activity instead of a product.
+   */
+  readonly activities?: readonly ParentActivityOption[];
   readonly onSave: (
     next: RiskEntry & { impact: string; mitigation: string },
   ) => void;
@@ -130,6 +140,148 @@ function isDeadEndProduct(
   return availableStages.length === 0 && effectiveStageIds.length === 0;
 }
 
+interface RiskFieldErrors {
+  text?: string;
+  impact?: string;
+  mitigation?: string;
+  stageIds?: string;
+}
+
+/**
+ * The context strip's pre-flagged owned stages for a product parent: the
+ * product's at-risk/blocked stages the current lead owns. Empty for an activity
+ * parent (no seed product), which is why the strip self-suppresses there.
+ */
+function computePreCheckedStages(
+  seedProduct: Product | undefined,
+  ownedStages: readonly string[],
+): { name: string; severity: "at-risk" | "blocked" }[] {
+  return (seedProduct?.stages ?? [])
+    .filter((s) => s.status === "at-risk" || s.status === "blocked")
+    .filter((s) =>
+      ownedStages.some(
+        (n) => canonicalStageName(n) === canonicalStageName(s.stageName),
+      ),
+    )
+    .map((s) => ({
+      name: canonicalStageName(s.stageName),
+      severity: s.status as "at-risk" | "blocked",
+    }));
+}
+
+/**
+ * Per-field validation for the risk save. A stage is required only for a
+ * product parent; an activity owns no stage, so it is never demanded there.
+ */
+function collectRiskErrors(args: {
+  readonly text: string;
+  readonly impact: string;
+  readonly mitigation: string;
+  readonly isActivityParent: boolean;
+  readonly effectiveStageIds: readonly string[];
+}): RiskFieldErrors {
+  const errors: RiskFieldErrors = {};
+  if (args.text.length === 0) errors.text = "Risk description is required";
+  if (args.impact.length === 0) errors.impact = "Impact is required";
+  if (args.mitigation.length === 0)
+    errors.mitigation = "Mitigation is required";
+  if (!args.isActivityParent && args.effectiveStageIds.length === 0)
+    errors.stageIds = "Select at least one stage.";
+  return errors;
+}
+
+/** The parent's display name for the header — the activity or the product. */
+function resolveRiskParentName(args: {
+  readonly isActivityParent: boolean;
+  readonly selectedActivity: ParentActivityOption | undefined;
+  readonly products: readonly Product[];
+  readonly parentId: string;
+  readonly risk: RiskEntry | null;
+}): string {
+  if (args.isActivityParent) return args.selectedActivity?.name ?? "";
+  const product = args.products.find((p) => p.id === args.parentId);
+  if (product) return product.name;
+  return args.risk?.productId === args.parentId ? args.risk.productName : "";
+}
+
+/**
+ * Resolve the product a product-parented save writes to. A cross-stage row may
+ * reference a project outside the lead's stage-owned `products`, so keep the
+ * original assignment instead of silently reassigning to the first product.
+ */
+function resolveRiskSaveProduct(
+  products: readonly Product[],
+  risk: RiskEntry | null,
+  parentId: string,
+): { id: string; name: string } | undefined {
+  return (
+    products.find((p) => p.id === parentId) ??
+    (risk?.productId === parentId
+      ? { id: risk.productId, name: risk.productName }
+      : products.at(0))
+  );
+}
+
+/**
+ * activity-first-class: derive the risk's initial parent — the bound risk's
+ * activity or product on edit, else the create-mode default product, falling
+ * back to the first attached activity for an activity-only lead (no products).
+ */
+function resolveRiskParent(
+  risk: RiskEntry | null,
+  seedProductId: string | undefined,
+  activities: readonly ParentActivityOption[],
+): RecordParent {
+  if (risk?.activityId) return { kind: "activity", id: risk.activityId };
+  if (risk?.productId) return { kind: "product", id: risk.productId };
+  if (seedProductId) return { kind: "product", id: seedProductId };
+  return activities[0]
+    ? { kind: "activity", id: activities[0].id }
+    : { kind: "product", id: "" };
+}
+
+/**
+ * The product-only stage step: the multi-select (with severity preview) plus
+ * the zero-owned-stage "contact admin" notice. Rendered only for a product
+ * parent; an activity owns no stage.
+ */
+function RiskStageStep({
+  stageIds,
+  availableStages,
+  severity,
+  isDeadEnd,
+  error,
+  onChange,
+}: {
+  readonly stageIds: string[];
+  readonly availableStages: readonly string[];
+  readonly severity: "at-risk" | "blocked";
+  readonly isDeadEnd: boolean;
+  readonly error: string | undefined;
+  readonly onChange: (next: string[]) => void;
+}) {
+  return (
+    <>
+      <StageMultiSelect
+        id="risk-stage"
+        value={stageIds}
+        stages={availableStages}
+        onChange={onChange}
+        previewSeverity={severity}
+        // Suppress the stale required-stage error in the dead-end branch so it
+        // never co-renders with the contact-admin notice below.
+        error={isDeadEnd ? undefined : error}
+        required
+      />
+      {isDeadEnd && (
+        <p role="status" className="text-xs text-[var(--color-destructive)]">
+          No stages assigned — contact admin.
+        </p>
+      )}
+    </>
+  );
+}
+
 /**
  * D12 mount/unmount shell (react-compiler-safe): the outer component returns
  * null when closed and mounts the inner content otherwise. Mount = fresh
@@ -154,6 +306,7 @@ function RiskEditDialogContent({
   initialStageIds,
   initialSeverity,
   stagesForProduct,
+  activities = [],
 }: RiskEditDialogProps) {
   const isCreate = risk === null;
   const seedProduct = isCreate
@@ -172,9 +325,14 @@ function RiskEditDialogContent({
     return deriveFromPreChecked(seedProduct, ownedStages);
   });
 
-  const [productId, setProductId] = useState(
-    risk?.productId ?? seedProduct?.id ?? "",
+  // activity-first-class: the record's parent — a product OR an attached
+  // activity (XOR). Seeded from the bound risk on edit, else the create-mode
+  // default product (falling back to the first activity for an activity-only
+  // lead with no products).
+  const [parent, setParent] = useState<RecordParent>(() =>
+    resolveRiskParent(risk, seedProduct?.id, activities),
   );
+  const isActivityParent = parent.kind === "activity";
   const [impact, setImpact] = useState(initialImpact ?? "");
   const [mitigation, setMitigation] = useState(initialMitigation ?? "");
 
@@ -202,24 +360,23 @@ function RiskEditDialogContent({
   const mitigationRef = useRef<HTMLTextAreaElement>(null);
 
   // Context strip: pipeline stages already flagged that are owned by this lead.
-  const preCheckedStages = useMemo(() => {
-    const ownedStages = stagesForProduct?.(seedProduct?.id ?? "") ?? [];
-    return (seedProduct?.stages ?? [])
-      .filter((s) => s.status === "at-risk" || s.status === "blocked")
-      .filter((s) =>
-        ownedStages.some(
-          (n) => canonicalStageName(n) === canonicalStageName(s.stageName),
-        ),
-      )
-      .map((s) => ({
-        name: canonicalStageName(s.stageName),
-        severity: s.status as "at-risk" | "blocked",
-      }));
-  }, [seedProduct, stagesForProduct]);
+  const preCheckedStages = useMemo(
+    () =>
+      computePreCheckedStages(
+        seedProduct,
+        stagesForProduct?.(seedProduct?.id ?? "") ?? [],
+      ),
+    [seedProduct, stagesForProduct],
+  );
 
-  const headerProductName =
-    products.find((p) => p.id === productId)?.name ??
-    (risk?.productId === productId ? risk.productName : "");
+  const selectedActivity = activities.find((a) => a.id === parent.id);
+  const parentName = resolveRiskParentName({
+    isActivityParent,
+    selectedActivity,
+    products,
+    parentId: parent.id,
+    risk,
+  });
   const headerVerb = isCreate ? "Add Risk" : "Edit Risk";
 
   function handleStageChange(nextStageIds: string[]) {
@@ -231,22 +388,24 @@ function RiskEditDialogContent({
     // Severity is NOT updated here — user's explicit severity choice is sticky.
   }
 
-  function setProductAndStages(nextProductId: string) {
-    setProductId(nextProductId);
-    // W11 (fix-report-surface-integrity 3.10): clear the stage selection on a
-    // product switch. NEVER default to all owned stages — that "covers all"
+  function setParentAndStages(nextParent: RecordParent) {
+    setParent(nextParent);
+    // W11 (fix-report-surface-integrity 3.10): clear the stage selection on any
+    // parent switch. NEVER default to all owned stages — that "covers all"
     // default is the root cause of the inflated-completeness ("6/7") defect.
-    // The lead marks stages explicitly; the single-owned-stage convenience is
-    // still handled at save time (effectiveStageIds in handleSave).
+    // Switching to an activity hides the stage step; the lead marks product
+    // stages explicitly; the single-owned-stage convenience lives in handleSave.
     setStageIds([]);
   }
 
-  const availableStages = stagesForProduct?.(productId) ?? [];
+  // activity-first-class: the stage step is product-only. An activity owns no
+  // SDLC stage (Decision 5), so no stages are available and no dead-end applies.
+  const availableStages = isActivityParent
+    ? []
+    : (stagesForProduct?.(parent.id) ?? []);
   const effectiveStageIds = computeEffectiveStageIds(stageIds, availableStages);
-  const isZeroOwnedStageDeadEnd = isDeadEndProduct(
-    availableStages,
-    effectiveStageIds,
-  );
+  const isZeroOwnedStageDeadEnd =
+    !isActivityParent && isDeadEndProduct(availableStages, effectiveStageIds);
 
   /**
    * a11y (validation-focus): moves focus to the first invalid field after a
@@ -284,25 +443,36 @@ function RiskEditDialogContent({
     const t = text.trim();
     const im = impact.trim();
     const m = mitigation.trim();
-    const next: typeof errors = {};
-    if (t.length === 0) next.text = "Risk description is required";
-    if (im.length === 0) next.impact = "Impact is required";
-    if (m.length === 0) next.mitigation = "Mitigation is required";
-    if (effectiveStageIds.length === 0)
-      next.stageIds = "Select at least one stage.";
+    const next = collectRiskErrors({
+      text: t,
+      impact: im,
+      mitigation: m,
+      isActivityParent,
+      effectiveStageIds,
+    });
     if (Object.keys(next).length > 0) {
       setErrors(next);
       focusFirstInvalidField(next);
       return;
     }
-    // Cross-stage rows (fix-lead-surface-name-resolution): an edited risk may
-    // reference a project outside the lead's stage-owned `products`. Keep the
-    // original assignment instead of silently reassigning to the first product.
-    const product =
-      products.find((p) => p.id === productId) ??
-      (risk?.productId === productId
-        ? { id: risk.productId, name: risk.productName }
-        : products.at(0));
+    // activity-first-class: an activity parent yields an activity-parented risk
+    // (empty productId, no stage); a product parent keeps today's output.
+    if (isActivityParent) {
+      onSave({
+        id: risk?.id ?? crypto.randomUUID(),
+        productId: "",
+        productName: selectedActivity?.name ?? "",
+        activityId: parent.id,
+        activityName: selectedActivity?.name,
+        stageIds: [],
+        severity,
+        text: t,
+        impact: im,
+        mitigation: m,
+      });
+      return;
+    }
+    const product = resolveRiskSaveProduct(products, risk, parent.id);
     if (!product) {
       const noProductError = { text: "No product available" };
       setErrors(noProductError);
@@ -313,6 +483,7 @@ function RiskEditDialogContent({
       id: risk?.id ?? crypto.randomUUID(),
       productId: product.id,
       productName: product.name,
+      activityId: null,
       stageIds: canonicalStageIds(effectiveStageIds),
       severity,
       text: t,
@@ -355,9 +526,9 @@ function RiskEditDialogContent({
       >
         <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
           {headerVerb}{" "}
-          {headerProductName ? (
+          {parentName ? (
             <span className="text-[var(--color-muted-foreground)]">
-              — {headerProductName}
+              — {parentName}
             </span>
           ) : null}
         </h2>
@@ -366,7 +537,7 @@ function RiskEditDialogContent({
         {preCheckedStages.length > 0 && (
           <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs">
             <div className="font-medium text-amber-900">
-              {headerProductName} →{" "}
+              {parentName} →{" "}
               {preCheckedStages
                 .map(
                   (s) =>
@@ -515,37 +686,28 @@ function RiskEditDialogContent({
               Classification
             </span>
 
-            {/* unify-record-dialogs: Product picker is kept FIRST so the
-                classification panel orders Product → Stages → Severity, the same
-                order as the item and decision dialogs. */}
-            <ProductPicker
+            {/* Parent picker kept FIRST so the classification panel orders
+                Parent → Stages → Severity, the same order as the item dialog.
+                Offers products and the author's attached activities; choosing an
+                activity hides the stage step below. */}
+            <ParentPicker
               id="risk-product"
-              value={productId}
+              value={parent}
               products={products}
-              onChange={setProductAndStages}
+              activities={activities}
+              onChange={setParentAndStages}
             />
 
-            <StageMultiSelect
-              id="risk-stage"
-              value={stageIds}
-              stages={stagesForProduct?.(productId) ?? []}
-              onChange={handleStageChange}
-              previewSeverity={severity}
-              // Suppress the stale required-stage error in the dead-end branch:
-              // a prior "Select at least one stage." set before switching to a
-              // zero-owned product must not co-render with the contact-admin
-              // message below.
-              error={isZeroOwnedStageDeadEnd ? undefined : errors.stageIds}
-              required
-            />
-
-            {isZeroOwnedStageDeadEnd && (
-              <p
-                role="status"
-                className="text-xs text-[var(--color-destructive)]"
-              >
-                No stages assigned — contact admin.
-              </p>
+            {/* activity-first-class: the stage step is product-only. */}
+            {!isActivityParent && (
+              <RiskStageStep
+                stageIds={stageIds}
+                availableStages={availableStages}
+                severity={severity}
+                isDeadEnd={isZeroOwnedStageDeadEnd}
+                error={errors.stageIds}
+                onChange={handleStageChange}
+              />
             )}
 
             {/* Severity chips */}

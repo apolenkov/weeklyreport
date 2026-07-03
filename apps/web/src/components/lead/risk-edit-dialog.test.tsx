@@ -248,7 +248,7 @@ describe("RiskEditDialog - SDLC stage selector (35-04 / UFB-014)", () => {
     );
 
     fireEvent.change(screen.getByRole("combobox"), {
-      target: { value: "p2" },
+      target: { value: "product:p2" },
     });
 
     const checkboxes = screen.getAllByRole("checkbox");
@@ -1027,7 +1027,7 @@ describe("RiskEditDialog — zero-owned-stage guard", () => {
     // Switch to the zero-owned-stage product: the stale required-stage error
     // must NOT co-render with the contact-admin dead-end message.
     fireEvent.change(screen.getByRole("combobox"), {
-      target: { value: "p2" },
+      target: { value: "product:p2" },
     });
 
     expect(
@@ -1064,5 +1064,62 @@ describe("RiskEditDialog — classification field order (unify-record-dialogs)",
     const FOLLOWING = Node.DOCUMENT_POSITION_FOLLOWING;
     expect(product.compareDocumentPosition(stages) & FOLLOWING).toBeTruthy();
     expect(stages.compareDocumentPosition(severity) & FOLLOWING).toBeTruthy();
+  });
+});
+
+describe("RiskEditDialog — activity parenting (activity-first-class)", () => {
+  const oneProduct: Product[] = [
+    { id: "p1", name: "CRM", overallStatus: "on-track", stages: [] },
+  ];
+  const activities = [{ id: "act1", name: "Jira triage duty" }];
+
+  it("hides the stage step and saves an activity-parented risk with no stage", () => {
+    const onSave = vi.fn();
+    render(
+      <RiskEditDialog
+        open
+        risk={null}
+        products={oneProduct}
+        activities={activities}
+        onSave={onSave}
+        onCancel={() => undefined}
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev", "Testing"]}
+      />,
+    );
+
+    // A product parent shows the stage step.
+    expect(screen.getByText(/SDLC Stages/i)).toBeInTheDocument();
+
+    // Switch the parent to the activity — the stage step disappears.
+    fireEvent.change(screen.getByLabelText("Parent"), {
+      target: { value: "activity:act1" },
+    });
+    expect(screen.queryByText(/SDLC Stages/i)).toBeNull();
+
+    fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
+      target: { value: "Vendor delay" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: "Slips Q3" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
+      target: { value: "Escalate" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save Risk/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    const saved = onSave.mock.calls[0]?.[0] as {
+      activityId?: string | null;
+      productId: string;
+      text: string;
+      stageIds?: string[];
+    };
+    expect(saved).toMatchObject({
+      activityId: "act1",
+      productId: "",
+      text: "Vendor delay",
+    });
+    expect(saved.stageIds).toEqual([]);
   });
 });

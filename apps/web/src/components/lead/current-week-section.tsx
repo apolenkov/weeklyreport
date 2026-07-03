@@ -33,6 +33,11 @@ interface CurrentWeekSectionProps {
    */
   readonly products?: readonly Product[];
   /**
+   * activity-first-class: the author's attached activities forwarded to
+   * ItemEditDialog so the parent picker can offer them alongside products.
+   */
+  readonly activities?: readonly { id: string; name: string }[];
+  /**
    * 35-04: stages-the-lead-owns selector forwarded to ItemEditDialog so
    * the SDLC stage dropdown is scoped to the active project.
    */
@@ -93,6 +98,7 @@ export function CurrentWeekSection({
   onItemsChange,
   currentUserName,
   products,
+  activities,
   stagesForProduct,
   ownPeriodRanks,
   addSignal = 0,
@@ -330,6 +336,7 @@ export function CurrentWeekSection({
           open={dialogState.open}
           item={dlg.editItem}
           products={products ?? []}
+          activities={activities}
           week="current"
           currentUserName={currentUserName}
           defaultProductId={dlg.createSeedProductId}

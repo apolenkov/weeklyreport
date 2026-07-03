@@ -43,16 +43,23 @@ export {
  * a dropped unshared product can never re-leak its name. A decision may carry a
  * null/undefined `productId` — a cross-cutting, non-product-scoped decision; it
  * is NOT a record on an unshared product, so the scoping has no reason to hide
- * it and it is kept. Only the nullable `decisions.productId` gets the keep-null
- * branch; items/risks/projects always carry a concrete id. Section-identity
+ * it and it is kept. An activity-parented item/risk/decision carries a null
+ * product FK and IS dropped here (this lens is product-scoped). Section-identity
  * fields (status, version, author, submittedAt) are preserved unchanged.
  */
 function filterSectionToSharedProducts(
   section: ReportSectionReadModel,
   sharedProductIds: ReadonlySet<string>,
 ): ReportSectionReadModel {
-  const items = section.items.filter((i) => sharedProductIds.has(i.projectId));
-  const risks = section.risks.filter((r) => sharedProductIds.has(r.projectId));
+  // activity-first-class: this lens is product-scoped — an activity-parented
+  // item/risk (null product FK) is on no shared product and is dropped, the
+  // same way a non-shared-product decision is.
+  const items = section.items.filter(
+    (i) => i.projectId != null && sharedProductIds.has(i.projectId),
+  );
+  const risks = section.risks.filter(
+    (r) => r.projectId != null && sharedProductIds.has(r.projectId),
+  );
   // Mirror getCrossAuthorContent's `sharedIds.has(d.productId)`: a cross-author
   // co-lead view drops every decision not on a shared product — INCLUDING a
   // null-productId (cross-cutting/group) decision — so this byPeriod lens
@@ -64,8 +71,8 @@ function filterSectionToSharedProducts(
     sharedProductIds.has(p.projectId),
   );
   const referencedIds = new Set<string>([
-    ...items.map((i) => i.projectId),
-    ...risks.map((r) => r.projectId),
+    ...items.flatMap((i) => (i.projectId != null ? [i.projectId] : [])),
+    ...risks.flatMap((r) => (r.projectId != null ? [r.projectId] : [])),
     ...decisions.flatMap((d) => (d.productId != null ? [d.productId] : [])),
   ]);
   const referencedProjects = section.referencedProjects?.filter((rp) =>

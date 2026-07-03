@@ -95,6 +95,8 @@ describe("section slide utilities", () => {
             activityId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
             activityName: "Jira triage duty",
             status: "red",
+            linkedProducts: [],
+            derivedStatus: null,
           },
         ],
       }),
@@ -105,8 +107,56 @@ describe("section slide utilities", () => {
         id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         name: "Jira triage duty",
         status: "red",
+        linkedProducts: [],
       },
     ]);
+  });
+
+  it("excludes activity-parented records from the product-slide aggregates", () => {
+    const activityId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const slide = buildSectionSlideModel(
+      makeSection({
+        items: [
+          {
+            id: "55555555-5555-4555-8555-555555555555",
+            projectId: PRODUCT_ID,
+            type: "current",
+            text: "Product current item",
+            tag: "delivery",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            completed: false,
+          },
+          {
+            id: "77777777-7777-4777-8777-777777777777",
+            projectId: null,
+            activityId,
+            type: "current",
+            text: "Activity current item",
+            tag: "ops",
+            workflowStatus: "blocked",
+            carriedOver: false,
+            completed: false,
+          },
+        ],
+        activities: [
+          {
+            activityId,
+            activityName: "Jira triage duty",
+            status: "green",
+            linkedProducts: [],
+            derivedStatus: null,
+          },
+        ],
+      }),
+    );
+
+    // The activity record rides the pills lane only — never the product quadrants.
+    expect(slide.currentItems).toEqual(["Product current item"]);
+    expect(slide.currentCount).toBe(1);
+    // The activity blocker must not inflate the product-slide blocked count/tone.
+    expect(slide.blockedCount).toBe(0);
+    expect(slide.activities?.map((a) => a.name)).toEqual(["Jira triage duty"]);
   });
 
   it("builds a ready owner slide from a complete section", () => {

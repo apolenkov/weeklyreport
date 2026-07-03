@@ -229,6 +229,9 @@ describe("ReportSectionsService — saveDraft happy path", () => {
       validDraft({
         decisions: [
           {
+            // activity-first-class XOR: a decision now needs exactly one parent;
+            // product-parent it (stageIds is then required, as here).
+            productId: PROJECT_ID_1,
             text: "Upgrade DB",
             owner: "Alice",
             impact: "Better performance",
