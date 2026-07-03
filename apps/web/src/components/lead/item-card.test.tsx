@@ -264,4 +264,17 @@ describe("ItemCard — record-status-derived-from-risk (risk-derived alarm)", ()
     render(<ItemCard item={{ ...inProgress, status: "blocked" }} />);
     expect(screen.getByText("Blocked")).toBeInTheDocument();
   });
+
+  it("does not derive a foreign item against the viewer's risks (trusts its baked status)", () => {
+    // Foreign items are mixed into the own-item arrays and reach the card WITH
+    // the section's (viewer's) risks — but must NOT derive against them; the
+    // author's overlay is already baked into the foreign item's status.
+    render(
+      <ItemCard
+        item={{ ...inProgress, foreign: true, status: "blocked" }}
+        risks={[]}
+      />,
+    );
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
+  });
 });

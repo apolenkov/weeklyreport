@@ -149,10 +149,12 @@ function deriveCardStatus(
   item: KanbanItem,
   risks: readonly RiskEntry[] | undefined,
 ): DerivedCardStatus {
-  // No risk set threaded in (foreign / legacy render paths that bake the status
-  // upstream): trust item.status as-is. The covering-risk overlay applies only
-  // where the section's own risks are provided.
-  if (risks === undefined) {
+  // No risk set threaded in, OR a foreign (cross-author) item: trust item.status
+  // as-is. Foreign items are mixed into the own-item arrays but carry their
+  // author's already-overlaid status (mapForeignItems) — deriving them against
+  // the VIEWER's own risks would floor them against the wrong risk set. The
+  // covering-risk overlay applies only to own items with the section's risks.
+  if (risks === undefined || item.foreign === true) {
     return {
       displayStatus: item.status,
       isBlocked: item.status === "blocked",
