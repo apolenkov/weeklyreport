@@ -45,51 +45,42 @@ regressions — ALL fixed + re-verified (full web suite 1483 green):
   view. A separate tiny follow-up (touching `draftCount`/`mapWeeklyReportLeadGroups`
   is where the 23-test break lived).
 
-## REMAINING backlog (sweeps, in order) — 5 changes left on the board
+## REMAINING backlog (sweeps, in order)
 
 DONE since this doc was written: observability-and-perf-hardening (archived
-`bd76472b`); activity-first-class epic (archived `d3b119d4`, see above).
+`bd76472b`); activity-first-class epic (archived `d3b119d4`); **record-status-
+derived-from-risk (archived `2026-07-03-...`, pushed `79553b0c`)**.
 
-1. **record-status-derived-from-risk** — IN PROGRESS. Q2 LOCKED: Option A
-   derive-only, PURE OVERLAY, enum-VALUE removal DEFERRED (near-moot under
-   disposable-DB MVP). §2 is the next concrete step. NOTE: §2 onward is a COUPLED
-   atomic change (item-card + dialog/quick-add reversal + backend write invariant
-   - migration + backfill + escalation) — it must land together; do NOT half-land
-     (design rejects the "muddy middle": stored blocked + floored display).
-     Scope (from `openspec/changes/record-status-derived-from-risk/{proposal,design,tasks}.md`):
-   * §1 **DONE** (`a8aaf9e`): shared helper `deriveItemAlarmFromRisks` landed in
-     `apps/web/src/lib/item-alarm.ts` (the true sibling of
-     `deriveEffectiveStageStatus` in `lib/stage-status.ts`; the spec's
-     "lead-form.ts" ref was off) + 12 unit tests. Pure, unused-until-§2.
-     Coverage rule (design Decision 1):
-     covered iff SAME reportSectionId + SAME product (`Item.projectId==Risk.projectId`)
-     - stage overlap (`Item.stageNames ∩ Risk.stageNames ≠ ∅` OR risk stageNames
-       empty = wildcard); stage-less item = covered by any same-product risk. Result
-       = highest covering severity (`blocked>at-risk`). ELIGIBILITY: only
-       `workflowStatus==in_progress` items are floored (a done/planned item under a
-       covering risk must NOT read at-risk — seed `mock-data.ts` cw2/cw4 are the trap).
-   * §2 `item-card.tsx`: pill from the helper not `item.status`; add `at-risk`
-     STATUS_BADGE (amber tokens); covered-lock affordance; foreign-risk attribution.
-     **KEY §2 DECISION (locked): derive LIVE AT RENDER, NOT in the mapper.** Thread
-     the section's live `risks` into `item-card` and call `deriveItemAlarmFromRisks`
-     at render — mirroring `applyRiskSeverityFloor` (stage floor), which re-derives
-     from live risks in the sync bridge so the chip updates on an in-session risk
-     add with no refetch. Baking the alarm into the mapper (`LeadKanbanItem`) would
-     go stale the moment the lead stages a covering risk. So: card takes `risks`,
-     derives on every render; the mapper does NOT precompute an alarm field.
-   * §3 `item-edit-dialog.tsx`: remove free `blocked` chip from CURRENT_WEEK_CHOICES;
-     uncovered alarm gesture opens the risk(blocker) dialog prefilled; `quick-add`
-     "blocker" → risk(blocked) not blocked-item. (Shares item-edit-dialog with the
-     just-refactored dialogs — mind `resolveRecordParent`/`RecordStageStep`.)
-   * §4 write invariant (saveSection rejects stored blocked w/o covering risk).
-     DEFER the enum-value removal from Prisma+Zod (Q2 lock).
-   * §5 migration/backfill: heal every legacy stored-blocked item → synth covering
-     Risk(blocked) + set item in_progress; update seeds; `migrate reset --force`.
-   * head-report item badge re-source BOTH consumers (`weekly-report-groupers.ts:123`,
-     `lead-cross-author.ts:228`); escalation `blocked` REPLACE the item-sourced push
-     at `published-report-snapshot.ts:272-281`, apply null-projectId activity skip
-     unconditionally (couples with Q1). Reconcile `status-risk-unification` delta
-     (ADD sibling requirement, no header change).
+### record-status-derived-from-risk — DONE + ARCHIVED + PUSHED (2026-07-03)
+
+Option A PURE OVERLAY shipped: item-card derives at-risk/blocked at render from
+covering risks (`deriveCardStatus` in `item-card.tsx`, three-way `risks` prop:
+`undefined`/foreign → trust status, else coerce-then-derive); free Blocked chip
+removed from the item dialog; quick-add "blocker" → risk-create; escalation
+`blocked` re-sourced from blocked-severity risks (no double-count, null-projectId
+skip); head-report + cross-author badge re-sourced (`applyBlockedRiskOverlay`,
+blocked-only); seed heal (item 5156 + `riskId(6)`; workflowCycle no longer bare-
+blocked). Gates: typecheck web+api, lint `--max-warnings 0`, web 1505, api 1396,
+integration 256 — all green. Adversarial 6-lens+Codex review: 6 findings, ALL
+fixed + re-verified (the two HIGH: card derive-before-coerce order; unified-view
+missing `risks`).
+
+- **DEFERRED, tracked in `openspec/changes/record-status-ux-polish`** (NOT dropped):
+  in-dialog locked message; in-dialog prefilled blocker routing; quick-add
+  "Blocker" blocked-severity prefill (today opens at the dialog's at-risk default —
+  the button routes through risk-creation but does not pre-set blocked); foreign
+  covering-risk author attribution. Enum-value removal stays deferred (council lock).
+- **LIVE-VERIFY PENDING (§5.3 / §7.5):** NOT run — declined a destructive reseed on
+  the shared `_dev` DB (different seed loaded; possible parallel session). The heal +
+  coerce-then-derive parity IS unit-tested and escalation is integration-tested, so
+  risk is low. To confirm live: `db:fresh:advanced` (reseed seed.ts) + boot from
+  source, eyeball Olga's item 5156 renders **Blocked** (derived) and the head badge
+  agrees. Do this on a clean/owned tree.
+
+### Next sweeps (in order)
+
+1. **record-status-ux-polish** — the 4 deferred UX refinements above (small, FE-only;
+   the severity-prefill needs the `LeadFormSyncBridge` risk-prefill path — load-bearing).
 2. **lead-report-surface-polish §5-6** (Q5 carry-over auto-copy at ensureLeadSection;
    Q6 acknowledge split placement). Q7 = KEEP shipped float (no work). Then archive.
 3. **agent-review-human-confirmed-gate** — review-mode split, move section-review
