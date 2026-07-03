@@ -598,12 +598,15 @@ async function main() {
       },
     };
 
-  // Workflow status cycle
+  // Workflow status cycle. record-status-derived-from-risk: NO bare stored
+  // `blocked` — a blocked pill is DERIVED from a covering blocked-severity risk
+  // now, so the generic cycle stores only progress states. The one modelled
+  // blocked example is Olga's item 5156, paired with the covering riskId(6).
   const workflowCycle: ItemWorkflowStatus[] = [
     ItemWorkflowStatus.in_progress,
     ItemWorkflowStatus.done,
     ItemWorkflowStatus.in_progress,
-    ItemWorkflowStatus.blocked,
+    ItemWorkflowStatus.done,
   ];
   const tagCycle = ["feature", "bugfix", "infra", "ops"];
   const stageNameFor = (seed: number) =>

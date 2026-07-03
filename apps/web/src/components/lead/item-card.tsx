@@ -162,12 +162,18 @@ function deriveCardStatus(
       alarmLocked: false,
     };
   }
+  // `blocked` is display-derived now: coerce a stored blocked to in-progress
+  // BEFORE deriving, so the derivation's in-progress eligibility gate fires for a
+  // legacy stored-blocked item that IS covered by a risk. This mirrors
+  // `applyBlockedRiskOverlay` on the head surface — the two MUST agree, else the
+  // lead card and the head report disagree for identical data.
+  const eligibleStatus: ItemStatus =
+    item.status === "blocked" ? "in-progress" : item.status;
   const derivedAlarm =
     item.activityId == null && item.productId !== ""
-      ? deriveItemAlarmFromRisks(item, risks)
+      ? deriveItemAlarmFromRisks({ ...item, status: eligibleStatus }, risks)
       : null;
-  const displayStatus: ItemStatus | "at-risk" =
-    derivedAlarm ?? (item.status === "blocked" ? "in-progress" : item.status);
+  const displayStatus: ItemStatus | "at-risk" = derivedAlarm ?? eligibleStatus;
   return {
     displayStatus,
     isBlocked: displayStatus === "blocked",
