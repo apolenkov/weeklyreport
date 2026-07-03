@@ -533,8 +533,10 @@ function RiskEditDialogContent({
           ) : null}
         </h2>
 
-        {/* Context strip: shown only when pipeline already has flagged owned stages */}
-        {preCheckedStages.length > 0 && (
+        {/* Context strip: flagged owned SDLC stages — product parents only. An
+            activity owns no stage, so suppress it there (preCheckedStages derives
+            from the mount-time seed product and does not clear on a parent switch). */}
+        {!isActivityParent && preCheckedStages.length > 0 && (
           <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs">
             <div className="font-medium text-amber-900">
               {parentName} →{" "}
