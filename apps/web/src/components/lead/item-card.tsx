@@ -2,8 +2,9 @@
 
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 
+import { deriveItemAlarmFromRisks } from "../../lib/item-alarm";
 import { ItemCardActions, PublishedRecordMarker } from "./item-card-actions";
-import type { KanbanItem } from "./mock-data";
+import type { ItemStatus, KanbanItem, RiskEntry } from "./mock-data";
 import { canonicalStageName, splitStageNames } from "./stage-tags";
 
 interface ItemCardProps {
@@ -35,6 +36,14 @@ interface ItemCardProps {
    * its `editingId` state.
    */
   readonly onTextSave?: (id: string, nextText: string) => void;
+  /**
+   * record-status-derived-from-risk: the section's own risks. The card's
+   * at-risk/blocked pill is DERIVED from the covering risks (never a free item
+   * status), mirroring the stage-chip render floor. Only product-parented
+   * in-progress items derive an alarm; an activity item's severity stays
+   * isolated (Q1 Phase-1 lock), so the activity section passes none.
+   */
+  readonly risks?: readonly RiskEntry[];
 }
 
 interface StatusBadge {
@@ -58,6 +67,13 @@ const STATUS_BADGE = {
     bg: "var(--color-status-blocked-bg)",
     text: "var(--color-destructive)",
     label: "Blocked",
+  },
+  // record-status-derived-from-risk: a DERIVED-only amber alarm (there is no
+  // stored at-risk item status) — token-derived per status-color-semantics.
+  "at-risk": {
+    bg: "var(--color-status-at-risk-bg)",
+    text: "var(--color-status-at-risk-fg)",
+    label: "At Risk",
   },
   planned: {
     bg: "var(--color-muted)",
@@ -112,8 +128,55 @@ function cardContainerStyle(opts: {
   };
 }
 
+interface DerivedCardStatus {
+  displayStatus: ItemStatus | "at-risk";
+  isBlocked: boolean;
+  isPlanned: boolean;
+  alarmLocked: boolean;
+}
+
+/**
+ * record-status-derived-from-risk: resolve the pill the card shows. The
+ * at-risk/blocked alarm is the roll-up of the covering risks (the item-card
+ * analogue of the stage-chip floor), never a free item status. Product-parented
+ * items only — an activity item's severity stays deferred (Q1 Phase-1
+ * isolation); the derivation's in-progress gate leaves completed/planned items
+ * on their progress pill. When an alarm is derived the pill is locked (resolve
+ * the covering risk/blocker to change it). A legacy stored `blocked` with no
+ * covering risk shows as in-progress — `blocked` is display-derived only now.
+ */
+function deriveCardStatus(
+  item: KanbanItem,
+  risks: readonly RiskEntry[] | undefined,
+): DerivedCardStatus {
+  // No risk set threaded in (foreign / legacy render paths that bake the status
+  // upstream): trust item.status as-is. The covering-risk overlay applies only
+  // where the section's own risks are provided.
+  if (risks === undefined) {
+    return {
+      displayStatus: item.status,
+      isBlocked: item.status === "blocked",
+      isPlanned: item.status === "planned",
+      alarmLocked: false,
+    };
+  }
+  const derivedAlarm =
+    item.activityId == null && item.productId !== ""
+      ? deriveItemAlarmFromRisks(item, risks)
+      : null;
+  const displayStatus: ItemStatus | "at-risk" =
+    derivedAlarm ?? (item.status === "blocked" ? "in-progress" : item.status);
+  return {
+    displayStatus,
+    isBlocked: displayStatus === "blocked",
+    isPlanned: displayStatus === "planned",
+    alarmLocked: derivedAlarm !== null,
+  };
+}
+
 export function ItemCard({
   item,
+  risks,
   onEdit,
   onDelete,
   publishedLocked = false,
@@ -123,11 +186,13 @@ export function ItemCard({
   isEditing = false,
   onTextSave,
 }: ItemCardProps) {
+  const { displayStatus, isBlocked, isPlanned, alarmLocked } = deriveCardStatus(
+    item,
+    risks,
+  );
   const badge =
-    (STATUS_BADGE as Record<string, StatusBadge>)[item.status] ??
+    (STATUS_BADGE as Record<string, StatusBadge>)[displayStatus] ??
     STATUS_BADGE["in-progress"];
-  const isBlocked = item.status === "blocked";
-  const isPlanned = item.status === "planned";
   const locked = readOnly || item.foreign === true;
   // Same gate as the render branch below — the style must track whichever
   // branch actually renders so an editable-but-locked card still gets the
@@ -204,6 +269,11 @@ export function ItemCard({
           <span
             className="inline-flex w-fit shrink-0 items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[10px] font-semibold"
             style={{ background: badge.bg, color: badge.text }}
+            title={
+              alarmLocked
+                ? "Status is set by the covering risk/blocker — resolve it to change."
+                : undefined
+            }
           >
             {badge.label}
           </span>

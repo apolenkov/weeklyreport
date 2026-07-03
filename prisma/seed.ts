@@ -877,6 +877,19 @@ async function main() {
       mitigation: "Изолированный стенд для нагрузки запланирован на следующий спринт",
       stageNames: ["Testing"],
     },
+    // record-status-derived-from-risk: the covering blocker for Olga's DevOps
+    // item (5156). The item itself is stored `in_progress` now — its blocked
+    // pill DERIVES from this blocked-severity risk (single source of truth).
+    {
+      id: riskId(6),
+      reportSectionId: sectionId("1", 5),
+      projectId: "a0000000-0000-4000-8000-000000000209",
+      risk: "Настройка DevOps-конвейера заблокирована ожиданием Dev-фикса",
+      impact: "Блокирует выкатку Платёжного шлюза до устранения",
+      mitigation: "Эскалировано команде Dev; ETA фикса — начало следующего спринта",
+      stageNames: ["DevOps"],
+      severity: "blocked",
+    },
   ];
 
   for (const r of risks) {
@@ -889,6 +902,9 @@ async function main() {
         impact: r.impact,
         mitigation: r.mitigation,
         stageNames: r.stageNames,
+        // record-status-derived-from-risk: carry the explicit severity so a
+        // re-seed keeps the blocked severity (others fall to the column default).
+        ...("severity" in r ? { severity: r.severity } : {}),
       },
       create: r,
     });
@@ -928,8 +944,10 @@ async function main() {
     });
   }
 
-  // LSC-06: Olga blocked item on DevOps stage (no explicit stageStatus).
-  // After deriveEffectiveStageStatus fix the DevOps chip shows blocked (#fee2e2).
+  // LSC-06: Olga's DevOps item on Платёжный шлюз. record-status-derived-from-risk:
+  // the item is stored `in_progress` — its blocked pill DERIVES at render from the
+  // covering blocked-severity risk riskId(6) on the same section/product/stage
+  // (single source of truth). No bare stored `blocked` without a backing risk.
   await prisma.item.upsert({
     where: { id: "a0000000-0000-4000-8000-000000005156" },
     update: {
@@ -938,7 +956,7 @@ async function main() {
       type: ItemType.current,
       text: "Настройка DevOps-конвейера для Платёжного шлюза",
       tag: "infra",
-      workflowStatus: ItemWorkflowStatus.blocked,
+      workflowStatus: ItemWorkflowStatus.in_progress,
       stageNames: ["DevOps"],
     },
     create: {
@@ -948,7 +966,7 @@ async function main() {
       type: ItemType.current,
       text: "Настройка DevOps-конвейера для Платёжного шлюза",
       tag: "infra",
-      workflowStatus: ItemWorkflowStatus.blocked,
+      workflowStatus: ItemWorkflowStatus.in_progress,
       stageNames: ["DevOps"],
     },
   });

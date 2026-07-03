@@ -22,7 +22,11 @@
 
 import { shortNameFromName } from "@customreport/shared";
 
-import { type ItemStatus, workflowToItemStatus } from "./item-status";
+import {
+  applyBlockedRiskOverlay,
+  type ItemStatus,
+  workflowToItemStatus,
+} from "./item-status";
 import {
   type LeadDecisionEntry,
   type LeadKanbanItem,
@@ -216,8 +220,18 @@ export function mapForeignItems(
   productNameById: ReadonlyMap<string, string>,
   itemType: "current" | "next",
 ): ForeignKanbanItem[] {
-  return rows.flatMap((ca) =>
-    ca.items
+  return rows.flatMap((ca) => {
+    // record-status-derived-from-risk: the foreign item's blocked derives from
+    // the author's own covering risks (blocked-only overlay) — the SAME rule the
+    // lead card applies — so a stored blocked never shows without a backing risk.
+    const alarmRisks = ca.risks.map((r) => ({
+      productId: r.projectId,
+      stageIds: r.stageNames,
+      severity:
+        r.severity === "blocked" ? ("blocked" as const) : ("at-risk" as const),
+      text: r.risk,
+    }));
+    return ca.items
       .filter((i) => i.type === itemType)
       .map(
         (i): ForeignKanbanItem => ({
@@ -225,7 +239,11 @@ export function mapForeignItems(
           productId: i.projectId,
           productName: productNameById.get(i.projectId) ?? i.projectId,
           stageIds: i.stageNames,
-          status: coerceWorkflowToItemStatus(i.workflowStatus),
+          status: applyBlockedRiskOverlay(
+            coerceWorkflowToItemStatus(i.workflowStatus),
+            { projectId: i.projectId, stageIds: i.stageNames },
+            alarmRisks,
+          ),
           text: i.text,
           author: shortNameFromName(ca.authorName),
           // Foreign (read-only) items never surface a priority control.
@@ -233,8 +251,8 @@ export function mapForeignItems(
           authorId: ca.authorId,
           foreign: true,
         }),
-      ),
-  );
+      );
+  });
 }
 
 /**

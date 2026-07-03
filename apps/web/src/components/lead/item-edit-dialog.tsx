@@ -64,13 +64,6 @@ interface ItemEditDialogProps {
    * gracefully — the collision set is visible but the dialog never crashes.
    */
   readonly ownPeriodRanks?: readonly number[];
-  /**
-   * Create-mode initial status chip. The quick-add "blocker" entry opens this
-   * SAME dialog with "blocked" pre-selected — a blocker is a current item
-   * with `workflowStatus=blocked`, not a new record type. Ignored in edit
-   * mode (the bound item's status wins).
-   */
-  readonly defaultStatus?: ItemStatus;
   readonly onSave: (next: KanbanItem) => void;
   readonly onCancel: () => void;
 }
@@ -83,6 +76,10 @@ interface Choice {
   border: string;
 }
 
+// record-status-derived-from-risk: no free "Blocked" chip. An item's blocked /
+// at-risk alarm is DERIVED from a covering risk (the card floors it), never a
+// free item status — "set blocked" routes through blocker (risk) creation via
+// the quick-add "Blocker" entry. Only progress states are authorable here.
 const CURRENT_WEEK_CHOICES: readonly Choice[] = [
   {
     value: "completed",
@@ -97,13 +94,6 @@ const CURRENT_WEEK_CHOICES: readonly Choice[] = [
     bg: "var(--color-success)",
     color: "var(--color-primary)",
     border: "var(--color-starbucks-accent)",
-  },
-  {
-    value: "blocked",
-    label: "✕ Blocked",
-    bg: "#fee2e2",
-    color: "var(--color-destructive)",
-    border: "var(--color-destructive)",
   },
 ];
 
@@ -238,7 +228,6 @@ function ItemEditDialogContent({
   defaultProductId,
   stagesForProduct,
   ownPeriodRanks,
-  defaultStatus,
   onSave,
   onCancel,
 }: ItemEditDialogProps) {
@@ -264,12 +253,17 @@ function ItemEditDialogContent({
     id: "",
     productId: seedProduct?.id ?? "",
     productName: seedProduct?.name ?? "",
-    status: defaultStatus ?? (week === "current" ? "in-progress" : "planned"),
+    status: week === "current" ? "in-progress" : "planned",
     text: "",
     author: currentUserName ?? "You",
   };
   const [text, setText] = useState(initial.text);
-  const [status, setStatus] = useState<ItemStatus>(initial.status);
+  // record-status-derived-from-risk: a legacy stored `blocked` opens as
+  // in-progress — `blocked` is no longer a free item status (the covering risk
+  // owns the alarm), so re-saving never re-persists a bare `blocked`.
+  const [status, setStatus] = useState<ItemStatus>(
+    initial.status === "blocked" ? "in-progress" : initial.status,
+  );
   // activity-first-class: the record's parent — a product OR an attached
   // activity (XOR). Seeded from the bound row on edit, or from the create-mode
   // default product (falling back to the first activity for an activity-only

@@ -799,12 +799,11 @@ export function LeadForm({
   const [nextWeekAddSignal, setNextWeekAddSignal] = useState(0);
   const [risksAddSignal, setRisksAddSignal] = useState(0);
   const [decisionsAddSignal, setDecisionsAddSignal] = useState(0);
-  // Quick-add item dialog host (current-item / next-item / blocker). Risk and
-  // decision quick-adds ride the existing section add-signals instead; `seq`
+  // Quick-add item dialog host (current-item / next-item only). Risk, blocker,
+  // and decision quick-adds ride the existing section add-signals instead; `seq`
   // remounts the dialog per open so its state re-seeds.
   const [quickAddItem, setQuickAddItem] = useState<{
     week: "current" | "next";
-    status?: "blocked";
     seq: number;
   } | null>(null);
 
@@ -1470,11 +1469,13 @@ export function LeadForm({
   }
 
   // ---- Quick-add ----
-  // One picker, five entries, all routed to the EXISTING per-type dialogs:
-  // risk/decision bump the section add-signals; the item kinds open the
-  // form-level dialog host below ("blocker" = current item pre-set blocked).
+  // One picker, five entries, all routed to the EXISTING per-type dialogs.
+  // record-status-derived-from-risk: a "blocker" is a blocked-severity RISK, not
+  // a free-blocked item — it rides the risk add-signal so "set blocked" routes
+  // through risk creation, exactly like the "risk" entry. risk/decision bump the
+  // section add-signals; the current/next item kinds open the form-level host.
   function handleQuickAdd(kind: QuickAddKind) {
-    if (kind === "risk") {
+    if (kind === "risk" || kind === "blocker") {
       setRisksAddSignal((value) => value + 1);
       return;
     }
@@ -1484,7 +1485,6 @@ export function LeadForm({
     }
     setQuickAddItem((prev) => ({
       week: kind === "next-item" ? "next" : "current",
-      ...(kind === "blocker" ? { status: "blocked" as const } : {}),
       seq: (prev?.seq ?? 0) + 1,
     }));
   }
@@ -1878,6 +1878,7 @@ export function LeadForm({
                   >
                     <CurrentWeekSection
                       items={currentWeekItems}
+                      risks={ownRisks}
                       readOnly={isReadOnly}
                       onItemsChange={handleCurrentWeekItemsChange}
                       currentUserName={currentUser.name}
@@ -1922,6 +1923,7 @@ export function LeadForm({
                   >
                     <NextWeekSection
                       items={nextWeekItems}
+                      risks={ownRisks}
                       readOnly={isReadOnly}
                       onItemsChange={handleNextWeekItemsChange}
                       currentUserName={currentUser.name}
@@ -2082,9 +2084,9 @@ export function LeadForm({
       )}
 
       {/* Quick-add item dialog host — the EXISTING item dialog opened by the
-          picker for current-item / next-item / blocker (blocker = current
-          item pre-set to Blocked). Risk/decision quick-adds open the dialogs
-          the sections already host, via their add-signals. */}
+          picker for current-item / next-item. Risk, blocker, and decision
+          quick-adds open the dialogs the sections already host, via their
+          add-signals (a blocker is a blocked-severity risk). */}
       <ItemEditDialog
         key={`quick-add-${quickAddItem?.seq ?? 0}`}
         open={quickAddItem !== null}
@@ -2096,7 +2098,6 @@ export function LeadForm({
         defaultProductId={products[0]?.id}
         stagesForProduct={stagesForProduct}
         ownPeriodRanks={ownPeriodRanks}
-        defaultStatus={quickAddItem?.status}
         onSave={handleQuickAddSave}
         onCancel={() => setQuickAddItem(null)}
       />

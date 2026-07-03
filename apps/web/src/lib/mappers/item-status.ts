@@ -8,6 +8,8 @@
  * completed=false for explicit in-progress.
  */
 
+import { type AlarmRisk, deriveItemAlarmFromRisks } from "../item-alarm";
+
 export type ItemWorkflowStatus = "done" | "in_progress" | "blocked";
 export type ItemType = "current" | "next";
 export type ItemStatus = "in-progress" | "completed" | "blocked" | "planned";
@@ -76,4 +78,47 @@ export function deriveItemStatus(item: {
     return workflowToItemStatus(item.workflowStatus);
   }
   return "in-progress";
+}
+
+/**
+ * record-status-derived-from-risk: apply the covering-risk BLOCKED overlay to a
+ * base progress status — the SAME derivation the lead card uses. A `blocked`
+ * base is a legacy stored value; it shows as in-progress unless a covering
+ * blocked-severity risk exists. `at-risk` amber stays deferred to a later
+ * head-parity pass, so ONLY the blocked overlay is applied on the head surfaces.
+ */
+export function applyBlockedRiskOverlay(
+  base: ItemStatus,
+  parent: { projectId: string; stageIds?: readonly string[] | null },
+  alarmRisks: readonly AlarmRisk[],
+): ItemStatus {
+  // Coerce a stored blocked to in-progress before the overlay so the
+  // derivation's in-progress eligibility gate fires.
+  const eligible = base === "blocked" ? "in-progress" : base;
+  const covered = deriveItemAlarmFromRisks(
+    {
+      productId: parent.projectId,
+      stageIds: parent.stageIds ?? undefined,
+      status: eligible,
+    },
+    alarmRisks,
+  );
+  return covered === "blocked" ? "blocked" : eligible;
+}
+
+/**
+ * The head-report item badge status: the stored-field progress status with the
+ * covering-risk blocked overlay applied (see {@link applyBlockedRiskOverlay}).
+ */
+export function deriveHeadItemStatus(
+  item: {
+    workflowStatus: ItemWorkflowStatus | null;
+    type: ItemType;
+    completed?: boolean | null;
+    projectId: string;
+    stageIds?: readonly string[] | null;
+  },
+  alarmRisks: readonly AlarmRisk[],
+): ItemStatus {
+  return applyBlockedRiskOverlay(deriveItemStatus(item), item, alarmRisks);
 }

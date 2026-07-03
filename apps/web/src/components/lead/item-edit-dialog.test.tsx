@@ -108,7 +108,7 @@ describe("ItemEditDialog — D-12 reopen reset", () => {
       productId: "p1",
       productName: "DevOps Tools",
       text: "Persisted item text",
-      status: "blocked",
+      status: "completed",
       author: "Test Lead",
       stageIds: ["Dev"],
     };
@@ -164,7 +164,7 @@ describe("ItemEditDialog — D-12 reopen reset", () => {
     expect(screen.getByLabelText(/Description \*/i)).toHaveValue(
       "Persisted item text",
     );
-    expect(screen.getByRole("button", { name: /Blocked/i })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: /Completed/i })).toHaveAttribute(
       "aria-pressed",
       "true",
     );

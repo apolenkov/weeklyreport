@@ -53,7 +53,7 @@ describe("QuickAddButton", () => {
   });
 });
 
-describe("quick-add blocker preset on the existing item dialog", () => {
+describe("record-status-derived-from-risk: item dialog has no free Blocked chip", () => {
   const products = [
     {
       id: "p1",
@@ -63,51 +63,52 @@ describe("quick-add blocker preset on the existing item dialog", () => {
     },
   ];
 
-  it("pre-selects the Blocked status chip in create mode", () => {
+  it("offers only progress statuses — the blocked/at-risk alarm derives from a covering risk", () => {
     render(
       <ItemEditDialog
         open
         item={null}
         products={products}
         week="current"
-        defaultStatus="blocked"
         onSave={vi.fn()}
         onCancel={vi.fn()}
       />,
     );
-    expect(screen.getByRole("button", { name: "✕ Blocked" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(
+      screen.getByRole("button", { name: "! In Progress" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "✓ Completed" }),
+    ).toBeInTheDocument();
+    // "set blocked" now routes through blocker (risk) creation, so the free
+    // Blocked chip is gone from the item dialog entirely.
+    expect(
+      screen.queryByRole("button", { name: "✕ Blocked" }),
+    ).not.toBeInTheDocument();
   });
 
-  it("saves a current-week item with blocked status — no new record type", () => {
-    const onSave = vi.fn();
+  it("opens a legacy stored-blocked item as In Progress (blocked is derived only)", () => {
     render(
       <ItemEditDialog
         open
-        item={null}
+        item={{
+          id: "i1",
+          productId: "p1",
+          productName: "Product 1",
+          status: "blocked",
+          text: "Legacy blocked row",
+          author: "Lead",
+        }}
         products={products}
         week="current"
-        defaultStatus="blocked"
         stagesForProduct={() => ["Development"]}
-        onSave={onSave}
+        onSave={vi.fn()}
         onCancel={vi.fn()}
       />,
     );
-    fireEvent.change(screen.getByLabelText("Description *"), {
-      target: { value: "Blocked by vendor" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Save Item" }));
-    expect(onSave).toHaveBeenCalledWith(
-      expect.objectContaining({
-        status: "blocked",
-        text: "Blocked by vendor",
-        // Single owned stage auto-applies — the stage invariant holds
-        // without a tap when exactly one stage is owned.
-        stageIds: ["Development"],
-      }),
-    );
+    expect(
+      screen.getByRole("button", { name: "! In Progress" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
   it("still enforces a stage choice when several stages are owned", () => {
@@ -118,14 +119,13 @@ describe("quick-add blocker preset on the existing item dialog", () => {
         item={null}
         products={products}
         week="current"
-        defaultStatus="blocked"
         stagesForProduct={() => ["Development", "Testing"]}
         onSave={onSave}
         onCancel={vi.fn()}
       />,
     );
     fireEvent.change(screen.getByLabelText("Description *"), {
-      target: { value: "Blocked by vendor" },
+      target: { value: "Needs a stage" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Save Item" }));
     expect(onSave).not.toHaveBeenCalled();

@@ -11,7 +11,7 @@ import type {
 import { initialsFromName as sharedInitialsFromName } from "@customreport/shared";
 
 import { formatPeriodRangeWithYear, formatWeekLabel } from "../format-date";
-import { deriveItemStatus } from "./item-status";
+import { deriveHeadItemStatus } from "./item-status";
 import { trafficToStageStatus } from "./traffic-light";
 import type {
   WeeklyProductStatus,
@@ -102,6 +102,14 @@ export function groupItemsByProject(
   >();
   for (const section of sections) {
     const initials = initialsFromName(section.authorName);
+    // record-status-derived-from-risk: the covering risks the head badge overlay
+    // reads (blocked-only) — same shape the lead card derives from.
+    const alarmRisks = section.risks.map((risk) => ({
+      productId: risk.projectId ?? "",
+      stageIds: risk.stageIds ?? undefined,
+      severity: risk.severity ?? ("at-risk" as const),
+      text: risk.risk,
+    }));
     for (const item of section.items) {
       // activity-first-class: activity-parented items (projectId null) render
       // under their activity, not a product column — skip them here.
@@ -123,11 +131,16 @@ export function groupItemsByProject(
         stage: stagePart,
         owner: initials,
         text: item.text,
-        status: deriveItemStatus({
-          workflowStatus: item.workflowStatus,
-          type: item.type,
-          completed: item.completed ?? null,
-        }),
+        status: deriveHeadItemStatus(
+          {
+            workflowStatus: item.workflowStatus,
+            type: item.type,
+            completed: item.completed ?? null,
+            projectId: item.projectId,
+            stageIds: item.stageIds,
+          },
+          alarmRisks,
+        ),
         priorityRank: item.priorityRank ?? null,
         // review-acknowledgement: carry the reviewer comments + this caller's
         // review capability for the section so the accordion row can surface
