@@ -45,6 +45,46 @@ This file RECORDS the recommendations; it does NOT rewrite the Codex-hardened sp
   This REVERSES the within-group float shipped + live-verified today (2e5fb45e). **Needs your
   nod** — I deliberately did NOT implement it (would preempt your call + re-reverse my own commit).
 
+## RESOLVED 2026-07-03 — full 3/3 council re-run, owner-delegated, LOCKED
+
+Owner (Саша) delegated the Q1/Q2/Q7 call to an autonomous council. A fresh
+adversarial council ran with all three lenses surviving (product-parity-UX,
+mvp-pragmatist, integrity-purist — the prior degradation is gone). Every
+override was code-verified before locking. These are now DECISIONS.
+
+- **Q1 — LOCKED: show activities as ONE severity-free COUNT column** in the
+  existing per-lead `LeadSummaryTable` / `LeadInfo` (add `activityCount?: number`
+  in `apps/web/src/lib/mappers/dashboard.ts`). NOT a separate lane, NOT a derived
+  activity-STATUS roll-up (activity SEVERITY stays deferred to Phase 2). Escalation
+  table + portfolio KPI product-health isolation (lock 0.1) stays fully intact.
+  **Load-bearing coupling into the epic:** the existing product count columns read
+  RAW section arrays (`dashboard.ts:315-320`, e.g. `section.risks.length`) — they
+  are NOT product-scoped. Once the epic lands activity-parented items/risks in the
+  flat `section.items`/`section.risks` with null `projectId`, those columns inflate
+  with activity work. So the product count columns MUST exclude null-`projectId`
+  records and `activityCount` = the activity-parented count. Handled in the epic's
+  head/dashboard UI phase.
+
+- **Q2 — LOCKED: Option A (derive-only), PHASED, PURE OVERLAY** (no transitional
+  stored dual-write). NOW slice (record-status-derived-from-risk): item-card pill
+  derives from covering risks + covered pill locked + no free toggle; remove the
+  free blocked/at-risk chips from `CURRENT_WEEK_CHOICES` ("set blocked" routes
+  through blocked-severity risk creation); re-source the head-report item badge to
+  the same overlay (BOTH consumers: `weekly-report-groupers.ts:123`,
+  `lead-cross-author.ts:228`); re-source escalation `blocked` from blocked-severity
+  risks and REPLACE (delete) the item-sourced push at
+  `published-report-snapshot.ts:272-281`, applying the null-`projectId` activity
+  skip unconditionally; heal/backfill a covering blocked-severity risk for every
+  legacy stored-blocked item (seeds + real data); reconcile the
+  `status-risk-unification` delta. DEFER only the `ItemWorkflowStatus.blocked`
+  enum-VALUE removal (near-moot under the disposable-DB MVP rule).
+
+- **Q7 — LOCKED: KEEP the shipped within-group priority float** (commit
+  `2e5fb45e`). Unanimous 3/3; the HIGH bar to re-reverse same-day-verified work is
+  not met — extraction removes each product's top row from its group (completeness
+  regression) for a marginal cross-product scan. No change to `lead-unified-slide.tsx`.
+  The deviation-from-ask-#9 note stays so Саша can request the two-tier later.
+
 ## Held regardless: the schema epic
 
 `activity-first-class-reporting-unit` (Q3/Q4 resolved) still requires a `prisma migrate reset`
