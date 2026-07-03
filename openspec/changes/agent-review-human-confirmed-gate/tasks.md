@@ -1,5 +1,11 @@
 # Tasks — Agent-Review Human-Confirmed Gate
 
+> **SCOPE 2026-07-04.** Implement **§1 only** (`report-review-mode` — HF9+HF3,
+> LIVE). **§2–§6 are PARKED** (the `agent-review` inert-proposal contract:
+> shared schema, Prisma table/migration, backend gate, web bar, deferred
+> bookkeeping) until agent-review is on the roadmap — see the proposal SCOPE
+> banner. Do not build §2–§6 tonight. §7 verification applies to the §1 slice.
+
 ## 1. report-review-mode — LIVE (HF3 + HF9)
 
 - [ ] 1.1 Add a review-mode/normal-mode toggle to the live report body shell
@@ -42,7 +48,7 @@
       `confirmedBy` User.
 - [ ] 3.2 Hand-write the partial unique index
       `AgentReviewProposal_one_proposed_per_section ON ("reportSectionId") WHERE
-  "status" = 'proposed'` in the init migration (ReopenRequest precedent).
+"status" = 'proposed'` in the init migration (ReopenRequest precedent).
 - [ ] 3.3 `pnpm --filter @customreport/api db:generate`, then
       `prisma migrate reset` with the consent env var; confirm the partial index
       lands (per DB).
