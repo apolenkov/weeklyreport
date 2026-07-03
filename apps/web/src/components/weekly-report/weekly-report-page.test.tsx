@@ -1234,6 +1234,47 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
     expect(publish).not.toBeDisabled();
   });
 
+  it("activity-first-class: a seeded-but-untouched green activity does NOT defeat the empty-state", async () => {
+    // Guards the touched-vs-seeded distinction: seedActivityStatuses defaults an
+    // attached activity to status "green" (never null) on section create, so a
+    // lead who only logged in — green activity, no note, no records, no product
+    // content — is still an empty period. It must read "No submissions yet", not
+    // render a scaffold of seeded-green activity cards.
+    renderPage({
+      ...makeWeeklyReportData("open", {
+        portfolioOverview: [],
+        leadSections: [
+          {
+            reportSectionId: "22222222-2222-4222-8222-aaaaaaaaaaa1",
+            reportId: REPORT_ID,
+            authorId: AUTHOR_ID_A,
+            authorName: "Alice",
+            status: "draft",
+            submittedAt: null,
+            projects: [],
+            items: [],
+            risks: [],
+            decisions: [],
+            priorities: [],
+            activities: [
+              {
+                activityId: "66666666-6666-4666-8666-666666666666",
+                activityName: "Jira triage duty",
+                status: "green",
+                note: null,
+              },
+            ],
+          },
+        ],
+      }),
+      submissionCount: 0,
+    });
+
+    expect(
+      await screen.findByTestId("empty-submissions-state"),
+    ).toBeInTheDocument();
+  });
+
   it("does not offer the filter to a lead on a live period", async () => {
     renderPage(
       makeWeeklyReportData("open", {

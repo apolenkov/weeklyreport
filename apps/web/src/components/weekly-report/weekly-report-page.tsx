@@ -391,11 +391,14 @@ interface AccordionModel {
 
 /**
  * activity-first-class: a section carries activity content when a lead has
- * TOUCHED an attached activity — set its status (derived or stored) or parented
- * ≥1 record to it. Mirrors reportHasContent's strictness: a merely-attached,
- * untouched activity is not a submission, so it must not defeat the "truly empty
- * period" empty-state. Without this an all-activity period (activity content,
- * zero product content) reads "No submissions yet" and cannot publish.
+ * TOUCHED an attached activity — deliberately raised its alarm (yellow/red),
+ * authored a note, or parented ≥1 record to it. A GREEN status does NOT count:
+ * `seedActivityStatuses` defaults every attached activity to green on section
+ * create (never null), so a non-null status is not evidence of lead input.
+ * Mirrors reportHasContent's strictness (a green product status is not content):
+ * a merely-provisioned activity must not defeat the "truly empty period"
+ * empty-state. Without the fold an all-activity period (real activity content,
+ * zero product content) would read "No submissions yet" and could not publish.
  */
 function sectionHasActivityContent(
   // `activities` is optional here (unlike the strict read model) so a legacy /
@@ -411,9 +414,12 @@ function sectionHasActivityContent(
     section.items.some((i) => i.activityId === activityId) ||
     section.risks.some((r) => r.activityId === activityId) ||
     section.decisions.some((d) => d.activityId === activityId);
-  return activities.some(
-    (a) => (a.derivedStatus ?? a.status) != null || ownsRecord(a.activityId),
-  );
+  return activities.some((a) => {
+    const alarm = a.derivedStatus ?? a.status;
+    if (alarm === "yellow" || alarm === "red") return true;
+    if (a.note != null && a.note.trim() !== "") return true;
+    return ownsRecord(a.activityId);
+  });
 }
 
 /**

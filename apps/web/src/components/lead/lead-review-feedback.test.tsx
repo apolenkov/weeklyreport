@@ -27,11 +27,16 @@ function comment(id: string, text: string) {
   };
 }
 
-// mapLeadReviewFeedback reads only projects/items/risks/decisions, so a partial
-// section is a faithful fixture (cast keeps the test free of unrelated fields).
+// mapLeadReviewFeedback reads projects/items/risks/decisions plus `activities`
+// (to label an activity-parented record), so a faithful fixture provides all of
+// them — `activities: []` mirrors the read model's schema default (the cast
+// keeps the test free of unrelated fields).
 function sectionWith(
   overrides: Partial<
-    Pick<ReportSectionReadModel, "projects" | "items" | "risks" | "decisions">
+    Pick<
+      ReportSectionReadModel,
+      "projects" | "items" | "risks" | "decisions" | "activities"
+    >
   >,
 ): ReportSectionReadModel {
   return {
@@ -41,6 +46,7 @@ function sectionWith(
     items: [],
     risks: [],
     decisions: [],
+    activities: [],
     ...overrides,
   } as unknown as ReportSectionReadModel;
 }
@@ -103,6 +109,45 @@ describe("mapLeadReviewFeedback", () => {
     });
 
     expect(mapLeadReviewFeedback(section)).toEqual([]);
+  });
+
+  it("labels an activity-parented record with the activity name, not 'Unknown'", () => {
+    const section = sectionWith({
+      activities: [
+        {
+          activityId: "act-1",
+          activityName: "Jira triage duty",
+          status: "green",
+          derivedStatus: "green",
+          note: null,
+          linkedProducts: [],
+        },
+      ] as unknown as ReportSectionReadModel["activities"],
+      decisions: [
+        {
+          id: "d1",
+          productId: null,
+          activityId: "act-1",
+          text: "Escalate the backlog",
+          owner: "Lead",
+          impact: "x",
+          deadline: null,
+          resolvedAt: null,
+          stageIds: [],
+          comments: [comment("c1", "Confirm scope")],
+        },
+      ],
+    });
+
+    const result = mapLeadReviewFeedback(section);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      id: "d1",
+      kind: "decision",
+      productName: "Jira triage duty",
+      text: "Escalate the backlog",
+    });
   });
 });
 

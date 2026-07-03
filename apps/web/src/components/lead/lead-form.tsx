@@ -1100,28 +1100,42 @@ export function LeadForm({
       const merged = next.map((d) => {
         const existing = existingById.get(d.id);
         const deadline = d.deadline ? new Date(d.deadline) : null;
+        // activity-first-class: XOR parent — an activity-parented decision clears
+        // productId and carries no stage; a product row keeps today's shape.
+        // Parity with the item/risk merge handlers — without it a decision the
+        // lead scopes to an activity is saved parent-less and fails the server
+        // XOR rule, rejecting the whole section save.
+        const parentFields = d.activityId
+          ? {
+              productId: null,
+              activityId: d.activityId,
+              stageIds: [] as string[],
+            }
+          : {
+              productId: d.productId || null,
+              activityId: null,
+              stageIds: d.stageIds,
+            };
         if (existing) {
           return {
             ...existing,
+            ...parentFields,
             text: d.text,
             owner: d.owner,
             impact: d.impact,
             deadline,
             stageName: null,
-            stageIds: d.stageIds,
-            productId: d.productId || null,
           };
         }
         return {
           id: d.id,
+          ...parentFields,
           text: d.text,
           owner: d.owner,
           impact: d.impact,
           deadline,
           resolvedAt: null,
           stageName: null,
-          stageIds: d.stageIds,
-          productId: d.productId || null,
         };
       });
       // activity-first-class: preserve activity-parented decisions — the product
