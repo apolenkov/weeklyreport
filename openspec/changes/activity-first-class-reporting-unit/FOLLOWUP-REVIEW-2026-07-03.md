@@ -36,18 +36,29 @@ Workflows (backend + UI, each finding verified) surfaced 9 findings. Fixed:
   activity-name index and resolves an activity-parented record's label from it
   (product name wins when present, else activity name, else "Unknown").
 
-## Still deferred (documented so they are not lost)
+## Fixed — #5 core (2026-07-03)
 
-- **#5 (HIGH, rare) — activity-only-period empty-state.** A reporting period with
-  activity content but ZERO product content anywhere is swallowed by the head
-  report's "No submissions yet" empty-state and cannot publish, because
-  `hasAnyContent = fullProducts.some(reportHasContent)`
-  (`weekly-report-page.tsx` `buildAccordionModel`) counts only product content.
-  A naive `|| hasActivityContent` OR broke 23 weekly-report tests — the fix must
-  respect the submitted-only filter and the draft-signal state machine (the
-  §7 "Submitted/All filter + anti-empty-state" tests encode it). FIX PROPERLY:
-  compute activity content per the SAME submitted filter as products (submitted
-  sections' attached activities), fold it into `hasAnyContent` AND the
-  draft-signal branch, and update the §7 fixtures/tests. Only triggers on an
-  all-activity report, so low practical urgency but a real gap in Decision 0.2.
-  This is the LAST finding blocking the epic's archive.
+- **#5 (HIGH, rare) — activity-only-period empty-state.** DONE (Gate 1). The
+  "truly empty period" gate `hasAnyContent` now folds in activity content:
+  `fullProducts.some(reportHasContent) || leadSections.some(sectionHasActivityContent)`
+  (`weekly-report-page.tsx`). `sectionHasActivityContent` mirrors
+  `reportHasContent`'s strictness — a section has activity content only when a
+  lead TOUCHED an attached activity (non-null derived-or-stored status, or ≥1
+  owned record), never a merely-attached, untouched activity (that would make
+  the empty-state dead in production). This fixes the reported bug — an
+  all-activity SUBMITTED period ("cannot publish" ⇒ submitted) now renders the
+  activity strip and unblocks Publish & Lock (`canPublishReport = submitted > 0
+&& hasAnyContent`). New regression test asserts: no empty-state, strip renders,
+  publish enabled. Full `weekly-report-page.test.tsx` (31) green — the earlier
+  23-test break did NOT recur.
+
+## Known minor edge — Gate 2 (deferred, NOT archive-blocking)
+
+- The draft-signal (`draftCount` / `mapWeeklyReportLeadGroups`) is unchanged, so
+  an activity-only DRAFT period viewed under the submitted-only default shows a
+  sparse body (no strip, no "N in draft — Show all") rather than the signal.
+  This is doubly-rare (activity-only AND all-draft AND submitted-view), produces
+  only a sparse body — never a wrong publish or data loss — and touching the
+  `draftCount` coupling is exactly where the 23-test break lived. Left as a
+  documented follow-up: fold activity content into the draft-signal branch with
+  its own §7 fixture/test, separately from the archive.

@@ -1181,6 +1181,59 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
     expect(screen.getByText("Draft-only vendor note")).toBeInTheDocument();
   });
 
+  it("activity-first-class: an all-activity submitted period renders (no empty-state) and can publish", async () => {
+    // Regression for the #5 gap: a submitted section whose ONLY content is a
+    // touched activity (status set, zero product content anywhere) must NOT read
+    // "No submissions yet" and must be publishable — hasAnyContent folds in
+    // activity content, not just product content.
+    renderPage({
+      ...makeWeeklyReportData("open", {
+        portfolioOverview: [],
+        leadSections: [
+          {
+            reportSectionId: "22222222-2222-4222-8222-aaaaaaaaaaa1",
+            reportId: REPORT_ID,
+            authorId: AUTHOR_ID_A,
+            authorName: "Alice",
+            status: "submitted",
+            submittedAt: new Date("2026-04-14T09:00:00Z"),
+            projects: [],
+            items: [],
+            risks: [],
+            decisions: [],
+            priorities: [],
+            activities: [
+              {
+                activityId: "66666666-6666-4666-8666-666666666666",
+                activityName: "Jira triage duty",
+                status: "green",
+                note: "Handled 20 tickets",
+              },
+            ],
+          },
+        ],
+      }),
+      submissionCount: 1,
+    });
+
+    await screen.findByRole("heading", { name: /status report/i });
+
+    // The truly-empty-period empty-state must NOT show — there is real content.
+    expect(
+      screen.queryByTestId("empty-submissions-state"),
+    ).not.toBeInTheDocument();
+
+    // The submitted activity renders under the default submitted-only view.
+    expect(
+      await screen.findByTestId("activity-status-strip"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Jira triage duty")).toBeInTheDocument();
+
+    // Publish is unblocked: submitted > 0 AND hasAnyContent (activity content).
+    const publish = screen.getByRole("button", { name: /publish & lock/i });
+    expect(publish).not.toBeDisabled();
+  });
+
   it("does not offer the filter to a lead on a live period", async () => {
     renderPage(
       makeWeeklyReportData("open", {
