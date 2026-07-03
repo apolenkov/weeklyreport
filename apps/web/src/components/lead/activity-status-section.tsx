@@ -84,9 +84,17 @@ function ActivityStatusPills({
   ) => void;
 }) {
   const [refused, setRefused] = useState(false);
-  const floor = card.derivedStatus;
+  // The enforceable floor is the RECORD-ONLY alarmFloor (covering risks/blockers),
+  // NOT derivedStatus — which folds in the lead's own stored choice and would
+  // wrongly lock a status the lead raised themselves (Decision 5).
+  const floor = card.alarmFloor;
+  const stored: TrafficLightStatus = card.status ?? "green";
+  // Display the lead's current pick floored by the alarm, computed client-side so
+  // the active pill tracks a local pick immediately (no save+refetch needed).
   const displayStatus: TrafficLightStatus =
-    card.derivedStatus ?? card.status ?? "green";
+    floor != null && SEVERITY_RANK[floor] > SEVERITY_RANK[stored]
+      ? floor
+      : stored;
 
   function pick(next: TrafficLightStatus) {
     if (floor != null && SEVERITY_RANK[next] < SEVERITY_RANK[floor]) {
@@ -94,10 +102,17 @@ function ActivityStatusPills({
       return;
     }
     setRefused(false);
-    // A pick AT the floor is not a genuine change to the lead's own choice — the
-    // pill already shows the floor. Don't overwrite the stored status with it, so
-    // clearing the covering risk restores the lead's earlier choice (Decision 5).
-    if (floor != null && SEVERITY_RANK[next] === SEVERITY_RANK[floor]) return;
+    // When the alarm floor sits ABOVE the lead's stored choice the pill is showing
+    // the floor, not their pick — clicking it must NOT overwrite the lower stored
+    // value, so clearing the covering risk restores it (Decision 5). When stored
+    // is at/above the floor, a pick is a genuine change and writes through.
+    if (
+      floor != null &&
+      SEVERITY_RANK[floor] > SEVERITY_RANK[stored] &&
+      SEVERITY_RANK[next] === SEVERITY_RANK[floor]
+    ) {
+      return;
+    }
     onStatusChange(card.activityId, next);
   }
 

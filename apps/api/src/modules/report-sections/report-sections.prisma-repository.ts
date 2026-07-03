@@ -380,19 +380,21 @@ export function deriveEffectiveProductStatus(project: {
 }
 
 /**
- * activity-first-class (design decision 5): the activity pill's render-time
- * status floor. An activity has no SDLC stage, so it is floored by its OWN
- * records only — a blocked item or a `blocked` risk forces red, an `at-risk`
- * risk forces at least yellow, else the stored/lead-chosen status passes
- * through. NEVER rewrites the stored `ActivityStatus.status`; removing the
- * risk/blocker restores the lead's choice. Returns null only when nothing
- * floors AND the stored status is null (the pill then falls back to `status`).
+ * activity-first-class (design decision 5): the activity pill's status floor.
+ * An activity has no SDLC stage, so it is floored by its OWN records only — a
+ * blocked item or a `blocked` risk forces red, an `at-risk` risk forces at
+ * least yellow. `alarmFloor` is that RECORD-ONLY floor (never the lead's stored
+ * choice); `derivedStatus` folds the stored status in for the read-only render
+ * surfaces (slides, head report). The stored `ActivityStatus.status` is NEVER
+ * rewritten. The interactive lead picker gates a manual lower on `alarmFloor`
+ * alone, so a lead can still lower a status they raised themselves when no
+ * covering risk/blocker holds it up.
  */
 function deriveActivityStatus(
   stored: TrafficLight | null,
   ownItemBlocked: boolean,
   ownRisks: readonly { severity: string }[],
-): TrafficLight | null {
+): { derivedStatus: TrafficLight | null; alarmFloor: TrafficLight | null } {
   const itemFloor: TrafficLight | null = ownItemBlocked ? "red" : null;
   const riskFloor = ownRisks.reduce<TrafficLight | null>(
     (acc, risk) =>
@@ -402,7 +404,8 @@ function deriveActivityStatus(
       ),
     null,
   );
-  return worseTraffic(stored, worseTraffic(itemFloor, riskFloor));
+  const alarmFloor = worseTraffic(itemFloor, riskFloor);
+  return { derivedStatus: worseTraffic(stored, alarmFloor), alarmFloor };
 }
 
 // review-acknowledgement: project the joined RecordComment rows onto the
@@ -645,7 +648,7 @@ export function mapPrismaToReportSection(
             productName: link.product.name,
           }))
           .sort((a, b) => a.productName.localeCompare(b.productName, "ru")),
-        derivedStatus: deriveActivityStatus(
+        ...deriveActivityStatus(
           asTraffic(status.status),
           row.items.some(
             (i) =>
