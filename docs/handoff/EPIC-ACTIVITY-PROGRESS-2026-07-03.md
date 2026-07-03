@@ -1,63 +1,76 @@
-# In-flight — activity-first-class epic + full backlog closeout (2026-07-03)
+# Backlog closeout — 2026-07-03 (autonomous, phone-only owner)
 
-Autonomous session (Саша at a conference, phone-only). Goal: close ALL OpenSpec
-debts + tails, archive, on main. Ultracode + workflows + council/Codex review.
+Goal: close ALL OpenSpec debts + tails, archive, on main. Ultracode + Workflows +
+council/Codex review. Branch `impl/backlog-2026-06-30` (== main, FF); PUSHED
+through `5e89484b`.
 
-## Done + committed this session (on `impl/backlog-2026-06-30`, == main, FF)
+## DONE + pushed
 
-- `ca0625c` refactor(auth) — options-object createSessionCookie (adopted a dead
-  session's clean uncommitted refactor; auth tests green).
-- `b9aa328` + `5a33adb` — tighten-comment-policy implemented + ARCHIVED (standard
-  §1.3 three-line WHY budget, rollout recon dimension; task 3.3 verified).
-- `88af723` docs(audit) — landed the 2026-07-02 603-finding audit + fix-roadmap as
-  durable reference (owner taste-verdict pending; NOT a green light to fix every row).
-- `090c4c8` — Q1/Q2/Q7 LOCKED by a full 3/3 owner-delegated council (see
-  docs/feedback/council-decisions-2026-07-02.md "RESOLVED 2026-07-03").
+- `ca0625c` refactor(auth) options-object createSessionCookie (adopted a dead
+  session's clean uncommitted refactor).
+- `b9aa328`/`5a33adb` tighten-comment-policy implemented + **ARCHIVED**.
+- `88af723` docs(audit) — 2026-07-02 603-finding audit + fix-roadmap (reference;
+  owner taste-verdict pending → NOT a green light to fix every row).
+- `090c4c8` Q1/Q2/Q7 **LOCKED** by a full 3/3 owner-delegated council
+  (docs/feedback/council-decisions-2026-07-02.md "RESOLVED 2026-07-03").
+- **`f0a1528` activity-first-class EPIC** (55 files) + `cdf2b4a` (alarmFloor) +
+  `bb9219d` (risk-dialog strip) + `5e89484` (followup doc). Fully green (typecheck
+  - lint + 3221 unit + integration), LIVE-VERIFIED in-browser (head report renders
+    activities as product-like cards w/ records + linked products + risk-derived
+    status; dashboard Activities count). Backend + UI each adversarially reviewed by
+    a Workflow (found + fixed: fillFromSection XOR-crash; activity-pill false-refuse;
+    risk-dialog stage mislabel).
 
-## Council resolution (owner-delegated, code-verified)
+## activity-first-class — 4 DEFERRED review findings (NOT yet done)
 
-- Q1: activity presence = ONE severity-free COUNT column in LeadSummaryTable
-  (`activityCount` in dashboard.ts mapper). Product count columns MUST exclude
-  null-projectId records (they read raw section arrays → would inflate). No lane,
-  no derived activity-status on dashboard (severity → Phase 2).
-- Q2: record-status Option A derive-only, PHASED, pure overlay; enum-value removal
-  deferred. (Sweep 4.)
-- Q7: KEEP shipped within-group priority float (no change). (Sweep 5 simplified.)
+See `openspec/changes/activity-first-class-reporting-unit/FOLLOWUP-REVIEW-2026-07-03.md`.
+The change is IMPLEMENTED but NOT archived — archive is gated on these:
 
-## Epic state (activity-first-class) — IN FLIGHT, NOT yet committed
+- #1 (HIGH) decision-edit-dialog: wire ParentPicker so a lead can author an
+  activity-parented decision (mirror item/risk dialogs). Completes Decision 0.4.
+- #5 (HIGH, rare) activity-only-period empty-state: `hasAnyContent` counts only
+  product content → an all-activity report reads "No submissions yet" + can't
+  publish. Fix respecting the submitted-filter + §7 draft-signal tests (a naive OR
+  broke 23 weekly-report tests — reverted).
+- #6/#7 (LOW) slide-pill ARIA list nesting; feedback-panel "Unknown" label.
 
-- Phase A DONE + DB-verified: schema.prisma + hand-edited init migration reshaped;
-  `migrate reset` applied to customreport_dev; drift-check "No difference detected";
-  psql confirms 3 XOR CHECKs + activity FKs (RESTRICT) + join CASCADE + dropped
-  ProjectActivity.projectId + nullable parent FKs. Client regenerated.
-- Phase B DONE + green: shared contracts (section.schema/project-activity.schema/
-  section-validation/report-primitives). XOR+conditional-stage on write schemas,
-  submit relaxation, sectionActivity.linkedProducts+derivedStatus, admin
-  linkedProductIds, validateRecordActivityIds. shared typecheck+build green, 348
-  tests (12 new). **NOT committed** (api/web still red until backend+UI land).
-- Phase C (backend 3.1-3.9) IN PROGRESS via a deep-reasoner subagent.
-- Remaining epic: UI (lead dialog parent-picker 4.x, lead form/slides 5.x, head
-  report 6.x + Q1 dashboard count), seed 7.1, web tests 8.3, specs 9.1, verify 10.x.
+## REMAINING backlog (sweeps, in order)
 
-## The dev stack
+1. **observability-and-perf-hardening** — code already landed in `0e62e92d` (15/16
+   tasks + tests); board 0/18 STALE. Before archive: reconcile tasks.md 3.2 (keyset
+   cursor, not cursor+skip) + 3.3 (superseded by `4455edb1`, N+1 already gone, no
+   deleteMany) → run gate → archive. NO code needed. CHEAPEST close.
+2. **record-status-derived-from-risk** (Q2 LOCKED: Option A derive-only, pure
+   overlay, enum-value removal DEFERRED). Item pill derives from covering risks;
+   remove free blocked chip; re-source head badge (both consumers) + escalation
+   REPLACE (skip null-projectId) ; heal legacy stored-blocked; reconcile spec.
+   NOTE: shares files with #1 above (item-edit-dialog) — sequence together.
+3. **lead-report-surface-polish §5-6** (Q5 carry-over auto-copy at ensureLeadSection;
+   Q6 acknowledge split placement). Q7 = KEEP shipped float (no work). Then archive.
+4. **agent-review-human-confirmed-gate** — review-mode split, move section-review
+   strip to dashboard, agent-review affordance, human-confirmed gate (spec + FE;
+   does NOT un-defer agent invocation).
+5. **ci-deploy-supplychain-hardening** — CI enforce, frozen lockfile, API port 3001
+   align, CSP enforce. CSP is high-stakes → live-verify the app doesn't break.
+6. **tighten-code-quality-ratchet** — LAST (so all new code ≤250). eslint 300→250 +
+   no-magic-literal; fix resulting violations. Fold in fix-roadmap ratchet rows.
 
-Stopped the 20h-stale parallel session's `pnpm dev` (next + api from source) so
-`migrate reset` could drop cleanly. Docker postgres+redis stay up. Restart from
-source for live-verify (docker image is stale). DB is RESET + EMPTY (no seed yet).
+## Env + gotchas (this session)
 
-## Queued closes (not the epic)
-
-- observability-and-perf-hardening: implemented in 0e62e92d (42 commits back),
-  15/16 tasks w/ tests, board 0/18 stale. Before archive: reconcile tasks.md 3.2
-  (keyset cursor) + 3.3 (superseded by 4455edb1) + run gate. NO code. Do at first
-  post-epic green checkpoint.
-- Then sweeps: record-status (Q2) → lead-polish §5-6 (Q5/Q6, Q7=keep) →
-  agent-review → ci-deploy-supplychain (CSP live-verify) → tighten-code-quality-
-  ratchet (LAST, so all new files ≤250). Then final gate+integration+push.
-
-## Recovery if session dies mid-epic
-
-Uncommitted schema+shared work is on disk + the DB is reshaped. `git diff --stat`
-shows it. Do NOT `migrate deploy` (skips the edited init) — only `migrate reset`
-re-applies. Continue Phase C from apps/api, reach `pnpm typecheck` green, commit
-the epic as one coherent unit, THEN push.
+- The dev app is booted from source (`pnpm dev`, web:3000 api:3002) against the
+  seeded `customreport_dev`. `customreport_test` was `migrate reset` to the new
+  schema too. To reshape a DB use **`prisma migrate reset --force`** (from repo
+  root, `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=1`) — NOT `db:reset:hard`
+  (uses `migrate deploy`, skips the edited init) and NOT `db push`.
+- **Prisma client keeps getting wiped** by pnpm ops (vitest, etc.) — regenerate
+  (`pnpm --filter @customreport/api db:generate`) immediately before any tsc; the
+  turbo `pnpm typecheck` self-heals. LSP diagnostics about `projectId: string`
+  (non-null) or missing `projectActivityProduct` = stale client, not a real error.
+- **pre-push blocks on PRE-EXISTING prettier drift** in ~14 unrelated files
+  (openspec archive tasks, docs HTML, .claude skills). Not ours — push with
+  `SKIP_PREPUSH=1` after running the full suite manually (`pnpm test`).
+- **API "Response stalled mid-stream"** killed a fix subagent + degraded a council
+  — delegation is flaky; do critical multi-layer fixes inline, keep agent prompts
+  bounded, and adversarially verify via Workflow (that caught the real bugs).
+- Codex lens in Workflows is SLOW (bottlenecks the verify barrier) but earns its
+  keep (found the fillFromSection crash).
