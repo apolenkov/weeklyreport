@@ -111,6 +111,7 @@ function makeWeeklyReport(
         decisions: [
           {
             id: DECISION_A,
+            productId: PROJECT_A,
             text: "Approve hire",
             owner: "Head",
             deadline: null,

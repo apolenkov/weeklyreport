@@ -8,19 +8,23 @@ import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { ProjectActivityRepository } from "./project-activity.service.js";
 
-// Prisma row shape shared by every read below (leads joined for `leadIds`).
+// Prisma row shape shared by every read below (leads joined for `leadIds`,
+// label-only product links joined for `linkedProducts`).
 const activityInclude = {
   leads: { select: { leadId: true } },
+  activityProducts: {
+    select: { product: { select: { id: true, name: true } } },
+  },
 } as const;
 
 interface ActivityRow {
   id: string;
   name: string;
   groupId: string;
-  projectId: string | null;
   jiraAccounts: string[];
   archived: boolean;
   leads: { leadId: string }[];
+  activityProducts: { product: { id: string; name: string } }[];
 }
 
 // Zod-parse on the way out (REPO-09) so the wire contract is enforced at the
@@ -30,7 +34,14 @@ function toReadModel(row: ActivityRow): ProjectActivity {
     id: row.id,
     name: row.name,
     groupId: row.groupId,
-    projectId: row.projectId,
+    // activity-first-class: M:N label-only product links, name-sorted for a
+    // stable admin-list order.
+    linkedProducts: row.activityProducts
+      .map((link) => ({
+        productId: link.product.id,
+        productName: link.product.name,
+      }))
+      .sort((a, b) => a.productName.localeCompare(b.productName)),
     jiraAccounts: row.jiraAccounts,
     archived: row.archived,
     leadIds: [...row.leads.map((lead) => lead.leadId)].sort((a, b) =>
@@ -64,11 +75,18 @@ export class ProjectActivityPrismaRepository
   async create(input: {
     name: string;
     groupId: string;
-    projectId: string | null;
+    linkedProductIds: string[];
     jiraAccounts: string[];
   }): Promise<ProjectActivity> {
+    const { linkedProductIds, ...data } = input;
     const row = await this.prisma.projectActivity.create({
-      data: input,
+      data: {
+        ...data,
+        // activity-first-class: seed the label-only join rows in the same write.
+        activityProducts: {
+          create: linkedProductIds.map((productId) => ({ productId })),
+        },
+      },
       include: activityInclude,
     });
     return toReadModel(row);
@@ -78,14 +96,37 @@ export class ProjectActivityPrismaRepository
     id: string;
     name: string;
     groupId: string;
-    projectId: string | null;
+    linkedProductIds: string[];
     jiraAccounts: string[];
   }): Promise<ProjectActivity> {
-    const { id, ...data } = input;
-    const row = await this.prisma.projectActivity.update({
-      where: { id },
-      data,
-      include: activityInclude,
+    const { id, linkedProductIds, ...data } = input;
+    // Reconcile the ProjectActivityProduct join to the submitted set (delete
+    // removed, add new) atomically with the scalar update. Untouched links keep
+    // their `createdAt`, so a no-op edit does not churn the join rows.
+    const row = await this.prisma.$transaction(async (tx) => {
+      await tx.projectActivity.update({ where: { id }, data });
+      const existing = await tx.projectActivityProduct.findMany({
+        where: { activityId: id },
+        select: { productId: true },
+      });
+      const existingIds = new Set(existing.map((link) => link.productId));
+      const nextIds = new Set(linkedProductIds);
+      const toRemove = [...existingIds].filter((p) => !nextIds.has(p));
+      const toAdd = linkedProductIds.filter((p) => !existingIds.has(p));
+      if (toRemove.length > 0) {
+        await tx.projectActivityProduct.deleteMany({
+          where: { activityId: id, productId: { in: toRemove } },
+        });
+      }
+      if (toAdd.length > 0) {
+        await tx.projectActivityProduct.createMany({
+          data: toAdd.map((productId) => ({ activityId: id, productId })),
+        });
+      }
+      return tx.projectActivity.findUniqueOrThrow({
+        where: { id },
+        include: activityInclude,
+      });
     });
     return toReadModel(row);
   }

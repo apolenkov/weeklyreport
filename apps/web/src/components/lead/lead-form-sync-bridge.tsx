@@ -189,6 +189,8 @@ interface BridgeContextValue {
   products: Product[];
   risks: RiskEntry[];
   readOnly: boolean;
+  /** activity-first-class: attached activities forwarded into the risk parent picker. */
+  activities?: readonly { id: string; name: string }[];
   /**
    * 35-04: stages-the-lead-owns selector forwarded into RisksSection ->
    * RiskEditDialog so the SDLC stage dropdown is per-project. Optional
@@ -240,6 +242,8 @@ export interface LeadFormSyncBridgeProviderProps {
   readonly onProductsChange: (next: Product[]) => void;
   readonly onRisksChange: (next: RiskEntry[]) => void;
   readonly readOnly?: boolean;
+  /** activity-first-class: attached activities forwarded into the risk parent picker. */
+  readonly activities?: readonly { id: string; name: string }[];
   /**
    * 35-04: per-project stages-the-lead-owns lookup. Forwarded by the
    * Risks consumer into RiskEditDialog. Optional — tests can omit it.
@@ -269,6 +273,7 @@ function Provider({
   onProductsChange,
   onRisksChange,
   readOnly = false,
+  activities,
   stagesForProduct,
   sectionAuthorName,
   risksAddSignal,
@@ -399,6 +404,7 @@ function Provider({
       products,
       risks,
       readOnly,
+      ...(activities !== undefined ? { activities } : {}),
       ...(stagesForProduct !== undefined ? { stagesForProduct } : {}),
       ...(sectionAuthorName !== undefined ? { sectionAuthorName } : {}),
       ...(risksAddSignal !== undefined ? { risksAddSignal } : {}),
@@ -413,6 +419,7 @@ function Provider({
       products,
       risks,
       readOnly,
+      activities,
       stagesForProduct,
       sectionAuthorName,
       risksAddSignal,
@@ -508,6 +515,7 @@ function Risks() {
       onChange={ctx.handleRisksChange}
       {...(ctx.riskPrefill ? { addPrefill: ctx.riskPrefill } : {})}
       products={ctx.products}
+      {...(ctx.activities ? { activities: ctx.activities } : {})}
       {...(ctx.stagesForProduct
         ? { stagesForProduct: ctx.stagesForProduct }
         : {})}

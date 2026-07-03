@@ -255,6 +255,24 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       );
     }
 
+    // activity-first-class: Fill From copies the lead's own past content forward,
+    // so it must honour the XOR parent and (like carry-over, decision 0.3) carry
+    // an activity-parented record ONLY when its activity is still attached to the
+    // TARGET section. A product-parented record always carries. Skipping this
+    // would orphan an activity row on a section that no longer reports it — or,
+    // by dropping activityId, collapse it to no-parent and trip the XOR CHECK,
+    // aborting the whole Fill From (including the valid product rows).
+    const targetActivityIds = new Set(
+      (
+        await this.prisma.activityStatus.findMany({
+          where: { reportSectionId: targetSectionId },
+          select: { activityId: true },
+        })
+      ).map((row) => row.activityId),
+    );
+    const isCarryable = (row: { activityId: string | null }): boolean =>
+      row.activityId === null || targetActivityIds.has(row.activityId);
+
     let copiedItems = 0;
 
     try {
@@ -286,12 +304,15 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
           });
 
           // Copy items from source. Next Week source items become Current Week
-          // suggestions in the target period.
-          if (source.items.length > 0) {
+          // suggestions in the target period. Activity-parented items ride the
+          // XOR parent — carry activityId (product FK null) only when re-attached.
+          const itemsToCopy = source.items.filter(isCarryable);
+          if (itemsToCopy.length > 0) {
             await tx.item.createMany({
-              data: source.items.map((i) => ({
+              data: itemsToCopy.map((i) => ({
                 reportSectionId: targetSectionId,
                 projectId: i.projectId,
+                activityId: i.activityId,
                 type: "current",
                 text: i.text,
                 tag: i.tag,
@@ -301,15 +322,17 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
                 stageNames: i.stageNames,
               })),
             });
-            copiedItems += source.items.length;
+            copiedItems += itemsToCopy.length;
           }
 
-          // Copy risks from source
-          if (source.risks.length > 0) {
+          // Copy risks from source (same XOR-parent carry rule as items).
+          const risksToCopy = source.risks.filter(isCarryable);
+          if (risksToCopy.length > 0) {
             await tx.risk.createMany({
-              data: source.risks.map((r) => ({
+              data: risksToCopy.map((r) => ({
                 reportSectionId: targetSectionId,
                 projectId: r.projectId,
+                activityId: r.activityId,
                 risk: r.risk,
                 impact: r.impact,
                 mitigation: r.mitigation,
@@ -317,11 +340,13 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
                 stageNames: r.stageNames,
               })),
             });
-            copiedItems += source.risks.length;
+            copiedItems += risksToCopy.length;
           }
 
-          // Copy decisions from source
-          const decisionsToCopy = source.decisions.filter((d) => !!d.productId);
+          // Copy decisions from source. A decision is product- OR activity-
+          // parented (XOR); carry the activity case only when re-attached, the
+          // product case always. isCarryable(null activityId) == true handles both.
+          const decisionsToCopy = source.decisions.filter(isCarryable);
           if (decisionsToCopy.length > 0) {
             await tx.decision.createMany({
               data: decisionsToCopy.map((d) => ({
@@ -333,6 +358,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
                 resolvedAt: d.resolvedAt ?? null,
                 stageNames: d.stageNames,
                 productId: d.productId,
+                activityId: d.activityId,
               })),
             });
             copiedItems += decisionsToCopy.length;
@@ -490,7 +516,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     // Per-author covering risks, grouped by projectId for the stage match.
     const risksByAuthor = new Map<
       string,
-      { projectId: string; severity: string; stageNames: string[] }[]
+      { projectId: string | null; severity: string; stageNames: string[] }[]
     >();
     for (const s of sections) {
       for (const ss of s.stageStatuses) {
@@ -722,9 +748,21 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         authorName: authorEntry.authorName,
         sharedProductIds: [...sharedIds],
         stages,
-        items: section.items.filter((i) => sharedIds.has(i.projectId)),
-        risks: section.risks.filter((r) => sharedIds.has(r.projectId)),
-        decisions: section.decisions.filter((d) => sharedIds.has(d.productId)),
+        // activity-first-class: the cross-lead grid is product-scoped — an
+        // activity-parented row (null product FK) belongs to no shared product,
+        // so the type-guard filter both narrows the type and excludes it.
+        items: section.items.filter(
+          (i): i is typeof i & { projectId: string } =>
+            i.projectId != null && sharedIds.has(i.projectId),
+        ),
+        risks: section.risks.filter(
+          (r): r is typeof r & { projectId: string } =>
+            r.projectId != null && sharedIds.has(r.projectId),
+        ),
+        decisions: section.decisions.filter(
+          (d): d is typeof d & { productId: string } =>
+            d.productId != null && sharedIds.has(d.productId),
+        ),
       });
     }
 
@@ -746,7 +784,9 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     stageName: string,
     projectId: string,
     risks: readonly {
-      projectId: string;
+      // Nullable: an activity-parented risk carries no product FK and never
+      // matches `projectId` below, so it colours no product stage.
+      projectId: string | null;
       severity: string;
       stageNames: string[];
     }[],

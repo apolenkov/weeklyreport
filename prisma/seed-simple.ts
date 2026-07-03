@@ -71,6 +71,10 @@ const LEAD_SERGEY = "a0000000-0000-4000-8000-000000000016";
 const LEAD_MOBILE_PM = "a0000000-0000-4000-8000-000000000022";
 const LEAD_CLOUD_PM = "a0000000-0000-4000-8000-000000000023";
 const LEAD_DEVOPS_PM = "a0000000-0000-4000-8000-000000000024";
+// Activity-only lead: attached to an activity but owning ZERO products, so the
+// activity-only-submit relaxation (a section with no product content) is an
+// exercised path rather than dead code. No Project.leadId ever points here.
+const LEAD_ACTIVITY_ONLY = "a0000000-0000-4000-8000-000000000025";
 
 const PROD_CRM = "a0000000-0000-4000-8000-000000000201";
 const PROD_MOBILE = "a0000000-0000-4000-8000-000000000203";
@@ -98,6 +102,15 @@ const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
 const FINANCE_GROUP_ID = "a0000000-0000-4000-8000-000000000302";
 const POLICY_DEADLINE = "a0000000-0000-4000-8000-000000000a01";
 const POLICY_ESCALATION = "a0000000-0000-4000-8000-000000000a02";
+
+// Activity-only lead fixture anchors (own id range, distinct from the ca/cb/cc
+// product-activity rows below). One activity, its lead link + product label,
+// the lead's ACTIVE section and its per-activity status.
+const ACTIVITY_ONLY_ID = "a0000000-0000-4000-8000-00000000cae0";
+const ACTIVITY_ONLY_LEAD_LINK_ID = "a0000000-0000-4000-8000-00000000cbe0";
+const ACTIVITY_ONLY_STATUS_ID = "a0000000-0000-4000-8000-00000000cce0";
+const ACTIVITY_ONLY_PRODUCT_LINK_ID = "a0000000-0000-4000-8000-00000000cde0";
+const ACTIVITY_ONLY_SECTION_ID = "a0000000-0000-4000-8000-00000000040a";
 
 // ---- Date helpers (FIX-01, Phase 35-08) ----
 // Compute the current ISO week in UTC so the active period always covers
@@ -308,6 +321,9 @@ async function main() {
   // statuses drop before their activities and activities before their group.
   await prisma.activityStatus.deleteMany({});
   await prisma.projectActivityLead.deleteMany({});
+  // ProjectActivityProduct cascades on activity delete, but drop it explicitly
+  // to mirror the other activity children and keep the wipe order obvious.
+  await prisma.projectActivityProduct.deleteMany({});
   await prisma.projectActivity.deleteMany({});
   await prisma.reopenRequest.deleteMany({});
   await prisma.reportSection.deleteMany({});
@@ -537,6 +553,19 @@ async function main() {
         position: null,
         role: Role.lead,
         samlId: "lead-devops-pm",
+        reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
+      },
+      {
+        // Activity-only lead: reports a cross-cutting activity, owns no product.
+        id: LEAD_ACTIVITY_ONLY,
+        email: "activity-lead@customreport.local",
+        name: "Фиалков Роман Аркадьевич",
+        lastName: "Фиалков",
+        firstName: "Роман",
+        middleName: "Аркадьевич",
+        position: "Ведущий инженер сопровождения",
+        role: Role.lead,
+        samlId: "lead-activity-only",
         reportingGroupId: DEFAULT_REPORTING_GROUP_ID,
       },
     ],
@@ -1789,12 +1818,14 @@ async function main() {
   // C3 (project-activity-reporting): stage-less Project Activities beside the
   // products, so the assembled report's "Project Activities" band renders out
   // of the box. Mirrors the per-section ProjectStatus seeding above — 2..4
-  // activities per product (groupId from the product's group, projectId = the
-  // product), the product's own lead attached (M:M), and one ActivityStatus
-  // per activity on the ACTIVE section that lead authored (authorId ===
-  // Project.leadId, sections ...0401..0404 from the leads loop). Statuses carry
-  // a deliberate green/yellow/red mix; both SUBMITTED sections (402, 404) get a
-  // full spread so the band stays meaningful under the §7 submitted-only filter.
+  // activities per product (groupId from the product's group; the product is
+  // linked M:N as a label via ProjectActivityProduct, since an activity no
+  // longer carries a direct projectId), the product's own lead attached (M:M),
+  // and one ActivityStatus per activity on the ACTIVE section that lead authored
+  // (authorId === Project.leadId, sections ...0401..0404 from the leads loop).
+  // Statuses carry a deliberate green/yellow/red mix; both SUBMITTED sections
+  // (402, 404) get a full spread so the band stays meaningful under the §7
+  // submitted-only filter.
   console.log(
     "[seed-simple] Creating project activities + weekly statuses (C3)...",
   );
@@ -1879,9 +1910,10 @@ async function main() {
     },
   ];
 
-  // Deterministic ids (idempotent re-run): 00000000c{a|b|c}{product}{activity}
-  // — a=activity, b=lead-link, c=status; the position-9 'c' slot is unused by
-  // other seed anchors. product/activity indices stay single hex digits.
+  // Deterministic ids (idempotent re-run): 00000000c{a|b|c|d}{product}{activity}
+  // — a=activity, b=lead-link, c=status, d=product-link; the position-9 'c' slot
+  // is unused by other seed anchors. product/activity indices stay single hex
+  // digits.
   const activityRows = activitySeeds.flatMap((seed, pIdx) =>
     seed.activities.map((activity, aIdx) => {
       const suffix = `${pIdx}${aIdx}`;
@@ -1889,6 +1921,7 @@ async function main() {
         activityId: `a0000000-0000-4000-8000-00000000ca${suffix}`,
         leadLinkId: `a0000000-0000-4000-8000-00000000cb${suffix}`,
         statusId: `a0000000-0000-4000-8000-00000000cc${suffix}`,
+        productLinkId: `a0000000-0000-4000-8000-00000000cd${suffix}`,
         productId: seed.productId,
         groupId: seed.groupId,
         leadId: seed.leadId,
@@ -1905,7 +1938,6 @@ async function main() {
       id: row.activityId,
       name: row.name,
       groupId: row.groupId,
-      projectId: row.productId,
     })),
   });
   await prisma.projectActivityLead.createMany({
@@ -1913,6 +1945,16 @@ async function main() {
       id: row.leadLinkId,
       activityId: row.activityId,
       leadId: row.leadId,
+    })),
+  });
+  // Product label link (M:N): what an activity reports against, shown as the
+  // linkedProducts chip on every surface. Each demo activity links its one
+  // product; UNIQUE(activityId, productId) holds since pairs are distinct.
+  await prisma.projectActivityProduct.createMany({
+    data: activityRows.map((row) => ({
+      id: row.productLinkId,
+      activityId: row.activityId,
+      productId: row.productId,
     })),
   });
   // One ActivityStatus per attached activity on the lead's own section —
@@ -1926,6 +1968,131 @@ async function main() {
       status: row.status,
       note: row.note,
     })),
+  });
+
+  // Activity-parented records on Maria's SUBMITTED section (402), attached to her
+  // first activity ("Дежурство по инцидентам", ...ca10 — already lead-linked,
+  // status-carrying, and product-labelled from the loop above). XOR parent shape:
+  // the product FK is null, `activityId` is set, and `stageNames` is [] because an
+  // activity has no SDLC stage. This makes the activity render POPULATED (records +
+  // linked product) on the lead form and the head report, not just a status strip.
+  console.log(
+    "[seed-simple] Creating activity-parented item/risk/decision (populated activity)...",
+  );
+  const populatedActivityId = "a0000000-0000-4000-8000-00000000ca10";
+  const populatedActivitySectionId = "a0000000-0000-4000-8000-000000000402";
+  await prisma.item.create({
+    data: {
+      id: "a0000000-0000-4000-8000-00000000ac10",
+      reportSectionId: populatedActivitySectionId,
+      type: ItemType.current,
+      projectId: null,
+      activityId: populatedActivityId,
+      text: "Разобрали 6 инцидентов дежурства, ускорили типовой ответ вдвое",
+      tag: "ops",
+      workflowStatus: ItemWorkflowStatus.in_progress,
+      carriedOver: false,
+      completed: false,
+      stageNames: [],
+    },
+  });
+  await prisma.risk.create({
+    data: {
+      id: "a0000000-0000-4000-8000-00000000ad10",
+      reportSectionId: populatedActivitySectionId,
+      projectId: null,
+      activityId: populatedActivityId,
+      risk: "Пиковая нагрузка на дежурную смену на праздничной неделе",
+      impact: "Рост времени реакции на инциденты сверх SLA",
+      mitigation: "Усилили дежурную смену и подготовили runbook эскалации",
+      severity: "at-risk",
+      stageNames: [],
+    },
+  });
+  await prisma.decision.create({
+    data: {
+      id: "a0000000-0000-4000-8000-00000000ae10",
+      reportSectionId: populatedActivitySectionId,
+      productId: null,
+      activityId: populatedActivityId,
+      text: "Решение: закрепить второго дежурного на праздничную неделю",
+      owner: "Каштанова Мария Андреевна",
+      impact: "Держит время реакции по инцидентам в рамках SLA",
+      stageNames: [],
+    },
+  });
+
+  // Activity-only lead: attached to a cross-cutting activity, owns no product, so
+  // his ACTIVE section carries activity content only. Seeds the activity, the
+  // lead M:M link, a product LABEL link (linkedProducts still renders), the
+  // section + its ActivityStatus, and activity-parented records — exercising the
+  // activity-only-submit relaxation end to end.
+  console.log("[seed-simple] Creating activity-only lead + section (Q4)...");
+  await prisma.projectActivity.create({
+    data: {
+      id: ACTIVITY_ONLY_ID,
+      name: "Кросс-командная поддержка релизов",
+      groupId: DEFAULT_REPORTING_GROUP_ID,
+    },
+  });
+  await prisma.projectActivityLead.create({
+    data: {
+      id: ACTIVITY_ONLY_LEAD_LINK_ID,
+      activityId: ACTIVITY_ONLY_ID,
+      leadId: LEAD_ACTIVITY_ONLY,
+    },
+  });
+  await prisma.projectActivityProduct.create({
+    data: {
+      id: ACTIVITY_ONLY_PRODUCT_LINK_ID,
+      activityId: ACTIVITY_ONLY_ID,
+      productId: PROD_CRM,
+    },
+  });
+  await prisma.reportSection.create({
+    data: {
+      id: ACTIVITY_ONLY_SECTION_ID,
+      reportId: REPORT_ACTIVE,
+      authorId: LEAD_ACTIVITY_ONLY,
+      status: ReportSectionStatus.submitted,
+      submittedAt: plusDaysUTC(ACTIVE_MONDAY, 3),
+    },
+  });
+  await prisma.activityStatus.create({
+    data: {
+      id: ACTIVITY_ONLY_STATUS_ID,
+      reportSectionId: ACTIVITY_ONLY_SECTION_ID,
+      activityId: ACTIVITY_ONLY_ID,
+      status: TrafficLightStatus.green,
+      note: "Поддержали 3 релиза без простоя",
+    },
+  });
+  await prisma.item.create({
+    data: {
+      id: "a0000000-0000-4000-8000-00000000ace0",
+      reportSectionId: ACTIVITY_ONLY_SECTION_ID,
+      type: ItemType.current,
+      projectId: null,
+      activityId: ACTIVITY_ONLY_ID,
+      text: "Сопроводили 3 релиза смежных команд без простоя прод-среды",
+      tag: "ops",
+      workflowStatus: ItemWorkflowStatus.done,
+      carriedOver: false,
+      completed: true,
+      stageNames: [],
+    },
+  });
+  await prisma.decision.create({
+    data: {
+      id: "a0000000-0000-4000-8000-00000000aee0",
+      reportSectionId: ACTIVITY_ONLY_SECTION_ID,
+      productId: null,
+      activityId: ACTIVITY_ONLY_ID,
+      text: "Решение: ввести общий чек-лист готовности релиза для смежных команд",
+      owner: "Фиалков Роман Аркадьевич",
+      impact: "Снижает число откатов релизов на стыке команд",
+      stageNames: [],
+    },
   });
 
   console.log(
@@ -2186,6 +2353,10 @@ async function main() {
     statuses: await prisma.projectStatus.count(),
     activities: await prisma.projectActivity.count(),
     activityStatuses: await prisma.activityStatus.count(),
+    activityProducts: await prisma.projectActivityProduct.count(),
+    activityParentedItems: await prisma.item.count({
+      where: { activityId: { not: null } },
+    }),
     risks: await prisma.risk.count(),
     decisions: await prisma.decision.count(),
     priorityItems: await prisma.item.count({ where: { priorityRank: { not: null } } }),

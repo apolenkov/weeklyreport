@@ -34,6 +34,8 @@ interface RisksSectionProps {
    * the +Add Risk button is rendered disabled with a tooltip.
    */
   readonly products?: readonly Product[];
+  /** activity-first-class: attached activities forwarded to the parent picker. */
+  readonly activities?: readonly { id: string; name: string }[];
   /**
    * 35-04 (FEAT-144): callback returning the SDLC stages the lead owns on
    * a given project. Forwarded to the dialog so the stage selector is
@@ -70,6 +72,7 @@ export function RisksSection({
   onChange,
   addPrefill,
   products,
+  activities,
   stagesForProduct,
   sectionAuthorName,
   addSignal = 0,
@@ -313,6 +316,7 @@ export function RisksSection({
             : null
         }
         products={products ?? []}
+        activities={activities}
         defaultProductId={
           dialogState.open && dialogState.mode === "create"
             ? dialogState.seedProductId

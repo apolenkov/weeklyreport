@@ -83,7 +83,7 @@ describe("ProjectActivity (integration)", () => {
         id: activityId,
         name: "Jira triage duty",
         groupId: groupA,
-        projectId: productId,
+        activityProducts: { create: [{ productId }] },
         jiraAccounts: ["OPS", "SUP-billing"],
       },
     });
@@ -106,10 +106,12 @@ describe("ProjectActivity (integration)", () => {
       id: activityId,
       name: "Jira triage duty",
       groupId: groupA,
-      projectId: productId,
       jiraAccounts: ["OPS", "SUP-billing"],
       archived: false,
     });
+    expect(activity?.linkedProducts).toEqual([
+      { productId, productName: "CRM Portal" },
+    ]);
     expect(activity?.leadIds).toEqual([leadA, leadB].sort());
   });
 
@@ -226,6 +228,10 @@ describe("ProjectActivity (integration)", () => {
         activityName: "Jira triage duty",
         status: "green",
         note: null,
+        // activity-first-class: the read model now joins the label-only linked
+        // products and the risk/blocker-derived floor (no records here -> stored).
+        linkedProducts: [{ productId, productName: "CRM Portal" }],
+        derivedStatus: "green",
       },
     ]);
   });
@@ -328,7 +334,7 @@ describe("ProjectActivity (integration)", () => {
         id: activityId,
         name: "Jira triage duty",
         groupId: groupB,
-        projectId: productId,
+        linkedProductIds: [productId],
         jiraAccounts: [],
       }),
     ).rejects.toBeInstanceOf(ProjectActivityDomainError);
@@ -340,7 +346,7 @@ describe("ProjectActivity (integration)", () => {
       id: activityId,
       name: "Jira triage duty",
       groupId: groupB,
-      projectId: productId,
+      linkedProductIds: [productId],
       jiraAccounts: [],
     });
     expect(moved.groupId).toBe(groupB);

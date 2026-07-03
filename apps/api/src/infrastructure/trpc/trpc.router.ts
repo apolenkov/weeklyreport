@@ -554,9 +554,14 @@ export function createAppRouter(deps: RouterDeps) {
             const productIds = new Set<string>();
             for (const row of s.projectStatuses) productIds.add(row.projectId);
             for (const row of s.stageStatuses) productIds.add(row.projectId);
-            for (const row of s.items) productIds.add(row.projectId);
-            for (const row of s.risks) productIds.add(row.projectId);
-            for (const row of s.decisions) productIds.add(row.productId);
+            // activity-first-class: activity-parented rows carry a null product
+            // FK and contribute no product id to the distinct-product count.
+            for (const row of s.items)
+              if (row.projectId) productIds.add(row.projectId);
+            for (const row of s.risks)
+              if (row.projectId) productIds.add(row.projectId);
+            for (const row of s.decisions)
+              if (row.productId) productIds.add(row.productId);
 
             const editDates = [
               s.updatedAt,
@@ -688,14 +693,16 @@ export function createAppRouter(deps: RouterDeps) {
                   for (const row of section.stageStatuses) {
                     productIds.add(row.projectId);
                   }
+                  // activity-first-class: activity-parented rows carry a null
+                  // product FK and contribute no product id here.
                   for (const row of section.items) {
-                    productIds.add(row.projectId);
+                    if (row.projectId) productIds.add(row.projectId);
                   }
                   for (const row of section.risks) {
-                    productIds.add(row.projectId);
+                    if (row.projectId) productIds.add(row.projectId);
                   }
                   for (const row of section.decisions) {
-                    productIds.add(row.productId);
+                    if (row.productId) productIds.add(row.productId);
                   }
                 }
 

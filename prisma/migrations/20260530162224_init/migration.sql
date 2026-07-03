@@ -202,7 +202,8 @@ CREATE TABLE "Item" (
     "id" TEXT NOT NULL,
     "stableId" TEXT NOT NULL,
     "reportSectionId" TEXT NOT NULL,
-    "projectId" TEXT NOT NULL,
+    "projectId" TEXT,
+    "activityId" TEXT,
     "type" "ItemType" NOT NULL,
     "text" TEXT NOT NULL,
     "tag" TEXT NOT NULL,
@@ -223,7 +224,8 @@ CREATE TABLE "Risk" (
     "id" TEXT NOT NULL,
     "stableId" TEXT NOT NULL,
     "reportSectionId" TEXT NOT NULL,
-    "projectId" TEXT NOT NULL,
+    "projectId" TEXT,
+    "activityId" TEXT,
     "risk" TEXT NOT NULL,
     "impact" TEXT NOT NULL,
     "mitigation" TEXT NOT NULL,
@@ -241,7 +243,8 @@ CREATE TABLE "Decision" (
     "id" TEXT NOT NULL,
     "stableId" TEXT NOT NULL,
     "reportSectionId" TEXT NOT NULL,
-    "productId" TEXT NOT NULL,
+    "productId" TEXT,
+    "activityId" TEXT,
     "text" TEXT NOT NULL,
     "owner" TEXT NOT NULL,
     "deadline" TIMESTAMP(3),
@@ -856,7 +859,6 @@ CREATE TABLE "ProjectActivity" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "groupId" TEXT NOT NULL,
-    "projectId" TEXT,
     "jiraAccounts" TEXT[],
     "archived" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -890,7 +892,6 @@ CREATE TABLE "ActivityStatus" (
 
 -- CreateIndex
 CREATE INDEX "ProjectActivity_groupId_idx" ON "ProjectActivity"("groupId");
-CREATE INDEX "ProjectActivity_projectId_idx" ON "ProjectActivity"("projectId");
 CREATE INDEX "ProjectActivity_archived_idx" ON "ProjectActivity"("archived");
 CREATE INDEX "ProjectActivityLead_leadId_idx" ON "ProjectActivityLead"("leadId");
 CREATE UNIQUE INDEX "ProjectActivityLead_activityId_leadId_key" ON "ProjectActivityLead"("activityId", "leadId");
@@ -899,8 +900,50 @@ CREATE UNIQUE INDEX "ActivityStatus_reportSectionId_activityId_key" ON "Activity
 
 -- AddForeignKey
 ALTER TABLE "ProjectActivity" ADD CONSTRAINT "ProjectActivity_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "ReportingGroup"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-ALTER TABLE "ProjectActivity" ADD CONSTRAINT "ProjectActivity_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "ProjectActivityLead" ADD CONSTRAINT "ProjectActivityLead_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "ProjectActivity"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ProjectActivityLead" ADD CONSTRAINT "ProjectActivityLead_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ActivityStatus" ADD CONSTRAINT "ActivityStatus_reportSectionId_fkey" FOREIGN KEY ("reportSectionId") REFERENCES "ReportSection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ActivityStatus" ADD CONSTRAINT "ActivityStatus_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "ProjectActivity"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- activity-first-class-reporting-unit: activities become a first-class parent
+-- for items/risks/decisions (XOR with a product parent) and link to products
+-- M:N. See prisma/schema.prisma + openspec specs/activity-reporting-unit.
+
+-- CreateTable: M:N activity↔product label-only link.
+CREATE TABLE "ProjectActivityProduct" (
+    "id" TEXT NOT NULL,
+    "activityId" TEXT NOT NULL,
+    "productId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ProjectActivityProduct_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProjectActivityProduct_activityId_productId_key" ON "ProjectActivityProduct"("activityId", "productId");
+CREATE INDEX "ProjectActivityProduct_productId_idx" ON "ProjectActivityProduct"("productId");
+CREATE INDEX "Item_activityId_idx" ON "Item"("activityId");
+CREATE INDEX "Risk_activityId_idx" ON "Risk"("activityId");
+CREATE INDEX "Decision_activityId_idx" ON "Decision"("activityId");
+
+-- AddForeignKey: activity parent (Restrict — retire an activity via `archived`,
+-- never hard-delete its owned records; mirrors the product-side FKs).
+ALTER TABLE "Item" ADD CONSTRAINT "Item_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "ProjectActivity"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Risk" ADD CONSTRAINT "Risk_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "ProjectActivity"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Decision" ADD CONSTRAINT "Decision_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "ProjectActivity"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ProjectActivityProduct" ADD CONSTRAINT "ProjectActivityProduct_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "ProjectActivity"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ProjectActivityProduct" ADD CONSTRAINT "ProjectActivityProduct_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Project"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- XOR parent invariant: exactly one of the product FK / activityId is non-null.
+-- Prisma cannot express a CHECK, so it is hand-written here as defence-in-depth
+-- behind the Zod .superRefine (section.schema.ts). Mirrors the RecordComment
+-- exactly-one-anchor CHECK above.
+ALTER TABLE "Item"
+  ADD CONSTRAINT "Item_parent_xor_check"
+  CHECK ((("projectId" IS NOT NULL)::int + ("activityId" IS NOT NULL)::int) = 1);
+ALTER TABLE "Risk"
+  ADD CONSTRAINT "Risk_parent_xor_check"
+  CHECK ((("projectId" IS NOT NULL)::int + ("activityId" IS NOT NULL)::int) = 1);
+ALTER TABLE "Decision"
+  ADD CONSTRAINT "Decision_parent_xor_check"
+  CHECK ((("productId" IS NOT NULL)::int + ("activityId" IS NOT NULL)::int) = 1);

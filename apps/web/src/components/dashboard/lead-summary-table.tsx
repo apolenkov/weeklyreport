@@ -58,6 +58,9 @@ const COUNT_FIELDS: readonly {
   { label: "Risks", get: (l) => l.riskCount ?? 0 },
   { label: "Decisions", get: (l) => l.decisionCount ?? 0 },
   { label: "Priorities", get: (l) => l.priorityCount ?? 0 },
+  // activity-first-class (Q1): a work-unit count of activity-parented records,
+  // distinct from the "Submission Activity" telemetry panel elsewhere.
+  { label: "Activities", get: (l) => l.activityCount ?? 0 },
 ];
 
 interface LeadSummaryTableProps {
@@ -163,13 +166,13 @@ export function LeadSummaryTable({
         </p>
       </div>
 
-      {/* The multi-column rails need ~970px (name + status + six 4.5rem count
+      {/* The multi-column rails need ~1040px (name + status + seven 4.5rem count
           columns + date + action + inter-column gaps); the `md` (768px)
           container is too narrow for them, so the grid engages only at `lg`
           (1024px). Below it the rows fall back to stacked cards whose counts
           wrap as a labeled-value list, holding the no-horizontal-scroll
           guarantee through the phone AND tablet band. */}
-      <ul className="grid gap-y-2 p-3 lg:grid-cols-[minmax(10rem,1fr)_auto_repeat(6,4.5rem)_auto_auto] lg:gap-x-4 lg:p-4">
+      <ul className="grid gap-y-2 p-3 lg:grid-cols-[minmax(10rem,1fr)_auto_repeat(7,4.5rem)_auto_auto] lg:gap-x-4 lg:p-4">
         {leads.map((lead) => {
           // A submitted lead is done, not "gone quiet" — the 24h-inactive
           // nudge styling only makes sense for leads with open work
@@ -211,7 +214,7 @@ export function LeadSummaryTable({
                 {STATUS_LABELS[lead.status]}
               </span>
 
-              <dl className="flex flex-wrap gap-x-4 gap-y-1.5 lg:col-span-6 lg:grid lg:grid-cols-subgrid lg:items-center">
+              <dl className="flex flex-wrap gap-x-4 gap-y-1.5 lg:col-span-7 lg:grid lg:grid-cols-subgrid lg:items-center">
                 {COUNT_FIELDS.map((field) => (
                   <div
                     key={field.label}

@@ -664,7 +664,7 @@ describe("ItemEditDialog — stage-ownership scoping", () => {
     ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/^Product/i), {
-      target: { value: "p2" },
+      target: { value: "product:p2" },
     });
 
     expect(screen.queryByRole("checkbox", { name: "Testing" })).toBeNull();
@@ -805,5 +805,50 @@ describe("ItemEditDialog — require a stage", () => {
 
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({ stageIds: ["Testing"] });
+  });
+});
+
+describe("ItemEditDialog — activity parenting (activity-first-class)", () => {
+  const productsWithStages: Product[] = [
+    { id: "p1", name: "DevOps Tools", overallStatus: "on-track", stages: [] },
+  ];
+  const activities = [{ id: "act1", name: "Jira triage duty" }];
+
+  it("hides the stage step and saves an activity-parented item with no stage", () => {
+    const onSave = vi.fn();
+    render(
+      <ItemEditDialog
+        open
+        item={null}
+        products={productsWithStages}
+        activities={activities}
+        week="current"
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev", "Testing"]}
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+
+    // A product parent shows the stage step.
+    expect(screen.getByText(/SDLC Stages/i)).toBeInTheDocument();
+
+    // Switch the parent to the activity — the stage step disappears.
+    fireEvent.change(screen.getByLabelText("Parent"), {
+      target: { value: "activity:act1" },
+    });
+    expect(screen.queryByText(/SDLC Stages/i)).toBeNull();
+
+    fireEvent.change(screen.getByLabelText(/Description \*/i), {
+      target: { value: "Triaged 12 tickets" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Save Item/i }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    const saved = onSave.mock.calls[0]?.[0] as KanbanItem;
+    expect(saved.activityId).toBe("act1");
+    expect(saved.productId).toBe("");
+    expect(saved.stageIds).toBeUndefined();
+    expect(saved.text).toBe("Triaged 12 tickets");
   });
 });

@@ -9,6 +9,7 @@ import {
   type SubmitSectionPayload,
   submitSectionSchema,
   validateActivityStatuses,
+  validateRecordActivityIds,
   validateStageOwnership,
   validateSubmitInput,
 } from "@customreport/shared";
@@ -250,7 +251,14 @@ export class ReportSectionsService {
     section: ReportSectionReadModel,
     input: DraftSaveInput | SubmitSectionInput,
   ): void {
-    const violation = validateActivityStatuses(section, input).at(0);
+    // Two client-trust gaps, same seeded-set reference and same
+    // ACTIVITY_NOT_ATTACHED reject: the status-slice guard
+    // (`validateActivityStatuses`) plus the record-parent guard
+    // (`validateRecordActivityIds`, Decision 7) for any item/risk/decision
+    // parented by an unattached activityId. First violation wins.
+    const violation =
+      validateActivityStatuses(section, input).at(0) ??
+      validateRecordActivityIds(section, input).at(0);
     if (violation) {
       throw new ReportSectionDomainError(violation.code, violation.message);
     }

@@ -5,7 +5,11 @@ import { createPortal } from "react-dom";
 
 import { useDialogFocus } from "../../lib/use-dialog-focus";
 import type { ItemStatus, KanbanItem, Product } from "./mock-data";
-import { ProductPicker } from "./product-picker";
+import {
+  type ParentActivityOption,
+  ParentPicker,
+  type RecordParent,
+} from "./product-picker";
 import { StageMultiSelect } from "./stage-multi-select";
 import {
   computeEffectiveStageIds,
@@ -24,6 +28,12 @@ interface ItemEditDialogProps {
   readonly item: KanbanItem | null;
   /** Available products — required so the user can re-assign the item to another column. */
   readonly products: readonly Product[];
+  /**
+   * activity-first-class: the section author's attached activities. When
+   * non-empty the parent picker offers them; choosing an activity hides the
+   * stage step and parents the item to the activity instead of a product.
+   */
+  readonly activities?: readonly ParentActivityOption[];
   /**
    * Whether this is the Current Week or Next Week. Only affects which
    * status chips are shown — Next Week doesn't show "Completed" or
@@ -114,6 +124,153 @@ const NEXT_WEEK_CHOICES: readonly Choice[] = [
 ];
 
 /**
+ * activity-first-class: derive the record's initial parent — the bound row's
+ * activity or product on edit, else the create-mode default product, falling
+ * back to the first attached activity for an activity-only lead (no products).
+ */
+function resolveInitialParent(
+  initial: KanbanItem,
+  activities: readonly ParentActivityOption[],
+): RecordParent {
+  if (initial.activityId) return { kind: "activity", id: initial.activityId };
+  if (initial.productId) return { kind: "product", id: initial.productId };
+  return activities[0]
+    ? { kind: "activity", id: activities[0].id }
+    : { kind: "product", id: "" };
+}
+
+/**
+ * Per-field validation for the item save. A stage is required only for a
+ * product parent with owned stages; an activity owns no stage, so it is never
+ * demanded there.
+ */
+function collectItemErrors(args: {
+  readonly trimmed: string;
+  readonly isActivityParent: boolean;
+  readonly availableStages: readonly string[];
+  readonly effectiveStageIds: readonly string[];
+}): { text?: string; stageIds?: string } {
+  const errors: { text?: string; stageIds?: string } = {};
+  if (args.trimmed.length === 0) errors.text = "Description is required";
+  if (
+    !args.isActivityParent &&
+    args.availableStages.length > 0 &&
+    args.effectiveStageIds.length === 0
+  )
+    errors.stageIds = "Select at least one stage.";
+  return errors;
+}
+
+/**
+ * Resolve the product a product-parented save writes to. A cross-stage row may
+ * reference a project outside the lead's stage-owned `products`, so keep the
+ * original assignment instead of silently reassigning to the first product.
+ */
+function resolveSaveProduct(
+  products: readonly Product[],
+  item: KanbanItem | null,
+  parentId: string,
+): { id: string; name: string } | undefined {
+  return (
+    products.find((p) => p.id === parentId) ??
+    (item?.productId === parentId
+      ? { id: item.productId, name: item.productName }
+      : products.at(0))
+  );
+}
+
+/**
+ * The product-only stage step: the multi-select plus the zero-owned-stage
+ * "contact admin" notice. Rendered only for a product parent (an activity owns
+ * no stage), so the whole block lives in one place off the main render.
+ */
+function ItemStageStep({
+  stageIds,
+  availableStages,
+  isDeadEnd,
+  error,
+  parentName,
+  onChange,
+}: {
+  readonly stageIds: string[];
+  readonly availableStages: readonly string[];
+  readonly isDeadEnd: boolean;
+  readonly error: string | undefined;
+  readonly parentName: string;
+  readonly onChange: (next: string[]) => void;
+}) {
+  return (
+    <>
+      <StageMultiSelect
+        id="item-stage"
+        value={stageIds}
+        stages={availableStages}
+        required
+        // Suppress the stale required-stage error in the dead-end branch so it
+        // never co-renders with the contact-admin notice below.
+        error={isDeadEnd ? undefined : error}
+        onChange={onChange}
+      />
+      {isDeadEnd && (
+        <p role="status" className="text-xs text-[var(--color-destructive)]">
+          No stages assigned on {parentName} — contact admin.
+        </p>
+      )}
+    </>
+  );
+}
+
+// Offer priority ranks 1..10, plus any legacy rank above 10 already on the item.
+const MAX_ITEM_RANK = 10;
+
+function buildRankOptions(existingRank: number | null): number[] {
+  const base = Array.from({ length: MAX_ITEM_RANK }, (_, i) => i + 1);
+  return existingRank != null && existingRank > MAX_ITEM_RANK
+    ? [...base, existingRank]
+    : base;
+}
+
+/** The item status-chip row (Completed / In Progress / Blocked / Planned). */
+function ItemStatusChips({
+  choices,
+  status,
+  onSelect,
+}: {
+  readonly choices: readonly Choice[];
+  readonly status: ItemStatus;
+  readonly onSelect: (value: ItemStatus) => void;
+}) {
+  return (
+    <div>
+      <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
+        Status
+      </span>
+      <div className="flex flex-wrap gap-2">
+        {choices.map((c) => {
+          const selected = status === c.value;
+          return (
+            <button
+              key={c.value}
+              type="button"
+              onClick={() => onSelect(c.value)}
+              className="inline-flex min-h-[var(--touch-target-min)] md:min-h-[34px] items-center gap-1 rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-[background-color,border-color,color,opacity]"
+              style={{
+                background: selected ? c.bg : "transparent",
+                color: selected ? c.color : "var(--color-foreground)",
+                border: `1.5px solid ${selected ? c.border : "rgba(0,0,0,0.15)"}`,
+              }}
+              aria-pressed={selected}
+            >
+              {c.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
  * D12 fix (react-compiler-safe): outer shell conditionally mounts the inner
  * content component. Mount = fresh useState from props; unmount on close.
  * No useEffect reset needed — structural guarantee via mount/unmount.
@@ -131,6 +288,7 @@ function ItemEditDialogContent({
   open,
   item,
   products,
+  activities = [],
   week,
   currentUserName,
   defaultProductId,
@@ -168,7 +326,14 @@ function ItemEditDialogContent({
   };
   const [text, setText] = useState(initial.text);
   const [status, setStatus] = useState<ItemStatus>(initial.status);
-  const [productId, setProductId] = useState(initial.productId);
+  // activity-first-class: the record's parent — a product OR an attached
+  // activity (XOR). Seeded from the bound row on edit, or from the create-mode
+  // default product (falling back to the first activity for an activity-only
+  // lead with no products).
+  const [parent, setParent] = useState<RecordParent>(() =>
+    resolveInitialParent(initial, activities),
+  );
+  const isActivityParent = parent.kind === "activity";
   const [priorityRank, setPriorityRank] = useState<number | null>(
     item?.priorityRank ?? null,
   );
@@ -191,32 +356,36 @@ function ItemEditDialogContent({
     (ownPeriodRanks ?? []).filter((r) => r !== (item?.priorityRank ?? null)),
   );
   // Offer options 1..10 plus any legacy rank above 10 already on the item.
-  const MAX_RANK = 10;
-  const rankOptions = Array.from({ length: MAX_RANK }, (_, i) => i + 1);
-  if (item?.priorityRank != null && item.priorityRank > MAX_RANK) {
-    rankOptions.push(item.priorityRank);
-  }
+  const rankOptions = buildRankOptions(item?.priorityRank ?? null);
 
   if (!open) return null;
 
   const choices = week === "current" ? CURRENT_WEEK_CHOICES : NEXT_WEEK_CHOICES;
-  const selectedProduct = products.find((p) => p.id === productId);
-  const headerProductName = selectedProduct?.name ?? initial.productName;
+  const selectedActivity = activities.find((a) => a.id === parent.id);
+  const selectedProduct = products.find((p) => p.id === parent.id);
+  const parentName = isActivityParent
+    ? (selectedActivity?.name ?? initial.activityName ?? "")
+    : (selectedProduct?.name ?? initial.productName);
   const headerVerb = isCreate ? "Add Item" : "Edit Item";
 
-  // require-stage-on-items-and-decisions: an item must carry a concrete stage
-  // when the product has owned stages — mirrors the risk dialog. A single owned
-  // stage is implicitly selected so the lead can save without a click; zero
-  // owned stages with nothing to carry is a dead end (Save disabled).
-  const availableStages = stagesForProduct?.(productId) ?? [];
+  // require-stage-on-items-and-decisions: a PRODUCT-parented item must carry a
+  // concrete stage when the product has owned stages — mirrors the risk dialog.
+  // An ACTIVITY-parented item owns no stage (Decision 5), so the stage step is
+  // hidden and never validated.
+  const availableStages = isActivityParent
+    ? []
+    : (stagesForProduct?.(parent.id) ?? []);
   const effectiveStageIds = computeEffectiveStageIds(stageIds, availableStages);
-  const isDeadEnd = isZeroOwnedStageDeadEnd(availableStages, effectiveStageIds);
+  const isDeadEnd =
+    !isActivityParent &&
+    isZeroOwnedStageDeadEnd(availableStages, effectiveStageIds);
 
-  function setProductAndStages(nextProductId: string) {
-    setProductId(nextProductId);
-    // unify-record-dialogs: clear the stage selection on a product switch —
-    // never default to all owned stages (mirrors the risk dialog, W11 3.10).
-    // The single-owned-stage convenience still applies at save time.
+  function setParentAndStages(nextParent: RecordParent) {
+    setParent(nextParent);
+    // Clear the stage selection on any parent switch — never default to all
+    // owned stages (mirrors the risk dialog, W11 3.10). Switching to an activity
+    // hides the stage step; switching back to a product re-shows it empty. The
+    // single-owned-stage convenience still applies at save time.
     setStageIds([]);
   }
 
@@ -226,17 +395,16 @@ function ItemEditDialogContent({
     // Ctrl/Cmd+Enter shortcut routes through here, so it inherits the guard.
     if (isDeadEnd) return;
     const trimmed = text.trim();
-    const next: typeof errors = {};
-    if (trimmed.length === 0) next.text = "Description is required";
-    if (availableStages.length > 0 && effectiveStageIds.length === 0)
-      next.stageIds = "Select at least one stage.";
+    const next: typeof errors = collectItemErrors({
+      trimmed,
+      isActivityParent,
+      availableStages,
+      effectiveStageIds,
+    });
     if (Object.keys(next).length > 0) {
       setErrors(next);
       // Move focus to the first invalid control so the error is discoverable by
-      // keyboard/screen-reader users instead of leaving focus on Save. The
-      // description is the first field; the stage group (rendered only when the
-      // product has ≥2 owned stages, which is exactly when this error fires) is
-      // next.
+      // keyboard/screen-reader users instead of leaving focus on Save.
       const firstInvalid = next.text
         ? document.getElementById("item-text")
         : dialogSurfaceRef.current?.querySelector<HTMLElement>(
@@ -245,14 +413,23 @@ function ItemEditDialogContent({
       firstInvalid?.focus();
       return;
     }
-    // Cross-stage rows (fix-lead-surface-name-resolution): an edited item may
-    // reference a project outside the lead's stage-owned `products`. Keep the
-    // original assignment instead of silently reassigning to the first product.
-    const product =
-      products.find((p) => p.id === productId) ??
-      (item?.productId === productId
-        ? { id: item.productId, name: item.productName }
-        : products.at(0));
+    // activity-first-class: an activity parent yields an activity-parented row
+    // (empty productId, no stage); a product parent keeps today's output.
+    if (isActivityParent) {
+      onSave({
+        id: item?.id ?? crypto.randomUUID(),
+        productId: "",
+        productName: selectedActivity?.name ?? initial.activityName ?? "",
+        activityId: parent.id,
+        activityName: selectedActivity?.name ?? initial.activityName,
+        text: trimmed,
+        status,
+        author: item?.author ?? currentUserName ?? "You",
+        priorityRank: priorityRank ?? null,
+      });
+      return;
+    }
+    const product = resolveSaveProduct(products, item, parent.id);
     if (!product) {
       setErrors({ text: "No product available" });
       return;
@@ -261,6 +438,7 @@ function ItemEditDialogContent({
       id: item?.id ?? crypto.randomUUID(),
       productId: product.id,
       productName: product.name,
+      activityId: null,
       stageIds:
         effectiveStageIds.length > 0
           ? canonicalStageIds(effectiveStageIds)
@@ -298,9 +476,9 @@ function ItemEditDialogContent({
       >
         <h2 className="mb-4 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
           {headerVerb}{" "}
-          {headerProductName ? (
+          {parentName ? (
             <span className="text-[var(--color-muted-foreground)]">
-              — {headerProductName}
+              — {parentName}
             </span>
           ) : null}
         </h2>
@@ -395,65 +573,38 @@ function ItemEditDialogContent({
               Classification
             </span>
 
-            {/* Product picker — shared component, always rendered. */}
-            <ProductPicker
+            {/* Parent picker — shared component. Offers products and the
+                author's attached activities; choosing an activity hides the
+                stage step below. */}
+            <ParentPicker
               id="item-product"
-              value={productId}
+              value={parent}
               products={products}
-              onChange={setProductAndStages}
+              activities={activities}
+              onChange={setParentAndStages}
             />
 
-            <StageMultiSelect
-              id="item-stage"
-              value={stageIds}
-              stages={availableStages}
-              required
-              // Suppress the stale required-stage error in the dead-end branch so
-              // it never co-renders with the contact-admin notice below.
-              error={isDeadEnd ? undefined : errors.stageIds}
-              onChange={(next) => {
-                setStageIds(next);
-                if (errors.stageIds)
+            {/* activity-first-class: the stage step is product-only. An activity
+                owns no SDLC stage, so it is omitted for an activity parent. */}
+            {!isActivityParent && (
+              <ItemStageStep
+                stageIds={stageIds}
+                availableStages={availableStages}
+                isDeadEnd={isDeadEnd}
+                error={errors.stageIds}
+                parentName={parentName}
+                onChange={(nextStages) => {
+                  setStageIds(nextStages);
                   setErrors((prev) => ({ ...prev, stageIds: undefined }));
-              }}
-            />
-
-            {isDeadEnd && (
-              <p
-                role="status"
-                className="text-xs text-[var(--color-destructive)]"
-              >
-                No stages assigned on {headerProductName} — contact admin.
-              </p>
+                }}
+              />
             )}
 
-            {/* Status chips */}
-            <div>
-              <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
-                Status
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {choices.map((c) => {
-                  const selected = status === c.value;
-                  return (
-                    <button
-                      key={c.value}
-                      type="button"
-                      onClick={() => setStatus(c.value)}
-                      className="inline-flex min-h-[var(--touch-target-min)] md:min-h-[34px] items-center gap-1 rounded-[var(--radius-pill)] px-3 py-1 text-xs font-semibold transition-[background-color,border-color,color,opacity]"
-                      style={{
-                        background: selected ? c.bg : "transparent",
-                        color: selected ? c.color : "var(--color-foreground)",
-                        border: `1.5px solid ${selected ? c.border : "rgba(0,0,0,0.15)"}`,
-                      }}
-                      aria-pressed={selected}
-                    >
-                      {c.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <ItemStatusChips
+              choices={choices}
+              status={status}
+              onSelect={setStatus}
+            />
           </div>
         </div>
 

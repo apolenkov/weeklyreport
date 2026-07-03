@@ -1,26 +1,44 @@
 "use client";
 
-import type { SectionActivity } from "@customreport/shared";
+import type {
+  ReportSectionReadModel,
+  SectionActivity,
+} from "@customreport/shared";
+
+// `linkedProducts` carries a schema default, but legacy fixtures and frozen
+// pre-activity snapshots may omit it, so tolerate its absence at the type level.
+type StripActivity = Omit<SectionActivity, "linkedProducts"> & {
+  readonly linkedProducts?: SectionActivity["linkedProducts"];
+};
 
 /**
- * The minimal section slice the strip reads. `activities` is optional here
- * (unlike the parsed read model) so pre-activity snapshot shapes and legacy
- * fixtures render as "no activities" instead of crashing.
+ * The section slice the band reads. `activities` and the flat record arrays are
+ * optional so pre-activity snapshot shapes and legacy fixtures render as "no
+ * activities" instead of crashing. Fed the full section, so each activity's
+ * own records are rendered in the report body.
  */
 interface ActivitySectionSlice {
   readonly authorId: string;
   readonly authorName: string;
-  readonly activities?: readonly SectionActivity[];
+  readonly activities?: readonly StripActivity[];
+  readonly items?: ReportSectionReadModel["items"];
+  readonly risks?: ReportSectionReadModel["risks"];
+  readonly decisions?: ReportSectionReadModel["decisions"];
 }
 
 type ActivityTone = "on-track" | "at-risk" | "blocked" | "empty";
 
-interface ActivityRow {
+interface ActivityCardModel {
   readonly key: string;
   readonly activityName: string;
   readonly authorName: string;
   readonly tone: ActivityTone;
   readonly note: string | null;
+  readonly linkedProducts: readonly string[];
+  readonly currentItems: readonly string[];
+  readonly nextItems: readonly string[];
+  readonly risks: readonly string[];
+  readonly decisions: readonly string[];
 }
 
 const TONE_LABEL: Record<ActivityTone, string> = {
@@ -44,24 +62,43 @@ function toTone(status: "green" | "yellow" | "red" | null): ActivityTone {
   return "empty";
 }
 
-/**
- * Flatten every section's activity statuses into display rows, one per
- * (activity, author) — several leads can report the same activity, each row is
- * that author's own status. Read through the section author, like the rest of
- * the report body; no separate group filter.
- */
-function buildActivityRows(
+/** Build one body card per (activity, author) with the activity's own records. */
+function toActivityCard(
+  section: ActivitySectionSlice,
+  activity: StripActivity,
+): ActivityCardModel {
+  const owns = (parentId: string | null | undefined): boolean =>
+    parentId === activity.activityId;
+  const items = (section.items ?? []).filter((i) => owns(i.activityId));
+  return {
+    key: `${activity.activityId}::${section.authorId}`,
+    activityName: activity.activityName,
+    authorName: section.authorName,
+    // Render the risk/blocker-derived floor, falling back to the stored status.
+    // `derivedStatus`/`linkedProducts` carry schema defaults, but legacy/partial
+    // fixtures and frozen snapshots may omit them — tolerate that here.
+    tone: toTone(activity.derivedStatus ?? activity.status),
+    note: activity.note ?? null,
+    linkedProducts: (activity.linkedProducts ?? []).map((p) => p.productName),
+    currentItems: items.filter((i) => i.type === "current").map((i) => i.text),
+    nextItems: items.filter((i) => i.type === "next").map((i) => i.text),
+    risks: (section.risks ?? [])
+      .filter((r) => owns(r.activityId))
+      .map((r) => r.risk),
+    decisions: (section.decisions ?? [])
+      .filter((d) => owns(d.activityId))
+      .map((d) => d.text),
+  };
+}
+
+function buildActivityCards(
   sections: readonly ActivitySectionSlice[],
-): ActivityRow[] {
+): ActivityCardModel[] {
   return sections
     .flatMap((section) =>
-      (section.activities ?? []).map((activity) => ({
-        key: `${activity.activityId}::${section.authorId}`,
-        activityName: activity.activityName,
-        authorName: section.authorName,
-        tone: toTone(activity.status),
-        note: activity.note ?? null,
-      })),
+      (section.activities ?? []).map((activity) =>
+        toActivityCard(section, activity),
+      ),
     )
     .sort(
       (a, b) =>
@@ -70,19 +107,88 @@ function buildActivityRows(
     );
 }
 
+/** One labeled record list inside an activity card (self-suppresses when empty). */
+function RecordList({
+  label,
+  rows,
+}: {
+  readonly label: string;
+  readonly rows: readonly string[];
+}) {
+  if (rows.length === 0) return null;
+  return (
+    <div className="mt-2">
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
+        {label}
+      </span>
+      <ul className="mt-0.5 space-y-0.5">
+        {rows.map((text, idx) => (
+          <li
+            key={`${label}-${String(idx)}`}
+            className="text-sm text-[var(--color-foreground)]"
+          >
+            {text}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ActivityBodyCard({ card }: { readonly card: ActivityCardModel }) {
+  const linkedNames = card.linkedProducts.join(", ");
+  return (
+    <li className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-white/70 p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          aria-hidden="true"
+          className={[
+            "inline-block h-2 w-2 shrink-0 rounded-full",
+            TONE_DOT_CLASS[card.tone],
+          ].join(" ")}
+        />
+        <span className="font-medium text-[var(--color-foreground)]">
+          {card.activityName}
+        </span>
+        <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--color-muted-foreground)]">
+          {TONE_LABEL[card.tone]}
+        </span>
+        <span className="text-xs text-[var(--color-muted-foreground)]">
+          {card.authorName}
+        </span>
+        {linkedNames ? (
+          <span className="text-xs text-[var(--color-muted-foreground)]">
+            · Products: {linkedNames}
+          </span>
+        ) : null}
+      </div>
+      {card.note ? (
+        <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+          {card.note}
+        </p>
+      ) : null}
+      <RecordList label="Current" rows={card.currentItems} />
+      <RecordList label="Next" rows={card.nextItems} />
+      <RecordList label="Risks & Blockers" rows={card.risks} />
+      <RecordList label="Decisions" rows={card.decisions} />
+    </li>
+  );
+}
+
 /**
- * Compact "Project Activities" band on the assembled weekly report — the
- * stage-less units beside products. Display-only: activity status never feeds
- * portfolio totals, escalations, or product health. Self-suppresses when no
- * section carries an activity.
+ * "Project Activities" band on the assembled weekly report — the stage-less
+ * units beside products, each rendered like a product body card (its own
+ * records + linked products), minus the SDLC stage lane. Display-only: activity
+ * status never feeds portfolio totals, escalations, or product health.
+ * Self-suppresses when no section carries an activity.
  */
 export function ActivityStatusStrip({
   sections,
 }: {
   readonly sections: readonly ActivitySectionSlice[];
 }) {
-  const rows = buildActivityRows(sections);
-  if (rows.length === 0) return null;
+  const cards = buildActivityCards(sections);
+  if (cards.length === 0) return null;
 
   return (
     <section
@@ -93,34 +199,9 @@ export function ActivityStatusStrip({
       <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
         Project Activities
       </h3>
-      <ul className="mt-3 space-y-1.5">
-        {rows.map((row) => (
-          <li
-            key={row.key}
-            className="flex flex-wrap items-center gap-2 text-sm"
-          >
-            <span
-              aria-hidden="true"
-              className={[
-                "inline-block h-2 w-2 shrink-0 rounded-full",
-                TONE_DOT_CLASS[row.tone],
-              ].join(" ")}
-            />
-            <span className="font-medium text-[var(--color-foreground)]">
-              {row.activityName}
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--color-muted-foreground)]">
-              {TONE_LABEL[row.tone]}
-            </span>
-            <span className="text-xs text-[var(--color-muted-foreground)]">
-              {row.authorName}
-            </span>
-            {row.note ? (
-              <span className="min-w-0 flex-1 truncate text-xs text-[var(--color-muted-foreground)]">
-                {row.note}
-              </span>
-            ) : null}
-          </li>
+      <ul className="mt-3 space-y-2">
+        {cards.map((card) => (
+          <ActivityBodyCard key={card.key} card={card} />
         ))}
       </ul>
     </section>

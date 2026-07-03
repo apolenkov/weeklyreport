@@ -77,6 +77,10 @@ const sourceSection: ReportSectionReadModel = {
 
 function createRepository(
   section: ReportSectionReadModel,
+  // activity-first-class: the target period's re-attached activities. Defaults
+  // to the source's set (the common case); a test passes `[]` to model an
+  // activity archived/detached between periods (decision 0.3).
+  targetActivities: ReportSectionReadModel["activities"] = section.activities,
 ): CarryOverRepository {
   const executions = new Map<string, CarryOverExecution>();
   let targetSection: ReportSectionReadModel = {
@@ -87,6 +91,7 @@ function createRepository(
     submittedAt: null,
     items: [],
     decisions: [],
+    activities: targetActivities,
   };
   let records: CarryOverRecord[] = [];
 
@@ -463,6 +468,76 @@ describe("CarryOverService", () => {
         service.executeCarryOver(sourceReportId, targetReportId),
       ).rejects.toBeInstanceOf(CarryOverDomainError);
     });
+  });
+});
+
+// activity-first-class (LOCKED decision 0.3): an activity-parented record is
+// carried only when its activity is re-attached to the target section; an
+// archived/detached activity's records are dropped, not carried forward.
+describe("CarryOverService — activity-parented carry-over", () => {
+  const ACTIVITY_ID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+  const activitySource: ReportSectionReadModel = {
+    ...sourceSection,
+    items: [
+      {
+        id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        activityId: ACTIVITY_ID,
+        type: "next",
+        text: "Activity next-week item",
+        tag: "feature",
+        workflowStatus: "in_progress",
+        carriedOver: false,
+      },
+    ],
+    decisions: [
+      {
+        id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        activityId: ACTIVITY_ID,
+        text: "Unresolved activity decision",
+        owner: "Lead 1",
+        deadline: null,
+        impact: "Follow up",
+        resolvedAt: null,
+      },
+    ],
+    activities: [
+      {
+        activityId: ACTIVITY_ID,
+        activityName: "Jira triage duty",
+        status: "green",
+        linkedProducts: [],
+        derivedStatus: "green",
+      },
+    ],
+  };
+
+  it("carries the records when the activity is re-attached in the target period", async () => {
+    const service = new CarryOverService(createRepository(activitySource));
+    const result = await service.executeCarryOver(
+      sourceReportId,
+      targetReportId,
+    );
+
+    expect(result.targetSection.items).toHaveLength(1);
+    expect(result.targetSection.items[0]?.activityId).toBe(ACTIVITY_ID);
+    expect(result.targetSection.decisions).toHaveLength(1);
+    expect(result.targetSection.decisions[0]?.activityId).toBe(ACTIVITY_ID);
+    expect(result.records).toHaveLength(2);
+  });
+
+  it("drops the clone when the activity is not re-attached", async () => {
+    const service = new CarryOverService(
+      // Empty target activities model an archived/detached activity.
+      createRepository(activitySource, []),
+    );
+    const result = await service.executeCarryOver(
+      sourceReportId,
+      targetReportId,
+    );
+
+    expect(result.targetSection.items).toHaveLength(0);
+    expect(result.targetSection.decisions).toHaveLength(0);
+    expect(result.records).toHaveLength(0);
   });
 });
 

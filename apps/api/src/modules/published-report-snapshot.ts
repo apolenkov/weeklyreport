@@ -249,6 +249,46 @@ function flaggedRedEscalation(
   };
 }
 
+// activity-first-class (Phase-1, LOCKED decision 0.1): the per-record escalation
+// loops skip activity-parented rows (null product FK) so an activity's
+// blockers/risks floor only its own pill, never the product-level roll-up.
+// Extracted so `buildEscalationsFromReadSections` stays under the complexity gate.
+function blockedItemEscalations(
+  section: ReportSectionReadModel,
+  productNames: ReadonlyMap<string, string>,
+): Escalation[] {
+  return section.items.flatMap((item) => {
+    if (item.workflowStatus !== "blocked" || !item.projectId) return [];
+    return [
+      {
+        type: "blocked" as const,
+        productName: productNames.get(item.projectId) ?? UNKNOWN_PRODUCT_NAME,
+        stageName: resolveStageName(item.stageIds),
+        leadName: section.authorName,
+        description: item.text,
+      },
+    ];
+  });
+}
+
+function unresolvedRiskEscalations(
+  section: ReportSectionReadModel,
+  productNames: ReadonlyMap<string, string>,
+): Escalation[] {
+  return section.risks.flatMap((risk) => {
+    if (!risk.projectId) return [];
+    return [
+      {
+        type: "unresolved_risk" as const,
+        productName: productNames.get(risk.projectId) ?? UNKNOWN_PRODUCT_NAME,
+        stageName: resolveStageName(risk.stageIds),
+        leadName: section.authorName,
+        description: risk.risk,
+      },
+    ];
+  });
+}
+
 export function buildEscalationsFromReadSections(
   sections: readonly ReportSectionReadModel[],
 ): Escalation[] {
@@ -265,20 +305,11 @@ export function buildEscalationsFromReadSections(
   for (const section of sections) {
     const productNames = new Map(
       [...section.projects, ...(section.referencedProjects ?? [])].map(
-        (project) => [project.projectId, project.projectName],
+        (project) => [project.projectId, project.projectName] as const,
       ),
     );
 
-    for (const item of section.items) {
-      if (item.workflowStatus !== "blocked") continue;
-      escalations.push({
-        type: "blocked",
-        productName: productNames.get(item.projectId) ?? UNKNOWN_PRODUCT_NAME,
-        stageName: resolveStageName(item.stageIds),
-        leadName: section.authorName,
-        description: item.text,
-      });
-    }
+    escalations.push(...blockedItemEscalations(section, productNames));
 
     for (const project of section.projects) {
       const flaggedRed = flaggedRedEscalation(
@@ -289,15 +320,7 @@ export function buildEscalationsFromReadSections(
       if (flaggedRed) escalations.push(flaggedRed);
     }
 
-    for (const risk of section.risks) {
-      escalations.push({
-        type: "unresolved_risk",
-        productName: productNames.get(risk.projectId) ?? UNKNOWN_PRODUCT_NAME,
-        stageName: resolveStageName(risk.stageIds),
-        leadName: section.authorName,
-        description: risk.risk,
-      });
-    }
+    escalations.push(...unresolvedRiskEscalations(section, productNames));
   }
 
   return escalations;

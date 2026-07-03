@@ -483,7 +483,7 @@ describe("DecisionEditDialog — product switch re-scopes + clears stages", () =
 
     // Switch product → options re-scope to p2 and nothing stays checked.
     fireEvent.change(screen.getByLabelText(/^Product/i), {
-      target: { value: "p2" },
+      target: { value: "product:p2" },
     });
     expect(screen.queryByRole("checkbox", { name: "Planning" })).toBeNull();
     expect(

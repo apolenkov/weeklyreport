@@ -222,7 +222,10 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
                   // PK `id` still comes from the clone above.
                   stableId: i.stableId,
                   reportSectionId: targetSection.reportSectionId,
-                  projectId: i.projectId,
+                  // XOR parent preserved onto the clone (product FK null for an
+                  // activity-parented carried item).
+                  projectId: i.projectId ?? null,
+                  activityId: i.activityId ?? null,
                   type: i.type,
                   text: i.text,
                   tag: i.tag,
@@ -252,16 +255,16 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
               (d) => d.id && !existingDecisionIds.has(d.id),
             );
 
-            // Decision.productId is a NOT-NULL product FK, so a productless
-            // decision cannot persist — skip it here (the service already
-            // excludes it from counts/records).
-            const decisionsWithProduct = newDecisions.filter(
-              (d): d is typeof d & { productId: string } =>
-                Boolean(d.productId),
+            // activity-first-class (Decision 6): a carried decision now persists
+            // when parented by EITHER a product OR an activity (the XOR
+            // guarantees exactly one). A record with neither is malformed and
+            // filtered out here (defense-in-depth against the CHECK).
+            const decisionsWithParent = newDecisions.filter(
+              (d) => d.productId != null || d.activityId != null,
             );
-            if (decisionsWithProduct.length > 0) {
+            if (decisionsWithParent.length > 0) {
               await tx.decision.createMany({
-                data: decisionsWithProduct.map((d) => ({
+                data: decisionsWithParent.map((d) => ({
                   id: d.id ?? undefined,
                   // Carry the source decision's durable lineage key onto the
                   // clone (rides the `...decision` spread in
@@ -274,7 +277,9 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
                   impact: d.impact,
                   resolvedAt: d.resolvedAt ?? null,
                   stageNames: d.stageIds ?? [],
-                  productId: d.productId,
+                  // XOR parent preserved (product FK null for the activity case).
+                  productId: d.productId ?? null,
+                  activityId: d.activityId ?? null,
                 })),
                 // Parity with the item insert above: a carried decision whose
                 // lineage already exists in the target section (the new

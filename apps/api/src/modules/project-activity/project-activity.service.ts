@@ -28,14 +28,14 @@ export interface ProjectActivityRepository {
   create(input: {
     name: string;
     groupId: string;
-    projectId: string | null;
+    linkedProductIds: string[];
     jiraAccounts: string[];
   }): Promise<ProjectActivity>;
   update(input: {
     id: string;
     name: string;
     groupId: string;
-    projectId: string | null;
+    linkedProductIds: string[];
     jiraAccounts: string[];
   }): Promise<ProjectActivity>;
   setArchived(activityId: string, archived: boolean): Promise<ProjectActivity>;
@@ -64,11 +64,11 @@ export class ProjectActivityService {
   }
 
   async create(input: ProjectActivityCreateInput): Promise<ProjectActivity> {
-    await this.assertReferencesExist(input.groupId, input.projectId ?? null);
+    await this.assertReferencesExist(input.groupId, input.linkedProductIds);
     return this.repository.create({
       name: input.name,
       groupId: input.groupId,
-      projectId: input.projectId ?? null,
+      linkedProductIds: input.linkedProductIds,
       jiraAccounts: input.jiraAccounts,
     });
   }
@@ -85,12 +85,12 @@ export class ProjectActivityService {
         "Detach all leads before moving the activity to another group.",
       );
     }
-    await this.assertReferencesExist(input.groupId, input.projectId ?? null);
+    await this.assertReferencesExist(input.groupId, input.linkedProductIds);
     return this.repository.update({
       id: input.id,
       name: input.name,
       groupId: input.groupId,
-      projectId: input.projectId ?? null,
+      linkedProductIds: input.linkedProductIds,
       jiraAccounts: input.jiraAccounts,
     });
   }
@@ -149,19 +149,24 @@ export class ProjectActivityService {
 
   private async assertReferencesExist(
     groupId: string,
-    projectId: string | null,
+    linkedProductIds: readonly string[],
   ): Promise<void> {
     if (!(await this.repository.groupExists(groupId))) {
       throw new ProjectActivityNotFoundError(
         `Reporting group ${groupId} was not found.`,
       );
     }
-    if (
-      projectId !== null &&
-      !(await this.repository.productExists(projectId))
-    ) {
+    // Every linked product must exist — a stale id in the multi-select must
+    // fail loud, never silently drop the link on reconcile.
+    const existence = await Promise.all(
+      linkedProductIds.map((productId) =>
+        this.repository.productExists(productId),
+      ),
+    );
+    const missingIndex = existence.findIndex((exists) => !exists);
+    if (missingIndex !== -1) {
       throw new ProjectActivityNotFoundError(
-        `Product ${projectId} was not found.`,
+        `Product ${linkedProductIds[missingIndex]} was not found.`,
       );
     }
   }

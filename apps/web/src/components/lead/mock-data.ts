@@ -44,6 +44,15 @@ export interface KanbanItem {
   id: string;
   productId: string;
   productName: string;
+  /**
+   * activity-first-class: set when the record is parented to an Activity
+   * instead of a product (XOR — exactly one). Activity-parented rows carry no
+   * stage and never appear in a product column; they render under the activity
+   * card. `productId` is empty for these rows.
+   */
+  activityId?: string | null;
+  /** Display name of the parent activity when `activityId` is set. */
+  activityName?: string;
   /** @deprecated Use stageIds. Kept for reading legacy data. */
   stageName?: string;
   stageIds?: string[];
@@ -61,6 +70,10 @@ export interface RiskEntry {
   id: string;
   productId: string;
   productName: string;
+  /** activity-first-class: parent activity id (XOR with productId). See KanbanItem. */
+  activityId?: string | null;
+  /** Display name of the parent activity when `activityId` is set. */
+  activityName?: string;
   /** @deprecated Use stageIds. Kept for reading legacy data. */
   stageName?: string;
   stageIds?: string[];
@@ -80,6 +93,10 @@ export interface DecisionEntry {
   id: string;
   productId: string;
   productName: string;
+  /** activity-first-class: parent activity id (XOR with productId). See KanbanItem. */
+  activityId?: string | null;
+  /** Display name of the parent activity when `activityId` is set. */
+  activityName?: string;
   text: string;
   /** Schema-required owner (responsible person). Surfaced in the edit dialog. */
   owner: string;
