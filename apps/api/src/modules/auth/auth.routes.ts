@@ -114,7 +114,10 @@ function createLogoutHandler(
 
     // Reuse the cookie issuer with an empty token + maxAge 0 so the cleared
     // cookie matches the set cookie's name and attributes exactly.
-    res.setHeader("Set-Cookie", createSessionCookie("", deps.env, 0));
+    res.setHeader(
+      "Set-Cookie",
+      createSessionCookie({ token: "", env: deps.env, maxAgeSeconds: 0 }),
+    );
     res.redirect("/");
   };
 }

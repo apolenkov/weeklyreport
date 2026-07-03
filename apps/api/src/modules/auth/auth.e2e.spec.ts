@@ -56,7 +56,7 @@ describe("auth controller and roles guard", () => {
 
   describe("logout cookie clearing", () => {
     it("createSessionCookie uses AUTH_JWT_COOKIE_NAME from env", () => {
-      const cookie = createSessionCookie("test-token", env);
+      const cookie = createSessionCookie({ token: "test-token", env });
 
       expect(cookie).toContain("customreport_session=");
       expect(cookie).toContain("HttpOnly");
@@ -64,7 +64,10 @@ describe("auth controller and roles guard", () => {
 
     it("uses custom cookie name when AUTH_JWT_COOKIE_NAME is set", () => {
       const customEnv = { ...env, AUTH_JWT_COOKIE_NAME: "custom_session" };
-      const cookie = createSessionCookie("test-token", customEnv);
+      const cookie = createSessionCookie({
+        token: "test-token",
+        env: customEnv,
+      });
 
       expect(cookie).toContain("custom_session=");
       expect(cookie).not.toContain("customreport_session=");
@@ -73,7 +76,10 @@ describe("auth controller and roles guard", () => {
     it("falls back to customreport_session when AUTH_JWT_COOKIE_NAME is not set", () => {
       const envWithout = { ...env } as NodeJS.ProcessEnv;
       delete envWithout.AUTH_JWT_COOKIE_NAME;
-      const cookie = createSessionCookie("test-token", envWithout);
+      const cookie = createSessionCookie({
+        token: "test-token",
+        env: envWithout,
+      });
 
       expect(cookie).toContain("customreport_session=");
     });
