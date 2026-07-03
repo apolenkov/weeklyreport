@@ -85,7 +85,7 @@
 - [x] 7.1 `pnpm typecheck` — green (web + api).
 - [x] 7.2 `pnpm lint` — clean, `--max-warnings 0`, no new exempt entry.
 - [x] 7.3 `pnpm test` — green (web 1503, api 1396) incl. the new tests.
-- [ ] 7.4 `pnpm test:integration` — PENDING live run (saveSection + escalation).
+- [x] 7.4 `pnpm test:integration` — GREEN (256 passed / 4 skipped, real \_test DB).
 - [ ] 7.5 Live-verify from source — PENDING.
 - [x] 7.6 `grep -nE '[а-яА-Я]'` on changed `.tsx` — every hit is data/comment/test.
 - [ ] 7.7 `openspec validate record-status-derived-from-risk --strict` — run below.
