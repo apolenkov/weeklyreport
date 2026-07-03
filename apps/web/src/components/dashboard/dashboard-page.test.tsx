@@ -32,6 +32,9 @@ vi.mock("../../lib/trpc-context", () => ({
       dashboard: {
         queryOptions: () => ({ queryKey: ["review.dashboard"] }),
       },
+      verdict: {
+        mutationOptions: () => ({}),
+      },
     },
     weeklyReport: {
       get: {
@@ -161,6 +164,7 @@ describe("DashboardPage loading guard", () => {
         weekLabel: "Week 20",
         periodStatus: "open",
         hasActiveReminderRule: true,
+        leadSections: [],
       },
     });
 
@@ -182,6 +186,7 @@ describe("DashboardPage loading guard", () => {
         weekLabel: "Week 20",
         periodStatus: "open",
         hasActiveReminderRule: true,
+        leadSections: [],
       },
     });
 
@@ -193,6 +198,39 @@ describe("DashboardPage loading guard", () => {
     // both as siblings, with neither standing in for the other.
     expect(screen.getByText("Alerts")).toBeInTheDocument();
     expect(screen.getByText("Reopen requests")).toBeInTheDocument();
+  });
+
+  it("mounts the section-reviews roll-up strip in the dashboard review area (report-review-mode HF3)", () => {
+    setQueryState("review.dashboard", { data: [] });
+    setQueryState("weeklyReport.get", {
+      data: {
+        status: "ok",
+        reportId: "report-1",
+        weekLabel: "Week 20",
+        periodStatus: "open",
+        hasActiveReminderRule: true,
+        leadSections: [
+          {
+            reportSectionId: "sec-1",
+            version: 1,
+            authorName: "Alice",
+            status: "submitted",
+            reviews: [],
+            canReview: true,
+            groupId: "group-1",
+          },
+        ],
+      },
+    });
+
+    render(<DashboardPage />);
+
+    // The strip relocated here from the report body; it exposes the per-section
+    // verdict control for the head's at-a-glance roll-up.
+    expect(
+      screen.getByRole("region", { name: "Section reviews" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
   });
 
   it("does not keep the dashboard on the skeleton after a query error", () => {

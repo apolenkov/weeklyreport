@@ -1,22 +1,9 @@
 "use client";
 
-import type {
-  ReportSectionReadModel,
-  SectionReviewView,
-} from "@customreport/shared";
+import type { ReportSectionReadModel } from "@customreport/shared";
 
+import type { SectionReviewRow } from "./section-review-rows";
 import { SectionVerdictControl } from "./section-verdict-control";
-
-/** One rendered section's review state for the strip. */
-export interface SectionReviewRow {
-  readonly reportSectionId: string;
-  readonly version: number;
-  readonly authorName: string;
-  readonly status: ReportSectionReadModel["status"];
-  readonly reviews: readonly SectionReviewView[];
-  readonly canReview: boolean;
-  readonly groupId: string | null;
-}
 
 function statusLabel(status: ReportSectionReadModel["status"]): string {
   return status === "submitted" ? "Submitted" : "Draft";
