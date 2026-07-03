@@ -3,8 +3,9 @@
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { deriveItemAlarmFromRisks } from "../../lib/item-alarm";
 import { useDialogFocus } from "../../lib/use-dialog-focus";
-import type { ItemStatus, KanbanItem, Product } from "./mock-data";
+import type { ItemStatus, KanbanItem, Product, RiskEntry } from "./mock-data";
 import {
   type ParentActivityOption,
   ParentPicker,
@@ -17,6 +18,13 @@ import {
   isZeroOwnedStageDeadEnd,
 } from "./stage-ownership";
 import { canonicalStageIds } from "./stage-tags";
+
+/** The prefill an item's alarm gesture hands to blocker (risk) creation. */
+export interface BlockerPrefill {
+  readonly productId: string;
+  readonly stageIds: string[];
+  readonly severity: "at-risk" | "blocked";
+}
 
 interface ItemEditDialogProps {
   /** Open/close state. Caller controls so it can wire submit/cancel. */
@@ -64,6 +72,18 @@ interface ItemEditDialogProps {
    * gracefully — the collision set is visible but the dialog never crashes.
    */
   readonly ownPeriodRanks?: readonly number[];
+  /**
+   * The section's own risks. An item a covering risk floors shows an inline
+   * locked message in place of the status chips (its at-risk/blocked alarm is
+   * derived from the risk, never a free chip — record-status-derived-from-risk).
+   */
+  readonly risks?: readonly RiskEntry[];
+  /**
+   * Route a product-parented, uncovered item to blocker creation: opens the
+   * risk (blocker) dialog prefilled with the item's product, stage, and the
+   * chosen severity, instead of setting a free blocked status on the item.
+   */
+  readonly onRouteToBlocker?: (prefill: BlockerPrefill) => void;
   readonly onSave: (next: KanbanItem) => void;
   readonly onCancel: () => void;
 }
@@ -136,6 +156,57 @@ function collectItemErrors(args: {
   return errors;
 }
 
+interface CoverageArgs {
+  readonly isActivityParent: boolean;
+  readonly productId: string;
+  readonly stageIds: readonly string[];
+  readonly status: ItemStatus;
+  readonly risks: readonly RiskEntry[] | undefined;
+}
+
+/**
+ * Whether a covering risk floors the item in its LIVE edit state. `status` is
+ * already coerced (a stored blocked opens as in-progress), so this floors to the
+ * risk's severity exactly as the card does. Product parents with a concrete
+ * stage only — an activity item's severity stays isolated, and a stage-less row
+ * (a fresh create before a stage is picked) is never pre-locked by the wildcard.
+ */
+function isItemCovered(args: CoverageArgs): boolean {
+  if (args.isActivityParent || args.productId === "") return false;
+  if (args.stageIds.length === 0) return false;
+  return (
+    deriveItemAlarmFromRisks(
+      {
+        productId: args.productId,
+        stageIds: args.stageIds,
+        status: args.status,
+      },
+      args.risks ?? [],
+    ) !== null
+  );
+}
+
+type StatusSlot = "locked" | "chips-blockable" | "chips";
+
+/**
+ * The status slot to render: `locked` (a covering risk owns the alarm),
+ * `chips-blockable` (progress chips plus the route-to-blocker gesture), or plain
+ * `chips`. The gesture is offered only for a current-week product item whose
+ * caller can route to blocker creation.
+ */
+function resolveStatusSlot(
+  args: CoverageArgs & {
+    readonly week: "current" | "next";
+    readonly canRoute: boolean;
+  },
+): StatusSlot {
+  if (isItemCovered(args)) return "locked";
+  if (!args.isActivityParent && args.week === "current" && args.canRoute) {
+    return "chips-blockable";
+  }
+  return "chips";
+}
+
 /**
  * Resolve the product a product-parented save writes to. A cross-stage row may
  * reference a project outside the lead's stage-owned `products`, so keep the
@@ -205,6 +276,60 @@ function ItemStatusChips({
 }
 
 /**
+ * The status slot when a covering risk floors the item: the alarm is derived
+ * from that risk, so the free chips are replaced by a read-only lock message.
+ */
+function CoveredStatusLock() {
+  return (
+    <div>
+      <span className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]">
+        Status
+      </span>
+      <p className="rounded-xl border border-[rgba(200,32,20,0.15)] bg-[var(--color-status-blocked-bg)] px-3 py-2 text-xs text-[var(--color-foreground)]">
+        Status is set by the covering risk/blocker — resolve it in Risks &amp;
+        Blockers to change.
+      </p>
+    </div>
+  );
+}
+
+/** The alarm gesture on an uncovered item: routes to blocker (risk) creation. */
+function MarkBlockedRow({ onClick }: { readonly onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-2 inline-flex min-h-[var(--touch-target-min)] md:min-h-[34px] items-center gap-1 self-start rounded-[var(--radius-pill)] border border-[rgba(200,32,20,0.3)] bg-transparent px-3 py-1 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:bg-[rgba(200,32,20,0.08)]"
+    >
+      ⚠ Mark as blocked…
+    </button>
+  );
+}
+
+/** The status slot: the locked message, or the progress chips (+ alarm gesture). */
+function StatusSlotView({
+  slot,
+  choices,
+  status,
+  onSelect,
+  onMarkBlocked,
+}: {
+  readonly slot: StatusSlot;
+  readonly choices: readonly Choice[];
+  readonly status: ItemStatus;
+  readonly onSelect: (value: ItemStatus) => void;
+  readonly onMarkBlocked: () => void;
+}) {
+  if (slot === "locked") return <CoveredStatusLock />;
+  return (
+    <div className="flex flex-col">
+      <ItemStatusChips choices={choices} status={status} onSelect={onSelect} />
+      {slot === "chips-blockable" && <MarkBlockedRow onClick={onMarkBlocked} />}
+    </div>
+  );
+}
+
+/**
  * D12 fix (react-compiler-safe): outer shell conditionally mounts the inner
  * content component. Mount = fresh useState from props; unmount on close.
  * No useEffect reset needed — structural guarantee via mount/unmount.
@@ -228,6 +353,8 @@ function ItemEditDialogContent({
   defaultProductId,
   stagesForProduct,
   ownPeriodRanks,
+  risks,
+  onRouteToBlocker,
   onSave,
   onCancel,
 }: ItemEditDialogProps) {
@@ -317,6 +444,27 @@ function ItemEditDialogContent({
   const isDeadEnd =
     !isActivityParent &&
     isZeroOwnedStageDeadEnd(availableStages, effectiveStageIds);
+
+  const statusSlot = resolveStatusSlot({
+    isActivityParent,
+    productId: parent.id,
+    stageIds: effectiveStageIds,
+    status,
+    risks,
+    week,
+    canRoute: onRouteToBlocker !== undefined,
+  });
+
+  function handleMarkBlocked() {
+    // Route "set blocked" through blocker creation, prefilled — never a free
+    // blocked item status. Closing the item dialog hands off to the risk dialog.
+    onRouteToBlocker?.({
+      productId: parent.id,
+      stageIds: canonicalStageIds(effectiveStageIds),
+      severity: "blocked",
+    });
+    onCancel();
+  }
 
   function setParentAndStages(nextParent: RecordParent) {
     setParent(nextParent);
@@ -539,10 +687,12 @@ function ItemEditDialogContent({
               />
             )}
 
-            <ItemStatusChips
+            <StatusSlotView
+              slot={statusSlot}
               choices={choices}
               status={status}
               onSelect={setStatus}
+              onMarkBlocked={handleMarkBlocked}
             />
           </div>
         </div>

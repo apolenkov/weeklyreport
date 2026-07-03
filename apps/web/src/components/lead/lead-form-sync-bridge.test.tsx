@@ -4,7 +4,10 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
-import { LeadFormSyncBridge } from "./lead-form-sync-bridge";
+import {
+  LeadFormSyncBridge,
+  type RiskPrefillRequest,
+} from "./lead-form-sync-bridge";
 import type { Product, RiskEntry } from "./mock-data";
 
 // unify-risk-stage-status (D3): the cross-author lowering block surfaces as
@@ -64,6 +67,12 @@ function Harness({
   const [products, setProducts] = useState(initialProducts);
   const [risks, setRisks] = useState(initialRisks);
   const [risksAddSignal, setRisksAddSignal] = useState(0);
+  // Mirror lead-form's quick-add "Blocker": a one-shot severity-blocked prefill
+  // routed through the bridge's external channel. It lives in this PERSISTENT
+  // parent while `bridgeKey` can remount the Provider (the slides<->edit toggle).
+  const [blockerPrefill, setBlockerPrefill] =
+    useState<RiskPrefillRequest | null>(null);
+  const [bridgeKey, setBridgeKey] = useState(0);
 
   // Mirror what lead-form.tsx does: derive owned stages per product so the
   // RiskEditDialog stage selector is populated in integration tests.
@@ -76,11 +85,13 @@ function Harness({
 
   return (
     <LeadFormSyncBridge.Provider
+      key={bridgeKey}
       products={products}
       risks={risks}
       readOnly={readOnly}
       {...(displayRisks ? { displayRisks } : {})}
       risksAddSignal={risksAddSignal}
+      externalRiskPrefill={blockerPrefill}
       stagesForProduct={stagesForProduct}
       onProductsChange={(next) => {
         setProducts(next);
@@ -102,6 +113,24 @@ function Harness({
             + Add Risk
           </button>
         )}
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={() =>
+              setBlockerPrefill((prev) => ({
+                signal: (prev?.signal ?? 0) + 1,
+                productId: products[0]?.id ?? "",
+                stageIds: [],
+                severity: "blocked",
+              }))
+            }
+          >
+            Quick-add Blocker
+          </button>
+        )}
+        <button type="button" onClick={() => setBridgeKey((k) => k + 1)}>
+          Remount bridge
+        </button>
         <LeadFormSyncBridge.Risks />
       </section>
     </LeadFormSyncBridge.Provider>
@@ -227,6 +256,65 @@ describe("LeadFormSyncBridge", () => {
       await screen.findByRole("button", { name: /^Dev: blocked/ }),
     ).toBeInTheDocument();
     expect(onProductsChangeSpy).not.toHaveBeenCalled();
+  });
+
+  it("Test 2c (quick-add Blocker): opens the risk dialog pre-set to severity blocked", async () => {
+    // record-status-ux-polish §2: the external prefill routes a "Blocker"
+    // through the create dialog pre-set to blocked, not the pipeline-derived
+    // at-risk default (no stage is pipeline-flagged here).
+    const user = userEvent.setup();
+    const product = buildProduct();
+
+    render(<Harness initialProducts={[product]} initialRisks={[]} />);
+
+    await user.click(
+      screen.getByRole("button", { name: /Quick-add Blocker/i }),
+    );
+
+    await screen.findByRole("dialog", { name: /Add Risk dialog/i });
+    expect(screen.getByRole("button", { name: /Blocked/i })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: /At Risk/i })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("Test 2d (D16): a bridge remount does NOT reopen the dialog from a stale external prefill", async () => {
+    // The external prefill lives in the persistent parent; the bridge remounts
+    // on the slides<->edit toggle. A stale (already-consumed) prefill must not
+    // reopen the create dialog on remount — mirrors the useEditableListDialog
+    // D16 stale-signal guard.
+    const user = userEvent.setup();
+    const product = buildProduct();
+
+    render(<Harness initialProducts={[product]} initialRisks={[]} />);
+
+    await user.click(
+      screen.getByRole("button", { name: /Quick-add Blocker/i }),
+    );
+    await screen.findByRole("dialog", { name: /Add Risk dialog/i });
+    // Close it — the prefill (signal 1) stays set in the persistent parent.
+    await user.click(screen.getByRole("button", { name: /^Cancel$/i }));
+    expect(
+      screen.queryByRole("dialog", { name: /Add Risk dialog/i }),
+    ).not.toBeInTheDocument();
+
+    // Remount the bridge; the still-set prefill must NOT reopen the dialog.
+    await user.click(screen.getByRole("button", { name: /Remount bridge/i }));
+    expect(
+      screen.queryByRole("dialog", { name: /Add Risk dialog/i }),
+    ).not.toBeInTheDocument();
+
+    // A genuine later quick-add still opens (guard advances on strict increase).
+    await user.click(
+      screen.getByRole("button", { name: /Quick-add Blocker/i }),
+    );
+    expect(
+      await screen.findByRole("dialog", { name: /Add Risk dialog/i }),
+    ).toBeInTheDocument();
   });
 
   it("Test 3: clicking Edit on a risk opens the RiskEditDialog (edit surface for impact/mitigation)", async () => {

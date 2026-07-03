@@ -5,7 +5,9 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { toast } from "sonner";
@@ -264,6 +266,13 @@ export interface LeadFormSyncBridgeProviderProps {
   readonly visibilityMode?: "mine" | "everyone";
   /** W5: merged risks for visual rendering; own-only risks drive sync hook. */
   readonly displayRisks?: RiskEntry[];
+  /**
+   * A one-shot risk-prefill routed from OUTSIDE the pipeline — the quick-add
+   * "Blocker" entry (severity blocked) and the item dialog's alarm gesture
+   * (product + stage + severity). Threaded through the same create-dialog
+   * channel the chip-raise interception uses; each new `signal` opens once.
+   */
+  readonly externalRiskPrefill?: RiskPrefillRequest | null;
   readonly children: ReactNode;
 }
 
@@ -280,12 +289,30 @@ function Provider({
   crossAuthors,
   visibilityMode,
   displayRisks,
+  externalRiskPrefill,
   children,
 }: LeadFormSyncBridgeProviderProps) {
-  // D2: chip-raise interception payload, consumed by RisksSection.
+  // D2: chip-raise interception payload, consumed by RisksSection. Shared with
+  // the external prefill channel (quick-add "Blocker" / item-dialog alarm) so a
+  // single create-dialog open source stays canonical.
   const [riskPrefill, setRiskPrefill] = useState<RiskPrefillRequest | null>(
     null,
   );
+
+  // Fold an external one-shot prefill into the same channel. The external
+  // source (`externalRiskPrefill`) lives in the PERSISTENT parent (lead-form),
+  // while this Provider remounts on the slides<->edit toggle. Seed the guard ref
+  // from the mount-time signal and open only on a strict increase, so a remount
+  // that re-reads a still-set stale prefill does NOT reopen the dialog (the D16
+  // stale-signal fix, mirrored from `useEditableListDialog`); a genuine later
+  // quick-add still advances past it and opens.
+  const lastExternalSignal = useRef(externalRiskPrefill?.signal ?? 0);
+  useEffect(() => {
+    if (!externalRiskPrefill) return;
+    if (externalRiskPrefill.signal <= lastExternalSignal.current) return;
+    lastExternalSignal.current = externalRiskPrefill.signal;
+    setRiskPrefill(externalRiskPrefill);
+  }, [externalRiskPrefill]);
   // D3: chip-lower interception awaiting user confirmation.
   const [pendingLower, setPendingLower] = useState<PendingLower | null>(null);
 

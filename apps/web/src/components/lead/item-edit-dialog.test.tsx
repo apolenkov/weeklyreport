@@ -13,7 +13,7 @@ import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ItemEditDialog } from "./item-edit-dialog";
-import type { KanbanItem, Product } from "./mock-data";
+import type { KanbanItem, Product, RiskEntry } from "./mock-data";
 
 const products: Product[] = [
   { id: "p1", name: "DevOps Tools", overallStatus: "on-track", stages: [] },
@@ -850,5 +850,90 @@ describe("ItemEditDialog — activity parenting (activity-first-class)", () => {
     expect(saved.productId).toBe("");
     expect(saved.stageIds).toBeUndefined();
     expect(saved.text).toBe("Triaged 12 tickets");
+  });
+});
+
+describe("ItemEditDialog — record-status-ux-polish (in-dialog lock + blocker routing)", () => {
+  const coveredItem: KanbanItem = {
+    id: "i1",
+    productId: "p1",
+    productName: "DevOps Tools",
+    stageIds: ["Development"],
+    status: "in-progress",
+    text: "wip",
+    author: "You",
+  };
+  const coveringRisk: RiskEntry = {
+    id: "r1",
+    productId: "p1",
+    productName: "DevOps Tools",
+    stageIds: ["Development"],
+    severity: "blocked",
+    text: "A real covering blocker",
+    impact: "impact",
+    mitigation: "mitigation",
+  };
+
+  it("shows the in-dialog locked message and hides the status chips for a covered item", () => {
+    render(
+      <ItemEditDialog
+        open
+        item={coveredItem}
+        products={products}
+        week="current"
+        risks={[coveringRisk]}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText(/Status is set by the covering risk\/blocker/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /In Progress/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("routes an uncovered item's alarm gesture to blocker creation, prefilled", () => {
+    const onRouteToBlocker = vi.fn();
+    const onCancel = vi.fn();
+    render(
+      <ItemEditDialog
+        open
+        item={{ ...coveredItem, id: "i2" }}
+        products={products}
+        week="current"
+        risks={[]}
+        stagesForProduct={() => ["Development"]}
+        onRouteToBlocker={onRouteToBlocker}
+        onSave={vi.fn()}
+        onCancel={onCancel}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Mark as blocked/i }));
+    expect(onRouteToBlocker).toHaveBeenCalledWith({
+      productId: "p1",
+      stageIds: ["Development"],
+      severity: "blocked",
+    });
+    expect(onCancel).toHaveBeenCalled();
+  });
+
+  it("offers no alarm gesture without an onRouteToBlocker handler", () => {
+    render(
+      <ItemEditDialog
+        open
+        item={{ ...coveredItem, id: "i3" }}
+        products={products}
+        week="current"
+        risks={[]}
+        stagesForProduct={() => ["Development"]}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: /Mark as blocked/i }),
+    ).not.toBeInTheDocument();
   });
 });

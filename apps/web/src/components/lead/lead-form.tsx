@@ -76,7 +76,10 @@ import { DecisionsSection } from "./decisions-section";
 import { FillFromButton } from "./fill-from-button";
 import { ItemEditDialog } from "./item-edit-dialog";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
-import { LeadFormSyncBridge } from "./lead-form-sync-bridge";
+import {
+  LeadFormSyncBridge,
+  type RiskPrefillRequest,
+} from "./lead-form-sync-bridge";
 import { LeadReviewFeedback } from "./lead-review-feedback";
 import type {
   DecisionEntry,
@@ -799,6 +802,13 @@ export function LeadForm({
   const [nextWeekAddSignal, setNextWeekAddSignal] = useState(0);
   const [risksAddSignal, setRisksAddSignal] = useState(0);
   const [decisionsAddSignal, setDecisionsAddSignal] = useState(0);
+  // A one-shot risk-prefill for the quick-add "Blocker" entry and the item
+  // dialog's alarm gesture — routed to the risk create dialog via the sync
+  // bridge so a "Blocker" opens pre-set to severity blocked (product + stage
+  // when known), instead of the pipeline-derived at-risk default.
+  const [riskPrefill, setRiskPrefill] = useState<RiskPrefillRequest | null>(
+    null,
+  );
   // Quick-add item dialog host (current-item / next-item only). Risk, blocker,
   // and decision quick-adds ride the existing section add-signals instead; `seq`
   // remounts the dialog per open so its state re-seeds.
@@ -1468,14 +1478,33 @@ export function LeadForm({
     updateDraftItemInPlace(itemId, moveToNextWeekPatch());
   }
 
+  // Route "set blocked" through blocker (risk) creation, prefilled — never a
+  // free blocked item status. Shared by the quick-add "Blocker" entry (no
+  // product/stage) and the item dialog's alarm gesture (product + stage).
+  function routeToBlocker(prefill: {
+    productId: string;
+    stageIds: string[];
+    severity: "at-risk" | "blocked";
+  }) {
+    setRiskPrefill((prev) => ({ signal: (prev?.signal ?? 0) + 1, ...prefill }));
+  }
+
   // ---- Quick-add ----
   // One picker, five entries, all routed to the EXISTING per-type dialogs.
   // record-status-derived-from-risk: a "blocker" is a blocked-severity RISK, not
-  // a free-blocked item — it rides the risk add-signal so "set blocked" routes
-  // through risk creation, exactly like the "risk" entry. risk/decision bump the
-  // section add-signals; the current/next item kinds open the form-level host.
+  // a free-blocked item — it opens the risk dialog pre-set to severity blocked
+  // via the sync-bridge prefill. A plain "risk" bumps the section add-signal;
+  // decision bumps its own; the current/next item kinds open the form-level host.
   function handleQuickAdd(kind: QuickAddKind) {
-    if (kind === "risk" || kind === "blocker") {
+    if (kind === "blocker") {
+      routeToBlocker({
+        productId: products[0]?.id ?? "",
+        stageIds: [],
+        severity: "blocked",
+      });
+      return;
+    }
+    if (kind === "risk") {
       setRisksAddSignal((value) => value + 1);
       return;
     }
@@ -1785,6 +1814,7 @@ export function LeadForm({
                 visibilityHydrated ? recordVisibility : "everyone"
               }
               displayRisks={risks}
+              externalRiskPrefill={riskPrefill}
             >
               <AccordionSection
                 groupExpanded={groupExpanded}
@@ -1831,7 +1861,7 @@ export function LeadForm({
                 >
                   <UnifiedActivitySection
                     entries={unifiedEntries}
-                    risks={ownRisks}
+                    risks={risks}
                     readOnly={isReadOnly}
                     onWeekItemsChange={(week, items) =>
                       week === "current"
@@ -1845,6 +1875,7 @@ export function LeadForm({
                     publishedLockedIds={publishedLockedItemIds}
                     onMarkComplete={handleMarkComplete}
                     onMoveToNextWeek={handleMoveToNextWeek}
+                    onRouteToBlocker={routeToBlocker}
                   />
                 </AccordionSection>
               ) : (
@@ -1879,7 +1910,7 @@ export function LeadForm({
                   >
                     <CurrentWeekSection
                       items={currentWeekItems}
-                      risks={ownRisks}
+                      risks={risks}
                       readOnly={isReadOnly}
                       onItemsChange={handleCurrentWeekItemsChange}
                       currentUserName={currentUser.name}
@@ -1891,6 +1922,7 @@ export function LeadForm({
                       publishedLockedIds={publishedLockedItemIds}
                       onMarkComplete={handleMarkComplete}
                       onMoveToNextWeek={handleMoveToNextWeek}
+                      onRouteToBlocker={routeToBlocker}
                     />
                   </AccordionSection>
 
@@ -1924,7 +1956,7 @@ export function LeadForm({
                   >
                     <NextWeekSection
                       items={nextWeekItems}
-                      risks={ownRisks}
+                      risks={risks}
                       readOnly={isReadOnly}
                       onItemsChange={handleNextWeekItemsChange}
                       currentUserName={currentUser.name}
@@ -2085,9 +2117,9 @@ export function LeadForm({
       )}
 
       {/* Quick-add item dialog host — the EXISTING item dialog opened by the
-          picker for current-item / next-item. Risk, blocker, and decision
-          quick-adds open the dialogs the sections already host, via their
-          add-signals (a blocker is a blocked-severity risk). */}
+          picker for current-item / next-item. The risk / blocker / decision
+          quick-adds open the dialogs the sections already host (a blocker rides
+          the severity-blocked risk prefill). */}
       <ItemEditDialog
         key={`quick-add-${quickAddItem?.seq ?? 0}`}
         open={quickAddItem !== null}
@@ -2099,6 +2131,8 @@ export function LeadForm({
         defaultProductId={products[0]?.id}
         stagesForProduct={stagesForProduct}
         ownPeriodRanks={ownPeriodRanks}
+        risks={risks}
+        onRouteToBlocker={routeToBlocker}
         onSave={handleQuickAddSave}
         onCancel={() => setQuickAddItem(null)}
       />
