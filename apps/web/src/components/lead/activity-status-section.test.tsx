@@ -14,6 +14,7 @@ function makeCard(overrides: Partial<LeadActivityCard>): LeadActivityCard {
     activityName: "Jira triage duty",
     status: "green",
     derivedStatus: null,
+    alarmFloor: null,
     linkedProducts: [],
     currentItems: [],
     nextItems: [],
@@ -102,7 +103,7 @@ describe("ActivityStatusSection", () => {
   it("renders the floored pill and refuses a manual lower below the floor", async () => {
     const onStatusChange = vi.fn();
     const user = userEvent.setup();
-    // Stored green but a blocker floors the pill to red.
+    // Stored green but a covering blocker floors the pill to red (alarmFloor).
     render(
       <ActivityStatusSection
         activities={[
@@ -110,6 +111,7 @@ describe("ActivityStatusSection", () => {
             activityId: ACTIVITY_A,
             activityName: "Jira triage duty",
             status: "green",
+            alarmFloor: "red",
             derivedStatus: "red",
           }),
         ]}
@@ -131,6 +133,38 @@ describe("ActivityStatusSection", () => {
     expect(
       screen.getByText(/resolve the covering risk\/blocker first/i),
     ).toBeInTheDocument();
+  });
+
+  it("lets the lead lower a status they raised themselves (no covering risk)", async () => {
+    const onStatusChange = vi.fn();
+    const user = userEvent.setup();
+    // Stored red is the lead's OWN choice — no covering risk, so alarmFloor is
+    // null and lowering must be allowed (the floor is not derivedStatus).
+    render(
+      <ActivityStatusSection
+        activities={[
+          makeCard({
+            activityId: ACTIVITY_A,
+            activityName: "Jira triage duty",
+            status: "red",
+            alarmFloor: null,
+            derivedStatus: "red",
+          }),
+        ]}
+        readOnly={false}
+        onStatusChange={onStatusChange}
+      />,
+    );
+
+    const group = screen.getByRole("group", {
+      name: "Status for Jira triage duty",
+    });
+    const [onTrack] = Array.from(group.querySelectorAll("button"));
+    await user.click(onTrack);
+    expect(onStatusChange).toHaveBeenCalledWith(ACTIVITY_A, "green");
+    expect(
+      screen.queryByText(/resolve the covering risk\/blocker first/i),
+    ).toBeNull();
   });
 
   it("disables every picker in read-only mode", async () => {

@@ -609,10 +609,16 @@ export interface LeadActivityCard {
   /** Stored lead-chosen status (nullable legacy). */
   readonly status: TrafficLightStatus | null;
   /**
-   * Risk/blocker-derived floor — the pill renders `derivedStatus ?? status` and
-   * refuses a manual lower below it. Server-computed; never re-derived client-side.
+   * Risk/blocker floor folded with the lead's stored choice — read-only surfaces
+   * (slides, head report) render `derivedStatus ?? status`. Server-computed.
    */
   readonly derivedStatus: TrafficLightStatus | null;
+  /**
+   * The RECORD-ONLY floor (covering risks/blockers), excluding the stored choice.
+   * The interactive pill gates a manual lower on THIS — so a lead can still lower
+   * a status they raised themselves — and displays `worse(status, alarmFloor)`.
+   */
+  readonly alarmFloor: TrafficLightStatus | null;
   readonly linkedProducts: readonly {
     productId: string;
     productName: string;
@@ -684,6 +690,7 @@ export function mapLeadActivityCards(
       activityName: activity.activityName,
       status: activity.status,
       derivedStatus: activity.derivedStatus,
+      alarmFloor: activity.alarmFloor ?? null,
       linkedProducts: activity.linkedProducts,
       currentItems: items.filter((item) => item.type === "current").map(toItem),
       nextItems: items.filter((item) => item.type === "next").map(toItem),

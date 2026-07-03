@@ -51,6 +51,12 @@ export const sectionActivitySchema = z.object({
   // Risk/blocker-derived status floor (design decision 5): the pill renders this
   // when set, else falls back to `status`. `.default(null)` for snapshot compat.
   derivedStatus: trafficLightStatusSchema.nullable().default(null),
+  // The RECORD-ONLY floor (covering risks/blockers), excluding the lead's stored
+  // choice — unlike `derivedStatus` which folds it in. The interactive lead pill
+  // gates a manual lower on THIS, so a lead can still lower a status they raised
+  // themselves when no covering risk holds it up. Optional so legacy fixtures and
+  // frozen snapshots that predate it still parse (consumers read `?? null`).
+  alarmFloor: trafficLightStatusSchema.nullable().optional(),
 });
 
 export const stageStatusInputSchema = z.object({

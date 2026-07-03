@@ -229,9 +229,11 @@ describe("ProjectActivity (integration)", () => {
         status: "green",
         note: null,
         // activity-first-class: the read model now joins the label-only linked
-        // products and the risk/blocker-derived floor (no records here -> stored).
+        // products and the risk/blocker-derived floor (no records here -> stored;
+        // alarmFloor null because no covering risk/blocker).
         linkedProducts: [{ productId, productName: "CRM Portal" }],
         derivedStatus: "green",
+        alarmFloor: null,
       },
     ]);
   });
