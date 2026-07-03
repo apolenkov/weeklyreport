@@ -390,6 +390,33 @@ interface AccordionModel {
 }
 
 /**
+ * activity-first-class: a section carries activity content when a lead has
+ * TOUCHED an attached activity — set its status (derived or stored) or parented
+ * ≥1 record to it. Mirrors reportHasContent's strictness: a merely-attached,
+ * untouched activity is not a submission, so it must not defeat the "truly empty
+ * period" empty-state. Without this an all-activity period (activity content,
+ * zero product content) reads "No submissions yet" and cannot publish.
+ */
+function sectionHasActivityContent(
+  // `activities` is optional here (unlike the strict read model) so a legacy /
+  // pre-activity fixture section that omits it is treated as no-activity, not a
+  // crash — the same tolerance ActivityStatusStrip applies.
+  section: Pick<ReportSectionReadModel, "items" | "risks" | "decisions"> & {
+    readonly activities?: ReportSectionReadModel["activities"];
+  },
+): boolean {
+  const activities = section.activities ?? [];
+  if (activities.length === 0) return false;
+  const ownsRecord = (activityId: string): boolean =>
+    section.items.some((i) => i.activityId === activityId) ||
+    section.risks.some((r) => r.activityId === activityId) ||
+    section.decisions.some((d) => d.activityId === activityId);
+  return activities.some(
+    (a) => (a.derivedStatus ?? a.status) != null || ownsRecord(a.activityId),
+  );
+}
+
+/**
  * review-acknowledgement (§7): THE submitted-only predicate. Every render
  * surface that narrows with the filter (accordion body, Project Activities
  * strip) must share it so no draft content leaks through one of them.
@@ -417,7 +444,12 @@ function buildAccordionModel(params: {
 }): AccordionModel {
   const { reportData, scope, submittedOnly, fullProducts, fullLeadGroups } =
     params;
-  const hasAnyContent = fullProducts.some(reportHasContent);
+  // Full-truth "truly empty period" gate: product content on any section, OR a
+  // touched activity on any section (activity-first-class — an all-activity
+  // period is real content and must render + be publishable, not read empty).
+  const hasAnyContent =
+    fullProducts.some(reportHasContent) ||
+    reportData.leadSections.some(sectionHasActivityContent);
   if (!submittedOnly) {
     return {
       products: fullProducts,
