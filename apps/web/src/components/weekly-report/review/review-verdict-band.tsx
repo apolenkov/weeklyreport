@@ -1,0 +1,61 @@
+"use client";
+
+import type { ReportSectionReadModel } from "@customreport/shared";
+
+import type { SectionReviewRow } from "./section-review-rows";
+import { SectionVerdictControl } from "./section-verdict-control";
+
+function statusLabel(status: ReportSectionReadModel["status"]): string {
+  return status === "submitted" ? "Submitted" : "Draft";
+}
+
+/**
+ * In-report per-section verdict control, mounted only in review mode. Scoped to
+ * the sections the caller can act on so a designated viewer-reviewer keeps a
+ * verdict home once the head-only roll-up strip moved to the dashboard. Like the
+ * strip, it renders NO publish/lock control — a viewer-reviewer judges but never
+ * publishes. Self-suppresses when the caller can review nothing.
+ */
+export function ReviewVerdictBand({
+  sections,
+  onMutated,
+}: {
+  readonly sections: readonly SectionReviewRow[];
+  readonly onMutated: () => void;
+}) {
+  const actionable = sections.filter((section) => section.canReview);
+  if (actionable.length === 0) return null;
+
+  return (
+    <section
+      aria-label="Section reviews"
+      className="flex flex-col gap-1.5 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3"
+    >
+      <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
+        Review
+      </span>
+      {actionable.map((section) => (
+        <div
+          key={section.reportSectionId}
+          className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] bg-[var(--color-background)] px-2.5 py-1.5"
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-[13px] font-semibold text-[var(--color-foreground)]">
+              {section.authorName}
+            </span>
+            <span className="text-[11px] text-[var(--color-muted-foreground)]">
+              {statusLabel(section.status)}
+            </span>
+          </span>
+          <SectionVerdictControl
+            reportSectionId={section.reportSectionId}
+            version={section.version}
+            reviews={section.reviews}
+            canReview={section.canReview}
+            onMutated={onMutated}
+          />
+        </div>
+      ))}
+    </section>
+  );
+}

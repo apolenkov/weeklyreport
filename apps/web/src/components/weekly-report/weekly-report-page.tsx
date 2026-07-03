@@ -53,10 +53,12 @@ import {
 } from "./product-accordion";
 import { PublishLockButton } from "./publish-lock-button";
 import { ReviewAcknowledgeBar } from "./review/review-acknowledge-bar";
+import { type ReviewMode, ReviewModeToggle } from "./review/review-mode-toggle";
+import { ReviewVerdictBand } from "./review/review-verdict-band";
 import {
   type SectionReviewRow,
-  SectionReviewStrip,
-} from "./review/section-review-strip";
+  toSectionReviewRows,
+} from "./review/section-review-rows";
 import {
   DraftHiddenSignal,
   type SubmissionFilter,
@@ -354,21 +356,10 @@ function buildReviewModel(
     isAdmin: params.currentRole === "admin",
     onMutated: params.onMutated,
   };
-  const sections: SectionReviewRow[] = reportData.leadSections.map(
-    (section) => ({
-      reportSectionId: section.reportSectionId,
-      version: section.version,
-      authorName: section.authorName,
-      status: section.status,
-      reviews: section.reviews ?? [],
-      canReview: section.canReview ?? false,
-      groupId: section.groupId ?? null,
-    }),
-  );
   return {
     context,
     groups: distinctReviewGroups(reportData.leadSections),
-    sections,
+    sections: toSectionReviewRows(reportData.leadSections),
     isHeadOrAdmin:
       params.currentRole === "head" || params.currentRole === "admin",
   };
@@ -513,15 +504,21 @@ function AcknowledgeSurface({
   );
 }
 
-/** review-acknowledgement (§6.3): self-gating per-section verdict band. */
-function VerdictSurface({
+/**
+ * Self-gating in-report verdict band. Renders only in review mode, so normal
+ * mode stays read-only. The head roll-up strip lives on the dashboard now; this
+ * keeps a designated viewer-reviewer's verdict home in the report body.
+ */
+function ReviewModeVerdictSurface({
   reviewModel,
+  reviewMode,
 }: {
   readonly reviewModel: ReviewModel;
+  readonly reviewMode: ReviewMode;
 }) {
-  if (!reviewModel.context) return null;
+  if (reviewMode !== "review" || !reviewModel.context) return null;
   return (
-    <SectionReviewStrip
+    <ReviewVerdictBand
       sections={reviewModel.sections}
       onMutated={reviewModel.context.onMutated}
     />
@@ -545,6 +542,10 @@ interface ReportContentProps {
   readonly reportId: string;
   readonly accordion: AccordionModel;
   readonly reviewEnabled: boolean;
+  /** The caller can review ≥1 section — gates the Read|Review mode toggle. */
+  readonly canReviewAny: boolean;
+  readonly reviewMode: ReviewMode;
+  readonly onReviewModeChange: (next: ReviewMode) => void;
   readonly submittedOnly: boolean;
   readonly submissionFilter: SubmissionFilter;
   readonly onFilterChange: (next: SubmissionFilter) => void;
@@ -570,6 +571,9 @@ function ReportContent({
   reportId,
   accordion,
   reviewEnabled,
+  canReviewAny,
+  reviewMode,
+  onReviewModeChange,
   submittedOnly,
   submissionFilter,
   onFilterChange,
@@ -624,23 +628,36 @@ function ReportContent({
         }
       />
 
-      {/* review-acknowledgement (§6.3): per-section verdict band above the
-          accordion, present in both by-product and by-lead scope. */}
-      <VerdictSurface reviewModel={reviewModel} />
-
-      {/* review-acknowledgement (§7): the per-user Submitted|All accordion filter,
-          shown only to an access-holder on a live period. */}
+      {/* review-acknowledgement (§7): the per-user Submitted|All accordion
+          filter, shown only to an access-holder on a live period. The Read|
+          Review mode toggle leads the group for a caller who can review. */}
       {reviewEnabled ? (
         <div className="flex items-center justify-between gap-3">
           <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
             Sections
           </span>
-          <SubmissionFilterToggle
-            value={submissionFilter}
-            onChange={onFilterChange}
-          />
+          <div className="flex items-center gap-2">
+            {canReviewAny ? (
+              <ReviewModeToggle
+                value={reviewMode}
+                onChange={onReviewModeChange}
+              />
+            ) : null}
+            <SubmissionFilterToggle
+              value={submissionFilter}
+              onChange={onFilterChange}
+            />
+          </div>
         </div>
       ) : null}
+
+      {/* Per-section verdict band beneath the mode toggle that reveals it —
+          mounted only in review mode, present in both by-product and by-lead
+          scope. */}
+      <ReviewModeVerdictSurface
+        reviewModel={reviewModel}
+        reviewMode={reviewMode}
+      />
 
       {/* §7 anti-empty-state: submitted-only is hiding draft content — reveal it
           rather than let the accordion read as empty. */}
@@ -651,14 +668,16 @@ function ReportContent({
         />
       ) : null}
 
-      {/* Accordion sections — by product (default) or grouped by lead */}
+      {/* Accordion sections — by product (default) or grouped by lead. The
+          reviewer overlay (per-record comments + composer) threads through only
+          in review mode; normal mode renders read-only report content. */}
       <ReportAccordionBody
         scope={scope}
         products={accordion.products}
         leadGroups={accordion.leadGroups}
         focusedProductId={focusedProductId}
         scrollTargetProductId={scrollTargetProductId}
-        review={reviewModel.context}
+        review={reviewMode === "review" ? reviewModel.context : undefined}
       />
     </>
   );
@@ -695,6 +714,11 @@ export function WeeklyReportPage({
   // published snapshot.
   const [submissionFilter, setSubmissionFilter] =
     useState<SubmissionFilter>("submitted");
+
+  // Read|Review body mode. Default "read" so any access-holder lands on the
+  // assembled report; a designated reviewer opts into the per-record comment
+  // composer and per-section verdict controls via the toggle.
+  const [reviewMode, setReviewMode] = useState<ReviewMode>("read");
 
   // weeklyReport.get input: { reportId?: string } | undefined.
   // When reportId is given, scope to that report; otherwise fall back to the
@@ -860,6 +884,12 @@ export function WeeklyReportPage({
   // the accordion products/leadGroups to submitted-only when active, leaving the
   // header count, portfolio band, and period nav on the full truth above.
   const reviewEnabled = isReviewEnabled(currentRole, view.period.periodStatus);
+  // The Read|Review toggle is offered only to a caller who can act on ≥1
+  // section (a designated reviewer / head / admin); `canReview` is server-
+  // stamped per section.
+  const canReviewAny = reviewModel.sections.some(
+    (section) => section.canReview,
+  );
   const submittedOnly = reviewEnabled && submissionFilter === "submitted";
   const accordion = buildAccordionModel({
     reportData,
@@ -1029,6 +1059,9 @@ export function WeeklyReportPage({
         reportId={view.period.reportId}
         accordion={accordion}
         reviewEnabled={reviewEnabled}
+        canReviewAny={canReviewAny}
+        reviewMode={reviewMode}
+        onReviewModeChange={setReviewMode}
         submittedOnly={submittedOnly}
         submissionFilter={submissionFilter}
         onFilterChange={setSubmissionFilter}

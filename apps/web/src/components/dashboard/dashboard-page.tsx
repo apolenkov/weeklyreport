@@ -14,6 +14,8 @@ import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
 import { ConfirmationDialog } from "../ui/confirmation-dialog";
+import { toSectionReviewRows } from "../weekly-report/review/section-review-rows";
+import { SectionReviewStrip } from "../weekly-report/review/section-review-strip";
 import { ActivityLivePanel } from "./activity-live-panel";
 import { AlertBar } from "./alert-bar";
 import { BlockedAtRiskTable } from "./blocked-at-risk-table";
@@ -244,6 +246,10 @@ export function DashboardPage() {
     weeklyReport: weeklyQ.data,
   });
   const { kpi, leads, blockedAtRisk, pendingLeads } = dashboard;
+  // Section-reviews roll-up: the head's at-a-glance verdict state for every
+  // section, relocated here from the report body. A verdict may un-submit a
+  // section, so refresh the dashboard's own queries on mutation.
+  const sectionReviewRows = toSectionReviewRows(weeklyQ.data.leadSections);
   // UFB-047 / Phase 49-01: see `orgFullName` above.
   const departmentLabel = orgFullName ?? "CustomReport";
   const canSendReminder =
@@ -324,6 +330,14 @@ export function DashboardPage() {
         pendingLeads={pendingLeads}
         reportId={weeklyQ.data.reportId}
         canSendReminder={canSendReminder}
+      />
+
+      {/* Section-reviews roll-up: per-section verdict state for the whole
+          period, merged into the dashboard review area (relocated from the
+          report body). Self-suppresses when nothing is reviewable. */}
+      <SectionReviewStrip
+        sections={sectionReviewRows}
+        onMutated={() => refetchDashboardQueries(false)}
       />
 
       {/* reopen-request-lifecycle (D2): head-side queue of pending reopen

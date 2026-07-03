@@ -26,6 +26,7 @@ vi.mock("../../lib/cache-keys", () => ({
   invalidateDashboard: vi.fn(),
   invalidateLeadForm: vi.fn(),
   invalidateLeadHistory: vi.fn(),
+  invalidateReview: vi.fn(),
 }));
 
 // Mock toast so we can assert success/error feedback.
@@ -59,6 +60,7 @@ import {
 import { SessionContext, type SessionUser } from "../../lib/session-provider";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../test-utils/mock-trpc";
+import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { WeeklyReportPage } from "./weekly-report-page";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";
@@ -198,6 +200,9 @@ function renderPage(
     { path: ["pdfExport", "request"], mutation: true },
     { path: ["pdfExport", "status"], query: null },
     { path: ["review", "dashboard"] },
+    { path: ["review", "verdict"], mutation: true },
+    { path: ["review", "comment"], mutation: true },
+    { path: ["review", "deleteComment"], mutation: true },
     { path: ["archive", "list"] },
     { path: ["archive", "archiveReport"], mutation: true },
     { path: ["reports", "myHistory"] },
@@ -1291,5 +1296,139 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
     ).not.toBeInTheDocument();
     // A lead sees content unfiltered (no submitted-only narrowing).
     expect(accordionCard(PRODUCT_ID_B)).not.toBeNull();
+  });
+});
+
+const REVIEW_COMMENT_TEXT = "Please double-check the milestone date";
+
+/**
+ * A live open-period report where the caller can review its section — canReview
+ * is server-stamped, so this mirrors what the repository sends a head/designated
+ * reviewer. The single item carries a reviewer comment so the read-only vs
+ * review-mode split is observable.
+ */
+function makeReviewableData(): ReturnType<typeof makeWeeklyReportData> {
+  const base = makeWeeklyReportData("open");
+  return {
+    ...base,
+    leadSections: base.leadSections.map((section) => ({
+      ...section,
+      version: 1,
+      reviews: [],
+      canReview: true,
+      // No group id keeps the per-group Acknowledge bar inert; the review-mode
+      // split under test is independent of acknowledgement.
+      groupId: null,
+      items: section.items.map((item) => ({
+        ...item,
+        comments: [
+          {
+            id: "44444444-4444-4444-8444-aaaaaaaaaa01",
+            reviewerId: "head-user-id",
+            reviewerName: "Test User",
+            text: REVIEW_COMMENT_TEXT,
+            createdAt: new Date("2026-04-15T10:00:00Z"),
+          },
+        ],
+      })),
+    })),
+  };
+}
+
+describe("WeeklyReportPage — review-mode split (report-review-mode HF9/HF3)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
+  it("defaults to read mode: the toggle shows for a reviewer but affordances stay hidden", async () => {
+    renderPage(makeReviewableData(), undefined, "head");
+
+    expect(
+      await screen.findByRole("button", { name: "Review" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Read" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    // Read mode renders read-only content — no verdict control, no composer, no
+    // reviewer comments.
+    expect(
+      screen.queryByRole("button", { name: "Approve" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Add a review comment"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(REVIEW_COMMENT_TEXT)).not.toBeInTheDocument();
+    // The roll-up strip no longer renders inside the report body (it moved to
+    // the dashboard).
+    expect(
+      screen.queryByRole("region", { name: "Section reviews" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("mounts the verdict control and comment composer once switched to review mode", async () => {
+    renderPage(makeReviewableData(), undefined, "head");
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Review" }),
+    );
+
+    expect(
+      await screen.findByRole("button", { name: "Approve" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Add a review comment")).toBeInTheDocument();
+    expect(screen.getByText(REVIEW_COMMENT_TEXT)).toBeInTheDocument();
+    // The in-body verdict band is the designated viewer-reviewer's verdict home.
+    expect(
+      screen.getByRole("region", { name: "Section reviews" }),
+    ).toBeInTheDocument();
+  });
+
+  it("gives a designated viewer-reviewer the in-body verdict home (not stranded by the head-only strip)", async () => {
+    renderPage(makeReviewableData(), undefined, "viewer");
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Review" }),
+    );
+
+    expect(
+      await screen.findByRole("button", { name: "Approve" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Section reviews" }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers no review-mode toggle to a lead", async () => {
+    renderPage(makeReviewableData(), undefined, "lead");
+
+    await screen.findByRole("heading", { name: "Status Report" });
+    expect(
+      screen.queryByRole("button", { name: "Review" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Read" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the Agent-review placeholder rendered in both read and review mode", async () => {
+    renderPage(
+      makeReviewableData(),
+      undefined,
+      "head",
+      undefined,
+      undefined,
+      undefined,
+      <AgentReviewComingSoon />,
+    );
+
+    expect(
+      await screen.findByTestId("agent-review-coming-soon"),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Review" }));
+
+    expect(screen.getByTestId("agent-review-coming-soon")).toBeInTheDocument();
   });
 });
