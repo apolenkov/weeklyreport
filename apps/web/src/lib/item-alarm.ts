@@ -57,10 +57,11 @@ function itemStageNames(item: AlarmItem): readonly string[] {
  * (seed `mock-data.ts` cw2/cw4 are completed + stage-less on a risk-covered
  * product — the wildcard would otherwise floor them).
  *
- * The caller passes the SECTION's own risks; cross-section coverage never
- * applies (same `reportSectionId` is implicit in the risk list handed in). The
- * generic preserves the caller's richer row type (e.g. `RiskEntry` with author
- * metadata) so the covering rows carry their author back to the caller.
+ * The caller passes the covering risks to consider: its own risks for the
+ * pill, or — for foreign attribution — the merged own+foreign same-product
+ * risks so a co-owner's blocker can floor and name them. The generic preserves
+ * the caller's richer row type (e.g. `RiskEntry` with author metadata) so each
+ * covering row carries its author back to the caller.
  */
 export function coveringRisksForItem<T extends AlarmRisk>(
   item: AlarmItem,
