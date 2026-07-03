@@ -1831,6 +1831,7 @@ export function LeadForm({
                 >
                   <UnifiedActivitySection
                     entries={unifiedEntries}
+                    risks={ownRisks}
                     readOnly={isReadOnly}
                     onWeekItemsChange={(week, items) =>
                       week === "current"

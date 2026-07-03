@@ -10,7 +10,7 @@ import {
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { ItemCard } from "./item-card";
 import { ItemEditDialog } from "./item-edit-dialog";
-import type { KanbanItem, Product } from "./mock-data";
+import type { KanbanItem, Product, RiskEntry } from "./mock-data";
 
 /**
  * One row of the unified view: a presentation item plus its derived bucket
@@ -25,6 +25,13 @@ export interface UnifiedActivityEntry {
 
 interface UnifiedActivitySectionProps {
   readonly entries: readonly UnifiedActivityEntry[];
+  /**
+   * record-status-derived-from-risk: own risks, forwarded to each ItemCard so an
+   * own product item's at-risk/blocked pill derives from its covering risks here
+   * too — parity with the classic Current/Next Week view. Activity items in this
+   * view are guarded off derivation inside ItemCard (Q1 isolation).
+   */
+  readonly risks?: readonly RiskEntry[];
   readonly readOnly?: boolean;
   /**
    * Controlled-component callback mirroring CurrentWeekSection /
@@ -71,6 +78,7 @@ function weekItems(
  */
 export function UnifiedActivitySection({
   entries,
+  risks,
   readOnly = false,
   onWeekItemsChange,
   currentUserName,
@@ -147,6 +155,7 @@ export function UnifiedActivitySection({
               <ItemCard
                 key={`${entry.week}-${entry.item.id}`}
                 item={entry.item}
+                risks={risks}
                 readOnly={readOnly}
                 isEditing={false}
                 publishedLocked={publishedLockedIds?.has(entry.item.id)}
