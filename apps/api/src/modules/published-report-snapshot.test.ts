@@ -49,20 +49,17 @@ function makeSection(
 }
 
 describe("buildEscalationsFromReadSections", () => {
-  it("resolves a single stage name for a blocked item", () => {
+  it("emits a blocked escalation from a blocked-severity risk (with its stage)", () => {
     const escalations = buildEscalationsFromReadSections([
       makeSection({
-        items: [
+        risks: [
           {
-            id: "5b2fe575-86c3-422e-b7ed-5fe858cab7f7",
+            id: "0e4f5947-bab4-4e24-a9f3-5cd3d0b1fb42",
             projectId: OWNED_PRODUCT,
-            type: "current",
-            text: "ETL pipeline blocked",
-            tag: "infra",
-            workflowStatus: "blocked",
-            carriedOver: false,
-            completed: null,
-            priorityRank: null,
+            risk: "ETL pipeline blocked",
+            impact: "High",
+            mitigation: "Await vendor fix",
+            severity: "blocked",
             stageIds: ["Development"],
           },
         ],
@@ -98,27 +95,70 @@ describe("buildEscalationsFromReadSections", () => {
     expect(risk?.stageName).toBe("Development, Testing");
   });
 
-  it("returns a null stage for a legacy stage-less row", () => {
+  it("returns a null stage for a stage-less blocked risk", () => {
     const escalations = buildEscalationsFromReadSections([
       makeSection({
-        items: [
+        risks: [
           {
             id: "f57e03c5-ed65-4b82-8c58-74cb6f1931de",
             projectId: OWNED_PRODUCT,
-            type: "current",
-            text: "Legacy blocker",
-            tag: "infra",
-            workflowStatus: "blocked",
-            carriedOver: false,
-            completed: null,
-            priorityRank: null,
+            risk: "Legacy blocker",
+            impact: "High",
+            mitigation: "Escalated",
+            severity: "blocked",
             stageIds: undefined,
           },
         ],
       }),
     ]);
 
+    expect(escalations[0]?.type).toBe("blocked");
     expect(escalations[0]?.stageName).toBeNull();
+  });
+
+  it("record-status-derived-from-risk: a blocked-severity risk yields ONE escalation, never also unresolved_risk", () => {
+    const escalations = buildEscalationsFromReadSections([
+      makeSection({
+        risks: [
+          {
+            id: "aa514484-bbd6-4583-926f-dc20e922421b",
+            projectId: OWNED_PRODUCT,
+            risk: "Blocking dependency",
+            impact: "High",
+            mitigation: "Escalated",
+            severity: "blocked",
+            stageIds: ["Development"],
+          },
+        ],
+      }),
+    ]);
+
+    expect(escalations).toHaveLength(1);
+    expect(escalations[0]?.type).toBe("blocked");
+    expect(escalations.some((e) => e.type === "unresolved_risk")).toBe(false);
+  });
+
+  it("record-status-derived-from-risk: a stored blocked item is no longer an escalation source", () => {
+    const escalations = buildEscalationsFromReadSections([
+      makeSection({
+        items: [
+          {
+            id: "5b2fe575-86c3-422e-b7ed-5fe858cab7f7",
+            projectId: OWNED_PRODUCT,
+            type: "current",
+            text: "Legacy stored blocked, no covering risk",
+            tag: "infra",
+            workflowStatus: "blocked",
+            carriedOver: false,
+            completed: null,
+            priorityRank: null,
+            stageIds: ["Development"],
+          },
+        ],
+      }),
+    ]);
+
+    expect(escalations).toHaveLength(0);
   });
 
   it("resolves a product name referenced but not owned (never 'Unknown')", () => {
@@ -167,21 +207,18 @@ describe("buildEscalationsFromReadSections — flagged-red dedupe", () => {
       makeSection({
         authorName: "Alice Lead",
         projects: [redProject],
-        items: [
+        // record-status-derived-from-risk: the blocker is a blocked-severity
+        // risk now, not a blocked item.
+        risks: [
           {
             id: "11111111-1111-4111-8111-111111111111",
             projectId: OWNED_PRODUCT,
-            type: "current",
-            text: "Alice blocker",
-            tag: "infra",
-            workflowStatus: "blocked",
-            carriedOver: false,
-            completed: null,
-            priorityRank: null,
+            risk: "Alice blocker",
+            impact: "High",
+            mitigation: "Escalated",
+            severity: "blocked",
             stageIds: ["Development"],
           },
-        ],
-        risks: [
           {
             id: "22222222-2222-4222-8222-222222222222",
             projectId: OWNED_PRODUCT,
@@ -197,21 +234,16 @@ describe("buildEscalationsFromReadSections — flagged-red dedupe", () => {
         reportSectionId: SECOND_SECTION_ID,
         authorName: "Bob Lead",
         projects: [redProject],
-        items: [
+        risks: [
           {
             id: "33333333-3333-4333-8333-333333333333",
             projectId: OWNED_PRODUCT,
-            type: "current",
-            text: "Bob blocker",
-            tag: "infra",
-            workflowStatus: "blocked",
-            carriedOver: false,
-            completed: null,
-            priorityRank: null,
+            risk: "Bob blocker",
+            impact: "Medium",
+            mitigation: "Escalated",
+            severity: "blocked",
             stageIds: ["Testing"],
           },
-        ],
-        risks: [
           {
             id: "44444444-4444-4444-8444-444444444444",
             projectId: OWNED_PRODUCT,
@@ -240,11 +272,11 @@ describe("buildEscalationsFromReadSections — flagged-red dedupe", () => {
     expect(atRisk[0]?.leadName).toBe("Alice Lead");
   });
 
-  it("does not dedupe per-record blocked items or unresolved risks", () => {
+  it("does not dedupe per-record blocked or unresolved risks", () => {
     const escalations = buildEscalationsFromReadSections(coOwnedRedSections());
 
-    // Each lead's own blocked item and risk stays a distinct row — only the
-    // product-level flagged-red signal collapses.
+    // Each lead's own blocked-severity risk and at-risk risk stays a distinct
+    // row — only the product-level flagged-red signal collapses.
     expect(
       escalations.filter((e) => e.type === "blocked").map((e) => e.description),
     ).toEqual(["Alice blocker", "Bob blocker"]);
@@ -471,7 +503,7 @@ describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => 
 // "flagged red" escalation off the effective status, alongside the existing
 // per-risk `unresolved_risk`. Pin both so the behaviour change is deliberate.
 describe("buildEscalationsFromReadSections — own-risk floor side effect", () => {
-  it("emits at_risk + unresolved_risk for a covers-all blocked own risk on an empty stage", () => {
+  it("emits at_risk + blocked for a covers-all blocked own risk on an empty stage", () => {
     const escalations = buildEscalationsFromReadSections([
       makeSection({
         projects: [
@@ -506,9 +538,11 @@ describe("buildEscalationsFromReadSections — own-risk floor side effect", () =
     expect(escalations.filter((e) => e.type === "at_risk")).toMatchObject([
       { productName: "CRM Portal", stageName: null },
     ]);
-    expect(
-      escalations.filter((e) => e.type === "unresolved_risk"),
-    ).toMatchObject([{ productName: "CRM Portal" }]);
+    // record-status-derived-from-risk: the blocked-severity risk itself now
+    // escalates as `blocked` (previously `unresolved_risk`).
+    expect(escalations.filter((e) => e.type === "blocked")).toMatchObject([
+      { productName: "CRM Portal" },
+    ]);
   });
 
   it("does NOT fire at_risk when the product has no owned stages (covers-all has nothing to floor)", () => {
