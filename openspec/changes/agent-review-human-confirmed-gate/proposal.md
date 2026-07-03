@@ -1,5 +1,19 @@
 # Agent-Review Is a Human-Confirmed Gate
 
+> **SCOPE 2026-07-04 — split after grill.** Only the `report-review-mode`
+> capability (HF9 review/normal split + HF3 strip relocation, tasks §1) is LIVE
+> and being implemented now: it is real walkthrough UX debt, touches no agent,
+> and stands alone. The `agent-review` capability (HF7 affordance + HF8
+> human-confirmed gate, tasks §2–§6: shared schema, `AgentReviewProposal` table,
+> backend confirm/dismiss, web bar) is **PARKED** — it specs an as-yet-unbuilt
+> feature (`AgentReviewComingSoon` is still inert) and no production point exists,
+> so writing the full inert-proposal contract now risks drift before it is built.
+> HF8's principle — _an agent judges, a human always confirms; an agent never
+> bypasses the human lifecycle_ — is retained here as the durable guardrail for
+> when agent-review is un-deferred. Physically splitting this into two OpenSpec
+> changes is deferred to archive-time (both halves are cleanly separated already:
+> spec dirs `report-review-mode/` vs `agent-review/`, tasks §1 vs §2–§6).
+
 ## Why
 
 The head-surface walkthrough (`docs/feedback/head-surface-walkthrough-2026-07-02.md`,

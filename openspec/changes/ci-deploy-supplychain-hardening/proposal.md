@@ -1,3 +1,15 @@
+# CI / Deploy / Supply-Chain Hardening
+
+> **STATUS 2026-07-04 — mostly landed, remainder parked for go-live.** Commit
+> `b98b0e6b` (2026-07-01) shipped CI-pipeline enforcement, deploy-edge topology,
+> and the frozen-lockfile half of supply-chain integrity out-of-band. Verified
+> in-tree: `Dockerfile.api` EXPOSE/HEALTHCHECK on 3001, `docker-compose.prod.yml` > `api` expose-only, `Dockerfile.web` `--frozen-lockfile` + `turbo@2.9.18`,
+> `ci.yml` `db:seed:middle`, pre-push `set -e` + typecheck/lint/format:check.
+> Genuinely undone and PARKED until the production go-live checklist (no
+> production point exists yet, so none of it protects anything today):
+> **base-image digest pins (§2.4)**, **CSP enforcement (§4)**, runner-gated CI
+> triggers (§1.5/§1.6). See `tasks.md` for the per-item state.
+
 ## Why
 
 The repository's automated quality and deployment seams are dormant or
