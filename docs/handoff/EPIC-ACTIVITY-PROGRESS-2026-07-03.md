@@ -70,6 +70,13 @@ DONE since this doc was written: observability-and-perf-hardening (archived
        covering risk must NOT read at-risk — seed `mock-data.ts` cw2/cw4 are the trap).
    * §2 `item-card.tsx`: pill from the helper not `item.status`; add `at-risk`
      STATUS_BADGE (amber tokens); covered-lock affordance; foreign-risk attribution.
+     **KEY §2 DECISION (locked): derive LIVE AT RENDER, NOT in the mapper.** Thread
+     the section's live `risks` into `item-card` and call `deriveItemAlarmFromRisks`
+     at render — mirroring `applyRiskSeverityFloor` (stage floor), which re-derives
+     from live risks in the sync bridge so the chip updates on an in-session risk
+     add with no refetch. Baking the alarm into the mapper (`LeadKanbanItem`) would
+     go stale the moment the lead stages a covering risk. So: card takes `risks`,
+     derives on every render; the mapper does NOT precompute an alarm field.
    * §3 `item-edit-dialog.tsx`: remove free `blocked` chip from CURRENT_WEEK_CHOICES;
      uncovered alarm gesture opens the risk(blocker) dialog prefilled; `quick-add`
      "blocker" → risk(blocked) not blocked-item. (Shares item-edit-dialog with the
