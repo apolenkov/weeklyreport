@@ -37,16 +37,22 @@ pnpm test && pnpm build` green, plus a live boot from source where a boot path
    explain at a glance is a smell: name it with a documented constant or remove
    it. Example flagged by the user: `standardHeaders: "draft-7"` — either a named
    constant with a one-line rationale, or gone. Simple and clear beats clever.
-3. **Comment hygiene — no archaeology.** A comment must explain the non-obvious
-   WHY of the CURRENT code. Delete change-log / ticket / phase archaeology:
-   `Phase 35-08`, `FIX-02`, `UFB-036`, `AUTH-08`, `R3a-4`, `CC-1`, `TD-06`,
-   `NOTIF-01`, `36-03`, "Extracted verbatim in Wave 3", etc. — git history holds
-   that; the code does not need it. (Scale, `apps/api/src` only: ~364 `Phase N`
-   lines across 124 files + ~338 `UFB-/AUTH-/FIX-` refs across 119 files.) KEEP
-   load-bearing rationale (e.g. the `ipKeyGenerator`/IPv6-/64 note in
-   `rate-limit.middleware.ts` is real — it explains WHY), but rewrite it without
-   the ticket prefix and without narrating what the code already says. Default:
-   if removing the comment loses nothing a competent reader couldn't see, remove it.
+3. **Comment hygiene — terse WHY, relocation-first** (spec:
+   `lint-max-strictness-standard`, delta `tighten-comment-policy`). Default is
+   NO comment: code a competent reader follows from names and types carries
+   none. A comment is justified only for a non-obvious WHY the code cannot
+   express, within a THREE-LINE budget. Delete change-log / ticket / phase
+   archaeology (`Phase 35-08`, `UFB-036`, `AUTH-08`, …) — git history holds
+   that — and JSDoc blocks on app-internal functions (JSDoc is public-API-only
+   per the spec). Load-bearing rationale that exceeds the budget is RELOCATED,
+   not deleted: verify (or add) the covering `openspec/specs/` requirement or
+   ADR first, then compress the comment to ≤2 lines, optionally naming the
+   spec — a live spec name is a pointer, not archaeology. Sweeps touching
+   security-sensitive paths (auth, JWT, cookies, redirects, rate-limit, CSRF,
+   secrets, authz — non-exhaustive) pass a security review. In-budget example
+   (the KEEP shape): "ipKeyGenerator: /64-mask IPv6 so one host can't dodge
+   the limiter by rotating suffixes (ERR_ERL advisory)" — three lines, pure
+   WHY, no ticket prefix.
 4. **Functional and immutable.** `const` only; no `let`, no reassignment, no
    in-place mutation, no parameter mutation. Build new values with
    `map`/`filter`/`reduce`/spread. Pure functions; side effects isolated.
@@ -94,7 +100,11 @@ From memory `exemplary-module-refactor-playbook` (validated on `auth`):
 4. **Extract functions** until each is ≤ 50 lines and cognitive complexity < 10.
 5. **Kill fallbacks/magic, enforce immutability** per §1.
 6. **Remove the folder's exemptions** from `eslint.config.ts`; confirm green
-   without them. THIS is the done-signal.
+   without them. The done-signal is BOTH gates: exemption-free lint AND a
+   comment-policy review pass (§1.3) — no lint rule judges comment noise, so
+   lint-green alone is NOT comment-clean. Post-sweep drift is caught by
+   standing PR review (reviewer/agent diligence), not by waiting for the next
+   sweep.
 7. **Dedup** — lift shared helpers to `lib/`; use canonical sources (e.g. a Zod
    schema, never a hand-maintained list).
 8. **Verify (layered)** → **archive** any OpenSpec change.
@@ -139,6 +149,9 @@ once. Until then, tighten per-folder via local overrides that you then delete.
 - `pnpm lint` runs clean with `--max-warnings 0` — **zero errors AND zero
   warnings** across the repo (a warning is a failure, not an acceptable state).
 - Zero config fallbacks/defaults for product-critical values; boot fails loud.
+- Every folder passed the comment-policy review (§1.3: 3-line WHY budget,
+  relocation-first) — a review gate, additional to and never implied by
+  lint-green.
 - Airbnb/Google/Vercel strict rule sets active, Prettier-reconciled.
 - The OpenSpec backlog triaged: implemented+archived or explicitly closed.
 - `main` was demo-stable throughout; every overhaul step landed via a revertable

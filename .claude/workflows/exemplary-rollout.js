@@ -37,7 +37,7 @@ const STANDARD = `Exemplary Code Standard (docs/exemplary-code-standard.md):
 - functional & immutable: const only, no let/reassignment/in-place mutation/param mutation; map/filter/reduce/spread.
 - NO fallbacks/defaults for product config (no '?? localhost', no zod .default for product vars); requireEnv; explicit per env file; fail loud.
 - NO non-obvious magic literals (e.g. bare "draft-7"): name+document or remove.
-- comment hygiene: delete change-log/ticket/phase archaeology (Phase 35-08, UFB-036, AUTH-08, FIX-02, R3a-4, ...); keep load-bearing WHY rewritten without the prefix; never narrate what the code says.
+- comment policy (tighten-comment-policy): default NO comment; a comment is only a non-obvious WHY the code cannot express, within a 3-LINE budget; delete narration + change-log/ticket/phase archaeology (Phase 35-08, UFB-036, ...) + JSDoc on app-internal functions; over-budget load-bearing rationale is a RELOCATE finding (verify/add the covering openspec/specs requirement or ADR, then compress to <=2 lines, optional spec pointer) — never a silent delete; comment sweeps in security paths (auth/JWT/cookies/redirects/rate-limit/CSRF/secrets/authz) require a security review.
 - exemplary WITHOUT exemption: eslint clean with --max-warnings 0 (zero errors AND zero warnings) and NO eslint.config.ts exempt/override entry for the file.
 - a module owns only its domain; cross-domain logic delegated via injection at the composition root.`;
 
@@ -64,6 +64,8 @@ const INVENTORY_SCHEMA = {
               "fallback-or-default",
               "magic-literal",
               "comment-archaeology",
+              "comment-over-budget",
+              "comment-relocate-to-spec",
               "other",
             ],
           },
@@ -127,7 +129,7 @@ const results = await pipeline(
   TARGET_FOLDERS,
   (folder) =>
     agent(
-      `Recon ${folder} against the standard. Read every file (use codegraph_explore). Run a strict local eslint over it if helpful. Produce a complete violation inventory: every file > 250 lines, every function > 50 lines, complexity hot-spots, every let/mutation/param-reassign, every '?? <fallback>' or zod .default on product config, every non-obvious magic literal, every eslint.config.ts exemption that names this folder, and any cross-domain logic the module wrongly owns.\n\n${STANDARD}`,
+      `Recon ${folder} against the standard. Read every file (use codegraph_explore). Run a strict local eslint over it if helpful. Produce a complete violation inventory: every file > 250 lines, every function > 50 lines, complexity hot-spots, every let/mutation/param-reassign, every '?? <fallback>' or zod .default on product config, every non-obvious magic literal, every comment violating the 3-line WHY budget (narration, archaeology, app-internal JSDoc as comment-over-budget/comment-archaeology; over-budget load-bearing rationale as comment-relocate-to-spec, naming the covering spec or its absence), every eslint.config.ts exemption that names this folder, and any cross-domain logic the module wrongly owns.\n\n${STANDARD}`,
       { label: `recon:${folder}`, phase: "Recon", schema: INVENTORY_SCHEMA },
     ),
   (inventory, folder) =>
