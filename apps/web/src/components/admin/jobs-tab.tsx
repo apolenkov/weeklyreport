@@ -21,6 +21,7 @@ import { TabHeader, TabSearch } from "./tab-header";
  */
 
 const QUEUE_NAME = "email-reminder" as const;
+const MAX_ERROR_REASON_LENGTH = 80;
 
 function formatTimestamp(ms: number): string {
   if (!Number.isFinite(ms) || ms <= 0) return "—";
@@ -181,7 +182,7 @@ export function JobsTab() {
                 const isExpanded = expanded.has(job.id);
                 const isRetrying = retryingId === job.id && retryMut.isPending;
                 const reason = job.failedReason || "—";
-                const truncated = truncate(reason, 80);
+                const truncated = truncate(reason, MAX_ERROR_REASON_LENGTH);
                 const canExpand = reason !== truncated;
                 return (
                   <tr
@@ -259,19 +260,19 @@ function JobsSkeleton() {
       aria-live="polite"
     >
       <div className="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3">
-        {[0, 1, 2, 3, 4, 5].map((col) => (
+        {Array.from({ length: 6 }, (_, col) => (
           <div
             key={col}
             className="h-4 w-20 animate-pulse rounded bg-[var(--color-border)]"
           />
         ))}
       </div>
-      {[0, 1, 2, 3].map((row) => (
+      {Array.from({ length: 4 }, (_, row) => (
         <div
           key={row}
           className="grid grid-cols-6 gap-4 border-b border-[var(--color-border)] px-4 py-3 last:border-0"
         >
-          {[0, 1, 2, 3, 4, 5].map((col) => (
+          {Array.from({ length: 6 }, (_, col) => (
             <div
               key={col}
               className="h-4 w-full animate-pulse rounded bg-[var(--color-border)]"

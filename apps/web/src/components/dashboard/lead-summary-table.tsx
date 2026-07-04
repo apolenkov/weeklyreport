@@ -1,8 +1,10 @@
+import { MS_PER_DAY } from "@customreport/shared";
+
 import type { LeadInfo } from "../../lib/mappers/dashboard";
 import { RemindLeadButton } from "./remind-lead-button";
 import { RevokeSectionButton } from "./revoke-lead-button";
 
-const MS_24H = 24 * 60 * 60 * 1000;
+const MS_24H = MS_PER_DAY;
 
 /**
  * Returns true when `lastActivity` is an ISO-date string whose parsed time is

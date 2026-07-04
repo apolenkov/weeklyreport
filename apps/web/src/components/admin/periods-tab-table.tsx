@@ -167,6 +167,8 @@ function StateBadge({ state }: { readonly state: PeriodState }) {
   );
 }
 
+const PROGRESS_AMBER_THRESHOLD = 0.5;
+
 /**
  * Progress badge — `<submitted>/<total>` with a 3-tier color scale.
  * Used in the row instead of just a number so heads can scan the
@@ -195,7 +197,12 @@ function ProgressBadge({
     );
   }
   const ratio = submitted / total;
-  const tone = ratio >= 1 ? "success" : ratio >= 0.5 ? "amber" : "red";
+  const tone =
+    ratio >= 1
+      ? "success"
+      : ratio >= PROGRESS_AMBER_THRESHOLD
+        ? "amber"
+        : "red";
   const colors = {
     success: { bg: "var(--color-success)", text: "var(--color-primary)" },
     amber: { bg: "#fef3c7", text: "#92400e" },

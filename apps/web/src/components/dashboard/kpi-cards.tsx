@@ -6,6 +6,8 @@ interface KpiCardsProps {
   readonly data: KpiData;
 }
 
+const PERCENT_MAX = 100;
+
 // Compact single-row KPI strip. Each metric is one horizontal card so the three
 // signals (Submissions / Deadline / Risks & Blockers) read as a slim status bar
 // above the dashboard rather than three tall cards that push the real content
@@ -13,7 +15,9 @@ interface KpiCardsProps {
 // submission ring stay as the recognisable at-a-glance cues.
 export function KpiCards({ data }: KpiCardsProps) {
   const submissionPercent =
-    data.total > 0 ? Math.round((data.submitted / data.total) * 100) : 0;
+    data.total > 0
+      ? Math.round((data.submitted / data.total) * PERCENT_MAX)
+      : 0;
 
   return (
     <div className="grid gap-3 sm:grid-cols-3">

@@ -8,6 +8,9 @@ import { invalidateAdmin } from "../../lib/cache-keys";
 import { useTRPC } from "../../lib/trpc-context";
 import { CheckIcon } from "./settings-tab-shared";
 
+const MAX_SHORT_NAME_LENGTH = 16;
+const MAX_FULL_NAME_LENGTH = 200;
+
 export function IdentitySubTab() {
   const trpc = useTRPC();
   const qc = useQueryClient();
@@ -50,8 +53,8 @@ export function IdentitySubTab() {
     });
   }
 
-  const shortNameOver = shortName.length > 16;
-  const fullNameOver = fullName.length > 200;
+  const shortNameOver = shortName.length > MAX_SHORT_NAME_LENGTH;
+  const fullNameOver = fullName.length > MAX_FULL_NAME_LENGTH;
   const canSave =
     !isSaving &&
     !isLoading &&
