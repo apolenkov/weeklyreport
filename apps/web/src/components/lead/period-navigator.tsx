@@ -1,16 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  type TouchEvent as ReactTouchEvent,
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useId, useMemo } from "react";
 
 import type { ReportPeriod } from "./mock-data";
 import {
@@ -19,14 +10,12 @@ import {
   PeriodListboxPanel,
   SubmittedBadge,
 } from "./period-listbox-panel";
+import { usePeriodListboxNav } from "./use-period-listbox-nav";
 
-const SWIPE_THRESHOLD_PX = 50;
 // 35-07: lead-form addressable URL base. Period nav now emits path-segment
 // URLs (`/lead/report/<reportId>`) so each week is bookmarkable.
 const LEAD_REPORT_BASE = "/lead/report";
 const PERIOD_SELECT_WIDTH_CH = 24;
-// Gap between the trigger and the portaled listbox panel (D3).
-const PERIOD_PANEL_GAP_PX = 4;
 
 interface PeriodNavigatorProps {
   readonly periods: ReportPeriod[];
@@ -97,12 +86,10 @@ export function PeriodNavigator({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  // W4: per-instance scoped listbox/option ids. useId yields a stable unique
-  // prefix per navigator instance so two on one page never collide on the
-  // DOM ids that aria-controls / aria-activedescendant reference.
+  // W4: per-instance scoped listbox/option ids, so two navigators on one page
+  // never collide on the DOM ids that aria-controls / aria-activedescendant
+  // reference (see usePeriodListboxNav).
   const instanceId = useId();
-  const listboxId = `period-listbox-${instanceId}`;
-  const optionIdPrefix = `period-option-${instanceId}-`;
 
   // 35-07: the dropdown reflects the path-segment reportId when the page is
   // rendered under `/lead/report/[reportId]`. driver-findings-2026-06-11
@@ -170,127 +157,35 @@ export function PeriodNavigator({
     if (hasNext && next) navigateTo(next.id);
   }
 
-  // ---- Custom listbox (D3) ----
-  // Native <option> cannot render badge markup, so the select is replaced by a
-  // trigger + portaled listbox. Focus stays on the trigger; the highlighted
-  // option is tracked via aria-activedescendant (roving without DOM focus).
-  const [open, setOpen] = useState(false);
-  const [activeIdx, setActiveIdx] = useState(currentIndex);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [panelPos, setPanelPos] = useState<{
-    top: number;
-    left: number;
-    width: number;
-  } | null>(null);
-
-  const closeAndRefocus = useCallback(() => {
-    setOpen(false);
-    triggerRef.current?.focus();
-  }, []);
-
-  const selectOption = useCallback(
-    (periodId: string) => {
-      // Re-selecting the current period is a no-op (matches native <select>
-      // semantics). This also keeps a single-option fallback navigator inert
-      // so a head urlBuilder never jumps a viewer/lead surface to /head/report.
-      if (periodId !== selectedPeriod?.id) navigateTo(periodId);
-      closeAndRefocus();
-    },
-    [navigateTo, closeAndRefocus, selectedPeriod?.id],
-  );
-
-  // Position the panel via portal to escape the toolbar's overflow clip.
-  useEffect(() => {
-    if (!open) return;
-    const update = () => {
-      const r = triggerRef.current?.getBoundingClientRect();
-      if (!r) return;
-      setPanelPos({
-        top: r.bottom + PERIOD_PANEL_GAP_PX,
-        left: r.left,
-        width: r.width,
-      });
-    };
-    update();
-    window.addEventListener("scroll", update, true);
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("scroll", update, true);
-      window.removeEventListener("resize", update);
-    };
-  }, [open]);
-
-  // Dual-ref outside click: trigger or panel keeps the listbox open.
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      const target = e.target as Node;
-      const triggerContains = triggerRef.current?.contains(target);
-      const panelContains = panelRef.current?.contains(target);
-      if (!triggerContains && !panelContains) setOpen(false);
-    }
-    if (open) document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
-
-  // When opening, anchor the highlight on the currently selected option.
-  useEffect(() => {
-    if (open) setActiveIdx(currentIndex);
-  }, [open, currentIndex]);
-
-  function handleTriggerKeyDown(e: ReactKeyboardEvent<HTMLButtonElement>) {
-    if (open) {
-      handleListKeyDown(e);
-      return;
-    }
-    if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter") {
-      e.preventDefault();
-      setOpen(true);
-    }
-  }
-
-  function handleListKeyDown(
-    e: ReactKeyboardEvent<HTMLButtonElement | HTMLDivElement>,
-  ) {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      closeAndRefocus();
-    } else if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActiveIdx((i) => Math.min(i + 1, periodOptions.length - 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActiveIdx((i) => Math.max(i - 1, 0));
-    } else if (e.key === "Home") {
-      e.preventDefault();
-      setActiveIdx(0);
-    } else if (e.key === "End") {
-      e.preventDefault();
-      setActiveIdx(periodOptions.length - 1);
-    } else if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      const opt = periodOptions.at(activeIdx);
-      if (opt) selectOption(opt.id);
-    }
-  }
-
-  // Phase 33-04: swipe gesture. Left = next week, right = previous week.
-  const touchStartXRef = useRef<number | null>(null);
-  function handleTouchStart(e: ReactTouchEvent<HTMLDivElement>) {
-    const t = Array.from(e.touches).at(0);
-    touchStartXRef.current = t ? t.clientX : null;
-  }
-  function handleTouchEnd(e: ReactTouchEvent<HTMLDivElement>) {
-    const start = touchStartXRef.current;
-    touchStartXRef.current = null;
-    if (start === null) return;
-    const t = Array.from(e.changedTouches).at(0);
-    if (!t) return;
-    const deltaX = t.clientX - start;
-    if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX) return;
-    if (deltaX < 0) handleNext();
-    else handlePrev();
-  }
+  // ---- Custom listbox (D3) + swipe gesture, extracted to a hook so this
+  // component stays focused on rendering. ----
+  const {
+    listboxId,
+    optionIdPrefix,
+    open,
+    setOpen,
+    activeIdx,
+    setActiveIdx,
+    triggerRef,
+    panelRef,
+    panelPos,
+    selectOption,
+    handleTriggerKeyDown,
+    handleListKeyDown,
+    handleTouchStart,
+    handleTouchEnd,
+  } = usePeriodListboxNav({
+    instanceId,
+    currentIndex,
+    periodOptionIds: useMemo(
+      () => periodOptions.map((o) => o.id),
+      [periodOptions],
+    ),
+    selectedPeriodId: selectedPeriod?.id,
+    navigateTo,
+    onPrev: handlePrev,
+    onNext: handleNext,
+  });
 
   return (
     <div

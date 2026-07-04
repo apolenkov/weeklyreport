@@ -9,8 +9,8 @@ import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { ItemCard } from "./item-card";
 import { type BlockerPrefill, ItemEditDialog } from "./item-edit-dialog";
 import type { KanbanItem, Product, RiskEntry } from "./mock-data";
+import { buildItemColumns, isBoardEmpty } from "./next-week-columns";
 import { SlideFitAdvisory } from "./slide-fit-advisory";
-import { splitStageNames } from "./stage-tags";
 
 interface CurrentWeekSectionProps {
   readonly items: KanbanItem[];
@@ -85,25 +85,6 @@ function deriveDialogProps(dialogState: EditableListDialogState<KanbanItem>): {
   };
 }
 
-function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
-  const map = new Map<string, KanbanItem[]>();
-  for (const item of items) {
-    const tags =
-      item.stageIds && item.stageIds.length > 0
-        ? item.stageIds
-        : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-          splitStageNames(item.stageName);
-    const key =
-      tags.length > 0
-        ? `${item.productName} · ${tags.join(", ")}`
-        : item.productName;
-    const group = map.get(key) ?? [];
-    group.push(item);
-    map.set(key, group);
-  }
-  return map;
-}
-
 export function CurrentWeekSection({
   items,
   risks,
@@ -120,13 +101,12 @@ export function CurrentWeekSection({
   onMoveToNextWeek,
   onRouteToBlocker,
 }: CurrentWeekSectionProps) {
-  const grouped = groupByProduct(items);
   const scrollRef = useRef<HTMLDivElement>(null);
   const canScrollDown = useScrollFade(scrollRef);
 
   // Only fall back to the standalone empty-state when there are neither
   // items nor products to drive a column layout.
-  const isEmpty = grouped.size === 0 && (!products || products.length === 0);
+  const isEmpty = isBoardEmpty(items, products);
   const hasMultipleProducts = products != null && products.length > 1;
   const defaultProduct = products?.[0];
 
@@ -229,31 +209,7 @@ export function CurrentWeekSection({
   // column. Falls back to non-empty groups when `products` isn't passed
   // (defensive — the prop became required de-facto in May 2026 but
   // existing callers may still omit it).
-  const columns: {
-    key: string;
-    productId: string;
-    productName: string;
-    items: KanbanItem[];
-  }[] =
-    products && products.length > 0
-      ? products.map((p) => ({
-          key: p.name,
-          productId: p.id,
-          productName: p.name,
-          items: items.filter((it) => it.productId === p.id),
-        }))
-      : [...grouped.entries()].flatMap(([groupName, gItems]) => {
-          const first = gItems.at(0);
-          if (!first) return [];
-          return [
-            {
-              key: groupName,
-              productId: first.productId,
-              productName: first.productName,
-              items: gItems,
-            },
-          ];
-        });
+  const columns = buildItemColumns(products, items);
   const dlg = deriveDialogProps(dialogState);
 
   return (

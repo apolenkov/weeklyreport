@@ -1,14 +1,23 @@
 "use client";
 
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   coveringRisksForItem,
   highestAlarmSeverity,
 } from "../../lib/item-alarm";
-import { ItemCardActions, PublishedRecordMarker } from "./item-card-actions";
+import { ItemCardActions } from "./item-card-actions";
+import { ItemCardBadges } from "./item-card-badges";
+import {
+  deriveItemCardStageTags,
+  ItemCardStageTagsRow,
+} from "./item-card-stage-tags";
+import {
+  cardContainerStyle,
+  STATUS_BADGE,
+  type StatusBadge,
+} from "./item-card-style";
 import type { ItemStatus, KanbanItem, RiskEntry } from "./mock-data";
-import { canonicalStageName, splitStageNames } from "./stage-tags";
 
 interface ItemCardProps {
   readonly item: KanbanItem;
@@ -47,88 +56,6 @@ interface ItemCardProps {
    * isolated (Q1 Phase-1 lock), so the activity section passes none.
    */
   readonly risks?: readonly RiskEntry[];
-}
-
-interface StatusBadge {
-  bg: string;
-  text: string;
-  label: string;
-}
-
-const STATUS_BADGE = {
-  "in-progress": {
-    bg: "var(--color-success)",
-    text: "var(--color-primary)",
-    label: "In Progress",
-  },
-  completed: {
-    bg: "var(--color-primary)",
-    text: "var(--color-primary-foreground)",
-    label: "Completed",
-  },
-  blocked: {
-    bg: "var(--color-status-blocked-bg)",
-    text: "var(--color-destructive)",
-    label: "Blocked",
-  },
-  // record-status-derived-from-risk: a DERIVED-only amber alarm (there is no
-  // stored at-risk item status) — token-derived per status-color-semantics.
-  "at-risk": {
-    bg: "var(--color-status-at-risk-bg)",
-    text: "var(--color-status-at-risk-fg)",
-    label: "At Risk",
-  },
-  planned: {
-    bg: "var(--color-muted)",
-    text: "var(--color-muted-foreground)",
-    label: "Planned",
-  },
-} as const satisfies Record<string, StatusBadge>;
-
-/**
- * Fixed card height for the static render, matching the section-level
- * empty-state placeholder ("No items yet" in current-week-section.tsx /
- * next-week-section.tsx) so every card in a column is uniform (B1). The height
- * is sized to the CONTENT, not the empty placeholder: it fits the status-pill /
- * action row + three body lines (the `line-clamp-3` the body keeps) + the
- * author / stage-tag footer + padding. A short card fills the slack with
- * whitespace; a long one truncates at three lines with an ellipsis (its full
- * text stays available via the `title` hover tooltip). The chrome rows keep
- * their natural size (`shrink-0`); the body is the only flexible slot.
- */
-const ITEM_CARD_REFERENCE_HEIGHT = 150;
-
-function cardContainerStyle(opts: {
-  isPlanned: boolean;
-  isBlocked: boolean;
-  foreign: boolean;
-  isEditing: boolean;
-}): CSSProperties {
-  const { isPlanned, isBlocked, foreign, isEditing } = opts;
-  const borderStyle = isPlanned ? "dashed" : "solid";
-  // Faint blocked border = the destructive token at 20% (token-derived, no
-  // hardcoded status literal — status-color-semantics).
-  const borderColor = isBlocked
-    ? "color-mix(in srgb, var(--color-destructive) 20%, transparent)"
-    : "var(--color-muted)";
-  return {
-    // The reference height is fixed for the static render; inline edit
-    // relaxes it to a floor so the textarea can grow past it to show the
-    // full untruncated text (never clipped while editing).
-    ...(isEditing
-      ? { minHeight: ITEM_CARD_REFERENCE_HEIGHT }
-      : { height: ITEM_CARD_REFERENCE_HEIGHT }),
-    borderTop: `1px ${borderStyle} ${borderColor}`,
-    borderRight: `1px ${borderStyle} ${borderColor}`,
-    borderBottom: `1px ${borderStyle} ${borderColor}`,
-    borderLeft: isPlanned
-      ? `3px dashed var(--color-starbucks-accent)`
-      : `3px solid ${isBlocked ? "var(--color-destructive)" : "var(--color-starbucks-accent)"}`,
-    background: isBlocked
-      ? "var(--color-status-blocked-bg)"
-      : "var(--color-background)",
-    opacity: foreign ? 0.7 : 1,
-  };
 }
 
 interface DerivedCardStatus {
@@ -228,26 +155,7 @@ export function ItemCard({
   // branch actually renders so an editable-but-locked card still gets the
   // fixed reference height instead of the edit-mode floor.
   const showEditor = isEditing && !locked;
-  const stageTags = (
-    item.stageIds && item.stageIds.length > 0
-      ? item.stageIds
-      : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-        splitStageNames(item.stageName)
-  )
-    // stage-label-canonicalization: heal a legacy short "Dev" at render so the
-    // card reads the canonical "Development" alongside seeded rows; the pipeline
-    // chip keeps its own short label.
-    .map(canonicalStageName);
-  // enforce-item-decision-stage-schema: a stage-less item is a legacy anomaly,
-  // never an implicit "all stages" scope — render the loud "No stage set"
-  // warning, mirroring the risk row.
-  const stageTagsLabel =
-    stageTags.length === 0 ? "No stage set" : stageTags.join(", ");
-  const visibleStageTags = stageTags.slice(0, 2);
-  const hiddenStageCount = Math.max(
-    stageTags.length - visibleStageTags.length,
-    0,
-  );
+  const stageTagsState = deriveItemCardStageTags(item);
 
   // Local draft for the inline textarea. Reset every time edit mode opens so
   // the field tracks the latest committed text.
@@ -295,36 +203,13 @@ export function ItemCard({
           shrink-0 keeps this row at its natural height so the fixed card
           height never clips it — only the body text region below flexes. */}
       <div className="mb-2 flex shrink-0 items-start justify-between gap-2">
-        <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-          <span
-            className="inline-flex w-fit shrink-0 items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[10px] font-semibold"
-            style={{ background: badge.bg, color: badge.text }}
-            title={
-              alarmLocked
-                ? lockAuthorName
-                  ? `Status is set by ${lockAuthorName}'s covering risk/blocker — resolve it with them to change.`
-                  : "Status is set by the covering risk/blocker — resolve it to change."
-                : undefined
-            }
-          >
-            {badge.label}
-          </span>
-          {item.priorityRank != null && (
-            <span
-              role="img"
-              className="inline-flex w-fit shrink-0 items-center rounded-[var(--radius-pill)] px-2 py-0.5 text-[10px] font-bold tabular-nums"
-              style={{
-                background: "var(--color-starbucks-gold)",
-                color: "var(--color-primary-foreground)",
-              }}
-              aria-label={`Priority ${item.priorityRank}`}
-              title={`Priority rank ${item.priorityRank}`}
-            >
-              P{item.priorityRank}
-            </span>
-          )}
-          {publishedLocked && <PublishedRecordMarker />}
-        </div>
+        <ItemCardBadges
+          badge={badge}
+          alarmLocked={alarmLocked}
+          lockAuthorName={lockAuthorName}
+          priorityRank={item.priorityRank}
+          publishedLocked={publishedLocked}
+        />
 
         <ItemCardActions
           item={item}
@@ -374,38 +259,7 @@ export function ItemCard({
           {item.author}
         </div>
         <div className="flex min-w-0 max-w-[72%] flex-wrap items-center justify-end gap-1">
-          <span
-            role="img"
-            className="inline-flex min-w-0 flex-wrap items-center justify-end gap-1"
-            aria-label={`Item stages: ${stageTagsLabel}`}
-            title={stageTagsLabel}
-          >
-            {stageTags.length === 0 ? (
-              // Warning tokens match the risk row's "no-stage-warning" chip
-              // (#fef3c7 / #8a6d1b) so a stage-less item reads as an anomaly.
-              <span className="inline-flex w-fit items-center rounded-[var(--radius-pill)] bg-[#fef3c7] px-2 py-0.5 text-[10px] font-semibold text-[#8a6d1b]">
-                No stage set
-              </span>
-            ) : (
-              visibleStageTags.map((stage) => (
-                <span
-                  key={stage}
-                  className="inline-flex max-w-[92px] items-center truncate rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
-                  title={stage}
-                >
-                  {stage}
-                </span>
-              ))
-            )}
-            {hiddenStageCount > 0 && (
-              <span
-                className="inline-flex w-fit items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-muted-foreground)]"
-                title={stageTagsLabel}
-              >
-                +{hiddenStageCount}
-              </span>
-            )}
-          </span>
+          <ItemCardStageTagsRow {...stageTagsState} />
         </div>
       </div>
     </div>

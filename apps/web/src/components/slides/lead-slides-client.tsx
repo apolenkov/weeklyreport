@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReportSectionReadModel } from "@customreport/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
@@ -14,7 +13,6 @@ import {
 
 import { useFullscreen } from "../../hooks/use-fullscreen";
 import { crossAuthorContentFetchEnabled } from "../../lib/cross-author-content-gate";
-import type { CrossAuthorContentRow } from "../../lib/mappers/lead-cross-author";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
@@ -23,70 +21,15 @@ import {
   DeckFullscreenOverlay,
   DeckToolbarControls,
 } from "./deck-fullscreen-overlay";
-import { LeadProductGrid } from "./lead-product-grid";
-import { LeadSlideHero } from "./lead-slide-hero";
 import {
   buildLeadSlidePeriodOptions,
   resolveLeadSlideReportId,
 } from "./lead-slide-periods";
+import { buildLeadDeckModel, SlideEmptyState } from "./lead-slides-deck-model";
+import { LeadSlidesProductView } from "./lead-slides-product-view";
 import { ReportSlides } from "./report-slides";
-import {
-  applyForeignProductHealth,
-  buildSectionSlideModel,
-  crossAuthorContentToSlideForeign,
-  mergeForeignSlideContent,
-  paginateSectionSlides,
-  type SectionSlideModel,
-} from "./section-slide-utils";
+import { paginateSectionSlides } from "./section-slide-utils";
 import { SlideSkeleton } from "./slide-skeleton";
-
-function SlideEmptyState({
-  title,
-  message,
-}: {
-  readonly title: string;
-  readonly message: string;
-}) {
-  return (
-    <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] px-6 py-16 text-center">
-      <p className="text-base font-semibold text-[var(--color-foreground)]">
-        {title}
-      </p>
-      <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-        {message}
-      </p>
-    </div>
-  );
-}
-
-/**
- * Assemble the lead deck's slide model: own records, then the risk-derived
- * foreign HEALTH fold (own deck only), then the Everyone CONTENT merge. Each
- * step returns NEW objects — the input `section` (the cached read-model the
- * draft serializes) is never mutated, so Everyone stays view-only.
- */
-function buildLeadDeckModel(
-  section: ReportSectionReadModel,
-  foreignHealth: Parameters<typeof applyForeignProductHealth>[1],
-  foreignContentRows: readonly CrossAuthorContentRow[],
-): SectionSlideModel {
-  const base = buildSectionSlideModel(section);
-  const withHealth =
-    foreignHealth.length === 0
-      ? base
-      : {
-          ...base,
-          productSlides: applyForeignProductHealth(
-            base.productSlides,
-            foreignHealth,
-          ),
-        };
-  if (foreignContentRows.length === 0) return withHealth;
-  return mergeForeignSlideContent(
-    withHealth,
-    crossAuthorContentToSlideForeign(foreignContentRows),
-  );
-}
 
 interface LeadSlidesClientProps {
   readonly initialReportId?: string | null;
@@ -302,43 +245,15 @@ export function LeadSlidesClient({
 
   if (scope === "product") {
     return (
-      <div ref={deckRef}>
-        {/* lead-demo-feedback #88: match the own-scope LeadSlideArticle inset
-            (p-3) so toggling Summary↔Product never shifts the hero (the prior
-            p-6 put the hero 12px lower/right than the own-scope path). */}
-        <article className="slide-frame rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[var(--color-card)] p-3 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
-          {sectionModel ? (
-            <LeadSlideHero
-              slide={sectionModel}
-              heroControls={
-                <div className="flex flex-wrap items-center gap-2">
-                  {scopeControls}
-                </div>
-              }
-            />
-          ) : (
-            <div className="flex flex-wrap items-center gap-2 border-b border-[rgba(0,0,0,0.08)] pb-4">
-              {scopeControls}
-            </div>
-          )}
-          <div className="mt-5">
-            <LeadProductGrid products={sectionModel?.productSlides ?? []} />
-          </div>
-          {!inReportMode && (
-            <div className="mt-4 flex items-center justify-end gap-2">
-              <DeckToolbarControls
-                isFullscreen={isFullscreen}
-                onToggle={onToggle}
-                toggleRef={toggleButtonRef}
-              />
-            </div>
-          )}
-        </article>
-        <DeckFullscreenOverlay
-          isFullscreen={isFullscreen}
-          onToggle={onToggle}
-        />
-      </div>
+      <LeadSlidesProductView
+        deckRef={deckRef}
+        sectionModel={sectionModel}
+        scopeControls={scopeControls}
+        inReportMode={inReportMode}
+        isFullscreen={isFullscreen}
+        onToggle={onToggle}
+        toggleButtonRef={toggleButtonRef}
+      />
     );
   }
 

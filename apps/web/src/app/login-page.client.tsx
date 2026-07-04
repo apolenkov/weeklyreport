@@ -15,6 +15,14 @@ import { TaglineCycler } from "../components/landing/tagline-cycler";
 import { type LastRoleRecord, readLastRole } from "../lib/last-role";
 import { sanitizeNext } from "../lib/safe-next";
 import { useTRPC } from "../lib/trpc-context";
+import {
+  defaultRedirectFor,
+  DEV_EMAIL_FOR_ROLE,
+  devLoginHref,
+  FALLBACK_REDIRECT,
+  getSessionRole,
+  ROLE_LABEL,
+} from "./login-page-roles";
 
 const AUTH_STUB =
   process.env.NEXT_PUBLIC_AUTH_STUB === "true" &&
@@ -44,57 +52,6 @@ const AUTH_STUB =
  *      page must not treat that fallback as an explicit login.
  *   4. If no session AND not stub → keep the SSO sign-in card.
  */
-type Role = "lead" | "head" | "admin" | "viewer";
-
-const DEFAULT_FOR_ROLE: Record<Role, string> = {
-  lead: "/lead/report",
-  head: "/head/dashboard",
-  admin: "/admin",
-  viewer: "/reports/latest",
-};
-
-/**
- * UFB-071 (2026-05-11): seeded dev-mode emails per role. The role grid
- * on the landing card uses these as the fallback email when no
- * persisted hint exists for that role. Must stay in sync with the
- * `emailByRole` table in `apps/api/src/modules/auth/auth.routes.ts`
- * and the seeded users in `prisma/seed-simple.ts`.
- */
-const DEV_EMAIL_FOR_ROLE: Record<Role, string> = {
-  lead: "lead1@customreport.local",
-  head: "head@customreport.local",
-  admin: "admin@customreport.local",
-  viewer: "viewer@customreport.local",
-};
-
-const ROLE_LABEL: Record<Role, string> = {
-  lead: "Lead",
-  head: "Head",
-  admin: "Admin",
-  viewer: "Viewer",
-};
-
-/**
- * Build the `/auth/dev-login` URL for a given role + email, with the
- * post-login redirect honouring the role's default landing route.
- */
-function devLoginHref(role: Role, email: string): string {
-  const params = new URLSearchParams({
-    role,
-    email,
-    redirect: DEFAULT_FOR_ROLE[role],
-  });
-  return `/auth/dev-login?${params.toString()}`;
-}
-
-const FALLBACK_REDIRECT = "/head/dashboard";
-
-function defaultRedirectFor(role: Role | null | undefined): string {
-  if (!role) return FALLBACK_REDIRECT;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- role may be a persisted/retired value absent from DEFAULT_FOR_ROLE at runtime
-  return DEFAULT_FOR_ROLE[role] ?? FALLBACK_REDIRECT;
-}
-
 interface LoginPageClientProps {
   initialOrg: OrganizationPublic;
 }
@@ -106,21 +63,6 @@ function isOrganizationPublic(value: unknown): value is OrganizationPublic {
     typeof (value as { shortName?: unknown }).shortName === "string" &&
     typeof (value as { fullName?: unknown }).fullName === "string"
   );
-}
-
-function isRole(value: unknown): value is Role {
-  return (
-    value === "lead" ||
-    value === "head" ||
-    value === "admin" ||
-    value === "viewer"
-  );
-}
-
-function getSessionRole(value: unknown): Role | undefined {
-  if (typeof value !== "object" || value === null) return undefined;
-  const role = (value as { role?: unknown }).role;
-  return isRole(role) ? role : undefined;
 }
 
 export function LoginPageClient({ initialOrg }: LoginPageClientProps) {

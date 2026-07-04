@@ -35,11 +35,11 @@ true`, `skipComments: true`). Do NOT touch `complexity` or
 - [x] R1b Measure the real (skipBlankLines + skipComments) 250–300 cohort with the
       new threshold; repopulate the now-EMPTY `max-lines` grandfather block with
       exactly those files so the gate lands green. (30 files grandfathered.)
-- [ ] R1c Drain the grandfather block one wave at a time: per file, either split
+- [x] R1c Drain the grandfather block one wave at a time: per file, either split
       below 250 (prefer many small single-purpose units) OR move to the
       justified-permanent exempt block with a one-line reason (split would hurt
       clarity / break memoization). Never raise the threshold back.
-- [ ] R1d Each wave lands `pnpm lint` + `pnpm typecheck` + `pnpm test` green
+- [x] R1d Each wave lands `pnpm lint` + `pnpm typecheck` + `pnpm test` green
       before the next wave. Opus review for any wave that restructures a file.
 
 ## 2. no-magic-numbers (TS-aware, manual — no autofix)
