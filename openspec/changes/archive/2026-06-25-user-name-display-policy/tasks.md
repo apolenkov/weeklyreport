@@ -13,7 +13,7 @@
 - [x] 2.1 `lib/mappers/lead-form.ts` (buildStageGrid): own-stage `assignee` uses
       `shortNameFromName(ownerLabel)` instead of the full `authorName`.
 - [x] 2.2 Backend: `getCrossAuthors` returns `authorShortName =
-  shortNameFromName(row.user.name)`; thread the field through the repository
+shortNameFromName(row.user.name)`; thread the field through the repository
       return type, `lead-form-shared.ts`, `lead-form.service.ts`, and the tRPC
       output. Update the "full name never leaves" comment to reflect ADR 0006.
 - [x] 2.3 Web `CrossAuthorRow` gains `authorShortName`;

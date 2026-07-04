@@ -104,7 +104,7 @@ acceptance (7.2) and user sign-off (7.3). Spec contract:
       `redesign-fullscreen.png` (all 1440×900).
       BEFORE not rebuilt by design: the "before" is the parent of the
       implementation commit `9dd6e974` (`feat(ui): adopt lead density
-    idiom on head status slide`) — recoverable from git but not
+idiom on head status slide`) — recoverable from git but not
       re-built here. The five AFTER shots demonstrate the contract:
       framed 2×2 cards, neutral section headers, token-driven left
       stripes, dashed empty-section placeholders ("No risks raised" /

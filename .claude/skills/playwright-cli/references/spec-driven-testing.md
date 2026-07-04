@@ -127,14 +127,12 @@ Save under `specs/<feature>.plan.md`. Use this structure:
 
 1. <Concrete user step>
 
-
-    - expect: <observable outcome>
-    - expect: <another observable outcome>
+   - expect: <observable outcome>
+   - expect: <another observable outcome>
 
 2. <Next step>
 
-
-    - expect: <outcome>
+   - expect: <outcome>
 
 #### 1.2. <next-scenario>
 

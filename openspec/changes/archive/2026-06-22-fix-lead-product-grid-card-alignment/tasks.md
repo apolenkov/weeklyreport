@@ -4,7 +4,7 @@
 
 - [x] 1.1 In `slides/lead-product-grid.tsx`, give the outer grid row tracks and
       make each `ProductCard` a subgrid participant: `display: grid;
-  grid-row: span 4; grid-template-rows: subgrid` (Tailwind
+grid-row: span 4; grid-template-rows: subgrid` (Tailwind
       `row-span-4 grid grid-rows-subgrid`) over the four bands (header / Current
       / Next / Risks+Decisions). Replaced the card's `flex h-full flex-col`.
       NOTE: the outer grid needs no explicit `grid-template-rows` — the four

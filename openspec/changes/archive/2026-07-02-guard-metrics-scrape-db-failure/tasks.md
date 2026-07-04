@@ -35,7 +35,7 @@
       import `metricsRegistry` from
       `apps/api/src/infrastructure/metrics/metrics.registry.ts`, install the
       throwing-port `TelemetryGauges` via `onModuleInit`, then `await
-  metricsRegistry.metrics()` and assert (a) the promise resolves without
+metricsRegistry.metrics()` and assert (a) the promise resolves without
       rejecting and (b) the returned scrape text still contains a known
       DB-independent metric family (e.g. `process_cpu`/`nodejs_heap` or another
       always-registered counter), proving the `Promise.all` aggregation in
