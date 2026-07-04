@@ -1,5 +1,11 @@
 # Tasks — Agent-Review Human-Confirmed Gate
 
+> **DEFERRED 2026-07-04 (owner call).** Parked, not abandoned: the review
+> agent itself is still a stub, so the HF7/HF8 gate contract cannot be
+> implemented against real behavior. The upper half (§1) already landed in
+> code. REOPEN WHEN: a real review agent exists. Move this directory back
+> to openspec/changes/ to reactivate.
+
 > **SCOPE 2026-07-04.** Implement **§1 only** (`report-review-mode` — HF9+HF3,
 > LIVE). **§2–§6 are PARKED** (the `agent-review` inert-proposal contract:
 > shared schema, Prisma table/migration, backend gate, web bar, deferred
