@@ -22,6 +22,7 @@ const SPLIT_BUTTON_SEGMENT_CLASS =
 // container already floors the height via --toolbar-control-h).
 const SPLIT_BUTTON_MAIN_CLASS = `${SPLIT_BUTTON_SEGMENT_CLASS} px-2.5 max-md:min-w-[var(--touch-target-min)]`;
 const SPLIT_BUTTON_CHEVRON_CLASS = `${SPLIT_BUTTON_SEGMENT_CLASS} border-l border-[var(--color-border)] px-1.5 max-md:min-w-[var(--touch-target-min)]`;
+const DROPDOWN_OFFSET_PX = 4;
 
 interface FillFromButtonProps {
   readonly periods: ReportPeriod[];
@@ -123,7 +124,7 @@ export function FillFromButton({
       const r = dropdownTriggerRef.current?.getBoundingClientRect();
       if (!r) return;
       setDropdownPos({
-        top: r.bottom + 4,
+        top: r.bottom + DROPDOWN_OFFSET_PX,
         right: window.innerWidth - r.right,
       });
     };

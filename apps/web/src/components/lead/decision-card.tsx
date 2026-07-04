@@ -1,6 +1,7 @@
 import { LockBadge } from "../report-shell/lock-badge";
 import { MetaRow } from "../report-shell/meta-row";
 import { PublishedRecordMarker } from "./item-card-actions";
+import { FOREIGN_ENTRY_OPACITY } from "./item-card-style";
 import type { DecisionEntry } from "./mock-data";
 import { canonicalStageName, splitStageNames } from "./stage-tags";
 
@@ -85,7 +86,7 @@ export function DecisionCard({
       className="rounded-lg p-4"
       style={{
         background: "var(--color-background)",
-        opacity: decision.foreign ? 0.7 : 1,
+        opacity: decision.foreign ? FOREIGN_ENTRY_OPACITY : 1,
       }}
     >
       <div className="mb-2 flex flex-wrap items-center gap-2">

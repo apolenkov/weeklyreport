@@ -20,6 +20,7 @@ type ToneVariant = "blocked" | "at-risk" | "on-track" | "empty";
    (polish-lead-toolbar 3.1). Keep the full `h-11` literal intact so
    Tailwind's JIT scanner still emits the class. */
 const HERO_ROW_HEIGHT_CLASS = "h-11";
+const PERCENT_MAX = 100;
 
 function worstProductTone(
   products: SectionSlideModel["productSlides"],
@@ -113,9 +114,9 @@ function computeOnTrackPct(
   products: SectionSlideModel["productSlides"],
 ): number {
   const real = products.filter((p) => p.id !== "cross-product");
-  if (real.length === 0) return 100;
+  if (real.length === 0) return PERCENT_MAX;
   const green = real.filter((p) => p.status === "green").length;
-  return Math.round((green / real.length) * 100);
+  return Math.round((green / real.length) * PERCENT_MAX);
 }
 
 interface Props {

@@ -2,6 +2,7 @@ import { Fragment } from "react";
 
 import { LockBadge } from "../report-shell/lock-badge";
 import { MetaRow } from "../report-shell/meta-row";
+import { FOREIGN_ENTRY_OPACITY } from "./item-card-style";
 import type { RiskEntry, StageStatus } from "./mock-data";
 import { DeleteIcon, EditIcon } from "./risk-card-icons";
 import { SlideFitAdvisory } from "./slide-fit-advisory";
@@ -99,7 +100,7 @@ export function RiskCard({
         style={{
           background: isBlocked ? "#fdf8f8" : "#fffcf5",
           border: `1px solid ${isBlocked ? "rgba(200,32,20,0.15)" : "rgba(212,160,23,0.15)"}`,
-          opacity: risk.foreign ? 0.7 : 1,
+          opacity: risk.foreign ? FOREIGN_ENTRY_OPACITY : 1,
         }}
       >
         <div className="mb-3 flex flex-wrap items-center gap-2">

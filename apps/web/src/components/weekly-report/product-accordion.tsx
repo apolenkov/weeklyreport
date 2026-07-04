@@ -28,6 +28,9 @@ export interface AccordionReviewContext {
   readonly onMutated: () => void;
 }
 
+/** Lets the expand animation start before the smooth scroll kicks in. */
+const SCROLL_INTO_VIEW_DELAY_MS = 80;
+
 interface ProductAccordionProps {
   readonly report: ProductReport;
   readonly defaultOpen?: boolean;
@@ -435,7 +438,7 @@ export function ProductAccordion({
       document
         .getElementById(`report-product-${report.id}`)
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 80);
+    }, SCROLL_INTO_VIEW_DELAY_MS);
     return () => window.clearTimeout(handle);
   }, [highlighted, report.id, scrollIntoViewOnHighlight]);
 

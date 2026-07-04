@@ -49,6 +49,9 @@ export const STATUS_BADGE = {
  */
 export const ITEM_CARD_REFERENCE_HEIGHT = 150;
 
+/** Faded opacity applied to a card/row owned by another lead ("foreign"). */
+export const FOREIGN_ENTRY_OPACITY = 0.7;
+
 export function cardContainerStyle(opts: {
   isPlanned: boolean;
   isBlocked: boolean;
@@ -78,6 +81,6 @@ export function cardContainerStyle(opts: {
     background: isBlocked
       ? "var(--color-status-blocked-bg)"
       : "var(--color-background)",
-    opacity: foreign ? 0.7 : 1,
+    opacity: foreign ? FOREIGN_ENTRY_OPACITY : 1,
   };
 }

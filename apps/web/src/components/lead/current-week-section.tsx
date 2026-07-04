@@ -12,6 +12,8 @@ import type { KanbanItem, Product, RiskEntry } from "./mock-data";
 import { buildItemColumns, isBoardEmpty } from "./next-week-columns";
 import { SlideFitAdvisory } from "./slide-fit-advisory";
 
+const MAX_GRID_COLUMNS = 3;
+
 interface CurrentWeekSectionProps {
   readonly items: KanbanItem[];
   /**
@@ -226,7 +228,7 @@ export function CurrentWeekSection({
         <div
           className="grid gap-4"
           style={{
-            gridTemplateColumns: `repeat(${Math.min(Math.max(columns.length, 1), 3)}, minmax(0, 1fr))`,
+            gridTemplateColumns: `repeat(${Math.min(Math.max(columns.length, 1), MAX_GRID_COLUMNS)}, minmax(0, 1fr))`,
           }}
         >
           {columns.map((col) => (

@@ -341,19 +341,21 @@ export function sectionToDraftPayload(
 
 type StageStatusValue = "green" | "yellow" | "red" | null;
 
+const SEVERITY_RED = 3;
+
 function aggregateTrafficLight(
   stages: readonly { status?: StageStatusValue }[],
 ): StageStatusValue {
   let severity = 0;
   for (const stage of stages) {
     if (stage.status === "red") {
-      severity = 3;
+      severity = SEVERITY_RED;
       break;
     }
     if (stage.status === "yellow") severity = Math.max(severity, 2);
     if (stage.status === "green") severity = Math.max(severity, 1);
   }
-  return severity === 3
+  return severity === SEVERITY_RED
     ? "red"
     : severity === 2
       ? "yellow"

@@ -12,7 +12,11 @@ interface LeadHistorySkeletonProps {
   readonly count?: number;
 }
 
-export function LeadHistorySkeleton({ count = 6 }: LeadHistorySkeletonProps) {
+const DEFAULT_SKELETON_CARD_COUNT = 6;
+
+export function LeadHistorySkeleton({
+  count = DEFAULT_SKELETON_CARD_COUNT,
+}: LeadHistorySkeletonProps) {
   return (
     <div
       className="grid gap-4 sm:grid-cols-2"
