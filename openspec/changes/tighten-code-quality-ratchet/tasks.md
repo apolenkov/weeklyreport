@@ -8,16 +8,15 @@ threshold-raise-back to force green.
 Model split: Sonnet (manual literal/size fixes) · Opus (review of clusters whose
 fix changes structure). Budget per cluster; no global ceiling.
 
-> **STATUS 2026-07-04 — scaffolding landed, drain + rules deferred.** R1a
-> (`max-lines` 300 → 250) and R1b (repopulate the grandfather block with the
-> 30-file 250–300 cohort) are DONE and green with ZERO churn — the notch is
-> landed and new code is gated at 250 repo-wide. DEFERRED to a supervised
-> session (taste-dependent module surgery / mass manual literal-lift that must
-> be vetted on before/after): R1c–R1d (drain the grandfather one wave at a
-> time), §2 `no-magic-numbers`, §3 `no-duplicate-string`, §4 close-out. These
-> two rules are autofix-free — enabling either forces a mass manual literal
-> churn across the repo (not green-via-exemption), so they were NOT enabled
-> tonight.
+> **STATUS 2026-07-04 (evening) — §1 COMPLETE, §2/§3 remain.** R1a/R1b landed
+> the 300→250 notch; R1c/R1d then drained the whole 30-file grandfather cohort
+> in six pattern-approved waves (ab049e76 … 97c5875b) and the R1b block was
+> deleted from `eslint.config.ts` — `max-lines: 250` is enforced repo-wide
+> with only the justified-permanent exempt list remaining. STILL OPEN: §2
+> `no-magic-numbers` (~330 firings measured) and §3 `no-duplicate-string`
+> (~100 firings) — both autofix-free mass manual literal-lifts — plus the §4
+> close-out, which requires both rules at `error` with zero firings. Do these
+> in a fresh session.
 
 ## 0. Preconditions
 
@@ -72,9 +71,10 @@ true`, `skipComments: true`). Do NOT touch `complexity` or
 
 ## 4. Close-out
 
-- [x] R4a Confirm the `max-lines` grandfather block is EMPTY again (every cohort
-      file split or justified-permanent exempt), and `no-magic-numbers` +
-      `no-duplicate-string` are `error` with zero remaining firings.
+- [ ] R4a Confirm the `max-lines` grandfather block is EMPTY again (every cohort
+      file split or justified-permanent exempt — DONE 2026-07-04, block deleted
+      in 97c5875b), and `no-magic-numbers` + `no-duplicate-string` are `error`
+      with zero remaining firings (NOT YET — §2/§3 pending).
 - [ ] R4b Full gate green: `pnpm lint` + `pnpm typecheck` + `pnpm test` +
       `pnpm build`. Every per-site disable carries a reason; no threshold was
       raised back to force green.
