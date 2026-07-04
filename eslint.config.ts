@@ -420,10 +420,9 @@ export default defineConfig([
       // -1/0/1/2 are universal idioms; array indexes, enums, readonly class
       // props, type positions and numeric literal types are self-documenting.
       // No autofix exists — firings are fixed by hand-lifting the literal,
-      // never by mass-disable. At `warn` while the remaining firings are
-      // drained wave by wave; flips to `error` when the repo hits zero.
+      // never by mass-disable.
       "@typescript-eslint/no-magic-numbers": [
-        "warn",
+        "error",
         {
           ignore: [-1, 0, 1, 2],
           enforceConst: true,
