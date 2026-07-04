@@ -91,6 +91,12 @@ const DEFAULT_RESEED_TIMEOUT_MS =
   DEFAULT_RESEED_TIMEOUT_MINUTES * MS_PER_MINUTE;
 const RESEED_OUTPUT_TAIL_LINES = 15;
 const RESEED_STDERR_TAIL_LENGTH = 500;
+const RESEED_VARIANT_MANUAL_UAT = "manual-uat";
+
+const REMINDER_RULE_OUT_OF_SCOPE_MESSAGE = "reminder-rule-out-of-scope";
+
+const WEEKLY_REPORT_LOAD_LOG_PHASE = "weekly-report.load";
+const WEEKLY_REPORT_GET_PROCEDURE = "weeklyReport.get";
 
 const MAX_PERIOD_LIST_LIMIT = 200;
 const DEFAULT_ACTION_LOG_LIMIT = 20;
@@ -240,7 +246,7 @@ async function resolveScopedReminderReportId(
   if (!rule?.reportId) {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: "reminder-rule-out-of-scope",
+      message: REMINDER_RULE_OUT_OF_SCOPE_MESSAGE,
     });
   }
   return rule.reportId;
@@ -263,7 +269,7 @@ async function assertReportHasInScopeSection(
   if (!section) {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: "reminder-rule-out-of-scope",
+      message: REMINDER_RULE_OUT_OF_SCOPE_MESSAGE,
     });
   }
 }
@@ -314,7 +320,7 @@ async function resolveInScopeRecipientEmails(
   if (sections.length === 0) {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: "reminder-rule-out-of-scope",
+      message: REMINDER_RULE_OUT_OF_SCOPE_MESSAGE,
     });
   }
   return new Set([...sections.map((s) => s.author.email), session.email]);
@@ -421,7 +427,7 @@ export function createAppRouter(deps: RouterDeps) {
         .input(
           z.object({
             variant: z
-              .enum(["small", "middle", "huge", "manual-uat"])
+              .enum(["small", "middle", "huge", RESEED_VARIANT_MANUAL_UAT])
               .default("small"),
           }),
         )
@@ -448,7 +454,7 @@ export function createAppRouter(deps: RouterDeps) {
           const seedFor = (variant: "small" | "middle" | "huge") =>
             variant === "middle" ? middleSeed : seedDemo(variant);
           const script =
-            input.variant === "manual-uat"
+            input.variant === RESEED_VARIANT_MANUAL_UAT
               ? manualUatWipe
               : `${reset} && ${seedFor(input.variant)}`;
           // Resolve repo root in both dev TS execution and built dist images.
@@ -483,7 +489,7 @@ export function createAppRouter(deps: RouterDeps) {
                 PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
               },
               timeout:
-                input.variant === "manual-uat"
+                input.variant === RESEED_VARIANT_MANUAL_UAT
                   ? MANUAL_UAT_RESEED_TIMEOUT_MS
                   : input.variant === "huge"
                     ? HUGE_RESEED_TIMEOUT_MS
@@ -2345,8 +2351,8 @@ export function createAppRouter(deps: RouterDeps) {
             // R3a: no-period is a normal 200 response, not an error path.
             if (result.status === "no-period") {
               ctx.logger.info("weekly report: no active period", {
-                phase: "weekly-report.load",
-                procedure: "weeklyReport.get",
+                phase: WEEKLY_REPORT_LOAD_LOG_PHASE,
+                procedure: WEEKLY_REPORT_GET_PROCEDURE,
                 userId: ctx.session.userId,
                 role: ctx.session.role,
                 requestedReportId,
@@ -2374,8 +2380,8 @@ export function createAppRouter(deps: RouterDeps) {
               });
             }
             ctx.logger.info("weekly report load succeeded", {
-              phase: "weekly-report.load",
-              procedure: "weeklyReport.get",
+              phase: WEEKLY_REPORT_LOAD_LOG_PHASE,
+              procedure: WEEKLY_REPORT_GET_PROCEDURE,
               userId: ctx.session.userId,
               role: ctx.session.role,
               requestedReportId,
@@ -2395,8 +2401,8 @@ export function createAppRouter(deps: RouterDeps) {
                 ? ctx.logger.warn.bind(ctx.logger)
                 : ctx.logger.error.bind(ctx.logger);
             logFailure("weekly report load failed", {
-              phase: "weekly-report.load",
-              procedure: "weeklyReport.get",
+              phase: WEEKLY_REPORT_LOAD_LOG_PHASE,
+              procedure: WEEKLY_REPORT_GET_PROCEDURE,
               userId: ctx.session.userId,
               role: ctx.session.role,
               requestedReportId,

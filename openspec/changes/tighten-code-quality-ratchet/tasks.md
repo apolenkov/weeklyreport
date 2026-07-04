@@ -8,20 +8,22 @@ threshold-raise-back to force green.
 Model split: Sonnet (manual literal/size fixes) · Opus (review of clusters whose
 fix changes structure). Budget per cluster; no global ceiling.
 
-> **STATUS 2026-07-04 (night) — §1 + §2 COMPLETE, §3 remains.** §1: the
+> **STATUS 2026-07-04 (night) — ALL SECTIONS COMPLETE (15/15).** §1: the
 > 300→250 notch landed and the 30-file grandfather cohort was drained
 > (ab049e76 … 97c5875b). §2: `no-magic-numbers` is `error` repo-wide — 398
-> firings across 98 files were hand-lifted in 7 waves (shared time vocabulary
-> at `packages/shared/src/time.ts`; justified-permanent exempts recorded in
-> the config block). STILL OPEN: §3 `no-duplicate-string` (~100 firings,
-> manual lifts with a test carve-out) and the §4 close-out gate.
+> firings across 98 files hand-lifted in 7 waves (shared time vocabulary at
+> `packages/shared/src/time.ts`). §3: `no-duplicate-string` is `error` — 54
+> firings triaged, ~39 real-code lifts in one wave, fixture/vendored/ops
+> carve-outs recorded in the config. §4 close-out gate ran green including
+> `pnpm build`. Ready to archive.
 
 ## 0. Preconditions
 
-- [ ] R0a The ratchet is complete: `eslint.config.ts` enforces `max-lines: 300`,
-      `complexity: 20`, `sonarjs/cognitive-complexity: 15`, `no-explicit-any:
-error`, and the R3a grandfather blocks are EMPTY (verified at authoring).
-- [ ] R0b This change's spec delta validates (`openspec validate
+- [x] R0a The ratchet is complete: `eslint.config.ts` enforces `max-lines` (300
+      at authoring, 250 since R1a), `complexity: 20`,
+      `sonarjs/cognitive-complexity: 15`, `no-explicit-any: error`, and the
+      R3a grandfather blocks are EMPTY (verified at authoring).
+- [x] R0b This change's spec delta validates (`openspec validate
 tighten-code-quality-ratchet --strict`).
 
 ## 1. max-lines 300 → 250 (structural, autofix-free)
@@ -64,21 +66,27 @@ true`, `skipComments: true`). Do NOT touch `complexity` or
 
 ## 3. Magic-string policy
 
-- [ ] R3a Flip `sonarjs/no-duplicate-string` from `off` to `error` (it is already
+- [x] R3a Flip `sonarjs/no-duplicate-string` from `off` to `error` (it is already
       in the spread recommended set) for the repeated-string subset; carve out
       tests where repeated fixture strings are inherent, per the existing sonarjs
-      test-file override pattern.
-- [ ] R3b Fix repeated-string firings by lifting to a shared named constant; the
+      test-file override pattern. (Also carved out with recorded reasons:
+      mock-data fixture catalogues, vendored shadcn sidebar, one-off ops
+      scripts, config override lists.)
+- [x] R3b Fix repeated-string firings by lifting to a shared named constant; the
       one-off-string case is the documented review policy (lift to
-      `const`/`enum`/config), not a lint error.
-- [ ] R3c Land green per cluster, fix-first ladder, no mass-disable.
+      `const`/`enum`/config), not a lint error. (54 firings measured; ~39 in
+      real code lifted across 15 files, the rest exempted as fixture/vendored/
+      ops data.)
+- [x] R3c Land green per cluster, fix-first ladder, no mass-disable. (Zero
+      per-site disables needed; suites green.)
 
 ## 4. Close-out
 
-- [ ] R4a Confirm the `max-lines` grandfather block is EMPTY again (every cohort
-      file split or justified-permanent exempt — DONE 2026-07-04, block deleted
-      in 97c5875b), and `no-magic-numbers` + `no-duplicate-string` are `error`
-      with zero remaining firings (NOT YET — §2/§3 pending).
-- [ ] R4b Full gate green: `pnpm lint` + `pnpm typecheck` + `pnpm test` +
+- [x] R4a Confirm the `max-lines` grandfather block is EMPTY again (every cohort
+      file split or justified-permanent exempt — block deleted in 97c5875b),
+      and `no-magic-numbers` + `no-duplicate-string` are `error` with zero
+      remaining firings (confirmed by repo-wide census before each flip).
+- [x] R4b Full gate green: `pnpm lint` + `pnpm typecheck` + `pnpm test` +
       `pnpm build`. Every per-site disable carries a reason; no threshold was
-      raised back to force green.
+      raised back to force green. (Gate run 2026-07-04 night: lint clean,
+      typecheck clean, api 1394 / web 1511 green, turbo build 5/5.)

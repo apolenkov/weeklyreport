@@ -11,6 +11,8 @@ type PortfolioOverviewTableProps =
   | { readonly scope?: "product"; readonly products: PortfolioProduct[] }
   | { readonly scope: "lead"; readonly leads: readonly LeadOverviewRow[] };
 
+const CSS_PRIMARY = "var(--color-primary)";
+
 const STATUS_BG: Record<string, string> = {
   "on-track": "var(--color-success)",
   "at-risk": "#fef3c7",
@@ -18,7 +20,7 @@ const STATUS_BG: Record<string, string> = {
 };
 
 const STATUS_TEXT: Record<string, string> = {
-  "on-track": "var(--color-primary)",
+  "on-track": CSS_PRIMARY,
   "at-risk": "#8a6d1b",
   blocked: "var(--color-destructive)",
 };
@@ -30,7 +32,7 @@ const STATUS_ICON: Record<string, string> = {
 };
 
 const STATUS_ICON_TEXT: Record<string, string> = {
-  "on-track": "var(--color-primary)",
+  "on-track": CSS_PRIMARY,
   "at-risk": "#8a6d1b",
   blocked: "var(--color-destructive)",
 };
@@ -55,7 +57,7 @@ function GridIcon() {
     <svg
       viewBox="0 0 24 24"
       className="h-5 w-5 flex-shrink-0"
-      style={{ color: "var(--color-primary)" }}
+      style={{ color: CSS_PRIMARY }}
       stroke="currentColor"
       fill="none"
       strokeWidth={2}

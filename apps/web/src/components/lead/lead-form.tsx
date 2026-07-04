@@ -342,6 +342,7 @@ export function sectionToDraftPayload(
 type StageStatusValue = "green" | "yellow" | "red" | null;
 
 const SEVERITY_RED = 3;
+const NO_PRODUCTS_ASSIGNED_MESSAGE = "No products assigned — contact admin";
 
 function aggregateTrafficLight(
   stages: readonly { status?: StageStatusValue }[],
@@ -1902,7 +1903,7 @@ export function LeadForm({
                           title={
                             products.length > 0
                               ? `Add item to ${products[0]?.name}`
-                              : "No products assigned — contact admin"
+                              : NO_PRODUCTS_ASSIGNED_MESSAGE
                           }
                         >
                           + Add Item
@@ -1948,7 +1949,7 @@ export function LeadForm({
                           title={
                             products.length > 0
                               ? `Add item to ${products[0]?.name}`
-                              : "No products assigned — contact admin"
+                              : NO_PRODUCTS_ASSIGNED_MESSAGE
                           }
                         >
                           + Add Item
@@ -1996,7 +1997,7 @@ export function LeadForm({
                       title={
                         products.length > 0
                           ? undefined
-                          : "No products assigned — contact admin"
+                          : NO_PRODUCTS_ASSIGNED_MESSAGE
                       }
                     >
                       + Add Risk

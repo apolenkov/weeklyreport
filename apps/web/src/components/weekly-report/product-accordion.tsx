@@ -86,27 +86,36 @@ interface StatusConfig {
   avatarText: string;
 }
 
+const CSS = {
+  success: "var(--color-success)",
+  muted: "var(--color-muted)",
+  statusBlockedBg: "var(--color-status-blocked-bg)",
+  destructive: "var(--color-destructive)",
+  statusAtRiskBorder: "var(--color-status-at-risk-border)",
+  mutedForeground: "var(--color-muted-foreground)",
+} as const;
+
 // apply-status-palette (memo T6 opt 2): red is the only alarm hue (blocked);
 // at-risk goes neutral here — the amber signal lives on the row's left
 // stripe, not on a flooded amber fill. No hardcoded status hex.
 const STATUS_CONFIG = {
   "on-track": {
-    bg: "var(--color-success)",
+    bg: CSS.success,
     text: "var(--color-primary)",
-    avatarBg: "var(--color-success)",
+    avatarBg: CSS.success,
     avatarText: "var(--color-primary)",
   },
   "at-risk": {
-    bg: "var(--color-muted)",
+    bg: CSS.muted,
     text: "var(--color-foreground)",
-    avatarBg: "var(--color-muted)",
+    avatarBg: CSS.muted,
     avatarText: "var(--color-foreground)",
   },
   blocked: {
-    bg: "var(--color-status-blocked-bg)",
-    text: "var(--color-destructive)",
-    avatarBg: "var(--color-status-blocked-bg)",
-    avatarText: "var(--color-destructive)",
+    bg: CSS.statusBlockedBg,
+    text: CSS.destructive,
+    avatarBg: CSS.statusBlockedBg,
+    avatarText: CSS.destructive,
   },
 } as const satisfies Record<string, StatusConfig>;
 
@@ -124,8 +133,8 @@ const ROW_GRID =
 // named token (red=blocked alarm, amber=at-risk, green=on-track).
 const HEADER_STATUS_TONE = {
   "on-track": "var(--color-chip-on-track-border)",
-  "at-risk": "var(--color-status-at-risk-border)",
-  blocked: "var(--color-destructive)",
+  "at-risk": CSS.statusAtRiskBorder,
+  blocked: CSS.destructive,
 } as const satisfies Record<string, string>;
 
 // status-color-semantics: each workflow status resolves its badge through named
@@ -134,8 +143,8 @@ const HEADER_STATUS_TONE = {
 const STATUS_BADGE = {
   blocked: {
     label: "Blocked",
-    bg: "var(--color-status-blocked-bg)",
-    fg: "var(--color-destructive)",
+    bg: CSS.statusBlockedBg,
+    fg: CSS.destructive,
   },
   "in-progress": {
     label: "In Progress",
@@ -144,22 +153,20 @@ const STATUS_BADGE = {
   },
   completed: {
     label: "Done",
-    bg: "var(--color-success)",
+    bg: CSS.success,
     fg: "var(--color-success-foreground)",
   },
   planned: {
     label: "Planned",
-    bg: "var(--color-muted)",
-    fg: "var(--color-muted-foreground)",
+    bg: CSS.muted,
+    fg: CSS.mutedForeground,
   },
 } as const satisfies Record<string, { label: string; bg: string; fg: string }>;
 
 // Item row left-stripe: red only for blocked (the alarm hue); every other status
 // is carried by the right-side badge, so the rail stays a neutral spine.
 function itemRailTone(status: string): string {
-  return status === "blocked"
-    ? "var(--color-destructive)"
-    : "var(--color-border)";
+  return status === "blocked" ? CSS.destructive : "var(--color-border)";
 }
 
 function ChevronDown({ expanded }: { readonly expanded: boolean }) {
@@ -265,9 +272,7 @@ function ItemRow({ item }: { readonly item: ReportItem }) {
 
 function RiskRow({ risk }: { readonly risk: ReportRisk }) {
   const tone =
-    risk.severity === "blocked"
-      ? "var(--color-destructive)"
-      : "var(--color-status-at-risk-border)";
+    risk.severity === "blocked" ? CSS.destructive : CSS.statusAtRiskBorder;
   return (
     <div className={ROW_GRID} data-accordion-row="risk">
       <span className="min-h-[18px]" aria-hidden="true" />
@@ -318,9 +323,7 @@ function EscalationRow({
   readonly severity: "blocked" | "at-risk";
 }) {
   const isBlocked = severity === "blocked";
-  const tone = isBlocked
-    ? "var(--color-destructive)"
-    : "var(--color-status-at-risk-border)";
+  const tone = isBlocked ? CSS.destructive : CSS.statusAtRiskBorder;
   return (
     <div className={ROW_GRID} data-accordion-row="escalation">
       <span className="min-h-[18px]" aria-hidden="true" />
@@ -335,8 +338,8 @@ function EscalationRow({
           style={
             isBlocked
               ? {
-                  background: "var(--color-status-blocked-bg)",
-                  color: "var(--color-destructive)",
+                  background: CSS.statusBlockedBg,
+                  color: CSS.destructive,
                 }
               : {
                   background: "var(--color-surface-muted)",
@@ -399,16 +402,16 @@ export function ProductAccordion({
   const isEmpty = !hasContent;
   const config = isEmpty
     ? {
-        bg: "var(--color-muted)",
-        text: "var(--color-muted-foreground)",
-        avatarBg: "var(--color-muted)",
-        avatarText: "var(--color-muted-foreground)",
+        bg: CSS.muted,
+        text: CSS.mutedForeground,
+        avatarBg: CSS.muted,
+        avatarText: CSS.mutedForeground,
       }
     : ((STATUS_CONFIG as Record<string, StatusConfig>)[report.status] ??
       STATUS_CONFIG["on-track"]);
   const statusLabel = isEmpty ? "No updates" : report.statusLabel;
   const statusTone = isEmpty
-    ? "var(--color-muted-foreground)"
+    ? CSS.mutedForeground
     : ((HEADER_STATUS_TONE as Record<string, string>)[report.status] ??
       HEADER_STATUS_TONE["on-track"]);
 

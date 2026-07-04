@@ -11,6 +11,8 @@ import { httpRequestDurationSeconds } from "../metrics/metrics.registry.js";
 import { trpcMetricsMiddleware as recordTrpcMetrics } from "../metrics/trpc-metrics.middleware.js";
 import type { TrpcContext } from "./trpc.context.js";
 
+const TRPC_REQUEST_LOG_PHASE = "trpc.request";
+
 /**
  * Describe a tRPC response shape for debug logs without exposing values.
  * Returns a compact descriptor (top-level keys for objects, length+inner
@@ -115,7 +117,7 @@ export const loggingMiddleware = t.middleware(
     const role = ctx.session?.role ?? null;
 
     ctx.logger.info("trpc request start", {
-      phase: "trpc.request",
+      phase: TRPC_REQUEST_LOG_PHASE,
       stage: "start",
       procedure: path,
       type,
@@ -130,7 +132,7 @@ export const loggingMiddleware = t.middleware(
         const rawInput = await getRawInput();
         if (rawInput !== undefined) {
           ctx.logger.debug("trpc request input", {
-            phase: "trpc.request",
+            phase: TRPC_REQUEST_LOG_PHASE,
             stage: "input",
             procedure: path,
             type,
@@ -150,7 +152,7 @@ export const loggingMiddleware = t.middleware(
       observeTrpcDuration(type, path, "200", duration);
       if (duration > SLOW_TRPC_MS) {
         ctx.logger.warn("slow trpc procedure", {
-          phase: "trpc.request",
+          phase: TRPC_REQUEST_LOG_PHASE,
           stage: "slow",
           procedure: path,
           type,
@@ -158,7 +160,7 @@ export const loggingMiddleware = t.middleware(
         });
       }
       ctx.logger.info("trpc request end", {
-        phase: "trpc.request",
+        phase: TRPC_REQUEST_LOG_PHASE,
         stage: "end",
         procedure: path,
         type,
@@ -173,7 +175,7 @@ export const loggingMiddleware = t.middleware(
       // stream on every auth.me / admin.* / weeklyReport.get call.
       try {
         ctx.logger.debug("trpc request output", {
-          phase: "trpc.request",
+          phase: TRPC_REQUEST_LOG_PHASE,
           stage: "output",
           procedure: path,
           type,
@@ -216,7 +218,7 @@ export const loggingMiddleware = t.middleware(
           : undefined;
 
       ctx.logger.error("trpc request end", {
-        phase: "trpc.request",
+        phase: TRPC_REQUEST_LOG_PHASE,
         stage: "end",
         procedure: path,
         type,

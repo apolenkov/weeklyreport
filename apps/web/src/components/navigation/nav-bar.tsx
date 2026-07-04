@@ -41,6 +41,11 @@ interface NavLink {
   roles: readonly Role[];
 }
 
+const HISTORY_LINK_TITLE = "Past weeks and closed reports";
+const REPORTS_LATEST_ROUTE = "/reports/latest";
+const HEAD_DASHBOARD_ROUTE = "/head/dashboard";
+const HEAD_REPORT_ROUTE = "/head/report";
+
 const NAV_LINKS: readonly NavLink[] = [
   { href: "/lead/report", label: "Report", roles: ["lead"] },
   // UX-17 (Phase 35-08): one History page for both active and archived
@@ -50,7 +55,7 @@ const NAV_LINKS: readonly NavLink[] = [
   {
     href: "/reports",
     label: "History",
-    title: "Past weeks and closed reports",
+    title: HISTORY_LINK_TITLE,
     roles: ["lead"],
   },
   // UAT 2026-05-22: /head/history 307-redirects to /reports (same surface as
@@ -58,7 +63,7 @@ const NAV_LINKS: readonly NavLink[] = [
   {
     href: "/reports",
     label: "History",
-    title: "Past weeks and closed reports",
+    title: HISTORY_LINK_TITLE,
     roles: ["head"],
   },
   // viewer-live-status (task 4.1): the viewer is a status observer of the
@@ -66,7 +71,7 @@ const NAV_LINKS: readonly NavLink[] = [
   // period, else the latest visible published report) via the static
   // `/reports/latest` route, which redirects to the resolved report.
   {
-    href: "/reports/latest",
+    href: REPORTS_LATEST_ROUTE,
     label: "Status",
     title: "Open the current status report",
     roles: ["viewer"],
@@ -74,11 +79,11 @@ const NAV_LINKS: readonly NavLink[] = [
   {
     href: "/reports",
     label: "History",
-    title: "Past weeks and closed reports",
+    title: HISTORY_LINK_TITLE,
     roles: ["viewer"],
   },
-  { href: "/head/dashboard", label: "Dashboard", roles: ["head"] },
-  { href: "/head/report", label: "Status", roles: ["head"] },
+  { href: HEAD_DASHBOARD_ROUTE, label: "Dashboard", roles: ["head"] },
+  { href: HEAD_REPORT_ROUTE, label: "Status", roles: ["head"] },
   // Slides removed from head nav — slides is a mode toggle inside
   // Status/History, not a separate destination. The legacy /head/slides URL
   // still redirects to /reports (back-compat in head/slides/page.tsx).
@@ -124,8 +129,8 @@ function isActiveLink(
   role: Role | null,
 ): boolean {
   if (href === "/admin") return pathname.startsWith("/admin");
-  if (href === "/head/report") return pathname.startsWith("/head/report");
-  if (href === "/head/dashboard") return pathname === "/head/dashboard";
+  if (href === HEAD_REPORT_ROUTE) return pathname.startsWith(HEAD_REPORT_ROUTE);
+  if (href === HEAD_DASHBOARD_ROUTE) return pathname === HEAD_DASHBOARD_ROUTE;
   // viewer-live-status: the viewer's Status entry (`/reports/latest`) resolves
   // to a `/reports/[id]` detail page, so for a viewer a report detail path must
   // light **Status**, not History — clicking Status and seeing History
@@ -133,8 +138,8 @@ function isActiveLink(
   // `/reports` list. Scoped to the viewer so the head/lead History-active
   // contract (lead-history-summary, lit on published-report paths) is untouched.
   if (role === "viewer") {
-    if (href === "/reports/latest") {
-      return pathname === "/reports/latest" || isReportDetailPath(pathname);
+    if (href === REPORTS_LATEST_ROUTE) {
+      return pathname === REPORTS_LATEST_ROUTE || isReportDetailPath(pathname);
     }
     if (href === "/reports") {
       return pathname === "/reports";
@@ -217,13 +222,13 @@ function NavIcon({ href }: { readonly href: string }) {
   switch (href) {
     case "/lead/report":
       return <FileText {...common} />;
-    case "/reports/latest":
+    case REPORTS_LATEST_ROUTE:
       return <FileText {...common} />;
     case "/reports":
       return <Clock {...common} />;
-    case "/head/dashboard":
+    case HEAD_DASHBOARD_ROUTE:
       return <LayoutDashboard {...common} />;
-    case "/head/report":
+    case HEAD_REPORT_ROUTE:
       return <BarChart3 {...common} />;
     case "/head/slides":
       return <Presentation {...common} />;

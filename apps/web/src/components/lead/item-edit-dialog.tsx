@@ -96,6 +96,9 @@ interface Choice {
   border: string;
 }
 
+const CSS_PRIMARY = "var(--color-primary)";
+const IN_PROGRESS_STATUS = "in-progress";
+
 // record-status-derived-from-risk: no free "Blocked" chip. An item's blocked /
 // at-risk alarm is DERIVED from a covering risk (the card floors it), never a
 // free item status — "set blocked" routes through blocker (risk) creation via
@@ -104,15 +107,15 @@ const CURRENT_WEEK_CHOICES: readonly Choice[] = [
   {
     value: "completed",
     label: "✓ Completed",
-    bg: "var(--color-primary)",
+    bg: CSS_PRIMARY,
     color: "#fff",
-    border: "var(--color-primary)",
+    border: CSS_PRIMARY,
   },
   {
-    value: "in-progress",
+    value: IN_PROGRESS_STATUS,
     label: "! In Progress",
     bg: "var(--color-success)",
-    color: "var(--color-primary)",
+    color: CSS_PRIMARY,
     border: "var(--color-starbucks-accent)",
   },
 ];
@@ -126,10 +129,10 @@ const NEXT_WEEK_CHOICES: readonly Choice[] = [
     border: "rgba(0,0,0,0.15)",
   },
   {
-    value: "in-progress",
+    value: IN_PROGRESS_STATUS,
     label: "! In Progress",
     bg: "var(--color-success)",
-    color: "var(--color-primary)",
+    color: CSS_PRIMARY,
     border: "var(--color-starbucks-accent)",
   },
 ];
@@ -380,7 +383,7 @@ function ItemEditDialogContent({
     id: "",
     productId: seedProduct?.id ?? "",
     productName: seedProduct?.name ?? "",
-    status: week === "current" ? "in-progress" : "planned",
+    status: week === "current" ? IN_PROGRESS_STATUS : "planned",
     text: "",
     author: currentUserName ?? "You",
   };
@@ -389,7 +392,7 @@ function ItemEditDialogContent({
   // in-progress — `blocked` is no longer a free item status (the covering risk
   // owns the alarm), so re-saving never re-persists a bare `blocked`.
   const [status, setStatus] = useState<ItemStatus>(
-    initial.status === "blocked" ? "in-progress" : initial.status,
+    initial.status === "blocked" ? IN_PROGRESS_STATUS : initial.status,
   );
   // activity-first-class: the record's parent — a product OR an attached
   // activity (XOR). Seeded from the bound row on edit, or from the create-mode
