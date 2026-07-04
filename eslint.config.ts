@@ -642,8 +642,6 @@ export default defineConfig([
     files: [
       "apps/api/src/infrastructure/trpc/trpc.context.ts",
       "apps/api/src/modules/admin/admin-period.queries.ts",
-      "apps/api/src/modules/carry-over/carry-over.prisma-repository.ts",
-      "apps/api/src/modules/carry-over/carry-over.service.ts",
       "apps/api/src/modules/reminders/reminders.prisma-repository.ts",
       "apps/api/src/modules/reminders/reminders.service.ts",
       "apps/api/src/modules/report-sections/lead-form.service.ts",
@@ -657,7 +655,6 @@ export default defineConfig([
       "apps/web/src/components/admin/reminders-tab.tsx",
       "apps/web/src/components/admin/reopen-tab.tsx",
       "apps/web/src/components/lead/current-week-section.tsx",
-      "apps/web/src/components/lead/decisions-section.tsx",
       "apps/web/src/components/lead/fill-from-button.tsx",
       "apps/web/src/components/lead/item-card.tsx",
       "apps/web/src/components/lead/period-navigator.tsx",
