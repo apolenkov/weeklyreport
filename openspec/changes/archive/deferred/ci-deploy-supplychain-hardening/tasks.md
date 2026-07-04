@@ -1,5 +1,11 @@
 # Tasks
 
+> **DEFERRED 2026-07-04 (owner call).** 18/28 done; the remainder (CSP
+> headers + docker image digest pins) is intentionally parked until
+> go-live — there is no production to verify against. REOPEN WHEN: go-live
+> preparation starts. Move this directory back to openspec/changes/ to
+> reactivate.
+
 > **STATUS 2026-07-04.** The bulk of this change landed out-of-band in commit
 > `b98b0e6b` (2026-07-01, "close API host port, freeze lockfiles, repair
 > CI/pre-push") — CI-pipeline enforcement, deploy-edge topology, and the
