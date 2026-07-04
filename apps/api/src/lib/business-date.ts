@@ -1,4 +1,5 @@
 import type { WorkingDays } from "@customreport/shared";
+import { DAYS_PER_WEEK } from "@customreport/shared";
 import { DateTime } from "luxon";
 
 /**
@@ -19,7 +20,28 @@ import { DateTime } from "luxon";
  * For 50-C the API is kept narrow; the parameter is added when 51-A lands.
  */
 
-const MAX_ITER = 366 * 10;
+/** Iteration budget for business-day walks: ~10 years of daily steps. */
+const MAX_ITER_YEARS = 10;
+const MAX_DAYS_PER_YEAR = 366;
+const MAX_ITER = MAX_DAYS_PER_YEAR * MAX_ITER_YEARS;
+
+// Luxon weekday numbers (1 = Monday … 7 = Sunday).
+const MONDAY = 1;
+const TUESDAY = 2;
+const WEDNESDAY = 3;
+const THURSDAY = 4;
+const FRIDAY = 5;
+const SATURDAY = 6;
+const SUNDAY = 7;
+
+/** Wall-clock default matching the legacy hardcoded "+ 18:00" deadline stamp. */
+const DEFAULT_DEADLINE_HOUR = 18;
+const MAX_HOUR_OF_DAY = 23;
+
+// End-of-day components for the Sunday 23:59:59.999 period boundary.
+const LAST_MINUTE = 59;
+const LAST_SECOND = 59;
+const LAST_MILLISECOND = 999;
 
 /**
  * Returns the Luxon weekday numbers (1=Mon … 7=Sun) that count as business
@@ -30,11 +52,19 @@ const MAX_ITER = 366 * 10;
 export function workingDaySet(wd: WorkingDays): ReadonlySet<number> {
   switch (wd) {
     case "mon-fri":
-      return new Set([1, 2, 3, 4, 5]);
+      return new Set([MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY]);
     case "mon-sat":
-      return new Set([1, 2, 3, 4, 5, 6]);
+      return new Set([MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY]);
     case "mon-sun":
-      return new Set([1, 2, 3, 4, 5, 6, 7]);
+      return new Set([
+        MONDAY,
+        TUESDAY,
+        WEDNESDAY,
+        THURSDAY,
+        FRIDAY,
+        SATURDAY,
+        SUNDAY,
+      ]);
   }
 }
 
@@ -132,12 +162,12 @@ export function computeDeadline(
   deadlineDays: number,
   wd: WorkingDays,
   tz: string,
-  deadlineHour = 18,
+  deadlineHour = DEFAULT_DEADLINE_HOUR,
 ): Date {
   if (
     !Number.isInteger(deadlineHour) ||
     deadlineHour < 0 ||
-    deadlineHour > 23
+    deadlineHour > MAX_HOUR_OF_DAY
   ) {
     throw new Error(
       `business-date: deadlineHour must be integer 0..23 (got ${deadlineHour})`,
@@ -175,14 +205,14 @@ export function computeDeadline(
  */
 export function getCurrentWeekBounds(
   date: Date = new Date(),
-  periodLengthDays = 7,
+  periodLengthDays = DAYS_PER_WEEK,
 ): {
   periodStart: Date;
   periodEnd: Date;
 } {
   const utcDay = date.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
   // Monday is the start-of-week. Sunday (0) maps to "6 days back".
-  const diffToMonday = utcDay === 0 ? -6 : 1 - utcDay;
+  const diffToMonday = utcDay === 0 ? 1 - DAYS_PER_WEEK : 1 - utcDay;
 
   const periodStart = new Date(
     Date.UTC(
@@ -200,10 +230,10 @@ export function getCurrentWeekBounds(
       date.getUTCFullYear(),
       date.getUTCMonth(),
       date.getUTCDate() + diffToMonday + (periodLengthDays - 1),
-      23,
-      59,
-      59,
-      999,
+      MAX_HOUR_OF_DAY,
+      LAST_MINUTE,
+      LAST_SECOND,
+      LAST_MILLISECOND,
     ),
   );
 
