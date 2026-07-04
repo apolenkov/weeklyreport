@@ -415,6 +415,26 @@ export default defineConfig([
       "@typescript-eslint/no-unnecessary-condition": "error",
 
       // React hooks (single-owned by ESLint)
+      // no-magic-numbers: every non-trivial numeric literal must be a named
+      // `const` (enforceConst). The options scope the rule to its signal:
+      // -1/0/1/2 are universal idioms; array indexes, enums, readonly class
+      // props, type positions and numeric literal types are self-documenting.
+      // No autofix exists — firings are fixed by hand-lifting the literal,
+      // never by mass-disable. At `warn` while the remaining firings are
+      // drained wave by wave; flips to `error` when the repo hits zero.
+      "@typescript-eslint/no-magic-numbers": [
+        "warn",
+        {
+          ignore: [-1, 0, 1, 2],
+          enforceConst: true,
+          ignoreArrayIndexes: true,
+          ignoreEnums: true,
+          ignoreReadonlyClassProperties: true,
+          ignoreTypeIndexes: true,
+          ignoreNumericLiteralTypes: true,
+        },
+      ],
+
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
 
@@ -563,6 +583,9 @@ export default defineConfig([
       ),
       "max-lines": "off",
       complexity: "off",
+      // Test literals (fixture counts, expected values, dates) are the
+      // assertion itself — naming each one adds noise, not meaning.
+      "@typescript-eslint/no-magic-numbers": "off",
       // R3a-3-fixup wave 3: tests are exempt from complexity budgets (same as
       // the core `complexity`/`max-lines` above) — long arrange/act/assert
       // bodies and nested setup callbacks are idiomatic test structure.
@@ -587,7 +610,13 @@ export default defineConfig([
   // (eslint.config.ts itself is 400+ lines; *.config.ts / *.setup.ts likewise).
   {
     files: ["**/*.config.ts", "**/*.setup.ts", "tools/**"],
-    rules: { "max-lines": "off", complexity: "off" },
+    rules: {
+      "max-lines": "off",
+      complexity: "off",
+      // Config knobs (ports, thresholds, rule options) ARE the named values —
+      // lifting them to consts above adds indirection, not clarity.
+      "@typescript-eslint/no-magic-numbers": "off",
+    },
   },
   // R3a-4: JUSTIFIED PERMANENT max-lines exemptions — data / generated / one-off
   // script / bootstrap, where splitting would not improve clarity (per
@@ -630,6 +659,30 @@ export default defineConfig([
       "apps/web/src/components/slides/section-slide-utils.ts", // core mapper buildSectionSlideModel (247 lines) + its private helpers are inseparable; extracting all else still leaves ~335 lines
     ],
     rules: { "max-lines": "off" },
+  },
+  // JUSTIFIED PERMANENT no-magic-numbers exemptions — files where the numbers
+  // ARE the content: naming each one adds indirection without meaning. New
+  // logic in other files stays gated.
+  {
+    files: [
+      // Histogram-bucket catalogues: each number is a distribution boundary
+      // chosen against the web-vitals / latency-SLO thresholds documented in
+      // the adjacent jsdoc. Lifting them to consts is a rename, not a doc —
+      // and the rule fires inside const arrays anyway (verified).
+      "apps/api/src/infrastructure/metrics/web-vitals.metrics.ts",
+      "apps/api/src/infrastructure/metrics/metrics.registry.ts",
+      // One-off operational scripts (cf. the max-lines exempt for
+      // wipe-manual-uat and the globally-ignored seeds).
+      "prisma/reset-hard.ts",
+      "prisma/backfill-policy-rules.ts",
+      "prisma/wipe-manual-uat.ts",
+      // Vendored shadcn/ui primitive bundle (generated upstream code; editing
+      // it creates drift against the shadcn source).
+      "packages/ui/src/components/ui/**",
+      // Test infrastructure — same footing as the test-file override above.
+      "apps/api/src/test-utils/**",
+    ],
+    rules: { "@typescript-eslint/no-magic-numbers": "off" },
   },
   //
   // R3a-3-fixup WAVE 3 (2026-06-09) — JUSTIFIED PERMANENT complexity exempts
