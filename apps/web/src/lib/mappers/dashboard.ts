@@ -26,27 +26,18 @@
 
 import type {
   ArchiveReportSummary,
-  Escalation,
   PaginatedResult,
-  PortfolioProductOverview,
-  ReportSectionReadModel,
   SubmissionDashboardRow,
   WeeklyReportReadModel,
 } from "@customreport/shared";
-import {
-  initialsFromName as sharedInitialsFromName,
-  shortNameFromName,
-} from "@customreport/shared";
 
 import { formatPeriodRangeWithYear, formatWeekLabel } from "../format-date";
-import {
-  countActivityRecords,
-  countProductContent,
-  countSectionContent,
-  productColumnCounts,
-} from "./dashboard-counts";
-import { deriveLeadStatus, type LeadStatus } from "./lead-status";
-import { trafficToStageStatus } from "./traffic-light";
+import { escalationToBlockedItem } from "./dashboard-escalations";
+import { buildKpiData, formatRelativeDeadline } from "./dashboard-kpi";
+import { buildLeadInfos, initialsFromName } from "./dashboard-leads";
+import type { LeadStatus } from "./lead-status";
+
+export { formatRelativeDeadline } from "./dashboard-kpi";
 
 // ---- Self-contained re-declarations of presentation types ----
 
@@ -113,114 +104,6 @@ export interface ArchiveReport {
   decisionCount: number;
 }
 
-// ---- Helpers ----
-
-const TRAFFIC_ICON: Record<ProductStatus, string> = {
-  "on-track": "\u2713", // ✓
-  blocked: "\u2715", // ✕
-  "at-risk": "!",
-};
-
-// Avatar initials via the canonical shared helper (surname-first ФИО), with
-// this surface's "??" placeholder for an empty name. The token logic lives once
-// in @customreport/shared — see commit 8fd7e8bf, where four hand-cloned copies
-// of it diverged and had to be patched in lockstep.
-function initialsFromName(name: string): string {
-  return sharedInitialsFromName(name) || "??";
-}
-
-function isoDateLabel(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-/**
- * Format a deadline as a human-relative label like "2d 5h" or "5h" or "Past".
- * Mirrors the shape used in the mock dashboard.
- */
-export function formatRelativeDeadline(deadline: Date, now: Date): string {
-  const diffMs = deadline.getTime() - now.getTime();
-  if (diffMs <= 0) return "Past";
-  const totalHours = Math.floor(diffMs / 3_600_000);
-  const days = Math.floor(totalHours / 24);
-  const hours = totalHours - days * 24;
-  if (days > 0) return `${days}d ${hours}h`;
-  return `${hours}h`;
-}
-
-function isoSubmittedLabel(date: Date | null): string | null {
-  return date ? date.toISOString().slice(0, 10) : null;
-}
-
-function trafficLightsForLeadByName(
-  leadName: string,
-  portfolio: PortfolioProductOverview[],
-): TrafficLight[] {
-  return portfolio
-    .filter((p) => p.leadNames.includes(leadName))
-    .map((p) => p.worstStatus)
-    .filter((status): status is NonNullable<typeof status> => status !== null)
-    .map((status) => {
-      const presentation = trafficToStageStatus(status);
-      const productStatus: ProductStatus =
-        presentation === "on-track" ||
-        presentation === "at-risk" ||
-        presentation === "blocked"
-          ? presentation
-          : "on-track";
-      return { status: productStatus, icon: TRAFFIC_ICON[productStatus] };
-    });
-}
-
-// Shown when a stage-keyed escalation (blocked item / unresolved risk) carries
-// no stage — the legacy stage-less item/risk case (empty stageNames). The API
-// builder returns stageName=null identically on the live and snapshot paths, so
-// this label is the single place that empty case is worded.
-const NO_STAGE_LABEL = "No stage set";
-
-// The product-level "flagged red" escalation (type "at_risk") is a product
-// traffic-light roll-up, not a stage-keyed blocker/risk, so it has no stage by
-// design. It is gutter-labeled "Flagged" — matching the report accordion's
-// EscalationRow — never the stage-less "No stage set", which would read as a
-// data defect on a row that legitimately has no stage.
-const FLAGGED_STAGE_LABEL = "Flagged";
-
-function escalationToBlockedItem(
-  escalation: Escalation,
-  index: number,
-): BlockedAtRiskItem | null {
-  if (escalation.type === "blocked") {
-    return {
-      id: `esc-${index}`,
-      severity: "blocked",
-      product: escalation.productName,
-      stage: escalation.stageName ?? NO_STAGE_LABEL,
-      assignee: shortNameFromName(escalation.leadName),
-      description: escalation.description,
-    };
-  }
-  if (escalation.type === "at_risk") {
-    return {
-      id: `esc-${index}`,
-      severity: "at-risk",
-      product: escalation.productName,
-      // Always null for at_risk (a product-level flag), so this resolves to
-      // "Flagged" — the product roll-up, not a stage.
-      stage: escalation.stageName ?? FLAGGED_STAGE_LABEL,
-      assignee: shortNameFromName(escalation.leadName),
-      description: escalation.description,
-    };
-  }
-  // unresolved_risk: surface as at-risk in the dashboard.
-  return {
-    id: `esc-${index}`,
-    severity: "at-risk",
-    product: escalation.productName,
-    stage: escalation.stageName ?? NO_STAGE_LABEL,
-    assignee: shortNameFromName(escalation.leadName),
-    description: escalation.description,
-  };
-}
-
 /**
  * Map a single ArchiveReportSummary to the presentation-layer ArchiveReport
  * shape. Exported so the cursor-paginated archive list can map page items
@@ -269,57 +152,8 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
   const now = args.now ?? new Date();
   const { review, archive, weeklyReport, currentUserId } = args;
 
-  // Build a section index by author for fast lookup.
-  const sectionByAuthor = new Map<string, ReportSectionReadModel>();
-  for (const section of weeklyReport.leadSections) {
-    sectionByAuthor.set(section.authorId, section);
-  }
-
   // -------- Leads --------
-  const leads: LeadInfo[] = review.map((row) => {
-    const section = sectionByAuthor.get(row.leadId);
-    // "Has the lead started" reads TOTAL content (product + activity); the
-    // displayed product column reads only product-parented rows (Q1).
-    const totalContentCount = section ? countSectionContent(section) : 0;
-    const reportContentCount = section ? countProductContent(section) : 0;
-    const status: LeadStatus = section
-      ? deriveLeadStatus({
-          sectionStatus: section.status,
-          contentCount: totalContentCount,
-        })
-      : "pending";
-
-    // The portfolio overview only carries lead NAMES, so we name-match either way.
-    const trafficLights = trafficLightsForLeadByName(
-      row.leadName,
-      weeklyReport.portfolioOverview,
-    );
-
-    const lastActivity = section?.submittedAt
-      ? section.submittedAt.toISOString().slice(0, 10)
-      : status === "pending"
-        ? "Not started"
-        : "In progress";
-
-    return {
-      id: row.leadId,
-      initials: initialsFromName(row.leadName),
-      // ADR 0006: the leads table shows the short form; the avatar stays 2-letter.
-      name: shortNameFromName(row.leadName),
-      role: row.role,
-      status,
-      trafficLights,
-      lastActivity,
-      isCurrentUser:
-        currentUserId !== undefined && row.leadId === currentUserId,
-      productCount: row.projectNames.length,
-      reportContentCount,
-      ...productColumnCounts(section),
-      activityCount: section ? countActivityRecords(section) : 0,
-      submittedAtLabel: isoSubmittedLabel(section?.submittedAt ?? null),
-      reportSectionId: section?.reportSectionId,
-    };
-  });
+  const leads = buildLeadInfos(review, weeklyReport, currentUserId);
 
   // -------- Pending leads (alert bar) --------
   const pendingLeads = leads
@@ -327,45 +161,7 @@ export function mapDashboardData(args: MapDashboardArgs): MappedDashboard {
     .map((l) => l.name);
 
   // -------- KPI --------
-  const submitted = weeklyReport.submissionCount;
-  const total = weeklyReport.totalLeads;
-  const pendingCount = pendingLeads.length;
-
-  const blockedCount = weeklyReport.escalations.filter(
-    (e) => e.type === "blocked",
-  ).length;
-  const atRiskCount = weeklyReport.escalations.filter(
-    (e) => e.type === "at_risk" || e.type === "unresolved_risk",
-  ).length;
-  // activity-first-class (Q1): the portfolio KPI stays product-only — count
-  // product-parented decisions so activity decisions never inflate the KPI.
-  const decisionCount = weeklyReport.leadSections.reduce(
-    (sum, section) =>
-      sum + section.decisions.filter((d) => d.productId != null).length,
-    0,
-  );
-
-  const isEditablePeriod =
-    weeklyReport.periodStatus === "open" ||
-    weeklyReport.periodStatus === "reopened";
-  const deadlineLabel = isEditablePeriod
-    ? formatRelativeDeadline(weeklyReport.deadline, now)
-    : "Closed";
-  const deadlineTime = isoDateLabel(weeklyReport.deadline);
-
-  const kpi: KpiData = {
-    submitted,
-    total,
-    // No "last week" comparison endpoint exists in v5.0 read models.
-    lastWeekSubmitted: 0,
-    lastWeekTotal: 0,
-    pendingCount,
-    deadlineLabel,
-    deadlineTime,
-    blockedCount,
-    atRiskCount,
-    decisionCount,
-  };
+  const kpi = buildKpiData(weeklyReport, pendingLeads.length, now);
 
   // -------- Blocked & At-Risk --------
   // Concrete blockers/risks are keyed by stage+product (`blocked` /
