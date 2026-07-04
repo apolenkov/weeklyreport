@@ -66,7 +66,7 @@ Design decisions D1–D9 live in `design.md`; the spec contract in
 - [x] 6.1 Quadrant grid gets a normal-view vertical floor
       (`min-h-[52dvh]`) so cards distribute evenly.
 - [x] 6.2 Decisions accent → blue token `--color-decisions-accent:
-  #4a7494` (recorded user color sign-off 2026-06-10).
+#4a7494` (recorded user color sign-off 2026-06-10).
 - [x] 6.3 Next focus card → dashed frame, solid left stripe.
 - [x] 6.4 Remove `MAX_ITEMS_PER_SECTION` + "+N more" — all rows always
       render; spec scenario updated.
