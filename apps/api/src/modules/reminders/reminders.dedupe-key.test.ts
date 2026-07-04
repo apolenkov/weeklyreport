@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { extractRecipientEmail } from "./reminders.prisma-repository";
+import { extractRecipientEmail } from "./reminders-row-mappers";
 
 /**
  * Phase 32-C / H-02 — dedupe-key recipient extraction regression.

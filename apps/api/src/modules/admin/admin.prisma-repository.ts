@@ -23,6 +23,7 @@ import * as entityWriteQueries from "./admin-entity-write.queries";
 import * as groupQueries from "./admin-group.queries";
 import * as groupProductQueries from "./admin-group-product.queries";
 import * as periodQueries from "./admin-period.queries";
+import * as periodLifecycle from "./admin-period-lifecycle";
 import * as policyQueries from "./admin-reminder-policy.queries";
 import * as settingsQueries from "./admin-settings.queries";
 import * as snapshotQueries from "./admin-snapshot.queries";
@@ -180,7 +181,10 @@ export class AdminPrismaRepository implements AdminRepository {
     deadline: Date;
     periodState: PeriodState;
   }> {
-    const created = await periodQueries.createPeriodManual(this.prisma, input);
+    const created = await periodLifecycle.createPeriodManual(
+      this.prisma,
+      input,
+    );
     // UFB-036 parity: materialize one ReminderRule per active policy on the
     // freshly-created period — like `saveSnapshot` (snapshot periods) and
     // `period-factory` (scheduler/login periods). `now` is forwarded so a
@@ -222,18 +226,18 @@ export class AdminPrismaRepository implements AdminRepository {
     weekLabel: string | null;
     periodState: PeriodState;
   }> {
-    return periodQueries.updatePeriodManual(this.prisma, input);
+    return periodLifecycle.updatePeriodManual(this.prisma, input);
   }
 
   archivePeriod(periodId: string): Promise<void> {
-    return periodQueries.archivePeriod(this.prisma, periodId);
+    return periodLifecycle.archivePeriod(this.prisma, periodId);
   }
 
   unarchivePeriod(periodId: string): Promise<{
     nextPeriodState: PeriodState;
     nextPeriodStatus: PeriodStatus;
   }> {
-    return periodQueries.unarchivePeriod(this.prisma, periodId);
+    return periodLifecycle.unarchivePeriod(this.prisma, periodId);
   }
 
   readReportForDelete(

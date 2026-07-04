@@ -1,5 +1,4 @@
 import {
-  type PortfolioProductOverview,
   type ReportSectionReadModel,
   weeklyReportReadModelSchema,
 } from "@customreport/shared";
@@ -7,15 +6,9 @@ import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {
-  groupScopeFilter,
-  type GroupScopeOptions,
-} from "../../lib/group-scope.js";
-import {
   buildPortfolioProductsFromSnapshotSections,
-  computeWorstStatus,
   filterSnapshotSections,
   parsePublishedSnapshot,
-  type TrafficLightStatus,
 } from "../published-report-snapshot.js";
 import { buildEscalationsFromReadSections } from "../report-escalations.js";
 import {
@@ -29,6 +22,10 @@ import type {
   WeeklyReportRepositoryResult,
   WeeklyReportScopeSession,
 } from "./weekly-report.service.js";
+import {
+  buildPortfolioOverview,
+  scopeWhere,
+} from "./weekly-report-portfolio.js";
 
 @Injectable()
 export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
@@ -378,73 +375,4 @@ export class WeeklyReportPrismaRepository implements WeeklyReportRepository {
     });
     return new Set(rows.map((row) => row.groupId));
   }
-}
-
-// ---------------------------------------------------------------------------
-//  Portfolio overview: one entry per (non-archived) project
-// ---------------------------------------------------------------------------
-
-function buildPortfolioOverview(
-  projects: {
-    id: string;
-    name: string;
-    stageAssignments: { id: string }[];
-  }[],
-  // Floored read-model sections (mapped via mapPrismaToReportSection): each
-  // project's `trafficLight` already folds the author's own covering risks,
-  // so the card status agrees with leadSections/escalations in the same payload.
-  sections: {
-    authorName: string;
-    projects: { projectId: string; trafficLight: string | null }[];
-  }[],
-): PortfolioProductOverview[] {
-  return projects.map((project) => {
-    const statuses: TrafficLightStatus[] = [];
-    const leadNameSet = new Set<string>();
-
-    for (const section of sections) {
-      for (const sectionProject of section.projects) {
-        // null trafficLight = lead hasn't filled (nor own-risk-floored) the
-        // traffic light for this project yet; skip it so the worst-of
-        // computation isn't muddied by missing data.
-        if (
-          sectionProject.projectId === project.id &&
-          sectionProject.trafficLight !== null
-        ) {
-          statuses.push(sectionProject.trafficLight as TrafficLightStatus);
-          leadNameSet.add(section.authorName);
-        }
-      }
-    }
-
-    const worstStatus = computeWorstStatus(statuses);
-
-    return {
-      productId: project.id,
-      productName: project.name,
-      worstStatus,
-      stageCount: project.stageAssignments.length,
-      leadNames: [...leadNameSet].sort((a, b) => a.localeCompare(b, "ru")),
-    };
-  });
-}
-
-/**
- * UFB-040 / Phase 46-04: build a Prisma where fragment for the given scope
- * target from the caller's session, or `undefined` when no filter applies
- * (admin or no-session paths).
- */
-function scopeWhere(
-  session: WeeklyReportScopeSession | undefined,
-  target: "user" | "reportSection" | "project",
-  options: GroupScopeOptions = {},
-): Record<string, unknown> | undefined {
-  if (!session) return undefined;
-  const scope = groupScopeFilter(
-    session as Parameters<typeof groupScopeFilter>[0],
-    target,
-    options,
-  );
-  if (Object.keys(scope).length === 0) return undefined;
-  return scope;
 }

@@ -640,13 +640,6 @@ export default defineConfig([
   // the threshold back. New code is gated at 250 repo-wide.
   {
     files: [
-      "apps/api/src/infrastructure/trpc/trpc.context.ts",
-      "apps/api/src/modules/admin/admin-period.queries.ts",
-      "apps/api/src/modules/reminders/reminders.prisma-repository.ts",
-      "apps/api/src/modules/reminders/reminders.service.ts",
-      "apps/api/src/modules/report-sections/lead-form.service.ts",
-      "apps/api/src/modules/report-sections/report-sections.service.ts",
-      "apps/api/src/modules/weekly-report/weekly-report.prisma-repository.ts",
       "apps/web/src/app/login-page.client.tsx",
       "apps/web/src/components/lead/current-week-section.tsx",
       "apps/web/src/components/lead/fill-from-button.tsx",
