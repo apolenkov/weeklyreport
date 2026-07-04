@@ -4,7 +4,15 @@
  * include timeZone: 'UTC' to prevent off-by-one day shifts in UTC+N timezones.
  */
 
+import { DAYS_PER_WEEK, MS_PER_WEEK } from "@customreport/shared";
+
 type DateInput = Date | string | null | undefined;
+
+// ISO-8601 week numbering: week 1 is the week containing the year's first
+// Thursday (equivalently, the week containing Jan 4). Shifting a date to the
+// Thursday of its week makes the year-boundary weeks resolve correctly.
+const ISO_PIVOT_WEEKDAY_OFFSET = 3;
+const ISO_PIVOT_JANUARY_DAY = 4;
 
 /** Format a date for display (ru-RU locale, medium style). */
 export function formatDate(date: DateInput): string {
@@ -63,15 +71,18 @@ export function isoWeekNumber(date: Date | string): number {
   const target = new Date(
     Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
   );
-  const dayNum = (target.getUTCDay() + 6) % 7;
-  target.setUTCDate(target.getUTCDate() - dayNum + 3);
-  const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
-  const firstThursdayDayNum = (firstThursday.getUTCDay() + 6) % 7;
+  const dayNum = (target.getUTCDay() + DAYS_PER_WEEK - 1) % DAYS_PER_WEEK;
+  target.setUTCDate(target.getUTCDate() - dayNum + ISO_PIVOT_WEEKDAY_OFFSET);
+  const firstThursday = new Date(
+    Date.UTC(target.getUTCFullYear(), 0, ISO_PIVOT_JANUARY_DAY),
+  );
+  const firstThursdayDayNum =
+    (firstThursday.getUTCDay() + DAYS_PER_WEEK - 1) % DAYS_PER_WEEK;
   firstThursday.setUTCDate(
-    firstThursday.getUTCDate() - firstThursdayDayNum + 3,
+    firstThursday.getUTCDate() - firstThursdayDayNum + ISO_PIVOT_WEEKDAY_OFFSET,
   );
   const diffMs = target.getTime() - firstThursday.getTime();
-  return 1 + Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
+  return 1 + Math.round(diffMs / MS_PER_WEEK);
 }
 
 export function formatWeekLabel(date: Date | string): string {
