@@ -1,4 +1,8 @@
-import type { Role, UserSession } from "@customreport/shared";
+import {
+  MS_PER_SECOND,
+  type Role,
+  type UserSession,
+} from "@customreport/shared";
 import { assertRole } from "@customreport/shared/trpc";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
@@ -77,7 +81,7 @@ function observeTrpcDuration(
       route: `/trpc/${path}`,
       status_code: statusCode,
     },
-    durationMs / 1000,
+    durationMs / MS_PER_SECOND,
   );
 }
 
@@ -258,7 +262,9 @@ const TARGET_ID_KEYS = [
   "id",
 ] as const;
 
-function truncateReason(reason: string, max = 500): string {
+const MAX_AUDIT_REASON_LENGTH = 500;
+
+function truncateReason(reason: string, max = MAX_AUDIT_REASON_LENGTH): string {
   if (reason.length <= max) return reason;
   return reason.slice(0, max).trimEnd();
 }

@@ -13,6 +13,7 @@ import {
   groupProductEdgeInputSchema,
   latestForViewerReportSchema,
   leadVelocityInputSchema,
+  MS_PER_MINUTE,
   myHistoryEntrySchema,
   organizationUpdateSchema,
   paginationInputSchema,
@@ -77,6 +78,26 @@ import {
   publicProcedure,
   router,
 } from "./trpc.middleware.js";
+
+// dev.wipeAndReseed: child-process timeout per seed tier — larger tiers write
+// more rows and need more wall-clock room.
+const MANUAL_UAT_RESEED_TIMEOUT_MINUTES = 1;
+const HUGE_RESEED_TIMEOUT_MINUTES = 5;
+const DEFAULT_RESEED_TIMEOUT_MINUTES = 2;
+const MANUAL_UAT_RESEED_TIMEOUT_MS =
+  MANUAL_UAT_RESEED_TIMEOUT_MINUTES * MS_PER_MINUTE;
+const HUGE_RESEED_TIMEOUT_MS = HUGE_RESEED_TIMEOUT_MINUTES * MS_PER_MINUTE;
+const DEFAULT_RESEED_TIMEOUT_MS =
+  DEFAULT_RESEED_TIMEOUT_MINUTES * MS_PER_MINUTE;
+const RESEED_OUTPUT_TAIL_LINES = 15;
+const RESEED_STDERR_TAIL_LENGTH = 500;
+
+const MAX_PERIOD_LIST_LIMIT = 200;
+const DEFAULT_ACTION_LOG_LIMIT = 20;
+const MAX_FAILED_JOBS_LIMIT = 200;
+const MAX_REOPEN_NOTE_LENGTH = 500;
+const DEFAULT_EXECUTION_LIST_LIMIT = 20;
+const MAX_REOPEN_REASON_LENGTH = 500;
 
 interface RouterDeps {
   prisma: PrismaClient;
@@ -463,15 +484,18 @@ export function createAppRouter(deps: RouterDeps) {
               },
               timeout:
                 input.variant === "manual-uat"
-                  ? 60_000
+                  ? MANUAL_UAT_RESEED_TIMEOUT_MS
                   : input.variant === "huge"
-                    ? 300_000
-                    : 120_000,
+                    ? HUGE_RESEED_TIMEOUT_MS
+                    : DEFAULT_RESEED_TIMEOUT_MS,
             });
             return {
               ok: true,
               variant: input.variant,
-              output: stdout.split("\n").slice(-15).join("\n"),
+              output: stdout
+                .split("\n")
+                .slice(-RESEED_OUTPUT_TAIL_LINES)
+                .join("\n"),
             };
           } catch (error) {
             const stderrRaw =
@@ -486,7 +510,7 @@ export function createAppRouter(deps: RouterDeps) {
                   : "";
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
-              message: `Reseed failed: ${error instanceof Error ? error.message : String(error)}\n${stderr.slice(-500)}`,
+              message: `Reseed failed: ${error instanceof Error ? error.message : String(error)}\n${stderr.slice(-RESEED_STDERR_TAIL_LENGTH)}`,
               cause: error instanceof Error ? error : undefined,
             });
           }
@@ -1307,7 +1331,12 @@ export function createAppRouter(deps: RouterDeps) {
         .input(
           z.object({
             bucket: periodListBucketSchema,
-            limit: z.number().int().min(1).max(200).optional(),
+            limit: z
+              .number()
+              .int()
+              .min(1)
+              .max(MAX_PERIOD_LIST_LIMIT)
+              .optional(),
           }),
         )
         .query(async ({ input }) => {
@@ -1686,7 +1715,7 @@ export function createAppRouter(deps: RouterDeps) {
           .input(paginationInputSchema.optional())
           .query(async ({ input }) => {
             try {
-              const limit = input?.limit ?? 20;
+              const limit = input?.limit ?? DEFAULT_ACTION_LOG_LIMIT;
               const cursor = input?.cursor;
               const rows = await deps.prisma.userActionLog.findMany({
                 take: limit + 1,
@@ -1732,7 +1761,12 @@ export function createAppRouter(deps: RouterDeps) {
             z.object({
               queue: queueNameSchema,
               cursor: z.number().int().min(0).optional(),
-              limit: z.number().int().min(1).max(200).optional(),
+              limit: z
+                .number()
+                .int()
+                .min(1)
+                .max(MAX_FAILED_JOBS_LIMIT)
+                .optional(),
             }),
           )
           .query(async ({ input }) => {
@@ -1841,7 +1875,7 @@ export function createAppRouter(deps: RouterDeps) {
           z.object({
             id: z.uuid(),
             decision: z.enum(["approved", "rejected"]),
-            note: z.string().max(500).optional(),
+            note: z.string().max(MAX_REOPEN_NOTE_LENGTH).optional(),
           }),
         )
         .mutation(async ({ input, ctx }) => {
@@ -2107,7 +2141,9 @@ export function createAppRouter(deps: RouterDeps) {
           try {
             const { ruleId, cursor, limit } = input;
             const pagination =
-              cursor || limit ? { cursor, limit: limit ?? 20 } : undefined;
+              cursor || limit
+                ? { cursor, limit: limit ?? DEFAULT_EXECUTION_LIST_LIMIT }
+                : undefined;
 
             // Non-admins see only their group's recipient rows. The allowlist
             // is resolved here and applied inside the service BEFORE pagination
@@ -2498,7 +2534,7 @@ export function createAppRouter(deps: RouterDeps) {
         .input(
           z.object({
             reportSectionId: z.uuid(),
-            reason: z.string().max(500).optional(),
+            reason: z.string().max(MAX_REOPEN_REASON_LENGTH).optional(),
           }),
         )
         .mutation(async ({ input, ctx }) => {

@@ -44,7 +44,10 @@ const LEVEL_SEVERITY: Record<LogLevel, SeverityNumber> = {
   error: SeverityNumber.ERROR,
 };
 
-const DEFAULT_MAX_BYTES = 50 * 1024 * 1024; // 50 MB
+const DEFAULT_MAX_BYTES_MB = 50;
+const BYTES_PER_KB = 1024;
+const KB_PER_MB = 1024;
+const DEFAULT_MAX_BYTES = DEFAULT_MAX_BYTES_MB * KB_PER_MB * BYTES_PER_KB;
 const DEFAULT_MAX_AGE_DAYS = 30;
 
 export interface LoggerOptions {

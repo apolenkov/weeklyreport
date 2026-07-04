@@ -3,6 +3,8 @@ import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { createGzip } from "node:zlib";
 
+import { MS_PER_DAY, MS_PER_HOUR } from "@customreport/shared";
+
 /**
  * File sink for the app logger (extracted from logger.ts): size-based rotation
  * into gzip archives, age-based archive pruning, and a per-sink serialized
@@ -13,7 +15,7 @@ import { createGzip } from "node:zlib";
 
 // Prune stale archives at most once per interval instead of on every log line —
 // a readdir+stat per emit dominated the file sink on a busy process.
-const PRUNE_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+const PRUNE_INTERVAL_MS = MS_PER_HOUR;
 const ACTIVE_LOG_FILENAME = "app.log";
 const ARCHIVE_PREFIX = "app.log.";
 const ARCHIVE_SUFFIX = ".gz";
@@ -53,7 +55,7 @@ async function pruneOldArchives(
   maxAgeDays: number,
 ): Promise<void> {
   if (maxAgeDays < 0) return;
-  const cutoff = Date.now() - maxAgeDays * 86_400_000;
+  const cutoff = Date.now() - maxAgeDays * MS_PER_DAY;
   const entries = await fs.readdir(logDir).catch(() => [] as string[]);
   await Promise.all(
     entries

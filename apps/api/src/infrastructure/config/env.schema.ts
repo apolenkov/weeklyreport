@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const MIN_JWT_SECRET_LENGTH = 32;
+
 // No `.default()` anywhere in this schema by design: every value the API needs
 // to run is REQUIRED and must be supplied explicitly per environment (`.env`
 // for local, the `environment:` block per docker-compose file, the e2e config's
@@ -31,7 +33,7 @@ export const envSchema = z
     // (`auth.controller.ts::createJwtSigner`) is built at boot in EVERY mode —
     // dev-login still issues a session JWT — so a config without it crashes at
     // controller construction regardless of AUTH_DEV_MODE.
-    AUTH_JWT_SECRET: z.string().min(32),
+    AUTH_JWT_SECRET: z.string().min(MIN_JWT_SECRET_LENGTH),
 
     // SAML / Keycloak (validated at runtime by saml.strategy.ts requireEnv).
     // Optional here because dev-login (AUTH_DEV_MODE) needs no IdP; prod boots
@@ -72,7 +74,7 @@ export const envSchema = z
     // Short-lived JWT signed at /trpc entry and injected as cookie into the
     // headless browser so PDF rendering can authenticate against
     // /weekly-report/* routes. Min 32 chars also enforced in the service.
-    PDF_EXPORT_JWT_SECRET: z.string().min(32),
+    PDF_EXPORT_JWT_SECRET: z.string().min(MIN_JWT_SECRET_LENGTH),
 
     // Heap threshold (bytes) for the /health/ready memory check. Required with
     // no default: readiness sheds traffic as the process nears the container

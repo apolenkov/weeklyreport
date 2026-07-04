@@ -52,6 +52,8 @@ export type OtelBootstrapResult =
   | { started: false; reason: "disabled-flag" }
   | { started: false; reason: "no-endpoint" };
 
+const DEFAULT_TRACES_SAMPLING_RATIO = 0.1;
+
 export function decideOtelBootstrap(
   env: NodeJS.ProcessEnv = process.env,
 ): OtelBootstrapResult {
@@ -62,9 +64,13 @@ export function decideOtelBootstrap(
   if (!endpoint) {
     return { started: false, reason: "no-endpoint" };
   }
-  const ratio = Number(env.OTEL_TRACES_SAMPLER_ARG ?? "0.1");
+  const ratio = Number(
+    env.OTEL_TRACES_SAMPLER_ARG ?? String(DEFAULT_TRACES_SAMPLING_RATIO),
+  );
   const samplingRatio =
-    Number.isFinite(ratio) && ratio >= 0 && ratio <= 1 ? ratio : 0.1;
+    Number.isFinite(ratio) && ratio >= 0 && ratio <= 1
+      ? ratio
+      : DEFAULT_TRACES_SAMPLING_RATIO;
   return { started: true, reason: "enabled", samplingRatio, endpoint };
 }
 

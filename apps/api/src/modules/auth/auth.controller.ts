@@ -1,11 +1,15 @@
-import { type UserSession, userSessionSchema } from "@customreport/shared";
+import {
+  SECONDS_PER_HOUR,
+  type UserSession,
+  userSessionSchema,
+} from "@customreport/shared";
 import { serialize } from "cookie";
 import jwt from "jsonwebtoken";
 
 import { requireEnv } from "../../lib/env.js";
 import { resolveSessionCookieName } from "../../lib/session-cookie.js";
 
-const ONE_HOUR_IN_SECONDS = 60 * 60;
+const ONE_HOUR_IN_SECONDS = SECONDS_PER_HOUR;
 
 /**
  * The session token is symmetric (HS256). Pin the accepted algorithm on verify

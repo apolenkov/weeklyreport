@@ -20,6 +20,9 @@ import { isUserAccessBarred } from "../../modules/auth/session-deactivation";
 import { PrismaService } from "../prisma/prisma.service";
 import { getBullMQOptions } from "./bullmq-options";
 
+const HTTP_UNAUTHORIZED = 401;
+const HTTP_FORBIDDEN = 403;
+
 /**
  * Owns the two `Queue` instances Bull Board reads from. Created directly
  * (bypassing @nestjs/bullmq DI) to avoid the DiscoveryService bug in
@@ -66,7 +69,7 @@ export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
       | undefined;
 
     if (!token) {
-      res.status(401).json({ error: "Authentication required" });
+      res.status(HTTP_UNAUTHORIZED).json({ error: "Authentication required" });
       return;
     }
 
@@ -74,7 +77,7 @@ export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
       const session = deps.verifySessionToken(token);
 
       if (session.role !== "head") {
-        res.status(403).json({ error: "Head role required" });
+        res.status(HTTP_FORBIDDEN).json({ error: "Head role required" });
         return;
       }
 
@@ -85,13 +88,15 @@ export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
           deps.sessionRevocation,
         )
       ) {
-        res.status(401).json({ error: "Session no longer valid" });
+        res
+          .status(HTTP_UNAUTHORIZED)
+          .json({ error: "Session no longer valid" });
         return;
       }
 
       next();
     } catch {
-      res.status(401).json({ error: "Invalid session" });
+      res.status(HTTP_UNAUTHORIZED).json({ error: "Invalid session" });
     }
   };
 }
