@@ -1,13 +1,10 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { invalidateAdmin } from "../../lib/cache-keys";
 import { toReminderPolicyInput } from "../../lib/mappers";
 import { pluralize } from "../../lib/pluralize";
-import { useTRPC } from "../../lib/trpc-context";
 import { ConfirmDeleteDialog } from "../lead/confirm-delete-dialog";
 import type { MockReminder, MockReminderPolicy } from "./mock-data";
 import { PlusIcon, PolicyForm } from "./policy-form";
@@ -22,8 +19,11 @@ import {
   describeRecipient,
   formatPolicyTiming,
   formatValidityWindow,
-  isoFromDate,
 } from "./reminders-tab-format";
+import {
+  toggledPayload,
+  useReminderPolicyMutations,
+} from "./reminders-tab-mutations";
 import { TabHeader, TabSearch } from "./tab-header";
 
 /**
@@ -53,29 +53,12 @@ interface RemindersTabProps {
   readonly defaultTimezone?: string;
 }
 
-function toggledPayload(policy: MockReminderPolicy) {
-  return toReminderPolicyInput(
-    {
-      kind: policy.kind,
-      offsetMinutes: policy.offsetMinutes,
-      timezone: policy.timezone,
-      audience: policy.audience,
-      active: !policy.active,
-      validFromIso: isoFromDate(policy.validFrom),
-      validUntilIso:
-        policy.validUntil === null ? null : isoFromDate(policy.validUntil),
-    },
-    policy.id,
-  );
-}
-
 export function RemindersTab({
   policies,
   derivedRulesByPolicyId,
   defaultTimezone,
 }: RemindersTabProps) {
-  const trpc = useTRPC();
-  const qc = useQueryClient();
+  const { saveMut, removeMut } = useReminderPolicyMutations();
 
   const [search, setSearch] = useState("");
   const [editor, setEditor] = useState<Editor>(() =>
@@ -97,31 +80,6 @@ export function RemindersTab({
   function resetForm() {
     setForm(emptyPolicyForm({ timezone: defaultTimezone }));
   }
-
-  const saveMut = useMutation(
-    trpc.admin.savePolicy.mutationOptions({
-      onSuccess: () => invalidateAdmin(qc, trpc),
-      onError: (err: unknown) => {
-        const message =
-          err instanceof Error ? err.message : "Failed to save reminder";
-        toast.error(message);
-      },
-    }),
-  );
-
-  const removeMut = useMutation(
-    trpc.admin.removePolicy.mutationOptions({
-      onSuccess: () => {
-        invalidateAdmin(qc, trpc);
-        toast.success("Reminder removed");
-      },
-      onError: (err: unknown) => {
-        const message =
-          err instanceof Error ? err.message : "Failed to remove reminder";
-        toast.error(message);
-      },
-    }),
-  );
 
   const validityValid = useMemo(() => {
     if (form.foreverChecked) return true;

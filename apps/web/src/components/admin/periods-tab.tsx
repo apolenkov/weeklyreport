@@ -6,8 +6,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { formatPeriodLabel, formatPeriodRange } from "../../lib/format-date";
 import { useTRPC } from "../../lib/trpc-context";
+import { PeriodsArchiveSection } from "./periods-archive-section";
+import { PeriodsDeleteConfirmDialog } from "./periods-delete-confirm-dialog";
 import { CreatePeriodDialog } from "./periods-tab-dialog";
-import { Chevron, PlusIcon } from "./periods-tab-icons";
+import { PlusIcon } from "./periods-tab-icons";
 import { PeriodTable } from "./periods-tab-table";
 import { TabHeader, TabSearch } from "./tab-header";
 import { usePeriodMutations } from "./use-period-mutations";
@@ -222,59 +224,21 @@ export function PeriodsTab() {
       </section>
 
       {/* ---- Archive section ---------------------------------------- */}
-      <section aria-labelledby="periods-archive-heading" className="space-y-3">
-        <header className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => setShowArchive((prev) => !prev)}
-            className="flex items-center gap-2 text-base font-semibold text-[var(--color-foreground)] hover:text-[var(--color-starbucks-accent)]"
-            aria-expanded={showArchive}
-            aria-controls="periods-archive-body"
-            data-testid="periods-archive-toggle"
-          >
-            <Chevron expanded={showArchive} />
-            <span id="periods-archive-heading">Archive</span>
-          </button>
-          <span className="text-xs text-[var(--color-muted-foreground)]">
-            archived
-          </span>
-        </header>
-
-        {showArchive && (
-          <div id="periods-archive-body" data-testid="periods-archive-body">
-            {archiveQuery.isLoading ? (
-              <div
-                className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-muted-foreground)]"
-                data-testid="periods-archive-loading"
-              >
-                Loading archive…
-              </div>
-            ) : archiveRows.length === 0 ? (
-              <div
-                className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] p-6 text-center text-sm text-[var(--color-muted-foreground)]"
-                data-testid="periods-archive-empty"
-              >
-                No archived periods.
-              </div>
-            ) : (
-              <PeriodTable
-                testIdPrefix="archive"
-                rows={archiveRows}
-                onPublish={(row) => publishMut.mutate({ reportId: row.id })}
-                onReopen={(row) => reopenMut.mutate({ reportId: row.id })}
-                onArchive={(row) => archiveMut.mutate({ periodId: row.id })}
-                onUnarchive={(row) => unarchiveMut.mutate({ periodId: row.id })}
-                onDelete={(row) => setDeleteConfirm(row)}
-                onEdit={(row) => {
-                  dialogTriggerRef.current =
-                    document.activeElement as HTMLElement;
-                  setEditingRow(row);
-                }}
-              />
-            )}
-          </div>
-        )}
-      </section>
+      <PeriodsArchiveSection
+        expanded={showArchive}
+        onToggle={() => setShowArchive((prev) => !prev)}
+        isLoading={archiveQuery.isLoading}
+        rows={archiveRows}
+        onPublish={(row) => publishMut.mutate({ reportId: row.id })}
+        onReopen={(row) => reopenMut.mutate({ reportId: row.id })}
+        onArchive={(row) => archiveMut.mutate({ periodId: row.id })}
+        onUnarchive={(row) => unarchiveMut.mutate({ periodId: row.id })}
+        onDelete={(row) => setDeleteConfirm(row)}
+        onEdit={(row) => {
+          dialogTriggerRef.current = document.activeElement as HTMLElement;
+          setEditingRow(row);
+        }}
+      />
 
       {/* UFB-063: «New period» creation dialog ----------------------- */}
       {showCreate && (
@@ -315,50 +279,14 @@ export function PeriodsTab() {
 
       {/* A27: Delete confirmation dialog */}
       {deleteConfirm && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40"
-          onClick={() => setDeleteConfirm(null)}
-          role="presentation"
-          data-testid="periods-delete-dialog"
-        >
-          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- onClick only stops propagation to the backdrop; not a user interaction, no keyboard equivalent applies */}
-          <div
-            className="animate-scale-in mx-4 w-full max-w-sm rounded-[var(--radius)] border border-[var(--color-border)] bg-white p-6 shadow-xl"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Delete period confirmation"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-              Delete period?
-            </h3>
-            <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-              This will permanently delete the period and all draft sections.
-              This action cannot be undone.
-            </p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setDeleteConfirm(null)}
-                disabled={deleteMut.isPending}
-                className="btn-press rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.2)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  deleteMut.mutate({ reportId: deleteConfirm.id });
-                  setDeleteConfirm(null);
-                }}
-                disabled={deleteMut.isPending}
-                className="btn-press rounded-[var(--radius-pill)] bg-[#991b1b] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#7f1d1d] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {deleteMut.isPending ? "Deleting…" : "Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <PeriodsDeleteConfirmDialog
+          isPending={deleteMut.isPending}
+          onCancel={() => setDeleteConfirm(null)}
+          onConfirm={() => {
+            deleteMut.mutate({ reportId: deleteConfirm.id });
+            setDeleteConfirm(null);
+          }}
+        />
       )}
     </div>
   );
