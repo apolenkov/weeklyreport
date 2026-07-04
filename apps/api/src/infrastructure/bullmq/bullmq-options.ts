@@ -1,9 +1,9 @@
-const DEFAULT_REDIS_PORT = 6379;
+import { requireEnv } from "../../lib/env.js";
 
 export function getBullMQConnectionOptions() {
   return {
-    host: process.env.REDIS_HOST ?? "localhost",
-    port: Number(process.env.REDIS_PORT ?? DEFAULT_REDIS_PORT),
+    host: requireEnv(process.env, "REDIS_HOST"),
+    port: Number(requireEnv(process.env, "REDIS_PORT")),
     maxRetriesPerRequest: null,
   };
 }

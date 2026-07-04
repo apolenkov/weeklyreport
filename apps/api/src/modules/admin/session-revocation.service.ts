@@ -2,7 +2,7 @@ import type { OnModuleDestroy } from "@nestjs/common";
 import { Injectable } from "@nestjs/common";
 import Redis from "ioredis";
 
-const DEFAULT_REDIS_PORT = 6379;
+import { requireEnv } from "../../lib/env.js";
 
 /**
  * A2 (UAT-v7 2026-05-12): Redis-backed session revocation for the
@@ -29,8 +29,8 @@ export class SessionRevocationService implements OnModuleDestroy {
       this.redis = redis;
     } else {
       this.redis = new Redis({
-        host: process.env.REDIS_HOST ?? "localhost",
-        port: Number(process.env.REDIS_PORT ?? DEFAULT_REDIS_PORT),
+        host: requireEnv(process.env, "REDIS_HOST"),
+        port: Number(requireEnv(process.env, "REDIS_PORT")),
         lazyConnect: true,
         maxRetriesPerRequest: 1,
         enableOfflineQueue: false,
