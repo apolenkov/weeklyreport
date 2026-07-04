@@ -9,6 +9,9 @@ const TTL_SECONDS = 3600;
 // do not collide with other applications sharing the Redis instance. Must
 // stay in lockstep with the sub-prefixes in analytics.service.ts.
 const PREFIX = "customreport:analytics:";
+const DEFAULT_REDIS_PORT = 6379;
+/** SCAN batch size for the invalidation cursor walk. */
+const SCAN_BATCH_SIZE = 100;
 
 /**
  * AnalyticsCache — read-through Redis cache for the analytics namespace.
@@ -29,7 +32,7 @@ export class AnalyticsCache implements AnalyticsCachePort, OnModuleDestroy {
   constructor() {
     this.redis = new Redis({
       host: process.env.REDIS_HOST ?? "localhost",
-      port: Number(process.env.REDIS_PORT ?? 6379),
+      port: Number(process.env.REDIS_PORT ?? DEFAULT_REDIS_PORT),
       lazyConnect: true,
       maxRetriesPerRequest: 1,
       enableOfflineQueue: false,
@@ -68,7 +71,7 @@ export class AnalyticsCache implements AnalyticsCachePort, OnModuleDestroy {
           "MATCH",
           `${PREFIX}*`,
           "COUNT",
-          100,
+          SCAN_BATCH_SIZE,
         );
         if (batch.length > 0) {
           await this.redis.del(...batch);

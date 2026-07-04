@@ -11,6 +11,9 @@ import type {
 } from "./reminders.service";
 import { RemindersService } from "./reminders.service";
 
+/** Length of an ISO calendar date (`YYYY-MM-DD`) after `toISOString().slice(0, n)`. */
+const ISO_DATE_LENGTH = 10;
+
 /**
  * NOTIF-04 (Phase 28-03), NOTIF-02/05 (Phase 29-05): hourly tick that
  * dispatches T-24h deadline reminders AND T+2h escalation digests in one
@@ -82,7 +85,7 @@ export class RemindersScheduler {
     rule: DueDeadlineRule,
     organization: ReminderOrganization,
   ): Promise<void> {
-    const cycleDate = rule.fireAt.toISOString().slice(0, 10); // YYYY-MM-DD UTC
+    const cycleDate = rule.fireAt.toISOString().slice(0, ISO_DATE_LENGTH); // YYYY-MM-DD UTC
     const sectionUrl = buildSectionUrl(rule.reportId);
     const deadlineIso = rule.fireAt.toISOString();
     for (const recipient of rule.recipients) {
@@ -108,7 +111,7 @@ export class RemindersScheduler {
   ): Promise<void> {
     // One digest email per (rule, group head) per cycle. Escalation always
     // notifies the head — it ignores notificationOptOut.
-    const cycleDate = rule.fireAt.toISOString().slice(0, 10);
+    const cycleDate = rule.fireAt.toISOString().slice(0, ISO_DATE_LENGTH);
     for (const group of rule.groups) {
       await this.service.requestReminderExecution(rule.id, group.head.email, {
         kind: "escalation",

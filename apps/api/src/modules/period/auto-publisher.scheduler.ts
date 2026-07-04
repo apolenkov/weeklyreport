@@ -1,3 +1,4 @@
+import { MS_PER_HOUR } from "@customreport/shared";
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 
@@ -60,7 +61,7 @@ export class AutoPublisherScheduler {
       return { published: false, reason: "disabled" };
     }
 
-    const graceMs = settings.gracePeriodHours * 3_600_000;
+    const graceMs = settings.gracePeriodHours * MS_PER_HOUR;
     const cutoff = new Date(now.getTime() - graceMs);
 
     // Candidate set: draft Reports whose deadline + grace is in the past.

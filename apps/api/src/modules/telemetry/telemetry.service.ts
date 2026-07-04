@@ -2,6 +2,9 @@ import type { TelemetrySummary } from "@customreport/shared";
 import { telemetrySummarySchema } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 
+/** Number of trailing periods shown on the KPI card's sparkline. */
+const SPARKLINE_PERIOD_COUNT = 4;
+
 /**
  * Port shape consumed by TelemetryService — Prisma-agnostic so unit
  * tests can stub the four read methods without a database. The
@@ -62,7 +65,9 @@ export class TelemetryService {
    */
   async getSummary(): Promise<TelemetrySummary> {
     return this.cache.getOrCompute<TelemetrySummary>("summary:v1", async () => {
-      const sparkline = await this.repository.onTimeRatioPerPeriod(4);
+      const sparkline = await this.repository.onTimeRatioPerPeriod(
+        SPARKLINE_PERIOD_COUNT,
+      );
       // Headline ratio = the freshest single period only (the last sparkline
       // entry). This is a DIFFERENT window from the Prometheus
       // `onTimeRatioLastNPeriods` gauge, which pools across the last N periods;
