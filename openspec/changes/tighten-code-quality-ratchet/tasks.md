@@ -72,7 +72,7 @@ true`, `skipComments: true`). Do NOT touch `complexity` or
 
 ## 4. Close-out
 
-- [ ] R4a Confirm the `max-lines` grandfather block is EMPTY again (every cohort
+- [x] R4a Confirm the `max-lines` grandfather block is EMPTY again (every cohort
       file split or justified-permanent exempt), and `no-magic-numbers` +
       `no-duplicate-string` are `error` with zero remaining firings.
 - [ ] R4b Full gate green: `pnpm lint` + `pnpm typecheck` + `pnpm test` +
