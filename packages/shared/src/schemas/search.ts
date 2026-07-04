@@ -62,10 +62,18 @@ export type SearchHit = z.infer<typeof searchHitSchema>;
  *   is empty for them, and `all` is forbidden; `published` exposes exactly
  *   the published, in-group content the viewer can already read.
  */
+const MAX_SEARCH_RESULTS_LIMIT = 50;
+const DEFAULT_SEARCH_RESULTS_LIMIT = 20;
+
 export const searchQueryInputSchema = z.object({
   q: safeText({ min: 2, max: 200 }),
   scope: z.enum(["mine", "all", "published"]).default("mine"),
-  limit: z.number().int().min(1).max(50).default(20),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_SEARCH_RESULTS_LIMIT)
+    .default(DEFAULT_SEARCH_RESULTS_LIMIT),
 });
 export type SearchQueryInput = z.infer<typeof searchQueryInputSchema>;
 

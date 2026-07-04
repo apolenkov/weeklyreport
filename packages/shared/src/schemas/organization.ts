@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+const MAX_SHORT_NAME_LENGTH = 16;
+const MAX_FULL_NAME_LENGTH = 200;
+
 /**
  * UFB-047 / Phase 48-A: organization identity singleton schema.
  *
@@ -19,8 +22,8 @@ import { z } from "zod";
  */
 export const organizationSchema = z.object({
   id: z.literal("singleton"),
-  shortName: z.string().min(1).max(16),
-  fullName: z.string().min(1).max(200),
+  shortName: z.string().min(1).max(MAX_SHORT_NAME_LENGTH),
+  fullName: z.string().min(1).max(MAX_FULL_NAME_LENGTH),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -46,8 +49,8 @@ const orgBrandString = (max: number) =>
  * non-singleton row, so we don't accept an id in the input.
  */
 export const organizationUpdateSchema = z.object({
-  shortName: orgBrandString(16),
-  fullName: orgBrandString(200),
+  shortName: orgBrandString(MAX_SHORT_NAME_LENGTH),
+  fullName: orgBrandString(MAX_FULL_NAME_LENGTH),
 });
 
 /**
@@ -57,8 +60,8 @@ export const organizationUpdateSchema = z.object({
  * no UX value to the public landing page.
  */
 export const organizationPublicSchema = z.object({
-  shortName: z.string().min(1).max(16),
-  fullName: z.string().min(1).max(200),
+  shortName: z.string().min(1).max(MAX_SHORT_NAME_LENGTH),
+  fullName: z.string().min(1).max(MAX_FULL_NAME_LENGTH),
 });
 
 export type Organization = z.infer<typeof organizationSchema>;
