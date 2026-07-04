@@ -5,8 +5,8 @@ import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { ItemCard } from "./item-card";
 import { ItemEditDialog } from "./item-edit-dialog";
 import type { KanbanItem, Product, RiskEntry } from "./mock-data";
+import { buildItemColumns, isBoardEmpty } from "./next-week-columns";
 import { SlideFitAdvisory } from "./slide-fit-advisory";
-import { splitStageNames } from "./stage-tags";
 
 interface NextWeekSectionProps {
   readonly items: KanbanItem[];
@@ -49,25 +49,6 @@ interface NextWeekSectionProps {
   readonly publishedLockedIds?: ReadonlySet<string>;
 }
 
-function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
-  const map = new Map<string, KanbanItem[]>();
-  for (const item of items) {
-    const tags =
-      item.stageIds && item.stageIds.length > 0
-        ? item.stageIds
-        : // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional legacy-data read; replacement noted in the deprecation comment
-          splitStageNames(item.stageName);
-    const key =
-      tags.length > 0
-        ? `${item.productName} · ${tags.join(", ")}`
-        : item.productName;
-    const group = map.get(key) ?? [];
-    group.push(item);
-    map.set(key, group);
-  }
-  return map;
-}
-
 export function NextWeekSection({
   items,
   risks,
@@ -81,8 +62,7 @@ export function NextWeekSection({
   addSignal = 0,
   publishedLockedIds,
 }: NextWeekSectionProps) {
-  const grouped = groupByProduct(items);
-  const isEmpty = grouped.size === 0 && (!products || products.length === 0);
+  const isEmpty = isBoardEmpty(items, products);
   const hasProducts = products && products.length > 0;
   const hasMultipleProducts = hasProducts && products.length > 1;
   const defaultProduct = products?.[0];
@@ -182,34 +162,7 @@ export function NextWeekSection({
     );
   }
 
-  // Render one column per assigned product so empty products still get a
-  // "+ Add" CTA in their column. Falls back to grouped items when
-  // `products` is not supplied.
-  const columns: {
-    key: string;
-    productId: string;
-    productName: string;
-    items: KanbanItem[];
-  }[] =
-    products && products.length > 0
-      ? products.map((p) => ({
-          key: p.name,
-          productId: p.id,
-          productName: p.name,
-          items: items.filter((it) => it.productId === p.id),
-        }))
-      : [...grouped.entries()].flatMap(([productName, gItems]) => {
-          const first = gItems.at(0);
-          if (!first) return [];
-          return [
-            {
-              key: productName,
-              productId: first.productId,
-              productName: first.productName,
-              items: gItems,
-            },
-          ];
-        });
+  const columns = buildItemColumns(products, items);
   const visibleColumnCount = Math.min(Math.max(columns.length, 1), 3);
 
   return (

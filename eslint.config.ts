@@ -641,7 +641,6 @@ export default defineConfig([
   {
     files: [
       "apps/api/src/infrastructure/trpc/trpc.context.ts",
-      "apps/api/src/lib/logger.ts",
       "apps/api/src/modules/admin/admin-period.queries.ts",
       "apps/api/src/modules/carry-over/carry-over.prisma-repository.ts",
       "apps/api/src/modules/carry-over/carry-over.service.ts",
@@ -661,7 +660,6 @@ export default defineConfig([
       "apps/web/src/components/lead/decisions-section.tsx",
       "apps/web/src/components/lead/fill-from-button.tsx",
       "apps/web/src/components/lead/item-card.tsx",
-      "apps/web/src/components/lead/next-week-section.tsx",
       "apps/web/src/components/lead/period-navigator.tsx",
       "apps/web/src/components/lead/risks-section.tsx",
       "apps/web/src/components/lead/sdlc-pipeline.tsx",
