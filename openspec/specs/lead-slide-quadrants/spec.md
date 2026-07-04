@@ -36,29 +36,83 @@ The lead "Own" slide MUST render its four sections (Current Work | Next Focus ov
 - **AND** the overflow is NOT clipped by `overflow:hidden` and no "+N more" truncation is introduced
 - **AND** the other quadrants keep their equal `auto-rows-fr` zones and `--slide-quadrant-min` floor
 
-### Requirement: Product attribution uses neutral identity badges
+### Requirement: Records group under a single product heading within each quadrant
 
-Product identity on the lead "Own" slide MUST be carried by a compact
-NEUTRAL badge per row (muted fill, truncated product name, `title` with
-the full name) plus the hero chip strip above — the old fixed-width
-product-name column MUST NOT return. Row badges MUST NOT carry status
-colors: a status hue next to a row reads as that row's own severity
-(user direction 2026-06-10, round 3 — replaced the earlier
-status-colored dots). Status stays exclusively on the chip strip's dots.
-With a single real product, rows render flat: no badges. Rows from the
-`cross-product` pseudo-entry carry the "Shared context" badge and never
-appear in the chip strip.
+The lead "Own" slide MUST group each quadrant's rows by product under one neutral
+product heading per group, rather than tagging every row with a repeated product
+badge. `LeadUnifiedSlide` (`apps/web/src/components/slides/lead-unified-slide.tsx`,
+fed by `buildUnifiedSlideModel` in
+`apps/web/src/components/slides/section-slide-utils.ts`) MUST render, within each
+quadrant, a single neutral product heading (muted fill, truncated product name,
+`title` carrying the full name) followed by that product's rows. The old
+fixed-width per-row product-name column MUST NOT return, and the repeated per-row
+product badge MUST NOT return. A product heading MUST carry no status color — a
+status hue beside records reads as their own severity (`status-color-semantics`),
+the same rule the removed per-row badge carried; status stays exclusively on the
+hero chip strip's dots. With exactly one real product, the quadrant rows MUST
+render flat with no product heading. Rows from the `cross-product` pseudo-entry
+MUST group under a single "Shared context" heading and MUST NOT appear in the
+hero chip strip. Grouping MUST preserve the overflow contract of the strict-2×2
+requirement: every row still renders (no count-based "+N more" truncation), a
+quadrant that overflows its zone scrolls internally, and product-count overflow
+paginates across the existing slide carousel (`paginateSectionSlides`) — grouping
+introduces no silent truncation.
 
-#### Scenario: a multi-product slide renders rows
+#### Scenario: a multi-product slide renders grouped rows
 
-- **WHEN** the slide aggregates two or more real products
-- **THEN** each row leads with a neutral badge naming its product
-- **AND** the badge carries no status color
+- **WHEN** the slide aggregates two or more real products and a quadrant holds
+  rows for more than one of them
+- **THEN** each product's rows sit under a single neutral product heading naming
+  that product
+- **AND** no row carries a per-row product badge and no fixed-width product-name
+  column is drawn
+- **AND** the heading carries no status color
 
-#### Scenario: a single-product slide renders rows
+#### Scenario: a single-product slide renders flat
 
 - **WHEN** the slide has exactly one real product
-- **THEN** rows render without badges
+- **THEN** the quadrant rows render flat with no product heading
+
+#### Scenario: cross-product rows group under Shared context
+
+- **WHEN** a quadrant holds `cross-product` pseudo-entry rows
+- **THEN** those rows group under a single "Shared context" heading
+- **AND** "Shared context" never appears in the hero chip strip
+
+#### Scenario: a grouped quadrant overflows its zone
+
+- **WHEN** a quadrant's grouped rows exceed its zone height inside the
+  fixed-aspect `.slide-frame`, or the section holds more products than fit one
+  slide page
+- **THEN** the quadrant scrolls internally and every row stays reachable, and the
+  extra products paginate across the slide carousel
+- **AND** no "+N more" truncation is introduced by grouping
+
+### Requirement: The lead slide reads lead, then priorities, then product
+
+The lead "Own" slide MUST present its content in a lead → priorities → product
+reading order. The author (lead) identity MUST be shown on the slide — the owning
+lead's name in the slide hero (`LeadSlideHero`, above the quadrant grid in
+`apps/web/src/components/slides/status-slide-deck.tsx`) — so a reader can
+attribute the slide to its author without inspecting the URL. Within a product
+group, priority-ranked records MUST surface before unranked records (ascending
+rank, unranked last, stable order), so a P1 record never renders below a
+lower-ranked one; records then read grouped by product per the grouping
+requirement. This ordering MUST hold in both the all-products view and a
+chip-scoped single-product view.
+
+#### Scenario: the slide attributes itself to its author
+
+- **WHEN** the lead "Own" slide renders
+- **THEN** the owning lead's name is shown in the slide hero
+
+#### Scenario: ranked records precede unranked within a group
+
+- **WHEN** a product group holds both priority-ranked and unranked records in a
+  quadrant
+- **THEN** the ranked records render above the unranked ones, ascending by rank
+- **AND** a lower-numbered priority (e.g. P1) never renders below a
+  higher-numbered one (e.g. P3)
 
 ### Requirement: Quadrant colors stay inside the existing status system
 
@@ -71,12 +125,15 @@ gold stays reserved for the priority chip. Any status color the slide
 introduces MUST resolve through a named `--color-*` token (per
 `status-color-semantics`), including the at-risk chip dot value, which
 MUST be referenced via a named token rather than an inline hex literal.
+The per-product headings introduced by the grouping requirement are also
+neutral and carry no status color (they replace the former per-row
+badges, which this change removed).
 
 #### Scenario: the slide renders all four quadrants with mixed content
 
-- **WHEN** the slide renders quadrants, stripes, badges, and priority
-  chips together
-- **THEN** all section headers are neutral-colored
+- **WHEN** the slide renders quadrants, stripes, product headings, and
+  priority chips together
+- **THEN** all section headers and product headings are neutral-colored
 - **AND** red appears only on the chip strip's blocked-product dots
 - **AND** every status color resolves through a named token
 

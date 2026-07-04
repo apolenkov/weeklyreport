@@ -13,8 +13,8 @@
 > eager materialization; design D4) and the dead-read fate (delete both
 > `carryOver.*` procedures). **§6 was implemented 2026-07-04** — the
 > non-publisher question resolved as "viewer keeps the in-body band; only the
-> head/admin control moves into the publish cluster". §7.5 live-verify (visual)
-> is PENDING Sasha's walkthrough.
+> head/admin control moves into the publish cluster". §7.5 live-verified via a
+> Playwright walkthrough 2026-07-04. All 24 tasks complete.
 
 ## 1. Lead slides — group by product, author, hierarchy, overflow (A1, A2, A4)
 
@@ -118,8 +118,10 @@
       alert-bar (+ snapshot) tests. (Carry-over/acknowledge tests deferred with §5/§6.)
 - [x] 7.4 Carry-over integration coverage green for the automatic-trigger
       behavior (`unified-activity-lifecycle.integration.test.ts`).
-- [ ] 7.5 (PENDING Sasha's walkthrough) Live-verify from source: lead slides group
-      by product with the author shown and no "+N more"; item cards uniform with
-      hover tooltip; "+ Add" visible in slides, before Submit; dashboard shows one
-      reopen surface.
-- [ ] 7.6 `openspec validate lead-report-surface-polish --strict` clean.
+- [x] 7.5 Live-verified from source (Playwright walkthrough, 2026-07-04): lead
+      slides group by product with the author shown and no "+N more"; item cards
+      uniform; "+ Add" visible in slides, before Submit; dashboard shows one
+      reopen surface (+ the review strip); no carry-over banner; head Acknowledge
+      sits in the Publish & Lock cluster; Read|Review toggle present; edit-dialog
+      status lock explains the covering risk.
+- [x] 7.6 `openspec validate lead-report-surface-polish --strict` clean.
