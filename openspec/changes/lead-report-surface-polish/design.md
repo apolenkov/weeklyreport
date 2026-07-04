@@ -151,11 +151,12 @@ acknowledge mutation, per-group model, and "Seen by" roster are unchanged.
 1. **HF10 trigger point — RESOLVED (owner, 2026-07-04).** Trigger when the period
    becomes open, with eager materialization of the prior-period authors' sections;
    no per-author `executeCarryOver` entry point. Full decision recorded in D4.
-2. **HF1 non-publisher acknowledge path.** `ReviewAcknowledgeBar` is available to
-   ANY access-holder today (head/admin/viewer); Publish & Lock is head/admin-only.
-   After moving the control into the publish cluster, where (if anywhere) does a
-   viewer / non-publishing access-holder acknowledge? The requirement scopes the
-   move to publish-capable reviewers and leaves the non-publisher path open.
+2. **HF1 non-publisher acknowledge path — RESOLVED (2026-07-04).** Only the
+   publish-capable reviewer's control moves: head/admin acknowledge from the
+   Publish & Lock cluster (`placement="header"`); a viewer keeps the in-body
+   band (`placement="body"`) — relocating it into a cluster the viewer does not
+   have would orphan their acknowledge path. Mutation, per-group model, and
+   "Seen by" roster unchanged.
 3. **A2 strength.** Is "priorities first" satisfied by ranked-records-float-to-top
    within each product group (adopted), or does the user want a dedicated
    priorities lane above the product-grouped quadrants (rejected here as scope
