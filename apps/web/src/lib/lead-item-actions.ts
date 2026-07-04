@@ -18,9 +18,9 @@ export function markCompletePatch(): Partial<LeadItem> {
 /**
  * "Move to next week": defer the item into next week. A moved item is a FRESH
  * deferral, not a carried-in row, so `carriedOver` is reset to false —
- * otherwise both `carryOver.execute`'s filter and the uncarried-open-work
- * banner (which both skip `carriedOver` rows) would never see it again, and a
- * previously carried item moved forward would silently fail to reach the
+ * otherwise the automatic carry-over's copy filter (which skips `carriedOver`
+ * rows) would never see it again, and a previously carried item moved forward
+ * would silently fail to reach the
  * following period. `type` flips to next and `completed=false` marks the
  * mid-flight push-out (the unified view's "deferred" bucket); `workflowStatus`
  * is preserved so a blocked item stays blocked. The `stableId` lineage is

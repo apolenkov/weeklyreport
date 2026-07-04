@@ -211,18 +211,6 @@ function renderPage(
     { path: ["leadForm", "versions"] },
     { path: ["admin", "snapshot"] },
     { path: ["admin", "getSettings"] },
-    // The head-only carry-over banner queries the uncarried signal on open
-    // periods; an empty result keeps it hidden so the page-level assertions
-    // are unchanged.
-    {
-      path: ["carryOver", "uncarried"],
-      queryByInput: () => ({
-        sourceReportId: null,
-        items: [],
-        decisions: [],
-      }),
-    },
-    { path: ["carryOver", "execute"], mutation: true },
   ]);
 
   const qc = new QueryClient({

@@ -212,6 +212,85 @@ describe("PeriodCreatorScheduler", () => {
     });
   });
 
+  it("HF10: reconciles carry-over for every fresh-open period, then the just-created one", async () => {
+    const prisma = makePrismaStub({
+      mostRecent: {
+        id: "period-old",
+        periodEnd: new Date("2026-05-10T23:59:59.999Z"),
+      },
+      createdId: "period-new-1",
+    });
+    // flipDueScheduledToOpen queries periodState:"scheduled" (no due rows);
+    // the reconcile pass queries periodState:"open" — TWO open periods, the
+    // multi-flip case a latest-only implementation would miss.
+    prisma.report.findMany.mockImplementation(
+      (args: { where?: { periodState?: unknown } }) =>
+        args.where?.periodState === "open"
+          ? [{ id: "open-1" }, { id: "open-2" }]
+          : [],
+    );
+    const admin = { getSettings: vi.fn().mockResolvedValue(makeSettings()) };
+    const autoCarryOver = vi
+      .fn<(targetReportId: string) => Promise<void>>()
+      .mockResolvedValue(undefined);
+    const scheduler = new PeriodCreatorScheduler(
+      asAny(prisma),
+      asAny(admin),
+      undefined,
+      undefined,
+      autoCarryOver,
+    );
+
+    const result = await scheduler.runOnce(new Date("2026-05-12T00:05:00Z"));
+
+    expect(result).toMatchObject({ created: true, periodId: "period-new-1" });
+    // Every open period reconciled, and the same-tick open-born creation too.
+    expect(autoCarryOver.mock.calls.map((call) => call[0])).toEqual([
+      "open-1",
+      "open-2",
+      "period-new-1",
+    ]);
+    // The reconcile query excludes reopened (periodStatus) and archived rows.
+    expect(prisma.report.findMany).toHaveBeenCalledWith({
+      where: { periodState: "open", periodStatus: "open", archived: false },
+      select: { id: true },
+    });
+  });
+
+  it("HF10: a scheduled-born creation does not fire carry-over at mint time", async () => {
+    const prisma = makePrismaStub({
+      mostRecent: {
+        id: "period-old",
+        // Ends exactly now (Sunday 23:59:59.999): the create proceeds, but
+        // the Monday-anchored next periodStart is still in the future →
+        // minted 'scheduled'.
+        periodEnd: new Date("2026-05-17T23:59:59.999Z"),
+      },
+      createdId: "period-new-1",
+    });
+    const admin = { getSettings: vi.fn().mockResolvedValue(makeSettings()) };
+    const autoCarryOver = vi.fn().mockResolvedValue(undefined);
+    const scheduler = new PeriodCreatorScheduler(
+      asAny(prisma),
+      asAny(admin),
+      undefined,
+      undefined,
+      autoCarryOver,
+    );
+
+    const result = await scheduler.runOnce(
+      new Date("2026-05-17T23:59:59.999Z"),
+    );
+
+    expect(result).toMatchObject({
+      created: true,
+      periodState: "scheduled",
+    });
+    // No open periods in the stub and the creation is scheduled-born: the
+    // carry for it happens later, at its scheduled→open flip.
+    expect(autoCarryOver).not.toHaveBeenCalled();
+  });
+
   it("TD-06: policyApplicator.applyToPeriod called once when period is created", async () => {
     const prisma = makePrismaStub({
       mostRecent: {

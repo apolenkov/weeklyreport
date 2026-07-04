@@ -7,6 +7,10 @@ import {
   disconnectTestPrisma,
   seedTestData,
 } from "../../test-utils/prisma-test-helper";
+import {
+  buildAutoCarryOverDeps,
+  carryOverIntoOpenedPeriod,
+} from "../carry-over/auto-carry-over";
 import { CarryOverPrismaRepository } from "../carry-over/carry-over.prisma-repository";
 import { CarryOverService } from "../carry-over/carry-over.service";
 import { LeadFormPrismaRepository } from "./lead-form.prisma-repository";
@@ -23,8 +27,8 @@ import { ReportSectionsService } from "./report-sections.service";
  *  - a carried clone of a published record stays locked (same lineage);
  *  - move-to-next-week keeps the durable identity, so a reviewer comment
  *    anchored to the record survives the move;
- *  - the uncarried-open-work signal surfaces the prior period's carryable
- *    open records without moving anything.
+ *  - the automatic carry-over materializes the lead's section in the newly
+ *    opened period and moves only the prior period's open records, once.
  */
 describe("unified-activity lifecycle (integration)", () => {
   const prisma = createTestPrisma();
@@ -465,7 +469,7 @@ describe("unified-activity lifecycle (integration)", () => {
     expect(inN2?.carriedOver).toBe(true);
   });
 
-  it("surfaces uncarried open work at the newly opened period without moving anything", async () => {
+  it("auto carry-over materializes the section, carries only open work, and never duplicates", async () => {
     // Prior period: one open next-week item, one unresolved decision, one done item.
     await seedItem(
       testData.section.id,
@@ -502,6 +506,8 @@ describe("unified-activity lifecycle (integration)", () => {
       },
     });
 
+    // The lead's target section is deliberately NOT pre-created: the
+    // orchestrator must materialize it via ensureLeadSection.
     const nextReport = await prisma.report.create({
       data: {
         periodStart: new Date("2026-04-14"),
@@ -510,41 +516,40 @@ describe("unified-activity lifecycle (integration)", () => {
         status: "draft",
       },
     });
-    await prisma.reportSection.create({
-      data: {
-        reportId: nextReport.id,
-        authorId: testData.lead.id,
-        status: "draft",
-      },
+
+    const repository = new CarryOverPrismaRepository(prisma as never);
+    const deps = buildAutoCarryOverDeps({
+      prisma,
+      repository,
+      carryOverService: new CarryOverService(repository),
+      logger: { info: () => undefined, warn: () => undefined },
     });
+    await carryOverIntoOpenedPeriod(deps, nextReport.id);
 
-    const carryOverService = new CarryOverService(
-      new CarryOverPrismaRepository(prisma as never),
-    );
-    const uncarried = await carryOverService.listUncarriedOpenWork(
-      nextReport.id,
-    );
-
-    expect(uncarried.sourceReportId).toBe(testData.report.id);
-    expect(uncarried.items.map((item) => item.text)).toEqual([
-      "Open planned work",
-    ]);
-    expect(uncarried.decisions.map((decision) => decision.text)).toEqual([
-      "Pending decision",
-    ]);
-
-    // Nothing moved automatically: the new period is still empty.
+    // The section was materialized and only the open records moved: the done
+    // item stays behind, the carried item is flagged, the decision is open.
     const targetItems = await prisma.item.findMany({
       where: { reportSection: { reportId: nextReport.id } },
     });
-    expect(targetItems).toHaveLength(0);
+    expect(targetItems.map((item) => item.text)).toEqual(["Open planned work"]);
+    expect(targetItems.at(0)?.carriedOver).toBe(true);
+    const targetDecisions = await prisma.decision.findMany({
+      where: { reportSection: { reportId: nextReport.id } },
+    });
+    expect(targetDecisions.map((decision) => decision.text)).toEqual([
+      "Pending decision",
+    ]);
+    expect(targetDecisions.at(0)?.resolvedAt).toBeNull();
 
-    // After the head's one-click execute, the same records read as carried.
-    await carryOverService.executeCarryOver(testData.report.id, nextReport.id);
-    const afterExecute = await carryOverService.listUncarriedOpenWork(
-      nextReport.id,
-    );
-    expect(afterExecute.items).toHaveLength(0);
-    expect(afterExecute.decisions).toHaveLength(0);
+    // A second run (second login, next scheduler tick) duplicates nothing.
+    await carryOverIntoOpenedPeriod(deps, nextReport.id);
+    const afterRerunItems = await prisma.item.count({
+      where: { reportSection: { reportId: nextReport.id } },
+    });
+    const afterRerunDecisions = await prisma.decision.count({
+      where: { reportSection: { reportId: nextReport.id } },
+    });
+    expect(afterRerunItems).toBe(1);
+    expect(afterRerunDecisions).toBe(1);
   });
 });

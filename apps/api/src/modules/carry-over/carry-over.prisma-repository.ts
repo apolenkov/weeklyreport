@@ -98,7 +98,7 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
   }
 
   /**
-   * The "prior period" for the uncarried-open-work signal: the latest report
+   * The "prior period" the automatic carry-over reads from: the latest report
    * whose periodEnd is on/before the target's periodStart. Deterministic
    * total order (periodEnd, createdAt, id — all desc) so two candidates
    * sharing a boundary never flip between reads.

@@ -1,10 +1,17 @@
-import { Module } from "@nestjs/common";
+import { Logger, Module } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { AdminModule } from "../admin/admin.module.js";
 import { AdminService } from "../admin/admin.service.js";
 import { AnalyticsCache } from "../analytics/analytics.cache.js";
 import { AnalyticsModule } from "../analytics/analytics.module.js";
+import {
+  buildAutoCarryOverDeps,
+  carryOverIntoOpenedPeriod,
+} from "../carry-over/auto-carry-over.js";
+import { CarryOverModule } from "../carry-over/carry-over.module.js";
+import { CarryOverPrismaRepository } from "../carry-over/carry-over.prisma-repository.js";
+import { CarryOverService } from "../carry-over/carry-over.service.js";
 import { PublicationModule } from "../publication/publication.module.js";
 import { PublicationService } from "../publication/publication.service.js";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
@@ -35,6 +42,7 @@ import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
   imports: [
     AnalyticsModule,
     AdminModule,
+    CarryOverModule,
     PublicationModule,
     WeeklyReportModule,
   ],
@@ -83,9 +91,39 @@ import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
         prisma: PrismaService,
         admin: AdminService,
         policyApplicator: PolicyApplicatorService,
-      ) =>
-        new PeriodCreatorScheduler(prisma, admin, undefined, policyApplicator),
-      inject: [PrismaService, AdminService, PolicyApplicatorService],
+        carryOverService: CarryOverService,
+        carryOverRepository: CarryOverPrismaRepository,
+      ) => {
+        // HF10: the scheduler's auto carry-over hook. AppLogger is not a DI
+        // provider (built in main.ts), so the orchestrator logs through a
+        // Nest Logger adapter here.
+        const nestLogger = new Logger("AutoCarryOver");
+        const autoCarryOverDeps = buildAutoCarryOverDeps({
+          prisma,
+          repository: carryOverRepository,
+          carryOverService,
+          logger: {
+            info: (message, context) => nestLogger.log({ message, ...context }),
+            warn: (message, context) =>
+              nestLogger.warn({ message, ...context }),
+          },
+        });
+        return new PeriodCreatorScheduler(
+          prisma,
+          admin,
+          undefined,
+          policyApplicator,
+          (targetReportId) =>
+            carryOverIntoOpenedPeriod(autoCarryOverDeps, targetReportId),
+        );
+      },
+      inject: [
+        PrismaService,
+        AdminService,
+        PolicyApplicatorService,
+        CarryOverService,
+        CarryOverPrismaRepository,
+      ],
     },
     {
       provide: AutoPublisherScheduler,

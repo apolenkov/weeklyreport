@@ -48,7 +48,6 @@ import type { JobsService } from "../../modules/admin/jobs.service.js";
 import type { SessionRevocationService } from "../../modules/admin/session-revocation.service.js";
 import type { AnalyticsService } from "../../modules/analytics/analytics.service.js";
 import type { ArchiveService } from "../../modules/archive/archive.service.js";
-import type { CarryOverService } from "../../modules/carry-over/carry-over.service.js";
 import { OrganizationService } from "../../modules/organization/organization.service.js";
 import { PdfExportService } from "../../modules/pdf-export/pdf-export.service.js";
 import type { PeriodService } from "../../modules/period/period.service.js";
@@ -107,7 +106,14 @@ interface RouterDeps {
    */
   organizationService?: OrganizationService;
   remindersService: RemindersService;
-  carryOverService: CarryOverService;
+  /**
+   * HF10 (lead-report-surface-polish): best-effort auto carry-over, fired
+   * when a manually created period is minted open (a scheduled-born one is
+   * carried later, at its scheduled→open flip). Never rejects. Optional so
+   * role-coverage test fixtures that build the router with `{}` deps keep
+   * compiling — production wiring (main.ts) always provides it.
+   */
+  autoCarryOver?: (targetReportId: string) => Promise<void>;
   archiveService: ArchiveService;
   periodService: PeriodService;
   weeklyReportService: WeeklyReportService;
@@ -1341,6 +1347,11 @@ export function createAppRouter(deps: RouterDeps) {
               from: null,
               to: result.periodState,
             });
+            // Only an open-born period carries now; a future-dated one is
+            // minted `scheduled` and the scheduler carries it at flip time.
+            if (result.periodState === "open") {
+              await deps.autoCarryOver?.(result.periodId);
+            }
             return result;
           } catch (error) {
             throw mapDomainError(error);
@@ -2245,42 +2256,6 @@ export function createAppRouter(deps: RouterDeps) {
               }
             }
             return { dispatched, alreadySent, skipped };
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-    }),
-
-    // === CarryOver namespace ===
-    carryOver: router({
-      execute: headProcedure
-        .input(
-          z.object({
-            sourceReportId: z.uuid(),
-            targetReportId: z.uuid(),
-          }),
-        )
-        .mutation(async ({ input }) => {
-          try {
-            return await deps.carryOverService.executeCarryOver(
-              input.sourceReportId,
-              input.targetReportId,
-            );
-          } catch (error) {
-            throw mapDomainError(error);
-          }
-        }),
-
-      // Read-only head-view signal: the prior period's open records the
-      // one-click "Copy forward unfinished" would carry but has not. Nothing
-      // moves automatically; the publish response stays {success, reportId}.
-      uncarried: headProcedure
-        .input(z.object({ targetReportId: z.uuid() }))
-        .query(async ({ input }) => {
-          try {
-            return await deps.carryOverService.listUncarriedOpenWork(
-              input.targetReportId,
-            );
           } catch (error) {
             throw mapDomainError(error);
           }

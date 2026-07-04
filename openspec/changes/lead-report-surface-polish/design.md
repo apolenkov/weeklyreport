@@ -74,29 +74,45 @@ So at period-creation time there is no target section to carry into.
 `executeCarryOver` already REQUIRES both source and target sections and throws
 otherwise. A naive synchronous carry-over inside `createPeriodManual` cannot work.
 
-**Decision (primary) — trigger at section provisioning, per author.** Fold the
-carry-over trigger into `ensureLeadSection`: when a lead's new-period section is
-first created (the fresh-create branch, guarded by the unique-violation
-catch-and-reread), carry that lead's prior-period unfinished work into it. This
-fits the lazy-provisioning model and needs no eager materialization.
+**Decision (owner, 2026-07-04) — trigger when the period becomes OPEN, eager
+materialization.** The product owner overrode the per-login primary: carried work
+must already be present when anyone opens the fresh period, before any lead has
+logged in. Resolved design (two-model council: Codex + deep-reasoner, synthesized):
 
-Cost to name: `executeCarryOver` is whole-report / by-author today (it loads all
-source + target sections and matches by `authorId`). Per-lead triggering needs a
-per-author entry point — either a new `carryOverService` method that scopes source
-
-- target to one author, or calling the existing whole-report execute keyed on the
-  new report with the copy filtered to the just-created author's section. The copy
-  rules, the write-integrity guard, and the lineage/dedupe idempotency are reused
-  verbatim; only the scoping is new.
-
-**Alternative (documented, not chosen) — eager materialization + whole-report
-execute at create.** At `createPeriodManual`, provision every active lead's
-section, then run `executeCarryOver(prevReportId, newReportId)` once. This matches
-"on creation" literally and reuses the whole-report execute as-is, but changes
-provisioning from lazy to eager — a larger architectural shift with its own edge
-cases (leads with no products, deactivated leads). Rejected as the default for
-that reason; recorded so the trigger-point choice is an explicit, reversible
-decision rather than an accident.
+- One orchestrator, `carryOverIntoOpenedPeriod(deps, targetReportId)`
+  (`apps/api/src/modules/carry-over/auto-carry-over.ts`, plain function over
+  explicit deps, house style of `ensureCurrentPeriod`/`flipDueScheduledToOpen`).
+  Order: previous-report lookup (none → no-op) → execution-dedupe short-circuit
+  (cheap indexed read before any heavy work) → prior-period author roster
+  (empty → no-op, which is what keeps `executeCarryOver`'s "requires both
+  sections" throw off the auto path) → materialize each author's target section
+  via `ensureLeadSection` → whole-report `executeCarryOver` verbatim. It never
+  rejects: failures log loudly and are swallowed so no caller is aborted.
+- NO per-author execute variant: `executeCarryOver` already skips source authors
+  without a matching target section, so pre-materializing the roster and running
+  the whole-report execute once reuses the engine untouched.
+- Roster = distinct prior-period section authors filtered to `User.isActive`.
+  This preserves the manual path's effective semantics (a deactivated lead never
+  logged in, so their target section never existed and nothing was carried).
+- **Scheduled-born periods must NOT carry at creation** (Codex): their source
+  period is still being edited all week, and firing early would snapshot it
+  mid-flight AND burn the `(source,target)` dedupe key with no second chance.
+  Only a `periodState === "open"` period triggers.
+- Three seams, all best-effort try/catch: (1) login `provisionLeadWorkspace`
+  (`main.ts`) — unconditional call; the dedupe short-circuit makes every later
+  login a free retry; (2) scheduler `runOnce` — a reconcile loop over ALL
+  `periodState=open, periodStatus=open, archived=false` periods each tick, which
+  covers scheduler-created periods, every row `flipDueScheduledToOpen` flipped
+  (it can flip several per tick), and yesterday's transient failures;
+  `periodStatus=open` excludes reopened periods — a reopen amends a published
+  period and must not re-trigger carry; (3) manual admin create (tRPC
+  composition layer) — fires only when the returned `periodState` is `"open"`;
+  a future-dated manual period is minted `scheduled` and is picked up by the
+  scheduler loop at flip time.
+- Known accepted gaps: a backfilled period carries from its chronological
+  predecessor (`findPreviousReportId` verbatim) and does not retroactively
+  re-carry a successor whose dedupe key is burned; an author added to the prior
+  period after its carry ran gets nothing (seed-once semantics).
 
 **Non-negotiables (in the spec, not just here).**
 
@@ -112,10 +128,12 @@ decision rather than an accident.
   (the `CarryOverBanner` comment). Explicit in the spec.
 
 **Banner + procedures.** `CarryOverBanner` and its `weekly-report-page.tsx` mount
-are removed; `carry-over-banner.test.tsx` is deleted. The `carryOver.execute` /
-`carryOver.uncarried` tRPC procedures MAY remain as the automation's shared
-service surface, but the manual UI that called them is gone. Whether to also
-remove the now-unused `uncarried` read is a cleanup left to implementation.
+are removed; `carry-over-banner.test.tsx` is deleted. The `carryOver.execute` and
+`carryOver.uncarried` tRPC procedures are BOTH deleted (no web caller remains;
+the auto path calls the service directly), along with the dead
+`carry-over.router.ts` wrapper, `listUncarriedOpenWork`, and the
+`carry-over-uncarried` module + shared type. `executeCarryOver` (the engine) and
+`findPreviousReportId` stay — the automation is their only consumer.
 
 ## D5 — HF1: plain reading, relocate not gate
 
@@ -130,10 +148,9 @@ acknowledge mutation, per-group model, and "Seen by" roster are unchanged.
 
 ## Open Questions
 
-1. **HF10 trigger point (headline).** Per-lead at `ensureLeadSection` (primary) vs
-   eager materialization + whole-report execute at `createPeriodManual`
-   (alternative). Confirm before implementation — it dictates whether a per-author
-   `executeCarryOver` entry point is added.
+1. **HF10 trigger point — RESOLVED (owner, 2026-07-04).** Trigger when the period
+   becomes open, with eager materialization of the prior-period authors' sections;
+   no per-author `executeCarryOver` entry point. Full decision recorded in D4.
 2. **HF1 non-publisher acknowledge path.** `ReviewAcknowledgeBar` is available to
    ANY access-holder today (head/admin/viewer); Publish & Lock is head/admin-only.
    After moving the control into the publish cluster, where (if anywhere) does a
@@ -143,6 +160,6 @@ acknowledge mutation, per-group model, and "Seen by" roster are unchanged.
    within each product group (adopted), or does the user want a dedicated
    priorities lane above the product-grouped quadrants (rejected here as scope
    creep)? Confirm on the live slide.
-4. **HF10 dead-read cleanup.** Remove the `carryOver.uncarried` procedure and its
-   query once the banner is gone, or keep it for a future read-only "what carried"
-   view? Left to implementation.
+4. **HF10 dead-read cleanup — RESOLVED (2026-07-04).** `carryOver.uncarried` and
+   `carryOver.execute` are both deleted with the banner (no caller remains); a
+   future "what carried" view would be a new feature, not this cleanup. See D4.

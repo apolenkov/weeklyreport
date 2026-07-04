@@ -5,7 +5,6 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { carryOverRouter } from "./carry-over.router";
 import {
   CarryOverDomainError,
   type CarryOverRepository,
@@ -538,21 +537,5 @@ describe("CarryOverService — activity-parented carry-over", () => {
     expect(result.targetSection.items).toHaveLength(0);
     expect(result.targetSection.decisions).toHaveLength(0);
     expect(result.records).toHaveLength(0);
-  });
-});
-
-describe("carryOverRouter", () => {
-  it("returns the carry-over execution result", async () => {
-    const service = new CarryOverService(createRepository(sourceSection));
-
-    await expect(
-      carryOverRouter.executeCarryOver({
-        carryOverService: service,
-        sourceReportId,
-        targetReportId,
-      }),
-    ).resolves.toMatchObject({
-      execution: { status: "completed" },
-    });
   });
 });
