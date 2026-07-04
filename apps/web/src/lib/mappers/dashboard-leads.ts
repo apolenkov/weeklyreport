@@ -33,8 +33,11 @@ export function initialsFromName(name: string): string {
   return sharedInitialsFromName(name) || "??";
 }
 
+// "YYYY-MM-DD" — length of an ISO date-only prefix.
+const ISO_DATE_LENGTH = 10;
+
 function isoSubmittedLabel(date: Date | null): string | null {
-  return date ? date.toISOString().slice(0, 10) : null;
+  return date ? date.toISOString().slice(0, ISO_DATE_LENGTH) : null;
 }
 
 function trafficLightsForLeadByName(
@@ -92,7 +95,7 @@ export function buildLeadInfos(
     );
 
     const lastActivity = section?.submittedAt
-      ? section.submittedAt.toISOString().slice(0, 10)
+      ? section.submittedAt.toISOString().slice(0, ISO_DATE_LENGTH)
       : status === "pending"
         ? "Not started"
         : "In progress";

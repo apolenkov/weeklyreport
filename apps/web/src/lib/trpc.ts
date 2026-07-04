@@ -21,6 +21,9 @@ import superjson from "superjson";
  */
 const AUTH_REDIRECT_EXEMPT = /^\/(?:$|auth(?:\/|$))/;
 
+const HTTP_UNAUTHORIZED = 401;
+const HTTP_CONFLICT = 409;
+
 /**
  * Pure function exported for unit testing. Given an unknown error captured
  * by the tRPC link, returns true if a redirect was issued, false otherwise.
@@ -42,7 +45,8 @@ export function createAuthRedirectHandler(): (err: unknown) => boolean {
     const data = err.data as { httpStatus?: number; code?: string } | undefined;
     const httpStatus = data?.httpStatus;
     const code = data?.code;
-    const isUnauthorized = httpStatus === 401 || code === "UNAUTHORIZED";
+    const isUnauthorized =
+      httpStatus === HTTP_UNAUTHORIZED || code === "UNAUTHORIZED";
     if (!isUnauthorized) return false;
 
     const { pathname, search } = window.location;
@@ -91,7 +95,7 @@ export function createAuthRedirectLink(): TRPCLink<AppRouter> {
 export function isConflictError(err: unknown): boolean {
   if (!(err instanceof TRPCClientError)) return false;
   const data = err.data as { httpStatus?: number; code?: string } | undefined;
-  return data?.code === "CONFLICT" || data?.httpStatus === 409;
+  return data?.code === "CONFLICT" || data?.httpStatus === HTTP_CONFLICT;
 }
 
 // ---------------------------------------------------------------------------

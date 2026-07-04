@@ -10,6 +10,12 @@ import type {
   CompiledHistoryEntry,
   MyHistoryEntry,
 } from "@customreport/shared";
+import {
+  HOURS_PER_DAY,
+  MINUTES_PER_HOUR,
+  MS_PER_SECOND,
+  SECONDS_PER_MINUTE,
+} from "@customreport/shared";
 
 import {
   formatPeriodRangeWithYear,
@@ -82,15 +88,15 @@ export function formatSubmittedAt(
   if (submittedAt === null) return null;
 
   const diffMs = now.getTime() - submittedAt.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
+  const diffSec = Math.floor(diffMs / MS_PER_SECOND);
 
-  if (diffSec < 60) return "just now";
+  if (diffSec < SECONDS_PER_MINUTE) return "just now";
 
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin} min ago`;
+  const diffMin = Math.floor(diffSec / SECONDS_PER_MINUTE);
+  if (diffMin < MINUTES_PER_HOUR) return `${diffMin} min ago`;
 
-  const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24)
+  const diffHour = Math.floor(diffMin / MINUTES_PER_HOUR);
+  if (diffHour < HOURS_PER_DAY)
     return diffHour === 1 ? "1 hour ago" : `${diffHour} hours ago`;
 
   // Older than a day: short month/day in UTC.
