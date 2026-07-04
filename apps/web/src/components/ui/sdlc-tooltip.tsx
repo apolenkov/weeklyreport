@@ -40,6 +40,8 @@ interface ContextValue {
 
 const SdlcTooltipContext = createContext<ContextValue | null>(null);
 
+const TOOLTIP_VERTICAL_GAP_PX = 8;
+
 export function useSdlcTooltip(): ContextValue {
   const ctx = useContext(SdlcTooltipContext);
   if (!ctx) {
@@ -72,7 +74,7 @@ export function SdlcTooltipProvider({
   const show = useCallback((rect: DOMRect, content: string) => {
     if (!content) return;
     // Position centered horizontally, just above the cell.
-    const top = rect.top - 8;
+    const top = rect.top - TOOLTIP_VERTICAL_GAP_PX;
     const left = rect.left + rect.width / 2;
     setState({ content, top, left });
   }, []);

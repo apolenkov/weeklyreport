@@ -8,6 +8,8 @@ import type { KanbanItem, Product, RiskEntry } from "./mock-data";
 import { buildItemColumns, isBoardEmpty } from "./next-week-columns";
 import { SlideFitAdvisory } from "./slide-fit-advisory";
 
+const MAX_GRID_COLUMNS = 3;
+
 interface NextWeekSectionProps {
   readonly items: KanbanItem[];
   /**
@@ -163,7 +165,10 @@ export function NextWeekSection({
   }
 
   const columns = buildItemColumns(products, items);
-  const visibleColumnCount = Math.min(Math.max(columns.length, 1), 3);
+  const visibleColumnCount = Math.min(
+    Math.max(columns.length, 1),
+    MAX_GRID_COLUMNS,
+  );
 
   return (
     <div

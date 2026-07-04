@@ -16,6 +16,9 @@
 
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
+/** Placeholder card count — matches the seeded product count (6 products). */
+const SEEDED_PRODUCT_COUNT = 6;
+
 /**
  * Mirrors {@link PortfolioOverviewTable}'s per-product card:
  *   `grid min-h-[76px] grid-cols-[1.75rem_minmax(0,1fr)_1.5rem]`
@@ -56,7 +59,7 @@ function PortfolioSkeleton() {
         </div>
       </div>
       <div className="grid gap-2 px-4 pb-4 sm:grid-cols-2">
-        {[0, 1, 2, 3, 4, 5].map((i) => (
+        {Array.from({ length: SEEDED_PRODUCT_COUNT }, (_, i) => (
           <PortfolioCardSkeleton key={i} />
         ))}
       </div>
@@ -124,7 +127,7 @@ export function WeeklyReportSkeleton() {
 
       {/* 5. Per-product accordion placeholders — 6 to match portfolio. */}
       <div className="space-y-3">
-        {[0, 1, 2, 3, 4, 5].map((i) => (
+        {Array.from({ length: SEEDED_PRODUCT_COUNT }, (_, i) => (
           <AccordionSkeleton key={i} />
         ))}
       </div>

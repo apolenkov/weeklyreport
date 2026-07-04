@@ -18,6 +18,10 @@ import {
 } from "./stage-chip-config";
 import { stageShortLabel } from "./stage-tags";
 
+const POPOVER_OFFSET_PX = 4;
+const ASSIGNEE_FONT_WEIGHT_MINE = 600;
+const ASSIGNEE_FONT_WEIGHT_OTHER = 400;
+
 interface StageChipProps {
   readonly stage: StageAssignment;
   readonly onStatusChange?: (stageName: string, newStatus: StageStatus) => void;
@@ -95,7 +99,7 @@ export function StageChip({
     const update = () => {
       const r = buttonRef.current?.getBoundingClientRect();
       if (!r) return;
-      setPopoverPos({ top: r.bottom + 4, left: r.left });
+      setPopoverPos({ top: r.bottom + POPOVER_OFFSET_PX, left: r.left });
     };
     update();
     window.addEventListener("scroll", update, true);
@@ -228,7 +232,10 @@ export function StageChip({
             stage.ownership === "mine"
               ? "var(--color-starbucks-accent)"
               : "var(--color-muted-foreground)",
-          fontWeight: stage.ownership === "mine" ? 600 : 400,
+          fontWeight:
+            stage.ownership === "mine"
+              ? ASSIGNEE_FONT_WEIGHT_MINE
+              : ASSIGNEE_FONT_WEIGHT_OTHER,
         }}
       >
         {stage.assignee ?? "—"}

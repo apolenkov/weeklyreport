@@ -25,6 +25,8 @@ function isCompletedWeek(entry: HistoryEntry): boolean {
   return COMPLETED_WEEK_STATUSES.has(entry.status);
 }
 
+const PERCENT_MAX = 100;
+
 /**
  * HIST-2 (Phase 33-04): right-rail companion for the lead history page.
  * Mockup s9 specs three stacked cards — My History Summary, Submission Status,
@@ -44,7 +46,8 @@ export function LeadHistorySidebar({
   const total = entries.length;
   const submittedEntries = entries.filter(isCompletedWeek);
   const submitted = submittedEntries.length;
-  const onTimeRate = total === 0 ? 0 : Math.round((submitted / total) * 100);
+  const onTimeRate =
+    total === 0 ? 0 : Math.round((submitted / total) * PERCENT_MAX);
   const draftCount = total - submitted;
   const totalGreen = submittedEntries.reduce(
     (acc, e) => acc + e.trafficLights.green,

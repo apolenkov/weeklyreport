@@ -13,6 +13,9 @@ import { sortByPriorityRank } from "../../lib/priority-sort";
 import { deriveEffectiveStageStatus } from "../../lib/stage-status";
 import { riskCoversStage } from "../lead/stage-tags";
 
+const PERCENT_MAX = 100;
+const DEFAULT_PRODUCTS_PER_PAGE = 9;
+
 export type SlideTone = "ready" | "warning" | "blocked" | "empty";
 
 export interface SlideReadinessItem {
@@ -164,9 +167,9 @@ function statusTone(model: {
 
 function readinessScore(items: readonly SlideReadinessItem[]): number {
   const required = items.filter((item) => item.required);
-  if (required.length === 0) return 100;
+  if (required.length === 0) return PERCENT_MAX;
   const ready = required.filter((item) => item.status === "ready").length;
-  return Math.round((ready / required.length) * 100);
+  return Math.round((ready / required.length) * PERCENT_MAX);
 }
 
 function describeCount(
@@ -641,7 +644,7 @@ export function buildActivitySlideModel(
  */
 export function paginateSectionSlides(
   model: SectionSlideModel,
-  productsPerPage = 9,
+  productsPerPage = DEFAULT_PRODUCTS_PER_PAGE,
 ): SectionSlideModel[] {
   // Separate real product slides from the synthetic cross-product entry.
   const crossProduct = model.productSlides.find(

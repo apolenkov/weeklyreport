@@ -1,3 +1,5 @@
+const SIDEBAR_SKELETON_ROW_COUNT = 4;
+
 export function SlideSkeleton() {
   return (
     <div
@@ -15,7 +17,7 @@ export function SlideSkeleton() {
       </div>
       <div className="grid gap-5 lg:grid-cols-[minmax(220px,300px)_1fr]">
         <div className="hidden space-y-2 lg:block">
-          {[0, 1, 2, 3].map((n) => (
+          {Array.from({ length: SIDEBAR_SKELETON_ROW_COUNT }, (_, n) => (
             <div
               key={n}
               className="h-24 animate-pulse rounded-[var(--radius)] bg-[var(--color-muted)]"

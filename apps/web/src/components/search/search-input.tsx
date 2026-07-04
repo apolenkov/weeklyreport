@@ -93,13 +93,16 @@ const TYPE_BADGE: Record<SearchHit["type"], { label: string; aria: string }> = {
  * function returns a stable key for each chunk so React can reconcile
  * highlights across re-renders.
  */
+/** Length of the `<<` / `>>` snippet markers, stripped when unwrapping a match. */
+const SNIPPET_MARKER_LENGTH = 2;
+
 function renderSnippet(snippet: string): React.ReactNode {
   if (!snippet) return null;
   // eslint-disable-next-line sonarjs/super-linear-regex -- server-generated literal markers, negated class + lazy quantifier, bounded input
   const parts = snippet.split(/(<<[^>]*?>>)/g);
   return parts.map((part, idx) => {
     if (part.startsWith("<<") && part.endsWith(">>")) {
-      const inner = part.slice(2, -2);
+      const inner = part.slice(SNIPPET_MARKER_LENGTH, -SNIPPET_MARKER_LENGTH);
       return (
         <mark
           key={`m-${idx.toString()}`}
