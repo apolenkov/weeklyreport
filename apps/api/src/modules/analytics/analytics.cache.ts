@@ -2,6 +2,7 @@ import type { OnModuleDestroy } from "@nestjs/common";
 import { Injectable, Logger } from "@nestjs/common";
 import Redis from "ioredis";
 
+import { requireEnv } from "../../lib/env.js";
 import type { AnalyticsCachePort } from "./analytics.service.js";
 
 const TTL_SECONDS = 3600;
@@ -9,7 +10,6 @@ const TTL_SECONDS = 3600;
 // do not collide with other applications sharing the Redis instance. Must
 // stay in lockstep with the sub-prefixes in analytics.service.ts.
 const PREFIX = "customreport:analytics:";
-const DEFAULT_REDIS_PORT = 6379;
 /** SCAN batch size for the invalidation cursor walk. */
 const SCAN_BATCH_SIZE = 100;
 
@@ -31,8 +31,8 @@ export class AnalyticsCache implements AnalyticsCachePort, OnModuleDestroy {
 
   constructor() {
     this.redis = new Redis({
-      host: process.env.REDIS_HOST ?? "localhost",
-      port: Number(process.env.REDIS_PORT ?? DEFAULT_REDIS_PORT),
+      host: requireEnv(process.env, "REDIS_HOST"),
+      port: Number(requireEnv(process.env, "REDIS_PORT")),
       lazyConnect: true,
       maxRetriesPerRequest: 1,
       enableOfflineQueue: false,
