@@ -1,3 +1,4 @@
+import { MS_PER_WEEK } from "@customreport/shared";
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 
@@ -59,7 +60,7 @@ export class AutoArchiverScheduler {
       return { archived: false, reason: "disabled" };
     }
 
-    const weeksMs = settings.autoArchiveWeeksAfterPublish * 7 * 24 * 3_600_000;
+    const weeksMs = settings.autoArchiveWeeksAfterPublish * MS_PER_WEEK;
     const cutoff = new Date(now.getTime() - weeksMs);
 
     const candidates = await this.prisma.report.findMany({

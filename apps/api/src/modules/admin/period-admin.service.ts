@@ -11,6 +11,8 @@ import {
   adminUpdatePeriodManualSchema,
   type AppSettings,
   appSettingsSchema,
+  MS_PER_DAY,
+  MS_PER_HOUR,
   type PeriodListBucket,
   type PeriodListItem,
   periodListItemSchema,
@@ -28,6 +30,11 @@ import {
   AdminPeriodOverlapError,
   type AdminRepository,
 } from "./admin-shared";
+
+const DEFAULT_PERIOD_LIST_LIMIT = 50;
+const MAX_PERIOD_LIST_LIMIT = 200;
+/** Length of an ISO calendar date (`YYYY-MM-DD`) after `toISOString().slice(0, n)`. */
+const ISO_DATE_LENGTH = 10;
 
 /**
  * Owns the period lifecycle surface: the Admin Periods tab read/archive
@@ -115,7 +122,10 @@ export class PeriodAdminService {
       return [];
     }
     const states = this.resolveBucketStates(input.bucket);
-    const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
+    const limit = Math.min(
+      Math.max(input.limit ?? DEFAULT_PERIOD_LIST_LIMIT, 1),
+      MAX_PERIOD_LIST_LIMIT,
+    );
     const settings = await this.getSettings();
     const rows = await this.repository.listPeriodsByState({
       states,
@@ -128,7 +138,7 @@ export class PeriodAdminService {
         row.periodState === "published" &&
         settings.allowReopenAfterPublish &&
         row.publishedAt !== null &&
-        row.publishedAt.getTime() + settings.reopenWindowHours * 3_600_000 >
+        row.publishedAt.getTime() + settings.reopenWindowHours * MS_PER_HOUR >
           now;
       // Archive is allowed for any not-yet-archived published period;
       // the auto-archiver handles the deferred "weeks-after-publish"
@@ -221,8 +231,8 @@ export class PeriodAdminService {
       input.periodEnd ??
       new Date(
         input.periodStart.getTime() +
-          (settings.periodLengthDays - 1) * 24 * 3_600_000 +
-          (24 * 3_600_000 - 1),
+          (settings.periodLengthDays - 1) * MS_PER_DAY +
+          (MS_PER_DAY - 1),
       );
 
     if (periodEnd.getTime() < input.periodStart.getTime()) {
@@ -259,7 +269,9 @@ export class PeriodAdminService {
         throw new AdminPeriodOverlapError(
           `A period already exists for these dates: ${conflict.periodStart
             .toISOString()
-            .slice(0, 10)}…${conflict.periodEnd.toISOString().slice(0, 10)}.`,
+            .slice(0, ISO_DATE_LENGTH)}…${conflict.periodEnd
+            .toISOString()
+            .slice(0, ISO_DATE_LENGTH)}.`,
         );
       }
     }
@@ -469,7 +481,9 @@ export class PeriodAdminService {
         throw new AdminPeriodOverlapError(
           `A period already exists for these dates: ${conflict.periodStart
             .toISOString()
-            .slice(0, 10)}…${conflict.periodEnd.toISOString().slice(0, 10)}.`,
+            .slice(0, ISO_DATE_LENGTH)}…${conflict.periodEnd
+            .toISOString()
+            .slice(0, ISO_DATE_LENGTH)}.`,
         );
       }
     }

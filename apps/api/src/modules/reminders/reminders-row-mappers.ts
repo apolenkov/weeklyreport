@@ -12,6 +12,9 @@ import type { Prisma } from "@prisma/client";
  * dedupeKey P2002 conflict detector, and the recipient-email extractor.
  */
 
+/** Length of an ISO calendar date (`YYYY-MM-DD`) after `toISOString().slice(0, n)`. */
+const ISO_DATE_LENGTH = 10;
+
 const execStatusToDb: Record<string, string> = {
   queued: "pending",
   sent: "sent",
@@ -53,7 +56,9 @@ export function toExecutionUpdateData(execution: AdminReminderExecution): {
 
 export function formatPeriodLabel(start: Date, end: Date): string {
   // Compact UTC-formatted label, e.g. "2026-04-13 → 2026-04-19"
-  return `${start.toISOString().slice(0, 10)} → ${end.toISOString().slice(0, 10)}`;
+  return `${start.toISOString().slice(0, ISO_DATE_LENGTH)} → ${end
+    .toISOString()
+    .slice(0, ISO_DATE_LENGTH)}`;
 }
 
 /**

@@ -3,6 +3,8 @@ import {
   type DraftSavePayload,
   draftSaveSchema,
   type DraftSaveValidationError,
+  MS_PER_HOUR,
+  MS_PER_SECOND,
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
   type SubmitSectionInput,
@@ -212,7 +214,7 @@ export class ReportSectionsService {
     if (now <= deadlineMs) {
       return false;
     }
-    const graceMs = settings.gracePeriodHours * 3_600_000;
+    const graceMs = settings.gracePeriodHours * MS_PER_HOUR;
     if (now > deadlineMs + graceMs && !settings.allowLateSubmissions) {
       throw new ReportSectionAccessError("Past deadline; submissions closed.");
     }
@@ -328,7 +330,8 @@ export class ReportSectionsService {
         const meta = await this.repository.getReportMeta(section.reportId);
         if (meta) {
           // Signed seconds: positive = late, negative = submitted early.
-          const deltaSeconds = (Date.now() - meta.deadline.getTime()) / 1000;
+          const deltaSeconds =
+            (Date.now() - meta.deadline.getTime()) / MS_PER_SECOND;
           customreportSectionSubmissionLatencySeconds.observe(deltaSeconds);
         }
       }

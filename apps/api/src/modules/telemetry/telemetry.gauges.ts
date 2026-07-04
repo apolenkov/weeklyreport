@@ -12,6 +12,9 @@ import {
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { queryActiveLeadsLastPublishedPeriod } from "./telemetry.queries.js";
 
+/** Rolling window for the on-time-ratio gauge: last N published periods. */
+const ON_TIME_RATIO_WINDOW_PERIODS = 4;
+
 /**
  * Port shape used by the gauges service. Declared as an interface so unit
  * tests can inject an in-memory stub without standing up the Prisma client —
@@ -110,7 +113,9 @@ export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
       // outage — exactly when the DB-independent metrics matter most.
       // Catch, log, and leave the gauge unset so the scrape survives.
       try {
-        const value = await this.repo.onTimeRatioLastNPeriods(4);
+        const value = await this.repo.onTimeRatioLastNPeriods(
+          ON_TIME_RATIO_WINDOW_PERIODS,
+        );
         if (value !== null) {
           customreportReportsOnTimeRatio.set(value);
         }

@@ -253,19 +253,22 @@ interface SectionReviewRow {
   reviewer: { name: string };
 }
 
+/** Worst-case severity rank for the per-project traffic-light aggregation (any red stage wins). */
+const TRAFFIC_LIGHT_RED_SEVERITY = 3;
+
 function aggregateStageTraffic(
   stages: { status?: string | null }[],
 ): string | null {
   let severity = 0;
   for (const stage of stages) {
     if (stage.status === "red") {
-      severity = 3;
+      severity = TRAFFIC_LIGHT_RED_SEVERITY;
       break;
     }
     if (stage.status === "yellow") severity = Math.max(severity, 2);
     if (stage.status === "green") severity = Math.max(severity, 1);
   }
-  return severity === 3
+  return severity === TRAFFIC_LIGHT_RED_SEVERITY
     ? "red"
     : severity === 2
       ? "yellow"

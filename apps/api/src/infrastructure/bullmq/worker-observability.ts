@@ -95,9 +95,12 @@ export async function runInJobTraceContext(
  * own carrier is the only link from a failure log to the enqueue trace.
  * Returns undefined when no traceparent was captured or it is malformed.
  */
+/** A W3C traceparent header has exactly 4 hyphen-separated segments: version-traceId-spanId-flags. */
+const TRACEPARENT_SEGMENT_COUNT = 4;
+
 export function extractTraceId(ctx: JobTraceContext): string | undefined {
   const segments = ctx.traceparent?.split("-");
-  if (segments?.length !== 4) return undefined;
+  if (segments?.length !== TRACEPARENT_SEGMENT_COUNT) return undefined;
   const traceId = segments[1];
   return traceId.length > 0 ? traceId : undefined;
 }

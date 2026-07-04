@@ -1,7 +1,9 @@
+const DEFAULT_REDIS_PORT = 6379;
+
 export function getBullMQConnectionOptions() {
   return {
     host: process.env.REDIS_HOST ?? "localhost",
-    port: Number(process.env.REDIS_PORT ?? 6379),
+    port: Number(process.env.REDIS_PORT ?? DEFAULT_REDIS_PORT),
     maxRetriesPerRequest: null,
   };
 }

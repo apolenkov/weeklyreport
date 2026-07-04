@@ -2,6 +2,9 @@ import type { Queue } from "bullmq";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger";
 
+const DEFAULT_FAILED_JOBS_LIMIT = 50;
+const MAX_FAILED_JOBS_LIMIT = 200;
+
 /**
  * Phase 35-06 — admin BullMQ DLQ surface.
  *
@@ -72,7 +75,10 @@ export class JobsService {
     if (!this.emailReminderQueue) {
       return { jobs: [], nextCursor: null };
     }
-    const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
+    const limit = Math.min(
+      Math.max(input.limit ?? DEFAULT_FAILED_JOBS_LIMIT, 1),
+      MAX_FAILED_JOBS_LIMIT,
+    );
     const start = Math.max(input.cursor ?? 0, 0);
     // BullMQ getFailed is inclusive on both ends: getFailed(0, 49) → 50 items.
     const end = start + limit - 1;

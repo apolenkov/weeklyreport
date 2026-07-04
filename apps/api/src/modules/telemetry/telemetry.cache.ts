@@ -3,6 +3,8 @@ import Redis from "ioredis";
 
 import type { TelemetryCachePort } from "./telemetry.service.js";
 
+const DEFAULT_REDIS_PORT = 6379;
+
 /**
  * Phase 52 (UFB-054) — Redis cache for the `telemetry.summary` tRPC
  * read path. Mirrors the AnalyticsCache shape but uses a separate
@@ -26,7 +28,7 @@ export class TelemetryCache implements TelemetryCachePort, OnModuleDestroy {
   constructor() {
     this.redis = new Redis({
       host: process.env.REDIS_HOST ?? "localhost",
-      port: Number(process.env.REDIS_PORT ?? 6379),
+      port: Number(process.env.REDIS_PORT ?? DEFAULT_REDIS_PORT),
       lazyConnect: true,
       maxRetriesPerRequest: 1,
       enableOfflineQueue: false,

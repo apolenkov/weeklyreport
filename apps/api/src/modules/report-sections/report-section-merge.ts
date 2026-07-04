@@ -11,6 +11,9 @@ import {
  * section read model — stage statuses, per-project traffic-light aggregation,
  * lead-owned decisions, and the activity-status slice.
  */
+
+/** Worst-case severity rank for the per-project traffic-light aggregation (any red stage wins). */
+const TRAFFIC_LIGHT_RED_SEVERITY = 3;
 export function mergeSection(
   section: ReportSectionReadModel,
   input: DraftSavePayload | SubmitSectionPayload,
@@ -36,13 +39,13 @@ export function mergeSection(
     let severity = 0;
     for (const stage of ownedStages) {
       if (stage.status === "red") {
-        severity = 3;
+        severity = TRAFFIC_LIGHT_RED_SEVERITY;
         break;
       }
       if (stage.status === "yellow") severity = Math.max(severity, 2);
       if (stage.status === "green") severity = Math.max(severity, 1);
     }
-    return severity === 3
+    return severity === TRAFFIC_LIGHT_RED_SEVERITY
       ? "red"
       : severity === 2
         ? "yellow"

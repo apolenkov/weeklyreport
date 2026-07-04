@@ -1,3 +1,4 @@
+import { MS_PER_DAY } from "@customreport/shared";
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 import type { PrismaClient } from "@prisma/client";
@@ -70,10 +71,6 @@ export async function flipDueScheduledToOpen(
     }
   }
 }
-
-// One calendar day in milliseconds — the scheduler anchors the next period to
-// the day AFTER the most recent period's end.
-const ONE_DAY_MS = 24 * 3_600_000;
 
 /**
  * UFB-049 / Phase 50-B: daily scheduler that creates the next Period when
@@ -191,7 +188,7 @@ export class PeriodCreatorScheduler {
     // computes the deadline, applies reminder policy on create, and is
     // race-safe against a concurrent login-create.
     const anchorDate = mostRecent
-      ? new Date(mostRecent.periodEnd.getTime() + ONE_DAY_MS)
+      ? new Date(mostRecent.periodEnd.getTime() + MS_PER_DAY)
       : now;
 
     const result = await ensureCurrentPeriod(

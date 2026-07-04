@@ -1,3 +1,4 @@
+import { MS_PER_WEEK } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
@@ -52,7 +53,7 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
   }
 
   async pdfExportsLast7d(): Promise<number> {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(Date.now() - MS_PER_WEEK);
     // The Prisma `PdfExportJob` row uses `createdAt` (auto-stamp) rather
     // than the in-domain `requestedAt` — the domain `requestedAt` lives
     // only on the assembled job shape returned to callers, not on the

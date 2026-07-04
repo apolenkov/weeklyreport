@@ -1,4 +1,4 @@
-import type { TrafficLightCell } from "@customreport/shared";
+import { MS_PER_DAY, type TrafficLightCell } from "@customreport/shared";
 
 /**
  * Pure period/date math shared by the analytics repository: TZ-stable
@@ -7,15 +7,16 @@ import type { TrafficLightCell } from "@customreport/shared";
  * No Prisma dependency — everything here is pure and independently testable.
  */
 
+/** Length of an ISO calendar date (`YYYY-MM-DD`) after `toISOString().slice(0, n)`. */
+const ISO_DATE_LENGTH = 10;
+
 /**
  * Format a Date as the UTC date-only ISO string (YYYY-MM-DD). This is
  * TZ-stable because Date.prototype.toISOString always returns UTC.
  */
 export function isoDateOnly(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return d.toISOString().slice(0, ISO_DATE_LENGTH);
 }
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
  * Start of the UTC calendar day for a `YYYY-MM-DD` label. A date-only input

@@ -1,4 +1,4 @@
-import type { UserSession } from "@customreport/shared";
+import { MS_PER_HOUR, type UserSession } from "@customreport/shared";
 
 import {
   customreportPeriodStateTransitionsTotal,
@@ -330,7 +330,7 @@ export class PeriodService {
       }
       if (policy.reopenWindowHours > 0 && report.publishedAt) {
         const windowEnd =
-          report.publishedAt.getTime() + policy.reopenWindowHours * 3_600_000;
+          report.publishedAt.getTime() + policy.reopenWindowHours * MS_PER_HOUR;
         if (Date.now() > windowEnd) {
           throw new PeriodAccessError(
             `Reopen window expired (${policy.reopenWindowHours}h after publication).`,
