@@ -4,8 +4,10 @@ interface TabCountPillProps {
   readonly testId?: string;
 }
 
+const MAX_BADGE_COUNT = 99;
+
 function formatTabCount(count: number): string {
-  if (count > 99) return "99+";
+  if (count > MAX_BADGE_COUNT) return `${MAX_BADGE_COUNT}+`;
   return String(count);
 }
 

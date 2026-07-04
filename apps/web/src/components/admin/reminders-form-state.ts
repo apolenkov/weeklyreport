@@ -4,6 +4,8 @@
  * PolicyForm editor.
  */
 
+import { MINUTES_PER_DAY } from "@customreport/shared";
+
 import type { AdminReminderPolicyFormInput } from "../../lib/mappers";
 import type { MockReminderPolicy } from "./mock-data";
 import {
@@ -12,6 +14,10 @@ import {
   presetPairing,
   type ReminderPresetChoice,
 } from "./reminders-tab-format";
+
+const ISO_DATE_LENGTH = 10;
+const DEFAULT_OFFSET_DAYS_BEFORE = 1;
+const DEFAULT_OFFSET_MINUTES = -(DEFAULT_OFFSET_DAYS_BEFORE * MINUTES_PER_DAY);
 
 export type PolicyFormState = AdminReminderPolicyFormInput & {
   /**
@@ -31,7 +37,7 @@ export type PolicyFormState = AdminReminderPolicyFormInput & {
 const DEFAULT_PRESET = "deadline-leads" as const;
 
 function todayIsoString(): string {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
 /**
@@ -47,7 +53,7 @@ export function emptyPolicyForm(opts?: { timezone?: string }): PolicyFormState {
     preset: DEFAULT_PRESET,
     kind,
     audience,
-    offsetMinutes: -1440, // T-24h
+    offsetMinutes: DEFAULT_OFFSET_MINUTES, // T-24h
     timezone: opts?.timezone ?? "Europe/Moscow",
     active: true,
     validFromIso: today,

@@ -10,6 +10,11 @@ import {
 } from "@customreport/ui/components/ui/chart";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
+// Status levels: red=1, yellow=2, green=3. Domain max leaves headroom above green.
+const STATUS_LEVEL_GREEN = 3;
+const STATUS_LEVEL_TICKS = [1, 2, STATUS_LEVEL_GREEN];
+const Y_AXIS_DOMAIN_MAX = 4;
+
 /**
  * Traffic-light history sparkline.
  *
@@ -93,7 +98,7 @@ export function TrafficLightHistoryChart({
       <LineChart data={data}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="period" />
-        <YAxis ticks={[1, 2, 3]} domain={[0, 4]} />
+        <YAxis ticks={STATUS_LEVEL_TICKS} domain={[0, Y_AXIS_DOMAIN_MAX]} />
         <ChartTooltip />
         {series.map((s, idx) => (
           <Line

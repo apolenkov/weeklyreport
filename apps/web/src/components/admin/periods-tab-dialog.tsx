@@ -1,9 +1,13 @@
 "use client";
 
-import type { PeriodListItem } from "@customreport/shared";
+import { DAYS_PER_WEEK, type PeriodListItem } from "@customreport/shared";
 import { useRef, useState } from "react";
 
 import { useDialogFocus } from "../../lib/use-dialog-focus";
+
+const ISO_DATE_LENGTH = 10;
+const ISO_DATETIME_LOCAL_LENGTH = 16;
+const NEXT_MONDAY_OFFSET_BASE = DAYS_PER_WEEK + 1;
 
 /**
  * Compute the scheduler-aligned default start date. Manual periods are not
@@ -13,14 +17,15 @@ import { useDialogFocus } from "../../lib/use-dialog-focus";
 function nextMonday(from: Date): string {
   const d = new Date(from);
   // getUTCDay: 0=Sun, 1=Mon..6=Sat. For Sun add 1 day; for any other
-  // weekday add (8 - day) % 7 days. For Monday this evaluates to 0 →
-  // returns `from` unchanged.
+  // weekday add (NEXT_MONDAY_OFFSET_BASE - day) % DAYS_PER_WEEK days. For
+  // Monday this evaluates to 0 → returns `from` unchanged.
   const day = d.getUTCDay();
-  const offset = day === 0 ? 1 : (8 - day) % 7;
+  const offset =
+    day === 0 ? 1 : (NEXT_MONDAY_OFFSET_BASE - day) % DAYS_PER_WEEK;
   d.setUTCDate(d.getUTCDate() + offset);
   d.setUTCHours(0, 0, 0, 0);
   // Render as `YYYY-MM-DD` for the <input type="date"> value.
-  return d.toISOString().slice(0, 10);
+  return d.toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
 export interface CreatePeriodValues {
@@ -41,7 +46,7 @@ export interface CreatePeriodValues {
  * so a no-op edit round-trips without spurious diff.
  */
 function dateInputValue(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return d.toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
 /**
@@ -54,7 +59,7 @@ function dateInputValue(d: Date): string {
  * drift the stored deadline for any non-UTC admin.
  */
 function dateTimeInputValue(d: Date): string {
-  return d.toISOString().slice(0, 16);
+  return d.toISOString().slice(0, ISO_DATETIME_LOCAL_LENGTH);
 }
 
 export function CreatePeriodDialog({

@@ -26,6 +26,10 @@ interface ActionLogRow {
 }
 
 const PAGE_SIZE = 20;
+const MAX_USER_ID_LENGTH = 18;
+const MAX_TARGET_ID_LENGTH = 26;
+const MAX_REFERENCE_ID_LENGTH = 14;
+const COPY_FEEDBACK_MS = 1500;
 
 export function ActionLogTab() {
   const trpc = useTRPC();
@@ -145,7 +149,7 @@ export function ActionLogTab() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="font-mono text-xs text-[var(--color-foreground)]">
-                      {truncate(row.userId, 18)}
+                      {truncate(row.userId, MAX_USER_ID_LENGTH)}
                     </div>
                     <div className="text-xs text-[var(--color-muted-foreground)]">
                       {row.role ?? "-"}
@@ -160,7 +164,7 @@ export function ActionLogTab() {
                     </div>
                     {row.targetId ? (
                       <div className="font-mono text-[11px] text-[var(--color-muted-foreground)]">
-                        {truncate(row.targetId, 26)}
+                        {truncate(row.targetId, MAX_TARGET_ID_LENGTH)}
                       </div>
                     ) : null}
                   </td>
@@ -221,7 +225,7 @@ function CorrelationCell({ value }: { readonly value: string }) {
         void copyToClipboard(value).then((ok) => {
           if (ok) {
             setCopied(true);
-            window.setTimeout(() => setCopied(false), 1500);
+            window.setTimeout(() => setCopied(false), COPY_FEEDBACK_MS);
           }
         });
       }}
@@ -229,7 +233,7 @@ function CorrelationCell({ value }: { readonly value: string }) {
       className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-1.5 py-0.5 font-mono text-xs text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] focus:bg-[var(--color-surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
       aria-label={`Copy reference id ${value}`}
     >
-      <span>{truncate(value, 14)}</span>
+      <span>{truncate(value, MAX_REFERENCE_ID_LENGTH)}</span>
       <span
         className={`text-[10px] ${
           copied

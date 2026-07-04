@@ -4,7 +4,14 @@ import type {
   ActivityLiveResponse,
   ActivityLiveRow,
 } from "@customreport/shared";
-import { initialsFromName as sharedInitialsFromName } from "@customreport/shared";
+import {
+  DAYS_PER_WEEK,
+  HOURS_PER_DAY,
+  initialsFromName as sharedInitialsFromName,
+  MINUTES_PER_HOUR,
+  MS_PER_SECOND,
+  SECONDS_PER_MINUTE,
+} from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 
 import { useTRPC } from "../../lib/trpc-context";
@@ -229,17 +236,19 @@ function initials(name: string): string {
   return sharedInitialsFromName(name) || "??";
 }
 
+const JUST_NOW_THRESHOLD_SECONDS = 30;
+
 // Lightweight relative-time formatter; no extra dependency needed.
 function formatRelative(date: Date): string {
   const diffMs = Date.now() - date.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  if (diffSec < 30) return "just now";
-  if (diffSec < 60) return `${diffSec}s ago`;
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin} min ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 7) return `${diffDay}d ago`;
+  const diffSec = Math.floor(diffMs / MS_PER_SECOND);
+  if (diffSec < JUST_NOW_THRESHOLD_SECONDS) return "just now";
+  if (diffSec < SECONDS_PER_MINUTE) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / SECONDS_PER_MINUTE);
+  if (diffMin < MINUTES_PER_HOUR) return `${diffMin} min ago`;
+  const diffHr = Math.floor(diffMin / MINUTES_PER_HOUR);
+  if (diffHr < HOURS_PER_DAY) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / HOURS_PER_DAY);
+  if (diffDay < DAYS_PER_WEEK) return `${diffDay}d ago`;
   return date.toLocaleDateString("en-US");
 }

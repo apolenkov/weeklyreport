@@ -4,8 +4,19 @@
  * sub-components.
  */
 
+import {
+  HOURS_PER_DAY,
+  MINUTES_PER_DAY,
+  MINUTES_PER_HOUR,
+} from "@customreport/shared";
+
 import { pluralize } from "../../lib/pluralize";
 import type { MockReminder, MockReminderPolicy } from "./mock-data";
+
+const ISO_DATE_LENGTH = 10;
+const MAX_HOUR_OFFSET_DAYS = 2;
+const MAX_HOUR_OFFSET_MINUTES =
+  MAX_HOUR_OFFSET_DAYS * HOURS_PER_DAY * MINUTES_PER_HOUR;
 
 /**
  * A Reminder type preset is one of the two meaningful (kind, audience)
@@ -79,7 +90,7 @@ export function describeRecipient(
 }
 
 export function isoFromDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return date.toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
 export type OffsetUnit = "minutes" | "hours" | "days";
@@ -89,17 +100,18 @@ export function offsetUnitFactor(unit: OffsetUnit): number {
     case "minutes":
       return 1;
     case "hours":
-      return 60;
+      return MINUTES_PER_HOUR;
     case "days":
-      return 1440;
+      return MINUTES_PER_DAY;
   }
 }
 
 export function getOffsetUnit(minutes: number): OffsetUnit {
   const abs = Math.abs(minutes);
-  if (abs > 0 && abs % 60 === 0 && abs <= 48 * 60) return "hours";
-  if (abs > 0 && abs % 1440 === 0) return "days";
-  if (abs > 0 && abs % 60 === 0) return "hours";
+  if (abs > 0 && abs % MINUTES_PER_HOUR === 0 && abs <= MAX_HOUR_OFFSET_MINUTES)
+    return "hours";
+  if (abs > 0 && abs % MINUTES_PER_DAY === 0) return "days";
+  if (abs > 0 && abs % MINUTES_PER_HOUR === 0) return "hours";
   return "minutes";
 }
 
@@ -115,13 +127,13 @@ export function formatPolicyTiming(policy: MockReminderPolicy): string {
   const abs = Math.abs(minutes);
   const direction = minutes < 0 ? "before" : "after";
 
-  if (abs % 60 === 0 && abs <= 48 * 60) {
-    const hours = abs / 60;
+  if (abs % MINUTES_PER_HOUR === 0 && abs <= MAX_HOUR_OFFSET_MINUTES) {
+    const hours = abs / MINUTES_PER_HOUR;
     return `${hours} ${pluralize(hours, "hour", "hours")} ${direction} deadline`;
   }
 
-  if (abs % 1440 === 0) {
-    const days = abs / 1440;
+  if (abs % MINUTES_PER_DAY === 0) {
+    const days = abs / MINUTES_PER_DAY;
     return `${days} ${pluralize(days, "day", "days")} ${direction} deadline`;
   }
 

@@ -1,5 +1,34 @@
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
+const ACTIVITY_ROW_COUNT = 6;
+const LEAD_TABLE_BODY_ROW_COUNT = 5;
+const BLOCKED_AT_RISK_ROW_COUNT = 5;
+const LEAD_TABLE_COL_LEAD_WIDTH = 120;
+const LEAD_TABLE_COL_ROLE_WIDTH = 80;
+const LEAD_TABLE_COL_STATUS_WIDTH = 80;
+const LEAD_TABLE_COL_PROGRESS_WIDTH = 80;
+const LEAD_TABLE_COL_ACTION_WIDTH = 100;
+const LEAD_TABLE_COLUMN_WIDTHS = [
+  LEAD_TABLE_COL_LEAD_WIDTH,
+  LEAD_TABLE_COL_ROLE_WIDTH,
+  LEAD_TABLE_COL_STATUS_WIDTH,
+  LEAD_TABLE_COL_PROGRESS_WIDTH,
+  LEAD_TABLE_COL_ACTION_WIDTH,
+];
+
+const activityRowIndexes = Array.from(
+  { length: ACTIVITY_ROW_COUNT },
+  (_, i) => i,
+);
+const leadTableBodyRowIndexes = Array.from(
+  { length: LEAD_TABLE_BODY_ROW_COUNT },
+  (_, i) => i,
+);
+const blockedAtRiskRowIndexes = Array.from(
+  { length: BLOCKED_AT_RISK_ROW_COUNT },
+  (_, i) => i,
+);
+
 /**
  * Loading-state skeleton for the head dashboard. Mirrors the dimensions of
  * ActivityLivePanel / KpiCards / LeadSummaryTable / AlertBar /
@@ -18,7 +47,7 @@ export function DashboardSkeleton() {
           <Skeleton className="h-4 w-36" />
         </div>
         <ul className="space-y-1">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
+          {activityRowIndexes.map((i) => (
             <li key={i} className="flex items-center gap-3 py-1">
               <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
               <div className="min-w-0 flex-1 space-y-1.5">
@@ -55,13 +84,13 @@ export function DashboardSkeleton() {
           <div className="w-full">
             {/* thead placeholder */}
             <div className="flex gap-4 border-b border-[var(--color-border)] px-5 py-3">
-              {[120, 80, 80, 80, 100].map((w, i) => (
+              {LEAD_TABLE_COLUMN_WIDTHS.map((w, i) => (
                 // eslint-disable-next-line react/no-array-index-key -- static column-width array, order never changes
                 <Skeleton key={i} className={`h-3 w-[${w}px]`} />
               ))}
             </div>
             {/* tbody rows */}
-            {[0, 1, 2, 3, 4].map((i) => (
+            {leadTableBodyRowIndexes.map((i) => (
               <div
                 key={i}
                 className="flex items-center gap-4 border-b border-[var(--color-border)] px-5 py-3 last:border-0"
@@ -85,7 +114,7 @@ export function DashboardSkeleton() {
           <Skeleton className="h-4 w-4" />
         </div>
         <div className="space-y-2 px-4 pb-4">
-          {[0, 1, 2, 3, 4].map((i) => (
+          {blockedAtRiskRowIndexes.map((i) => (
             <Skeleton key={i} className="h-12 w-full rounded-lg" />
           ))}
         </div>
