@@ -203,6 +203,10 @@ function renderPage(
     { path: ["review", "verdict"], mutation: true },
     { path: ["review", "comment"], mutation: true },
     { path: ["review", "deleteComment"], mutation: true },
+    // Acknowledge-placement (HF1) tests give sections a group id, which mounts
+    // the per-group Acknowledge control; an empty roster keeps it un-acked.
+    { path: ["review", "acknowledgements"], queryByInput: () => [] },
+    { path: ["review", "acknowledge"], mutation: true },
     { path: ["archive", "list"] },
     { path: ["archive", "archiveReport"], mutation: true },
     { path: ["reports", "myHistory"] },
@@ -1418,5 +1422,49 @@ describe("WeeklyReportPage — review-mode split (report-review-mode HF9/HF3)", 
     await userEvent.click(screen.getByRole("button", { name: "Review" }));
 
     expect(screen.getByTestId("agent-review-coming-soon")).toBeInTheDocument();
+  });
+});
+
+/** makeReviewableData with a real group id, so the Acknowledge control mounts. */
+function makeAcknowledgeableData(): ReturnType<typeof makeWeeklyReportData> {
+  const base = makeReviewableData();
+  return {
+    ...base,
+    leadSections: base.leadSections.map((section) => ({
+      ...section,
+      groupId: "99999999-9999-4999-8999-999999999901",
+    })),
+  };
+}
+
+describe("WeeklyReportPage — acknowledge placement (HF1)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
+  it("head: Acknowledge sits in the publish cluster on the header, not as a body band", async () => {
+    renderPage(makeAcknowledgeableData(), undefined, "head");
+
+    const cluster = await screen.findByTestId("acknowledge-header");
+    expect(
+      within(cluster).getByRole("button", { name: /acknowledge/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("acknowledge-body")).not.toBeInTheDocument();
+    // Acknowledgement never gates publish: the lifecycle button still renders
+    // alongside, un-acknowledged.
+    expect(
+      screen.getByRole("button", { name: /publish/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("viewer: Acknowledge stays a body band (no publish cluster to host it)", async () => {
+    renderPage(makeAcknowledgeableData(), undefined, "viewer");
+
+    const band = await screen.findByTestId("acknowledge-body");
+    expect(
+      within(band).getByRole("button", { name: /acknowledge/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("acknowledge-header")).not.toBeInTheDocument();
   });
 });

@@ -11,9 +11,10 @@
 > reality. **§5 (carry-over automation) was UNPARKED and implemented 2026-07-04**
 > — the owner resolved the trigger point (fire when the period becomes open,
 > eager materialization; design D4) and the dead-read fate (delete both
-> `carryOver.*` procedures). §6 (review-acknowledge placement) stays **PARKED**
-> on its open question (§6.1 non-publisher acknowledge path — a product-owner
-> decision). §7.5 live-verify (visual) is PENDING Sasha's walkthrough.
+> `carryOver.*` procedures). **§6 was implemented 2026-07-04** — the
+> non-publisher question resolved as "viewer keeps the in-body band; only the
+> head/admin control moves into the publish cluster". §7.5 live-verify (visual)
+> is PENDING Sasha's walkthrough.
 
 ## 1. Lead slides — group by product, author, hierarchy, overflow (A1, A2, A4)
 
@@ -97,15 +98,15 @@
       exclusion, and the reworked lifecycle integration test (materializes the
       section, carries only open work, second run duplicates nothing).
 
-## 6. Review-acknowledge placement (HF1) — PARKED (open question)
+## 6. Review-acknowledge placement (HF1)
 
-- [ ] 6.1 In `weekly-report-page.tsx`, relocate `AcknowledgeSurface` /
+- [x] 6.1 In `weekly-report-page.tsx`, relocate `AcknowledgeSurface` /
       `ReviewAcknowledgeBar` for head/admin into the Publish & Lock action cluster
-      on the header line; do NOT gate publish on acknowledgement. Resolve the
-      non-publisher acknowledge path (design Open Question 2) before finalizing.
-- [ ] 6.2 Keep the acknowledge mutation, per-group model, and "Seen by" roster
-      unchanged; update `review-acknowledge-bar.test.tsx` and the page test for the
-      new placement.
+      on the header line; publish is NOT gated on acknowledgement. Non-publisher
+      path resolved (design Open Question 2): a viewer keeps the in-body band.
+- [x] 6.2 Acknowledge mutation, per-group model, and "Seen by" roster unchanged
+      (`review-acknowledge-bar.tsx` untouched); page test gained an
+      acknowledge-placement suite (head → header cluster, viewer → body band).
 
 ## 7. Verification
 

@@ -482,24 +482,33 @@ function buildAccordionModel(params: {
 }
 
 /**
- * review-acknowledgement (§6.1): self-gating Acknowledge band. Renders nothing
- * when review is disabled, so the page body stays free of a nested ternary.
+ * Self-gating Acknowledge control (renders nothing when review is disabled).
+ * Mounted in TWO places by role: for a publish-capable reviewer (head/admin)
+ * inside the header's Publish & Lock action cluster, so
+ * review → acknowledge → publish reads as one sequence (HF1); for a
+ * non-publishing access-holder (viewer) it stays a band in the report body —
+ * relocating it into a cluster the viewer does not have would orphan their
+ * acknowledge path.
  */
 function AcknowledgeSurface({
   reviewModel,
   reportId,
+  placement,
 }: {
   readonly reviewModel: ReviewModel;
   readonly reportId: string;
+  readonly placement: "header" | "body";
 }) {
-  if (!reviewModel.context) return null;
+  if (!reviewModel.context || reviewModel.groups.length === 0) return null;
   return (
-    <ReviewAcknowledgeBar
-      reportId={reportId}
-      groups={reviewModel.groups}
-      currentUserId={reviewModel.context.currentUserId}
-      isHeadOrAdmin={reviewModel.isHeadOrAdmin}
-    />
+    <div data-testid={`acknowledge-${placement}`}>
+      <ReviewAcknowledgeBar
+        reportId={reportId}
+        groups={reviewModel.groups}
+        currentUserId={reviewModel.context.currentUserId}
+        isHeadOrAdmin={reviewModel.isHeadOrAdmin}
+      />
+    </div>
   );
 }
 
@@ -603,9 +612,16 @@ function ReportContent({
 
   return (
     <>
-      {/* review-acknowledgement (§6.1): Acknowledge control for any
-          access-holder on the live current-period report. */}
-      <AcknowledgeSurface reviewModel={reviewModel} reportId={reportId} />
+      {/* Acknowledge band for NON-publishing access-holders only (viewer);
+          head/admin acknowledge from the Publish & Lock cluster on the header
+          line (HF1). */}
+      {!reviewModel.isHeadOrAdmin && (
+        <AcknowledgeSurface
+          reviewModel={reviewModel}
+          reportId={reportId}
+          placement="body"
+        />
+      )}
 
       {/* Report overview — scope-adaptive (report-overview-scope-parity). It
           reads the FULL truth, so it never narrows with the §7 filter. */}
@@ -995,6 +1011,17 @@ export function WeeklyReportPage({
             >
               {archiveLabel}
             </button>
+          )}
+          {/* HF1: the head/admin Acknowledge control sits WITH Publish & Lock
+              so review → acknowledge → publish reads as one sequence. It never
+              gates publish; AcknowledgeSurface self-suppresses when review is
+              disabled (e.g. a published period). */}
+          {canMutatePeriod && (
+            <AcknowledgeSurface
+              reviewModel={reviewModel}
+              reportId={view.period.reportId}
+              placement="header"
+            />
           )}
           {canMutatePeriod && (
             <PublishLockButton
