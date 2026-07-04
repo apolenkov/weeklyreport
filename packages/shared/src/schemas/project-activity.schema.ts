@@ -2,6 +2,11 @@ import { z } from "zod";
 
 import { safeText } from "./report-primitives.schema";
 
+const MAX_ACTIVITY_NAME_LENGTH = 200;
+const MAX_JIRA_ACCOUNT_LENGTH = 100;
+const MAX_LINKED_PRODUCTS = 50;
+const MAX_JIRA_ACCOUNTS = 20;
+
 /**
  * A Project Activity — an admin-provisioned, stage-less reporting unit beside
  * Products. Carries the authoritative owning `groupId`, M:N label-only product
@@ -10,7 +15,7 @@ import { safeText } from "./report-primitives.schema";
  */
 export const projectActivitySchema = z.object({
   id: z.uuid(),
-  name: z.string().min(1).max(200),
+  name: z.string().min(1).max(MAX_ACTIVITY_NAME_LENGTH),
   groupId: z.uuid(),
   // activity-first-class: M:N label-only product links (id + name), replacing the
   // former single nullable projectId. Reconciled by the admin CRUD from
@@ -18,7 +23,9 @@ export const projectActivitySchema = z.object({
   linkedProducts: z
     .array(z.object({ productId: z.uuid(), productName: z.string().min(1) }))
     .default([]),
-  jiraAccounts: z.array(z.string().min(1).max(100)).default([]),
+  jiraAccounts: z
+    .array(z.string().min(1).max(MAX_JIRA_ACCOUNT_LENGTH))
+    .default([]),
   archived: z.boolean(),
   leadIds: z.array(z.uuid()).default([]),
 });
@@ -27,10 +34,10 @@ export const projectActivityCreateSchema = z.object({
   name: safeText({ max: 200 }),
   groupId: z.uuid(),
   // activity-first-class: 0..N product links (was a single nullable projectId).
-  linkedProductIds: z.array(z.uuid()).max(50).default([]),
+  linkedProductIds: z.array(z.uuid()).max(MAX_LINKED_PRODUCTS).default([]),
   jiraAccounts: z
-    .array(safeText({ max: 100 }))
-    .max(20)
+    .array(safeText({ max: MAX_JIRA_ACCOUNT_LENGTH }))
+    .max(MAX_JIRA_ACCOUNTS)
     .default([]),
 });
 

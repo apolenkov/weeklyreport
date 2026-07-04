@@ -16,6 +16,9 @@ import {
   sectionReviewViewSchema,
 } from "./review.schema";
 
+// Payload guard against pathological section-save array sizes.
+const MAX_RECORDS_PER_SECTION_SAVE = 100;
+
 export const projectStatusInputSchema = z.object({
   projectId: z.uuid(),
   status: trafficLightStatusSchema.optional(),
@@ -238,10 +241,13 @@ export const draftSaveSchema = z.object({
   // Activity-status slice beside projectStatuses. Defaulted so pre-existing
   // clients (and fixtures) that omit it keep saving; the server then keeps
   // the seeded statuses unchanged.
-  activityStatuses: z.array(activityStatusInputSchema).max(100).default([]),
-  items: z.array(itemWriteSchema).max(100),
-  risks: z.array(riskWriteSchema).max(100),
-  decisions: z.array(decisionWriteSchema).max(100),
+  activityStatuses: z
+    .array(activityStatusInputSchema)
+    .max(MAX_RECORDS_PER_SECTION_SAVE)
+    .default([]),
+  items: z.array(itemWriteSchema).max(MAX_RECORDS_PER_SECTION_SAVE),
+  risks: z.array(riskWriteSchema).max(MAX_RECORDS_PER_SECTION_SAVE),
+  decisions: z.array(decisionWriteSchema).max(MAX_RECORDS_PER_SECTION_SAVE),
 });
 
 export const submitSectionSchema = draftSaveSchema.extend({

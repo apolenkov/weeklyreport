@@ -23,11 +23,13 @@ const noNullBytes = (val: string) => !val.includes("\u0000");
  * @param opts.max - maximum length (default 500)
  * @returns a Zod string schema enforcing the bounds and content rules
  */
+const DEFAULT_SAFE_TEXT_MAX_LENGTH = 500;
+
 export const safeText = (opts: { min?: number; max?: number } = {}) =>
   z
     .string()
     .min(opts.min ?? 1)
-    .max(opts.max ?? 500)
+    .max(opts.max ?? DEFAULT_SAFE_TEXT_MAX_LENGTH)
     .refine(noNullBytes, { message: "Text must not contain null bytes" })
     .refine(noInvisibleOnly, {
       message: "Text must contain visible characters",
@@ -37,8 +39,10 @@ export const safeText = (opts: { min?: number; max?: number } = {}) =>
  * Rejects dates before year 2000 (prevents pre-epoch/nonsensical report dates).
  * @returns a Zod date schema that coerces input and rejects pre-2000 dates
  */
+const MIN_VALID_YEAR = 2000;
+
 export const reportDate = () =>
-  z.coerce.date().refine((d) => d.getFullYear() >= 2000, {
+  z.coerce.date().refine((d) => d.getFullYear() >= MIN_VALID_YEAR, {
     message: "Date must be after year 2000",
   });
 

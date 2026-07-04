@@ -46,9 +46,12 @@ export type IntegrationsStatus = z.infer<typeof integrationsStatusSchema>;
  * pass through any non-empty trimmed string. `text` is capped at 4096
  * because that's the Telegram Bot API message-length cap.
  */
+const MAX_TELEGRAM_CHAT_ID_LENGTH = 64;
+const MAX_TELEGRAM_MESSAGE_LENGTH = 4096; // Telegram Bot API message-length cap
+
 export const adminTestTelegramSendSchema = z.object({
-  chatId: z.string().trim().min(1).max(64),
-  text: z.string().trim().min(1).max(4096),
+  chatId: z.string().trim().min(1).max(MAX_TELEGRAM_CHAT_ID_LENGTH),
+  text: z.string().trim().min(1).max(MAX_TELEGRAM_MESSAGE_LENGTH),
 });
 
 export type AdminTestTelegramSendInput = z.infer<

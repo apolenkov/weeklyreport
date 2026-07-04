@@ -13,6 +13,11 @@ import {
 } from "./report-primitives.schema";
 import { reportSectionReadModelSchema } from "./section.schema";
 
+const MAX_REPORTING_GROUP_NAME_LENGTH = 200;
+const MAX_REPORTING_GROUP_DESCRIPTION_LENGTH = 500;
+const MAX_PAGE_SIZE = 100;
+const DEFAULT_PAGE_SIZE = 20;
+
 /**
  * UX-18 (Phase 35-08): row shape for the head/admin "Активность за текущий
  * период" panel. One row per lead's section in the open report period;
@@ -100,7 +105,12 @@ export const adminUserSchema = z.object({
   position: z.string().nullable(),
   role: roleSchema,
   reportingGroupId: z.uuid().nullable().optional(),
-  reportingGroupName: z.string().min(1).max(200).nullable().optional(),
+  reportingGroupName: z
+    .string()
+    .min(1)
+    .max(MAX_REPORTING_GROUP_NAME_LENGTH)
+    .nullable()
+    .optional(),
   // A2 (UAT-v7 2026-05-12): soft-deactivation flag. Defaults to true so
   // existing snapshot rows (created before this field existed) parse cleanly.
   isActive: z.boolean().default(true),
@@ -108,8 +118,12 @@ export const adminUserSchema = z.object({
 
 export const reportingGroupSchema = z.object({
   id: z.uuid(),
-  name: z.string().min(1).max(200),
-  description: z.string().max(500).nullable().optional(),
+  name: z.string().min(1).max(MAX_REPORTING_GROUP_NAME_LENGTH),
+  description: z
+    .string()
+    .max(MAX_REPORTING_GROUP_DESCRIPTION_LENGTH)
+    .nullable()
+    .optional(),
   archived: z.boolean(),
   // UFB-039: optional FK to the User (role=head or admin) that runs this
   // group. null when the admin has not yet assigned a leader.
@@ -451,7 +465,7 @@ export const paginationInputSchema = z.object({
   // keyset coordinate for the archive. Validated only as a non-empty string so
   // no single consumer's cursor shape is baked into the shared contract.
   cursor: z.string().min(1).optional(),
-  limit: z.number().int().min(1).max(100).default(20),
+  limit: z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
 });
 
 export type PaginationInput = z.infer<typeof paginationInputSchema>;

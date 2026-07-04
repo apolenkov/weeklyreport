@@ -1,11 +1,23 @@
 import { z } from "zod";
 
+import { DAYS_PER_WEEK, HOURS_PER_DAY } from "../time";
 import {
   periodStateSchema,
   periodStatusSchema,
   reportDate,
   reportStatusSchema,
 } from "./report-primitives.schema";
+
+const MAX_WEEK_LABEL_LENGTH = 64;
+const MAX_DEFAULT_DEADLINE_DAYS = 30;
+const MAX_PERIOD_LENGTH_DAYS = 31;
+const DEFAULT_PERIOD_LENGTH_DAYS = DAYS_PER_WEEK;
+// Cap shared by gracePeriodHours and reopenWindowHours: one week.
+const ONE_WEEK_HOURS = HOURS_PER_DAY * DAYS_PER_WEEK;
+const DEFAULT_GRACE_PERIOD_HOURS = HOURS_PER_DAY;
+const MAX_AUTO_ARCHIVE_WEEKS_AFTER_PUBLISH = 52;
+const MAX_EMAIL_LENGTH = 254; // RFC 5321 max email length
+const DEFAULT_REOPEN_WINDOW_HOURS = 72; // 3 days
 
 export const reportPeriodSchema = z.object({
   id: z.uuid(),
@@ -116,7 +128,7 @@ export const adminCreatePeriodManualSchema = z.object({
   periodStart: z.coerce.date(),
   periodEnd: z.coerce.date().optional(),
   deadline: z.coerce.date().optional(),
-  weekLabel: z.string().max(64).optional(),
+  weekLabel: z.string().max(MAX_WEEK_LABEL_LENGTH).optional(),
 });
 
 export type AdminCreatePeriodManualInput = z.infer<
@@ -163,7 +175,7 @@ export const adminUpdatePeriodManualSchema = z.object({
   periodStart: z.coerce.date().optional(),
   periodEnd: z.coerce.date().optional(),
   deadline: z.coerce.date().optional(),
-  weekLabel: z.string().max(64).nullable().optional(),
+  weekLabel: z.string().max(MAX_WEEK_LABEL_LENGTH).nullable().optional(),
 });
 
 export type AdminUpdatePeriodManualInput = z.infer<
@@ -224,21 +236,38 @@ export const appSettingsSchema = z.object({
   // Identity / brand strings live on the `Organization` singleton
   // (`shortName` for compact references, `fullName` for headings).
   autoCreatePeriods: z.boolean(),
-  defaultDeadlineDays: z.number().int().min(1).max(30),
+  defaultDeadlineDays: z.number().int().min(1).max(MAX_DEFAULT_DEADLINE_DAYS),
   // ---- UFB-048: Periods knobs -----------------------------------------
-  periodLengthDays: z.number().int().min(1).max(31).default(7),
+  periodLengthDays: z
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_PERIOD_LENGTH_DAYS)
+    .default(DEFAULT_PERIOD_LENGTH_DAYS),
   workingDays: workingDaysSchema.default("mon-fri"),
-  gracePeriodHours: z.number().int().min(0).max(168).default(24),
+  gracePeriodHours: z
+    .number()
+    .int()
+    .min(0)
+    .max(ONE_WEEK_HOURS)
+    .default(DEFAULT_GRACE_PERIOD_HOURS),
   allowLateSubmissions: z.boolean().default(true),
   autoPublishAfterDeadline: z.boolean().default(false),
-  autoArchiveWeeksAfterPublish: z.number().int().min(0).max(52).default(0),
+  autoArchiveWeeksAfterPublish: z
+    .number()
+    .int()
+    .min(0)
+    .max(MAX_AUTO_ARCHIVE_WEEKS_AFTER_PUBLISH)
+    .default(0),
   // ---- UFB-048: Reminders knobs ---------------------------------------
   defaultTimezone: z.string().min(1).default("Europe/Moscow"),
   defaultReminderAudience:
     reminderAudienceWireSchema.default("lead-with-draft"),
   // ---- UFB-048: Notifications knobs -----------------------------------
   // Nullable email; `''` is rejected (admins can clear by sending null).
-  notificationFromEmail: z.union([z.email().max(254), z.null()]).default(null),
+  notificationFromEmail: z
+    .union([z.email().max(MAX_EMAIL_LENGTH), z.null()])
+    .default(null),
   // ---- UFB-051 (Phase 51-A): Period-cycle knobs -----------------------
   // Publish/reopen gating + manual-creation deadline default. The four
   // consumer-less knobs (firstDayOfWeek, deadlineDayOfWeek, maxOpenPeriods,
@@ -254,7 +283,12 @@ export const appSettingsSchema = z.object({
   // reopened. `0..168` (one week) matches the 48-B `gracePeriodHours`
   // convention. Default `72` (3 days) chosen as a practical floor for
   // "noticed the bug on Monday, reopen Friday's report" use cases.
-  reopenWindowHours: z.number().int().min(0).max(168).default(72),
+  reopenWindowHours: z
+    .number()
+    .int()
+    .min(0)
+    .max(ONE_WEEK_HOURS)
+    .default(DEFAULT_REOPEN_WINDOW_HOURS),
   // Opt-in unified by-state lead-form view (a pure presentation projection —
   // ADR 0011). Off keeps the classic two-section format. The default mirrors
   // the DB column default; the DB row is the source of truth (no env knob).

@@ -6,13 +6,18 @@ import { z } from "zod";
 // that does not round-trip back to the same YYYY-MM-DD. The regex stays as the
 // cheap first gate so the refine only runs on well-shaped input; the
 // `Number.isNaN` guard keeps `toISOString()` from throwing on Invalid Date.
+const ISO_DATE_LENGTH = "YYYY-MM-DD".length;
+
 const isoDateOnly = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .refine(
     (s) => {
       const d = new Date(`${s}T00:00:00.000Z`);
-      return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+      return (
+        !Number.isNaN(d.getTime()) &&
+        d.toISOString().slice(0, ISO_DATE_LENGTH) === s
+      );
     },
     { message: "Not a real calendar date" },
   );

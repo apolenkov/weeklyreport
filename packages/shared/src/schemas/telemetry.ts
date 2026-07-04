@@ -23,6 +23,8 @@ import { z } from "zod";
  * for that period; missing periods are filtered out so the consumer
  * does not need null-handling logic.
  */
+const SPARKLINE_PERIOD_COUNT = 4;
+
 export const telemetrySummarySchema = z.object({
   reportsThisPeriod: z.number().int().nonnegative(),
   onTimeRatio: z.number().min(0).max(1).nullable(),
@@ -30,7 +32,7 @@ export const telemetrySummarySchema = z.object({
   lateSections: z.number().int().nonnegative(),
   pendingReopens: z.number().int().nonnegative(),
   pdfExportsLast7d: z.number().int().nonnegative(),
-  sparkline: z.array(z.number().min(0).max(1)).max(4),
+  sparkline: z.array(z.number().min(0).max(1)).max(SPARKLINE_PERIOD_COUNT),
 });
 
 export type TelemetrySummary = z.infer<typeof telemetrySummarySchema>;

@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+const MAX_REPORTING_GROUP_NAME_LENGTH = 200;
+const MAX_ORG_SHORT_NAME_LENGTH = 16;
+const MAX_ORG_FULL_NAME_LENGTH = 200;
+
 /**
  * Role of a User row in the database (Prisma `Role` enum).
  * DB-bound writes (admin user CRUD) MUST validate against this set.
@@ -48,7 +52,11 @@ export const userSessionSchema = z.object({
    * API context so long-lived JWTs can keep carrying only the stable group id
    * while the navbar still reflects admin-side group renames.
    */
-  reportingGroupName: z.string().min(1).max(200).optional(),
+  reportingGroupName: z
+    .string()
+    .min(1)
+    .max(MAX_REPORTING_GROUP_NAME_LENGTH)
+    .optional(),
   /**
    * UFB-040 / Phase 46-01: list of `ReportingGroup.id` values the viewer
    * has been granted access to via the `ViewerGroupAccess` join table.
@@ -73,8 +81,8 @@ export const userSessionSchema = z.object({
    */
   organization: z
     .object({
-      shortName: z.string().min(1).max(16),
-      fullName: z.string().min(1).max(200),
+      shortName: z.string().min(1).max(MAX_ORG_SHORT_NAME_LENGTH),
+      fullName: z.string().min(1).max(MAX_ORG_FULL_NAME_LENGTH),
     })
     .optional(),
 });
