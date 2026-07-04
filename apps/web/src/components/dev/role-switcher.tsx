@@ -26,6 +26,7 @@ const ROLE_LABEL: Record<Role, string> = {
 };
 
 const ROLE_ORDER: Role[] = ["head", "admin", "lead", "viewer"];
+const LOGOUT_PATH = "/auth/logout";
 
 export function DevRoleSwitcher() {
   const [pending, setPending] = useState(false);
@@ -52,7 +53,7 @@ export function DevRoleSwitcher() {
     trpc.dev.wipeAndReseed.mutationOptions({
       onSuccess: () => {
         // Logout then redirect to landing so the next role pick starts clean.
-        void fetch("/auth/logout", {
+        void fetch(LOGOUT_PATH, {
           method: "POST",
           credentials: "include",
         }).finally(() => {
@@ -77,7 +78,7 @@ export function DevRoleSwitcher() {
       role: identity.role,
       email: identity.email,
     });
-    void fetch("/auth/logout", {
+    void fetch(LOGOUT_PATH, {
       method: "POST",
       credentials: "include",
     }).finally(() => {
@@ -101,7 +102,7 @@ export function DevRoleSwitcher() {
   const logout = async () => {
     setPending(true);
     try {
-      await fetch("/auth/logout", { method: "POST", credentials: "include" });
+      await fetch(LOGOUT_PATH, { method: "POST", credentials: "include" });
     } finally {
       window.location.href = "/";
     }

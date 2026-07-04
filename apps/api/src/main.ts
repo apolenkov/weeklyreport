@@ -113,12 +113,15 @@ const MAX_CLIENT_LOG_URL_LENGTH = 500;
 const MAX_CLIENT_LOG_STACK_LENGTH = 4000;
 const MAX_CLIENT_LOG_USER_AGENT_LENGTH = 200;
 
+const PDF_DOWNLOAD_ROUTE = "/pdfs/:file";
+const CLIENT_LOGS_ROUTE = "/api/client-logs";
+
 function normalizeHttpRoute(path: string): string {
-  if (path.startsWith("/pdfs/")) return "/pdfs/:file";
+  if (path.startsWith("/pdfs/")) return PDF_DOWNLOAD_ROUTE;
   if (path.startsWith("/auth/")) return "/auth/*";
   if (path.startsWith("/health/")) return path;
   if (path === "/metrics") return "/metrics";
-  if (path === "/api/client-logs") return "/api/client-logs";
+  if (path === CLIENT_LOGS_ROUTE) return CLIENT_LOGS_ROUTE;
   return path.replaceAll(UUID_SEGMENT_RE, ":id");
 }
 
@@ -276,7 +279,7 @@ async function bootstrap() {
     env.NODE_ENV === "development" ||
     process.env.CLIENT_LOG_FORWARDING === "true";
   app.use(
-    "/api/client-logs",
+    CLIENT_LOGS_ROUTE,
     express.json({ limit: "128kb" }),
     (req: express.Request, res: express.Response) => {
       if (!clientLogsEnabled) {
@@ -412,7 +415,7 @@ async function bootstrap() {
   mkdirSync(pdfDir, { recursive: true });
   const pdfAuthController = createAuthController(process.env);
   expressApp.get(
-    "/pdfs/:file",
+    PDF_DOWNLOAD_ROUTE,
     createPdfDownloadHandler({
       prisma: prismaService,
       pdfDir,
@@ -422,7 +425,7 @@ async function bootstrap() {
     }),
   );
   logger.info("mounted authenticated PDF download handler", {
-    route: "/pdfs/:file",
+    route: PDF_DOWNLOAD_ROUTE,
     pdfDir,
   });
 

@@ -32,6 +32,10 @@ import { useTRPC } from "../../../lib/trpc-context";
 /*  it only for the PDF worker.                                       */
 /* ------------------------------------------------------------------ */
 
+const BORDER_LIGHT = "1px solid #e5e7eb";
+const TEXT_SECONDARY = "rgba(0,0,0,0.58)";
+const TEXT_PRIMARY = "rgba(0,0,0,0.87)";
+
 interface Props {
   reportId: string;
 }
@@ -125,7 +129,7 @@ function PortfolioTable({ products }: { products: PortfolioProduct[] }) {
           <tr
             key={p.id}
             style={{
-              borderBottom: "1px solid #e5e7eb",
+              borderBottom: BORDER_LIGHT,
             }}
           >
             <td style={{ padding: "5px 8px", fontWeight: 600 }}>{p.name}</td>
@@ -144,7 +148,7 @@ function PortfolioTable({ products }: { products: PortfolioProduct[] }) {
                 {statusLabel(p.status)}
               </span>
             </td>
-            <td style={{ padding: "5px 8px", color: "rgba(0,0,0,0.58)" }}>
+            <td style={{ padding: "5px 8px", color: TEXT_SECONDARY }}>
               {p.leads}
             </td>
             <td style={{ padding: "5px 8px", textAlign: "center" }}>
@@ -231,7 +235,7 @@ function LeadSection({ report }: { report: ProductReport }) {
         <span
           style={{
             fontSize: "11px",
-            color: "rgba(0,0,0,0.58)",
+            color: TEXT_SECONDARY,
             marginLeft: "auto",
           }}
         >
@@ -262,7 +266,7 @@ function LeadSection({ report }: { report: ProductReport }) {
               margin: "0 0 4px",
               fontSize: "11px",
               fontWeight: 600,
-              color: "rgba(0,0,0,0.87)",
+              color: TEXT_PRIMARY,
             }}
           >
             Current Week
@@ -277,7 +281,7 @@ function LeadSection({ report }: { report: ProductReport }) {
           >
             {report.currentWeek.map((item) => (
               <li key={item.id}>
-                <span style={{ color: "rgba(0,0,0,0.58)", fontSize: "10px" }}>
+                <span style={{ color: TEXT_SECONDARY, fontSize: "10px" }}>
                   [{item.stageLead}]
                 </span>{" "}
                 {item.text}{" "}
@@ -297,7 +301,7 @@ function LeadSection({ report }: { report: ProductReport }) {
                         ? "#006241"
                         : item.status === "blocked"
                           ? "#c82014"
-                          : "rgba(0,0,0,0.58)",
+                          : TEXT_SECONDARY,
                   }}
                 >
                   {workflowBadge(item.status)}
@@ -316,7 +320,7 @@ function LeadSection({ report }: { report: ProductReport }) {
               margin: "0 0 4px",
               fontSize: "11px",
               fontWeight: 600,
-              color: "rgba(0,0,0,0.87)",
+              color: TEXT_PRIMARY,
             }}
           >
             Next Week
@@ -387,7 +391,7 @@ function LeadSection({ report }: { report: ProductReport }) {
               margin: "0 0 4px",
               fontSize: "11px",
               fontWeight: 600,
-              color: "rgba(0,0,0,0.87)",
+              color: TEXT_PRIMARY,
             }}
           >
             Decisions Needed
@@ -429,7 +433,7 @@ function LeadSection({ report }: { report: ProductReport }) {
               margin: "0 0 4px",
               fontSize: "11px",
               fontWeight: 600,
-              color: "rgba(0,0,0,0.87)",
+              color: TEXT_PRIMARY,
             }}
           >
             Priorities
@@ -460,7 +464,7 @@ function LoadingShell({ reportId }: { reportId: string }) {
     <main
       style={{
         backgroundColor: "#ffffff",
-        color: "rgba(0,0,0,0.87)",
+        color: TEXT_PRIMARY,
         fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
         fontSize: "12px",
         maxWidth: "210mm",
@@ -469,7 +473,7 @@ function LoadingShell({ reportId }: { reportId: string }) {
       }}
       aria-busy="true"
     >
-      <p style={{ color: "rgba(0,0,0,0.58)" }}>Loading report {reportId} …</p>
+      <p style={{ color: TEXT_SECONDARY }}>Loading report {reportId} …</p>
     </main>
   );
 }
@@ -546,7 +550,7 @@ export function PrintReportTemplate({ reportId }: Props) {
       <main
         style={{
           backgroundColor: "#ffffff",
-          color: "rgba(0,0,0,0.87)",
+          color: TEXT_PRIMARY,
           fontFamily: 'Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
           fontSize: "12px",
           lineHeight: "1.5",
@@ -580,7 +584,7 @@ export function PrintReportTemplate({ reportId }: Props) {
             style={{
               margin: 0,
               fontSize: "13px",
-              color: "rgba(0,0,0,0.58)",
+              color: TEXT_SECONDARY,
             }}
           >
             {periodLabel} &middot; {submissionSummary}
@@ -610,7 +614,7 @@ export function PrintReportTemplate({ reportId }: Props) {
               style={{
                 flex: 1,
                 padding: "8px 12px",
-                border: "1px solid #e5e7eb",
+                border: BORDER_LIGHT,
                 borderRadius: "8px",
                 textAlign: "center",
               }}
@@ -620,13 +624,13 @@ export function PrintReportTemplate({ reportId }: Props) {
               >
                 {submitted}/{total}
               </div>
-              <div style={{ color: "rgba(0,0,0,0.58)" }}>Submitted</div>
+              <div style={{ color: TEXT_SECONDARY }}>Submitted</div>
             </div>
             <div
               style={{
                 flex: 1,
                 padding: "8px 12px",
-                border: "1px solid #e5e7eb",
+                border: BORDER_LIGHT,
                 borderRadius: "8px",
                 textAlign: "center",
               }}
@@ -636,13 +640,13 @@ export function PrintReportTemplate({ reportId }: Props) {
               >
                 {blockedCount}
               </div>
-              <div style={{ color: "rgba(0,0,0,0.58)" }}>Blocked</div>
+              <div style={{ color: TEXT_SECONDARY }}>Blocked</div>
             </div>
             <div
               style={{
                 flex: 1,
                 padding: "8px 12px",
-                border: "1px solid #e5e7eb",
+                border: BORDER_LIGHT,
                 borderRadius: "8px",
                 textAlign: "center",
               }}
@@ -652,13 +656,13 @@ export function PrintReportTemplate({ reportId }: Props) {
               >
                 {atRiskCount}
               </div>
-              <div style={{ color: "rgba(0,0,0,0.58)" }}>At Risk</div>
+              <div style={{ color: TEXT_SECONDARY }}>At Risk</div>
             </div>
             <div
               style={{
                 flex: 1,
                 padding: "8px 12px",
-                border: "1px solid #e5e7eb",
+                border: BORDER_LIGHT,
                 borderRadius: "8px",
                 textAlign: "center",
               }}
@@ -668,7 +672,7 @@ export function PrintReportTemplate({ reportId }: Props) {
               >
                 {decisionCount}
               </div>
-              <div style={{ color: "rgba(0,0,0,0.58)" }}>Decisions</div>
+              <div style={{ color: TEXT_SECONDARY }}>Decisions</div>
             </div>
           </div>
         </section>
@@ -711,7 +715,7 @@ export function PrintReportTemplate({ reportId }: Props) {
           style={{
             marginTop: "24px",
             paddingTop: "8px",
-            borderTop: "1px solid #e5e7eb",
+            borderTop: BORDER_LIGHT,
             textAlign: "center",
             fontSize: "10px",
             color: "rgba(0,0,0,0.38)",

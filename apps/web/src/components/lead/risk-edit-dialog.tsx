@@ -62,6 +62,11 @@ interface SeverityChoice {
   color: string;
   border: string;
 }
+const TEXTAREA_BORDER_ERROR =
+  "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]";
+const TEXTAREA_BORDER_DEFAULT =
+  "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]";
+
 const SEVERITY_CHOICES: readonly SeverityChoice[] = [
   {
     value: "at-risk",
@@ -563,9 +568,7 @@ function RiskEditDialogContent({
                 aria-invalid={errors.text ? "true" : "false"}
                 aria-describedby={errors.text ? "risk-text-error" : undefined}
                 className={`w-full flex-1 resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
-                  errors.text
-                    ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
-                    : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
+                  errors.text ? TEXTAREA_BORDER_ERROR : TEXTAREA_BORDER_DEFAULT
                 }`}
                 style={{ minHeight: "60px" }}
                 value={text}
@@ -602,8 +605,8 @@ function RiskEditDialogContent({
                 }
                 className={`w-full flex-1 resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
                   errors.impact
-                    ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
-                    : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
+                    ? TEXTAREA_BORDER_ERROR
+                    : TEXTAREA_BORDER_DEFAULT
                 }`}
                 style={{ minHeight: "50px" }}
                 value={impact}
@@ -640,8 +643,8 @@ function RiskEditDialogContent({
                 }
                 className={`w-full flex-1 resize-y rounded-xl border bg-white px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:outline-none ${
                   errors.mitigation
-                    ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
-                    : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
+                    ? TEXTAREA_BORDER_ERROR
+                    : TEXTAREA_BORDER_DEFAULT
                 }`}
                 style={{ minHeight: "50px" }}
                 value={mitigation}

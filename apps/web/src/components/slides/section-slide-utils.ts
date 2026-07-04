@@ -15,6 +15,8 @@ import { riskCoversStage } from "../lead/stage-tags";
 
 const PERCENT_MAX = 100;
 const DEFAULT_PRODUCTS_PER_PAGE = 9;
+const CROSS_PRODUCT_ID = "cross-product";
+const NEEDS_WORK_STATUS = "needs-work";
 
 export type SlideTone = "ready" | "warning" | "blocked" | "empty";
 
@@ -373,7 +375,7 @@ export function buildSectionSlideModel(
     crossProductPriorities.length > 0
   ) {
     productSlides.push({
-      id: "cross-product",
+      id: CROSS_PRODUCT_ID,
       name: "Cross-product",
       status: null,
       stages: [],
@@ -416,7 +418,7 @@ export function buildSectionSlideModel(
     {
       id: "scope",
       label: "Scope",
-      status: products.length > 0 ? "ready" : "needs-work",
+      status: products.length > 0 ? "ready" : NEEDS_WORK_STATUS,
       detail:
         products.length > 0
           ? describeCount(products.length, "product")
@@ -426,7 +428,7 @@ export function buildSectionSlideModel(
     {
       id: "traffic",
       label: "Traffic lights",
-      status: hasProjectStatuses ? "ready" : "needs-work",
+      status: hasProjectStatuses ? "ready" : NEEDS_WORK_STATUS,
       detail: hasProjectStatuses
         ? "Every product has a status"
         : "Add status to every product",
@@ -435,7 +437,7 @@ export function buildSectionSlideModel(
     {
       id: "current",
       label: "Current work",
-      status: currentItems.length > 0 ? "ready" : "needs-work",
+      status: currentItems.length > 0 ? "ready" : NEEDS_WORK_STATUS,
       detail:
         currentItems.length > 0
           ? describeCount(currentItems.length, "item")
@@ -445,7 +447,7 @@ export function buildSectionSlideModel(
     {
       id: "next",
       label: "Next focus",
-      status: nextItems.length > 0 ? "ready" : "needs-work",
+      status: nextItems.length > 0 ? "ready" : NEEDS_WORK_STATUS,
       detail:
         nextItems.length > 0
           ? describeCount(nextItems.length, "item")
@@ -456,7 +458,11 @@ export function buildSectionSlideModel(
       id: "risks",
       label: "Risk story",
       status:
-        risks.length > 0 ? "ready" : hasRiskSignal ? "needs-work" : "optional",
+        risks.length > 0
+          ? "ready"
+          : hasRiskSignal
+            ? NEEDS_WORK_STATUS
+            : "optional",
       detail:
         risks.length > 0
           ? describeCount(risks.length, "risk")
@@ -468,7 +474,7 @@ export function buildSectionSlideModel(
     {
       id: "priorities",
       label: "Top priorities",
-      status: priorities.length > 0 ? "ready" : "needs-work",
+      status: priorities.length > 0 ? "ready" : NEEDS_WORK_STATUS,
       detail:
         priorities.length > 0
           ? describeCount(priorities.length, "priority", "priorities")
@@ -547,21 +553,21 @@ export function buildActivitySlideModel(
     {
       id: "scope",
       label: "Scope",
-      status: hasSection ? "ready" : "needs-work",
+      status: hasSection ? "ready" : NEEDS_WORK_STATUS,
       detail: hasSection ? "Section exists" : "Section not created yet",
       required: true,
     },
     {
       id: "traffic",
       label: "Traffic lights",
-      status: hasSection ? "needs-work" : "optional",
+      status: hasSection ? NEEDS_WORK_STATUS : "optional",
       detail: hasSection ? "Review product statuses" : "Waiting for section",
       required: hasSection,
     },
     {
       id: "current",
       label: "Current work",
-      status: row.itemCount > 0 ? "ready" : "needs-work",
+      status: row.itemCount > 0 ? "ready" : NEEDS_WORK_STATUS,
       detail:
         row.itemCount > 0
           ? describeCount(row.itemCount, "item")
@@ -571,7 +577,7 @@ export function buildActivitySlideModel(
     {
       id: "next",
       label: "Next focus",
-      status: hasContent ? "needs-work" : "optional",
+      status: hasContent ? NEEDS_WORK_STATUS : "optional",
       detail: hasContent ? "Add next-period focus" : "Waiting for content",
       required: hasContent,
     },
@@ -588,7 +594,7 @@ export function buildActivitySlideModel(
     {
       id: "priorities",
       label: "Top priorities",
-      status: row.priorityCount > 0 ? "ready" : "needs-work",
+      status: row.priorityCount > 0 ? "ready" : NEEDS_WORK_STATUS,
       detail:
         row.priorityCount > 0
           ? describeCount(row.priorityCount, "priority", "priorities")
@@ -648,10 +654,10 @@ export function paginateSectionSlides(
 ): SectionSlideModel[] {
   // Separate real product slides from the synthetic cross-product entry.
   const crossProduct = model.productSlides.find(
-    (p) => p.id === "cross-product",
+    (p) => p.id === CROSS_PRODUCT_ID,
   );
   const productOnly = model.productSlides.filter(
-    (p) => p.id !== "cross-product",
+    (p) => p.id !== CROSS_PRODUCT_ID,
   );
 
   if (productOnly.length <= productsPerPage && !crossProduct) {
@@ -732,7 +738,7 @@ export function buildUnifiedSlideModel(
 
   for (const product of products) {
     const name =
-      product.id === "cross-product" ? CROSS_PRODUCT_LABEL : product.name;
+      product.id === CROSS_PRODUCT_ID ? CROSS_PRODUCT_LABEL : product.name;
     // itemRanks is sparse (items without a rank have no key), so a present-key
     // lookup is genuinely `number | undefined` at runtime. Annotate honestly —
     // noUncheckedIndexedAccess is off, so the bare Record would lie non-null and
@@ -804,7 +810,7 @@ export function scopeSlideToProduct(
   return {
     ...slide,
     productSlides: slide.productSlides.filter(
-      (product) => product.id !== "cross-product" && product.id === productId,
+      (product) => product.id !== CROSS_PRODUCT_ID && product.id === productId,
     ),
   };
 }

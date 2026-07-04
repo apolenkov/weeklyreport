@@ -12,7 +12,14 @@ interface RemindLeadButtonProps {
   readonly leadName: string;
 }
 
-type ConfirmState = "idle" | "sent" | "already" | "no-section" | "error";
+const NO_SECTION_CONFIRM_STATE = "no-section";
+
+type ConfirmState =
+  | "idle"
+  | "sent"
+  | "already"
+  | typeof NO_SECTION_CONFIRM_STATE
+  | "error";
 
 const CONFIRM_HOLD_MS = 2400;
 
@@ -57,7 +64,7 @@ export function RemindLeadButton({
     trpc.reminders.dispatchPending.mutationOptions({
       onSuccess: (result) => {
         if (result.reason === "no-matching-section") {
-          setConfirm("no-section");
+          setConfirm(NO_SECTION_CONFIRM_STATE);
         } else if (result.dispatched > 0) {
           setConfirm("sent");
         } else if (result.alreadySent > 0) {
@@ -84,7 +91,7 @@ export function RemindLeadButton({
       ? "Sent"
       : confirm === "already"
         ? "Already sent"
-        : confirm === "no-section"
+        : confirm === NO_SECTION_CONFIRM_STATE
           ? "No sections matched"
           : confirm === "error"
             ? "Retry"
@@ -99,7 +106,7 @@ export function RemindLeadButton({
       ? `Reminder sent to ${leadName}`
       : confirm === "already"
         ? `Reminder already sent to ${leadName} this cycle`
-        : confirm === "no-section"
+        : confirm === NO_SECTION_CONFIRM_STATE
           ? `No sections matched this lead for ${leadName}`
           : confirm === "error"
             ? `Reminder to ${leadName} failed; retry available`
@@ -114,7 +121,7 @@ export function RemindLeadButton({
           busy ||
           confirm === "sent" ||
           confirm === "already" ||
-          confirm === "no-section"
+          confirm === NO_SECTION_CONFIRM_STATE
         }
         aria-busy={busy}
         aria-label={`Send reminder to ${leadName}`}

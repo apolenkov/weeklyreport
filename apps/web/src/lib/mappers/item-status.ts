@@ -10,6 +10,8 @@
 
 import { type AlarmRisk, deriveItemAlarmFromRisks } from "../item-alarm";
 
+const IN_PROGRESS_STATUS = "in-progress";
+
 export type ItemWorkflowStatus = "done" | "in_progress" | "blocked";
 export type ItemType = "current" | "next";
 export type ItemStatus = "in-progress" | "completed" | "blocked" | "planned";
@@ -26,7 +28,7 @@ export function workflowToItemStatus(
     case "done":
       return "completed";
     case "in_progress":
-      return "in-progress";
+      return IN_PROGRESS_STATUS;
     case "blocked":
       return "blocked";
   }
@@ -42,7 +44,7 @@ export function itemStatusToWorkflow(
   switch (status) {
     case "completed":
       return "done";
-    case "in-progress":
+    case IN_PROGRESS_STATUS:
       return "in_progress";
     case "blocked":
       return "blocked";
@@ -70,14 +72,14 @@ export function deriveItemStatus(item: {
     if (item.workflowStatus === "done") return "completed";
     if (item.workflowStatus === "blocked") return "blocked";
     if (item.workflowStatus === "in_progress" && item.completed === false) {
-      return "in-progress";
+      return IN_PROGRESS_STATUS;
     }
     return "planned";
   }
   if (item.workflowStatus) {
     return workflowToItemStatus(item.workflowStatus);
   }
-  return "in-progress";
+  return IN_PROGRESS_STATUS;
 }
 
 /**
@@ -94,7 +96,7 @@ export function applyBlockedRiskOverlay(
 ): ItemStatus {
   // Coerce a stored blocked to in-progress before the overlay so the
   // derivation's in-progress eligibility gate fires.
-  const eligible = base === "blocked" ? "in-progress" : base;
+  const eligible = base === "blocked" ? IN_PROGRESS_STATUS : base;
   const covered = deriveItemAlarmFromRisks(
     {
       productId: parent.projectId,

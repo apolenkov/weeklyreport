@@ -522,6 +522,11 @@ export default defineConfig([
       // undefined asymmetry is harmless. 2 sites per-site-disabled in
       // carry-over.service. NOT an always-false bug.
       "sonarjs/different-types-comparison": "error",
+      // no-duplicate-string: the recommended preset ships this OFF; enabled
+      // here so a string literal repeated 3+ times must be lifted to a shared
+      // named constant. Tests are carved out below (repeated fixture strings
+      // are inherent to test code).
+      "sonarjs/no-duplicate-string": "error",
     },
   },
   // R3b: jsdoc — TS-flavored recommended, scoped to the two published packages'
@@ -603,6 +608,9 @@ export default defineConfig([
       "sonarjs/no-undefined-argument": "off",
       "sonarjs/no-identical-functions": "off",
       "sonarjs/no-alphabetical-sort": "off",
+      // Repeated fixture strings are the test's vocabulary — lifting them to
+      // consts obscures what each assertion literally checks.
+      "sonarjs/no-duplicate-string": "off",
     },
   },
   // Tooling files are not product source — exempt from size/complexity budgets
@@ -613,8 +621,10 @@ export default defineConfig([
       "max-lines": "off",
       complexity: "off",
       // Config knobs (ports, thresholds, rule options) ARE the named values —
-      // lifting them to consts above adds indirection, not clarity.
+      // lifting them to consts above adds indirection, not clarity. Same for
+      // repeated path/glob literals in override lists.
       "@typescript-eslint/no-magic-numbers": "off",
+      "sonarjs/no-duplicate-string": "off",
     },
   },
   // R3a-4: JUSTIFIED PERMANENT max-lines exemptions — data / generated / one-off
@@ -682,6 +692,20 @@ export default defineConfig([
       "apps/api/src/test-utils/**",
     ],
     rules: { "@typescript-eslint/no-magic-numbers": "off" },
+  },
+  // Fixture catalogues, vendored primitives and one-off ops scripts: repeated
+  // literals ARE the data (product names, seed emails, generated class
+  // strings) — same footing as the test carve-out above.
+  {
+    files: [
+      "apps/web/src/components/dashboard/mock-data.ts",
+      "apps/web/src/components/lead/mock-data.ts",
+      "apps/web/src/components/admin/mock-data.ts",
+      "packages/ui/src/components/ui/sidebar.tsx",
+      "prisma/wipe-manual-uat.ts",
+      "apps/web/uat-suite/**",
+    ],
+    rules: { "sonarjs/no-duplicate-string": "off" },
   },
   //
   // R3a-3-fixup WAVE 3 (2026-06-09) — JUSTIFIED PERMANENT complexity exempts

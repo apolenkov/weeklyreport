@@ -7,18 +7,20 @@ export interface ProductGroup {
   readonly items: readonly BlockedAtRiskItem[];
 }
 
+const CSS_DESTRUCTIVE = "var(--color-destructive)";
+
 // Mirror the ProductAccordion idiom (product-accordion.tsx): blocked is the only
 // alarm hue; at-risk is carried by the row's left rail + badge, not a flooded
 // fill. Tokens are shared so the dashboard and the report read identically.
 const SEVERITY_TONE = {
-  blocked: "var(--color-destructive)",
+  blocked: CSS_DESTRUCTIVE,
   "at-risk": "var(--color-status-at-risk-border)",
 } as const satisfies Record<Severity, string>;
 
 const AVATAR_CONFIG = {
   blocked: {
     bg: "var(--color-status-blocked-bg)",
-    fg: "var(--color-destructive)",
+    fg: CSS_DESTRUCTIVE,
   },
   "at-risk": { bg: "var(--color-muted)", fg: "var(--color-foreground)" },
 } as const satisfies Record<Severity, { bg: string; fg: string }>;
@@ -27,7 +29,7 @@ const SEVERITY_BADGE = {
   blocked: {
     label: "Blocked",
     bg: "var(--color-status-blocked-bg)",
-    fg: "var(--color-destructive)",
+    fg: CSS_DESTRUCTIVE,
   },
   "at-risk": {
     label: "At Risk",
