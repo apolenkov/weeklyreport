@@ -15,6 +15,13 @@ import { resolveSessionCookieName } from "../../lib/session-cookie.js";
 const JOB_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+const HTTP = {
+  unauthorized: 401,
+  forbidden: 403,
+  notFound: 404,
+  serverError: 500,
+} as const;
+
 export interface PdfDownloadDeps {
   prisma: PrismaService;
   /** Absolute directory the BullMQ worker writes `{jobId}.pdf` into. */
@@ -81,7 +88,7 @@ export async function handlePdfDownload(
   const cookies = req.cookies as Record<string, string> | undefined;
   const token = cookies?.[resolveSessionCookieName(process.env)];
   if (!token) {
-    res.status(401).end();
+    res.status(HTTP.unauthorized).end();
     return;
   }
 
@@ -93,7 +100,7 @@ export async function handlePdfDownload(
     prisma: deps.prisma,
   });
   if (!session) {
-    res.status(401).end();
+    res.status(HTTP.unauthorized).end();
     return;
   }
 
@@ -104,7 +111,7 @@ export async function handlePdfDownload(
   const file = typeof fileParam === "string" ? fileParam : "";
   const jobId = file.endsWith(".pdf") ? file.slice(0, -".pdf".length) : "";
   if (!JOB_ID_RE.test(jobId)) {
-    res.status(404).end();
+    res.status(HTTP.notFound).end();
     return;
   }
 
@@ -116,19 +123,19 @@ export async function handlePdfDownload(
   // 404 when missing, not completed, or the persisted artifact path does not
   // match the requested path (a path-mismatched row or orphan same-named file).
   if (job?.status !== "completed" || job.filePath !== `/pdfs/${jobId}.pdf`) {
-    res.status(404).end();
+    res.status(HTTP.notFound).end();
     return;
   }
 
   if (!(await canReadReport(session, job.reportId, deps.prisma))) {
-    res.status(403).end();
+    res.status(HTTP.forbidden).end();
     return;
   }
 
   const baseDir = resolve(deps.pdfDir);
   const filePath = resolve(baseDir, `${jobId}.pdf`);
   if (!filePath.startsWith(baseDir + sep) || !existsSync(filePath)) {
-    res.status(404).end();
+    res.status(HTTP.notFound).end();
     return;
   }
 
@@ -142,7 +149,7 @@ export async function handlePdfDownload(
     if (res.headersSent) {
       res.destroy();
     } else {
-      res.status(500).end();
+      res.status(HTTP.serverError).end();
     }
   });
   stream.pipe(res);

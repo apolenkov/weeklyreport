@@ -36,6 +36,7 @@ const otelDecision = startOtel();
 
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { MS_PER_SECOND } from "@customreport/shared";
 import { HttpAdapterHost, NestFactory } from "@nestjs/core";
 import * as trpcExpress from "@trpc/server/adapters/express";
 import { Queue } from "bullmq";
@@ -96,6 +97,21 @@ import { WeeklyReportService } from "./modules/weekly-report/weekly-report.servi
 
 const UUID_SEGMENT_RE =
   /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
+
+const HTTP = {
+  noContent: 204,
+  clientErrorThreshold: 400,
+  serverErrorThreshold: 500,
+} as const;
+
+// Bounds on the client-log forwarder payload — a misbehaving browser tab
+// must not be able to grow one log line without limit.
+const MAX_CLIENT_LOG_BATCH_SIZE = 100;
+const MAX_CLIENT_LOG_MESSAGE_LENGTH = 2000;
+const MAX_CLIENT_LOG_SOURCE_LENGTH = 64;
+const MAX_CLIENT_LOG_URL_LENGTH = 500;
+const MAX_CLIENT_LOG_STACK_LENGTH = 4000;
+const MAX_CLIENT_LOG_USER_AGENT_LENGTH = 200;
 
 function normalizeHttpRoute(path: string): string {
   if (path.startsWith("/pdfs/")) return "/pdfs/:file";
@@ -223,9 +239,9 @@ async function bootstrap() {
         const isHealthPath =
           req.path === "/health" || req.path.startsWith("/health/");
         const level =
-          status >= 500
+          status >= HTTP.serverErrorThreshold
             ? "error"
-            : status >= 400
+            : status >= HTTP.clientErrorThreshold
               ? "warn"
               : isHealthPath
                 ? "debug"
@@ -245,7 +261,7 @@ async function bootstrap() {
             route: normalizeHttpRoute(req.path),
             status_code: String(status),
           },
-          duration / 1000,
+          duration / MS_PER_SECOND,
         );
       });
       nextFn();
@@ -264,12 +280,12 @@ async function bootstrap() {
     express.json({ limit: "128kb" }),
     (req: express.Request, res: express.Response) => {
       if (!clientLogsEnabled) {
-        res.sendStatus(204);
+        res.sendStatus(HTTP.noContent);
         return;
       }
       const body = req.body as { entries?: unknown };
       const entries = Array.isArray(body.entries) ? body.entries : [];
-      for (const raw of entries.slice(0, 100)) {
+      for (const raw of entries.slice(0, MAX_CLIENT_LOG_BATCH_SIZE)) {
         if (!raw || typeof raw !== "object") continue;
         const e = raw as Record<string, unknown>;
         const lvl = e.level;
@@ -279,21 +295,28 @@ async function bootstrap() {
             : "info";
         const msg =
           typeof e.message === "string"
-            ? e.message.slice(0, 2000)
+            ? e.message.slice(0, MAX_CLIENT_LOG_MESSAGE_LENGTH)
             : "<non-string>";
         logger[level](`client: ${msg}`, {
           phase: "web.client",
           source:
-            typeof e.source === "string" ? e.source.slice(0, 64) : undefined,
-          url: typeof e.url === "string" ? e.url.slice(0, 500) : undefined,
+            typeof e.source === "string"
+              ? e.source.slice(0, MAX_CLIENT_LOG_SOURCE_LENGTH)
+              : undefined,
+          url:
+            typeof e.url === "string"
+              ? e.url.slice(0, MAX_CLIENT_LOG_URL_LENGTH)
+              : undefined,
           stack:
-            typeof e.stack === "string" ? e.stack.slice(0, 4000) : undefined,
+            typeof e.stack === "string"
+              ? e.stack.slice(0, MAX_CLIENT_LOG_STACK_LENGTH)
+              : undefined,
           ts: e.ts,
-          ua: req.get("user-agent")?.slice(0, 200),
+          ua: req.get("user-agent")?.slice(0, MAX_CLIENT_LOG_USER_AGENT_LENGTH),
           ip: req.ip,
         });
       }
-      res.sendStatus(204);
+      res.sendStatus(HTTP.noContent);
     },
   );
 

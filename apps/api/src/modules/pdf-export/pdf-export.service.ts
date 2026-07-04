@@ -79,6 +79,7 @@ const PDF_EXPORT_KIND = "pdf-export" as const;
 // auth.controller.ts `SESSION_JWT_ALGORITHM`). Sign uses the jsonwebtoken
 // default, which is the same HS256.
 const PDF_EXPORT_JWT_ALGORITHM = "HS256" as const;
+const MIN_PDF_EXPORT_JWT_SECRET_LENGTH = 32;
 
 /**
  * AUTH-05 / Phase 32-B1 (H-04): verify a token signed by `signPdfExportToken`
@@ -89,7 +90,7 @@ const PDF_EXPORT_JWT_ALGORITHM = "HS256" as const;
  */
 export function verifyPdfExportToken(token: string): PdfExportTokenClaims {
   const secret = process.env.PDF_EXPORT_JWT_SECRET;
-  if (!secret || secret.length < 32) {
+  if (!secret || secret.length < MIN_PDF_EXPORT_JWT_SECRET_LENGTH) {
     throw new Error(
       "PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 32 chars).",
     );
@@ -139,7 +140,7 @@ export class PdfExportService {
    */
   signPdfExportToken(reportId: string, requestedBy?: string): string {
     const secret = process.env.PDF_EXPORT_JWT_SECRET;
-    if (!secret || secret.length < 32) {
+    if (!secret || secret.length < MIN_PDF_EXPORT_JWT_SECRET_LENGTH) {
       throw new PdfExportDomainError(
         "PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 32 chars).",
       );

@@ -1,8 +1,17 @@
+import { MS_PER_SECOND } from "@customreport/shared";
 import type { RequestHandler } from "express";
 import rateLimit, { ipKeyGenerator, type Options } from "express-rate-limit";
 
 import type { AppLogger } from "../../lib/logger";
 import { rateLimitHitsTotal } from "../metrics/metrics.registry.js";
+
+const HTTP_TOO_MANY_REQUESTS = 429;
+// Test-mode bumps every bucket to this figure so E2E suites firing 10+ rapid
+// requests per spec don't flake on the production limits below.
+const TEST_MODE_LIMIT_PER_MINUTE = 1000;
+const AUTH_LIMIT_PER_MINUTE = 5;
+const TRPC_LIMIT_PER_MINUTE = 200;
+const VITALS_LIMIT_PER_MINUTE = 60;
 
 /**
  * Rate-limit middleware factory.
@@ -41,7 +50,10 @@ export function createRateLimits(options: {
       return ipKeyGenerator(ip);
     },
     handler: (req, res, _next, opts) => {
-      const bucket = opts.statusCode === 429 ? String(opts.message) : "unknown";
+      const bucket =
+        opts.statusCode === HTTP_TOO_MANY_REQUESTS
+          ? String(opts.message)
+          : "unknown";
       logger.warn("rate limit hit", {
         phase: "rate-limit",
         path: req.path,
@@ -54,20 +66,20 @@ export function createRateLimits(options: {
       res.status(opts.statusCode).json({
         error: "rate_limit_exceeded",
         message: "Too many requests. Please retry shortly.",
-        retryAfter: Math.ceil(opts.windowMs / 1000),
+        retryAfter: Math.ceil(opts.windowMs / MS_PER_SECOND),
       });
     },
   };
 
   const authLimiter = rateLimit({
     ...baseConfig,
-    limit: isTest ? 1000 : 5,
+    limit: isTest ? TEST_MODE_LIMIT_PER_MINUTE : AUTH_LIMIT_PER_MINUTE,
     message: "auth",
   });
 
   const trpcLimiter = rateLimit({
     ...baseConfig,
-    limit: isTest ? 1000 : 200,
+    limit: isTest ? TEST_MODE_LIMIT_PER_MINUTE : TRPC_LIMIT_PER_MINUTE,
     message: "trpc",
   });
 
@@ -76,7 +88,7 @@ export function createRateLimits(options: {
   // rateLimitHitsTotal accounting via the "vitals" bucket message.
   const vitalsLimiter = rateLimit({
     ...baseConfig,
-    limit: isTest ? 1000 : 60,
+    limit: isTest ? TEST_MODE_LIMIT_PER_MINUTE : VITALS_LIMIT_PER_MINUTE,
     message: "vitals",
   });
 

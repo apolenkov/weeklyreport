@@ -16,6 +16,9 @@ import {
   type SamlProfile,
 } from "./user-session.js";
 
+const HTTP_BAD_REQUEST = 400;
+const HTTP_NOT_FOUND = 404;
+
 /**
  * Dev-only authentication surface, split out of `auth.routes.ts` so the
  * production file carries nothing dev-specific. Every route here is mounted by
@@ -155,7 +158,7 @@ function createDevLoginHandler(deps: DevLoginDeps): RequestHandler {
       const parsedRole = roleSchema.safeParse(requestedRole);
       if (!parsedRole.success) {
         loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });
-        res.status(400).json({
+        res.status(HTTP_BAD_REQUEST).json({
           error: `Invalid role: ${requestedRole}. Must be one of: ${roleSchema.options.join(", ")}`,
         });
         return;
@@ -169,7 +172,7 @@ function createDevLoginHandler(deps: DevLoginDeps): RequestHandler {
       );
       if (!identity) {
         loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });
-        res.status(404).json({
+        res.status(HTTP_NOT_FOUND).json({
           error: `No dev-login user found (role=${validRole}). Seed the database, or pass ?email= of an existing user.`,
         });
         return;
