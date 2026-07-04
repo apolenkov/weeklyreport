@@ -11,13 +11,13 @@ import {
   type GroupScopeOptions,
 } from "../../lib/group-scope.js";
 import {
-  buildEscalationsFromReadSections,
   buildPortfolioProductsFromSnapshotSections,
   computeWorstStatus,
   filterSnapshotSections,
   parsePublishedSnapshot,
   type TrafficLightStatus,
 } from "../published-report-snapshot.js";
+import { buildEscalationsFromReadSections } from "../report-escalations.js";
 import {
   mapPrismaToReportSection,
   reportSectionFullInclude,

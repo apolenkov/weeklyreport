@@ -6,10 +6,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildAssembledReportFromPrismaRow,
-  buildEscalationsFromReadSections,
   buildPortfolioProductsFromSnapshotSections,
   computePortfolioOverviewFromReadSections,
 } from "./published-report-snapshot";
+import { buildEscalationsFromReadSections } from "./report-escalations";
 
 const REPORT_ID = "659b2767-0f86-41e2-b025-49730ca010e4";
 const SECTION_ID = "2a223d8b-c4b2-473c-8a7b-15ecc52195c7";

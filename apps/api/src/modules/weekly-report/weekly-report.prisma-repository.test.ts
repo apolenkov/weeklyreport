@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
-import { buildEscalationsFromReadSections } from "../published-report-snapshot";
+import { buildEscalationsFromReadSections } from "../report-escalations";
 import {
   mapPrismaToReportSection,
   type PrismaReportSectionWithRelations,
