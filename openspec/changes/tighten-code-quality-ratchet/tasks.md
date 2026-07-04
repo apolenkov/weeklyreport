@@ -8,15 +8,13 @@ threshold-raise-back to force green.
 Model split: Sonnet (manual literal/size fixes) · Opus (review of clusters whose
 fix changes structure). Budget per cluster; no global ceiling.
 
-> **STATUS 2026-07-04 (evening) — §1 COMPLETE, §2/§3 remain.** R1a/R1b landed
-> the 300→250 notch; R1c/R1d then drained the whole 30-file grandfather cohort
-> in six pattern-approved waves (ab049e76 … 97c5875b) and the R1b block was
-> deleted from `eslint.config.ts` — `max-lines: 250` is enforced repo-wide
-> with only the justified-permanent exempt list remaining. STILL OPEN: §2
-> `no-magic-numbers` (~330 firings measured) and §3 `no-duplicate-string`
-> (~100 firings) — both autofix-free mass manual literal-lifts — plus the §4
-> close-out, which requires both rules at `error` with zero firings. Do these
-> in a fresh session.
+> **STATUS 2026-07-04 (night) — §1 + §2 COMPLETE, §3 remains.** §1: the
+> 300→250 notch landed and the 30-file grandfather cohort was drained
+> (ab049e76 … 97c5875b). §2: `no-magic-numbers` is `error` repo-wide — 398
+> firings across 98 files were hand-lifted in 7 waves (shared time vocabulary
+> at `packages/shared/src/time.ts`; justified-permanent exempts recorded in
+> the config block). STILL OPEN: §3 `no-duplicate-string` (~100 firings,
+> manual lifts with a test carve-out) and the §4 close-out gate.
 
 ## 0. Preconditions
 
@@ -43,20 +41,26 @@ true`, `skipComments: true`). Do NOT touch `complexity` or
 
 ## 2. no-magic-numbers (TS-aware, manual — no autofix)
 
-- [ ] R2a Enable `@typescript-eslint/no-magic-numbers` as `error` with: `ignore:
+- [x] R2a Enable `@typescript-eslint/no-magic-numbers` as `error` with: `ignore:
 [-1, 0, 1, 2]`, `enforceConst: true`, `ignoreArrayIndexes: true`,
       `ignoreEnums: true`, `ignoreReadonlyClassProperties: true`,
       `ignoreTypeIndexes: true`, `ignoreNumericLiteralTypes: true`. Reuse the
       standard's exempt set (tests, e2e, `prisma/generated`, `prisma/seed*.ts`,
-      `*.config.ts`) plus one-off operational scripts.
-- [ ] R2b Because the rule has NO autofix, there is no isolated `eslint --fix`
+      `*.config.ts`) plus one-off operational scripts. (Also exempt with
+      recorded reasons: histogram-bucket catalogues in metrics files, vendored
+      shadcn primitives, api test-utils.)
+- [x] R2b Because the rule has NO autofix, there is no isolated `eslint --fix`
       commit: fix every firing by hand, lifting the literal to a named `const` /
-      `enum` / config value at the top of its module (Sonnet tier).
-- [ ] R2c Follow the fix-first ladder: fix code → per-site `eslint-disable` only
+      `enum` / config value at the top of its module (Sonnet tier). (398
+      firings / 98 files drained in 7 waves; shared time-constant vocabulary
+      added at `packages/shared/src/time.ts`.)
+- [x] R2c Follow the fix-first ladder: fix code → per-site `eslint-disable` only
       for a genuine false positive with a written reason → exempt only as a last
-      resort, recorded in the spec. No mass-disable.
-- [ ] R2d Land per-cluster green (`pnpm lint` + `typecheck` + `test`); counts
-      measured per cluster, no global ceiling.
+      resort, recorded in the spec. No mass-disable. (Zero new per-site
+      disables were needed.)
+- [x] R2d Land per-cluster green (`pnpm lint` + `typecheck` + `test`); counts
+      measured per cluster, no global ceiling. (Each wave committed green:
+      typecheck + full api 1394 / web 1511 / shared 348 suites.)
 
 ## 3. Magic-string policy
 
