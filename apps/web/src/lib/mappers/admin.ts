@@ -40,7 +40,7 @@ import type {
   ReportingGroup,
   ReportPeriod,
 } from "@customreport/shared";
-import { STAGE_NAMES } from "@customreport/shared";
+import { DAYS_PER_WEEK, MS_PER_DAY, STAGE_NAMES } from "@customreport/shared";
 
 import { formatPeriodLabel } from "../format-date";
 import type {
@@ -93,24 +93,32 @@ function emptyStageGrid(): StageAssignment[] {
   return STAGE_NAMES.map((stage) => ({ stage, assigneeId: null }));
 }
 
+// ISO-8601 weeks are Thursday-anchored: shifting a date to "this week's
+// Thursday" needs a Sun=7 day number and a +4 offset from Monday.
+const ISO_WEEK_SUNDAY_AS_SEVEN = DAYS_PER_WEEK;
+const ISO_WEEK_THURSDAY_OFFSET = 4;
+
 /** Returns ISO week label like "Week 17" given a Date in the UTC range. */
 function isoWeekLabel(date: Date): string {
   // ISO week number per ISO-8601: thursday-anchored.
   const d = new Date(
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
   );
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const dayNum = d.getUTCDay() || ISO_WEEK_SUNDAY_AS_SEVEN;
+  d.setUTCDate(d.getUTCDate() + ISO_WEEK_THURSDAY_OFFSET - dayNum);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   const week = Math.ceil(
-    ((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7,
+    ((d.getTime() - yearStart.getTime()) / MS_PER_DAY + 1) / DAYS_PER_WEEK,
   );
   return `Week ${week}`;
 }
 
+// "YYYY-MM-DD" — length of an ISO date-only prefix.
+const ISO_DATE_LENGTH = 10;
+
 function toIsoDateString(date: Date): string {
   // YYYY-MM-DD
-  return date.toISOString().slice(0, 10);
+  return date.toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
 function mapUser(api: AdminUser): MockUser {
@@ -181,8 +189,14 @@ function reminderName(kind: AdminReminderRule["kind"]): string {
   }
 }
 
+// "YYYY-MM-DD HH:MM" — ISO date+time truncated to minute precision.
+const ISO_DATETIME_MINUTE_LENGTH = 16;
+
 function reminderDescription(rule: AdminReminderRule): string {
-  const at = rule.fireAt.toISOString().replace("T", " ").slice(0, 16);
+  const at = rule.fireAt
+    .toISOString()
+    .replace("T", " ")
+    .slice(0, ISO_DATETIME_MINUTE_LENGTH);
   switch (rule.kind) {
     case "deadline":
       return `Send a reminder when the deadline is reached (fires at ${at} UTC).`;

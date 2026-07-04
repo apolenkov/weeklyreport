@@ -1,3 +1,4 @@
+import { MS_PER_SECOND } from "@customreport/shared";
 import {
   defaultShouldDehydrateQuery,
   keepPreviousData,
@@ -6,6 +7,10 @@ import {
 import superjson from "superjson";
 
 import { getClientErrorDetails } from "./client-error-reporting";
+
+// Query results are considered fresh for this many seconds before a refetch.
+const STALE_TIME_SECONDS = 30;
+const STALE_TIME_MS = STALE_TIME_SECONDS * MS_PER_SECOND;
 
 /**
  * TanStack default retry count for transient failures (5xx / network). Kept
@@ -34,7 +39,7 @@ export function makeQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 30 * 1000,
+        staleTime: STALE_TIME_MS,
         refetchOnWindowFocus: true,
         // A20: prevent blank flash during refetch (autosave → invalidate cycle).
         // Shows previous data while new data loads instead of unmounting UI.

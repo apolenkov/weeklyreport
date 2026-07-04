@@ -1,9 +1,13 @@
 import type { WeeklyReportReadModel } from "@customreport/shared";
+import { HOURS_PER_DAY, MS_PER_HOUR } from "@customreport/shared";
 
 import type { KpiData } from "./dashboard";
 
+// "YYYY-MM-DD" — length of an ISO date-only prefix.
+const ISO_DATE_LENGTH = 10;
+
 function isoDateLabel(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  return date.toISOString().slice(0, ISO_DATE_LENGTH);
 }
 
 /**
@@ -13,9 +17,9 @@ function isoDateLabel(date: Date): string {
 export function formatRelativeDeadline(deadline: Date, now: Date): string {
   const diffMs = deadline.getTime() - now.getTime();
   if (diffMs <= 0) return "Past";
-  const totalHours = Math.floor(diffMs / 3_600_000);
-  const days = Math.floor(totalHours / 24);
-  const hours = totalHours - days * 24;
+  const totalHours = Math.floor(diffMs / MS_PER_HOUR);
+  const days = Math.floor(totalHours / HOURS_PER_DAY);
+  const hours = totalHours - days * HOURS_PER_DAY;
   if (days > 0) return `${days}d ${hours}h`;
   return `${hours}h`;
 }

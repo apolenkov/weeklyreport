@@ -52,8 +52,12 @@ import type {
   ReportSectionReadModel,
 } from "@customreport/shared";
 import {
+  HOURS_PER_DAY,
   initialsFromName as sharedInitialsFromName,
+  MINUTES_PER_HOUR,
+  MS_PER_SECOND,
   normalizeStageName,
+  SECONDS_PER_MINUTE,
   shortNameFromName,
   STAGE_NAMES,
   stageNamesMatch,
@@ -238,18 +242,25 @@ function isoWeekNumber(d: Date): number {
   return sharedIsoWeekNumber(d);
 }
 
+// Truncation length for a fallback id's embedded text fragment.
+const ID_TEXT_FRAGMENT_LENGTH = 8;
+
+// "YYYY-MM-DD" — length of an ISO date-only prefix.
+const ISO_DATE_LENGTH = 10;
+
 function formatDateRange(start: Date, end: Date): string {
   return formatPeriodRangeWithYear(start, end);
 }
 
 function formatRelativeTimestamp(at: Date, now: Date): string {
   const diffMs = now.getTime() - at.getTime();
-  const diffSec = Math.max(0, Math.floor(diffMs / 1000));
-  if (diffSec < 60) return "just now";
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin} min ago`;
-  const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return diffHour === 1 ? "1h ago" : `${diffHour}h ago`;
+  const diffSec = Math.max(0, Math.floor(diffMs / MS_PER_SECOND));
+  if (diffSec < SECONDS_PER_MINUTE) return "just now";
+  const diffMin = Math.floor(diffSec / SECONDS_PER_MINUTE);
+  if (diffMin < MINUTES_PER_HOUR) return `${diffMin} min ago`;
+  const diffHour = Math.floor(diffMin / MINUTES_PER_HOUR);
+  if (diffHour < HOURS_PER_DAY)
+    return diffHour === 1 ? "1h ago" : `${diffHour}h ago`;
   const month = MONTHS[at.getUTCMonth()];
   const day = at.getUTCDate();
   return `${month} ${day}`;
@@ -520,7 +531,9 @@ export function mapLeadItems(
         completed: item.completed ?? null,
       });
       return {
-        id: item.id ?? `${itemType}-${item.projectId}-${item.text.slice(0, 8)}`,
+        id:
+          item.id ??
+          `${itemType}-${item.projectId}-${item.text.slice(0, ID_TEXT_FRAGMENT_LENGTH)}`,
         productId: item.projectId,
         productName: project?.name ?? "Unknown",
         // UFB-073 (R1): stage array from DB. Surfaces on the kanban card and
@@ -592,7 +605,7 @@ export function mapLeadDecisions(
     owner: d.owner,
     impact: d.impact,
     deadline: d.deadline
-      ? new Date(d.deadline).toISOString().slice(0, 10)
+      ? new Date(d.deadline).toISOString().slice(0, ISO_DATE_LENGTH)
       : null,
     stageIds: d.stageIds,
   }));
@@ -637,7 +650,9 @@ export function mapLeadActivityCards(
       parentId === activity.activityId;
 
     const toItem = (item: SectionItem): LeadKanbanItem => ({
-      id: item.id ?? `activity-${activity.activityId}-${item.text.slice(0, 8)}`,
+      id:
+        item.id ??
+        `activity-${activity.activityId}-${item.text.slice(0, ID_TEXT_FRAGMENT_LENGTH)}`,
       productId: "",
       productName: activity.activityName,
       activityId: activity.activityId,
@@ -680,7 +695,7 @@ export function mapLeadActivityCards(
         owner: decision.owner,
         impact: decision.impact,
         deadline: decision.deadline
-          ? new Date(decision.deadline).toISOString().slice(0, 10)
+          ? new Date(decision.deadline).toISOString().slice(0, ISO_DATE_LENGTH)
           : null,
         stageIds: decision.stageIds,
       }));

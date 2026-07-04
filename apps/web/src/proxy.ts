@@ -38,6 +38,14 @@ const COOKIE_NAME = "customreport_session";
 
 const PROTECTED_PATH_PREFIXES = ["/lead", "/head", "/reports", "/admin"];
 
+// A JWT has three base64 segments separated by dots (header.payload.signature).
+const JWT_SEGMENT_COUNT = 3;
+// Conservative lower bound on a JWT's total length — real tokens run several
+// hundred chars; anything shorter is definitionally not a JWT.
+const MIN_JWT_LENGTH = 20;
+
+const HTTP_TEMPORARY_REDIRECT = 307;
+
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PATH_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
@@ -67,8 +75,8 @@ export default function proxy(request: NextRequest): NextResponse {
   const cookieValue = request.cookies.get(COOKIE_NAME)?.value;
   const hasValidCookieShape =
     !!cookieValue &&
-    cookieValue.length > 20 &&
-    cookieValue.split(".").length === 3;
+    cookieValue.length > MIN_JWT_LENGTH &&
+    cookieValue.split(".").length === JWT_SEGMENT_COUNT;
   if (hasValidCookieShape) {
     return NextResponse.next();
   }
@@ -79,7 +87,7 @@ export default function proxy(request: NextRequest): NextResponse {
   const loginUrl = new URL("/", request.url);
   const originalPath = request.nextUrl.pathname + request.nextUrl.search;
   loginUrl.searchParams.set("next", originalPath);
-  return NextResponse.redirect(loginUrl, 307);
+  return NextResponse.redirect(loginUrl, HTTP_TEMPORARY_REDIRECT);
 }
 
 /**

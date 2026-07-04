@@ -2,6 +2,10 @@
 
 import { type RefObject, useEffect, useState } from "react";
 
+// Pixel slack below the fold before the fade affordance hides — avoids
+// flicker from sub-pixel scroll-height rounding.
+const SCROLL_FADE_THRESHOLD_PX = 4;
+
 /**
  * Whether a scroll container has more content below the fold — drives a
  * bottom fade-out affordance. Re-checks on scroll and on resize, and tolerates
@@ -13,7 +17,10 @@ export function useScrollFade(ref: RefObject<HTMLElement | null>): boolean {
     const el = ref.current;
     if (!el) return;
     const check = () => {
-      setCanScrollDown(el.scrollTop + el.clientHeight < el.scrollHeight - 4);
+      setCanScrollDown(
+        el.scrollTop + el.clientHeight <
+          el.scrollHeight - SCROLL_FADE_THRESHOLD_PX,
+      );
     };
     check();
     el.addEventListener("scroll", check, { passive: true });
