@@ -70,6 +70,11 @@ import {
   createSamlStrategy,
   createSamlStrategyOptions,
 } from "./modules/auth/saml.strategy";
+import {
+  buildAutoCarryOverDeps,
+  carryOverIntoOpenedPeriod,
+} from "./modules/carry-over/auto-carry-over";
+import { CarryOverPrismaRepository } from "./modules/carry-over/carry-over.prisma-repository";
 import { CarryOverService } from "./modules/carry-over/carry-over.service";
 import { OrganizationService } from "./modules/organization/organization.service";
 import { createPdfDownloadHandler } from "./modules/pdf-export/pdf-export.download-handler";
@@ -322,9 +327,22 @@ async function bootstrap() {
     },
   });
 
+  // HF10 (lead-report-surface-polish): auto carry-over closure shared by the
+  // tRPC createPeriodManual seam and the login provisioning seam below. Best
+  // effort by construction — carryOverIntoOpenedPeriod never rejects.
+  const autoCarryOverDeps = buildAutoCarryOverDeps({
+    prisma: prismaService,
+    repository: app.get(CarryOverPrismaRepository),
+    carryOverService: app.get(CarryOverService),
+    logger,
+  });
+  const autoCarryOver = (targetReportId: string) =>
+    carryOverIntoOpenedPeriod(autoCarryOverDeps, targetReportId);
+
   // Resolve all services from NestJS DI container
   const appRouter = createAppRouter({
     prisma: prismaService,
+    autoCarryOver,
     reportSectionsService: app.get(ReportSectionsService),
     reviewService: app.get(ReviewService),
     reviewActionsService: app.get(ReviewActionsService),
@@ -333,7 +351,6 @@ async function bootstrap() {
     adminService: app.get(AdminService),
     organizationService: app.get(OrganizationService),
     remindersService: app.get(RemindersService),
-    carryOverService: app.get(CarryOverService),
     archiveService: app.get(ArchiveService),
     periodService: app.get(PeriodService),
     weeklyReportService: app.get(WeeklyReportService),
@@ -448,6 +465,11 @@ async function bootstrap() {
       reportId,
       userId,
     );
+    // HF10: unconditional, not gated on "just created" — the execution-dedupe
+    // short-circuit makes an already-carried period a single indexed read, so
+    // every login doubles as a free retry after a transient carry failure.
+    // Never rejects; a carry problem must not block login.
+    await autoCarryOver(reportId);
     return { reportId, sectionId };
   };
   mountAuthRoutes(

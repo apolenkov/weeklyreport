@@ -8,12 +8,12 @@
 > fixed reference height + `line-clamp-3`, `lead-form.tsx` QuickAddButton before
 > Submit outside the `!isSlidesMode` gate, `alert-bar.tsx` reopen indicator
 > removed). The openspec change was left at 0/24; these boxes now reflect
-> reality. §5 (carry-over automation) and §6 (review-acknowledge placement) are
-> **PARKED** — each carries an unresolved design open question (§5.1 trigger
-> point, §5.3 unused `carryOver.uncarried` read, §6.1 non-publisher acknowledge
-> path) that is a product-owner decision, and §5 is backend + integration (not
-> web-only). Do NOT build §5/§6 until those questions are answered. §7.5
-> live-verify (visual) is PENDING Sasha's walkthrough.
+> reality. **§5 (carry-over automation) was UNPARKED and implemented 2026-07-04**
+> — the owner resolved the trigger point (fire when the period becomes open,
+> eager materialization; design D4) and the dead-read fate (delete both
+> `carryOver.*` procedures). §6 (review-acknowledge placement) stays **PARKED**
+> on its open question (§6.1 non-publisher acknowledge path — a product-owner
+> decision). §7.5 live-verify (visual) is PENDING Sasha's walkthrough.
 
 ## 1. Lead slides — group by product, author, hierarchy, overflow (A1, A2, A4)
 
@@ -74,24 +74,28 @@
       for the alert bar without the reopen line and the card as the only reopen
       surface.
 
-## 5. Carry-over automation + banner removal (HF10) — PARKED (open questions)
+## 5. Carry-over automation + banner removal (HF10)
 
-- [ ] 5.1 CONFIRM the trigger point (design Open Question 1) before coding:
-      per-lead at `ensureLeadSection` (primary) vs eager materialization at
-      `createPeriodManual` (alternative).
-- [ ] 5.2 Add the automatic trigger reusing `CarryOverService.executeCarryOver`
-      copy rules; scope to the just-established author's section (per-author entry
-      point if primary trigger chosen). Preserve the write-integrity guard
-      (editable target, never overwrite `submitted`) and idempotency (the
-      `@@unique([reportSectionId, stableId])` lineage skip + execution dedupe).
+- [x] 5.1 CONFIRM the trigger point (design Open Question 1) before coding:
+      RESOLVED by the owner — trigger when the period becomes open, eager
+      materialization of prior-period authors' sections (see design D4).
+- [x] 5.2 Add the automatic trigger reusing `CarryOverService.executeCarryOver`
+      copy rules: `carryOverIntoOpenedPeriod` orchestrator
+      (`apps/api/src/modules/carry-over/auto-carry-over.ts`) fired from three
+      seams — login provisioning (`main.ts`), the scheduler's per-tick reconcile
+      loop over fresh-open periods, and manual admin create when minted open.
+      Write-integrity guard and lineage/execution idempotency reused verbatim.
       NO schema change.
-- [ ] 5.3 Remove `apps/web/src/components/weekly-report/carry-over-banner.tsx` and
+- [x] 5.3 Remove `apps/web/src/components/weekly-report/carry-over-banner.tsx` and
       its mount in `weekly-report-page.tsx`; delete `carry-over-banner.test.tsx`.
-      Decide the fate of the now-unused `carryOver.uncarried` read (design Open
-      Question 4).
-- [ ] 5.4 Add/adjust service + integration coverage: unfinished carried
-      automatically, no prior period → no-op, finished work not carried, second
-      provisioning does not duplicate, submitted/non-editable target rejected.
+      `carryOver.uncarried` AND `carryOver.execute` tRPC procedures deleted with
+      `listUncarriedOpenWork`, `carry-over-uncarried.ts` and the dead
+      `carry-over.router.ts` wrapper (design Open Question 4 resolved).
+- [x] 5.4 Add/adjust service + integration coverage: orchestrator unit suite
+      (no-prior no-op, dedupe short-circuit, empty-roster no-op, happy path,
+      swallow semantics), scheduler multi-flip reconcile + scheduled-born
+      exclusion, and the reworked lifecycle integration test (materializes the
+      section, carries only open work, second run duplicates nothing).
 
 ## 6. Review-acknowledge placement (HF1) — PARKED (open question)
 
@@ -111,8 +115,8 @@
       except data/comment/test.
 - [x] 7.3 `pnpm test` (unit) green, including the updated slide/card/quick-add,
       alert-bar (+ snapshot) tests. (Carry-over/acknowledge tests deferred with §5/§6.)
-- [ ] 7.4 (PARKED with §5) Carry-over integration coverage green for the
-      automatic-trigger behavior.
+- [x] 7.4 Carry-over integration coverage green for the automatic-trigger
+      behavior (`unified-activity-lifecycle.integration.test.ts`).
 - [ ] 7.5 (PENDING Sasha's walkthrough) Live-verify from source: lead slides group
       by product with the author shown and no "+N more"; item cards uniform with
       hover tooltip; "+ Add" visible in slides, before Submit; dashboard shows one

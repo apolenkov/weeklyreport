@@ -13,6 +13,9 @@ import { CarryOverService } from "./carry-over.service";
       inject: [CarryOverPrismaRepository],
     },
   ],
-  exports: [CarryOverService],
+  // The repository is exported for the auto-carry-over wiring (PeriodModule's
+  // scheduler factory and the composition root both build orchestrator deps
+  // from it directly).
+  exports: [CarryOverService, CarryOverPrismaRepository],
 })
 export class CarryOverModule {}

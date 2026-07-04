@@ -107,8 +107,32 @@ export class PeriodCreatorScheduler {
     // TD-06: wire PolicyApplicator so auto-created periods materialise
     // reminder rules just like admin-panel-created ones.
     private readonly policyApplicator?: PolicyApplicatorService,
+    // Auto carry-over hook (best-effort, never rejects), invoked for every
+    // fresh-open period each tick. Optional for the same DI reason as the
+    // audit logger; the module factory always wires it.
+    private readonly autoCarryOver?: (targetReportId: string) => Promise<void>,
   ) {
     this.auditLogger = auditLogger ?? createNullAuditLogger();
+  }
+
+  /**
+   * Reconcile carry-over for EVERY fresh-open period, not only rows this tick
+   * flipped: `flipDueScheduledToOpen` can open several rows at once, and a
+   * period whose carry failed transiently on a previous tick gets retried
+   * here (the execution dedupe inside the orchestrator makes a re-visit a
+   * single indexed read). `periodStatus: "open"` deliberately excludes
+   * reopened periods — a reopen amends a published period and must not
+   * re-trigger carry.
+   */
+  private async reconcileCarryOver(): Promise<void> {
+    if (!this.autoCarryOver) return;
+    const openPeriods = await this.prisma.report.findMany({
+      where: { periodState: "open", periodStatus: "open", archived: false },
+      select: { id: true },
+    });
+    for (const period of openPeriods) {
+      await this.autoCarryOver(period.id);
+    }
   }
 
   // Every day at 00:05 UTC. The 5-minute offset keeps the tick out of the
@@ -145,6 +169,8 @@ export class PeriodCreatorScheduler {
     // partial unique index now constrains this UPDATE, so the flip runs
     // per-boundary with P2002 recovery instead of a single bulk updateMany.
     await flipDueScheduledToOpen(this.prisma.report, now, this.logger);
+
+    await this.reconcileCarryOver();
 
     // Most recent period across the whole table. If it ends in the future
     // (or right now), nothing to do — the current cycle is still open.
@@ -194,6 +220,12 @@ export class PeriodCreatorScheduler {
       from: null,
       to: result.periodState,
     });
+
+    // A period minted open THIS tick post-dates the reconcile pass above; a
+    // scheduled-born one is picked up by a later tick's flip + reconcile.
+    if (result.periodState === "open" && this.autoCarryOver) {
+      await this.autoCarryOver(result.reportId);
+    }
 
     return {
       created: true,
