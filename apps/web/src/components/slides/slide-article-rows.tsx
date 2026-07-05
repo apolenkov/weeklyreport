@@ -1,5 +1,25 @@
+import { Check } from "lucide-react";
+import { useRef } from "react";
+
 import { STAGE_ICONS } from "../lead/stage-chip-config";
+import { useSdlcTooltip } from "../ui/sdlc-tooltip";
 import type { GridAuthor, GridBadge, GridRow } from "./slide-grid-model";
+
+/** Hover/focus handlers wiring an element to the singleton slide tooltip. */
+function useHoverTooltip(content: string) {
+  const ref = useRef<HTMLSpanElement | null>(null);
+  const tooltip = useSdlcTooltip();
+  return {
+    ref,
+    onMouseEnter: () => {
+      const el = ref.current;
+      if (el) tooltip.show(el.getBoundingClientRect(), content);
+    },
+    onMouseLeave: () => {
+      tooltip.hide();
+    },
+  };
+}
 
 /** Background for an author's identity slot (cycled tokens, owner = slot 0). */
 export function authorSlotBackground(author: GridAuthor): string {
@@ -13,11 +33,20 @@ function AuthorBadge({
   readonly author: GridAuthor | undefined;
   readonly show: boolean;
 }) {
+  // Hooks precede the early return (rules-of-hooks); the label mirrors the
+  // footer legend entry so hover answers "who" without leaving the row.
+  const label =
+    author === undefined
+      ? ""
+      : author.role === undefined
+        ? author.name
+        : `${author.name} · ${author.role}`;
+  const tooltip = useHoverTooltip(label);
   // Inline in the text flow — no reserved column, the text wraps around it.
   if (!show || author === undefined) return null;
   return (
     <span
-      title={author.name}
+      {...tooltip}
       data-testid="slide-author-badge"
       className="mr-1 inline-flex h-[15px] w-[22px] translate-y-[-1px] items-center justify-center rounded align-middle text-[8px] font-semibold text-[var(--color-foreground)]"
       style={{ background: authorSlotBackground(author) }}
@@ -28,42 +57,33 @@ function AuthorBadge({
   );
 }
 
-const BADGE_CONFIG: Record<
-  Exclude<GridBadge, null>,
-  { readonly label: string; readonly className: string }
-> = {
-  completed: {
-    label: "COMPLETED",
-    className:
-      "bg-[var(--color-success)] text-[var(--color-primary)] border border-transparent",
-  },
-  "in-progress": {
-    label: "IN PROGRESS",
-    className:
-      "bg-[var(--color-surface-muted)] text-[var(--color-muted-foreground)] border border-transparent",
-  },
-  planned: {
-    label: "PLANNED",
-    className:
-      "bg-[var(--color-surface-muted)] text-[var(--color-muted-foreground)] border border-dashed border-[var(--color-border)]",
-  },
-  "at-risk": {
-    label: "AT RISK",
-    className:
-      "bg-[var(--color-status-dot-at-risk)] text-white border border-transparent",
-  },
-};
-
+/** Exception-only trailing marks: expected states carry nothing, a done item
+ * gets a quiet check glyph, an open risk keeps its loud AT RISK chip. Both
+ * trail the text inline so wrapped lines keep the full column width. */
 function StatusBadge({ badge }: { readonly badge: GridBadge }) {
   if (badge === null) return null;
-  const config = BADGE_CONFIG[badge];
-  // Trails the item text inline (not a fixed side column), so the text keeps
-  // the full column width and the badge wraps with the last line.
+  if (badge === "completed") {
+    return (
+      <span className="ml-1 inline-flex translate-y-[-1px] align-middle text-[var(--color-primary)]">
+        <Check aria-hidden="true" className="h-3 w-3" />
+        <span className="sr-only">Completed</span>
+      </span>
+    );
+  }
   return (
-    <span
-      className={`ml-1 inline-flex translate-y-[-1px] rounded px-1 py-0.5 align-middle text-[8px] font-semibold uppercase tracking-wide ${config.className}`}
-    >
-      {config.label}
+    <span className="ml-1 inline-flex translate-y-[-1px] rounded border border-transparent bg-[var(--color-status-dot-at-risk)] px-1 py-0.5 align-middle text-[8px] font-semibold uppercase tracking-wide text-white">
+      AT RISK
+    </span>
+  );
+}
+
+function StageWatermark({ stageName }: { readonly stageName: string }) {
+  const tooltip = useHoverTooltip(stageName);
+  const Icon = STAGE_ICONS[stageName];
+  if (!Icon) return null;
+  return (
+    <span {...tooltip}>
+      <Icon className="h-[11px] w-[11px]" />
     </span>
   );
 }
@@ -79,16 +99,37 @@ function StageWatermarks({
       aria-hidden="true"
       className="mr-1 inline-flex translate-y-[1px] items-center gap-0.5 align-baseline opacity-[0.28]"
     >
+      {stageNames.map((stageName) => (
+        <StageWatermark key={stageName} stageName={stageName} />
+      ))}
+    </span>
+  );
+}
+
+/** Footer legend for the stage watermark icons — one entry per stage that
+ * actually appears on the slide, in the canonical pipeline order. */
+export function StageLegend({
+  stageNames,
+}: {
+  readonly stageNames: readonly string[];
+}) {
+  if (stageNames.length === 0) return null;
+  return (
+    <div
+      data-testid="slide-stage-legend"
+      className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-[var(--color-muted-foreground)]"
+    >
       {stageNames.map((stageName) => {
         const Icon = STAGE_ICONS[stageName];
         if (!Icon) return null;
         return (
-          <span key={stageName} title={stageName}>
-            <Icon className="h-[11px] w-[11px]" />
+          <span key={stageName} className="inline-flex items-center gap-1">
+            <Icon aria-hidden="true" className="h-[11px] w-[11px]" />
+            {stageName}
           </span>
         );
       })}
-    </span>
+    </div>
   );
 }
 

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { CrossAuthorContentRow } from "../../lib/mappers/lead-cross-author";
 import {
   buildSlideGridModel,
+  collectStageNames,
   type GridProductCard,
   type GridSubsection,
   SHARED_CARD_ID,
@@ -125,16 +126,26 @@ describe("buildSlideGridModel — badges and columns", () => {
       }),
     });
     const cols = productLevelOf(cardOf(model, "p1")).columns;
-    expect(cols.current.map((r) => r.badge)).toEqual([
-      "completed",
-      "in-progress",
-    ]);
-    expect(cols.next.map((r) => r.badge)).toEqual(["planned"]);
+    // Exception-only marks: expected states (in progress / planned) are null.
+    expect(cols.current.map((r) => r.badge)).toEqual(["completed", null]);
+    expect(cols.next.map((r) => r.badge)).toEqual([null]);
     expect(cols.risks.map((r) => [r.badge, r.blockerHighlight])).toEqual([
       ["at-risk", false],
       [null, true],
     ]);
     expect(cols.decisions.map((r) => r.badge)).toEqual([null]);
+  });
+
+  it("collects the slide's stage names once, in canonical order", () => {
+    const model = buildSlideGridModel({
+      section: section({
+        items: [
+          item({ text: "test work", stageIds: ["Testing"] }),
+          item({ text: "plan work", stageIds: ["Planning", "Testing"] }),
+        ],
+      }),
+    });
+    expect(collectStageNames(model)).toEqual(["Planning", "Testing"]);
   });
 
   it("drops rows with empty text and counts the rest", () => {

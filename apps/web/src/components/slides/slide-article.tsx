@@ -10,6 +10,8 @@ import {
   SlideLegend,
   SlidePriorityStrip,
 } from "./slide-article-header";
+import { StageLegend } from "./slide-article-rows";
+import { collectStageNames } from "./slide-grid-model";
 
 /**
  * The one slide article for the whole deck (lead sections AND the head's own
@@ -71,6 +73,7 @@ export function SlideArticle({
         )}
       </div>
       <SlideLegend authors={grid.authors} />
+      <StageLegend stageNames={collectStageNames(grid)} />
     </article>
   );
 }

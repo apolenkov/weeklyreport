@@ -18,6 +18,7 @@ import {
   type GridAuthor,
   type GridColumns,
   type SlideTrafficStatus,
+  sortStageNames,
 } from "./slide-grid-rows";
 
 export type { GridPriorityCard } from "./slide-grid-cells";
@@ -237,6 +238,21 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
     priorityStrip,
     products,
   };
+}
+
+/** Unique stage names present on the slide, in canonical pipeline order —
+ * feeds the footer stage legend. */
+export function collectStageNames(model: SlideGridModel): readonly string[] {
+  const names = model.products
+    .flatMap((card) => card.subsections)
+    .flatMap((subsection) => [
+      ...subsection.columns.current,
+      ...subsection.columns.next,
+      ...subsection.columns.risks,
+      ...subsection.columns.decisions,
+    ])
+    .flatMap((row) => row.stageNames);
+  return sortStageNames([...new Set(names)]);
 }
 
 /** Guard used by tests and the article: `hasText` re-export for fixtures. */

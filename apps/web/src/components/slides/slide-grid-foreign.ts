@@ -31,11 +31,7 @@ export function buildForeignRows(
           ...base,
           id: item.id,
           text: item.text.trim(),
-          badge: isNext
-            ? "planned"
-            : item.workflowStatus === "done"
-              ? "completed"
-              : "in-progress",
+          badge: item.workflowStatus === "done" ? "completed" : null,
           stageNames: sortStageNames(item.stageNames),
         },
       };

@@ -13,6 +13,7 @@ import {
   statusLabel,
 } from "../../lib/status-presentation";
 import { SlideCell } from "./slide-article-rows";
+import { columnsRowCount } from "./slide-grid-cells";
 import type {
   GridAuthor,
   GridProductCard,
@@ -126,20 +127,25 @@ function SubsectionRow({
   readonly subsection: GridSubsection;
   readonly authorsById: ReadonlyMap<string, GridAuthor>;
 }) {
+  // A record-less subsection (status-only project) collapses to its header —
+  // a 4-column row of em-dashes says nothing the status dot doesn't.
+  const empty = columnsRowCount(subsection.columns) === 0;
   return (
     <div className="border-t border-dashed border-[rgba(0,0,0,0.10)] pt-2 first:border-t-0 first:pt-0">
       <SubsectionHeader subsection={subsection} />
-      <div className={`${GRID_TEMPLATE} mt-1.5`}>
-        {COLUMNS.map(({ key, label }) => (
-          <SlideCell
-            key={key}
-            rows={subsection.columns[key]}
-            authorsById={authorsById}
-            showStages={subsection.showStages}
-            label={label}
-          />
-        ))}
-      </div>
+      {!empty && (
+        <div className={`${GRID_TEMPLATE} mt-1.5`}>
+          {COLUMNS.map(({ key, label }) => (
+            <SlideCell
+              key={key}
+              rows={subsection.columns[key]}
+              authorsById={authorsById}
+              showStages={subsection.showStages}
+              label={label}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
