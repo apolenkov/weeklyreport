@@ -1,28 +1,31 @@
 "use client";
 
+import {
+  type CanonicalStatus,
+  statusDotClassName,
+  statusLabel,
+} from "../../lib/status-presentation";
 import type { SlideActivityPill } from "./section-slide-utils";
 
 type PillStatus = "green" | "yellow" | "red" | "empty";
-
-const PILL_DOT_CLASS: Record<PillStatus, string> = {
-  green: "bg-[var(--color-primary)]",
-  yellow: "bg-[var(--color-status-dot-at-risk)]",
-  red: "bg-[var(--color-destructive)]",
-  empty: "bg-[var(--color-muted-foreground)] opacity-50",
-};
-
-const PILL_STATUS_LABEL: Record<PillStatus, string> = {
-  green: "On track",
-  yellow: "At risk",
-  red: "Blocked",
-  empty: "No status",
-};
 
 // Worst-first so blocked activities read first on the status slide.
 const GROUP_ORDER: readonly PillStatus[] = ["red", "yellow", "green", "empty"];
 
 function toPillStatus(status: SlideActivityPill["status"]): PillStatus {
   return status ?? "empty";
+}
+
+/** Traffic-light pill key → canonical status for map lookups (D6). */
+function pillToStatus(pill: PillStatus): CanonicalStatus {
+  if (pill === "red") return "blocked";
+  if (pill === "yellow") return "at-risk";
+  if (pill === "green") return "on-track";
+  return "empty";
+}
+
+function pillLabel(pill: PillStatus): string {
+  return statusLabel(pillToStatus(pill), "screen");
 }
 
 function ActivityPill({ activity }: { readonly activity: SlideActivityPill }) {
@@ -37,7 +40,7 @@ function ActivityPill({ activity }: { readonly activity: SlideActivityPill }) {
         aria-hidden="true"
         className={[
           "inline-block h-2 w-2 shrink-0 rounded-full",
-          PILL_DOT_CLASS[status],
+          statusDotClassName(pillToStatus(status)),
         ].join(" ")}
       />
       <span className="truncate">{activity.name}</span>
@@ -46,7 +49,7 @@ function ActivityPill({ activity }: { readonly activity: SlideActivityPill }) {
           {activity.linkedProducts.join(", ")}
         </span>
       )}
-      <span className="sr-only">{PILL_STATUS_LABEL[status]}</span>
+      <span className="sr-only">{pillLabel(status)}</span>
     </span>
   );
 }
@@ -83,7 +86,7 @@ export function SlideActivityPills({
         <div
           key={group.status}
           role="list"
-          aria-label={`${PILL_STATUS_LABEL[group.status]} activities`}
+          aria-label={`${pillLabel(group.status)} activities`}
           data-testid={`slide-activity-group-${group.status}`}
           className="flex flex-wrap items-center gap-1.5"
         >

@@ -1,5 +1,7 @@
 "use client";
 
+import { statusDotClassName, statusLabel } from "../../lib/status-presentation";
+
 export type ProductStatus = "blocked" | "at-risk" | "on-track" | "empty";
 
 export interface ProductChipEntry {
@@ -24,36 +26,13 @@ export function mapTrafficLightToStatus(
   return "empty";
 }
 
-/**
- * Tailwind class for a status dot of the given status.
- * at-risk references the named token (D6) instead of a hardcoded hex.
- * Module-private: rows use neutral product badges (feedback round 3), so
- * the chip strip is the only status-dot surface.
- */
-const STATUS_DOT_CLASS: Record<ProductStatus, string> = {
-  blocked: "bg-[var(--color-destructive)]",
-  "at-risk": "bg-[var(--color-status-dot-at-risk)]",
-  "on-track": "bg-[var(--color-primary)]",
-  empty: "bg-[var(--color-muted-foreground)] opacity-50",
-};
-
-/** Human-readable status label, exposed to assistive tech via an sr-only span. */
-const STATUS_LABEL: Record<ProductStatus, string> = {
-  blocked: "Blocked",
-  "at-risk": "At risk",
-  "on-track": "On track",
-  empty: "No status",
-};
-
 function statusDot(status: ProductStatus) {
-  const colorClass = STATUS_DOT_CLASS[status];
-
   return (
     <span
       aria-hidden="true"
       className={[
         "inline-block h-2 w-2 shrink-0 rounded-full",
-        colorClass,
+        statusDotClassName(status),
       ].join(" ")}
     />
   );
@@ -94,7 +73,9 @@ export function SlideProductChips({
             ].join(" ")}
           >
             {statusDot(product.worstStatus)}
-            <span className="sr-only">{STATUS_LABEL[product.worstStatus]}</span>
+            <span className="sr-only">
+              {statusLabel(product.worstStatus, "screen")}
+            </span>
             <span className="line-clamp-2 break-words">
               {product.productName}
             </span>
