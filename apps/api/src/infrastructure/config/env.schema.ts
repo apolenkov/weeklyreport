@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { logLevelSchema } from "../../lib/logger.js";
+
 const MIN_JWT_SECRET_LENGTH = 32;
 
 // No `.default()` anywhere in this schema by design: every value the API needs
@@ -33,7 +35,7 @@ export const envSchema = z
     // Dev/test reseed repo-root override (`dev.wipeAndReseed`); first candidate
     // in a fallback list, so absent → the process walks cwd/workspace guesses.
     CUSTOMREPORT_REPO_ROOT: z.string().optional(),
-    LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]),
+    LOG_LEVEL: logLevelSchema,
     LOG_DIR: z.string().optional(),
 
     // Auth / JWT. Required (min 32): the JWT signer
