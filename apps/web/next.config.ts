@@ -3,10 +3,9 @@ import { resolve } from "node:path";
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
-const API_URL =
-  process.env.API_URL ??
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:3002";
+import { requireApiUrl } from "./src/lib/server/api-url";
+
+const API_URL = requireApiUrl();
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,

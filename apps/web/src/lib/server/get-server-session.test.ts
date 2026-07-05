@@ -61,6 +61,8 @@ describe("getServerSession", () => {
     cookieStore.get.mockReset();
     fetchMock.mockReset();
     vi.stubGlobal("fetch", fetchMock);
+    // The unit suite loads no env file; requireApiUrl has no fallback.
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:3002");
   });
 
   afterEach(() => {
