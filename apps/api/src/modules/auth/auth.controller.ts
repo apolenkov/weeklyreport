@@ -11,17 +11,8 @@ import { resolveSessionCookieName } from "../../lib/session-cookie.js";
 
 const ONE_HOUR_IN_SECONDS = SECONDS_PER_HOUR;
 
-/**
- * The session token is symmetric (HS256). Pin the accepted algorithm on verify
- * so a token can never be coerced into a different algorithm, and require a
- * secret long enough not to be brute-forced offline from a captured token.
- *
- * Coordination note: `refactor-auth-exemplary-layering` deduplicates the
- * "require env var" helpers. `requireJwtSecret` MUST stay a distinct function
- * (keeping the `>= MIN_JWT_SECRET_LENGTH` check) rather than collapsing into a
- * generic presence getter, and the `{ algorithms: [SESSION_JWT_ALGORITHM] }`
- * pin below MUST survive that refactor.
- */
+// HS256 pinned on verify + a 32-char secret floor — required by
+// jwt-session-integrity (an unpinned alg or a short secret is forgeable).
 const SESSION_JWT_ALGORITHM = "HS256" as const;
 const MIN_JWT_SECRET_LENGTH = 32;
 

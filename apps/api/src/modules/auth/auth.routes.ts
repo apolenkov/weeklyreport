@@ -28,11 +28,6 @@ import {
   type SamlProfile,
 } from "./user-session.js";
 
-// --- Route handlers --------------------------------------------------------
-// The dependencies each /auth/* handler closes over. `mountAuthRoutes` builds
-// this once and the handler factories below capture it, so the registration
-// function stays a thin wiring map.
-
 interface AuthRouteDeps {
   prisma: PrismaClient;
   authController: ReturnType<typeof createAuthController>;
@@ -48,9 +43,9 @@ function createSamlCallbackHandler(deps: AuthRouteDeps): RequestHandler {
       const profile = req.user as SamlProfile | undefined;
 
       if (!profile) {
-        // AUTH-08: SAML callback hit without a passport-attached profile —
-        // treat as login-fail (T2 mitigation: emit even when role/userId are
-        // unknown so the audit trail captures the attempt).
+        // SAML callback hit without a passport-attached profile — emit
+        // login-fail even when role/userId are unknown so the audit trail
+        // still captures the attempt.
         deps.auditLogger.loginFail({
           userId: "anonymous",
           role: null,
@@ -70,7 +65,6 @@ function createSamlCallbackHandler(deps: AuthRouteDeps): RequestHandler {
       const { setCookieHeader } =
         deps.authController.issueSessionCookie(session);
 
-      // AUTH-08: structured login-success audit event.
       deps.auditLogger.loginSuccess({
         userId: session.userId,
         role: session.role,
@@ -81,8 +75,8 @@ function createSamlCallbackHandler(deps: AuthRouteDeps): RequestHandler {
       res.setHeader("Set-Cookie", setCookieHeader);
       res.redirect(deps.frontendUrl);
     } catch (error) {
-      // AUTH-08: any post-passport failure (DB write, JWT signing, etc.) is
-      // still a failed login from the user's perspective.
+      // Any post-passport failure (DB write, JWT signing, etc.) is still a
+      // failed login from the user's perspective.
       deps.auditLogger.loginFail({
         userId: "anonymous",
         role: null,
@@ -99,12 +93,10 @@ function createLogoutHandler(
   deps: Pick<AuthRouteDeps, "auditLogger" | "env">,
 ): RequestHandler {
   return (request: Request, res: Response) => {
-    // AUTH-08: emit logout audit event using whatever session shape was
-    // attached upstream (passport-strategy or proxy middleware). When no
-    // session is present, fall back to userId='anonymous' / role=null —
-    // Phase 32-M8 (M-08) replaced the previous 'unknown' literal so SIEM rules
-    // tuned to the Role enum (or to null = "no session") see the anonymous
-    // logout case explicitly rather than as a fake "unknown role" entry.
+    // Emit logout audit using whatever session shape was attached upstream.
+    // With no session, fall back to userId='anonymous' / role=null (not a fake
+    // "unknown" literal) so SIEM rules keyed on the Role enum or null see the
+    // no-session logout explicitly.
     const reqUser = (request as Request & { user?: UserSession }).user;
     deps.auditLogger.logout({
       userId: reqUser?.userId ?? "anonymous",

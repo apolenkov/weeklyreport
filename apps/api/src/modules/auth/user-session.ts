@@ -1,15 +1,9 @@
 import type { UserSession } from "@customreport/shared";
 import type { PrismaClient, Role } from "@prisma/client";
 
-/**
- * refactor-auth-exemplary-layering: login session-building, split out of
- * `auth.routes.ts` so that file is route wiring only and each unit stays a
- * single concern (no per-file lint exemption). This module turns a verified
- * SAML / dev-login identity into a `UserSession`: it resolves-or-provisions the
- * user, and — for a lead with no active section — delegates report-period and
- * report-section creation to injected functions (it does not own that
- * persistence). The route handlers in `auth.routes.ts` consume `buildUserSession`.
- */
+// Turns a verified SAML / dev-login identity into a UserSession: resolve-or-
+// provision the user, and for a lead with no active section delegate period +
+// section creation to injected seams (this module does not own that persistence).
 
 export interface SamlProfile {
   samlId: string;
@@ -18,25 +12,17 @@ export interface SamlProfile {
   role: Role;
 }
 
-/**
- * The seam through which `buildUserSession` provisions a lead's workspace at
- * login. Wired in the composition root (`main.ts`): the period factory
- * (`period/period-factory.ts`) finds-or-creates the current period, and
- * `report-sections/ensure-lead-section.ts` materialises the lead's section.
- */
+// Seam for provisioning a lead's workspace at login, wired in the composition
+// root (main.ts) so this module stays free of period/section persistence.
 export type ProvisionLeadWorkspace = (
   userId: string,
 ) => Promise<{ reportId: string; sectionId: string }>;
 
 const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
 
-// SAML stubs carry only `name` (= displayName); the structured ФИО parts are
-// required columns the IdP cannot supply. Per the resolved decision we do NOT
-// guess the name order: the whole displayName becomes `lastName`, and
-// `firstName` is a whitespace placeholder — it satisfies the non-empty column
-// while the name helpers treat it as absent (short form shows just the surname,
-// avatar shows its initial). The admin sets the real parts on edit; canSave
-// trims, so the placeholder can never be re-saved.
+// SAML gives only displayName but ФИО columns are required, and we don't guess
+// name order: whole displayName → lastName; firstName is a whitespace placeholder
+// the name helpers treat as absent (canSave trims it, so it never re-saves).
 const SAML_STUB_FIRST_NAME_PLACEHOLDER = " ";
 
 // `User.email` and `User.samlId` are each `@unique`. Prisma's P2002
@@ -55,18 +41,9 @@ function isUserUniqueViolation(error: unknown): boolean {
   return targetText.includes("email") || targetText.includes("samlId");
 }
 
-/**
- * Write (create or re-sync) a provisioned user. Only reached for a brand-new
- * user or a dev-login resync — the SAML create-only path reuses the existing
- * row untouched, so the reporting-group fallback machinery here never mutates
- * an existing admin-authored record.
- *
- * Concurrency: two concurrent first-logins of the SAME new identity both miss
- * the `buildUserSession` find and both reach the create here, colliding on the
- * `email` / `samlId` unique index. The create is guarded by a
- * catch-on-unique-violation + re-read so the loser resolves to the winner's
- * full row (the caller reads `reportingGroupId`) instead of throwing a 500.
- */
+// Two concurrent first-logins of the same new identity both miss the find and
+// collide on the email/samlId unique index, so the create catches the unique
+// violation and re-reads the winner's full row instead of throwing a 500.
 async function writeProvisionedUser(
   prisma: PrismaClient,
   profile: SamlProfile,
@@ -205,10 +182,9 @@ export async function buildUserSession(
     role: user.role,
     activeReportId: activeSection?.reportId ?? activeReport?.id ?? null,
     activeReportSectionId: activeSection?.id ?? null,
-    // UFB-040 / Phase 46-01: carry the user's owning ReportingGroup id in
-    // the JWT so groupScopeFilter does not need a Prisma lookup per request.
-    // viewer sessions may have no owning group; their visibility hydrates
-    // through `viewerGroupAccess` lazily in trpc.context.
+    // Carry the owning ReportingGroup id in the JWT so groupScopeFilter needs no
+    // per-request Prisma lookup. viewer sessions may have none; their visibility
+    // hydrates lazily through `viewerGroupAccess` in trpc.context.
     reportingGroupId: user.reportingGroupId ?? undefined,
     reportingGroupName: reportingGroup?.name ?? undefined,
   };
