@@ -290,30 +290,3 @@ describe("RisksSection stage scope", () => {
     expect(screen.queryByText("+1")).not.toBeInTheDocument();
   });
 });
-
-describe("RisksSection — slide-capacity advisory (add-slide-capacity-signals)", () => {
-  function manyRisks(n: number): RiskEntry[] {
-    return Array.from({ length: n }, (_, i) => ({
-      ...baseRisk,
-      id: `risk-${String(i)}`,
-      productId: "product-1",
-      productName: "CRM",
-    }));
-  }
-
-  it("renders a single advisory when one product exceeds the soft cap (once per group)", () => {
-    render(<RisksSection risks={manyRisks(6)} />);
-
-    const notes = screen.getAllByTestId("slide-fit-advisory");
-    expect(notes).toHaveLength(1);
-    expect(notes[0]).toHaveTextContent(
-      "6 records may not fit cleanly on the slide",
-    );
-  });
-
-  it("renders no advisory when the product is at or under the soft cap", () => {
-    render(<RisksSection risks={manyRisks(5)} />);
-
-    expect(screen.queryByTestId("slide-fit-advisory")).not.toBeInTheDocument();
-  });
-});

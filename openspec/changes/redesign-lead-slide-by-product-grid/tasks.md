@@ -26,10 +26,10 @@
 
 - [x] 4.1 Delete `lead-unified-slide.tsx`, `lead-product-grid.tsx`, `lead-slide-hero.tsx`, `lead-slides-product-view.tsx`, `HeadSlideArticle`/`HeadSectionCard`, `buildUnifiedSlideModel`/`scopeSlideToProduct` + Unified types, and their tests.
 - [x] 4.2 Delete `slide-fit-advisory.tsx` (+ test) and `SLIDE_SECTION_SOFT_CAP` from `@customreport/shared`; remove call sites in lead form sections.
-- [ ] 4.3 Grep-verify no orphan imports/tokens (`SLIDE_SECTION_SOFT_CAP`, `firstOverCapRowIds`, deleted component names).
+- [x] 4.3 Grep-verify no orphan imports/tokens (`SLIDE_SECTION_SOFT_CAP`, `firstOverCapRowIds`, deleted component names).
 
 ## 5. Verify
 
-- [ ] 5.1 Full gate: `pnpm --filter @customreport/api db:generate && pnpm typecheck && pnpm lint && pnpm test` (FULL web suite — no folder scoping).
+- [x] 5.1 Full gate: `pnpm --filter @customreport/api db:generate && pnpm typecheck && pnpm lint && pnpm test` (FULL web suite — no folder scoping).
 - [ ] 5.2 Live-verify from source (`pnpm --filter @customreport/web dev`): lead deck, head present, viewer present; dense seed for auto-height; fullscreen scroll; Product mode scoping.
-- [ ] 5.3 UI-string check on changed files: `grep -nE '[а-яА-Я]'` — hits only in data/comments/tests.
+- [x] 5.3 UI-string check on changed files: `grep -nE '[а-яА-Я]'` — hits only in data/comments/tests.
