@@ -8,12 +8,9 @@ import type { CrossAuthorContentRow } from "../../lib/mappers/lead-cross-author"
 
 export type SlideTrafficStatus = "green" | "yellow" | "red" | null;
 
-export type GridBadge =
-  | "completed"
-  | "in-progress"
-  | "planned"
-  | "at-risk"
-  | null;
+/** Exception-only marks: expected states (in progress / planned) carry no
+ * badge — the column already implies them. */
+export type GridBadge = "completed" | "at-risk" | null;
 
 export interface GridAuthor {
   readonly id: string;
@@ -131,14 +128,9 @@ export function buildOwnItemRow(
   owner: GridAuthor,
   index: number,
 ): GridRow {
-  // A stored `blocked` item renders IN PROGRESS on this surface (existing
-  // coercion convention) — blocker semantics live in the Risks column only.
-  const badge: GridBadge =
-    item.type === "next"
-      ? "planned"
-      : item.workflowStatus === "done"
-        ? "completed"
-        : "in-progress";
+  // Only the exception is marked; a stored `blocked` item stays unmarked here
+  // (existing coercion convention) — blocker semantics live in Risks only.
+  const badge: GridBadge = item.workflowStatus === "done" ? "completed" : null;
   return {
     id: rowId(item.id, item.stableId, "item", index),
     text: item.text.trim(),

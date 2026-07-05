@@ -142,7 +142,7 @@ describe("StatusSlideDeck — by-product grid article", () => {
     expect(within(card).getAllByTestId("slide-author-badge")).toHaveLength(1);
   });
 
-  it("maps record statuses to badges and highlights blocked risks without one", () => {
+  it("marks only exceptions: done check, at-risk chip, blocked highlight", () => {
     renderDeck(
       makeSection({
         items: [item({ workflowStatus: "done" }), item({ type: "next" })],
@@ -152,10 +152,39 @@ describe("StatusSlideDeck — by-product grid article", () => {
         ],
       }),
     );
-    expect(screen.getByText("COMPLETED")).toBeInTheDocument();
-    expect(screen.getByText("PLANNED")).toBeInTheDocument();
+    // Done → sr-only "Completed" next to a check glyph; no words for the
+    // expected states (in progress / planned).
+    expect(screen.getByText("Completed")).toBeInTheDocument();
+    expect(screen.queryByText("IN PROGRESS")).not.toBeInTheDocument();
+    expect(screen.queryByText("PLANNED")).not.toBeInTheDocument();
     expect(screen.getAllByText("AT RISK")).toHaveLength(1);
     expect(screen.getByText("hard blocker")).toBeInTheDocument();
+  });
+
+  it("collapses a record-less project subsection to its header row", () => {
+    renderDeck(
+      makeSection({
+        activities: [
+          {
+            activityId: "act-1",
+            activityName: "Поддержка",
+            status: "green",
+            derivedStatus: null,
+            linkedProducts: [{ productId: "p1", productName: "Alpha" }],
+          },
+        ],
+      }),
+    );
+    expect(screen.getByText("Поддержка")).toBeInTheDocument();
+    // No em-dash grid under the status-only project header.
+    expect(screen.queryByLabelText("No Current work")).not.toBeInTheDocument();
+  });
+
+  it("renders the stage legend for stages present on the slide", () => {
+    renderDeck(makeSection({ items: [item({ stageIds: ["Testing"] })] }));
+    expect(screen.getByTestId("slide-stage-legend")).toHaveTextContent(
+      "Testing",
+    );
   });
 
   it("renders the priority strip ascending", () => {
