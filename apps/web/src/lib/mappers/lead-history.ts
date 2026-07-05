@@ -19,6 +19,7 @@ import {
 
 import {
   formatPeriodRangeWithYear,
+  formatTimestampShort,
   isoWeekNumber as sharedIsoWeekNumber,
 } from "../format-date";
 
@@ -54,21 +55,6 @@ export interface HistoryEntry {
 // Helpers (pure, fully unit-testable -- no I/O, no React)
 // ---------------------------------------------------------------------------
 
-const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
-
 export function formatDateRange(start: Date, end: Date): string {
   return formatPeriodRangeWithYear(start, end);
 }
@@ -100,9 +86,7 @@ export function formatSubmittedAt(
     return diffHour === 1 ? "1 hour ago" : `${diffHour} hours ago`;
 
   // Older than a day: short month/day in UTC.
-  const month = MONTHS[submittedAt.getUTCMonth()];
-  const day = submittedAt.getUTCDate();
-  return `${month} ${day}`;
+  return formatTimestampShort(submittedAt);
 }
 
 function formatHistoryTimestamp(

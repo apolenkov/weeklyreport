@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { FillFromConfirmDialog } from "./fill-from-confirm-dialog";
@@ -54,21 +55,6 @@ function CopyIcon() {
     >
       <rect x="9" y="9" width="13" height="13" rx="2" />
       <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-    </svg>
-  );
-}
-
-function ChevronDown() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3 w-3"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      aria-hidden="true"
-    >
-      <path d="M6 9l6 6 6-6" />
     </svg>
   );
 }
@@ -191,7 +177,7 @@ export function FillFromButton({
             disabled={disabled || locked}
             className={SPLIT_BUTTON_CHEVRON_CLASS}
           >
-            <ChevronDown />
+            <ChevronDown className="h-3 w-3" aria-hidden="true" />
           </button>
         </div>
       </div>

@@ -23,6 +23,36 @@ export const roleSchema = z.enum(["lead", "head", "admin", "viewer"]);
  */
 export const sessionRoleSchema = z.enum(["lead", "head", "admin", "viewer"]);
 
+/**
+ * Display label for a role. Single source consumed by the login page, the dev
+ * role-switcher, and the lead-form author mapper, so a role's label cannot
+ * drift between surfaces (the head label was once "Department Head" in one copy
+ * and "Head" in two others). Exhaustive on the role enum — adding a role is a
+ * compile error until it has a label.
+ */
+export const ROLE_LABEL: Record<Role, string> = {
+  lead: "Lead",
+  head: "Head",
+  admin: "Admin",
+  viewer: "Viewer",
+};
+
+/**
+ * Canonical per-role post-login landing route. One home backing all three
+ * landing surfaces — the api dev-login fallback, the web login default, and
+ * `roleHomePath` (brand link / role-gate) — so a role's landing cannot diverge
+ * between tiers. Exhaustive on the role enum with NO runtime fallback here:
+ * a non-`Role` runtime value (persisted/retired role) is the web call site's
+ * concern, guarded there. The viewer lands on `/reports/latest`, its canonical
+ * primary Status entry, never the `/reports?tab=published` list surface.
+ */
+export const ROLE_HOME_PATH: Record<Role, string> = {
+  lead: "/lead/report",
+  head: "/head/dashboard",
+  admin: "/admin",
+  viewer: "/reports/latest",
+};
+
 export const userSessionSchema = z.object({
   userId: z.uuid(),
   email: z.email(),

@@ -47,7 +47,12 @@ export function formatPeriodDate(date: DateInput): string {
   });
 }
 
-const MONTHS_SHORT = [
+/**
+ * Short English month labels, indexed by `getUTCMonth()`. The single home for
+ * short-date rendering (web-shared-idioms); a month-label correction here
+ * propagates to every consuming surface.
+ */
+export const MONTHS_SHORT = [
   "Jan",
   "Feb",
   "Mar",
@@ -61,6 +66,14 @@ const MONTHS_SHORT = [
   "Nov",
   "Dec",
 ];
+
+/**
+ * Short "Mon D" timestamp in UTC (e.g. "Apr 18"). UTC accessors keep the label
+ * timezone-stable, matching the period-range formatters above.
+ */
+export function formatTimestampShort(date: Date): string {
+  return `${MONTHS_SHORT[date.getUTCMonth()]} ${date.getUTCDate()}`;
+}
 
 function toDate(date: Date | string): Date {
   return date instanceof Date ? date : new Date(date);

@@ -227,7 +227,7 @@ export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
     : "Products with content open detailed sections. Empty products stay muted.";
 
   return (
-    <div className="mt-4 overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]">
+    <div className="card-surface mt-4">
       <div className="flex w-full items-center justify-between p-4">
         <div>
           <div className="flex items-center gap-3">

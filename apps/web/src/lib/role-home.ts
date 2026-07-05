@@ -1,35 +1,12 @@
-import type { Role } from "@customreport/shared";
+import { type Role, ROLE_HOME_PATH } from "@customreport/shared";
 
 /**
- * UFB-044 / UFB-034: canonical per-role home page mapping.
- *
- * Single source of truth for "where does role X land after login / when
- * the brand mark is clicked / when redirected from `/`". Centralised so
- * the dev-login redirect, the brand link in `nav-bar.tsx`, and any future
- * post-auth landing logic share identical behaviour.
- *
- * Mapping rationale:
- *
- *   - admin    → `/admin`              admin panel is admin-only post UFB-038
- *   - head     → `/head/dashboard`     submission dashboard is the head's main surface
- *   - lead     → `/lead/report`        active section editor for the open period
- *   - viewer   → `/reports/latest`     the Status entry (current period live);
- *                                      viewer-live-status made the viewer a status
- *                                      observer, so the Status target — not the
- *                                      History list — is the viewer's landing page
- *
- * Anonymous (no role) callers should fall back to `/` and let the proxy /
- * landing redirect logic decide.
+ * Canonical per-role home page: where role X lands after login, when the brand
+ * mark is clicked, or when redirected from `/`. A thin re-export of the shared
+ * `ROLE_HOME_PATH` map (web-shared-idioms) so this, the web login default, and
+ * the api dev-login fallback cannot diverge. Anonymous (no role) callers fall
+ * back to `/` at the call site and let the landing redirect decide.
  */
 export function roleHomePath(role: Role): string {
-  switch (role) {
-    case "admin":
-      return "/admin";
-    case "head":
-      return "/head/dashboard";
-    case "lead":
-      return "/lead/report";
-    case "viewer":
-      return "/reports/latest";
-  }
+  return ROLE_HOME_PATH[role];
 }

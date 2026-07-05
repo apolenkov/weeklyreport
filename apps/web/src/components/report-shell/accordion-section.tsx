@@ -2,21 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-function ChevronDown({ expanded }: { readonly expanded: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4 text-[var(--color-muted-foreground)] transition-transform duration-300"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      style={{ transform: expanded ? "rotate(0deg)" : "rotate(-90deg)" }}
-      aria-hidden="true"
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
-}
+import { RotatingChevron } from "./rotating-chevron";
 
 interface AccordionSectionProps {
   readonly icon: React.ReactNode;
@@ -62,7 +48,7 @@ export function AccordionSection({
   return (
     <div
       data-testid={testId}
-      className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-[0_0_0.5px_0_rgba(0,0,0,0.12),0_12px_26px_-18px_rgba(0,0,0,0.22),0_2px_4px_rgba(0,0,0,0.06)]"
+      className="card-surface card-surface-hover transition-shadow"
     >
       <div className="flex w-full items-center justify-between gap-3 p-5 transition-colors hover:bg-[var(--color-surface-hover)]">
         <button
@@ -95,7 +81,7 @@ export function AccordionSection({
               </span>
             )}
           </div>
-          {!actions && <ChevronDown expanded={expanded} />}
+          {!actions && <RotatingChevron expanded={expanded} />}
         </button>
         {actions ? (
           <div className="flex shrink-0 items-center gap-2">{actions}</div>
@@ -108,7 +94,7 @@ export function AccordionSection({
             aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
             aria-expanded={expanded}
           >
-            <ChevronDown expanded={expanded} />
+            <RotatingChevron expanded={expanded} />
           </button>
         ) : null}
       </div>

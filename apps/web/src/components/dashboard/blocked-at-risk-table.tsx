@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import type { BlockedAtRiskItem } from "../../lib/mappers/dashboard";
+import { RotatingChevron } from "../report-shell/rotating-chevron";
 import { groupByProduct, ProductCard } from "./blocked-at-risk-product-card";
 
 interface BlockedAtRiskTableProps {
@@ -29,22 +30,6 @@ function AlertIcon() {
   );
 }
 
-function ChevronDown({ expanded }: { readonly expanded: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4 text-[var(--color-muted-foreground)] transition-transform duration-300"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      style={{ transform: expanded ? "rotate(0deg)" : "rotate(-90deg)" }}
-      aria-hidden="true"
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
-}
-
 export function BlockedAtRiskTable({ items }: BlockedAtRiskTableProps) {
   // head-surface-uat-polish (F4): collapsed by default. The same risk content
   // appears in the report below, so the dashboard treats this as a fast triage
@@ -58,10 +43,8 @@ export function BlockedAtRiskTable({ items }: BlockedAtRiskTableProps) {
 
   return (
     <div
-      className={`overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)] ${
-        hasItems
-          ? "bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)]"
-          : "bg-[rgba(0,0,0,0.035)]"
+      className={`card-surface-elevated overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] ${
+        hasItems ? "card-surface-fill" : "bg-[rgba(0,0,0,0.035)]"
       }`}
     >
       <button
@@ -100,7 +83,7 @@ export function BlockedAtRiskTable({ items }: BlockedAtRiskTableProps) {
           </span>
         </div>
         <span className={hasItems ? undefined : "opacity-45"}>
-          <ChevronDown expanded={isExpanded} />
+          <RotatingChevron expanded={isExpanded} />
         </span>
       </button>
 
