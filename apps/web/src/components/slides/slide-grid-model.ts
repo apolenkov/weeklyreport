@@ -6,6 +6,7 @@ import {
   buildPriorityStrip,
   collectCells,
   columnsRowCount,
+  emptyBuckets,
   finalizeColumns,
   type GridPriorityCard,
   hasText,
@@ -157,8 +158,17 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
       columns: finalizeColumns(cells, authorOrder),
     });
   }
-  [...activityCells.entries()]
-    .map(([activityId, cells]) => {
+  // Every attached activity gets a project subsection — status-only ones (no
+  // records this period) render as a labeled header row with empty columns, so
+  // projects read like Product-level lines instead of a separate pill lane.
+  const recordOnlyActivityIds = [...activityCells.keys()].filter(
+    (activityId) => !activityMeta.has(activityId),
+  );
+  [
+    ...section.activities.map((activity) => activity.activityId),
+    ...recordOnlyActivityIds,
+  ]
+    .map((activityId) => {
       const meta = activityMeta.get(activityId);
       return {
         home: activityHomeById.get(activityId) ?? SHARED_CARD_ID,
@@ -168,7 +178,10 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
           name: meta?.activityName ?? "Activity",
           status: meta ? (meta.derivedStatus ?? meta.status) : null,
           showStages: false,
-          columns: finalizeColumns(cells, authorOrder),
+          columns: finalizeColumns(
+            activityCells.get(activityId) ?? emptyBuckets(),
+            authorOrder,
+          ),
         },
       };
     })
@@ -187,7 +200,8 @@ export function buildSlideGridModel(input: SlideGridInput): SlideGridModel {
       id,
       name,
       status: productStatuses.get(id) ?? null,
-      noData: rowCount === 0,
+      // A status-only project header is data: keep the card open for it.
+      noData: rowCount === 0 && !subsections.some((s) => s.kind === "project"),
       subsections,
     };
   };

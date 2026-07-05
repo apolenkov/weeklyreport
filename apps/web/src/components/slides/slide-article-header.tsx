@@ -29,7 +29,7 @@ function metric(count: number, label: string) {
       key={label}
       className="whitespace-nowrap text-xs text-[var(--color-muted-foreground)]"
     >
-      <span className="text-sm font-bold text-[var(--color-foreground)]">
+      <span className="text-sm font-bold tabular-nums text-[var(--color-foreground)]">
         {count}
       </span>{" "}
       {label}
@@ -148,7 +148,8 @@ export function SlidePriorityStrip({
                   className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-white"
                   style={{ background: authorSlotBackground(author) }}
                 >
-                  {author.initials}
+                  <span aria-hidden="true">{author.initials}</span>
+                  <span className="sr-only">{author.name}</span>
                 </span>
               )}
             </div>

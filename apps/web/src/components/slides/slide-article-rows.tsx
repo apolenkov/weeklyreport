@@ -24,7 +24,8 @@ function AuthorBadge({
       className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-white"
       style={{ background: authorSlotBackground(author) }}
     >
-      {author.initials}
+      <span aria-hidden="true">{author.initials}</span>
+      <span className="sr-only">{author.name}</span>
     </span>
   );
 }
@@ -58,9 +59,11 @@ const BADGE_CONFIG: Record<
 function StatusBadge({ badge }: { readonly badge: GridBadge }) {
   if (badge === null) return null;
   const config = BADGE_CONFIG[badge];
+  // Trails the item text inline (not a fixed side column), so the text keeps
+  // the full column width and the badge wraps with the last line.
   return (
     <span
-      className={`inline-flex shrink-0 self-start rounded px-1 py-0.5 text-[8px] font-semibold uppercase tracking-wide ${config.className}`}
+      className={`ml-1 inline-flex translate-y-[-1px] rounded px-1 py-0.5 align-middle text-[8px] font-semibold uppercase tracking-wide ${config.className}`}
     >
       {config.label}
     </span>
@@ -116,8 +119,8 @@ function ItemRow({
       {showStages && <StageWatermarks stageNames={row.stageNames} />}
       <span className="min-w-0 flex-1 whitespace-normal break-words">
         {row.text}
+        <StatusBadge badge={row.badge} />
       </span>
-      <StatusBadge badge={row.badge} />
     </li>
   );
 }
