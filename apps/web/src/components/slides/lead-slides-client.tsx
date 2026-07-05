@@ -16,7 +16,6 @@ import { crossAuthorContentFetchEnabled } from "../../lib/cross-author-content-g
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
-import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
 import {
   DeckFullscreenOverlay,
   DeckToolbarControls,
@@ -26,7 +25,6 @@ import {
   resolveLeadSlideReportId,
 } from "./lead-slide-periods";
 import { buildLeadDeckModel, SlideEmptyState } from "./lead-slides-deck-model";
-import { LeadSlidesProductView } from "./lead-slides-product-view";
 import { ReportSlides } from "./report-slides";
 import { paginateSectionSlides } from "./section-slide-utils";
 import { SlideSkeleton } from "./slide-skeleton";
@@ -69,7 +67,6 @@ export function LeadSlidesClient({
   const searchParams = useSearchParams();
   const session = useContext(SessionContext);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [scope, setScope] = useState<ScopeValue>("own");
   const internalDeckRef = useRef<HTMLDivElement>(null);
   const deckRef = externalDeckRef ?? internalDeckRef;
   // add-slide-fullscreen-exit-affordance: the lead-form-hosted path passes
@@ -231,32 +228,8 @@ export function LeadSlidesClient({
     );
   }
 
-  const scopeControls = (
-    <ScopeToggle
-      value={scope}
-      onChange={(s) => {
-        setScope(s);
-        setSelectedIndex(0);
-      }}
-      allowedScopes={["own", "product"]}
-      size="lg"
-    />
-  );
-
-  if (scope === "product") {
-    return (
-      <LeadSlidesProductView
-        deckRef={deckRef}
-        sectionModel={sectionModel}
-        scopeControls={scopeControls}
-        inReportMode={inReportMode}
-        isFullscreen={isFullscreen}
-        onToggle={onToggle}
-        toggleButtonRef={toggleButtonRef}
-      />
-    );
-  }
-
+  // The former deck-level Own/Product scope toggle is gone: the slide article
+  // owns the Summary/Product mode now (redesign-lead-slide-by-product-grid).
   return (
     <div ref={deckRef}>
       <ReportSlides
@@ -264,11 +237,6 @@ export function LeadSlidesClient({
         selectedIndex={selectedIndex}
         onSelect={setSelectedIndex}
         variant="lead"
-        heroControls={
-          <div className="flex flex-wrap items-center gap-2">
-            {scopeControls}
-          </div>
-        }
         toolbar={
           !inReportMode ? (
             <div className="flex items-center gap-2">
