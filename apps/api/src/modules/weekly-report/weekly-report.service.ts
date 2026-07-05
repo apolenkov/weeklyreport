@@ -28,7 +28,7 @@ export type WeeklyReportServiceResult =
       crossGroup: CrossGroupSignal | null;
     });
 
-import { createAppLogger } from "../../lib/logger.js";
+import { createServiceLogger } from "../../lib/logger-service.js";
 
 export class WeeklyReportDomainError extends Error {
   constructor(message: string) {
@@ -92,17 +92,7 @@ export interface WeeklyReportRepository {
 }
 
 export class WeeklyReportService {
-  private readonly logger = createAppLogger({
-    service: "WeeklyReportService",
-    logDir: process.env.LOG_DIR,
-    minLevel:
-      (process.env.LOG_LEVEL as
-        | "debug"
-        | "info"
-        | "warn"
-        | "error"
-        | undefined) ?? "info",
-  });
+  private readonly logger = createServiceLogger("WeeklyReportService");
 
   constructor(private readonly repository: WeeklyReportRepository) {}
 
