@@ -1,64 +1,41 @@
-import { Injectable, Logger, type OnModuleDestroy } from "@nestjs/common";
-import Redis from "ioredis";
+import { Injectable, type OnModuleDestroy } from "@nestjs/common";
 
+import {
+  createRedisReadThroughCache,
+  type RedisReadThroughCache,
+} from "../../infrastructure/cache/read-through-cache.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema";
-import { buildRedisConnectionOptions } from "../../infrastructure/config/redis-connection";
 import type { TelemetryCachePort } from "./telemetry.service.js";
 
-/**
- * Phase 52 (UFB-054) — Redis cache for the `telemetry.summary` tRPC
- * read path. Mirrors the AnalyticsCache shape but uses a separate
- * prefix and a much shorter TTL (60s vs analytics' 3600s) because the
- * KPI card is the primary surfaceable view: stale leadership numbers
- * are a worse failure than a slightly hotter Redis. Reusing
- * AnalyticsCache directly would either widen its TTL semantics or
- * collide with its `customreport:analytics:` prefix.
- *
- * Cache miss never breaks the read path — a Redis outage falls through
- * to direct repository calls. Writes are best-effort.
- */
+// 60s TTL (vs analytics' 3600s): the KPI card is the primary leadership view,
+// so stale numbers are worse than a slightly hotter Redis. The separate prefix
+// keeps telemetry keys off the analytics SCAN-invalidation root.
 const TTL_SECONDS = 60;
 const PREFIX = "customreport:telemetry:";
 
+/**
+ * Read-through Redis cache for the `telemetry.summary` read path — a thin
+ * domain wrapper over the shared cache. Callers pass bare keys; the shared
+ * cache namespaces them under PREFIX.
+ */
 @Injectable()
 export class TelemetryCache implements TelemetryCachePort, OnModuleDestroy {
-  private readonly logger = new Logger(TelemetryCache.name);
-  private readonly redis: Redis;
+  private readonly cache: RedisReadThroughCache;
 
   constructor(env: EnvConfig) {
-    this.redis = new Redis({
-      ...buildRedisConnectionOptions(env),
-      lazyConnect: true,
-      maxRetriesPerRequest: 1,
-      enableOfflineQueue: false,
+    this.cache = createRedisReadThroughCache({
+      connection: env,
+      loggerName: TelemetryCache.name,
+      ttlSeconds: TTL_SECONDS,
+      keyPrefix: PREFIX,
     });
-    // Suppress unhandled error events on transient Redis blips — the
-    // service is designed to degrade gracefully to direct queries.
-    this.redis.on("error", () => undefined);
   }
 
-  async getOrCompute<T>(key: string, fn: () => Promise<T>): Promise<T> {
-    const namespaced = `${PREFIX}${key}`;
-    try {
-      const cached = await this.redis.get(namespaced);
-      if (cached !== null) {
-        this.logger.debug(`cache hit key=${key}`);
-        return JSON.parse(cached) as T;
-      }
-    } catch {
-      // Cache miss/failure → fall through to compute.
-    }
-    this.logger.debug(`cache miss key=${key}`);
-    const fresh = await fn();
-    try {
-      await this.redis.setex(namespaced, TTL_SECONDS, JSON.stringify(fresh));
-    } catch {
-      // Cache write failure is non-fatal.
-    }
-    return fresh;
+  getOrCompute<T>(key: string, fn: () => Promise<T>): Promise<T> {
+    return this.cache.getOrCompute(key, fn);
   }
 
-  async onModuleDestroy(): Promise<void> {
-    await this.redis.quit().catch(() => undefined);
+  onModuleDestroy(): Promise<void> {
+    return this.cache.close();
   }
 }
