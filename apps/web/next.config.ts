@@ -4,6 +4,11 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 import { requireApiUrl } from "./src/lib/server/api-url";
+import { assertWebEnv } from "./src/lib/web-env";
+
+// Runs during `next build`, where the real NEXT_PUBLIC_* values are still in
+// process.env before inlining — a malformed value fails the build loud here.
+assertWebEnv();
 
 const API_URL = requireApiUrl();
 

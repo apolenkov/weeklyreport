@@ -8,6 +8,8 @@
 // NEXT_PUBLIC_CLIENT_LOG_FORWARDING is not 'true'. Enable via
 // .env.development by default; opt-in in prod.
 
+import { webEnv } from "./web-env";
+
 type Level = "debug" | "info" | "warn" | "error";
 
 interface Entry {
@@ -70,7 +72,7 @@ async function flush() {
 export function installClientLogger(): void {
   if (installed) return;
   if (typeof window === "undefined") return;
-  if (process.env.NEXT_PUBLIC_CLIENT_LOG_FORWARDING !== "true") return;
+  if (!webEnv.clientLogForwarding()) return;
   installed = true;
 
   const origError = console.error.bind(console);

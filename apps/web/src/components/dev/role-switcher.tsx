@@ -15,6 +15,7 @@ import { Users } from "lucide-react";
 import { useState } from "react";
 
 import { useTRPC } from "../../lib/trpc-context";
+import { webEnv } from "../../lib/web-env";
 
 type Role = "head" | "lead" | "admin" | "viewer";
 type DataResetVariant = "small" | "middle" | "huge" | "manual-uat";
@@ -26,9 +27,7 @@ export function DevRoleSwitcher() {
   const [pending, setPending] = useState(false);
   const trpc = useTRPC();
 
-  const enabled =
-    process.env.NODE_ENV !== "production" &&
-    process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER === "true";
+  const enabled = webEnv.devRoleSwitcher();
 
   const usersQ = useQuery({
     ...trpc.dev.listUsers.queryOptions(),

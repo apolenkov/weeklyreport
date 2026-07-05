@@ -81,3 +81,23 @@ then this file for live state.
   folders, commit only own paths, no `git add -A`.
 - Owner: perfectionist, "every comma matters"; constants policy = STRICT;
   reviews/verification on strong models only.
+
+## Wave 3 progress (2026-07-05, night session)
+
+- Tree CLEAN — the parallel session committed its 186 files; all wave-3 folders eligible.
+- **Wave3a api DONE**: 7 reports in `docs/audit/wave3/` (auth/admin/period/carry-over/
+  report-sections/trpc/root), 265 kept / 6 killed (59 high, 111 medium). INDEX updated.
+  Lean pipeline: sonnet finders -> fable verify high/medium only (effort medium) -> LOCAL
+  python formatter (`$CLAUDE_JOB_DIR/tmp/format_wave3_reports.py`), no synth agents.
+- **Wave3b INTERRUPTED by session limit** (resets 03:30 MSK): run `wf_368ccb8d-51d`,
+  script `/home/user/.claude/jobs/8ae8ee97/tmp/wave3b-web-shared-audit.js`. 39/70 agents
+  done (most audits cached), all web verifies + 3 audit chunks failed on the limit.
+  RESUME after reset: `Workflow({scriptPath: ".../wave3b-web-shared-audit.js",
+resumeFromRunId: "wf_368ccb8d-51d"})` — cached audits replay, failed agents re-run.
+  Then format reports with the same python script + extend INDEX/roadmap.
+- **Codex attempt #5 (2026-07-05)**: rc=137, 0 bytes — quota STILL dead. Logged in the
+  archived tighten-comment-policy PLAN-REVIEW-LOG. Closed; manual re-run only.
+- Roadmap: the PARALLEL session refreshed FIX-ROADMAP to v2 first (its own wave3a
+  fold = #81-#90 + re-home audit + 10 items executed). This session's independent
+  clustering (agent roadmap-3a) was cross-checked against v2 and only the uncovered
+  clusters were added: #91-#95 + period-sweep reconciliation + micro-folds. No dup rows.

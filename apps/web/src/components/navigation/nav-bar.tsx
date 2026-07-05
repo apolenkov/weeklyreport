@@ -28,6 +28,7 @@ import { useState, useSyncExternalStore } from "react";
 
 import { roleHomePath } from "../../lib/role-home";
 import { useSession } from "../../lib/session-provider";
+import { webEnv } from "../../lib/web-env";
 import { DevRoleSwitcher } from "../dev/role-switcher";
 
 interface NavLink {
@@ -201,10 +202,7 @@ function ThemeComingSoonControl() {
 }
 
 function shouldRenderDevRoleSwitcher() {
-  return (
-    process.env.NODE_ENV !== "production" &&
-    process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER === "true"
-  );
+  return webEnv.devRoleSwitcher();
 }
 
 function NavIcon({ href }: { readonly href: string }) {
