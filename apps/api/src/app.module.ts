@@ -7,7 +7,11 @@ import { BullMQModule } from "./infrastructure/bullmq/bullmq.module";
 import { EmailReminderProcessor } from "./infrastructure/bullmq/email-reminder.processor";
 import { PdfExportProcessor } from "./infrastructure/bullmq/pdf-export.processor";
 import { createWorkerLogger } from "./infrastructure/bullmq/worker-observability.js";
-import { ConfigModule } from "./infrastructure/config/config.module";
+import {
+  ConfigModule,
+  ENV_CONFIG,
+} from "./infrastructure/config/config.module";
+import type { EnvConfig } from "./infrastructure/config/env.schema";
 import { EmailService } from "./infrastructure/email/email.service";
 import { HealthModule } from "./infrastructure/health/health.module";
 import { MetricsModule } from "./infrastructure/metrics/metrics.module";
@@ -82,30 +86,43 @@ import { WeeklyReportModule } from "./modules/weekly-report/weekly-report.module
   providers: [
     {
       provide: PdfExportProcessor,
-      useFactory: (pdfExportService: PdfExportService, cls: ClsService) =>
+      useFactory: (
+        pdfExportService: PdfExportService,
+        env: EnvConfig,
+        cls: ClsService,
+      ) =>
         new PdfExportProcessor(
           pdfExportService,
+          env,
           createWorkerLogger("pdf-export-worker", cls),
           cls,
         ),
-      inject: [PdfExportService, ClsService],
+      inject: [PdfExportService, ENV_CONFIG, ClsService],
     },
     {
       provide: EmailReminderProcessor,
       useFactory: (
         remindersService: RemindersService,
         emailService: EmailService,
+        env: EnvConfig,
         adminService: AdminService,
         cls: ClsService,
       ) =>
         new EmailReminderProcessor(
           remindersService,
           emailService,
+          env,
           adminService,
           createWorkerLogger("email-reminder-worker", cls),
           cls,
         ),
-      inject: [RemindersService, EmailService, AdminService, ClsService],
+      inject: [
+        RemindersService,
+        EmailService,
+        ENV_CONFIG,
+        AdminService,
+        ClsService,
+      ],
     },
     EmailService,
     CorrelationIdMiddleware,

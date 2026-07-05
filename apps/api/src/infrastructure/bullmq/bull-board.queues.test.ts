@@ -7,11 +7,15 @@ vi.mock("bullmq", () => ({
   },
 }));
 
+import type { EnvConfig } from "../config/env.schema";
 import { BullBoardQueues } from "./bull-board.module.js";
+
+// The Queue constructor is mocked above, so only the env shape matters.
+const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
 
 describe("BullBoardQueues", () => {
   it("closes both Bull Board queue handles on shutdown", async () => {
-    const holder = new BullBoardQueues();
+    const holder = new BullBoardQueues(STUB_ENV);
 
     await holder.onModuleDestroy();
 

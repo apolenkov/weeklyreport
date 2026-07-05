@@ -1,6 +1,7 @@
 import type { Job } from "bullmq";
 import { describe, expect, it, vi } from "vitest";
 
+import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import { dlqFailedTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import type { AppLogger } from "../../lib/logger.js";
 import { MockTelegramAdapter } from "./mock-telegram.adapter";
@@ -16,6 +17,10 @@ import {
 // BullMQ Worker — we invoke the private `processJob` through a thin shim so
 // the redis-less unit test stays hermetic. Worker startup itself is covered
 // by the integration suite (when one lands for telegram in a follow-on phase).
+// The processor reads env only in onModuleInit (not exercised here); a minimal
+// stub satisfies the inherited constructor.
+const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
+
 class TestProcessor extends TelegramProcessor {
   public async invoke(data: TelegramOutboundJobData): Promise<void> {
     // Cast through unknown so we can call the private method from the test
@@ -56,7 +61,7 @@ function createSpyLogger(): AppLogger {
 describe("TelegramProcessor (Phase 55 / UFB-056)", () => {
   it("forwards chatId + text to the injected adapter", async () => {
     const adapter = new MockTelegramAdapter();
-    const proc = new TestProcessor(adapter);
+    const proc = new TestProcessor(adapter, STUB_ENV);
     await proc.invoke({ chatId: "chat-1", text: "hello" });
     expect(adapter.lastPayload).toEqual({ chatId: "chat-1", text: "hello" });
   });
@@ -68,7 +73,7 @@ describe("TelegramProcessor (Phase 55 / UFB-056)", () => {
         return { ok: false };
       },
     };
-    const proc = new TestProcessor(failingAdapter);
+    const proc = new TestProcessor(failingAdapter, STUB_ENV);
     await expect(
       proc.invoke({ chatId: "chat-x", text: "body" }),
     ).rejects.toThrow(/telegram adapter rejected send/i);
@@ -81,7 +86,7 @@ describe("TelegramProcessor (Phase 55 / UFB-056)", () => {
         throw new Error("ENETDOWN");
       },
     };
-    const proc = new TestProcessor(throwingAdapter);
+    const proc = new TestProcessor(throwingAdapter, STUB_ENV);
     await expect(
       proc.invoke({ chatId: "chat-y", text: "body" }),
     ).rejects.toThrow("ENETDOWN");
@@ -91,7 +96,7 @@ describe("TelegramProcessor (Phase 55 / UFB-056)", () => {
 describe("TelegramProcessor failure logging", () => {
   it("logs a terminal failure through AppLogger with the job correlationId", () => {
     const logger = createSpyLogger();
-    const proc = new TestProcessor(new MockTelegramAdapter(), logger);
+    const proc = new TestProcessor(new MockTelegramAdapter(), STUB_ENV, logger);
 
     proc.logFailureForTest(
       {
@@ -112,6 +117,7 @@ describe("TelegramProcessor failure logging", () => {
     const inc = vi.spyOn(dlqFailedTotal, "inc");
     const proc = new TestProcessor(
       new MockTelegramAdapter(),
+      STUB_ENV,
       createSpyLogger(),
     );
 

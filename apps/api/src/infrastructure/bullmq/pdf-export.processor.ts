@@ -15,6 +15,7 @@ import { chromium } from "playwright";
 import { requireEnv } from "../../lib/env.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { PdfExportService } from "../../modules/pdf-export/pdf-export.service";
+import type { EnvConfig } from "../config/env.schema";
 import { getBullMQOptions } from "./bullmq-options";
 import {
   extractTraceId,
@@ -48,6 +49,7 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly pdfExportService: PdfExportService,
+    private readonly env: EnvConfig,
     logger?: AppLogger,
     private readonly cls?: ClsService,
   ) {
@@ -65,7 +67,7 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
           () => this.processJob(job),
         );
       },
-      getBullMQOptions(),
+      getBullMQOptions(this.env),
     );
 
     this.worker.on("failed", (job, error) => {

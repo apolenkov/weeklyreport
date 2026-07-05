@@ -2,8 +2,13 @@ import { Logger } from "@nestjs/common";
 import type { Queue } from "bullmq";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { EnvConfig } from "../config/env.schema";
 import { dlqFailedTotal } from "../metrics/metrics.registry.js";
 import { DLQMonitorService } from "./dlq-monitor.service.js";
+
+// The service reads env only in onModuleInit (not exercised by these
+// Redis-free seam tests); a minimal stub satisfies the constructor.
+const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
 
 // Seam onto the private, Redis-free logic so it can be tested without a live
 // queue connection.
@@ -18,7 +23,7 @@ interface DlqTestSeam {
 }
 
 function seam(): DlqTestSeam {
-  return new DLQMonitorService() as unknown as DlqTestSeam;
+  return new DLQMonitorService(STUB_ENV) as unknown as DlqTestSeam;
 }
 
 describe("DLQMonitorService.parseThreshold", () => {

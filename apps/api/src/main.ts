@@ -47,6 +47,8 @@ import { ClsMiddleware, ClsService } from "nestjs-cls";
 import { AppModule } from "./app.module";
 import { mountBullBoard } from "./infrastructure/bullmq/bull-board.module";
 import { getBullMQOptions } from "./infrastructure/bullmq/bullmq-options";
+import { ENV_CONFIG } from "./infrastructure/config/config.module";
+import type { EnvConfig } from "./infrastructure/config/env.schema";
 import { validateEnv } from "./infrastructure/config/env.schema";
 import { SentryExceptionFilter } from "./infrastructure/filters/sentry-exception.filter";
 import { httpRequestDurationSeconds } from "./infrastructure/metrics/metrics.registry";
@@ -158,6 +160,11 @@ async function bootstrap() {
   app.useGlobalFilters(new SentryExceptionFilter(httpAdapter));
 
   const cls = app.get(ClsService);
+
+  // The validated env, resolved through the DI container so every Redis
+  // connection built at bootstrap (BullMQ queue handles, the PDF-handler and
+  // context-factory session-revocation clients) uses the centralized options.
+  const envConfig = app.get<EnvConfig>(ENV_CONFIG);
   const logger = createAppLogger({
     service: "customreport-api",
     minLevel: env.LOG_LEVEL,
@@ -326,7 +333,10 @@ async function bootstrap() {
   // NOTIF-06 (Phase 29-05): read-only Queue handle for the admin DLQ count.
   // Constructed once at boot; Express request lifecycle does not need its
   // own connection. Closed on app shutdown via enableShutdownHooks above.
-  const emailReminderQueue = new Queue("email-reminder", getBullMQOptions());
+  const emailReminderQueue = new Queue(
+    "email-reminder",
+    getBullMQOptions(envConfig),
+  );
 
   // UFB-056 / Phase 55-3: read-only Queue handle for the admin Telegram
   // smoke-test (`admin.testTelegramSend`). Stays out of the NestJS DI
@@ -334,7 +344,7 @@ async function bootstrap() {
   // DI bug note in bullmq.module.ts.
   const telegramOutboundQueue = new Queue(
     "telegram-outbound",
-    getBullMQOptions(),
+    getBullMQOptions(envConfig),
   );
 
   const prismaService = app.get(PrismaService);
@@ -421,7 +431,7 @@ async function bootstrap() {
       pdfDir,
       verifySessionToken: (token) =>
         pdfAuthController.verifySessionToken(token),
-      sessionRevocation: new SessionRevocationService(),
+      sessionRevocation: new SessionRevocationService(undefined, envConfig),
     }),
   );
   logger.info("mounted authenticated PDF download handler", {

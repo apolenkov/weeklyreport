@@ -1,12 +1,17 @@
 import { Module } from "@nestjs/common";
-import Redis from "ioredis";
 
+import {
+  ConfigModule,
+  ENV_CONFIG,
+} from "../../infrastructure/config/config.module.js";
+import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
 import { AdminService } from "./admin.service";
 import { SessionRevocationService } from "./session-revocation.service";
 
 @Module({
+  imports: [ConfigModule],
   providers: [
     // UFB-036 (Phase 44-03): the policy applicator is the seam that
     // turns ReminderPolicy templates into concrete ReminderRule rows
@@ -20,11 +25,15 @@ import { SessionRevocationService } from "./session-revocation.service";
       useFactory: (repo: AdminPrismaRepository) => new AdminService(repo),
       inject: [AdminPrismaRepository],
     },
-    // A2b: satisfy DI so NestJS resolves the Redis type dep; the
-    // SessionRevocationService constructor detects null and creates
-    // its own ioredis client. Tests override this with a mock client.
-    { provide: Redis, useValue: null },
-    SessionRevocationService,
+    // The service builds its own ioredis client from the validated env when
+    // no test client is injected; the factory passes only env so the redis
+    // param stays undefined on the production path.
+    {
+      provide: SessionRevocationService,
+      useFactory: (env: EnvConfig) =>
+        new SessionRevocationService(undefined, env),
+      inject: [ENV_CONFIG],
+    },
   ],
   exports: [AdminService, SessionRevocationService],
 })

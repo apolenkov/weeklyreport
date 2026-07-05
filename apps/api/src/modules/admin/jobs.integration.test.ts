@@ -4,12 +4,22 @@ import { Queue, QueueEvents, Worker } from "bullmq";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { getBullMQOptions } from "../../infrastructure/bullmq/bullmq-options";
+import type { EnvConfig } from "../../infrastructure/config/env.schema";
+import { requireEnv } from "../../lib/env";
 import {
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
 } from "../../test-utils/prisma-test-helper";
 import { JobsService } from "./jobs.service";
+
+// getBullMQConnectionOptions reads only REDIS_HOST/REDIS_PORT; a partial stub
+// from the live test env avoids validateEnv() (which parses the full schema
+// and process.exit(1)s under the minimal integration env).
+const REDIS_ENV = {
+  REDIS_HOST: requireEnv(process.env, "REDIS_HOST"),
+  REDIS_PORT: Number(requireEnv(process.env, "REDIS_PORT")),
+} as unknown as EnvConfig;
 
 describe("JobsService — integration (BullMQ failed jobs)", () => {
   const prisma = createTestPrisma();
@@ -23,7 +33,7 @@ describe("JobsService — integration (BullMQ failed jobs)", () => {
     await cleanDatabase(prisma);
 
     const options = {
-      ...getBullMQOptions(),
+      ...getBullMQOptions(REDIS_ENV),
       prefix: `test-admin-jobs-${randomUUID()}`,
     };
     queue = new Queue<unknown, unknown, string>(queueName, options);

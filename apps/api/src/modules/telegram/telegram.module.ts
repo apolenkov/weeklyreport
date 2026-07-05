@@ -2,6 +2,11 @@ import { Module } from "@nestjs/common";
 import { ClsService } from "nestjs-cls";
 
 import { createWorkerLogger } from "../../infrastructure/bullmq/worker-observability.js";
+import {
+  ConfigModule,
+  ENV_CONFIG,
+} from "../../infrastructure/config/config.module.js";
+import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import { MockTelegramAdapter } from "./mock-telegram.adapter.js";
 import { TELEGRAM_ADAPTER, type TelegramAdapter } from "./telegram.adapter.js";
 import { TelegramProcessor } from "./telegram.queue.js";
@@ -47,9 +52,11 @@ export function selectTelegramAdapter(): TelegramAdapter {
 }
 
 @Module({
-  // BullMQModule is registered globally in AppModule; this module imports
-  // nothing here because the queue handle is consumed via DI elsewhere
-  // (the tRPC router gets a `Queue` instance through `getQueueToken`).
+  // ConfigModule supplies ENV_CONFIG for the processor's Redis connection.
+  // BullMQModule is registered globally in AppModule; the queue handle is
+  // consumed via DI elsewhere (the tRPC router gets a `Queue` instance
+  // through `getQueueToken`).
+  imports: [ConfigModule],
   providers: [
     {
       provide: TELEGRAM_ADAPTER,
@@ -57,13 +64,14 @@ export function selectTelegramAdapter(): TelegramAdapter {
     },
     {
       provide: TelegramProcessor,
-      useFactory: (adapter: TelegramAdapter, cls: ClsService) =>
+      useFactory: (adapter: TelegramAdapter, env: EnvConfig, cls: ClsService) =>
         new TelegramProcessor(
           adapter,
+          env,
           createWorkerLogger("telegram-outbound-worker", cls),
           cls,
         ),
-      inject: [TELEGRAM_ADAPTER, ClsService],
+      inject: [TELEGRAM_ADAPTER, ENV_CONFIG, ClsService],
     },
   ],
   exports: [TELEGRAM_ADAPTER],

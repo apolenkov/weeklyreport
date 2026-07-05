@@ -1,7 +1,8 @@
 import { Injectable, Logger, type OnModuleDestroy } from "@nestjs/common";
 import Redis from "ioredis";
 
-import { requireEnv } from "../../lib/env.js";
+import type { EnvConfig } from "../../infrastructure/config/env.schema";
+import { buildRedisConnectionOptions } from "../../infrastructure/config/redis-connection";
 import type { TelemetryCachePort } from "./telemetry.service.js";
 
 /**
@@ -24,10 +25,9 @@ export class TelemetryCache implements TelemetryCachePort, OnModuleDestroy {
   private readonly logger = new Logger(TelemetryCache.name);
   private readonly redis: Redis;
 
-  constructor() {
+  constructor(env: EnvConfig) {
     this.redis = new Redis({
-      host: requireEnv(process.env, "REDIS_HOST"),
-      port: Number(requireEnv(process.env, "REDIS_PORT")),
+      ...buildRedisConnectionOptions(env),
       lazyConnect: true,
       maxRetriesPerRequest: 1,
       enableOfflineQueue: false,

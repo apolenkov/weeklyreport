@@ -10,6 +10,7 @@ import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { AdminService } from "../../modules/admin/admin.service";
 import { renderEmail } from "../../modules/email/render-template";
 import { RemindersService } from "../../modules/reminders/reminders.service";
+import type { EnvConfig } from "../config/env.schema";
 import { EmailService } from "../email/email.service";
 import { getBullMQOptions } from "./bullmq-options";
 import {
@@ -86,6 +87,7 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly remindersService: RemindersService,
     private readonly emailService: EmailService,
+    private readonly env: EnvConfig,
     // AdminService surfaces the AppSettings singleton. We read
     // `notificationFromEmail` once per job and pass it through to EmailService
     // so admin can swap the From-address without redeploying. `null` (default)
@@ -111,7 +113,7 @@ export class EmailReminderProcessor implements OnModuleInit, OnModuleDestroy {
         );
       },
       {
-        ...getBullMQOptions(),
+        ...getBullMQOptions(this.env),
         // NOTIF-06 (Phase 29-05): BullMQ rate-limit at the worker level.
         // Caps SMTP throughput at 5 emails per rolling 60s window so a burst
         // of late-cycle reminders does not throttle the corporate mail relay.
