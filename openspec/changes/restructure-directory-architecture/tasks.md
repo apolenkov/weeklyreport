@@ -28,14 +28,22 @@
 
 ## 2. Web: extract ONE self-contained leaf slice (proves the mechanic)
 
-- [ ] 2.1 Relocate the pinned pilot leaf domain `landing` (fully covered by
+- [x] 2.1 Relocate the pinned pilot leaf domain `landing` (fully covered by
       `docs/architecture/mapping/`, unlike `search`) from
       `apps/web/src/components/landing/` to `apps/web/src/features/landing/` with
       `ui/`/`model/`/`api/` (minimal `index.ts` ONLY if a route/slice consumes
       it — web barrels are optional per the standard), fix imports, edit the eslint
       exemption list, and live-verify web from source (the shared-src `.js`-extension
       webpack 500 that tsc/vitest miss). Full unit gate green.
-      **Gated on clean git status (parallel session).**
+      **Gated on clean git status (parallel session).** - DONE (2026-07-06). `git mv`
+      of all 7 files + 2 snapshots to `features/landing/ui/`; `features/landing/index.ts`
+      barrel (route consumer exists); consumer imports + vi.mock paths updated in 3 app/
+      files; `landing` zone appended via new `webCrossSliceZones`; complexity-exemption
+      path updated. Fail-closed proven (synthetic cross-slice import errors). Full gate
+      green (typecheck, lint, 1497 web unit). Live-verified from source on :3100 —
+      `/` 200, moved components SSR-render, no webpack module-resolution 500. Fable
+      adversarial review APPROVED (2 LOW: stale zone-5 comment fixed in-commit;
+      barrel-vs-internals except semantics deferred to slice 3).
 
 ## 3. Web: remaining slices (one domain per change)
 
