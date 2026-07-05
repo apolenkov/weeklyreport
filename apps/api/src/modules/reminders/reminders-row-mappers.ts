@@ -6,6 +6,8 @@ import {
 } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
+import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
+
 /**
  * Pure Prisma-row <-> domain-model mappers for `RemindersPrismaRepository`,
  * split out (R3a-4 max-lines drain): execution/rule row translation, the
@@ -63,24 +65,14 @@ export function formatPeriodLabel(start: Date, end: Date): string {
 
 /**
  * True when `error` is the Prisma P2002 raised by the `dedupeKey` unique index
- * (`ReminderExecution_dedupeKey_key`). Under the pg driver adapter `meta.target`
- * is unset, so the index identity lives in `message` /
- * `meta.driverAdapterError.cause.originalMessage`; both — and the classic
- * engine's column-name form — contain the `dedupeKey` substring. Since the
- * caller only inserts a `ReminderExecution`, that substring uniquely
- * identifies this conflict; any other violation returns false (and re-throws).
+ * (`ReminderExecution_dedupeKey_key`). The caller only inserts a
+ * `ReminderExecution`, so the `dedupeKey` substring uniquely identifies this
+ * conflict; any other violation returns false (and re-throws). The shared guard
+ * carries the pg-adapter matching (serialized meta + message, never
+ * `meta.target` alone).
  */
 export function isDedupeKeyConflict(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  const candidate = error as {
-    code?: unknown;
-    message?: unknown;
-    meta?: { driverAdapterError?: { cause?: { originalMessage?: unknown } } };
-  };
-  if (candidate.code !== "P2002") return false;
-  const original = candidate.meta?.driverAdapterError?.cause?.originalMessage;
-  const identity = `${typeof candidate.message === "string" ? candidate.message : ""} ${typeof original === "string" ? original : ""}`;
-  return identity.includes("dedupeKey");
+  return isUniqueViolation(error, { columns: ["dedupeKey"] });
 }
 
 export function toRuleDomain(rule: {

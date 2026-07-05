@@ -1,9 +1,9 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 import type {
   CrossAuthorSectionRow,
   LeadFormRepository,
@@ -370,10 +370,10 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       if (error instanceof SectionVersionConflictError) {
         throw error;
       }
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
+      // Any P2002 in the fill copy means a duplicate child row — surface it as a
+      // clean domain error, never a raw 500. Unscoped: duck-typed `.code` via
+      // the shared guard, so no `instanceof` narrowing is needed.
+      if (isUniqueViolation(error)) {
         throw new ReportSectionDomainError(
           "DUPLICATE_CHILD_ROW",
           "Could not fill the section: a duplicate row was rejected.",
@@ -403,17 +403,14 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         },
       });
     } catch (error) {
-      // reopen-request-lifecycle (D5): a true race between two requestReopen
-      // calls passes the app-level pending check on both, then the partial
-      // unique index `ReopenRequest_one_pending_per_section` rejects the second
-      // with P2002. Translate it to the SAME friendly domain error the
-      // app-level check raises, instead of letting it surface as a 500. The
-      // ReopenRequest table has no other unique constraint, so P2002 here can
-      // only be the one-pending guard.
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
+      // A true race between two requestReopen calls passes the app-level pending
+      // check on both, then the partial unique index
+      // `ReopenRequest_one_pending_per_section` rejects the second with P2002.
+      // Translate it to the SAME friendly domain error the app-level check
+      // raises, instead of letting it surface as a 500. The ReopenRequest table
+      // has no other unique constraint, so any P2002 here is the one-pending
+      // guard — an unscoped guard call is exact.
+      if (isUniqueViolation(error)) {
         throw new ReopenRequestError(
           reopenBlockedMessage("pending_request_exists"),
         );

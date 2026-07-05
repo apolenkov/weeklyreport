@@ -6,6 +6,7 @@ import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 import { queryPublishedLineage } from "./published-lineage";
 import {
   ReportSectionDomainError,
@@ -1037,10 +1038,7 @@ export class ReportSectionsPrismaRepository
       // The DB mints child ids now, but a duplicate (reportSectionId, projectId)
       // ProjectStatus (or any other unique violation) in a malformed payload can
       // still trip P2002 — surface it as a clean 400, never an unhandled 500.
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
+      if (isUniqueViolation(error)) {
         throw new ReportSectionDomainError(
           "DUPLICATE_CHILD_ROW",
           "Could not save the section: a duplicate row was rejected.",

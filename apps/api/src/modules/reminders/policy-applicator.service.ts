@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { DateTime } from "luxon";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 
 /**
  * UFB-036 (Phase 44-03): the seam that turns ReminderPolicy templates
@@ -154,8 +155,9 @@ export class PolicyApplicatorService {
           created += 1;
         }
       } catch (error: unknown) {
-        const code = (error as { code?: string } | null)?.code;
-        if (code === "P2002") {
+        // Unscoped: any P2002 here is the (reportId, policyId) race — the
+        // swallow-any behavior this loop has always had.
+        if (isUniqueViolation(error)) {
           // Two concurrent applyToPeriod calls raced on the same
           // (reportId, policyId). The unique index prevents duplicates;
           // log + continue so the loop finishes the rest of the

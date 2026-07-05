@@ -6,6 +6,7 @@ import {
   computeDeadline,
   getCurrentWeekBounds,
 } from "../../lib/business-date.js";
+import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 import type { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
 import { buildTransition, initialPeriodState } from "./period-transition.js";
 
@@ -100,28 +101,10 @@ function narrowDraftState(
  * the SAME violation identically; an unrelated unique violation re-throws.
  */
 export function isOpenBoundaryConflict(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  if ((error as { code?: unknown }).code !== "P2002") return false;
-
-  const meta = (error as { meta?: unknown }).meta;
-  const message = (error as { message?: unknown }).message;
-  const identity = `${meta === undefined ? "" : safeJson(meta)} ${
-    typeof message === "string" ? message : ""
-  }`;
-
-  return (
-    identity.includes(OPEN_BOUNDARY_INDEX) ||
-    (identity.includes("periodStart") && identity.includes("periodEnd"))
-  );
-}
-
-/** JSON.stringify that never throws (a circular/BigInt meta degrades to ""). */
-function safeJson(value: unknown): string {
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return "";
-  }
+  return isUniqueViolation(error, {
+    index: OPEN_BOUNDARY_INDEX,
+    columns: ["periodStart", "periodEnd"],
+  });
 }
 
 /**

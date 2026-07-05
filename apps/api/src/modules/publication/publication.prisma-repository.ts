@@ -2,6 +2,7 @@ import type { AssembledReport } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { publishCompareAndSet } from "../../lib/publish-compare-and-set.js";
 import { buildTransition } from "../period/period-transition.js";
 import {
   buildAssembledReportFromPrismaRow,
@@ -70,42 +71,23 @@ export class PublicationPrismaRepository implements PublicationRepository {
       };
     }
 
-    // Compare-and-set: the guarded predicate lets exactly one of two concurrent
-    // publishes win. Both clear the fast-path read above; this predicate
-    // transitions exactly one and the loser matches zero rows. The lifecycle
-    // field set comes from the transition builder (preserving the single
-    // transition-writer invariant) and the snapshot rides the same statement,
-    // so the state and snapshot stay atomic — the established
-    // `saveAutoPublishedReport` pattern.
-    const { count } = await this.prisma.report.updateMany({
-      where: {
-        id: report.reportId,
-        periodStatus: { not: "published" },
-        archived: false,
-      },
-      data: {
-        ...this.publishLifecycle(report, false),
-        publishedSnapshot: toPublishedSnapshotJson(report),
-      },
+    // Shared compare-and-set: the guarded predicate lets exactly one of two
+    // concurrent publishes win, and the zero-row match is disambiguated (raced
+    // vs archived) by a direct re-read through the base client — this path has
+    // NO surrounding transaction, so single-statement execution is its only
+    // atomicity. The lifecycle field set (single transition-writer invariant)
+    // AND the snapshot therefore ride the SAME guarded `updateMany` `data`.
+    const outcome = await publishCompareAndSet(this.prisma, report.reportId, {
+      ...this.publishLifecycle(report, false),
+      publishedSnapshot: toPublishedSnapshotJson(report),
     });
 
     const saved = await this.readAssembled(report.reportId);
 
-    // count === 0 → the predicate matched no row, for one of two reasons. A
-    // direct re-read (this path has no surrounding transaction) disambiguates:
-    // a now-published row means a concurrent publish committed first
-    // (idempotent "raced" success — this call wrote nothing); otherwise the
-    // period was archived inside the read→write window, so fail closed
-    // ("archived"). The contradictory archived-and-published row is never
-    // written — `archived: false` in the predicate guarantees it.
-    if (count === 0) {
-      const current = await this.prisma.report.findUnique({
-        where: { id: report.reportId },
-        select: { periodStatus: true },
-      });
-      if (current?.periodStatus === "published") {
-        return { status: "raced", report: saved };
-      }
+    if (outcome === "raced") {
+      return { status: "raced", report: saved };
+    }
+    if (outcome === "archived") {
       return { status: "archived", report: saved };
     }
 

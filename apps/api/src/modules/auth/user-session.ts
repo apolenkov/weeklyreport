@@ -1,6 +1,8 @@
 import type { UserSession } from "@customreport/shared";
 import type { PrismaClient, Role } from "@prisma/client";
 
+import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
+
 // Turns a verified SAML / dev-login identity into a UserSession: resolve-or-
 // provision the user, and for a lead with no active section delegate period +
 // section creation to injected seams (this module does not own that persistence).
@@ -25,20 +27,14 @@ const DEFAULT_REPORTING_GROUP_ID = "a0000000-0000-4000-8000-000000000301";
 // the name helpers treat as absent (canSave trims it, so it never re-saves).
 const SAML_STUB_FIRST_NAME_PLACEHOLDER = " ";
 
-// `User.email` and `User.samlId` are each `@unique`. Prisma's P2002
-// `meta.target` may surface the column name or a field array depending on the
-// driver, so accept either shape (mirrors `ensure-lead-section`'s detector).
+// `User.email` and `User.samlId` are each `@unique`; either colliding means a
+// concurrent first-login raced us. The shared guard also reads the pg-adapter
+// shape, where the old meta.target-only check was blind.
 function isUserUniqueViolation(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  if ((error as { code?: unknown }).code !== "P2002") return false;
-  const target = (error as { meta?: { target?: unknown } }).meta?.target;
-  const targetText =
-    typeof target === "string"
-      ? target
-      : Array.isArray(target)
-        ? target.join(",")
-        : "";
-  return targetText.includes("email") || targetText.includes("samlId");
+  return (
+    isUniqueViolation(error, { columns: ["email"] }) ||
+    isUniqueViolation(error, { columns: ["samlId"] })
+  );
 }
 
 // Two concurrent first-logins of the same new identity both miss the find and

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { publishCompareAndSet } from "../../lib/publish-compare-and-set.js";
 import { AdminPeriodOverlapError } from "../admin/admin-shared.js";
 import {
   buildAssembledReportFromPrismaRow,
@@ -74,39 +75,25 @@ export class PeriodPrismaRepository implements PeriodRepository {
     userId: string,
   ): Promise<PublishPeriodOutcome> {
     return this.prisma.$transaction(async (tx) => {
-      // Compare-and-set: only a not-yet-published, non-archived period
-      // transitions. `archived: false` is the single point that closes the
-      // archive↔publish race — a pre-write `report.archived` check cannot,
-      // because the archive can land after it. On a real transition the
-      // complete publish field set comes from the transition builder
-      // (preserving the single transition-writer invariant). updateMany cannot
-      // carry an `include`, so the row is read back to build the snapshot —
-      // both stay in this transaction, so the state and the snapshot remain
-      // atomic.
-      const { count } = await tx.report.updateMany({
-        where: {
-          id: reportId,
-          periodStatus: { not: "published" },
-          archived: false,
-        },
-        data: buildTransition("publish", { now: new Date(), userId }),
-      });
+      // Shared compare-and-set: only a not-yet-published, non-archived period
+      // transitions, and a zero-row match is disambiguated (raced vs archived)
+      // by a re-read through this same `tx`. The complete publish field set
+      // comes from the transition builder (preserving the single
+      // transition-writer invariant); the snapshot is written as a second
+      // statement inside this transaction below, so state + snapshot stay atomic.
+      const outcome = await publishCompareAndSet(
+        tx,
+        reportId,
+        buildTransition("publish", { now: new Date(), userId }),
+      );
 
-      if (count === 0) {
-        // A zero-row match now has two causes. Re-read inside the same
-        // transaction to disambiguate: a now-published row means a concurrent
-        // publish won (idempotent success); otherwise the period was archived
-        // inside the read→write window (fail closed). The contradictory
-        // archived-and-published row is never written.
-        const current = await tx.report.findUnique({
-          where: { id: reportId },
-          select: { periodStatus: true },
-        });
-        const reason =
-          current?.periodStatus === "published" ? "raced" : "archived";
-        return { transitioned: false, reason };
+      if (outcome !== "transitioned") {
+        return { transitioned: false, reason: outcome };
       }
 
+      // updateMany cannot carry an `include`, so read the row back to build the
+      // snapshot — still inside this transaction, so it stays atomic with the
+      // transition.
       const published = await tx.report.findUniqueOrThrow({
         where: { id: reportId },
         include: reportFullIncludeForSnapshot,
