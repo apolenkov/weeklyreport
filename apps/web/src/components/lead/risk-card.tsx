@@ -97,8 +97,12 @@ export function RiskCard({
         <span
           className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold"
           style={{
-            background: isBlocked ? "#fee2e2" : "#fef3c7",
-            color: isBlocked ? "var(--color-destructive)" : "#8a6d1b",
+            background: isBlocked
+              ? "var(--color-status-blocked-bg)"
+              : "var(--color-status-at-risk-bg)",
+            color: isBlocked
+              ? "var(--color-destructive)"
+              : "var(--color-status-at-risk-fg)",
           }}
         >
           {isBlocked ? "Blocked" : "At Risk"}
@@ -168,7 +172,7 @@ export function RiskCard({
       </div>
       {/* F4: required-mark when product is at-risk/blocked but no stage selected */}
       {needsStage && (
-        <p className="mt-2 text-[11px] font-semibold text-[#8a6d1b]">
+        <p className="mt-2 text-[11px] font-semibold text-[var(--color-status-at-risk-fg)]">
           ⚠ Select at least one stage — required for at-risk/blocked products.
         </p>
       )}

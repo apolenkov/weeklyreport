@@ -15,13 +15,13 @@ const CSS_PRIMARY = "var(--color-primary)";
 
 const STATUS_BG: Record<string, string> = {
   "on-track": "var(--color-success)",
-  "at-risk": "#fef3c7",
-  blocked: "#fee2e2",
+  "at-risk": "var(--color-status-at-risk-bg)",
+  blocked: "var(--color-status-blocked-bg)",
 };
 
 const STATUS_TEXT: Record<string, string> = {
   "on-track": CSS_PRIMARY,
-  "at-risk": "#8a6d1b",
+  "at-risk": "var(--color-status-at-risk-fg)",
   blocked: "var(--color-destructive)",
 };
 
@@ -33,7 +33,7 @@ const STATUS_ICON: Record<string, string> = {
 
 const STATUS_ICON_TEXT: Record<string, string> = {
   "on-track": CSS_PRIMARY,
-  "at-risk": "#8a6d1b",
+  "at-risk": "var(--color-status-at-risk-fg)",
   blocked: "var(--color-destructive)",
 };
 

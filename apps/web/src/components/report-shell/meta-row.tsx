@@ -4,7 +4,7 @@
 // "all-stages" keeps the items/decisions semantics (empty = all assigned
 // stages); "no-stage-warning" is the loud risk variant — a stage-less risk
 // is an anomaly, never an implicit scope. Warning tokens match the F4
-// needsStage hint (#fef3c7 / #8a6d1b).
+// needsStage hint (at-risk bg/fg tokens).
 const EMPTY_STAGE_CHIPS = {
   "all-stages": {
     label: "All stages",
@@ -12,7 +12,8 @@ const EMPTY_STAGE_CHIPS = {
   },
   "no-stage-warning": {
     label: "No stage set",
-    className: "bg-[#fef3c7] text-[#8a6d1b]",
+    className:
+      "bg-[var(--color-status-at-risk-bg)] text-[var(--color-status-at-risk-fg)]",
   },
 } as const;
 

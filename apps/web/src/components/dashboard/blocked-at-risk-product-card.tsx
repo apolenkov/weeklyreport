@@ -34,7 +34,7 @@ const SEVERITY_BADGE = {
   "at-risk": {
     label: "At Risk",
     bg: "var(--color-surface-muted)",
-    fg: "#8a6d1b",
+    fg: "var(--color-status-at-risk-fg)",
   },
 } as const satisfies Record<
   Severity,
@@ -138,7 +138,7 @@ export function ProductCard({ group }: { readonly group: ProductGroup }) {
   const tone = SEVERITY_TONE[severity];
   const avatar = AVATAR_CONFIG[severity];
   return (
-    <div className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[rgba(0,0,0,0.02)]">
+    <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[rgba(0,0,0,0.02)]">
       <div className="flex items-center gap-3 px-4 py-3">
         <div
           className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-semibold"

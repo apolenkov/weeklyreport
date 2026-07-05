@@ -21,7 +21,7 @@ function TrafficDot({
   return (
     <span
       role="img"
-      className="inline-flex h-7 min-w-12 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[rgba(0,0,0,0.08)] bg-white/70 px-2 text-[12px] font-semibold text-[var(--color-foreground)]"
+      className="inline-flex h-7 min-w-12 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border-subtle)] bg-white/70 px-2 text-[12px] font-semibold text-[var(--color-foreground)]"
       aria-label={`${label}: ${count}`}
     >
       <span className={`h-2 w-2 rounded-full ${className}`} />
@@ -53,7 +53,7 @@ function StatusBadge({ status }: { readonly status: HistoryEntry["status"] }) {
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[#fef3c7] px-3 py-1 text-xs font-semibold text-[#8a6d1b]">
+    <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-3 py-1 text-xs font-semibold text-[var(--color-status-at-risk-fg)]">
       Draft
     </span>
   );
@@ -173,7 +173,7 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
             <TrafficDot
               label="Yellow statuses"
               count={entry.trafficLights.yellow}
-              className="bg-[#d4a017]"
+              className="bg-[var(--color-status-dot-at-risk)]"
             />
             <TrafficDot
               label="Red statuses"

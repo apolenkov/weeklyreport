@@ -92,6 +92,7 @@ const CSS = {
   statusBlockedBg: "var(--color-status-blocked-bg)",
   destructive: "var(--color-destructive)",
   statusAtRiskBorder: "var(--color-status-at-risk-border)",
+  statusAtRiskFg: "var(--color-status-at-risk-fg)",
   mutedForeground: "var(--color-muted-foreground)",
 } as const;
 
@@ -343,7 +344,7 @@ function EscalationRow({
                 }
               : {
                   background: "var(--color-surface-muted)",
-                  color: "#8a6d1b",
+                  color: CSS.statusAtRiskFg,
                 }
           }
         >
