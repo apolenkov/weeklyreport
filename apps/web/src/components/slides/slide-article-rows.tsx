@@ -3,7 +3,7 @@ import { useRef } from "react";
 
 import { STAGE_ICONS } from "../lead/stage-chip-config";
 import { useSdlcTooltip } from "../ui/sdlc-tooltip";
-import type { GridAuthor, GridBadge, GridRow } from "./slide-grid-model";
+import type { GridAuthor, GridHighlight, GridRow } from "./slide-grid-model";
 
 /** Hover/focus handlers wiring an element to the singleton slide tooltip. */
 function useHoverTooltip(content: string) {
@@ -57,25 +57,32 @@ function AuthorBadge({
   );
 }
 
-/** Exception-only trailing marks: expected states carry nothing, a done item
- * gets a quiet check glyph, an open risk keeps its loud AT RISK chip. Both
- * trail the text inline so wrapped lines keep the full column width. */
-function StatusBadge({ badge }: { readonly badge: GridBadge }) {
-  if (badge === null) return null;
-  if (badge === "completed") {
-    return (
-      <span className="ml-1 inline-flex translate-y-[-1px] align-middle text-[var(--color-primary)]">
-        <Check aria-hidden="true" className="h-3 w-3" />
-        <span className="sr-only">Completed</span>
-      </span>
-    );
-  }
+/** The only per-row status mark: a quiet check glyph on done items, trailing
+ * the text inline so wrapped lines keep the full column width. Every other
+ * status reads from the row's background/border, never from words. */
+function CompletedMark({ completed }: { readonly completed: boolean }) {
+  if (!completed) return null;
   return (
-    <span className="ml-1 inline-flex translate-y-[-1px] rounded border border-transparent bg-[var(--color-status-dot-at-risk)] px-1 py-0.5 align-middle text-[8px] font-semibold uppercase tracking-wide text-white">
-      AT RISK
+    <span className="ml-1 inline-flex translate-y-[-1px] align-middle text-[var(--color-primary)]">
+      <Check aria-hidden="true" className="h-3 w-3" />
+      <span className="sr-only">Completed</span>
     </span>
   );
 }
+
+/** Risk emphasis plays background and border, not status text: blocked is the
+ * loud filled tint, at-risk the quieter bordered wash. sr-only keeps the
+ * severity readable for screen readers and grayscale print. */
+const HIGHLIGHT_CLASS: Record<Exclude<GridHighlight, null>, string> = {
+  blocked: "-mx-2 rounded-md bg-[var(--color-chip-blocked-bg)] px-2 py-1",
+  "at-risk":
+    "-mx-2 rounded-md border border-[var(--color-status-at-risk-border)] bg-[var(--color-status-at-risk-bg)] px-2 py-1",
+};
+
+const HIGHLIGHT_SR_LABEL: Record<Exclude<GridHighlight, null>, string> = {
+  blocked: "Blocked",
+  "at-risk": "At risk",
+};
 
 function StageWatermark({ stageName }: { readonly stageName: string }) {
   const tooltip = useHoverTooltip(stageName);
@@ -142,10 +149,8 @@ function ItemRow({
   readonly author: GridAuthor | undefined;
   readonly showStages: boolean;
 }) {
-  // Blocked-risk emphasis: highlighted row, no badge.
-  const highlight = row.blockerHighlight
-    ? "-mx-2 rounded-md bg-[var(--color-chip-blocked-bg)] px-2 py-1"
-    : "";
+  const highlight =
+    row.highlight === null ? "" : HIGHLIGHT_CLASS[row.highlight];
   // One flowing paragraph: badges and icons ride the text instead of columns,
   // so wrapped lines start at the cell edge and nothing indents the body.
   return (
@@ -155,7 +160,10 @@ function ItemRow({
       <AuthorBadge author={author} show={row.showAuthorBadge} />
       {showStages && <StageWatermarks stageNames={row.stageNames} />}
       {row.text}
-      <StatusBadge badge={row.badge} />
+      <CompletedMark completed={row.completed} />
+      {row.highlight !== null && (
+        <span className="sr-only">{HIGHLIGHT_SR_LABEL[row.highlight]}</span>
+      )}
     </li>
   );
 }

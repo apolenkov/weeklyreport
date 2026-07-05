@@ -20,8 +20,8 @@ export function buildForeignRows(
     const base = {
       authorId: ca.authorId,
       showAuthorBadge: true,
-      blockerHighlight: false,
-    };
+      highlight: null,
+    } as const;
     const items = ca.items.map((item): ForeignGridRow => {
       const isNext = item.type === "next";
       return {
@@ -31,7 +31,7 @@ export function buildForeignRows(
           ...base,
           id: item.id,
           text: item.text.trim(),
-          badge: item.workflowStatus === "done" ? "completed" : null,
+          completed: item.workflowStatus === "done",
           stageNames: sortStageNames(item.stageNames),
         },
       };
@@ -45,8 +45,8 @@ export function buildForeignRows(
           ...base,
           id: risk.id,
           text: risk.risk.trim(),
-          badge: blocked ? null : "at-risk",
-          blockerHighlight: blocked,
+          completed: false,
+          highlight: blocked ? "blocked" : "at-risk",
           stageNames: sortStageNames(risk.stageNames),
         },
       };
@@ -59,7 +59,7 @@ export function buildForeignRows(
           ...base,
           id: decision.id,
           text: decision.text.trim(),
-          badge: null,
+          completed: false,
           stageNames: sortStageNames(decision.stageNames),
         },
       }),
