@@ -43,7 +43,7 @@ import { Queue } from "bullmq";
 import cookieParser from "cookie-parser";
 import express, { type RequestHandler } from "express";
 import helmet from "helmet";
-import { ClsMiddleware, ClsService } from "nestjs-cls";
+import { ClsMiddleware } from "nestjs-cls";
 import { AppModule } from "./app.module";
 import { mountBullBoard } from "./infrastructure/bullmq/bull-board.module";
 import { getBullMQOptions } from "./infrastructure/bullmq/bullmq-options";
@@ -57,7 +57,8 @@ import { PrismaService } from "./infrastructure/prisma/prisma.service";
 import { createRateLimits } from "./infrastructure/throttler/rate-limit.middleware";
 import { createContextFactory } from "./infrastructure/trpc/trpc.context";
 import { createAppRouter } from "./infrastructure/trpc/trpc.router";
-import { createAuditLogger } from "./lib/audit-logger";
+import { APP_LOGGER, createAuditLogger } from "./lib/audit-logger";
+import type { AppLogger } from "./lib/logger";
 import { createAppLogger } from "./lib/logger";
 import { NestAppLoggerAdapter } from "./lib/nest-app-logger.adapter";
 import { ActivityService } from "./modules/activity/activity.service";
@@ -159,18 +160,14 @@ async function bootstrap() {
   const { httpAdapter } = app.get(HttpAdapterHost);
   app.useGlobalFilters(new SentryExceptionFilter(httpAdapter));
 
-  const cls = app.get(ClsService);
-
   // The validated env, resolved through the DI container so every Redis
   // connection built at bootstrap (BullMQ queue handles, the PDF-handler and
   // context-factory session-revocation clients) uses the centralized options.
   const envConfig = app.get<EnvConfig>(ENV_CONFIG);
-  const logger = createAppLogger({
-    service: "customreport-api",
-    minLevel: env.LOG_LEVEL,
-    logDir: env.LOG_DIR,
-    clsService: cls,
-  });
+  // The single post-CLS AppLogger, resolved from the container (config.module)
+  // so the audit sink (AUDIT_LOGGER) and this logger share ONE file sink —
+  // no second concurrent writer on app.log.
+  const logger = app.get<AppLogger>(APP_LOGGER);
 
   nestLoggerAdapter.setLogger(logger);
   logger.info("bootstrap started");

@@ -1,6 +1,9 @@
 import { Logger, Module } from "@nestjs/common";
 
+import { ConfigModule } from "../../infrastructure/config/config.module.js";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import type { AuditLogger } from "../../lib/audit-logger.js";
+import { AUDIT_LOGGER } from "../../lib/audit-logger.js";
 import { AdminModule } from "../admin/admin.module.js";
 import { AdminService } from "../admin/admin.service.js";
 import { AnalyticsCache } from "../analytics/analytics.cache.js";
@@ -31,18 +34,17 @@ import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
  * is present in the root `AppModule` — already wired there for the
  * pre-existing `RemindersScheduler`.
  *
- * Audit envelopes are emitted via the optional `AuditLogger` constructor
- * arg; module-level the schedulers fall back to `createNullAuditLogger()`
- * because the AppLogger-backed audit logger is built once in `main.ts` and
- * is not currently a Nest-DI provider. Phase 51-A or later may promote it
- * to a token-injected provider — for 50-B the null fallback is sufficient
- * (audit data still goes through the Nest `Logger` debug stream).
+ * Audit envelopes are emitted through the real `AuditLogger`: each scheduler
+ * factory injects the `AUDIT_LOGGER` token (config.module.ts), which resolves
+ * the AppLogger-backed sink shared with `main.ts`. The arg is required — a
+ * missing sink fails DI resolution loudly rather than degrading to a no-op.
  */
 @Module({
   imports: [
     AnalyticsModule,
     AdminModule,
     CarryOverModule,
+    ConfigModule,
     PublicationModule,
     WeeklyReportModule,
   ],
@@ -58,10 +60,9 @@ import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
         new PeriodService(
           repo,
           () => cache.invalidateAll(),
-          // UFB-052 (Phase 51-B): reopen-policy reader resolves to the
-          // two `AppSettings` knobs from 51-A. Settings.get already
-          // upserts the singleton row so this stays a single round-trip
-          // per reopen call.
+          // Reopen-policy reader resolves the two AppSettings knobs;
+          // Settings.get upserts the singleton row, so this stays a single
+          // round-trip per reopen call.
           async () => {
             const settings = await admin.getSettings();
             return {
@@ -74,29 +75,22 @@ import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
         ),
       inject: [PeriodPrismaRepository, AnalyticsCache, AdminService],
     },
-    // Schedulers use explicit factories so the optional AuditLogger
-    // constructor arg stays optional under Nest DI. Without the factory,
-    // Nest tries to resolve the 3rd parameter and fails because there is
-    // no provider for AuditLogger in the graph (it's built in main.ts).
-    // Passing `undefined` makes the schedulers fall back to the null
-    // audit logger, which routes structured signal through Nest's
-    // built-in Logger anyway.
-    // TD-06: PolicyApplicatorService provided directly (depends only on
-    // PrismaService, no circular dep). Injected into the scheduler so that
-    // auto-created periods materialise reminder rules like admin-created ones.
+    // PolicyApplicatorService provided directly (depends only on PrismaService,
+    // no circular dep). Injected into the scheduler so that auto-created periods
+    // materialise reminder rules like admin-created ones.
     PolicyApplicatorService,
     {
       provide: PeriodCreatorScheduler,
       useFactory: (
         prisma: PrismaService,
         admin: AdminService,
+        auditLogger: AuditLogger,
         policyApplicator: PolicyApplicatorService,
         carryOverService: CarryOverService,
         carryOverRepository: CarryOverPrismaRepository,
       ) => {
-        // HF10: the scheduler's auto carry-over hook. AppLogger is not a DI
-        // provider (built in main.ts), so the orchestrator logs through a
-        // Nest Logger adapter here.
+        // The carry-over orchestrator logs through a Nest Logger adapter —
+        // its deps contract predates APP_LOGGER and expects the Nest shape.
         const nestLogger = new Logger("AutoCarryOver");
         const autoCarryOverDeps = buildAutoCarryOverDeps({
           prisma,
@@ -111,7 +105,7 @@ import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
         return new PeriodCreatorScheduler(
           prisma,
           admin,
-          undefined,
+          auditLogger,
           policyApplicator,
           (targetReportId) =>
             carryOverIntoOpenedPeriod(autoCarryOverDeps, targetReportId),
@@ -120,6 +114,7 @@ import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
       inject: [
         PrismaService,
         AdminService,
+        AUDIT_LOGGER,
         PolicyApplicatorService,
         CarryOverService,
         CarryOverPrismaRepository,
@@ -131,14 +126,18 @@ import { PeriodCreatorScheduler } from "./period-creator.scheduler.js";
         prisma: PrismaService,
         admin: AdminService,
         publication: PublicationService,
-      ) => new AutoPublisherScheduler(prisma, admin, publication),
-      inject: [PrismaService, AdminService, PublicationService],
+        auditLogger: AuditLogger,
+      ) => new AutoPublisherScheduler(prisma, admin, publication, auditLogger),
+      inject: [PrismaService, AdminService, PublicationService, AUDIT_LOGGER],
     },
     {
       provide: AutoArchiverScheduler,
-      useFactory: (prisma: PrismaService, admin: AdminService) =>
-        new AutoArchiverScheduler(prisma, admin),
-      inject: [PrismaService, AdminService],
+      useFactory: (
+        prisma: PrismaService,
+        admin: AdminService,
+        auditLogger: AuditLogger,
+      ) => new AutoArchiverScheduler(prisma, admin, auditLogger),
+      inject: [PrismaService, AdminService, AUDIT_LOGGER],
     },
   ],
   // PolicyApplicatorService is exported so the composition root (`main.ts`) can

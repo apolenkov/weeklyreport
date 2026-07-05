@@ -89,33 +89,27 @@ export interface PeriodRepository {
    * List of section ids tied to a report — read by the post-publish
    * ingestion seam (see {@link IngestionPublishHook}) so a future async
    * consumer can enqueue per-section work after a period publishes.
-   * Optional on the port so existing unit-test fixtures that don't care
-   * about ingestion stay green; the production repo implements it.
    */
-  listSectionIds?(reportId: string): Promise<string[]>;
+  listSectionIds(reportId: string): Promise<string[]>;
 }
 
 /**
- * Phase 30-01 (ANAL-01): the cache invalidation port. PeriodService stays
- * Redis-free; the AnalyticsCache is wired through this lambda by
- * period.module.ts. Default no-op keeps existing unit tests green.
+ * The cache invalidation port. PeriodService stays Redis-free; the
+ * AnalyticsCache is wired through this lambda by period.module.ts.
  */
 export type AnalyticsCacheInvalidator = () => Promise<void>;
 
 /**
- * UFB-052 (Phase 51-B): a lazy reader for the two reopen-policy knobs
- * in `AppSettings`. PeriodService stays decoupled from AdminService
- * by reading them through this lambda; tests can stub the values
- * directly, and the production wiring resolves to `appSettings.get`.
- *
- * `null` means "no settings wired" — backwards-compatible no-op gate
- * (every reopen is allowed), so existing unit tests that did not pass
- * a reader keep passing without modification.
+ * A lazy reader for the two reopen-policy knobs in `AppSettings`.
+ * PeriodService stays decoupled from AdminService by reading them through
+ * this lambda; the production wiring resolves to `appSettings.get`. The
+ * return is non-null: a reopen-policy gate is always wired, so no code path
+ * can construct the service without one.
  */
 export type ReopenPolicyReader = () => Promise<{
   allowReopenAfterPublish: boolean;
   reopenWindowHours: number;
-} | null>;
+}>;
 
 /**
  * Fire-and-forget post-publish ingestion seam, called after a
@@ -135,17 +129,10 @@ export type IngestionPublishHook = (
 export class PeriodService {
   constructor(
     private readonly repository: PeriodRepository,
-    private readonly invalidateAnalyticsCache: AnalyticsCacheInvalidator = () =>
-      Promise.resolve(undefined),
-    /**
-     * UFB-052 (Phase 51-B): reopen-policy gate. Defaults to a null
-     * reader (no gating) so the 88+ unit/integration tests that pre-date
-     * 51-B keep passing — when no reader is wired, every reopen is
-     * allowed exactly as before. Production wiring is done in
-     * period.module.ts.
-     */
-    private readonly readReopenPolicy: ReopenPolicyReader = () =>
-      Promise.resolve(null),
+    private readonly invalidateAnalyticsCache: AnalyticsCacheInvalidator,
+    // Reopen-policy gate reader. Required — production wiring is done in
+    // period.module.ts; the gate is always enforced.
+    private readonly readReopenPolicy: ReopenPolicyReader,
     /**
      * On every successful publishPeriod, called with the section ids of
      * the just-published period. No-op by default; production may wire a
@@ -234,13 +221,11 @@ export class PeriodService {
 
     await this.invalidateAnalyticsCache();
 
-    if (this.repository.listSectionIds) {
-      try {
-        const sectionIds = await this.repository.listSectionIds(reportId);
-        await this.ingestionHook(sectionIds);
-      } catch {
-        // intentionally swallowed
-      }
+    try {
+      const sectionIds = await this.repository.listSectionIds(reportId);
+      await this.ingestionHook(sectionIds);
+    } catch {
+      // intentionally swallowed
     }
   }
 
@@ -310,7 +295,7 @@ export class PeriodService {
 
     await this.assertNoConcurrentReopen(session);
 
-    // UFB-052 (Phase 51-B): reopen-policy enforcement. Two gates:
+    // Reopen-policy enforcement, always applied. Two gates:
     //   1. `allowReopenAfterPublish` master switch — if false, no reopen
     //      is ever allowed regardless of window.
     //   2. `reopenWindowHours` — if set to N>0, the reopen must arrive
@@ -318,24 +303,19 @@ export class PeriodService {
     //      populated for periodStatus='published' rows (the publishPeriod
     //      writer sets it atomically), but we still guard against a NULL
     //      defensively so a hand-corrected DB row cannot crash the gate.
-    //
-    // When no policy reader is wired (legacy tests), gating is skipped
-    // entirely so old fixtures keep passing.
     const policy = await this.readReopenPolicy();
-    if (policy) {
-      if (!policy.allowReopenAfterPublish) {
+    if (!policy.allowReopenAfterPublish) {
+      throw new PeriodAccessError(
+        "Reopening published periods is disabled in Settings (allowReopenAfterPublish=false).",
+      );
+    }
+    if (policy.reopenWindowHours > 0 && report.publishedAt) {
+      const windowEnd =
+        report.publishedAt.getTime() + policy.reopenWindowHours * MS_PER_HOUR;
+      if (Date.now() > windowEnd) {
         throw new PeriodAccessError(
-          "Reopening published periods is disabled in Settings (allowReopenAfterPublish=false).",
+          `Reopen window expired (${policy.reopenWindowHours}h after publication).`,
         );
-      }
-      if (policy.reopenWindowHours > 0 && report.publishedAt) {
-        const windowEnd =
-          report.publishedAt.getTime() + policy.reopenWindowHours * MS_PER_HOUR;
-        if (Date.now() > windowEnd) {
-          throw new PeriodAccessError(
-            `Reopen window expired (${policy.reopenWindowHours}h after publication).`,
-          );
-        }
       }
     }
 

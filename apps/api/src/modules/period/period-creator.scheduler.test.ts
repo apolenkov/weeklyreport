@@ -236,7 +236,7 @@ describe("PeriodCreatorScheduler", () => {
     const scheduler = new PeriodCreatorScheduler(
       asAny(prisma),
       asAny(admin),
-      undefined,
+      createNullAuditLogger(),
       undefined,
       autoCarryOver,
     );
@@ -273,7 +273,7 @@ describe("PeriodCreatorScheduler", () => {
     const scheduler = new PeriodCreatorScheduler(
       asAny(prisma),
       asAny(admin),
-      undefined,
+      createNullAuditLogger(),
       undefined,
       autoCarryOver,
     );
@@ -306,7 +306,7 @@ describe("PeriodCreatorScheduler", () => {
     const scheduler = new PeriodCreatorScheduler(
       asAny(prisma),
       asAny(admin),
-      undefined,
+      createNullAuditLogger(),
       asAny(policyApplicator),
     );
 

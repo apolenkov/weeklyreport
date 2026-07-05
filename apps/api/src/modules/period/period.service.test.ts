@@ -6,12 +6,18 @@ import {
   customreportReportsSubmittedTotal,
 } from "../../infrastructure/metrics/metrics.registry.js";
 import {
+  type AnalyticsCacheInvalidator,
   PeriodAccessError,
   PeriodNotFoundError,
   type PeriodRepository,
   PeriodScopeError,
   PeriodService,
+  type ReopenPolicyReader,
 } from "./period.service";
+
+const noopInvalidate: AnalyticsCacheInvalidator = () => Promise.resolve();
+const noGatingReopenPolicy: ReopenPolicyReader = () =>
+  Promise.resolve({ allowReopenAfterPublish: true, reopenWindowHours: 0 });
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */
@@ -90,6 +96,7 @@ function createSpyRepository(
     [...reports.values()].find(match)?.id ?? null;
 
   return {
+    listSectionIds: () => Promise.resolve([]),
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
     async getReportById(id: string) {
       const r = reports.get(id);
@@ -136,7 +143,11 @@ describe("PeriodService — publishPeriod (unit)", () => {
       ],
     ]);
     const repo = createSpyRepository(reports);
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await service.publishPeriod(reportId, headSession);
 
@@ -159,7 +170,11 @@ describe("PeriodService — publishPeriod (unit)", () => {
         },
       ],
     ]);
-    const service = new PeriodService(createSpyRepository(reports));
+    const service = new PeriodService(
+      createSpyRepository(reports),
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     const result = await service.publishPeriod(reportId, headSession);
 
@@ -168,7 +183,11 @@ describe("PeriodService — publishPeriod (unit)", () => {
   });
 
   it("throws plain Error (not PeriodAccessError) when report is missing", async () => {
-    const service = new PeriodService(createSpyRepository(new Map()));
+    const service = new PeriodService(
+      createSpyRepository(new Map()),
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(service.publishPeriod(reportId, headSession)).rejects.toThrow(
       Error,
@@ -193,7 +212,11 @@ describe("PeriodService — publishPeriod (unit)", () => {
       ],
     ]);
     const repo = createSpyRepository(reports);
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(
       service.publishPeriod(reportId, headSession),
@@ -214,7 +237,11 @@ describe("PeriodService — publishPeriod (unit)", () => {
       ],
     ]);
     const repo = createSpyRepository(reports);
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     // 1. Publish
     await service.publishPeriod(reportId, headSession);
@@ -243,7 +270,11 @@ describe("PeriodService — publishPeriod (unit)", () => {
     ]);
     // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy satisfies the AnalyticsCacheInvalidator typed slot (must return Promise<void>)
     const invalidate = vi.fn(async () => undefined);
-    const service = new PeriodService(createSpyRepository(reports), invalidate);
+    const service = new PeriodService(
+      createSpyRepository(reports),
+      invalidate,
+      noGatingReopenPolicy,
+    );
 
     await service.publishPeriod(reportId, headSession);
 
@@ -264,7 +295,11 @@ describe("PeriodService — publishPeriod (unit)", () => {
     ]);
     // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy satisfies the AnalyticsCacheInvalidator typed slot (must return Promise<void>)
     const invalidate = vi.fn(async () => undefined);
-    const service = new PeriodService(createSpyRepository(reports), invalidate);
+    const service = new PeriodService(
+      createSpyRepository(reports),
+      invalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(
       service.publishPeriod(reportId, headSession),
@@ -294,7 +329,11 @@ describe("PeriodService — publishPeriod (unit)", () => {
         },
       ],
     ]);
-    const service = new PeriodService(createSpyRepository(reports));
+    const service = new PeriodService(
+      createSpyRepository(reports),
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     // First report can be published
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
@@ -329,7 +368,11 @@ describe("PeriodService — reopenPeriod (unit)", () => {
       ],
     ]);
     const repo = createSpyRepository(reports);
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await service.reopenPeriod(reportId, headSession);
 
@@ -350,7 +393,11 @@ describe("PeriodService — reopenPeriod (unit)", () => {
       ],
     ]);
     const repo = createSpyRepository(reports);
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(service.reopenPeriod(reportId, headSession)).rejects.toThrow();
     expect(repo.reopenPeriod).not.toHaveBeenCalled();
@@ -370,7 +417,11 @@ describe("PeriodService — reopenPeriod (unit)", () => {
     ]);
     // eslint-disable-next-line @typescript-eslint/require-await -- vi.fn wrapping an async stub; async required so the spy satisfies the AnalyticsCacheInvalidator typed slot (must return Promise<void>)
     const invalidate = vi.fn(async () => undefined);
-    const service = new PeriodService(createSpyRepository(reports), invalidate);
+    const service = new PeriodService(
+      createSpyRepository(reports),
+      invalidate,
+      noGatingReopenPolicy,
+    );
 
     await service.reopenPeriod(reportId, headSession);
 
@@ -389,7 +440,11 @@ describe("PeriodService — reopenPeriod (unit)", () => {
         },
       ],
     ]);
-    const service = new PeriodService(createSpyRepository(reports));
+    const service = new PeriodService(
+      createSpyRepository(reports),
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     // First reopen works
     await service.reopenPeriod(reportId, headSession);
@@ -487,7 +542,7 @@ describe("PeriodService — reopen policy gate (UFB-052)", () => {
     expect(repo.reopenPeriod).toHaveBeenCalledOnce();
   });
 
-  it("legacy callers without a policy reader stay un-gated", async () => {
+  it("a permissive policy (allow + zero window) permits reopen", async () => {
     const reports = new Map([
       [
         reportId,
@@ -500,7 +555,11 @@ describe("PeriodService — reopen policy gate (UFB-052)", () => {
       ],
     ]);
     const repo = createSpyRepository(reports);
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await service.reopenPeriod(reportId, headSession);
     expect(repo.reopenPeriod).toHaveBeenCalledOnce();
@@ -544,7 +603,11 @@ describe("PeriodService — manual-publish telemetry", () => {
         },
       ],
     ]);
-    const service = new PeriodService(createSpyRepository(reports));
+    const service = new PeriodService(
+      createSpyRepository(reports),
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
     const before = await getCounterValue(customreportReportsSubmittedTotal, {
       state: "published",
     });
@@ -570,7 +633,11 @@ describe("PeriodService — manual-publish telemetry", () => {
         },
       ],
     ]);
-    const service = new PeriodService(createSpyRepository(reports));
+    const service = new PeriodService(
+      createSpyRepository(reports),
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
     const before = await getCounterValue(
       customreportPeriodStateTransitionsTotal,
       { from: "open", to: "published" },
@@ -598,7 +665,11 @@ describe("PeriodService — manual-publish telemetry", () => {
         },
       ],
     ]);
-    const service = new PeriodService(createSpyRepository(reports));
+    const service = new PeriodService(
+      createSpyRepository(reports),
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
     const before = await getCounterValue(
       customreportPeriodStateTransitionsTotal,
       { from: "reopened", to: "published" },
@@ -640,8 +711,13 @@ describe("PeriodService — manual-publish telemetry", () => {
       }),
       // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract
       reopenPeriod: vi.fn(async () => undefined),
+      listSectionIds: () => Promise.resolve([]),
     };
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     const submittedBefore = await getCounterValue(
       customreportReportsSubmittedTotal,
@@ -691,7 +767,12 @@ describe("PeriodService — manual-publish telemetry", () => {
       reopenPeriod: () => Promise.resolve(),
       listSectionIds: () => Promise.resolve(["s1"]),
     };
-    const service = new PeriodService(repo, undefined, undefined, ingestion);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+      ingestion,
+    );
 
     const submittedBefore = await getCounterValue(
       customreportReportsSubmittedTotal,
@@ -762,7 +843,11 @@ describe("PeriodService — publish target scope", () => {
     const repo = createSpyRepository(
       new Map([[reportId, openReport(reportId)]]),
     );
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
       {
@@ -785,7 +870,11 @@ describe("PeriodService — publish target scope", () => {
         [otherReportId, openReport(otherReportId)],
       ]),
     );
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(
       service.publishPeriod(otherReportId, headSession),
@@ -800,7 +889,11 @@ describe("PeriodService — publish target scope", () => {
         [otherReportId, openReport(otherReportId)],
       ]),
     );
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     // reportId is the resolved active id; an admin still publishes the OTHER one.
     await expect(
@@ -816,7 +909,11 @@ describe("PeriodService — publish target scope", () => {
     const repo = createSpyRepository(
       new Map([[archivedReportId, openReport(archivedReportId, true)]]),
     );
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(
       service.publishPeriod(archivedReportId, headSession),
@@ -828,7 +925,11 @@ describe("PeriodService — publish target scope", () => {
     const repo = createSpyRepository(
       new Map([[archivedReportId, openReport(archivedReportId, true)]]),
     );
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(
       service.publishPeriod(archivedReportId, adminSession),
@@ -837,7 +938,11 @@ describe("PeriodService — publish target scope", () => {
   });
 
   it("maps a missing report to PeriodNotFoundError, not a bare Error", async () => {
-    const service = new PeriodService(createSpyRepository(new Map()));
+    const service = new PeriodService(
+      createSpyRepository(new Map()),
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(
       service.publishPeriod(reportId, headSession),
@@ -860,11 +965,16 @@ describe("PeriodService — publish target scope", () => {
       getReopenedNonArchivedId: () => Promise.resolve(null),
       publishPeriod,
       reopenPeriod: vi.fn(() => Promise.resolve()),
+      listSectionIds: () => Promise.resolve([]),
     };
     const before = await getCounterValue(customreportReportsSubmittedTotal, {
       state: "published",
     });
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(
       service.publishPeriod(reportId, headSession),
@@ -883,7 +993,11 @@ describe("PeriodService — reopen target scope", () => {
     const repo = createSpyRepository(
       new Map([[reportId, publishedReport(reportId)]]),
     );
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(service.reopenPeriod(reportId, headSession)).resolves.toEqual({
       success: true,
@@ -899,7 +1013,11 @@ describe("PeriodService — reopen target scope", () => {
         [otherReportId, publishedReport(otherReportId)],
       ]),
     );
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     // reportId is the resolved latest published id; otherReportId is stale.
     await expect(
@@ -915,7 +1033,11 @@ describe("PeriodService — reopen target scope", () => {
         [otherReportId, publishedReport(otherReportId)],
       ]),
     );
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(
       service.reopenPeriod(otherReportId, adminSession),
@@ -927,7 +1049,11 @@ describe("PeriodService — reopen target scope", () => {
     const repo = createSpyRepository(
       new Map([[archivedReportId, publishedReport(archivedReportId, true)]]),
     );
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(
       service.reopenPeriod(archivedReportId, headSession),
@@ -939,7 +1065,11 @@ describe("PeriodService — reopen target scope", () => {
     const repo = createSpyRepository(
       new Map([[archivedReportId, publishedReport(archivedReportId, true)]]),
     );
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(
       service.reopenPeriod(archivedReportId, adminSession),
@@ -959,7 +1089,11 @@ describe("PeriodService — reopen target scope", () => {
         [otherReportId, publishedReport(otherReportId, false)],
       ]),
     );
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(
       service.reopenPeriod(otherReportId, headSession),
@@ -973,7 +1107,11 @@ describe("PeriodService — reopen target scope", () => {
   });
 
   it("maps a missing report to PeriodNotFoundError", async () => {
-    const service = new PeriodService(createSpyRepository(new Map()));
+    const service = new PeriodService(
+      createSpyRepository(new Map()),
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(
       service.reopenPeriod(reportId, headSession),
@@ -995,8 +1133,9 @@ describe("PeriodService — reopen target scope", () => {
         Promise.resolve({ transitioned: true as const }),
       ),
       reopenPeriod,
+      listSectionIds: () => Promise.resolve([]),
     };
-    const service = new PeriodService(repo, invalidate);
+    const service = new PeriodService(repo, invalidate, noGatingReopenPolicy);
 
     await expect(
       service.reopenPeriod(reportId, headSession),
@@ -1017,7 +1156,11 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
       [reportId, publishedReport(reportId)],
     ]);
     const repo = createSpyRepository(reports);
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await service.reopenPeriod(reportId, headSession);
     expect(repo.reopenPeriod).toHaveBeenCalledWith(reportId);
@@ -1043,7 +1186,11 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
       [reportId, publishedReport(reportId)],
     ]);
     const repo = createSpyRepository(reports);
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(
       service.reopenPeriod(reportId, headSession),
@@ -1057,7 +1204,11 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
       [reportId, publishedReport(reportId)],
     ]);
     const repo = createSpyRepository(reports);
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(service.reopenPeriod(reportId, adminSession)).resolves.toEqual(
       { success: true, reportId },
@@ -1075,7 +1226,11 @@ describe("PeriodService — publish reopened-target scope", () => {
     const repo = createSpyRepository(
       new Map([[reportId, reopenedReport(reportId)]]),
     );
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
       { success: true, reportId },
@@ -1097,7 +1252,11 @@ describe("PeriodService — publish reopened-target scope", () => {
         [otherReportId, reopenedReport(otherReportId)],
       ]),
     );
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(
       service.publishPeriod(otherReportId, headSession),
@@ -1112,7 +1271,11 @@ describe("PeriodService — publish reopened-target scope", () => {
         [otherReportId, reopenedReport(otherReportId)],
       ]),
     );
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(
       service.publishPeriod(otherReportId, adminSession),
@@ -1161,8 +1324,8 @@ describe("PeriodService — archive-in-window publish outcome", () => {
     );
     const service = new PeriodService(
       repoWithOutcome(publish),
-      undefined,
-      undefined,
+      noopInvalidate,
+      noGatingReopenPolicy,
       ingestion,
     );
 
@@ -1189,8 +1352,8 @@ describe("PeriodService — archive-in-window publish outcome", () => {
     );
     const service = new PeriodService(
       repoWithOutcome(publish),
-      undefined,
-      undefined,
+      noopInvalidate,
+      noGatingReopenPolicy,
       ingestion,
     );
 

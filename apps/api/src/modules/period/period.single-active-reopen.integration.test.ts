@@ -9,7 +9,16 @@ import {
 } from "../../test-utils/prisma-test-helper";
 import { WeeklyReportPrismaRepository } from "../weekly-report/weekly-report.prisma-repository";
 import { PeriodPrismaRepository } from "./period.prisma-repository";
-import { PeriodScopeError, PeriodService } from "./period.service";
+import {
+  type AnalyticsCacheInvalidator,
+  PeriodScopeError,
+  PeriodService,
+  type ReopenPolicyReader,
+} from "./period.service";
+
+const noopInvalidate: AnalyticsCacheInvalidator = () => Promise.resolve();
+const noGatingReopenPolicy: ReopenPolicyReader = () =>
+  Promise.resolve({ allowReopenAfterPublish: true, reopenWindowHours: 0 });
 
 /**
  * Real-Prisma coverage for the single-active-reopen guard. The unit tests pin
@@ -28,7 +37,11 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
     prisma as unknown as PrismaService,
     new WeeklyReportPrismaRepository(prisma as unknown as PrismaService),
   );
-  const service = new PeriodService(repository);
+  const service = new PeriodService(
+    repository,
+    noopInvalidate,
+    noGatingReopenPolicy,
+  );
 
   const PUBLISHED_A = "f0000000-0000-4000-a000-0000000000b1";
   const PUBLISHED_B = "f0000000-0000-4000-a000-0000000000b2";

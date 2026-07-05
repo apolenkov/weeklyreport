@@ -5,7 +5,6 @@ import type { PrismaClient } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { AuditLogger } from "../../lib/audit-logger.js";
-import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { AdminService } from "../admin/admin.service";
 import { PolicyApplicatorService } from "../reminders/policy-applicator.service.js";
 import {
@@ -95,22 +94,19 @@ export async function flipDueScheduledToOpen(
 @Injectable()
 export class PeriodCreatorScheduler {
   private readonly logger = new Logger(PeriodCreatorScheduler.name);
-  private readonly auditLogger: AuditLogger;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly adminService: AdminService,
-    auditLogger?: AuditLogger,
-    // TD-06: wire PolicyApplicator so auto-created periods materialise
-    // reminder rules just like admin-panel-created ones.
+    private readonly auditLogger: AuditLogger,
+    // Wire PolicyApplicator so auto-created periods materialise reminder rules
+    // just like admin-panel-created ones.
     private readonly policyApplicator?: PolicyApplicatorService,
     // Auto carry-over hook (best-effort, never rejects), invoked for every
-    // fresh-open period each tick. Optional for the same DI reason as the
-    // audit logger; the module factory always wires it.
+    // fresh-open period each tick. Trailing-optional; the module factory
+    // always wires it.
     private readonly autoCarryOver?: (targetReportId: string) => Promise<void>,
-  ) {
-    this.auditLogger = auditLogger ?? createNullAuditLogger();
-  }
+  ) {}
 
   /**
    * Reconcile carry-over for EVERY fresh-open period, not only rows this tick

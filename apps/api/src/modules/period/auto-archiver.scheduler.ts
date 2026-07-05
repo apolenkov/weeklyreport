@@ -4,7 +4,6 @@ import { Cron } from "@nestjs/schedule";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { AuditLogger } from "../../lib/audit-logger.js";
-import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { AdminService } from "../admin/admin.service";
 import { buildTransition } from "./period-transition.js";
 
@@ -28,15 +27,12 @@ import { buildTransition } from "./period-transition.js";
 @Injectable()
 export class AutoArchiverScheduler {
   private readonly logger = new Logger(AutoArchiverScheduler.name);
-  private readonly auditLogger: AuditLogger;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly adminService: AdminService,
-    auditLogger?: AuditLogger,
-  ) {
-    this.auditLogger = auditLogger ?? createNullAuditLogger();
-  }
+    private readonly auditLogger: AuditLogger,
+  ) {}
 
   // Every day at 00:15 UTC.
   @Cron("15 0 * * *")
