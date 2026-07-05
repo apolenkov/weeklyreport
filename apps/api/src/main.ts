@@ -283,8 +283,7 @@ async function bootstrap() {
   // the same rotating app.log so all debug data lives in one file.
   // Dev-only by default; turn on in prod with CLIENT_LOG_FORWARDING=true.
   const clientLogsEnabled =
-    env.NODE_ENV === "development" ||
-    process.env.CLIENT_LOG_FORWARDING === "true";
+    env.NODE_ENV === "development" || env.CLIENT_LOG_FORWARDING === "true";
   app.use(
     CLIENT_LOGS_ROUTE,
     express.json({ limit: "128kb" }),
@@ -378,6 +377,7 @@ async function bootstrap() {
   // Resolve all services from NestJS DI container
   const appRouter = createAppRouter({
     prisma: prismaService,
+    env,
     autoCarryOver,
     reportSectionsService: app.get(ReportSectionsService),
     reviewService: app.get(ReviewService),

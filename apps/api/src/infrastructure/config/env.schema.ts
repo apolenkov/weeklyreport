@@ -26,6 +26,13 @@ export const envSchema = z
     // in superRefine when NODE_ENV=production.
     FRONTEND_URLS: z.string().optional(),
     AUTH_DEV_MODE: z.string().transform((v) => v === "true"),
+    // Non-prod test-context toggle, read raw beside NODE_ENV/AUTH_DEV_MODE in
+    // the trpc.context dev-mode gate. Optional: only honoured when
+    // NODE_ENV !== 'production'; absent → the test-context path stays off.
+    AUTH_DEV_MODE_ALLOW_TEST: z.string().optional(),
+    // Dev/test reseed repo-root override (`dev.wipeAndReseed`); first candidate
+    // in a fallback list, so absent → the process walks cwd/workspace guesses.
+    CUSTOMREPORT_REPO_ROOT: z.string().optional(),
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]),
     LOG_DIR: z.string().optional(),
 
@@ -34,6 +41,10 @@ export const envSchema = z
     // dev-login still issues a session JWT — so a config without it crashes at
     // controller construction regardless of AUTH_DEV_MODE.
     AUTH_JWT_SECRET: z.string().min(MIN_JWT_SECRET_LENGTH),
+    // Session-cookie name. Optional: `resolveSessionCookieName` applies its
+    // named SESSION_COOKIE_DEFAULT_NAME const when absent (a consumer default,
+    // not a schema `.default()`).
+    AUTH_JWT_COOKIE_NAME: z.string().optional(),
 
     // SAML / Keycloak (validated at runtime by saml.strategy.ts requireEnv).
     // Optional here because dev-login (AUTH_DEV_MODE) needs no IdP; prod boots
@@ -47,6 +58,12 @@ export const envSchema = z
     REDIS_HOST: z.string(),
     REDIS_PORT: z.coerce.number().int().positive(),
     BULLMQ_PREFIX: z.string().optional(),
+    // DLQ alert threshold consumed only by DLQMonitorService. Genuinely
+    // optional: absent → the service applies its named DEFAULT_THRESHOLD const,
+    // so no `.default()` belongs here. A PRESENT value must be a whole positive
+    // number or boot fails loud (`z.coerce`), rather than a typo silently
+    // degrading the alert to the default at first poll. Mirrors DB_POOL_MAX.
+    DLQ_ALERT_THRESHOLD: z.coerce.number().int().positive().optional(),
 
     // SMTP (email reminders)
     SMTP_HOST: z.string().optional(),
@@ -64,6 +81,18 @@ export const envSchema = z
     OTEL_TRACES_SAMPLER_ARG: z.coerce.number().min(0).max(1),
     OTEL_SERVICE_NAME: z.string().optional(),
     OTEL_SERVICE_VERSION: z.string().optional(),
+
+    // Error capture (Bugsink/Sentry-compatible). Optional: `main.ts` inits the
+    // SDK only when set. Read raw at module load there — before validateEnv()
+    // runs — so this declaration is for coverage, not routing.
+    SENTRY_DSN: z.string().optional(),
+    // Browser → server log forwarder toggle (`main.ts`). Optional prod opt-in;
+    // dev enables the forwarder via NODE_ENV, prod opts in with "true".
+    CLIENT_LOG_FORWARDING: z.string().optional(),
+    // Telegram bot token (Phase 55). Optional: unset/blank →
+    // MockTelegramAdapter; a non-blank value activates real delivery. The
+    // configured-check is centralised in `isTelegramConfigured`.
+    TG_BOT_TOKEN: z.string().optional(),
 
     // PDF generation
     PDF_BASE_URL: z.url(),

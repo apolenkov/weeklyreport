@@ -101,6 +101,10 @@ export default defineConfig({
         OTEL_SDK_DISABLED: "true",
         OTEL_TRACES_SAMPLER_ARG: "0",
         HEAP_HEALTH_THRESHOLD_BYTES: "1610612736",
+        // The seven optional coverage vars (TG_BOT_TOKEN, SENTRY_DSN,
+        // CLIENT_LOG_FORWARDING, AUTH_DEV_MODE_ALLOW_TEST, CUSTOMREPORT_REPO_ROOT,
+        // DLQ_ALERT_THRESHOLD, AUTH_JWT_COOKIE_NAME) flow through `...process.env`
+        // above; no integration path depends on any of them, so none is pinned.
       },
     },
     {

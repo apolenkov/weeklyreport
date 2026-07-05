@@ -7,6 +7,7 @@ import {
   ENV_CONFIG,
 } from "../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema";
+import { isTelegramConfigured } from "../../lib/env.js";
 import { MockTelegramAdapter } from "./mock-telegram.adapter.js";
 import { TELEGRAM_ADAPTER, type TelegramAdapter } from "./telegram.adapter.js";
 import { TelegramProcessor } from "./telegram.queue.js";
@@ -27,9 +28,8 @@ import { TelegramProcessor } from "./telegram.queue.js";
  * at that point this switch grows a `if (token) return new RealAdapter()`
  * arm and the throw becomes unreachable.
  */
-export function selectTelegramAdapter(): TelegramAdapter {
-  const token = process.env.TG_BOT_TOKEN?.trim() ?? "";
-  if (token === "") {
+export function selectTelegramAdapter(env: EnvConfig): TelegramAdapter {
+  if (!isTelegramConfigured(env)) {
     return new MockTelegramAdapter();
   }
   // TODO(Phase-55-activation): wire real bot adapter when TG_BOT_TOKEN is set.
@@ -60,7 +60,8 @@ export function selectTelegramAdapter(): TelegramAdapter {
   providers: [
     {
       provide: TELEGRAM_ADAPTER,
-      useFactory: () => selectTelegramAdapter(),
+      useFactory: (env: EnvConfig) => selectTelegramAdapter(env),
+      inject: [ENV_CONFIG],
     },
     {
       provide: TelegramProcessor,

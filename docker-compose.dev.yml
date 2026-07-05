@@ -51,6 +51,11 @@ services:
       OTEL_TRACES_SAMPLER_ARG: "1.0"
       HEAP_HEALTH_THRESHOLD_BYTES: ${HEAP_HEALTH_THRESHOLD_BYTES:-1610612736}
       SENTRY_DSN: ${SENTRY_DSN_DOCKER:-}
+      # Remaining optional coverage vars (all declared .optional() in envSchema,
+      # each defaulting to its consumer behaviour when absent): TG_BOT_TOKEN,
+      # CLIENT_LOG_FORWARDING, AUTH_DEV_MODE_ALLOW_TEST, CUSTOMREPORT_REPO_ROOT,
+      # DLQ_ALERT_THRESHOLD, AUTH_JWT_COOKIE_NAME. Add a pass-through line here
+      # only when a run needs to override the default. See .env.example.
     depends_on:
       postgres:
         condition: service_healthy
