@@ -12,6 +12,7 @@ import type {
   ReportItem,
   ReportRisk,
 } from "../dashboard/mock-data";
+import { RotatingChevron } from "../report-shell/rotating-chevron";
 import {
   type RecordCommentAnchor,
   RecordComments,
@@ -168,22 +169,6 @@ const STATUS_BADGE = {
 // is carried by the right-side badge, so the rail stays a neutral spine.
 function itemRailTone(status: string): string {
   return status === "blocked" ? CSS.destructive : "var(--color-border)";
-}
-
-function ChevronDown({ expanded }: { readonly expanded: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4 text-[var(--color-muted-foreground)] transition-transform duration-300"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      style={{ transform: expanded ? "rotate(0deg)" : "rotate(-90deg)" }}
-      aria-hidden="true"
-    >
-      <path d="M6 9l6 6 6-6" />
-    </svg>
-  );
 }
 
 // Gold rank marker in the dedicated left column — priorities-only hue
@@ -449,10 +434,8 @@ export function ProductAccordion({
   return (
     <div
       id={`report-product-${report.id}`}
-      className={`scroll-mt-28 overflow-hidden rounded-[var(--radius)] border shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)] transition-[border-color,box-shadow] ${
-        isEmpty
-          ? "bg-[rgba(0,0,0,0.035)] opacity-90"
-          : "bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)]"
+      className={`card-surface-elevated scroll-mt-28 overflow-hidden rounded-[var(--radius)] border transition-[border-color,box-shadow] ${
+        isEmpty ? "bg-[rgba(0,0,0,0.035)] opacity-90" : "card-surface-fill"
       }`}
       style={{
         borderColor:
@@ -510,7 +493,7 @@ export function ProductAccordion({
           </div>
         </div>
         {hasContent ? (
-          <ChevronDown expanded={expanded} />
+          <RotatingChevron expanded={expanded} />
         ) : (
           <span className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
         )}

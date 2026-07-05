@@ -1,4 +1,4 @@
-import { roleSchema } from "@customreport/shared";
+import { ROLE_HOME_PATH, roleSchema } from "@customreport/shared";
 import type { PrismaClient, Role } from "@prisma/client";
 import type {
   Express,
@@ -28,15 +28,6 @@ const DEV_LOGIN_EMAIL_BY_ROLE: Record<Role, string> = {
   lead: "lead1@customreport.local",
   admin: "admin@customreport.local",
   viewer: "viewer@customreport.local",
-};
-
-// Role-aware default landing. Must stay in sync with DEFAULT_FOR_ROLE in
-// apps/web/src/app/login-page-roles.ts.
-const DEV_LOGIN_REDIRECT_BY_ROLE: Record<Role, string> = {
-  head: "/head/dashboard",
-  lead: "/lead/report",
-  admin: "/admin",
-  viewer: "/reports?tab=published",
 };
 
 const DEV_LOGIN_DEFAULT_ROLE: Role = "head";
@@ -173,7 +164,7 @@ function createDevLoginHandler(deps: DevLoginDeps): RequestHandler {
       res.redirect(
         resolveDevLoginRedirectUrl(
           readQueryParam(req.query.redirect),
-          DEV_LOGIN_REDIRECT_BY_ROLE[validRole],
+          ROLE_HOME_PATH[validRole],
           deps.frontendUrl,
         ),
       );

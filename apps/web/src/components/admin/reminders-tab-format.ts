@@ -10,6 +10,7 @@ import {
   MINUTES_PER_HOUR,
 } from "@customreport/shared";
 
+import { MONTHS_SHORT } from "../../lib/format-date";
 import { pluralize } from "../../lib/pluralize";
 import type { MockReminder, MockReminderPolicy } from "./mock-data";
 
@@ -149,21 +150,6 @@ export function formatValidityWindow(policy: MockReminderPolicy): string {
   return `${from} → ${until}`;
 }
 
-const SEND_MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
-
 /**
  * The earliest future derived-rule fire time, formatted as a plain date, or
  * `null` when there is no upcoming send (every derived rule already fired or
@@ -180,5 +166,5 @@ export function nextSendDate(
   const next = upcoming.at(0);
   if (!next) return null;
   const fireAt = next.fireAt;
-  return `${SEND_MONTHS[fireAt.getUTCMonth()]} ${fireAt.getUTCDate()}, ${fireAt.getUTCFullYear()}`;
+  return `${MONTHS_SHORT[fireAt.getUTCMonth()]} ${fireAt.getUTCDate()}, ${fireAt.getUTCFullYear()}`;
 }

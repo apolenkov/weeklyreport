@@ -57,6 +57,7 @@ import {
   MINUTES_PER_HOUR,
   MS_PER_SECOND,
   normalizeStageName,
+  ROLE_LABEL,
   SECONDS_PER_MINUTE,
   shortNameFromName,
   STAGE_NAMES,
@@ -66,6 +67,7 @@ import {
 import { riskCoversStage } from "../../components/lead/stage-tags";
 import {
   formatPeriodRangeWithYear,
+  formatTimestampShort,
   isoWeekNumber as sharedIsoWeekNumber,
 } from "../format-date";
 import { deriveEffectiveStageStatus } from "../stage-status";
@@ -223,21 +225,6 @@ export interface LeadCurrentUser {
 // stage options from it, so a record stores the full "Development"; the pipeline
 // chip renders a display-only short label (`stageShortLabel`), never stored.
 
-const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
-
 function isoWeekNumber(d: Date): number {
   return sharedIsoWeekNumber(d);
 }
@@ -261,9 +248,7 @@ function formatRelativeTimestamp(at: Date, now: Date): string {
   const diffHour = Math.floor(diffMin / MINUTES_PER_HOUR);
   if (diffHour < HOURS_PER_DAY)
     return diffHour === 1 ? "1h ago" : `${diffHour}h ago`;
-  const month = MONTHS[at.getUTCMonth()];
-  const day = at.getUTCDate();
-  return `${month} ${day}`;
+  return formatTimestampShort(at);
 }
 
 function clampRank(rank: number): number {
@@ -904,20 +889,13 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
   const readOnly = args.byPeriod.readOnly || section.status === "submitted";
 
   // 35-03: surface the section author's role end-to-end. The display label
-  // ("Lead", "Head", "Admin") is derived from the role token; the raw
-  // token (`authorRole`) is exposed so role-based UI gating doesn't have
-  // to reverse-engineer the label string. Defaults to 'lead' when the
-  // read model omits it (legacy fixtures, harness-driven tests).
+  // comes from the shared `ROLE_LABEL` home; the raw token (`authorRole`) is
+  // exposed so role-based UI gating doesn't have to reverse-engineer the label
+  // string. Defaults to 'lead' when the read model omits it (legacy fixtures,
+  // harness-driven tests).
   const authorRole: "lead" | "head" | "admin" | "viewer" =
     args.active.authorRole ?? "lead";
-  const roleLabel =
-    authorRole === "head"
-      ? "Head"
-      : authorRole === "admin"
-        ? "Admin"
-        : authorRole === "viewer"
-          ? "Viewer"
-          : "Lead";
+  const roleLabel = ROLE_LABEL[authorRole];
 
   return {
     products: mapLeadProducts(section),

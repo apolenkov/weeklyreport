@@ -147,10 +147,7 @@ export function LeadSummaryTable({
   // aligned by accident and drifted on uneven content. The full count labels
   // and warm cards are retained intentionally (see design note in the spec).
   return (
-    <section
-      className="overflow-hidden rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97)_0%,rgba(255,255,255,0.94)_100%)] shadow-[0_0_0.5px_0_rgba(0,0,0,0.08),0_8px_18px_-14px_rgba(0,0,0,0.18),0_1px_2px_rgba(0,0,0,0.05)]"
-      aria-labelledby="lead-summary-heading"
-    >
+    <section className="card-surface" aria-labelledby="lead-summary-heading">
       <div className="border-b border-[rgba(0,0,0,0.08)] px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
           <h2

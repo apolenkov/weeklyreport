@@ -1,5 +1,6 @@
 "use client";
 
+import { ROLE_LABEL } from "@customreport/shared";
 import { Button } from "@customreport/ui/components/ui/button";
 import {
   DropdownMenu,
@@ -17,13 +18,6 @@ import { useTRPC } from "../../lib/trpc-context";
 
 type Role = "head" | "lead" | "admin" | "viewer";
 type DataResetVariant = "small" | "middle" | "huge" | "manual-uat";
-
-const ROLE_LABEL: Record<Role, string> = {
-  head: "Department Head",
-  admin: "Admin",
-  lead: "Lead",
-  viewer: "Viewer",
-};
 
 const ROLE_ORDER: Role[] = ["head", "admin", "lead", "viewer"];
 const LOGOUT_PATH = "/auth/logout";
