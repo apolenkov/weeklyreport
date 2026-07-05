@@ -12,3 +12,5 @@ prisma/seed-constants.ts
 e2e
 pnpm-lock.yaml
 scheduled_tasks.lock
+# Agent worktrees are full repo copies — they format themselves.
+.claude/worktrees/
