@@ -63,7 +63,10 @@ function makePrismaStub(policyCount: number) {
 // ---------------------------------------------------------------------------
 
 describe("TD-05: PolicyApplicatorService fan-out performance", () => {
-  it("completes 10 active policies within 50 ms", async () => {
+  // retry: a wall-clock budget on a loaded machine (turbo runs 4 package
+  // suites in parallel) flakes without a real regression; a genuine slowdown
+  // fails all 3 attempts.
+  it("completes 10 active policies within 50 ms", { retry: 2 }, async () => {
     const service = new PolicyApplicatorService(
       makePrismaStub(10) as unknown as PrismaService,
     );
