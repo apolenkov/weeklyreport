@@ -1,6 +1,6 @@
 ## 1. Enforcement ratchet baseline (additive, zero file moves)
 
-- [ ] 1.1 Add the four NEW boundary zones to `eslint.config.ts`: the package-name
+- [x] 1.1 Add the four NEW boundary zones to `eslint.config.ts`: the package-name
       zones (api domain-purity; ui-domain-free) extend the existing
       `@typescript-eslint/no-restricted-imports` block; the relative-path zones
       (api cross-module internals; web cross-slice) use the resolver-aware
@@ -12,7 +12,19 @@
       `eslint-disable`
       suppression of boundary zones forbidden; do NOT re-declare the package-level
       zones already owned by `lint-max-strictness-standard` — verify, do not re-add.
-      Land `pnpm lint` green. **Gated on clean git status (parallel session).**
+      Land `pnpm lint` green. **Gated on clean git status (parallel session).** - DONE (2026-07-05). Installed `eslint-plugin-import-x`, `eslint-import-resolver-typescript`
+      (required so `no-restricted-paths` resolves NodeNext `.js`→`.ts` specifiers; without it every
+      zone is a silent no-op), and `@eslint-community/eslint-plugin-eslint-comments` (the
+      spec-mandated suppression ban). Zones: (3) api cross-module `import-x/no-restricted-paths`,
+      one zone per module, 36 grandfathered `except` entries across 11 consumers (30 sibling-module + 6 loose-root-file imports); (4) api domain-purity `no-restricted-imports` on invariant
+      `domain/**` (inert — domain/ arrives slice 4, 0 violations); (5) web cross-slice
+      `no-restricted-paths` wired with empty zones (features/ absent — each web slice appends its
+      own `{target,from,except:[self]}` zone from slice 2); (6) ui-domain-free `no-restricted-imports`
+      (0 violations). Verified fail-closed: synthetic new cross-module import errors; inverse test
+      (drop one `except` → that exact import errors) proves the resolver + allowlist are load-bearing;
+      eslint-disable of a boundary rule is itself reported. `pnpm lint` + `pnpm typecheck` + api/web
+      unit suites green. Zones 1-2 (packages one-way, web→api) verified still active in
+      `lint-max-strictness-standard`, not re-added.
 
 ## 2. Web: extract ONE self-contained leaf slice (proves the mechanic)
 
