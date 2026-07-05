@@ -1,7 +1,9 @@
 import type { Metric } from "web-vitals";
 
+import { webEnv } from "./web-env";
+
 export function reportWebVitals(): void {
-  if (process.env.NEXT_PUBLIC_WEB_VITALS !== "true") return;
+  if (!webEnv.webVitals()) return;
 
   void import("web-vitals").then(({ onCLS, onFCP, onINP, onLCP, onTTFB }) => {
     const send = (metric: Metric): void => {

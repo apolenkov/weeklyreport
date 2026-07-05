@@ -15,6 +15,7 @@ import { TaglineCycler } from "../components/landing/tagline-cycler";
 import { type LastRoleRecord, readLastRole } from "../lib/last-role";
 import { sanitizeNext } from "../lib/safe-next";
 import { useTRPC } from "../lib/trpc-context";
+import { webEnv } from "../lib/web-env";
 import {
   defaultRedirectFor,
   DEV_EMAIL_FOR_ROLE,
@@ -24,9 +25,8 @@ import {
   ROLE_LABEL,
 } from "./login-page-roles";
 
-const AUTH_STUB =
-  process.env.NEXT_PUBLIC_AUTH_STUB === "true" &&
-  process.env.NODE_ENV !== "production";
+const AUTH_STUB = webEnv.authStub();
+const APP_VERSION = webEnv.appVersion();
 
 /**
  * UX-16 (Phase 35-08): role-aware default landing.
@@ -334,9 +334,7 @@ function LoginPageBody({ initialOrg }: LoginPageClientProps) {
 
           <p className="text-xs tracking-[0.02em] text-[var(--color-muted-foreground)]">
             {orgFullName}
-            {process.env.NEXT_PUBLIC_APP_VERSION && (
-              <> · v{process.env.NEXT_PUBLIC_APP_VERSION}</>
-            )}
+            {APP_VERSION && <> · v{APP_VERSION}</>}
           </p>
         </div>
       </div>

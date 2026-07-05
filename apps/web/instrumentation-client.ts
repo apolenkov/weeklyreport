@@ -1,5 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 
+import { webEnv } from "./src/lib/web-env";
+
 // correlate-errors-to-traces: the browser must emit a `sentry-trace` header on
 // same-origin api calls so the api adopts the browser's trace id (one id end to
 // end). browserTracing needs a non-zero sample rate to start a trace and attach
@@ -8,7 +10,7 @@ import * as Sentry from "@sentry/nextjs";
 const BROWSER_TRACES_SAMPLE_RATE = 1;
 
 Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  dsn: webEnv.sentryDsn(),
   environment: process.env.NODE_ENV,
   integrations: [Sentry.browserTracingIntegration()],
   tracesSampleRate: BROWSER_TRACES_SAMPLE_RATE,

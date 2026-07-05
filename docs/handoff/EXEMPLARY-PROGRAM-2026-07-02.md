@@ -111,8 +111,9 @@ pass is the calibration signal that tunes the taste profile before scaling.
 1. Owner veto pass: `tighten-comment-policy` design.md calibration table.
 2. Implement `tighten-comment-policy` tasks 1.x (doc + workflow), then the
    auth exemplar sweep when the folder is quiet.
-3. Author `add-web-env-schema`; route finding 3.3 into
-   `code-health-and-test-cleanup`.
+3. `add-web-env-schema` implemented (finding 3.1 closed: `webEnvSchema` +
+   `web-env` accessor + `next.config.ts` build assert; seven consumers routed).
+   Route finding 3.3 into `code-health-and-test-cleanup`.
 4. Resume the backlog waves; fold style dimensions into each change touched.
 5. Scale per-file audits folder-by-folder using the updated workflow; the
    owner's verdict column from each pilot feeds the taste profile.
