@@ -66,19 +66,6 @@ export function SlideArticle({
       ? grid.products.filter((card) => card.id === scopedId)
       : grid.products;
 
-  // Activities already rendered as project subsections stay out of the pill
-  // lane — pills keep surfacing status-only activities (no records).
-  const gridActivityIds = new Set(
-    grid.products.flatMap((card) =>
-      card.subsections
-        .filter((subsection) => subsection.kind === "project")
-        .map((subsection) => subsection.id),
-    ),
-  );
-  const pillActivities = (slide.activities ?? []).filter(
-    (activity) => !gridActivityIds.has(activity.id),
-  );
-
   return (
     <article
       data-testid="slide-article"
@@ -95,9 +82,6 @@ export function SlideArticle({
         heroControls={heroControls}
       />
       <SlidePriorityStrip grid={grid} authorsById={authorsById} />
-      {pillActivities.length > 0 && (
-        <SlideActivityPills activities={pillActivities} />
-      )}
       {mode === "product" && chips.length > 1 && (
         <SlideProductChips
           products={chips}

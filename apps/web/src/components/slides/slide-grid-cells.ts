@@ -20,7 +20,7 @@ export interface CellBuckets {
   readonly decisions: GridRow[];
 }
 
-const emptyBuckets = (): CellBuckets => ({
+export const emptyBuckets = (): CellBuckets => ({
   current: [],
   next: [],
   risks: [],

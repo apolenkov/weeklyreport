@@ -249,6 +249,45 @@ describe("buildSlideGridModel — activity subsections", () => {
     expect(shared.subsections.some((s) => s.kind === "project")).toBe(true);
   });
 
+  it("renders a status-only activity (no records) as a project subsection", () => {
+    const model = buildSlideGridModel({
+      section: section({
+        activities: [activity({ derivedStatus: "yellow" })],
+      }),
+    });
+    const card = cardOf(model, "p1");
+    const sub = card.subsections.find((s) => s.kind === "project");
+    expect(sub).toMatchObject({ name: "Портал", status: "yellow" });
+    expect(sub?.columns).toEqual({
+      current: [],
+      next: [],
+      risks: [],
+      decisions: [],
+    });
+    expect(card.noData).toBe(false);
+  });
+
+  it("keeps a record-less product collapsed when it has no activities either", () => {
+    const model = buildSlideGridModel({
+      section: section({
+        activities: [activity()],
+        items: [item({ projectId: null, activityId: "a1" })],
+      }),
+    });
+    expect(cardOf(model, "p2").noData).toBe(true);
+  });
+
+  it("shows the Shared context card for a status-only unlinked activity", () => {
+    const model = buildSlideGridModel({
+      section: section({
+        activities: [activity({ linkedProducts: [] })],
+      }),
+    });
+    const shared = cardOf(model, SHARED_CARD_ID);
+    expect(shared.noData).toBe(false);
+    expect(shared.subsections.some((s) => s.kind === "project")).toBe(true);
+  });
+
   it("omits the Shared context card when nothing lands on it", () => {
     const model = buildSlideGridModel({
       section: section({ items: [item()] }),

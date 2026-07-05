@@ -66,7 +66,7 @@ export function SlideProductChips({
               onSelect?.(product.productId);
             }}
             className={[
-              "inline-flex min-w-0 items-center gap-1.5 rounded-[var(--radius-pill)] border px-3 py-1.5 text-sm transition-colors",
+              "inline-flex min-w-0 items-center gap-1.5 rounded-[var(--radius-pill)] border px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]",
               isActive
                 ? "border-[var(--color-primary)] bg-white font-semibold text-[var(--color-primary)] underline underline-offset-2 decoration-[var(--color-primary)]"
                 : "border-[rgba(0,0,0,0.10)] bg-white/70 font-normal text-[var(--color-foreground)] hover:border-[var(--color-border)] hover:bg-white",

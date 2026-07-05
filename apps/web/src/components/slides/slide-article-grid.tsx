@@ -10,6 +10,7 @@ import {
 import {
   type CanonicalStatus,
   statusDotClassName,
+  statusLabel,
 } from "../../lib/status-presentation";
 import { SlideCell } from "./slide-article-rows";
 import type {
@@ -84,11 +85,15 @@ function trafficDotStatus(status: "green" | "yellow" | "red"): CanonicalStatus {
 
 function StatusDot({ status }: { readonly status: SlideTrafficStatus }) {
   if (status == null) return null;
+  const canonical = trafficDotStatus(status);
   return (
-    <span
-      aria-hidden="true"
-      className={`inline-block h-2 w-2 shrink-0 rounded-full ${statusDotClassName(trafficDotStatus(status))}`}
-    />
+    <>
+      <span
+        aria-hidden="true"
+        className={`inline-block h-2 w-2 shrink-0 rounded-full ${statusDotClassName(canonical)}`}
+      />
+      <span className="sr-only">{statusLabel(canonical, "screen")}</span>
+    </>
   );
 }
 
