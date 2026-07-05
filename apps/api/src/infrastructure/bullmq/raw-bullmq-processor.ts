@@ -5,6 +5,7 @@ import type { ClsService } from "nestjs-cls";
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import type { EnvConfig } from "../config/env.schema";
 import { getBullMQOptions } from "./bullmq-options";
+import type { QueueName } from "./queue-registry";
 import {
   type JobTraceContext,
   runInJobTraceContext,
@@ -31,7 +32,9 @@ export abstract class RawBullMqProcessor<TData extends JobTraceContext>
     this.logger = logger ?? createNullLogger();
   }
 
-  protected abstract readonly queueName: string;
+  // QueueName (not string): a subclass typo cannot spin up a worker on a
+  // queue the registry does not own.
+  protected abstract readonly queueName: QueueName;
   protected abstract readonly spanName: string;
   protected abstract processJob(job: Job<TData>): Promise<void>;
   protected abstract onJobFailed(
