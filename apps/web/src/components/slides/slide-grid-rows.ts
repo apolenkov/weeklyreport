@@ -29,9 +29,8 @@ export interface GridRow {
   readonly id: string;
   readonly text: string;
   readonly authorId: string;
-  /** False on 2nd+ rows of a same-author series — spacer renders instead. */
+  /** False on 2nd+ rows of a same-author series — the badge is omitted. */
   readonly showAuthorBadge: boolean;
-  readonly priorityRank: number | null;
   readonly badge: GridBadge;
   /** Blocked risk: highlighted row instead of a badge (Risks column only). */
   readonly blockerHighlight: boolean;
@@ -145,7 +144,6 @@ export function buildOwnItemRow(
     text: item.text.trim(),
     authorId: owner.id,
     showAuthorBadge: true,
-    priorityRank: item.priorityRank ?? null,
     badge,
     blockerHighlight: false,
     stageNames: sortStageNames(item.stageIds ?? []),
@@ -163,7 +161,6 @@ export function buildOwnRiskRow(
     text: risk.risk.trim(),
     authorId: owner.id,
     showAuthorBadge: true,
-    priorityRank: null,
     badge: blocked ? null : "at-risk",
     blockerHighlight: blocked,
     stageNames: sortStageNames(risk.stageIds ?? []),
@@ -180,7 +177,6 @@ export function buildOwnDecisionRow(
     text: decision.text.trim(),
     authorId: owner.id,
     showAuthorBadge: true,
-    priorityRank: null,
     badge: null,
     blockerHighlight: false,
     stageNames: sortStageNames(decision.stageIds ?? []),

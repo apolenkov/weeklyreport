@@ -9,9 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
-import { PulseBackground } from "../components/landing/pulse-background";
-import { PulseMark } from "../components/landing/pulse-mark";
-import { TaglineCycler } from "../components/landing/tagline-cycler";
+import { PulseBackground, PulseMark, TaglineCycler } from "../features/landing";
 import { type LastRoleRecord, readLastRole } from "../lib/last-role";
 import { sanitizeNext } from "../lib/safe-next";
 import { useTRPC } from "../lib/trpc-context";

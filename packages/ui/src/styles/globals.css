@@ -186,18 +186,20 @@
 }
 
 /* ---- Slide author-identity cycle (badge/legend backgrounds; the section
-   author always takes slot 0; initials disambiguate past 6 authors). All
-   slots reference existing palette tokens — no new hues.
+   author always takes slot 0; initials disambiguate past 6 authors).
+   Deliberately pastel with dark foreground text: author identity must never
+   compete with the semantic tints (yellow/orange = risk, red = blocked,
+   green = success), so no slot reuses a status hue.
    Plain `:root`, NOT `@theme`: these tokens are referenced only from JS
    (`var(--slide-author-${i})` inline styles), which Tailwind's scanner cannot
    see, so inside `@theme` they get tree-shaken out of the built CSS. */
 :root {
-  --slide-author-0: var(--color-foreground);
-  --slide-author-1: var(--color-decisions-accent);
-  --slide-author-2: var(--color-status-dot-at-risk);
-  --slide-author-3: var(--color-primary);
-  --slide-author-4: var(--color-muted-foreground);
-  --slide-author-5: var(--color-destructive);
+  --slide-author-0: #d6e5dc; /* sage — the section owner */
+  --slide-author-1: #d8e4f0; /* powder blue */
+  --slide-author-2: #e4dcee; /* lilac */
+  --slide-author-3: #d5eae8; /* pale teal */
+  --slide-author-4: #e8e3d9; /* sand */
+  --slide-author-5: #f0dee3; /* dusty rose */
 }
 
 /* ---- Compact-tier control height (responsive-compact-layout) ----

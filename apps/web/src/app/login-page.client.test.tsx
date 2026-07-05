@@ -44,13 +44,13 @@ vi.mock("../lib/trpc-context", () => ({
   }),
 }));
 
-vi.mock("../components/landing/pulse-background", () => ({
+vi.mock("../features/landing/ui/pulse-background", () => ({
   PulseBackground: () => null,
 }));
-vi.mock("../components/landing/pulse-mark", () => ({
+vi.mock("../features/landing/ui/pulse-mark", () => ({
   PulseMark: () => null,
 }));
-vi.mock("../components/landing/tagline-cycler", () => ({
+vi.mock("../features/landing/ui/tagline-cycler", () => ({
   TaglineCycler: () => null,
 }));
 

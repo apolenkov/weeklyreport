@@ -20,7 +20,6 @@ export function buildForeignRows(
     const base = {
       authorId: ca.authorId,
       showAuthorBadge: true,
-      priorityRank: null,
       blockerHighlight: false,
     };
     const items = ca.items.map((item): ForeignGridRow => {

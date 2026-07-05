@@ -180,6 +180,17 @@ const apiCrossModuleZones = apiModules.map((moduleName) => ({
   message: `api module boundary: '${moduleName}' may reach a sibling module only through its index.ts facade barrel, never an internal path (restructure-directory-architecture). Grandfathered exceptions shrink monotonically.`,
 }));
 
+// One zone per web slice: files under features/S may import from features/ only
+// within their own slice. Slices append here as they are extracted (slice 2+).
+const webFeaturesDir = "apps/web/src/features";
+const webSlices = ["landing"] as const;
+const webCrossSliceZones = webSlices.map((sliceName) => ({
+  target: `${webFeaturesDir}/${sliceName}`,
+  from: webFeaturesDir,
+  except: [sliceName],
+  message: `web slice boundary: '${sliceName}' may not import another slice's internals (restructure-directory-architecture).`,
+}));
+
 export default defineConfig([
   globalIgnores([
     "**/node_modules/**",
@@ -719,7 +730,7 @@ export default defineConfig([
     ignores: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/__tests__/**"],
     plugins: { "import-x": importX },
     rules: {
-      "import-x/no-restricted-paths": ["error", { zones: [] }],
+      "import-x/no-restricted-paths": ["error", { zones: webCrossSliceZones }],
     },
   },
   // Zone 4 — api domain purity (package-name zone). Files under an invariant
@@ -986,7 +997,7 @@ export default defineConfig([
   // serialized scripts; extracting fragments the concern or breaks memoization.
   {
     files: [
-      "apps/web/src/components/landing/tagline-cycler.tsx", // self-recursive setTimeout handler mutating timer/visible/index state
+      "apps/web/src/features/landing/ui/tagline-cycler.tsx", // self-recursive setTimeout handler mutating timer/visible/index state
       "apps/web/src/components/lead/lead-form.tsx", // array-transform pipelines inside React state setters
       "apps/web/src/hooks/use-status-risk.ts", // arrow callbacks in state-update chains; consolidated to avoid loops via syncSourceRef
       "apps/web/src/lib/trpc.ts", // RxJS observer/cleanup handlers in the error-link middleware

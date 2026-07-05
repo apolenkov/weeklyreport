@@ -190,23 +190,19 @@ describe("StatusSlideDeck — by-product grid article", () => {
     expect(screen.getByTestId("slide-legend")).toHaveTextContent("· lead");
   });
 
-  it("scopes to one product in Product mode and unscopes on re-click", () => {
+  it("always shows every product — no view-mode toggle", () => {
     renderDeck(
       makeSection({
         items: [item(), item({ projectId: "p2", text: "portal item" })],
       }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Product" }));
-    expect(screen.getAllByTestId("slide-product-card")).toHaveLength(1);
-    expect(screen.getByText("own item")).toBeInTheDocument();
-    expect(screen.queryByText("portal item")).not.toBeInTheDocument();
-
-    const chips = screen.getByRole("group", { name: "Products" });
-    const [active] = within(chips)
-      .getAllByRole("button")
-      .filter((button) => button.getAttribute("aria-pressed") === "true");
-    fireEvent.click(active);
     expect(screen.getAllByTestId("slide-product-card")).toHaveLength(2);
+    expect(
+      screen.queryByRole("button", { name: "Product" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("group", { name: "Slide view mode" }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders the head deck through the same article", () => {

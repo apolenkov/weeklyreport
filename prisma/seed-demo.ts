@@ -630,6 +630,12 @@ const HEAD_NAME =
 
 async function wipe(): Promise<void> {
   // FK-safe delete order mirrors prisma/seed-simple.ts.
+  // Activity statuses drop before their activities (RESTRICT), activities
+  // before ReportingGroup/User/Project.
+  await prisma.activityStatus.deleteMany({});
+  await prisma.projectActivityLead.deleteMany({});
+  await prisma.projectActivityProduct.deleteMany({});
+  await prisma.projectActivity.deleteMany({});
   await prisma.reminderExecution.deleteMany({});
   await prisma.reminderRule.deleteMany({});
   await prisma.reminderPolicy.deleteMany({});
@@ -1061,6 +1067,81 @@ async function seedPriorLeadSection(
   }
 }
 
+// Small-tier Project Activities: the base demo must show the by-product slide
+// with project subsections out of the box. Three activities on Vasily's
+// portal — one carrying a real record, two status-only — so both render paths
+// (records + bare header row) are visible without extra seeding.
+async function seedSmallActivities(): Promise<void> {
+  const vasilySection = await prisma.reportSection.findFirst({
+    where: { reportId: ACTIVE_REPORT_ID, authorId: LEAD_1_ID },
+    select: { id: true },
+  });
+  if (!vasilySection) throw new Error("small tier: Vasily section missing");
+
+  const activities = [
+    {
+      name: "Исследование новых интеграций",
+      status: TrafficLightStatus.yellow,
+      note: "Партнёр задерживает доступ к API",
+    },
+    {
+      name: "Технический долг и рефакторинг",
+      status: TrafficLightStatus.yellow,
+    },
+    { name: "Поддержка и сопровождение", status: TrafficLightStatus.green },
+  ] as const;
+
+  const created = await Promise.all(
+    activities.map(async (activity) => {
+      const activityId = makeRowId();
+      await prisma.projectActivity.create({
+        data: {
+          id: activityId,
+          name: activity.name,
+          groupId: DEFAULT_REPORTING_GROUP_ID,
+        },
+      });
+      await prisma.projectActivityProduct.create({
+        data: {
+          id: makeRowId(),
+          activityId,
+          productId: PROD_PORTAL,
+        },
+      });
+      await prisma.projectActivityLead.create({
+        data: { id: makeRowId(), activityId, leadId: LEAD_1_ID },
+      });
+      await prisma.activityStatus.create({
+        data: {
+          id: makeRowId(),
+          reportSectionId: vasilySection.id,
+          activityId,
+          status: activity.status,
+          note: "note" in activity ? activity.note : null,
+        },
+      });
+      return activityId;
+    }),
+  );
+
+  // One live record on the first activity: the slide shows a project row with
+  // content, the other two stay status-only header rows.
+  await prisma.item.create({
+    data: {
+      id: makeRowId(),
+      reportSectionId: vasilySection.id,
+      type: ItemType.current,
+      activityId: created[0],
+      text: "Составили шорт-лист интеграций для пилота",
+      tag: "research",
+      workflowStatus: ItemWorkflowStatus.in_progress,
+      carriedOver: false,
+      completed: false,
+      stageNames: [],
+    },
+  });
+}
+
 async function seedDemo(tier: Tier): Promise<void> {
   assertNonProdDestructive(`seed-demo:${tier}`);
   const dataset = tier === "small" ? SMALL_DATASET : buildHugeDataset();
@@ -1090,6 +1171,10 @@ async function seedDemo(tier: Tier): Promise<void> {
   const productNames = new Map(dataset.products.map((p) => [p.id, p.name]));
   for (const [leadId, contributions] of byLead) {
     await seedActiveLeadSection(leadId, contributions);
+  }
+  if (tier === "small") {
+    console.log(`[seed-demo:${tier}] Seeding project activities...`);
+    await seedSmallActivities();
   }
   for (const [leadId, contributions] of byLead) {
     await seedPriorLeadSection(
