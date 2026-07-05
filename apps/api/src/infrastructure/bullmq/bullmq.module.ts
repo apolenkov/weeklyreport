@@ -1,6 +1,8 @@
 import { BullModule } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
 
+import { ConfigModule, ENV_CONFIG } from "../config/config.module.js";
+import type { EnvConfig } from "../config/env.schema";
 import { BullBoardQueues } from "./bull-board.module.js";
 import { getBullMQOptions } from "./bullmq-options";
 import { DLQMonitorService } from "./dlq-monitor.service.js";
@@ -19,7 +21,12 @@ import { DLQMonitorService } from "./dlq-monitor.service.js";
  */
 @Module({
   imports: [
-    BullModule.forRoot(getBullMQOptions()),
+    ConfigModule,
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ENV_CONFIG],
+      useFactory: (env: EnvConfig) => getBullMQOptions(env),
+    }),
     BullModule.registerQueue({ name: "pdf-export" }),
     BullModule.registerQueue({ name: "email-reminder" }),
     // UFB-056 / Phase 55-3: Telegram outbound queue. Seeds-only — no
@@ -29,7 +36,18 @@ import { DLQMonitorService } from "./dlq-monitor.service.js";
     // queue itself, so the test surface can stay synchronous).
     BullModule.registerQueue({ name: "telegram-outbound" }),
   ],
-  providers: [DLQMonitorService, BullBoardQueues],
+  providers: [
+    {
+      provide: DLQMonitorService,
+      useFactory: (env: EnvConfig) => new DLQMonitorService(env),
+      inject: [ENV_CONFIG],
+    },
+    {
+      provide: BullBoardQueues,
+      useFactory: (env: EnvConfig) => new BullBoardQueues(env),
+      inject: [ENV_CONFIG],
+    },
+  ],
   exports: [BullModule, BullBoardQueues],
 })
 export class BullMQModule {}

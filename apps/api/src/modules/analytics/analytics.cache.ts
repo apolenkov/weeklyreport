@@ -2,7 +2,8 @@ import type { OnModuleDestroy } from "@nestjs/common";
 import { Injectable, Logger } from "@nestjs/common";
 import Redis from "ioredis";
 
-import { requireEnv } from "../../lib/env.js";
+import type { EnvConfig } from "../../infrastructure/config/env.schema";
+import { buildRedisConnectionOptions } from "../../infrastructure/config/redis-connection";
 import type { AnalyticsCachePort } from "./analytics.service.js";
 
 const TTL_SECONDS = 3600;
@@ -29,10 +30,9 @@ export class AnalyticsCache implements AnalyticsCachePort, OnModuleDestroy {
   private readonly logger = new Logger(AnalyticsCache.name);
   private readonly redis: Redis;
 
-  constructor() {
+  constructor(env: EnvConfig) {
     this.redis = new Redis({
-      host: requireEnv(process.env, "REDIS_HOST"),
-      port: Number(requireEnv(process.env, "REDIS_PORT")),
+      ...buildRedisConnectionOptions(env),
       lazyConnect: true,
       maxRetriesPerRequest: 1,
       enableOfflineQueue: false,

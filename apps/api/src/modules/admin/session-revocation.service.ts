@@ -2,7 +2,8 @@ import type { OnModuleDestroy } from "@nestjs/common";
 import { Injectable } from "@nestjs/common";
 import Redis from "ioredis";
 
-import { requireEnv } from "../../lib/env.js";
+import type { EnvConfig } from "../../infrastructure/config/env.schema";
+import { buildRedisConnectionOptions } from "../../infrastructure/config/redis-connection";
 
 /**
  * A2 (UAT-v7 2026-05-12): Redis-backed session revocation for the
@@ -23,14 +24,22 @@ import { requireEnv } from "../../lib/env.js";
 export class SessionRevocationService implements OnModuleDestroy {
   private readonly redis: Redis;
 
-  /** Allow injecting a custom redis client (used in unit tests). */
-  constructor(redis?: Redis) {
+  /**
+   * `redis` is an injected client (unit tests); otherwise the service builds
+   * its own from `env`. `env` is optional only to keep the redis-first test
+   * seam call-compatible — the non-test path passes it or the guard fails loud.
+   */
+  constructor(redis?: Redis, env?: EnvConfig) {
     if (redis) {
       this.redis = redis;
     } else {
+      if (!env) {
+        throw new Error(
+          "SessionRevocationService requires an EnvConfig when no Redis client is injected",
+        );
+      }
       this.redis = new Redis({
-        host: requireEnv(process.env, "REDIS_HOST"),
-        port: Number(requireEnv(process.env, "REDIS_PORT")),
+        ...buildRedisConnectionOptions(env),
         lazyConnect: true,
         maxRetriesPerRequest: 1,
         enableOfflineQueue: false,

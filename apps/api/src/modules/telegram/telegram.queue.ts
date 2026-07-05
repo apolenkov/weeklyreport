@@ -29,6 +29,7 @@ import {
   type JobTraceContext,
   runInJobTraceContext,
 } from "../../infrastructure/bullmq/worker-observability.js";
+import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { TELEGRAM_ADAPTER, type TelegramAdapter } from "./telegram.adapter.js";
 
@@ -64,6 +65,7 @@ export class TelegramProcessor implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     @Inject(TELEGRAM_ADAPTER) private readonly adapter: TelegramAdapter,
+    private readonly env: EnvConfig,
     logger?: AppLogger,
     private readonly cls?: ClsService,
   ) {
@@ -82,7 +84,7 @@ export class TelegramProcessor implements OnModuleInit, OnModuleDestroy {
         );
       },
       {
-        ...getBullMQOptions(),
+        ...getBullMQOptions(this.env),
         // Modest concurrency — Telegram per-bot rate limit is 30 msg/s in
         // private chats; seeds-only path only sees admin smoke tests, so
         // 2 in-flight is plenty.

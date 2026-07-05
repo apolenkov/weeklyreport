@@ -1,19 +1,23 @@
 import type { OnModuleDestroy } from "@nestjs/common";
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import type { HealthIndicatorResult } from "@nestjs/terminus";
 import { HealthIndicatorService } from "@nestjs/terminus";
 import Redis from "ioredis";
 
-import { requireEnv } from "../../lib/env.js";
+import { ENV_CONFIG } from "../config/config.module";
+import type { EnvConfig } from "../config/env.schema";
+import { buildRedisConnectionOptions } from "../config/redis-connection";
 
 @Injectable()
 export class RedisHealthIndicator implements OnModuleDestroy {
   private readonly redis: Redis;
 
-  constructor(private readonly healthIndicator: HealthIndicatorService) {
+  constructor(
+    private readonly healthIndicator: HealthIndicatorService,
+    @Inject(ENV_CONFIG) env: EnvConfig,
+  ) {
     this.redis = new Redis({
-      host: requireEnv(process.env, "REDIS_HOST"),
-      port: Number(requireEnv(process.env, "REDIS_PORT")),
+      ...buildRedisConnectionOptions(env),
       lazyConnect: true,
     });
   }

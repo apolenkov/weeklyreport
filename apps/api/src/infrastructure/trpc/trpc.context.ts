@@ -9,6 +9,8 @@ import { SessionRevocationService } from "../../modules/admin/session-revocation
 import { createAuthController } from "../../modules/auth/auth.controller.js";
 import { isUserAccessBarred } from "../../modules/auth/session-deactivation.js";
 import { verifyPdfExportToken } from "../../modules/pdf-export/pdf-export.service.js";
+import { ENV_CONFIG } from "../config/config.module.js";
+import type { EnvConfig } from "../config/env.schema.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { hydrateSession } from "./trpc.session-hydration.js";
 
@@ -216,7 +218,10 @@ export function createContextFactory(
   // A2 (UAT-v7 2026-05-12): Redis-backed session revocation fast path.
   // Constructed once; the underlying ioredis client uses lazyConnect so it
   // does not block startup when Redis is unavailable.
-  const sessionRevocation = new SessionRevocationService();
+  const sessionRevocation = new SessionRevocationService(
+    undefined,
+    _app.get<EnvConfig>(ENV_CONFIG),
+  );
 
   return async ({ req }: CreateExpressContextOptions): Promise<TrpcContext> => {
     const ip = req.ip ?? "unknown";

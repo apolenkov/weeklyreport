@@ -89,7 +89,12 @@ import { createHash } from "node:crypto";
 import { Worker } from "bullmq";
 import { chromium } from "playwright";
 
+import type { EnvConfig } from "../config/env.schema";
 import { PdfExportProcessor } from "./pdf-export.processor.js";
+
+// The processor reads env only in onModuleInit (mocked away here); a minimal
+// stub satisfies the constructor for the processJob-focused tests.
+const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -170,7 +175,7 @@ describe("PdfExportProcessor.processJob", () => {
   it("launches Chromium with headless: true", async () => {
     setupMocks();
     const mockService = createMockPdfExportService();
-    const processor = new PdfExportProcessor(mockService as never);
+    const processor = new PdfExportProcessor(mockService as never, STUB_ENV);
     const job = createMockJob({
       reportId: "report-1",
       jobId: "job-1",
@@ -186,7 +191,7 @@ describe("PdfExportProcessor.processJob", () => {
   it("navigates to correct report URL", async () => {
     const { mockPage } = setupMocks();
     const mockService = createMockPdfExportService();
-    const processor = new PdfExportProcessor(mockService as never);
+    const processor = new PdfExportProcessor(mockService as never, STUB_ENV);
     const job = createMockJob({
       reportId: "report-1",
       jobId: "job-1",
@@ -207,7 +212,7 @@ describe("PdfExportProcessor.processJob", () => {
   it("generates PDF with A4 format and printBackground: true", async () => {
     const { mockPage } = setupMocks();
     const mockService = createMockPdfExportService();
-    const processor = new PdfExportProcessor(mockService as never);
+    const processor = new PdfExportProcessor(mockService as never, STUB_ENV);
     const job = createMockJob({
       reportId: "report-1",
       jobId: "job-1",
@@ -225,7 +230,7 @@ describe("PdfExportProcessor.processJob", () => {
   it("marks export completed with correct args", async () => {
     setupMocks();
     const mockService = createMockPdfExportService();
-    const processor = new PdfExportProcessor(mockService as never);
+    const processor = new PdfExportProcessor(mockService as never, STUB_ENV);
     const job = createMockJob({
       reportId: "report-1",
       jobId: "job-1",
@@ -252,7 +257,11 @@ describe("PdfExportProcessor.processJob", () => {
       child: () => logger,
     };
     const mockService = createMockPdfExportService();
-    const processor = new PdfExportProcessor(mockService as never, logger);
+    const processor = new PdfExportProcessor(
+      mockService as never,
+      STUB_ENV,
+      logger,
+    );
     const job = createMockJob({
       reportId: "report-1",
       jobId: "job-1",
@@ -280,7 +289,7 @@ describe("PdfExportProcessor.processJob", () => {
     silenceStderr();
     const { mockPage, mockBrowser } = setupMocks();
     const mockService = createMockPdfExportService();
-    const processor = new PdfExportProcessor(mockService as never);
+    const processor = new PdfExportProcessor(mockService as never, STUB_ENV);
     const job = createMockJob({
       reportId: "report-1",
       jobId: "job-1",
@@ -311,7 +320,7 @@ describe("PdfExportProcessor.onModuleInit", () => {
 
   it("marks the DB export job failed when BullMQ reports terminal failure", () => {
     const mockService = createMockPdfExportService();
-    const processor = new PdfExportProcessor(mockService as never);
+    const processor = new PdfExportProcessor(mockService as never, STUB_ENV);
 
     processor.onModuleInit();
 

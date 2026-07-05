@@ -17,6 +17,7 @@ import { resolveSessionCookieName } from "../../lib/session-cookie";
 import { SessionRevocationService } from "../../modules/admin/session-revocation.service";
 import { createAuthController } from "../../modules/auth/auth.controller";
 import { isUserAccessBarred } from "../../modules/auth/session-deactivation";
+import type { EnvConfig } from "../config/env.schema";
 import { PrismaService } from "../prisma/prisma.service";
 import { getBullMQOptions } from "./bullmq-options";
 
@@ -32,8 +33,15 @@ const HTTP_FORBIDDEN = 403;
  */
 @Injectable()
 export class BullBoardQueues implements OnModuleDestroy {
-  readonly pdfQueue = new Queue("pdf-export", getBullMQOptions());
-  readonly emailQueue = new Queue("email-reminder", getBullMQOptions());
+  // Created in the constructor (not as field initializers) because an ES2022
+  // class-field initializer cannot read the injected `env` constructor param.
+  readonly pdfQueue: Queue;
+  readonly emailQueue: Queue;
+
+  constructor(env: EnvConfig) {
+    this.pdfQueue = new Queue("pdf-export", getBullMQOptions(env));
+    this.emailQueue = new Queue("email-reminder", getBullMQOptions(env));
+  }
 
   async onModuleDestroy(): Promise<void> {
     await Promise.all([this.pdfQueue.close(), this.emailQueue.close()]);

@@ -2,6 +2,7 @@ import type { OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { Injectable, Logger } from "@nestjs/common";
 import { Queue, QueueEvents } from "bullmq";
 
+import type { EnvConfig } from "../config/env.schema";
 import { dlqFailedTotal } from "../metrics/metrics.registry.js";
 import { getBullMQOptions } from "./bullmq-options";
 
@@ -44,8 +45,10 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
   private readonly queues = new Map<QueueName, Queue>();
   private pollTimer: NodeJS.Timeout | null = null;
 
+  constructor(private readonly env: EnvConfig) {}
+
   onModuleInit(): void {
-    const bullOptions = getBullMQOptions();
+    const bullOptions = getBullMQOptions(this.env);
 
     for (const name of QUEUE_NAMES) {
       const events = new QueueEvents(name, bullOptions);

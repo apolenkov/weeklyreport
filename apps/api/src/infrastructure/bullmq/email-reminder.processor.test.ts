@@ -44,7 +44,12 @@ vi.mock("../../modules/admin/admin.service.js", () => ({
   },
 }));
 
+import type { EnvConfig } from "../config/env.schema";
 import { EmailReminderProcessor } from "./email-reminder.processor.js";
+
+// The processor reads env only in onModuleInit (not exercised here); a minimal
+// stub satisfies the constructor for the processJob-focused tests.
+const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -112,6 +117,7 @@ describe("EmailReminderProcessor.processJob", () => {
     const processor = new EmailReminderProcessor(
       mockReminders as never,
       mockEmail as never,
+      STUB_ENV,
     );
     const job = createMockJob(defaultJobData);
 
@@ -138,6 +144,7 @@ describe("EmailReminderProcessor.processJob", () => {
     const processor = new EmailReminderProcessor(
       mockReminders as never,
       mockEmail as never,
+      STUB_ENV,
       mockAdmin as never,
     );
     const job = createMockJob(defaultJobData);
@@ -163,6 +170,7 @@ describe("EmailReminderProcessor.processJob", () => {
     const processor = new EmailReminderProcessor(
       mockReminders as never,
       mockEmail as never,
+      STUB_ENV,
       mockAdmin as never,
     );
     const job = createMockJob(defaultJobData);
@@ -183,6 +191,7 @@ describe("EmailReminderProcessor.processJob", () => {
     const processor = new EmailReminderProcessor(
       mockReminders as never,
       mockEmail as never,
+      STUB_ENV,
     );
     const job = createMockJob(defaultJobData);
 
@@ -199,6 +208,7 @@ describe("EmailReminderProcessor.processJob", () => {
     const processor = new EmailReminderProcessor(
       mockReminders as never,
       mockEmail as never,
+      STUB_ENV,
     );
     const job = createMockJob(defaultJobData);
 

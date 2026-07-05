@@ -64,12 +64,15 @@ import type { EnvConfig } from "../config/env.schema.js";
 import { EmailService } from "./email.service.js";
 
 // Injected EnvConfig carrying the real SMTP coordinates so EmailService picks
-// the Mailpit-backed transport rather than jsonTransport. Only the SMTP fields
-// are read by the constructor.
+// the Mailpit-backed transport rather than jsonTransport, plus Redis
+// coordinates so the EmailReminderProcessor constructor is satisfied (its
+// onModuleInit is never called here — processJob is invoked directly).
 const SMTP_ENV = {
   SMTP_HOST: "localhost",
   SMTP_PORT: 1025,
   SMTP_FROM: "test-integration@customreport.local",
+  REDIS_HOST: "localhost",
+  REDIS_PORT: 6379,
 } as unknown as EnvConfig;
 
 // ---------------------------------------------------------------------------
@@ -128,6 +131,7 @@ describe("email-dispatch integration (P8)", () => {
     const processor = new EmailReminderProcessor(
       remindersStub as never,
       emailService,
+      SMTP_ENV,
       adminStub as never,
     );
 
@@ -182,6 +186,7 @@ describe("email-dispatch integration (P8)", () => {
     const processor = new EmailReminderProcessor(
       remindersStub as never,
       emailService,
+      SMTP_ENV,
       adminStub as never,
     );
 

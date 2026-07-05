@@ -14,6 +14,10 @@ import { HealthController } from "./health.controller.js";
 import { PrismaHealthIndicator } from "./prisma.health.js";
 import { RedisHealthIndicator } from "./redis.health.js";
 
+// lazyConnect keeps the constructed client from opening a socket; the tests
+// override the client anyway, so only the host/port shape is needed.
+const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
+
 // ---------------------------------------------------------------------------
 // HealthController
 // ---------------------------------------------------------------------------
@@ -111,7 +115,10 @@ describe("PrismaHealthIndicator", () => {
 
 describe("RedisHealthIndicator", () => {
   it("returns up result keyed `redis` when ping succeeds", async () => {
-    const indicator = new RedisHealthIndicator(new HealthIndicatorService());
+    const indicator = new RedisHealthIndicator(
+      new HealthIndicatorService(),
+      STUB_ENV,
+    );
     // Override the internal redis client with a stub that never opens a socket
     const redisMock = {
       ping: vi.fn().mockResolvedValue("PONG"),
@@ -125,7 +132,10 @@ describe("RedisHealthIndicator", () => {
   });
 
   it("returns down result keyed `redis` when ping throws (does NOT throw)", async () => {
-    const indicator = new RedisHealthIndicator(new HealthIndicatorService());
+    const indicator = new RedisHealthIndicator(
+      new HealthIndicatorService(),
+      STUB_ENV,
+    );
     const redisMock = {
       ping: vi.fn().mockRejectedValue(new Error("ECONNREFUSED")),
       quit: vi.fn(),

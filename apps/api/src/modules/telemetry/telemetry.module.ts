@@ -1,5 +1,10 @@
 import { Module } from "@nestjs/common";
 
+import {
+  ConfigModule,
+  ENV_CONFIG,
+} from "../../infrastructure/config/config.module.js";
+import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import { TelemetryCache } from "./telemetry.cache.js";
 import {
   TelemetryGauges,
@@ -17,6 +22,7 @@ import { TelemetryService } from "./telemetry.service.js";
  *    the dashboard refresh cheap.
  */
 @Module({
+  imports: [ConfigModule],
   providers: [
     TelemetryGaugesPrismaRepository,
     {
@@ -26,7 +32,11 @@ import { TelemetryService } from "./telemetry.service.js";
       inject: [TelemetryGaugesPrismaRepository],
     },
     TelemetryPrismaRepository,
-    TelemetryCache,
+    {
+      provide: TelemetryCache,
+      useFactory: (env: EnvConfig) => new TelemetryCache(env),
+      inject: [ENV_CONFIG],
+    },
     {
       provide: TelemetryService,
       useFactory: (repo: TelemetryPrismaRepository, cache: TelemetryCache) =>

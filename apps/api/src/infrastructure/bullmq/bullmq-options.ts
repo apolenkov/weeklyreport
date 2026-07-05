@@ -1,9 +1,9 @@
-import { requireEnv } from "../../lib/env.js";
+import type { EnvConfig } from "../config/env.schema";
+import { buildRedisConnectionOptions } from "../config/redis-connection";
 
-export function getBullMQConnectionOptions() {
+export function getBullMQConnectionOptions(env: EnvConfig) {
   return {
-    host: requireEnv(process.env, "REDIS_HOST"),
-    port: Number(requireEnv(process.env, "REDIS_PORT")),
+    ...buildRedisConnectionOptions(env),
     maxRetriesPerRequest: null,
   };
 }
@@ -13,9 +13,9 @@ export function getBullMQPrefix(): string | undefined {
   return prefix ? prefix : undefined;
 }
 
-export function getBullMQOptions() {
+export function getBullMQOptions(env: EnvConfig) {
   return {
-    connection: getBullMQConnectionOptions(),
+    connection: getBullMQConnectionOptions(env),
     prefix: getBullMQPrefix(),
   };
 }
