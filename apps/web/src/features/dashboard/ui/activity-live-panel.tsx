@@ -14,7 +14,7 @@ import {
 } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 
-import { useTRPC } from "../../lib/trpc-context";
+import { useTRPC } from "../../../lib/trpc-context";
 
 /**
  * UX-18 (Phase 35-08): "Submission Activity" panel.

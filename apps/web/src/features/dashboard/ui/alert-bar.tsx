@@ -3,8 +3,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { useTRPC } from "../../lib/trpc-context";
-import { IfRole } from "../auth/if-role";
+import { IfRole } from "../../../components/auth/if-role";
+import { useTRPC } from "../../../lib/trpc-context";
 
 interface AlertBarProps {
   readonly pendingLeads: string[];

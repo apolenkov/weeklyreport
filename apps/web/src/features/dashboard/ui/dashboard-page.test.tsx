@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { logClientError } from "../../lib/client-error-reporting";
+import { logClientError } from "../../../lib/client-error-reporting";
 import { DASHBOARD_LOAD_STALL_MS, DashboardPage } from "./dashboard-page";
 
 vi.mock("@tanstack/react-query", () => ({
@@ -19,14 +19,14 @@ vi.mock("sonner", () => ({
   },
 }));
 
-vi.mock("../../lib/client-error-reporting", () => ({
+vi.mock("../../../lib/client-error-reporting", () => ({
   formatClientErrorMessage: vi.fn((prefix: string, error: unknown) =>
     error instanceof Error ? `${prefix}: ${error.message}` : prefix,
   ),
   logClientError: vi.fn(),
 }));
 
-vi.mock("../../lib/trpc-context", () => ({
+vi.mock("../../../lib/trpc-context", () => ({
   useTRPC: () => ({
     review: {
       dashboard: {
@@ -77,13 +77,13 @@ vi.mock("./lead-summary-table", () => ({
   LeadSummaryTable: () => <div>Lead summary</div>,
 }));
 
-vi.mock("../ui/confirmation-dialog", () => ({
+vi.mock("../../../components/ui/confirmation-dialog", () => ({
   ConfirmationDialog: () => null,
 }));
 
 // Mapper is unit-tested separately; stub it so the success-path render does not
 // need a full WeeklyReportReadModel fixture (head-dashboard-declutter test 5.1).
-vi.mock("../../lib/mappers", () => ({
+vi.mock("../../../lib/mappers", () => ({
   mapDashboardData: () => ({
     kpi: {
       submitted: 0,

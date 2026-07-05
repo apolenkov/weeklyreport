@@ -1,6 +1,6 @@
 import Script from "next/script";
 
-import { DashboardPage } from "../../../../components/dashboard/dashboard-page";
+import { DashboardPage } from "../../../../features/dashboard";
 
 const DASHBOARD_BFCACHE_RECOVERY_SCRIPT = `
 (() => {

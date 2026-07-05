@@ -4,7 +4,7 @@
  * VA-0a / VA-0b regression tests for activity-live-panel.tsx.
  *
  * Catalog: openspec/changes/verify-a11y-recommended-flip/design.md
- * Section: apps/web/src/components/dashboard/activity-live-panel.tsx
+ * Section: apps/web/src/features/dashboard/ui/activity-live-panel.tsx
  *
  * In-scope rows:
  *   unit-rtl/high  — draft-status div: no aria-label
@@ -33,7 +33,7 @@ vi.mock("@tanstack/react-query", () => ({
   useQuery: vi.fn(),
 }));
 
-vi.mock("../../lib/trpc-context", () => ({
+vi.mock("../../../lib/trpc-context", () => ({
   useTRPC: () => ({
     activity: {
       live: {

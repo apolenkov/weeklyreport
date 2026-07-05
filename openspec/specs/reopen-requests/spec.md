@@ -95,9 +95,9 @@ group, even by passing its id directly.
 
 The head dashboard MUST surface pending reopen requests through a SINGLE
 consolidated surface — the Reopen Requests card
-(`apps/web/src/components/dashboard/reopen-requests-card.tsx`) — and MUST NOT also
+(`apps/web/src/features/dashboard/ui/reopen-requests-card.tsx`) — and MUST NOT also
 duplicate the pending reopen count as a separate indicator in the pending-lead
-alert bar (`apps/web/src/components/dashboard/alert-bar.tsx`). Live walkthrough
+alert bar (`apps/web/src/features/dashboard/ui/alert-bar.tsx`). Live walkthrough
 2026-07-02 (head HF6) found the alert bar's reopen line and the card's header
 count state the same thing twice. The pending reopen count and its queue MUST
 live only on the Reopen Requests card, whose header already shows the "N pending"

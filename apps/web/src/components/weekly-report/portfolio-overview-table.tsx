@@ -1,7 +1,7 @@
 "use client";
 
 import type { LeadOverviewRow } from "../../lib/mappers";
-import type { PortfolioProduct } from "../dashboard/mock-data";
+import type { PortfolioProduct } from "../../shared/lib/dashboard-mock-data";
 
 // report-overview-scope-parity: the overview band follows the report's active
 // scope. In `product` scope it summarizes products (unchanged); in `lead` scope

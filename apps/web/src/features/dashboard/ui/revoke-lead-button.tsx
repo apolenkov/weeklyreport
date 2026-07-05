@@ -5,8 +5,8 @@ import { RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { useTRPC } from "../../lib/trpc-context";
-import { ConfirmationDialog } from "../ui/confirmation-dialog";
+import { ConfirmationDialog } from "../../../components/ui/confirmation-dialog";
+import { useTRPC } from "../../../lib/trpc-context";
 
 interface RevokeSectionButtonProps {
   readonly reportSectionId: string;

@@ -55,7 +55,7 @@ export const SEED_REPORTING_GROUPS: readonly SeedReportingGroup[] = [
 /**
  * 9 seed users: 1 head, 1 viewer, 1 admin, 6 leads.
  *
- * Lead names and roles come from apps/web/src/components/dashboard/mock-data.ts
+ * Lead names and roles come from apps/web/src/shared/lib/dashboard-mock-data.ts
  * MOCK_LEADS — these are canonical because 30+ E2E assertions reference them.
  *
  * Lead UUIDs use range ...0011 through ...0016 to avoid collision with
