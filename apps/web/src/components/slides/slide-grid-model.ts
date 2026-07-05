@@ -26,8 +26,8 @@ export type {
   GridAuthor,
   GridColumnKey,
   GridColumns,
-  GridHighlight,
   GridRow,
+  GridTone,
   SlideTrafficStatus,
 } from "./slide-grid-rows";
 

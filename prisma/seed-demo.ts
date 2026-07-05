@@ -1078,17 +1078,24 @@ async function seedSmallActivities(): Promise<void> {
   });
   if (!vasilySection) throw new Error("small tier: Vasily section missing");
 
+  // Two activities on the portal, one on BI (owner-requested demo layout).
   const activities = [
     {
       name: "Исследование новых интеграций",
+      productId: PROD_PORTAL,
       status: TrafficLightStatus.yellow,
       note: "Партнёр задерживает доступ к API",
     },
     {
+      name: "Поддержка и сопровождение",
+      productId: PROD_PORTAL,
+      status: TrafficLightStatus.green,
+    },
+    {
       name: "Технический долг и рефакторинг",
+      productId: PROD_BI,
       status: TrafficLightStatus.yellow,
     },
-    { name: "Поддержка и сопровождение", status: TrafficLightStatus.green },
   ] as const;
 
   const created = await Promise.all(
@@ -1105,7 +1112,7 @@ async function seedSmallActivities(): Promise<void> {
         data: {
           id: makeRowId(),
           activityId,
-          productId: PROD_PORTAL,
+          productId: activity.productId,
         },
       });
       await prisma.projectActivityLead.create({
@@ -1124,8 +1131,8 @@ async function seedSmallActivities(): Promise<void> {
     }),
   );
 
-  // One live record on the first activity: the slide shows a project row with
-  // content, the other two stay status-only header rows.
+  // One live record on the first portal activity: the slide shows a project
+  // row with content, the others stay status-only header rows.
   await prisma.item.create({
     data: {
       id: makeRowId(),
