@@ -75,9 +75,12 @@ export default defineConfig([
   globalIgnores([
     "**/node_modules/**",
     "**/dist/**",
-    "**/.next/**",
-    "**/.next-e2e/**",
-    "**/.next-sweep/**",
+    // Any alternate Next dist dir (NEXT_DIST_DIR — e2e, sweep, ad-hoc source
+    // runs) is a build artifact, never lintable source.
+    "**/.next*/**",
+    // Agent worktrees are full repo copies; linting them triples the file set
+    // and OOMs eslint. Each worktree lints itself.
+    ".claude/worktrees/**",
     "**/coverage/**",
     "**/.turbo/**",
     "**/prisma/generated/**",
