@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useContext, useMemo } from "react";
 
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
@@ -16,7 +15,8 @@ import {
   ReportToolbar,
   ReportToolbarCenterLabel,
 } from "../report-shell/report-toolbar";
-import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
+import { ScopeToggle } from "../report-shell/scope-toggle";
+import { useReportShellUrlState } from "../report-shell/use-report-shell-url-state";
 import { ViewModeToggle } from "../report-shell/view-mode-toggle";
 import { HeadSlidesClient } from "../slides/head-slides-client";
 import { SlideSkeleton } from "../slides/slide-skeleton";
@@ -24,6 +24,10 @@ import { ExportPdfButton } from "../weekly-report/export-pdf-button";
 import { HeadPublishLockAction } from "../weekly-report/head-publish-lock-action";
 import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
 import { WeeklyReportSkeleton } from "../weekly-report/weekly-report-skeleton";
+
+// Module-scope so the reference is stable across renders — a fresh literal would
+// churn the hook's `buildQuery` memoization. The head strips no one-shot markers.
+const HEAD_STRIP_PARAMS: readonly string[] = [];
 
 interface HeadReportShellProps {
   readonly reportId: string;
@@ -55,36 +59,10 @@ export function HeadReportShell({
   // head-toolbar-semantics: the head report view state — scope (Product/Leads)
   // and the show-archived filter — lives in the URL so navigation, refresh, and
   // shared links all restore the selection. `mode` is already a route concern
-  // (`?mode=slides`), resolved server-side and passed in as the `mode` prop.
-  const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const buildQuery = useCallback(
-    (overrides: Record<string, string | null>) => {
-      const next = new URLSearchParams(searchParams.toString());
-      for (const [key, value] of Object.entries(overrides)) {
-        if (value === null || value === "") next.delete(key);
-        else next.set(key, value);
-      }
-      const qs = next.toString();
-      return qs ? `?${qs}` : "";
-    },
-    [searchParams],
-  );
-
-  const includeArchive = searchParams.get("archive") === "1";
-  const setIncludeArchive = useCallback(
-    (value: boolean) => {
-      router.replace(
-        `${pathname}${buildQuery({ archive: value ? "1" : null })}`,
-        {
-          scroll: false,
-        },
-      );
-    },
-    [router, pathname, buildQuery],
-  );
+  // (`?mode=slides`), resolved server-side and passed in as the `mode` prop. The
+  // head strips nothing (no one-shot markers), so `stripParams` is empty.
+  const { buildQuery, includeArchive, setIncludeArchive, scope, setScope } =
+    useReportShellUrlState({ stripParams: HEAD_STRIP_PARAMS });
 
   const historyQ = useQuery(
     trpc.reports.compiledHistory.queryOptions({ includeArchive }),
@@ -173,18 +151,8 @@ export function HeadReportShell({
 
   // Grouping axis for the form-mode status pane (UAT 2026-05-22): product (the
   // classic per-product list) or lead (products bucketed under each lead). Held
-  // in the URL (`?scope=lead`) so it survives navigation / refresh.
-  const scope: ScopeValue =
-    searchParams.get("scope") === "lead" ? "lead" : "product";
-  const setScope = useCallback(
-    (value: ScopeValue) => {
-      router.replace(
-        `${pathname}${buildQuery({ scope: value === "lead" ? "lead" : null })}`,
-        { scroll: false },
-      );
-    },
-    [router, pathname, buildQuery],
-  );
+  // in the URL (`?scope=lead`) so it survives navigation / refresh — `scope` /
+  // `setScope` come from the shared URL-state hook above.
   const reportScope = scope === "lead" ? "lead" : "product";
 
   // head-toolbar-parity D2: the department context label moved off the toolbar

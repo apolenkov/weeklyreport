@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo } from "react";
 
 import { getClientErrorDetails } from "../../lib/client-error-reporting";
@@ -12,13 +12,19 @@ import { PeriodNavigator } from "../lead/period-navigator";
 import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { ArchiveToggle } from "../report-shell/archive-toggle";
 import { ReportToolbar } from "../report-shell/report-toolbar";
-import { ScopeToggle, type ScopeValue } from "../report-shell/scope-toggle";
+import { ScopeToggle } from "../report-shell/scope-toggle";
+import { useReportShellUrlState } from "../report-shell/use-report-shell-url-state";
 import { ViewModeToggle } from "../report-shell/view-mode-toggle";
 import { HeadSlidesClient } from "../slides/head-slides-client";
 import { SlideSkeleton } from "../slides/slide-skeleton";
 import { ExportPdfButton } from "../weekly-report/export-pdf-button";
 import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
 import { WeeklyReportSkeleton } from "../weekly-report/weekly-report-skeleton";
+
+// Module-scope so the reference is stable across renders — a fresh literal would
+// churn the hook's `buildQuery` memoization. The viewer strips the one-shot
+// Status-entry markers on every in-shell navigation.
+const VIEWER_STRIP_PARAMS: readonly string[] = ["source", "recovery"];
 
 interface ViewerReportShellProps {
   readonly reportId: string;
@@ -56,42 +62,19 @@ export function ViewerReportShell({
   authorId,
 }: ViewerReportShellProps) {
   const trpc = useTRPC();
-  const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const buildQuery = useCallback(
-    (overrides: Record<string, string | null>) => {
-      const next = new URLSearchParams(searchParams.toString());
-      // viewer-live-status (task 4.3): `source`/`recovery` are one-shot markers
-      // the `/reports/latest` redirect places on the FIRST report URL. They must
-      // never be carried forward by any in-shell navigation (period navigator,
-      // scope / archive / view-mode toggles) — otherwise a History selection or
-      // a toggle would inherit `source=status` and a later NOT_FOUND would be
-      // misread as a Status navigation and bounce the viewer back to the Status
-      // target. Strip them here so they live exactly on the entry redirect.
-      next.delete("source");
-      next.delete("recovery");
-      for (const [key, value] of Object.entries(overrides)) {
-        if (value === null || value === "") next.delete(key);
-        else next.set(key, value);
-      }
-      const qs = next.toString();
-      return qs ? `?${qs}` : "";
-    },
-    [searchParams],
-  );
-
-  const includeArchive = searchParams.get("archive") === "1";
-  const setIncludeArchive = useCallback(
-    (value: boolean) => {
-      router.replace(
-        `${pathname}${buildQuery({ archive: value ? "1" : null })}`,
-        { scroll: false },
-      );
-    },
-    [router, pathname, buildQuery],
-  );
+  // viewer-live-status (task 4.3): `source`/`recovery` are one-shot markers the
+  // `/reports/latest` redirect places on the FIRST report URL. `stripParams`
+  // deletes them on every in-shell navigation (period navigator, scope / archive
+  // / view-mode toggles) — otherwise a History selection or a toggle would
+  // inherit `source=status`, and a later NOT_FOUND would be misread as a Status
+  // navigation and bounce the viewer back to the Status target. They live exactly
+  // on the entry redirect, read directly from `searchParams` for the recovery
+  // check below.
+  const { buildQuery, includeArchive, setIncludeArchive, scope, setScope } =
+    useReportShellUrlState({ stripParams: VIEWER_STRIP_PARAMS });
 
   const historyQ = useQuery(
     trpc.reports.compiledHistory.queryOptions({ includeArchive }),
@@ -166,17 +149,6 @@ export function ViewerReportShell({
   const editHref = `/reports/${encodeURIComponent(reportId)}${buildQuery({ mode: null })}`;
   const slidesHref = `/reports/${encodeURIComponent(reportId)}${buildQuery({ mode: "slides" })}`;
 
-  const scope: ScopeValue =
-    searchParams.get("scope") === "lead" ? "lead" : "product";
-  const setScope = useCallback(
-    (value: ScopeValue) => {
-      router.replace(
-        `${pathname}${buildQuery({ scope: value === "lead" ? "lead" : null })}`,
-        { scroll: false },
-      );
-    },
-    [router, pathname, buildQuery],
-  );
   const reportScope = scope === "lead" ? "lead" : "product";
 
   const contextControls = (
