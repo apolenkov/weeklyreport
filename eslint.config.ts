@@ -1,5 +1,8 @@
+import eslintComments from "@eslint-community/eslint-plugin-eslint-comments";
 import type { ESLint, Linter } from "eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
+import { createTypeScriptImportResolver } from "eslint-import-resolver-typescript";
+import importX from "eslint-plugin-import-x";
 import jsdoc from "eslint-plugin-jsdoc";
 import jsxA11yPlugin from "eslint-plugin-jsx-a11y";
 import react from "eslint-plugin-react";
@@ -70,6 +73,112 @@ const sonarjsRecommended = sonarjs.configs.recommended as unknown as {
 const jsdocRecommendedTs = jsdoc.configs["flat/recommended-typescript"] as {
   readonly rules: Linter.RulesRecord;
 };
+
+// ── Directory-architecture import boundaries (restructure-directory-architecture,
+// slice 1). Two mechanisms: relative-path zones via import-x/no-restricted-paths
+// (api cross-module, web cross-slice), package-name zones via
+// no-restricted-imports (api domain purity, ui domain-free). Each ships RATCHETED
+// — current violations grandfathered in a per-consumer allowlist that shrinks
+// monotonically; a NEW cross-boundary import errors immediately. eslint-disable of
+// these rules is banned below (@eslint-community/eslint-comments/no-restricted-disable)
+// so the config allowlist is the ONLY grandfathering path.
+const eslintCommentsPlugin = eslintComments as unknown as ESLint.Plugin;
+
+const apiModulesDir = "apps/api/src/modules";
+const apiModules = [
+  "activity",
+  "admin",
+  "analytics",
+  "archive",
+  "auth",
+  "carry-over",
+  "email",
+  "observability",
+  "organization",
+  "pdf-export",
+  "period",
+  "project-activity",
+  "publication",
+  "reminders",
+  "report-sections",
+  "review",
+  "search",
+  "telegram",
+  "telemetry",
+  "weekly-report",
+] as const;
+
+// Grandfathered cross-module imports, keyed by CONSUMING module → resolved sibling
+// paths (relative to modules/) it already imports. Inventory 2026-07-05: 30 unique
+// (consumer, target) pairs across 11 consumers (the raw ~40 count is import LINES;
+// several modules import one sibling file from multiple files). Entries are only
+// ever REMOVED (as slice 6 reroutes each to the sibling's index.ts facade), never
+// added or broadened. Two loose files at modules/ ROOT (not inside any module) are
+// also under `from` and imported by several modules today — published-report-snapshot.ts
+// and report-escalations.ts; those imports are grandfathered here too and drop out when
+// the loose files relocate in a later slice. (published-report-snapshot.ts itself imports
+// report-sections, but it is not under modules/A/** so no zone targets it as a consumer.)
+const apiCrossModuleGrandfathered: Record<string, readonly string[]> = {
+  admin: [
+    "period/period-factory.ts",
+    "period/period-transition.ts",
+    "reminders/policy-applicator.service.ts",
+  ],
+  archive: [
+    "published-report-snapshot.ts",
+    "report-sections/report-sections.prisma-repository.ts",
+  ],
+  auth: ["admin/session-revocation.service.ts"],
+  "carry-over": [
+    "report-sections/ensure-lead-section.ts",
+    "report-sections/report-sections.prisma-repository.ts",
+  ],
+  "pdf-export": [
+    "published-report-snapshot.ts",
+    "report-sections/report-sections.prisma-repository.ts",
+  ],
+  period: [
+    "admin/admin-shared.ts",
+    "admin/admin.module.ts",
+    "admin/admin.service.ts",
+    "analytics/analytics.cache.ts",
+    "analytics/analytics.module.ts",
+    "carry-over/auto-carry-over.ts",
+    "carry-over/carry-over.module.ts",
+    "carry-over/carry-over.prisma-repository.ts",
+    "carry-over/carry-over.service.ts",
+    "publication/publication.module.ts",
+    "publication/publication.service.ts",
+    "published-report-snapshot.ts",
+    "reminders/policy-applicator.service.ts",
+    "weekly-report/weekly-report.module.ts",
+    "weekly-report/weekly-report.prisma-repository.ts",
+  ],
+  publication: ["period/period-transition.ts", "published-report-snapshot.ts"],
+  reminders: [
+    "organization/organization.module.ts",
+    "organization/organization.service.ts",
+  ],
+  "report-sections": ["admin/admin.module.ts", "admin/admin.service.ts"],
+  review: ["report-sections/revoke-transition.ts"],
+  "weekly-report": [
+    "published-report-snapshot.ts",
+    "report-escalations.ts",
+    "report-sections/report-sections.prisma-repository.ts",
+    "review/review-authz.ts",
+  ],
+};
+
+// One zone per module: files under modules/M may import from modules/ ONLY within
+// their own module (except: [M]) plus M's grandfathered sibling paths. A new import
+// of any other sibling internal path errors. The facade barrel (modules/M/index.ts)
+// becomes the sole allowlist entry once slice 6 flips this to error-with-no-grandfather.
+const apiCrossModuleZones = apiModules.map((moduleName) => ({
+  target: `${apiModulesDir}/${moduleName}`,
+  from: apiModulesDir,
+  except: [moduleName, ...(apiCrossModuleGrandfathered[moduleName] ?? [])],
+  message: `api module boundary: '${moduleName}' may reach a sibling module only through its index.ts facade barrel, never an internal path (restructure-directory-architecture). Grandfathered exceptions shrink monotonically.`,
+}));
 
 export default defineConfig([
   globalIgnores([
@@ -568,6 +677,114 @@ export default defineConfig([
             },
           ],
         },
+      ],
+    },
+  },
+  // ── restructure-directory-architecture slice 1: import-boundary zones. ──
+  // Resolver so import-x/no-restricted-paths can map relative NodeNext specifiers
+  // (`../period/period-transition.js` → the real .ts) to real paths; without it the
+  // rule silently matches nothing and every zone becomes an inert no-op.
+  {
+    settings: {
+      "import-x/resolver-next": [
+        createTypeScriptImportResolver({
+          noWarnOnMultipleProjects: true,
+          project: [
+            "apps/api/tsconfig.json",
+            "apps/web/tsconfig.json",
+            "packages/shared/tsconfig.json",
+            "packages/ui/tsconfig.json",
+          ],
+        }),
+      ],
+    },
+  },
+  // Zone 3 — api cross-module internals. Tests are exempt: cross-module imports in
+  // test setup are wiring, not production coupling (12 test files do it today).
+  {
+    files: ["apps/api/src/**/*.ts"],
+    ignores: ["**/*.test.ts", "**/*.spec.ts", "**/__tests__/**"],
+    plugins: { "import-x": importX },
+    rules: {
+      "import-x/no-restricted-paths": ["error", { zones: apiCrossModuleZones }],
+    },
+  },
+  // Zone 5 — web cross-slice ban. features/ does not exist yet, so there are zero
+  // current slices and zero violations; the rule is wired here and each web slice
+  // (from slice 2 `landing` onward) appends its own zone
+  // `{ target: features/<slice>, from: features, except: [<slice>] }` — a shared
+  // allowlist cannot distinguish self-import from cross-slice, so zones stay per-slice.
+  {
+    files: ["apps/web/src/features/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/__tests__/**"],
+    plugins: { "import-x": importX },
+    rules: {
+      "import-x/no-restricted-paths": ["error", { zones: [] }],
+    },
+  },
+  // Zone 4 — api domain purity (package-name zone). Files under an invariant
+  // module's domain/ must not import an adapter dependency, so deleting Nest/Prisma
+  // leaves the pure domain compiling. domain/ subfolders arrive in slice 4; inert
+  // until then (zero current violations).
+  {
+    files: [
+      "apps/api/src/modules/period/domain/**/*.ts",
+      "apps/api/src/modules/report-sections/domain/**/*.ts",
+      "apps/api/src/modules/review/domain/**/*.ts",
+      "apps/api/src/modules/publication/domain/**/*.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "@prisma/client",
+                "@nestjs/*",
+                "ioredis",
+                "bullmq",
+                "nodemailer",
+              ],
+              message:
+                "domain/ is pure: no @prisma/client, @nestjs/*, ioredis, bullmq or nodemailer — inject an adapter through a port instead (restructure-directory-architecture).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Zone 6 — ui stays domain-free (package-name zone). packages/ui primitives must
+  // not import @customreport/shared domain schemas; charts receive finished series
+  // as props. Currently 0 violations.
+  {
+    files: ["packages/ui/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@customreport/shared", "@customreport/shared/*"],
+              message:
+                "packages/ui must stay domain-free: no @customreport/shared schemas; shape data in the web slice or api and pass finished series as props (restructure-directory-architecture).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Suppression ban: eslint-disable of any boundary-zone rule is forbidden, so the
+  // config-level allowlist is the ONLY grandfathering mechanism (every exemption
+  // reviewable in one place, shrinking monotonically). A bare disable that would
+  // sweep these rules is caught too.
+  {
+    plugins: { "@eslint-community/eslint-comments": eslintCommentsPlugin },
+    rules: {
+      "@eslint-community/eslint-comments/no-restricted-disable": [
+        "error",
+        "import-x/no-restricted-paths",
+        "@typescript-eslint/no-restricted-imports",
       ],
     },
   },
