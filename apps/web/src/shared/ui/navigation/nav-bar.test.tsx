@@ -7,7 +7,7 @@ import { render } from "@testing-library/react";
 import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { SessionState } from "../../lib/session-provider";
+import type { SessionState } from "../../../lib/session-provider";
 
 const navigationMock = vi.hoisted(() => ({
   pathname: "/lead/report",
@@ -20,14 +20,14 @@ vi.mock("next/navigation", () => ({
 }));
 
 const useSessionMock = vi.fn();
-vi.mock("../../lib/session-provider", () => ({
+vi.mock("../../../lib/session-provider", () => ({
   useSession: () => useSessionMock() as SessionState,
 }));
 
 // Phase 33-04: NavBar now reads the active period via tRPC for the right-rail
 // badge. Tests don't exercise that surface — stub the proxy to a minimal
 // object that satisfies `trpc.weeklyReport.get.queryOptions(...)` calls.
-vi.mock("../../lib/trpc-context", () => ({
+vi.mock("../../../lib/trpc-context", () => ({
   useTRPC: () => ({
     weeklyReport: {
       get: {

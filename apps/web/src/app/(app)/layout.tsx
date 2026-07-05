@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 
-import { NavBar } from "../../components/navigation/nav-bar";
-import { NavBarSkeleton } from "../../components/navigation/nav-bar-skeleton";
 import { SessionProvider } from "../../lib/session-provider";
+import { NavBar } from "../../shared/ui/navigation/nav-bar";
+import { NavBarSkeleton } from "../../shared/ui/navigation/nav-bar-skeleton";
 
 type AppGroupLayoutProps = Readonly<{
   children: ReactNode;

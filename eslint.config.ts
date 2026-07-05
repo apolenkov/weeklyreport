@@ -884,7 +884,7 @@ export default defineConfig([
       "apps/web/src/components/lead/decision-edit-dialog.tsx", // one create/edit dialog; XOR parent picker + per-field validation + conditional stage step — parity with item/risk-edit-dialog (shared helpers already extracted)
       "apps/web/src/components/lead/lead-form-sync-bridge.tsx", // one context bridge wiring sync to two consumers
       "apps/web/src/components/slides/status-slide-deck.tsx", // one navigable slide-deck widget
-      "apps/web/src/components/navigation/nav-bar.tsx", // one role-aware nav widget; MobileNav/coming-soon have no external consumers
+      "apps/web/src/shared/ui/navigation/nav-bar.tsx", // one role-aware nav widget; MobileNav/coming-soon have no external consumers
       "apps/web/src/components/dashboard/dashboard-page.tsx", // one head-dashboard page; private load-issue helper only
       "apps/web/src/components/weekly-report/product-accordion.tsx", // one accordion for one ProductReport
       "apps/web/src/components/weekly-report/weekly-report-page.tsx", // one page: data load + 3 mutations + render
@@ -958,7 +958,7 @@ export default defineConfig([
       "apps/web/src/components/lead/risk-edit-dialog.tsx", // one dialog; validation coupled to 7+ form fields; 'use no memo' race guard
       "apps/web/src/components/lead/risks-section.tsx", // 3 dialog states across handlers + JSX; prior split broke behavior
       "apps/web/src/components/lead/stage-chip.tsx", // interactive chip; dropdown/status/clear/popover entangled via hooks
-      "apps/web/src/components/navigation/nav-bar.tsx", // role-based link filtering + session/hydration across layout slots
+      "apps/web/src/shared/ui/navigation/nav-bar.tsx", // role-based link filtering + session/hydration across layout slots
       "apps/web/src/components/slides/head-slides-client.tsx", // guard clauses (loading/error/data) + scope-driven slide build
       "apps/web/src/components/slides/lead-slides-client.tsx", // hooks + shared state + loading/error/empty returns drive the deck lifecycle
       "apps/web/src/components/slides/section-slide-utils.ts", // 4 domain transforms; branch count inherent to the data they model
