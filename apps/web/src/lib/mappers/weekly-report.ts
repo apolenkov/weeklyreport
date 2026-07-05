@@ -21,6 +21,7 @@
  */
 import type { WeeklyReportReadModel } from "@customreport/shared";
 
+import { statusLabel } from "../status-presentation";
 import { reportHasContent } from "./report-content";
 import {
   buildProductToAuthorMap,
@@ -47,13 +48,6 @@ import type {
 
 export { formatWeekRange } from "./weekly-report-groupers";
 export type * from "./weekly-report-types";
-
-/** Bare product-status label ("On Track" / "At Risk" / "Blocked"). */
-function productStatusLabel(status: WeeklyProductReport["status"]): string {
-  if (status === "on-track") return "On Track";
-  if (status === "at-risk") return "At Risk";
-  return "Blocked";
-}
 
 /**
  * Compose `weeklyReport.get` into the page's portfolio + per-product slices.
@@ -114,7 +108,7 @@ export function mapWeeklyReport(
       initials,
       name: overview.productName,
       status,
-      statusLabel: productStatusLabel(status),
+      statusLabel: statusLabel(status, "print"),
       leads: leadsLabel,
       ...(attention.needsAttention !== undefined
         ? { needsAttention: attention.needsAttention }
@@ -199,12 +193,7 @@ export function mapWeeklyReportLeadGroups(
             initials: initialsFromName(proj.projectName),
             name: proj.projectName,
             status,
-            statusLabel:
-              status === "on-track"
-                ? "On Track"
-                : status === "at-risk"
-                  ? "At Risk"
-                  : "Blocked",
+            statusLabel: statusLabel(status, "print"),
             leads: section.authorName,
             ...(attention
               ? {

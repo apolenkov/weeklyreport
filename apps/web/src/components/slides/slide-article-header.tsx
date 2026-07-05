@@ -1,6 +1,6 @@
-import { AlertTriangle } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { type CanonicalStatus } from "../../lib/status-presentation";
 import {
   segmentClassName,
   SegmentedToggle,
@@ -11,42 +11,17 @@ import type {
   SlideGridModel,
   SlideTrafficStatus,
 } from "./slide-grid-model";
+import { SlideStatusBadge } from "./slide-status-badge";
 
 export type SlideViewMode = "summary" | "product";
 
-const WORST_PILL: Record<
-  Exclude<SlideTrafficStatus, null> | "none",
-  {
-    readonly label: string;
-    readonly className: string;
-    readonly alert: boolean;
-  }
-> = {
-  red: {
-    label: "Blockers",
-    className:
-      "bg-[var(--color-chip-blocked-bg)] text-[var(--color-destructive)] border-[var(--color-chip-blocked-border)]",
-    alert: true,
-  },
-  yellow: {
-    label: "At risk",
-    className:
-      "bg-[var(--color-chip-at-risk-bg)] text-[var(--color-chip-at-risk-text)] border-[var(--color-chip-at-risk-border)]",
-    alert: true,
-  },
-  green: {
-    label: "On track",
-    className:
-      "bg-[var(--color-chip-on-track-bg)] text-[var(--color-chip-on-track-text)] border-[var(--color-chip-on-track-border)]",
-    alert: false,
-  },
-  none: {
-    label: "No status",
-    className:
-      "bg-[var(--color-surface-muted)] text-[var(--color-muted-foreground)] border-[var(--color-border)]",
-    alert: false,
-  },
-};
+/** Worst-status traffic light → canonical status for the header pill (D6). */
+function worstToStatus(traffic: SlideTrafficStatus): CanonicalStatus {
+  if (traffic === "red") return "blocked";
+  if (traffic === "yellow") return "at-risk";
+  if (traffic === "green") return "on-track";
+  return "empty";
+}
 
 function metric(count: number, label: string) {
   return (
@@ -78,18 +53,13 @@ export function SlideGridHeader({
   /** Deck-owned controls (fullscreen, period picker) rendered after the toggle. */
   readonly heroControls?: ReactNode;
 }) {
-  const pill = WORST_PILL[grid.worstStatus ?? "none"];
   const short = grid.onTrack.on < grid.onTrack.total;
   return (
     <div className="flex flex-wrap items-center gap-3 border-b border-[rgba(0,0,0,0.08)] pb-3">
-      <span
-        className={`inline-flex items-center gap-1 rounded-[var(--radius-pill)] border px-2.5 py-1 text-xs font-semibold ${pill.className}`}
-      >
-        {pill.alert && (
-          <AlertTriangle aria-hidden="true" className="h-3.5 w-3.5" />
-        )}
-        {pill.label}
-      </span>
+      <SlideStatusBadge
+        status={worstToStatus(grid.worstStatus)}
+        labelVariant="worstPill"
+      />
       <h2 className="min-w-0 truncate text-xl font-semibold text-[var(--color-foreground)]">
         {ownerName}
       </h2>

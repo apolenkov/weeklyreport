@@ -24,9 +24,10 @@ import {
   buildLeadSlidePeriodOptions,
   resolveLeadSlideReportId,
 } from "./lead-slide-periods";
-import { buildLeadDeckModel, SlideEmptyState } from "./lead-slides-deck-model";
+import { buildLeadDeckModel } from "./lead-slides-deck-model";
 import { ReportSlides } from "./report-slides";
 import { paginateSectionSlides } from "./section-slide-utils";
+import { SlideEmptyState } from "./slide-empty-state";
 import { SlideSkeleton } from "./slide-skeleton";
 
 interface LeadSlidesClientProps {

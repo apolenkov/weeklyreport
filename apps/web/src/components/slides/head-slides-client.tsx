@@ -13,26 +13,8 @@ import {
   paginateSectionSlides,
   sortSlidesForReview,
 } from "./section-slide-utils";
+import { SlideEmptyState } from "./slide-empty-state";
 import { SlideSkeleton } from "./slide-skeleton";
-
-function SlideEmptyState({
-  title,
-  message,
-}: {
-  readonly title: string;
-  readonly message: string;
-}) {
-  return (
-    <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] px-6 py-16 text-center">
-      <p className="text-base font-semibold text-[var(--color-foreground)]">
-        {title}
-      </p>
-      <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-        {message}
-      </p>
-    </div>
-  );
-}
 
 interface HeadSlidesClientProps {
   /** When provided, loads slides for that specific report period instead of

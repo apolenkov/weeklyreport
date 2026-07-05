@@ -11,6 +11,7 @@ import type {
 import { initialsFromName as sharedInitialsFromName } from "@customreport/shared";
 
 import { formatPeriodRangeWithYear, formatWeekLabel } from "../format-date";
+import { statusLabel } from "../status-presentation";
 import { deriveHeadItemStatus } from "./item-status";
 import { trafficToStageStatus } from "./traffic-light";
 import type {
@@ -57,14 +58,7 @@ export function statusLabelFor(
   leadNames: string[],
 ): string {
   const leads = leadNames.length > 0 ? leadNames.join(", ") : "unassigned";
-  switch (status) {
-    case "on-track":
-      return `On Track · ${leads}`;
-    case "at-risk":
-      return `At Risk · ${leads}`;
-    case "blocked":
-      return `Blocked · ${leads}`;
-  }
+  return `${statusLabel(status, "print")} · ${leads}`;
 }
 
 /**

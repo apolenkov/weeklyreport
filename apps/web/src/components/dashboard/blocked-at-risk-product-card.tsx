@@ -1,4 +1,5 @@
 import type { BlockedAtRiskItem } from "../../lib/mappers/dashboard";
+import { statusLabel } from "../../lib/status-presentation";
 
 type Severity = BlockedAtRiskItem["severity"];
 
@@ -25,21 +26,16 @@ const AVATAR_CONFIG = {
   "at-risk": { bg: "var(--color-muted)", fg: "var(--color-foreground)" },
 } as const satisfies Record<Severity, { bg: string; fg: string }>;
 
+// bg/fg only — the label folds into the canonical status map (statusLabel,
+// print variant). The bg/fg pair does not fit the map's single-token tone
+// shape, so it stays here, like SEVERITY_TONE and AVATAR_CONFIG (D8).
 const SEVERITY_BADGE = {
-  blocked: {
-    label: "Blocked",
-    bg: "var(--color-status-blocked-bg)",
-    fg: CSS_DESTRUCTIVE,
-  },
+  blocked: { bg: "var(--color-status-blocked-bg)", fg: CSS_DESTRUCTIVE },
   "at-risk": {
-    label: "At Risk",
     bg: "var(--color-surface-muted)",
     fg: "var(--color-status-at-risk-fg)",
   },
-} as const satisfies Record<
-  Severity,
-  { label: string; bg: string; fg: string }
->;
+} as const satisfies Record<Severity, { bg: string; fg: string }>;
 
 // One column grid shared by every issue row so all stage labels share a left
 // edge and all descriptions share another, matching the report accordion.
@@ -125,7 +121,7 @@ function IssueRow({ item }: { readonly item: BlockedAtRiskItem }) {
           className="whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold"
           style={{ background: badge.bg, color: badge.fg }}
         >
-          {badge.label}
+          {statusLabel(item.severity, "print")}
         </span>
       </span>
     </div>
@@ -161,7 +157,7 @@ export function ProductCard({ group }: { readonly group: ProductGroup }) {
                 style={{ background: tone }}
                 aria-hidden="true"
               />
-              {SEVERITY_BADGE[severity].label}
+              {statusLabel(severity, "print")}
             </span>
           </div>
           <span className="truncate text-[12.5px] text-[var(--color-muted-foreground)]">

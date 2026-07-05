@@ -7,6 +7,10 @@ import {
   Target,
 } from "lucide-react";
 
+import {
+  type CanonicalStatus,
+  statusDotClassName,
+} from "../../lib/status-presentation";
 import { SlideCell } from "./slide-article-rows";
 import type {
   GridAuthor,
@@ -65,24 +69,25 @@ export function SlideColumnHeaderRow() {
   );
 }
 
-const STATUS_DOT_BG: Record<"green" | "yellow" | "red", string> = {
-  green: "bg-[var(--color-primary)]",
-  yellow: "bg-[var(--color-status-dot-at-risk)]",
-  red: "bg-[var(--color-destructive)]",
-};
-
 const STATUS_STRIPE: Record<"green" | "yellow" | "red", string> = {
   green: "border-l-4 border-l-[var(--color-chip-on-track-border)]",
   yellow: "border-l-4 border-l-[var(--color-status-dot-at-risk)]",
   red: "border-l-4 border-l-[var(--color-destructive)]",
 };
 
+/** Traffic light → canonical status for the dot map lookup (D6). */
+function trafficDotStatus(status: "green" | "yellow" | "red"): CanonicalStatus {
+  if (status === "red") return "blocked";
+  if (status === "yellow") return "at-risk";
+  return "on-track";
+}
+
 function StatusDot({ status }: { readonly status: SlideTrafficStatus }) {
   if (status == null) return null;
   return (
     <span
       aria-hidden="true"
-      className={`inline-block h-2 w-2 shrink-0 rounded-full ${STATUS_DOT_BG[status]}`}
+      className={`inline-block h-2 w-2 shrink-0 rounded-full ${statusDotClassName(trafficDotStatus(status))}`}
     />
   );
 }
