@@ -3,24 +3,19 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 
-import {
-  Injectable,
-  type OnModuleDestroy,
-  type OnModuleInit,
-} from "@nestjs/common";
-import { type Job, Worker } from "bullmq";
+import { Injectable } from "@nestjs/common";
+import { type Job } from "bullmq";
 import type { ClsService } from "nestjs-cls";
 import { chromium } from "playwright";
 
 import { requireEnv } from "../../lib/env.js";
-import { type AppLogger, createNullLogger } from "../../lib/logger.js";
+import type { AppLogger } from "../../lib/logger.js";
 import { PdfExportService } from "../../modules/pdf-export/pdf-export.service";
 import type { EnvConfig } from "../config/env.schema";
-import { getBullMQOptions } from "./bullmq-options";
+import { RawBullMqProcessor } from "./raw-bullmq-processor.js";
 import {
   extractTraceId,
   type JobTraceContext,
-  runInJobTraceContext,
 } from "./worker-observability.js";
 
 // Cap the render navigation so a hung print page fails the job instead of
@@ -36,50 +31,22 @@ interface PdfExportJobData extends JobTraceContext {
   authToken: string;
 }
 
-/**
- * BullMQ worker for the pdf-export queue.
- *
- * Uses raw Worker (not @Processor/WorkerHost) to avoid the DiscoveryService
- * DI bug in @nestjs/bullmq 11 with NestJS 11.
- */
+/** BullMQ worker for the pdf-export queue. */
 @Injectable()
-export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
-  private worker: Worker<PdfExportJobData> | undefined;
-  private readonly logger: AppLogger;
+export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
+  protected readonly queueName = "pdf-export";
+  protected readonly spanName = "pdf-export.process";
 
   constructor(
     private readonly pdfExportService: PdfExportService,
-    private readonly env: EnvConfig,
+    env: EnvConfig,
     logger?: AppLogger,
-    private readonly cls?: ClsService,
+    cls?: ClsService,
   ) {
-    this.logger = logger ?? createNullLogger();
+    super(env, logger, cls);
   }
 
-  onModuleInit(): void {
-    this.worker = new Worker<PdfExportJobData>(
-      "pdf-export",
-      async (job: Job<PdfExportJobData>) => {
-        await runInJobTraceContext(
-          job.data,
-          "pdf-export.process",
-          this.cls,
-          () => this.processJob(job),
-        );
-      },
-      getBullMQOptions(this.env),
-    );
-
-    this.worker.on("failed", (job, error) => {
-      this.handleFailure(job, error);
-    });
-  }
-
-  async onModuleDestroy(): Promise<void> {
-    await this.worker?.close();
-  }
-
-  private handleFailure(
+  protected onJobFailed(
     job: Job<PdfExportJobData> | undefined,
     error: Error,
   ): void {
@@ -116,7 +83,7 @@ export class PdfExportProcessor implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  private async processJob(job: Job<PdfExportJobData>): Promise<void> {
+  protected async processJob(job: Job<PdfExportJobData>): Promise<void> {
     const { reportId, jobId, authToken } = job.data;
     const baseUrl = requireEnv(process.env, "PDF_BASE_URL");
     const reportUrl = `${baseUrl}/print/${reportId}`;

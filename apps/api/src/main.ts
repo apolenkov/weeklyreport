@@ -39,14 +39,13 @@ import { resolve } from "node:path";
 import { MS_PER_SECOND } from "@customreport/shared";
 import { HttpAdapterHost, NestFactory } from "@nestjs/core";
 import * as trpcExpress from "@trpc/server/adapters/express";
-import { Queue } from "bullmq";
 import cookieParser from "cookie-parser";
 import express, { type RequestHandler } from "express";
 import helmet from "helmet";
 import { ClsMiddleware } from "nestjs-cls";
 import { AppModule } from "./app.module";
 import { mountBullBoard } from "./infrastructure/bullmq/bull-board.module";
-import { getBullMQOptions } from "./infrastructure/bullmq/bullmq-options";
+import { QueueRegistry } from "./infrastructure/bullmq/queue-registry.js";
 import { ENV_CONFIG } from "./infrastructure/config/config.module";
 import type { EnvConfig } from "./infrastructure/config/env.schema";
 import { validateEnv } from "./infrastructure/config/env.schema";
@@ -326,22 +325,12 @@ async function bootstrap() {
     },
   );
 
-  // NOTIF-06 (Phase 29-05): read-only Queue handle for the admin DLQ count.
-  // Constructed once at boot; Express request lifecycle does not need its
-  // own connection. Closed on app shutdown via enableShutdownHooks above.
-  const emailReminderQueue = new Queue(
-    "email-reminder",
-    getBullMQOptions(envConfig),
-  );
-
-  // UFB-056 / Phase 55-3: read-only Queue handle for the admin Telegram
-  // smoke-test (`admin.testTelegramSend`). Stays out of the NestJS DI
-  // graph for the same reason as the email queue — see the @nestjs/bullmq
-  // DI bug note in bullmq.module.ts.
-  const telegramOutboundQueue = new Queue(
-    "telegram-outbound",
-    getBullMQOptions(envConfig),
-  );
+  // Shared queue handles for the admin DLQ count and the Telegram smoke-test
+  // (`admin.testTelegramSend`). Owned by QueueRegistry — one connection per
+  // name, closed on shutdown — instead of a bootstrap-local `new Queue`.
+  const queueRegistry = app.get(QueueRegistry);
+  const emailReminderQueue = queueRegistry.get("email-reminder");
+  const telegramOutboundQueue = queueRegistry.get("telegram-outbound");
 
   const prismaService = app.get(PrismaService);
 
