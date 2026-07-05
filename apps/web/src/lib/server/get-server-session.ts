@@ -4,6 +4,11 @@ import type { UserSession } from "@customreport/shared";
 import { cookies } from "next/headers";
 
 import { AUTH_COOKIE_NAME } from "../../server/auth/session";
+import {
+  decodeTrpcBatchPayload,
+  requireApiUrl,
+  shouldUseDevAuthFallback,
+} from "./api-url";
 
 /**
  * AUTH-07 (Phase 29-03): server-only helper that reads the session cookie
@@ -30,52 +35,17 @@ import { AUTH_COOKIE_NAME } from "../../server/auth/session";
  */
 const COOKIE_NAME = AUTH_COOKIE_NAME;
 
-function resolveApiUrl(): string {
-  // In production, NEXT_PUBLIC_API_URL points at the API hostname inside
-  // the docker network or behind the corporate proxy. In the local regression
-  // stack, the Nest API listens on :3002.
-  return (
-    process.env.API_URL ??
-    process.env.NEXT_PUBLIC_API_URL ??
-    "http://localhost:3002"
-  );
-}
-
-interface TrpcBatchEntry {
-  readonly result?: { readonly data?: unknown };
-  readonly error?: { readonly message?: string };
-}
-
-/**
- * Decode a tRPC v11 superjson-batched query response.
- *
- * The shape is `[{ result: { data: { json: <payload>, meta?: ... } } }]`
- * for the superjson transformer. We tolerate the un-transformed shape too
- * (`result.data === <payload>`) for resilience against config drift.
- */
 function decodeAuthMeResponse(body: unknown): UserSession | null {
-  if (!Array.isArray(body) || body.length === 0) return null;
-  const entry = body[0] as TrpcBatchEntry | undefined;
-  if (!entry || entry.error) return null;
-  const data = entry.result?.data;
-  if (data === null || data === undefined) return null;
-  if (typeof data === "object" && "json" in (data as Record<string, unknown>)) {
-    const inner = (data as { json: unknown }).json;
-    return inner === null ? null : (inner as UserSession);
-  }
-  return data as UserSession;
+  const payload = decodeTrpcBatchPayload(body);
+  return payload === null ? null : (payload as UserSession);
 }
 
 export async function getServerSession(): Promise<UserSession | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
-  const shouldUseDevFallback =
-    process.env.NODE_ENV !== "production" &&
-    (process.env.AUTH_DEV_MODE === "true" ||
-      process.env.AUTH_DEV_MODE_ALLOW_TEST === "true");
-  if (!token && !shouldUseDevFallback) return null;
+  if (!token && !shouldUseDevAuthFallback()) return null;
 
-  const apiUrl = resolveApiUrl();
+  const apiUrl = requireApiUrl();
   // tRPC v11 batched GET — `input` is a JSON map keyed by request index.
   // For a procedure with no input, `{"0":{}}` is the canonical empty form
   // (superjson transformer accepts undefined input).

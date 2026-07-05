@@ -4,6 +4,11 @@ import type { UserSession } from "@customreport/shared";
 import { cookies } from "next/headers";
 
 import { AUTH_COOKIE_NAME } from "../../server/auth/session";
+import {
+  decodeTrpcBatchPayload,
+  requireApiUrl,
+  shouldUseDevAuthFallback,
+} from "./api-url";
 
 /**
  * fix-report-surface-integrity W2 (task 3.3): server-only helper for the
@@ -34,35 +39,8 @@ const NO_CONTEXT: PrintRouteContext = {
   pdfReportId: null,
 };
 
-function resolveApiUrl(): string {
-  return (
-    process.env.API_URL ??
-    process.env.NEXT_PUBLIC_API_URL ??
-    "http://localhost:3002"
-  );
-}
-
-interface TrpcBatchEntry {
-  readonly result?: { readonly data?: unknown };
-  readonly error?: { readonly message?: string };
-}
-
-/**
- * Decode a tRPC v11 superjson-batched query response into the print-gate
- * context. Tolerates both the superjson-wrapped shape
- * (`result.data.json === <payload>`) and the un-transformed shape
- * (`result.data === <payload>`) for resilience against config drift.
- */
 function decodePrintGateResponse(body: unknown): PrintRouteContext {
-  if (!Array.isArray(body) || body.length === 0) return NO_CONTEXT;
-  const entry = body[0] as TrpcBatchEntry | undefined;
-  if (!entry || entry.error) return NO_CONTEXT;
-  const data = entry.result?.data;
-  if (data === null || data === undefined) return NO_CONTEXT;
-  const payload =
-    typeof data === "object" && "json" in (data as Record<string, unknown>)
-      ? (data as { json: unknown }).json
-      : data;
+  const payload = decodeTrpcBatchPayload(body);
   if (payload === null || typeof payload !== "object") return NO_CONTEXT;
   const p = payload as Record<string, unknown>;
   return {
@@ -75,13 +53,9 @@ function decodePrintGateResponse(body: unknown): PrintRouteContext {
 export async function getPrintRouteContext(): Promise<PrintRouteContext> {
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
-  const shouldUseDevFallback =
-    process.env.NODE_ENV !== "production" &&
-    (process.env.AUTH_DEV_MODE === "true" ||
-      process.env.AUTH_DEV_MODE_ALLOW_TEST === "true");
-  if (!token && !shouldUseDevFallback) return NO_CONTEXT;
+  if (!token && !shouldUseDevAuthFallback()) return NO_CONTEXT;
 
-  const apiUrl = resolveApiUrl();
+  const apiUrl = requireApiUrl();
   const inputParam = encodeURIComponent('{"0":{}}');
   const url = `${apiUrl}/trpc/auth.printGate?batch=1&input=${inputParam}`;
 
