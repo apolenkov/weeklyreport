@@ -3,6 +3,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { trace } from "@opentelemetry/api";
 import { logs, SeverityNumber } from "@opentelemetry/api-logs";
 import { ClsService } from "nestjs-cls";
+import { z } from "zod";
 
 import {
   createFileSink,
@@ -10,7 +11,13 @@ import {
   type FileSink,
 } from "./logger-file-sink.js";
 
-export type LogLevel = "debug" | "info" | "warn" | "error";
+/**
+ * Single source of truth for the log-level domain: the env schema validates
+ * `LOG_LEVEL` with this exact enum, so a value the logger accepts and a value
+ * the env accepts can never drift.
+ */
+export const logLevelSchema = z.enum(["debug", "info", "warn", "error"]);
+export type LogLevel = z.infer<typeof logLevelSchema>;
 
 export interface AppLogger {
   debug(message: string, context?: Record<string, unknown>): void;

@@ -7,7 +7,7 @@ import {
   type UserSession,
 } from "@customreport/shared";
 
-import { createAppLogger } from "../../lib/logger.js";
+import { createServiceLogger } from "../../lib/logger-service.js";
 
 /**
  * 39-05 (PERF-05): SearchRepository contract — Prisma-free at the service
@@ -55,17 +55,7 @@ export class SearchAuthorizationError extends Error {
 }
 
 export class SearchService {
-  private readonly logger = createAppLogger({
-    service: "SearchService",
-    logDir: process.env.LOG_DIR,
-    minLevel:
-      (process.env.LOG_LEVEL as
-        | "debug"
-        | "info"
-        | "warn"
-        | "error"
-        | undefined) ?? "info",
-  });
+  private readonly logger = createServiceLogger("SearchService");
 
   constructor(private readonly repository: SearchRepository) {}
 

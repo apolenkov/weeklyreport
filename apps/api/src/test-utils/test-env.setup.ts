@@ -10,3 +10,6 @@ process.env.PDF_BASE_URL ??= "http://localhost:3000";
 process.env.APP_BASE_URL ??= "http://localhost:3000";
 process.env.REDIS_HOST ??= "localhost";
 process.env.REDIS_PORT ??= "6379";
+// Services build their logger at field-init via `createServiceLogger`, which
+// parses LOG_LEVEL through the env schema (no fallback) — supply it here.
+process.env.LOG_LEVEL ??= "info";
