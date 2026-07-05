@@ -35,7 +35,10 @@ import { reportHasContent } from "../../lib/mappers/report-content";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
-import type { PortfolioProduct, ProductReport } from "../dashboard/mock-data";
+import type {
+  PortfolioProduct,
+  ProductReport,
+} from "../../shared/lib/dashboard-mock-data";
 import type { ReportPeriod } from "../lead/mock-data";
 import { PdfExportComingSoonControl } from "../lead/pdf-export-coming-soon";
 import { PeriodNavigator } from "../lead/period-navigator";

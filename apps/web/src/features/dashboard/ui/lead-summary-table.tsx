@@ -1,6 +1,6 @@
 import { MS_PER_DAY } from "@customreport/shared";
 
-import type { LeadInfo } from "../../lib/mappers/dashboard";
+import type { LeadInfo } from "../../../lib/mappers/dashboard";
 import { RemindLeadButton } from "./remind-lead-button";
 import { RevokeSectionButton } from "./revoke-lead-button";
 

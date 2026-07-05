@@ -10,14 +10,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { toast } from "sonner";
 
-import type {
-  PortfolioProduct,
-  ProductReport,
-} from "../../../components/dashboard/mock-data";
 import { formatClientErrorMessage } from "../../../lib/client-error-reporting";
 import { joinPeriodLabel } from "../../../lib/format-date";
 import { mapWeeklyReport } from "../../../lib/mappers";
 import { useTRPC } from "../../../lib/trpc-context";
+import type {
+  PortfolioProduct,
+  ProductReport,
+} from "../../../shared/lib/dashboard-mock-data";
 
 /* ------------------------------------------------------------------ */
 /*  Print/PDF Template — Client Component (Phase 21)                  */

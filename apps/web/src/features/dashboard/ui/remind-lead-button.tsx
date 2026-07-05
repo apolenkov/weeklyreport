@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Bell, BellRing, Check } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useTRPC } from "../../lib/trpc-context";
+import { useTRPC } from "../../../lib/trpc-context";
 
 interface RemindLeadButtonProps {
   readonly reportId: string;

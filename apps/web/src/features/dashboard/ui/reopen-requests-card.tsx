@@ -7,8 +7,8 @@ import { toast } from "sonner";
 import {
   formatPeriodRangeWithYear,
   joinPeriodLabel,
-} from "../../lib/format-date";
-import { useTRPC } from "../../lib/trpc-context";
+} from "../../../lib/format-date";
+import { useTRPC } from "../../../lib/trpc-context";
 
 /**
  * reopen-request-lifecycle (D2): a head-dashboard queue of pending reopen

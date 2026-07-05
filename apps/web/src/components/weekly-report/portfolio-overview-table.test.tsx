@@ -9,7 +9,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { LeadOverviewRow } from "../../lib/mappers";
-import type { PortfolioProduct } from "../dashboard/mock-data";
+import type { PortfolioProduct } from "../../shared/lib/dashboard-mock-data";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
 
 function makeProduct(overrides?: Partial<PortfolioProduct>): PortfolioProduct {

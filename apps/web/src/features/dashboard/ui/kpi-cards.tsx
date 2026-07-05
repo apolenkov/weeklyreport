@@ -1,6 +1,6 @@
 "use client";
 
-import type { KpiData } from "./mock-data";
+import type { KpiData } from "../../../shared/lib/dashboard-mock-data";
 
 interface KpiCardsProps {
   readonly data: KpiData;

@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  *
  * Regression catalog: verify-a11y-recommended-flip
- * Target: apps/web/src/components/dashboard/kpi-cards.tsx
+ * Target: apps/web/src/features/dashboard/ui/kpi-cards.tsx
  *
  * Covers:
  *   - all unit-rtl high rows (section elements + aria-labels)
@@ -13,8 +13,8 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import type { KpiData } from "../../../shared/lib/dashboard-mock-data";
 import { KpiCards } from "./kpi-cards";
-import type { KpiData } from "./mock-data";
 
 const baseData: KpiData = {
   submitted: 5,

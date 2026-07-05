@@ -243,13 +243,13 @@ const GROUP = [
   {
     name: "fix-dashboard-nan-pending",
     files: [
-      "apps/web/src/components/dashboard/kpi-cards.tsx",
-      "apps/web/src/components/dashboard/alert-bar.tsx",
+      "apps/web/src/features/dashboard/ui/kpi-cards.tsx",
+      "apps/web/src/features/dashboard/ui/alert-bar.tsx",
     ],
     testFiles: [
-      "apps/web/src/components/dashboard/kpi-cards.test.tsx",
-      "apps/web/src/components/dashboard/alert-bar.test.tsx",
-      "apps/web/src/components/dashboard/__snapshots__/alert-bar.test.tsx.snap",
+      "apps/web/src/features/dashboard/ui/kpi-cards.test.tsx",
+      "apps/web/src/features/dashboard/ui/alert-bar.test.tsx",
+      "apps/web/src/features/dashboard/ui/__snapshots__/alert-bar.test.tsx.snap",
     ],
     spec: { dir: true },
     seam: "kpi-cards.tsx: guard submissionPercent with `data.total > 0 ? Math.round(...) : 0`. alert-bar.tsx: drop the `isDraft = i===0` heuristic; label every pendingLeads entry '(Not started)'. Re-record the alert-bar snapshot.",

@@ -1,5 +1,5 @@
-import type { BlockedAtRiskItem } from "../../lib/mappers/dashboard";
-import { statusLabel } from "../../lib/status-presentation";
+import type { BlockedAtRiskItem } from "../../../lib/mappers/dashboard";
+import { statusLabel } from "../../../lib/status-presentation";
 
 type Severity = BlockedAtRiskItem["severity"];
 

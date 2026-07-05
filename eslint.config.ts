@@ -183,7 +183,7 @@ const apiCrossModuleZones = apiModules.map((moduleName) => ({
 // One zone per web slice: files under features/S may import from features/ only
 // within their own slice. Slices append here as they are extracted (slice 2+).
 const webFeaturesDir = "apps/web/src/features";
-const webSlices = ["landing", "analytics"] as const;
+const webSlices = ["landing", "analytics", "dashboard"] as const;
 const webCrossSliceZones = webSlices.map((sliceName) => ({
   target: `${webFeaturesDir}/${sliceName}`,
   from: webFeaturesDir,
@@ -863,7 +863,7 @@ export default defineConfig([
   // unit and say why"). These are the documented end-state exempts, NOT TODO.
   {
     files: [
-      "apps/web/src/components/dashboard/mock-data.ts", // fixture data, no logic
+      "apps/web/src/shared/lib/dashboard-mock-data.ts", // fixture data, no logic
       "apps/web/src/components/lead/mock-data.ts", // fixture data, no logic
       "apps/web/src/components/admin/mock-data.ts", // fixture data, no logic
       "packages/ui/src/components/ui/sidebar.tsx", // shadcn/ui generated primitive bundle
@@ -885,7 +885,7 @@ export default defineConfig([
       "apps/web/src/components/lead/lead-form-sync-bridge.tsx", // one context bridge wiring sync to two consumers
       "apps/web/src/components/slides/status-slide-deck.tsx", // one navigable slide-deck widget
       "apps/web/src/shared/ui/navigation/nav-bar.tsx", // one role-aware nav widget; MobileNav/coming-soon have no external consumers
-      "apps/web/src/components/dashboard/dashboard-page.tsx", // one head-dashboard page; private load-issue helper only
+      "apps/web/src/features/dashboard/ui/dashboard-page.tsx", // one head-dashboard page; private load-issue helper only
       "apps/web/src/components/weekly-report/product-accordion.tsx", // one accordion for one ProductReport
       "apps/web/src/components/weekly-report/weekly-report-page.tsx", // one page: data load + 3 mutations + render
       "apps/web/src/lib/mappers/lead-form.ts", // one LeadForm mapping pipeline; types-out alone stays >300, further split fragments it
@@ -928,7 +928,7 @@ export default defineConfig([
   // strings) — same footing as the test carve-out above.
   {
     files: [
-      "apps/web/src/components/dashboard/mock-data.ts",
+      "apps/web/src/shared/lib/dashboard-mock-data.ts",
       "apps/web/src/components/lead/mock-data.ts",
       "apps/web/src/components/admin/mock-data.ts",
       "packages/ui/src/components/ui/sidebar.tsx",
@@ -949,7 +949,7 @@ export default defineConfig([
     files: [
       "apps/web/src/app/(app)/reports/page.tsx", // role-aware history renderer; 5 roles × distinct query/filter/label paths
       "apps/web/src/components/admin/admin-panel.tsx", // 9-tab dispatch + skeleton/loaded gating; only ~3 pts extractable
-      "apps/web/src/components/dashboard/dashboard-page.tsx", // orchestrator: 2 queries + shared state + 4 render branches, hook-coupled
+      "apps/web/src/features/dashboard/ui/dashboard-page.tsx", // orchestrator: 2 queries + shared state + 4 render branches, hook-coupled
       "apps/web/src/components/lead/decision-edit-dialog.tsx", // one create/edit dialog; per-field validation + conditional fields
       "apps/web/src/components/lead/item-edit-dialog.tsx", // one form dialog; interdependent state (text/status/product/priority/stages)
       "apps/web/src/components/lead/lead-form.tsx", // monolith; aggregateTrafficLight + state-setter pipelines; multi-PR architectural work
@@ -979,7 +979,7 @@ export default defineConfig([
       "apps/api/src/modules/admin/period-admin.service.ts", // manual period edit + per-field audit diff (only layer with before+after)
       "apps/api/src/modules/analytics/analytics.prisma-repository.ts", // 3-level traversal (reports→sections→statuses) → period×project matrix
       "apps/web/src/app/(app)/reports/page.tsx", // see cyclomatic block (same role-aware renderer)
-      "apps/web/src/components/dashboard/remind-lead-button.tsx", // one ConfirmState machine → label/message/icon/disabled
+      "apps/web/src/features/dashboard/ui/remind-lead-button.tsx", // one ConfirmState machine → label/message/icon/disabled
       "apps/web/src/components/lead/lead-form.tsx", // see cyclomatic block (same monolith)
       "apps/web/src/components/lead/lead-history-sidebar.tsx", // see cyclomatic block
       "apps/web/src/components/lead/risks-section.tsx", // see cyclomatic block

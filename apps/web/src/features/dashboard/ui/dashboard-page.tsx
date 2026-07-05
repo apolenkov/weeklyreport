@@ -5,17 +5,17 @@ import { AlertTriangle, RefreshCw, RotateCcw } from "lucide-react";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { ConfirmationDialog } from "../../../components/ui/confirmation-dialog";
+import { toSectionReviewRows } from "../../../components/weekly-report/review/section-review-rows";
+import { SectionReviewStrip } from "../../../components/weekly-report/review/section-review-strip";
 import {
   formatClientErrorMessage,
   logClientError,
-} from "../../lib/client-error-reporting";
-import { mapDashboardData } from "../../lib/mappers";
-import { SessionContext } from "../../lib/session-provider";
-import { useTRPC } from "../../lib/trpc-context";
-import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
-import { ConfirmationDialog } from "../ui/confirmation-dialog";
-import { toSectionReviewRows } from "../weekly-report/review/section-review-rows";
-import { SectionReviewStrip } from "../weekly-report/review/section-review-strip";
+} from "../../../lib/client-error-reporting";
+import { mapDashboardData } from "../../../lib/mappers";
+import { SessionContext } from "../../../lib/session-provider";
+import { useTRPC } from "../../../lib/trpc-context";
+import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
 import { ActivityLivePanel } from "./activity-live-panel";
 import { AlertBar } from "./alert-bar";
 import { BlockedAtRiskTable } from "./blocked-at-risk-table";

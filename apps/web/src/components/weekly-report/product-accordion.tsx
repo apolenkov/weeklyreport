@@ -11,7 +11,7 @@ import type {
   ReportDecision,
   ReportItem,
   ReportRisk,
-} from "../dashboard/mock-data";
+} from "../../shared/lib/dashboard-mock-data";
 import { RotatingChevron } from "../report-shell/rotating-chevron";
 import {
   type RecordCommentAnchor,
