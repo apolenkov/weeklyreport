@@ -19,20 +19,10 @@ import {
 const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
 
-/**
- * Dev-only authentication surface, split out of `auth.routes.ts` so the
- * production file carries nothing dev-specific. Every route here is mounted by
- * `mountDevLoginRoutes`, which `mountAuthRoutes` calls ONLY when
- * `AUTH_DEV_MODE === "true"` (and the boot fence forbids that under
- * `NODE_ENV=production`). Nothing in this module is reachable in production.
- *
- * dev-login is a UAT role switcher among SEEDED users — not a user factory:
- * it re-syncs an existing row so a `?role=` switch updates the live user.
- * Brand-new-user provisioning is the SAML path's job (auth.routes.ts).
- */
+// Dev-only auth surface, mounted only under AUTH_DEV_MODE (the boot fence
+// forbids that flag under NODE_ENV=production) — nothing here reaches
+// production. Its resync-vs-create-only role is fixed in auth-module-layering.
 
-// Typed exhaustively on `Role`, so adding a role to the enum fails to compile
-// here until it is given an entry — no silently-missing role.
 const DEV_LOGIN_EMAIL_BY_ROLE: Record<Role, string> = {
   head: "head@customreport.local",
   lead: "lead1@customreport.local",
@@ -40,8 +30,8 @@ const DEV_LOGIN_EMAIL_BY_ROLE: Record<Role, string> = {
   viewer: "viewer@customreport.local",
 };
 
-// UX-16: role-aware default landing. Must stay in sync with DEFAULT_FOR_ROLE
-// in apps/web/src/app/page.tsx.
+// Role-aware default landing. Must stay in sync with DEFAULT_FOR_ROLE in
+// apps/web/src/app/login-page-roles.ts.
 const DEV_LOGIN_REDIRECT_BY_ROLE: Record<Role, string> = {
   head: "/head/dashboard",
   lead: "/lead/report",
@@ -53,7 +43,6 @@ const DEV_LOGIN_DEFAULT_ROLE: Role = "head";
 // The dev SAML-login shortcut signs in as admin (no real Keycloak locally).
 const DEV_SAML_LOGIN_ROLE: Role = "admin";
 
-/** The dependencies the dev-login handlers close over. */
 export interface DevLoginDeps {
   prisma: PrismaClient;
   authController: ReturnType<typeof createAuthController>;
@@ -88,10 +77,8 @@ export function safeRedirectPath(
   }
 }
 
-// Build the absolute dev-login redirect URL, validating and constructing with
-// the same parse (see safeRedirectPath) so a value cannot pass validation yet
-// resolve to a foreign host at the sink. Falls back to fallbackPath when the
-// candidate is rejected.
+// Validate and build from the SAME parse (see safeRedirectPath) so a value
+// cannot pass the origin gate yet resolve off-origin at the sink.
 export function resolveDevLoginRedirectUrl(
   candidate: string | undefined,
   fallbackPath: string,
@@ -101,10 +88,8 @@ export function resolveDevLoginRedirectUrl(
   return new URL(safePath, frontendUrl).toString();
 }
 
-/**
- * Dev-mode shortcut for GET /auth/saml/login: redirect to /auth/dev-login as
- * admin (no real Keycloak running locally), preserving a safe relative `next`.
- */
+// Dev shortcut for GET /auth/saml/login (no real Keycloak locally): sign in as
+// admin via /auth/dev-login, preserving only a safe relative `next`.
 function handleDevSamlLoginRedirect(
   req: Request,
   res: Response,
@@ -124,14 +109,9 @@ function handleDevSamlLoginRedirect(
   res.redirect(`/auth/dev-login?${params.toString()}`);
 }
 
-/**
- * Resolve the dev-login identity for a validated role to an EXISTING user.
- *
- * The email is the role's canonical seed email (or an explicit `?email=` of
- * another seeded user), and the name/samlId come straight from the DB row. An
- * unknown email returns `null` — the caller fails clearly instead of
- * fabricating a phantom user from hardcoded role defaults.
- */
+// Resolves to an EXISTING seeded user (role's canonical email, or an explicit
+// `?email=`); an unknown email returns null so the caller fails clearly rather
+// than fabricating a phantom user from hardcoded defaults.
 export async function resolveDevLoginIdentity(
   prisma: PrismaClient,
   role: Role,
@@ -153,8 +133,6 @@ function createDevLoginHandler(deps: DevLoginDeps): RequestHandler {
     try {
       const requestedRole =
         readQueryParam(req.query.role) ?? DEV_LOGIN_DEFAULT_ROLE;
-      // Validate through the canonical role enum (single source of truth) — no
-      // hand-maintained role list, and `.data` is typed `Role` (no cast).
       const parsedRole = roleSchema.safeParse(requestedRole);
       if (!parsedRole.success) {
         loginAttemptsTotal.inc({ method: "dev-login", outcome: "fail" });
@@ -178,9 +156,8 @@ function createDevLoginHandler(deps: DevLoginDeps): RequestHandler {
         return;
       }
 
-      // dev-login is the UAT role switcher: re-sync an existing row so a
-      // ?role= switch updates the live user (unlike SAML, which is create-only
-      // and never overwrites an existing record).
+      // resyncExisting: dev-login updates the live row on a ?role= switch,
+      // unlike create-only SAML (auth-module-layering).
       const session = await buildUserSession(
         deps.prisma,
         identity,
@@ -207,12 +184,9 @@ function createDevLoginHandler(deps: DevLoginDeps): RequestHandler {
   };
 }
 
-/**
- * Mount the dev-only auth routes. Called by `mountAuthRoutes` exclusively under
- * `AUTH_DEV_MODE`. The GET /auth/saml/login dev shortcut is registered here
- * INSTEAD of the production passport handler (Express picks the first match),
- * so the two are mutually exclusive by construction.
- */
+// The GET /auth/saml/login dev shortcut is registered here INSTEAD of the
+// production passport handler (Express first-match), so the two are mutually
+// exclusive by construction.
 export function mountDevLoginRoutes(
   expressApp: Express,
   deps: DevLoginDeps,

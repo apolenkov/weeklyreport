@@ -28,12 +28,9 @@ export async function isUserAccessBarred(
     where: { id: userId },
     select: { isActive: true },
   });
-  // Bar a missing row (a hard-deleted account no longer keeps a live session)
-  // and an explicitly deactivated one — but a row that EXISTS is active unless
-  // it says otherwise. We compare the nullable `userRow?.isActive` to `false`
-  // (not `!isActive`) so only an explicit deactivation bars; an existing row is
-  // never barred merely because the flag is unselected. The two checks stay
-  // separate so neither over-bars the other.
+  // Compare `isActive` to `false` (not `!isActive`) so only an explicit
+  // deactivation bars; a missing row bars separately (hard-deleted account).
+  // Keeping the checks apart stops either from over-barring the other.
   const missing = userRow == null;
   const deactivated = userRow?.isActive === false;
   return missing || deactivated;

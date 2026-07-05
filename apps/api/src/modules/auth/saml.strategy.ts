@@ -30,10 +30,9 @@ const validateAlways = "always" as NonNullable<
 export function createSamlStrategyOptions(
   env: NodeJS.ProcessEnv,
 ): SamlStrategyOptions {
-  // AUTH-01 (Phase 29-04): narrow `devMode` to non-production. Production
-  // ignores `AUTH_DEV_MODE` entirely; the boot-time fence in
-  // `lib/dev-auth-fence.ts` refuses to start at all if either dev-auth flag
-  // is set under `NODE_ENV=production`.
+  // Narrow `devMode` to non-production: production ignores `AUTH_DEV_MODE`, and
+  // the boot fence in `lib/dev-auth-fence.ts` refuses to start if either
+  // dev-auth flag is set under `NODE_ENV=production`.
   const devMode = env.NODE_ENV !== "production" && env.AUTH_DEV_MODE === "true";
 
   if (devMode) {
@@ -73,16 +72,9 @@ export function createSamlStrategyOptions(
   };
 }
 
-/**
- * AUTH-02 (Phase 29-02): the verify callback parses the raw SAML profile
- * through the shared Zod schema (`SamlProfileSchema`) so a missing or
- * unrecognised `role` attribute fails closed (A-2 mitigation).
- *
- * `options.devMode === true` retains the legacy permissive fallback for
- * local development and the Phase 26 / 28 integration suite — Phase 29-04
- * retires DEV_SESSION entirely once the mock IdP container is wired
- * (CC-2 staged removal).
- */
+// Parse the raw SAML profile through the shared Zod schema so a missing or
+// unrecognised attribute fails closed. devMode retains a permissive fallback
+// for local development where no real IdP populates the assertion.
 export function verifySamlProfile(
   options: SamlStrategyOptions,
   rawProfile: Record<string, unknown> | null | undefined,
@@ -102,8 +94,8 @@ export function verifySamlProfile(
     const email = firstString(rawProfile.email) ?? "unknown@example.com";
     const displayName =
       firstString(rawProfile.displayName, rawProfile.cn) ?? "Unknown User";
-    // The assertion no longer carries a role (structured-user-name change):
-    // every SAML-provisioned user defaults to viewer; admins assign roles.
+    // The assertion carries no role: every SAML-provisioned user defaults to
+    // viewer; admins assign real roles afterwards.
     return {
       ok: true,
       profile: { samlId, email, displayName, role: "viewer" },
@@ -123,8 +115,7 @@ export function verifySamlProfile(
     };
   }
 
-  // Role is not carried by the assertion (structured-user-name change):
-  // default every SAML-provisioned user to viewer; admins assign roles.
+  // Same as the devMode branch: no role in the assertion, so default to viewer.
   return {
     ok: true,
     profile: {

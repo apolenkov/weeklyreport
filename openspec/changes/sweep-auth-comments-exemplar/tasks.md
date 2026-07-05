@@ -47,40 +47,40 @@
 
 ## 3. Sweep (single comment-only commit, zero behavior change)
 
-- [ ] 3.0 IF DL5 verdict = (b): `openspec sync-specs` the `safe-redirect-validation`
+- [x] 3.0 IF DL5 verdict = (b): `openspec sync-specs` the `safe-redirect-validation`
       delta from `fix-open-redirect-next-param` into `openspec/specs/`, attributed to
       that change, as a SEPARATE spec commit that precedes 3.2. IF (a): skip; the
       open-redirect comment stays verbatim and 3.2 leaves `dev-login.routes.ts:67-74`
-      untouched.
-- [ ] 3.1 `auth.controller.ts`: apply AC1 (compress + delete coordination note),
+      untouched. → verdict (a) keep-and-defer (owner-decision, spec unsynced); 3.0 skipped.
+- [x] 3.1 `auth.controller.ts`: apply AC1 (compress + delete coordination note),
       AC2 (delete narration), keep AC3; leave AC4 to the magic-literal ratchet.
-- [ ] 3.2 `dev-login.routes.ts`: apply DL1, DL2, DL3, DL7, DL8, DL9, DL10; keep DL6;
-      keep+correct DL4; leave DL11 to the size rule; DL5 per the 2.4 verdict.
-- [ ] 3.3 `auth.routes.ts`: DELETE AR1, AR2, AR4; strip archaeology prefixes on
+- [x] 3.2 `dev-login.routes.ts`: apply DL1, DL2, DL3, DL7, DL8, DL9, DL10; keep DL6;
+      keep+correct DL4; leave DL11 to the size rule; DL5 kept verbatim (2.4 = (a)).
+- [x] 3.3 `auth.routes.ts`: DELETE AR1, AR2, AR4; strip archaeology prefixes on
       AR3, AR5, AR6 (keep the WHY); keep AR7-AR11.
-- [ ] 3.4 `user-session.ts`: strip the change-name prefix on US1 and the ticket/phase
-      prefix on US12; compress US2, US3, US5, US9; keep US4, US6-US8, US10, US11.
-- [ ] 3.5 `saml.strategy.ts`: strip ticket/phase archaeology on SS3, SS4, SS6 (keep
+- [x] 3.4 `user-session.ts`: strip the change-name prefix on US1 and the ticket/phase
+      prefix on US12; compress US2, US3, US5; keep US4, US6-US11 (US9 already in budget).
+- [x] 3.5 `saml.strategy.ts`: strip ticket/phase archaeology on SS3, SS4, SS6 (keep
       the WHY); dedup SS7 with SS6; keep SS1, SS2, SS5.
-- [ ] 3.6 `session-deactivation.ts`: RETAIN SD1 verbatim (relocation-first, tracked);
+- [x] 3.6 `session-deactivation.ts`: RETAIN SD1 verbatim (relocation-first, tracked);
       compress SD2 ≤3 lines.
-- [ ] 3.7 `roles.guard.ts`: no action (confirmed clean).
-- [ ] 3.8 Confirm the diff is comment-only: `git diff` shows no change to any
-      identifier, string literal, control flow, export, or signature.
+- [x] 3.7 `roles.guard.ts`: no action (confirmed clean).
+- [x] 3.8 Confirm the diff is comment-only: transpile HEAD vs working with
+      `removeComments` → emitted code identical for all 7 files (mechanical proof).
 - [ ] 3.9 Re-check `git status` on the folder immediately before commit (guard
-      against a parallel session re-dirtying it).
+      against a parallel session re-dirtying it). → orchestrator's pre-commit step.
 
 ## 4. Gates & acceptance
 
 - [ ] 4.1 `pnpm typecheck && pnpm lint && pnpm test` green (a comment-only diff
-      must not move any gate).
-- [ ] 4.2 **Security-review pass** on the comment diff (mandated by
+      must not move any gate). → combined gate runs after the parallel batch.
+- [x] 4.2 **Security-review pass** on the comment diff (mandated by
       `lint-max-strictness-standard` — "Comment sweeps over security-sensitive paths
       pass security review"): confirm no compressed comment dropped an unspecced
       protective rationale across ALL security-sensitive files — HS256/cookie
       (`auth.controller.ts`), audit/logout (`auth.routes.ts`), SAML fail-closed
       (`saml.strategy.ts`), session revocation (`session-deactivation.ts`), redirect
       (`dev-login.routes.ts`). A finding blocks merge until relocation completes.
-- [ ] 4.3 Comment-policy review pass confirms the folder is exemplar-clean under the
-      retained-comment carve-out (DL5 open-redirect if verdict = (a); SD1 always).
-- [ ] 4.4 `openspec validate sweep-auth-comments-exemplar --strict` passes.
+- [x] 4.3 Comment-policy review pass confirms the folder is exemplar-clean under the
+      retained-comment carve-out (DL5 open-redirect kept, verdict = (a); SD1 always).
+- [x] 4.4 `openspec validate sweep-auth-comments-exemplar --strict` passes.
