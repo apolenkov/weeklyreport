@@ -15,7 +15,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ComingSoonBadge } from "@customreport/ui/components/coming-soon-badge";
+import {
+  ComingSoonControl,
+  ComingSoonIconButton,
+} from "@customreport/ui/components/coming-soon-control";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { History } from "lucide-react";
 import { describe, expect, it } from "vitest";
 
 import { PdfExportComingSoonControl } from "./lead/pdf-export-coming-soon";
@@ -34,6 +39,122 @@ describe("ComingSoonBadge — single canonical style", () => {
     const badge = screen.getByText("Coming Soon");
     expect(badge).toHaveAttribute("data-state", "coming-soon");
     expect(badge).toHaveClass(CANONICAL_BG, CANONICAL_FG);
+  });
+});
+
+describe("shared coming-soon primitive owns the inert button chrome", () => {
+  // Parity-by-construction: the five button controls compose this primitive, so
+  // asserting the chrome here replaces the retired per-file source scans.
+  const INERT_CLASSES = [
+    "cursor-default",
+    "border-[var(--color-border)]",
+    "bg-[var(--color-surface-empty)]",
+    "text-[var(--color-muted-foreground)]",
+  ];
+
+  it("icon-only toolbar shape carries the inert chrome + square geometry", () => {
+    render(
+      <ComingSoonIconButton
+        icon={History}
+        shape="toolbar"
+        ariaLabel="Version history is coming soon"
+        testId="primitive-toolbar"
+      />,
+    );
+    const button = screen.getByTestId("primitive-toolbar");
+    expect(button).toHaveClass(...INERT_CLASSES);
+    expect(button).toHaveClass(
+      "h-[var(--toolbar-control-h)]",
+      "w-[var(--toolbar-control-h)]",
+      "shrink-0",
+      "rounded-full",
+    );
+    expect(button).toHaveAttribute("aria-disabled", "true");
+    expect(button).not.toHaveAttribute("disabled");
+    expect(button).not.toHaveAttribute("title");
+    // Fixed-size lucide icon slot, aria-hidden so it adds no accessible name.
+    expect(button.querySelector("svg")).not.toBeNull();
+  });
+
+  it("icon-only nav shape carries the inert chrome + pill geometry", () => {
+    render(
+      <ComingSoonIconButton
+        icon={History}
+        shape="nav"
+        ariaLabel="Language selection is coming soon"
+        testId="primitive-nav"
+      />,
+    );
+    const button = screen.getByTestId("primitive-nav");
+    expect(button).toHaveClass(...INERT_CLASSES);
+    expect(button).toHaveClass(
+      "h-8",
+      "w-10",
+      "px-0",
+      "gap-1.5",
+      "rounded-[var(--radius-pill)]",
+    );
+  });
+
+  it("labelled variant renders its label and default touch-target geometry", () => {
+    render(
+      <ComingSoonControl
+        icon={History}
+        label="Agent review"
+        ariaLabel="Agent review is coming soon"
+        testId="primitive-labelled"
+      />,
+    );
+    const button = screen.getByTestId("primitive-labelled");
+    expect(button).toHaveClass(...INERT_CLASSES);
+    expect(button).toHaveClass(
+      "min-h-[var(--touch-target-min)]",
+      "px-4",
+      "py-1.5",
+      "text-sm",
+      "rounded-[var(--radius-pill)]",
+    );
+    expect(button).toHaveTextContent("Agent review");
+  });
+
+  it("labelled compact variant swaps to the toolbar-height geometry", () => {
+    render(
+      <ComingSoonControl
+        icon={History}
+        label="Agent review"
+        ariaLabel="Agent review is coming soon"
+        testId="primitive-compact"
+        compact
+      />,
+    );
+    const button = screen.getByTestId("primitive-compact");
+    expect(button).toHaveClass(
+      "h-[var(--toolbar-control-h)]",
+      "px-2.5",
+      "text-xs",
+    );
+    expect(button).not.toHaveClass("min-h-[var(--touch-target-min)]");
+  });
+
+  it("opens the amber ComingSoonBadge through the Radix portal on focus", async () => {
+    render(
+      <ComingSoonIconButton
+        icon={History}
+        shape="toolbar"
+        ariaLabel="Version history is coming soon"
+        testId="primitive-portal"
+      />,
+    );
+    expect(document.querySelector('[data-state="coming-soon"]')).toBeNull();
+
+    fireEvent.focus(screen.getByTestId("primitive-portal"));
+
+    await screen.findByRole("tooltip");
+    const content = document.querySelector('[data-slot="tooltip-content"]');
+    const badge = content?.querySelector('[data-state="coming-soon"]');
+    expect(badge).not.toBeNull();
+    expect(badge?.classList.contains(CANONICAL_BG)).toBe(true);
+    expect(badge?.classList.contains(CANONICAL_FG)).toBe(true);
   });
 });
 
@@ -96,17 +217,12 @@ describe("Coming-Soon controls render the amber badge through the Radix portal",
 });
 
 describe("every tooltip control migrated to the shared Radix wrapper (source scan)", () => {
-  // The render test reaches only the 3 exported controls; the other 3 (nav
-  // theme/language, admin holidays) are internal functions needing providers/
-  // tab context, so a filesystem scan guards them.
+  // Holidays-only scope: the five button controls now compose the shared
+  // ComingSoonIconButton/ComingSoonControl primitive (verified by its unit test
+  // below), so they can no longer drift. Holidays keeps its own inert-span
+  // composition (nested-button HTML validity), so it stays a source scan.
   const componentsRoot = path.dirname(fileURLToPath(import.meta.url));
-  const TOOLTIP_CONTROL_FILES = [
-    "report-shell/agent-review-coming-soon.tsx",
-    "lead/version-coming-soon.tsx",
-    "lead/pdf-export-coming-soon.tsx",
-    "navigation/nav-bar.tsx",
-    "admin/settings-tab.tsx",
-  ];
+  const TOOLTIP_CONTROL_FILES = ["admin/settings-tab.tsx"];
 
   it("each control uses ComingSoonTooltip and dropped the retired CSS anchor", () => {
     for (const rel of TOOLTIP_CONTROL_FILES) {
@@ -137,14 +253,10 @@ describe("every inert Coming Soon control — no stacked native title", () => {
   // `title="Coming Soon"` on the same control stacked a SECOND browser-native
   // tooltip over the badge — the double-tooltip glitch. No control may carry a
   // native title; this source scan guards every one of them.
+  // Holidays-only scope: the five button controls inherit the no-native-title
+  // guarantee from the shared primitive (verified by its unit test below).
   const componentsRoot = path.dirname(fileURLToPath(import.meta.url));
-  const INERT_CONTROL_FILES = [
-    "report-shell/agent-review-coming-soon.tsx",
-    "lead/version-coming-soon.tsx",
-    "lead/pdf-export-coming-soon.tsx",
-    "navigation/nav-bar.tsx",
-    "admin/settings-tab.tsx",
-  ];
+  const INERT_CONTROL_FILES = ["admin/settings-tab.tsx"];
 
   it("no inert control source carries title=Coming Soon", () => {
     const violations = INERT_CONTROL_FILES.filter((rel) =>

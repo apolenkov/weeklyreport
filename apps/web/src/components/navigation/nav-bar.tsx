@@ -5,6 +5,7 @@ import {
   initials as deriveInitials,
   type Role,
 } from "@customreport/shared";
+import { ComingSoonIconButton } from "@customreport/ui/components/coming-soon-control";
 import {
   Sheet,
   SheetContent,
@@ -12,7 +13,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@customreport/ui/components/ui/sheet";
-import { ComingSoonTooltip } from "@customreport/ui/components/ui/tooltip";
 import {
   BarChart3,
   Clock,
@@ -177,17 +177,12 @@ function LanguageComingSoonControl() {
   // TODO(i18n-future): replace this inert control with a real locale switch
   // when the dedicated i18n phase introduces dictionaries and routing.
   return (
-    <ComingSoonTooltip>
-      <button
-        type="button"
-        aria-disabled="true"
-        aria-label="Language selection is coming soon"
-        data-testid="language-coming-soon"
-        className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)]"
-      >
-        <Globe2 size={14} strokeWidth={2} aria-hidden="true" />
-      </button>
-    </ComingSoonTooltip>
+    <ComingSoonIconButton
+      icon={Globe2}
+      shape="nav"
+      ariaLabel="Language selection is coming soon"
+      testId="language-coming-soon"
+    />
   );
 }
 
@@ -196,17 +191,12 @@ function ThemeComingSoonControl() {
   // after .planning/todos/pending/2026-05-14-future-ui-telemetry-coming-soon.md
   // is promoted into a new milestone.
   return (
-    <ComingSoonTooltip>
-      <button
-        type="button"
-        aria-disabled="true"
-        aria-label="Theme selection is coming soon"
-        data-testid="theme-coming-soon"
-        className="inline-flex h-8 w-10 cursor-default items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-empty)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)]"
-      >
-        <Moon size={14} strokeWidth={2} aria-hidden="true" />
-      </button>
-    </ComingSoonTooltip>
+    <ComingSoonIconButton
+      icon={Moon}
+      shape="nav"
+      ariaLabel="Theme selection is coming soon"
+      testId="theme-coming-soon"
+    />
   );
 }
 
