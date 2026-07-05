@@ -20,7 +20,7 @@ import {
   customreportSectionsSubmittedTotal,
   customreportSectionSubmissionLatencySeconds,
 } from "../../infrastructure/metrics/metrics.registry.js";
-import { createAppLogger } from "../../lib/logger.js";
+import { createServiceLogger } from "../../lib/logger-service.js";
 import { findPublishedRecordViolation } from "./published-record-guard.js";
 import { mergeSection } from "./report-section-merge.js";
 
@@ -99,17 +99,7 @@ export type GetGraceSettings = () => Promise<{
 }>;
 
 export class ReportSectionsService {
-  private readonly logger = createAppLogger({
-    service: "ReportSectionsService",
-    logDir: process.env.LOG_DIR,
-    minLevel:
-      (process.env.LOG_LEVEL as
-        | "debug"
-        | "info"
-        | "warn"
-        | "error"
-        | undefined) ?? "info",
-  });
+  private readonly logger = createServiceLogger("ReportSectionsService");
 
   constructor(
     private readonly repository: ReportSectionsRepository,

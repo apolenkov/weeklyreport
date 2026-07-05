@@ -4,7 +4,7 @@ import {
   type UserSession,
 } from "@customreport/shared";
 
-import { createAppLogger } from "../../lib/logger.js";
+import { createServiceLogger } from "../../lib/logger-service.js";
 
 export class ReviewAccessError extends Error {
   constructor(message: string) {
@@ -68,17 +68,7 @@ function sortRows(rows: SubmissionDashboardRow[]): SubmissionDashboardRow[] {
 }
 
 export class ReviewService {
-  private readonly logger = createAppLogger({
-    service: "ReviewService",
-    logDir: process.env.LOG_DIR,
-    minLevel:
-      (process.env.LOG_LEVEL as
-        | "debug"
-        | "info"
-        | "warn"
-        | "error"
-        | undefined) ?? "info",
-  });
+  private readonly logger = createServiceLogger("ReviewService");
 
   constructor(private readonly repository: ReviewRepository) {}
 
