@@ -135,8 +135,33 @@ the #1–#80 space by the same rule. Two are behavior bugs, not cleanliness (#83
 | 90  | Strip change-ref/Phase/ticket comment archaeology + relocate over-budget JSDoc (api-wide)     | medium | 139   | L      | sweep-auth-comments-exemplar       |
 
 Wave-3a also reinforces existing rows: #37 (auth `isUserUniqueViolation` /
-`isSectionUniqueViolation` are acknowledged near-verbatim P2002 copies) and the
+`isSectionUniqueViolation` are acknowledged near-verbatim P2002 copies — and wave-3a
+says WIDEN the guard to P2003/P2025, which admin/lead-form also match inline) and the
 per-folder period/report-sections sweeps (#10, #42).
+
+### Wave 3a second-pass complement — #91–#95 (2026-07-05, night)
+
+Independent clustering pass over the same 7 reports (provenance: this session's
+fable agent, cross-checked against #81–#90); only the clusters NOT already
+covered above:
+
+| #   | Work-item                                                                                                                                                       | Sev    | Files | Effort | Home                          |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----- | ------ | ----------------------------- |
+| 91  | createDomainError(name) factory / DomainError base — 29 `class XError extends Error` copies                                                                     | medium | 13    | M      | api-shared-guards             |
+| 92  | Admin module split+dedup: period-admin.service (559 ln), getSnapshot (121 ln), upsertByIds generic (4 upsert\*), toAdminProject / rowToReminderPolicy mappers   | high   | 5     | L      | sweep: apps/api/modules/admin |
+| 93  | Make AdminRepository optional methods required; drop the repeated requireRepoMethod runtime guards                                                              | medium | 4     | S      | sweep: apps/api/modules/admin |
+| 94  | SAML: COMMON*SAML_OPTIONS shared spread (6 fields duplicated across dev/prod branches) + named consts for the KEYCLOAK_SAML*\* dev fallbacks                    | medium | 1     | S      | sweep: apps/api/auth          |
+| 95  | Shared traffic-light aggregation helper — aggregateTrafficLight == aggregateStageTraffic + duplicated TRAFFIC_LIGHT_RED_SEVERITY; kills the `let severity` pair | high   | 2     | S      | api-shared-guards             |
+
+Micro-folds (no own row): buildCarryOverDedupeKey(src,tgt) → fold into #82;
+carry-over `{ timeout: 15_000 }` + cron literals (`"5 0 * * *"`) + api-side
+`"ru"` localeCompare sites → #36; PDF_EXPORT_SYNTHETIC_USER_ID is a non-hex
+fake UUID — verify no downstream `z.uuid()` parses it (latent reject bug) →
+check inside #84's router work; trpc.session-hydration.ts:35-122 mutates the
+`session` PARAMETER in place (trpc.context defensively spreads DEV_SESSION to
+compensate) — the worst surviving #12 case, fix with #84's router split.
+SessionRevocationService placement (modules/admin → modules/auth) →
+restructure-directory-architecture relocation slice.
 
 ## Cross-cutting wins (do first)
 
@@ -220,7 +245,7 @@ require-period-scheduler-deps (#20 ✅), shared-coming-soon-control (#51 ✅) �
 
 Gated on a clean `git status` + the **tighten-comment-policy** and **tighten-code-quality-ratchet** standards landing first (they set the comment rules and the size/immutability ratchets these sweeps must satisfy). One folder per sweep; stage only that folder's paths.
 
-- **apps/api/modules/period**: #10 (monolithic runOnce/factory, push-accumulators, positional params), #42 (transition types, scheduler skeleton, DI single-home, EnsuredPeriod builder). Run together — overlapping files.
+- **apps/api/modules/period**: #10 and #42, RECONCILED against the 2026-07-05 re-audit (module rewritten since the pilot). Still valid: break period-creator runOnce (~60 ln) + period-factory ensureCurrentPeriod (~86 ln); applyTransition positional params; buildTransition 64-ln switch split; NEW dup — snapshot-lifecycle.ts:48-59 vs period-transition.ts:90-103 hand-write the legacy-tuple↔periodState map in opposite directions (single-home the inverse). DROPPED: push-accumulators (re-verified as accepted local builders), EnsuredPeriod builder (no target in the rewrite), auditLogger DI single-home (mooted by require-period-scheduler-deps ✅), scheduler-skeleton dedup (diminished to low). Run together — overlapping files.
 - **apps/web/report-shell-and-nav**: #7 (split shells + nav-bar; shared toolbar-state/period-list hooks; AccordionHeader; segmented-toggle options).
 - **apps/web/components/dashboard**: #13 (useDashboardLoadWatchdog hook; row/section subcomponents; renderBody takes the query object).
 - **apps/web/components/slides**: #25 (split section-slide-utils into model/pagination/unified/product-scoped/foreign-content; reduce over sections; useLeadSlidesDeck; drop max-lines disables).
