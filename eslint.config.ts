@@ -183,7 +183,7 @@ const apiCrossModuleZones = apiModules.map((moduleName) => ({
 // One zone per web slice: files under features/S may import from features/ only
 // within their own slice. Slices append here as they are extracted (slice 2+).
 const webFeaturesDir = "apps/web/src/features";
-const webSlices = ["landing"] as const;
+const webSlices = ["landing", "analytics"] as const;
 const webCrossSliceZones = webSlices.map((sliceName) => ({
   target: `${webFeaturesDir}/${sliceName}`,
   from: webFeaturesDir,
