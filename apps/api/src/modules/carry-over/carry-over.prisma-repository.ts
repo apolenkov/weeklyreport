@@ -6,9 +6,9 @@ import {
   type ReportSectionReadModel,
 } from "@customreport/shared";
 import { Injectable } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 import {
   mapPrismaToReportSection,
   type PrismaReportSectionWithRelations,
@@ -222,10 +222,10 @@ export class CarryOverPrismaRepository implements CarryOverRepository {
       // execution (idempotent success) rather than surfacing a raw 500; only if
       // it cannot be re-read does this become a distinct conflict. No `failed`
       // status is ever written.
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
+      // Unscoped: any P2002 here is the dedupe race (the swallow-any behavior
+      // this path has always had). The shared guard duck-types `.code`, so the
+      // `instanceof` narrowing is no longer needed.
+      if (isUniqueViolation(error)) {
         const recorded = await this.readExecutionByDedupeKey(
           execution.dedupeKey,
         );

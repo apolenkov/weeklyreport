@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
+import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 import {
   cleanDatabase,
   createTestPrisma,
@@ -68,6 +69,20 @@ describe("Report_one_open_per_boundary partial unique index (integration)", () =
     // it — so every admin/reopen/scheduler translation path actually fires
     // instead of silently 500ing if Prisma surfaces `meta.target` unexpectedly.
     expect(isOpenBoundaryConflict(known)).toBe(true);
+
+    // The shared guard must fire on the SAME live error, scoped to the boundary
+    // index — this is the real-DB proof the pg-adapter matcher works.
+    expect(
+      isUniqueViolation(known, {
+        index: "Report_one_open_per_boundary",
+        columns: ["periodStart", "periodEnd"],
+      }),
+    ).toBe(true);
+
+    // Load-bearing: under the pg driver adapter `meta.target` is UNSET on a real
+    // P2002, so a guard reading `meta.target` alone would miss this race. Pin it
+    // — a regression to `meta.target`-only matching fails here.
+    expect(known.meta?.target).toBeUndefined();
   });
 
   it("allows a closed (published) period to share a boundary with a new open one", async () => {

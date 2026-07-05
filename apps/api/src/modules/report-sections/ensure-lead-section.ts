@@ -1,5 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 
+import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
+
 /**
  * refactor-auth-exemplary-layering: provision a lead's `ReportSection` (and its
  * seeded `ProjectStatus` rows) for a given period. Moved out of the auth module
@@ -19,19 +21,10 @@ const DEFAULT_PROJECT_STATUS = "green" as const;
 const SECTION_UNIQUE_INDEX = "ReportSection_reportId_authorId";
 
 function isSectionUniqueViolation(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  if ((error as { code?: unknown }).code !== "P2002") return false;
-  const target = (error as { meta?: { target?: unknown } }).meta?.target;
-  const targetText =
-    typeof target === "string"
-      ? target
-      : Array.isArray(target)
-        ? target.join(",")
-        : "";
-  return (
-    targetText.includes(SECTION_UNIQUE_INDEX) ||
-    (targetText.includes("reportId") && targetText.includes("authorId"))
-  );
+  return isUniqueViolation(error, {
+    index: SECTION_UNIQUE_INDEX,
+    columns: ["reportId", "authorId"],
+  });
 }
 
 async function seedProjectStatuses(
