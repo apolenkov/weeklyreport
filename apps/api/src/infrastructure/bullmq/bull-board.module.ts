@@ -2,9 +2,7 @@ import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
 import type { UserSession } from "@customreport/shared";
-import type { INestApplication, OnModuleDestroy } from "@nestjs/common";
-import { Injectable } from "@nestjs/common";
-import { Queue } from "bullmq";
+import type { INestApplication } from "@nestjs/common";
 import type {
   Express,
   NextFunction,
@@ -17,36 +15,11 @@ import { resolveSessionCookieName } from "../../lib/session-cookie";
 import { SessionRevocationService } from "../../modules/admin/session-revocation.service";
 import { createAuthController } from "../../modules/auth/auth.controller";
 import { isUserAccessBarred } from "../../modules/auth/session-deactivation";
-import type { EnvConfig } from "../config/env.schema";
 import { PrismaService } from "../prisma/prisma.service";
-import { getBullMQOptions } from "./bullmq-options";
+import { QueueRegistry } from "./queue-registry.js";
 
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_FORBIDDEN = 403;
-
-/**
- * Owns the two `Queue` instances Bull Board reads from. Created directly
- * (bypassing @nestjs/bullmq DI) to avoid the DiscoveryService bug in
- * @nestjs/bullmq 11 + NestJS 11, but registered as a Nest provider so its
- * `onModuleDestroy` closes both handles on shutdown instead of leaking their
- * Redis connections.
- */
-@Injectable()
-export class BullBoardQueues implements OnModuleDestroy {
-  // Created in the constructor (not as field initializers) because an ES2022
-  // class-field initializer cannot read the injected `env` constructor param.
-  readonly pdfQueue: Queue;
-  readonly emailQueue: Queue;
-
-  constructor(env: EnvConfig) {
-    this.pdfQueue = new Queue("pdf-export", getBullMQOptions(env));
-    this.emailQueue = new Queue("email-reminder", getBullMQOptions(env));
-  }
-
-  async onModuleDestroy(): Promise<void> {
-    await Promise.all([this.pdfQueue.close(), this.emailQueue.close()]);
-  }
-}
 
 interface RequireHeadDeps {
   verifySessionToken: (token: string) => UserSession;
@@ -112,12 +85,14 @@ export function createRequireHeadGuard(deps: RequireHeadDeps): RequestHandler {
 /**
  * Mount Bull Board monitoring UI at /admin/queues.
  *
- * Creates Queue instances directly (bypasses @nestjs/bullmq DI) to avoid
- * the DiscoveryService bug in @nestjs/bullmq 11 + NestJS 11.
- * Protected by JWT auth — only an active (non-revoked) head can access.
+ * Reads the shared queue handles from QueueRegistry (single owner, closed on
+ * shutdown). Protected by JWT auth — only an active (non-revoked) head can
+ * access.
  */
 export function mountBullBoard(_app: INestApplication): void {
-  const { pdfQueue, emailQueue } = _app.get(BullBoardQueues);
+  const registry = _app.get(QueueRegistry);
+  const pdfQueue = registry.get("pdf-export");
+  const emailQueue = registry.get("email-reminder");
 
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath("/admin/queues");

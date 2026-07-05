@@ -3,21 +3,21 @@ import { Module } from "@nestjs/common";
 
 import { ConfigModule, ENV_CONFIG } from "../config/config.module.js";
 import type { EnvConfig } from "../config/env.schema";
-import { BullBoardQueues } from "./bull-board.module.js";
 import { getBullMQOptions } from "./bullmq-options";
 import { DLQMonitorService } from "./dlq-monitor.service.js";
+import { QueueRegistry } from "./queue-registry.js";
 
 /**
  * BullMQ infrastructure module.
  *
- * Registers Redis connection (with maxRetriesPerRequest: null for worker
- * compatibility) and two queues: pdf-export and email-reminder.
+ * Registers the Redis connection (maxRetriesPerRequest: null for worker
+ * compatibility) and the pdf-export, email-reminder, and telegram-outbound
+ * queues. Redis noeviction policy is enforced in Docker Compose, not code.
  *
- * Redis noeviction policy is enforced in Docker Compose config, not in code.
- *
- * 37-02: DLQMonitorService runs alongside the queues, increments
- * cr_dlq_failed_total on terminal job failure and emits an ERROR log when
- * the absolute failed-job count exceeds DLQ_ALERT_THRESHOLD (default 5).
+ * QueueRegistry owns one shared `Queue` handle per name (injected by the DLQ
+ * monitor, Bull Board, and the admin bootstrap queues); DLQMonitorService
+ * counts terminal failures and alerts when the failed-job count exceeds
+ * DLQ_ALERT_THRESHOLD.
  */
 @Module({
   imports: [
@@ -29,25 +29,23 @@ import { DLQMonitorService } from "./dlq-monitor.service.js";
     }),
     BullModule.registerQueue({ name: "pdf-export" }),
     BullModule.registerQueue({ name: "email-reminder" }),
-    // UFB-056 / Phase 55-3: Telegram outbound queue. Seeds-only — no
-    // producer enqueues to it yet beyond the admin test-send tRPC
-    // procedure. Default job options keep payload visible in dev (a
-    // BullMQ `attempts: 3` is set per-job at enqueue time, not on the
-    // queue itself, so the test surface can stay synchronous).
+    // telegram-outbound is seeds-only until Phase 55; `attempts: 3` is set
+    // per-job at enqueue time, not on the queue.
     BullModule.registerQueue({ name: "telegram-outbound" }),
   ],
   providers: [
     {
-      provide: DLQMonitorService,
-      useFactory: (env: EnvConfig) => new DLQMonitorService(env),
+      provide: QueueRegistry,
+      useFactory: (env: EnvConfig) => new QueueRegistry(env),
       inject: [ENV_CONFIG],
     },
     {
-      provide: BullBoardQueues,
-      useFactory: (env: EnvConfig) => new BullBoardQueues(env),
-      inject: [ENV_CONFIG],
+      provide: DLQMonitorService,
+      useFactory: (registry: QueueRegistry, env: EnvConfig) =>
+        new DLQMonitorService(registry, env),
+      inject: [QueueRegistry, ENV_CONFIG],
     },
   ],
-  exports: [BullModule, BullBoardQueues],
+  exports: [BullModule, QueueRegistry],
 })
 export class BullMQModule {}

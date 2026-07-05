@@ -1,28 +1,21 @@
 import type { OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 import { Injectable, Logger } from "@nestjs/common";
-import { Queue, QueueEvents } from "bullmq";
+import { type Queue, QueueEvents } from "bullmq";
 
 import type { EnvConfig } from "../config/env.schema";
 import { dlqFailedTotal } from "../metrics/metrics.registry.js";
 import { getBullMQOptions } from "./bullmq-options";
-
-const QUEUE_NAMES = [
-  "email-reminder",
-  "pdf-export",
-  // TODO(Phase 55): telegram-outbound is seeds-only until the bot activates.
-  // Monitoring it here now means its terminal failures count into
-  // cr_dlq_failed_total{queue="telegram-outbound"} the moment the feature
-  // turns on — the DLQ monitor is the counter's single owner, so no telegram
-  // worker handler must increment it (that would double-count).
-  "telegram-outbound",
-] as const;
-type QueueName = (typeof QUEUE_NAMES)[number];
+import {
+  QUEUE_NAMES,
+  type QueueName,
+  QueueRegistry,
+} from "./queue-registry.js";
 
 const DEFAULT_THRESHOLD = 5;
 const POLL_INTERVAL_MS = 60_000;
 
 /**
- * 37-02 — DLQ monitor. Two responsibilities:
+ * DLQ monitor. Two responsibilities:
  *
  *   1. Increment cr_dlq_failed_total{queue} every time a BullMQ job exhausts
  *      its retry budget (attemptsMade >= attempts). This is the
@@ -36,23 +29,26 @@ const POLL_INTERVAL_MS = 60_000;
  * QueueEvents is the right BullMQ surface for cross-process listening: it
  * subscribes to Redis pub/sub channels rather than embedding inside a
  * Worker, so failures observed by ANY worker for the queue increment our
- * counter exactly once.
+ * counter exactly once. The `Queue` handles come from QueueRegistry (shared,
+ * closed there); only the QueueEvents subscribers are owned here.
  */
 @Injectable()
 export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DLQMonitorService.name);
   private readonly queueEvents = new Map<QueueName, QueueEvents>();
-  private readonly queues = new Map<QueueName, Queue>();
   private pollTimer: NodeJS.Timeout | null = null;
 
-  constructor(private readonly env: EnvConfig) {}
+  constructor(
+    private readonly registry: QueueRegistry,
+    private readonly env: EnvConfig,
+  ) {}
 
   onModuleInit(): void {
     const bullOptions = getBullMQOptions(this.env);
 
     for (const name of QUEUE_NAMES) {
       const events = new QueueEvents(name, bullOptions);
-      const queue = new Queue(name, bullOptions);
+      const queue = this.registry.get(name);
 
       events.on("failed", ({ jobId, failedReason }) => {
         // The QueueEvents emitter expects a void-returning listener and ignores
@@ -62,7 +58,6 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
       });
 
       this.queueEvents.set(name, events);
-      this.queues.set(name, queue);
     }
 
     // Absent → the named default; a present value is already a validated
@@ -86,9 +81,6 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
     }
     for (const events of this.queueEvents.values()) {
       await events.close();
-    }
-    for (const queue of this.queues.values()) {
-      await queue.close();
     }
   }
 
@@ -124,9 +116,9 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async checkThresholds(threshold: number): Promise<void> {
-    for (const [name, queue] of this.queues) {
+    for (const name of QUEUE_NAMES) {
       try {
-        const count = await queue.getFailedCount();
+        const count = await this.registry.get(name).getFailedCount();
         if (count > threshold) {
           this.logger.error(
             `[dlq-alert] queue=${name} failedCount=${count} threshold=${threshold} — investigate via /admin/queues`,
