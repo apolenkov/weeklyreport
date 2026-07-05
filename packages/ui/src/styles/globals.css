@@ -80,6 +80,11 @@
   /* ---- Border & ring ---- */
   --color-border: #ccd4c8;
   --color-ring: rgba(0, 98, 65, 0.3);
+  /* Subtle hairline for status card/table dividers — names the dominant
+     rgba(0,0,0,0.08) border so the status-presentation layer reads one token
+     instead of scattered literals. Theme-blind, matching the literal it
+     replaces. The 0.07/0.10 hairline variants are intentionally NOT folded here. */
+  --color-border-subtle: rgba(0, 0, 0, 0.08);
 
   /* ---- Card & popover — elevated surfaces ---- */
   --color-card: #fffefb;

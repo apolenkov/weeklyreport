@@ -1983,7 +1983,7 @@ export function LeadForm({
                 titleColor="var(--color-destructive)"
                 badge={`${risks.length}`}
                 badgeStyle={{
-                  background: "#fee2e2",
+                  background: "var(--color-status-blocked-bg)",
                   color: "var(--color-destructive)",
                 }}
                 subtitle="Risks and blockers that need attention, with impact, mitigation, and affected stages."

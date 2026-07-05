@@ -1,0 +1,41 @@
+# Tasks — unify-web-status-color-tokens
+
+## 1. Token layer (`packages/ui/src/styles/globals.css`)
+
+- [x] 1.1 Add `--color-border-subtle` at `rgba(0,0,0,0.08)` to the token block, with a comment on its role; adopt it ONLY on in-scope surfaces that already draw an exact `rgba(0,0,0,0.08)` hairline (zero-delta swap). Defer the `rgba(0,0,0,0.07)` and `rgba(0,0,0,0.10)` hairline variants — do not fold them onto the token here
+  - Adopted on the 3 in-scope surfaces drawing an exact `border-[rgba(0,0,0,0.08)]` hairline: `lead-history-list` (TrafficDot), `lead-history-sidebar` (SidebarCard), `blocked-at-risk-product-card` (card frame). Token defined theme-blind (no dark variant) to keep the swap zero-delta. `shadow-[…0.08…]` occurrences are box-shadows, not borders — left untouched.
+- [x] 1.2 Confirm the status token set is complete for the in-scope surfaces (at-risk bg/fg, blocked bg + `--color-destructive`, on-track fill/fg, `--color-status-dot-at-risk`); add a named token only if one is genuinely missing
+  - Set complete; no new token added. DRIFT/DECISION: the at-risk severity **border** (`#d4a017`, in `risk-edit-dialog` + the yellow traffic dots) maps to the existing `--color-status-dot-at-risk` (exact `#d4a017`), NOT to `--color-status-at-risk-border` (`#a07c30` — a different shade that would be an UNSIGNED pixel shift). The dot token's stated purpose (globals.css) is to name the `#d4a017` gold accent, so reuse is consistent, not abuse.
+
+## 2. Fallback removal
+
+- [x] 2.1 `report-shell/save-now-button.tsx`: point the checkmark stroke at `--color-success-foreground` (#006241) and drop the `#16a34a` fallback (semantic fix — not a bare strip to `var(--color-success)`; `--color-primary` is the rejected alternative, see design D4)
+- [x] 2.2 Grep `apps/web/src` for `var(--color-…, #hex)` on status colors; confirm zero remain — verified zero `var(--color-…, #hex)` fallbacks remain.
+
+## 3. Report-workflow status surfaces → named tokens
+
+- [x] 3.1 `lead/risk-card.tsx`: severity pill bg/fg → at-risk/blocked tokens (also the F4 needsStage `text-[#8a6d1b]` warning → `--color-status-at-risk-fg`). DRIFT: the card FRAME tints (`#fdf8f8`/`#fffcf5`, `rgba(212,160,23,0.15)`, `rgba(200,32,20,0.15)`) are NOT the severity pill's fill/fg — out of the spec scenario's scope, deferred like the 0.07/0.10 hairlines.
+- [x] 3.2 `lead/risk-edit-dialog.tsx`: severity option bg/border/text → tokens (at-risk bg→`at-risk-bg`, text→`at-risk-fg`, border→`dot-at-risk` per §1.2 decision)
+- [x] 3.3 `weekly-report/portfolio-overview-table.tsx`: at-risk/blocked cell colors → tokens (STATUS_BG, STATUS_TEXT, STATUS_ICON_TEXT; the border derives from STATUS_TEXT so it follows)
+- [x] 3.4 `lead/lead-form.tsx`: blocked accent (#fee2e2) → `--color-status-blocked-bg`
+- [x] 3.5 `lead/lead-history-list.tsx` + `lead/lead-history-sidebar.tsx`: severity chip + dot → tokens (Draft chip + `warn` stat fg → `at-risk-fg`; yellow traffic dot → `dot-at-risk`; the exact-0.08 borders → `border-subtle` per §1.1)
+- [x] 3.6 `report-shell/meta-row.tsx` + `lead/item-card-stage-tags.tsx`: stage-hint amber → at-risk tokens (comments rewritten). OPEN for sign-off: whether the stage-hint should instead read a dedicated warning token vs. at-risk — flagged per design Risks; current mapping matches pixels.
+- [x] 3.7 `weekly-report/product-accordion.tsx`: "At Risk" pill fg (#8a6d1b) → `--color-status-at-risk-fg` (added `statusAtRiskFg` to the file's CSS const)
+- [x] 3.8 `dashboard/blocked-at-risk-product-card.tsx`: SEVERITY_BADGE at-risk fg (#8a6d1b) → `--color-status-at-risk-fg` (consumer of #3 — must be consolidated before #3 lands, per design D1)
+
+## 4. Foreground consolidation (palette gate)
+
+- [x] 4.1 Consolidate the near-duplicate at-risk foreground `#8a6d1b` on the in-scope report-workflow surfaces (incl. `product-accordion`, `blocked-at-risk-product-card`) onto `--color-status-at-risk-fg`. No blocked-foreground consolidation: the report surfaces already resolve `--color-destructive`; the `#92400e` / `#991b1b` literals are admin-domain (out of scope, guarded by §5). Final grep: the ONLY remaining `#8a6d1b` in web src are the two OUT-domain callsites (`publish-lock-button:137`, `decision-card:97`).
+- [ ] 4.2 Cite the recorded user sign-off authorizing the palette direction (per `status-color-semantics`) — PENDING: user-owned; cannot be self-satisfied by the implementer. Blocks archive, not implementation.
+- [ ] 4.3 Capture same-viewport before/after screenshots of every consolidated surface for user acceptance before archive — PENDING: user-owned acceptance step.
+
+## 5. Out-of-scope guard
+
+- [x] 5.1 Verify no edit touched the OUT domains: `users-tab` role badge, `periods-tab-*` / `periods-delete-confirm-dialog` reds, `publish-lock-button` pending-leads warning (#8a6d1b), `decision-card` "Due" deadline chip (#8a6d1b), `print-report-template` inline hex — confirmed untouched (git diff scoped to the 11 status files + globals.css + 2 snapshots).
+
+## 6. Verify
+
+- [x] 6.1 `pnpm --filter @customreport/web typecheck` green
+- [x] 6.2 `pnpm lint` green (no new eslint exemption for any touched file) — FOCUSED: `eslint --max-warnings 0` clean on all 11 changed web files + `stylelint` clean on `globals.css`; no new exempt entry added. Full repo-wide `pnpm lint` deferred to the combined post-batch gate (parallel ComingSoon agent shares the tree).
+- [ ] 6.3 Live-verify the status surfaces from source (docker image is stale); confirm no hue regression — DEFERRED to user acceptance (folds into 4.3 before/after screenshots). Zero-delta established by value: every non-consolidated swap maps a literal to a token whose defined value is byte-identical, and the tokens are theme-blind (no dark override), so light AND dark are unchanged; only the signed `#8a6d1b`→`#78350f` at-risk-fg consolidation shifts pixels.
+- [x] 6.4 `openspec validate "unify-web-status-color-tokens" --strict` still valid

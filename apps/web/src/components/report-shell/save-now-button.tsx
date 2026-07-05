@@ -174,7 +174,7 @@ function CheckIcon() {
       height="14"
       viewBox="0 0 12 12"
       fill="none"
-      stroke="var(--color-success,#16a34a)"
+      stroke="var(--color-success-foreground)"
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"

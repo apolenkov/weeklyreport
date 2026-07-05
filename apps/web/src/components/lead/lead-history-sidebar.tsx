@@ -117,7 +117,7 @@ export function LeadHistorySidebar({
               {totalGreen}
             </span>
             <span className="inline-flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-[#d4a017]" />{" "}
+              <span className="h-2 w-2 rounded-full bg-[var(--color-status-dot-at-risk)]" />{" "}
               {totalYellow}
             </span>
             <span className="inline-flex items-center gap-1">
@@ -181,7 +181,7 @@ function SidebarCard({
   readonly children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.08)] bg-[var(--color-card)] p-4 shadow-[0_0_0.5px_0_rgba(0,0,0,0.06),0_4px_10px_-8px_rgba(0,0,0,0.18)]">
+    <div className="rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] p-4 shadow-[0_0_0.5px_0_rgba(0,0,0,0.06),0_4px_10px_-8px_rgba(0,0,0,0.18)]">
       <div className="mb-3 flex items-center gap-2">
         <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
           {title}
@@ -209,7 +209,7 @@ function Stat({
     accent === "primary"
       ? "var(--color-starbucks-accent)"
       : accent === "warn"
-        ? "#8a6d1b"
+        ? "var(--color-status-at-risk-fg)"
         : accent === "muted"
           ? "var(--color-muted-foreground)"
           : "var(--color-foreground)";

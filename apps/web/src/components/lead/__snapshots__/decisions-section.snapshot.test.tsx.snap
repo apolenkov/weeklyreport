@@ -45,7 +45,7 @@ exports[`DecisionsSection meta-row — pre-extract snapshot > renders the 'No st
     title="No stage set"
   >
     <span
-      class="inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold bg-[#fef3c7] text-[#8a6d1b]"
+      class="inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold bg-[var(--color-status-at-risk-bg)] text-[var(--color-status-at-risk-fg)]"
     >
       No stage set
     </span>
