@@ -156,6 +156,23 @@
   /* ---- Decisions accent (user sign-off 2026-06-10: decisions read blue,
      not green; steel-blue tone matched to the chip-border weight) ---- */
   --color-decisions-accent: #4a7494;
+
+  /* ---- By-product slide canvas (redesign-lead-slide-by-product-grid):
+     centered, auto-height; below the min width the deck scrolls horizontally
+     instead of squeezing the shared 4-column grid. ---- */
+  --slide-canvas-max-w: 1088px;
+  --slide-canvas-min-w: 900px;
+  --slide-canvas-min-h: 680px;
+
+  /* ---- Slide author-identity cycle (badge/legend backgrounds; the section
+     author always takes slot 0; initials disambiguate past 6 authors). All
+     slots reference existing palette tokens — no new hues. ---- */
+  --slide-author-0: var(--color-foreground);
+  --slide-author-1: var(--color-decisions-accent);
+  --slide-author-2: var(--color-status-dot-at-risk);
+  --slide-author-3: var(--color-primary);
+  --slide-author-4: var(--color-muted-foreground);
+  --slide-author-5: var(--color-destructive);
 }
 
 /* ---- Compact-tier control height (responsive-compact-layout) ----

@@ -1,0 +1,163 @@
+import { STAGE_ICONS } from "../lead/stage-chip-config";
+import type { GridAuthor, GridBadge, GridRow } from "./slide-grid-model";
+
+/** Background for an author's identity slot (cycled tokens, owner = slot 0). */
+export function authorSlotBackground(author: GridAuthor): string {
+  return `var(--slide-author-${String(author.colorIndex)})`;
+}
+
+function AuthorBadge({
+  author,
+  show,
+}: {
+  readonly author: GridAuthor | undefined;
+  readonly show: boolean;
+}) {
+  // Invisible spacer keeps text alignment on 2nd+ rows of a same-author series.
+  if (!show || author === undefined) {
+    return <span aria-hidden="true" className="w-[22px] shrink-0" />;
+  }
+  return (
+    <span
+      title={author.name}
+      data-testid="slide-author-badge"
+      className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-white"
+      style={{ background: authorSlotBackground(author) }}
+    >
+      {author.initials}
+    </span>
+  );
+}
+
+const BADGE_CONFIG: Record<
+  Exclude<GridBadge, null>,
+  { readonly label: string; readonly className: string }
+> = {
+  completed: {
+    label: "COMPLETED",
+    className:
+      "bg-[var(--color-success)] text-[var(--color-primary)] border border-transparent",
+  },
+  "in-progress": {
+    label: "IN PROGRESS",
+    className:
+      "bg-[var(--color-surface-muted)] text-[var(--color-muted-foreground)] border border-transparent",
+  },
+  planned: {
+    label: "PLANNED",
+    className:
+      "bg-[var(--color-surface-muted)] text-[var(--color-muted-foreground)] border border-dashed border-[var(--color-border)]",
+  },
+  "at-risk": {
+    label: "AT RISK",
+    className:
+      "bg-[var(--color-status-dot-at-risk)] text-white border border-transparent",
+  },
+};
+
+function StatusBadge({ badge }: { readonly badge: GridBadge }) {
+  if (badge === null) return null;
+  const config = BADGE_CONFIG[badge];
+  return (
+    <span
+      className={`inline-flex shrink-0 self-start rounded px-1 py-0.5 text-[8px] font-semibold uppercase tracking-wide ${config.className}`}
+    >
+      {config.label}
+    </span>
+  );
+}
+
+function StageWatermarks({
+  stageNames,
+}: {
+  readonly stageNames: readonly string[];
+}) {
+  if (stageNames.length === 0) return null;
+  return (
+    <span
+      aria-hidden="true"
+      className="absolute bottom-0.5 right-0.5 flex gap-0.5 opacity-[0.28]"
+    >
+      {stageNames.map((stageName) => {
+        const Icon = STAGE_ICONS[stageName];
+        if (!Icon) return null;
+        return (
+          <span key={stageName} title={stageName}>
+            <Icon className="h-[11px] w-[11px]" />
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+function ItemRow({
+  row,
+  author,
+  showStages,
+}: {
+  readonly row: GridRow;
+  readonly author: GridAuthor | undefined;
+  readonly showStages: boolean;
+}) {
+  // Blocked-risk emphasis: highlighted row, no badge; the negative left margin
+  // keeps the highlight flush while the right edge stays on the shared
+  // vertical so stage watermarks align across rows.
+  const highlight = row.blockerHighlight
+    ? "-ml-2 rounded-md bg-[var(--color-chip-blocked-bg)] py-1 pl-2 pr-2"
+    : "";
+  return (
+    <li
+      className={`relative flex gap-1.5 text-[13px] leading-[1.3] ${highlight}`}
+    >
+      <AuthorBadge author={author} show={row.showAuthorBadge} />
+      {row.priorityRank != null && (
+        <span className="inline-flex h-[15px] shrink-0 items-center rounded bg-[var(--color-status-dot-at-risk)] px-1 text-[8px] font-semibold text-white">
+          P{row.priorityRank}
+        </span>
+      )}
+      <span className="min-w-0 flex-1 whitespace-normal break-words pr-1">
+        {row.text}
+      </span>
+      <StatusBadge badge={row.badge} />
+      {showStages && <StageWatermarks stageNames={row.stageNames} />}
+    </li>
+  );
+}
+
+/** One grid cell: the sorted, author-collapsed rows of a single column, or the
+ * muted em-dash placeholder when the cell is empty. */
+export function SlideCell({
+  rows,
+  authorsById,
+  showStages,
+  label,
+}: {
+  readonly rows: readonly GridRow[];
+  readonly authorsById: ReadonlyMap<string, GridAuthor>;
+  readonly showStages: boolean;
+  readonly label: string;
+}) {
+  if (rows.length === 0) {
+    return (
+      <span
+        aria-label={`No ${label}`}
+        className="text-[13px] text-[var(--color-muted-foreground)]"
+      >
+        —
+      </span>
+    );
+  }
+  return (
+    <ul aria-label={label} className="min-w-0 space-y-1">
+      {rows.map((row) => (
+        <ItemRow
+          key={row.id}
+          row={row}
+          author={authorsById.get(row.authorId)}
+          showStages={showStages}
+        />
+      ))}
+    </ul>
+  );
+}

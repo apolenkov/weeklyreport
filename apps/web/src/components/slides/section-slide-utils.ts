@@ -9,9 +9,9 @@ import {
   stageStatusToTraffic,
   trafficToStageStatus,
 } from "../../lib/mappers/traffic-light";
-import { sortByPriorityRank } from "../../lib/priority-sort";
 import { deriveEffectiveStageStatus } from "../../lib/stage-status";
 import { riskCoversStage } from "../lead/stage-tags";
+import { buildSlideGridModel, type SlideGridModel } from "./slide-grid-model";
 
 const PERCENT_MAX = 100;
 const DEFAULT_PRODUCTS_PER_PAGE = 9;
@@ -104,6 +104,13 @@ export interface SectionSlideModel {
    * to every page by pagination (section-global, like the KPI counts).
    */
   readonly activities?: readonly SlideActivityPill[];
+  /**
+   * The by-product grid view model (redesign-lead-slide-by-product-grid).
+   * Optional so the activity-feed slide model (no section) omits it; the
+   * article falls back to a records-less header when missing. Pagination
+   * slices `grid.products` in step with `productSlides`.
+   */
+  readonly grid?: SlideGridModel;
 }
 
 function nonEmpty(text: string | null | undefined): boolean {
@@ -184,6 +191,13 @@ function describeCount(
 
 export function buildSectionSlideModel(
   section: ReportSectionReadModel,
+  options: {
+    /** Everyone-mode co-owner rows, folded into the grid WITH author identity. */
+    readonly foreign?: readonly CrossAuthorContentRow[];
+    /** Anonymized co-owner health fold (own deck only) — applied to product
+     * statuses BEFORE the grid derives its cards, so both render paths agree. */
+    readonly foreignHealth?: Parameters<typeof applyForeignProductHealth>[1];
+  } = {},
 ): SectionSlideModel {
   const projectRows: ReportSectionReadModel["projects"] = [];
   const seenProjectIds = new Set<string>();
@@ -387,6 +401,11 @@ export function buildSectionSlideModel(
     });
   }
 
+  const foldedProductSlides =
+    options.foreignHealth === undefined || options.foreignHealth.length === 0
+      ? productSlides
+      : applyForeignProductHealth(productSlides, options.foreignHealth);
+
   const blockedProjectCount = section.projects.filter(
     (project) => project.trafficLight === "red",
   ).length;
@@ -513,7 +532,7 @@ export function buildSectionSlideModel(
     status: section.status,
     submittedAt: section.submittedAt,
     products,
-    productSlides,
+    productSlides: foldedProductSlides,
     productCount: products.length,
     currentCount: currentItems.length,
     nextCount: nextItems.length,
@@ -537,6 +556,13 @@ export function buildSectionSlideModel(
       status: activity.derivedStatus ?? activity.status,
       linkedProducts: activity.linkedProducts.map((p) => p.productName),
     })),
+    grid: buildSlideGridModel({
+      section,
+      productStatuses: new Map(
+        foldedProductSlides.map((p) => [p.id, p.status]),
+      ),
+      ...(options.foreign === undefined ? {} : { foreign: options.foreign }),
+    }),
   };
 }
 
@@ -679,9 +705,24 @@ export function paginateSectionSlides(
   for (let i = 0; i < productOnly.length; i += productsPerPage) {
     const chunk = productOnly.slice(i, i + productsPerPage);
     const isLast = i + productsPerPage >= productOnly.length;
+    const pageSlides =
+      isLast && crossProduct ? [...chunk, crossProduct] : chunk;
+    // The grid mirrors the page's product set so both render paths agree on
+    // which products this page shows.
+    const pageIds = new Set(pageSlides.map((p) => p.id));
     pages.push({
       ...model,
-      productSlides: isLast && crossProduct ? [...chunk, crossProduct] : chunk,
+      productSlides: pageSlides,
+      ...(model.grid === undefined
+        ? {}
+        : {
+            grid: {
+              ...model.grid,
+              products: model.grid.products.filter((card) =>
+                pageIds.has(card.id),
+              ),
+            },
+          }),
       pageIndex: pages.length,
       pageTotal: pageCount,
     });
@@ -689,131 +730,8 @@ export function paginateSectionSlides(
   return pages;
 }
 
-// ---- Unified by-section slide model (W12) ----
-
 /** Display label of the cross-product pseudo-entry; never part of the legend. */
 export const CROSS_PRODUCT_LABEL = "Shared context";
-
-export interface UnifiedSectionRow {
-  readonly text: string;
-  readonly productName: string;
-  /** T-G3: present when the source item carries a priorityRank. */
-  readonly priorityRank?: number;
-}
-
-export interface UnifiedSlideModel {
-  readonly current: readonly UnifiedSectionRow[];
-  readonly next: readonly UnifiedSectionRow[];
-  readonly risks: readonly UnifiedSectionRow[];
-  readonly priorities: readonly UnifiedSectionRow[];
-  readonly decisions: readonly UnifiedSectionRow[];
-  readonly emptyProducts: {
-    readonly current: readonly string[];
-    readonly next: readonly string[];
-    readonly risks: readonly string[];
-    readonly priorities: readonly string[];
-    readonly decisions: readonly string[];
-  };
-}
-
-export function buildUnifiedSlideModel(
-  slide: SectionSlideModel,
-): UnifiedSlideModel {
-  const products = [...slide.productSlides].sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
-
-  const current: UnifiedSectionRow[] = [];
-  const next: UnifiedSectionRow[] = [];
-  const risks: UnifiedSectionRow[] = [];
-  const priorities: UnifiedSectionRow[] = [];
-  const decisions: UnifiedSectionRow[] = [];
-  const emptyProducts = {
-    current: [] as string[],
-    next: [] as string[],
-    risks: [] as string[],
-    priorities: [] as string[],
-    decisions: [] as string[],
-  };
-
-  for (const product of products) {
-    const name =
-      product.id === CROSS_PRODUCT_ID ? CROSS_PRODUCT_LABEL : product.name;
-    // itemRanks is sparse (items without a rank have no key), so a present-key
-    // lookup is genuinely `number | undefined` at runtime. Annotate honestly —
-    // noUncheckedIndexedAccess is off, so the bare Record would lie non-null and
-    // the `rank != null` guard below would read as redundant.
-    const ranks: Record<string, number | undefined> = product.itemRanks ?? {};
-    const withRank = (text: string): UnifiedSectionRow => {
-      const rank = ranks[text];
-      return rank != null
-        ? { text, productName: name, priorityRank: rank }
-        : { text, productName: name };
-    };
-    if (product.currentItems.length > 0) {
-      // Float ranked bullets to the top within this product block (ascending,
-      // unranked last, stable) so a P1 chip never renders below a P3 chip.
-      sortByPriorityRank(product.currentItems.map(withRank)).forEach((row) => {
-        current.push(row);
-      });
-    } else {
-      emptyProducts.current.push(name);
-    }
-    if (product.nextItems.length > 0) {
-      sortByPriorityRank(product.nextItems.map(withRank)).forEach((row) => {
-        next.push(row);
-      });
-    } else {
-      emptyProducts.next.push(name);
-    }
-    if (product.risks.length > 0) {
-      // Risks don't carry priorityRank, but keep the row shape uniform.
-      product.risks.forEach((text) => {
-        risks.push({ text, productName: name });
-      });
-    } else {
-      emptyProducts.risks.push(name);
-    }
-    if (product.priorities.length > 0) {
-      product.priorities.forEach((text) => {
-        priorities.push(withRank(text));
-      });
-    } else {
-      emptyProducts.priorities.push(name);
-    }
-    if (product.decisions.length > 0) {
-      product.decisions.forEach((text) => {
-        decisions.push({ text, productName: name });
-      });
-    } else {
-      emptyProducts.decisions.push(name);
-    }
-  }
-
-  return { current, next, risks, priorities, decisions, emptyProducts };
-}
-
-/**
- * slides-product-autofit (D2): scopes the slide to one product BEFORE
- * buildUnifiedSlideModel, so rows, empty-product placeholders, and badge
- * gating all derive from the same filtered source. `null` returns the slide
- * unchanged. A product id reduces productSlides to that product and always
- * drops the cross-product pseudo-entry — its rows belong to no single
- * product. An unknown id yields empty productSlides, which renders as
- * all-empty quadrants (dashed placeholders), never a crash.
- */
-export function scopeSlideToProduct(
-  slide: SectionSlideModel,
-  productId: string | null,
-): SectionSlideModel {
-  if (productId === null) return slide;
-  return {
-    ...slide,
-    productSlides: slide.productSlides.filter(
-      (product) => product.id !== CROSS_PRODUCT_ID && product.id === productId,
-    ),
-  };
-}
 
 export function sortSlidesForReview(
   slides: readonly SectionSlideModel[],

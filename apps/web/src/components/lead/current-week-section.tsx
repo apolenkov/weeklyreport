@@ -10,7 +10,6 @@ import { ItemCard } from "./item-card";
 import { type BlockerPrefill, ItemEditDialog } from "./item-edit-dialog";
 import type { KanbanItem, Product, RiskEntry } from "./mock-data";
 import { buildItemColumns, isBoardEmpty } from "./next-week-columns";
-import { SlideFitAdvisory } from "./slide-fit-advisory";
 
 const MAX_GRID_COLUMNS = 3;
 
@@ -251,7 +250,6 @@ export function CurrentWeekSection({
                   </button>
                 )}
               </div>
-              <SlideFitAdvisory count={col.items.length} />
               {col.items.length === 0 ? (
                 <div
                   className="flex items-center justify-center rounded-lg border border-dashed border-[rgba(0,0,0,0.12)] bg-[var(--color-surface-hover)] p-3 text-center text-xs text-[var(--color-muted-foreground)]"
