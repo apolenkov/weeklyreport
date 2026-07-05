@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo } from "react";
+import { Fragment } from "react";
 
 import { useEditableListDialog } from "../../hooks/use-editable-list-dialog";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
@@ -8,7 +8,6 @@ import { DecisionCard } from "./decision-card";
 import { DecisionEditDialog } from "./decision-edit-dialog";
 import type { DecisionEntry, Product } from "./mock-data";
 import type { ParentActivityOption } from "./product-picker";
-import { firstOverCapRowIds, SlideFitAdvisory } from "./slide-fit-advisory";
 
 interface DecisionsSectionProps {
   readonly decisions: DecisionEntry[];
@@ -76,15 +75,6 @@ export function DecisionsSection({
     clearPendingDelete,
   } = useEditableListDialog<DecisionEntry>({ readOnly, addSignal });
 
-  // add-slide-capacity-signals: per-product decision counts for the slide-fit
-  // advisory. Group by productId to match the risks path (a stable id, not a
-  // display string); review fix. Unscoped decisions carry productId "" and are
-  // SKIPPED (department-scoped, not a per-product slide group).
-  const decisionOverflow = useMemo(
-    () => firstOverCapRowIds(decisions, (d) => d.productId || undefined),
-    [decisions],
-  );
-
   function handleDelete(id: string) {
     const decision = decisions.find((d) => d.id === id);
     if (!decision) return;
@@ -134,11 +124,6 @@ export function DecisionsSection({
       ) : (
         decisions.map((decision) => (
           <Fragment key={decision.id}>
-            {decisionOverflow.firstIds.has(decision.id) ? (
-              <SlideFitAdvisory
-                count={decisionOverflow.countByKey.get(decision.productId) ?? 0}
-              />
-            ) : null}
             <DecisionCard
               decision={decision}
               readOnly={readOnly}

@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useEditableListDialog } from "../../hooks/use-editable-list-dialog";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import type { Product, RiskEntry } from "./mock-data";
 import { canonicalRiskStageTags, RiskCard } from "./risk-card";
 import { RiskEditDialog } from "./risk-edit-dialog";
-import { firstOverCapRowIds } from "./slide-fit-advisory";
 
 interface RisksSectionProps {
   readonly risks: RiskEntry[];
@@ -59,13 +58,6 @@ export function RisksSection({
   addSignal = 0,
 }: RisksSectionProps) {
   const firstProductId = products?.[0]?.id;
-
-  // add-slide-capacity-signals: per-product risk counts for the slide-fit
-  // advisory (flat list — attach it to the first card of each over-cap group).
-  const riskOverflow = useMemo(
-    () => firstOverCapRowIds(risks, (r) => r.productId),
-    [risks],
-  );
 
   // Shared dialog lifecycle (DialogState union, D1 readOnly-ref add-signal
   // effect, D13 openSeq remount key, pending-delete). requireSeed is false:
@@ -168,11 +160,6 @@ export function RisksSection({
               linkedProductStatus={linkedProductStatus}
               onEdit={handleEdit}
               onDelete={handleDelete}
-              overflowCount={
-                riskOverflow.firstIds.has(risk.id)
-                  ? (riskOverflow.countByKey.get(risk.productId) ?? 0)
-                  : undefined
-              }
             />
           );
         })

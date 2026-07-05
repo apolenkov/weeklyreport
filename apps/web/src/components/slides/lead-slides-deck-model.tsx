@@ -39,20 +39,18 @@ export function buildLeadDeckModel(
   foreignHealth: Parameters<typeof applyForeignProductHealth>[1],
   foreignContentRows: readonly CrossAuthorContentRow[],
 ): SectionSlideModel {
-  const base = buildSectionSlideModel(section);
-  const withHealth =
-    foreignHealth.length === 0
-      ? base
-      : {
-          ...base,
-          productSlides: applyForeignProductHealth(
-            base.productSlides,
-            foreignHealth,
-          ),
-        };
-  if (foreignContentRows.length === 0) return withHealth;
+  // The grid gets the foreign rows WITH author identity and the health fold
+  // pre-applied (both inside buildSectionSlideModel), so its cards, legend and
+  // header stats agree with the deck chrome.
+  const base = buildSectionSlideModel(section, {
+    foreign: foreignContentRows,
+    foreignHealth,
+  });
+  if (foreignContentRows.length === 0) return base;
+  // Legacy string-list merge keeps the deck-chrome aggregates (carousel counts,
+  // tone) consistent with the merged content.
   return mergeForeignSlideContent(
-    withHealth,
+    base,
     crossAuthorContentToSlideForeign(foreignContentRows),
   );
 }
