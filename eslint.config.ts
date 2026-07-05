@@ -720,11 +720,10 @@ export default defineConfig([
       "import-x/no-restricted-paths": ["error", { zones: apiCrossModuleZones }],
     },
   },
-  // Zone 5 — web cross-slice ban. features/ does not exist yet, so there are zero
-  // current slices and zero violations; the rule is wired here and each web slice
-  // (from slice 2 `landing` onward) appends its own zone
-  // `{ target: features/<slice>, from: features, except: [<slice>] }` — a shared
-  // allowlist cannot distinguish self-import from cross-slice, so zones stay per-slice.
+  // Zone 5 — web cross-slice ban. Each extracted web slice appends its own zone
+  // `{ target: features/<slice>, from: features, except: [<slice>] }` to
+  // webCrossSliceZones — a shared allowlist cannot distinguish self-import from
+  // cross-slice, so zones stay per-slice.
   {
     files: ["apps/web/src/features/**/*.{ts,tsx}"],
     ignores: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/__tests__/**"],
