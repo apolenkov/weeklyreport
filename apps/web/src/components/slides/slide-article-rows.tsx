@@ -76,7 +76,7 @@ function StageWatermarks({
   return (
     <span
       aria-hidden="true"
-      className="absolute bottom-0.5 right-0.5 flex gap-0.5 opacity-[0.28]"
+      className="flex shrink-0 items-center gap-0.5 self-start pt-[2px] opacity-[0.28]"
     >
       {stageNames.map((stageName) => {
         const Icon = STAGE_ICONS[stageName];
@@ -101,26 +101,23 @@ function ItemRow({
   readonly showStages: boolean;
 }) {
   // Blocked-risk emphasis: highlighted row, no badge; the negative left margin
-  // keeps the highlight flush while the right edge stays on the shared
-  // vertical so stage watermarks align across rows.
+  // keeps the highlight flush with the column's text edge.
   const highlight = row.blockerHighlight
     ? "-ml-2 rounded-md bg-[var(--color-chip-blocked-bg)] py-1 pl-2 pr-2"
     : "";
   return (
-    <li
-      className={`relative flex gap-1.5 text-[13px] leading-[1.3] ${highlight}`}
-    >
+    <li className={`flex gap-1.5 text-[13px] leading-[1.3] ${highlight}`}>
       <AuthorBadge author={author} show={row.showAuthorBadge} />
       {row.priorityRank != null && (
         <span className="inline-flex h-[15px] shrink-0 items-center rounded bg-[var(--color-status-dot-at-risk)] px-1 text-[8px] font-semibold text-white">
           P{row.priorityRank}
         </span>
       )}
-      <span className="min-w-0 flex-1 whitespace-normal break-words pr-1">
+      {showStages && <StageWatermarks stageNames={row.stageNames} />}
+      <span className="min-w-0 flex-1 whitespace-normal break-words">
         {row.text}
       </span>
       <StatusBadge badge={row.badge} />
-      {showStages && <StageWatermarks stageNames={row.stageNames} />}
     </li>
   );
 }

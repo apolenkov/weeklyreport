@@ -121,8 +121,11 @@ export function SlidePriorityStrip({
             className="flex min-w-[180px] max-w-[320px] flex-1 flex-col gap-1.5 rounded-[10px] border border-[var(--color-chip-at-risk-border)] bg-[var(--color-chip-at-risk-bg)] p-2.5"
           >
             <div className="flex items-start gap-1.5">
+              {/* Class background is the fallback so the rank chip stays
+                  readable when the author is unknown; the author slot color
+                  wins via inline style. */}
               <span
-                className="inline-flex h-[15px] shrink-0 items-center rounded px-1 text-[8px] font-semibold text-white"
+                className="inline-flex h-[15px] shrink-0 items-center rounded bg-[var(--color-status-dot-at-risk)] px-1 text-[8px] font-semibold text-white"
                 style={
                   author === undefined
                     ? undefined
