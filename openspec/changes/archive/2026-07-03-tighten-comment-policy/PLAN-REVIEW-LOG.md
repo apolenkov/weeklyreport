@@ -83,3 +83,11 @@ zero bytes streamed; `codex doctor` fully green (websocket 101, auth OK) =
 ChatGPT-plan quota exhaustion, not a config/plugin issue. Closing: this change
 was adversarially reviewed by the Opus agent only. Re-run Codex manually when
 the ChatGPT window resets if a cross-model pass is still wanted.
+
+## Codex retry 2026-07-05 (wave-3 session) — still quota-dead
+
+One `codex exec -s read-only` spot-check attempt (this change + two wave1
+audit reports) under the tree-killing 540s watchdog: rc=137, zero bytes
+streamed — same signature as the four 2026-07-02 attempts. Attempt #5 total.
+Per the standing rule ("if zero bytes again — stop"), the cross-model pass is
+CLOSED here; re-open only manually after a confirmed ChatGPT quota reset.
