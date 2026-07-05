@@ -63,13 +63,13 @@ vi.mock("../lib/trpc-context", () => ({
 
 // Lightweight stubs for landing-only visuals — keep tests focused on
 // the last-role hint, not the hero rendering.
-vi.mock("../components/landing/pulse-background", () => ({
+vi.mock("../features/landing/ui/pulse-background", () => ({
   PulseBackground: () => null,
 }));
-vi.mock("../components/landing/pulse-mark", () => ({
+vi.mock("../features/landing/ui/pulse-mark", () => ({
   PulseMark: () => null,
 }));
-vi.mock("../components/landing/tagline-cycler", () => ({
+vi.mock("../features/landing/ui/tagline-cycler", () => ({
   TaglineCycler: () => null,
 }));
 

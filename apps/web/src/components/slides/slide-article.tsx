@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 
 import type { SectionSlideModel } from "./section-slide-utils";
 import { SlideActivityPills } from "./slide-activity-pills";
@@ -9,14 +9,7 @@ import {
   SlideGridHeader,
   SlideLegend,
   SlidePriorityStrip,
-  type SlideViewMode,
 } from "./slide-article-header";
-import { type GridProductCard, SHARED_CARD_ID } from "./slide-grid-model";
-import {
-  mapTrafficLightToStatus,
-  type ProductChipEntry,
-  SlideProductChips,
-} from "./slide-product-chips";
 
 /**
  * The one slide article for the whole deck (lead sections AND the head's own
@@ -32,8 +25,6 @@ export function SlideArticle({
   readonly slide: SectionSlideModel;
   readonly heroControls?: ReactNode;
 }) {
-  const [mode, setMode] = useState<SlideViewMode>("summary");
-  const [activeProductId, setActiveProductId] = useState<string | null>(null);
   const grid = slide.grid;
 
   if (grid === undefined) {
@@ -52,19 +43,6 @@ export function SlideArticle({
   }
 
   const authorsById = new Map(grid.authors.map((a) => [a.id, a]));
-  const realCards = grid.products.filter((card) => card.id !== SHARED_CARD_ID);
-  const chips: ProductChipEntry[] = realCards.map((card) => ({
-    productId: card.id,
-    productName: card.name,
-    worstStatus: mapTrafficLightToStatus(card.status),
-  }));
-
-  const firstRealId = realCards.length > 0 ? realCards[0].id : null;
-  const scopedId = activeProductId ?? firstRealId;
-  const visibleCards: readonly GridProductCard[] =
-    mode === "product" && scopedId !== null
-      ? grid.products.filter((card) => card.id === scopedId)
-      : grid.products;
 
   return (
     <article
@@ -74,39 +52,19 @@ export function SlideArticle({
       <SlideGridHeader
         ownerName={slide.ownerName}
         grid={grid}
-        mode={mode}
-        onModeChange={(next) => {
-          setMode(next);
-          if (next === "summary") setActiveProductId(null);
-        }}
         heroControls={heroControls}
       />
       <SlidePriorityStrip grid={grid} authorsById={authorsById} />
-      {mode === "product" && chips.length > 1 && (
-        <SlideProductChips
-          products={chips}
-          activeProductId={scopedId ?? undefined}
-          onSelect={(productId) => {
-            // Re-selecting the active chip unscopes back to Summary.
-            if (productId === scopedId) {
-              setMode("summary");
-              setActiveProductId(null);
-              return;
-            }
-            setActiveProductId(productId);
-          }}
-        />
-      )}
       <SlideColumnHeaderRow />
       <div className="flex flex-1 flex-col gap-3">
-        {visibleCards.map((card) => (
+        {grid.products.map((card) => (
           <SlideProductCard
             key={card.id}
             card={card}
             authorsById={authorsById}
           />
         ))}
-        {visibleCards.length === 0 && (
+        {grid.products.length === 0 && (
           <p className="text-sm text-[var(--color-muted-foreground)]">
             No products on this slide
           </p>

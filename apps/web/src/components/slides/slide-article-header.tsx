@@ -1,10 +1,6 @@
 import type { ReactNode } from "react";
 
 import { type CanonicalStatus } from "../../lib/status-presentation";
-import {
-  segmentClassName,
-  SegmentedToggle,
-} from "../report-shell/segmented-toggle";
 import { authorSlotBackground } from "./slide-article-rows";
 import type {
   GridAuthor,
@@ -12,8 +8,6 @@ import type {
   SlideTrafficStatus,
 } from "./slide-grid-model";
 import { SlideStatusBadge } from "./slide-status-badge";
-
-export type SlideViewMode = "summary" | "product";
 
 /** Worst-status traffic light → canonical status for the header pill (D6). */
 function worstToStatus(traffic: SlideTrafficStatus): CanonicalStatus {
@@ -37,20 +31,16 @@ function metric(count: number, label: string) {
   );
 }
 
-/** Slide header: worst-status pill, owner name, counters, the "N of M products
- * on track" chip (alert tint while N < M), and the Summary/Product toggle. */
+/** Slide header: worst-status pill, owner name, counters, and the "N of M
+ * products on track" chip (alert tint while N < M). */
 export function SlideGridHeader({
   ownerName,
   grid,
-  mode,
-  onModeChange,
   heroControls,
 }: {
   readonly ownerName: string;
   readonly grid: SlideGridModel;
-  readonly mode: SlideViewMode;
-  readonly onModeChange: (mode: SlideViewMode) => void;
-  /** Deck-owned controls (fullscreen, period picker) rendered after the toggle. */
+  /** Deck-owned controls (fullscreen, period picker) rendered at the end. */
   readonly heroControls?: ReactNode;
 }) {
   const short = grid.onTrack.on < grid.onTrack.total;
@@ -82,21 +72,6 @@ export function SlideGridHeader({
           {grid.onTrack.on} of {grid.onTrack.total} products on track
         </span>
       )}
-      <SegmentedToggle ariaLabel="Slide view mode">
-        {(["summary", "product"] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={mode === value}
-            className={segmentClassName(mode === value)}
-            onClick={() => {
-              onModeChange(value);
-            }}
-          >
-            {value === "summary" ? "Summary" : "Product"}
-          </button>
-        ))}
-      </SegmentedToggle>
       {heroControls}
     </div>
   );
@@ -121,17 +96,9 @@ export function SlidePriorityStrip({
             className="flex min-w-[180px] max-w-[320px] flex-1 flex-col gap-1.5 rounded-[10px] border border-[var(--color-chip-at-risk-border)] bg-[var(--color-chip-at-risk-bg)] p-2.5"
           >
             <div className="flex items-start gap-1.5">
-              {/* Class background is the fallback so the rank chip stays
-                  readable when the author is unknown; the author slot color
-                  wins via inline style. */}
-              <span
-                className="inline-flex h-[15px] shrink-0 items-center rounded bg-[var(--color-status-dot-at-risk)] px-1 text-[8px] font-semibold text-white"
-                style={
-                  author === undefined
-                    ? undefined
-                    : { background: authorSlotBackground(author) }
-                }
-              >
+              {/* Rank keeps its own semantic tint — author identity lives in
+                  the initials badge below, so the colors never compete. */}
+              <span className="inline-flex h-[15px] shrink-0 items-center rounded bg-[var(--color-status-dot-at-risk)] px-1 text-[8px] font-semibold text-white">
                 P{card.rank}
               </span>
               <span className="min-w-0 whitespace-normal break-words text-xs text-[var(--color-foreground)]">
@@ -145,7 +112,7 @@ export function SlidePriorityStrip({
               {author !== undefined && (
                 <span
                   title={author.name}
-                  className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-white"
+                  className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-[var(--color-foreground)]"
                   style={{ background: authorSlotBackground(author) }}
                 >
                   <span aria-hidden="true">{author.initials}</span>
@@ -175,7 +142,7 @@ export function SlideLegend({
       {authors.map((author) => (
         <span key={author.id} className="inline-flex items-center gap-1.5">
           <span
-            className="inline-flex h-[15px] w-[22px] items-center justify-center rounded text-[8px] font-semibold text-white"
+            className="inline-flex h-[15px] w-[22px] items-center justify-center rounded text-[8px] font-semibold text-[var(--color-foreground)]"
             style={{ background: authorSlotBackground(author) }}
           >
             {author.initials}

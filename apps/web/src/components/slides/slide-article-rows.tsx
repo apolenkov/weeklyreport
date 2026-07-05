@@ -13,15 +13,13 @@ function AuthorBadge({
   readonly author: GridAuthor | undefined;
   readonly show: boolean;
 }) {
-  // Invisible spacer keeps text alignment on 2nd+ rows of a same-author series.
-  if (!show || author === undefined) {
-    return <span aria-hidden="true" className="w-[22px] shrink-0" />;
-  }
+  // Inline in the text flow — no reserved column, the text wraps around it.
+  if (!show || author === undefined) return null;
   return (
     <span
       title={author.name}
       data-testid="slide-author-badge"
-      className="inline-flex h-[15px] w-[22px] shrink-0 items-center justify-center rounded text-[8px] font-semibold text-white"
+      className="mr-1 inline-flex h-[15px] w-[22px] translate-y-[-1px] items-center justify-center rounded align-middle text-[8px] font-semibold text-[var(--color-foreground)]"
       style={{ background: authorSlotBackground(author) }}
     >
       <span aria-hidden="true">{author.initials}</span>
@@ -79,7 +77,7 @@ function StageWatermarks({
   return (
     <span
       aria-hidden="true"
-      className="flex shrink-0 items-center gap-0.5 self-start pt-[2px] opacity-[0.28]"
+      className="mr-1 inline-flex translate-y-[1px] items-center gap-0.5 align-baseline opacity-[0.28]"
     >
       {stageNames.map((stageName) => {
         const Icon = STAGE_ICONS[stageName];
@@ -103,24 +101,20 @@ function ItemRow({
   readonly author: GridAuthor | undefined;
   readonly showStages: boolean;
 }) {
-  // Blocked-risk emphasis: highlighted row, no badge; the negative left margin
-  // keeps the highlight flush with the column's text edge.
+  // Blocked-risk emphasis: highlighted row, no badge.
   const highlight = row.blockerHighlight
-    ? "-ml-2 rounded-md bg-[var(--color-chip-blocked-bg)] py-1 pl-2 pr-2"
+    ? "-mx-2 rounded-md bg-[var(--color-chip-blocked-bg)] px-2 py-1"
     : "";
+  // One flowing paragraph: badges and icons ride the text instead of columns,
+  // so wrapped lines start at the cell edge and nothing indents the body.
   return (
-    <li className={`flex gap-1.5 text-[13px] leading-[1.3] ${highlight}`}>
+    <li
+      className={`min-w-0 whitespace-normal break-words text-[13px] leading-[1.3] ${highlight}`}
+    >
       <AuthorBadge author={author} show={row.showAuthorBadge} />
-      {row.priorityRank != null && (
-        <span className="inline-flex h-[15px] shrink-0 items-center rounded bg-[var(--color-status-dot-at-risk)] px-1 text-[8px] font-semibold text-white">
-          P{row.priorityRank}
-        </span>
-      )}
       {showStages && <StageWatermarks stageNames={row.stageNames} />}
-      <span className="min-w-0 flex-1 whitespace-normal break-words">
-        {row.text}
-        <StatusBadge badge={row.badge} />
-      </span>
+      {row.text}
+      <StatusBadge badge={row.badge} />
     </li>
   );
 }
