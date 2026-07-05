@@ -4,7 +4,6 @@ import { Cron, CronExpression } from "@nestjs/schedule";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { AuditLogger } from "../../lib/audit-logger.js";
-import { createNullAuditLogger } from "../../lib/audit-logger.js";
 import { AdminService } from "../admin/admin.service";
 import { PublicationService } from "../publication/publication.service";
 
@@ -29,16 +28,13 @@ import { PublicationService } from "../publication/publication.service";
 @Injectable()
 export class AutoPublisherScheduler {
   private readonly logger = new Logger(AutoPublisherScheduler.name);
-  private readonly auditLogger: AuditLogger;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly adminService: AdminService,
     private readonly publicationService: PublicationService,
-    auditLogger?: AuditLogger,
-  ) {
-    this.auditLogger = auditLogger ?? createNullAuditLogger();
-  }
+    private readonly auditLogger: AuditLogger,
+  ) {}
 
   @Cron(CronExpression.EVERY_HOUR)
   async runHourly(): Promise<void> {

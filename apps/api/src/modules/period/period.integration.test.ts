@@ -2,10 +2,16 @@ import type { UserSession } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  type AnalyticsCacheInvalidator,
   PeriodAccessError,
   type PeriodRepository,
   PeriodService,
+  type ReopenPolicyReader,
 } from "./period.service";
+
+const noopInvalidate: AnalyticsCacheInvalidator = () => Promise.resolve();
+const noGatingReopenPolicy: ReopenPolicyReader = () =>
+  Promise.resolve({ allowReopenAfterPublish: true, reopenWindowHours: 0 });
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */
@@ -72,6 +78,7 @@ function createSpyRepository(
     [...reports.values()].find(match)?.id ?? null;
 
   return {
+    listSectionIds: () => Promise.resolve([]),
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
     async getReportById(id: string) {
       const r = reports.get(id);
@@ -118,7 +125,11 @@ describe("PeriodService — integration (publish lifecycle)", () => {
       ],
     ]);
     const repo = createSpyRepository(reports);
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     const result = await service.publishPeriod(reportId, headSession);
 
@@ -142,7 +153,11 @@ describe("PeriodService — integration (publish lifecycle)", () => {
         },
       ],
     ]);
-    const service = new PeriodService(createSpyRepository(reports));
+    const service = new PeriodService(
+      createSpyRepository(reports),
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(
       service.publishPeriod(reportId, headSession),
@@ -162,7 +177,11 @@ describe("PeriodService — integration (publish lifecycle)", () => {
       ],
     ]);
     const repo = createSpyRepository(reports);
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     const result = await service.reopenPeriod(reportId, headSession);
 
@@ -182,7 +201,11 @@ describe("PeriodService — integration (publish lifecycle)", () => {
         },
       ],
     ]);
-    const service = new PeriodService(createSpyRepository(reports));
+    const service = new PeriodService(
+      createSpyRepository(reports),
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await expect(
       service.reopenPeriod(reportId, headSession),
@@ -201,7 +224,11 @@ describe("PeriodService — integration (publish lifecycle)", () => {
         },
       ],
     ]);
-    const service = new PeriodService(createSpyRepository(reports));
+    const service = new PeriodService(
+      createSpyRepository(reports),
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     // Publish -> Reopen -> Re-publish
     await service.publishPeriod(reportId, headSession);
@@ -212,7 +239,11 @@ describe("PeriodService — integration (publish lifecycle)", () => {
   });
 
   it("publish with missing report throws generic Error (not PeriodAccessError)", async () => {
-    const service = new PeriodService(createSpyRepository(new Map()));
+    const service = new PeriodService(
+      createSpyRepository(new Map()),
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     const error = await service
       .publishPeriod(reportId, headSession)
@@ -223,7 +254,11 @@ describe("PeriodService — integration (publish lifecycle)", () => {
   });
 
   it("reopen with missing report throws generic Error", async () => {
-    const service = new PeriodService(createSpyRepository(new Map()));
+    const service = new PeriodService(
+      createSpyRepository(new Map()),
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     const error = await service
       .reopenPeriod(reportId, headSession)
@@ -246,7 +281,11 @@ describe("PeriodService — integration (publish lifecycle)", () => {
       ],
     ]);
     const repo = createSpyRepository(reports);
-    const service = new PeriodService(repo);
+    const service = new PeriodService(
+      repo,
+      noopInvalidate,
+      noGatingReopenPolicy,
+    );
 
     await service.publishPeriod(reportId, headSession);
 

@@ -6,6 +6,15 @@ import type { AppLogger } from "./logger.js";
 // trpc.context, auth.routes, the period schedulers) are unaffected.
 export type * from "./audit-logger-types.js";
 
+/**
+ * Composition-root DI tokens. `APP_LOGGER` resolves the single post-CLS
+ * AppLogger (one shared file sink); `AUDIT_LOGGER` resolves the AuditLogger
+ * built on it, so scheduled period transitions emit real audit lines instead
+ * of a null-object no-op. Registered in config.module.ts.
+ */
+export const APP_LOGGER = Symbol("APP_LOGGER");
+export const AUDIT_LOGGER = Symbol("AUDIT_LOGGER");
+
 const AUDIT_MESSAGE = "audit";
 
 /**

@@ -3,10 +3,16 @@ import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
+  type AnalyticsCacheInvalidator,
   PeriodAccessError,
   type PeriodRepository,
   PeriodService,
+  type ReopenPolicyReader,
 } from "./period.service";
+
+const noopInvalidate: AnalyticsCacheInvalidator = () => Promise.resolve();
+const noGatingReopenPolicy: ReopenPolicyReader = () =>
+  Promise.resolve({ allowReopenAfterPublish: true, reopenWindowHours: 0 });
 
 /* ------------------------------------------------------------------ */
 /*  Fixed test UUIDs                                                   */
@@ -60,6 +66,7 @@ function createRepository(report: MockReport | null): PeriodRepository & {
     current && predicate(current) ? current.id : null;
 
   return {
+    listSectionIds: () => Promise.resolve([]),
     // eslint-disable-next-line @typescript-eslint/require-await -- mock implements the async PeriodRepository contract (no awaitable work in the stub)
     async getReportById(id: string) {
       if (id !== current?.id) {
@@ -138,7 +145,11 @@ describe("PeriodService — contract tests", () => {
   describe("publishPeriod", () => {
     it("succeeds for an open period", async () => {
       const report = makeReport({ periodStatus: "open" });
-      const service = new PeriodService(createRepository(report));
+      const service = new PeriodService(
+        createRepository(report),
+        noopInvalidate,
+        noGatingReopenPolicy,
+      );
 
       const result = await service.publishPeriod(reportId, headSession);
 
@@ -147,7 +158,11 @@ describe("PeriodService — contract tests", () => {
 
     it("succeeds for a reopened period", async () => {
       const report = makeReport({ periodStatus: "reopened" });
-      const service = new PeriodService(createRepository(report));
+      const service = new PeriodService(
+        createRepository(report),
+        noopInvalidate,
+        noGatingReopenPolicy,
+      );
 
       const result = await service.publishPeriod(reportId, headSession);
 
@@ -159,7 +174,11 @@ describe("PeriodService — contract tests", () => {
         periodStatus: "published",
         publishedAt: new Date("2026-04-10T16:00:00.000Z"),
       });
-      const service = new PeriodService(createRepository(report));
+      const service = new PeriodService(
+        createRepository(report),
+        noopInvalidate,
+        noGatingReopenPolicy,
+      );
 
       await expect(
         service.publishPeriod(reportId, headSession),
@@ -171,7 +190,11 @@ describe("PeriodService — contract tests", () => {
     });
 
     it("throws when report not found", async () => {
-      const service = new PeriodService(createRepository(null));
+      const service = new PeriodService(
+        createRepository(null),
+        noopInvalidate,
+        noGatingReopenPolicy,
+      );
 
       await expect(
         service.publishPeriod(
@@ -184,7 +207,11 @@ describe("PeriodService — contract tests", () => {
     it("records publishedAt and publishedById via repository", async () => {
       const report = makeReport({ periodStatus: "open" });
       const repo = createRepository(report);
-      const service = new PeriodService(repo);
+      const service = new PeriodService(
+        repo,
+        noopInvalidate,
+        noGatingReopenPolicy,
+      );
 
       await service.publishPeriod(reportId, headSession);
 
@@ -206,7 +233,11 @@ describe("PeriodService — contract tests", () => {
         periodStatus: "published",
         publishedAt: new Date("2026-04-10T16:00:00.000Z"),
       });
-      const service = new PeriodService(createRepository(report));
+      const service = new PeriodService(
+        createRepository(report),
+        noopInvalidate,
+        noGatingReopenPolicy,
+      );
 
       const result = await service.reopenPeriod(reportId, headSession);
 
@@ -215,7 +246,11 @@ describe("PeriodService — contract tests", () => {
 
     it("throws PeriodAccessError for non-published period (open)", async () => {
       const report = makeReport({ periodStatus: "open" });
-      const service = new PeriodService(createRepository(report));
+      const service = new PeriodService(
+        createRepository(report),
+        noopInvalidate,
+        noGatingReopenPolicy,
+      );
 
       await expect(
         service.reopenPeriod(reportId, headSession),
@@ -228,7 +263,11 @@ describe("PeriodService — contract tests", () => {
 
     it("throws PeriodAccessError for non-published period (reopened)", async () => {
       const report = makeReport({ periodStatus: "reopened" });
-      const service = new PeriodService(createRepository(report));
+      const service = new PeriodService(
+        createRepository(report),
+        noopInvalidate,
+        noGatingReopenPolicy,
+      );
 
       await expect(
         service.reopenPeriod(reportId, headSession),
@@ -240,7 +279,11 @@ describe("PeriodService — contract tests", () => {
     });
 
     it("throws when report not found", async () => {
-      const service = new PeriodService(createRepository(null));
+      const service = new PeriodService(
+        createRepository(null),
+        noopInvalidate,
+        noGatingReopenPolicy,
+      );
 
       await expect(
         service.reopenPeriod(
@@ -257,7 +300,11 @@ describe("PeriodService — contract tests", () => {
         publishedAt: new Date("2026-04-10T16:00:00.000Z"),
       });
       const repo = createRepository(report);
-      const service = new PeriodService(repo);
+      const service = new PeriodService(
+        repo,
+        noopInvalidate,
+        noGatingReopenPolicy,
+      );
 
       await service.reopenPeriod(reportId, headSession);
 
