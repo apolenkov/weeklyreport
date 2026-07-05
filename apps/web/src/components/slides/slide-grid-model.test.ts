@@ -126,11 +126,11 @@ describe("buildSlideGridModel — status marks and columns", () => {
       }),
     });
     const cols = productLevelOf(cardOf(model, "p1")).columns;
-    // Only done carries a mark; expected states (in progress / planned) don't.
-    expect(cols.current.map((r) => r.completed)).toEqual([true, false]);
-    expect(cols.next.map((r) => r.completed)).toEqual([false]);
-    expect(cols.risks.map((r) => r.highlight)).toEqual(["at-risk", "blocked"]);
-    expect(cols.decisions.map((r) => r.highlight)).toEqual([null]);
+    // The frame tone IS the status: expected states stay neutral.
+    expect(cols.current.map((r) => r.tone)).toEqual(["completed", "neutral"]);
+    expect(cols.next.map((r) => r.tone)).toEqual(["neutral"]);
+    expect(cols.risks.map((r) => r.tone)).toEqual(["at-risk", "blocked"]);
+    expect(cols.decisions.map((r) => r.tone)).toEqual(["neutral"]);
   });
 
   it("collects the slide's stage names once, in canonical order", () => {

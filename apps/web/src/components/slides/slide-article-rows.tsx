@@ -3,11 +3,13 @@ import { useRef } from "react";
 
 import { STAGE_ICONS } from "../lead/stage-chip-config";
 import { useSdlcTooltip } from "../ui/sdlc-tooltip";
-import type { GridAuthor, GridHighlight, GridRow } from "./slide-grid-model";
+import type { GridAuthor, GridRow, GridTone } from "./slide-grid-model";
 
 /** Hover/focus handlers wiring an element to the singleton slide tooltip. */
-function useHoverTooltip(content: string) {
-  const ref = useRef<HTMLSpanElement | null>(null);
+function useHoverTooltip<T extends HTMLElement = HTMLSpanElement>(
+  content: string,
+) {
+  const ref = useRef<T | null>(null);
   const tooltip = useSdlcTooltip();
   return {
     ref,
@@ -57,32 +59,37 @@ function AuthorBadge({
   );
 }
 
-/** The only per-row status mark: a quiet check glyph on done items, trailing
- * the text inline so wrapped lines keep the full column width. Every other
- * status reads from the row's background/border, never from words. */
-function CompletedMark({ completed }: { readonly completed: boolean }) {
-  if (!completed) return null;
+/** The frame IS the status: neutral for expected work, green for done,
+ * yellow for at-risk, red for blocked — no status words on the row. */
+const TONE_BORDER: Record<GridTone, string> = {
+  neutral: "border-[rgba(0,0,0,0.10)]",
+  completed: "border-[var(--color-chip-on-track-border)]",
+  "at-risk": "border-[var(--color-status-at-risk-border)]",
+  blocked: "border-[var(--color-destructive)]",
+};
+
+/** sr-only status per tone — keeps the frame hue readable for screen readers
+ * and grayscale print. Neutral rows stay silent (expected state). */
+const TONE_SR_LABEL: Record<GridTone, string | null> = {
+  neutral: null,
+  completed: "Completed",
+  "at-risk": "At risk",
+  blocked: "Blocked",
+};
+
+/** Quiet check glyph on done rows — the frame goes grayscale in print, the
+ * glyph shape does not. */
+function CompletedMark({ tone }: { readonly tone: GridTone }) {
+  if (tone !== "completed") return null;
   return (
-    <span className="ml-1 inline-flex translate-y-[-1px] align-middle text-[var(--color-primary)]">
-      <Check aria-hidden="true" className="h-3 w-3" />
-      <span className="sr-only">Completed</span>
+    <span
+      aria-hidden="true"
+      className="ml-1 inline-flex translate-y-[-1px] align-middle text-[var(--color-primary)]"
+    >
+      <Check className="h-3 w-3" />
     </span>
   );
 }
-
-/** Risk emphasis plays background and border, not status text: blocked is the
- * loud filled tint, at-risk the quieter bordered wash. sr-only keeps the
- * severity readable for screen readers and grayscale print. */
-const HIGHLIGHT_CLASS: Record<Exclude<GridHighlight, null>, string> = {
-  blocked: "-mx-2 rounded-md bg-[var(--color-chip-blocked-bg)] px-2 py-1",
-  "at-risk":
-    "-mx-2 rounded-md border border-[var(--color-status-at-risk-border)] bg-[var(--color-status-at-risk-bg)] px-2 py-1",
-};
-
-const HIGHLIGHT_SR_LABEL: Record<Exclude<GridHighlight, null>, string> = {
-  blocked: "Blocked",
-  "at-risk": "At risk",
-};
 
 function StageWatermark({ stageName }: { readonly stageName: string }) {
   const tooltip = useHoverTooltip(stageName);
@@ -149,21 +156,24 @@ function ItemRow({
   readonly author: GridAuthor | undefined;
   readonly showStages: boolean;
 }) {
-  const highlight =
-    row.highlight === null ? "" : HIGHLIGHT_CLASS[row.highlight];
-  // One flowing paragraph: badges and icons ride the text instead of columns,
-  // so wrapped lines start at the cell edge and nothing indents the body.
+  const srLabel = TONE_SR_LABEL[row.tone];
+  // Every row is the same two-line card (short text still occupies two lines,
+  // longer text clamps to an ellipsis; hover shows it in full). Badges and
+  // icons ride the text inline, so nothing indents the body.
+  const textTooltip = useHoverTooltip<HTMLLIElement>(row.text);
   return (
     <li
-      className={`min-w-0 whitespace-normal break-words text-[13px] leading-[1.3] ${highlight}`}
+      {...textTooltip}
+      className={`min-w-0 rounded-md border px-2 py-1 text-[13px] leading-[1.3] ${TONE_BORDER[row.tone]}`}
     >
-      <AuthorBadge author={author} show={row.showAuthorBadge} />
-      {showStages && <StageWatermarks stageNames={row.stageNames} />}
-      {row.text}
-      <CompletedMark completed={row.completed} />
-      {row.highlight !== null && (
-        <span className="sr-only">{HIGHLIGHT_SR_LABEL[row.highlight]}</span>
-      )}
+      {/* min-h = 2 lines at 13px x 1.3 line-height. */}
+      <span className="line-clamp-2 min-h-[34px] whitespace-normal break-words">
+        <AuthorBadge author={author} show={row.showAuthorBadge} />
+        {showStages && <StageWatermarks stageNames={row.stageNames} />}
+        {row.text}
+        <CompletedMark tone={row.tone} />
+        {srLabel !== null && <span className="sr-only">{srLabel}</span>}
+      </span>
     </li>
   );
 }

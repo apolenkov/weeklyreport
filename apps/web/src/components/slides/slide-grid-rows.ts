@@ -8,9 +8,10 @@ import type { CrossAuthorContentRow } from "../../lib/mappers/lead-cross-author"
 
 export type SlideTrafficStatus = "green" | "yellow" | "red" | null;
 
-/** Row emphasis: risk rows play background/border instead of status text —
- * blocked (loud tint) vs at-risk (quieter bordered tint). */
-export type GridHighlight = "blocked" | "at-risk" | null;
+/** Per-row frame tone: every row is a bordered two-line card; the border hue
+ * IS the status — neutral (expected work), green (done), yellow (at-risk),
+ * red (blocked). */
+export type GridTone = "neutral" | "completed" | "at-risk" | "blocked";
 
 export interface GridAuthor {
   readonly id: string;
@@ -28,9 +29,7 @@ export interface GridRow {
   readonly authorId: string;
   /** False on 2nd+ rows of a same-author series — the badge is omitted. */
   readonly showAuthorBadge: boolean;
-  /** Done items get a quiet check glyph — the only per-row status mark. */
-  readonly completed: boolean;
-  readonly highlight: GridHighlight;
+  readonly tone: GridTone;
   readonly stageNames: readonly string[];
 }
 
@@ -133,10 +132,9 @@ export function buildOwnItemRow(
     text: item.text.trim(),
     authorId: owner.id,
     showAuthorBadge: true,
-    // Only the exception is marked; a stored `blocked` item stays unmarked
-    // here (existing coercion convention) — blocker semantics live in Risks.
-    completed: item.workflowStatus === "done",
-    highlight: null,
+    // A stored `blocked` item reads neutral here (existing coercion
+    // convention) — blocker semantics live in the Risks column only.
+    tone: item.workflowStatus === "done" ? "completed" : "neutral",
     stageNames: sortStageNames(item.stageIds ?? []),
   };
 }
@@ -152,8 +150,7 @@ export function buildOwnRiskRow(
     text: risk.risk.trim(),
     authorId: owner.id,
     showAuthorBadge: true,
-    completed: false,
-    highlight: blocked ? "blocked" : "at-risk",
+    tone: blocked ? "blocked" : "at-risk",
     stageNames: sortStageNames(risk.stageIds ?? []),
   };
 }
@@ -168,8 +165,7 @@ export function buildOwnDecisionRow(
     text: decision.text.trim(),
     authorId: owner.id,
     showAuthorBadge: true,
-    completed: false,
-    highlight: null,
+    tone: "neutral",
     stageNames: sortStageNames(decision.stageIds ?? []),
   };
 }
