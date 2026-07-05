@@ -13,7 +13,6 @@ const STUB_ENV = { REDIS_HOST: "localhost", REDIS_PORT: 6379 } as EnvConfig;
 // Seam onto the private, Redis-free logic so it can be tested without a live
 // queue connection.
 interface DlqTestSeam {
-  parseThreshold(): number;
   recordTerminalFailure(
     name: string,
     queue: Pick<Queue, "getJob">,
@@ -26,41 +25,9 @@ function seam(): DlqTestSeam {
   return new DLQMonitorService(STUB_ENV) as unknown as DlqTestSeam;
 }
 
-describe("DLQMonitorService.parseThreshold", () => {
-  const original = process.env.DLQ_ALERT_THRESHOLD;
-
-  afterEach(() => {
-    if (original === undefined) delete process.env.DLQ_ALERT_THRESHOLD;
-    else process.env.DLQ_ALERT_THRESHOLD = original;
-    vi.restoreAllMocks();
-  });
-
-  it("parses a valid numeric threshold", () => {
-    process.env.DLQ_ALERT_THRESHOLD = "12";
-    expect(seam().parseThreshold()).toBe(12);
-  });
-
-  it("falls back to the default and warns on an unparseable value", () => {
-    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => {
-      /* silence */
-    });
-    process.env.DLQ_ALERT_THRESHOLD = "not-a-number";
-
-    expect(seam().parseThreshold()).toBe(5);
-    expect(warn).toHaveBeenCalledOnce();
-    expect(warn.mock.calls[0]?.[0]).toContain("not-a-number");
-  });
-
-  it("uses the default when the env var is unset (no warn)", () => {
-    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => {
-      /* silence */
-    });
-    delete process.env.DLQ_ALERT_THRESHOLD;
-
-    expect(seam().parseThreshold()).toBe(5);
-    expect(warn).not.toHaveBeenCalled();
-  });
-});
+// Threshold resolution is now a validated-config read (env.DLQ_ALERT_THRESHOLD
+// ?? DEFAULT_THRESHOLD); a malformed value fails boot at validateEnv(), so the
+// former parse-and-warn seam is gone — see env.schema.ts DLQ_ALERT_THRESHOLD.
 
 describe("DLQMonitorService.recordTerminalFailure", () => {
   beforeEach(() => {

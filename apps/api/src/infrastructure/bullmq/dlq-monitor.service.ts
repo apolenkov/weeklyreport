@@ -65,7 +65,9 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
       this.queues.set(name, queue);
     }
 
-    const threshold = this.parseThreshold();
+    // Absent → the named default; a present value is already a validated
+    // positive int (env.schema `z.coerce.number()`), so no parse/guard here.
+    const threshold = this.env.DLQ_ALERT_THRESHOLD ?? DEFAULT_THRESHOLD;
     this.pollTimer = setInterval(() => {
       void this.checkThresholds(threshold);
     }, POLL_INTERVAL_MS);
@@ -88,23 +90,6 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
     for (const queue of this.queues.values()) {
       await queue.close();
     }
-  }
-
-  /**
-   * Parse `DLQ_ALERT_THRESHOLD`, falling back to the default and warning on an
-   * unparseable value so a typo cannot silently disable the alert.
-   */
-  private parseThreshold(): number {
-    const raw = process.env.DLQ_ALERT_THRESHOLD;
-    if (raw === undefined) return DEFAULT_THRESHOLD;
-    const parsed = Number(raw);
-    if (!Number.isFinite(parsed)) {
-      this.logger.warn(
-        `[dlq] invalid DLQ_ALERT_THRESHOLD='${raw}', falling back to default ${DEFAULT_THRESHOLD}`,
-      );
-      return DEFAULT_THRESHOLD;
-    }
-    return parsed;
   }
 
   /**

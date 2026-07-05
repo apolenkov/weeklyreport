@@ -181,6 +181,13 @@ services:
       KEYCLOAK_SAML_ENTRY_POINT: ${KEYCLOAK_SAML_ENTRY_POINT:?KEYCLOAK_SAML_ENTRY_POINT must be set}
       KEYCLOAK_SAML_ISSUER: ${KEYCLOAK_SAML_ISSUER:?KEYCLOAK_SAML_ISSUER must be set}
       KEYCLOAK_SAML_CERT: ${KEYCLOAK_SAML_CERT:?KEYCLOAK_SAML_CERT must be set}
+      # Optional coverage vars (all .optional() in envSchema). In prod, forward
+      # SENTRY_DSN for error capture and CLIENT_LOG_FORWARDING=true to accept the
+      # browser log forwarder; the rest (TG_BOT_TOKEN, AUTH_DEV_MODE_ALLOW_TEST,
+      # CUSTOMREPORT_REPO_ROOT, DLQ_ALERT_THRESHOLD, AUTH_JWT_COOKIE_NAME) stay
+      # at their consumer defaults unless a deploy needs the override.
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      CLIENT_LOG_FORWARDING: ${CLIENT_LOG_FORWARDING:-}
     depends_on:
       migrate:
         condition: service_completed_successfully

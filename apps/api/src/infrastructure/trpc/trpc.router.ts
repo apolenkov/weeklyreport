@@ -42,6 +42,7 @@ import { TRPCError } from "@trpc/server";
 import type { Queue } from "bullmq";
 import { z } from "zod";
 
+import { isTelegramConfigured } from "../../lib/env.js";
 import { groupScopeFilter } from "../../lib/group-scope.js";
 import type { ActivityService } from "../../modules/activity/activity.service.js";
 import { AdminService } from "../../modules/admin/admin.service.js";
@@ -66,6 +67,7 @@ import {
 import type { TelemetryService } from "../../modules/telemetry/telemetry.service.js";
 import type { WeeklyReportService } from "../../modules/weekly-report/weekly-report.service.js";
 import { captureJobTraceContext } from "../bullmq/worker-observability.js";
+import type { EnvConfig } from "../config/env.schema";
 import { customreportReopenRequestsTotal } from "../metrics/metrics.registry.js";
 import { clearOrgCache } from "./trpc.context.js";
 import { mapDomainError } from "./trpc.error-mapper.js";
@@ -107,6 +109,12 @@ const MAX_REOPEN_REASON_LENGTH = 500;
 
 interface RouterDeps {
   prisma: PrismaClient;
+  /**
+   * Validated env, threaded from main.ts. Read for the Telegram
+   * configured-check (`integrationsStatus`) and the reseed repo-root override
+   * (`dev.wipeAndReseed`) instead of raw `process.env`.
+   */
+  env: EnvConfig;
   reportSectionsService: ReportSectionsService;
   reviewService: ReviewService;
   /**
@@ -466,7 +474,7 @@ export function createAppRouter(deps: RouterDeps) {
           const url = await import("node:url");
           const __filename = url.fileURLToPath(import.meta.url);
           const repoRootCandidates = [
-            process.env.CUSTOMREPORT_REPO_ROOT,
+            deps.env.CUSTOMREPORT_REPO_ROOT,
             process.cwd(),
             path.resolve(process.cwd(), "../.."),
             path.resolve(path.dirname(__filename), "../../../../.."),
@@ -1076,13 +1084,13 @@ export function createAppRouter(deps: RouterDeps) {
        */
       integrationsStatus: adminProcedure.query(async () => {
         try {
-          const token = process.env.TG_BOT_TOKEN?.trim() ?? "";
+          const configured = isTelegramConfigured(deps.env);
           const bindings = await deps.prisma.telegramBinding.count({
             where: { active: true },
           });
           return {
             telegram: {
-              configured: token !== "",
+              configured,
               bindings,
             },
           };

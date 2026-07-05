@@ -111,6 +111,11 @@ services:
       SMTP_HOST: mailhog
       SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_FROM: ${SMTP_FROM:-noreply@example.com}
+      # Optional coverage vars (all .optional() in envSchema, each defaulting to
+      # its consumer behaviour when absent): SENTRY_DSN, TG_BOT_TOKEN,
+      # CLIENT_LOG_FORWARDING, AUTH_DEV_MODE_ALLOW_TEST, CUSTOMREPORT_REPO_ROOT,
+      # DLQ_ALERT_THRESHOLD, AUTH_JWT_COOKIE_NAME. Add a pass-through line only to
+      # override a default. See .env.example.
     depends_on:
       migrate:
         condition: service_completed_successfully
