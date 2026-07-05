@@ -142,7 +142,7 @@ describe("StatusSlideDeck — by-product grid article", () => {
     expect(within(card).getAllByTestId("slide-author-badge")).toHaveLength(1);
   });
 
-  it("marks only exceptions: done check, at-risk chip, blocked highlight", () => {
+  it("plays status via marks and highlights, never words", () => {
     renderDeck(
       makeSection({
         items: [item({ workflowStatus: "done" }), item({ type: "next" })],
@@ -152,12 +152,14 @@ describe("StatusSlideDeck — by-product grid article", () => {
         ],
       }),
     );
-    // Done → sr-only "Completed" next to a check glyph; no words for the
-    // expected states (in progress / planned).
+    // Done → sr-only "Completed" next to a check glyph; risk severity lives
+    // in the row background/border with an sr-only label — no visible words.
     expect(screen.getByText("Completed")).toBeInTheDocument();
     expect(screen.queryByText("IN PROGRESS")).not.toBeInTheDocument();
     expect(screen.queryByText("PLANNED")).not.toBeInTheDocument();
-    expect(screen.getAllByText("AT RISK")).toHaveLength(1);
+    expect(screen.queryByText("AT RISK")).not.toBeInTheDocument();
+    expect(screen.getByText("At risk")).toBeInTheDocument();
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
     expect(screen.getByText("hard blocker")).toBeInTheDocument();
   });
 

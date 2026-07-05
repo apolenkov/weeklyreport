@@ -8,9 +8,9 @@ import type { CrossAuthorContentRow } from "../../lib/mappers/lead-cross-author"
 
 export type SlideTrafficStatus = "green" | "yellow" | "red" | null;
 
-/** Exception-only marks: expected states (in progress / planned) carry no
- * badge — the column already implies them. */
-export type GridBadge = "completed" | "at-risk" | null;
+/** Row emphasis: risk rows play background/border instead of status text —
+ * blocked (loud tint) vs at-risk (quieter bordered tint). */
+export type GridHighlight = "blocked" | "at-risk" | null;
 
 export interface GridAuthor {
   readonly id: string;
@@ -28,9 +28,9 @@ export interface GridRow {
   readonly authorId: string;
   /** False on 2nd+ rows of a same-author series — the badge is omitted. */
   readonly showAuthorBadge: boolean;
-  readonly badge: GridBadge;
-  /** Blocked risk: highlighted row instead of a badge (Risks column only). */
-  readonly blockerHighlight: boolean;
+  /** Done items get a quiet check glyph — the only per-row status mark. */
+  readonly completed: boolean;
+  readonly highlight: GridHighlight;
   readonly stageNames: readonly string[];
 }
 
@@ -128,16 +128,15 @@ export function buildOwnItemRow(
   owner: GridAuthor,
   index: number,
 ): GridRow {
-  // Only the exception is marked; a stored `blocked` item stays unmarked here
-  // (existing coercion convention) — blocker semantics live in Risks only.
-  const badge: GridBadge = item.workflowStatus === "done" ? "completed" : null;
   return {
     id: rowId(item.id, item.stableId, "item", index),
     text: item.text.trim(),
     authorId: owner.id,
     showAuthorBadge: true,
-    badge,
-    blockerHighlight: false,
+    // Only the exception is marked; a stored `blocked` item stays unmarked
+    // here (existing coercion convention) — blocker semantics live in Risks.
+    completed: item.workflowStatus === "done",
+    highlight: null,
     stageNames: sortStageNames(item.stageIds ?? []),
   };
 }
@@ -153,8 +152,8 @@ export function buildOwnRiskRow(
     text: risk.risk.trim(),
     authorId: owner.id,
     showAuthorBadge: true,
-    badge: blocked ? null : "at-risk",
-    blockerHighlight: blocked,
+    completed: false,
+    highlight: blocked ? "blocked" : "at-risk",
     stageNames: sortStageNames(risk.stageIds ?? []),
   };
 }
@@ -169,8 +168,8 @@ export function buildOwnDecisionRow(
     text: decision.text.trim(),
     authorId: owner.id,
     showAuthorBadge: true,
-    badge: null,
-    blockerHighlight: false,
+    completed: false,
+    highlight: null,
     stageNames: sortStageNames(decision.stageIds ?? []),
   };
 }

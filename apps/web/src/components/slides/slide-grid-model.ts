@@ -24,9 +24,9 @@ import {
 export type { GridPriorityCard } from "./slide-grid-cells";
 export type {
   GridAuthor,
-  GridBadge,
   GridColumnKey,
   GridColumns,
+  GridHighlight,
   GridRow,
   SlideTrafficStatus,
 } from "./slide-grid-rows";

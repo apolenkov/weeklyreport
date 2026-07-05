@@ -105,8 +105,8 @@ const productLevelOf = (card: GridProductCard): GridSubsection => {
   return sub;
 };
 
-describe("buildSlideGridModel — badges and columns", () => {
-  it("maps item/risk/decision statuses to the open badge map", () => {
+describe("buildSlideGridModel — status marks and columns", () => {
+  it("marks done items and plays risk severity via row highlight", () => {
     const model = buildSlideGridModel({
       section: section({
         items: [
@@ -126,14 +126,11 @@ describe("buildSlideGridModel — badges and columns", () => {
       }),
     });
     const cols = productLevelOf(cardOf(model, "p1")).columns;
-    // Exception-only marks: expected states (in progress / planned) are null.
-    expect(cols.current.map((r) => r.badge)).toEqual(["completed", null]);
-    expect(cols.next.map((r) => r.badge)).toEqual([null]);
-    expect(cols.risks.map((r) => [r.badge, r.blockerHighlight])).toEqual([
-      ["at-risk", false],
-      [null, true],
-    ]);
-    expect(cols.decisions.map((r) => r.badge)).toEqual([null]);
+    // Only done carries a mark; expected states (in progress / planned) don't.
+    expect(cols.current.map((r) => r.completed)).toEqual([true, false]);
+    expect(cols.next.map((r) => r.completed)).toEqual([false]);
+    expect(cols.risks.map((r) => r.highlight)).toEqual(["at-risk", "blocked"]);
+    expect(cols.decisions.map((r) => r.highlight)).toEqual([null]);
   });
 
   it("collects the slide's stage names once, in canonical order", () => {
