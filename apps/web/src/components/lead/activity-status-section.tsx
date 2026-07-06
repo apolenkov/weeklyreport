@@ -137,7 +137,7 @@ function ActivityStatusPills({
 
 /** One attached activity as a status-only card: name, linked products, pill.
  * Records live in the main Current/Next/Risks/Decisions sections under the
- * activity's lane (route-activity-records-into-record-sections). */
+ * activity's lane, never here. */
 function ActivityCard({
   card,
   readOnly,

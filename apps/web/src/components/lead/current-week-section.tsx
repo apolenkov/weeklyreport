@@ -239,7 +239,7 @@ export function CurrentWeekSection({
                 </div>
                 {/* Activity lanes carry no + Add — creation flows through the
                     dialog's parent picker; the lane exists only when it has
-                    rows (route-activity-records-into-record-sections). */}
+                    rows. */}
                 {!readOnly && hasMultipleProducts && col.activityId == null && (
                   <button
                     type="button"

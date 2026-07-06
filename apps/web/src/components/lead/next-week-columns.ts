@@ -11,9 +11,9 @@ export interface ItemColumn {
   readonly productId: string;
   readonly productName: string;
   /**
-   * Set on an activity lane — the column groups activity-parented rows
-   * (route-activity-records-into-record-sections). `productId` is empty and
-   * `productName` carries the activity name on these lanes.
+   * Set on an activity lane — the column groups activity-parented rows.
+   * `productId` is empty and `productName` carries the activity name on
+   * these lanes.
    */
   readonly activityId?: string;
   readonly items: KanbanItem[];
