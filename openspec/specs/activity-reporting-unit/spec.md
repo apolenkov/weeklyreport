@@ -110,8 +110,17 @@ product. When the activity owns a blocked item its status MUST be floored to red
 (blocked); when it owns an at-risk or blocked risk its status MUST be floored to
 at least that severity (precedence: blocked > at-risk). The lead MUST NOT be able
 to lower the pill below the floor manually; the surface MUST explain the floor
-with a message telling the lead to remove the risk/blocker first. Absent any risk
-or blocker, the lead's manually chosen status stands (defaulting to on-track).
+with a message telling the lead to remove the risk/blocker first.
+
+A manual raise MUST NOT be the only record of an alarm: clicking At Risk or
+Blocked without a sufficient covering risk (blocked requires a covering blocked
+risk; at-risk accepts any covering risk) MUST NOT persist the status and MUST
+instead open the risk entry in create mode with the activity preselected as the
+parent and the clicked severity prefilled — the pill analogue of the stage-chip
+raise interception. On-track remains directly settable whenever no floor holds
+the pill up. The interactive pill MUST derive its alarm floor from the live
+draft risks so a just-created activity risk floors the pill without a
+save/refetch round-trip.
 
 #### Scenario: a blocked item forces the activity red
 
@@ -127,31 +136,88 @@ or blocker, the lead's manually chosen status stands (defaulting to on-track).
 - **THEN** the pill shows at least at-risk (yellow) and cannot be manually
   lowered to on-track
 
-#### Scenario: no risk or blocker leaves the manual choice intact
+#### Scenario: no risk or blocker leaves the manual on-track choice intact
 
 - **GIVEN** an activity with no risks and no blockers
 - **WHEN** the lead sets the pill to on-track
 - **THEN** the on-track status is accepted and persisted
 
+#### Scenario: an unbacked raise routes through activity-scoped risk creation
+
+- **GIVEN** an activity with no covering risk or blocker
+- **WHEN** the lead clicks the pill's At Risk (or Blocked) option
+- **THEN** the status is not applied
+- **AND** the risk entry opens in create mode with the activity preselected as
+  the parent and the clicked severity prefilled
+
+#### Scenario: cancelling the prefilled risk entry leaves the pill unchanged
+
+- **GIVEN** the risk entry opened by an unbacked pill raise
+- **WHEN** the lead cancels it
+- **THEN** the pill keeps its previous status and no risk row is created
+
+#### Scenario: a saved activity risk floors the pill immediately
+
+- **GIVEN** the risk entry opened by an unbacked Blocked click on an activity
+- **WHEN** the lead saves the risk
+- **THEN** the activity's pill renders blocked (red) without a reload
+
 ### Requirement: Activities render on the lead form, slides, and head report like products
 
 Activities MUST render on the lead form, the lead slides, and the head report
 with the same records/risks/blockers presentation a product uses, minus the SDLC
-stage lane. On the lead form (`activity-status-section.tsx` /
-`unified-activity-section.tsx`) each activity renders as a card carrying its
-records and derived status, without a stage pipeline. On the slides
+stage lane. On the lead form the split mirrors products exactly: the Project
+Activities section (`activity-status-section.tsx`) is a STATUS-ONLY surface —
+each attached activity renders as a card carrying its name, linked product(s),
+and the risk/blocker-floored traffic-light pills, and MUST NOT list or accept
+record content. The activity's records (items, risks, decisions) MUST render and
+be editable in the main record sections (Current Week / Next Week / Risks /
+Decisions, and the unified by-state view when enabled), grouped under an
+activity lane keyed by `activityId` and labeled with the activity name — the
+same grouping treatment product records get, without a stage lane. On the slides
 (`slide-activity-pills.tsx`, `lead-unified-slide.tsx`) the lead's activities are
 grouped by traffic-light status. On the head report
 (`activity-status-strip.tsx`, `weekly-report-page.tsx`) each activity renders in
 the report body like a product — its records and linked product(s) — instead of a
 status-only strip. Every surface MUST show the activity's linked product(s).
 
-#### Scenario: the lead form renders an activity card without a stage pipeline
+#### Scenario: the lead form renders a status-only activity card
 
 - **WHEN** a lead opens their report form for a section attached to an activity
-- **THEN** the activity renders as a card showing its items/risks/blockers and
-  its derived status
+- **THEN** the activity renders as a card showing its name, linked product(s),
+  and its derived traffic-light status
+- **AND** the card lists no record content and offers no record entry
 - **AND** no SDLC stage pipeline is rendered for the activity
+
+#### Scenario: activity records are edited in the main record sections
+
+- **GIVEN** a section owning an activity-parented current-week item, a risk, and
+  a decision
+- **WHEN** the lead opens the report form
+- **THEN** each record renders in its matching main section under a lane
+  labeled with the activity's name
+- **AND** the lead can edit and delete it there exactly like a product record
+
+#### Scenario: an activity lane never collapses into a product group
+
+- **GIVEN** an activity-parented item (`productId` empty, `activityId` set)
+- **WHEN** the week sections build their grouped columns
+- **THEN** the item appears under its activity's lane, not under any product
+  and not silently dropped
+
+#### Scenario: activity items occupy priority ranks
+
+- **GIVEN** an activity-parented item holding priority rank 1
+- **WHEN** the lead opens the rank picker on any other own item
+- **THEN** rank 1 is presented as taken
+
+#### Scenario: the unified by-state view includes activity records
+
+- **GIVEN** the org's unified activity view flag is on and a section owns an
+  activity-parented item
+- **WHEN** the unified view renders
+- **THEN** the activity-parented item appears in its state bucket alongside
+  product items, and its alarm derivation stays isolated (Q1)
 
 #### Scenario: the slides group the lead's activities by status
 

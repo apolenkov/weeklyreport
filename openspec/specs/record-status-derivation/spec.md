@@ -103,27 +103,7 @@ the stage-chip foreign handling in `status-risk-unification`.
 
 ### Requirement: Setting an item to at-risk/blocked routes through blocker creation
 
-An attempt to set an uncovered item to at-risk or blocked MUST route through
-risk (blocker) creation instead of storing a free alarm on the item: the risk
-edit dialog opens in create mode prefilled with the item's product, the item's
-stage, and the chosen severity. On cancel the item is unchanged and no risk row
-is created. The quick-add "blocker"
-(`apps/web/src/components/lead/quick-add-button.tsx`) creates a blocker record —
-a risk of severity `blocked` — not a free-blocked item.
-
-#### Scenario: choosing Blocked on an uncovered item opens the risk dialog
-
-- **GIVEN** an item with no covering risk
-- **WHEN** the lead chooses the Blocked alarm for it
-- **THEN** the risk edit dialog opens in create mode with severity blocked, the item's product, and the item's stage prefilled
-- **AND** the item's stored status is not changed to a free alarm
-
-#### Scenario: cancelling the prefilled blocker dialog leaves the item unchanged
-
-- **GIVEN** the risk dialog opened by an item alarm gesture
-- **WHEN** the lead cancels it
-- **THEN** no risk row is created
-- **AND** the item keeps its previous progress status
+The system MUST NOT offer any item-level gesture that stores an alarm on the item. Blockers are created in Risks & Blockers or via the quick-add "blocker" entry (`apps/web/src/components/lead/quick-add-button.tsx`) — a risk of severity `blocked`, never a free-blocked item. The former in-dialog "mark as blocked" gesture is removed.
 
 #### Scenario: the blocker quick-add creates a blocker record
 
@@ -131,17 +111,15 @@ a risk of severity `blocked` — not a free-blocked item.
 - **WHEN** the entry dialog opens
 - **THEN** it is the risk (blocker) dialog with severity blocked, not an item with a free-blocked status
 
+#### Scenario: no item gesture stores an alarm
+
+- **GIVEN** the item edit dialog of an uncovered current item
+- **WHEN** its status controls render
+- **THEN** no blocked/at-risk choice or gesture is present, and the stored status can only take the item type's progress vocabulary
+
 ### Requirement: No stored item alarm exists without a covering risk
 
-`at-risk` MUST never be a stored `Item` status — the amber item pill is produced
-only by a covering at-risk risk at render — and no stored `blocked` may exist
-without a covering blocked-severity risk in the same section, product, and stage.
-The raw stored `workflowStatus` and the displayed alarm are SEPARATE layers
-(mirroring the raw-vs-displayed split in `status-risk-unification`): the stored
-value carries the lead's progress intent, the displayed alarm is the covering-risk
-roll-up. A legacy `blocked` item with no covering risk is healed by the change's
-migration (see `design.md`) so no blocked signal is silently dropped and the
-displayed pill never disagrees with a stored value.
+No alarm MUST ever be stored on an item: the `ItemWorkflowStatus` enum carries progress values only (`planned | in_progress | paused | postponed | done`) — `at-risk` and `blocked` are not representable as stored item statuses. The displayed alarm remains the covering-risk roll-up at render (the raw-vs-displayed split of `status-risk-unification` is unchanged). The former legacy-`blocked` healing path is obsolete: the value no longer exists in the enum, and seed fixtures that stored `blocked` carry a covering blocker risk plus a progress status instead.
 
 #### Scenario: at-risk is display-only for items
 
@@ -150,12 +128,10 @@ displayed pill never disagrees with a stored value.
 - **THEN** its stored `workflowStatus` is a progress value, not an alarm
 - **AND** the amber At Risk pill is reproduced from the covering risk at the next render
 
-#### Scenario: a legacy unbacked blocked item is healed by migration
+#### Scenario: blocked cannot be persisted at all
 
-- **GIVEN** a persisted item with `workflowStatus=blocked` and no covering risk row
-- **WHEN** the change's migration/backfill runs
-- **THEN** a covering blocked-severity risk is synthesized for the item's section, product, and stage
-- **AND** the item's blocked signal survives as the covering risk, keeping stored state and the displayed pill in agreement
+- **GIVEN** any save payload that tries to store `blocked` as an item status
+- **THEN** shared validation rejects it — the blocked signal exists only as a blocked-severity risk covering the item
 
 ### Requirement: The escalation roll-up does not double-count a blocked item and its blocker
 
@@ -183,24 +159,19 @@ blocker, so the roll-up count does not inflate.
 
 ### Requirement: The item dialog and quick-add surface the derived-alarm UX in full
 
-The item edit dialog and the quick-add "Blocker" entry MUST surface the full
-locked-alarm and route-through-blocker experience, refining the shipped invariant
-(the derived pill, the removed free chip, and the escalation/head re-sourcing) so
-the lead is never left guessing why an item's status cannot be edited and a
-"Blocker" always creates a blocker.
+The item edit dialog MUST offer exactly the item type's status vocabulary (current → In Progress | Paused | Completed; next → Planned | Postponed) and MUST NOT offer an in-dialog "mark as blocked" affordance — the only path to a blocked item is creating a blocker in Risks & Blockers (the quick-add "Blocker" entry keeps creating a blocked-severity risk). The covered-status lock stays: when a covering risk floors the item, an inline message replaces the status chips, stating the status is set by the covering risk/blocker and to resolve it to change.
 
 #### Scenario: a covered item's dialog shows the locked message
 
 - **GIVEN** the lead opens the edit dialog of an item that a covering risk floors
 - **WHEN** the dialog renders its status controls
-- **THEN** an inline message replaces the alarm chips, stating the status is set by the covering risk/blocker and to resolve it to change
+- **THEN** an inline message replaces the status chips, stating the status is set by the covering risk/blocker and to resolve it to change
 
-#### Scenario: an alarm gesture inside the dialog opens the prefilled blocker dialog
+#### Scenario: the dialog never offers foreign-type or alarm statuses
 
-- **GIVEN** the lead opens the edit dialog of an uncovered item and asks to mark it blocked
-- **WHEN** the gesture fires
-- **THEN** the risk (blocker) dialog opens in create mode prefilled with the item's product, the item's stage, and severity blocked
-- **AND** the item's stored status is not changed to a free alarm
+- **GIVEN** the lead opens the edit dialog of a next item
+- **WHEN** the status chips render
+- **THEN** the choices are exactly Planned and Postponed — no In Progress, no blocked gesture
 
 #### Scenario: the quick-add "Blocker" defaults to blocked severity
 
@@ -213,4 +184,62 @@ the lead is never left guessing why an item's status cannot be edited and a
 
 - **GIVEN** an item on a co-owned product whose covering risk belongs to another lead
 - **WHEN** the item card renders the locked alarm
-- **THEN** the lock affordance names the other author instead of the generic lock copy
+- **THEN** the lock names the covering risk's author so the lead knows whom to talk to
+
+### Requirement: One stored progress status per item, with per-type vocabularies
+
+`ItemWorkflowStatus` (Prisma enum + shared Zod item schemas) MUST be the single stored source of an item's progress: `planned | in_progress | paused | postponed | done`. The system MUST NOT store `blocked` on an item (alarms derive from covering risks) and MUST NOT carry a separate completed flag (`Item.completed` is removed). Shared Zod MUST reject a status outside the item type's vocabulary: current → `in_progress | paused | done`; next → `planned | postponed`. `paused` and `postponed` roll up as not-done and MUST NOT feed the blocked/at-risk escalation paths.
+
+#### Scenario: next item accepts only its vocabulary
+
+- **WHEN** a save payload carries a next item with status `in_progress`
+- **THEN** shared validation rejects it; `planned` and `postponed` pass
+
+#### Scenario: paused work does not escalate
+
+- **WHEN** a section contains only `paused`/`postponed` items and no risks
+- **THEN** the dashboard blocked/at-risk tables and product health show no escalation caused by those items
+
+#### Scenario: carry-over materializes as in-progress; postponed stays behind
+
+- **WHEN** the carry-over run copies a `planned` next item into the new period
+- **THEN** the created current item is `in_progress`
+- **AND** `postponed` items are not carried — re-planning them is an explicit lead action
+
+### Requirement: Pausing an item requires and records a reason
+
+When a lead pauses an item, the UI MUST require a non-blank reason before the
+pause takes effect, and the reason MUST be persisted with the item
+(`Item.pausedReason`) and surfaced on the item card. Both pause entry points —
+the quick "Pause" action on a current-week card and the "Paused" status choice
+in the item edit dialog — MUST enforce the reason. The requirement is enforced
+at the UI entry points, not as a hard schema invariant, so legacy paused rows
+that predate the field still load and round-trip. Leaving the paused status
+clears the reason.
+
+#### Scenario: the quick pause action requires a reason
+
+- **WHEN** the lead clicks Pause on a current-week in-progress item
+- **THEN** a reason prompt opens and the item is not paused until a non-blank
+  reason is confirmed
+- **AND** the confirmed reason is persisted and shown on the card as a
+  "Paused: …" line
+
+#### Scenario: the edit dialog requires a reason for the paused status
+
+- **WHEN** the lead selects the Paused status in the item edit dialog
+- **THEN** a required reason field appears and the item cannot be saved while it
+  is blank
+
+#### Scenario: editing a paused item preserves its reason
+
+- **GIVEN** a paused item with a reason
+- **WHEN** the lead opens the edit dialog, changes an unrelated field, and saves
+  while keeping the Paused status
+- **THEN** the pause reason is preserved, not dropped
+
+#### Scenario: leaving the paused status clears the reason
+
+- **GIVEN** a paused item with a reason
+- **WHEN** the item moves to any non-paused status
+- **THEN** its pause reason is cleared

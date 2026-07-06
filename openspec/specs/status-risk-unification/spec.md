@@ -10,116 +10,84 @@ lowered, and the risk-entry dialog's stage-selection defaults.
 
 ### Requirement: Risks are the single source of truth for at-risk/blocked
 
-At-risk and blocked states MUST be authored only as risk rows in the
-Risks section of the lead report. Stage chips (`SdlcPipeline` in
-`apps/web/src/components/lead/sdlc-pipeline.tsx`) MUST NOT create an
-at-risk/blocked state that is not backed by a risk row; chip
-interactions that imply such a state route through risk creation or
-deletion instead.
+At-risk and blocked states MUST be authored only as risk rows in the Risks
+section of the lead report. Stage chips (`SdlcPipeline` in
+`apps/web/src/components/lead/sdlc-pipeline.tsx`) MUST NOT author an
+at-risk/blocked state at all: a chip has no status menu and offers no
+At Risk/Blocked option. An editable chip is a plain toggle between unset (empty)
+and On Track. A covering risk floors the chip's DISPLAYED severity at render;
+while a covering risk exists the chip MUST NOT be settable to On Track — clicking
+it leaves the status unchanged and directs the lead to resolve the risk in the
+Risks section. Removing every covering risk returns the chip to its stored On
+Track or unset status.
 
-#### Scenario: a chip click is never the only record of a risk
+#### Scenario: a chip click toggles On Track, never a severity
 
-- **WHEN** the lead attempts to set a stage chip to at-risk or blocked
-  and no covering risk row exists
-- **THEN** the stage status is not applied directly
-- **AND** the risk edit dialog opens in create mode prefilled with the
-  product, the clicked stage, and the clicked severity
+- **WHEN** the lead clicks an editable, uncovered stage chip
+- **THEN** the chip toggles between unset and On Track only
+- **AND** no status menu is shown and no at-risk/blocked option exists
 
-#### Scenario: cancelling the prefilled dialog leaves the chip unchanged
+#### Scenario: a covered chip cannot be set on-track from the chip
 
-- **WHEN** the lead cancels the risk edit dialog opened by a chip
-  interception
-- **THEN** the chip keeps its previous status and no risk row is
-  created
+- **WHEN** the lead clicks a stage chip that a covering risk floors to
+  at-risk or blocked
+- **THEN** the status is unchanged and the lead is directed to resolve the
+  risk in the Risks section
+
+#### Scenario: removing the covering risk un-floors the chip
+
+- **GIVEN** a chip floored to blocked by a single covering risk
+- **WHEN** the lead deletes that risk in the Risks section
+- **THEN** the chip returns to its stored On Track or unset status without any
+  chip interaction
 
 ### Requirement: Covering risks force a severity floor on stage chips
 
-A stage chip, AS DISPLAYED, MUST render at least at the highest covering
-risk's severity when its stage is covered by at least one non-empty own
-risk (precedence: blocked > at-risk). The DISPLAYED chip MUST NOT show
-on-track or empty while covering risks exist. This DISPLAY floor is
-applied at RENDER time — by the live lead form (`applyRiskSeverityFloor`
-in `lead-form-sync-bridge.tsx`) and the slides/head-review surface
-(`floorSlideStageStatus` in `section-slide-utils.ts`), both deriving the
-severity through the shared `deriveEffectiveStageStatus`.
+A stage chip, AS DISPLAYED, MUST render at least at the highest covering risk's
+severity when its stage is covered by at least one non-empty own risk
+(precedence: blocked > at-risk). The DISPLAYED chip MUST NOT show on-track or
+empty while covering risks exist. This DISPLAY floor is applied at RENDER time —
+by the live lead form (`applyRiskSeverityFloor` in `lead-form-sync-bridge.tsx`)
+and the slides/head-review surface (`floorSlideStageStatus` in
+`section-slide-utils.ts`), both deriving the severity through the shared
+`deriveEffectiveStageStatus`.
+
+The render floor MUST also COLLAPSE a stale unbacked severity: a stage whose raw
+status is at-risk/blocked but which has NO covering risk MUST render as On Track
+on the live form, matching the read-model mapper. `applyRiskSeverityFloor` MUST
+route every own stage through `deriveEffectiveStageStatus` (not only stages with
+a covering risk), so the live form and read model never disagree on an orphan
+explicit severity. This also serves as the migration for legacy explicit
+at-risk/blocked stage rows — they render On Track on next load with no backfill.
 
 The RAW read-model status is a SEPARATE layer from the displayed chip. The
-mapper (`mapLeadProducts` in `apps/web/src/lib/mappers/lead-form.ts`)
-applies the floor to a NON-EMPTY stage (via `deriveEffectiveStageStatus`:
-floor up to a worse covering risk, collapse a stale unbacked severity
-down) but PRESERVES an EMPTY stage's raw status as empty — the empty→empty
-guard. It MUST NOT floor an EMPTY stage's RAW status up to a covering
-severity; it records that coverage separately via the `coveredByOwnRisk`
-annotation. This raw empty is NOT what the chip displays — the render
-floor above already prevents an empty-looking covered chip — it is what
-the X/7 completeness counter (which must not count foreign-covered stages)
-and the chip's risk-covered-vs-status-set distinction rely on.
-
-The head-form, preview, and PDF/print surfaces carry no per-stage grid —
-they render the product-level `worstStatus`, which already reflects risk
-severity. This supersedes the PRJ-2 decision that disconnected
-risk-derived status in `mapLeadProducts`.
+mapper (`mapLeadProducts` in `apps/web/src/lib/mappers/lead-form.ts`) applies the
+floor to a NON-EMPTY stage (via `deriveEffectiveStageStatus`: floor up to a worse
+covering risk, collapse a stale unbacked severity down) but PRESERVES an EMPTY
+stage's raw status as empty — the empty→empty guard. It records coverage
+separately via the `coveredByOwnRisk` annotation for the completeness counter.
 
 #### Scenario: saving a risk raises the covered chip
 
-- **WHEN** the lead saves a non-empty risk with severity blocked
-  covering the Development stage whose chip shows on-track
-- **THEN** the Development chip renders blocked without any extra
-  confirmation
+- **WHEN** the lead saves a non-empty risk with severity blocked covering the
+  Development stage whose chip shows on-track
+- **THEN** the Development chip renders blocked without any extra confirmation
 
-#### Scenario: a stale persisted on-track status is floored on load
+#### Scenario: an orphan explicit severity collapses on the live form
 
-- **WHEN** a draft loads whose persisted explicit stage status is
-  on-track while a non-empty covering risk with severity at-risk
-  exists
-- **THEN** the chip renders at-risk on the lead form and the head-review
-  slides (a non-empty status is floored by the mapper too — only an empty
-  status is preserved)
-- **AND** the head-form and PDF/print surfaces (which carry no per-stage
-  grid) reflect the risk through the product-level `worstStatus`
+- **WHEN** a draft loads whose persisted explicit stage status is blocked while
+  no covering risk exists
+- **THEN** the chip renders On Track on the live lead form, matching the read
+  model, and no chip interaction is needed to correct it
 
 #### Scenario: the read-model mapper preserves raw status and annotates coverage
 
-- **WHEN** the read-model mapper builds the view of a product whose stage
-  has an empty status but a non-empty covering own risk
+- **WHEN** the read-model mapper builds the view of a product whose stage has an
+  empty status but a non-empty covering own risk
 - **THEN** the mapper keeps the stage's raw status empty and sets
   `coveredByOwnRisk` to true (it does NOT floor the raw status)
-- **AND** the live lead form and the slides/head-review surface re-floor
-  the chip to the risk severity at render, while the head-form, preview,
-  and PDF export surfaces (which have no per-stage grid) reflect the risk
-  through the product-level `worstStatus` — so no surface shows an
-  un-floored empty
-
-### Requirement: Lowering a covered chip requires confirmed risk removal
-
-Setting a covered chip to on-track MUST ask for confirmation that
-names the consequence before any state changes. On confirm, each
-covering own risk MUST either be deleted (the clicked stage was its
-only stage) or have the clicked stage removed from its `stageIds`
-(it covers other stages — surviving risks keep at least one stage).
-On cancel, chip and risks MUST be unchanged. If any covering risk
-belongs to another author, the lowering MUST be blocked with an
-explanatory message instead of deleting foreign data.
-
-#### Scenario: confirming the lowering deletes the covering risk
-
-- **WHEN** the lead sets a chip to on-track whose stage is covered by
-  one single-stage own risk and confirms the dialog
-- **THEN** that risk row is deleted and the chip flips to on-track
-
-#### Scenario: a multi-stage risk survives with the stage stripped
-
-- **WHEN** the lead confirms lowering a chip covered by a risk that
-  also covers another stage
-- **THEN** the risk row survives with the clicked stage removed from
-  its `stageIds`
-- **AND** the other covered chip keeps its severity floor
-
-#### Scenario: cancelling the confirmation changes nothing
-
-- **WHEN** the lead cancels the deletion confirmation
-- **THEN** the chip keeps its at-risk/blocked status and all risk rows
-  are unchanged
+- **AND** the live lead form and the slides/head-review surface re-floor the
+  chip to the risk severity at render
 
 ### Requirement: The risk-entry dialog stage multi-select does not default to all stages
 
@@ -236,3 +204,29 @@ invariant so the two surfaces cannot drift.
 - **WHEN** the item card renders
 - **THEN** the item pill shows Blocked, floored from the covering risk
 - **AND** the alarm cannot be cleared from the item without resolving the covering risk
+
+### Requirement: Unset stages auto-promote to On Track at submit after a warning
+
+At submit, any of the lead's own stages left unset (empty) MUST be promoted to
+On Track in the submitted section, mirroring the existing null→green coercion for
+project and activity statuses. The submit-confirm dialog MUST warn the lead
+first, stating how many stages will be marked On Track; the promotion MUST NOT
+block submit. While editing (before submit) an unset stage remains a valid state.
+
+#### Scenario: the submit-confirm dialog warns about unset stages
+
+- **GIVEN** a section with two of the lead's own stages left unset
+- **WHEN** the lead opens the submit confirmation
+- **THEN** the dialog states that 2 stages are not set and will be marked On
+  Track
+
+#### Scenario: confirming submit promotes unset stages to On Track
+
+- **WHEN** the lead confirms submit with unset own stages
+- **THEN** those stages are submitted as On Track and submit proceeds
+
+#### Scenario: no unset stages shows no warning
+
+- **GIVEN** a section where every own stage has a status
+- **WHEN** the lead opens the submit confirmation
+- **THEN** no unset-stage warning is shown
