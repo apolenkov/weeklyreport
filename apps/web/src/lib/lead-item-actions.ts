@@ -41,3 +41,13 @@ export function moveToNextWeekPatch(): Partial<LeadItem> {
 export function moveToCurrentWeekPatch(): Partial<LeadItem> {
   return { type: "current", workflowStatus: "in_progress", carriedOver: false };
 }
+
+/**
+ * "Pause": stall an item where it stands with the lead's reason. The reason is
+ * required at the UI entry point (the schema stays permissive for legacy rows).
+ * The `stableId` lineage is untouched, so the published-lock and comment
+ * anchors still hold.
+ */
+export function pauseItemPatch(reason: string): Partial<LeadItem> {
+  return { workflowStatus: "paused", pausedReason: reason };
+}

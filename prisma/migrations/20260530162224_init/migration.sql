@@ -210,6 +210,7 @@ CREATE TABLE "Item" (
     "workflowStatus" "ItemWorkflowStatus" NOT NULL,
     "carriedOver" BOOLEAN NOT NULL DEFAULT false,
     "priorityRank" INTEGER,
+    "pausedReason" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "searchTsv" tsvector GENERATED ALWAYS AS (to_tsvector('russian'::regconfig, COALESCE(text, ''::text))) STORED,

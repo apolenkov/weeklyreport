@@ -36,6 +36,7 @@ import {
   markCompletePatch,
   moveToCurrentWeekPatch,
   moveToNextWeekPatch,
+  pauseItemPatch,
 } from "../../lib/lead-item-actions";
 import { mapLeadFormData, mapLeadReviewFeedback } from "../../lib/mappers";
 import type { ItemWorkflowStatus as MapperItemWorkflowStatus } from "../../lib/mappers/item-status";
@@ -300,6 +301,10 @@ export function sectionToDraftPayload(
         // F1: include priorityRank in the autosave payload (was omitted, so the
         // dialog's rank never reached the backend → "doesn't save").
         priorityRank: it.priorityRank ?? null,
+        // require-paused-item-reason: round-trip the pause reason so it survives
+        // the save; cleared when the item leaves the paused status.
+        pausedReason:
+          it.workflowStatus === "paused" ? (it.pausedReason ?? null) : null,
       })),
     risks: section.risks
       .filter((r) => hasText(r.risk) && hasText(r.mitigation))
@@ -1327,6 +1332,10 @@ export function LeadForm({
                 activityId: null,
                 stageIds: kb.stageIds,
               };
+          // require-paused-item-reason: keep the reason only while the row is
+          // paused, so leaving pause (any other status) clears it.
+          const pausedReason =
+            raw.workflowStatus === "paused" ? (kb.pausedReason ?? null) : null;
           if (existing) {
             return {
               ...existing,
@@ -1337,6 +1346,7 @@ export function LeadForm({
               // F1: carry the priority rank from the dialog into the draft so
               // autosave persists it (was silently dropped here).
               priorityRank: kb.priorityRank ?? null,
+              pausedReason,
             };
           }
           return {
@@ -1351,6 +1361,7 @@ export function LeadForm({
             carriedOver: false,
             stageName: null,
             priorityRank: kb.priorityRank ?? null,
+            pausedReason,
           };
         });
         // Keep all items of the OTHER type unchanged; replace this type with
@@ -1483,6 +1494,10 @@ export function LeadForm({
 
   function handleMoveToCurrentWeek(itemId: string) {
     updateDraftItemInPlace(itemId, moveToCurrentWeekPatch());
+  }
+
+  function handlePauseItem(itemId: string, reason: string) {
+    updateDraftItemInPlace(itemId, pauseItemPatch(reason));
   }
 
   // Route "set blocked" through blocker (risk) creation, prefilled — never a
@@ -1941,6 +1956,7 @@ export function LeadForm({
                       publishedLockedIds={publishedLockedItemIds}
                       onMarkComplete={handleMarkComplete}
                       onMoveToNextWeek={handleMoveToNextWeek}
+                      onPauseItem={handlePauseItem}
                     />
                   </AccordionSection>
 

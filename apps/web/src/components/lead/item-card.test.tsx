@@ -355,3 +355,48 @@ describe("ItemCard — move-to-current-week action (F4)", () => {
     ).toBeNull();
   });
 });
+
+describe("ItemCard — pause action and reason display (F5)", () => {
+  it("shows the Pause button for an in-progress item when the handler is passed", () => {
+    render(<ItemCard item={BASE_ITEM} onPause={() => undefined} />);
+    expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
+  });
+
+  it("withholds Pause from a non-in-progress item", () => {
+    render(
+      <ItemCard
+        item={{ ...BASE_ITEM, status: "completed" }}
+        onPause={() => undefined}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Pause" })).toBeNull();
+  });
+
+  it("calls onPause with the item id", async () => {
+    const onPause = vi.fn();
+    const user = userEvent.setup();
+    render(<ItemCard item={BASE_ITEM} onPause={onPause} />);
+    await user.click(screen.getByRole("button", { name: "Pause" }));
+    expect(onPause).toHaveBeenCalledWith("item-1");
+  });
+
+  it("surfaces the reason on a paused card", () => {
+    render(
+      <ItemCard
+        item={{
+          ...BASE_ITEM,
+          status: "paused",
+          pausedReason: "waiting on a dependency",
+        }}
+      />,
+    );
+    expect(
+      screen.getByText(/Paused: waiting on a dependency/),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no paused line when the item is not paused", () => {
+    render(<ItemCard item={{ ...BASE_ITEM, pausedReason: "stale value" }} />);
+    expect(screen.queryByText(/Paused:/)).toBeNull();
+  });
+});

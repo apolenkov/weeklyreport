@@ -35,6 +35,8 @@ interface ItemCardProps {
   readonly onMoveToNextWeek?: (id: string) => void;
   /** In-place move action: pull a next-week item back into the current week. */
   readonly onMoveToCurrentWeek?: (id: string) => void;
+  /** require-paused-item-reason: open the pause-reason prompt for this item. */
+  readonly onPause?: (id: string) => void;
   readonly readOnly?: boolean;
   /**
    * When true, the card renders an inline textarea seeded with `item.text`
@@ -140,6 +142,7 @@ export function ItemCard({
   onMarkComplete,
   onMoveToNextWeek,
   onMoveToCurrentWeek,
+  onPause,
   readOnly = false,
   isEditing = false,
   onTextSave,
@@ -220,6 +223,7 @@ export function ItemCard({
           onMarkComplete={onMarkComplete}
           onMoveToNextWeek={onMoveToNextWeek}
           onMoveToCurrentWeek={onMoveToCurrentWeek}
+          onPause={onPause}
         />
       </div>
 
@@ -250,6 +254,20 @@ export function ItemCard({
           {item.text}
         </div>
       )}
+
+      {/* require-paused-item-reason: a paused item always carries the lead's
+          reason, surfaced as a muted line so a reviewer sees WHY it stalled. */}
+      {!showEditor &&
+        displayStatus === "paused" &&
+        item.pausedReason != null &&
+        item.pausedReason.trim().length > 0 && (
+          <p
+            className="mt-1 line-clamp-2 shrink-0 text-[11px] italic text-[var(--color-muted-foreground)]"
+            title={item.pausedReason}
+          >
+            Paused: {item.pausedReason}
+          </p>
+        )}
 
       {/* Footer: author on the left, compact stage tags on the right.
           shrink-0 mirrors the top row — never compressed by the fixed

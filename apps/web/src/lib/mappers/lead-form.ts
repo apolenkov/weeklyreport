@@ -549,6 +549,9 @@ export function mapLeadItems(
         // re-populates the field on reopen (dropping it left the field empty
         // after reload even though the value persisted).
         priorityRank: item.priorityRank ?? null,
+        // require-paused-item-reason: surfaced on the card and round-tripped
+        // through sectionToDraftPayload so it survives a save.
+        pausedReason: item.pausedReason ?? null,
       };
     });
 }

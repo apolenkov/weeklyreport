@@ -194,6 +194,9 @@ export type PrismaReportSectionWithRelations = NonNullable<
     workflowStatus: string;
     carriedOver: boolean;
     priorityRank: number | null;
+    // require-paused-item-reason: the lead's reason for pausing. Optional here
+    // so unit fixtures predating the column still map; null on non-paused rows.
+    pausedReason?: string | null;
     stageNames: string[];
     // fix-lead-surface-name-resolution: ridden along by
     // `reportSectionFullInclude`; optional so legacy fixtures that
@@ -601,6 +604,7 @@ export function mapPrismaToReportSection(
       workflowStatus: i.workflowStatus,
       carriedOver: i.carriedOver,
       priorityRank: i.priorityRank ?? null,
+      pausedReason: i.pausedReason ?? null,
       stageIds: i.stageNames.length > 0 ? i.stageNames : undefined,
       comments: toCommentViews(i.recordComments ?? []),
     })),
@@ -966,6 +970,7 @@ export class ReportSectionsPrismaRepository
                 workflowStatus: i.workflowStatus,
                 carriedOver: i.carriedOver,
                 priorityRank: i.priorityRank ?? null,
+                pausedReason: i.pausedReason ?? null,
                 stageNames: i.stageIds ?? [],
               })),
             });

@@ -5,6 +5,7 @@ import {
   markCompletePatch,
   moveToCurrentWeekPatch,
   moveToNextWeekPatch,
+  pauseItemPatch,
 } from "./lead-item-actions";
 
 type LeadItem = ReportSectionReadModel["items"][number];
@@ -69,5 +70,22 @@ describe("markCompletePatch", () => {
     expect(markCompletePatch()).toEqual({
       workflowStatus: "done",
     });
+  });
+});
+
+describe("pauseItemPatch", () => {
+  it("pauses the item in place with the given reason", () => {
+    expect(pauseItemPatch("waiting on a dependency")).toEqual({
+      workflowStatus: "paused",
+      pausedReason: "waiting on a dependency",
+    });
+  });
+
+  it("preserves durable identity when applied to an existing item", () => {
+    const paused = { ...carriedItem(), ...pauseItemPatch("blocked upstream") };
+    expect(paused.workflowStatus).toBe("paused");
+    expect(paused.pausedReason).toBe("blocked upstream");
+    expect(paused.stableId).toBe("22222222-2222-4222-8222-222222222222");
+    expect(paused.id).toBe("11111111-1111-4111-8111-111111111111");
   });
 });
