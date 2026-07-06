@@ -157,7 +157,7 @@ describe("useEditableListDialog", () => {
     );
 
     const keys: string[] = [];
-    act(() => result.current.openCreate("crm"));
+    act(() => result.current.openCreate({ productId: "crm" }));
     keys.push(result.current.dialogKey);
     act(() => result.current.openEdit(entityA));
     keys.push(result.current.dialogKey);
@@ -187,7 +187,7 @@ describe("useEditableListDialog", () => {
       useEditableListDialog<TestEntity>({ readOnly: true, addSignal: 0 }),
     );
 
-    act(() => result.current.openCreate("crm"));
+    act(() => result.current.openCreate({ productId: "crm" }));
     expect(result.current.dialogState.open).toBe(false);
 
     act(() => result.current.openEdit(entityA));

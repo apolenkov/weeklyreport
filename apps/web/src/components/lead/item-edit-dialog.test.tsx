@@ -961,3 +961,33 @@ describe("ItemEditDialog — record-status-ux-polish (in-dialog lock + blocker r
     ).not.toBeInTheDocument();
   });
 });
+
+describe("ItemEditDialog — activity-lane + Add preselects the activity", () => {
+  const activities = [{ id: "act-1", name: "Jira triage duty" }];
+
+  it("opens create mode with the seed activity as parent and no stage step", () => {
+    render(
+      <ItemEditDialog
+        open={true}
+        item={null}
+        products={products}
+        activities={activities}
+        week="current"
+        defaultProductId="p1"
+        defaultActivityId="act-1"
+        stagesForProduct={() => ["Dev", "Testing"] as const}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    // The seed activity beats the baked-in default product.
+    const parentSelect = screen.getByLabelText("Parent") as HTMLSelectElement;
+    expect(parentSelect.value).toBe("activity:act-1");
+    // An activity parent owns no SDLC stage — the stage step is hidden.
+    expect(screen.queryByText(/SDLC Stages/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Jira triage duty/ }),
+    ).toBeInTheDocument();
+  });
+});

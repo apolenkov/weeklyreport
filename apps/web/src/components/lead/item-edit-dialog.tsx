@@ -53,6 +53,11 @@ interface ItemEditDialogProps {
    */
   readonly defaultProductId?: string;
   /**
+   * In create mode, preselect this activity as the parent — an activity
+   * lane's `+ Add`. Wins over the seed product (XOR parent).
+   */
+  readonly defaultActivityId?: string;
+  /**
    * 35-04 (FEAT-144): callback returning the SDLC stages the current lead
    * owns on the given project. Constrains the "SDLC Stage" select.
    */
@@ -330,6 +335,7 @@ function ItemEditDialogContent({
   week,
   currentUserName,
   defaultProductId,
+  defaultActivityId,
   stagesForProduct,
   ownPeriodRanks,
   risks,
@@ -371,10 +377,15 @@ function ItemEditDialogContent({
   );
   // activity-first-class: the record's parent — a product OR an attached
   // activity (XOR). Seeded from the bound row on edit, or from the create-mode
-  // default product (falling back to the first activity for an activity-only
-  // lead with no products).
+  // seed — an activity lane's `+ Add` presets the activity and beats the
+  // baked-in seed product (falling back to the first activity for an
+  // activity-only lead with no products).
   const [parent, setParent] = useState<RecordParent>(() =>
-    resolveRecordParent(initial, undefined, activities),
+    resolveRecordParent(
+      initial,
+      { activityId: isCreate ? defaultActivityId : undefined },
+      activities,
+    ),
   );
   const isActivityParent = parent.kind === "activity";
   const [priorityRank, setPriorityRank] = useState<number | null>(

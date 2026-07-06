@@ -104,7 +104,7 @@ function DecisionEditDialogContent({
   const [parent, setParent] = useState<RecordParent>(() =>
     resolveRecordParent(
       decision ?? {},
-      defaultProductId || products?.[0]?.id,
+      { productId: defaultProductId || products?.[0]?.id },
       activities,
     ),
   );
