@@ -6,18 +6,18 @@ import { Suspense, useCallback, useContext, useMemo } from "react";
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
-import type { ReportPeriod } from "../lead/mock-data";
-import { PeriodNavigator } from "../lead/period-navigator";
-import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
-import { ArchiveToggle } from "../report-shell/archive-toggle";
+import { AgentReviewComingSoon } from "../../shared/ui/report-shell/agent-review-coming-soon";
+import { ArchiveToggle } from "../../shared/ui/report-shell/archive-toggle";
 import {
   DocumentActionGroup,
   ReportToolbar,
   ReportToolbarCenterLabel,
-} from "../report-shell/report-toolbar";
-import { ScopeToggle } from "../report-shell/scope-toggle";
-import { useReportShellUrlState } from "../report-shell/use-report-shell-url-state";
-import { ViewModeToggle } from "../report-shell/view-mode-toggle";
+} from "../../shared/ui/report-shell/report-toolbar";
+import { ScopeToggle } from "../../shared/ui/report-shell/scope-toggle";
+import { useReportShellUrlState } from "../../shared/ui/report-shell/use-report-shell-url-state";
+import { ViewModeToggle } from "../../shared/ui/report-shell/view-mode-toggle";
+import type { ReportPeriod } from "../lead/mock-data";
+import { PeriodNavigator } from "../lead/period-navigator";
 import { HeadSlidesClient } from "../slides/head-slides-client";
 import { SlideSkeleton } from "../slides/slide-skeleton";
 import { ExportPdfButton } from "../weekly-report/export-pdf-button";

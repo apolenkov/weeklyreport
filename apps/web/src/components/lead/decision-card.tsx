@@ -1,5 +1,5 @@
-import { LockBadge } from "../report-shell/lock-badge";
-import { MetaRow } from "../report-shell/meta-row";
+import { LockBadge } from "../../shared/ui/report-shell/lock-badge";
+import { MetaRow } from "../../shared/ui/report-shell/meta-row";
 import { PublishedRecordMarker } from "./item-card-actions";
 import { FOREIGN_ENTRY_OPACITY } from "./item-card-style";
 import type { DecisionEntry } from "./mock-data";

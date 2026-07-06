@@ -53,19 +53,19 @@ import { SessionContext } from "../../lib/session-provider";
 import { isConflictError } from "../../lib/trpc";
 import { useTRPC } from "../../lib/trpc-context";
 import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
-import { AccordionSection } from "../report-shell/accordion-section";
-import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
-import { ArchiveToggle } from "../report-shell/archive-toggle";
+import { AccordionSection } from "../../shared/ui/report-shell/accordion-section";
+import { AgentReviewComingSoon } from "../../shared/ui/report-shell/agent-review-coming-soon";
+import { ArchiveToggle } from "../../shared/ui/report-shell/archive-toggle";
 import {
   DocumentActionGroup,
   ReportToolbar,
-} from "../report-shell/report-toolbar";
-import { SaveNowButton } from "../report-shell/save-now-button";
+} from "../../shared/ui/report-shell/report-toolbar";
+import { SaveNowButton } from "../../shared/ui/report-shell/save-now-button";
 import {
   segmentClassName,
   SegmentedToggle,
-} from "../report-shell/segmented-toggle";
-import { ViewModeToggle } from "../report-shell/view-mode-toggle";
+} from "../../shared/ui/report-shell/segmented-toggle";
+import { ViewModeToggle } from "../../shared/ui/report-shell/view-mode-toggle";
 import { LeadSlidesClient } from "../slides/lead-slides-client";
 import { SlideFullscreenButton } from "../slides/slide-fullscreen-button";
 import { SdlcTooltipProvider } from "../ui/sdlc-tooltip";

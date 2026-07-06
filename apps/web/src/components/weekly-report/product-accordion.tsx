@@ -12,7 +12,7 @@ import type {
   ReportItem,
   ReportRisk,
 } from "../../shared/lib/dashboard-mock-data";
-import { RotatingChevron } from "../report-shell/rotating-chevron";
+import { RotatingChevron } from "../../shared/ui/report-shell/rotating-chevron";
 import {
   type RecordCommentAnchor,
   RecordComments,

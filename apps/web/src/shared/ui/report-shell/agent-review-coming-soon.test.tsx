@@ -13,7 +13,7 @@ import { render, screen, within } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { PrintRouteContext } from "../../lib/server/get-print-route-context";
+import type { PrintRouteContext } from "../../../lib/server/get-print-route-context";
 
 /* ---- Module mocks (must be hoisted above all imports of the SUT) ---- */
 
@@ -42,17 +42,17 @@ vi.mock("next/navigation", () => ({
 // The /print server gate reads the cookie once via this helper; mock it
 // per-test to drive the worker / human / no-session branches.
 const getPrintRouteContext = vi.fn<() => Promise<PrintRouteContext>>();
-vi.mock("../../lib/server/get-print-route-context", () => ({
+vi.mock("../../../lib/server/get-print-route-context", () => ({
   getPrintRouteContext: () => getPrintRouteContext(),
 }));
 
-vi.mock("../../components/lead/lead-section-preview-auth", () => ({
+vi.mock("../../../components/lead/lead-section-preview-auth", () => ({
   LeadSectionPreviewAuth: () => (
     <div data-testid="lead-section-preview-auth-stub" />
   ),
 }));
 
-vi.mock("../../components/weekly-report/weekly-report-page", () => ({
+vi.mock("../../../components/weekly-report/weekly-report-page", () => ({
   // viewer-report-surface-parity: the viewer now wraps WeeklyReportPage in
   // ViewerReportShell, which routes the full bottom-row controls (agent-review
   // placeholder + Back-to-Archive + scope/view-mode toggles) through the
@@ -66,12 +66,12 @@ vi.mock("../../components/weekly-report/weekly-report-page", () => ({
   ),
 }));
 
-vi.mock("../../components/weekly-report/weekly-report-skeleton", () => ({
+vi.mock("../../../components/weekly-report/weekly-report-skeleton", () => ({
   WeeklyReportSkeleton: () => <div data-testid="weekly-report-skeleton-stub" />,
 }));
 
 // RoleGate: pass children straight through for the lead preview test.
-vi.mock("../../components/role-gate", () => ({
+vi.mock("../../../components/role-gate", () => ({
   RoleGate: ({ children }: { children: ReactElement }) => children,
 }));
 
@@ -124,7 +124,7 @@ vi.mock("@tanstack/react-query", async () => {
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
-vi.mock("../../lib/trpc-context", () => ({
+vi.mock("../../../lib/trpc-context", () => ({
   useTRPC: () => ({
     reports: {
       compiledHistory: {
@@ -145,7 +145,7 @@ vi.mock("../../lib/trpc-context", () => ({
   }),
 }));
 
-vi.mock("../../lib/mappers", () => ({
+vi.mock("../../../lib/mappers", () => ({
   mapWeeklyReport: () => ({
     portfolio: [],
     products: [],
@@ -170,11 +170,11 @@ vi.mock("react", async () => {
 
 /* ---- Imports under test (after all vi.mock registrations) ---- */
 
-import HeadReportPresentPage from "../../app/(app)/head/report/[reportId]/present/page";
-import LeadReportPreviewPage from "../../app/(app)/lead/report/[reportId]/preview/page";
-import PublishedReportPage from "../../app/(app)/reports/[reportId]/page";
-import PublishedReportPresentPage from "../../app/(app)/reports/[reportId]/present/page";
-import PrintReportPage from "../../app/print/[reportId]/page";
+import HeadReportPresentPage from "../../../app/(app)/head/report/[reportId]/present/page";
+import LeadReportPreviewPage from "../../../app/(app)/lead/report/[reportId]/preview/page";
+import PublishedReportPage from "../../../app/(app)/reports/[reportId]/page";
+import PublishedReportPresentPage from "../../../app/(app)/reports/[reportId]/present/page";
+import PrintReportPage from "../../../app/print/[reportId]/page";
 
 /* ---- Helpers ---- */
 
