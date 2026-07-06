@@ -3,27 +3,30 @@
 import { useQuery } from "@tanstack/react-query";
 import { Suspense, useCallback, useContext, useMemo } from "react";
 
-import { PeriodNavigator } from "../../features/period/ui/period-navigator";
-import type { ReportPeriod } from "../../features/report-sections/model/mock-data";
-import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
-import { SessionContext } from "../../lib/session-provider";
-import { useTRPC } from "../../lib/trpc-context";
-import { AgentReviewComingSoon } from "../../shared/ui/report-shell/agent-review-coming-soon";
-import { ArchiveToggle } from "../../shared/ui/report-shell/archive-toggle";
+import { HeadSlidesClient } from "../../../components/slides/head-slides-client";
+import { SlideSkeleton } from "../../../components/slides/slide-skeleton";
+import { ExportPdfButton } from "../../../components/weekly-report/export-pdf-button";
+import { HeadPublishLockAction } from "../../../components/weekly-report/head-publish-lock-action";
+import { WeeklyReportPage } from "../../../components/weekly-report/weekly-report-page";
+import { WeeklyReportSkeleton } from "../../../components/weekly-report/weekly-report-skeleton";
+import {
+  formatDateRange,
+  isoWeekNumber,
+} from "../../../lib/mappers/lead-history";
+import { SessionContext } from "../../../lib/session-provider";
+import { useTRPC } from "../../../lib/trpc-context";
+import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
+import { ArchiveToggle } from "../../../shared/ui/report-shell/archive-toggle";
 import {
   DocumentActionGroup,
   ReportToolbar,
   ReportToolbarCenterLabel,
-} from "../../shared/ui/report-shell/report-toolbar";
-import { ScopeToggle } from "../../shared/ui/report-shell/scope-toggle";
-import { useReportShellUrlState } from "../../shared/ui/report-shell/use-report-shell-url-state";
-import { ViewModeToggle } from "../../shared/ui/report-shell/view-mode-toggle";
-import { HeadSlidesClient } from "../slides/head-slides-client";
-import { SlideSkeleton } from "../slides/slide-skeleton";
-import { ExportPdfButton } from "../weekly-report/export-pdf-button";
-import { HeadPublishLockAction } from "../weekly-report/head-publish-lock-action";
-import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
-import { WeeklyReportSkeleton } from "../weekly-report/weekly-report-skeleton";
+} from "../../../shared/ui/report-shell/report-toolbar";
+import { ScopeToggle } from "../../../shared/ui/report-shell/scope-toggle";
+import { useReportShellUrlState } from "../../../shared/ui/report-shell/use-report-shell-url-state";
+import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle";
+import { PeriodNavigator } from "../../period/ui/period-navigator";
+import type { ReportPeriod } from "../model/mock-data";
 
 // Module-scope so the reference is stable across renders — a fresh literal would
 // churn the hook's `buildQuery` memoization. The head strips no one-shot markers.
