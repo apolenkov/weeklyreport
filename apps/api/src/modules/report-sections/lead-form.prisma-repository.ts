@@ -619,7 +619,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         projectId: true,
         stageId: true,
         stage: { select: { name: true } },
-        user: { select: { id: true, name: true } },
+        user: { select: { id: true, name: true, role: true } },
       },
     });
 
@@ -631,6 +631,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       {
         authorId: string;
         authorName: string;
+        authorRole: "lead" | "head" | "admin" | "viewer";
         sharedProjectIds: Set<string>;
         stageAssignments: {
           projectId: string;
@@ -653,6 +654,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
         authorProjectMap.set(row.user.id, {
           authorId: row.user.id,
           authorName: row.user.name,
+          authorRole: row.user.role,
           sharedProjectIds: new Set([row.projectId]),
           stageAssignments: [assignment],
         });
@@ -747,6 +749,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
       rows.push({
         authorId: authorEntry.authorId,
         authorName: authorEntry.authorName,
+        authorRole: authorEntry.authorRole,
         sharedProductIds: [...sharedIds],
         stages,
         // activity-first-class: the cross-lead grid is product-scoped — an

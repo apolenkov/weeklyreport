@@ -79,10 +79,13 @@ export function buildAuthorRoster(
   const foreignById = new Map(
     foreign
       .filter((row) => row.authorId !== section.authorId)
-      .map((row) => [row.authorId, row.authorName]),
+      .map((row) => [
+        row.authorId,
+        { name: row.authorName, role: row.authorRole },
+      ]),
   );
   const foreignAuthors = [...foreignById.entries()].sort(([, a], [, b]) =>
-    a.localeCompare(b),
+    a.name.localeCompare(b.name),
   );
   const authors = [
     {
@@ -93,9 +96,10 @@ export function buildAuthorRoster(
       colorIndex: 0,
       isOwner: true,
     },
-    ...foreignAuthors.map(([id, name], index) => ({
+    ...foreignAuthors.map(([id, { name, role }], index) => ({
       id,
       name,
+      ...(role === undefined ? {} : { role }),
       initials: initialsOf(name),
       colorIndex: (index + 1) % AUTHOR_COLOR_COUNT,
       isOwner: false,

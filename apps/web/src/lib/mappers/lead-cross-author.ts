@@ -67,6 +67,9 @@ export interface CrossAuthorRow {
 export interface CrossAuthorContentRow {
   authorId: string;
   authorName: string;
+  /** The author's access role — the slide legend labels every author with it.
+   * Optional so frozen snapshots predating the field still parse. */
+  authorRole?: "lead" | "head" | "admin" | "viewer";
   items: {
     id: string;
     projectId: string;

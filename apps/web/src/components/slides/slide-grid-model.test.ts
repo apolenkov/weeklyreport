@@ -322,6 +322,22 @@ describe("buildSlideGridModel — authors and header stats", () => {
     ]);
   });
 
+  it("carries every author's role into the roster, foreign included", () => {
+    const model = buildSlideGridModel({
+      section: section(),
+      foreign: [
+        foreignRow({ authorId: "co-2", authorRole: "lead" }),
+        foreignRow({ authorId: "co-3", authorName: "Юдина Т.Т." }),
+      ],
+    });
+    expect(model.authors.map((a) => [a.isOwner, a.role])).toEqual([
+      [true, "lead"],
+      [false, "lead"],
+      // A row predating the field (frozen snapshot) still renders, role-less.
+      [false, undefined],
+    ]);
+  });
+
   it("derives worst status, on-track chip, and noData collapse", () => {
     const model = buildSlideGridModel({
       section: section({ items: [item()] }),
