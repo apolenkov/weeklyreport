@@ -28,5 +28,5 @@
       button + reason line.
 - [x] 3.2 Full gates green (db:generate → typecheck → lint → unit; shared 360 /
       web 1560 / api 1410).
-- [ ] 3.3 Live-verify on :3000: pause an item with a reason, reload, confirm the
+- [x] 3.3 Live-verify on :3000: pause an item with a reason, reload, confirm the
       reason persists and shows; edit-dialog Paused requires a reason.
