@@ -1,9 +1,8 @@
 /**
- * Form-state → API-input helpers for the admin tabs, extracted from `admin.ts`
- * (R3a-4 max-lines split). Each helper translates the mock-shaped form state
- * stored in an admin tab into the Zod-validated input expected by the
- * corresponding mutation. They live together so any contract drift (e.g. schema
- * field renames) collects in one place.
+ * Form-state → API-input helpers for the admin tabs. Each helper translates
+ * the mock-shaped form state stored in an admin tab into the Zod-validated
+ * input expected by the corresponding mutation. They live together so any
+ * contract drift (e.g. schema field renames) collects in one place.
  */
 
 import {
@@ -207,7 +206,7 @@ export function toAdminReminderRuleInput(
 }
 
 /**
- * UFB-036 (Phase 44-04): Reminders Tab policy editor form-state.
+ * Reminders Tab policy editor form-state.
  *
  * The form binds:
  *   - `kind`, `offsetMinutes`, `timezone`, `audience`, `active`: 1:1 with

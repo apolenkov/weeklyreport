@@ -1,10 +1,9 @@
 /**
- * Presentation types for the admin tabs, extracted from `admin.ts` (R3a-4
- * max-lines split). These are intentionally self-contained re-declarations so
- * downstream consumers do not couple to a particular UI module
- * (`apps/web/src/shared/lib/admin-mock-data.ts`). The mapper logic that
- * produces them lives in `admin.ts`; the form-state→API helpers live in
- * `admin-form-inputs.ts`.
+ * Presentation types for the admin tabs. These are intentionally
+ * self-contained re-declarations so downstream consumers do not couple to a
+ * particular UI module (`apps/web/src/shared/lib/admin-mock-data.ts`). The
+ * mapper logic that produces them lives in `admin.ts`; the form-state→API
+ * helpers live in `admin-form-inputs.ts`.
  */
 
 import type {
@@ -32,7 +31,7 @@ export interface MockUser {
   groupId: string;
   // Reporting-group display label (NOT an HR field — distinct from `position`).
   department: string;
-  // A2 (UAT-v7 2026-05-12): soft-deactivation flag from the API.
+  // Soft-deactivation flag from the API.
   isActive: boolean;
 }
 
@@ -81,17 +80,17 @@ export interface MockReminder {
   timezone: string;
   version: number;
   reportId: string | null;
-  // UFB-036 (Phase 44-04): policy FK preserved so the Reminders Tab can
-  // group derived rules under their owning policy in the read-only
-  // expander. `null` for legacy rules (created before 44-01).
+  // Policy FK preserved so the Reminders Tab can group derived rules under
+  // their owning policy in the read-only expander. `null` for legacy rules
+  // created before policies existed.
   policyId: string | null;
 }
 
 /**
- * UFB-036 (Phase 44-04): presentation shape of {@link reminderPolicySchema}
- * for the Reminders Tab policy editor. Mirrors the wire schema 1:1 except
- * the wire-only `id` is preserved verbatim — there is no name/description
- * synthesis here because the editor surfaces every column directly.
+ * Presentation shape of {@link reminderPolicySchema} for the Reminders Tab
+ * policy editor. Mirrors the wire schema 1:1 except the wire-only `id` is
+ * preserved verbatim — there is no name/description synthesis here because
+ * the editor surfaces every column directly.
  */
 export interface MockReminderPolicy {
   id: string;
@@ -105,12 +104,11 @@ export interface MockReminderPolicy {
   validUntil: Date | null;
 }
 
-// UFB-048 (Phase 48-B): MockSettings expanded with 9 new admin-tunable fields
-// surfaced on the Periods / Reminders / Notifications sub-tabs. Field order
-// mirrors the tab layout for readability. The mapper below copies through 1:1
-// from the wire schema (`appSettingsSchema`).
-// UFB-047 / Phase 49-01: legacy `departmentName` removed alongside the
-// AppSettings column.
+// MockSettings surfaces the admin-tunable fields on the Periods / Reminders /
+// Notifications sub-tabs. Field order mirrors the tab layout for readability.
+// The mapper in `admin.ts` copies these through 1:1 from the wire schema
+// (`appSettingsSchema`). The legacy `departmentName` field was removed
+// alongside the AppSettings column.
 export interface MockSettings {
   autoCreatePeriods: boolean;
   defaultDeadlineDays: number;
@@ -121,8 +119,7 @@ export interface MockSettings {
   allowLateSubmissions: boolean;
   autoPublishAfterDeadline: boolean;
   autoArchiveWeeksAfterPublish: number;
-  // UFB-051 period-cycle knobs (consumer-less ones removed in
-  // admin-settings-surface-cleanup).
+  // Period-cycle knobs.
   deadlineTime: string; // HH:MM (24h)
   allowReopenAfterPublish: boolean;
   reopenWindowHours: number;
@@ -141,6 +138,6 @@ export interface MappedAdminSnapshot {
   products: MockProduct[];
   periods: MockPeriod[];
   reminders: MockReminder[];
-  /** UFB-036 (Phase 44-04): policies surfaced for the Reminders Tab editor. */
+  /** Policies surfaced for the Reminders Tab editor. */
   policies: MockReminderPolicy[];
 }

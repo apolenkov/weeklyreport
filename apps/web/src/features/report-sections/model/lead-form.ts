@@ -6,44 +6,9 @@
  *   - `leadForm.byPeriod`     -> `{ section: ReportSectionReadModel; readOnly: boolean }`
  *   - `reports.myHistory`     -> `MyHistoryEntry[]`
  *
- * Reuses Phase 20 mappers (`trafficToStageStatus`, `deriveItemStatus`).
- *
- * Synthesis notes (Phase 21 / Plan 21-04):
- * - `leadForm.byPeriod` returns ONE section (the current user's slice for the
- *   target period). It does NOT carry `products` / `currentWeek` / `nextWeek` /
- *   `risks` / `decisions` / `priorities` as the plan's `<interfaces>` block
- *   claimed — those are derived from `section.projects`, `section.items`,
- *   `section.risks`, etc. (Rule 2 deviation, mirrors 21-03 admin synthesis.)
- *
- * - `MockProduct.stages` — synthesized empty 7-stage grid (assignee: null).
- *   The "mine" stage is auto-marked when the project's `trafficLight` is
- *   non-null (the lead owns that project's stage in the active section).
- *   Real per-stage assignments come from Phase 22 via `admin.listStageAssignments`.
- *
- * - `KanbanItem.productName` is looked up via `projectId` -> `projectName` from
- *   `section.projects`. Items with unknown projectId fall back to "Unknown".
- *
- * - `KanbanItem.stageName` — not present on `itemInputSchema`. Defaults to
- *   `undefined` (UI groups by product name only).
- *
- * - `KanbanItem.author` — uses `section.authorName`.
- *
- * - `RiskEntry.productName` — looked up via `risk.projectId` -> `projectName`.
- *   `RiskEntry.stageName` — not on `riskInputSchema`; defaults to "—".
- *   `RiskEntry.severity` — persisted when present; legacy rows default to
- *   `"at-risk"`.
- *
- * - `DecisionEntry.productId` / `.productName` — `decisionInputSchema` has no
- *   `projectId`. Defaults to `''` / 'Department'. Phase 22 may scope decisions
- *   per-project if the schema gains a projectId.
- *
- * - `PriorityEntry.text` is passthrough; `rank` clamped to 1|2|3.
- *
- * - `ReportPeriod.isCurrent` is determined by matching the period entry's
- *   reportId against the active section's reportId. `isSubmitted` flows from
- *   `sectionStatus === 'submitted'`. Counts flow through from
- *   `reports.myHistory`; the FillFrom UI owns the display fallback when older
- *   fixtures omit them.
+ * Each mapper below documents its own resolution rules; `leadForm.byPeriod`
+ * returns a single section, and `products` / `risks` / `decisions` /
+ * `priorities` are derived from that section's flat arrays.
  */
 
 import type {
@@ -80,8 +45,8 @@ import {
 
 // ---- Self-contained re-declarations of presentation types ----
 //
-// Mirrors `apps/web/src/components/lead/mock-data.ts` so consumers can depend
-// on this barrel rather than importing a value from `mock-data.ts`.
+// Mirrors the sibling `./mock-data.ts` so consumers can depend on this barrel
+// rather than importing a value from `mock-data.ts`.
 
 // unassigned-stage-reporting-exclusion: the "unassigned" category is gone. A
 // stage is either the lead's own ("mine") or assigned to another lead on the
@@ -96,7 +61,7 @@ export interface LeadStageAssignment {
   assignee: string | null;
   tooltip?: string;
   /**
-   * W11 (fix-report-surface-integrity): true when an OWN non-empty risk
+   * fix-report-surface-integrity: true when an OWN non-empty risk
    * EXPLICITLY names this stage (strict — `stageIds` non-empty and matching). A
    * covers-all (`stageIds: []`) or legacy stage-less risk does NOT set it. Feeds
    * own-input completeness so a deliberately risk-staged stage counts, while the
@@ -128,7 +93,7 @@ export interface LeadKanbanItem {
   activityName?: string;
   /** @deprecated Use stageIds. Kept for display back-compat via splitStageNames. */
   stageName?: string;
-  /** UFB-073 (R1): stage selection as array of stage names. */
+  /** Stage selection as an array of stage names. */
   stageIds?: string[];
   status: ItemStatus;
   text: string;
@@ -147,7 +112,7 @@ export interface LeadRiskEntry {
   activityName?: string;
   /** @deprecated Use stageIds. Kept for display back-compat via splitStageNames. */
   stageName?: string;
-  /** UFB-073 (R1): stage selection as array of stage names. */
+  /** Stage selection as an array of stage names. */
   stageIds?: string[];
   severity: "at-risk" | "blocked";
   /** The user-controlled "what is the risk" text (= raw `risk` field). */
@@ -175,7 +140,7 @@ export interface LeadDecisionEntry {
   deadline: string | null;
   /** @deprecated Use stageIds. Kept for display back-compat via splitStageNames. */
   stageName?: string;
-  /** UFB-073 (R1): stage selection as array of stage names. */
+  /** Stage selection as an array of stage names. */
   stageIds?: string[];
 }
 
@@ -184,9 +149,9 @@ export interface LeadPriorityEntry {
   text: string;
   /** @deprecated Use stageIds. Kept for display back-compat via splitStageNames. */
   stageName?: string;
-  /** UFB-073 (R1): stage selection as array of stage names. */
+  /** Stage selection as an array of stage names. */
   stageIds?: string[];
-  /** R4-B: product this priority is scoped to. */
+  /** Product this priority is scoped to. */
   productId?: string;
   productName?: string;
 }
@@ -214,7 +179,7 @@ export interface LeadCurrentUser {
   initials: string;
   /**
    * Display label rendered next to the user's name in the form chrome.
-   * Pre-35-03 this was a hard-coded "Dev Lead"; the chrome text now
+   * Previously this was a hard-coded "Dev Lead"; the chrome text now
    * derives from the section's `authorRole`.
    */
   role: string;
@@ -269,7 +234,7 @@ function clampRank(rank: number): number {
 
 // Avatar initials via the canonical shared helper (surname-first ФИО), with
 // this surface's "??" placeholder for an empty name. The token logic lives once
-// in @customreport/shared (see commit 8fd7e8bf — four cloned copies diverged).
+// in @customreport/shared so cloned copies can't diverge.
 function initialsFromName(name: string): string {
   return sharedInitialsFromName(name) || "??";
 }
@@ -290,7 +255,7 @@ function buildProjectIndex(section: ReportSectionReadModel): Map<
   >();
   // fix-lead-surface-name-resolution: name-only entries for projects that
   // section rows reference but the author owns no stage on. Seeded first so
-  // the stage-owned loop below wins on conflict (design Decision 3); they
+  // the stage-owned loop below wins on conflict; they
   // feed product-name lookup only — `mapLeadProducts` does not read this
   // index, so no stray product card or stage grid appears.
   for (const referenced of section.referencedProjects ?? []) {
@@ -359,17 +324,17 @@ export { normalizeStageName, stageNamesMatch };
  * render even if `stageSet` is missing (legacy fixtures / frozen snapshots).
  * Order follows the canonical `STAGE_NAMES` pipeline order.
  *
- * rethink-pipeline-state-vs-completeness (D1): an EMPTY owned stage — one the
+ * rethink-pipeline-state-vs-completeness: an EMPTY owned stage — one the
  * lead never set a status on — keeps its raw `status: "empty"` even when a
  * covering risk exists. The risk-derived severity floor for DISPLAY is
  * re-applied at render by the live form's `applyRiskSeverityFloor` (and the
  * slide export's `floorSlideStageStatus`), so the chip still shows the risk
  * severity. The raw `status` must NOT be floored for an untouched stage:
  * flooring would erase the chip's risk-covered-vs-status-set distinction
- * (W11 task 3.9) and would count foreign/covers-all-covered stages toward
+ * and would count foreign/covers-all-covered stages toward
  * own-input completeness.
  *
- * fix-report-surface-integrity W11: own-input completeness no longer reads the
+ * fix-report-surface-integrity: own-input completeness no longer reads the
  * raw `status` alone — it counts a stage when `status !== "empty"` OR the lead's
  * OWN risk EXPLICITLY names it (`coveredByOwnRisk`, set below). So an empty stage
  * the lead deliberately staged a risk on DOES count, while its raw `status`
@@ -424,7 +389,7 @@ function buildStageGrid(
         // Stage owner labels render the short form ("Иванов В.П."); the full ФИО
         // is reserved for the top user badge. Avatar chips keep 2-letter initials.
         assignee: shortNameFromName(ownerLabel),
-        // W11 (fix-report-surface-integrity): flag a stage the lead's OWN risk
+        // fix-report-surface-integrity: flag a stage the lead's OWN risk
         // EXPLICITLY names (strict — non-empty stageIds). A covers-all (`[]`) or
         // legacy stage-less risk is excluded, so it never inflates the counter.
         // The raw `status` above is left untouched — the chip distinguishes a
@@ -453,15 +418,15 @@ function buildStageGrid(
 /**
  * Map a section's projects -> presentation Product[].
  *
- * 35-04 / unassigned-stage-reporting-exclusion: each project's `stageSet` (the
+ * unassigned-stage-reporting-exclusion: each project's `stageSet` (the
  * union of all leads' `StageAssignment` rows on the product) sources the grid;
  * `ownedStages` (scoped to the section author) marks which of those render as
  * "mine" vs foreign-owned "locked". A stage with no assignment is absent from
  * the set and excluded — no vacant chip.
  *
- * Pre-35-04 this mapper synthesized a fake grid that hard-coded the lead
- * onto "Dev" — that's the bug where assigning a lead to all 7 stages on
- * the Products admin tab didn't show up on /lead/report.
+ * Previously this mapper synthesized a fake grid that hard-coded the lead
+ * onto "Dev", so assigning a lead to all 7 stages on the Products admin tab
+ * did not show up on /lead/report.
  */
 export function mapLeadProducts(
   section: ReportSectionReadModel,
@@ -469,9 +434,9 @@ export function mapLeadProducts(
   return section.projects.map((p) => {
     const ownedStages = p.ownedStages ?? [];
     const overallStatus = trafficToStageStatus(p.trafficLight);
-    // rethink-pipeline-state-vs-completeness (D1): pass the covering risks so a
+    // rethink-pipeline-state-vs-completeness: pass the covering risks so a
     // TOUCHED stage floors up / collapses down correctly, while an UNTOUCHED
-    // (empty) stage keeps raw `status: "empty"` (see buildStageGrid). W11:
+    // (empty) stage keeps raw `status: "empty"` (see buildStageGrid).
     // buildStageGrid also tags it `coveredByOwnRisk` when an own risk names it,
     // which is how an empty-but-risk-staged stage counts toward completeness.
     const coveringRisks = section.risks.filter(
@@ -496,7 +461,7 @@ export function mapLeadProducts(
 /**
  * Map a section's items (filtered by `type`) into KanbanItems.
  *
- * Each item's display status flows through `deriveItemStatus` (Phase 20).
+ * Each item's display status flows through `deriveItemStatus`.
  * Product name is resolved via `section.projects[i].projectName`.
  */
 export function mapLeadItems(
@@ -728,7 +693,7 @@ export function mapLeadPeriods(
 }
 
 /**
- * review-acknowledgement (§8): one of the lead's OWN records that carries
+ * review-acknowledgement: one of the lead's OWN records that carries
  * reviewer comments. Surfaced read-only when a returned (draft) section comes
  * back, so the feedback is not silent. `text` is the record's OWN text — context
  * for the lead, NEVER re-rendered as a comment.
@@ -821,7 +786,7 @@ export interface MapLeadFormArgs {
     section: ReportSectionReadModel;
     readOnly: boolean;
     /**
-     * reopen-request-lifecycle (D4): server-computed flag — true only when the
+     * reopen-request-lifecycle: server-computed flag — true only when the
      * lead may file a reopen request (submitted section, open/reopened period,
      * no pending request). The button reads this; it does NOT reconstruct the
      * policy. Optional so legacy/test args without it default to "hidden".
@@ -845,7 +810,7 @@ export interface MappedLeadForm {
   /** Whether the section is locked for the current user (submitted or period published). */
   readOnly: boolean;
   /**
-   * reopen-request-lifecycle (D4): whether to show the lead's Request Reopen
+   * reopen-request-lifecycle: whether to show the lead's Request Reopen
    * control. Server-computed; the client never reconstructs the lifecycle.
    */
   canRequestReopen: boolean;
@@ -861,7 +826,7 @@ export function mapLeadFormData(args: MapLeadFormArgs): MappedLeadForm {
   // Lock the form when the period is locked OR the section is already submitted.
   const readOnly = args.byPeriod.readOnly || section.status === "submitted";
 
-  // 35-03: surface the section author's role end-to-end. The display label
+  // Surface the section author's role end-to-end. The display label
   // comes from the shared `ROLE_LABEL` home; the raw token (`authorRole`) is
   // exposed so role-based UI gating doesn't have to reverse-engineer the label
   // string. Defaults to 'lead' when the read model omits it (legacy fixtures,

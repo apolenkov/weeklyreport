@@ -8,10 +8,10 @@
  *                      decisions / priorities)
  *
  * The presentation types live in `./weekly-report-types` and the section
- * grouping/formatting helpers in `./weekly-report-groupers` (R3a-4 max-lines
- * split); both are re-exported here so existing importers are unaffected.
+ * grouping/formatting helpers in `./weekly-report-groupers`; both are
+ * re-exported here so existing importers are unaffected.
  *
- * Synthesis notes (Phase 21 / Plan 21-04):
+ * How the slices are derived:
  * - `weeklyReport.get` returns `leadSections: ReportSectionReadModel[]` (sliced
  *   per LEAD). We re-slice by `projectId` across all leadSections, then attach
  *   risks/decisions/priorities.

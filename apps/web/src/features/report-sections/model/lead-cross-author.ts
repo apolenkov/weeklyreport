@@ -126,7 +126,7 @@ export type CrossAuthorStageMap = Map<
 // ---- Mappers ----
 
 /**
- * F8: build a projectId → normalized-stage-name → { assignee, status } lookup
+ * Build a projectId → normalized-stage-name → { assignee, status } lookup
  * from `crossAuthors` rows only. Stage status is taken DIRECTLY from
  * `ca.stages[].status`, which the server already risk-derived
  * (deriveForeignStageStatus). Re-running the client `deriveEffectiveStageStatus`
@@ -159,7 +159,7 @@ export function buildCrossAuthorStageMap(
 }
 
 /**
- * F8 / unassigned-stage-reporting-exclusion: fill the real cross-author
+ * unassigned-stage-reporting-exclusion: fill the real cross-author
  * assignee + derived status onto foreign-owned (`locked`) stages. Since the
  * "unassigned" category is gone, `buildStageGrid` now emits foreign-owned
  * stages as `locked` with `assignee: null` directly; this resolves who holds
@@ -196,7 +196,7 @@ export function applyCrossAuthorStageOverrides(
 const ISO_DATE_PREFIX_LENGTH = 10;
 
 /**
- * Lenient workflow→ItemStatus coercion (design D3). The cross-author content
+ * Lenient workflow→ItemStatus coercion. The cross-author content
  * rows carry `workflowStatus` as a plain string; the known enum values
  * delegate to the tested `workflowToItemStatus`, anything else falls back to
  * `'planned'`. The fallback is load-bearing — substituting the strict mapper

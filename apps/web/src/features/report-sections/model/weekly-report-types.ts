@@ -1,8 +1,8 @@
 /**
  * Presentation types for the Weekly Report / `/reports/[reportId]` pages,
- * produced by {@link mapWeeklyReport} in `./weekly-report`. Extracted from that
- * module (R3a-4 max-lines split); re-exported from `./weekly-report` so existing
- * importers (and the `./index` barrel) are unaffected.
+ * produced by {@link mapWeeklyReport} in `./weekly-report`. Re-exported from
+ * `./weekly-report` so existing importers (and the `./index` barrel) are
+ * unaffected.
  */
 import type {
   RecordCommentView,
@@ -115,13 +115,12 @@ export interface WeeklyReportPeriod {
    * Concrete report identifier (UUID). Equal to `id` (which historically was
    * set to `api.reportId`); surfaced explicitly so consumers wiring publish /
    * reopen mutations can read `period.reportId` without relying on the
-   * implicit `id === reportId` invariant. Added in Phase 22 (plan 22-05).
+   * implicit `id === reportId` invariant.
    */
   reportId: string;
   /**
    * Period lifecycle state mirrored from the API. Used by the head's
    * Publish & Lock / Reopen toggle to decide which action to render.
-   * Phase 22 (plan 22-05).
    */
   periodStatus: "open" | "published" | "reopened";
   weekLabel: string;
