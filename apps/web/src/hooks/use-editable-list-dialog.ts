@@ -17,8 +17,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
  */
 export type EditableListDialogState<TEntity> =
   | { open: false }
-  | { open: true; mode: "create"; seedProductId?: string }
+  | {
+      open: true;
+      mode: "create";
+      seedProductId?: string;
+      seedActivityId?: string;
+    }
   | { open: true; mode: "edit"; entity: TEntity };
+
+/** Create-mode parent preset (XOR): a product column's or an activity lane's "+ Add". */
+export interface CreateSeed {
+  readonly productId?: string;
+  readonly activityId?: string;
+}
 
 interface UseEditableListDialogOptions {
   readonly readOnly: boolean;
@@ -43,8 +54,8 @@ interface UseEditableListDialogResult<TEntity> {
    * opens of the same entity always remount the dialog with fresh state.
    */
   readonly dialogKey: string;
-  /** Opens create mode. No-op when readOnly. */
-  readonly openCreate: (seedProductId?: string) => void;
+  /** Opens create mode, optionally preselecting a parent. No-op when readOnly. */
+  readonly openCreate: (seed?: CreateSeed) => void;
   /** Opens edit mode for an entity. No-op when readOnly. */
   readonly openEdit: (entity: TEntity) => void;
   /** Closes the dialog. */
@@ -101,13 +112,14 @@ export function useEditableListDialog<TEntity extends { id: string }>({
   // without re-running on a snapshot enter/exit. Listing a [readOnly]-keyed
   // callback there would reopen the dialog on a view-state transition — the
   // exact lead-report-controls-integrity violation this hook prevents.
-  const openCreate = useCallback((nextSeedProductId?: string) => {
+  const openCreate = useCallback((seed?: CreateSeed) => {
     if (readOnlyRef.current) return;
     setOpenSeq((n) => n + 1);
     setDialogState({
       open: true,
       mode: "create",
-      seedProductId: nextSeedProductId,
+      seedProductId: seed?.productId,
+      seedActivityId: seed?.activityId,
     });
   }, []);
 

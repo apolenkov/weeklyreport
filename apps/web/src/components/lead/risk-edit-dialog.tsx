@@ -320,7 +320,7 @@ function RiskEditDialogContent({
   // default product (falling back to the first activity for an activity-only
   // lead with no products).
   const [parent, setParent] = useState<RecordParent>(() =>
-    resolveRecordParent(risk ?? {}, seedProduct?.id, activities),
+    resolveRecordParent(risk ?? {}, { productId: seedProduct?.id }, activities),
   );
   const isActivityParent = parent.kind === "activity";
   const [impact, setImpact] = useState(initialImpact ?? "");

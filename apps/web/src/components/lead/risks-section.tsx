@@ -130,7 +130,7 @@ export function RisksSection({
       stageIds: addPrefill.stageIds,
       severity: addPrefill.severity,
     });
-    openCreate(addPrefill.productId);
+    openCreate({ productId: addPrefill.productId });
   }, [addPrefill, openCreate]);
 
   return (
