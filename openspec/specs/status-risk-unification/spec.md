@@ -3,8 +3,9 @@
 Risk rows are the single source of truth for at-risk/blocked stage states on the
 lead report. This capability governs how covering risks floor stage chips at
 render, how the lead's own risk coverage counts toward own-input completeness
-(without letting foreign or stage-less risks inflate it), how a covered chip is
-lowered, and the risk-entry dialog's stage-selection defaults.
+(without letting foreign or stage-less risks inflate it), how the chip behaves as
+a plain On Track/unset toggle that cannot author or change a covered severity,
+and the risk-entry dialog's stage-selection defaults.
 
 ## Requirements
 
@@ -92,18 +93,19 @@ separately via the `coveredByOwnRisk` annotation for the completeness counter.
 ### Requirement: The risk-entry dialog stage multi-select does not default to all stages
 
 The risk-entry dialog stage multi-select MUST NOT default to every owned
-stage checked. When the dialog opens from a clicked chip it MUST default
-the selection to that clicked stage only. Switching the product through
+stage checked. When the dialog opens with a prefilled stage — the item
+dialog's alarm gesture passes the item's product + stage — it MUST default
+the selection to that prefilled stage only. Switching the product through
 `setProductAndStages` MUST NOT auto-select all of the newly-owned
 stages; it MUST clear the selection or keep only the originating stage. A
 risk MAY still deliberately cover several stages, but multi-stage
 coverage MUST be a deliberate choice, never the default.
 
-#### Scenario: opening the dialog from a chip selects only that stage
+#### Scenario: opening the dialog with a prefilled stage selects only that stage
 
-- **WHEN** the lead opens the risk-entry dialog by clicking a single
-  stage chip
-- **THEN** the stage multi-select has only the clicked stage checked
+- **WHEN** the lead opens the risk-entry dialog from an item's alarm gesture,
+  which prefills a single stage
+- **THEN** the stage multi-select has only the prefilled stage checked
 - **AND** the other owned stages are unchecked
 
 #### Scenario: switching product does not auto-select all owned stages
