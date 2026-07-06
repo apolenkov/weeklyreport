@@ -1,7 +1,6 @@
 /**
  * Grouping + formatting helpers for {@link mapWeeklyReport} in `./weekly-report`.
- * Extracted from that module (R3a-4 max-lines split) — pure functions that
- * re-slice `weeklyReport.get` sections by product. No behavior change.
+ * Pure functions that re-slice `weeklyReport.get` sections by product.
  */
 import type {
   PortfolioProductOverview,
@@ -27,7 +26,7 @@ import type {
 
 // Avatar initials via the canonical shared helper (surname-first ФИО), with
 // this surface's "??" placeholder for an empty name. The token logic lives once
-// in @customreport/shared (see commit 8fd7e8bf — four cloned copies diverged).
+// in @customreport/shared so cloned copies can't diverge.
 export function initialsFromName(name: string): string {
   return sharedInitialsFromName(name) || "??";
 }

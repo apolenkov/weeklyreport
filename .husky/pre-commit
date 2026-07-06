@@ -1,8 +1,7 @@
 #!/usr/bin/env sh
 
-# 34-01: pre-commit hook — runs ESLint + stylelint + Prettier on staged files
-# via lint-staged.
-# Bypass with `git commit --no-verify` if you really need to (you don't —
-# fix the lint warning instead).
+# Runs ESLint + stylelint + Prettier + the comment-archaeology check on staged
+# files via lint-staged. Bypass with `git commit --no-verify` only in a real
+# emergency — otherwise fix the reported issue.
 
 pnpm exec lint-staged

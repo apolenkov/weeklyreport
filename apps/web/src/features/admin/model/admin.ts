@@ -2,20 +2,20 @@
  * Translates `admin.snapshot` + `admin.getSettings` to the mock-shaped types
  * the existing admin tab components expect.
  *
- * Per CONTEXT.md migration order, used by Users, Products, Periods, Reminders,
- * and Settings tabs. The mapper is intentionally self-contained and re-declares
- * the presentation types so downstream consumers do not couple to a particular
- * UI module (`apps/web/src/shared/lib/admin-mock-data.ts`).
+ * Used by the Users, Products, Periods, Reminders, and Settings tabs. The
+ * mapper is intentionally self-contained and re-declares the presentation
+ * types so downstream consumers do not couple to a particular UI module
+ * (`apps/web/src/shared/lib/admin-mock-data.ts`).
  *
- * R3a-4 split: the presentation types live in `admin-types.ts` and the
- * form-state→API helpers in `admin-form-inputs.ts`; this module keeps the
- * snapshot/settings read-mappers and re-exports both siblings so the mappers
- * barrel and all importers resolve through `./admin` unchanged.
+ * The presentation types live in `admin-types.ts` and the form-state→API
+ * helpers in `admin-form-inputs.ts`; this module keeps the snapshot/settings
+ * read-mappers and re-exports both siblings so all importers resolve through
+ * `./admin` unchanged.
  *
- * Synthesis notes (Phase 21 / Plan 21-03):
+ * Field-mapping notes:
  * - `adminSnapshotSchema` does NOT carry stages or stageAssignments. We default
  *   each product to 7 empty stage rows (assigneeId: null) so ProductsTab still
- *   renders. Phase 22 wires real stage assignments via `admin.listStageAssignments`.
+ *   renders. Real stage assignments are wired separately via `admin.listStageAssignments`.
  * - `adminUserSchema` carries reporting group fields. The legacy
  *   `department` presentation property now renders the group name.
  * - `adminProjectSchema.archived: boolean` collapses to mock `status: 'active'|'archived'`.
@@ -26,8 +26,8 @@
  * - `adminReminderRuleSchema` has no name/description. We synthesize from `kind`
  *   and `fireAt`.
  * - `appSettingsSchema` is a 1:1 match for `MockSettings` (autoCreatePeriods,
- *   defaultDeadlineDays + the UFB-048 knobs; UFB-047 Phase 49-01 dropped
- *   the legacy `departmentName` field).
+ *   defaultDeadlineDays + the added period/reminder knobs; the legacy
+ *   `departmentName` field was dropped on both sides).
  */
 
 import type {
@@ -133,7 +133,6 @@ function mapUser(api: AdminUser): MockUser {
     role: api.role,
     groupId: api.reportingGroupId ?? "",
     department: api.reportingGroupName ?? "No owning group",
-    // A2 (UAT-v7 2026-05-12): default true in case old snapshot rows lack the field.
     isActive: api.isActive,
   };
 }
@@ -154,8 +153,8 @@ function mapProject(api: AdminProject): MockProduct {
     name: api.name,
     leadOwnerId: api.leadId,
     status: api.archived ? "archived" : "active",
-    // Stage assignments are loaded separately via admin.listStageAssignments
-    // (Phase 22). For Phase 21 read-only migration, surface an empty 7-stage grid.
+    // Stage assignments load separately via admin.listStageAssignments;
+    // surface an empty 7-stage grid here.
     stages: emptyStageGrid(),
   };
 }
@@ -224,9 +223,9 @@ function mapReminder(api: AdminReminderRule): MockReminder {
 }
 
 /**
- * UFB-036 (Phase 44-04): translates `reminderPolicySchema` → presentation.
- * Field-for-field; keeps `validFrom` + `validUntil` as JS Dates so the
- * editor's date inputs can format them with one consistent helper.
+ * Translates `reminderPolicySchema` → presentation. Field-for-field; keeps
+ * `validFrom` + `validUntil` as JS Dates so the editor's date inputs can
+ * format them with one consistent helper.
  */
 function mapReminderPolicy(api: ReminderPolicy): MockReminderPolicy {
   return {
@@ -246,7 +245,7 @@ function mapReminderPolicy(api: ReminderPolicy): MockReminderPolicy {
 /**
  * Translates `admin.snapshot` API output into the slices each admin tab needs.
  *
- * The Reminder enum mapping follows PITFALLS Pitfall 1:
+ * The Reminder status → active mapping:
  *   apiStatus === 'active' => mock.active === true
  *   apiStatus === 'paused' => mock.active === false
  */
@@ -257,7 +256,7 @@ export function mapAdminSnapshot(api: AdminSnapshot): MappedAdminSnapshot {
     products: api.projects.map(mapProject),
     periods: api.periods.map(mapPeriod),
     reminders: api.reminderRules.map(mapReminder),
-    // UFB-036 (Phase 44-04): policies are emitted by `admin.snapshot`
+    // Policies are emitted by `admin.snapshot`
     // (default `[]` keeps older / in-memory test snapshots compatible).
     policies: api.policies.map(mapReminderPolicy),
   };
@@ -266,15 +265,15 @@ export function mapAdminSnapshot(api: AdminSnapshot): MappedAdminSnapshot {
 /**
  * Translates `admin.getSettings` API output into the SettingsTab presentation
  * shape. Field-for-field copy — `appSettingsSchema` and `MockSettings` stay
- * structurally identical (Phase 49-01: `departmentName` dropped on both
- * sides at the same time).
+ * structurally identical (the legacy `departmentName` field was dropped on
+ * both sides at the same time).
  */
 export function mapAdminSettings(api: AppSettings): MockSettings {
   return {
     autoCreatePeriods: api.autoCreatePeriods,
     defaultDeadlineDays: api.defaultDeadlineDays,
-    // UFB-048 (Phase 48-B): pass-through for the 9 new fields. The wire
-    // schema fills defaults so older API responses still parse cleanly.
+    // Pass-through for the added settings fields. The wire schema fills
+    // defaults so older API responses still parse cleanly.
     periodLengthDays: api.periodLengthDays,
     workingDays: api.workingDays,
     gracePeriodHours: api.gracePeriodHours,

@@ -3,9 +3,6 @@
  * KPI / leads / blocked-at-risk / archive / pending-leads shape that
  * `DashboardPage` expects.
  *
- * Reuses Phase 20 `deriveLeadStatus` and `trafficToStageStatus`.
- *
- * Synthesis notes (Phase 21 / Plan 21-03):
  * - `review.dashboard` returns `SubmissionDashboardRow[]` only — it does NOT
  *   carry submission counts, deadlines, escalations, or completion percentages.
  *   We source those from `weeklyReport.get` (`WeeklyReportReadModel`) instead.
@@ -13,8 +10,7 @@
  *   Never infer it from `periodEnd`: a period can stay open/reopened while the
  *   reporting deadline has already passed.
  * - `lastWeekSubmitted` / `lastWeekTotal` have no equivalent in any v5.0 read
- *   model, so they default to 0/0 (the KPI card just renders "0/0"). Phase 22
- *   may add a comparison endpoint.
+ *   model, so they default to 0/0 (the KPI card just renders "0/0").
  * - `archive.list` returns `ArchiveReportSummary[]` (via `PaginatedResult`).
  *   The summary is leaner than the mock `ArchiveReport`: no week label,
  *   submission count, product count, risk count, or decision count. Synthesize
@@ -67,10 +63,10 @@ export interface LeadInfo {
   riskCount?: number;
   decisionCount?: number;
   priorityCount?: number;
-  /** activity-first-class (Q1): count of activity-parented records (work units). */
+  /** count of activity-parented records (work units). */
   activityCount?: number;
   submittedAtLabel?: string | null;
-  /** SC-160: The section UUID needed for the per-lead Revoke button. */
+  /** The section UUID needed for the per-lead Revoke button. */
   reportSectionId?: string;
 }
 

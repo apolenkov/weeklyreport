@@ -25,9 +25,8 @@ export function formatRelativeDeadline(deadline: Date, now: Date): string {
 }
 
 /**
- * Build the dashboard KPI tile data. Extracted from mapDashboardData's "KPI"
- * step: submission counts, escalation roll-ups, and the deadline label (only
- * shown while the period is editable).
+ * Build the dashboard KPI tile data: submission counts, escalation roll-ups,
+ * and the deadline label (only shown while the period is editable).
  */
 export function buildKpiData(
   weeklyReport: WeeklyReportReadModel,
@@ -43,7 +42,7 @@ export function buildKpiData(
   const atRiskCount = weeklyReport.escalations.filter(
     (e) => e.type === "at_risk" || e.type === "unresolved_risk",
   ).length;
-  // activity-first-class (Q1): the portfolio KPI stays product-only — count
+  // The portfolio KPI stays product-only — count
   // product-parented decisions so activity decisions never inflate the KPI.
   const decisionCount = weeklyReport.leadSections.reduce(
     (sum, section) =>

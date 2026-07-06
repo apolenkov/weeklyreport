@@ -30,8 +30,7 @@ const TRAFFIC_ICON: Record<ProductStatus, string> = {
 
 // Avatar initials via the canonical shared helper (surname-first ФИО), with
 // this surface's "??" placeholder for an empty name. The token logic lives once
-// in @customreport/shared — see commit 8fd7e8bf, where four hand-cloned copies
-// of it diverged and had to be patched in lockstep.
+// in @customreport/shared so hand-cloned copies can't diverge and drift apart.
 export function initialsFromName(name: string): string {
   return sharedInitialsFromName(name) || "??";
 }
@@ -66,7 +65,6 @@ function trafficLightsForLeadByName(
 /**
  * Build the per-lead rows for the dashboard leads table, folding in section
  * content counts, derived status, traffic lights, and submission metadata.
- * Extracted from mapDashboardData's "Leads" step.
  */
 export function buildLeadInfos(
   review: SubmissionDashboardRow[],
@@ -81,7 +79,7 @@ export function buildLeadInfos(
   return review.map((row) => {
     const section = sectionByAuthor.get(row.leadId);
     // "Has the lead started" reads TOTAL content (product + activity); the
-    // displayed product column reads only product-parented rows (Q1).
+    // displayed product column reads only product-parented rows.
     const totalContentCount = section ? countSectionContent(section) : 0;
     const reportContentCount = section ? countProductContent(section) : 0;
     const status: LeadStatus = section

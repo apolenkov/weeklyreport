@@ -1,7 +1,7 @@
 /**
  * Per-lead content counters for the head dashboard summary.
  *
- * activity-first-class (Q1): product records and activity records ride the same
+ * Product records and activity records ride the same
  * flat section arrays, discriminated by which parent FK is set. The product
  * summary columns must count ONLY product-parented rows (else activity records
  * inflate them); the activity column counts activity-parented rows. The
@@ -54,8 +54,7 @@ export interface ProductColumnCounts {
 
 /**
  * The five per-lead PRODUCT summary columns, each scoped to product-parented
- * rows (Q1). Extracted so the dashboard `map` callback stays under the
- * cognitive-complexity budget.
+ * rows.
  */
 export function productColumnCounts(
   section: ReportSectionReadModel | undefined,

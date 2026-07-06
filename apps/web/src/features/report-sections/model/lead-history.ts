@@ -2,7 +2,7 @@
  * Translate API `reports.myHistory` entries to the `HistoryEntry` shape the
  * `LeadHistoryList` component expects.
  *
- * D17: date formatting includes the year and uses an en dash so period labels
+ * Date formatting includes the year and uses an en dash so period labels
  * stay unambiguous around year boundaries.
  */
 
@@ -25,8 +25,8 @@ import {
 
 // ---------------------------------------------------------------------------
 // Self-contained presentation type (mirrors the mock's `HistoryEntry` shape).
-// Re-declared here per the "self-contained mapper modules" decision in
-// STATE.md, so consumers depend on this barrel rather than `mock-data.ts`.
+// Re-declared here per the self-contained mapper-modules convention, so
+// consumers depend on this barrel rather than `mock-data.ts`.
 // ---------------------------------------------------------------------------
 
 export interface HistoryEntry {
@@ -46,8 +46,8 @@ export interface HistoryEntry {
   riskCount: number;
   decisionCount: number;
   priorityCount: number;
-  // HIST-4 (Phase 33-04): prefix the metric line with the lead's
-  // assigned-product count for that period when available.
+  // Prefix the metric line with the lead's assigned-product count for that
+  // period when available.
   productCount?: number;
 }
 
@@ -118,8 +118,7 @@ export function mapHistoryEntries(
   return api.map((e) => ({
     id: e.sectionId,
     // No separate periodId in the API; the report id identifies the period
-    // for routing purposes. This is acceptable for the read-only history
-    // page (see plan 21-02, follow-up: extend router to project periodId).
+    // for routing purposes. This is acceptable for the read-only history page.
     periodId: e.reportId,
     weekLabel: `Week ${isoWeekNumber(e.periodStart)}`,
     dateRange: formatDateRange(e.periodStart, e.periodEnd),
