@@ -26,10 +26,10 @@ import {
 import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 
-import { DevRoleSwitcher } from "../../../components/dev/role-switcher";
 import { roleHomePath } from "../../../lib/role-home";
 import { useSession } from "../../../lib/session-provider";
 import { webEnv } from "../../../lib/web-env";
+import { DevRoleSwitcher } from "../role-switcher";
 
 interface NavLink {
   href: string;
