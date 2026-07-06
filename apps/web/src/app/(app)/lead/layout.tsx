@@ -1,7 +1,7 @@
 import type { Role } from "@customreport/shared";
 import type { ReactNode } from "react";
 
-import { RoleGate } from "../../../components/role-gate";
+import { RoleGate } from "../../../shared/ui/role-gate";
 
 /**
  * AUTH-07 (Phase 29-03): SSR role gate for /lead/* routes.

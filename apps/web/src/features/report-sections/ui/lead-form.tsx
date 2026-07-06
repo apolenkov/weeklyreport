@@ -18,7 +18,6 @@ import { toast } from "sonner";
 
 import { LeadSlidesClient } from "../../../components/slides/lead-slides-client";
 import { SlideFullscreenButton } from "../../../components/slides/slide-fullscreen-button";
-import { SdlcTooltipProvider } from "../../../components/ui/sdlc-tooltip";
 import { useFullscreen } from "../../../hooks/use-fullscreen";
 import {
   type DraftSaveContent,
@@ -80,6 +79,7 @@ import {
   SegmentedToggle,
 } from "../../../shared/ui/report-shell/segmented-toggle";
 import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle";
+import { SdlcTooltipProvider } from "../../../shared/ui/sdlc-tooltip";
 import { VersionComingSoonControl } from "../../admin/ui/version-coming-soon";
 import { PdfExportComingSoonControl } from "../../pdf-export/ui/pdf-export-coming-soon";
 import { ActivityStatusSection } from "../../period/ui/activity-status-section";

@@ -23,9 +23,9 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { History } from "lucide-react";
 import { describe, expect, it } from "vitest";
 
-import { VersionComingSoonControl } from "../features/admin/ui/version-coming-soon";
-import { PdfExportComingSoonControl } from "../features/pdf-export/ui/pdf-export-coming-soon";
-import { AgentReviewComingSoon } from "../shared/ui/report-shell/agent-review-coming-soon";
+import { VersionComingSoonControl } from "../../features/admin/ui/version-coming-soon";
+import { PdfExportComingSoonControl } from "../../features/pdf-export/ui/pdf-export-coming-soon";
+import { AgentReviewComingSoon } from "./report-shell/agent-review-coming-soon";
 
 // The canonical amber tokens baked into the shared primitive. `cn` uses
 // tailwind-merge, so a control passing a conflicting `bg-*`/`text-*color*`
@@ -222,7 +222,7 @@ describe("every tooltip control migrated to the shared Radix wrapper (source sca
   // below), so they can no longer drift. Holidays keeps its own inert-span
   // composition (nested-button HTML validity), so it stays a source scan.
   const componentsRoot = path.dirname(fileURLToPath(import.meta.url));
-  const TOOLTIP_CONTROL_FILES = ["../features/admin/ui/settings-tab.tsx"];
+  const TOOLTIP_CONTROL_FILES = ["../../features/admin/ui/settings-tab.tsx"];
 
   it("each control uses ComingSoonTooltip and dropped the retired CSS anchor", () => {
     for (const rel of TOOLTIP_CONTROL_FILES) {
@@ -239,7 +239,7 @@ describe("every tooltip control migrated to the shared Radix wrapper (source sca
     // carries a PERSISTENT (sr-only) ComingSoonBadge — the tab's accessible name
     // still announces the coming-soon state without adding an aria-label.
     const source = readFileSync(
-      path.join(componentsRoot, "../features/admin/ui/settings-tab.tsx"),
+      path.join(componentsRoot, "../../features/admin/ui/settings-tab.tsx"),
       "utf8",
     );
     expect(source).toContain("ComingSoonBadge");
@@ -256,7 +256,7 @@ describe("every inert Coming Soon control — no stacked native title", () => {
   // Holidays-only scope: the five button controls inherit the no-native-title
   // guarantee from the shared primitive (verified by its unit test below).
   const componentsRoot = path.dirname(fileURLToPath(import.meta.url));
-  const INERT_CONTROL_FILES = ["../features/admin/ui/settings-tab.tsx"];
+  const INERT_CONTROL_FILES = ["../../features/admin/ui/settings-tab.tsx"];
 
   it("no inert control source carries title=Coming Soon", () => {
     const violations = INERT_CONTROL_FILES.filter((rel) =>
@@ -274,7 +274,7 @@ describe("deferred-feature-pattern — no bespoke 'Coming Soon' pill", () => {
   // rendered occurrence is a bespoke pill that bypasses the shared primitive.
   const repoRoot = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
-    "../../../..",
+    "../../../../..",
   );
   const SCAN_ROOTS = [
     path.join(repoRoot, "apps/web/src"),

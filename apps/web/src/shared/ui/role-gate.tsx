@@ -1,8 +1,8 @@
 import type { Role } from "@customreport/shared";
 import type { ReactNode } from "react";
 
-import { roleHomePath } from "../lib/role-home";
-import { getServerSession } from "../lib/server/get-server-session";
+import { roleHomePath } from "../../lib/role-home";
+import { getServerSession } from "../../lib/server/get-server-session";
 import { ForbiddenPage } from "./forbidden-page";
 
 /**

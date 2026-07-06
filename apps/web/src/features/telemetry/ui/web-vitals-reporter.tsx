@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-import { reportWebVitals } from "../lib/web-vitals";
+import { reportWebVitals } from "../../../lib/web-vitals";
 
 export function WebVitalsReporter(): null {
   useEffect(() => {

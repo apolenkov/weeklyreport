@@ -2,7 +2,7 @@
 
 import { Agentation } from "agentation";
 
-import { webEnv } from "../lib/web-env";
+import { webEnv } from "../../lib/web-env";
 
 export function AgentationDevtools() {
   // Escape hatch for environments that run the app via `next dev` (which forces

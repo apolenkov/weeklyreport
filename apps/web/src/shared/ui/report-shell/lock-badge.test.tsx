@@ -4,12 +4,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { LockBadge } from "./lock-badge";
 
-vi.mock("../../../components/ui/sdlc-tooltip", () => ({
+vi.mock("../sdlc-tooltip", () => ({
   useSdlcTooltip: vi.fn(() => ({ show: vi.fn(), hide: vi.fn() })),
 }));
 
 // Import after the mock is registered so the mock is in place.
-const { useSdlcTooltip } = await import("../../../components/ui/sdlc-tooltip");
+const { useSdlcTooltip } = await import("../sdlc-tooltip");
 
 describe("LockBadge", () => {
   it("outer div has role='img'", () => {
