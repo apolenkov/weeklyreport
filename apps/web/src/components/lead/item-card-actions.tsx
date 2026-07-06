@@ -1,6 +1,6 @@
 "use client";
 
-import { LockBadge } from "../report-shell/lock-badge";
+import { LockBadge } from "../../shared/ui/report-shell/lock-badge";
 import type { KanbanItem } from "./mock-data";
 
 function EditIcon() {

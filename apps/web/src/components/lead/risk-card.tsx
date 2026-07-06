@@ -1,5 +1,5 @@
-import { LockBadge } from "../report-shell/lock-badge";
-import { MetaRow } from "../report-shell/meta-row";
+import { LockBadge } from "../../shared/ui/report-shell/lock-badge";
+import { MetaRow } from "../../shared/ui/report-shell/meta-row";
 import { FOREIGN_ENTRY_OPACITY } from "./item-card-style";
 import type { RiskEntry, StageStatus } from "./mock-data";
 import { DeleteIcon, EditIcon } from "./risk-card-icons";

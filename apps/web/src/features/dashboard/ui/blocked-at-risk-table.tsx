@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 
-import { RotatingChevron } from "../../../components/report-shell/rotating-chevron";
 import type { BlockedAtRiskItem } from "../../../lib/mappers/dashboard";
+import { RotatingChevron } from "../../../shared/ui/report-shell/rotating-chevron";
 import { groupByProduct, ProductCard } from "./blocked-at-risk-product-card";
 
 interface BlockedAtRiskTableProps {

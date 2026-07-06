@@ -3,7 +3,7 @@
 import {
   segmentClassName,
   SegmentedToggle,
-} from "../../report-shell/segmented-toggle";
+} from "../../../shared/ui/report-shell/segmented-toggle";
 
 /**
  * review-acknowledgement (§7): which sections the reviewer sees in the accordion

@@ -2,9 +2,9 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { LeadSectionPreviewAuth } from "../../../../../../components/lead/lead-section-preview-auth";
-import { AgentReviewComingSoon } from "../../../../../../components/report-shell/agent-review-coming-soon";
 import { RoleGate } from "../../../../../../components/role-gate";
 import { WeeklyReportSkeleton } from "../../../../../../components/weekly-report/weekly-report-skeleton";
+import { AgentReviewComingSoon } from "../../../../../../shared/ui/report-shell/agent-review-coming-soon";
 
 interface Props {
   params: Promise<{ reportId: string }>;

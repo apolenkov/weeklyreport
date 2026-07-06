@@ -58,9 +58,9 @@ import {
   invalidateLeadHistory,
 } from "../../lib/cache-keys";
 import { SessionContext, type SessionUser } from "../../lib/session-provider";
+import { AgentReviewComingSoon } from "../../shared/ui/report-shell/agent-review-coming-soon";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../test-utils/mock-trpc";
-import { AgentReviewComingSoon } from "../report-shell/agent-review-coming-soon";
 import { WeeklyReportPage } from "./weekly-report-page";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";

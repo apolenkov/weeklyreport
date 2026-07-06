@@ -39,13 +39,13 @@ import type {
   PortfolioProduct,
   ProductReport,
 } from "../../shared/lib/dashboard-mock-data";
-import type { ReportPeriod } from "../lead/mock-data";
-import { PdfExportComingSoonControl } from "../lead/pdf-export-coming-soon";
-import { PeriodNavigator } from "../lead/period-navigator";
 import {
   DocumentActionGroup,
   ReportToolbar,
-} from "../report-shell/report-toolbar";
+} from "../../shared/ui/report-shell/report-toolbar";
+import type { ReportPeriod } from "../lead/mock-data";
+import { PdfExportComingSoonControl } from "../lead/pdf-export-coming-soon";
+import { PeriodNavigator } from "../lead/period-navigator";
 import { ActivityStatusStrip } from "./activity-status-strip";
 import { ExportPdfButton } from "./export-pdf-button";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";

@@ -3,7 +3,7 @@
 import {
   segmentClassName,
   SegmentedToggle,
-} from "../../report-shell/segmented-toggle";
+} from "../../../shared/ui/report-shell/segmented-toggle";
 
 /**
  * Report body mode. "read" renders the assembled report as read-only content;

@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
-import type { AutosaveSnapshot } from "../../hooks/use-lead-form-autosave";
+import type { AutosaveSnapshot } from "../../../hooks/use-lead-form-autosave";
 
 const SAVED_REVERT_MS = 1500;
 

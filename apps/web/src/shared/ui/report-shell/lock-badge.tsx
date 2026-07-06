@@ -3,7 +3,7 @@
 import { Lock } from "lucide-react";
 import { useRef } from "react";
 
-import { useSdlcTooltip } from "../ui/sdlc-tooltip";
+import { useSdlcTooltip } from "../../../components/ui/sdlc-tooltip";
 
 type LockBadgeVariant = "default" | "slim";
 
