@@ -23,6 +23,8 @@ interface RisksSectionProps {
     productId: string;
     stageIds: string[];
     severity: "at-risk" | "blocked";
+    /** Activity-scoped prefill (pill raise) — preselects the activity parent. */
+    activityId?: string;
   };
   /**
    * Products list — required so the edit dialog can show a project picker
@@ -130,7 +132,10 @@ export function RisksSection({
       stageIds: addPrefill.stageIds,
       severity: addPrefill.severity,
     });
-    openCreate({ productId: addPrefill.productId });
+    openCreate({
+      productId: addPrefill.productId,
+      activityId: addPrefill.activityId,
+    });
   }, [addPrefill, openCreate]);
 
   return (
@@ -178,6 +183,11 @@ export function RisksSection({
         defaultProductId={
           dialogState.open && dialogState.mode === "create"
             ? dialogState.seedProductId
+            : undefined
+        }
+        defaultActivityId={
+          dialogState.open && dialogState.mode === "create"
+            ? dialogState.seedActivityId
             : undefined
         }
         initialStageIds={

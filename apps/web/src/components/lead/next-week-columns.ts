@@ -64,27 +64,32 @@ function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
   return map;
 }
 
-export function buildItemColumns(
+/**
+ * The board's two levels, split so the sections can render product columns in
+ * the shared grid and activity lanes in the lighter block below it (the slide
+ * precedent — activities are their own row, never peer product columns).
+ */
+export function splitItemBoard(
   products: readonly Product[] | undefined,
   items: KanbanItem[],
-): ItemColumn[] {
+): { productColumns: ItemColumn[]; activityLanes: ItemColumn[] } {
   // Activity rows carry productId "" — they'd match no product column and
   // silently vanish, so they always route through their own lanes.
   const productRows = items.filter((it) => it.activityId == null);
   const lanes = activityLanes(items);
   if (products && products.length > 0) {
-    return [
-      ...products.map((p) => ({
+    return {
+      productColumns: products.map((p) => ({
         key: p.name,
         productId: p.id,
         productName: p.name,
         items: productRows.filter((it) => it.productId === p.id),
       })),
-      ...lanes,
-    ];
+      activityLanes: lanes,
+    };
   }
-  return [
-    ...[...groupByProduct(productRows).entries()].flatMap(
+  return {
+    productColumns: [...groupByProduct(productRows).entries()].flatMap(
       ([productName, gItems]) => {
         const first = gItems.at(0);
         if (!first) return [];
@@ -98,8 +103,16 @@ export function buildItemColumns(
         ];
       },
     ),
-    ...lanes,
-  ];
+    activityLanes: lanes,
+  };
+}
+
+export function buildItemColumns(
+  products: readonly Product[] | undefined,
+  items: KanbanItem[],
+): ItemColumn[] {
+  const board = splitItemBoard(products, items);
+  return [...board.productColumns, ...board.activityLanes];
 }
 
 /** True when the board has neither items nor any product column to seed. */

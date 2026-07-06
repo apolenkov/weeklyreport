@@ -24,6 +24,7 @@ import {
 } from "../../hooks/use-lead-form-autosave";
 import { useRecordVisibility } from "../../hooks/use-record-visibility";
 import { computeCoupling, validateCoupling } from "../../hooks/use-status-risk";
+import { deriveActivityAlarmFloor } from "../../lib/activity-alarm";
 import { deriveActivityBucket } from "../../lib/activity-buckets";
 import {
   invalidateDashboard,
@@ -948,6 +949,15 @@ export function LeadForm({
   const ownRisks: RiskEntry[] = data.risks as RiskEntry[];
   const ownDecisions: DecisionEntry[] = data.decisions as DecisionEntry[];
 
+  // The interactive pill's alarm floor re-derived from the LIVE draft risks
+  // (the server-baked alarmFloor goes stale the moment a draft risk is added
+  // or removed — no refetch mid-edit). Activity twin of the stage chips'
+  // applyRiskSeverityFloor; read-only surfaces keep the server value.
+  const activityCards = data.activityCards.map((card) => ({
+    ...card,
+    alarmFloor: deriveActivityAlarmFloor(card.activityId, ownRisks),
+  }));
+
   // 7c.4: Everyone merges co-owners' full records READ-ONLY on top of the
   // lead's own records, from the gated full-content read. Mine only renders
   // own records only (no full-content fetch). The merge is view-only: the
@@ -1472,13 +1482,25 @@ export function LeadForm({
 
   // Route "set blocked" through blocker (risk) creation, prefilled — never a
   // free blocked item status. Shared by the quick-add "Blocker" entry (no
-  // product/stage) and the item dialog's alarm gesture (product + stage).
+  // product/stage), the item dialog's alarm gesture (product + stage), and an
+  // activity pill's unbacked raise (activity parent, no product/stage).
   function routeToBlocker(prefill: {
     productId: string;
     stageIds: string[];
     severity: "at-risk" | "blocked";
+    activityId?: string;
   }) {
     setRiskPrefill((prev) => ({ signal: (prev?.signal ?? 0) + 1, ...prefill }));
+  }
+
+  // An activity pill's unbacked At Risk/Blocked click: never persist the
+  // status — open risk creation scoped to the activity instead. The pill
+  // floors itself from the saved risk (deriveActivityAlarmFloor overlay).
+  function handleActivityRaiseRequiresRisk(
+    activityId: string,
+    severity: "at-risk" | "blocked",
+  ) {
+    routeToBlocker({ productId: "", stageIds: [], severity, activityId });
   }
 
   // ---- Quick-add ----
@@ -1832,9 +1854,10 @@ export function LeadForm({
                   subtitle="Weekly status for activities you are attached to. Activities carry no SDLC stage and never affect product health."
                 >
                   <ActivityStatusSection
-                    activities={data.activityCards}
+                    activities={activityCards}
                     readOnly={isReadOnly}
                     onStatusChange={handleActivityStatusChange}
+                    onRaiseRequiresRisk={handleActivityRaiseRequiresRisk}
                   />
                 </AccordionSection>
               )}

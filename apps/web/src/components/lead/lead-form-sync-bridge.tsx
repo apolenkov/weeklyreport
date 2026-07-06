@@ -176,6 +176,12 @@ export interface RiskPrefillRequest {
   productId: string;
   stageIds: string[];
   severity: "at-risk" | "blocked";
+  /**
+   * Set by an activity pill's unbacked raise: the create dialog opens with
+   * this activity preselected as the parent (XOR — `productId` is "" and
+   * `stageIds` empty on activity prefills).
+   */
+  activityId?: string;
 }
 
 /** unify-risk-stage-status (D3): pending confirmed-removal state. */

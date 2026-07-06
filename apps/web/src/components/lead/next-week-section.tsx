@@ -1,12 +1,13 @@
 "use client";
 
 import { useEditableListDialog } from "../../hooks/use-editable-list-dialog";
+import { ActivityLanesBlock } from "./activity-lanes-block";
 import { BoardColumnHeader } from "./board-column-header";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { ItemCard } from "./item-card";
 import { ItemEditDialog } from "./item-edit-dialog";
 import type { KanbanItem, Product, RiskEntry } from "./mock-data";
-import { buildItemColumns, isBoardEmpty } from "./next-week-columns";
+import { isBoardEmpty, splitItemBoard } from "./next-week-columns";
 
 const MAX_GRID_COLUMNS = 3;
 
@@ -162,10 +163,25 @@ export function NextWeekSection({
     );
   }
 
-  const columns = buildItemColumns(products, items);
+  // Activity lanes render in their own lighter block BELOW the grid — never
+  // as peer product columns.
+  const board = splitItemBoard(products, items);
   const visibleColumnCount = Math.min(
-    Math.max(columns.length, 1),
+    Math.max(board.productColumns.length, 1),
     MAX_GRID_COLUMNS,
+  );
+
+  const renderItem = (item: KanbanItem) => (
+    <ItemCard
+      key={item.id}
+      item={item}
+      risks={risks}
+      readOnly={readOnly}
+      isEditing={false}
+      publishedLocked={publishedLockedIds?.has(item.id)}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
+    />
   );
 
   return (
@@ -183,7 +199,7 @@ export function NextWeekSection({
           gridTemplateColumns: `repeat(${visibleColumnCount}, minmax(0, 1fr))`,
         }}
       >
-        {columns.map((col) => (
+        {board.productColumns.map((col) => (
           <div key={col.key}>
             <BoardColumnHeader
               col={col}
@@ -199,24 +215,18 @@ export function NextWeekSection({
                 No items yet
               </div>
             ) : (
-              <div className="space-y-2">
-                {col.items.map((item) => (
-                  <ItemCard
-                    key={item.id}
-                    item={item}
-                    risks={risks}
-                    readOnly={readOnly}
-                    isEditing={false}
-                    publishedLocked={publishedLockedIds?.has(item.id)}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                  />
-                ))}
-              </div>
+              <div className="space-y-2">{col.items.map(renderItem)}</div>
             )}
           </div>
         ))}
       </div>
+
+      <ActivityLanesBlock
+        lanes={board.activityLanes}
+        readOnly={readOnly}
+        onAdd={openCreate}
+        renderItem={renderItem}
+      />
 
       <ItemEditDialog
         key={dialogKey}

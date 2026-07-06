@@ -34,17 +34,40 @@ const activities: LeadActivityCard[] = [
   }),
 ];
 
+function renderSection(
+  cards: readonly LeadActivityCard[],
+  opts?: {
+    readOnly?: boolean;
+    onStatusChange?: (
+      activityId: string,
+      status: "green" | "yellow" | "red",
+    ) => void;
+    onRaiseRequiresRisk?: (
+      activityId: string,
+      severity: "at-risk" | "blocked",
+    ) => void;
+  },
+) {
+  return render(
+    <ActivityStatusSection
+      activities={cards}
+      readOnly={opts?.readOnly ?? false}
+      onStatusChange={opts?.onStatusChange ?? vi.fn()}
+      onRaiseRequiresRisk={opts?.onRaiseRequiresRisk ?? vi.fn()}
+    />,
+  );
+}
+
+function pillsOf(name: string): HTMLButtonElement[] {
+  const group = screen.getByRole("group", { name: `Status for ${name}` });
+  return [...group.querySelectorAll("button")];
+}
+
 describe("ActivityStatusSection", () => {
   // The card is status-only — records render in the main record sections
   // under the activity's lane.
   it("renders one status-only card per activity with linked products", () => {
-    render(
-      <ActivityStatusSection
-        activities={activities}
-        readOnly={false}
-        onStatusChange={vi.fn()}
-      />,
-    );
+    renderSection(activities);
 
     expect(screen.getByText("Jira triage duty")).toBeInTheDocument();
     expect(screen.getByText("Ops rotation")).toBeInTheDocument();
@@ -57,61 +80,84 @@ describe("ActivityStatusSection", () => {
   });
 
   it("renders nothing when the author has no attached activities", () => {
-    const { container } = render(
-      <ActivityStatusSection
-        activities={[]}
-        readOnly={false}
-        onStatusChange={vi.fn()}
-      />,
-    );
+    const { container } = renderSection([]);
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("marks the current status pressed and reports a status change", async () => {
+  it("routes an unbacked At Risk click to risk creation, not a status write", async () => {
     const onStatusChange = vi.fn();
+    const onRaiseRequiresRisk = vi.fn();
     const user = userEvent.setup();
-    render(
-      <ActivityStatusSection
-        activities={activities}
-        readOnly={false}
-        onStatusChange={onStatusChange}
-      />,
-    );
+    renderSection(activities, { onStatusChange, onRaiseRequiresRisk });
 
-    const groupA = screen.getByRole("group", {
-      name: "Status for Jira triage duty",
-    });
-    const [onTrack, atRisk] = Array.from(groupA.querySelectorAll("button"));
+    const [onTrack, atRisk] = pillsOf("Jira triage duty");
     expect(onTrack).toHaveAttribute("aria-pressed", "true");
 
     await user.click(atRisk);
-    expect(onStatusChange).toHaveBeenCalledWith(ACTIVITY_A, "yellow");
+    expect(onStatusChange).not.toHaveBeenCalled();
+    expect(onRaiseRequiresRisk).toHaveBeenCalledWith(ACTIVITY_A, "at-risk");
+  });
+
+  it("routes an unbacked Blocked click to blocker creation with severity blocked", async () => {
+    const onRaiseRequiresRisk = vi.fn();
+    const user = userEvent.setup();
+    renderSection([makeCard({})], { onRaiseRequiresRisk });
+
+    const [, , blocked] = pillsOf("Jira triage duty");
+    await user.click(blocked);
+    expect(onRaiseRequiresRisk).toHaveBeenCalledWith(ACTIVITY_A, "blocked");
+  });
+
+  it("a Blocked click on an at-risk-floored pill still needs a blocker", async () => {
+    // A covering at-risk risk backs yellow but not red — red needs a blocker.
+    const onStatusChange = vi.fn();
+    const onRaiseRequiresRisk = vi.fn();
+    const user = userEvent.setup();
+    renderSection(
+      [makeCard({ alarmFloor: "yellow", derivedStatus: "yellow" })],
+      { onStatusChange, onRaiseRequiresRisk },
+    );
+
+    const [, , blocked] = pillsOf("Jira triage duty");
+    await user.click(blocked);
+    expect(onStatusChange).not.toHaveBeenCalled();
+    expect(onRaiseRequiresRisk).toHaveBeenCalledWith(ACTIVITY_A, "blocked");
+  });
+
+  it("an At Risk click at the yellow floor neither writes nor opens creation", async () => {
+    // The pill already shows the floor; clicking it must not overwrite the
+    // stored lower choice (clearing the risk restores it) and the severity is
+    // already backed, so no creation either.
+    const onStatusChange = vi.fn();
+    const onRaiseRequiresRisk = vi.fn();
+    const user = userEvent.setup();
+    renderSection(
+      [makeCard({ alarmFloor: "yellow", derivedStatus: "yellow" })],
+      { onStatusChange, onRaiseRequiresRisk },
+    );
+
+    const [, atRisk] = pillsOf("Jira triage duty");
+    await user.click(atRisk);
+    expect(onStatusChange).not.toHaveBeenCalled();
+    expect(onRaiseRequiresRisk).not.toHaveBeenCalled();
   });
 
   it("renders the floored pill and refuses a manual lower below the floor", async () => {
     const onStatusChange = vi.fn();
     const user = userEvent.setup();
     // Stored green but a covering blocker floors the pill to red (alarmFloor).
-    render(
-      <ActivityStatusSection
-        activities={[
-          makeCard({
-            activityId: ACTIVITY_A,
-            activityName: "Jira triage duty",
-            status: "green",
-            alarmFloor: "red",
-            derivedStatus: "red",
-          }),
-        ]}
-        readOnly={false}
-        onStatusChange={onStatusChange}
-      />,
+    renderSection(
+      [
+        makeCard({
+          status: "green",
+          alarmFloor: "red",
+          derivedStatus: "red",
+        }),
+      ],
+      { onStatusChange },
     );
 
-    const group = screen.getByRole("group", {
-      name: "Status for Jira triage duty",
-    });
-    const [onTrack, , blocked] = Array.from(group.querySelectorAll("button"));
+    const [onTrack, , blocked] = pillsOf("Jira triage duty");
     // The floor (red) is shown pressed, not the stored green.
     expect(blocked).toHaveAttribute("aria-pressed", "true");
     expect(onTrack).toHaveAttribute("aria-pressed", "false");
@@ -123,33 +169,27 @@ describe("ActivityStatusSection", () => {
     ).toBeInTheDocument();
   });
 
-  it("lets the lead lower a status they raised themselves (no covering risk)", async () => {
+  it("lets the lead lower a legacy self-raised status when no floor holds it", async () => {
     const onStatusChange = vi.fn();
+    const onRaiseRequiresRisk = vi.fn();
     const user = userEvent.setup();
-    // Stored red is the lead's OWN choice — no covering risk, so alarmFloor is
-    // null and lowering must be allowed (the floor is not derivedStatus).
-    render(
-      <ActivityStatusSection
-        activities={[
-          makeCard({
-            activityId: ACTIVITY_A,
-            activityName: "Jira triage duty",
-            status: "red",
-            alarmFloor: null,
-            derivedStatus: "red",
-          }),
-        ]}
-        readOnly={false}
-        onStatusChange={onStatusChange}
-      />,
+    // Stored red predates the raise gate (legacy data) — no covering risk, so
+    // alarmFloor is null and lowering to green stays a direct write.
+    renderSection(
+      [
+        makeCard({
+          status: "red",
+          alarmFloor: null,
+          derivedStatus: "red",
+        }),
+      ],
+      { onStatusChange, onRaiseRequiresRisk },
     );
 
-    const group = screen.getByRole("group", {
-      name: "Status for Jira triage duty",
-    });
-    const [onTrack] = Array.from(group.querySelectorAll("button"));
+    const [onTrack] = pillsOf("Jira triage duty");
     await user.click(onTrack);
     expect(onStatusChange).toHaveBeenCalledWith(ACTIVITY_A, "green");
+    expect(onRaiseRequiresRisk).not.toHaveBeenCalled();
     expect(
       screen.queryByText(/resolve the covering risk\/blocker first/i),
     ).toBeNull();
@@ -157,14 +197,13 @@ describe("ActivityStatusSection", () => {
 
   it("disables every picker in read-only mode", async () => {
     const onStatusChange = vi.fn();
+    const onRaiseRequiresRisk = vi.fn();
     const user = userEvent.setup();
-    render(
-      <ActivityStatusSection
-        activities={activities}
-        readOnly={true}
-        onStatusChange={onStatusChange}
-      />,
-    );
+    renderSection(activities, {
+      readOnly: true,
+      onStatusChange,
+      onRaiseRequiresRisk,
+    });
 
     const buttons = screen.getAllByRole("button");
     expect(buttons.every((button) => button.hasAttribute("disabled"))).toBe(
@@ -172,5 +211,6 @@ describe("ActivityStatusSection", () => {
     );
     await user.click(buttons[0]);
     expect(onStatusChange).not.toHaveBeenCalled();
+    expect(onRaiseRequiresRisk).not.toHaveBeenCalled();
   });
 });

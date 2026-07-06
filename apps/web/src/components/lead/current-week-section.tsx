@@ -5,12 +5,13 @@ import { useRef } from "react";
 import type { EditableListDialogState } from "../../hooks/use-editable-list-dialog";
 import { useEditableListDialog } from "../../hooks/use-editable-list-dialog";
 import { useScrollFade } from "../../hooks/use-scroll-fade";
+import { ActivityLanesBlock } from "./activity-lanes-block";
 import { BoardColumnHeader } from "./board-column-header";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { ItemCard } from "./item-card";
 import { ItemEditDialog } from "./item-edit-dialog";
 import type { KanbanItem, Product, RiskEntry } from "./mock-data";
-import { buildItemColumns, isBoardEmpty } from "./next-week-columns";
+import { isBoardEmpty, splitItemBoard } from "./next-week-columns";
 
 const MAX_GRID_COLUMNS = 3;
 
@@ -208,9 +209,25 @@ export function CurrentWeekSection({
   // that products with zero items still surface a `+ Add` CTA in their
   // column. Falls back to non-empty groups when `products` isn't passed
   // (defensive — the prop became required de-facto in May 2026 but
-  // existing callers may still omit it).
-  const columns = buildItemColumns(products, items);
+  // existing callers may still omit it). Activity lanes render in their own
+  // lighter block BELOW the grid — never as peer product columns.
+  const board = splitItemBoard(products, items);
   const dlg = deriveDialogProps(dialogState);
+
+  const renderItem = (item: KanbanItem) => (
+    <ItemCard
+      key={item.id}
+      item={item}
+      risks={risks}
+      readOnly={readOnly}
+      isEditing={false}
+      publishedLocked={publishedLockedIds?.has(item.id)}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
+      onMarkComplete={onMarkComplete}
+      onMoveToNextWeek={onMoveToNextWeek}
+    />
+  );
 
   return (
     <div className="relative">
@@ -226,10 +243,10 @@ export function CurrentWeekSection({
         <div
           className="grid gap-4"
           style={{
-            gridTemplateColumns: `repeat(${Math.min(Math.max(columns.length, 1), MAX_GRID_COLUMNS)}, minmax(0, 1fr))`,
+            gridTemplateColumns: `repeat(${Math.min(Math.max(board.productColumns.length, 1), MAX_GRID_COLUMNS)}, minmax(0, 1fr))`,
           }}
         >
-          {columns.map((col) => (
+          {board.productColumns.map((col) => (
             <div key={col.key} className="min-w-0">
               <BoardColumnHeader
                 col={col}
@@ -245,26 +262,18 @@ export function CurrentWeekSection({
                   No items yet
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {col.items.map((item) => (
-                    <ItemCard
-                      key={item.id}
-                      item={item}
-                      risks={risks}
-                      readOnly={readOnly}
-                      isEditing={false}
-                      publishedLocked={publishedLockedIds?.has(item.id)}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                      onMarkComplete={onMarkComplete}
-                      onMoveToNextWeek={onMoveToNextWeek}
-                    />
-                  ))}
-                </div>
+                <div className="space-y-2">{col.items.map(renderItem)}</div>
               )}
             </div>
           ))}
         </div>
+
+        <ActivityLanesBlock
+          lanes={board.activityLanes}
+          readOnly={readOnly}
+          onAdd={openCreate}
+          renderItem={renderItem}
+        />
 
         {/* Edit / Add modal — single instance shared across all columns. */}
         <ItemEditDialog
