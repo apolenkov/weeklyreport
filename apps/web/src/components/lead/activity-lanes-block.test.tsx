@@ -56,6 +56,33 @@ describe("ActivityLanesBlock", () => {
     expect(onAdd).toHaveBeenCalledWith({ activityId: "act-a" });
   });
 
+  it("renders an empty lane with '+ Add' and 'No items yet' for an attached activity", async () => {
+    const onAdd = vi.fn();
+    const user = userEvent.setup();
+    const emptyLane: ItemColumn = {
+      key: "activity:act-b",
+      productId: "",
+      productName: "Ops rotation",
+      activityId: "act-b",
+      items: [],
+    };
+    render(
+      <ActivityLanesBlock
+        lanes={[emptyLane]}
+        readOnly={false}
+        onAdd={onAdd}
+        renderItem={(item) => <div key={item.id}>{item.text}</div>}
+      />,
+    );
+
+    expect(screen.getByText("Ops rotation")).toBeInTheDocument();
+    expect(screen.getByText("No items yet")).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Add item to Ops rotation" }),
+    );
+    expect(onAdd).toHaveBeenCalledWith({ activityId: "act-b" });
+  });
+
   it("self-suppresses when there are no lanes", () => {
     const { container } = render(
       <ActivityLanesBlock
