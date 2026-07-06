@@ -1,7 +1,7 @@
 import {
   riskCoversStage,
   splitStageNames,
-} from "../components/lead/stage-tags";
+} from "../features/report-sections/model/stage-tags";
 
 /**
  * The at-risk/blocked alarm an item inherits from its covering risks, or `null`

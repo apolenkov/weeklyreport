@@ -6,9 +6,9 @@ import { Archive } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { LeadHistoryList } from "../../../components/lead/lead-history-list";
-import { LeadHistorySidebar } from "../../../components/lead/lead-history-sidebar";
-import { LeadHistorySkeleton } from "../../../components/lead/lead-history-skeleton";
+import { LeadHistoryList } from "../../../features/period/ui/lead-history-list";
+import { LeadHistorySidebar } from "../../../features/period/ui/lead-history-sidebar";
+import { LeadHistorySkeleton } from "../../../features/period/ui/lead-history-skeleton";
 import {
   type HistoryEntry,
   mapCompiledHistoryEntries,

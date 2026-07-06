@@ -46,11 +46,14 @@ vi.mock("../../../lib/server/get-print-route-context", () => ({
   getPrintRouteContext: () => getPrintRouteContext(),
 }));
 
-vi.mock("../../../components/lead/lead-section-preview-auth", () => ({
-  LeadSectionPreviewAuth: () => (
-    <div data-testid="lead-section-preview-auth-stub" />
-  ),
-}));
+vi.mock(
+  "../../../features/report-sections/ui/lead-section-preview-auth",
+  () => ({
+    LeadSectionPreviewAuth: () => (
+      <div data-testid="lead-section-preview-auth-stub" />
+    ),
+  }),
+);
 
 vi.mock("../../../components/weekly-report/weekly-report-page", () => ({
   // viewer-report-surface-parity: the viewer now wraps WeeklyReportPage in

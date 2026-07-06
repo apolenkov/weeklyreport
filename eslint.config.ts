@@ -864,7 +864,7 @@ export default defineConfig([
   {
     files: [
       "apps/web/src/shared/lib/dashboard-mock-data.ts", // fixture data, no logic
-      "apps/web/src/components/lead/mock-data.ts", // fixture data, no logic
+      "apps/web/src/features/report-sections/model/mock-data.ts", // fixture data, no logic
       "apps/web/src/shared/lib/admin-mock-data.ts", // fixture data, no logic
       "packages/ui/src/components/ui/sidebar.tsx", // shadcn/ui generated primitive bundle
       "prisma/wipe-manual-uat.ts", // one-off operational script (cf. seeds, ignored)
@@ -879,10 +879,10 @@ export default defineConfig([
       "apps/web/src/features/admin/ui/users-tab.tsx", // one CRUD panel; table + dialogs share one state tree
       "apps/web/src/features/admin/ui/groups-tab.tsx", // one CRUD tab; dialogs share one state machine
       "apps/web/src/features/admin/ui/products-tab.tsx", // one CRUD screen; private icon helpers only
-      "apps/web/src/components/lead/risk-edit-dialog.tsx", // one dialog: state + validation + render
-      "apps/web/src/components/lead/item-edit-dialog.tsx", // one create/edit dialog; shell + content coupled
-      "apps/web/src/components/lead/decision-edit-dialog.tsx", // one create/edit dialog; XOR parent picker + per-field validation + conditional stage step — parity with item/risk-edit-dialog (shared helpers already extracted)
-      "apps/web/src/components/lead/lead-form-sync-bridge.tsx", // one context bridge wiring sync to two consumers
+      "apps/web/src/features/review/ui/risk-edit-dialog.tsx", // one dialog: state + validation + render
+      "apps/web/src/features/report-sections/ui/item-edit-dialog.tsx", // one create/edit dialog; shell + content coupled
+      "apps/web/src/features/period/ui/decision-edit-dialog.tsx", // one create/edit dialog; XOR parent picker + per-field validation + conditional stage step — parity with item/risk-edit-dialog (shared helpers already extracted)
+      "apps/web/src/features/report-sections/ui/lead-form-sync-bridge.tsx", // one context bridge wiring sync to two consumers
       "apps/web/src/components/slides/status-slide-deck.tsx", // one navigable slide-deck widget
       "apps/web/src/shared/ui/navigation/nav-bar.tsx", // one role-aware nav widget; MobileNav/coming-soon have no external consumers
       "apps/web/src/features/dashboard/ui/dashboard-page.tsx", // one head-dashboard page; private load-issue helper only
@@ -894,7 +894,7 @@ export default defineConfig([
       // the larger unit and say why). See wf wjqkbxhc3.
       "apps/api/src/infrastructure/trpc/trpc.router.ts", // single tRPC god-router; all 17 namespace sub-routers close over one RouterDeps; real fix is service-layer extraction, not a shell split
       "apps/api/src/modules/report-sections/lead-form.prisma-repository.ts", // one DI provider for one LeadFormRepository interface; domain separation already lives at the service layer above it
-      "apps/web/src/components/lead/lead-form.tsx", // monolithic component; 6 queries/5 mutations/~15 state vars share one scope; best-case extraction still leaves ~1440 lines — needs multi-PR architectural work, not a mechanical split
+      "apps/web/src/features/report-sections/ui/lead-form.tsx", // monolithic component; 6 queries/5 mutations/~15 state vars share one scope; best-case extraction still leaves ~1440 lines — needs multi-PR architectural work, not a mechanical split
       "apps/web/src/components/slides/section-slide-utils.ts", // core mapper buildSectionSlideModel (247 lines) + its private helpers are inseparable; extracting all else still leaves ~335 lines
     ],
     rules: { "max-lines": "off" },
@@ -929,7 +929,7 @@ export default defineConfig([
   {
     files: [
       "apps/web/src/shared/lib/dashboard-mock-data.ts",
-      "apps/web/src/components/lead/mock-data.ts",
+      "apps/web/src/features/report-sections/model/mock-data.ts",
       "apps/web/src/shared/lib/admin-mock-data.ts",
       "packages/ui/src/components/ui/sidebar.tsx",
       "prisma/wipe-manual-uat.ts",
@@ -950,14 +950,14 @@ export default defineConfig([
       "apps/web/src/app/(app)/reports/page.tsx", // role-aware history renderer; 5 roles × distinct query/filter/label paths
       "apps/web/src/features/admin/ui/admin-panel.tsx", // 9-tab dispatch + skeleton/loaded gating; only ~3 pts extractable
       "apps/web/src/features/dashboard/ui/dashboard-page.tsx", // orchestrator: 2 queries + shared state + 4 render branches, hook-coupled
-      "apps/web/src/components/lead/decision-edit-dialog.tsx", // one create/edit dialog; per-field validation + conditional fields
-      "apps/web/src/components/lead/item-edit-dialog.tsx", // one form dialog; interdependent state (text/status/product/priority/stages)
-      "apps/web/src/components/lead/lead-form.tsx", // monolith; aggregateTrafficLight + state-setter pipelines; multi-PR architectural work
-      "apps/web/src/components/lead/lead-history-sidebar.tsx", // status-card multi-branch messaging (streak/viewer/draft/risk)
-      "apps/web/src/components/lead/next-week-section.tsx", // kanban CRUD + discriminated-union dialog state + grouped columns
-      "apps/web/src/components/lead/risk-edit-dialog.tsx", // one dialog; validation coupled to 7+ form fields; 'use no memo' race guard
-      "apps/web/src/components/lead/risks-section.tsx", // 3 dialog states across handlers + JSX; prior split broke behavior
-      "apps/web/src/components/lead/stage-chip.tsx", // interactive chip; dropdown/status/clear/popover entangled via hooks
+      "apps/web/src/features/period/ui/decision-edit-dialog.tsx", // one create/edit dialog; per-field validation + conditional fields
+      "apps/web/src/features/report-sections/ui/item-edit-dialog.tsx", // one form dialog; interdependent state (text/status/product/priority/stages)
+      "apps/web/src/features/report-sections/ui/lead-form.tsx", // monolith; aggregateTrafficLight + state-setter pipelines; multi-PR architectural work
+      "apps/web/src/features/period/ui/lead-history-sidebar.tsx", // status-card multi-branch messaging (streak/viewer/draft/risk)
+      "apps/web/src/features/report-sections/ui/next-week-section.tsx", // kanban CRUD + discriminated-union dialog state + grouped columns
+      "apps/web/src/features/review/ui/risk-edit-dialog.tsx", // one dialog; validation coupled to 7+ form fields; 'use no memo' race guard
+      "apps/web/src/features/review/ui/risks-section.tsx", // 3 dialog states across handlers + JSX; prior split broke behavior
+      "apps/web/src/features/report-sections/ui/stage-chip.tsx", // interactive chip; dropdown/status/clear/popover entangled via hooks
       "apps/web/src/shared/ui/navigation/nav-bar.tsx", // role-based link filtering + session/hydration across layout slots
       "apps/web/src/components/slides/head-slides-client.tsx", // guard clauses (loading/error/data) + scope-driven slide build
       "apps/web/src/components/slides/lead-slides-client.tsx", // hooks + shared state + loading/error/empty returns drive the deck lifecycle
@@ -980,10 +980,10 @@ export default defineConfig([
       "apps/api/src/modules/analytics/analytics.prisma-repository.ts", // 3-level traversal (reports→sections→statuses) → period×project matrix
       "apps/web/src/app/(app)/reports/page.tsx", // see cyclomatic block (same role-aware renderer)
       "apps/web/src/features/dashboard/ui/remind-lead-button.tsx", // one ConfirmState machine → label/message/icon/disabled
-      "apps/web/src/components/lead/lead-form.tsx", // see cyclomatic block (same monolith)
-      "apps/web/src/components/lead/lead-history-sidebar.tsx", // see cyclomatic block
-      "apps/web/src/components/lead/risks-section.tsx", // see cyclomatic block
-      "apps/web/src/components/lead/stage-chip.tsx", // see cyclomatic block
+      "apps/web/src/features/report-sections/ui/lead-form.tsx", // see cyclomatic block (same monolith)
+      "apps/web/src/features/period/ui/lead-history-sidebar.tsx", // see cyclomatic block
+      "apps/web/src/features/review/ui/risks-section.tsx", // see cyclomatic block
+      "apps/web/src/features/report-sections/ui/stage-chip.tsx", // see cyclomatic block
       "apps/web/src/components/slides/section-slide-utils.ts", // see cyclomatic block
       "apps/web/src/components/slides/status-slide-deck.tsx", // lead/head modes + sidebar/control/fallback render branches
       "apps/web/src/components/weekly-report/product-accordion.tsx", // see cyclomatic block
@@ -997,7 +997,7 @@ export default defineConfig([
   {
     files: [
       "apps/web/src/features/landing/ui/tagline-cycler.tsx", // self-recursive setTimeout handler mutating timer/visible/index state
-      "apps/web/src/components/lead/lead-form.tsx", // array-transform pipelines inside React state setters
+      "apps/web/src/features/report-sections/ui/lead-form.tsx", // array-transform pipelines inside React state setters
       "apps/web/src/hooks/use-status-risk.ts", // arrow callbacks in state-update chains; consolidated to avoid loops via syncSourceRef
       "apps/web/src/lib/trpc.ts", // RxJS observer/cleanup handlers in the error-link middleware
     ],

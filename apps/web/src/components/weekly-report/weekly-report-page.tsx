@@ -16,6 +16,9 @@ import {
 } from "react";
 import { toast } from "sonner";
 
+import { PdfExportComingSoonControl } from "../../features/pdf-export/ui/pdf-export-coming-soon";
+import { PeriodNavigator } from "../../features/period/ui/period-navigator";
+import type { ReportPeriod } from "../../features/report-sections/model/mock-data";
 import {
   invalidateDashboard,
   invalidateLeadForm,
@@ -43,9 +46,6 @@ import {
   DocumentActionGroup,
   ReportToolbar,
 } from "../../shared/ui/report-shell/report-toolbar";
-import type { ReportPeriod } from "../lead/mock-data";
-import { PdfExportComingSoonControl } from "../lead/pdf-export-coming-soon";
-import { PeriodNavigator } from "../lead/period-navigator";
 import { ActivityStatusStrip } from "./activity-status-strip";
 import { ExportPdfButton } from "./export-pdf-button";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";

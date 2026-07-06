@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { ConfirmDeleteDialog } from "../../../components/lead/confirm-delete-dialog";
 import { invalidateAdmin } from "../../../lib/cache-keys";
 import { toAdminProjectInput } from "../../../lib/mappers";
 import { useTRPC } from "../../../lib/trpc-context";
@@ -14,6 +13,7 @@ import type {
   MockProduct,
   MockUser,
 } from "../../../shared/lib/admin-mock-data";
+import { ConfirmDeleteDialog } from "../../../shared/ui/confirm-delete-dialog";
 import { SearchInput } from "../../../shared/ui/search-input";
 import { ProductGroupChips } from "./product-group-chips";
 import { StageAssignmentEditor } from "./stage-assignment-editor";

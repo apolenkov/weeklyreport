@@ -6,8 +6,8 @@ import type {
   Product,
   RiskEntry,
   StageStatus,
-} from "../components/lead/mock-data";
-import { riskCoversStage } from "../components/lead/stage-tags";
+} from "../features/report-sections/model/mock-data";
+import { riskCoversStage } from "../features/report-sections/model/stage-tags";
 
 // ---------------------------------------------------------------------------
 // Status <-> Risk coupling (pure, render-time derivation)

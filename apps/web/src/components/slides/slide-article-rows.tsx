@@ -1,7 +1,7 @@
 import { Check, ChevronsRight, Pause } from "lucide-react";
 import { useRef } from "react";
 
-import { STAGE_ICONS } from "../lead/stage-chip-config";
+import { STAGE_ICONS } from "../../features/report-sections/model/stage-chip-config";
 import { useSdlcTooltip } from "../ui/sdlc-tooltip";
 import type { GridAuthor, GridRow, GridTone } from "./slide-grid-model";
 

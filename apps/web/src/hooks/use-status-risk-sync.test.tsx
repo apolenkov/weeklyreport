@@ -1,7 +1,10 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Product, StageStatus } from "../components/lead/mock-data";
+import type {
+  Product,
+  StageStatus,
+} from "../features/report-sections/model/mock-data";
 import { expectDefined } from "../test-utils/expect-defined.js";
 import { useStatusRiskSync } from "./use-status-risk";
 

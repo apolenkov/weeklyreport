@@ -64,7 +64,7 @@ import {
   stageNamesMatch,
 } from "@customreport/shared";
 
-import { riskCoversStage } from "../../components/lead/stage-tags";
+import { riskCoversStage } from "../../features/report-sections/model/stage-tags";
 import {
   formatPeriodRangeWithYear,
   formatTimestampShort,

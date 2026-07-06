@@ -39,7 +39,7 @@ vi.mock("../../../shared/ui/search-input", () => ({
   SearchInput: () => <div data-testid="search-input-stub" />,
 }));
 
-vi.mock("../../../components/lead/confirm-delete-dialog", () => ({
+vi.mock("../../../shared/ui/confirm-delete-dialog", () => ({
   ConfirmDeleteDialog: ({
     open,
     onCancel,
