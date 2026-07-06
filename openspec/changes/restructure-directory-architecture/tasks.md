@@ -53,6 +53,12 @@
       `report-shell`/`common`/`ui` primitives to `src/shared/`; keep every move OUT
       of `app/`. Each domain lands its own OpenSpec change with the full unit gate green.
       **Gated on clean git status (parallel session).**
+      Progress 2026-07-06: 4 domains landed + archived — analytics (3b4f9a9c),
+      navigation→shared/ui (b07e75a1), dashboard (e8cf8a74), report-shell→shared/ui
+      (c4592bd7); each via impl → full gate → 2 Fable adversaries + Codex → live-verify.
+      Remaining: lead (→ report-sections + period + review), admin, weekly-report,
+      slides (deferred — parallel session owns the folder), lib/mappers dissolve,
+      common/ui primitives → shared/.
 
 ## 4. api: formalize existing ports in the invariant modules (internal only)
 
