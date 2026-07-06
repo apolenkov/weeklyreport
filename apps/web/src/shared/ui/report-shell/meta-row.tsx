@@ -17,7 +17,9 @@ const EMPTY_STAGE_CHIPS = {
   },
 } as const;
 
-type EmptyStageChip = keyof typeof EMPTY_STAGE_CHIPS;
+/** "none" renders no chip at all — an activity-parented row is legitimately
+ * stage-less, so neither the warning nor an "All stages" chip applies. */
+type EmptyStageChip = keyof typeof EMPTY_STAGE_CHIPS | "none";
 
 interface MetaRowProps {
   readonly authorName: string | null | undefined;
@@ -38,8 +40,10 @@ export function MetaRow({
   foreign = false,
   emptyStageChip = "all-stages",
 }: MetaRowProps) {
-  const emptyChip = EMPTY_STAGE_CHIPS[emptyStageChip];
-  const title = stageTags.length === 0 ? emptyChip.label : stageTags.join(", ");
+  const emptyChip =
+    emptyStageChip === "none" ? null : EMPTY_STAGE_CHIPS[emptyStageChip];
+  const title =
+    stageTags.length === 0 ? (emptyChip?.label ?? "") : stageTags.join(", ");
 
   return (
     <div
@@ -60,22 +64,22 @@ export function MetaRow({
         ) : null}
       </span>
       <span className="inline-flex flex-wrap items-center gap-1" title={title}>
-        {stageTags.length === 0 ? (
-          <span
-            className={`inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold ${emptyChip.className}`}
-          >
-            {emptyChip.label}
-          </span>
-        ) : (
-          stageTags.map((stage) => (
-            <span
-              key={stage}
-              className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
-            >
-              {stage}
-            </span>
-          ))
-        )}
+        {stageTags.length === 0
+          ? emptyChip && (
+              <span
+                className={`inline-flex items-center rounded-[var(--radius-pill)] px-2.5 py-0.5 text-[11px] font-semibold ${emptyChip.className}`}
+              >
+                {emptyChip.label}
+              </span>
+            )
+          : stageTags.map((stage) => (
+              <span
+                key={stage}
+                className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]"
+              >
+                {stage}
+              </span>
+            ))}
       </span>
     </div>
   );
