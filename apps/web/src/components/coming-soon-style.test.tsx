@@ -222,7 +222,7 @@ describe("every tooltip control migrated to the shared Radix wrapper (source sca
   // below), so they can no longer drift. Holidays keeps its own inert-span
   // composition (nested-button HTML validity), so it stays a source scan.
   const componentsRoot = path.dirname(fileURLToPath(import.meta.url));
-  const TOOLTIP_CONTROL_FILES = ["admin/settings-tab.tsx"];
+  const TOOLTIP_CONTROL_FILES = ["../features/admin/ui/settings-tab.tsx"];
 
   it("each control uses ComingSoonTooltip and dropped the retired CSS anchor", () => {
     for (const rel of TOOLTIP_CONTROL_FILES) {
@@ -239,7 +239,7 @@ describe("every tooltip control migrated to the shared Radix wrapper (source sca
     // carries a PERSISTENT (sr-only) ComingSoonBadge — the tab's accessible name
     // still announces the coming-soon state without adding an aria-label.
     const source = readFileSync(
-      path.join(componentsRoot, "admin/settings-tab.tsx"),
+      path.join(componentsRoot, "../features/admin/ui/settings-tab.tsx"),
       "utf8",
     );
     expect(source).toContain("ComingSoonBadge");
@@ -256,7 +256,7 @@ describe("every inert Coming Soon control — no stacked native title", () => {
   // Holidays-only scope: the five button controls inherit the no-native-title
   // guarantee from the shared primitive (verified by its unit test below).
   const componentsRoot = path.dirname(fileURLToPath(import.meta.url));
-  const INERT_CONTROL_FILES = ["admin/settings-tab.tsx"];
+  const INERT_CONTROL_FILES = ["../features/admin/ui/settings-tab.tsx"];
 
   it("no inert control source carries title=Coming Soon", () => {
     const violations = INERT_CONTROL_FILES.filter((rel) =>

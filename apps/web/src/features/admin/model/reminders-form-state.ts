@@ -1,0 +1,80 @@
+/**
+ * Policy-editor form-state type + factories for the Reminders tab. Pure data
+ * construction — no JSX. Shared by the tab (initial + reset state) and the
+ * PolicyForm editor.
+ */
+
+import { MINUTES_PER_DAY } from "@customreport/shared";
+
+import type { AdminReminderPolicyFormInput } from "../../../lib/mappers";
+import type { MockReminderPolicy } from "../../../shared/lib/admin-mock-data";
+import {
+  isoFromDate,
+  presetForPolicy,
+  presetPairing,
+  type ReminderPresetChoice,
+} from "./reminders-tab-format";
+
+const ISO_DATE_LENGTH = 10;
+const DEFAULT_OFFSET_DAYS_BEFORE = 1;
+const DEFAULT_OFFSET_MINUTES = -(DEFAULT_OFFSET_DAYS_BEFORE * MINUTES_PER_DAY);
+
+export type PolicyFormState = AdminReminderPolicyFormInput & {
+  /**
+   * The selected Reminder type. `kind`/`audience` are derived from it on
+   * save for a real preset, and preserved verbatim for a "custom" row (D2/D3).
+   */
+  preset: ReminderPresetChoice;
+  /** ISO `YYYY-MM-DD` of "now" when this form was first opened. */
+  todayIso: string;
+  /**
+   * Mirrors the "forever" checkbox. When `true`, `validUntilIso` is forced to
+   * `null` and the upper-bound input is hidden.
+   */
+  foreverChecked: boolean;
+};
+
+const DEFAULT_PRESET = "deadline-leads" as const;
+
+function todayIsoString(): string {
+  return new Date().toISOString().slice(0, ISO_DATE_LENGTH);
+}
+
+/**
+ * A new reminder always starts from a valid preset (D7). The org default
+ * audience is intentionally NOT blended into the pairing — that was the
+ * footgun (`deadline → head-of-late`) this change removes. Only the timezone
+ * default is sourced from AppSettings.
+ */
+export function emptyPolicyForm(opts?: { timezone?: string }): PolicyFormState {
+  const today = todayIsoString();
+  const { kind, audience } = presetPairing(DEFAULT_PRESET);
+  return {
+    preset: DEFAULT_PRESET,
+    kind,
+    audience,
+    offsetMinutes: DEFAULT_OFFSET_MINUTES, // T-24h
+    timezone: opts?.timezone ?? "Europe/Moscow",
+    active: true,
+    validFromIso: today,
+    validUntilIso: null,
+    todayIso: today,
+    foreverChecked: true,
+  };
+}
+
+export function policyToForm(policy: MockReminderPolicy): PolicyFormState {
+  return {
+    preset: presetForPolicy(policy.kind, policy.audience),
+    kind: policy.kind,
+    offsetMinutes: policy.offsetMinutes,
+    timezone: policy.timezone,
+    audience: policy.audience,
+    active: policy.active,
+    validFromIso: isoFromDate(policy.validFrom),
+    validUntilIso:
+      policy.validUntil === null ? null : isoFromDate(policy.validUntil),
+    todayIso: todayIsoString(),
+    foreverChecked: policy.validUntil === null,
+  };
+}

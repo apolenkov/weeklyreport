@@ -86,7 +86,15 @@ export interface ReportItem {
   /** Contributing lead's initials for the gutter; live data always sets it. */
   owner?: string;
   text: string;
-  status: "in-progress" | "completed" | "blocked" | "planned";
+  // Mirrors the mapper ItemStatus union (rework-item-status-model) — keep the
+  // two ReportItem declarations in sync (known dual-type hazard).
+  status:
+    | "in-progress"
+    | "completed"
+    | "planned"
+    | "paused"
+    | "postponed"
+    | "blocked";
   /** Priority rank (1 = top) when the item is a flagged priority; null otherwise. */
   priorityRank?: number | null;
   /** review-acknowledgement: reviewer comments anchored to this item's DB id. */

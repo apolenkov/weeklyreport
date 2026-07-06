@@ -1,7 +1,11 @@
-import { AdminPanel } from "../../../components/admin/admin-panel";
-import { AdminTabsMobileSelect } from "../../../components/admin/admin-tabs-mobile-select";
-import { JobsTabLabel } from "../../../components/admin/jobs-tab-label";
-import { ReopenTabLabel } from "../../../components/admin/reopen-tab-label";
+import {
+  AdminPanel,
+  AdminTabsMobileSelect,
+  JobsTabLabel,
+} from "../../../features/admin";
+// ReopenTabLabel lives in the review slice; the route composes it directly
+// until the review slice registers and exposes a barrel (paired lead/ change).
+import { ReopenTabLabel } from "../../../features/review/ui/reopen-tab-label";
 
 interface Props {
   searchParams: Promise<{ tab?: string; filter?: string }>;

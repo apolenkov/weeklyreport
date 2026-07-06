@@ -865,7 +865,7 @@ export default defineConfig([
     files: [
       "apps/web/src/shared/lib/dashboard-mock-data.ts", // fixture data, no logic
       "apps/web/src/components/lead/mock-data.ts", // fixture data, no logic
-      "apps/web/src/components/admin/mock-data.ts", // fixture data, no logic
+      "apps/web/src/shared/lib/admin-mock-data.ts", // fixture data, no logic
       "packages/ui/src/components/ui/sidebar.tsx", // shadcn/ui generated primitive bundle
       "prisma/wipe-manual-uat.ts", // one-off operational script (cf. seeds, ignored)
       "packages/shared/src/schemas/report.schema.ts", // dense Zod schema catalogue, no logic
@@ -876,9 +876,9 @@ export default defineConfig([
       "apps/api/src/infrastructure/trpc/trpc.middleware.ts", // tRPC instance + all procedure builders share the private `t` binding
       "apps/api/src/modules/admin/period-admin.service.ts", // one Admin period-lifecycle service class
       "apps/api/src/modules/report-sections/report-sections.prisma-repository.ts", // one Prisma persistence layer; include/type/mapper/class coupled
-      "apps/web/src/components/admin/users-tab.tsx", // one CRUD panel; table + dialogs share one state tree
-      "apps/web/src/components/admin/groups-tab.tsx", // one CRUD tab; dialogs share one state machine
-      "apps/web/src/components/admin/products-tab.tsx", // one CRUD screen; private icon helpers only
+      "apps/web/src/features/admin/ui/users-tab.tsx", // one CRUD panel; table + dialogs share one state tree
+      "apps/web/src/features/admin/ui/groups-tab.tsx", // one CRUD tab; dialogs share one state machine
+      "apps/web/src/features/admin/ui/products-tab.tsx", // one CRUD screen; private icon helpers only
       "apps/web/src/components/lead/risk-edit-dialog.tsx", // one dialog: state + validation + render
       "apps/web/src/components/lead/item-edit-dialog.tsx", // one create/edit dialog; shell + content coupled
       "apps/web/src/components/lead/decision-edit-dialog.tsx", // one create/edit dialog; XOR parent picker + per-field validation + conditional stage step — parity with item/risk-edit-dialog (shared helpers already extracted)
@@ -930,7 +930,7 @@ export default defineConfig([
     files: [
       "apps/web/src/shared/lib/dashboard-mock-data.ts",
       "apps/web/src/components/lead/mock-data.ts",
-      "apps/web/src/components/admin/mock-data.ts",
+      "apps/web/src/shared/lib/admin-mock-data.ts",
       "packages/ui/src/components/ui/sidebar.tsx",
       "prisma/wipe-manual-uat.ts",
       "apps/web/uat-suite/**",
@@ -948,7 +948,7 @@ export default defineConfig([
   {
     files: [
       "apps/web/src/app/(app)/reports/page.tsx", // role-aware history renderer; 5 roles × distinct query/filter/label paths
-      "apps/web/src/components/admin/admin-panel.tsx", // 9-tab dispatch + skeleton/loaded gating; only ~3 pts extractable
+      "apps/web/src/features/admin/ui/admin-panel.tsx", // 9-tab dispatch + skeleton/loaded gating; only ~3 pts extractable
       "apps/web/src/features/dashboard/ui/dashboard-page.tsx", // orchestrator: 2 queries + shared state + 4 render branches, hook-coupled
       "apps/web/src/components/lead/decision-edit-dialog.tsx", // one create/edit dialog; per-field validation + conditional fields
       "apps/web/src/components/lead/item-edit-dialog.tsx", // one form dialog; interdependent state (text/status/product/priority/stages)
