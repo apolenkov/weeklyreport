@@ -104,6 +104,20 @@ export function RisksSection({
     openEdit(risk);
   }
 
+  // simplify-stage-status-interaction (D5): one-click blocked <-> at-risk flip
+  // without the full edit dialog. The chip's displayed severity re-derives from
+  // this on the next render (applyRiskSeverityFloor), so downgrading a blocker
+  // to a risk lowers the covered stage in a single click.
+  function handleToggleSeverity(risk: RiskEntry) {
+    if (readOnly) return;
+    const nextSeverity = risk.severity === "blocked" ? "at-risk" : "blocked";
+    onChange?.(
+      risks.map((r) =>
+        r.id === risk.id ? { ...r, severity: nextSeverity } : r,
+      ),
+    );
+  }
+
   function handleDialogSave(
     saved: RiskEntry & { impact: string; mitigation: string },
   ) {
@@ -165,6 +179,7 @@ export function RisksSection({
               linkedProductStatus={linkedProductStatus}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onToggleSeverity={handleToggleSeverity}
             />
           );
         })

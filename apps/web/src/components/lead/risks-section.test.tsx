@@ -3,8 +3,8 @@
  */
 import "@testing-library/jest-dom/vitest";
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { SdlcTooltipProvider } from "../ui/sdlc-tooltip";
 import type { RiskEntry } from "./mock-data";
@@ -288,5 +288,63 @@ describe("RisksSection stage scope", () => {
     // "Dev" is canonicalized to "Development" before rendering (L4 fix).
     expect(screen.getByText("Development")).toBeInTheDocument();
     expect(screen.queryByText("+1")).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// simplify-stage-status-interaction (D5): one-click blocked <-> at-risk toggle
+// ---------------------------------------------------------------------------
+
+describe("RisksSection — severity toggle (D5)", () => {
+  it("flips a blocked risk to at-risk in one click and calls onChange", () => {
+    const onChange = vi.fn<(next: RiskEntry[]) => void>();
+    render(
+      <RisksSection
+        risks={[{ ...baseRisk, severity: "blocked" }]}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /Downgrade risk for CRM to at risk/i,
+      }),
+    );
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0]?.[0]?.[0]?.severity).toBe("at-risk");
+  });
+
+  it("escalates an at-risk risk to blocked in one click", () => {
+    const onChange = vi.fn<(next: RiskEntry[]) => void>();
+    render(
+      <RisksSection
+        risks={[{ ...baseRisk, severity: "at-risk" }]}
+        onChange={onChange}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Escalate risk for CRM to blocked/i }),
+    );
+
+    expect(onChange.mock.calls[0]?.[0]?.[0]?.severity).toBe("blocked");
+  });
+
+  it("shows no severity toggle on a foreign (read-only) risk card", () => {
+    render(
+      <SdlcTooltipProvider>
+        <RisksSection
+          risks={[foreignRisk]}
+          products={[
+            { id: "p1", name: "Product", overallStatus: "at-risk", stages: [] },
+          ]}
+        />
+      </SdlcTooltipProvider>,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /Downgrade risk|Escalate risk/i }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -343,6 +343,145 @@ describe("LeadForm mutation wiring", () => {
     expect(sent.version).toBe(5);
   });
 
+  it("D4: submit-confirm warns about unset own stages and coerces them to On Track", async () => {
+    // The seed's single owned stage carries no status → unset. The confirm
+    // dialog warns, and confirming promotes it to green (mirrors the null→green
+    // project/activity coercion).
+    const { Wrapper, captured } = buildHarness();
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    expect(await screen.findByText("Autosaved")).toBeInTheDocument();
+
+    act(() => {
+      screen.getByRole("button", { name: "Submit" }).click();
+    });
+    const dialog = await screen.findByRole("dialog", {
+      name: "Confirm submission",
+    });
+    expect(
+      within(dialog).getByText(/1 stage not set.*marked On Track/i),
+    ).toBeInTheDocument();
+
+    act(() => {
+      within(dialog).getByRole("button", { name: "Submit" }).click();
+    });
+    await waitFor(() =>
+      expect(
+        captured["reports.submit"].mutationFn.mock.calls.length,
+      ).toBeGreaterThan(0),
+    );
+    const sent = captured["reports.submit"].mutationFn.mock.calls.at(
+      -1,
+    )?.[0] as {
+      stageStatuses?: { status: string | null }[];
+    };
+    expect(sent.stageStatuses?.length).toBeGreaterThan(0);
+    expect(sent.stageStatuses?.every((s) => s.status === "green")).toBe(true);
+  });
+
+  it("D4: no unset own stages → the submit-confirm shows no warning", async () => {
+    const seeded = makeSection();
+    const withStatus = {
+      ...seeded,
+      projects: seeded.projects.map((p) => ({
+        ...p,
+        ownedStages: p.ownedStages.map((s) => ({
+          ...s,
+          status: "green" as const,
+        })),
+      })),
+    };
+    const { Wrapper } = buildHarness({
+      byPeriodQueryFn: () =>
+        Promise.resolve({
+          section: withStatus,
+          readOnly: false,
+          canRequestReopen: false,
+          publishedLineage: { itemStableIds: [], decisionStableIds: [] },
+        }),
+    });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    expect(await screen.findByText("Autosaved")).toBeInTheDocument();
+
+    act(() => {
+      screen.getByRole("button", { name: "Submit" }).click();
+    });
+    const dialog = await screen.findByRole("dialog", {
+      name: "Confirm submission",
+    });
+    expect(
+      within(dialog).queryByText(/not set.*marked On Track/i),
+    ).not.toBeInTheDocument();
+  });
+
+  it("D4: a stale orphan (red) own stage with no covering risk is coerced to green on submit, not warned", async () => {
+    // Under the one-source model a persisted stage severity is never legitimate;
+    // an orphan red renders On Track on every read, so submit must collapse it to
+    // green (matching the display) rather than re-persist a ghost severity. It is
+    // NOT counted in the "N not set" warning (that is null/unset only).
+    const seeded = makeSection();
+    const withOrphan = {
+      ...seeded,
+      risks: [],
+      projects: seeded.projects.map((p) => ({
+        ...p,
+        ownedStages: p.ownedStages.map((s) => ({
+          ...s,
+          status: "red" as const,
+        })),
+      })),
+    };
+    const { Wrapper, captured } = buildHarness({
+      byPeriodQueryFn: () =>
+        Promise.resolve({
+          section: withOrphan,
+          readOnly: false,
+          canRequestReopen: false,
+          publishedLineage: { itemStableIds: [], decisionStableIds: [] },
+        }),
+    });
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    expect(await screen.findByText("Autosaved")).toBeInTheDocument();
+
+    act(() => {
+      screen.getByRole("button", { name: "Submit" }).click();
+    });
+    const dialog = await screen.findByRole("dialog", {
+      name: "Confirm submission",
+    });
+    // The orphan displays On Track, so it is NOT an "unset" stage — no warning.
+    expect(
+      within(dialog).queryByText(/not set.*marked On Track/i),
+    ).not.toBeInTheDocument();
+
+    act(() => {
+      within(dialog).getByRole("button", { name: "Submit" }).click();
+    });
+    await waitFor(() =>
+      expect(
+        captured["reports.submit"].mutationFn.mock.calls.length,
+      ).toBeGreaterThan(0),
+    );
+    const sent = captured["reports.submit"].mutationFn.mock.calls.at(
+      -1,
+    )?.[0] as {
+      stageStatuses?: { status: string | null }[];
+    };
+    expect(sent.stageStatuses?.length).toBeGreaterThan(0);
+    expect(sent.stageStatuses?.every((s) => s.status === "green")).toBe(true);
+  });
+
   it("a refetch updates the held version without dirtying the form, and the new version reaches the next write (guardrail 4)", async () => {
     let serverVersion = 1;
     const { Wrapper, captured, queryClient } = buildHarness({
@@ -449,11 +588,14 @@ describe("LeadForm mutation wiring", () => {
     // findByText is act-wrapped by RTL — waits for the query cascade to settle.
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
-    // Click an editable stage chip to open the popover menu.
+    // simplify-stage-status-interaction: the chip is a plain On Track/unset
+    // toggle now — a single click fires onStatusChange and dirties the draft,
+    // no popover menu. Pick an editable chip that is togglable (on-track or
+    // empty); a risk-floored at-risk/blocked chip would be a no-op.
     const editableChip = screen.getAllByRole("button").find((b) => {
       const label = b.getAttribute("aria-label") ?? "";
       return (
-        /^(Planning|Analysis|Design|Development|Testing|DevOps|Support):/.test(
+        /^(Planning|Analysis|Design|Development|Testing|DevOps|Support): (on-track|empty)/.test(
           label,
         ) && b.getAttribute("aria-disabled") !== "true"
       );
@@ -461,25 +603,6 @@ describe("LeadForm mutation wiring", () => {
     expect(editableChip).toBeDefined();
     act(() => {
       expectDefined(editableChip).click();
-    });
-    // Wait for the popover menu to appear before querying its items.
-    await waitFor(() =>
-      expect(screen.getAllByRole("menuitem").length).toBeGreaterThan(0),
-    );
-
-    // Pick a different status from the menu — fires onStatusChange and
-    // dirties the draft.
-    const menuitem = screen.getAllByRole("menuitem").find((m) => {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- DOM textContent is nullable; defensive default in a test helper
-      const label = m.textContent ?? "";
-      return (
-        /On Track|At Risk|Blocked|Clear/i.test(label) &&
-        !label.includes("current")
-      );
-    });
-    expect(menuitem).toBeDefined();
-    act(() => {
-      expectDefined(menuitem).click();
     });
 
     // Wait for the dirty indicator to replace "Autosaved".

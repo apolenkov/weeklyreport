@@ -15,7 +15,7 @@ import "@testing-library/jest-dom/vitest";
 import { TooltipProvider } from "@customreport/ui/components/ui/tooltip";
 import { fireEvent, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { StageChip } from "./stage-chip";
 
@@ -82,11 +82,16 @@ describe("StageChip — locked stage color (F2)", () => {
     expect(container.querySelector("svg[aria-hidden]")).toBeInTheDocument();
   });
 
-  it("locked chip is not editable — no status popover on click", () => {
-    render(<StageChip stage={{ ...BASE_LOCKED, status: "at-risk" }} />);
+  it("locked chip is not editable — a click never fires onStatusChange", () => {
+    const onStatusChange = vi.fn();
+    render(
+      <StageChip
+        stage={{ ...BASE_LOCKED, status: "at-risk" }}
+        onStatusChange={onStatusChange}
+      />,
+    );
     screen.getByRole("button").click();
-    expect(screen.queryByText("✓ On Track")).not.toBeInTheDocument();
-    expect(screen.queryByText("✕ Blocked")).not.toBeInTheDocument();
+    expect(onStatusChange).not.toHaveBeenCalled();
   });
 });
 
@@ -140,7 +145,23 @@ describe("StageChip — covered-by-risk vs status-set distinction (W11 3.9)", ()
     ).toBeInTheDocument();
   });
 
-  it("explicitly-set blocked chip announces 'status set' in its aria-label", () => {
+  it("a mine on-track chip announces 'status set' in its aria-label", () => {
+    // simplify-stage-status-interaction: on-track is the only severity a lead
+    // sets explicitly on the chip, so it is the only one that reads "status set".
+    render(
+      <StageChip
+        stage={{ ...BASE_MINE, status: "on-track" }}
+        rawStatus="on-track"
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Design: on-track — status set" }),
+    ).toBeInTheDocument();
+  });
+
+  it("a mine blocked chip always reads 'by risk', never 'status set'", () => {
+    // at-risk/blocked come only from risks now — a mine chip showing blocked is
+    // risk-floored regardless of its raw status, so it announces "by risk".
     render(
       <StageChip
         stage={{ ...BASE_MINE, status: "blocked" }}
@@ -148,7 +169,7 @@ describe("StageChip — covered-by-risk vs status-set distinction (W11 3.9)", ()
       />,
     );
     expect(
-      screen.getByRole("button", { name: "Design: blocked — status set" }),
+      screen.getByRole("button", { name: "Design: blocked by risk" }),
     ).toBeInTheDocument();
   });
 
@@ -164,14 +185,20 @@ describe("StageChip — covered-by-risk vs status-set distinction (W11 3.9)", ()
     ).toBeInTheDocument();
   });
 
-  it("covered-empty and explicitly-set blocked chips have DIFFERENT aria-labels", () => {
+  it("covered-empty and raw-set blocked chips share the 'by risk' label but differ visually", () => {
+    // simplify-stage-status-interaction: both announce "by risk" now (blocked
+    // comes only from risks), but the covered-empty chip stays a dashed sketch
+    // (data-coverage="risk") while a raw-set chip renders solid — the W11 border
+    // distinction survives even though the aria-label no longer splits them.
     const { unmount } = render(
       <StageChip
         stage={{ ...BASE_MINE, status: "blocked", coveredByOwnRisk: true }}
         rawStatus="empty"
       />,
     );
-    const coveredLabel = screen.getByRole("button").getAttribute("aria-label");
+    const coveredButton = screen.getByRole("button");
+    const coveredLabel = coveredButton.getAttribute("aria-label");
+    const coveredCoverage = coveredButton.dataset.coverage;
     unmount();
     render(
       <StageChip
@@ -179,46 +206,11 @@ describe("StageChip — covered-by-risk vs status-set distinction (W11 3.9)", ()
         rawStatus="blocked"
       />,
     );
-    const setLabel = screen.getByRole("button").getAttribute("aria-label");
-    expect(coveredLabel).not.toBe(setLabel);
-    // both still announce the blocked severity
-    expect(coveredLabel).toContain("blocked");
-    expect(setLabel).toContain("blocked");
-  });
-
-  it("covered-empty and explicitly-set chips are visually distinguishable", () => {
-    const { unmount } = render(
-      <StageChip
-        stage={{ ...BASE_MINE, status: "blocked", coveredByOwnRisk: true }}
-        rawStatus="empty"
-      />,
-    );
-    const coveredCoverage = screen.getByRole("button").dataset.coverage;
-    unmount();
-    render(
-      <StageChip
-        stage={{ ...BASE_MINE, status: "blocked" }}
-        rawStatus="blocked"
-      />,
-    );
-    const setCoverage = screen.getByRole("button").dataset.coverage;
+    const setButton = screen.getByRole("button");
+    expect(coveredLabel).toBe(setButton.getAttribute("aria-label"));
+    expect(coveredLabel).toBe("Design: blocked by risk");
     expect(coveredCoverage).toBe("risk");
-    expect(setCoverage).not.toBe("risk");
-  });
-
-  it("foreign-floored raw-empty chip reads neither 'by risk' nor 'status set'", () => {
-    // Display floor from a FOREIGN risk: floored to blocked, raw empty, but
-    // NOT covered by the lead's own risk. Must not claim ownership of intent.
-    render(
-      <StageChip
-        stage={{ ...BASE_MINE, status: "blocked", coveredByOwnRisk: false }}
-        rawStatus="empty"
-      />,
-    );
-    expect(
-      screen.getByRole("button", { name: "Design: blocked" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button").dataset.coverage).not.toBe("risk");
+    expect(setButton.dataset.coverage).not.toBe("risk");
   });
 
   it("locked chip keeps a plain status aria-label (no suffix)", () => {
@@ -276,48 +268,66 @@ describe("StageChip — assignee label invariants (mine/locked)", () => {
   });
 });
 
-// ---- "→ create risk" menu hint: an unbacked raise routes to risk creation ----
-// The hint mirrors the bridge's interception predicate (at-risk needs any
-// covering risk, blocked needs a blocked one); without the flags the menu
-// stays hint-free (read-only / head paths pass no riskGap).
+// ---- simplify-stage-status-interaction (D1): the chip is a plain toggle ----
+// An editable, uncovered chip toggles empty <-> on-track off the RAW status.
+// There is NO status menu — at-risk/blocked are authored only via the Risks
+// section, so a click never opens a popover or offers a severity option.
 
-describe("StageChip — '→ create risk' menu hint", () => {
-  function openMenu(riskGap?: {
-    readonly "at-risk": boolean;
-    readonly blocked: boolean;
-  }) {
+describe("StageChip — On Track / unset toggle (no menu)", () => {
+  it("clicking an empty chip toggles it to on-track", () => {
+    const onStatusChange = vi.fn();
+    render(
+      <StageChip
+        stage={{ ...BASE_MINE, status: "empty" }}
+        rawStatus="empty"
+        onStatusChange={onStatusChange}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Design/ }));
+    expect(onStatusChange).toHaveBeenCalledWith("Design", "on-track");
+  });
+
+  it("clicking an on-track chip toggles it back to empty", () => {
+    const onStatusChange = vi.fn();
     render(
       <StageChip
         stage={{ ...BASE_MINE, status: "on-track" }}
-        riskGap={riskGap}
+        rawStatus="on-track"
+        onStatusChange={onStatusChange}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Design/ }));
+    expect(onStatusChange).toHaveBeenCalledWith("Design", "empty");
+  });
+
+  it("opens no status menu and offers no at-risk/blocked option on click", () => {
+    render(
+      <StageChip
+        stage={{ ...BASE_MINE, status: "on-track" }}
+        rawStatus="on-track"
         onStatusChange={() => undefined}
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: /Design/ }));
-  }
-
-  it("labels At Risk and Blocked when no covering risk exists", () => {
-    openMenu({ "at-risk": true, blocked: true });
-    const hints = screen.getAllByText("→ create risk");
-    expect(hints).toHaveLength(2);
-    expect(
-      screen.getByRole("menuitem", { name: /At Risk.*create risk/ }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("menuitem", { name: /Blocked.*create risk/ }),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
+    expect(screen.queryByText("! At Risk")).not.toBeInTheDocument();
+    expect(screen.queryByText("✕ Blocked")).not.toBeInTheDocument();
   });
 
-  it("labels only Blocked when an at-risk risk already covers the stage", () => {
-    openMenu({ "at-risk": false, blocked: true });
-    expect(screen.getAllByText("→ create risk")).toHaveLength(1);
-    expect(
-      screen.getByRole("menuitem", { name: /Blocked.*create risk/ }),
-    ).toBeInTheDocument();
-  });
-
-  it("shows no hint without riskGap (read-only / head paths)", () => {
-    openMenu(undefined);
-    expect(screen.queryByText("→ create risk")).not.toBeInTheDocument();
+  it("a risk-floored chip fires the toggle intent (the bridge owns the hint)", () => {
+    // The chip stays dumb: it toggles off the RAW status and lets the sync
+    // bridge decide a covered chip is a no-op. Here raw is empty, so the
+    // intent is on-track; the bridge (not the chip) blocks it when covered.
+    const onStatusChange = vi.fn();
+    render(
+      <StageChip
+        stage={{ ...BASE_MINE, status: "blocked", coveredByOwnRisk: true }}
+        rawStatus="empty"
+        onStatusChange={onStatusChange}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Design/ }));
+    expect(onStatusChange).toHaveBeenCalledWith("Design", "on-track");
   });
 });
