@@ -18,11 +18,11 @@ import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TRPCProxyContext } from "../../lib/trpc-context";
+import { TRPCProxyContext } from "../../../lib/trpc-context";
 
 // We mock cache-keys to verify invalidation cascade without actually inspecting
 // react-query internals.
-vi.mock("../../lib/cache-keys", () => ({
+vi.mock("../../../lib/cache-keys", () => ({
   invalidateDashboard: vi.fn(),
   invalidateLeadForm: vi.fn(),
   invalidateLeadHistory: vi.fn(),
@@ -56,11 +56,14 @@ import {
   invalidateDashboard,
   invalidateLeadForm,
   invalidateLeadHistory,
-} from "../../lib/cache-keys";
-import { SessionContext, type SessionUser } from "../../lib/session-provider";
-import { AgentReviewComingSoon } from "../../shared/ui/report-shell/agent-review-coming-soon";
-import { expectDefined } from "../../test-utils/expect-defined.js";
-import { createMockTRPC } from "../../test-utils/mock-trpc";
+} from "../../../lib/cache-keys";
+import {
+  SessionContext,
+  type SessionUser,
+} from "../../../lib/session-provider";
+import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
+import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { WeeklyReportPage } from "./weekly-report-page";
 
 const REPORT_ID = "11111111-1111-4111-8111-111111111111";

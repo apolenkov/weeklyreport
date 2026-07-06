@@ -24,7 +24,7 @@ vi.mock("../../../components/slides/head-slides-client", () => ({
   ),
 }));
 
-vi.mock("../../../components/weekly-report/weekly-report-page", () => ({
+vi.mock("../../report-sections/ui/weekly-report-page", () => ({
   WeeklyReportPage: ({
     documentActionsLeading,
     contextControls,

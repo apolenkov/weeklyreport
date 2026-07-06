@@ -27,13 +27,13 @@ vi.mock("../../../components/slides/head-slides-client", () => ({
 // action (a self-contained component with its own query/mutations). Stub it
 // here — the shell test only verifies it is mounted on the header line, not its
 // publish internals (those live in publish-lock-button.test).
-vi.mock("../../../components/weekly-report/head-publish-lock-action", () => ({
+vi.mock("../../period/ui/head-publish-lock-action", () => ({
   HeadPublishLockAction: () => (
     <div data-testid="head-publish-lock-action-stub" />
   ),
 }));
 
-vi.mock("../../../components/weekly-report/weekly-report-page", () => ({
+vi.mock("./weekly-report-page", () => ({
   // report-toolbar-layout: render the header context label + the two toolbar
   // slots so tests can pin where the shell routes each. The real page renders
   // the single two-row ReportToolbar below the header; this stub synthesizes

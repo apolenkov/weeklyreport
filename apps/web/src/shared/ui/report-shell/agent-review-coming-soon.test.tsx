@@ -55,7 +55,7 @@ vi.mock(
   }),
 );
 
-vi.mock("../../../components/weekly-report/weekly-report-page", () => ({
+vi.mock("../../../features/report-sections/ui/weekly-report-page", () => ({
   // viewer-report-surface-parity: the viewer now wraps WeeklyReportPage in
   // ViewerReportShell, which routes the full bottom-row controls (agent-review
   // placeholder + Back-to-Archive + scope/view-mode toggles) through the
@@ -69,7 +69,7 @@ vi.mock("../../../components/weekly-report/weekly-report-page", () => ({
   ),
 }));
 
-vi.mock("../../../components/weekly-report/weekly-report-skeleton", () => ({
+vi.mock("../../../features/report-sections/ui/weekly-report-skeleton", () => ({
   WeeklyReportSkeleton: () => <div data-testid="weekly-report-skeleton-stub" />,
 }));
 

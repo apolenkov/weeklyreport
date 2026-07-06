@@ -5,8 +5,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { useTRPC } from "../../lib/trpc-context";
-import { ToolbarIconButton } from "../../shared/ui/report-shell/toolbar-icon-button";
+import { useTRPC } from "../../../lib/trpc-context";
+import { ToolbarIconButton } from "../../../shared/ui/report-shell/toolbar-icon-button";
 
 const STATUS_POLL_INTERVAL_MS = 2 * MS_PER_SECOND;
 

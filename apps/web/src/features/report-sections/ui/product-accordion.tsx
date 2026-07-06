@@ -3,20 +3,20 @@
 import type { RecordCommentView } from "@customreport/shared";
 import { type ReactNode, useEffect, useState } from "react";
 
-import { reportHasContent } from "../../lib/mappers/report-content";
-import { pluralize } from "../../lib/pluralize";
-import { sortByPriorityRank } from "../../lib/priority-sort";
+import { reportHasContent } from "../../../lib/mappers/report-content";
+import { pluralize } from "../../../lib/pluralize";
+import { sortByPriorityRank } from "../../../lib/priority-sort";
 import type {
   ProductReport,
   ReportDecision,
   ReportItem,
   ReportRisk,
-} from "../../shared/lib/dashboard-mock-data";
-import { RotatingChevron } from "../../shared/ui/report-shell/rotating-chevron";
+} from "../../../shared/lib/dashboard-mock-data";
+import { RotatingChevron } from "../../../shared/ui/report-shell/rotating-chevron";
 import {
   type RecordCommentAnchor,
   RecordComments,
-} from "./review/record-comments";
+} from "../../review/ui/record-comments";
 
 /**
  * review-acknowledgement: the in-app reviewer context threaded from the page.

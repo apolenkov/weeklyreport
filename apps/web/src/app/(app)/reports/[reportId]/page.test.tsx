@@ -27,9 +27,12 @@ vi.mock("../../../../features/viewer/ui/viewer-report-shell", () => ({
   ),
 }));
 
-vi.mock("../../../../components/weekly-report/weekly-report-skeleton", () => ({
-  WeeklyReportSkeleton: () => <div data-testid="weekly-report-skeleton" />,
-}));
+vi.mock(
+  "../../../../features/report-sections/ui/weekly-report-skeleton",
+  () => ({
+    WeeklyReportSkeleton: () => <div data-testid="weekly-report-skeleton" />,
+  }),
+);
 
 import PublishedReportPage from "./page";
 

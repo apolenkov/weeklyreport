@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 
-import { WeeklyReportPage } from "../../../../components/weekly-report/weekly-report-page";
-import { WeeklyReportSkeleton } from "../../../../components/weekly-report/weekly-report-skeleton";
+import { WeeklyReportPage } from "../../../../features/report-sections/ui/weekly-report-page";
+import { WeeklyReportSkeleton } from "../../../../features/report-sections/ui/weekly-report-skeleton";
 
 interface Props {
   searchParams: Promise<{ authorId?: string }>;

@@ -16,56 +16,62 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import { PdfExportComingSoonControl } from "../../features/pdf-export/ui/pdf-export-coming-soon";
-import { PeriodNavigator } from "../../features/period/ui/period-navigator";
-import type { ReportPeriod } from "../../features/report-sections/model/mock-data";
 import {
   invalidateDashboard,
   invalidateLeadForm,
   invalidateLeadHistory,
   invalidateReview,
-} from "../../lib/cache-keys";
-import { getClientErrorDetails } from "../../lib/client-error-reporting";
-import { joinPeriodLabel } from "../../lib/format-date";
+} from "../../../lib/cache-keys";
+import { getClientErrorDetails } from "../../../lib/client-error-reporting";
+import { joinPeriodLabel } from "../../../lib/format-date";
 import {
   type LeadOverviewRow,
   mapWeeklyReport,
   mapWeeklyReportLeadGroups,
   mapWeeklyReportLeadOverview,
-} from "../../lib/mappers";
-import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
-import { reportHasContent } from "../../lib/mappers/report-content";
-import { SessionContext } from "../../lib/session-provider";
-import { useTRPC } from "../../lib/trpc-context";
-import { useQueryErrorHandler } from "../../lib/use-query-error-handler";
+} from "../../../lib/mappers";
+import {
+  formatDateRange,
+  isoWeekNumber,
+} from "../../../lib/mappers/lead-history";
+import { reportHasContent } from "../../../lib/mappers/report-content";
+import { SessionContext } from "../../../lib/session-provider";
+import { useTRPC } from "../../../lib/trpc-context";
+import { useQueryErrorHandler } from "../../../lib/use-query-error-handler";
 import type {
   PortfolioProduct,
   ProductReport,
-} from "../../shared/lib/dashboard-mock-data";
+} from "../../../shared/lib/dashboard-mock-data";
 import {
   DocumentActionGroup,
   ReportToolbar,
-} from "../../shared/ui/report-shell/report-toolbar";
+} from "../../../shared/ui/report-shell/report-toolbar";
+import { ExportPdfButton } from "../../pdf-export/ui/export-pdf-button";
+import { PdfExportComingSoonControl } from "../../pdf-export/ui/pdf-export-coming-soon";
+import { PeriodNavigator } from "../../period/ui/period-navigator";
+import { PublishLockButton } from "../../period/ui/publish-lock-button";
+import {
+  type SectionReviewRow,
+  toSectionReviewRows,
+} from "../../review/model/section-review-rows";
+import { ReviewAcknowledgeBar } from "../../review/ui/review-acknowledge-bar";
+import {
+  type ReviewMode,
+  ReviewModeToggle,
+} from "../../review/ui/review-mode-toggle";
+import { ReviewVerdictBand } from "../../review/ui/review-verdict-band";
+import {
+  DraftHiddenSignal,
+  type SubmissionFilter,
+  SubmissionFilterToggle,
+} from "../../review/ui/submission-filter";
+import type { ReportPeriod } from "../model/mock-data";
 import { ActivityStatusStrip } from "./activity-status-strip";
-import { ExportPdfButton } from "./export-pdf-button";
 import { PortfolioOverviewTable } from "./portfolio-overview-table";
 import {
   type AccordionReviewContext,
   ProductAccordion,
 } from "./product-accordion";
-import { PublishLockButton } from "./publish-lock-button";
-import { ReviewAcknowledgeBar } from "./review/review-acknowledge-bar";
-import { type ReviewMode, ReviewModeToggle } from "./review/review-mode-toggle";
-import { ReviewVerdictBand } from "./review/review-verdict-band";
-import {
-  type SectionReviewRow,
-  toSectionReviewRows,
-} from "./review/section-review-rows";
-import {
-  DraftHiddenSignal,
-  type SubmissionFilter,
-  SubmissionFilterToggle,
-} from "./review/submission-filter";
 import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
 
 interface WeeklyReportPageProps {
