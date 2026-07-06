@@ -68,7 +68,7 @@ export function NextWeekSection({
   publishedLockedIds,
   onMoveToCurrentWeek,
 }: NextWeekSectionProps) {
-  const isEmpty = isBoardEmpty(items, products);
+  const isEmpty = isBoardEmpty(items, products, activities);
   const hasProducts = products && products.length > 0;
   const hasMultipleProducts = hasProducts && products.length > 1;
   const defaultProduct = products?.[0];
@@ -168,7 +168,7 @@ export function NextWeekSection({
 
   // Activity lanes render in their own lighter block BELOW the grid — never
   // as peer product columns.
-  const board = splitItemBoard(products, items);
+  const board = splitItemBoard(products, items, activities);
   const visibleColumnCount = Math.min(
     Math.max(board.productColumns.length, 1),
     MAX_GRID_COLUMNS,

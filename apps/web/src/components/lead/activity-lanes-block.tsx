@@ -57,7 +57,13 @@ export function ActivityLanesBlock({
               showProductAdd={false}
               onAdd={onAdd}
             />
-            <div className="space-y-2">{lane.items.map(renderItem)}</div>
+            {lane.items.length === 0 ? (
+              <div className="flex items-center justify-center rounded-lg border border-dashed border-[rgba(0,0,0,0.12)] bg-white/60 p-3 text-center text-xs text-[var(--color-muted-foreground)]">
+                No items yet
+              </div>
+            ) : (
+              <div className="space-y-2">{lane.items.map(renderItem)}</div>
+            )}
           </div>
         ))}
       </div>

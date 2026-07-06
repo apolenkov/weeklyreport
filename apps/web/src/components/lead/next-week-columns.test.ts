@@ -86,9 +86,67 @@ describe("splitItemBoard — two-level split", () => {
     expect(board.activityLanes[0].items.map((i) => i.id)).toEqual(["act-1"]);
   });
 
-  it("returns empty activityLanes when no activity owns rows", () => {
+  it("returns empty activityLanes when no activity owns rows AND none attached", () => {
     const board = splitItemBoard(PRODUCTS, [item({ id: "prod-only" })]);
     expect(board.activityLanes).toEqual([]);
     expect(board.productColumns).toHaveLength(1);
+  });
+
+  it("seeds an empty lane per ATTACHED activity, like a product column", () => {
+    // Activities behave like products: an attached activity with no rows still
+    // gets an empty lane (with a "+ Add" CTA), so the structure is visible.
+    const board = splitItemBoard(
+      PRODUCTS,
+      [],
+      [
+        { id: "act-a", name: "Jira triage duty" },
+        { id: "act-b", name: "Ops rotation" },
+      ],
+    );
+    expect(board.activityLanes.map((c) => c.productName)).toEqual([
+      "Jira triage duty",
+      "Ops rotation",
+    ]);
+    expect(board.activityLanes.every((c) => c.items.length === 0)).toBe(true);
+    expect(board.activityLanes.map((c) => c.activityId)).toEqual([
+      "act-a",
+      "act-b",
+    ]);
+  });
+
+  it("fills an attached lane with its rows and keeps empty lanes for the rest", () => {
+    const rows = [
+      item({
+        id: "act-row",
+        productId: "",
+        productName: "Jira triage duty",
+        activityId: "act-a",
+        activityName: "Jira triage duty",
+      }),
+    ];
+    const board = splitItemBoard(PRODUCTS, rows, [
+      { id: "act-a", name: "Jira triage duty" },
+      { id: "act-b", name: "Ops rotation" },
+    ]);
+    const byId = new Map(board.activityLanes.map((c) => [c.activityId, c]));
+    expect(byId.get("act-a")?.items.map((i) => i.id)).toEqual(["act-row"]);
+    expect(byId.get("act-b")?.items).toEqual([]);
+  });
+
+  it("never drops a row whose activity is not in the attached list", () => {
+    const rows = [
+      item({
+        id: "orphan",
+        productId: "",
+        productName: "Legacy activity",
+        activityId: "act-x",
+        activityName: "Legacy activity",
+      }),
+    ];
+    const board = splitItemBoard(PRODUCTS, rows, [
+      { id: "act-a", name: "Jira triage duty" },
+    ]);
+    const orphan = board.activityLanes.find((c) => c.activityId === "act-x");
+    expect(orphan?.items.map((i) => i.id)).toEqual(["orphan"]);
   });
 });

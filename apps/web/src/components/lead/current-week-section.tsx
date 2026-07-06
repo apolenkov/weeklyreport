@@ -118,7 +118,7 @@ export function CurrentWeekSection({
 
   // Only fall back to the standalone empty-state when there are neither
   // items nor products to drive a column layout.
-  const isEmpty = isBoardEmpty(items, products);
+  const isEmpty = isBoardEmpty(items, products, activities);
   const hasMultipleProducts = products != null && products.length > 1;
   const defaultProduct = products?.[0];
 
@@ -210,7 +210,7 @@ export function CurrentWeekSection({
   // (defensive — the prop became required de-facto in May 2026 but
   // existing callers may still omit it). Activity lanes render in their own
   // lighter block BELOW the grid — never as peer product columns.
-  const board = splitItemBoard(products, items);
+  const board = splitItemBoard(products, items, activities);
   const dlg = deriveDialogProps(dialogState);
 
   const renderItem = (item: KanbanItem) => (

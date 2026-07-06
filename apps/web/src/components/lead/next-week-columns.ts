@@ -19,29 +19,49 @@ export interface ItemColumn {
   readonly items: KanbanItem[];
 }
 
+/** The attached-activity shape a lane is seeded from (id + display name). */
+export interface LaneActivity {
+  readonly id: string;
+  readonly name: string;
+}
+
 /**
- * One lane per activity that owns rows, in first-appearance order. Unlike
- * product columns (which render empty for the "+ Add" CTA), an activity lane
- * exists only when it has rows — creation goes through the dialog's parent
- * picker, so an empty lane would advertise nothing.
+ * One lane per ATTACHED activity, in attached order — activities behave like
+ * products: an attached activity with no rows still gets an empty lane with a
+ * "+ Add" CTA, so the reporting structure is visible before anything is filled.
+ * Any activity that owns rows but is not in the attached list (defensive — the
+ * write path forbids it) is appended so no row is ever dropped. With no attached
+ * activities supplied, lanes fall back to the activities that own rows (the
+ * legacy items-derived behavior, kept for `buildItemColumns` callers).
  */
-function activityLanes(items: KanbanItem[]): ItemColumn[] {
+function activityLanes(
+  items: KanbanItem[],
+  activities: readonly LaneActivity[],
+): ItemColumn[] {
   const activityRows = items.filter((it) => it.activityId != null);
-  const laneIds = [...new Set(activityRows.map((it) => it.activityId))];
-  return laneIds.flatMap((activityId) => {
-    if (activityId == null) return [];
+  const nameById = new Map(activities.map((a) => [a.id, a.name]));
+  const orphanIds = [
+    ...new Set(
+      activityRows
+        .map((it) => it.activityId)
+        .filter((id): id is string => id != null && !nameById.has(id)),
+    ),
+  ];
+  const laneIds = [...activities.map((a) => a.id), ...orphanIds];
+  return laneIds.map((activityId) => {
     const laneItems = activityRows.filter((it) => it.activityId === activityId);
-    const first = laneItems.at(0);
-    if (!first) return [];
-    return [
-      {
-        key: `activity:${activityId}`,
-        productId: "",
-        productName: first.activityName ?? first.productName,
-        activityId,
-        items: laneItems,
-      },
-    ];
+    const name =
+      nameById.get(activityId) ??
+      laneItems.at(0)?.activityName ??
+      laneItems.at(0)?.productName ??
+      "Activity";
+    return {
+      key: `activity:${activityId}`,
+      productId: "",
+      productName: name,
+      activityId,
+      items: laneItems,
+    };
   });
 }
 
@@ -72,11 +92,12 @@ function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
 export function splitItemBoard(
   products: readonly Product[] | undefined,
   items: KanbanItem[],
+  activities: readonly LaneActivity[] = [],
 ): { productColumns: ItemColumn[]; activityLanes: ItemColumn[] } {
   // Activity rows carry productId "" — they'd match no product column and
   // silently vanish, so they always route through their own lanes.
   const productRows = items.filter((it) => it.activityId == null);
-  const lanes = activityLanes(items);
+  const lanes = activityLanes(items, activities);
   if (products && products.length > 0) {
     return {
       productColumns: products.map((p) => ({
@@ -115,10 +136,19 @@ export function buildItemColumns(
   return [...board.productColumns, ...board.activityLanes];
 }
 
-/** True when the board has neither items nor any product column to seed. */
+/**
+ * True when the board has nothing to render at all — no items, no product
+ * column, and no attached activity lane. An attached activity (like a product)
+ * seeds an empty lane, so its presence keeps the board non-empty.
+ */
 export function isBoardEmpty(
   items: KanbanItem[],
   products: readonly Product[] | undefined,
+  activities: readonly LaneActivity[] = [],
 ): boolean {
-  return items.length === 0 && (!products || products.length === 0);
+  return (
+    items.length === 0 &&
+    (!products || products.length === 0) &&
+    activities.length === 0
+  );
 }
