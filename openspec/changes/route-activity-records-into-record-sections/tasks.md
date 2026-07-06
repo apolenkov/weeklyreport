@@ -32,5 +32,5 @@
 ## 4. Verify
 
 - [x] 4.1 Full gates green (typecheck, lint, unit)
-- [ ] 4.2 Live check on :3000 (small seed): activity records visible/editable
+- [x] 4.2 Live check on :3000 (small seed): activity records visible/editable
       in sections, card status-only, no double render, foreign view read-only
