@@ -35,7 +35,7 @@ vi.mock("./stage-assignment-editor", () => ({
   ),
 }));
 
-vi.mock("../../../components/search/search-input", () => ({
+vi.mock("../../../shared/ui/search-input", () => ({
   SearchInput: () => <div data-testid="search-input-stub" />,
 }));
 

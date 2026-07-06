@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { LeadHistoryList } from "../../../components/lead/lead-history-list";
 import { LeadHistorySidebar } from "../../../components/lead/lead-history-sidebar";
 import { LeadHistorySkeleton } from "../../../components/lead/lead-history-skeleton";
-import { SearchInput } from "../../../components/search/search-input";
 import {
   type HistoryEntry,
   mapCompiledHistoryEntries,
@@ -17,6 +16,7 @@ import {
 } from "../../../lib/mappers";
 import { useSession } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
+import { SearchInput } from "../../../shared/ui/search-input";
 
 /**
  * UX-17 (Phase 35-08): merged Reports page.

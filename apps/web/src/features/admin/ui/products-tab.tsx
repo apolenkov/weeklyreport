@@ -6,7 +6,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDeleteDialog } from "../../../components/lead/confirm-delete-dialog";
-import { SearchInput } from "../../../components/search/search-input";
 import { invalidateAdmin } from "../../../lib/cache-keys";
 import { toAdminProjectInput } from "../../../lib/mappers";
 import { useTRPC } from "../../../lib/trpc-context";
@@ -15,6 +14,7 @@ import type {
   MockProduct,
   MockUser,
 } from "../../../shared/lib/admin-mock-data";
+import { SearchInput } from "../../../shared/ui/search-input";
 import { ProductGroupChips } from "./product-group-chips";
 import { StageAssignmentEditor } from "./stage-assignment-editor";
 import { TabHeader, TabSearch } from "./tab-header";
