@@ -180,6 +180,8 @@ export interface LeadFormRepository {
 export interface CrossAuthorSectionRow {
   authorId: string;
   authorName: string;
+  /** The author's access role — the slide legend labels every author with it. */
+  authorRole: "lead" | "head" | "admin" | "viewer";
   sharedProductIds: string[];
   /** Risk-derived foreign stage chips per shared product (covers-all aware). */
   stages: {
