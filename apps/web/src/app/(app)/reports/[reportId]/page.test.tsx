@@ -12,7 +12,7 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("../../../../components/viewer/viewer-report-shell", () => ({
+vi.mock("../../../../features/viewer/ui/viewer-report-shell", () => ({
   ViewerReportShell: (props: {
     reportId: string;
     mode: string;

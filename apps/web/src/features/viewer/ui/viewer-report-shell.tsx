@@ -4,22 +4,25 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo } from "react";
 
-import { PeriodNavigator } from "../../features/period/ui/period-navigator";
-import type { ReportPeriod } from "../../features/report-sections/model/mock-data";
-import { getClientErrorDetails } from "../../lib/client-error-reporting";
-import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
-import { useTRPC } from "../../lib/trpc-context";
-import { AgentReviewComingSoon } from "../../shared/ui/report-shell/agent-review-coming-soon";
-import { ArchiveToggle } from "../../shared/ui/report-shell/archive-toggle";
-import { ReportToolbar } from "../../shared/ui/report-shell/report-toolbar";
-import { ScopeToggle } from "../../shared/ui/report-shell/scope-toggle";
-import { useReportShellUrlState } from "../../shared/ui/report-shell/use-report-shell-url-state";
-import { ViewModeToggle } from "../../shared/ui/report-shell/view-mode-toggle";
-import { HeadSlidesClient } from "../slides/head-slides-client";
-import { SlideSkeleton } from "../slides/slide-skeleton";
-import { ExportPdfButton } from "../weekly-report/export-pdf-button";
-import { WeeklyReportPage } from "../weekly-report/weekly-report-page";
-import { WeeklyReportSkeleton } from "../weekly-report/weekly-report-skeleton";
+import { HeadSlidesClient } from "../../../components/slides/head-slides-client";
+import { SlideSkeleton } from "../../../components/slides/slide-skeleton";
+import { ExportPdfButton } from "../../../components/weekly-report/export-pdf-button";
+import { WeeklyReportPage } from "../../../components/weekly-report/weekly-report-page";
+import { WeeklyReportSkeleton } from "../../../components/weekly-report/weekly-report-skeleton";
+import { getClientErrorDetails } from "../../../lib/client-error-reporting";
+import {
+  formatDateRange,
+  isoWeekNumber,
+} from "../../../lib/mappers/lead-history";
+import { useTRPC } from "../../../lib/trpc-context";
+import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
+import { ArchiveToggle } from "../../../shared/ui/report-shell/archive-toggle";
+import { ReportToolbar } from "../../../shared/ui/report-shell/report-toolbar";
+import { ScopeToggle } from "../../../shared/ui/report-shell/scope-toggle";
+import { useReportShellUrlState } from "../../../shared/ui/report-shell/use-report-shell-url-state";
+import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle";
+import { PeriodNavigator } from "../../period/ui/period-navigator";
+import type { ReportPeriod } from "../../report-sections/model/mock-data";
 
 // Module-scope so the reference is stable across renders — a fresh literal would
 // churn the hook's `buildQuery` memoization. The viewer strips the one-shot
