@@ -31,6 +31,11 @@ interface RiskEditDialogProps {
   readonly onCancel: () => void;
   readonly defaultProductId?: string;
   /**
+   * In create mode, preselect this activity as the parent — an activity
+   * pill's unbacked raise. Wins over the seed product (XOR parent).
+   */
+  readonly defaultActivityId?: string;
+  /**
    * The mockup-aligned dialog also exposes raw `impact` and `mitigation`
    * fields. The presentation `RiskEntry` doesn't carry them, but the
    * caller (lead-form) needs to write them onto the raw section.risks
@@ -291,6 +296,7 @@ function RiskEditDialogContent({
   onSave,
   onCancel,
   defaultProductId,
+  defaultActivityId,
   initialImpact,
   initialMitigation,
   initialStageIds,
@@ -317,10 +323,17 @@ function RiskEditDialogContent({
 
   // activity-first-class: the record's parent — a product OR an attached
   // activity (XOR). Seeded from the bound risk on edit, else the create-mode
-  // default product (falling back to the first activity for an activity-only
-  // lead with no products).
+  // seed — a pill raise's activity beats the default product (shared seed
+  // rule; falls back to the first activity for an activity-only lead).
   const [parent, setParent] = useState<RecordParent>(() =>
-    resolveRecordParent(risk ?? {}, { productId: seedProduct?.id }, activities),
+    resolveRecordParent(
+      risk ?? {},
+      {
+        productId: seedProduct?.id,
+        activityId: isCreate ? defaultActivityId : undefined,
+      },
+      activities,
+    ),
   );
   const isActivityParent = parent.kind === "activity";
   const [impact, setImpact] = useState(initialImpact ?? "");

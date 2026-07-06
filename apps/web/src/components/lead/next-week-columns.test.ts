@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { KanbanItem, Product } from "./mock-data";
-import { buildItemColumns } from "./next-week-columns";
+import { buildItemColumns, splitItemBoard } from "./next-week-columns";
 
 const PRODUCTS: Product[] = [
   { id: "p1", name: "Portal", overallStatus: "on-track", stages: [] },
@@ -63,5 +63,32 @@ describe("buildItemColumns — activity lanes", () => {
     expect(columns).toHaveLength(1);
     expect(columns[0].activityId).toBe("act-a");
     expect(columns[0].items.map((i) => i.id)).toEqual(["act-2"]);
+  });
+});
+
+describe("splitItemBoard — two-level split", () => {
+  it("routes product rows to productColumns and activity rows to activityLanes", () => {
+    const rows = [
+      item({ id: "prod-1" }),
+      item({
+        id: "act-1",
+        productId: "",
+        productName: "Jira triage duty",
+        activityId: "act-a",
+        activityName: "Jira triage duty",
+      }),
+    ];
+
+    const board = splitItemBoard(PRODUCTS, rows);
+    expect(board.productColumns.map((c) => c.key)).toEqual(["Portal"]);
+    expect(board.productColumns[0].items.map((i) => i.id)).toEqual(["prod-1"]);
+    expect(board.activityLanes.map((c) => c.key)).toEqual(["activity:act-a"]);
+    expect(board.activityLanes[0].items.map((i) => i.id)).toEqual(["act-1"]);
+  });
+
+  it("returns empty activityLanes when no activity owns rows", () => {
+    const board = splitItemBoard(PRODUCTS, [item({ id: "prod-only" })]);
+    expect(board.activityLanes).toEqual([]);
+    expect(board.productColumns).toHaveLength(1);
   });
 });

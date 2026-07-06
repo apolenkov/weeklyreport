@@ -35,24 +35,40 @@ interface ActivityStatusSectionProps {
     activityId: string,
     status: TrafficLightStatus,
   ) => void;
+  /**
+   * An unbacked raise (At Risk with no covering risk, Blocked with no covering
+   * blocker) routes here instead of `onStatusChange` — the host opens the risk
+   * entry in create mode with the activity preselected and this severity
+   * prefilled. The pill analogue of the stage-chip raise interception.
+   */
+  readonly onRaiseRequiresRisk: (
+    activityId: string,
+    severity: "at-risk" | "blocked",
+  ) => void;
 }
 
 /**
  * The activity's traffic-light pill row. Renders the FLOORED value
- * (`derivedStatus ?? status`) and refuses a manual pick below the floor — the
- * pill analogue of the stage-chip click interception. The stored
- * status is preserved, so clearing the covering risk restores the lead's choice.
+ * (`derivedStatus ?? status`), refuses a manual pick below the floor, and
+ * routes an unbacked raise through risk creation — the pill analogue of the
+ * stage-chip click interception in both directions. The stored status is
+ * preserved, so clearing the covering risk restores the lead's choice.
  */
 function ActivityStatusPills({
   card,
   readOnly,
   onStatusChange,
+  onRaiseRequiresRisk,
 }: {
   readonly card: LeadActivityCard;
   readonly readOnly: boolean;
   readonly onStatusChange: (
     activityId: string,
     status: TrafficLightStatus,
+  ) => void;
+  readonly onRaiseRequiresRisk: (
+    activityId: string,
+    severity: "at-risk" | "blocked",
   ) => void;
 }) {
   const [refused, setRefused] = useState(false);
@@ -74,6 +90,21 @@ function ActivityStatusPills({
       return;
     }
     setRefused(false);
+    // A raise is never the only record of an alarm: yellow needs any covering
+    // risk (floor != null), red a covering blocker (floor === "red"). An
+    // unbacked raise routes through risk creation instead of persisting — the
+    // status lands via the render-time floor once the risk is saved; cancel
+    // changes nothing.
+    if (
+      next !== "green" &&
+      SEVERITY_RANK[next] > SEVERITY_RANK[floor ?? "green"]
+    ) {
+      onRaiseRequiresRisk(
+        card.activityId,
+        next === "red" ? "blocked" : "at-risk",
+      );
+      return;
+    }
     // When the alarm floor sits ABOVE the lead's stored choice the pill is showing
     // the floor, not their pick — clicking it must NOT overwrite the lower stored
     // value, so clearing the covering risk restores it. When stored
@@ -142,12 +173,17 @@ function ActivityCard({
   card,
   readOnly,
   onStatusChange,
+  onRaiseRequiresRisk,
 }: {
   readonly card: LeadActivityCard;
   readonly readOnly: boolean;
   readonly onStatusChange: (
     activityId: string,
     status: TrafficLightStatus,
+  ) => void;
+  readonly onRaiseRequiresRisk: (
+    activityId: string,
+    severity: "at-risk" | "blocked",
   ) => void;
 }) {
   const linkedNames = card.linkedProducts.map((p) => p.productName).join(", ");
@@ -168,6 +204,7 @@ function ActivityCard({
           card={card}
           readOnly={readOnly}
           onStatusChange={onStatusChange}
+          onRaiseRequiresRisk={onRaiseRequiresRisk}
         />
       </div>
     </li>
@@ -184,6 +221,7 @@ export function ActivityStatusSection({
   activities,
   readOnly,
   onStatusChange,
+  onRaiseRequiresRisk,
 }: ActivityStatusSectionProps) {
   if (activities.length === 0) return null;
 
@@ -195,6 +233,7 @@ export function ActivityStatusSection({
           card={card}
           readOnly={readOnly}
           onStatusChange={onStatusChange}
+          onRaiseRequiresRisk={onRaiseRequiresRisk}
         />
       ))}
     </ul>
