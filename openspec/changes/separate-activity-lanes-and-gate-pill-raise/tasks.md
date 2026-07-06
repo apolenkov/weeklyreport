@@ -33,6 +33,6 @@ activityId, risks)` — own non-empty risks, blocked→red else yellow.
 ## 3. Verify
 
 - [x] 3.1 Full gates green (db:generate → typecheck → lint → unit).
-- [ ] 3.2 Live-verify on :3000: lanes render below the grid in both weeks;
+- [x] 3.2 Live-verify on :3000: lanes render below the grid in both weeks;
       unbacked pill raise opens the risk dialog with the activity preselected;
       saving floors the pill immediately; cancel leaves it unchanged.
