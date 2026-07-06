@@ -3,35 +3,29 @@ import { describe, expect, it } from "vitest";
 import {
   deriveItemStatus,
   itemStatusToWorkflow,
+  type ItemWorkflowStatus,
   workflowToItemStatus,
 } from "./item-status";
 
-describe("workflowToItemStatus", () => {
-  it("maps 'done' to 'completed'", () => {
-    expect(workflowToItemStatus("done")).toBe("completed");
-  });
+const PROGRESS_PAIRS: readonly (readonly [
+  ItemWorkflowStatus,
+  ReturnType<typeof workflowToItemStatus>,
+])[] = [
+  ["done", "completed"],
+  ["in_progress", "in-progress"],
+  ["planned", "planned"],
+  ["paused", "paused"],
+  ["postponed", "postponed"],
+];
 
-  it("maps 'in_progress' to 'in-progress'", () => {
-    expect(workflowToItemStatus("in_progress")).toBe("in-progress");
-  });
-
-  it("maps 'blocked' to 'blocked'", () => {
-    expect(workflowToItemStatus("blocked")).toBe("blocked");
-  });
-});
-
-describe("itemStatusToWorkflow", () => {
-  it("maps 'completed' to 'done'", () => {
-    expect(itemStatusToWorkflow("completed")).toBe("done");
-  });
-
-  it("maps 'in-progress' to 'in_progress'", () => {
-    expect(itemStatusToWorkflow("in-progress")).toBe("in_progress");
-  });
-
-  it("maps 'blocked' to 'blocked'", () => {
-    expect(itemStatusToWorkflow("blocked")).toBe("blocked");
-  });
+describe("workflowToItemStatus / itemStatusToWorkflow round-trip", () => {
+  it.each(PROGRESS_PAIRS)(
+    "round-trips '%s' <-> '%s'",
+    (workflowStatus, itemStatus) => {
+      expect(workflowToItemStatus(workflowStatus)).toBe(itemStatus);
+      expect(itemStatusToWorkflow(itemStatus)).toBe(workflowStatus);
+    },
+  );
 });
 
 describe("deriveItemStatus", () => {
@@ -47,30 +41,22 @@ describe("deriveItemStatus", () => {
     );
   });
 
-  it("computes 'planned' for next-week in_progress with completed null", () => {
-    expect(
-      deriveItemStatus({
-        workflowStatus: "in_progress",
-        type: "next",
-        completed: null,
-      }),
-    ).toBe("planned");
-  });
-
-  it("preserves explicit in-progress for next-week completed false", () => {
-    expect(
-      deriveItemStatus({
-        workflowStatus: "in_progress",
-        type: "next",
-        completed: false,
-      }),
-    ).toBe("in-progress");
-  });
-
-  it("preserves blocked for next-week items", () => {
-    expect(deriveItemStatus({ workflowStatus: "blocked", type: "next" })).toBe(
-      "blocked",
+  it("reads 'planned' verbatim for a next-week item with workflowStatus 'planned'", () => {
+    expect(deriveItemStatus({ workflowStatus: "planned", type: "next" })).toBe(
+      "planned",
     );
+  });
+
+  it("reads 'postponed' verbatim for a next-week item with workflowStatus 'postponed'", () => {
+    expect(
+      deriveItemStatus({ workflowStatus: "postponed", type: "next" }),
+    ).toBe("postponed");
+  });
+
+  it("reads 'paused' verbatim for a current-week item with workflowStatus 'paused'", () => {
+    expect(
+      deriveItemStatus({ workflowStatus: "paused", type: "current" }),
+    ).toBe("paused");
   });
 
   it("preserves completed for next-week items", () => {

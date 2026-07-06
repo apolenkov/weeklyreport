@@ -7,7 +7,7 @@ import { useEditableListDialog } from "../../hooks/use-editable-list-dialog";
 import { useScrollFade } from "../../hooks/use-scroll-fade";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { ItemCard } from "./item-card";
-import { type BlockerPrefill, ItemEditDialog } from "./item-edit-dialog";
+import { ItemEditDialog } from "./item-edit-dialog";
 import type { KanbanItem, Product, RiskEntry } from "./mock-data";
 import { buildItemColumns, isBoardEmpty } from "./next-week-columns";
 
@@ -71,7 +71,6 @@ interface CurrentWeekSectionProps {
    * Route an uncovered item's alarm gesture to blocker (risk) creation.
    * Forwarded to the item dialog.
    */
-  readonly onRouteToBlocker?: (prefill: BlockerPrefill) => void;
 }
 
 function deriveDialogProps(dialogState: EditableListDialogState<KanbanItem>): {
@@ -100,7 +99,6 @@ export function CurrentWeekSection({
   publishedLockedIds,
   onMarkComplete,
   onMoveToNextWeek,
-  onRouteToBlocker,
 }: CurrentWeekSectionProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const canScrollDown = useScrollFade(scrollRef);
@@ -292,7 +290,6 @@ export function CurrentWeekSection({
           stagesForProduct={stagesForProduct}
           ownPeriodRanks={ownPeriodRanks}
           risks={risks}
-          onRouteToBlocker={onRouteToBlocker}
           onSave={handleDialogSave}
           onCancel={handleDialogCancel}
         />

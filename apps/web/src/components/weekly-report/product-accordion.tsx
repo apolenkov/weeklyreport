@@ -163,6 +163,16 @@ const STATUS_BADGE = {
     bg: CSS.muted,
     fg: CSS.mutedForeground,
   },
+  paused: {
+    label: "Paused",
+    bg: CSS.muted,
+    fg: CSS.mutedForeground,
+  },
+  postponed: {
+    label: "Postponed",
+    bg: CSS.muted,
+    fg: CSS.mutedForeground,
+  },
 } as const satisfies Record<string, { label: string; bg: string; fg: string }>;
 
 // Item row left-stripe: red only for blocked (the alarm hue); every other status

@@ -385,22 +385,21 @@ export function deriveEffectiveProductStatus(project: {
 
 /**
  * activity-first-class (design decision 5): the activity pill's status floor.
- * An activity has no SDLC stage, so it is floored by its OWN records only — a
- * blocked item or a `blocked` risk forces red, an `at-risk` risk forces at
- * least yellow. `alarmFloor` is that RECORD-ONLY floor (never the lead's stored
- * choice); `derivedStatus` folds the stored status in for the read-only render
- * surfaces (slides, head report). The stored `ActivityStatus.status` is NEVER
- * rewritten. The interactive lead picker gates a manual lower on `alarmFloor`
- * alone, so a lead can still lower a status they raised themselves when no
- * covering risk/blocker holds it up.
+ * An activity has no SDLC stage, so it is floored by its OWN risks only — a
+ * `blocked` risk forces red, an `at-risk` risk forces at least yellow. Items
+ * carry progress, never an alarm (rework-item-status-model), so they cannot
+ * floor the pill. `alarmFloor` is that RECORD-ONLY floor (never the lead's
+ * stored choice); `derivedStatus` folds the stored status in for the read-only
+ * render surfaces (slides, head report). The stored `ActivityStatus.status` is
+ * NEVER rewritten. The interactive lead picker gates a manual lower on
+ * `alarmFloor` alone, so a lead can still lower a status they raised themselves
+ * when no covering risk/blocker holds it up.
  */
 function deriveActivityStatus(
   stored: TrafficLight | null,
-  ownItemBlocked: boolean,
   ownRisks: readonly { severity: string }[],
 ): { derivedStatus: TrafficLight | null; alarmFloor: TrafficLight | null } {
-  const itemFloor: TrafficLight | null = ownItemBlocked ? "red" : null;
-  const riskFloor = ownRisks.reduce<TrafficLight | null>(
+  const alarmFloor = ownRisks.reduce<TrafficLight | null>(
     (acc, risk) =>
       worseTraffic(
         acc,
@@ -408,7 +407,6 @@ function deriveActivityStatus(
       ),
     null,
   );
-  const alarmFloor = worseTraffic(itemFloor, riskFloor);
   return { derivedStatus: worseTraffic(stored, alarmFloor), alarmFloor };
 }
 
@@ -654,11 +652,6 @@ export function mapPrismaToReportSection(
           .sort((a, b) => a.productName.localeCompare(b.productName, "ru")),
         ...deriveActivityStatus(
           asTraffic(status.status),
-          row.items.some(
-            (i) =>
-              i.activityId === status.activityId &&
-              i.workflowStatus === "blocked",
-          ),
           row.risks.filter((r) => r.activityId === status.activityId),
         ),
       }))
@@ -974,7 +967,6 @@ export class ReportSectionsPrismaRepository
                 tag: i.tag,
                 workflowStatus: i.workflowStatus,
                 carriedOver: i.carriedOver,
-                completed: i.completed ?? null,
                 priorityRank: i.priorityRank ?? null,
                 stageNames: i.stageIds ?? [],
               })),

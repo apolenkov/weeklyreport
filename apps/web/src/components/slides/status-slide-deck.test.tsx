@@ -145,16 +145,23 @@ describe("StatusSlideDeck — by-product grid article", () => {
   it("plays status via marks and highlights, never words", () => {
     renderDeck(
       makeSection({
-        items: [item({ workflowStatus: "done" }), item({ type: "next" })],
+        items: [
+          item({ workflowStatus: "done" }),
+          item({ workflowStatus: "paused" }),
+          item({ type: "next", workflowStatus: "postponed" }),
+        ],
         risks: [
           risk({ risk: "yellow risk" }),
           risk({ risk: "hard blocker", severity: "blocked" }),
         ],
       }),
     );
-    // Done → sr-only "Completed" next to a check glyph; risk severity lives
-    // in the row background/border with an sr-only label — no visible words.
+    // Done/paused/postponed → sr-only status word next to a quiet glyph; risk
+    // severity lives in the row background/border with an sr-only label — no
+    // visible words anywhere.
     expect(screen.getByText("Completed")).toBeInTheDocument();
+    expect(screen.getByText("Paused")).toBeInTheDocument();
+    expect(screen.getByText("Postponed")).toBeInTheDocument();
     expect(screen.queryByText("IN PROGRESS")).not.toBeInTheDocument();
     expect(screen.queryByText("PLANNED")).not.toBeInTheDocument();
     expect(screen.queryByText("AT RISK")).not.toBeInTheDocument();

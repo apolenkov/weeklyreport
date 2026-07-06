@@ -9,7 +9,7 @@ import {
 } from "../../lib/activity-buckets";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { ItemCard } from "./item-card";
-import { type BlockerPrefill, ItemEditDialog } from "./item-edit-dialog";
+import { ItemEditDialog } from "./item-edit-dialog";
 import type { KanbanItem, Product, RiskEntry } from "./mock-data";
 
 /**
@@ -53,7 +53,6 @@ interface UnifiedActivitySectionProps {
   /** In-place move action for current-week open items. */
   readonly onMoveToNextWeek?: (id: string) => void;
   /** Route an uncovered item's alarm gesture to blocker (risk) creation. */
-  readonly onRouteToBlocker?: (prefill: BlockerPrefill) => void;
 }
 
 interface EditState {
@@ -90,7 +89,6 @@ export function UnifiedActivitySection({
   publishedLockedIds,
   onMarkComplete,
   onMoveToNextWeek,
-  onRouteToBlocker,
 }: UnifiedActivitySectionProps) {
   const [editState, setEditState] = useState<EditState | null>(null);
   const [pendingDelete, setPendingDelete] =
@@ -195,7 +193,6 @@ export function UnifiedActivitySection({
         stagesForProduct={stagesForProduct}
         ownPeriodRanks={ownPeriodRanks}
         risks={risks}
-        onRouteToBlocker={onRouteToBlocker}
         onSave={handleDialogSave}
         onCancel={() => setEditState(null)}
       />

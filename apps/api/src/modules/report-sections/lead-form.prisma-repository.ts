@@ -316,9 +316,14 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
                 type: "current",
                 text: i.text,
                 tag: i.tag,
-                workflowStatus: i.workflowStatus,
+                // Fill From flips next → current, so next-only statuses must
+                // land in the current vocabulary (same remap as carry-over).
+                workflowStatus:
+                  i.workflowStatus === "planned" ||
+                  i.workflowStatus === "postponed"
+                    ? "in_progress"
+                    : i.workflowStatus,
                 carriedOver: false,
-                completed: i.completed ?? null,
                 stageNames: i.stageNames,
               })),
             });
@@ -678,7 +683,6 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
             tag: true,
             workflowStatus: true,
             carriedOver: true,
-            completed: true,
             priorityRank: true,
             stageNames: true,
           },

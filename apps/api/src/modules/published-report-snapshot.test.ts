@@ -138,7 +138,7 @@ describe("buildEscalationsFromReadSections", () => {
     expect(escalations.some((e) => e.type === "unresolved_risk")).toBe(false);
   });
 
-  it("record-status-derived-from-risk: a stored blocked item is no longer an escalation source", () => {
+  it("record-status-derived-from-risk: an item's own workflowStatus is never an escalation source", () => {
     const escalations = buildEscalationsFromReadSections([
       makeSection({
         items: [
@@ -146,11 +146,10 @@ describe("buildEscalationsFromReadSections", () => {
             id: "5b2fe575-86c3-422e-b7ed-5fe858cab7f7",
             projectId: OWNED_PRODUCT,
             type: "current",
-            text: "Legacy stored blocked, no covering risk",
+            text: "In progress, no covering risk",
             tag: "infra",
-            workflowStatus: "blocked",
+            workflowStatus: "in_progress",
             carriedOver: false,
-            completed: null,
             priorityRank: null,
             stageIds: ["Development"],
           },

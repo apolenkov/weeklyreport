@@ -31,7 +31,9 @@ export function cloneCarriedItem(
       id: targetItemId,
       type: "current",
       carriedOver: true,
-      completed: null,
+      // The type flips next → current, so the status must land in the
+      // current vocabulary: a carried planned item is being worked on now.
+      workflowStatus: "in_progress",
     },
     record: carryOverRecordSchema.parse({
       id: crypto.randomUUID(),

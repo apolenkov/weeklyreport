@@ -1004,10 +1004,14 @@ async function main() {
       tag: string;
       status: ItemWorkflowStatus;
       carriedOver?: boolean;
-      completed?: boolean;
     }[];
     nextItems: { text: string; tag: string }[];
-    risk?: { risk: string; impact: string; mitigation: string };
+    risk?: {
+      risk: string;
+      impact: string;
+      mitigation: string;
+      severity?: "at-risk" | "blocked";
+    };
     decisions: {
       text: string;
       impact: string;
@@ -1022,13 +1026,12 @@ async function main() {
         {
           text: "Завершил рефакторинг модуля авторизации в Маркетинговом портале",
           tag: "feature",
-          status: ItemWorkflowStatus.blocked,
+          status: ItemWorkflowStatus.in_progress,
         },
         {
           text: "Зафиксил 4 бага по интеграции SDK с CRM",
           tag: "bugfix",
           status: ItemWorkflowStatus.done,
-          completed: true,
         },
         {
           text: "Перенёс A/B тесты на новую инфраструктуру",
@@ -1046,6 +1049,9 @@ async function main() {
         impact: "Влияние: задержка релиза Q2 на одну неделю",
         mitigation:
           "Митигация: фолбэк через очередь повтора + эскалация партнёру",
+        // The demo's blocked pill derives from THIS risk (no stored blocked
+        // item status exists) — keep the severity explicit.
+        severity: "blocked",
       },
       decisions: [
         {
@@ -1075,7 +1081,6 @@ async function main() {
           text: "Подключили contract-тесты с провайдером платежей",
           tag: "infra",
           status: ItemWorkflowStatus.done,
-          completed: true,
         },
         {
           text: "Подготовили smoke-тесты для прода",
@@ -1121,7 +1126,6 @@ async function main() {
           text: "Тюнинг pool_size в PgBouncer: p99 latency упало на 22%",
           tag: "infra",
           status: ItemWorkflowStatus.done,
-          completed: true,
         },
         {
           text: "Подключили GPU autoscaling по custom metrics",
@@ -1132,7 +1136,6 @@ async function main() {
           text: "Обновили DR-runbook (multi-region failover checklist)",
           tag: "ops",
           status: ItemWorkflowStatus.done,
-          completed: true,
         },
       ],
       nextItems: [
@@ -1173,13 +1176,11 @@ async function main() {
           text: "Интеграция security scanner в pre-merge (блокирует Critical/High)",
           tag: "infra",
           status: ItemWorkflowStatus.done,
-          completed: true,
         },
         {
           text: "Тюнинг WAF: ложных срабатываний минус 40%",
           tag: "ops",
           status: ItemWorkflowStatus.done,
-          completed: true,
         },
       ],
       nextItems: [
@@ -1216,13 +1217,11 @@ async function main() {
           text: "Перевели аутентификацию на короткие сессии (refresh 24 ч)",
           tag: "feature",
           status: ItemWorkflowStatus.done,
-          completed: true,
         },
         {
           text: "Починили двойное списание при timeout (idempotency-key через Redis)",
           tag: "bugfix",
           status: ItemWorkflowStatus.done,
-          completed: true,
         },
       ],
       nextItems: [
@@ -1264,7 +1263,6 @@ async function main() {
           text: "Закатили обновлённую модель прав доступа в HR-системе",
           tag: "feature",
           status: ItemWorkflowStatus.done,
-          completed: true,
         },
         {
           text: "Перенесли отчёты по найму на новый BI-движок",
@@ -1275,7 +1273,6 @@ async function main() {
           text: "Починили баги по экспорту в Excel (3 тикета закрыты)",
           tag: "bugfix",
           status: ItemWorkflowStatus.done,
-          completed: true,
         },
       ],
       nextItems: [
@@ -1316,13 +1313,11 @@ async function main() {
           text: "Провела интервью с 8 пользователями по болям чекаута",
           tag: "analysis",
           status: ItemWorkflowStatus.done,
-          completed: true,
         },
         {
           text: "Подготовила спецификацию для push-уведомлений",
           tag: "feature",
           status: ItemWorkflowStatus.done,
-          completed: true,
         },
       ],
       nextItems: [
@@ -1356,13 +1351,11 @@ async function main() {
           text: "Согласовала требования к дашборду с 3 аналитическими командами",
           tag: "analysis",
           status: ItemWorkflowStatus.done,
-          completed: true,
         },
         {
           text: "Подготовила roadmap перехода на self-service BI",
           tag: "ops",
           status: ItemWorkflowStatus.done,
-          completed: true,
         },
       ],
       nextItems: [
@@ -1394,7 +1387,6 @@ async function main() {
           text: "Согласовала стандарты документирования infrastructure-as-code",
           tag: "ops",
           status: ItemWorkflowStatus.done,
-          completed: true,
         },
         {
           text: "Провела анализ инцидентов Q2 и подготовила action plan",
@@ -1405,7 +1397,6 @@ async function main() {
           text: "Актуализировала SLA-соглашения со смежными командами",
           tag: "ops",
           status: ItemWorkflowStatus.done,
-          completed: true,
         },
       ],
       nextItems: [
@@ -1519,7 +1510,6 @@ async function main() {
         tag: it.tag,
         workflowStatus: it.status,
         carriedOver: it.carriedOver ?? false,
-        completed: it.completed ?? false,
         stageNames: [stageFor(idx)],
         priorityRank: idx < content.priorities.length ? idx + 1 : null,
       })),
@@ -1531,14 +1521,10 @@ async function main() {
           idx === 0 ? lead.productId : SECONDARY[idx % SECONDARY.length]!,
         text: it.text,
         tag: it.tag,
-        workflowStatus: ItemWorkflowStatus.in_progress,
+        // Next-week items are stored planned work — the per-type CHECK
+        // constraint requires ItemWorkflowStatus.planned or .postponed here.
+        workflowStatus: ItemWorkflowStatus.planned,
         carriedOver: false,
-        // next-week items are planned work — `completed: null` derives the
-        // "planned" presentation status (deriveItemStatus). With the redesigned
-        // accordion surfacing real per-item status, a non-null `false` here would
-        // read as "In Progress" on every next-week row; the old card hid this
-        // behind a hardcoded "Planned" label.
-        completed: null,
         stageNames: [stageFor(idx + 100)],
       })),
     ];
@@ -1553,6 +1539,7 @@ async function main() {
           risk: content.risk.risk,
           impact: content.risk.impact,
           mitigation: content.risk.mitigation,
+          severity: content.risk.severity ?? "at-risk",
           stageNames: [stageFor(0)],
         },
       });
@@ -1603,9 +1590,8 @@ async function main() {
       projectId: PROD_CRM_SALES,
       text: "PM-обзор: подключить выгрузку sales-метрик в CRM-Sales Hub",
       tag: "analysis",
-      workflowStatus: ItemWorkflowStatus.in_progress,
+      workflowStatus: ItemWorkflowStatus.planned,
       carriedOver: false,
-      completed: false,
       stageNames: ["Planning"],
     },
   });
@@ -1634,7 +1620,6 @@ async function main() {
         tag: "analysis",
         workflowStatus: ItemWorkflowStatus.in_progress,
         carriedOver: false,
-        completed: false,
         stageNames: ["Planning"],
         priorityRank: 1,
       },
@@ -1645,9 +1630,8 @@ async function main() {
         projectId: PROD_CRM,
         text: "Стартовать дискавери-сессию с командой дизайна",
         tag: "feature",
-        workflowStatus: ItemWorkflowStatus.in_progress,
+        workflowStatus: ItemWorkflowStatus.planned,
         carriedOver: false,
-        completed: false,
         stageNames: ["Planning"],
       },
     ],
@@ -1718,7 +1702,6 @@ async function main() {
         tag: "analysis",
         workflowStatus: ItemWorkflowStatus.in_progress,
         carriedOver: false,
-        completed: false,
         stageNames: ["Analysis"],
         priorityRank: 1,
       },
@@ -1729,9 +1712,8 @@ async function main() {
         projectId: PROD_CRM,
         text: "Согласовать схему данных с бэкенд-командой",
         tag: "feature",
-        workflowStatus: ItemWorkflowStatus.in_progress,
+        workflowStatus: ItemWorkflowStatus.planned,
         carriedOver: false,
-        completed: false,
         stageNames: ["Analysis"],
       },
     ],
@@ -1773,7 +1755,6 @@ async function main() {
         tag: "feature",
         workflowStatus: ItemWorkflowStatus.in_progress,
         carriedOver: false,
-        completed: false,
         stageNames: ["Design"],
         priorityRank: 1,
       },
@@ -1784,9 +1765,8 @@ async function main() {
         projectId: PROD_CRM,
         text: "Провести usability-тест с 5 пользователями по прототипу",
         tag: "analysis",
-        workflowStatus: ItemWorkflowStatus.in_progress,
+        workflowStatus: ItemWorkflowStatus.planned,
         carriedOver: false,
-        completed: false,
         stageNames: ["Design"],
       },
     ],
@@ -1992,7 +1972,6 @@ async function main() {
       tag: "ops",
       workflowStatus: ItemWorkflowStatus.in_progress,
       carriedOver: false,
-      completed: false,
       stageNames: [],
     },
   });
@@ -2078,7 +2057,6 @@ async function main() {
       tag: "ops",
       workflowStatus: ItemWorkflowStatus.done,
       carriedOver: false,
-      completed: true,
       stageNames: [],
     },
   });
@@ -2131,7 +2109,6 @@ async function main() {
           tag: "feature",
           workflowStatus: ItemWorkflowStatus.done,
           carriedOver: false,
-          completed: true,
           priorityRank: 1,
         },
         {
@@ -2141,7 +2118,7 @@ async function main() {
           projectId: lead.productId,
           text: `Перенос: продолжить рефакторинг авторизации`,
           tag: "feature",
-          workflowStatus: ItemWorkflowStatus.in_progress,
+          workflowStatus: ItemWorkflowStatus.planned,
           carriedOver: false,
         },
       ],
@@ -2207,7 +2184,6 @@ async function main() {
             tag: "feature",
             workflowStatus: ItemWorkflowStatus.done,
             carriedOver: false,
-            completed: true,
             stageNames: ["Development"],
             priorityRank: 1,
             createdAt,
@@ -2220,9 +2196,8 @@ async function main() {
             projectId: lead.productId,
             text: `Архив: перенесли следующий фокус команды ${lead.label} в новый период`,
             tag: "ops",
-            workflowStatus: ItemWorkflowStatus.done,
+            workflowStatus: ItemWorkflowStatus.planned,
             carriedOver: false,
-            completed: true,
             stageNames: ["Development"],
             createdAt,
             updatedAt: submittedAt,

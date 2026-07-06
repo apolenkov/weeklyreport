@@ -414,10 +414,8 @@ export function buildSectionSlideModel(
   ).length;
   // activity-first-class (Decision 1): activity risks/blockers never feed product
   // health, so the slide's blocked/at-risk counts (which drive tone) count only
-  // product-parented rows.
-  const blockedItemCount = section.items.filter(
-    (item) => item.workflowStatus === "blocked" && item.projectId != null,
-  ).length;
+  // product-parented rows. Blocked-ness lives ONLY on risks now — items carry
+  // progress, never an alarm (rework-item-status-model).
   const atRiskRiskCount = section.risks.filter(
     (risk) => risk.severity === "at-risk" && risk.projectId != null,
   ).length;
@@ -425,8 +423,7 @@ export function buildSectionSlideModel(
     (risk) => risk.severity === "blocked" && risk.projectId != null,
   ).length;
 
-  const blockedCount =
-    blockedProjectCount + blockedItemCount + blockedRiskCount;
+  const blockedCount = blockedProjectCount + blockedRiskCount;
   const atRiskCount = atRiskProjectCount + atRiskRiskCount;
   const hasProjectStatuses =
     section.projects.length > 0 &&

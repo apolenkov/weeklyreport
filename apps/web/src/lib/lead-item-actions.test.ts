@@ -15,7 +15,6 @@ function carriedItem(): LeadItem {
     tag: "feature",
     workflowStatus: "in_progress",
     carriedOver: true,
-    completed: null,
   };
 }
 
@@ -24,26 +23,20 @@ describe("moveToNextWeekPatch", () => {
     const patch = moveToNextWeekPatch();
     expect(patch).toEqual({
       type: "next",
-      completed: false,
+      workflowStatus: "postponed",
       carriedOver: false,
     });
   });
 
-  it("applied to a carried item yields type=next, completed=false, carriedOver=false", () => {
+  it("applied to a carried item yields type=next, workflowStatus=postponed, carriedOver=false", () => {
     const moved = { ...carriedItem(), ...moveToNextWeekPatch() };
     expect(moved.type).toBe("next");
-    expect(moved.completed).toBe(false);
+    expect(moved.workflowStatus).toBe("postponed");
     expect(moved.carriedOver).toBe(false);
     // Durable identity is preserved — the published-lock and comment anchors
     // key on stableId, so the move must not touch it.
     expect(moved.stableId).toBe("22222222-2222-4222-8222-222222222222");
     expect(moved.id).toBe("11111111-1111-4111-8111-111111111111");
-  });
-
-  it("preserves workflowStatus so a blocked item stays blocked", () => {
-    const blocked = { ...carriedItem(), workflowStatus: "blocked" as const };
-    const moved = { ...blocked, ...moveToNextWeekPatch() };
-    expect(moved.workflowStatus).toBe("blocked");
   });
 });
 
@@ -51,7 +44,6 @@ describe("markCompletePatch", () => {
   it("marks the item done in place", () => {
     expect(markCompletePatch()).toEqual({
       workflowStatus: "done",
-      completed: true,
     });
   });
 });

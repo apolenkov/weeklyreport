@@ -174,6 +174,64 @@ describe("draftSaveSchema", () => {
 });
 
 // ---------------------------------------------------------------------------
+// itemWriteSchema — per-type progress vocabulary (rework-item-status-model)
+// ---------------------------------------------------------------------------
+
+describe("itemWriteSchema — per-type progress vocabulary", () => {
+  const currentLegal = ["in_progress", "paused", "done"] as const;
+  const nextLegal = ["planned", "postponed"] as const;
+
+  it.each(currentLegal)("accepts %s on a current item", (status) => {
+    const item = { ...validItem(), workflowStatus: status };
+    expect(itemWriteSchema.safeParse(item).success).toBe(true);
+  });
+
+  it.each(nextLegal)("accepts %s on a next item", (status) => {
+    const item = {
+      ...validItem(),
+      type: "next" as const,
+      workflowStatus: status,
+    };
+    expect(itemWriteSchema.safeParse(item).success).toBe(true);
+  });
+
+  it.each(nextLegal)(
+    "rejects next-only status %s on a current item",
+    (status) => {
+      const item = { ...validItem(), workflowStatus: status };
+      expect(itemWriteSchema.safeParse(item).success).toBe(false);
+    },
+  );
+
+  it.each(currentLegal)(
+    "rejects current-only status %s on a next item",
+    (status) => {
+      const item = {
+        ...validItem(),
+        type: "next" as const,
+        workflowStatus: status,
+      };
+      expect(itemWriteSchema.safeParse(item).success).toBe(false);
+    },
+  );
+
+  it("blocked is not representable at all", () => {
+    const item = { ...validItem(), workflowStatus: "blocked" };
+    expect(itemWriteSchema.safeParse(item).success).toBe(false);
+  });
+
+  it("the completed flag is gone from the input schema", () => {
+    const parsed = itemInputSchema.safeParse({
+      ...validItem(),
+      completed: true,
+    });
+    // Unknown keys are stripped, never round-tripped.
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect("completed" in parsed.data).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Group 2: itemInputSchema — safeText boundaries
 // ---------------------------------------------------------------------------
 
@@ -615,15 +673,20 @@ describe("enum schemas", () => {
     expect(itemTypeSchema.safeParse("previous").success).toBe(false);
   });
 
-  it("itemWorkflowStatusSchema accepts done/in_progress/blocked", () => {
-    expect(itemWorkflowStatusSchema.safeParse("done").success).toBe(true);
-    expect(itemWorkflowStatusSchema.safeParse("in_progress").success).toBe(
-      true,
-    );
-    expect(itemWorkflowStatusSchema.safeParse("blocked").success).toBe(true);
+  it("itemWorkflowStatusSchema accepts the five progress values", () => {
+    for (const status of [
+      "planned",
+      "in_progress",
+      "paused",
+      "postponed",
+      "done",
+    ]) {
+      expect(itemWorkflowStatusSchema.safeParse(status).success).toBe(true);
+    }
   });
 
-  it("itemWorkflowStatusSchema rejects unknown value", () => {
+  it("itemWorkflowStatusSchema rejects alarms and unknowns", () => {
+    expect(itemWorkflowStatusSchema.safeParse("blocked").success).toBe(false);
     expect(itemWorkflowStatusSchema.safeParse("cancelled").success).toBe(false);
   });
 

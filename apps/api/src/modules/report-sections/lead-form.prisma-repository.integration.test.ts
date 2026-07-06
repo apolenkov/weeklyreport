@@ -66,7 +66,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
           type: "next",
           text: "Source next item",
           tag: "plan",
-          workflowStatus: "in_progress",
+          workflowStatus: "planned",
           carriedOver: false,
         },
       ],
@@ -100,7 +100,7 @@ describe("LeadFormPrismaRepository (integration)", () => {
         type: "current",
         text: "Target stale item",
         tag: "stale",
-        workflowStatus: "blocked",
+        workflowStatus: "in_progress",
       },
     });
     await prisma.risk.create({
@@ -486,19 +486,20 @@ describe("LeadFormPrismaRepository (integration)", () => {
       expect(expectDefined(testingStage).status).toBe("yellow");
     });
 
-    it("a blocked ITEM (no risk) does NOT colour the stage red", async () => {
-      // A blocked item on the co-lead's section, no risk. The foreign-blocked-
-      // item path is intentionally NOT consulted; the stage must stay on the
-      // persisted-traffic base (no traffic seeded → null).
+    it("an item's own workflowStatus (no risk) does NOT colour the stage red", async () => {
+      // An item on the co-lead's section with no covering risk. The item's own
+      // workflowStatus is never consulted for stage colouring — only a risk
+      // does that — so the stage must stay on the persisted-traffic base (no
+      // traffic seeded → null).
       const { coSection } = await seedCoLead(testData.report.id);
       await prisma.item.create({
         data: {
           reportSectionId: coSection.id,
           projectId: testData.project.id,
           type: "current",
-          text: "Blocked item",
+          text: "In-progress item",
           tag: "feature",
-          workflowStatus: "blocked",
+          workflowStatus: "in_progress",
           stageNames: ["Testing"],
         },
       });

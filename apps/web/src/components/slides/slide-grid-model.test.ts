@@ -111,11 +111,11 @@ describe("buildSlideGridModel — status marks and columns", () => {
       section: section({
         items: [
           item({ text: "done", workflowStatus: "done" }),
-          item({ text: "blocked coerces", workflowStatus: "blocked" }),
+          item({ text: "paused", workflowStatus: "paused" }),
           item({
             text: "planned",
             type: "next",
-            workflowStatus: "in_progress",
+            workflowStatus: "postponed",
           }),
         ],
         risks: [
@@ -127,8 +127,8 @@ describe("buildSlideGridModel — status marks and columns", () => {
     });
     const cols = productLevelOf(cardOf(model, "p1")).columns;
     // The frame tone IS the status: expected states stay neutral.
-    expect(cols.current.map((r) => r.tone)).toEqual(["completed", "neutral"]);
-    expect(cols.next.map((r) => r.tone)).toEqual(["neutral"]);
+    expect(cols.current.map((r) => r.tone)).toEqual(["completed", "paused"]);
+    expect(cols.next.map((r) => r.tone)).toEqual(["postponed"]);
     expect(cols.risks.map((r) => r.tone)).toEqual(["at-risk", "blocked"]);
     expect(cols.decisions.map((r) => r.tone)).toEqual(["note"]);
   });

@@ -36,6 +36,7 @@ import {
   moveToNextWeekPatch,
 } from "../../lib/lead-item-actions";
 import { mapLeadFormData, mapLeadReviewFeedback } from "../../lib/mappers";
+import type { ItemWorkflowStatus as MapperItemWorkflowStatus } from "../../lib/mappers/item-status";
 import {
   applyCrossAuthorStageOverrides,
   buildCrossAuthorStageMap,
@@ -288,7 +289,6 @@ export function sectionToDraftPayload(
         tag: it.tag,
         workflowStatus: it.workflowStatus,
         carriedOver: it.carriedOver,
-        completed: it.completed ?? null,
         // enforce-item-decision-stage-schema: the write schema demands ≥1 stage
         // for a PRODUCT parent (mirrors risks); an activity-parented row carries
         // an empty stage set. The read model stays tolerant of stage-less legacy
@@ -1047,7 +1047,6 @@ export function LeadForm({
         bucket: deriveActivityBucket({
           type: raw.type,
           workflowStatus: raw.workflowStatus,
-          completed: raw.completed ?? null,
           carriedOver: raw.carriedOver,
         }),
       };
@@ -1055,12 +1054,12 @@ export function LeadForm({
     const bucket =
       item.status === "completed"
         ? "done"
-        : item.status === "blocked"
-          ? "blocked"
-          : item.status === "planned"
-            ? "planned-next"
-            : week === "next"
-              ? "deferred"
+        : item.status === "paused"
+          ? "paused"
+          : item.status === "postponed"
+            ? "deferred"
+            : item.status === "planned"
+              ? "planned-next"
               : "in-progress";
     return { item, week, bucket };
   };
@@ -1272,27 +1271,25 @@ export function LeadForm({
   // (current or next). Merge it back into raw `draftSection.items` while
   // preserving cross-type entries.
   //
-  // The presentation `status` ('completed' | 'in-progress' | 'blocked' |
-  // 'planned') is the inverse of `workflowToItemStatus` + a `completed` flag.
-  // We translate it back so the modal-edit dialog can change Status without
-  // a separate field surface for `workflowStatus` / `completed`.
+  // The presentation `status` is the inverse of `workflowToItemStatus` — a
+  // direct enum round-trip since rework-item-status-model. A displayed
+  // `blocked` is the risk-derived overlay, never persisted: it round-trips to
+  // the in-flight progress value.
   function statusToRawFields(status: KanbanItem["status"]): {
-    workflowStatus: "done" | "in_progress" | "blocked";
-    completed: boolean | null;
+    workflowStatus: MapperItemWorkflowStatus;
   } {
     switch (status) {
       case "completed":
-        return { workflowStatus: "done", completed: true };
-      case "blocked":
-        return { workflowStatus: "blocked", completed: false };
+        return { workflowStatus: "done" };
       case "planned":
-        // 'planned' has no DB enum value. Next-week rows use
-        // completed=null as the explicit presentation marker so reopening the
-        // form can distinguish Planned from In Progress.
-        return { workflowStatus: "in_progress", completed: null };
+        return { workflowStatus: "planned" };
+      case "paused":
+        return { workflowStatus: "paused" };
+      case "postponed":
+        return { workflowStatus: "postponed" };
+      case "blocked":
       case "in-progress":
-      default:
-        return { workflowStatus: "in_progress", completed: false };
+        return { workflowStatus: "in_progress" };
     }
   }
 
@@ -1329,7 +1326,6 @@ export function LeadForm({
               ...parentFields,
               text: kb.text,
               workflowStatus: raw.workflowStatus,
-              completed: raw.completed,
               stageName: null,
               // F1: carry the priority rank from the dialog into the draft so
               // autosave persists it (was silently dropped here).
@@ -1346,7 +1342,6 @@ export function LeadForm({
             tag: "general",
             workflowStatus: raw.workflowStatus,
             carriedOver: false,
-            completed: raw.completed,
             stageName: null,
             priorityRank: kb.priorityRank ?? null,
           };
@@ -1878,7 +1873,6 @@ export function LeadForm({
                     publishedLockedIds={publishedLockedItemIds}
                     onMarkComplete={handleMarkComplete}
                     onMoveToNextWeek={handleMoveToNextWeek}
-                    onRouteToBlocker={routeToBlocker}
                   />
                 </AccordionSection>
               ) : (
@@ -1925,7 +1919,6 @@ export function LeadForm({
                       publishedLockedIds={publishedLockedItemIds}
                       onMarkComplete={handleMarkComplete}
                       onMoveToNextWeek={handleMoveToNextWeek}
-                      onRouteToBlocker={routeToBlocker}
                     />
                   </AccordionSection>
 
@@ -2135,7 +2128,6 @@ export function LeadForm({
         stagesForProduct={stagesForProduct}
         ownPeriodRanks={ownPeriodRanks}
         risks={risks}
-        onRouteToBlocker={routeToBlocker}
         onSave={handleQuickAddSave}
         onCancel={() => setQuickAddItem(null)}
       />

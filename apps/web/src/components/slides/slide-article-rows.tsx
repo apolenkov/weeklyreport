@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, ChevronsRight, Pause } from "lucide-react";
 import { useRef } from "react";
 
 import { STAGE_ICONS } from "../lead/stage-chip-config";
@@ -59,18 +59,19 @@ function AuthorBadge({
   );
 }
 
-/** The frame IS the status: dashed = still in flight (in progress / planned),
- * green = done, yellow = at-risk, red = blocked. Finished/alarmed states also
- * carry their tint — no status words on the row. */
+/** The frame IS the status: dashed = still in flight (in progress / planned /
+ * paused / postponed), tint-only = done / at-risk / blocked — tinted rows
+ * carry no visible border, just the fill. Postponed additionally mutes the
+ * row text (deprioritized, not alarmed). */
 const TONE_BORDER: Record<GridTone, string> = {
   neutral: "border-dashed border-[rgba(0,0,0,0.18)]",
   note: "border-[rgba(0,0,0,0.10)]",
-  completed:
-    "border-[var(--color-chip-on-track-border)] bg-[var(--color-chip-on-track-bg)]",
-  "at-risk":
-    "border-[var(--color-status-at-risk-border)] bg-[var(--color-status-at-risk-bg)]",
-  blocked:
-    "border-[var(--color-destructive)] bg-[var(--color-chip-blocked-bg)]",
+  completed: "border-transparent bg-[var(--color-chip-on-track-bg)]",
+  "at-risk": "border-transparent bg-[var(--color-status-at-risk-bg)]",
+  blocked: "border-transparent bg-[var(--color-chip-blocked-bg)]",
+  paused: "border-dashed border-[rgba(0,0,0,0.18)]",
+  postponed:
+    "border-dashed border-[rgba(0,0,0,0.18)] text-[var(--color-muted-foreground)]",
 };
 
 /** sr-only status per tone — keeps the frame hue readable for screen readers
@@ -81,18 +82,33 @@ const TONE_SR_LABEL: Record<GridTone, string | null> = {
   completed: "Completed",
   "at-risk": "At risk",
   blocked: "Blocked",
+  paused: "Paused",
+  postponed: "Postponed",
 };
 
-/** Quiet check glyph on done rows — the frame goes grayscale in print, the
+/** Quiet trailing glyph per tone — the frame goes grayscale in print, the
  * glyph shape does not. */
-function CompletedMark({ tone }: { readonly tone: GridTone }) {
-  if (tone !== "completed") return null;
+const TONE_GLYPH: Partial<
+  Record<GridTone, { readonly Icon: typeof Check; readonly className: string }>
+> = {
+  completed: { Icon: Check, className: "text-[var(--color-primary)]" },
+  paused: { Icon: Pause, className: "text-[var(--color-muted-foreground)]" },
+  postponed: {
+    Icon: ChevronsRight,
+    className: "text-[var(--color-muted-foreground)]",
+  },
+};
+
+function ToneMark({ tone }: { readonly tone: GridTone }) {
+  const entry = TONE_GLYPH[tone];
+  if (!entry) return null;
+  const { Icon, className } = entry;
   return (
     <span
       aria-hidden="true"
-      className="ml-1 inline-flex translate-y-[-1px] align-middle text-[var(--color-primary)]"
+      className={`ml-1 inline-flex translate-y-[-1px] align-middle ${className}`}
     >
-      <Check className="h-3 w-3" />
+      <Icon className="h-3 w-3" />
     </span>
   );
 }
@@ -164,12 +180,12 @@ function ItemRow({
 }) {
   const srLabel = TONE_SR_LABEL[row.tone];
   // Every row is the same two-line card (short text still occupies two lines,
-  // longer text clamps to an ellipsis; hover shows it in full). Badges and
-  // icons ride the text inline, so nothing indents the body.
-  const textTooltip = useHoverTooltip<HTMLLIElement>(row.text);
+  // longer text clamps to an ellipsis). Hover shows the status, not the text
+  // — badges and icons ride the text inline, so nothing indents the body.
+  const statusTooltip = useHoverTooltip<HTMLLIElement>(row.hoverLabel);
   return (
     <li
-      {...textTooltip}
+      {...statusTooltip}
       className={`min-w-0 rounded-md border px-2 py-1 text-[13px] leading-[1.3] ${TONE_BORDER[row.tone]}`}
     >
       {/* min-h = 2 lines at 13px x 1.3 line-height. */}
@@ -177,7 +193,7 @@ function ItemRow({
         <AuthorBadge author={author} show={row.showAuthorBadge} />
         {showStages && <StageWatermarks stageNames={row.stageNames} />}
         {row.text}
-        <CompletedMark tone={row.tone} />
+        <ToneMark tone={row.tone} />
         {srLabel !== null && <span className="sr-only">{srLabel}</span>}
       </span>
     </li>

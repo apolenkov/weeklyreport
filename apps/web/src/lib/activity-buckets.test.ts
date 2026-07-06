@@ -8,34 +8,36 @@ import {
 } from "./activity-buckets";
 
 const TYPES = ["current", "next"] as const;
-const WORKFLOW_STATUSES = ["done", "in_progress", "blocked"] as const;
-const COMPLETED = [true, false, null] as const;
+const WORKFLOW_STATUSES = [
+  "planned",
+  "in_progress",
+  "paused",
+  "postponed",
+  "done",
+] as const;
 const CARRIED = [true, false] as const;
 
 function allCombos(): BucketInput[] {
   return TYPES.flatMap((type) =>
     WORKFLOW_STATUSES.flatMap((workflowStatus) =>
-      COMPLETED.flatMap((completed) =>
-        CARRIED.map((carriedOver) => ({
-          type,
-          workflowStatus,
-          completed,
-          carriedOver,
-        })),
-      ),
+      CARRIED.map((carriedOver) => ({
+        type,
+        workflowStatus,
+        carriedOver,
+      })),
     ),
   );
 }
 
 describe("deriveActivityBucket", () => {
-  it("is total: every (type × status × completed × carriedOver) combo lands in exactly one bucket", () => {
+  it("is total: every (type × workflowStatus × carriedOver) combo lands in exactly one bucket", () => {
     const known = new Set<ActivityBucket>(ACTIVITY_BUCKET_ORDER);
     for (const combo of allCombos()) {
       const bucket = deriveActivityBucket(combo);
       expect(known.has(bucket)).toBe(true);
     }
-    // 2 × 3 × 3 × 2 = 36 combos, each mapped (no throw above).
-    expect(allCombos()).toHaveLength(36);
+    // 2 × 5 × 2 = 20 combos, each mapped (no throw above).
+    expect(allCombos()).toHaveLength(20);
   });
 
   it("is deterministic", () => {
@@ -44,23 +46,14 @@ describe("deriveActivityBucket", () => {
     }
   });
 
-  it("never produces a 'failed' bucket", () => {
+  it("never produces a 'failed' or 'blocked' bucket", () => {
     for (const combo of allCombos()) {
       expect(deriveActivityBucket(combo)).not.toBe("failed");
+      expect(deriveActivityBucket(combo)).not.toBe("blocked");
     }
   });
 
-  it("a carried item is bucketed by its live state, never as 'deferred'", () => {
-    // The carry-over clone shape: type=current, completed=null, carriedOver.
-    expect(
-      deriveActivityBucket({
-        type: "current",
-        workflowStatus: "in_progress",
-        completed: null,
-        carriedOver: true,
-      }),
-    ).toBe("in-progress");
-    // carriedOver never discriminates: flipping it never changes the bucket.
+  it("carriedOver never discriminates: flipping it never changes the bucket", () => {
     for (const combo of allCombos()) {
       expect(deriveActivityBucket({ ...combo, carriedOver: true })).toBe(
         deriveActivityBucket({ ...combo, carriedOver: false }),
@@ -68,61 +61,60 @@ describe("deriveActivityBucket", () => {
     }
   });
 
-  it("applies the documented precedence: done > blocked > week split", () => {
+  it("a carried current-week in_progress item stays in-progress, never 'deferred'", () => {
+    // The carry-over clone shape: type=current, carriedOver=true.
     expect(
       deriveActivityBucket({
         type: "current",
-        workflowStatus: "done",
-        completed: null,
-        carriedOver: false,
+        workflowStatus: "in_progress",
+        carriedOver: true,
       }),
-    ).toBe("done");
-    expect(
-      deriveActivityBucket({
-        type: "next",
-        workflowStatus: "blocked",
-        completed: true,
-        carriedOver: false,
-      }),
-    ).toBe("done");
-    expect(
-      deriveActivityBucket({
-        type: "next",
-        workflowStatus: "blocked",
-        completed: false,
-        carriedOver: false,
-      }),
-    ).toBe("blocked");
+    ).toBe("in-progress");
   });
 
-  it("splits next-week items into planned-next (fresh) vs deferred (pushed out mid-flight)", () => {
+  it("reads the workflow status verbatim regardless of type", () => {
+    for (const type of TYPES) {
+      expect(
+        deriveActivityBucket({
+          type,
+          workflowStatus: "done",
+          carriedOver: false,
+        }),
+      ).toBe("done");
+      expect(
+        deriveActivityBucket({
+          type,
+          workflowStatus: "paused",
+          carriedOver: false,
+        }),
+      ).toBe("paused");
+      expect(
+        deriveActivityBucket({
+          type,
+          workflowStatus: "in_progress",
+          carriedOver: false,
+        }),
+      ).toBe("in-progress");
+    }
+  });
+
+  it("maps 'postponed' to 'deferred' — a next-week item consciously pushed out", () => {
     expect(
       deriveActivityBucket({
         type: "next",
-        workflowStatus: "in_progress",
-        completed: null,
-        carriedOver: false,
-      }),
-    ).toBe("planned-next");
-    // "Move to next week" writes completed=false — the deferred marker.
-    expect(
-      deriveActivityBucket({
-        type: "next",
-        workflowStatus: "in_progress",
-        completed: false,
+        workflowStatus: "postponed",
         carriedOver: false,
       }),
     ).toBe("deferred");
   });
 
-  it("keeps an open current-week item in-progress", () => {
+  it("maps 'planned' to 'planned-next'", () => {
     expect(
       deriveActivityBucket({
-        type: "current",
-        workflowStatus: "in_progress",
-        completed: false,
+        type: "next",
+        workflowStatus: "planned",
         carriedOver: false,
       }),
-    ).toBe("in-progress");
+    ).toBe("planned-next");
   });
 });

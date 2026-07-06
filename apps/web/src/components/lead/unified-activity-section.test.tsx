@@ -31,8 +31,8 @@ const entries: UnifiedActivityEntry[] = [
     week: "current",
   },
   {
-    item: makeItem({ id: "i-blocked", status: "blocked" }),
-    bucket: "blocked",
+    item: makeItem({ id: "i-paused", status: "paused" }),
+    bucket: "paused",
     week: "current",
   },
   {
@@ -62,7 +62,7 @@ describe("UnifiedActivitySection", () => {
     for (const bucket of [
       "done",
       "in-progress",
-      "blocked",
+      "paused",
       "planned-next",
       "deferred",
     ]) {
@@ -130,11 +130,11 @@ describe("UnifiedActivitySection", () => {
         onWeekItemsChange={vi.fn()}
       />,
     );
-    // Two open current-week entries (blocked renders first per bucket order).
+    // Two open current-week entries (in-progress renders before paused per bucket order).
     expect(screen.getAllByLabelText("Mark complete")).toHaveLength(2);
-    fireEvent.click(screen.getAllByLabelText("Mark complete")[0]);
-    expect(onMarkComplete).toHaveBeenCalledWith("i-blocked");
-    fireEvent.click(screen.getAllByLabelText("Move to next week")[0]);
-    expect(onMoveToNextWeek).toHaveBeenCalledWith("i-blocked");
+    fireEvent.click(screen.getAllByLabelText("Mark complete")[1]);
+    expect(onMarkComplete).toHaveBeenCalledWith("i-paused");
+    fireEvent.click(screen.getAllByLabelText("Move to next week")[1]);
+    expect(onMoveToNextWeek).toHaveBeenCalledWith("i-paused");
   });
 });

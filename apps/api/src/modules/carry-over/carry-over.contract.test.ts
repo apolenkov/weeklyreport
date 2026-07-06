@@ -139,7 +139,7 @@ const sourceBeta: ReportSectionReadModel = makeSection({
       type: "next",
       text: "Beta next item — should carry",
       tag: "bugfix",
-      workflowStatus: "blocked",
+      workflowStatus: "planned",
       carriedOver: false,
     },
   ],

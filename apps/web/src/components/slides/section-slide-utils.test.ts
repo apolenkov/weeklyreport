@@ -63,7 +63,6 @@ function makeSection(
         tag: "delivery",
         workflowStatus: "done",
         carriedOver: false,
-        completed: true,
         priorityRank: 1,
       },
       {
@@ -72,9 +71,8 @@ function makeSection(
         type: "next",
         text: "Prepare rollout notes",
         tag: "delivery",
-        workflowStatus: "in_progress",
+        workflowStatus: "planned",
         carriedOver: false,
-        completed: null,
       },
     ],
     risks: [],
@@ -123,7 +121,6 @@ describe("section slide utilities", () => {
             tag: "delivery",
             workflowStatus: "in_progress",
             carriedOver: false,
-            completed: false,
           },
           {
             id: "77777777-7777-4777-8777-777777777777",
@@ -132,9 +129,8 @@ describe("section slide utilities", () => {
             type: "current",
             text: "Activity current item",
             tag: "ops",
-            workflowStatus: "blocked",
+            workflowStatus: "in_progress",
             carriedOver: false,
-            completed: false,
           },
         ],
         activities: [
@@ -152,7 +148,8 @@ describe("section slide utilities", () => {
     // The activity record rides the pills lane only — never the product quadrants.
     expect(slide.currentItems).toEqual(["Product current item"]);
     expect(slide.currentCount).toBe(1);
-    // The activity blocker must not inflate the product-slide blocked count/tone.
+    // blockedCount derives only from product trafficLight/risks, never items,
+    // so an activity-parented record can never inflate it.
     expect(slide.blockedCount).toBe(0);
     expect(slide.activities?.map((a) => a.name)).toEqual(["Jira triage duty"]);
   });
@@ -407,7 +404,6 @@ describe("section slide utilities", () => {
             tag: "delivery",
             workflowStatus: "done",
             carriedOver: false,
-            completed: true,
             priorityRank: 1,
           },
           {
@@ -416,9 +412,8 @@ describe("section slide utilities", () => {
             type: "next",
             text: "Prepare portal rollout",
             tag: "delivery",
-            workflowStatus: "in_progress",
+            workflowStatus: "planned",
             carriedOver: false,
-            completed: null,
           },
           {
             id: "77777777-7777-4777-8777-777777777777",
@@ -426,9 +421,8 @@ describe("section slide utilities", () => {
             type: "next",
             text: "Protect launch date",
             tag: "delivery",
-            workflowStatus: "in_progress",
+            workflowStatus: "planned",
             carriedOver: false,
-            completed: null,
             priorityRank: 2,
           },
         ],
@@ -498,7 +492,6 @@ describe("section slide utilities", () => {
             tag: "delivery",
             workflowStatus: "in_progress",
             carriedOver: false,
-            completed: null,
           },
           {
             id: "66666666-6666-4666-8666-666666666666",
@@ -506,9 +499,8 @@ describe("section slide utilities", () => {
             type: "next",
             text: "Hand over platform runbook",
             tag: "delivery",
-            workflowStatus: "in_progress",
+            workflowStatus: "planned",
             carriedOver: false,
-            completed: null,
           },
         ],
         risks: [
@@ -570,7 +562,6 @@ describe("section slide utilities", () => {
             tag: "delivery",
             workflowStatus: "done",
             carriedOver: false,
-            completed: true,
           },
         ],
       }),
@@ -622,7 +613,6 @@ describe("section slide utilities", () => {
             tag: "delivery",
             workflowStatus: "done",
             carriedOver: false,
-            completed: true,
           },
           {
             id: "66666666-6666-4666-8666-666666666666",
@@ -630,9 +620,8 @@ describe("section slide utilities", () => {
             type: "next",
             text: "Prepare rollout notes",
             tag: "delivery",
-            workflowStatus: "in_progress",
+            workflowStatus: "planned",
             carriedOver: false,
-            completed: null,
           },
         ],
       }),
@@ -689,7 +678,6 @@ describe("section slide utilities", () => {
           tag: "delivery",
           workflowStatus: "done",
           carriedOver: false,
-          completed: true,
         },
         {
           id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002",
@@ -697,9 +685,8 @@ describe("section slide utilities", () => {
           type: "next",
           text: "Alice portal next",
           tag: "delivery",
-          workflowStatus: "in_progress",
+          workflowStatus: "planned",
           carriedOver: false,
-          completed: null,
         },
       ],
       risks: [],
@@ -729,7 +716,6 @@ describe("section slide utilities", () => {
           tag: "delivery",
           workflowStatus: "in_progress",
           carriedOver: false,
-          completed: null,
         },
       ],
       risks: [],
@@ -965,46 +951,32 @@ describe("mergeForeignSlideContent", () => {
     expect(product?.decisions).toContain("Foreign decision");
   });
 
-  it("counts a foreign blocked item exactly like an own blocked item (parity)", () => {
+  it("counts a foreign blocked item exactly like an own blocked risk (parity)", () => {
+    // Blocked-ness lives only on risks now (rework-item-status-model), so the
+    // "own" side of the parity is a blocked-severity risk, not an item status.
     const ownBlocked = buildSectionSlideModel(
       makeSection({
-        items: [
+        risks: [
           {
             id: "own-b",
             projectId: PRODUCT_ID,
-            type: "current",
-            text: "Own blocked",
-            tag: "t",
-            workflowStatus: "blocked",
-            carriedOver: false,
-            completed: null,
+            risk: "Own blocked risk",
+            impact: "x",
+            mitigation: "y",
+            severity: "blocked",
+            stageIds: ["Build"],
           },
         ],
       }),
     );
-    const base = buildSectionSlideModel(
-      makeSection({
-        items: [
-          {
-            id: "own-ip",
-            projectId: PRODUCT_ID,
-            type: "current",
-            text: "Own in progress",
-            tag: "t",
-            workflowStatus: "in_progress",
-            carriedOver: false,
-            completed: null,
-          },
-        ],
-      }),
-    );
+    const base = buildSectionSlideModel(makeSection());
     const mergedBlocked = mergeForeignSlideContent(base, {
       ...EMPTY_SLIDE_FOREIGN_CONTENT,
       currentItems: [
         { projectId: PRODUCT_ID, text: "Foreign blocked", blocked: true },
       ],
     });
-    // own blocked vs foreign blocked contribute the same +1 to the blocked KPI.
+    // own blocked risk vs foreign blocked item contribute the same +1 to the blocked KPI.
     expect(mergedBlocked.blockedCount).toBe(ownBlocked.blockedCount);
   });
 

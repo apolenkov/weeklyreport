@@ -894,32 +894,7 @@ describe("ItemEditDialog — record-status-ux-polish (in-dialog lock + blocker r
     ).not.toBeInTheDocument();
   });
 
-  it("routes an uncovered item's alarm gesture to blocker creation, prefilled", () => {
-    const onRouteToBlocker = vi.fn();
-    const onCancel = vi.fn();
-    render(
-      <ItemEditDialog
-        open
-        item={{ ...coveredItem, id: "i2" }}
-        products={products}
-        week="current"
-        risks={[]}
-        stagesForProduct={() => ["Development"]}
-        onRouteToBlocker={onRouteToBlocker}
-        onSave={vi.fn()}
-        onCancel={onCancel}
-      />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: /Mark as blocked/i }));
-    expect(onRouteToBlocker).toHaveBeenCalledWith({
-      productId: "p1",
-      stageIds: ["Development"],
-      severity: "blocked",
-    });
-    expect(onCancel).toHaveBeenCalled();
-  });
-
-  it("offers no alarm gesture without an onRouteToBlocker handler", () => {
+  it("offers no in-dialog alarm gesture at all — blockers live in Risks & Blockers", () => {
     render(
       <ItemEditDialog
         open
@@ -934,6 +909,55 @@ describe("ItemEditDialog — record-status-ux-polish (in-dialog lock + blocker r
     );
     expect(
       screen.queryByRole("button", { name: /Mark as blocked/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers exactly the item type's vocabulary — current chips", () => {
+    render(
+      <ItemEditDialog
+        open
+        item={{ ...coveredItem, id: "i4" }}
+        products={products}
+        week="current"
+        risks={[]}
+        stagesForProduct={() => ["Development"]}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: /In Progress/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Paused/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Completed/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Planned/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers exactly the item type's vocabulary — next chips", () => {
+    render(
+      <ItemEditDialog
+        open
+        item={{ ...coveredItem, id: "i5", status: "planned" }}
+        products={products}
+        week="next"
+        risks={[]}
+        stagesForProduct={() => ["Development"]}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: /Planned/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Postponed/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /In Progress/i }),
     ).not.toBeInTheDocument();
   });
 });
