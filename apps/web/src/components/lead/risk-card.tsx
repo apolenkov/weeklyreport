@@ -32,6 +32,8 @@ interface RiskCardProps {
 
 interface RiskCardState {
   isBlocked: boolean;
+  /** Activity-parented rows are legitimately stage-less — no warning chip. */
+  isActivityRisk: boolean;
   stageTags: string[];
   stageTagsLabel: string;
   needsStage: boolean;
@@ -44,21 +46,29 @@ function deriveRiskCardState(
   linkedProductStatus: RiskCardProps["linkedProductStatus"],
 ): RiskCardState {
   const stageTags = canonicalRiskStageTags(risk);
-  // require-risk-stage (D2): a risk with no stages is an anomaly (legacy
-  // row), never an implicit "all stages" scope — render the loud "No stage
-  // set" warning chip instead of disguising it. Keep every selected stage
-  // visible; seven SDLC chips fit better than hiding critical scope behind
-  // "+N".
+  // An activity-parented risk is legitimately stage-less (activities carry no
+  // SDLC stage) — no warning chip, no stage nudge.
+  const isActivityRisk = risk.activityId != null;
+  // A PRODUCT risk with no stages is an anomaly (legacy row), never an
+  // implicit "all stages" scope — render the loud "No stage set" warning chip
+  // instead of disguising it. Keep every selected stage visible; seven SDLC
+  // chips fit better than hiding critical scope behind "+N".
   const stageTagsLabel =
-    stageTags.length === 0 ? "No stage set" : stageTags.join(", ");
-  // F4: warn when the linked product is at-risk/blocked but no explicit
-  // stage is selected for this risk row.
+    stageTags.length > 0
+      ? stageTags.join(", ")
+      : isActivityRisk
+        ? "Activity — no SDLC stage"
+        : "No stage set";
+  // Warn when the linked product is at-risk/blocked but no explicit stage is
+  // selected for this risk row.
   const needsStage =
     !readOnly &&
+    !isActivityRisk &&
     (linkedProductStatus === "at-risk" || linkedProductStatus === "blocked") &&
     stageTags.length === 0;
   return {
     isBlocked: risk.severity === "blocked",
+    isActivityRisk,
     stageTags,
     stageTagsLabel,
     needsStage,
@@ -80,8 +90,14 @@ export function RiskCard({
   onEdit,
   onDelete,
 }: RiskCardProps) {
-  const { isBlocked, stageTags, stageTagsLabel, needsStage, locked } =
-    deriveRiskCardState(risk, readOnly, linkedProductStatus);
+  const {
+    isBlocked,
+    isActivityRisk,
+    stageTags,
+    stageTagsLabel,
+    needsStage,
+    locked,
+  } = deriveRiskCardState(risk, readOnly, linkedProductStatus);
 
   return (
     <div
@@ -182,7 +198,7 @@ export function RiskCard({
         stageTags={stageTags}
         ariaLabel={`Risk stages: ${stageTagsLabel}`}
         foreign={false}
-        emptyStageChip="no-stage-warning"
+        emptyStageChip={isActivityRisk ? "none" : "no-stage-warning"}
       />
     </div>
   );

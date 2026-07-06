@@ -148,16 +148,24 @@ export function DecisionCard({
           </div>
         </div>
       </div>
-      {/* P5: unified [author …… chip] meta-row */}
+      {/* Unified [author …… chip] meta-row. A stage-less PRODUCT decision is
+          a legacy anomaly, never an implicit "all stages" scope — render the
+          loud "No stage set" warning, mirroring risks. An activity-parented
+          decision is legitimately stage-less: no chip at all. */}
       <MetaRow
         authorName={decision.owner}
         stageTags={stageTags}
-        // enforce-item-decision-stage-schema: a stage-less decision is
-        // a legacy anomaly, never an implicit "all stages" scope —
-        // render the loud "No stage set" warning, mirroring risks.
-        ariaLabel={`Decision stages: ${stageTags.length === 0 ? "No stage set" : stageTags.join(", ")}`}
+        ariaLabel={`Decision stages: ${
+          stageTags.length > 0
+            ? stageTags.join(", ")
+            : decision.activityId != null
+              ? "Activity — no SDLC stage"
+              : "No stage set"
+        }`}
         foreign={false}
-        emptyStageChip="no-stage-warning"
+        emptyStageChip={
+          decision.activityId != null ? "none" : "no-stage-warning"
+        }
       />
     </div>
   );
