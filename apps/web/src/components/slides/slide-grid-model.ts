@@ -1,6 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
-import type { CrossAuthorContentRow } from "../../lib/mappers/lead-cross-author";
+import type { CrossAuthorContentRow } from "../../features/report-sections/model/lead-cross-author";
 import {
   activityHomeProduct,
   buildPriorityStrip,

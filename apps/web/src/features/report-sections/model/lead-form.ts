@@ -64,14 +64,14 @@ import {
   stageNamesMatch,
 } from "@customreport/shared";
 
-import { riskCoversStage } from "../../features/report-sections/model/stage-tags";
 import {
   formatPeriodRangeWithYear,
   formatTimestampShort,
   isoWeekNumber as sharedIsoWeekNumber,
-} from "../format-date";
-import { deriveEffectiveStageStatus } from "../stage-status";
+} from "../../../lib/format-date";
+import { deriveEffectiveStageStatus } from "../../../lib/stage-status";
 import { deriveItemStatus, type ItemStatus } from "./item-status";
+import { riskCoversStage } from "./stage-tags";
 import {
   type StageStatus,
   type TrafficLightStatus,

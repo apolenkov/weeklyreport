@@ -21,7 +21,7 @@ import {
   formatPeriodRangeWithYear,
   formatTimestampShort,
   isoWeekNumber as sharedIsoWeekNumber,
-} from "../format-date";
+} from "../../../lib/format-date";
 
 // ---------------------------------------------------------------------------
 // Self-contained presentation type (mirrors the mock's `HistoryEntry` shape).

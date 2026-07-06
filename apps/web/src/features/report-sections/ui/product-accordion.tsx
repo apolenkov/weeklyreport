@@ -3,7 +3,6 @@
 import type { RecordCommentView } from "@customreport/shared";
 import { type ReactNode, useEffect, useState } from "react";
 
-import { reportHasContent } from "../../../lib/mappers/report-content";
 import { pluralize } from "../../../lib/pluralize";
 import { sortByPriorityRank } from "../../../lib/priority-sort";
 import type {
@@ -17,6 +16,7 @@ import {
   type RecordCommentAnchor,
   RecordComments,
 } from "../../review/ui/record-comments";
+import { reportHasContent } from "../model/report-content";
 
 /**
  * review-acknowledgement: the in-app reviewer context threaded from the page.

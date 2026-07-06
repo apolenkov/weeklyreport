@@ -6,8 +6,8 @@
 
 import { MINUTES_PER_DAY } from "@customreport/shared";
 
-import type { AdminReminderPolicyFormInput } from "../../../lib/mappers";
 import type { MockReminderPolicy } from "../../../shared/lib/admin-mock-data";
+import type { AdminReminderPolicyFormInput } from "./admin";
 import {
   isoFromDate,
   presetForPolicy,

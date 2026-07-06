@@ -56,9 +56,14 @@
       Progress 2026-07-06: 4 domains landed + archived — analytics (3b4f9a9c),
       navigation→shared/ui (b07e75a1), dashboard (e8cf8a74), report-shell→shared/ui
       (c4592bd7); each via impl → full gate → 2 Fable adversaries + Codex → live-verify.
-      Remaining: lead (→ report-sections + period + review), admin, weekly-report,
-      slides (deferred — parallel session owns the folder), lib/mappers dissolve,
-      common/ui primitives → shared/.
+      Progress 2026-07-07: lib/mappers dissolved into
+      features/{admin,dashboard,report-sections}/model
+      (restructure-web-mappers-dissolution) — the trailing tree. lead, admin,
+      weekly-report, common/ui primitives, and the shared/report-shell/navigation
+      primitives all landed earlier this window (see git log). All of 3.1 is done
+      except `slides/` (deferred — parallel session owns the folder), which is the
+      sole survivor under `components/`.
+      Remaining: slides (deferred).
 
 ## 4. api: formalize existing ports in the invariant modules (internal only)
 

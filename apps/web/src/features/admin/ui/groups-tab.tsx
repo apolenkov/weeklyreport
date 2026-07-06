@@ -5,9 +5,9 @@ import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateAdmin } from "../../../lib/cache-keys";
-import { toReportingGroupInput } from "../../../lib/mappers";
 import { useTRPC } from "../../../lib/trpc-context";
 import { useDialogFocus } from "../../../lib/use-dialog-focus";
+import { toReportingGroupInput } from "../model/admin";
 import { TabFilter, TabHeader, TabSearch } from "./tab-header";
 
 // B4: archive quick-filter — default "active" hides archived groups on load

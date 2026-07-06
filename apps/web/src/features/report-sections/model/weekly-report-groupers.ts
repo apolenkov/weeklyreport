@@ -10,8 +10,11 @@ import type {
 } from "@customreport/shared";
 import { initialsFromName as sharedInitialsFromName } from "@customreport/shared";
 
-import { formatPeriodRangeWithYear, formatWeekLabel } from "../format-date";
-import { statusLabel } from "../status-presentation";
+import {
+  formatPeriodRangeWithYear,
+  formatWeekLabel,
+} from "../../../lib/format-date";
+import { statusLabel } from "../../../lib/status-presentation";
 import { deriveHeadItemStatus } from "./item-status";
 import { trafficToStageStatus } from "./traffic-light";
 import type {

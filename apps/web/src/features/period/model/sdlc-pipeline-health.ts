@@ -1,12 +1,12 @@
 import type { CSSProperties } from "react";
 
-import { trafficToStageStatus } from "../../../lib/mappers/traffic-light";
 import type {
   Product,
   StageAssignment,
   StageStatus,
 } from "../../report-sections/model/mock-data";
 import { STATUS_CONFIG } from "../../report-sections/model/stage-chip-config";
+import { trafficToStageStatus } from "../../report-sections/model/traffic-light";
 import type { CrossAuthorEntry } from "../ui/sdlc-pipeline";
 
 // apply-status-palette (memo T5 opt 3 + user feedback 2026-06-10): every

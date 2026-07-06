@@ -6,7 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { HistoryEntry } from "../../../lib/mappers";
+import type { HistoryEntry } from "../../report-sections/model/lead-history";
 import { LeadHistoryList } from "./lead-history-list";
 
 const entry: HistoryEntry = {

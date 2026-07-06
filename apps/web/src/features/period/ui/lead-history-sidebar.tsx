@@ -1,6 +1,6 @@
 "use client";
 
-import type { HistoryEntry } from "../../../lib/mappers";
+import type { HistoryEntry } from "../../report-sections/model/lead-history";
 
 interface LeadHistorySidebarProps {
   readonly entries: readonly HistoryEntry[];

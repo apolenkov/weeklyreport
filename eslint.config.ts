@@ -192,8 +192,10 @@ const webSliceGrandfatheredExcept: Partial<
   Record<(typeof webSlices)[number], readonly string[]>
 > = {
   // dashboard-page consumes review's section-review-rows mapper + SectionReviewStrip,
-  // moved into features/review by the weekly-report dissolve.
-  dashboard: ["review"],
+  // moved into features/review by the weekly-report dissolve; dashboard's own
+  // mappers (dashboard.ts / dashboard-leads.ts) read lead-status + traffic-light,
+  // which live in report-sections/model after the lib/mappers dissolution.
+  dashboard: ["review", "report-sections"],
 };
 const webCrossSliceZones = webSlices.map((sliceName) => ({
   target: `${webFeaturesDir}/${sliceName}`,
@@ -900,7 +902,7 @@ export default defineConfig([
       "apps/web/src/features/report-sections/ui/product-accordion.tsx", // one accordion for one ProductReport
       "apps/web/src/features/report-sections/ui/weekly-report-page.tsx", // one page: data load + 3 mutations + render
       "apps/web/src/features/period/ui/current-week-section.tsx", // 255 lines: FSD relocation forced two model imports to multi-line (longer paths), tipping it 5 over; content unchanged from its <=250 pre-move form. Candidate for a small extraction.
-      "apps/web/src/lib/mappers/lead-form.ts", // one LeadForm mapping pipeline; types-out alone stays >300, further split fragments it
+      "apps/web/src/features/report-sections/model/lead-form.ts", // one LeadForm mapping pipeline; types-out alone stays >300, further split fragments it
       // R3a-4 god-files (700+) triaged to permanent-exempt: a namespace split is
       // mechanically possible but would not improve the file (per code-style: keep
       // the larger unit and say why). See wf wjqkbxhc3.

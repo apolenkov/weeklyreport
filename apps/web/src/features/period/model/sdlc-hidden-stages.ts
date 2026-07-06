@@ -1,11 +1,11 @@
 "use client";
 
-import { trafficToStageStatus } from "../../../lib/mappers/traffic-light";
 import type {
   StageAssignment,
   StageStatus,
 } from "../../report-sections/model/mock-data";
 import { canonicalStageName } from "../../report-sections/model/stage-tags";
+import { trafficToStageStatus } from "../../report-sections/model/traffic-light";
 import type { CrossAuthorEntry } from "../ui/sdlc-pipeline";
 
 // pipeline-tooltip-and-indicator / unassigned-stage-reporting-exclusion: the

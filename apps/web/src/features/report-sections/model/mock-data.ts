@@ -40,7 +40,7 @@ export interface Product {
 
 // Single source: the mapper's union (rework-item-status-model) — progress
 // values plus the risk-derived display-only "blocked".
-import type { ItemStatus } from "../../../lib/mappers/item-status";
+import type { ItemStatus } from "./item-status";
 
 export type { ItemStatus };
 

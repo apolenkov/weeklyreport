@@ -9,10 +9,10 @@ import {
   invalidateLeadForm,
   invalidateLeadHistory,
 } from "../../../lib/cache-keys";
-import { mapWeeklyReport } from "../../../lib/mappers";
-import { reportHasContent } from "../../../lib/mappers/report-content";
 import { SessionContext } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
+import { reportHasContent } from "../../report-sections/model/report-content";
+import { mapWeeklyReport } from "../../report-sections/model/weekly-report";
 import { PublishLockButton } from "./publish-lock-button";
 
 interface HeadPublishLockActionProps {

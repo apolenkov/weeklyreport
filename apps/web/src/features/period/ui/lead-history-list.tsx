@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import { joinPeriodLabel } from "../../../lib/format-date";
-import type { HistoryEntry } from "../../../lib/mappers";
+import type { HistoryEntry } from "../../report-sections/model/lead-history";
 
 interface LeadHistoryListProps {
   readonly entries: HistoryEntry[];

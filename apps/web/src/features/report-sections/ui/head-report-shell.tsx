@@ -5,10 +5,6 @@ import { Suspense, useCallback, useContext, useMemo } from "react";
 
 import { HeadSlidesClient } from "../../../components/slides/head-slides-client";
 import { SlideSkeleton } from "../../../components/slides/slide-skeleton";
-import {
-  formatDateRange,
-  isoWeekNumber,
-} from "../../../lib/mappers/lead-history";
 import { SessionContext } from "../../../lib/session-provider";
 import { useTRPC } from "../../../lib/trpc-context";
 import { AgentReviewComingSoon } from "../../../shared/ui/report-shell/agent-review-coming-soon";
@@ -24,6 +20,7 @@ import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle
 import { ExportPdfButton } from "../../pdf-export/ui/export-pdf-button";
 import { HeadPublishLockAction } from "../../period/ui/head-publish-lock-action";
 import { PeriodNavigator } from "../../period/ui/period-navigator";
+import { formatDateRange, isoWeekNumber } from "../model/lead-history";
 import type { ReportPeriod } from "../model/mock-data";
 import { WeeklyReportPage } from "./weekly-report-page";
 import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
