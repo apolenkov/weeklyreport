@@ -254,24 +254,6 @@ describe("ItemCard — record-status-derived-from-risk (risk-derived alarm)", ()
     expect(screen.queryByText("Blocked")).not.toBeInTheDocument();
   });
 
-  it("coerces a legacy stored-blocked item to In Progress when uncovered", () => {
-    render(<ItemCard item={{ ...inProgress, status: "blocked" }} risks={[]} />);
-    expect(screen.getByText("In Progress")).toBeInTheDocument();
-    expect(screen.queryByText("Blocked")).not.toBeInTheDocument();
-  });
-
-  it("derives Blocked for a stored-blocked own item WITH a covering risk (head parity)", () => {
-    // Coerce-then-derive: a legacy stored `blocked` item that IS covered must
-    // still floor to Blocked, matching the head surface (applyBlockedRiskOverlay).
-    render(
-      <ItemCard
-        item={{ ...inProgress, status: "blocked" }}
-        risks={[risk("blocked")]}
-      />,
-    );
-    expect(screen.getByText("Blocked")).toBeInTheDocument();
-  });
-
   it("trusts item.status when no risk set is threaded in (foreign/legacy path)", () => {
     render(<ItemCard item={{ ...inProgress, status: "blocked" }} />);
     expect(screen.getByText("Blocked")).toBeInTheDocument();

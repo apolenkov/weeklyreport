@@ -91,8 +91,7 @@ function foreignLockAuthor(
  * free item status. Product-parented items only — an activity item's severity
  * stays isolated; the in-progress gate leaves completed/planned on their
  * progress pill. A derived alarm locks the pill (resolve the covering
- * risk/blocker to change it); a co-owner's flooring risk names its author. A
- * legacy stored `blocked` with no covering risk shows as in-progress.
+ * risk/blocker to change it); a co-owner's flooring risk names its author.
  */
 function deriveCardStatus(
   item: KanbanItem,
@@ -110,19 +109,17 @@ function deriveCardStatus(
       alarmLocked: false,
     };
   }
-  // `blocked` is display-derived now: coerce a stored blocked to in-progress
-  // BEFORE deriving, so the derivation's in-progress eligibility gate fires for a
-  // legacy stored-blocked item that IS covered by a risk. This mirrors
-  // `applyBlockedRiskOverlay` on the head surface — the two MUST agree, else the
-  // lead card and the head report disagree for identical data.
-  const eligibleStatus: ItemStatus =
-    item.status === "blocked" ? "in-progress" : item.status;
+  // Stored `blocked` is unrepresentable (rework-item-status-model): the DB
+  // CHECK and Zod reject it, and workflowToItemStatus never produces it — an
+  // own item's status arrives here as a pure Progress value. `blocked` appears
+  // only as the risk-derived alarm below (or pre-baked on foreign rows, which
+  // returned early above).
   const covering =
     item.activityId == null && item.productId !== ""
-      ? coveringRisksForItem({ ...item, status: eligibleStatus }, risks)
+      ? coveringRisksForItem(item, risks)
       : [];
   const derivedAlarm = highestAlarmSeverity(covering);
-  const displayStatus: ItemStatus | "at-risk" = derivedAlarm ?? eligibleStatus;
+  const displayStatus: ItemStatus | "at-risk" = derivedAlarm ?? item.status;
   const lockAuthorName = foreignLockAuthor(covering, derivedAlarm);
   return {
     displayStatus,
