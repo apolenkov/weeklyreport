@@ -88,6 +88,11 @@ export const itemInputSchema = z.object({
   workflowStatus: itemWorkflowStatusSchema,
   carriedOver: z.boolean().default(false),
   priorityRank: z.number().int().min(1).nullable().optional(),
+  // require-paused-item-reason: the lead's reason for pausing. Nullable/optional —
+  // legacy paused rows predate it and non-paused items never carry one. The UI
+  // requires it when pausing; the schema stays permissive so existing paused rows
+  // still round-trip on the next save.
+  pausedReason: safeText({ max: 500 }).nullable().optional(),
   // Length-tolerant here; the itemWriteSchema superRefine requires ≥1 stage for a
   // product parent and rejects any stage on an activity parent.
   stageIds: writeStageIdsField,

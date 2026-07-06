@@ -274,6 +274,55 @@ function ItemStatusChips({
 }
 
 /**
+ * require-paused-item-reason: the reason field shown when Paused is the selected
+ * status. Extracted so the dialog's conditional render stays flat (cognitive
+ * complexity). Required — the parent blocks save while it is empty.
+ */
+function PausedReasonField({
+  value,
+  error,
+  onChange,
+}: {
+  readonly value: string;
+  readonly error: string | undefined;
+  readonly onChange: (next: string) => void;
+}) {
+  return (
+    <div>
+      <label
+        className="mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
+        htmlFor="item-paused-reason"
+      >
+        Pause reason *
+      </label>
+      <textarea
+        id="item-paused-reason"
+        aria-invalid={error ? "true" : "false"}
+        aria-describedby={error ? "item-paused-reason-error" : undefined}
+        className={`w-full resize-y rounded-xl border bg-white px-3 py-2 text-sm text-[var(--color-foreground)] focus:outline-none ${
+          error
+            ? "border-[var(--color-destructive)] focus:border-[var(--color-destructive)] focus:shadow-[0_0_0_3px_rgba(200,32,20,0.15)]"
+            : "border-[rgba(0,0,0,0.2)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_rgba(0,117,74,0.15)]"
+        }`}
+        style={{ minHeight: "52px" }}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Why is this paused? (e.g. waiting on a dependency)"
+      />
+      {error && (
+        <p
+          id="item-paused-reason-error"
+          role="alert"
+          className="mt-1 text-xs text-[var(--color-destructive)]"
+        >
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
  * The status slot when a covering risk floors the item: the alarm is derived
  * from that risk, so the free chips are replaced by a read-only lock message.
  */
@@ -375,6 +424,10 @@ function ItemEditDialogContent({
   const [status, setStatus] = useState<ItemStatus>(
     initial.status === "blocked" ? IN_PROGRESS_STATUS : initial.status,
   );
+  // require-paused-item-reason: seeded from the bound row so editing a paused
+  // item preserves its reason instead of silently wiping it; required only
+  // while Paused is the selected status.
+  const [pausedReason, setPausedReason] = useState(item?.pausedReason ?? "");
   // activity-first-class: the record's parent — a product OR an attached
   // activity (XOR). Seeded from the bound row on edit, or from the create-mode
   // seed — an activity lane's `+ Add` presets the activity and beats the
@@ -399,9 +452,11 @@ function ItemEditDialogContent({
   const [stageIds, setStageIds] = useState<string[]>(
     item?.stageIds ? [...item.stageIds] : [],
   );
-  const [errors, setErrors] = useState<{ text?: string; stageIds?: string }>(
-    {},
-  );
+  const [errors, setErrors] = useState<{
+    text?: string;
+    stageIds?: string;
+    pausedReason?: string;
+  }>({});
 
   // Ranks already taken by OTHER items. The item's own current rank is
   // excluded so the user can keep it without seeing a false "taken" marker.
@@ -457,12 +512,17 @@ function ItemEditDialogContent({
     // Ctrl/Cmd+Enter shortcut routes through here, so it inherits the guard.
     if (isDeadEnd) return;
     const trimmed = text.trim();
+    const trimmedPausedReason = pausedReason.trim();
     const next: typeof errors = collectItemErrors({
       trimmed,
       isActivityParent,
       availableStages,
       effectiveStageIds,
     });
+    // require-paused-item-reason: a Paused item must carry a reason.
+    if (status === "paused" && trimmedPausedReason.length === 0) {
+      next.pausedReason = "A reason is required to pause an item.";
+    }
     if (Object.keys(next).length > 0) {
       setErrors(next);
       // Move focus to the first invalid control so the error is discoverable by
@@ -488,6 +548,7 @@ function ItemEditDialogContent({
         status,
         author: item?.author ?? currentUserName ?? "You",
         priorityRank: priorityRank ?? null,
+        pausedReason: status === "paused" ? trimmedPausedReason : null,
       });
       return;
     }
@@ -509,6 +570,7 @@ function ItemEditDialogContent({
       status,
       author: item?.author ?? currentUserName ?? "You",
       priorityRank: priorityRank ?? null,
+      pausedReason: status === "paused" ? trimmedPausedReason : null,
     };
     onSave(out);
   }
@@ -669,6 +731,18 @@ function ItemEditDialogContent({
               status={status}
               onSelect={setStatus}
             />
+
+            {/* require-paused-item-reason: a Paused item must explain why. */}
+            {status === "paused" && (
+              <PausedReasonField
+                value={pausedReason}
+                error={errors.pausedReason}
+                onChange={(next) => {
+                  setPausedReason(next);
+                  setErrors((prev) => ({ ...prev, pausedReason: undefined }));
+                }}
+              />
+            )}
           </div>
         </div>
 

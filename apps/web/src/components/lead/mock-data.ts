@@ -68,6 +68,12 @@ export interface KanbanItem {
   authorId?: string;
   /** Derived from Item.priorityRank. Null = not a priority item. */
   priorityRank?: number | null;
+  /**
+   * require-paused-item-reason: the lead's reason for pausing this item. Set
+   * only on a paused row; null/undefined otherwise. The UI requires it when
+   * pausing (the schema stays permissive for legacy paused rows).
+   */
+  pausedReason?: string | null;
 }
 
 export interface RiskEntry {

@@ -79,6 +79,21 @@ function ArrowLeftIcon() {
   );
 }
 
+function PauseIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3 w-3"
+      stroke="currentColor"
+      fill="none"
+      strokeWidth={2}
+      aria-hidden="true"
+    >
+      <path d="M8 5v14M16 5v14" />
+    </svg>
+  );
+}
+
 const NEUTRAL_ACTION_CLASS =
   "flex h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] items-center justify-center rounded border border-[var(--color-muted)] bg-white text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]";
 
@@ -100,6 +115,11 @@ interface ItemCardActionsProps {
   readonly onMoveToNextWeek?: (id: string) => void;
   /** Move action: flips `type` back to current IN PLACE (same durable identity). */
   readonly onMoveToCurrentWeek?: (id: string) => void;
+  /**
+   * require-paused-item-reason: open the pause-reason prompt for this item.
+   * Passed only where pausing applies (current-week, in-progress rows).
+   */
+  readonly onPause?: (id: string) => void;
 }
 
 /**
@@ -118,6 +138,7 @@ export function ItemCardActions({
   onMarkComplete,
   onMoveToNextWeek,
   onMoveToCurrentWeek,
+  onPause,
 }: ItemCardActionsProps) {
   if (locked || isEditing) {
     return item.foreign === true ? (
@@ -137,6 +158,17 @@ export function ItemCardActions({
           title="Move to current week"
         >
           <ArrowLeftIcon />
+        </button>
+      )}
+      {onPause && item.status === "in-progress" && (
+        <button
+          type="button"
+          className={NEUTRAL_ACTION_CLASS}
+          onClick={() => onPause(item.id)}
+          aria-label="Pause"
+          title="Pause (a reason is required)"
+        >
+          <PauseIcon />
         </button>
       )}
       {onMarkComplete && item.status !== "completed" && (

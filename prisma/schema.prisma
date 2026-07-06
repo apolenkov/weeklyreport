@@ -426,6 +426,11 @@ model Item {
   workflowStatus  ItemWorkflowStatus
   carriedOver     Boolean                  @default(false)
   priorityRank    Int?
+  // require-paused-item-reason: the lead's reason for pausing. Nullable — legacy
+  // paused rows predate the field and non-paused items never carry one; the UI
+  // makes it required at the point of pausing, not the schema (a hard invariant
+  // would reject those legacy rows on the next save).
+  pausedReason    String?
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   searchTsv       Unsupported("tsvector")? @default(dbgenerated("to_tsvector('russian'::regconfig, COALESCE(text, ''::text))"))

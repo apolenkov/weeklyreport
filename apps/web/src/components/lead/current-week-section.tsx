@@ -4,14 +4,17 @@ import { useRef } from "react";
 
 import type { EditableListDialogState } from "../../hooks/use-editable-list-dialog";
 import { useEditableListDialog } from "../../hooks/use-editable-list-dialog";
+import { usePauseReason } from "../../hooks/use-pause-reason";
 import { useScrollFade } from "../../hooks/use-scroll-fade";
 import { ActivityLanesBlock } from "./activity-lanes-block";
 import { BoardColumnHeader } from "./board-column-header";
+import { BoardEmptyState } from "./board-empty-state";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { ItemCard } from "./item-card";
 import { ItemEditDialog } from "./item-edit-dialog";
 import type { KanbanItem, Product, RiskEntry } from "./mock-data";
 import { isBoardEmpty, splitItemBoard } from "./next-week-columns";
+import { PauseReasonDialog } from "./pause-reason-dialog";
 
 const MAX_GRID_COLUMNS = 3;
 
@@ -70,9 +73,10 @@ interface CurrentWeekSectionProps {
   /** In-place move action (same durable identity; see ItemCardActions). */
   readonly onMoveToNextWeek?: (id: string) => void;
   /**
-   * Route an uncovered item's alarm gesture to blocker (risk) creation.
-   * Forwarded to the item dialog.
+   * require-paused-item-reason: pause an in-progress item with a required
+   * reason. The section owns the reason prompt; this persists the result.
    */
+  readonly onPauseItem?: (id: string, reason: string) => void;
 }
 
 function deriveDialogProps(dialogState: EditableListDialogState<KanbanItem>): {
@@ -103,9 +107,14 @@ export function CurrentWeekSection({
   publishedLockedIds,
   onMarkComplete,
   onMoveToNextWeek,
+  onPauseItem,
 }: CurrentWeekSectionProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const canScrollDown = useScrollFade(scrollRef);
+
+  // require-paused-item-reason: the reason prompt lifecycle lives in a hook so
+  // a card's Pause button only needs to name the item.
+  const pause = usePauseReason<KanbanItem>(onPauseItem);
 
   // Only fall back to the standalone empty-state when there are neither
   // items nor products to drive a column layout.
@@ -184,24 +193,14 @@ export function CurrentWeekSection({
     close();
   }
 
-  // Empty-state: when no items exist there are no per-product groups to
-  // hang the `+ Add` button on, so render a stand-alone CTA seeded from
-  // the first product. Without this the section reads as a dead band.
   if (isEmpty) {
-    if (readOnly) {
-      return (
-        <div className="rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
-          No current-week items.
-        </div>
-      );
-    }
     return (
-      <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-[rgba(0,0,0,0.15)] bg-[var(--color-surface-hover)] p-8 text-center">
-        <p className="text-sm text-[var(--color-muted-foreground)]">
-          No current-week items yet.
-        </p>
-        {globalAddButton}
-      </div>
+      <BoardEmptyState
+        readOnly={readOnly}
+        readOnlyLabel="No current-week items."
+        editableLabel="No current-week items yet."
+        addButton={globalAddButton}
+      />
     );
   }
 
@@ -226,6 +225,9 @@ export function CurrentWeekSection({
       onDelete={handleDelete}
       onMarkComplete={onMarkComplete}
       onMoveToNextWeek={onMoveToNextWeek}
+      {...(onPauseItem && !readOnly
+        ? { onPause: () => pause.request(item) }
+        : {})}
     />
   );
 
@@ -302,6 +304,14 @@ export function CurrentWeekSection({
           }
           onConfirm={confirmDelete}
           onCancel={clearPendingDelete}
+        />
+
+        <PauseReasonDialog
+          open={pause.pending !== null}
+          preview={pause.pending?.text ?? ""}
+          initialReason={pause.pending?.pausedReason ?? ""}
+          onConfirm={pause.confirm}
+          onCancel={pause.cancel}
         />
       </div>
       {canScrollDown && (
