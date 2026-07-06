@@ -24,6 +24,22 @@
 
 ## MODIFIED Requirements
 
+### Requirement: No stored item alarm exists without a covering risk
+
+No alarm MUST ever be stored on an item: the `ItemWorkflowStatus` enum carries progress values only (`planned | in_progress | paused | postponed | done`) — `at-risk` and `blocked` are not representable as stored item statuses. The displayed alarm remains the covering-risk roll-up at render (the raw-vs-displayed split of `status-risk-unification` is unchanged). The former legacy-`blocked` healing path is obsolete: the value no longer exists in the enum, and seed fixtures that stored `blocked` carry a covering blocker risk plus a progress status instead.
+
+#### Scenario: at-risk is display-only for items
+
+- **GIVEN** an item covered by an at-risk risk
+- **WHEN** the item is persisted by saveSection
+- **THEN** its stored `workflowStatus` is a progress value, not an alarm
+- **AND** the amber At Risk pill is reproduced from the covering risk at the next render
+
+#### Scenario: blocked cannot be persisted at all
+
+- **GIVEN** any save payload that tries to store `blocked` as an item status
+- **THEN** shared validation rejects it — the blocked signal exists only as a blocked-severity risk covering the item
+
 ### Requirement: Setting an item to at-risk/blocked routes through blocker creation
 
 The system MUST NOT offer any item-level gesture that stores an alarm on the item. Blockers are created in Risks & Blockers or via the quick-add "blocker" entry (`apps/web/src/components/lead/quick-add-button.tsx`) — a risk of severity `blocked`, never a free-blocked item. The former in-dialog "mark as blocked" gesture is removed.
