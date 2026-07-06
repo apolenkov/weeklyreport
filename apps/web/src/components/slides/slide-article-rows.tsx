@@ -59,13 +59,17 @@ function AuthorBadge({
   );
 }
 
-/** The frame IS the status: neutral for expected work, green for done,
- * yellow for at-risk, red for blocked — no status words on the row. */
+/** The frame IS the status: dashed = still in flight (in progress / planned),
+ * green = done, yellow = at-risk, red = blocked. Finished/alarmed states also
+ * carry their tint — no status words on the row. */
 const TONE_BORDER: Record<GridTone, string> = {
-  neutral: "border-[rgba(0,0,0,0.10)]",
-  completed: "border-[var(--color-chip-on-track-border)]",
-  "at-risk": "border-[var(--color-status-at-risk-border)]",
-  blocked: "border-[var(--color-destructive)]",
+  neutral: "border-dashed border-[rgba(0,0,0,0.18)]",
+  completed:
+    "border-[var(--color-chip-on-track-border)] bg-[var(--color-chip-on-track-bg)]",
+  "at-risk":
+    "border-[var(--color-status-at-risk-border)] bg-[var(--color-status-at-risk-bg)]",
+  blocked:
+    "border-[var(--color-destructive)] bg-[var(--color-chip-blocked-bg)]",
 };
 
 /** sr-only status per tone — keeps the frame hue readable for screen readers

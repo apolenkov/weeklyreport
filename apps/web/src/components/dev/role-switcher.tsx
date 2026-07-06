@@ -35,12 +35,6 @@ export function DevRoleSwitcher() {
     staleTime: 60_000,
   });
 
-  // dev.wipeAndReseed is adminProcedure, so the data-reset controls only work
-  // for an admin session — surface them to admins alone rather than let other
-  // roles trigger a FORBIDDEN alert.
-  const meQ = useQuery({ ...trpc.auth.me.queryOptions(), enabled });
-  const isAdmin = meQ.data?.role === "admin";
-
   // Hooks must run unconditionally — guard the gate below.
   const wipeAndReseedMut = useMutation(
     trpc.dev.wipeAndReseed.mutationOptions({
@@ -162,36 +156,34 @@ export function DevRoleSwitcher() {
               <DropdownMenuSeparator key={`${role}-sep`} />,
             ];
           })}
-          {isAdmin && (
-            <>
-              <DropdownMenuLabel>Data</DropdownMenuLabel>
-              <DropdownMenuItem
-                onSelect={() => reseed("small")}
-                data-testid="dev-role-switcher-reseed-small"
-              >
-                Wipe + Reseed (small)
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => reseed("middle")}
-                data-testid="dev-role-switcher-reseed-middle"
-              >
-                Wipe + Reseed (middle)
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => reseed("huge")}
-                data-testid="dev-role-switcher-reseed-huge"
-              >
-                Wipe + Reseed (huge)
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => reseed("manual-uat")}
-                data-testid="dev-role-switcher-wipe-manual-uat"
-              >
-                Wipe reports (manual UAT)
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-            </>
-          )}
+          {/* Dev-only data reset — available to every role; the API side is
+              still double-gated on AUTH_DEV_MODE. */}
+          <DropdownMenuLabel>Data</DropdownMenuLabel>
+          <DropdownMenuItem
+            onSelect={() => reseed("small")}
+            data-testid="dev-role-switcher-reseed-small"
+          >
+            Wipe + Reseed (small)
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => reseed("middle")}
+            data-testid="dev-role-switcher-reseed-middle"
+          >
+            Wipe + Reseed (middle)
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => reseed("huge")}
+            data-testid="dev-role-switcher-reseed-huge"
+          >
+            Wipe + Reseed (huge)
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => reseed("manual-uat")}
+            data-testid="dev-role-switcher-wipe-manual-uat"
+          >
+            Wipe reports (manual UAT)
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             onSelect={() => {
               void logout();
