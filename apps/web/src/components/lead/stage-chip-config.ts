@@ -49,13 +49,6 @@ export const STATUS_CONFIG: Record<
   },
 };
 
-export const STATUS_OPTIONS: { value: StageStatus; label: string }[] = [
-  { value: "on-track", label: "✓ On Track" },
-  { value: "at-risk", label: "! At Risk" },
-  { value: "blocked", label: "✕ Blocked" },
-  { value: "empty", label: "○ Clear" },
-];
-
 // apply-status-palette (memo T5): per-stage SDLC icon, keyed by stage name
 // ("Dev" ↔ "Development" alias mirrors lead-form.ts). Status stays on the
 // glyph/colors above; the icon only aids spatial scanning of the pipeline.

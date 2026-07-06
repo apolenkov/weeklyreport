@@ -796,6 +796,15 @@ export function LeadForm({
     [draftSection],
   );
 
+  // simplify-stage-status-interaction (D4): stages the lead left unset (null
+  // traffic) auto-promote to On Track at submit, warned first. stageStatuses
+  // only carries the lead's OWN stages, so a null entry is a genuinely unset
+  // own stage. Both the confirm-dialog warning and the coercion below read this
+  // one count, so they can never disagree.
+  const unsetOwnStageCount = (draftPayload?.stageStatuses ?? []).filter(
+    (s) => s.status == null,
+  ).length;
+
   const isLoading =
     activeQ.isLoading || byPeriodQ.isLoading || historyQ.isLoading;
   const awaitingRoleRedirect = shouldRouteHeadLikeAwayFromLeadForm;
@@ -1414,6 +1423,25 @@ export function LeadForm({
       status: a.status ?? ("green" as const),
       note: a.note ?? null,
     }));
+    // simplify-stage-status-interaction (D4): auto-promote any own stage the
+    // lead left unset (null traffic) to On Track (green), mirroring the
+    // null->green project/activity coercion above. The confirm dialog warned
+    // about the null count first, so the promotion is announced, not silent.
+    //
+    // A stale red/yellow own-stage status also collapses to green here: under
+    // the one-source model a persisted stage severity is never legitimate
+    // (severity lives in risks; handleRisksChange never writes a derived status;
+    // the chip only authors on-track/empty), so any red/yellow is a legacy
+    // orphan the read model already renders as On Track. Collapsing it on submit
+    // writes the value the display already shows — the design's "next save
+    // writes the collapsed value" — instead of re-persisting a ghost severity.
+    const stageStatuses = (draftPayload.stageStatuses ?? []).map((s) => ({
+      ...s,
+      status:
+        s.status == null || s.status === "red" || s.status === "yellow"
+          ? ("green" as const)
+          : s.status,
+    }));
     submitMut.mutate({
       ...draftPayload,
       // Current revision read synchronously — never a stale closure, so a submit
@@ -1421,6 +1449,7 @@ export function LeadForm({
       version: versionRef.current,
       projectStatuses,
       activityStatuses,
+      stageStatuses,
       confirmed: true,
     });
   }
@@ -2130,6 +2159,16 @@ export function LeadForm({
                 </span>
               </div>
             </div>
+            {/* simplify-stage-status-interaction (D4): warn that unset own
+                stages will be promoted to On Track on submit — announced, not
+                silent. Omitted when nothing is unset. */}
+            {unsetOwnStageCount > 0 && (
+              <p className="mt-3 text-sm text-[var(--color-muted-foreground)]">
+                {unsetOwnStageCount} stage
+                {unsetOwnStageCount === 1 ? "" : "s"} not set — they will be
+                marked On Track.
+              </p>
+            )}
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"

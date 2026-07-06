@@ -63,11 +63,11 @@ routes:
         then: "the decision is added, modified, or removed from the decisions list; the form shows the updated decision count in the section badge, and the changes are captured in the autosave draft"
         note: "Decisions include owner, impact, deadline, and affected stages; they are edited via DecisionEditDialog"
       - id: lead-report-edit-product-status
-        intent: "Set project or stage traffic-light status"
+        intent: "Set project traffic-light status or toggle a stage chip On Track"
         given: "The lead is on the report form in edit mode and the report is not submitted"
-        when: "the lead interacts with status controls (green/yellow/red traffic lights) for a project or stage"
+        when: "the lead sets a project status (green/yellow/red) or clicks one of their own stage chips"
         then: "the status is updated; the form marks it as dirty and queues it for autosave"
-        note: "Status is tied to project and stage identifiers; undefined statuses are coerced to green before submit"
+        note: "A stage chip is a plain On Track ⇄ unset toggle — it has NO status menu. At-risk/blocked stages are authored only via the Risks & Blockers section (a covering risk floors the chip's displayed severity); clicking a risk-floored chip is a no-op that points the lead at the Risks section. Undefined project/activity statuses and unset own stages are coerced to green (On Track) before submit, warned in the submit-confirm dialog."
       - id: lead-report-autosave
         intent: "Automatically save draft changes"
         given: "The lead is in edit mode, has unsaved changes, and the report is not submitted"

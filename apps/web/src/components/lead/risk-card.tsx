@@ -1,3 +1,5 @@
+import { ArrowDownUp } from "lucide-react";
+
 import { LockBadge } from "../../shared/ui/report-shell/lock-badge";
 import { MetaRow } from "../../shared/ui/report-shell/meta-row";
 import { FOREIGN_ENTRY_OPACITY } from "./item-card-style";
@@ -28,6 +30,12 @@ interface RiskCardProps {
   readonly linkedProductStatus?: StageStatus;
   readonly onEdit: (risk: RiskEntry) => void;
   readonly onDelete: (id: string) => void;
+  /**
+   * simplify-stage-status-interaction (D5): one-click blocked <-> at-risk
+   * severity flip, without opening the full edit dialog. Omitted on read-only /
+   * foreign cards (their action row is a LockBadge, not buttons).
+   */
+  readonly onToggleSeverity?: (risk: RiskEntry) => void;
 }
 
 interface RiskCardState {
@@ -89,6 +97,7 @@ export function RiskCard({
   linkedProductStatus,
   onEdit,
   onDelete,
+  onToggleSeverity,
 }: RiskCardProps) {
   const {
     isBlocked,
@@ -128,6 +137,20 @@ export function RiskCard({
         </span>
         {!locked ? (
           <div className="ml-auto flex gap-1">
+            {onToggleSeverity && (
+              <button
+                type="button"
+                className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
+                onClick={() => onToggleSeverity(risk)}
+                aria-label={
+                  isBlocked
+                    ? `Downgrade risk for ${risk.productName} to at risk`
+                    : `Escalate risk for ${risk.productName} to blocked`
+                }
+              >
+                <ArrowDownUp className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
             <button
               type="button"
               className="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[rgba(0,0,0,0.1)] bg-white p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
