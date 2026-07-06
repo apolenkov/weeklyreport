@@ -157,7 +157,10 @@ function ActivityStatusPills({
       {refused && (
         <p
           role="status"
-          className="mt-1 text-xs text-[var(--color-destructive)]"
+          // w-0 + min-w-full: the message adopts the pill row's width instead
+          // of contributing its own intrinsic width — a long message must
+          // never widen this flex cell and shove the pills leftward.
+          className="mt-1 w-0 min-w-full text-right text-xs text-[var(--color-destructive)]"
         >
           Resolve the covering risk/blocker first to lower this status.
         </p>
