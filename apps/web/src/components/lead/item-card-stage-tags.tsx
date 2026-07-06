@@ -6,6 +6,8 @@ export interface ItemCardStageTags {
   stageTagsLabel: string;
   visibleStageTags: string[];
   hiddenStageCount: number;
+  /** Activity-parented rows are legitimately stage-less — no tags, no warning. */
+  isActivityItem: boolean;
 }
 
 /**
@@ -13,8 +15,19 @@ export interface ItemCardStageTags {
  * no rendering.
  */
 export function deriveItemCardStageTags(
-  item: Pick<KanbanItem, "stageIds" | "stageName">,
+  item: Pick<KanbanItem, "stageIds" | "stageName" | "activityId">,
 ): ItemCardStageTags {
+  // Activities carry no SDLC stage by design, so a stage-less activity item is
+  // the expected shape — never the "No stage set" anomaly warning.
+  if (item.activityId != null) {
+    return {
+      stageTags: [],
+      stageTagsLabel: "Activity — no SDLC stage",
+      visibleStageTags: [],
+      hiddenStageCount: 0,
+      isActivityItem: true,
+    };
+  }
   const stageTags = (
     item.stageIds && item.stageIds.length > 0
       ? item.stageIds
@@ -35,7 +48,13 @@ export function deriveItemCardStageTags(
     stageTags.length - visibleStageTags.length,
     0,
   );
-  return { stageTags, stageTagsLabel, visibleStageTags, hiddenStageCount };
+  return {
+    stageTags,
+    stageTagsLabel,
+    visibleStageTags,
+    hiddenStageCount,
+    isActivityItem: false,
+  };
 }
 
 /**
@@ -48,7 +67,9 @@ export function ItemCardStageTagsRow({
   stageTagsLabel,
   visibleStageTags,
   hiddenStageCount,
+  isActivityItem,
 }: ItemCardStageTags) {
+  if (isActivityItem) return null;
   return (
     <span
       role="img"

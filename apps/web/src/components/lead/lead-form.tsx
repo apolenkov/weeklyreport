@@ -1149,13 +1149,10 @@ export function LeadForm({
           stageName: null,
         };
       });
-      // activity-first-class: preserve activity-parented decisions — the product
-      // decisions view excludes them, so replacing the whole array would
-      // otherwise drop seeded activity decisions on any decision edit.
-      const activityDecisions = prev.decisions.filter(
-        (d) => d.activityId != null,
-      );
-      return { ...prev, decisions: [...activityDecisions, ...merged] };
+      // The section list round-trips activity-parented decisions too (they
+      // render in the Decisions section under their activity), so `merged` IS
+      // the full set — re-appending a preserved copy would duplicate them.
+      return { ...prev, decisions: merged };
     });
   }
 
@@ -1259,11 +1256,10 @@ export function LeadForm({
           stageName: null,
         };
       });
-      // activity-first-class: preserve activity-parented risks — they never
-      // appear in the product-scoped section list, so replacing the whole risks
-      // array would otherwise drop them on any product-risk edit.
-      const activityRisks = prev.risks.filter((r) => r.activityId != null);
-      return { ...prev, risks: [...activityRisks, ...merged] };
+      // The section list round-trips activity-parented risks too (they render
+      // in the Risks section under their activity), so `merged` IS the full
+      // set — re-appending a preserved copy would duplicate them.
+      return { ...prev, risks: merged };
     });
   }
 
@@ -1347,12 +1343,10 @@ export function LeadForm({
           };
         });
         // Keep all items of the OTHER type unchanged; replace this type with
-        // the merged set. activity-first-class: also keep activity-parented
-        // items of THIS type — they never appear in the product-scoped section
-        // list, so replacing the whole type would otherwise drop them.
-        const others = prev.items.filter(
-          (it) => it.type !== itemType || it.activityId != null,
-        );
+        // the merged set. The section round-trips activity-parented items of
+        // this type too (they render under their activity lane), so keeping a
+        // separate copy of them would duplicate them.
+        const others = prev.items.filter((it) => it.type !== itemType);
         return { ...prev, items: [...others, ...mergedTyped] };
       });
     };
