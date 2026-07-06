@@ -431,7 +431,10 @@ export function createAppRouter(deps: RouterDeps) {
         return users;
       }),
 
-      wipeAndReseed: adminProcedure
+      // Any authenticated role may reset demo data — this is a dev-only test
+      // affordance (double-gated: dev router mount + the AUTH_DEV_MODE check
+      // below), not a production admin capability.
+      wipeAndReseed: protectedProcedure
         .input(
           z.object({
             variant: z
