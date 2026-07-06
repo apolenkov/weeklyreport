@@ -16,10 +16,6 @@ function makeCard(overrides: Partial<LeadActivityCard>): LeadActivityCard {
     derivedStatus: null,
     alarmFloor: null,
     linkedProducts: [],
-    currentItems: [],
-    nextItems: [],
-    risks: [],
-    decisions: [],
     ...overrides,
   };
 }
@@ -30,18 +26,6 @@ const activities: LeadActivityCard[] = [
     activityName: "Jira triage duty",
     status: "green",
     linkedProducts: [{ productId: "p1", productName: "CRM" }],
-    currentItems: [
-      {
-        id: "i1",
-        productId: "",
-        productName: "Jira triage duty",
-        activityId: ACTIVITY_A,
-        status: "in-progress",
-        text: "Triaged 12 tickets",
-        author: "You",
-        priorityRank: null,
-      },
-    ],
   }),
   makeCard({
     activityId: ACTIVITY_B,
@@ -51,7 +35,9 @@ const activities: LeadActivityCard[] = [
 ];
 
 describe("ActivityStatusSection", () => {
-  it("renders one card per activity with linked products and records", () => {
+  // route-activity-records-into-record-sections: the card is status-only —
+  // records render in the main record sections under the activity's lane.
+  it("renders one status-only card per activity with linked products", () => {
     render(
       <ActivityStatusSection
         activities={activities}
@@ -63,9 +49,11 @@ describe("ActivityStatusSection", () => {
     expect(screen.getByText("Jira triage duty")).toBeInTheDocument();
     expect(screen.getByText("Ops rotation")).toBeInTheDocument();
     expect(screen.getByText("Products: CRM")).toBeInTheDocument();
-    expect(screen.getByText("Triaged 12 tickets")).toBeInTheDocument();
     expect(screen.getAllByRole("group")).toHaveLength(2);
     expect(screen.queryByText(/add/i)).toBeNull();
+    // No record content leaks into the card.
+    expect(screen.queryByText("Current")).toBeNull();
+    expect(screen.queryByText("Risks & Blockers")).toBeNull();
   });
 
   it("renders nothing when the author has no attached activities", () => {

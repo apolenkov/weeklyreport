@@ -190,7 +190,10 @@ export function NextWeekSection({
               <div className="flex-1 truncate font-[family-name:var(--font-sans)] text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
                 {col.productName}
               </div>
-              {!readOnly && hasMultipleProducts && (
+              {/* Activity lanes carry no + Add — creation flows through the
+                  dialog's parent picker; the lane exists only when it has
+                  rows (route-activity-records-into-record-sections). */}
+              {!readOnly && hasMultipleProducts && col.activityId == null && (
                 <button
                   type="button"
                   // KB-5 (Phase 33-04): mobile keeps 44px tap-target for a11y;

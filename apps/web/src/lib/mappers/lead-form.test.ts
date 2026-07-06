@@ -22,6 +22,16 @@ const REPORT_ID = "22222222-2222-4222-8222-222222222222";
 const AUTHOR_ID = "33333333-3333-4333-8333-333333333333";
 const PROJECT_A = "44444444-4444-4444-8444-444444444444";
 const PROJECT_B = "55555555-5555-4555-8555-555555555555";
+const ACTIVITY_A = "77777777-7777-4777-8777-777777777777";
+
+/** One attached activity for route-activity-records tests. */
+const activityA = {
+  activityId: ACTIVITY_A,
+  activityName: "Jira triage duty",
+  status: "green" as const,
+  linkedProducts: [],
+  derivedStatus: null,
+};
 
 function baseSection(
   overrides: Partial<ReportSectionReadModel> = {},
@@ -705,6 +715,34 @@ describe("mapLeadItems", () => {
     const mapped = mapLeadItems(section, "current").at(0);
     expect(mapped?.productName).toBe("Unknown");
   });
+
+  // route-activity-records-into-record-sections: activity-parented rows render
+  // in the main sections under an activity lane, no longer only in the card.
+  it("includes an activity-parented item with the activity as its display parent", () => {
+    const section = baseSection({
+      activities: [activityA],
+      items: [
+        {
+          id: "act-item-1",
+          projectId: null,
+          activityId: ACTIVITY_A,
+          type: "current",
+          text: "Triage the incoming queue",
+          tag: "ops",
+          workflowStatus: "in_progress",
+          carriedOver: false,
+        },
+      ],
+    });
+
+    const mapped = mapLeadItems(section, "current");
+    expect(mapped).toHaveLength(1);
+    const item = expectDefined(mapped[0]);
+    expect(item.activityId).toBe(ACTIVITY_A);
+    expect(item.activityName).toBe("Jira triage duty");
+    expect(item.productId).toBe("");
+    expect(item.productName).toBe("Jira triage duty");
+  });
 });
 
 describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
@@ -750,6 +788,55 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
     const mapped = mapLeadDecisions(section).at(0);
     expect(mapped?.text).toBe("Approve Redis cluster");
     expect(mapped?.productName).toBe("Group");
+  });
+
+  // route-activity-records-into-record-sections: activity risks/decisions
+  // surface in the main sections labeled with the activity name.
+  it("includes an activity-parented risk labeled with the activity name", () => {
+    const section = baseSection({
+      activities: [activityA],
+      risks: [
+        {
+          id: "act-risk-1",
+          projectId: null,
+          activityId: ACTIVITY_A,
+          risk: "Rotation understaffed",
+          impact: "Queue grows",
+          mitigation: "Borrow one dev",
+          severity: "at-risk",
+        },
+      ],
+    });
+
+    const mapped = mapLeadRisks(section);
+    expect(mapped).toHaveLength(1);
+    const risk = expectDefined(mapped[0]);
+    expect(risk.activityId).toBe(ACTIVITY_A);
+    expect(risk.productId).toBe("");
+    expect(risk.productName).toBe("Jira triage duty");
+    expect(risk.text).toBe("Rotation understaffed");
+  });
+
+  it("includes an activity-parented decision labeled with the activity name", () => {
+    const section = baseSection({
+      activities: [activityA],
+      decisions: [
+        {
+          id: "act-dec-1",
+          activityId: ACTIVITY_A,
+          text: "Keep the rotation weekly",
+          owner: "Тимлид 1",
+          impact: "Predictable load",
+        },
+      ],
+    });
+
+    const mapped = mapLeadDecisions(section);
+    expect(mapped).toHaveLength(1);
+    const decision = expectDefined(mapped[0]);
+    expect(decision.activityId).toBe(ACTIVITY_A);
+    expect(decision.productId).toBe("");
+    expect(decision.productName).toBe("Jira triage duty");
   });
 
   it("derives priorities from items with priorityRank, sorted by rank, floors invalid ranks to 1", () => {

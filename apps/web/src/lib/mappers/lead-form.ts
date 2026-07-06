@@ -141,6 +141,10 @@ export interface LeadRiskEntry {
   id: string;
   productId: string;
   productName: string;
+  /** Parent activity id (XOR with productId); `productId` is empty when set. */
+  activityId?: string | null;
+  /** Display name of the parent activity when `activityId` is set. */
+  activityName?: string;
   /** @deprecated Use stageIds. Kept for display back-compat via splitStageNames. */
   stageName?: string;
   /** UFB-073 (R1): stage selection as array of stage names. */
@@ -158,6 +162,10 @@ export interface LeadDecisionEntry {
   id: string;
   productId: string;
   productName: string;
+  /** Parent activity id (XOR with productId); `productId` is empty when set. */
+  activityId?: string | null;
+  /** Display name of the parent activity when `activityId` is set. */
+  activityName?: string;
   text: string;
   /** Schema-required owner (responsible person). */
   owner: string;
@@ -328,11 +336,8 @@ export function ownedStagesForProject(
 
 // ---- Mappers ----
 
-// activity-first-class: element-type aliases for the flat section arrays, used
-// by the product-parented type-predicate filters below (narrowing the nullable
-// product FK to a concrete string once, at the mapper boundary).
+// Element-type aliases for the flat section arrays.
 type SectionItem = ReportSectionReadModel["items"][number];
-type SectionRisk = ReportSectionReadModel["risks"][number];
 type SectionDecision = ReportSectionReadModel["decisions"][number];
 
 // The Dev↔Development stage-name canonicalization is single-homed in
@@ -499,17 +504,26 @@ export function mapLeadItems(
   itemType: "current" | "next",
 ): LeadKanbanItem[] {
   const projectIndex = buildProjectIndex(section);
-  // activity-first-class (Decision 1): the product columns render only
-  // product-parented rows. Activity-parented items (projectId null, activityId
-  // set) ride the same flat array but render under the activity card
-  // (mapLeadActivityCards), so filter them out up front here.
+  const activityNameById = new Map(
+    section.activities.map((a) => [a.activityId, a.activityName]),
+  );
+  // route-activity-records-into-record-sections: rows with EITHER parent render
+  // in the week sections — product rows under their product column, activity
+  // rows under their activity lane (buildItemColumns). A row with neither
+  // parent is malformed and stays excluded.
   return section.items
     .filter(
-      (item): item is SectionItem & { projectId: string } =>
-        item.type === itemType && item.projectId != null,
+      (item) =>
+        item.type === itemType &&
+        (item.projectId != null || item.activityId != null),
     )
     .map((item) => {
-      const project = projectIndex.get(item.projectId);
+      const activityName =
+        item.activityId != null
+          ? (activityNameById.get(item.activityId) ?? "Unknown")
+          : undefined;
+      const project =
+        item.projectId != null ? projectIndex.get(item.projectId) : undefined;
       const status = deriveItemStatus({
         workflowStatus: item.workflowStatus,
         type: item.type,
@@ -517,9 +531,13 @@ export function mapLeadItems(
       return {
         id:
           item.id ??
-          `${itemType}-${item.projectId}-${item.text.slice(0, ID_TEXT_FRAGMENT_LENGTH)}`,
-        productId: item.projectId,
-        productName: project?.name ?? "Unknown",
+          `${itemType}-${item.projectId ?? item.activityId ?? "row"}-${item.text.slice(0, ID_TEXT_FRAGMENT_LENGTH)}`,
+        productId: item.projectId ?? "",
+        // An activity row's display parent is the activity itself.
+        productName: project?.name ?? activityName ?? "Unknown",
+        ...(item.activityId != null
+          ? { activityId: item.activityId, activityName }
+          : {}),
         // UFB-073 (R1): stage array from DB. Surfaces on the kanban card and
         // groups items by product+stage. Falls back to undefined for
         // legacy rows seeded before the column existed.
@@ -547,18 +565,27 @@ export function mapLeadItems(
  */
 export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
   const projectIndex = buildProjectIndex(section);
-  // activity-first-class: product view renders product-parented risks only;
-  // activity risks render under the activity card (mapLeadActivityCards).
+  const activityNameById = new Map(
+    section.activities.map((a) => [a.activityId, a.activityName]),
+  );
+  // route-activity-records-into-record-sections: activity-parented risks render
+  // in the Risks section labeled with the activity name, beside product risks.
   return section.risks
-    .filter(
-      (r): r is SectionRisk & { projectId: string } => r.projectId != null,
-    )
+    .filter((r) => r.projectId != null || r.activityId != null)
     .map((r, idx) => {
-      const project = projectIndex.get(r.projectId);
+      const activityName =
+        r.activityId != null
+          ? (activityNameById.get(r.activityId) ?? "Unknown")
+          : undefined;
+      const project =
+        r.projectId != null ? projectIndex.get(r.projectId) : undefined;
       return {
         id: r.id ?? `risk-${idx}`,
-        productId: r.projectId,
-        productName: project?.name ?? "Unknown",
+        productId: r.projectId ?? "",
+        productName: project?.name ?? activityName ?? "Unknown",
+        ...(r.activityId != null
+          ? { activityId: r.activityId, activityName }
+          : {}),
         // UFB-073 (R1): stage array from DB; legacy rows fall back to undefined.
         stageIds: r.stageIds,
         severity: r.severity ?? "at-risk",
@@ -573,18 +600,27 @@ export function mapLeadDecisions(
   section: ReportSectionReadModel,
 ): LeadDecisionEntry[] {
   const projectIndex = buildProjectIndex(section);
-  // activity-first-class: the product decisions view keeps product-parented and
-  // legacy parentless ("Group") decisions; activity-parented decisions
-  // (activityId set) render under the activity card instead.
-  const productDecisions: SectionDecision[] = section.decisions.filter(
-    (d) => d.activityId == null,
+  const activityNameById = new Map(
+    section.activities.map((a) => [a.activityId, a.activityName]),
   );
-  return productDecisions.map((d, idx) => ({
+  // route-activity-records-into-record-sections: product-parented, legacy
+  // parentless ("Group"), AND activity-parented decisions all render in the
+  // Decisions section — activity rows labeled with the activity name.
+  const decisions: SectionDecision[] = section.decisions;
+  return decisions.map((d, idx) => ({
     id: d.id ?? `decision-${idx}`,
     productId: d.productId ?? "",
     productName:
       (d.productId ? projectIndex.get(d.productId)?.name : undefined) ??
-      "Group",
+      (d.activityId != null
+        ? (activityNameById.get(d.activityId) ?? "Unknown")
+        : "Group"),
+    ...(d.activityId != null
+      ? {
+          activityId: d.activityId,
+          activityName: activityNameById.get(d.activityId) ?? "Unknown",
+        }
+      : {}),
     text: d.text,
     owner: d.owner,
     impact: d.impact,
@@ -595,11 +631,10 @@ export function mapLeadDecisions(
   }));
 }
 
-// activity-first-class (Decision 5): one activity rendered as a full card — its
-// own records grouped from the flat section arrays by `activityId`, plus the
-// stored + risk/blocker-derived status and the label-only linked products. The
-// presentation rows carry `activityId`/`activityName` so the record card renders
-// the parent and the edit dialog reopens with the activity pre-selected.
+// route-activity-records-into-record-sections: one attached activity as a
+// STATUS-ONLY card — stored + risk/blocker-derived status and the label-only
+// linked products. The activity's records render in the main record sections
+// (mapLeadItems/mapLeadRisks/mapLeadDecisions include activity-parented rows).
 export interface LeadActivityCard {
   readonly activityId: string;
   readonly activityName: string;
@@ -620,82 +655,19 @@ export interface LeadActivityCard {
     productId: string;
     productName: string;
   }[];
-  readonly currentItems: LeadKanbanItem[];
-  readonly nextItems: LeadKanbanItem[];
-  readonly risks: LeadRiskEntry[];
-  readonly decisions: LeadDecisionEntry[];
 }
 
 export function mapLeadActivityCards(
   section: ReportSectionReadModel,
 ): LeadActivityCard[] {
-  return section.activities.map((activity) => {
-    const ownsRow = (parentId: string | null | undefined): boolean =>
-      parentId === activity.activityId;
-
-    const toItem = (item: SectionItem): LeadKanbanItem => ({
-      id:
-        item.id ??
-        `activity-${activity.activityId}-${item.text.slice(0, ID_TEXT_FRAGMENT_LENGTH)}`,
-      productId: "",
-      productName: activity.activityName,
-      activityId: activity.activityId,
-      activityName: activity.activityName,
-      ...(item.stageIds ? { stageIds: item.stageIds } : {}),
-      status: deriveItemStatus({
-        workflowStatus: item.workflowStatus,
-        type: item.type,
-      }),
-      text: item.text,
-      author: section.authorName,
-      priorityRank: item.priorityRank ?? null,
-    });
-
-    const items = section.items.filter((item) => ownsRow(item.activityId));
-    const risks: LeadRiskEntry[] = section.risks
-      .filter((risk) => ownsRow(risk.activityId))
-      .map((risk, idx) => ({
-        id: risk.id ?? `activity-risk-${activity.activityId}-${idx}`,
-        productId: "",
-        productName: activity.activityName,
-        activityId: activity.activityId,
-        activityName: activity.activityName,
-        stageIds: risk.stageIds,
-        severity: risk.severity ?? "at-risk",
-        text: risk.risk,
-        impact: risk.impact,
-        mitigation: risk.mitigation,
-      }));
-    const decisions: LeadDecisionEntry[] = section.decisions
-      .filter((decision) => ownsRow(decision.activityId))
-      .map((decision, idx) => ({
-        id: decision.id ?? `activity-decision-${activity.activityId}-${idx}`,
-        productId: "",
-        productName: activity.activityName,
-        activityId: activity.activityId,
-        activityName: activity.activityName,
-        text: decision.text,
-        owner: decision.owner,
-        impact: decision.impact,
-        deadline: decision.deadline
-          ? new Date(decision.deadline).toISOString().slice(0, ISO_DATE_LENGTH)
-          : null,
-        stageIds: decision.stageIds,
-      }));
-
-    return {
-      activityId: activity.activityId,
-      activityName: activity.activityName,
-      status: activity.status,
-      derivedStatus: activity.derivedStatus,
-      alarmFloor: activity.alarmFloor ?? null,
-      linkedProducts: activity.linkedProducts,
-      currentItems: items.filter((item) => item.type === "current").map(toItem),
-      nextItems: items.filter((item) => item.type === "next").map(toItem),
-      risks,
-      decisions,
-    };
-  });
+  return section.activities.map((activity) => ({
+    activityId: activity.activityId,
+    activityName: activity.activityName,
+    status: activity.status,
+    derivedStatus: activity.derivedStatus,
+    alarmFloor: activity.alarmFloor ?? null,
+    linkedProducts: activity.linkedProducts,
+  }));
 }
 
 export function mapLeadPriorities(

@@ -37,34 +37,6 @@ interface ActivityStatusSectionProps {
   ) => void;
 }
 
-/** One labeled record list inside an activity card (self-suppresses when empty). */
-function RecordList({
-  label,
-  rows,
-}: {
-  readonly label: string;
-  readonly rows: readonly string[];
-}) {
-  if (rows.length === 0) return null;
-  return (
-    <div>
-      <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-        {label}
-      </span>
-      <ul className="mt-1 space-y-1">
-        {rows.map((text, idx) => (
-          <li
-            key={`${label}-${String(idx)}`}
-            className="text-sm text-[var(--color-foreground)]"
-          >
-            {text}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 /**
  * The activity's traffic-light pill row. Renders the FLOORED value
  * (`derivedStatus ?? status`) and refuses a manual pick below the floor — the
@@ -163,7 +135,9 @@ function ActivityStatusPills({
   );
 }
 
-/** One attached activity as a full card: status pill, linked products, records. */
+/** One attached activity as a status-only card: name, linked products, pill.
+ * Records live in the main Current/Next/Risks/Decisions sections under the
+ * activity's lane (route-activity-records-into-record-sections). */
 function ActivityCard({
   card,
   readOnly,
@@ -178,7 +152,7 @@ function ActivityCard({
 }) {
   const linkedNames = card.linkedProducts.map((p) => p.productName).join(", ");
   return (
-    <li className="space-y-3 rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-white/80 px-4 py-3">
+    <li className="rounded-[var(--radius)] border border-[rgba(0,0,0,0.10)] bg-white/80 px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <span className="block truncate text-sm font-medium text-[var(--color-foreground)]">
@@ -196,13 +170,6 @@ function ActivityCard({
           onStatusChange={onStatusChange}
         />
       </div>
-      <RecordList label="Current" rows={card.currentItems.map((i) => i.text)} />
-      <RecordList label="Next" rows={card.nextItems.map((i) => i.text)} />
-      <RecordList
-        label="Risks & Blockers"
-        rows={card.risks.map((r) => r.text)}
-      />
-      <RecordList label="Decisions" rows={card.decisions.map((d) => d.text)} />
     </li>
   );
 }

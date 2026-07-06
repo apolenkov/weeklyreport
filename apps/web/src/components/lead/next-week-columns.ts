@@ -10,7 +10,39 @@ export interface ItemColumn {
   readonly key: string;
   readonly productId: string;
   readonly productName: string;
+  /**
+   * Set on an activity lane — the column groups activity-parented rows
+   * (route-activity-records-into-record-sections). `productId` is empty and
+   * `productName` carries the activity name on these lanes.
+   */
+  readonly activityId?: string;
   readonly items: KanbanItem[];
+}
+
+/**
+ * One lane per activity that owns rows, in first-appearance order. Unlike
+ * product columns (which render empty for the "+ Add" CTA), an activity lane
+ * exists only when it has rows — creation goes through the dialog's parent
+ * picker, so an empty lane would advertise nothing.
+ */
+function activityLanes(items: KanbanItem[]): ItemColumn[] {
+  const activityRows = items.filter((it) => it.activityId != null);
+  const laneIds = [...new Set(activityRows.map((it) => it.activityId))];
+  return laneIds.flatMap((activityId) => {
+    if (activityId == null) return [];
+    const laneItems = activityRows.filter((it) => it.activityId === activityId);
+    const first = laneItems.at(0);
+    if (!first) return [];
+    return [
+      {
+        key: `activity:${activityId}`,
+        productId: "",
+        productName: first.activityName ?? first.productName,
+        activityId,
+        items: laneItems,
+      },
+    ];
+  });
 }
 
 function groupByProduct(items: KanbanItem[]): Map<string, KanbanItem[]> {
@@ -36,28 +68,38 @@ export function buildItemColumns(
   products: readonly Product[] | undefined,
   items: KanbanItem[],
 ): ItemColumn[] {
+  // Activity rows carry productId "" — they'd match no product column and
+  // silently vanish, so they always route through their own lanes.
+  const productRows = items.filter((it) => it.activityId == null);
+  const lanes = activityLanes(items);
   if (products && products.length > 0) {
-    return products.map((p) => ({
-      key: p.name,
-      productId: p.id,
-      productName: p.name,
-      items: items.filter((it) => it.productId === p.id),
-    }));
+    return [
+      ...products.map((p) => ({
+        key: p.name,
+        productId: p.id,
+        productName: p.name,
+        items: productRows.filter((it) => it.productId === p.id),
+      })),
+      ...lanes,
+    ];
   }
-  return [...groupByProduct(items).entries()].flatMap(
-    ([productName, gItems]) => {
-      const first = gItems.at(0);
-      if (!first) return [];
-      return [
-        {
-          key: productName,
-          productId: first.productId,
-          productName: first.productName,
-          items: gItems,
-        },
-      ];
-    },
-  );
+  return [
+    ...[...groupByProduct(productRows).entries()].flatMap(
+      ([productName, gItems]) => {
+        const first = gItems.at(0);
+        if (!first) return [];
+        return [
+          {
+            key: productName,
+            productId: first.productId,
+            productName: first.productName,
+            items: gItems,
+          },
+        ];
+      },
+    ),
+    ...lanes,
+  ];
 }
 
 /** True when the board has neither items nor any product column to seed. */

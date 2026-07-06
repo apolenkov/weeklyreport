@@ -237,7 +237,10 @@ export function CurrentWeekSection({
                 <div className="min-w-0 flex-1 truncate font-[family-name:var(--font-sans)] text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--color-muted-foreground)]">
                   {col.productName}
                 </div>
-                {!readOnly && hasMultipleProducts && (
+                {/* Activity lanes carry no + Add — creation flows through the
+                    dialog's parent picker; the lane exists only when it has
+                    rows (route-activity-records-into-record-sections). */}
+                {!readOnly && hasMultipleProducts && col.activityId == null && (
                   <button
                     type="button"
                     className="btn-press inline-flex min-h-[var(--touch-target-min)] md:min-h-[28px] flex-shrink-0 items-center gap-1 rounded-[var(--radius-pill)] border border-[rgba(0,117,74,0.18)] bg-[rgba(0,117,74,0.08)] px-3 py-1.5 md:px-2.5 md:py-0.5 text-[11px] font-semibold text-[var(--color-primary)] transition-colors hover:border-[rgba(0,117,74,0.28)] hover:bg-[var(--color-success)]"
