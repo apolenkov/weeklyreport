@@ -124,7 +124,6 @@ describe("mapPrismaToReportSection — referencedProjects", () => {
             tag: "feature",
             workflowStatus: "in_progress",
             carriedOver: false,
-            completed: null,
             priorityRank: null,
             stageNames: [],
             project: { name: "Foreign Project" },
@@ -518,7 +517,6 @@ describe("mapPrismaToReportSection — activity derived-status floor", () => {
     tag: "feature",
     workflowStatus,
     carriedOver: false,
-    completed: null,
     priorityRank: null,
     stageNames: [],
   });

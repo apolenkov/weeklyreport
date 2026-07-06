@@ -193,7 +193,6 @@ export type PrismaReportSectionWithRelations = NonNullable<
     tag: string;
     workflowStatus: string;
     carriedOver: boolean;
-    completed: boolean | null;
     priorityRank: number | null;
     stageNames: string[];
     // fix-lead-surface-name-resolution: ridden along by
@@ -601,7 +600,6 @@ export function mapPrismaToReportSection(
       tag: i.tag,
       workflowStatus: i.workflowStatus,
       carriedOver: i.carriedOver,
-      completed: i.completed,
       priorityRank: i.priorityRank ?? null,
       stageIds: i.stageNames.length > 0 ? i.stageNames : undefined,
       comments: toCommentViews(i.recordComments ?? []),
