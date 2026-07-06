@@ -8,11 +8,11 @@ import {
   invalidateDashboard,
   invalidateLeadForm,
   invalidateLeadHistory,
-} from "../../lib/cache-keys";
-import { mapWeeklyReport } from "../../lib/mappers";
-import { reportHasContent } from "../../lib/mappers/report-content";
-import { SessionContext } from "../../lib/session-provider";
-import { useTRPC } from "../../lib/trpc-context";
+} from "../../../lib/cache-keys";
+import { mapWeeklyReport } from "../../../lib/mappers";
+import { reportHasContent } from "../../../lib/mappers/report-content";
+import { SessionContext } from "../../../lib/session-provider";
+import { useTRPC } from "../../../lib/trpc-context";
 import { PublishLockButton } from "./publish-lock-button";
 
 interface HeadPublishLockActionProps {

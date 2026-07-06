@@ -2,9 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { WeeklyReportPage } from "../../../components/weekly-report/weekly-report-page";
-import { WeeklyReportSkeleton } from "../../../components/weekly-report/weekly-report-skeleton";
 import { useTRPC } from "../../../lib/trpc-context";
+import { WeeklyReportPage } from "./weekly-report-page";
+import { WeeklyReportSkeleton } from "./weekly-report-skeleton";
 
 interface Props {
   readonly reportId: string;

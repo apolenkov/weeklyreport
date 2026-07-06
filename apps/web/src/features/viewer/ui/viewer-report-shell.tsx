@@ -6,9 +6,6 @@ import { Suspense, useCallback, useEffect, useMemo } from "react";
 
 import { HeadSlidesClient } from "../../../components/slides/head-slides-client";
 import { SlideSkeleton } from "../../../components/slides/slide-skeleton";
-import { ExportPdfButton } from "../../../components/weekly-report/export-pdf-button";
-import { WeeklyReportPage } from "../../../components/weekly-report/weekly-report-page";
-import { WeeklyReportSkeleton } from "../../../components/weekly-report/weekly-report-skeleton";
 import { getClientErrorDetails } from "../../../lib/client-error-reporting";
 import {
   formatDateRange,
@@ -21,8 +18,11 @@ import { ReportToolbar } from "../../../shared/ui/report-shell/report-toolbar";
 import { ScopeToggle } from "../../../shared/ui/report-shell/scope-toggle";
 import { useReportShellUrlState } from "../../../shared/ui/report-shell/use-report-shell-url-state";
 import { ViewModeToggle } from "../../../shared/ui/report-shell/view-mode-toggle";
+import { ExportPdfButton } from "../../pdf-export/ui/export-pdf-button";
 import { PeriodNavigator } from "../../period/ui/period-navigator";
 import type { ReportPeriod } from "../../report-sections/model/mock-data";
+import { WeeklyReportPage } from "../../report-sections/ui/weekly-report-page";
+import { WeeklyReportSkeleton } from "../../report-sections/ui/weekly-report-skeleton";
 
 // Module-scope so the reference is stable across renders — a fresh literal would
 // churn the hook's `buildQuery` memoization. The viewer strips the one-shot

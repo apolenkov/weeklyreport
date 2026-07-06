@@ -22,7 +22,7 @@ import type {
   ReportDecision,
   ReportItem,
   ReportRisk,
-} from "../../shared/lib/dashboard-mock-data";
+} from "../../../shared/lib/dashboard-mock-data";
 import { ProductAccordion } from "./product-accordion";
 
 function makeReport(overrides?: Partial<ProductReport>): ProductReport {

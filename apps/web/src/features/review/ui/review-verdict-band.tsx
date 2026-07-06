@@ -2,7 +2,7 @@
 
 import type { ReportSectionReadModel } from "@customreport/shared";
 
-import type { SectionReviewRow } from "./section-review-rows";
+import type { SectionReviewRow } from "../model/section-review-rows";
 import { SectionVerdictControl } from "./section-verdict-control";
 
 function statusLabel(status: ReportSectionReadModel["status"]): string {
