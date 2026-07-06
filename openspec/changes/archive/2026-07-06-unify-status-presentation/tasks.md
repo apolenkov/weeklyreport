@@ -89,7 +89,7 @@
 
 ## 4. Planning + docs
 
-- [ ] 4.1 Update `openspec/specs` on archive so `status-presentation-model`
+- [x] 4.1 Update `openspec/specs` on archive so `status-presentation-model`
       becomes a durable spec. (Deferred to archive step — not run here.)
 - [x] 4.2 No `eslint.config.ts` exempt entry needed: the new module and every
       re-pointed file are eslint-clean at `--max-warnings 0` with no exemption.
