@@ -24,7 +24,7 @@ const PROJECT_A = "44444444-4444-4444-8444-444444444444";
 const PROJECT_B = "55555555-5555-4555-8555-555555555555";
 const ACTIVITY_A = "77777777-7777-4777-8777-777777777777";
 
-/** One attached activity for route-activity-records tests. */
+/** One attached activity for the activity-lane routing tests. */
 const activityA = {
   activityId: ACTIVITY_A,
   activityName: "Jira triage duty",
@@ -716,8 +716,8 @@ describe("mapLeadItems", () => {
     expect(mapped?.productName).toBe("Unknown");
   });
 
-  // route-activity-records-into-record-sections: activity-parented rows render
-  // in the main sections under an activity lane, no longer only in the card.
+  // Activity-parented rows render in the main sections under an activity
+  // lane, no longer only in the card.
   it("includes an activity-parented item with the activity as its display parent", () => {
     const section = baseSection({
       activities: [activityA],
@@ -790,8 +790,8 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
     expect(mapped?.productName).toBe("Group");
   });
 
-  // route-activity-records-into-record-sections: activity risks/decisions
-  // surface in the main sections labeled with the activity name.
+  // Activity risks/decisions surface in the main sections labeled with the
+  // activity name.
   it("includes an activity-parented risk labeled with the activity name", () => {
     const section = baseSection({
       activities: [activityA],

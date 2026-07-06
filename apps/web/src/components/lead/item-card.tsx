@@ -109,11 +109,10 @@ function deriveCardStatus(
       alarmLocked: false,
     };
   }
-  // Stored `blocked` is unrepresentable (rework-item-status-model): the DB
-  // CHECK and Zod reject it, and workflowToItemStatus never produces it — an
-  // own item's status arrives here as a pure Progress value. `blocked` appears
-  // only as the risk-derived alarm below (or pre-baked on foreign rows, which
-  // returned early above).
+  // Stored `blocked` is unrepresentable: the DB CHECK and Zod reject it, and
+  // workflowToItemStatus never produces it — an own item's status arrives here
+  // as a pure Progress value. `blocked` appears only as the risk-derived alarm
+  // below (or pre-baked on foreign rows, which returned early above).
   const covering =
     item.activityId == null && item.productId !== ""
       ? coveringRisksForItem(item, risks)

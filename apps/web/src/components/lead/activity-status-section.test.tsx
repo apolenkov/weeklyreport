@@ -35,8 +35,8 @@ const activities: LeadActivityCard[] = [
 ];
 
 describe("ActivityStatusSection", () => {
-  // route-activity-records-into-record-sections: the card is status-only —
-  // records render in the main record sections under the activity's lane.
+  // The card is status-only — records render in the main record sections
+  // under the activity's lane.
   it("renders one status-only card per activity with linked products", () => {
     render(
       <ActivityStatusSection

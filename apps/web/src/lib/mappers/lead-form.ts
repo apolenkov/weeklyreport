@@ -507,10 +507,10 @@ export function mapLeadItems(
   const activityNameById = new Map(
     section.activities.map((a) => [a.activityId, a.activityName]),
   );
-  // route-activity-records-into-record-sections: rows with EITHER parent render
-  // in the week sections — product rows under their product column, activity
-  // rows under their activity lane (buildItemColumns). A row with neither
-  // parent is malformed and stays excluded.
+  // Rows with EITHER parent render in the week sections — product rows under
+  // their product column, activity rows under their activity lane
+  // (buildItemColumns). A row with neither parent is malformed and stays
+  // excluded.
   return section.items
     .filter(
       (item) =>
@@ -568,8 +568,8 @@ export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
   const activityNameById = new Map(
     section.activities.map((a) => [a.activityId, a.activityName]),
   );
-  // route-activity-records-into-record-sections: activity-parented risks render
-  // in the Risks section labeled with the activity name, beside product risks.
+  // Activity-parented risks render in the Risks section labeled with the
+  // activity name, beside product risks.
   return section.risks
     .filter((r) => r.projectId != null || r.activityId != null)
     .map((r, idx) => {
@@ -603,9 +603,9 @@ export function mapLeadDecisions(
   const activityNameById = new Map(
     section.activities.map((a) => [a.activityId, a.activityName]),
   );
-  // route-activity-records-into-record-sections: product-parented, legacy
-  // parentless ("Group"), AND activity-parented decisions all render in the
-  // Decisions section — activity rows labeled with the activity name.
+  // Product-parented, legacy parentless ("Group"), AND activity-parented
+  // decisions all render in the Decisions section — activity rows labeled
+  // with the activity name.
   const decisions: SectionDecision[] = section.decisions;
   return decisions.map((d, idx) => ({
     id: d.id ?? `decision-${idx}`,
@@ -631,10 +631,10 @@ export function mapLeadDecisions(
   }));
 }
 
-// route-activity-records-into-record-sections: one attached activity as a
-// STATUS-ONLY card — stored + risk/blocker-derived status and the label-only
-// linked products. The activity's records render in the main record sections
-// (mapLeadItems/mapLeadRisks/mapLeadDecisions include activity-parented rows).
+// One attached activity as a STATUS-ONLY card — stored + risk/blocker-derived
+// status and the label-only linked products. The activity's records render in
+// the main record sections (mapLeadItems/mapLeadRisks/mapLeadDecisions
+// include activity-parented rows).
 export interface LeadActivityCard {
   readonly activityId: string;
   readonly activityName: string;
