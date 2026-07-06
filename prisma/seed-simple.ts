@@ -51,6 +51,7 @@ import {
   UserActionStatus,
 } from "@prisma/client";
 import { assertNonProdDestructive } from "./_destructive-guard.js";
+import { assertSeedCoverage } from "./seed-coverage-check.js";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -1005,7 +1006,7 @@ async function main() {
       status: ItemWorkflowStatus;
       carriedOver?: boolean;
     }[];
-    nextItems: { text: string; tag: string }[];
+    nextItems: { text: string; tag: string; status?: ItemWorkflowStatus }[];
     risk?: {
       risk: string;
       impact: string;
@@ -1039,10 +1040,22 @@ async function main() {
           status: ItemWorkflowStatus.in_progress,
           carriedOver: true,
         },
+        // Paused exemplar — the middle tier must show every Progress state.
+        {
+          text: "Миграция шаблонов писем на паузе: ждём финальный брендбук",
+          tag: "feature",
+          status: ItemWorkflowStatus.paused,
+        },
       ],
       nextItems: [
         { text: "Запланировал ревью архитектуры с командой PEO", tag: "ops" },
         { text: "Подготовка демо для квартального ревью", tag: "feature" },
+        // Postponed exemplar — consciously pushed beyond this period.
+        {
+          text: "Апгрейд SDK статистики отложили до стабилизации API партнёра",
+          tag: "infra",
+          status: ItemWorkflowStatus.postponed,
+        },
       ],
       risk: {
         risk: "Риск: внешний API контрагента нестабилен на пике трафика",
@@ -1521,9 +1534,9 @@ async function main() {
           idx === 0 ? lead.productId : SECONDARY[idx % SECONDARY.length]!,
         text: it.text,
         tag: it.tag,
-        // Next-week items are stored planned work — the per-type CHECK
-        // constraint requires ItemWorkflowStatus.planned or .postponed here.
-        workflowStatus: ItemWorkflowStatus.planned,
+        // Next-week items default to planned — the per-type CHECK constraint
+        // allows only ItemWorkflowStatus.planned or .postponed here.
+        workflowStatus: it.status ?? ItemWorkflowStatus.planned,
         carriedOver: false,
         stageNames: [stageFor(idx + 100)],
       })),
@@ -2346,6 +2359,7 @@ async function main() {
   console.log(
     `[seed-simple] Active period: ${ACTIVE_MONDAY.toISOString().slice(0, 10)}..${ACTIVE_SUNDAY.toISOString().slice(0, 10)}`,
   );
+  await assertSeedCoverage(prisma, "seed-simple");
 }
 
 main()

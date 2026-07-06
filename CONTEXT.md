@@ -249,12 +249,6 @@ without the stage chip. Distinct from a **foreign-owned stage**, which IS assign
 _Avoid_: vacant chip / grey stage (an unassigned stage is excluded, not rendered
 greyed).
 
-**Workflow status** (of an item):
-`in-progress` / `completed` / `blocked` / `planned`. Surfaced via the row's left
-stripe or a dedicated marker — deliberately decoupled from the stage chip so one
-control carries one meaning.
-_Avoid_: stage (a stage is the SDLC phase, not the progress state).
-
 **Позиция / Record (запись)**:
 The umbrella for the four kinds of report line a lead authors in a section — a
 current-week item, a next-week item, a risk, and a decision. Russian: _позиция_;
@@ -284,7 +278,9 @@ consciously pushed beyond this period; postponed work is NOT auto-carried —
 re-planning it is an explicit call. Neither paused nor postponed raises any
 alarm. (Model locked in `rework-item-status-model`.)
 _Avoid_: blocked as an item status (that is an Alarm, see below); "completed"
-as a separate flag (done-ness lives in the status).
+as a separate flag (done-ness lives in the status); stage (a stage is the SDLC
+phase, not the progress state); "workflow status" as a separate term (this IS
+the stored `workflowStatus`).
 
 **Alarm (derived severity)**:
 The at-risk/blocked severity an item DISPLAYS, always derived from its covering

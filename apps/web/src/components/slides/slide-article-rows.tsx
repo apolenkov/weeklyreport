@@ -180,9 +180,12 @@ function ItemRow({
 }) {
   const srLabel = TONE_SR_LABEL[row.tone];
   // Every row is the same two-line card (short text still occupies two lines,
-  // longer text clamps to an ellipsis). Hover shows the status, not the text
-  // — badges and icons ride the text inline, so nothing indents the body.
-  const statusTooltip = useHoverTooltip<HTMLLIElement>(row.hoverLabel);
+  // longer text clamps to an ellipsis). Hover shows the status plus the full
+  // text — unconditionally, so a clamped row never hides its tail behind the
+  // ellipsis. Badges and icons ride the text inline, so nothing indents the body.
+  const statusTooltip = useHoverTooltip<HTMLLIElement>(
+    `${row.hoverLabel}\n${row.text}`,
+  );
   return (
     <li
       {...statusTooltip}

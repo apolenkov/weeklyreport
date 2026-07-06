@@ -52,6 +52,7 @@ import {
 } from "@prisma/client";
 
 import { assertNonProdDestructive } from "./_destructive-guard.js";
+import { assertSeedCoverage } from "./seed-coverage-check.js";
 import {
   HEAD_USER_ID,
   VIEWER_USER_ID,
@@ -258,7 +259,7 @@ const SMALL_DATASET: TierDataset = {
           // Done exemplar: the small demo must show every status treatment.
           status: ItemWorkflowStatus.done,
           stages: ["Development"],
-          priorityRank: 1,
+          priorityRank: 2,
         },
         {
           type: ItemType.next,
@@ -308,7 +309,7 @@ const SMALL_DATASET: TierDataset = {
           tag: "feature",
           status: ItemWorkflowStatus.in_progress,
           stages: ["Development", "Testing"],
-          priorityRank: 1,
+          priorityRank: 3,
         },
         {
           type: ItemType.next,
@@ -555,6 +556,13 @@ function buildHugeDataset(): TierDataset {
 
   const sections: DemoSection[] = SEED_PRODUCTS.map((p, idx) => {
     const stage = HUGE_STAGE_ROTATION[idx % HUGE_STAGE_ROTATION.length]!;
+    // Ranks are per-author: the lead's first three products get P1..P3 (in
+    // product order), the rest stay unranked — a slide never shows duplicate
+    // ranks or a wall of P1s.
+    const rankWithinLead = SEED_PRODUCTS.filter(
+      (sp) => sp.leadId === p.leadId,
+    ).findIndex((sp) => sp.id === p.id);
+    const priorityRank = rankWithinLead < 3 ? rankWithinLead + 1 : null;
     // Every 5th product is blocked+red, every 3rd is at-risk+yellow, else green.
     const blocked = idx % 5 === 0;
     const atRisk = !blocked && idx % 3 === 0;
@@ -577,11 +585,19 @@ function buildHugeDataset(): TierDataset {
       items: [
         {
           type: ItemType.current,
-          text: `Работы по продукту «${p.name}» на этапе ${stage}`,
+          // Every 7th product pauses its lead work so the huge tier shows the
+          // full Progress vocabulary, not just in-progress/done/planned.
+          text:
+            idx % 7 === 1
+              ? `Работы по продукту «${p.name}» на паузе: ждём внешнюю команду`
+              : `Работы по продукту «${p.name}» на этапе ${stage}`,
           tag: "feature",
-          status: ItemWorkflowStatus.in_progress,
+          status:
+            idx % 7 === 1
+              ? ItemWorkflowStatus.paused
+              : ItemWorkflowStatus.in_progress,
           stages: [stage],
-          priorityRank: 1,
+          ...(priorityRank === null ? {} : { priorityRank }),
         },
         {
           type: ItemType.current,
@@ -592,9 +608,16 @@ function buildHugeDataset(): TierDataset {
         },
         {
           type: ItemType.next,
-          text: `Следующий фокус по продукту «${p.name}»`,
+          // Every 7th product (offset 3) postpones its next-week focus.
+          text:
+            idx % 7 === 3
+              ? `Следующий фокус по продукту «${p.name}» отложен на следующий цикл`
+              : `Следующий фокус по продукту «${p.name}»`,
           tag: "ops",
-          status: ItemWorkflowStatus.planned,
+          status:
+            idx % 7 === 3
+              ? ItemWorkflowStatus.postponed
+              : ItemWorkflowStatus.planned,
           stages: [stage],
         },
       ],
@@ -644,15 +667,17 @@ async function wipe(): Promise<void> {
   // Activity statuses drop before their activities (RESTRICT), activities
   // before ReportingGroup/User/Project.
   await prisma.activityStatus.deleteMany({});
-  await prisma.projectActivityLead.deleteMany({});
-  await prisma.projectActivityProduct.deleteMany({});
-  await prisma.projectActivity.deleteMany({});
   await prisma.reminderExecution.deleteMany({});
   await prisma.reminderRule.deleteMany({});
   await prisma.reminderPolicy.deleteMany({});
   await prisma.decision.deleteMany({});
   await prisma.risk.deleteMany({});
   await prisma.item.deleteMany({});
+  // Activities go only after their referencing records (items/risks/decisions
+  // carry activityId) — the reverse order trips the FK on a populated DB.
+  await prisma.projectActivityLead.deleteMany({});
+  await prisma.projectActivityProduct.deleteMany({});
+  await prisma.projectActivity.deleteMany({});
   await prisma.stageStatus.deleteMany({});
   await prisma.projectStatus.deleteMany({});
   await prisma.reopenRequest.deleteMany({});
@@ -1050,7 +1075,7 @@ async function seedPriorLeadSection(
       submittedAt,
     },
   });
-  for (const c of contributions) {
+  for (const [index, c] of contributions.entries()) {
     await prisma.projectStatus.create({
       data: {
         id: makeRowId(),
@@ -1070,7 +1095,9 @@ async function seedPriorLeadSection(
         workflowStatus: ItemWorkflowStatus.done,
         carriedOver: false,
         stageNames: [c.ownedStages[0] ?? "Development"],
-        priorityRank: 1,
+        // Ranks are per-author — the prior period keeps the same P1..P3
+        // spread as the active one instead of stamping P1 on every product.
+        priorityRank: index < 3 ? index + 1 : null,
       },
     });
   }
@@ -1328,6 +1355,7 @@ async function seedDemo(tier: Tier): Promise<void> {
     decisions: await prisma.decision.count(),
   };
   console.log(`[seed-demo:${tier}] Done: ${JSON.stringify(counts)}`);
+  await assertSeedCoverage(prisma, `seed-demo:${tier}`);
 }
 
 function parseTier(): Tier {

@@ -28,6 +28,35 @@ describe("workflowToItemStatus / itemStatusToWorkflow round-trip", () => {
   );
 });
 
+describe("stored blocked is unrepresentable", () => {
+  const ALL_WORKFLOW: readonly ItemWorkflowStatus[] = [
+    "planned",
+    "in_progress",
+    "paused",
+    "postponed",
+    "done",
+  ];
+
+  it.each(ALL_WORKFLOW)(
+    "workflowToItemStatus('%s') never yields the risk-derived 'blocked'",
+    (workflowStatus) => {
+      expect(workflowToItemStatus(workflowStatus)).not.toBe("blocked");
+    },
+  );
+
+  it.each(ALL_WORKFLOW)(
+    "deriveItemStatus never yields 'blocked' for '%s' on either week",
+    (workflowStatus) => {
+      expect(deriveItemStatus({ workflowStatus, type: "current" })).not.toBe(
+        "blocked",
+      );
+      expect(deriveItemStatus({ workflowStatus, type: "next" })).not.toBe(
+        "blocked",
+      );
+    },
+  );
+});
+
 describe("deriveItemStatus", () => {
   it("returns 'completed' for current item with workflowStatus 'done'", () => {
     expect(deriveItemStatus({ workflowStatus: "done", type: "current" })).toBe(

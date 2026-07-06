@@ -96,9 +96,17 @@ export function SlidePriorityStrip({
             className="flex min-w-[180px] max-w-[320px] flex-1 flex-col gap-1.5 rounded-[10px] border border-[var(--color-chip-at-risk-border)] bg-[var(--color-chip-at-risk-bg)] p-2.5"
           >
             <div className="flex items-start gap-1.5">
-              {/* Rank keeps its own semantic tint — author identity lives in
-                  the initials badge below, so the colors never compete. */}
-              <span className="inline-flex h-[15px] shrink-0 items-center rounded bg-[var(--color-status-dot-at-risk)] px-1 text-[8px] font-semibold text-white">
+              {/* The rank badge wears its author's identity color, answering
+                  "whose priority" at a glance; pastel backgrounds need the
+                  dark foreground text, never white. */}
+              <span
+                className="inline-flex h-[15px] shrink-0 items-center rounded px-1 text-[8px] font-semibold text-[var(--color-foreground)]"
+                style={
+                  author === undefined
+                    ? undefined
+                    : { background: authorSlotBackground(author) }
+                }
+              >
                 P{card.rank}
               </span>
               <span className="min-w-0 whitespace-normal break-words text-xs text-[var(--color-foreground)]">

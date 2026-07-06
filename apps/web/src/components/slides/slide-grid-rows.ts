@@ -37,8 +37,8 @@ export interface GridRow {
   /** False on 2nd+ rows of a same-author series — the badge is omitted. */
   readonly showAuthorBadge: boolean;
   readonly tone: GridTone;
-  /** Status word shown on hover — the frame stays word-free, the tooltip
-   * carries the status instead of repeating the row text. */
+  /** Status word shown on hover — the frame stays word-free; the tooltip
+   * pairs this status with the full row text (which the row itself clamps). */
   readonly hoverLabel: string;
   readonly stageNames: readonly string[];
 }
