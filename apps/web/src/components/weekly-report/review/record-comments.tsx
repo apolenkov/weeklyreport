@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { invalidateReview } from "../../../lib/cache-keys";
 import { useTRPC } from "../../../lib/trpc-context";
-import { ReviewCommentList } from "../../review/review-comment-list";
+import { ReviewCommentList } from "../../../shared/ui/review-comment-list";
 
 /** A comment anchors to exactly one concrete record. */
 export interface RecordCommentAnchor {
