@@ -265,9 +265,8 @@ and the unit quick-entry creates and moves (see `unified-activity-entry`).
 A позиция that has appeared in a PUBLISHED report can never be deleted — only
 RESOLVED (marked done) or carried forward; one that has only ever been a
 never-published draft CAN be deleted (an uncommitted mistake — typo, duplicate,
-wrong product). It moves between derived states kanban-style — _done_ closes it;
-_in-progress / blocked / planned-next / deferred_ (the `unified-activity-entry`
-buckets) keep it open — and open work is not lost at the period boundary (the
+wrong product). It moves between states kanban-style — _done_ closes it; the other Progress
+states (see _Progress (item status)_) keep it open — and open work is not lost at the period boundary (the
 exact carry scope is a spec/design detail; carry-over today covers items and
 decisions). A delete-locked позиция shows a marker saying why. See ADR 0015. _Future:_ AI-assisted
 entry — the lead types free text and an agent classifies and structures it into a
@@ -275,6 +274,24 @@ entry — the lead types free text and an agent classifies and structures it int
 stage); this is the capability the inert _Agent-review_ placeholder foreshadows.
 _Avoid_: English "position" (that is the HR job title); deleting a published позиция
 to make it go away (resolve or carry it forward instead).
+
+**Progress (item status)**:
+The stored `workflowStatus` of an item — what the lead SAYS about the work:
+`planned | in_progress | paused | postponed | done`. Each item type owns a
+subset: current-week → in progress / paused / done; next-week → planned /
+postponed. **Paused** = on hold, the lead intends to resume. **Postponed** =
+consciously pushed beyond this period; postponed work is NOT auto-carried —
+re-planning it is an explicit call. Neither paused nor postponed raises any
+alarm. (Model locked in `rework-item-status-model`.)
+_Avoid_: blocked as an item status (that is an Alarm, see below); "completed"
+as a separate flag (done-ness lives in the status).
+
+**Alarm (derived severity)**:
+The at-risk/blocked severity an item DISPLAYS, always derived from its covering
+risks — never stored on the item. Creating a blocker (a blocked-severity risk)
+is the only way an item reads blocked; resolving the risk releases the item.
+_Avoid_: "blocked item status", "setting an item to at-risk" (you create or
+resolve a risk instead).
 
 **Decision**:
 A choice a lead needs leadership to make, phrased as a yes/no or short
