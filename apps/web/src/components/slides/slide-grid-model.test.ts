@@ -130,7 +130,7 @@ describe("buildSlideGridModel — status marks and columns", () => {
     expect(cols.current.map((r) => r.tone)).toEqual(["completed", "neutral"]);
     expect(cols.next.map((r) => r.tone)).toEqual(["neutral"]);
     expect(cols.risks.map((r) => r.tone)).toEqual(["at-risk", "blocked"]);
-    expect(cols.decisions.map((r) => r.tone)).toEqual(["neutral"]);
+    expect(cols.decisions.map((r) => r.tone)).toEqual(["note"]);
   });
 
   it("collects the slide's stage names once, in canonical order", () => {

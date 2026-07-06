@@ -57,7 +57,7 @@ export function buildForeignRows(
           ...base,
           id: decision.id,
           text: decision.text.trim(),
-          tone: "neutral",
+          tone: "note",
           stageNames: sortStageNames(decision.stageNames),
         },
       }),

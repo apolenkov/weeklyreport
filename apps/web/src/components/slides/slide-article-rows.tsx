@@ -64,6 +64,7 @@ function AuthorBadge({
  * carry their tint — no status words on the row. */
 const TONE_BORDER: Record<GridTone, string> = {
   neutral: "border-dashed border-[rgba(0,0,0,0.18)]",
+  note: "border-[rgba(0,0,0,0.10)]",
   completed:
     "border-[var(--color-chip-on-track-border)] bg-[var(--color-chip-on-track-bg)]",
   "at-risk":
@@ -76,6 +77,7 @@ const TONE_BORDER: Record<GridTone, string> = {
  * and grayscale print. Neutral rows stay silent (expected state). */
 const TONE_SR_LABEL: Record<GridTone, string | null> = {
   neutral: null,
+  note: null,
   completed: "Completed",
   "at-risk": "At risk",
   blocked: "Blocked",
@@ -206,7 +208,7 @@ export function SlideCell({
     );
   }
   return (
-    <ul aria-label={label} className="min-w-0 space-y-1">
+    <ul aria-label={label} className="min-w-0 space-y-1.5">
       {rows.map((row) => (
         <ItemRow
           key={row.id}
