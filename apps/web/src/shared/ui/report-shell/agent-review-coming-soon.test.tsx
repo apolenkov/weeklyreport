@@ -74,7 +74,7 @@ vi.mock("../../../features/report-sections/ui/weekly-report-skeleton", () => ({
 }));
 
 // RoleGate: pass children straight through for the lead preview test.
-vi.mock("../../../components/role-gate", () => ({
+vi.mock("../role-gate", () => ({
   RoleGate: ({ children }: { children: ReactElement }) => children,
 }));
 

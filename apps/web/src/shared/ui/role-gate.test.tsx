@@ -3,14 +3,14 @@ import { render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { roleHomePath } from "../lib/role-home";
+import { roleHomePath } from "../../lib/role-home";
 // `server-only` inside get-server-session is aliased to a stub in
 // apps/web/vitest.config.ts, so the module itself is importable here; the
 // network-touching getServerSession is mocked below.
-import { getServerSession } from "../lib/server/get-server-session";
+import { getServerSession } from "../../lib/server/get-server-session";
 import { RoleGate } from "./role-gate";
 
-vi.mock("../lib/server/get-server-session", () => ({
+vi.mock("../../lib/server/get-server-session", () => ({
   getServerSession: vi.fn(),
 }));
 

@@ -15,14 +15,14 @@ vi.mock("../lib/server/get-org-public", () => ({
 
 // Stub client-only components that would fail in a jsdom render of the
 // full RSC tree (they are not under test here).
-vi.mock("../components/agentation-devtools", () => ({
+vi.mock("../shared/ui/agentation-devtools", () => ({
   AgentationDevtools: () => null,
 }));
-vi.mock("../components/error-boundary", () => ({
+vi.mock("../shared/ui/error-boundary", () => ({
   QueryErrorBoundary: ({ children }: { readonly children: React.ReactNode }) =>
     children,
 }));
-vi.mock("../components/web-vitals-reporter", () => ({
+vi.mock("../features/telemetry/ui/web-vitals-reporter", () => ({
   WebVitalsReporter: () => null,
 }));
 vi.mock("../lib/trpc-provider", () => ({

@@ -1,7 +1,7 @@
 import type { Role } from "@customreport/shared";
 import type { ReactNode } from "react";
 
-import { RoleGate } from "../../../../components/role-gate";
+import { RoleGate } from "../../../../shared/ui/role-gate";
 
 /** Nested role gate for the head weekly-report submission surface. */
 const REQUIRED: readonly Role[] = ["head", "admin"];

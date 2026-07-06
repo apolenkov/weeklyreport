@@ -77,7 +77,7 @@ vi.mock("./lead-summary-table", () => ({
   LeadSummaryTable: () => <div>Lead summary</div>,
 }));
 
-vi.mock("../../../components/ui/confirmation-dialog", () => ({
+vi.mock("../../../shared/ui/confirmation-dialog", () => ({
   ConfirmationDialog: () => null,
 }));
 

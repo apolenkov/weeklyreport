@@ -3,11 +3,11 @@ import "../styles/app.css";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-import { AgentationDevtools } from "../components/agentation-devtools";
-import { QueryErrorBoundary } from "../components/error-boundary";
-import { WebVitalsReporter } from "../components/web-vitals-reporter";
+import { WebVitalsReporter } from "../features/telemetry/ui/web-vitals-reporter";
 import { getOrgPublic } from "../lib/server/get-org-public";
 import { TRPCProvider } from "../lib/trpc-provider";
+import { AgentationDevtools } from "../shared/ui/agentation-devtools";
+import { QueryErrorBoundary } from "../shared/ui/error-boundary";
 
 type RootLayoutProps = Readonly<{
   children: ReactNode;
