@@ -49,11 +49,11 @@ interface ItemCardProps {
    */
   readonly onTextSave?: (id: string, nextText: string) => void;
   /**
-   * record-status-derived-from-risk: the section's own risks. The card's
-   * at-risk/blocked pill is DERIVED from the covering risks (never a free item
-   * status), mirroring the stage-chip render floor. Only product-parented
-   * in-progress items derive an alarm; an activity item's severity stays
-   * isolated (Q1 Phase-1 lock), so the activity section passes none.
+   * The section's own risks. The card's at-risk/blocked pill is DERIVED from
+   * the covering risks (never a free item status), mirroring the stage-chip
+   * render floor. Only product-parented in-progress items derive an alarm; an
+   * activity item's severity stays isolated by design, so the activity
+   * section passes none.
    */
   readonly risks?: readonly RiskEntry[];
 }

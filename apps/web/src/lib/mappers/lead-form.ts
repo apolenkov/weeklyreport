@@ -538,16 +538,16 @@ export function mapLeadItems(
         ...(item.activityId != null
           ? { activityId: item.activityId, activityName }
           : {}),
-        // UFB-073 (R1): stage array from DB. Surfaces on the kanban card and
-        // groups items by product+stage. Falls back to undefined for
-        // legacy rows seeded before the column existed.
+        // Stage array from DB — surfaces on the kanban card and groups items
+        // by product+stage. Undefined for legacy rows seeded before the
+        // column existed.
         ...(item.stageIds ? { stageIds: item.stageIds } : {}),
         status,
         text: item.text,
         author: section.authorName,
-        // F1: carry priorityRank into the bound KanbanItem so ItemEditDialog
-        // re-populates the field on reopen (was dropped → empty field after
-        // reload even though the value persisted + showed in the priorities view).
+        // priorityRank rides the bound KanbanItem so ItemEditDialog
+        // re-populates the field on reopen (dropping it left the field empty
+        // after reload even though the value persisted).
         priorityRank: item.priorityRank ?? null,
       };
     });
@@ -586,7 +586,7 @@ export function mapLeadRisks(section: ReportSectionReadModel): LeadRiskEntry[] {
         ...(r.activityId != null
           ? { activityId: r.activityId, activityName }
           : {}),
-        // UFB-073 (R1): stage array from DB; legacy rows fall back to undefined.
+        // Stage array from DB; legacy rows fall back to undefined.
         stageIds: r.stageIds,
         severity: r.severity ?? "at-risk",
         text: r.risk,

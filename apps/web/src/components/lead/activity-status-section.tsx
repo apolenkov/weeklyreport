@@ -40,7 +40,7 @@ interface ActivityStatusSectionProps {
 /**
  * The activity's traffic-light pill row. Renders the FLOORED value
  * (`derivedStatus ?? status`) and refuses a manual pick below the floor — the
- * pill analogue of the stage-chip click interception (Decision 5). The stored
+ * pill analogue of the stage-chip click interception. The stored
  * status is preserved, so clearing the covering risk restores the lead's choice.
  */
 function ActivityStatusPills({
@@ -58,7 +58,7 @@ function ActivityStatusPills({
   const [refused, setRefused] = useState(false);
   // The enforceable floor is the RECORD-ONLY alarmFloor (covering risks/blockers),
   // NOT derivedStatus — which folds in the lead's own stored choice and would
-  // wrongly lock a status the lead raised themselves (Decision 5).
+  // wrongly lock a status the lead raised themselves.
   const floor = card.alarmFloor;
   const stored: TrafficLightStatus = card.status ?? "green";
   // Display the lead's current pick floored by the alarm, computed client-side so
@@ -76,7 +76,7 @@ function ActivityStatusPills({
     setRefused(false);
     // When the alarm floor sits ABOVE the lead's stored choice the pill is showing
     // the floor, not their pick — clicking it must NOT overwrite the lower stored
-    // value, so clearing the covering risk restores it (Decision 5). When stored
+    // value, so clearing the covering risk restores it. When stored
     // is at/above the floor, a pick is a genuine change and writes through.
     if (
       floor != null &&
