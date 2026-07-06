@@ -195,7 +195,6 @@ export interface CrossAuthorSectionRow {
     tag: string;
     workflowStatus: string;
     carriedOver: boolean;
-    completed: boolean | null;
     priorityRank: number | null;
     stageNames: string[];
   }[];
