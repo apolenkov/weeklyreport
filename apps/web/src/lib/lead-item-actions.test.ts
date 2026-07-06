@@ -1,7 +1,11 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
-import { markCompletePatch, moveToNextWeekPatch } from "./lead-item-actions";
+import {
+  markCompletePatch,
+  moveToCurrentWeekPatch,
+  moveToNextWeekPatch,
+} from "./lead-item-actions";
 
 type LeadItem = ReportSectionReadModel["items"][number];
 
@@ -37,6 +41,26 @@ describe("moveToNextWeekPatch", () => {
     // key on stableId, so the move must not touch it.
     expect(moved.stableId).toBe("22222222-2222-4222-8222-222222222222");
     expect(moved.id).toBe("11111111-1111-4111-8111-111111111111");
+  });
+});
+
+describe("moveToCurrentWeekPatch", () => {
+  it("pulls a next-week item back as fresh in-progress current work", () => {
+    expect(moveToCurrentWeekPatch()).toEqual({
+      type: "current",
+      workflowStatus: "in_progress",
+      carriedOver: false,
+    });
+  });
+
+  it("round-trips with moveToNextWeekPatch, preserving durable identity", () => {
+    const deferred = { ...carriedItem(), ...moveToNextWeekPatch() };
+    const pulledBack = { ...deferred, ...moveToCurrentWeekPatch() };
+    expect(pulledBack.type).toBe("current");
+    expect(pulledBack.workflowStatus).toBe("in_progress");
+    expect(pulledBack.carriedOver).toBe(false);
+    expect(pulledBack.stableId).toBe("22222222-2222-4222-8222-222222222222");
+    expect(pulledBack.id).toBe("11111111-1111-4111-8111-111111111111");
   });
 });
 

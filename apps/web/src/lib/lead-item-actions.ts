@@ -29,3 +29,15 @@ export function markCompletePatch(): Partial<LeadItem> {
 export function moveToNextWeekPatch(): Partial<LeadItem> {
   return { type: "next", workflowStatus: "postponed", carriedOver: false };
 }
+
+/**
+ * "Move to current week": pull a next-week (planned/postponed) item back into
+ * the current week as active work. Mirror of `moveToNextWeekPatch` — the same
+ * `carriedOver: false` reset applies so the automatic carry-over's copy filter
+ * still sees the relocated row, and `workflowStatus: "in-progress"` reflects
+ * that the pulled-in item is now this week's in-flight work. The `stableId`
+ * lineage is untouched, so the published-lock and comment anchors still hold.
+ */
+export function moveToCurrentWeekPatch(): Partial<LeadItem> {
+  return { type: "current", workflowStatus: "in_progress", carriedOver: false };
+}

@@ -33,6 +33,8 @@ interface ItemCardProps {
   readonly onMarkComplete?: (id: string) => void;
   /** In-place move action; see ItemCardActions. */
   readonly onMoveToNextWeek?: (id: string) => void;
+  /** In-place move action: pull a next-week item back into the current week. */
+  readonly onMoveToCurrentWeek?: (id: string) => void;
   readonly readOnly?: boolean;
   /**
    * When true, the card renders an inline textarea seeded with `item.text`
@@ -137,6 +139,7 @@ export function ItemCard({
   publishedLocked = false,
   onMarkComplete,
   onMoveToNextWeek,
+  onMoveToCurrentWeek,
   readOnly = false,
   isEditing = false,
   onTextSave,
@@ -216,6 +219,7 @@ export function ItemCard({
           onDelete={onDelete}
           onMarkComplete={onMarkComplete}
           onMoveToNextWeek={onMoveToNextWeek}
+          onMoveToCurrentWeek={onMoveToCurrentWeek}
         />
       </div>
 

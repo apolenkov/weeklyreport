@@ -50,6 +50,8 @@ interface NextWeekSectionProps {
    * published report — the card shows the marker and withholds Delete.
    */
   readonly publishedLockedIds?: ReadonlySet<string>;
+  /** In-place move action: pull a next-week item back into the current week. */
+  readonly onMoveToCurrentWeek?: (id: string) => void;
 }
 
 export function NextWeekSection({
@@ -64,6 +66,7 @@ export function NextWeekSection({
   ownPeriodRanks,
   addSignal = 0,
   publishedLockedIds,
+  onMoveToCurrentWeek,
 }: NextWeekSectionProps) {
   const isEmpty = isBoardEmpty(items, products);
   const hasProducts = products && products.length > 0;
@@ -181,6 +184,7 @@ export function NextWeekSection({
       publishedLocked={publishedLockedIds?.has(item.id)}
       onEdit={handleEdit}
       onDelete={handleDelete}
+      onMoveToCurrentWeek={onMoveToCurrentWeek}
     />
   );
 
