@@ -11,7 +11,7 @@ export type SlideTrafficStatus = "green" | "yellow" | "red" | null;
 /** Per-row frame tone: every row is a bordered two-line card; the border hue
  * IS the status — neutral (expected work), green (done), yellow (at-risk),
  * red (blocked). */
-export type GridTone = "neutral" | "completed" | "at-risk" | "blocked";
+export type GridTone = "neutral" | "note" | "completed" | "at-risk" | "blocked";
 
 export interface GridAuthor {
   readonly id: string;
@@ -165,7 +165,8 @@ export function buildOwnDecisionRow(
     text: decision.text.trim(),
     authorId: owner.id,
     showAuthorBadge: true,
-    tone: "neutral",
+    // Decisions are facts, not work in flight — solid quiet frame.
+    tone: "note",
     stageNames: sortStageNames(decision.stageIds ?? []),
   };
 }
