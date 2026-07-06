@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 
-import { ViewerReportShell } from "../../../../components/viewer/viewer-report-shell";
 import { WeeklyReportSkeleton } from "../../../../components/weekly-report/weekly-report-skeleton";
+import { ViewerReportShell } from "../../../../features/viewer/ui/viewer-report-shell";
 
 interface Props {
   params: Promise<{ reportId: string }>;
