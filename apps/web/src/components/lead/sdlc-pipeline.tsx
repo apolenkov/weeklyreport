@@ -65,6 +65,15 @@ interface SdlcPipelineProps {
    * paths keep the full pipeline.
    */
   readonly visibilityMode?: "mine" | "everyone";
+  /**
+   * Per-stage "raise routes through risk creation" flags for the chip menu
+   * (see StageChipProps.riskGap). Supplied by the lead's sync bridge, which
+   * owns the risks; omitted on read-only / head paths.
+   */
+  readonly riskGapForStage?: (
+    productId: string,
+    stageName: string,
+  ) => { readonly "at-risk": boolean; readonly blocked: boolean };
 }
 
 // lead-mine-hide-unowned-stages: empty-own-stages note copy, lifted to a const
@@ -89,6 +98,7 @@ export function SdlcPipeline({
   onStatusChange,
   crossAuthors = [],
   visibilityMode = "everyone",
+  riskGapForStage,
 }: SdlcPipelineProps) {
   function handleStatusChange(
     productId: string,
@@ -254,6 +264,10 @@ export function SdlcPipeline({
                               )?.status ?? stage.status
                             }
                             readOnly={readOnly}
+                            riskGap={riskGapForStage?.(
+                              product.id,
+                              stage.stageName,
+                            )}
                             onStatusChange={(name, status) =>
                               handleStatusChange(product.id, name, status)
                             }

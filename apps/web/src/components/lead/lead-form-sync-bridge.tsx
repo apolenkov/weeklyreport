@@ -514,11 +514,22 @@ function Pipeline() {
   // D1: render-time severity floor — same rule as mapLeadProducts, so the
   // live chips can never show on-track/empty while covering risks exist.
   const flooredProducts = applyRiskSeverityFloor(rawWithCoverage, ctx.risks);
+  // Menu hint twin of handleStageStatusChange's raise interception: a raise
+  // with no sufficient covering risk (blocked needs a blocked risk, at-risk
+  // any covering risk) routes to risk creation, so the menu says so.
+  const riskGapForStage = (productId: string, stageName: string) => {
+    const covering = coveringRisksForStage(ctx.risks, productId, stageName);
+    return {
+      "at-risk": covering.length === 0,
+      blocked: !covering.some((r) => r.severity === "blocked"),
+    };
+  };
   return (
     <SdlcPipeline
       products={flooredProducts}
       rawProducts={rawWithCoverage}
       readOnly={ctx.readOnly}
+      riskGapForStage={riskGapForStage}
       onStatusChange={ctx.handleStageStatusChange}
       {...(ctx.crossAuthors !== undefined
         ? { crossAuthors: ctx.crossAuthors }

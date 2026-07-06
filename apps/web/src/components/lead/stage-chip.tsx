@@ -7,15 +7,14 @@ import {
 } from "@customreport/ui/components/ui/tooltip";
 import { Lock } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 
 import type { StageAssignment, StageStatus } from "./mock-data";
 import {
   STAGE_CHIP_BOX_HEIGHT,
   STAGE_ICONS,
   STATUS_CONFIG,
-  STATUS_OPTIONS,
 } from "./stage-chip-config";
+import { StageChipMenu } from "./stage-chip-menu";
 import { stageShortLabel } from "./stage-tags";
 
 const POPOVER_OFFSET_PX = 4;
@@ -36,6 +35,14 @@ interface StageChipProps {
    * floored status for read-only / head paths that pass no raw signal.
    */
   readonly rawStatus?: StageStatus;
+  /**
+   * Per-severity "click routes through risk creation" flags for the menu.
+   * True when the bridge's raise interception would open the risk dialog
+   * instead of applying the status (no sufficient covering risk). The menu
+   * labels those options with a "→ create risk" hint so the routing is
+   * announced, not a surprise. Omitted on read-only / head paths.
+   */
+  readonly riskGap?: { readonly "at-risk": boolean; readonly blocked: boolean };
 }
 
 // Status/icon config lives in stage-chip-config.ts (apply-status-palette).
@@ -55,6 +62,7 @@ export function StageChip({
   onStatusChange,
   readOnly = false,
   rawStatus,
+  riskGap,
 }: StageChipProps) {
   const [showPopover, setShowPopover] = useState(false);
   const [popoverPos, setPopoverPos] = useState<{
@@ -241,63 +249,19 @@ export function StageChip({
         {stage.assignee ?? "—"}
       </span>
 
-      {/* Status popover — click-to-apply menu. Each option is a single
-          tap; the popover closes immediately. Portaled to body to escape
-          accordion overflow:hidden. The Save/Cancel form was an earlier
-          iteration the user reverted: for a 4-option enum the form felt
-          heavier than the action it gated. Transitions that need a second
-          step (raise without a risk, lower a covered chip) are intercepted
-          by lead-form-sync-bridge, not here. */}
-      {showPopover &&
-        popoverPos &&
-        typeof document !== "undefined" &&
-        createPortal(
-          <div
-            ref={portalRef}
-            className="fixed z-50 w-[180px] rounded-xl border border-[var(--color-border)] bg-white p-1.5 shadow-lg"
-            style={{ top: popoverPos.top, left: popoverPos.left }}
-            role="menu"
-            aria-label={`Set status for ${stage.stageName}`}
-          >
-            {STATUS_OPTIONS.map((opt) => {
-              const cfg = STATUS_CONFIG[opt.value];
-              const isCurrent = stage.status === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  role="menuitem"
-                  onClick={() => applyStatus(opt.value)}
-                  className="flex w-full max-md:min-h-[var(--touch-target-min)] items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] font-medium transition-colors hover:bg-[var(--color-surface-hover)]"
-                  style={{
-                    background: isCurrent ? cfg.bg : "transparent",
-                    color: isCurrent ? cfg.text : "var(--color-foreground)",
-                  }}
-                >
-                  <span
-                    className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
-                    style={{
-                      background: cfg.bg,
-                      color: cfg.text,
-                      border: `1px solid ${cfg.border}`,
-                    }}
-                  >
-                    {cfg.icon}
-                  </span>
-                  <span className="flex-1">
-                    {opt.label.replace(/^[^\s]+\s/, "")}
-                  </span>
-                  {isCurrent && (
-                    <span className="text-[10px] uppercase tracking-wide text-[var(--color-muted-foreground)]">
-                      current
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>,
-          document.body,
-        )}
+      {/* Status popover — click-to-apply menu (StageChipMenu). The
+          Save/Cancel form was an earlier iteration the user reverted: for a
+          4-option enum the form felt heavier than the action it gated. */}
+      {showPopover && popoverPos && (
+        <StageChipMenu
+          stageName={stage.stageName}
+          currentStatus={stage.status}
+          position={popoverPos}
+          portalRef={portalRef}
+          riskGap={riskGap}
+          onApply={applyStatus}
+        />
+      )}
     </div>
   );
 }

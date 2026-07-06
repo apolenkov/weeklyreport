@@ -275,3 +275,49 @@ describe("StageChip — assignee label invariants (mine/locked)", () => {
     expect(screen.getByText("Boris")).toBeInTheDocument();
   });
 });
+
+// ---- "→ create risk" menu hint: an unbacked raise routes to risk creation ----
+// The hint mirrors the bridge's interception predicate (at-risk needs any
+// covering risk, blocked needs a blocked one); without the flags the menu
+// stays hint-free (read-only / head paths pass no riskGap).
+
+describe("StageChip — '→ create risk' menu hint", () => {
+  function openMenu(riskGap?: {
+    readonly "at-risk": boolean;
+    readonly blocked: boolean;
+  }) {
+    render(
+      <StageChip
+        stage={{ ...BASE_MINE, status: "on-track" }}
+        riskGap={riskGap}
+        onStatusChange={() => undefined}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Design/ }));
+  }
+
+  it("labels At Risk and Blocked when no covering risk exists", () => {
+    openMenu({ "at-risk": true, blocked: true });
+    const hints = screen.getAllByText("→ create risk");
+    expect(hints).toHaveLength(2);
+    expect(
+      screen.getByRole("menuitem", { name: /At Risk.*create risk/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: /Blocked.*create risk/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("labels only Blocked when an at-risk risk already covers the stage", () => {
+    openMenu({ "at-risk": false, blocked: true });
+    expect(screen.getAllByText("→ create risk")).toHaveLength(1);
+    expect(
+      screen.getByRole("menuitem", { name: /Blocked.*create risk/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no hint without riskGap (read-only / head paths)", () => {
+    openMenu(undefined);
+    expect(screen.queryByText("→ create risk")).not.toBeInTheDocument();
+  });
+});
