@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
-import { LeadForm } from "../../../../../components/lead/lead-form";
-import { LeadFormSkeleton } from "../../../../../components/lead/lead-form-skeleton";
+import { LeadForm } from "../../../../../features/report-sections/ui/lead-form";
+import { LeadFormSkeleton } from "../../../../../features/report-sections/ui/lead-form-skeleton";
 
 interface Props {
   params: Promise<{ reportId: string }>;

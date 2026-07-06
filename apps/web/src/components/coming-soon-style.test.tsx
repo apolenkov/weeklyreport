@@ -23,9 +23,9 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { History } from "lucide-react";
 import { describe, expect, it } from "vitest";
 
+import { VersionComingSoonControl } from "../features/admin/ui/version-coming-soon";
+import { PdfExportComingSoonControl } from "../features/pdf-export/ui/pdf-export-coming-soon";
 import { AgentReviewComingSoon } from "../shared/ui/report-shell/agent-review-coming-soon";
-import { PdfExportComingSoonControl } from "./lead/pdf-export-coming-soon";
-import { VersionComingSoonControl } from "./lead/version-coming-soon";
 
 // The canonical amber tokens baked into the shared primitive. `cn` uses
 // tailwind-merge, so a control passing a conflicting `bg-*`/`text-*color*`

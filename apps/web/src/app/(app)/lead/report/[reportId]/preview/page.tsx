@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Suspense } from "react";
 
-import { LeadSectionPreviewAuth } from "../../../../../../components/lead/lead-section-preview-auth";
 import { RoleGate } from "../../../../../../components/role-gate";
 import { WeeklyReportSkeleton } from "../../../../../../components/weekly-report/weekly-report-skeleton";
+import { LeadSectionPreviewAuth } from "../../../../../../features/report-sections/ui/lead-section-preview-auth";
 import { AgentReviewComingSoon } from "../../../../../../shared/ui/report-shell/agent-review-coming-soon";
 
 interface Props {

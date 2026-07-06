@@ -4,13 +4,13 @@ import type {
 } from "@customreport/shared";
 import { shortNameFromName } from "@customreport/shared";
 
+import { riskCoversStage } from "../../features/report-sections/model/stage-tags";
 import type { CrossAuthorContentRow } from "../../lib/mappers/lead-cross-author";
 import {
   stageStatusToTraffic,
   trafficToStageStatus,
 } from "../../lib/mappers/traffic-light";
 import { deriveEffectiveStageStatus } from "../../lib/stage-status";
-import { riskCoversStage } from "../lead/stage-tags";
 import { buildSlideGridModel, type SlideGridModel } from "./slide-grid-model";
 
 const PERCENT_MAX = 100;

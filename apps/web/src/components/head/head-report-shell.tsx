@@ -3,6 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Suspense, useCallback, useContext, useMemo } from "react";
 
+import { PeriodNavigator } from "../../features/period/ui/period-navigator";
+import type { ReportPeriod } from "../../features/report-sections/model/mock-data";
 import { formatDateRange, isoWeekNumber } from "../../lib/mappers/lead-history";
 import { SessionContext } from "../../lib/session-provider";
 import { useTRPC } from "../../lib/trpc-context";
@@ -16,8 +18,6 @@ import {
 import { ScopeToggle } from "../../shared/ui/report-shell/scope-toggle";
 import { useReportShellUrlState } from "../../shared/ui/report-shell/use-report-shell-url-state";
 import { ViewModeToggle } from "../../shared/ui/report-shell/view-mode-toggle";
-import type { ReportPeriod } from "../lead/mock-data";
-import { PeriodNavigator } from "../lead/period-navigator";
 import { HeadSlidesClient } from "../slides/head-slides-client";
 import { SlideSkeleton } from "../slides/slide-skeleton";
 import { ExportPdfButton } from "../weekly-report/export-pdf-button";

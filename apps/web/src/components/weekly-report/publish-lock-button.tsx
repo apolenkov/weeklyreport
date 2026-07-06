@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 
 import { useDialogFocus } from "../../lib/use-dialog-focus";
-import { ConfirmDeleteDialog } from "../lead/confirm-delete-dialog";
+import { ConfirmDeleteDialog } from "../../shared/ui/confirm-delete-dialog";
 
 interface PublishLockButtonProps {
   readonly pendingCount: number;
