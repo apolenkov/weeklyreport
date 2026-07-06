@@ -47,7 +47,7 @@ function primeHooks(sessionRole: string): void {
   });
 }
 
-describe("DevRoleSwitcher — admin-only data-reset controls", () => {
+describe("DevRoleSwitcher — data-reset controls for every dev role", () => {
   beforeEach(() => {
     process.env.NEXT_PUBLIC_DEV_ROLE_SWITCHER = "true";
     useQueryMock.mockReset();
@@ -73,7 +73,7 @@ describe("DevRoleSwitcher — admin-only data-reset controls", () => {
     ).toBeInTheDocument();
   });
 
-  it("hides the reset controls for a non-admin (lead) dev session", async () => {
+  it("shows the reset controls for a lead dev session too (dev-only tool)", async () => {
     primeHooks("lead");
     const user = userEvent.setup();
 
@@ -81,11 +81,11 @@ describe("DevRoleSwitcher — admin-only data-reset controls", () => {
     await user.click(screen.getByTestId("dev-role-switcher-trigger"));
 
     expect(
-      screen.queryByTestId("dev-role-switcher-reseed-small"),
-    ).not.toBeInTheDocument();
+      screen.getByTestId("dev-role-switcher-reseed-small"),
+    ).toBeInTheDocument();
     expect(
-      screen.queryByTestId("dev-role-switcher-wipe-manual-uat"),
-    ).not.toBeInTheDocument();
+      screen.getByTestId("dev-role-switcher-wipe-manual-uat"),
+    ).toBeInTheDocument();
     // The role picker itself still renders — only the Data reset block is gated.
     expect(screen.getByTestId("dev-role-switcher-logout")).toBeInTheDocument();
   });

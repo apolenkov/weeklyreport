@@ -256,7 +256,8 @@ const SMALL_DATASET: TierDataset = {
           type: ItemType.current,
           text: "Реализовали REST-коннектор для платформы интеграций",
           tag: "feature",
-          status: ItemWorkflowStatus.in_progress,
+          // Done exemplar: the small demo must show every status treatment.
+          status: ItemWorkflowStatus.done,
           stages: ["Development"],
           priorityRank: 1,
         },
@@ -411,7 +412,8 @@ const SMALL_DATASET: TierDataset = {
           type: ItemType.current,
           text: "Согласовали аналитику и макеты экранов дашборда BI",
           tag: "feature",
-          status: ItemWorkflowStatus.in_progress,
+          // Done exemplar (second author) — green frame on the slide.
+          status: ItemWorkflowStatus.done,
           stages: ["Analysis"],
         },
         {
