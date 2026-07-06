@@ -181,21 +181,47 @@ const apiCrossModuleZones = apiModules.map((moduleName) => ({
 }));
 
 // One zone per web slice: files under features/S may import from features/ only
-// within their own slice. Slices append here as they are extracted (slice 2+).
+// within their own slice, plus the grandfathered cross-slice edges below. ALL
+// populated slices are enforced (boundaries flip #33); any NEW slice-to-slice
+// coupling not in the allowlist is a lint error.
 const webFeaturesDir = "apps/web/src/features";
-const webSlices = ["landing", "analytics", "dashboard"] as const;
-// Grandfathered cross-slice edges: a pre-existing coupling exposed when the other
-// side became a feature slice. Kept as an explicit allowlist (forbid-new,
-// grandfather-existing); the enforcement flip that removes these is a later
-// boundaries slice.
+const webSlices = [
+  "admin",
+  "analytics",
+  "dashboard",
+  "landing",
+  "organization",
+  "pdf-export",
+  "period",
+  "report-sections",
+  "review",
+  "telemetry",
+  "viewer",
+] as const;
+// Grandfathered cross-slice edges: pre-existing couplings between slices, exposed
+// as each domain graduated from components/lib into features/. Explicit allowlist
+// (forbid a slice reaching into a NEW sibling; grandfather the pairs it already
+// touches). `except` is slice-granular, so an entry permits any import between
+// that pair — finer per-file enforcement is a separate mechanism, out of scope.
 const webSliceGrandfatheredExcept: Partial<
   Record<(typeof webSlices)[number], readonly string[]>
 > = {
-  // dashboard-page consumes review's section-review-rows mapper + SectionReviewStrip,
-  // moved into features/review by the weekly-report dissolve; dashboard's own
-  // mappers (dashboard.ts / dashboard-leads.ts) read lead-status + traffic-light,
-  // which live in report-sections/model after the lib/mappers dissolution.
+  // admin settings tabs reach organization (reporting-group forms), period
+  // (report-period forms), and review (reminder/verdict presentation).
+  admin: ["organization", "period", "review"],
+  // dashboard-page consumes review's section-review-rows + SectionReviewStrip;
+  // its own mappers read report-sections' lead-status + traffic-light.
   dashboard: ["review", "report-sections"],
+  // period lifecycle controls reach admin (settings context) and report-sections
+  // (the assembled-report body they gate publish/reopen on).
+  period: ["admin", "report-sections"],
+  // report-sections is the assembled-report hub: it composes admin, pdf-export,
+  // period, and review surfaces into the rendered report.
+  "report-sections": ["admin", "pdf-export", "period", "review"],
+  // review surfaces sit on top of admin context and the report-sections body.
+  review: ["admin", "report-sections"],
+  // the viewer report shell reuses pdf-export, period, and report-sections UI.
+  viewer: ["pdf-export", "period", "report-sections"],
 };
 const webCrossSliceZones = webSlices.map((sliceName) => ({
   target: `${webFeaturesDir}/${sliceName}`,
